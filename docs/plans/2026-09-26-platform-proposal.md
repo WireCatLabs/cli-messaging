@@ -121,6 +121,7 @@ Each of these is inside the `CLI-30` boundary and would break Telegram if copied
 | DEBT-7 | `cid?: number` in the guard | `src/sends/guard.ts:26` | `sendId: string` — Telegram's `random_id` is 64-bit |
 | DEBT-8 | `Attachment.fileId` / `videoId` | `src/domain/models.ts:39-40` | `providerRef` (opaque JSON) + common fields |
 | DEBT-9 | `ChatKind` has no bot, forum, or saved-messages notion | `src/domain/models.ts:10` | add `saved` and `isBot`; forum = group with the `threads` capability |
+| DEBT-10 | the message renderer prints `provider  max` with `-vv`, whatever the provider | `src/rendering/messages.ts:83` | the provider is a render option (found 2026-09-26, fixed in PR 0.1) |
 
 **Stay MAX-only** (one implementation): folders, group admin, scheduled messages, account sessions,
 contact import. They plug into the skeleton as the MAX adapter's extra commands (§1a).
@@ -181,6 +182,12 @@ interface MessengerAdapter {
 
 Optional operations are optional members, and `capabilities` says so up front — a command checks
 the capability and exits with a typed error; it never calls and catches.
+
+**Bot accounts are messengers too** (max-cli `NEED-300`, `NEED-301`, ruled 2026-09-26): the MAX
+Bot API now, the Telegram Bot API later, each as its own adapter with less — no history, no chat
+list from the server (only the chats the store has seen), updates by long polling or a webhook.
+The port takes them without a change: `history`, `chatList: "observed"` and `realtime: "poll"` say
+so, and the operations a bot lacks are simply absent.
 
 ## 4. The store: a system of record, ready for a CRM
 
@@ -405,8 +412,10 @@ connection — the `max serve` pattern — and the others ask it, or run one-sho
 ## 7. Capabilities
 
 A `Capabilities` object in the domain from the first commit — cheap, and it stops commands assuming
-every messenger can do everything: `edit`, `delete`, `react`, `schedule`, `forward`, `threads`,
-`groups`, `readReceipts`, `searchRemote`, `realtime`, `history` (how far back), `maxTextLength`.
+every messenger can do everything. **Shipped in PR 0.1** (`src/domain/capabilities.ts`): `history`,
+`chatList` (`server` | `observed`), `realtime` (`push` | `poll` | `none`), `send`, `edit`, `delete`,
+`react`, `threads`. Candidates as commands need them: `schedule`, `forward`, `groups`,
+`readReceipts`, `searchRemote`, `maxTextLength`.
 Filled by each adapter; printed by `tg commands --json` for agents. Only the fields a command
 actually checks are added; the full list grows in Phase 4 when MAX fills it too.
 

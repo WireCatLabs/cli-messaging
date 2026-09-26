@@ -1,0 +1,8 @@
+# pnpm blocks dependencies' install scripts by default, so esbuild never unpacks its platform
+# binary and vitest fails at startup. Since pnpm 11 the key is `allowBuilds` here, with an explicit
+# boolean per package.
+allowBuilds:
+  esbuild: true
+  lefthook: true
+minimumReleaseAgeExclude:
+  - '@leemour/cli-core@0.1.0 || 0.1.1 || 0.2.0 || 0.3.0 || 0.4.0 || 0.5.0 || 0.6.0 || 0.6.1 || 0.7.0'
