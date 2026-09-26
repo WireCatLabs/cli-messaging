@@ -334,6 +334,11 @@ command is written.
     `transaction` would be `BEGIN`/`COMMIT`. B also needs the network transport that `@mtcute/node`
     provides — **unknown** whether that is usable without `better-sqlite3`.
 - The spike runs on **Node only**. Bun is measured after, not assumed.
+- **Correction 2026-09-27 (measured in the spike):** neither A nor B. `pnpm add -g` left
+  `better-sqlite3` without its native binding, and login failed. `@mtcute/node` stays for the network;
+  its session storage runs over `node:sqlite` / `bun:sqlite` through this package's seam
+  (`tg-cli/src/telegram/storage.ts`). Both global installs work. Details:
+  [the spike report](https://github.com/leemour/tg-cli/blob/main/docs/plans/2026-09-27-spike-report.md).
 
 ### Auth and credentials
 
@@ -498,7 +503,7 @@ Run against the owner's real account, sending only to Saved Messages.
 
 | id | Risk | Mitigation |
 |---|---|---|
-| RISK-1 | `better-sqlite3` native build fails on global install | spike criterion 7; transport B |
+| RISK-1 | `better-sqlite3` native build fails on global install | **happened** with pnpm (2026-09-27); session storage moved to the runtime's own SQLite |
 | RISK-2 | mtcute is pre-1.0; the API moves | exact pin; all of it behind `src/telegram/` |
 | RISK-3 | two processes drive one session and corrupt update state | one owner process (`tg serve`); others one-shot without updates |
 | RISK-4 | FloodWait while backfilling large groups | throttle, resumable ranges, typed `rate_limited`, never retry sends |
