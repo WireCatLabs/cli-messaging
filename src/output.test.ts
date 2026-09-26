@@ -1,0 +1,30 @@
+import { captureStreams } from "@leemour/cli-core"
+import { describe, expect, it } from "vitest"
+import { resolveOutput } from "./output.js"
+
+describe("the output mode", () => {
+  it("writes one JSON value to stdout and nothing to stderr when piped", () => {
+    const streams = captureStreams()
+    resolveOutput({ streams, tty: false }).renderer.result({ items: [{ id: "1" }], hasMore: false })
+
+    expect(streams.stdout).toEqual(['{"items":[{"id":"1"}],"hasMore":false}'])
+    expect(streams.stderr).toEqual([])
+  })
+
+  it("keeps a chat title on one line for a person, and a message text as written", () => {
+    const streams = captureStreams()
+    resolveOutput({ streams, tty: true, color: false }).renderer.result({ title: "a\nb", text: "c\nd" })
+
+    expect(streams.stdout.join("\n")).toContain("a\\x0ab")
+    expect(streams.stdout.join("\n")).toContain("c\nd")
+  })
+
+  it("silences notes under --quiet but still says a failure", () => {
+    const streams = captureStreams()
+    const { renderer } = resolveOutput({ streams, tty: false, quiet: true })
+    renderer.note("working")
+    renderer.failure("no chat matches")
+
+    expect(streams.stderr).toEqual(["no chat matches"])
+  })
+})
