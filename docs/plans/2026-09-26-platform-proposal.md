@@ -1,6 +1,9 @@
 # Messaging platform: cli-messaging + tg-cli — proposal
 
-**Status 2026-09-26: proposal, nothing built. Stop for review before Phase 0.**
+**Status 2026-09-26: reviewed, nothing built.** Owner's answers: NEED-1 → A (one store),
+NEED-2 → A (max-cli untouched until Phase 4) **with a generous extraction** — "better to extract
+more and override it in the adapters, so there is a proper skeleton" (§1a), NEED-3 → B (every user
+registers their own `api_id`, §5).
 Answers the brief's §17 (reuse map, extraction map, Telegram adapter, package boundaries, phases,
 risks, spike) and adds one section the brief asked for later in the conversation: a store that is
 ready for contact linking and cross-messenger context (a CRM) without building the CRM now.
@@ -17,9 +20,12 @@ run), **inferred** (hedged). Nothing here was run against Telegram yet.
 
 Three consequences:
 
-1. **Two implementations before an abstraction.** Only what already looks the same in MAX and
-   Telegram moves into `cli-messaging`. Everything else stays in the adapter and travels as
-   `providerMetadata`.
+1. **A skeleton with hooks, a domain without guesses.** The *program* — flags, settings, profiles,
+   output, run records, guard, the command set, MCP, the background process — moves into
+   `cli-messaging` generously, and an adapter overrides what does not fit (owner, NEED-2). The
+   *domain model* stays strict: a field goes into the shared types only when MAX and Telegram both
+   have it; everything else travels as `providerMetadata`. A MAX habit found in the skeleton becomes
+   a hook, never a default Telegram has to fight.
 2. **The local store is a system of record, not a cache.** A backfilled group, a link between two
    identities, a note on a person — none of these can be fetched again. This is the single biggest
    difference from max-cli, and it changes the schema, the migration strategy and the file location
@@ -59,19 +65,46 @@ max-cli stays untouched until the Telegram slice works (§6, Phase 4).
 | `src/rendering/messages.ts` | `render/` | none expected |
 | `src/resolve.ts` | `resolve/` | none; `isId` already accepts `-100…` (`src/resolve.ts:5`). Add `@username` |
 | `src/sends/guard.ts`, `journal.ts`, `permissions.ts`, `recipients.ts` | `guard/` | `cid?: number` → `sendId: string` (DEBT-7); drop the `Settings` import for a narrow options type; MAX-only `ChatAction` values become adapter-declared |
-| `src/export.ts`, `src/deadline.ts`, `src/profile.ts`, `src/runs/run.ts`, `src/runs/recording.ts` | candidates | imports are cli-core only (read 2026-09-26); **to verify** in Phase 1 before moving |
-| `src/commands/paging.ts`, `src/output.ts` | candidates | to verify |
+### 1a. The skeleton — also copied, generously (owner, NEED-2)
 
-### From max-cli — pattern only, code stays
+Measured 2026-09-26 by counting references to the MAX client, protocol, session or `MAX` names per
+file. Three kinds of move:
 
-| max-cli | Why the code does not move |
+**As is** — no MAX reference: `src/export.ts`, `src/deadline.ts`, `src/profile.ts` (profile as the
+first word), `src/runs/run.ts`, `src/runs/recording.ts`, `src/report.ts`, `src/markdown.ts`,
+`src/session/prompt.ts` (hidden input), `src/session/qr-terminal.ts`, `src/server/subscribe.ts`,
+`src/transcribe/models.ts`, `src/commands/paging.ts`, `src/output.ts`.
+
+**With a parameter** — one or two MAX names (the app name, the env prefix, a client type):
+`src/program.ts` (root command, global flags, `run()` that never throws, the last catch),
+`src/update.ts`, `src/server/lines.ts`, `src/transcribe/*` (voice notes are Ogg/Opus in Telegram
+too), `src/mcp/confirm.ts` (send confirmation from the MCP server), `src/mcp/instructions.ts`,
+`src/commands/watch.ts`, `src/commands/inbox.ts`.
+
+**As a skeleton with hooks** — the shape is generic, the body knows MAX:
+
+| max-cli | Generic part in cli-messaging | What the adapter supplies |
+|---|---|---|
+| `src/config.ts` (564 lines) | flag → env → file → default, strict schema, `config show\|set` | its own fields, added to the schema |
+| `src/commands/context.ts` | building renderer, deadline, run record, guard, store, adapter for a command | the adapter factory |
+| `src/commands/*` | `session start\|end`, `account show`, `chats list\|show`, `messages list\|show\|context\|send\|reply\|search\|export`, `contacts list\|show`, `watch`, `doctor`, `commands`, `complete`, `config`, `runs`, `sends`, `recipients`, `update`, `skill`, `mcp`, `serve` | login methods; extra commands (MAX folders, Telegram topics); a replacement for any generic command by name |
+| `src/server/server.ts`, `server-connection.ts`, `start.ts` | the background process: local socket, start/stop/status, forwarding writes through the guard, pushing events to subscribers | the connection it owns and its update stream |
+| `src/mcp/server.ts`, `session.ts`, `tools.ts`, `resources.ts`, `prompts.ts` | MCP server, idle-drop session, the read/search/send tools, confirmation | extra tools |
+| `src/diagnose.ts`, `src/commands/doctor.ts` | generic checks: paths, keyring, store, versions | provider checks |
+| `src/runs/events.ts` | the event shape and the "never a message body" rule | which ids an event names |
+| `src/download.ts`, `src/upload.ts` | writing a file safely, sizes, names | fetching the bytes |
+
+The price, said once: the skeleton is shaped from one implementation until Telegram runs on it.
+That is why Telegram is built **on** it in Phase 1, not after it — every hook the Telegram adapter
+needs is found while the skeleton is still new.
+
+### From max-cli — code stays in max-cli
+
+| max-cli | Why |
 |---|---|
 | `src/client.ts` (2655 lines) | the MAX adapter. Its **shape** (`account`, `chats`, `contacts`, `messages`, `live`) is the template for the adapter port |
-| `src/server/` (`max serve`, warm connection over a local socket) | imports the MAX protocol (`src/server/server.ts:7-14`). The *pattern* — one process owns the connection, commands talk to it — is what Telegram's `watch` and background sync need |
-| `src/mcp/` | imports `MaxClient`. Extracted in Phase 3 once `tg` has the same tools |
-| `src/commands/*` | commands are extracted as shared builders in Phase 3, after both CLIs have them |
-| `src/runs/events.ts` | imports the MAX frame type |
-| `src/transcribe/` (voice → text) | generic in nature — Telegram voice notes are Ogg/Opus too. Later candidate |
+| `src/protocol/`, `src/spec/`, `src/generated/`, `src/session/` (but the two files above), `src/domain/map.ts` | the MAX transport and mapping |
+| MAX-only commands: folders, group admin, scheduled messages, account sessions, contact import | one implementation; they plug in through the adapter's extra commands |
 
 ## 2. Extraction map: where MAX leaked into "generic" code
 
@@ -89,8 +122,8 @@ Each of these is inside the `CLI-30` boundary and would break Telegram if copied
 | DEBT-8 | `Attachment.fileId` / `videoId` | `src/domain/models.ts:39-40` | `providerRef` (opaque JSON) + common fields |
 | DEBT-9 | `ChatKind` has no bot, forum, or saved-messages notion | `src/domain/models.ts:10` | add `saved` and `isBot`; forum = group with the `threads` capability |
 
-**Not extracted now** (one implementation only): folders, group admin, inbox, scheduled messages,
-account sessions, contact import. They stay in max-cli until Telegram needs them.
+**Stay MAX-only** (one implementation): folders, group admin, scheduled messages, account sessions,
+contact import. They plug into the skeleton as the MAX adapter's extra commands (§1a).
 
 ## 3. Package boundaries
 
@@ -304,9 +337,15 @@ command is written.
   dir (`<state>/sessions/<profile>.db`), mode 0600, and is excluded from export, backup, the doctor
   report and any log. Moving only the auth key into the OS keyring is possible in principle (mtcute
   keeps auth keys in their own repository); not promised.
-- **`api_id` / `api_hash`** are read from the keyring (service `tg-cli`), put there by a
-  `bin/tg-credentials` script that prompts without echo. Never through chat, never on argv. Who owns
-  the id at publication is **NEED-3**.
+- **Every user registers their own `api_id` / `api_hash`** at [my.telegram.org/apps](https://my.telegram.org/apps)
+  (NEED-3 → B), as [kfastov/tgcli](https://github.com/kfastov/tgcli) asks. Telegram's
+  [page on obtaining an api_id](https://core.telegram.org/api/obtaining_api_id) allows one id per
+  phone number and puts every account of an unofficial client "under observation". One id shared by
+  every install would carry every user's behaviour, and its `api_hash` would be public in the
+  package. `tg session start` asks for both the first time, `api_hash` without echo, and keeps them
+  in the keyring (service `tg-cli`, per profile) next to nothing else. `TG_API_ID` / `TG_API_HASH`
+  outrank the keyring, for CI — as `MAX_TOKEN` does in max-cli. Never on argv, never in a file,
+  never through chat.
 - **Profiles as in max-cli**: the first word (`tg work chats list`), bound to one Telegram user id on
   first login; a different account is refused (max-cli `MAX-12`).
 - **Unlike max-cli, `tg` does not pretend to be an official client.** max-cli's "look like the
@@ -380,7 +419,7 @@ twice. The store and the guard wait for Phase 1.
 | PR | What |
 |---|---|
 | 0.1 | cli-messaging scaffold + domain, render, resolve, SQLite seam (copies from max-cli; DEBT-1, DEBT-8, DEBT-9 fixed) |
-| 0.2 | tg-cli scaffold: pnpm, TypeScript, Biome, Vitest, lefthook, cli-core, cli-messaging via `link:`; the two lint rules; `bin/tg`, `bin/tg-credentials` |
+| 0.2 | tg-cli scaffold: pnpm, TypeScript, Biome, Vitest, lefthook, cli-core, cli-messaging via `link:`; the two lint rules; `bin/tg` |
 | 0.3 | `tg session start qr\|phone`, `tg chats list`, `tg messages list <chat>`, `tg messages send me <text>` — no store |
 | 0.4 | spike report in `tg-cli/docs/plans/`: every measurement in §9's criteria, and the A/B transport choice |
 
@@ -388,13 +427,13 @@ twice. The store and the guard wait for Phase 1.
 
 | PR | What |
 |---|---|
-| 1.1 | cli-messaging: the JSON contract gets a version (see below) |
+| 1.1 | skeleton, part 1: program, global flags, settings with adapter fields, profile as first word, output, command context, run records, paging (§1a "as is" and "with a parameter"). tg-cli moves onto it; the spike's commands keep working |
 | 1.2 | cli-messaging guard + journal, generalised (DEBT-7) |
 | 1.3 | cli-messaging store v1: §4 schema, migrations with `min_compatible`, repositories, FTS; identities get a 1:1 person |
-| 1.4 | tg-cli on cli-messaging: the adapter behind the port; `account show`, `chats list\|show`, `messages list\|show\|context` |
+| 1.4 | skeleton, part 2: the generic read commands with hooks — `session start\|end`, `account show`, `chats list\|show`, `messages list\|show\|context`, `contacts list\|show` — and the Telegram adapter behind them |
 | 1.5 | `messages send\|reply` through the guard, with the send identity and `outcome_unknown` |
-| 1.6 | `doctor`, `commands`, `--json`/`--jsonl`, typed errors — and a test that stdout carries one JSON value |
-| 1.7 | `tg watch` in the foreground, `--jsonl` |
+| 1.6 | `doctor` (generic + Telegram checks), `commands` (with the contract version), `complete`, `config`, `runs`, `sends`, `recipients`, `update` — and a test that stdout carries one JSON value |
+| 1.7 | `watch` in the foreground, `--jsonl` |
 
 **How the JSON contract is versioned** (brief §6 asks for "stable and versionable"). The output
 types live in cli-messaging, so the contract is cli-messaging's: adding a field is a minor version,
@@ -409,13 +448,13 @@ large groups, search the whole history locally.
 |---|---|
 | 2.1 | ingestion: every read writes to the store; `--offline` answers from it. The brief's `--source live\|local\|both` is reduced to `--offline` on purpose: max-cli ruled out a "freshness window" and the two CLIs should agree. `both` comes back with remote search (§6), where it means something |
 | 2.2 | `tg backfill <chat>` — resumable via `sync_ranges`, throttled, FloodWait-aware |
-| 2.3 | `tg serve` — one process owns the connection, ingests updates (new, edit, delete, reaction) |
+| 2.3 | skeleton, part 3: the background process (`serve`) from max-cli's `src/server/`; the Telegram adapter supplies the connection and ingests updates (new, edit, delete, reaction) |
 | 2.4 | tokenizer measurement (§6), then `tg messages search` on the `SearchProvider` |
 | 2.5 | `tg sync status`, `tg export` |
 
-**Phase 3 — agent-safe runtime.** Skill, MCP (a second front end over the same operations, as in
-max-cli §17), capability discovery. MCP tools and command builders that are now alike in `tg` and
-`max` move to cli-messaging.
+**Phase 3 — agent-safe runtime.** Skeleton, part 4: MCP (a second front end over the same
+operations, as in max-cli §17) with its session, tools and send confirmation; the skill; capability
+discovery. Telegram adds its own tools through the hook.
 
 **Phase 4 — the platform.** max-cli moves onto cli-messaging (under max-cli's own rules: worktree,
 `🚧` claim on its backlog, a plan in its `docs_ai/`); its existing history is imported into the
@@ -464,6 +503,8 @@ Run against the owner's real account, sending only to Saved Messages.
 
 ## 11. Decisions that need the owner
 
+Answered 2026-09-26: NEED-1 → A, NEED-2 → A with a generous extraction, NEED-3 → B.
+
 - **NEED-1 — one store for all messengers, or one file per CLI?** Recommended: one file in
   `~/.local/share/cli-messaging/`, with `min_compatible`. Per-CLI files make every cross-messenger
   query an `ATTACH` with no foreign keys, and the `msg` command (Phase 4) would have nothing single
@@ -471,5 +512,7 @@ Run against the owner's real account, sending only to Saved Messages.
 - **NEED-2 — keep max-cli untouched until Phase 4?** Recommended: yes. max-cli has several agents,
   a security batch and a pre-release in flight; its own ruling (max-cli `NEED-147`) already says the package
   is extracted when the second messenger starts, which is this.
-- **NEED-3 — whose `api_id` does a published `tg` use?** Recommended: for the spike, the owner's own
-  from my.telegram.org; at publication, one registered for the app, overridable per user.
+- **NEED-3 — whose `api_id` does a published `tg` use?** ~~Recommended: at publication, one
+  registered for the app, overridable per user.~~ **Correction 2026-09-26:** the owner chose B, each
+  user registers their own, and Telegram's rules back it (§5). The earlier recommendation weighed a
+  lower entry barrier over one shared id carrying every user's behaviour.
