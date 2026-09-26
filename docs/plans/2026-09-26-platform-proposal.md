@@ -52,13 +52,13 @@ max-cli stays untouched until the Telegram slice works (§6, Phase 4).
 
 | max-cli file | In cli-messaging | Change needed |
 |---|---|---|
-| `src/domain/models.ts` | `domain/` | add provider, account, locator, identity, thread; drop `timeOfMessageId` (L1) |
+| `src/domain/models.ts` | `domain/` | add provider, account, locator, identity, thread; drop `timeOfMessageId` (DEBT-1) |
 | `src/cache/driver.ts`, `open.ts`, `drivers/*` | `store/driver` | none — the Node/Bun SQLite seam is exactly what a third runtime-agnostic user needs |
-| `src/cache/schema.ts` | `store/schema` | **rewritten**, not copied (L2–L5). The FTS5-with-triggers pattern and the "ranges mean completeness" idea carry over |
+| `src/cache/schema.ts` | `store/schema` | **rewritten**, not copied (DEBT-2–DEBT-5). The FTS5-with-triggers pattern and the "ranges mean completeness" idea carry over |
 | `src/cache/store.ts` | `store/` repositories | pattern carries (upsert with `coalesce`, membership deleted per chat only); SQL rewritten for composite keys |
 | `src/rendering/messages.ts` | `render/` | none expected |
 | `src/resolve.ts` | `resolve/` | none; `isId` already accepts `-100…` (`src/resolve.ts:5`). Add `@username` |
-| `src/sends/guard.ts`, `journal.ts`, `permissions.ts`, `recipients.ts` | `guard/` | `cid?: number` → `sendId: string` (L7); drop the `Settings` import for a narrow options type; MAX-only `ChatAction` values become adapter-declared |
+| `src/sends/guard.ts`, `journal.ts`, `permissions.ts`, `recipients.ts` | `guard/` | `cid?: number` → `sendId: string` (DEBT-7); drop the `Settings` import for a narrow options type; MAX-only `ChatAction` values become adapter-declared |
 | `src/export.ts`, `src/deadline.ts`, `src/profile.ts`, `src/runs/run.ts`, `src/runs/recording.ts` | candidates | imports are cli-core only (read 2026-09-26); **to verify** in Phase 1 before moving |
 | `src/commands/paging.ts`, `src/output.ts` | candidates | to verify |
 
@@ -79,15 +79,15 @@ Each of these is inside the `CLI-30` boundary and would break Telegram if copied
 
 | id | Leak | Where | Fix in cli-messaging |
 |---|---|---|---|
-| L1 | "a message id holds its send time (`id >> 16`)" — a MAX property | `src/domain/models.ts:267`, duplicated at `src/client.ts:2401` | stays in the MAX adapter |
-| L2 | `messages_by_id` finds a message by id "without knowing which chat" | `src/cache/schema.ts:97` | ids are unique only per chat (Telegram channels) or per account (Telegram private chats); every key is composite |
-| L3 | `sync_marker` — one row, MAX's login delta | `src/cache/schema.ts:73-76` | `sync_state (account, key, value)` — per account, per provider |
-| L4 | the store is one file per profile, in the **cache** dir | `src/cache/index.ts:30` | one store per user, in the data dir, holding every account and provider |
-| L5 | `migrate` drops and rebuilds everything but `messages` and `ranges` | `src/cache/schema.ts:234` | forward-only additive migrations — a rebuild would erase identity links and notes |
-| L6 | `PersonSource` = `login \| info \| participant \| sync` | `src/cache/store.ts:6` | free text, declared by the adapter |
-| L7 | `cid?: number` in the guard | `src/sends/guard.ts:26` | `sendId: string` — Telegram's `random_id` is 64-bit |
-| L8 | `Attachment.fileId` / `videoId` | `src/domain/models.ts:39-40` | `providerRef` (opaque JSON) + common fields |
-| L9 | `ChatKind` has no bot, forum, or saved-messages notion | `src/domain/models.ts:10` | add `saved` and `isBot`; forum = group with the `threads` capability |
+| DEBT-1 | "a message id holds its send time (`id >> 16`)" — a MAX property | `src/domain/models.ts:267`, duplicated at `src/client.ts:2401` | stays in the MAX adapter |
+| DEBT-2 | `messages_by_id` finds a message by id "without knowing which chat" | `src/cache/schema.ts:97` | ids are unique only per chat (Telegram channels) or per account (Telegram private chats); every key is composite |
+| DEBT-3 | `sync_marker` — one row, MAX's login delta | `src/cache/schema.ts:73-76` | `sync_state (account, key, value)` — per account, per provider |
+| DEBT-4 | the store is one file per profile, in the **cache** dir | `src/cache/index.ts:30` | one store per user, in the data dir, holding every account and provider |
+| DEBT-5 | `migrate` drops and rebuilds everything but `messages` and `ranges` | `src/cache/schema.ts:234` | forward-only additive migrations — a rebuild would erase identity links and notes |
+| DEBT-6 | `PersonSource` = `login \| info \| participant \| sync` | `src/cache/store.ts:6` | free text, declared by the adapter |
+| DEBT-7 | `cid?: number` in the guard | `src/sends/guard.ts:26` | `sendId: string` — Telegram's `random_id` is 64-bit |
+| DEBT-8 | `Attachment.fileId` / `videoId` | `src/domain/models.ts:39-40` | `providerRef` (opaque JSON) + common fields |
+| DEBT-9 | `ChatKind` has no bot, forum, or saved-messages notion | `src/domain/models.ts:10` | add `saved` and `isBot`; forum = group with the `threads` capability |
 
 **Not extracted now** (one implementation only): folders, group admin, inbox, scheduled messages,
 account sessions, contact import. They stay in max-cli until Telegram needs them.
@@ -121,7 +121,7 @@ account sessions, contact import. They stay in max-cli until Telegram needs them
 - **One npm package with subpath exports** (`/store`, `/search`, `/guard`, `/testing`), like
   cli-core. Not a workspace of five packages: nothing needs them versioned apart yet.
 - **Nothing in cli-messaging imports a provider library.** No `@mtcute`, no `ws`.
-- tg-cli is **one package, split by directory**, as max-cli is (`NEED-12`). Two lint rules, copied
+- tg-cli is **one package, split by directory**, as max-cli is (max-cli ruling `NEED-12`). Two lint rules, copied
   from max-cli's `biome.json`: `src/commands/` and `src/mcp/` never import `src/telegram/`
   internals or `@mtcute/*`; `@mtcute/*` is imported only under `src/telegram/`.
 - During development tg-cli uses `"@leemour/cli-messaging": "link:../cli-messaging"`; publishing
@@ -156,9 +156,23 @@ the capability and exits with a typed error; it never calls and catches.
 `<data dir of "cli-messaging">/messages.db`, mode 0600 — for example
 `~/.local/share/cli-messaging/messages.db`. One file for every provider and every account, because
 "everything I discussed with Ivan, in Telegram and in MAX" must be one query, and FTS5, foreign keys
-and joins do not cross `ATTACH`ed files cleanly. This is decision **NEED-A** (§9).
+and joins do not cross `ATTACH`ed files cleanly. This is decision **NEED-1** (§11).
 
 The mtcute session database is **not** in this file: it is a credential (§5).
+
+### Tests and branch builds never touch it
+
+max-cli paid for this once: on 2026-09-22 a test run opened the owner's real cache, migrated it and
+destroyed its history (max-cli `docs_ai/HANDOFF.md`, the `pnpm test` warning; fixed by its test
+sandbox and by `bin/max` keeping everything in `.max/` of the worktree). A shared store makes it
+worse — it is not under `tg`'s own directories, and a forward-only migration from a branch build
+cannot be undone on the owner's file.
+
+- **One environment variable names the store file**, `MESSAGING_STORE`, read in one place.
+- **The tg-cli test sandbox sets it**, together with every `TG_*_DIR` and the mtcute session path,
+  and a test asserts that the sandbox holds — as max-cli's `src/testing/sandbox.ts` does.
+- **`bin/tg` sets it too**, to `.tg/` in the worktree. Any development run goes through `bin/tg`;
+  only an installed `tg` opens the real store.
 
 ### Keys
 
@@ -292,7 +306,7 @@ command is written.
   keeps auth keys in their own repository); not promised.
 - **`api_id` / `api_hash`** are read from the keyring (service `tg-cli`), put there by a
   `bin/tg-credentials` script that prompts without echo. Never through chat, never on argv. Who owns
-  the id at publication is **NEED-C**.
+  the id at publication is **NEED-3**.
 - **Profiles as in max-cli**: the first word (`tg work chats list`), bound to one Telegram user id on
   first login; a different account is refused (max-cli `MAX-12`).
 - **Unlike max-cli, `tg` does not pretend to be an official client.** max-cli's "look like the
@@ -359,32 +373,41 @@ actually checks are added; the full list grows in Phase 4 when MAX fills it too.
 
 ## 8. Phases — small, independently shippable pull requests
 
-**Phase 0 — spike (tg-cli, throwaway allowed).** Goal: prove the transport and measure the unknowns.
+**Phase 0 — spike.** Goal: prove the transport and measure the unknowns. cli-messaging starts here
+with only the copies that carry no risk, so the spike already imports them and nothing is copied
+twice. The store and the guard wait for Phase 1.
 
 | PR | What |
 |---|---|
-| 0.1 | tg-cli scaffold: pnpm, TypeScript, Biome, Vitest, lefthook, cli-core; the two lint rules; `bin/tg-credentials` |
-| 0.2 | `tg session start qr\|phone`, `tg chats list`, `tg messages list <chat>`, `tg messages send me <text>` — domain types copied locally, no store |
-| 0.3 | spike report in `tg-cli/docs/plans/`: every measurement in §9's criteria, and the A/B transport choice |
+| 0.1 | cli-messaging scaffold + domain, render, resolve, SQLite seam (copies from max-cli; DEBT-1, DEBT-8, DEBT-9 fixed) |
+| 0.2 | tg-cli scaffold: pnpm, TypeScript, Biome, Vitest, lefthook, cli-core, cli-messaging via `link:`; the two lint rules; `bin/tg`, `bin/tg-credentials` |
+| 0.3 | `tg session start qr\|phone`, `tg chats list`, `tg messages list <chat>`, `tg messages send me <text>` — no store |
+| 0.4 | spike report in `tg-cli/docs/plans/`: every measurement in §9's criteria, and the A/B transport choice |
 
-**Phase 1 — foundation.** cli-messaging comes into being here, seeded by what the spike used.
+**Phase 1 — foundation.**
 
 | PR | What |
 |---|---|
-| 1.1 | cli-messaging scaffold + domain, render, resolve, SQLite seam (copies from max-cli, leaks L1, L8, L9 fixed) |
-| 1.2 | cli-messaging guard + journal, generalised (L7) |
+| 1.1 | cli-messaging: the JSON contract gets a version (see below) |
+| 1.2 | cli-messaging guard + journal, generalised (DEBT-7) |
 | 1.3 | cli-messaging store v1: §4 schema, migrations with `min_compatible`, repositories, FTS; identities get a 1:1 person |
 | 1.4 | tg-cli on cli-messaging: the adapter behind the port; `account show`, `chats list\|show`, `messages list\|show\|context` |
 | 1.5 | `messages send\|reply` through the guard, with the send identity and `outcome_unknown` |
 | 1.6 | `doctor`, `commands`, `--json`/`--jsonl`, typed errors — and a test that stdout carries one JSON value |
 | 1.7 | `tg watch` in the foreground, `--jsonl` |
 
+**How the JSON contract is versioned** (brief §6 asks for "stable and versionable"). The output
+types live in cli-messaging, so the contract is cli-messaging's: adding a field is a minor version,
+removing or renaming one is a major version. `tg commands --json` prints `contract: <major>` so an
+agent can check it once. No version field inside each answer — max-cli's listing shape
+(`{items, page, limit, hasMore}`) stays as it is.
+
 **Phase 2 — local archive and search.** The business milestone: connect Telegram, index a few
 large groups, search the whole history locally.
 
 | PR | What |
 |---|---|
-| 2.1 | ingestion: every read writes to the store; `--offline` answers from it |
+| 2.1 | ingestion: every read writes to the store; `--offline` answers from it. The brief's `--source live\|local\|both` is reduced to `--offline` on purpose: max-cli ruled out a "freshness window" and the two CLIs should agree. `both` comes back with remote search (§6), where it means something |
 | 2.2 | `tg backfill <chat>` — resumable via `sync_ranges`, throttled, FloodWait-aware |
 | 2.3 | `tg serve` — one process owns the connection, ingests updates (new, edit, delete, reaction) |
 | 2.4 | tokenizer measurement (§6), then `tg messages search` on the `SearchProvider` |
@@ -397,7 +420,10 @@ max-cli §17), capability discovery. MCP tools and command builders that are now
 **Phase 4 — the platform.** max-cli moves onto cli-messaging (under max-cli's own rules: worktree,
 `🚧` claim on its backlog, a plan in its `docs_ai/`); its existing history is imported into the
 shared store; the capability model is filled by both; `auto:self` and `auto:phone` identity links
-are switched on. First cross-messenger read: `msg person show <name>`.
+are switched on. First cross-messenger read: `msg person show <name>`. **`msg` is a thin second
+command shipped by cli-messaging itself**: it reads the shared store only, opens no connection and
+imports no adapter. `tg` and `max` write the store; `msg` reads across it. This is where the CRM
+commands will live later.
 
 **Not in any phase here:** CRM commands, notes, embeddings, AI summarisation, polls, stickers,
 stories, calls, admin features, a UI. If it does not help *read → sync → search → context → safe
@@ -424,24 +450,26 @@ Run against the owner's real account, sending only to Saved Messages.
 
 | id | Risk | Mitigation |
 |---|---|---|
-| R1 | `better-sqlite3` native build fails on global install | spike criterion 7; transport B |
-| R2 | mtcute is pre-1.0; the API moves | exact pin; all of it behind `src/telegram/` |
-| R3 | two processes drive one session and corrupt update state | one owner process (`tg serve`); others one-shot without updates |
-| R4 | FloodWait while backfilling large groups | throttle, resumable ranges, typed `rate_limited`, never retry sends |
-| R5 | account limits for unofficial clients (spam, shared `api_id`) | registered `api_id` (NEED-C), guard limits, no bulk send features |
-| R6 | update gaps silently lose deletes and edits | cut `sync_ranges` at a gap; `sync status` shows it |
-| R7 | two CLIs, one store, different schema versions | additive migrations + `min_compatible` (§4) |
-| R8 | trigram index size and ranking on large groups | Phase 2 measurement before committing (§6) |
-| R9 | Telegram message ids unique per account in private chats | `account_pk` on messages; composite keys everywhere (L2) |
-| R10 | the session database leaks through backup/export/doctor | excluded by path, and a test for each |
+| RISK-1 | `better-sqlite3` native build fails on global install | spike criterion 7; transport B |
+| RISK-2 | mtcute is pre-1.0; the API moves | exact pin; all of it behind `src/telegram/` |
+| RISK-3 | two processes drive one session and corrupt update state | one owner process (`tg serve`); others one-shot without updates |
+| RISK-4 | FloodWait while backfilling large groups | throttle, resumable ranges, typed `rate_limited`, never retry sends |
+| RISK-5 | account limits for unofficial clients (spam, shared `api_id`) | registered `api_id` (NEED-3), guard limits, no bulk send features |
+| RISK-6 | update gaps silently lose deletes and edits | cut `sync_ranges` at a gap; `sync status` shows it |
+| RISK-7 | two CLIs, one store, different schema versions | additive migrations + `min_compatible` (§4) |
+| RISK-8 | trigram index size and ranking on large groups | Phase 2 measurement before committing (§6) |
+| RISK-9 | Telegram message ids unique per account in private chats | `account_pk` on messages; composite keys everywhere (DEBT-2) |
+| RISK-10 | the session database leaks through backup/export/doctor | excluded by path, and a test for each |
+| RISK-11 | a test or a branch build migrates the owner's real store — forward-only, so it cannot be undone | `MESSAGING_STORE` set by the test sandbox and by `bin/tg`; a test asserts it (§4) |
 
 ## 11. Decisions that need the owner
 
-- **NEED-A — one store for all messengers, or one file per CLI?** Recommended: one file in
+- **NEED-1 — one store for all messengers, or one file per CLI?** Recommended: one file in
   `~/.local/share/cli-messaging/`, with `min_compatible`. Per-CLI files make every cross-messenger
-  query an `ATTACH` with no foreign keys.
-- **NEED-B — keep max-cli untouched until Phase 4?** Recommended: yes. max-cli has several agents,
-  a security batch and a pre-release in flight; its own ruling (`NEED-147`) already says the package
+  query an `ATTACH` with no foreign keys, and the `msg` command (Phase 4) would have nothing single
+  to read.
+- **NEED-2 — keep max-cli untouched until Phase 4?** Recommended: yes. max-cli has several agents,
+  a security batch and a pre-release in flight; its own ruling (max-cli `NEED-147`) already says the package
   is extracted when the second messenger starts, which is this.
-- **NEED-C — whose `api_id` does a published `tg` use?** Recommended: for the spike, the owner's own
+- **NEED-3 — whose `api_id` does a published `tg` use?** Recommended: for the spike, the owner's own
   from my.telegram.org; at publication, one registered for the app, overridable per user.
