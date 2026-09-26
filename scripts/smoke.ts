@@ -7,6 +7,7 @@
 import { mkdtempSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
+import { settingsFor } from "../src/cli/index.js"
 import { formatLocator, parseLocator, renderMessages } from "../src/index.js"
 import { openCache } from "../src/store/index.js"
 
@@ -32,6 +33,13 @@ database.close()
 const locator = { provider: "telegram", account: "1", chat: "-1002", message: "3" }
 check("a locator round-trips", JSON.stringify(parseLocator(formatLocator(locator))) === JSON.stringify(locator))
 check("an empty feed renders", renderMessages([]) === "(nothing)")
+
+const app = { command: "app", appName: "app-cli", envPrefix: "APP", description: "", version: "0" }
+const settings = settingsFor(app).resolveSettings(
+  { timeout: "2s" },
+  { env: {}, configDir: mkdtempSync(join(tmpdir(), "cli-messaging-smoke-")) },
+)
+check("settings resolve with no file", settings.profile === "default" && settings.commandTimeoutMs === 2000)
 
 if (failures.length > 0) {
   console.error(`smoke failed under ${runtime}:\n${failures.map((one) => `  - ${one}`).join("\n")}`)

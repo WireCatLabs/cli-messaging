@@ -10,13 +10,16 @@ importers:
     dependencies:
       '@leemour/cli-core':
         specifier: 0.7.0
-        version: 0.7.0(typescript@7.0.2)
+        version: 0.7.0(commander@15.0.0)(typescript@7.0.2)
       qrcode-generator:
         specifier: 2.0.4
         version: 2.0.4
       string-width:
         specifier: 8.3.0
         version: 8.3.0
+      valibot:
+        specifier: 1.5.0
+        version: 1.5.0(typescript@7.0.2)
       wrap-ansi:
         specifier: 10.0.2
         version: 10.0.2
@@ -27,6 +30,9 @@ importers:
       '@types/node':
         specifier: ^22.20.4
         version: 22.20.4
+      commander:
+        specifier: 15.0.0
+        version: 15.0.0
       lefthook:
         specifier: ^2.1.8
         version: 2.1.14
@@ -479,6 +485,10 @@ packages:
     resolution: {integrity: sha512-+W/5efTR7y5HRD7gACw9yQjqMVvEMLBHmboM/kPWam+H+Hmyrgjh6YncVKK122YZkXrLudzTuAukUw9FnMf7IQ==}
     engines: {node: 10.* || >= 12.*}
 
+  commander@15.0.0:
+    resolution: {integrity: sha512-z67u4ZhzCL/Tydu1lJARtEZYWbWaN7oYLHbsuzocr6y4N6WZAagG3RQ4FW61V1/0+jImpj293XfrcYnd1qxtPg==}
+    engines: {node: '>=22.12.0'}
+
   detect-libc@2.1.2:
     resolution: {integrity: sha512-Btj2BOOO83o3WyH59e8MgXsxEQVcarkUOpEYrubB0urwnN10yQ364rsiByU11nZlqWYZm05i/of7io4mzihBtQ==}
     engines: {node: '>=8'}
@@ -920,7 +930,7 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.6.0
 
-  '@leemour/cli-core@0.7.0(typescript@7.0.2)':
+  '@leemour/cli-core@0.7.0(commander@15.0.0)(typescript@7.0.2)':
     dependencies:
       cli-table3: 0.6.5
       env-paths: 4.0.0
@@ -929,6 +939,7 @@ snapshots:
       valibot: 1.5.0(typescript@7.0.2)
     optionalDependencies:
       '@napi-rs/keyring': 2.1.0
+      commander: 15.0.0
     transitivePeerDependencies:
       - typescript
 
@@ -1136,6 +1147,8 @@ snapshots:
       string-width: 4.2.3
     optionalDependencies:
       '@colors/colors': 1.5.0
+
+  commander@15.0.0: {}
 
   detect-libc@2.1.2: {}
 
