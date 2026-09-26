@@ -1,0 +1,10 @@
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+*.log
+.DS_Store
+
+# The working trail, kept on the machine doing the work.
+/docs_ai/
+.claude/settings.local.json

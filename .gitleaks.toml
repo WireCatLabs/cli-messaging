@@ -1,0 +1,22 @@
+# Secret scanning for a package whose whole job is handling other people's secrets.
+#
+#   gitleaks git --redact .              the whole history
+#   gitleaks git --staged --redact .     what is about to be committed — the pre-commit hook
+#
+# `--redact` matters: without it a finding prints the secret into your terminal and your CI log,
+# which is a second leak on top of the first.
+#
+# The default rules do the work here — this package speaks to no particular provider, so there is
+# no vendor-shaped token to add a rule for. What it needs is an allowlist that keeps the test
+# fixtures from crying wolf, because a scanner people learn to ignore is worse than none.
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Values the tests write on purpose"
+regexTarget = "match"
+regexes = [
+  '''(?i)s3cret|from-env|from-keyring|hunter2|t0ken|secret-[ab]|in-keyring''',
+]
+paths = ['''pnpm-lock\.yaml''']
