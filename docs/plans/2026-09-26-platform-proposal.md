@@ -503,7 +503,7 @@ Run against the owner's real account, sending only to Saved Messages.
 
 | id | Risk | Mitigation |
 |---|---|---|
-| RISK-1 | `better-sqlite3` native build fails on global install | **happened** with pnpm (2026-09-27); session storage moved to the runtime's own SQLite |
+| RISK-1 | `better-sqlite3` native build fails on global install | **happened** with pnpm (2026-09-27): fixed by moving session storage to the runtime's own SQLite. npm is only mitigated: it still runs the install script and needs a prebuilt binary; the real fix is `@mtcute/core` with our own transport |
 | RISK-2 | mtcute is pre-1.0; the API moves | exact pin; all of it behind `src/telegram/` |
 | RISK-3 | two processes drive one session and corrupt update state | one owner process (`tg serve`); others one-shot without updates |
 | RISK-4 | FloodWait while backfilling large groups | throttle, resumable ranges, typed `rate_limited`, never retry sends |
