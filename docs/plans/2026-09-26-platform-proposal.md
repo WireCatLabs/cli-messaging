@@ -54,7 +54,7 @@ max-cli already drew this line: rule `CLI-30` (ruling `NEED-147`, `ASK-24`) forb
 `src/domain/models.ts`, `src/cache/**`, `src/rendering/**`, `src/resolve.ts` from importing
 anything MAX, "so the package is a move, not an untangling"
 (`max-cli/docs/dev/ARCHITECTURE.md:48-53`). The plan is to **copy** those files, not move them —
-max-cli stays untouched until the Telegram slice works (§6, Phase 4).
+max-cli stays untouched until the Telegram slice works (§8, Phase 4).
 
 | max-cli file | In cli-messaging | Change needed |
 |---|---|---|
