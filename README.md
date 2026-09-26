@@ -42,6 +42,20 @@ pnpm lint && pnpm typecheck && pnpm test
 pnpm smoke:bun    # the same exports, run under Bun
 ```
 
+## Releasing
+
+Raise `version` in `package.json` through a pull request, merge it, then on `main`:
+
+```sh
+bin/release --local   # from this machine: NPM_TOKEN if exported, else the keyring (service npm, account leemour)
+bin/release           # from GitHub Actions, once npm trusts .github/workflows/release.yml
+```
+
+Both refuse a dirty tree, a branch other than `main`, an unpushed `main` and a version npm already
+has, run every check, and tag `v<version>` once npm shows it. The token is never printed and never
+written to a file. After the first publish, add a trusted publisher on npmjs.com (`leemour` /
+`cli-messaging` / `release.yml`) so the second form needs no token at all.
+
 ## Licence
 
 MIT.
