@@ -205,6 +205,14 @@ export interface Page<T> {
   hasMore: boolean
 }
 
+/** Who a profile is logged in as. */
+export interface Account {
+  id: Id
+  name: string | null
+  /** The public handle, without `@`, when there is one. */
+  username: string | null
+}
+
 export interface Profile {
   id: Id
   name: string | null
