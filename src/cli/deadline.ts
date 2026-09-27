@@ -32,18 +32,21 @@ export const withDeadline = async <T>(
   if (ms === undefined) return body()
 
   let timer: NodeJS.Timeout | undefined
+  let timedOut: CliError | undefined
   const expired = new Promise<never>((_, reject) => {
     timer = setTimeout(() => {
+      timedOut = new CliError("timeout", `the command did not finish within ${ms}ms — \`--timeout\` ended it`)
       // Sockets first, then the message: the rejection is what the person reads, and the closing
       // is what lets the process actually end once they have read it.
-      void Promise.allSettled(closeables.map((closeable) => closeable.close())).then(() =>
-        reject(new CliError("timeout", `the command did not finish within ${ms}ms — \`--timeout\` ended it`)),
-      )
+      void Promise.allSettled(closeables.map((closeable) => closeable.close())).then(() => reject(timedOut))
     }, ms)
   })
 
   try {
     return await Promise.race([body(), expired])
+  } catch (error) {
+    // Closing rejects the body's own request, and that rejection arrives first.
+    throw timedOut ?? error
   } finally {
     if (timer) clearTimeout(timer)
   }

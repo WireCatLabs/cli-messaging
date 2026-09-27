@@ -442,7 +442,7 @@ twice. The store and the guard wait for Phase 1.
 | PR | What |
 |---|---|
 | 1.1a | skeleton, part 1: program and `run()`, global flags, settings with each CLI's own fields in one strict schema, profile as the first word and its lock, command context with `--timeout`, paging. Copied from max-cli at `f1ee2ed`, with its config and profile tests. tg-cli moves onto it. **Done 2026-09-27** |
-| 1.1b | run records (`--record`, `runs`) — **after 1.2**: the guard protects a live account, run records are diagnostics |
+| 1.1b | run records (`--record`, `runs`) — **after 1.2**: the guard protects a live account, run records are diagnostics. `baseContext().run` records; the adapter names ids and counts; `runsCommand(app)` gives `runs list\|show\|path`. Failures before a command runs (usage errors) are not kept yet. **Done 2026-09-27** |
 | 1.2 | cli-messaging guard + journal, generalised (DEBT-7): the send id is a string, max-cli's numeric `cid` is still read. tg's `messages send`, `recipients` and `sends` go through it. **Done 2026-09-27** |
 | 1.3 | cli-messaging store v1: §4 schema, migrations with `min_compatible`, repositories, FTS; identities get a 1:1 person |
 | 1.4 | skeleton, part 2: the generic read commands with hooks — `session start\|end`, `account show`, `chats list\|show`, `messages list\|show\|context`, `contacts list\|show` — and the Telegram adapter behind them |

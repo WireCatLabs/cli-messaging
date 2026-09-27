@@ -7,7 +7,7 @@
 import { mkdtempSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { settingsFor } from "../src/cli/index.js"
+import { listRuns, readEvents, recorded, settingsFor } from "../src/cli/index.js"
 import { formatLocator, parseLocator, renderMessages } from "../src/index.js"
 import { openCache } from "../src/store/index.js"
 
@@ -40,6 +40,18 @@ const settings = settingsFor(app).resolveSettings(
   { env: {}, configDir: mkdtempSync(join(tmpdir(), "cli-messaging-smoke-")) },
 )
 check("settings resolve with no file", settings.profile === "default" && settings.commandTimeoutMs === 2000)
+
+const runsDir = join(mkdtempSync(join(tmpdir(), "cli-messaging-smoke-")), "runs")
+const recording = { app, command: "chats list", profile: "default", keepFailed: false, trace: false } as const
+await recorded({ ...recording, record: true, format: "json", runsDir }, async (events) => {
+  events({ event: "request", operation: "chats.list" })
+})
+const [kept] = listRuns(runsDir)
+check("a recorded run finishes", kept?.status === "success")
+check(
+  "its log is flushed on finish",
+  readEvents(join(runsDir, kept?.startedAt.slice(0, 10) ?? "", kept?.runId ?? "")).length === 1,
+)
 
 if (failures.length > 0) {
   console.error(`smoke failed under ${runtime}:\n${failures.map((one) => `  - ${one}`).join("\n")}`)

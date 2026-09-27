@@ -1,8 +1,11 @@
 import type { Renderer, RenderFormat, Streams } from "@leemour/cli-core"
 import type { Command } from "commander"
 import { resolveOutput } from "../output.js"
+import type { AppIdentity } from "./app.js"
 import { type Closeable, withDeadline } from "./deadline.js"
 import { rootOf } from "./profile.js"
+import type { EventSink } from "./runs/events.js"
+import { recorded } from "./runs/recording.js"
 import type { GlobalFlags, ResolveOptions, Settings } from "./settings.js"
 
 /** What every CLI's commands write to, when it is not the real terminal. A CLI adds its own fields. */
@@ -11,6 +14,8 @@ export interface BaseEnvironment {
   /** Whether a person is looking. Defaults to whether stdout is a terminal. */
   tty?: boolean
   env?: NodeJS.ProcessEnv
+  /** Set by `run()`; a command's run is recorded only when it is known whose run it is. */
+  app?: AppIdentity
 }
 
 const environments = new WeakMap<Command, BaseEnvironment>()
@@ -41,11 +46,11 @@ export interface BaseContext {
   streams: Streams
   env: NodeJS.ProcessEnv
   /**
-   * Runs the body inside `--timeout`, closing whatever was tracked when it expires. Whatever holds
-   * the process open — a connection — must be tracked **before** it can block, or a timed-out
-   * command reports the timeout and then hangs.
+   * Runs the body inside `--timeout`, closing whatever was tracked when it expires, and records it
+   * when `--record` asks or it fails. Whatever holds the process open — a connection — must be
+   * tracked **before** it can block, or a timed-out command reports the timeout and then hangs.
    */
-  run: <T>(body: () => Promise<T>) => Promise<T>
+  run: <T>(body: (events: EventSink) => Promise<T>) => Promise<T>
   track: (closeable: Closeable) => void
 }
 
@@ -70,9 +75,34 @@ export const baseContext = (command: Command, resolveSettings: Resolve): BaseCon
     color,
     streams,
     env,
-    run: (body) => withDeadline(settings.commandTimeoutMs, closeables, body),
+    // The deadline inside the record, so a timeout finishes the run as failed rather than leaving it running.
+    run: (body) =>
+      environment.app
+        ? recorded(
+            {
+              app: environment.app,
+              command: commandPath(command),
+              profile: settings.profile,
+              record: settings.record,
+              keepFailed: settings.keepFailedRuns,
+              trace: settings.trace,
+              keepDays: settings.keepRunsForDays,
+              format,
+              streams,
+              env,
+            },
+            (events) => withDeadline(settings.commandTimeoutMs, closeables, () => body(events)),
+          )
+        : withDeadline(settings.commandTimeoutMs, closeables, () => body(() => {})),
     track: (closeable) => {
       closeables.push(closeable)
     },
   }
+}
+
+/** `messages send` — the words that name commands, never the arguments: those can be a message. */
+const commandPath = (command: Command): string => {
+  const words: string[] = []
+  for (let current: Command | null = command; current?.parent; current = current.parent) words.unshift(current.name())
+  return words.join(" ")
 }
