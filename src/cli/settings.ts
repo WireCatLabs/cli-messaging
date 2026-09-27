@@ -407,3 +407,6 @@ const given = (value: string | undefined): string | undefined => {
   const trimmed = value?.trim()
   return trimmed === undefined || trimmed === "" ? undefined : trimmed
 }
+
+/** What `settingsFor` hands a CLI — named, so a CLI can export it without naming the schema library's types. */
+export type Configuration = ReturnType<typeof settingsFor>

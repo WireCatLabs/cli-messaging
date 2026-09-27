@@ -452,7 +452,8 @@ twice. The store and the guard wait for Phase 1.
 | 1.4b-3 | `contacts list\|show`: a contact is a one-to-one chat (max-cli `NEED-105`), so the list is a query over chats and works `--offline`; `show` is online — the person, their bio, and the chats shared with them. **Done 2026-09-27 — 1.4 is complete** |
 | 1.5 | `messages send\|reply` through the guard, with the send identity and `outcome_unknown`. Shared in `messagesCommand`; a reply records `replyTo` in the journal; `reply` also takes a `msg:` locator. The guard now takes its paths from the command's environment. **Done 2026-09-27** |
 | 1.6 | `doctor` (generic + Telegram checks), `commands` (with the contract version), `complete`, `config`, `runs`, `sends`, `recipients`, `update` — and a test that stdout carries one JSON value |
-| 1.6a | `recipients`, `sends` and `commands` (with `contract` and which commands write) shared; tg's test runs every command with `--json` and holds stdout to one JSON value, or nothing on failure. **Done 2026-09-27** — `config`, `complete`, `doctor`, `update` remain |
+| 1.6a | `recipients`, `sends` and `commands` (with `contract` and which commands write) shared; tg's test runs every command with `--json` and holds stdout to one JSON value, or nothing on failure. **Done 2026-09-27** |
+| 1.6b | `config show\|set\|unset` shared: every file setting with its source, a messenger's own included; profiles from the file and from remembered accounts; `--defaults` refused under a profile lock. **Done 2026-09-27** — `complete`, `doctor`, `update` remain |
 | 1.7 | `watch` in the foreground, `--jsonl` |
 
 **How the JSON contract is versioned** (brief §6 asks for "stable and versionable"). The output
