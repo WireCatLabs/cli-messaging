@@ -104,6 +104,8 @@ export interface Message {
   chatId: Id
   senderId: Id | null
   senderName: string | null
+  /** `senderId` is a chat, not a person — a channel post, or a message sent as the group. */
+  senderIsChat?: boolean
   /** ISO 8601. */
   timestamp: string
   /**

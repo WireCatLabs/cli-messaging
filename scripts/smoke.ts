@@ -9,7 +9,7 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { listRuns, readEvents, recorded, settingsFor } from "../src/cli/index.js"
 import { formatLocator, parseLocator, renderMessages } from "../src/index.js"
-import { openCache } from "../src/store/index.js"
+import { openCache, openStore } from "../src/store/index.js"
 
 const runtime = typeof (globalThis as { Bun?: unknown }).Bun === "undefined" ? "node" : "bun"
 const failures: string[] = []
@@ -52,6 +52,27 @@ check(
   "its log is flushed on finish",
   readEvents(join(runsDir, kept?.startedAt.slice(0, 10) ?? "", kept?.runId ?? "")).length === 1,
 )
+
+const store = await openStore({ path: join(mkdtempSync(join(tmpdir(), "cli-messaging-smoke-")), "messages.db") })
+const account = { provider: "telegram", account: "1" }
+const stored = {
+  id: "3",
+  chatId: "-1002",
+  senderId: "7",
+  senderName: "Иван",
+  timestamp: "2026-09-27T10:00:00.000Z",
+  editedAt: null,
+  text: "Иван Петров пишет",
+  outgoing: false,
+  attachments: [],
+  replyTo: null,
+  forwardedFrom: null,
+  reactions: null,
+}
+store.saveMessages(account, "-1002", [stored], { via: "smoke" })
+check("the store gives a message back", store.messages(account, "-1002", { limit: 5 }).items[0]?.text === stored.text)
+check("the store finds inside a Cyrillic word", store.search("етро", { limit: 5 }).items.length === 1)
+store.close()
 
 if (failures.length > 0) {
   console.error(`smoke failed under ${runtime}:\n${failures.map((one) => `  - ${one}`).join("\n")}`)

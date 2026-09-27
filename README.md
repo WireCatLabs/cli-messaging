@@ -4,9 +4,9 @@ The messenger-neutral half of a messaging command line tool, shared by
 [`tg-cli`](https://github.com/leemour/tg-cli) and, later, [`max-cli`](https://github.com/leemour/max-cli).
 Built on [`@leemour/cli-core`](https://github.com/leemour/cli-core).
 
-**Status: 0.3.0.** The domain model, message locators, message rendering, name
+**Status: 0.4.0.** The domain model, message locators, message rendering, name
 resolution, the SQLite seam that runs under Node and Bun, and the first part of the command
-skeleton, the send guard and run records. The store follows — see
+skeleton, the send guard, run records and the message store — see
 [the platform proposal](docs/plans/2026-09-26-platform-proposal.md).
 
 ## The rule this package keeps
@@ -18,7 +18,7 @@ provider has travels in `providerMetadata`.
 | | |
 |---|---|
 | `.` | `Chat`, `Message`, `Contact`, `Page`… · `formatLocator` / `parseLocator` · `renderMessages` · `pickChat` / `pickPerson` |
-| `./store` | `openCache` — `node:sqlite` under Node, `bun:sqlite` under Bun, WAL and a busy timeout on both |
+| `./store` | `openCache` — `node:sqlite` under Node, `bun:sqlite` under Bun, WAL and a busy timeout on both · `openStore` — the shared message store: one file for every messenger (`MESSAGING_STORE` overrides where), forward-only migrations with `min_compatible`, every sender an identity with a person of their own, edits kept as revisions, trigram search |
 | `./sends` | the send guard: read-only profiles, an allow-list of actions, a recipient list, an hourly limit, and a journal of every attempt that never holds the text; `newSendId` for a send's identity across retries |
 | `./cli` | the command skeleton: `run` (never throws, returns an exit code), the global flags, `settingsFor` (flag → environment → file → default, one strict file schema with each CLI's own fields), the profile as the first word, `--timeout` that closes what a command holds, paging, and run records: `--record` keeps a run's ids and timings (never content), a failure is kept unless `--no-record`, and `runsCommand` gives `runs list\|show\|path` |
 
