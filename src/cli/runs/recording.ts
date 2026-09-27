@@ -80,9 +80,15 @@ export const recorded = async <T>(options: RecordingOptions, body: (events: Even
         ...(run ? {} : { keptBecauseFailed: true }),
       })
     }
+    if (typeof error === "object" && error !== null) settled.add(error)
     throw error
   }
 }
+
+/** Failures a run already dealt with — kept, or not kept by the owner's choice. `run()`'s last catch skips them. */
+const settled = new WeakSet<object>()
+
+export const wasSettled = (error: unknown): boolean => typeof error === "object" && error !== null && settled.has(error)
 
 const HELD_AT_MOST = 500
 

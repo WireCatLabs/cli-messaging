@@ -1,4 +1,4 @@
-import { mkdtempSync, readdirSync, readFileSync } from "node:fs"
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { CliError, captureStreams } from "@leemour/cli-core"
@@ -18,9 +18,13 @@ const BODY = "the pin is 4321"
 
 type Action = (context: BaseContext) => Promise<unknown>
 
-const call = async (argv: string[], action: Action = async () => {}) => {
+const call = async (argv: string[], action: Action = async () => {}, config?: string) => {
   const root = mkdtempSync(join(tmpdir(), "runs-recording-"))
   const env = { APP_STATE_DIR: join(root, "state"), APP_CONFIG_DIR: join(root, "config") }
+  if (config !== undefined) {
+    mkdirSync(env.APP_CONFIG_DIR, { recursive: true })
+    writeFileSync(join(env.APP_CONFIG_DIR, "config.json"), config)
+  }
   const streams = captureStreams()
   const definition = {
     app,
@@ -83,6 +87,7 @@ describe("a recorded run", () => {
     })
 
     expect(code).toBe(11)
+    expect(listRuns(runsDir)).toHaveLength(1)
     const [metadata] = listRuns(runsDir)
     expect(metadata).toMatchObject({
       status: "failed",
@@ -123,6 +128,42 @@ describe("a recorded run", () => {
   })
 })
 
+describe("a failure before the command runs", () => {
+  it("is kept, naming the command and never what was typed", async () => {
+    const { code, runsDir } = await call(["messages", "send", TITLE, "--bogus"])
+
+    expect(code).not.toBe(0)
+    expect(listRuns(runsDir)).toHaveLength(1)
+    expect(listRuns(runsDir)[0]).toMatchObject({
+      command: "messages send",
+      status: "failed",
+      errorCode: "validation_error",
+      keptBecauseFailed: true,
+    })
+    expect(everythingUnder(runsDir)).not.toContain(TITLE)
+  })
+
+  it("is kept for a profile with no command after it", async () => {
+    const { code, runsDir } = await call(["work"])
+
+    expect(code).toBe(2)
+    expect(listRuns(runsDir)[0]).toMatchObject({ command: "app", profile: "work", errorCode: "validation_error" })
+  })
+
+  it("is kept when the configuration will not load", async () => {
+    const { code, runsDir } = await call(["messages", "send", TITLE, BODY], undefined, "{ not json")
+
+    expect(code).not.toBe(0)
+    expect(listRuns(runsDir)).toHaveLength(1)
+    expect(listRuns(runsDir)[0]).toMatchObject({ command: "messages send", status: "failed" })
+  })
+
+  it("is not kept with --no-record, nor for --help", async () => {
+    expect(listRuns((await call(["messages", "send", TITLE, "--bogus", "--no-record"])).runsDir)).toEqual([])
+    expect(listRuns((await call(["messages", "--help"])).runsDir)).toEqual([])
+  })
+})
+
 describe("the runs command", () => {
   it("lists, shows and locates a recorded run without starting one of its own", async () => {
     const { runsDir, env } = await call(["messages", "send", TITLE, BODY, "--record"])
@@ -138,7 +179,8 @@ describe("the runs command", () => {
     expect(shown.events.map((event: { event: string }) => event.event)).toEqual(["request", "response"])
     expect(shown.events[0]).not.toHaveProperty("runId")
     expect((await read(["runs", "path", metadata?.runId ?? "", "--json"])).answer.path).toContain(runsDir)
-    expect((await read(["runs", "path", "no-such-run"])).code).toBe(6)
     expect(listRuns(runsDir)).toHaveLength(1)
+    expect((await read(["runs", "path", "no-such-run"])).code).toBe(6)
+    expect(listRuns(runsDir).map((one) => one.command)).toContain("runs path")
   })
 })
