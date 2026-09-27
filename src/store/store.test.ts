@@ -291,6 +291,32 @@ describe("finding people and what they wrote", () => {
   })
 })
 
+describe("searching message text", () => {
+  it("**finds a Russian word by its stem, whatever its ending**, and every word asked for", async () => {
+    const store = await openStore({ path: fresh() })
+    store.saveMessages(
+      ME,
+      chat.id,
+      [
+        message({ id: "1", text: "Сдаю квартиру в центре" }),
+        message({ id: "2", text: "Ищу квартира рядом с морем" }),
+        message({ id: "3", text: "Продаю машину в центре" }),
+      ],
+      { via: "history" },
+    )
+    const ids = (query: string) =>
+      store
+        .search(query, { limit: 10 })
+        .items.map((hit) => hit.id)
+        .sort()
+
+    expect(ids("квартир")).toEqual(["1", "2"])
+    expect(ids("квартир центр")).toEqual(["1"])
+    expect(ids("вартир")).toEqual([])
+    store.close()
+  })
+})
+
 describe("the stretches held completely", () => {
   it("**merge when they overlap or touch**, and stay apart across a gap", async () => {
     const store = await openStore({ path: fresh() })
@@ -355,6 +381,7 @@ describe("migrating the store", () => {
       expect(store.messages(ME, chat.id, { limit: 5 }).items.map((one) => one.text)).toEqual([
         "kept across the upgrade",
       ])
+      expect(store.search("across", { limit: 5 }).items.map((hit) => hit.id)).toEqual(["42"])
       store.close()
     }
   })

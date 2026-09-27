@@ -123,6 +123,46 @@ export const messagesCommand = (messenger: Messenger): Command => {
     else context.renderer.result(window.before === 0 && window.after === 0 ? found[0] : { items: found })
   }
 
+  messages
+    .command("search")
+    .description("search the local store — what was read, backfilled or kept by serve; never asks the messenger")
+    .argument("<words...>", "every word must appear, as a word or the start of one: квартир finds квартира")
+    .option("--chat <chat>", `only this chat: ${messenger.chatArgument}`)
+    .option("--limit <n>", "how many", (value) => Number.parseInt(value, 10))
+    .action(async function (this: Command, words: string[]) {
+      const context = messengerContext(this, messenger)
+      const { chat } = this.opts<{ chat?: string }>()
+      const { limit } = context.settings
+      const page = await context.withStore((store, account) =>
+        store.find({
+          text: words.join(" "),
+          account,
+          limit,
+          ...(chat === undefined ? {} : { chatId: storedChatId(messenger, chat, store, account) }),
+        }),
+      )
+      if (context.format === "pretty") {
+        context.streams.data(
+          page.items
+            .map(
+              (hit) =>
+                `${hit.chatTitle ?? hit.chatId}  ${hit.locator}\n${renderMessages([hit], {
+                  color: context.color,
+                  verbosity: context.settings.detail,
+                  senderColors: context.settings.senderColors,
+                  profile: context.profile,
+                  provider: messenger.provider,
+                })}`,
+            )
+            .join("\n"),
+        )
+        if (page.items.length === 0)
+          context.renderer.note("nothing found — only what is in the local store is searched")
+        return
+      }
+      context.renderer.result({ items: page.items, limit, hasMore: page.hasMore })
+    })
+
   annotate(messages.command("send"), { mutates: true })
     .description("send a text message; without [text], the text is read from stdin")
     .argument("<chat>", messenger.chatArgument)

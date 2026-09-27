@@ -201,6 +201,32 @@ export const MIGRATIONS: Migration[] = [
        )`,
     ],
   },
+  {
+    version: 3,
+    minCompatible: 1,
+    statements: [
+      // Message text by whole words and their beginnings, not by any three letters: measured on 4,517
+      // real messages (2026-09-27), half the index of trigram, and a prefix query finds about 90% of
+      // what trigram finds for a Russian word stem. Names stay trigram — short, and matched inside.
+      "DROP TRIGGER messages_fts_ai",
+      "DROP TRIGGER messages_fts_au",
+      "DROP TRIGGER messages_fts_ad",
+      "DROP TABLE messages_fts",
+      `CREATE VIRTUAL TABLE messages_fts USING fts5(text, content='messages', content_rowid='pk',
+         tokenize='unicode61 remove_diacritics 2')`,
+      `CREATE TRIGGER messages_fts_ai AFTER INSERT ON messages BEGIN
+         INSERT INTO messages_fts (rowid, text) VALUES (new.pk, new.text);
+       END`,
+      `CREATE TRIGGER messages_fts_au AFTER UPDATE OF text ON messages BEGIN
+         INSERT INTO messages_fts (messages_fts, rowid, text) VALUES ('delete', old.pk, old.text);
+         INSERT INTO messages_fts (rowid, text) VALUES (new.pk, new.text);
+       END`,
+      `CREATE TRIGGER messages_fts_ad AFTER DELETE ON messages BEGIN
+         INSERT INTO messages_fts (messages_fts, rowid, text) VALUES ('delete', old.pk, old.text);
+       END`,
+      "INSERT INTO messages_fts (messages_fts) VALUES ('rebuild')",
+    ],
+  },
 ]
 
 const HISTORY = `CREATE TABLE IF NOT EXISTS schema_migrations (
