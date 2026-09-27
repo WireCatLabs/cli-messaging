@@ -4,9 +4,9 @@ The messenger-neutral half of a messaging command line tool, shared by
 [`tg-cli`](https://github.com/leemour/tg-cli) and, later, [`max-cli`](https://github.com/leemour/max-cli).
 Built on [`@leemour/cli-core`](https://github.com/leemour/cli-core).
 
-**Status: 0.1.0, not published.** The domain model, message locators, message rendering, name
+**Status: 0.2.0.** The domain model, message locators, message rendering, name
 resolution, the SQLite seam that runs under Node and Bun, and the first part of the command
-skeleton. The send guard, run records and the store follow — see
+skeleton and the send guard. Run records and the store follow — see
 [the platform proposal](docs/plans/2026-09-26-platform-proposal.md).
 
 ## The rule this package keeps
@@ -19,6 +19,7 @@ provider has travels in `providerMetadata`.
 |---|---|
 | `.` | `Chat`, `Message`, `Contact`, `Page`… · `formatLocator` / `parseLocator` · `renderMessages` · `pickChat` / `pickPerson` |
 | `./store` | `openCache` — `node:sqlite` under Node, `bun:sqlite` under Bun, WAL and a busy timeout on both |
+| `./sends` | the send guard: read-only profiles, an allow-list of actions, a recipient list, an hourly limit, and a journal of every attempt that never holds the text; `newSendId` for a send's identity across retries |
 | `./cli` | the command skeleton: `run` (never throws, returns an exit code), the global flags, `settingsFor` (flag → environment → file → default, one strict file schema with each CLI's own fields), the profile as the first word, `--timeout` that closes what a command holds, paging |
 
 ⚠ **Errors are recognised by shape, not by class** (`isCliFailure`). A package linked during
