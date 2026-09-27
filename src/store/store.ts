@@ -54,6 +54,8 @@ export interface MessageFilter {
   senders?: Id[]
   together?: boolean
   text?: string
+  /** Only this chat of the account; needs `account`. */
+  chatId?: Id
   /** With `perChat`, the newest `limit` of each chat rather than of all of them together. */
   limit: number
   perChat?: boolean
@@ -377,6 +379,7 @@ const storeOver = (database: CacheDatabase, now: () => number): MessageStore => 
     senders,
     together = false,
     text,
+    chatId,
     limit,
     perChat = false,
   }: MessageFilter): Page<StoredHit> => {
@@ -391,7 +394,7 @@ const storeOver = (database: CacheDatabase, now: () => number): MessageStore => 
     const parameters: SqlValue[] = []
     if (trimmed) {
       conditions.push("m.pk IN (SELECT rowid FROM messages_fts WHERE messages_fts MATCH ?)")
-      parameters.push(`"${trimmed.replaceAll('"', '""')}"`)
+      parameters.push(wordsOf(trimmed))
     }
     const scopeProvider = account?.provider ?? provider
     if (scopeProvider !== undefined) {
@@ -401,6 +404,10 @@ const storeOver = (database: CacheDatabase, now: () => number): MessageStore => 
     if (account) {
       conditions.push("a.native_id = ?")
       parameters.push(account.account)
+    }
+    if (chatId !== undefined) {
+      conditions.push("c.native_id = ?")
+      parameters.push(chatId)
     }
     if (senders?.length) {
       const ids = [...new Set(senders)]
@@ -712,4 +719,14 @@ const toMessage = (row: Record<string, unknown>, attachments: Attachment[]): Mes
     reactions: parsed(row.reactions) ?? null,
     ...present({ providerMetadata: parsed(row.provider_metadata) }),
   } as Message
+}
+
+/**
+ * Every word as the beginning of a word, all of them required: `квартир` finds квартира and
+ * квартиру, which an index of whole words would not. Punctuation separates words, as the index does.
+ */
+const wordsOf = (text: string): string => {
+  const words = text.match(/[\p{L}\p{N}]+/gu) ?? []
+  if (words.length === 0) throw new CliError("validation_error", "search needs a word — letters or digits")
+  return words.map((word) => `"${word}"*`).join(" ")
 }

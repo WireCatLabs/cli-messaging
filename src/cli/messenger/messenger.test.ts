@@ -258,6 +258,23 @@ describe("the shared read commands", () => {
     expect(existsSync(join(root, "m.db"))).toBe(false)
   })
 
+  it("**search the store without connecting**, and name each hit by its locator", async () => {
+    const root = mkdtempSync(join(tmpdir(), "messenger-"))
+    const env = { CHAT_STATE_DIR: join(root, "state"), MESSAGING_STORE: join(root, "m.db") }
+    await call(["messages", "context", "Book", "2", "--json"], async () => fake, env)
+    const never = async (): Promise<MessengerAdapter> => {
+      throw new Error("search must never connect")
+    }
+
+    const found = await call(["messages", "search", "chapt", "--json"], never, env)
+    const hits = JSON.parse(found.stdout[0] ?? "").items
+    expect(found.code).toBe(0)
+    expect(hits.map((hit: { id: string }) => hit.id)).toEqual(["3", "2", "1"])
+    expect(hits[0].locator).toBe("msg:chat/500/7/3")
+    const elsewhere = await call(["messages", "search", "chapt", "--chat", "999", "--json"], never, env)
+    expect(JSON.parse(elsewhere.stdout[0] ?? "").items).toEqual([])
+  })
+
   it("keep the account file where tg-cli 0.x kept it", () => {
     const tg = { command: "tg", appName: "tg-cli", envPrefix: "TG", description: "", version: "0" }
     expect(accountFileFor(tg, "work", { TG_STATE_DIR: "/state" })).toBe("/state/accounts/work.json")

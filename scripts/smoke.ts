@@ -71,7 +71,7 @@ const stored = {
 }
 store.saveMessages(account, "-1002", [stored], { via: "smoke" })
 check("the store gives a message back", store.messages(account, "-1002", { limit: 5 }).items[0]?.text === stored.text)
-check("the store finds inside a Cyrillic word", store.search("етро", { limit: 5 }).items.length === 1)
+check("the store finds a Cyrillic word by its beginning", store.search("Петр", { limit: 5 }).items.length === 1)
 store.close()
 
 if (failures.length > 0) {
