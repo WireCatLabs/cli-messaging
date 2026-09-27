@@ -49,6 +49,7 @@
     "prepublishOnly": "pnpm build"
   },
   "dependencies": {
+    "@bomb.sh/tab": "0.0.22",
     "@leemour/cli-core": "0.7.0",
     "qrcode-generator": "2.0.4",
     "string-width": "8.3.0",
