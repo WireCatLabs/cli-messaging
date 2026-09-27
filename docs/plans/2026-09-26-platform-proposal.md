@@ -454,7 +454,8 @@ twice. The store and the guard wait for Phase 1.
 | 1.6 | `doctor` (generic + Telegram checks), `commands` (with the contract version), `complete`, `config`, `runs`, `sends`, `recipients`, `update` — and a test that stdout carries one JSON value |
 | 1.6a | `recipients`, `sends` and `commands` (with `contract` and which commands write) shared; tg's test runs every command with `--json` and holds stdout to one JSON value, or nothing on failure. **Done 2026-09-27** |
 | 1.6b | `config show\|set\|unset` shared: every file setting with its source, a messenger's own included; profiles from the file and from remembered accounts; `--defaults` refused under a profile lock. **Done 2026-09-27** |
-| 1.6c | `complete` shared (`@bomb.sh/tab`, as max-cli): chat and person ids from the message store with titles as descriptions; a Tab never connects and never creates the store. **Done 2026-09-27** — `doctor`, `update` remain |
+| 1.6c | `complete` shared (`@bomb.sh/tab`, as max-cli): chat and person ids from the message store with titles as descriptions; a Tab never connects and never creates the store. **Done 2026-09-27** |
+| 1.6d | `doctor` shared: cli, config, remembered account, the store read without migrating, sends, runs, and `Messenger.diagnose` for the messenger's own facts; answers when everything is broken; `--online` connects once. `update` waits until a CLI is published — tg-cli is private. **Done 2026-09-27** |
 | 1.7 | `watch` in the foreground, `--jsonl` |
 
 **How the JSON contract is versioned** (brief §6 asks for "stable and versionable"). The output

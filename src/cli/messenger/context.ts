@@ -27,6 +27,8 @@ export interface Messenger {
   savedChatId?: (account: AccountKey) => Id
   /** The other person in a one-to-one chat, when the chat says who — a recipient list matches on it. */
   partnerOf?: (chat: Chat) => Id | undefined
+  /** What only this messenger can say about itself for `doctor`, read from disk — never a secret. */
+  diagnose?: (command: Command, context: BaseContext) => Promise<Record<string, unknown>>
 }
 
 export interface MessengerContext extends BaseContext {
