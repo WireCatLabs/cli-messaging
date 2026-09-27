@@ -456,7 +456,7 @@ twice. The store and the guard wait for Phase 1.
 | 1.6b | `config show\|set\|unset` shared: every file setting with its source, a messenger's own included; profiles from the file and from remembered accounts; `--defaults` refused under a profile lock. **Done 2026-09-27** |
 | 1.6c | `complete` shared (`@bomb.sh/tab`, as max-cli): chat and person ids from the message store with titles as descriptions; a Tab never connects and never creates the store. **Done 2026-09-27** |
 | 1.6d | `doctor` shared: cli, config, remembered account, the store read without migrating, sends, runs, and `Messenger.diagnose` for the messenger's own facts; answers when everything is broken; `--online` connects once. `update` waits until a CLI is published — tg-cli is private. **Done 2026-09-27** |
-| 1.7 | `watch` in the foreground, `--jsonl` |
+| 1.7 | `watch` in the foreground, `--jsonl`. `MessengerAdapter.watch` on a connection opened `{ listen: true }` (one-shot commands keep updates off); each message saved via `update`; Ctrl-C and `--timeout` end it with exit 0; `--json` refused; a closed pipe ends it at the next write. Edits, deletions and reactions (`--events`) wait for the background process (2.3). **Done 2026-09-27** |
 
 **How the JSON contract is versioned** (brief §6 asks for "stable and versionable"). The output
 types live in cli-messaging, so the contract is cli-messaging's: adding a field is a minor version,

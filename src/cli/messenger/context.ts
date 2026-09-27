@@ -11,6 +11,11 @@ import { observed } from "./observed.js"
 import type { MessengerAdapter } from "./port.js"
 import { stored } from "./stored.js"
 
+/** `listen` opens a connection that receives updates — only `watch` asks; the rest stay quiet. */
+export interface ConnectOptions {
+  listen?: boolean
+}
+
 /** What one messenger CLI hands the shared commands. Everything else about it stays in its own code. */
 export interface Messenger {
   app: AppIdentity
@@ -20,7 +25,7 @@ export interface Messenger {
    * Opens a connection for the command's profile, or throws a typed error saying how to log in.
    * Called inside `--timeout`; the context tracks and closes what it returns.
    */
-  connect: (command: Command, context: BaseContext) => Promise<MessengerAdapter>
+  connect: (command: Command, context: BaseContext, options?: ConnectOptions) => Promise<MessengerAdapter>
   /** The help for a `<chat>` argument, in this messenger's words. */
   chatArgument: string
   /** The chat `me` names, when the messenger has a notes-to-self chat. */
@@ -40,7 +45,7 @@ export interface MessengerContext extends BaseContext {
    * Connects inside `--timeout`, and closes on every path. What the reads answer is saved to the
    * message store, and each call is a run event.
    */
-  withMessenger: <T>(work: (messenger: MessengerAdapter) => Promise<T>) => Promise<T>
+  withMessenger: <T>(work: (messenger: MessengerAdapter) => Promise<T>, options?: ConnectOptions) => Promise<T>
   /** Answers from the message store alone, for `--offline`. Never connects and needs no credentials. */
   withStore: <T>(work: (store: MessageStore, account: AccountKey) => T) => Promise<T>
 }
@@ -55,39 +60,42 @@ export const messengerContext = (command: Command, messenger: Messenger): Messen
     profile,
     stdin: environmentOf(command).stdin ?? process.stdin,
     guard: guardFor(app, base.settings, base.renderer.warn, base.env),
-    withMessenger: (work) =>
-      base.run(async (events) => {
-        if (base.settings.offline) {
-          throw new CliError(
-            "validation_error",
-            "--offline answers only from what is kept locally: `chats list`, `messages list|show|context` and `contacts list`",
-          )
-        }
-        const connection = await messenger.connect(command, base)
-        base.track(connection)
-        let store: Promise<MessageStore | undefined> | undefined
-        try {
-          const self = connection.self()
-          if (self !== null) rememberAccount(app, profile, self, base.env)
-          const adapter = observed(connection, events)
-          return await work(
-            self === null
-              ? adapter
-              : stored(adapter, {
-                  account: { provider, account: self },
-                  store: () => {
-                    store ??= openStore({ env: base.env })
-                    return store
-                  },
-                  warn: base.renderer.warn,
-                  events,
-                }),
-          )
-        } finally {
-          await connection.close()
-          if (store) (await store.catch(() => undefined))?.close()
-        }
-      }),
+    withMessenger: (work, options = {}) =>
+      base.run(
+        async (events) => {
+          if (base.settings.offline) {
+            throw new CliError(
+              "validation_error",
+              "--offline answers only from what is kept locally: `chats list`, `messages list|show|context` and `contacts list`",
+            )
+          }
+          const connection = await messenger.connect(command, base, options)
+          base.track(connection)
+          let store: Promise<MessageStore | undefined> | undefined
+          try {
+            const self = connection.self()
+            if (self !== null) rememberAccount(app, profile, self, base.env)
+            const adapter = observed(connection, events)
+            return await work(
+              self === null
+                ? adapter
+                : stored(adapter, {
+                    account: { provider, account: self },
+                    store: () => {
+                      store ??= openStore({ env: base.env })
+                      return store
+                    },
+                    warn: base.renderer.warn,
+                    events,
+                  }),
+            )
+          } finally {
+            await connection.close()
+            if (store) (await store.catch(() => undefined))?.close()
+          }
+        },
+        { unbounded: options.listen === true },
+      ),
     withStore: (work) =>
       base.run(async () => {
         const account = recalledAccount(app, provider, profile, base.env)

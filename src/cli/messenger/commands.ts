@@ -2,11 +2,12 @@ import { CliError } from "@leemour/cli-core"
 import { annotate } from "@leemour/cli-core/commands"
 import { Command } from "commander"
 import { isLocator, parseLocator } from "../../domain/locator.js"
-import type { Chat, Contact } from "../../domain/models.js"
+import type { Chat, Contact, MessageHit } from "../../domain/models.js"
 import { renderMessages } from "../../render/messages.js"
 import { pickChat } from "../../resolve.js"
 import { newSendId } from "../../sends/send-id.js"
 import type { AccountKey, MessageStore } from "../../store/store.js"
+import { environmentOf } from "../context.js"
 import { renderPage, window, withPaging } from "../paging.js"
 import { type Messenger, messengerContext } from "./context.js"
 
@@ -320,3 +321,67 @@ const toContact = (chat: Chat): Contact => ({
 
 const byRecency = (a: Contact, b: Contact) => (b.lastMessagedAt ?? "").localeCompare(a.lastMessagedAt ?? "")
 const byName = (a: Contact, b: Contact) => (a.name ?? "").localeCompare(b.name ?? "")
+
+/**
+ * New messages as they arrive, until Ctrl-C or `--timeout` — both a normal end, exit 0: listening
+ * for a minute is a complete answer. One `MessageHit` per line with `--jsonl`; `--json` is refused,
+ * because a stream is not one value. Nothing is marked read.
+ */
+export const watchCommand = (messenger: Messenger): Command =>
+  new Command("watch")
+    .description("print new messages as they arrive, until Ctrl-C or --timeout (either ends it normally)")
+    .action(async function (this: Command) {
+      const context = messengerContext(this, messenger)
+      if (context.format === "json") {
+        throw new CliError("validation_error", "watch is a stream — use --jsonl for one message per line")
+      }
+      if (context.settings.offline)
+        throw new CliError("validation_error", "watch listens live; --offline has nothing to wait for")
+
+      const stop = new AbortController()
+      const given = environmentOf(this).signal
+      const end = () => stop.abort()
+      given?.addEventListener("abort", end, { once: true })
+      const signals = given ? [] : (["SIGINT", "SIGTERM"] as const)
+      for (const name of signals) process.once(name, end)
+      // `tg watch --jsonl | head -1`: once the reader is gone, the next write fails, and that is the end.
+      const closed = (error: NodeJS.ErrnoException) => {
+        if (error.code === "EPIPE") end()
+      }
+      if (!given) process.stdout.on("error", closed)
+      const timer =
+        context.settings.commandTimeoutMs === undefined ? undefined : setTimeout(end, context.settings.commandTimeoutMs)
+
+      const print = (message: MessageHit) => {
+        if (stop.signal.aborted) return
+        if (context.format === "jsonl") context.streams.data(JSON.stringify(message))
+        else
+          context.streams.data(
+            `${message.chatTitle ?? message.chatId}\n${renderMessages([message], {
+              color: context.color,
+              verbosity: context.settings.detail,
+              senderColors: context.settings.senderColors,
+              profile: context.profile,
+              provider: messenger.provider,
+            })}`,
+          )
+      }
+
+      try {
+        await context.withMessenger(
+          async (connection) => {
+            if (!connection.watch) {
+              throw new CliError("validation_error", `${messenger.app.command} cannot listen for new messages`)
+            }
+            context.renderer.note("listening — Ctrl-C to stop")
+            await connection.watch(print, stop.signal)
+          },
+          { listen: true },
+        )
+      } finally {
+        if (timer) clearTimeout(timer)
+        for (const name of signals) process.off(name, end)
+        if (!given) process.stdout.off("error", closed)
+        given?.removeEventListener("abort", end)
+      }
+    })
