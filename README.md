@@ -54,8 +54,8 @@ bin/release           # from GitHub Actions, once npm trusts .github/workflows/r
 
 Both refuse a dirty tree, a branch other than `main`, an unpushed `main` and a version npm already
 has, run every check, and tag `v<version>` once npm shows it. The token is never printed and never
-written to a file. After the first publish, add a trusted publisher on npmjs.com (`leemour` /
-`cli-messaging` / `release.yml`) so the second form needs no token at all.
+written to a file. The GitHub form publishes from the job in the `npm` environment, which is what
+npm's trusted publisher names: `leemour` / `cli-messaging` / `release.yml` / environment `npm`.
 
 ## Licence
 
