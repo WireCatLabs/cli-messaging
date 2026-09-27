@@ -461,7 +461,7 @@ large groups, search the whole history locally.
 
 | PR | What |
 |---|---|
-| 2.1 | ingestion: every read writes to the store; `--offline` answers from it. The brief's `--source live\|local\|both` is reduced to `--offline` on purpose: max-cli ruled out a "freshness window" and the two CLIs should agree. `both` comes back with remote search (§6), where it means something |
+| 2.1 | ingestion: every read writes to the store; `--offline` answers from it. The brief's `--source live\|local\|both` is reduced to `--offline` on purpose: max-cli ruled out a "freshness window" and the two CLIs should agree. `both` comes back with remote search (§6), where it means something  tg saves `chats`, `history`, `send` and `me` (not `resolve`, which would erase dialog fields); `--offline` answers `chats list` and `messages list`, byte-identical to the live answer. Migration 1 is frozen from here. **Done 2026-09-27** |
 | 2.2 | `tg backfill <chat>` — resumable via `sync_ranges`, throttled, FloodWait-aware |
 | 2.3 | skeleton, part 3: the background process (`serve`) from max-cli's `src/server/`; the Telegram adapter supplies the connection and ingests updates (new, edit, delete, reaction) |
 | 2.4 | tokenizer measurement (§6), then `tg messages search` on the `SearchProvider` |
