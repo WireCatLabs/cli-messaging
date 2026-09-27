@@ -86,7 +86,19 @@ export interface MessageStore {
   savePeople(provider: Provider, people: PersonFacts[]): void
   /** Everyone this provider's accounts have seen; with `account`, only who wrote in its chats. */
   people(provider: Provider, options?: { account?: Id }): PeopleLookup
+  /**
+   * Records that every message from `from` to `to` (inclusive, by ordering key) is held, merging it
+   * with the stretches it overlaps or touches. Answers the merged stretch.
+   */
+  markRange(key: AccountKey, chatId: Id, from: number, to: number): Range
+  /** The stretches held completely, oldest first. */
+  ranges(key: AccountKey, chatId: Id): Range[]
   close(): void
+}
+
+export interface Range {
+  from: number
+  to: number
 }
 
 export interface StoreOptions {
@@ -577,6 +589,37 @@ const storeOver = (database: CacheDatabase, now: () => number): MessageStore => 
       const everyone = rows.map(toContact)
       const byId = new Map(everyone.map((person) => [person.id, person]))
       return { get: (id) => byId.get(id), all: () => everyone }
+    },
+
+    markRange: (key, chatId, from, to) => {
+      let merged: Range = { from, to }
+      inTransaction(() => {
+        const chatKey = chatPkFor(accountPk(key), chatId)
+        const touching = all(
+          "SELECT from_key, to_key FROM sync_ranges WHERE chat_pk = ? AND from_key <= ? AND to_key >= ?",
+          chatKey,
+          to + 1,
+          from - 1,
+        )
+        for (const row of touching) {
+          merged = {
+            from: Math.min(merged.from, Number(row.from_key)),
+            to: Math.max(merged.to, Number(row.to_key)),
+          }
+        }
+        run("DELETE FROM sync_ranges WHERE chat_pk = ? AND from_key <= ? AND to_key >= ?", chatKey, to + 1, from - 1)
+        run("INSERT INTO sync_ranges (chat_pk, from_key, to_key) VALUES (?, ?, ?)", chatKey, merged.from, merged.to)
+      })
+      return merged
+    },
+
+    ranges: (key, chatId) => {
+      const accountKey = findAccountPk(key)
+      const chatKey = accountKey === undefined ? undefined : findChatPk(accountKey, chatId)
+      if (chatKey === undefined) return []
+      return all("SELECT from_key, to_key FROM sync_ranges WHERE chat_pk = ? ORDER BY from_key", chatKey).map(
+        (row) => ({ from: Number(row.from_key), to: Number(row.to_key) }),
+      )
     },
 
     close: () => database.close(),

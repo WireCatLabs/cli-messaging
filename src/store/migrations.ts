@@ -187,6 +187,20 @@ export const MIGRATIONS: Migration[] = [
        END`,
     ],
   },
+  {
+    version: 2,
+    minCompatible: 1,
+    statements: [
+      // The stretches of a chat held completely, by the provider's ordering key — Telegram's message
+      // id. A message missing from inside one was deleted; outside every one, it was never fetched.
+      `CREATE TABLE sync_ranges (
+         chat_pk  INTEGER NOT NULL REFERENCES chats (pk),
+         from_key INTEGER NOT NULL,
+         to_key   INTEGER NOT NULL,
+         PRIMARY KEY (chat_pk, from_key)
+       )`,
+    ],
+  },
 ]
 
 const HISTORY = `CREATE TABLE IF NOT EXISTS schema_migrations (

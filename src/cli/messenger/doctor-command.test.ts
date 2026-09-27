@@ -86,7 +86,10 @@ describe("doctor", () => {
     await call(["chats", "list"], env, async () => connection)
 
     const { answer } = await call(["doctor", "--json"], env, refused)
-    expect(answer).toMatchObject({ account: { remembered: "500" }, store: { exists: true, schema: 1, chats: 1 } })
+    expect(answer).toMatchObject({
+      account: { remembered: "500" },
+      store: { exists: true, schema: MIGRATIONS.at(-1)?.version, chats: 1 },
+    })
   })
 
   it("**answers when the configuration will not load**, and says why", async () => {
@@ -102,11 +105,14 @@ describe("doctor", () => {
   it("says a store from a newer version cannot be written, and leaves it as it was", async () => {
     const { env } = setup()
     const database = await openCache(env.MESSAGING_STORE)
-    migrate(database, { migrations: [...MIGRATIONS, { version: 2, minCompatible: 2, statements: [] }] })
+    const latest = MIGRATIONS.at(-1)?.version ?? 0
+    migrate(database, {
+      migrations: [...MIGRATIONS, { version: latest + 1, minCompatible: latest + 1, statements: [] }],
+    })
     database.close()
 
     const { answer } = await call(["doctor", "--json"], env, refused)
-    expect(answer.store).toMatchObject({ schema: 2, speaks: 1, writable: false })
+    expect(answer.store).toMatchObject({ schema: latest + 1, speaks: latest, writable: false })
   })
 
   it("with --online, connects once, and says a failure rather than failing", async () => {
