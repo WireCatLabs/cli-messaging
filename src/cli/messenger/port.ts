@@ -1,4 +1,14 @@
-import type { Account, Chat, ChatCard, Id, Message, Page, PersonCard, WindowedMessage } from "../../domain/models.js"
+import type {
+  Account,
+  Chat,
+  ChatCard,
+  Id,
+  Message,
+  MessageHit,
+  Page,
+  PersonCard,
+  WindowedMessage,
+} from "../../domain/models.js"
 
 export interface Sent {
   message: Message
@@ -27,6 +37,11 @@ export interface MessengerAdapter {
   around(chat: string, messageId: Id, window: { before: number; after: number }): Promise<WindowedMessage[]>
   /** `replyTo` is a message id in the same chat. */
   send(chatId: Id, text: string, options: { sendId: string; replyTo?: Id }): Promise<Sent>
+  /**
+   * New messages as they arrive, until `signal` aborts. Only on a connection opened with
+   * `{ listen: true }`; a messenger that cannot listen leaves it out.
+   */
+  watch?(onMessage: (message: MessageHit) => void, signal: AbortSignal): Promise<void>
   logout(): Promise<void>
   close(): Promise<void>
 }

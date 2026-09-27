@@ -89,6 +89,23 @@ export const observed = (messenger: MessengerAdapter, events: EventSink): Messen
         () => messenger.send(chatId, text, options),
         (sent) => ({ ids: { message: sent.message.id } }),
       ),
+    ...(messenger.watch
+      ? {
+          watch: async (onMessage, signal) => {
+            let count = 0
+            await timed(
+              "messages.watch",
+              {},
+              () =>
+                messenger.watch?.((message) => {
+                  count += 1
+                  onMessage(message)
+                }, signal) ?? Promise.resolve(),
+              () => ({ counts: { messages: count } }),
+            )
+          },
+        }
+      : {}),
     logout: () => timed("session.logout", {}, () => messenger.logout()),
     close: () => messenger.close(),
   }

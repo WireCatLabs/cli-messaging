@@ -14,6 +14,8 @@ export interface BaseEnvironment {
   /** Whether a person is looking. Defaults to whether stdout is a terminal. */
   tty?: boolean
   env?: NodeJS.ProcessEnv
+  /** Ends a long-running command — `watch` — in place of Ctrl-C; tests hand one in. */
+  signal?: AbortSignal
   /** Where a command reads text it was not given as an argument. */
   stdin?: NodeJS.ReadableStream & { isTTY?: boolean }
   /** Set by `run()`; a command's run is recorded only when it is known whose run it is. */
@@ -52,7 +54,8 @@ export interface BaseContext {
    * when `--record` asks or it fails. Whatever holds the process open — a connection — must be
    * tracked **before** it can block, or a timed-out command reports the timeout and then hangs.
    */
-  run: <T>(body: (events: EventSink) => Promise<T>) => Promise<T>
+  /** `unbounded` is for a command that ends itself at `--timeout` — `watch` — rather than failing there. */
+  run: <T>(body: (events: EventSink) => Promise<T>, options?: { unbounded?: boolean }) => Promise<T>
   track: (closeable: Closeable) => void
 }
 
@@ -78,7 +81,7 @@ export const baseContext = (command: Command, resolveSettings: Resolve): BaseCon
     streams,
     env,
     // The deadline inside the record, so a timeout finishes the run as failed rather than leaving it running.
-    run: (body) =>
+    run: (body, { unbounded = false } = {}) =>
       environment.app
         ? recorded(
             {
@@ -93,9 +96,9 @@ export const baseContext = (command: Command, resolveSettings: Resolve): BaseCon
               streams,
               env,
             },
-            (events) => withDeadline(settings.commandTimeoutMs, closeables, () => body(events)),
+            (events) => withDeadline(unbounded ? undefined : settings.commandTimeoutMs, closeables, () => body(events)),
           )
-        : withDeadline(settings.commandTimeoutMs, closeables, () => body(() => {})),
+        : withDeadline(unbounded ? undefined : settings.commandTimeoutMs, closeables, () => body(() => {})),
     track: (closeable) => {
       closeables.push(closeable)
     },

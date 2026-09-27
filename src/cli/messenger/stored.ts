@@ -65,6 +65,18 @@ export const stored = (messenger: MessengerAdapter, { account, store, warn, even
       }
       return items
     },
+    ...(messenger.watch
+      ? {
+          watch: (onMessage, signal) =>
+            messenger.watch?.((hit) => {
+              const { chatTitle, ...message } = hit
+              void save("messages.watch", (opened) =>
+                opened.saveMessages(account, message.chatId, [message], { via: "update" }),
+              )
+              onMessage(hit)
+            }, signal) ?? Promise.resolve(),
+        }
+      : {}),
     send: async (chatId, text, options) => {
       const sent = await messenger.send(chatId, text, options)
       await save("messages.send", (opened) => opened.saveMessages(account, chatId, [sent.message], { via: "send" }))
