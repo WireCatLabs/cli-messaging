@@ -1,4 +1,4 @@
-import type { Account, Chat, Id, Message, Page, WindowedMessage } from "../../domain/models.js"
+import type { Account, Chat, ChatCard, Id, Message, Page, WindowedMessage } from "../../domain/models.js"
 
 export interface Sent {
   message: Message
@@ -19,6 +19,8 @@ export interface MessengerAdapter {
   /** Oldest to newest. `before` is a message id, or whatever the messenger pages by, as typed. */
   history(chat: string, window: { limit: number; before?: string }): Promise<Page<Message>>
   resolve(chat: string): Promise<Chat>
+  /** One chat and who is in it; `members` is `null` where the messenger does not say — a channel, a hidden list. */
+  chat(chat: string): Promise<ChatCard>
   /** One message and up to `before` and `after` either side, oldest first; the one asked for carries `anchor`. */
   around(chat: string, messageId: Id, window: { before: number; after: number }): Promise<WindowedMessage[]>
   send(chatId: Id, text: string, options: { sendId: string }): Promise<Sent>

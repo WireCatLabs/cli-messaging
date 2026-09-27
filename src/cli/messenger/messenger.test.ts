@@ -54,6 +54,7 @@ const fake: MessengerAdapter = {
   chats: async () => ({ items: [chat], hasMore: false }),
   history: async () => ({ items: [message], hasMore: false }),
   resolve: async () => chat,
+  chat: async () => ({ ...chat, members: [{ id: "9", name: "Olga", username: null }] }),
   around: async (_chat, id, { before, after }) => {
     const index = thread.findIndex((one) => one.id === id)
     return thread
@@ -122,6 +123,17 @@ describe("the shared read commands", () => {
     ])
     expect(JSON.parse(shown.stdout[0] ?? "")).toMatchObject({ id: "3", anchor: true })
     expect(foreign.code).toBe(2)
+  })
+
+  it("show a chat with who is in it, and say when the list is cut short", async () => {
+    const root = mkdtempSync(join(tmpdir(), "messenger-"))
+    const env = { CHAT_STATE_DIR: join(root, "state"), MESSAGING_STORE: join(root, "m.db") }
+    const { code, stdout, stderr } = await call(["chats", "show", "Book", "--json"], async () => fake, env)
+
+    expect(code).toBe(0)
+    expect(JSON.parse(stdout[0] ?? "")).toMatchObject({ id: "7", members: [{ id: "9" }] })
+    expect(stderr.join("\n")).toContain("only 1 of 4 members")
+    expect((await call(["chats", "show", "Book", "--offline"], async () => fake, env)).code).toBe(2)
   })
 
   it("keep the account file where tg-cli 0.x kept it", () => {
