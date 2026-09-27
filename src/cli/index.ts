@@ -9,6 +9,10 @@ export {
 } from "./context.js"
 export { type Closeable, withDeadline } from "./deadline.js"
 export { isCliFailure, isCommanderFailure } from "./failures.js"
+export { accountFileFor, rememberAccount } from "./messenger/accounts.js"
+export { accountCommand, chatsCommand, messagesCommand } from "./messenger/commands.js"
+export { type Messenger, type MessengerContext, messengerContext } from "./messenger/context.js"
+export type { MessengerAdapter, Sent } from "./messenger/port.js"
 export { renderPage, window, withPaging } from "./paging.js"
 export {
   asFirstWord,
