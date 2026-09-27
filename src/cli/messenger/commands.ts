@@ -288,7 +288,12 @@ const targetOf = (messenger: Messenger, chat: string, message: string | undefine
 }
 
 /** A chat as typed, found among the stored chats the way an adapter finds it among its own. */
-const storedChatId = (messenger: Messenger, reference: string, store: MessageStore, account: AccountKey): string => {
+export const storedChatId = (
+  messenger: Messenger,
+  reference: string,
+  store: MessageStore,
+  account: AccountKey,
+): string => {
   const trimmed = reference.trim()
   if (messenger.savedChatId && ["me", "self", "saved"].includes(trimmed.toLowerCase())) {
     return messenger.savedChatId(account)

@@ -96,9 +96,20 @@ export interface MessageStore {
   /** A message's reactions as they are now; answers whether the message is held at all. */
   saveReactions(key: AccountKey, chatId: Id, messageId: Id, reactions: Reactions): boolean
   markRange(key: AccountKey, chatId: Id, from: number, to: number): Range
+  /** Per chat that has messages: how many, the oldest and newest, and when the last one was stored. */
+  chatStats(key: AccountKey, chatId?: Id): ChatStats[]
   /** The stretches held completely, oldest first. */
   ranges(key: AccountKey, chatId: Id): Range[]
   close(): void
+}
+
+export interface ChatStats {
+  chatId: Id
+  title: string | null
+  messages: number
+  oldestAt: string | null
+  newestAt: string | null
+  lastStoredAt: string | null
 }
 
 export interface Range {
@@ -635,6 +646,27 @@ const storeOver = (database: CacheDatabase, now: () => number): MessageStore => 
         run("INSERT INTO sync_ranges (chat_pk, from_key, to_key) VALUES (?, ?, ?)", chatKey, merged.from, merged.to)
       })
       return merged
+    },
+
+    chatStats: (key, chatId) => {
+      const accountKey = findAccountPk(key)
+      if (accountKey === undefined) return []
+      return all(
+        `SELECT c.native_id, c.title, count(m.pk) AS messages, min(m.sent_at) AS oldest, max(m.sent_at) AS newest,
+                max(m.ingested_at) AS stored
+         FROM chats c JOIN messages m ON m.chat_pk = c.pk AND m.deleted_at IS NULL
+         WHERE c.account_pk = ? ${chatId === undefined ? "" : "AND c.native_id = ?"}
+         GROUP BY c.pk ORDER BY newest DESC`,
+        accountKey,
+        ...(chatId === undefined ? [] : [chatId]),
+      ).map((row) => ({
+        chatId: String(row.native_id),
+        title: (row.title as string | null) ?? null,
+        messages: Number(row.messages),
+        oldestAt: toIso(row.oldest),
+        newestAt: toIso(row.newest),
+        lastStoredAt: toIso(row.stored),
+      }))
     },
 
     ranges: (key, chatId) => {

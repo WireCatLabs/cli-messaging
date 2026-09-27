@@ -10,6 +10,7 @@ import { commandsCommand } from "../commands-command.js"
 import { run } from "../program.js"
 import { settingsFor } from "../settings.js"
 import { accountFileFor } from "./accounts.js"
+import { exportCommand, syncCommand } from "./archive-commands.js"
 import { accountCommand, chatsCommand, contactsCommand, messagesCommand } from "./commands.js"
 import { completeCommand } from "./complete-command.js"
 import type { Messenger } from "./context.js"
@@ -113,6 +114,8 @@ const call = async (argv: string[], connect: Messenger["connect"], env: NodeJS.P
         sendsCommand(messenger),
         commandsCommand(app),
         completeCommand(messenger, settingsFor(app)),
+        syncCommand(messenger),
+        exportCommand(messenger),
       ],
     },
     { streams, tty: false, env },
@@ -273,6 +276,22 @@ describe("the shared read commands", () => {
     expect(hits[0].locator).toBe("msg:chat/500/7/3")
     const elsewhere = await call(["messages", "search", "chapt", "--chat", "999", "--json"], never, env)
     expect(JSON.parse(elsewhere.stdout[0] ?? "").items).toEqual([])
+  })
+
+  it("**report and export what the store holds**, without connecting", async () => {
+    const root = mkdtempSync(join(tmpdir(), "messenger-"))
+    const env = { CHAT_STATE_DIR: join(root, "state"), MESSAGING_STORE: join(root, "m.db") }
+    await call(["messages", "context", "Book", "2", "--json"], async () => fake, env)
+    const never = async (): Promise<MessengerAdapter> => {
+      throw new Error("the archive commands must never connect")
+    }
+
+    const status = await call(["sync", "status", "--json"], never, env)
+    expect(JSON.parse(status.stdout[0] ?? "")).toMatchObject([{ chatId: "7", title: null, messages: 3, held: [] }])
+    const exported = await call(["export", "7", "--jsonl"], never, env)
+    expect(exported.stdout.map((line) => JSON.parse(line).id)).toEqual(["1", "2", "3"])
+    const one = await call(["export", "7", "--json"], never, env)
+    expect(one.stdout).toHaveLength(1)
   })
 
   it("keep the account file where tg-cli 0.x kept it", () => {
