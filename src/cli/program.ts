@@ -1,14 +1,25 @@
-import { exitCodeFor, GENERIC_FAILURE, processStreams, type Streams, visibleControls } from "@leemour/cli-core"
+import {
+  CliError,
+  exitCodeFor,
+  GENERIC_FAILURE,
+  processStreams,
+  type Streams,
+  visibleControls,
+} from "@leemour/cli-core"
 import { Command } from "commander"
 import type { AppIdentity } from "./app.js"
 import { type BaseEnvironment, provide } from "./context.js"
 import { isCliFailure, isCommanderFailure } from "./failures.js"
 import { commandWords, liftProfile } from "./profile.js"
+import { recorded, wasSettled } from "./runs/recording.js"
+import { type Configuration, settingsFor } from "./settings.js"
 
 export interface ProgramDefinition {
   app: AppIdentity
   /** One resource per command, one action per subcommand. Built fresh for every program. */
   commands: () => Command[]
+  /** The CLI's own settings, for keeping a failure that happened before its command could; plain ones without. */
+  configuration?: Configuration
 }
 
 export interface ProgramOptions {
@@ -91,12 +102,11 @@ export const run = async (argv: string[], definition: ProgramDefinition, options
   // A bare word with nothing after it would make commander print help **on stdout**, which breaks
   // the one contract this program has and says nothing about why.
   if (profile !== undefined && rest.length === 0) {
-    report(streams, options, {
-      code: "validation_error",
-      message:
-        `"${profile}" is not a command, so it was read as a profile name — and no command followed it. ` +
-        `Run \`${command} --help\` for the commands, or \`${command} ${profile} account show\` if "${profile}" is your profile.`,
-    })
+    const message =
+      `"${profile}" is not a command, so it was read as a profile name — and no command followed it. ` +
+      `Run \`${command} --help\` for the commands, or \`${command} ${profile} account show\` if "${profile}" is your profile.`
+    report(streams, options, { code: "validation_error", message })
+    await keepFailure(new CliError("validation_error", message), { definition, program, rest, profile, options })
     return exitCodeFor("validation_error")
   }
 
@@ -104,6 +114,10 @@ export const run = async (argv: string[], definition: ProgramDefinition, options
     await program.parseAsync(rest, { from: "user" })
     return process.exitCode === undefined ? 0 : Number(process.exitCode)
   } catch (error) {
+    if (!isCommanderFailure(error) || error.exitCode !== 0) {
+      const failure = isCommanderFailure(error) ? new CliError("validation_error", error.message) : error
+      await keepFailure(failure, { definition, program, rest, profile, options })
+    }
     if (isCommanderFailure(error)) {
       if (profile !== undefined && error.code === "commander.unknownCommand") {
         streams.diagnostic(
@@ -122,6 +136,65 @@ export const run = async (argv: string[], definition: ProgramDefinition, options
     })
     return GENERIC_FAILURE
   }
+}
+
+interface Failed {
+  definition: ProgramDefinition
+  program: Command
+  rest: string[]
+  profile: string | undefined
+  options: RunOptions
+}
+
+/**
+ * **Every failure is kept as a run** — a usage error, a configuration that will not load, a command
+ * that never opens a run — unless recording was turned off. One its own run already kept is skipped.
+ * Only the command's words are named, never its arguments: those can be a message.
+ */
+const keepFailure = async (
+  failure: unknown,
+  { definition, program, rest, profile, options }: Failed,
+): Promise<void> => {
+  if (wasSettled(failure)) return
+  const env = options.env ?? process.env
+  const { resolveSettings } = definition.configuration ?? settingsFor(definition.app)
+  let settings: ReturnType<typeof resolveSettings> | undefined
+  try {
+    settings = resolveSettings({ ...program.opts(), ...(profile === undefined ? {} : { profile }) }, { env })
+  } catch {
+    // A configuration that will not load is a failure worth keeping too; the flags are all there is to go on.
+  }
+  await recorded(
+    {
+      app: definition.app,
+      command: commandPath(program, rest) || definition.app.command,
+      profile: settings?.profile ?? profile ?? "default",
+      record: false,
+      keepFailed: settings?.keepFailedRuns ?? !rest.includes("--no-record"),
+      trace: false,
+      format: "json",
+      streams: options.streams ?? processStreams,
+      env,
+      ...(settings ? { keepDays: settings.keepRunsForDays } : {}),
+    },
+    async () => {
+      throw failure
+    },
+  ).catch(() => {})
+}
+
+/** `messages list` from `messages list 111 --limit 5`: the words that name commands, up to the first that does not. */
+const commandPath = (program: Command, rest: string[]): string => {
+  const words: string[] = []
+  let current = program
+  for (const token of rest) {
+    if (token.startsWith("-")) continue
+    const next = current.commands.find((one) => one.name() === token || one.aliases().includes(token))
+    if (!next) break
+    words.push(token)
+    current = next
+  }
+  return words.join(" ")
 }
 
 interface ReportedError {
