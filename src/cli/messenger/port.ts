@@ -25,7 +25,8 @@ export interface MessengerAdapter {
   contact(person: string): Promise<PersonCard>
   /** One message and up to `before` and `after` either side, oldest first; the one asked for carries `anchor`. */
   around(chat: string, messageId: Id, window: { before: number; after: number }): Promise<WindowedMessage[]>
-  send(chatId: Id, text: string, options: { sendId: string }): Promise<Sent>
+  /** `replyTo` is a message id in the same chat. */
+  send(chatId: Id, text: string, options: { sendId: string; replyTo?: Id }): Promise<Sent>
   logout(): Promise<void>
   close(): Promise<void>
 }

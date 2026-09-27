@@ -56,6 +56,8 @@ export interface SendEntry {
    * string: Telegram's is 64-bit. A retry repeats it, and the provider delivers one message for both.
    */
   sendId?: string
+  /** The message a reply answers. */
+  replyTo?: Id
   length?: number
   /** What was attached, by kind and size — never a file name. */
   attachments?: { kind: "photo" | "file"; bytes: number }[]

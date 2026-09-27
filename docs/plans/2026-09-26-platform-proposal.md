@@ -450,7 +450,7 @@ twice. The store and the guard wait for Phase 1.
 | 1.4b-1 | `messages show\|context` (`around` on the port and the store; `show` also takes a `msg:` locator), online and `--offline`. **Done 2026-09-27** — `chats show` and `contacts` remain |
 | 1.4b-2 | `chats show`: the chat as its dialog describes it, and who is in it (`null` for a channel or a hidden list; a note when fewer members come back than the chat has). Online only — the store keeps no members yet. **Done 2026-09-27** |
 | 1.4b-3 | `contacts list\|show`: a contact is a one-to-one chat (max-cli `NEED-105`), so the list is a query over chats and works `--offline`; `show` is online — the person, their bio, and the chats shared with them. **Done 2026-09-27 — 1.4 is complete** |
-| 1.5 | `messages send\|reply` through the guard, with the send identity and `outcome_unknown` |
+| 1.5 | `messages send\|reply` through the guard, with the send identity and `outcome_unknown`. Shared in `messagesCommand`; a reply records `replyTo` in the journal; `reply` also takes a `msg:` locator. The guard now takes its paths from the command's environment. **Done 2026-09-27** |
 | 1.6 | `doctor` (generic + Telegram checks), `commands` (with the contract version), `complete`, `config`, `runs`, `sends`, `recipients`, `update` — and a test that stdout carries one JSON value |
 | 1.7 | `watch` in the foreground, `--jsonl` |
 

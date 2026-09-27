@@ -4,6 +4,7 @@ import { join } from "node:path"
 import { captureStreams } from "@leemour/cli-core"
 import { describe, expect, it } from "vitest"
 import type { Chat, Message, WindowedMessage } from "../../domain/models.js"
+import { SendJournal, sendsPathFor } from "../../sends/journal.js"
 import { run } from "../program.js"
 import { settingsFor } from "../settings.js"
 import { accountFileFor } from "./accounts.js"
@@ -178,6 +179,42 @@ describe("the shared read commands", () => {
     expect(await names("--search", "ADAM_")).toEqual(["Adam"])
     const shown = await call(["contacts", "show", "adam", "--json"], async () => fake, env)
     expect(JSON.parse(shown.stdout[0] ?? "")).toMatchObject({ id: "21", chats: [{ id: "7" }] })
+  })
+
+  it("**reply to the message named, record it without the text**, by chat and id or by locator", async () => {
+    const root = mkdtempSync(join(tmpdir(), "messenger-"))
+    const env = {
+      CHAT_STATE_DIR: join(root, "state"),
+      CHAT_CONFIG_DIR: join(root, "config"),
+      MESSAGING_STORE: join(root, "m.db"),
+    }
+    const sent: { chatId: string; text: string; replyTo?: string }[] = []
+    const replying: MessengerAdapter = {
+      ...fake,
+      send: async (chatId, text, { sendId, replyTo }) => {
+        sent.push({ chatId, text, ...(replyTo ? { replyTo } : {}) })
+        return { message: { ...message, text }, sendId }
+      },
+    }
+
+    expect((await call(["messages", "reply", "Book", "2", "see you there"], async () => replying, env)).code).toBe(0)
+    expect(
+      (await call(["messages", "reply", "msg:chat/500/7/3", "and bring it"], async () => replying, env)).code,
+    ).toBe(0)
+    expect((await call(["messages", "send", "Book", "hello"], async () => replying, env)).code).toBe(0)
+
+    expect(sent).toEqual([
+      { chatId: "7", text: "see you there", replyTo: "2" },
+      { chatId: "7", text: "and bring it", replyTo: "3" },
+      { chatId: "7", text: "hello" },
+    ])
+    const journal = new SendJournal(sendsPathFor(app, "default", env)).entries()
+    expect(journal.map((entry) => [entry.outcome, entry.replyTo])).toEqual([
+      ["sent", "2"],
+      ["sent", "3"],
+      ["sent", undefined],
+    ])
+    expect(JSON.stringify(journal)).not.toContain("see you there")
   })
 
   it("keep the account file where tg-cli 0.x kept it", () => {
