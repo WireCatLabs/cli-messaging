@@ -1,5 +1,6 @@
 import { CliError } from "@leemour/cli-core"
 import { Command } from "commander"
+import { isLocator, parseLocator } from "../../domain/locator.js"
 import { renderMessages } from "../../render/messages.js"
 import { pickChat } from "../../resolve.js"
 import type { AccountKey, MessageStore } from "../../store/store.js"
@@ -77,7 +78,72 @@ export const messagesCommand = (messenger: Messenger): Command => {
       context.renderer.result({ items: page.items, limit, hasMore: page.hasMore })
     })
 
+  const readWindow = async (command: Command, chat: string, message: string | undefined, window: Window) => {
+    const context = messengerContext(command, messenger)
+    const target = targetOf(messenger, chat, message)
+    const found = context.settings.offline
+      ? await context.withStore((store, account) =>
+          store.around(account, storedChatId(messenger, target.chat, store, account), target.message, window),
+        )
+      : await context.withMessenger((connection) => connection.around(target.chat, target.message, window))
+    if (context.format === "pretty") {
+      context.streams.data(
+        renderMessages(found, {
+          color: context.color,
+          verbosity: context.settings.detail,
+          senderColors: context.settings.senderColors,
+          profile: context.profile,
+          provider: messenger.provider,
+        }),
+      )
+    } else if (context.format === "jsonl") context.renderer.stream(found)
+    else context.renderer.result(window.before === 0 && window.after === 0 ? found[0] : { items: found })
+  }
+
+  messages
+    .command("show")
+    .description("one message, by its chat and id or by its msg: locator")
+    .argument("<chat>", `${messenger.chatArgument}; or a msg: locator, with no message id after it`)
+    .argument("[message]", "the message id")
+    .action(async function (this: Command, chat: string, message: string | undefined) {
+      await readWindow(this, chat, message, { before: 0, after: 0 })
+    })
+
+  messages
+    .command("context")
+    .description("a message and what came either side of it, oldest first")
+    .argument("<chat>", `${messenger.chatArgument}; or a msg: locator, with no message id after it`)
+    .argument("[message]", "the message id")
+    .option("--before <n>", "how many before it", count, 5)
+    .option("--after <n>", "how many after it", count, 5)
+    .action(async function (this: Command, chat: string, message: string | undefined) {
+      const { before, after } = this.opts<Window>()
+      await readWindow(this, chat, message, { before, after })
+    })
+
   return messages
+}
+
+type Window = { before: number; after: number }
+
+const count = (value: string): number => {
+  const parsed = Number(value)
+  if (!Number.isInteger(parsed) || parsed < 0) throw new CliError("validation_error", `"${value}" is not a count`)
+  return parsed
+}
+
+/** A chat and a message id, or one locator naming both — which must be this messenger's. */
+const targetOf = (messenger: Messenger, chat: string, message: string | undefined) => {
+  if (isLocator(chat)) {
+    if (message !== undefined) throw new CliError("validation_error", "a locator already names the message")
+    const locator = parseLocator(chat)
+    if (locator.provider !== messenger.provider) {
+      throw new CliError("validation_error", `that locator is a ${locator.provider} message, not ${messenger.provider}`)
+    }
+    return { chat: locator.chat, message: locator.message }
+  }
+  if (message === undefined) throw new CliError("validation_error", "which message? give its id after the chat")
+  return { chat, message: message.trim() }
 }
 
 /** A chat as typed, found among the stored chats the way an adapter finds it among its own. */

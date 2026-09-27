@@ -2,7 +2,7 @@ import { mkdirSync, writeFileSync } from "node:fs"
 import { dirname } from "node:path"
 import { CliError } from "@leemour/cli-core"
 import { formatLocator } from "../domain/locator.js"
-import type { Attachment, Chat, Id, Message, MessageHit, Page, Provider } from "../domain/models.js"
+import type { Attachment, Chat, Id, Message, MessageHit, Page, Provider, WindowedMessage } from "../domain/models.js"
 import type { CacheDatabase, SqlValue } from "./driver.js"
 import { migrate } from "./migrations.js"
 import { openCache } from "./open.js"
@@ -30,6 +30,12 @@ export interface MessageStore {
   chats(key: AccountKey, window: { limit?: number; offset?: number }): Page<Chat>
   /** Oldest to newest, like a provider's history page. */
   messages(key: AccountKey, chatId: Id, window: { limit: number; before?: Id }): Page<Message>
+  /**
+   * A stored message and its stored neighbours, oldest first, the one asked for with `anchor`. Until
+   * backfill records which stretches are complete, a neighbour here is the nearest one kept, not
+   * necessarily the next one sent.
+   */
+  around(key: AccountKey, chatId: Id, messageId: Id, window: { before: number; after: number }): WindowedMessage[]
   /** Newest first. At least three characters: a trigram index answers a shorter query with nothing. */
   search(query: string, options: { limit: number; account?: AccountKey }): Page<StoredHit>
   close(): void
@@ -337,6 +343,38 @@ const storeOver = (database: CacheDatabase, now: () => number): MessageStore => 
         limit + 1,
       )
       return { items: toMessages(rows.slice(0, limit)).reverse(), hasMore: rows.length > limit }
+    },
+
+    around: (key, chatId, messageId, { before, after }) => {
+      const accountKey = findAccountPk(key)
+      const chatKey = accountKey === undefined ? undefined : findChatPk(accountKey, chatId)
+      const anchor =
+        chatKey === undefined
+          ? undefined
+          : one(
+              `SELECT ${MESSAGE_COLUMNS} FROM messages m ${MESSAGE_JOINS}
+               WHERE m.chat_pk = ? AND m.native_id = ? AND m.deleted_at IS NULL`,
+              chatKey,
+              messageId,
+            )
+      if (chatKey === undefined || !anchor) {
+        throw new CliError("not_found", `message ${messageId} is not in the local copy of this chat`)
+      }
+      const side = (direction: "<" | ">", count: number) =>
+        count === 0
+          ? []
+          : all(
+              `SELECT ${MESSAGE_COLUMNS} FROM messages m ${MESSAGE_JOINS}
+               WHERE m.chat_pk = ? AND m.deleted_at IS NULL AND (m.sent_at, m.pk) ${direction} (?, ?)
+               ORDER BY m.sent_at ${direction === "<" ? "DESC" : "ASC"}, m.pk ${direction === "<" ? "DESC" : "ASC"}
+               LIMIT ?`,
+              chatKey,
+              anchor.sent_at as number,
+              anchor.pk as number,
+              count,
+            )
+      const rows = [...side("<", before).reverse(), anchor, ...side(">", after)]
+      return toMessages(rows).map((message, index) => (rows[index] === anchor ? { ...message, anchor: true } : message))
     },
 
     search: (query, { limit, account }) => {

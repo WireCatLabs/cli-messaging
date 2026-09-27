@@ -53,6 +53,15 @@ export const stored = (messenger: MessengerAdapter, { account, store, warn, even
       }
       return page
     },
+    around: async (reference, messageId, window) => {
+      const items = await messenger.around(reference, messageId, window)
+      const chatId = items[0]?.chatId
+      if (chatId !== undefined) {
+        const plain = items.map(({ anchor, ...message }) => message)
+        await save("messages.around", (opened) => opened.saveMessages(account, chatId, plain, { via: "context" }))
+      }
+      return items
+    },
     send: async (chatId, text, options) => {
       const sent = await messenger.send(chatId, text, options)
       await save("messages.send", (opened) => opened.saveMessages(account, chatId, [sent.message], { via: "send" }))
