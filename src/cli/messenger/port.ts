@@ -4,7 +4,7 @@ import type {
   ChatCard,
   Id,
   Message,
-  MessageHit,
+  MessageEvent,
   Page,
   PersonCard,
   WindowedMessage,
@@ -38,10 +38,11 @@ export interface MessengerAdapter {
   /** `replyTo` is a message id in the same chat. */
   send(chatId: Id, text: string, options: { sendId: string; replyTo?: Id }): Promise<Sent>
   /**
-   * New messages as they arrive, until `signal` aborts. Only on a connection opened with
-   * `{ listen: true }`; a messenger that cannot listen leaves it out.
+   * New messages and changes to messages as they arrive, until `signal` aborts. `onReady` once it is
+   * actually listening — a caller that sends on "listening" must not race the connection. Only on a
+   * connection opened with `{ listen: true }`; a messenger that cannot listen leaves it out.
    */
-  watch?(onMessage: (message: MessageHit) => void, signal: AbortSignal): Promise<void>
+  watch?(onEvent: (event: MessageEvent) => void, signal: AbortSignal, onReady?: () => void): Promise<void>
   logout(): Promise<void>
   close(): Promise<void>
 }

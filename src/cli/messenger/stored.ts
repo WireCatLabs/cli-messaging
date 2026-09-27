@@ -1,3 +1,4 @@
+import type { MessageEvent } from "../../domain/models.js"
 import type { AccountKey, MessageStore } from "../../store/store.js"
 import type { EventSink } from "../runs/events.js"
 import type { MessengerAdapter } from "./port.js"
@@ -67,14 +68,15 @@ export const stored = (messenger: MessengerAdapter, { account, store, warn, even
     },
     ...(messenger.watch
       ? {
-          watch: (onMessage, signal) =>
-            messenger.watch?.((hit) => {
-              const { chatTitle, ...message } = hit
-              void save("messages.watch", (opened) =>
-                opened.saveMessages(account, message.chatId, [message], { via: "update" }),
-              )
-              onMessage(hit)
-            }, signal) ?? Promise.resolve(),
+          watch: (onEvent, signal, onReady) =>
+            messenger.watch?.(
+              (event) => {
+                void save("messages.watch", (opened) => keep(opened, account, event))
+                onEvent(event)
+              },
+              signal,
+              onReady,
+            ) ?? Promise.resolve(),
         }
       : {}),
     send: async (chatId, text, options) => {
@@ -82,5 +84,22 @@ export const stored = (messenger: MessengerAdapter, { account, store, warn, even
       await save("messages.send", (opened) => opened.saveMessages(account, chatId, [sent.message], { via: "send" }))
       return sent
     },
+  }
+}
+
+/** Each change as the store keeps it: a message or an edit upserted, a deletion a tombstone, reactions replaced. */
+const keep = (store: MessageStore, account: AccountKey, event: MessageEvent): void => {
+  switch (event.event) {
+    case "message":
+    case "edit": {
+      const { chatTitle, ...message } = event.message
+      store.saveMessages(account, message.chatId, [message], { via: "update" })
+      return
+    }
+    case "delete":
+      store.markDeleted(account, [event.messageId], event.chatId === null ? {} : { chatId: event.chatId })
+      return
+    case "reaction":
+      store.saveReactions(account, event.chatId, event.messageId, event.reactions)
   }
 }

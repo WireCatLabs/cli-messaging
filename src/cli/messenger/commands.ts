@@ -2,7 +2,7 @@ import { CliError } from "@leemour/cli-core"
 import { annotate } from "@leemour/cli-core/commands"
 import { Command } from "commander"
 import { isLocator, parseLocator } from "../../domain/locator.js"
-import type { Chat, Contact, MessageHit } from "../../domain/models.js"
+import type { Chat, Contact, MessageEvent, MessageHit } from "../../domain/models.js"
 import { renderMessages } from "../../render/messages.js"
 import { pickChat } from "../../resolve.js"
 import { newSendId } from "../../sends/send-id.js"
@@ -330,7 +330,9 @@ const byName = (a: Contact, b: Contact) => (a.name ?? "").localeCompare(b.name ?
 export const watchCommand = (messenger: Messenger): Command =>
   new Command("watch")
     .description("print new messages as they arrive, until Ctrl-C or --timeout (either ends it normally)")
+    .option("--events", "also edits, deletions and reactions; every line then names its event")
     .action(async function (this: Command) {
+      const events = this.opts<{ events?: boolean }>().events === true
       const context = messengerContext(this, messenger)
       if (context.format === "json") {
         throw new CliError("validation_error", "watch is a stream — use --jsonl for one message per line")
@@ -352,19 +354,22 @@ export const watchCommand = (messenger: Messenger): Command =>
       const timer =
         context.settings.commandTimeoutMs === undefined ? undefined : setTimeout(end, context.settings.commandTimeoutMs)
 
-      const print = (message: MessageHit) => {
-        if (stop.signal.aborted) return
-        if (context.format === "jsonl") context.streams.data(JSON.stringify(message))
-        else
-          context.streams.data(
-            `${message.chatTitle ?? message.chatId}\n${renderMessages([message], {
-              color: context.color,
-              verbosity: context.settings.detail,
-              senderColors: context.settings.senderColors,
-              profile: context.profile,
-              provider: messenger.provider,
-            })}`,
-          )
+      const render = (message: MessageHit) =>
+        `${message.chatTitle ?? message.chatId}\n${renderMessages([message], {
+          color: context.color,
+          verbosity: context.settings.detail,
+          senderColors: context.settings.senderColors,
+          profile: context.profile,
+          provider: messenger.provider,
+        })}`
+
+      // Without --events the stream is bare messages, as it always was: a reader of it never meets
+      // a line of another shape.
+      const print = (event: MessageEvent) => {
+        if (stop.signal.aborted || (!events && event.event !== "message")) return
+        if (context.format === "jsonl") {
+          context.streams.data(JSON.stringify(events ? event : (event as { message: MessageHit }).message))
+        } else context.streams.data(describe(event, render))
       }
 
       try {
@@ -373,8 +378,7 @@ export const watchCommand = (messenger: Messenger): Command =>
             if (!connection.watch) {
               throw new CliError("validation_error", `${messenger.app.command} cannot listen for new messages`)
             }
-            context.renderer.note("listening — Ctrl-C to stop")
-            await connection.watch(print, stop.signal)
+            await connection.watch(print, stop.signal, () => context.renderer.note("listening — Ctrl-C to stop"))
           },
           { listen: true },
         )
@@ -385,3 +389,18 @@ export const watchCommand = (messenger: Messenger): Command =>
         given?.removeEventListener("abort", end)
       }
     })
+
+const describe = (event: MessageEvent, render: (message: MessageHit) => string): string => {
+  switch (event.event) {
+    case "message":
+      return render(event.message)
+    case "edit":
+      return `edited — ${render(event.message)}`
+    case "delete":
+      return `deleted in ${event.chatTitle ?? event.chatId ?? "a private chat or small group"}: message ${event.messageId}\n`
+    case "reaction": {
+      const counts = event.reactions.counts.map(({ reaction, count }) => `${reaction} ${count}`).join(", ")
+      return `reactions in ${event.chatTitle ?? event.chatId} on message ${event.messageId}: ${counts || "none"}\n`
+    }
+  }
+}

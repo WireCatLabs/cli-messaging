@@ -11,6 +11,7 @@ import type {
   MessageHit,
   Page,
   Provider,
+  Reactions,
   WindowedMessage,
 } from "../domain/models.js"
 import type { PeopleLookup } from "../resolve.js"
@@ -90,6 +91,8 @@ export interface MessageStore {
    * Records that every message from `from` to `to` (inclusive, by ordering key) is held, merging it
    * with the stretches it overlaps or touches. Answers the merged stretch.
    */
+  /** A message's reactions as they are now; answers whether the message is held at all. */
+  saveReactions(key: AccountKey, chatId: Id, messageId: Id, reactions: Reactions): boolean
   markRange(key: AccountKey, chatId: Id, from: number, to: number): Range
   /** The stretches held completely, oldest first. */
   ranges(key: AccountKey, chatId: Id): Range[]
@@ -589,6 +592,20 @@ const storeOver = (database: CacheDatabase, now: () => number): MessageStore => 
       const everyone = rows.map(toContact)
       const byId = new Map(everyone.map((person) => [person.id, person]))
       return { get: (id) => byId.get(id), all: () => everyone }
+    },
+
+    saveReactions: (key, chatId, messageId, reactions) => {
+      const accountKey = findAccountPk(key)
+      const chatKey = accountKey === undefined ? undefined : findChatPk(accountKey, chatId)
+      if (chatKey === undefined) return false
+      return (
+        run(
+          "UPDATE messages SET reactions = ? WHERE chat_pk = ? AND native_id = ?",
+          JSON.stringify(reactions),
+          chatKey,
+          messageId,
+        ).changes > 0
+      )
     },
 
     markRange: (key, chatId, from, to) => {
