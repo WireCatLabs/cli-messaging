@@ -65,6 +65,13 @@ export const observed = (messenger: MessengerAdapter, events: EventSink): Messen
         () => messenger.chat(reference),
         (card) => ({ ids: { chat: card.id }, ...(card.members ? { counts: { members: card.members.length } } : {}) }),
       ),
+    contact: (reference) =>
+      timed(
+        "contacts.show",
+        {},
+        () => messenger.contact(reference),
+        (card) => ({ ids: { person: card.id }, counts: { chats: card.chats.length } }),
+      ),
     around: (reference, messageId, window) =>
       timed(
         "messages.around",
