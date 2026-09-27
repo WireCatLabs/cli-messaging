@@ -15,8 +15,10 @@ export const accountCommand = (messenger: Messenger): Command =>
     }),
   )
 
-export const chatsCommand = (messenger: Messenger): Command =>
-  new Command("chats").description("the account's chats").addCommand(
+export const chatsCommand = (messenger: Messenger): Command => {
+  const chats = new Command("chats").description("the account's chats")
+
+  chats.addCommand(
     withPaging(new Command("list").description("chats, newest first, archived ones included")).action(async function (
       this: Command,
     ) {
@@ -40,6 +42,23 @@ export const chatsCommand = (messenger: Messenger): Command =>
       })
     }),
   )
+
+  chats
+    .command("show")
+    .description("one chat: its kind, unread count, last message time and who is in it")
+    .argument("<chat>", messenger.chatArgument)
+    .action(async function (this: Command, chat: string) {
+      const context = messengerContext(this, messenger)
+      const card = await context.withMessenger((connection) => connection.chat(chat))
+      context.renderer.result(card)
+      const { members, participantsCount } = card
+      if (members && participantsCount !== null && members.length < participantsCount) {
+        context.renderer.note(`only ${members.length} of ${participantsCount} members could be read`)
+      }
+    })
+
+  return chats
+}
 
 /** `messages` with `list`. A CLI adds its own subcommands — `send` — to what this returns. */
 export const messagesCommand = (messenger: Messenger): Command => {
