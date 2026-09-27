@@ -1,6 +1,6 @@
 # The background process — plan for PR 2.3
 
-**Status 2026-09-27: a plan, nothing built.** Proposal §8 row 2.3: "the background process (`serve`)
+**Status 2026-09-27: 2.3a built** (`watch --events`); 2.3b (`serve`) is next. Proposal §8 row 2.3: "the background process (`serve`)
 from max-cli's `src/server/`; the Telegram adapter supplies the connection and ingests updates (new,
 edit, delete, reaction)".
 

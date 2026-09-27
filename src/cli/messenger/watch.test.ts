@@ -3,7 +3,7 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { captureStreams } from "@leemour/cli-core"
 import { describe, expect, it } from "vitest"
-import type { MessageHit } from "../../domain/models.js"
+import type { MessageEvent, MessageHit } from "../../domain/models.js"
 import { run } from "../program.js"
 import { settingsFor } from "../settings.js"
 import { messagesCommand, watchCommand } from "./commands.js"
@@ -29,13 +29,15 @@ const hit = (id: string): MessageHit => ({
 })
 
 const listening =
-  (arrive: MessageHit[], asked: ConnectOptions[]) => async (_: unknown, __: unknown, options?: ConnectOptions) => {
+  (arrive: (MessageHit | MessageEvent)[], asked: ConnectOptions[]) =>
+  async (_: unknown, __: unknown, options?: ConnectOptions) => {
     asked.push(options ?? {})
     return {
       self: () => "500",
       close: async () => {},
-      watch: async (onMessage: (message: MessageHit) => void, signal: AbortSignal) => {
-        for (const message of arrive) onMessage(message)
+      watch: async (onEvent: (event: MessageEvent) => void, signal: AbortSignal, onReady?: () => void) => {
+        onReady?.()
+        for (const event of arrive) onEvent("event" in event ? event : { event: "message", message: event })
         await new Promise((resolve) => signal.addEventListener("abort", resolve, { once: true }))
       },
     } as unknown as MessengerAdapter
@@ -90,6 +92,56 @@ describe("watch", () => {
       { streams: offline, tty: false, env },
     )
     expect(JSON.parse(offline.stdout[0] ?? "").items.map((one: { id: string }) => one.id)).toEqual(["1", "2"])
+  })
+
+  it("**with --events, names each line's event and keeps every change**", async () => {
+    const stop = new AbortController()
+    setTimeout(() => stop.abort(), 20)
+    const reactions = { counts: [{ reaction: "👍", count: 3 }], mine: null, total: 3 }
+    const arrive: MessageEvent[] = [
+      { event: "message", message: hit("1") },
+      { event: "message", message: hit("2") },
+      { event: "edit", message: { ...hit("1"), text: "message 1, corrected", editedAt: "2026-09-27T11:00:00.000Z" } },
+      { event: "delete", chatId: null, chatTitle: null, messageId: "2" },
+      { event: "reaction", chatId: "7", chatTitle: "Book club", messageId: "1", reactions },
+    ]
+
+    const { code, streams, env, messenger } = await call(
+      ["watch", "--jsonl", "--events"],
+      listening(arrive, []),
+      stop.signal,
+    )
+
+    expect(code).toBe(0)
+    expect(streams.stdout.map((line) => JSON.parse(line).event)).toEqual([
+      "message",
+      "message",
+      "edit",
+      "delete",
+      "reaction",
+    ])
+    expect(streams.stderr.join("\n")).toContain("listening")
+    const offline = captureStreams()
+    await run(
+      ["messages", "list", "7", "--json", "--offline"],
+      { app, commands: () => [messagesCommand(messenger)] },
+      { streams: offline, tty: false, env },
+    )
+    const kept = JSON.parse(offline.stdout[0] ?? "").items
+    expect(kept.map((one: MessageHit) => [one.id, one.text, one.reactions?.total])).toEqual([
+      ["1", "message 1, corrected", 3],
+    ])
+  })
+
+  it("prints only messages without --events", async () => {
+    const stop = new AbortController()
+    setTimeout(() => stop.abort(), 20)
+    const arrive: MessageEvent[] = [
+      { event: "message", message: hit("1") },
+      { event: "delete", chatId: "7", chatTitle: null, messageId: "1" },
+    ]
+    const { streams } = await call(["watch", "--jsonl"], listening(arrive, []), stop.signal)
+    expect(streams.stdout.map((line) => JSON.parse(line).id)).toEqual(["1"])
   })
 
   it("ends normally at --timeout", async () => {

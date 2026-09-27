@@ -91,17 +91,21 @@ export const observed = (messenger: MessengerAdapter, events: EventSink): Messen
       ),
     ...(messenger.watch
       ? {
-          watch: async (onMessage, signal) => {
-            let count = 0
+          watch: async (onEvent, signal, onReady) => {
+            const counts: Record<string, number> = {}
             await timed(
               "messages.watch",
               {},
               () =>
-                messenger.watch?.((message) => {
-                  count += 1
-                  onMessage(message)
-                }, signal) ?? Promise.resolve(),
-              () => ({ counts: { messages: count } }),
+                messenger.watch?.(
+                  (event) => {
+                    counts[event.event] = (counts[event.event] ?? 0) + 1
+                    onEvent(event)
+                  },
+                  signal,
+                  onReady,
+                ) ?? Promise.resolve(),
+              () => ({ counts }),
             )
           },
         }

@@ -145,8 +145,12 @@ export interface MessageHit extends Message {
 /** What happened to a message after it arrived, as `watch --events` prints it. */
 export type MessageChange =
   | { event: "edit"; message: MessageHit }
-  | { event: "delete"; chatId: Id; chatTitle: string | null; messageId: Id }
+  /** `chatId` is `null` where the provider does not say — Telegram's private chats and basic groups. */
+  | { event: "delete"; chatId: Id | null; chatTitle: string | null; messageId: Id }
   | { event: "reaction"; chatId: Id; chatTitle: string | null; messageId: Id; reactions: Reactions }
+
+/** What a listening connection reports: a new message, or a change to one. */
+export type MessageEvent = { event: "message"; message: MessageHit } | MessageChange
 
 /** One chat's share of `inbox`: other people's messages since the last check, oldest first. */
 export interface InboxChat extends Pick<Chat, "id" | "title" | "kind" | "unreadCount"> {
