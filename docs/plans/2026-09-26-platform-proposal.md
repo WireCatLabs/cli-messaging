@@ -448,7 +448,8 @@ twice. The store and the guard wait for Phase 1.
 | 1.4a | skeleton, part 2a: the adapter port (`MessengerAdapter`) and `Messenger` in `./cli`; `account show`, `chats list`, `messages list` shared, with saving to the store, `--offline` and run events. A CLI overrides by composition — it picks the builders and adds subcommands; no hook registry. tg-cli moved onto it with no test changed. **Done 2026-09-27** |
 | 1.4b | skeleton, part 2b: the new read commands — `chats show`, `messages show\|context`, `contacts list\|show` — with their adapter methods. `session start\|end` stays in each CLI: logging in is the messenger's own business |
 | 1.4b-1 | `messages show\|context` (`around` on the port and the store; `show` also takes a `msg:` locator), online and `--offline`. **Done 2026-09-27** — `chats show` and `contacts` remain |
-| 1.4b-2 | `chats show`: the chat as its dialog describes it, and who is in it (`null` for a channel or a hidden list; a note when fewer members come back than the chat has). Online only — the store keeps no members yet. **Done 2026-09-27** — `contacts` remains |
+| 1.4b-2 | `chats show`: the chat as its dialog describes it, and who is in it (`null` for a channel or a hidden list; a note when fewer members come back than the chat has). Online only — the store keeps no members yet. **Done 2026-09-27** |
+| 1.4b-3 | `contacts list\|show`: a contact is a one-to-one chat (max-cli `NEED-105`), so the list is a query over chats and works `--offline`; `show` is online — the person, their bio, and the chats shared with them. **Done 2026-09-27 — 1.4 is complete** |
 | 1.5 | `messages send\|reply` through the guard, with the send identity and `outcome_unknown` |
 | 1.6 | `doctor` (generic + Telegram checks), `commands` (with the contract version), `complete`, `config`, `runs`, `sends`, `recipients`, `update` — and a test that stdout carries one JSON value |
 | 1.7 | `watch` in the foreground, `--jsonl` |

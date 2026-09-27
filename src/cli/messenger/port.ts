@@ -1,4 +1,4 @@
-import type { Account, Chat, ChatCard, Id, Message, Page, WindowedMessage } from "../../domain/models.js"
+import type { Account, Chat, ChatCard, Id, Message, Page, PersonCard, WindowedMessage } from "../../domain/models.js"
 
 export interface Sent {
   message: Message
@@ -21,6 +21,8 @@ export interface MessengerAdapter {
   resolve(chat: string): Promise<Chat>
   /** One chat and who is in it; `members` is `null` where the messenger does not say — a channel, a hidden list. */
   chat(chat: string): Promise<ChatCard>
+  /** One person and the chats this account shares with them, newest first. A chat that is not a person is refused. */
+  contact(person: string): Promise<PersonCard>
   /** One message and up to `before` and `after` either side, oldest first; the one asked for carries `anchor`. */
   around(chat: string, messageId: Id, window: { before: number; after: number }): Promise<WindowedMessage[]>
   send(chatId: Id, text: string, options: { sendId: string }): Promise<Sent>

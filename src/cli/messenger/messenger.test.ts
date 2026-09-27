@@ -7,7 +7,7 @@ import type { Chat, Message, WindowedMessage } from "../../domain/models.js"
 import { run } from "../program.js"
 import { settingsFor } from "../settings.js"
 import { accountFileFor } from "./accounts.js"
-import { accountCommand, chatsCommand, messagesCommand } from "./commands.js"
+import { accountCommand, chatsCommand, contactsCommand, messagesCommand } from "./commands.js"
 import type { Messenger } from "./context.js"
 import type { MessengerAdapter } from "./port.js"
 
@@ -48,12 +48,32 @@ const thread: Message[] = ["1", "2", "3"].map((id, index) => ({
   timestamp: `2026-09-27T10:0${index}:00.000Z`,
 }))
 
+const people: Chat[] = [
+  { ...chat, id: "20", kind: "dialog", title: "Zoe", lastMessageAt: "2026-09-27T09:00:00.000Z" },
+  {
+    ...chat,
+    id: "21",
+    kind: "dialog",
+    title: "Adam",
+    lastMessageAt: "2026-09-26T09:00:00.000Z",
+    providerMetadata: { username: "adam_k" },
+  },
+]
+
 const fake: MessengerAdapter = {
   self: () => "500",
   me: async () => ({ id: "500", name: "Owner", username: null }),
-  chats: async () => ({ items: [chat], hasMore: false }),
+  chats: async () => ({ items: [chat, ...people], hasMore: false }),
   history: async () => ({ items: [message], hasMore: false }),
   resolve: async () => chat,
+  contact: async () => ({
+    id: "21",
+    name: "Adam",
+    username: "adam_k",
+    description: null,
+    lastMessagedAt: null,
+    chats: [{ id: "7", title: "Book club", kind: "group", lastMessageAt: null }],
+  }),
   chat: async () => ({ ...chat, members: [{ id: "9", name: "Olga", username: null }] }),
   around: async (_chat, id, { before, after }) => {
     const index = thread.findIndex((one) => one.id === id)
@@ -77,7 +97,15 @@ const call = async (argv: string[], connect: Messenger["connect"], env: NodeJS.P
   const streams = captureStreams()
   const code = await run(
     argv,
-    { app, commands: () => [accountCommand(messenger), chatsCommand(messenger), messagesCommand(messenger)] },
+    {
+      app,
+      commands: () => [
+        accountCommand(messenger),
+        chatsCommand(messenger),
+        messagesCommand(messenger),
+        contactsCommand(messenger),
+      ],
+    },
     { streams, tty: false, env },
   )
   return { code, stdout: streams.stdout, stderr: streams.stderr }
@@ -101,6 +129,7 @@ describe("the shared read commands", () => {
       ["messages", "list", "Book", "--json"],
       ["messages", "context", "Book", "2", "--before", "1", "--after", "1", "--json"],
       ["messages", "show", "msg:chat/500/7/3", "--json"],
+      ["contacts", "list", "--json"],
     ]) {
       const live = await call(argv, online, env)
       const offline = await call([...argv, "--offline"], never, env)
@@ -134,6 +163,21 @@ describe("the shared read commands", () => {
     expect(JSON.parse(stdout[0] ?? "")).toMatchObject({ id: "7", members: [{ id: "9" }] })
     expect(stderr.join("\n")).toContain("only 1 of 4 members")
     expect((await call(["chats", "show", "Book", "--offline"], async () => fake, env)).code).toBe(2)
+  })
+
+  it("list as contacts only the one-to-one chats, in the order and with the filter asked for", async () => {
+    const root = mkdtempSync(join(tmpdir(), "messenger-"))
+    const env = { CHAT_STATE_DIR: join(root, "state"), MESSAGING_STORE: join(root, "m.db") }
+    const names = async (...argv: string[]) =>
+      JSON.parse(
+        (await call(["contacts", "list", "--json", ...argv], async () => fake, env)).stdout[0] ?? "",
+      ).items.map((one: { name: string }) => one.name)
+
+    expect(await names()).toEqual(["Zoe", "Adam"])
+    expect(await names("--order", "name")).toEqual(["Adam", "Zoe"])
+    expect(await names("--search", "ADAM_")).toEqual(["Adam"])
+    const shown = await call(["contacts", "show", "adam", "--json"], async () => fake, env)
+    expect(JSON.parse(shown.stdout[0] ?? "")).toMatchObject({ id: "21", chats: [{ id: "7" }] })
   })
 
   it("keep the account file where tg-cli 0.x kept it", () => {

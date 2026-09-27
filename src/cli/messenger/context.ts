@@ -54,7 +54,7 @@ export const messengerContext = (command: Command, messenger: Messenger): Messen
         if (base.settings.offline) {
           throw new CliError(
             "validation_error",
-            "--offline answers only from what is kept locally: `chats list` and `messages list|show|context`",
+            "--offline answers only from what is kept locally: `chats list`, `messages list|show|context` and `contacts list`",
           )
         }
         const connection = await messenger.connect(command, base)
