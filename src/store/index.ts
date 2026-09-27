@@ -5,6 +5,7 @@ export { openCache } from "./open.js"
 export { storePath } from "./path.js"
 export {
   type AccountKey,
+  type ChatStats,
   type IngestedVia,
   type MessageFilter,
   type MessageStore,
