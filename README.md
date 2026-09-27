@@ -4,7 +4,7 @@ The messenger-neutral half of a messaging command line tool, shared by
 [`tg-cli`](https://github.com/leemour/tg-cli) and, later, [`max-cli`](https://github.com/leemour/max-cli).
 Built on [`@leemour/cli-core`](https://github.com/leemour/cli-core).
 
-**Status: 0.10.0.** The domain model, message locators, message rendering, name
+**Status: 0.11.0.** The domain model, message locators, message rendering, name
 resolution, the SQLite seam that runs under Node and Bun, and the first part of the command
 skeleton with the shared read commands, the send guard, run records and the message store — see
 [the platform proposal](docs/plans/2026-09-26-platform-proposal.md).
