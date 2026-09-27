@@ -10,6 +10,7 @@ export {
   type MessageStore,
   openStore,
   type PersonFacts,
+  type Range,
   type StoredHit,
   type StoreOptions,
 } from "./store.js"

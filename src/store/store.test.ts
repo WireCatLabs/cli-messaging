@@ -291,8 +291,25 @@ describe("finding people and what they wrote", () => {
   })
 })
 
+describe("the stretches held completely", () => {
+  it("**merge when they overlap or touch**, and stay apart across a gap", async () => {
+    const store = await openStore({ path: fresh() })
+    store.markRange(ME, chat.id, 100, 200)
+    store.markRange(ME, chat.id, 300, 400)
+    expect(store.markRange(ME, chat.id, 201, 250)).toEqual({ from: 100, to: 250 })
+    expect(store.ranges(ME, chat.id)).toEqual([
+      { from: 100, to: 250 },
+      { from: 300, to: 400 },
+    ])
+    expect(store.markRange(ME, chat.id, 240, 310)).toEqual({ from: 100, to: 400 })
+    expect(store.ranges(ME, chat.id)).toEqual([{ from: 100, to: 400 }])
+    store.close()
+  })
+})
+
 describe("migrating the store", () => {
-  const next = { version: 2, minCompatible: 1, statements: ["ALTER TABLE chats ADD COLUMN folder TEXT"] }
+  const latest = MIGRATIONS.at(-1)?.version ?? 0
+  const next = { version: latest + 1, minCompatible: 1, statements: ["ALTER TABLE chats ADD COLUMN folder TEXT"] }
 
   it("opens a newer file this version can still write to, and changes nothing in it", async () => {
     const path = fresh()
@@ -309,16 +326,37 @@ describe("migrating the store", () => {
   it("**refuses a newer file it cannot write to**, and leaves it as it was", async () => {
     const path = fresh()
     const newer = await openCache(path)
-    migrate(newer, { migrations: [...MIGRATIONS, { ...next, minCompatible: 2 }] })
+    migrate(newer, { migrations: [...MIGRATIONS, { ...next, minCompatible: next.version }] })
     newer.close()
 
     await expect(openStore({ path })).rejects.toMatchObject({ code: "configuration_error" })
     const database = await openCache(path)
-    expect(database.prepare("SELECT version FROM schema_migrations ORDER BY version").all()).toEqual([
-      { version: 1 },
-      { version: 2 },
-    ])
+    expect(database.prepare("SELECT version FROM schema_migrations ORDER BY version").all()).toEqual(
+      [...MIGRATIONS, next].map(({ version }) => ({ version })),
+    )
     database.close()
+  })
+
+  it("**brings a file from every shipped version forward** without losing a message", async () => {
+    for (const shipped of MIGRATIONS.slice(0, -1)) {
+      const path = fresh()
+      const older = await openCache(path)
+      migrate(older, { migrations: MIGRATIONS.filter(({ version }) => version <= shipped.version) })
+      // Written the way that version wrote it — named columns, the ones version 1 has.
+      older.exec(`INSERT INTO accounts (pk, provider, native_id, created_at) VALUES (1, 'telegram', '100', 0)`)
+      older.exec(
+        `INSERT INTO chats (pk, account_pk, native_id, kind, updated_at) VALUES (1, 1, '${chat.id}', 'group', 0)`,
+      )
+      older.exec(`INSERT INTO messages (chat_pk, account_pk, native_id, sent_at, text, ingested_at, ingested_via)
+                  VALUES (1, 1, '42', 1, 'kept across the upgrade', 0, 'history')`)
+      older.close()
+
+      const store = await openStore({ path })
+      expect(store.messages(ME, chat.id, { limit: 5 }).items.map((one) => one.text)).toEqual([
+        "kept across the upgrade",
+      ])
+      store.close()
+    }
   })
 
   it("brings an older file forward without losing a message", async () => {

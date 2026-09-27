@@ -12,6 +12,7 @@ export {
 export { type Closeable, withDeadline } from "./deadline.js"
 export { isCliFailure, isCommanderFailure } from "./failures.js"
 export { accountFileFor, rememberAccount } from "./messenger/accounts.js"
+export { backfillCommand } from "./messenger/backfill-command.js"
 export { accountCommand, chatsCommand, contactsCommand, messagesCommand, watchCommand } from "./messenger/commands.js"
 export { completeCommand } from "./messenger/complete-command.js"
 export { type ConnectOptions, type Messenger, type MessengerContext, messengerContext } from "./messenger/context.js"
