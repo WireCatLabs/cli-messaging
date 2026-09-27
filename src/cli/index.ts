@@ -1,4 +1,5 @@
 export { type AppIdentity, envName } from "./app.js"
+export { CONTRACT, commandsCommand } from "./commands-command.js"
 export {
   type BaseContext,
   type BaseEnvironment,
@@ -12,6 +13,7 @@ export { isCliFailure, isCommanderFailure } from "./failures.js"
 export { accountFileFor, rememberAccount } from "./messenger/accounts.js"
 export { accountCommand, chatsCommand, contactsCommand, messagesCommand } from "./messenger/commands.js"
 export { type Messenger, type MessengerContext, messengerContext } from "./messenger/context.js"
+export { recipientsCommand, sendsCommand } from "./messenger/guard-commands.js"
 export type { MessengerAdapter, Sent } from "./messenger/port.js"
 export { renderPage, window, withPaging } from "./paging.js"
 export {

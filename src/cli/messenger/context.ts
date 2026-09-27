@@ -1,6 +1,6 @@
 import { CliError } from "@leemour/cli-core"
 import type { Command } from "commander"
-import type { Id, Provider } from "../../domain/models.js"
+import type { Chat, Id, Provider } from "../../domain/models.js"
 import { guardFor, type SendGuard } from "../../sends/guard.js"
 import { type AccountKey, type MessageStore, openStore } from "../../store/store.js"
 import type { AppIdentity } from "../app.js"
@@ -25,6 +25,8 @@ export interface Messenger {
   chatArgument: string
   /** The chat `me` names, when the messenger has a notes-to-self chat. */
   savedChatId?: (account: AccountKey) => Id
+  /** The other person in a one-to-one chat, when the chat says who — a recipient list matches on it. */
+  partnerOf?: (chat: Chat) => Id | undefined
 }
 
 export interface MessengerContext extends BaseContext {

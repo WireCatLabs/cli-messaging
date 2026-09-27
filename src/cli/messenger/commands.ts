@@ -1,4 +1,5 @@
 import { CliError } from "@leemour/cli-core"
+import { annotate } from "@leemour/cli-core/commands"
 import { Command } from "commander"
 import { isLocator, parseLocator } from "../../domain/locator.js"
 import type { Chat, Contact } from "../../domain/models.js"
@@ -121,8 +122,7 @@ export const messagesCommand = (messenger: Messenger): Command => {
     else context.renderer.result(window.before === 0 && window.after === 0 ? found[0] : { items: found })
   }
 
-  messages
-    .command("send")
+  annotate(messages.command("send"), { mutates: true })
     .description("send a text message; without [text], the text is read from stdin")
     .argument("<chat>", messenger.chatArgument)
     .argument("[text]", "the message")
@@ -131,8 +131,7 @@ export const messagesCommand = (messenger: Messenger): Command => {
       await sendText(this, messenger, chat, text, undefined)
     })
 
-  messages
-    .command("reply")
+  annotate(messages.command("reply"), { mutates: true })
     .description("answer one message; without [text], the text is read from stdin")
     .argument("<chat>", `${messenger.chatArgument}; or a msg: locator, with no message id after it`)
     .argument("[message]", "the message id to answer")

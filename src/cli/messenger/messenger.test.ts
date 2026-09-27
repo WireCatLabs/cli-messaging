@@ -2,14 +2,17 @@ import { mkdtempSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { captureStreams } from "@leemour/cli-core"
+import type { CommandInfo } from "@leemour/cli-core/commands"
 import { describe, expect, it } from "vitest"
 import type { Chat, Message, WindowedMessage } from "../../domain/models.js"
 import { SendJournal, sendsPathFor } from "../../sends/journal.js"
+import { commandsCommand } from "../commands-command.js"
 import { run } from "../program.js"
 import { settingsFor } from "../settings.js"
 import { accountFileFor } from "./accounts.js"
 import { accountCommand, chatsCommand, contactsCommand, messagesCommand } from "./commands.js"
 import type { Messenger } from "./context.js"
+import { recipientsCommand, sendsCommand } from "./guard-commands.js"
 import type { MessengerAdapter } from "./port.js"
 
 const app = {
@@ -105,6 +108,9 @@ const call = async (argv: string[], connect: Messenger["connect"], env: NodeJS.P
         chatsCommand(messenger),
         messagesCommand(messenger),
         contactsCommand(messenger),
+        recipientsCommand(messenger),
+        sendsCommand(messenger),
+        commandsCommand(app),
       ],
     },
     { streams, tty: false, env },
@@ -215,6 +221,19 @@ describe("the shared read commands", () => {
       ["sent", undefined],
     ])
     expect(JSON.stringify(journal)).not.toContain("see you there")
+  })
+
+  it("describe themselves for an agent, with the contract version and which ones write", async () => {
+    const root = mkdtempSync(join(tmpdir(), "messenger-"))
+    const { stdout } = await call(["commands", "--json"], async () => fake, { CHAT_STATE_DIR: root })
+    const described = JSON.parse(stdout[0] ?? "")
+    const flat = (list: CommandInfo[]): CommandInfo[] => list.flatMap((one) => [one, ...flat([...one.commands])])
+    const find = (path: string[]) => flat(described.commands).find((one) => one.path.join(" ") === path.join(" "))
+
+    expect(described).toMatchObject({ cli: "chat", contract: 0 })
+    expect(find(["messages", "send"])?.mutates).toBe(true)
+    expect(find(["recipients", "add"])?.mutates).toBe(true)
+    expect(find(["messages", "list"])?.mutates).toBeFalsy()
   })
 
   it("keep the account file where tg-cli 0.x kept it", () => {
