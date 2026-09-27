@@ -528,6 +528,12 @@ Run against the owner's real account, sending only to Saved Messages.
 
 Answered 2026-09-26: NEED-1 → A, NEED-2 → A with a generous extraction, NEED-3 → B.
 
+Answered 2026-09-27: **NEED-7 → A** — one session owns this package's releases: the one that works on
+the store for max-cli's bot. Others send PRs without a version bump, ask it for a release, and announce
+a migration's number before writing it. Two releases in one day collided on the same version (0.10.0,
+0.13.0); a collision on a migration number would damage the shared store. **NEED-8 → A** — tg-cli
+is published on npm like this package, once backfill and search exist; `tg update` is built then.
+
 - **NEED-1 — one store for all messengers, or one file per CLI?** Recommended: one file in
   `~/.local/share/cli-messaging/`, with `min_compatible`. Per-CLI files make every cross-messenger
   query an `ATTACH` with no foreign keys, and the `msg` command (Phase 4) would have nothing single
