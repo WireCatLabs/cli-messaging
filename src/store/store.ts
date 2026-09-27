@@ -2,7 +2,18 @@ import { mkdirSync, writeFileSync } from "node:fs"
 import { dirname } from "node:path"
 import { CliError } from "@leemour/cli-core"
 import { formatLocator } from "../domain/locator.js"
-import type { Attachment, Chat, Id, Message, MessageHit, Page, Provider, WindowedMessage } from "../domain/models.js"
+import type {
+  Attachment,
+  Chat,
+  Contact,
+  Id,
+  Message,
+  MessageHit,
+  Page,
+  Provider,
+  WindowedMessage,
+} from "../domain/models.js"
+import type { PeopleLookup } from "../resolve.js"
 import type { CacheDatabase, SqlValue } from "./driver.js"
 import { migrate } from "./migrations.js"
 import { openCache } from "./open.js"
@@ -20,6 +31,31 @@ export type IngestedVia = string
 
 export interface StoredHit extends MessageHit {
   locator: string
+}
+
+/** What a provider says about a person. `null` or absent never erases what was known. */
+export interface PersonFacts {
+  id: Id
+  name: string | null
+  username?: string | null
+  isBot?: boolean | null
+}
+
+/**
+ * Which messages `find` returns. At least `text` or `senders`.
+ *
+ * `together` keeps only the chats where **every** sender has a message in this store — written
+ * there, as far as this copy knows, which is not the same as being a member.
+ */
+export interface MessageFilter {
+  provider?: Provider
+  account?: AccountKey
+  senders?: Id[]
+  together?: boolean
+  text?: string
+  /** With `perChat`, the newest `limit` of each chat rather than of all of them together. */
+  limit: number
+  perChat?: boolean
 }
 
 export interface MessageStore {
@@ -45,6 +81,11 @@ export interface MessageStore {
   markDeleted(key: AccountKey, messageIds: Id[], options?: { chatId?: Id }): number
   /** Newest first. At least three characters: a trigram index answers a shorter query with nothing. */
   search(query: string, options: { limit: number; account?: AccountKey }): Page<StoredHit>
+  /** Newest first — by text, by who wrote it, or both. */
+  find(filter: MessageFilter): Page<StoredHit>
+  savePeople(provider: Provider, people: PersonFacts[]): void
+  /** Everyone this provider's accounts have seen; with `account`, only who wrote in its chats. */
+  people(provider: Provider, options?: { account?: Id }): PeopleLookup
   close(): void
 }
 
@@ -142,23 +183,44 @@ const storeOver = (database: CacheDatabase, now: () => number): MessageStore => 
     )
 
   /** Every new identity gets its own person; linking two is a later, recorded act. */
-  const identityPk = (provider: Provider, nativeId: Id, name: string | null): number => {
-    const found = one("SELECT pk, name FROM identities WHERE provider = ? AND native_id = ?", provider, nativeId)
+  const identityPk = (
+    provider: Provider,
+    nativeId: Id,
+    name: string | null,
+    facts: Omit<PersonFacts, "id" | "name"> = {},
+  ): number => {
+    const found = one(
+      "SELECT pk, name, username, is_bot FROM identities WHERE provider = ? AND native_id = ?",
+      provider,
+      nativeId,
+    )
     if (found) {
+      const username = facts.username ?? found.username ?? null
+      const isBot = facts.isBot === undefined || facts.isBot === null ? (found.is_bot ?? null) : Number(facts.isBot)
+      const newName = name ?? found.name ?? null
       // Only on a real change: the search trigger rewrites the index row on every update of `name`.
-      if (name !== null && name !== found.name) {
-        run("UPDATE identities SET name = ?, updated_at = ? WHERE pk = ?", name, now(), Number(found.pk))
+      if (newName !== found.name || username !== found.username || isBot !== found.is_bot) {
+        run(
+          "UPDATE identities SET name = ?, username = ?, is_bot = ?, updated_at = ? WHERE pk = ?",
+          newName as SqlValue,
+          username as SqlValue,
+          isBot as SqlValue,
+          now(),
+          Number(found.pk),
+        )
       }
       return Number(found.pk)
     }
     const at = now()
     const identity = Number(
       one(
-        `INSERT INTO identities (provider, native_id, name, first_seen_at, updated_at) VALUES (?, ?, ?, ?, ?)
-         RETURNING pk`,
+        `INSERT INTO identities (provider, native_id, name, username, is_bot, first_seen_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING pk`,
         provider,
         nativeId,
         name,
+        facts.username ?? null,
+        facts.isBot === undefined || facts.isBot === null ? null : Number(facts.isBot),
         at,
         at,
       )?.pk,
@@ -294,6 +356,79 @@ const storeOver = (database: CacheDatabase, now: () => number): MessageStore => 
     return rows.map((row) => toMessage(row, attachments.get(Number(row.pk)) ?? []))
   }
 
+  const find = ({
+    provider,
+    account,
+    senders,
+    together = false,
+    text,
+    limit,
+    perChat = false,
+  }: MessageFilter): Page<StoredHit> => {
+    const trimmed = text?.trim()
+    if (trimmed !== undefined && [...trimmed].length < 3) {
+      throw new CliError("validation_error", "search needs at least three characters")
+    }
+    if (!trimmed && !senders?.length) {
+      throw new CliError("validation_error", "say what to find: some text, or who wrote it")
+    }
+    const conditions = ["m.deleted_at IS NULL"]
+    const parameters: SqlValue[] = []
+    if (trimmed) {
+      conditions.push("m.pk IN (SELECT rowid FROM messages_fts WHERE messages_fts MATCH ?)")
+      parameters.push(`"${trimmed.replaceAll('"', '""')}"`)
+    }
+    const scopeProvider = account?.provider ?? provider
+    if (scopeProvider !== undefined) {
+      conditions.push("a.provider = ?")
+      parameters.push(scopeProvider)
+    }
+    if (account) {
+      conditions.push("a.native_id = ?")
+      parameters.push(account.account)
+    }
+    if (senders?.length) {
+      const ids = [...new Set(senders)]
+      const marks = ids.map(() => "?").join(", ")
+      conditions.push(`i.provider = a.provider AND i.native_id IN (${marks})`)
+      parameters.push(...ids)
+      if (together) {
+        conditions.push(`m.chat_pk IN (
+          SELECT m2.chat_pk FROM messages m2 JOIN identities i2 ON i2.pk = m2.sender_identity_pk
+          WHERE m2.deleted_at IS NULL AND ${scopeProvider === undefined ? "i2.provider = i.provider" : "i2.provider = ?"}
+            AND i2.native_id IN (${marks})
+          GROUP BY m2.chat_pk HAVING count(DISTINCT i2.native_id) = ?)`)
+        parameters.push(...(scopeProvider === undefined ? [] : [scopeProvider]), ...ids, ids.length)
+      }
+    }
+    const matching = `SELECT ${MESSAGE_COLUMNS}, c.title AS chat_title, a.provider AS provider,
+         a.native_id AS account_native_id
+         ${perChat ? ", row_number() OVER (PARTITION BY m.chat_pk ORDER BY m.sent_at DESC, m.pk DESC) AS chat_rank" : ""}
+       FROM messages m ${MESSAGE_JOINS} JOIN accounts a ON a.pk = m.account_pk
+       WHERE ${conditions.join(" AND ")}`
+    const rows = perChat
+      ? all(`SELECT * FROM (${matching}) WHERE chat_rank <= ? ORDER BY sent_at DESC, pk DESC`, ...parameters, limit + 1)
+      : all(`${matching} ORDER BY m.sent_at DESC, m.pk DESC LIMIT ?`, ...parameters, limit + 1)
+    const page = perChat ? rows.filter((row) => Number(row.chat_rank) <= limit) : rows.slice(0, limit)
+    const messages = toMessages(page)
+    return {
+      items: page.map((row, index) => {
+        const message = messages[index] as Message
+        return {
+          ...message,
+          chatTitle: (row.chat_title as string | null) ?? null,
+          locator: formatLocator({
+            provider: String(row.provider),
+            account: String(row.account_native_id),
+            chat: message.chatId,
+            message: message.id,
+          }),
+        }
+      }),
+      hasMore: rows.length > page.length,
+    }
+  }
+
   const MESSAGE_COLUMNS = `m.*, c.native_id AS chat_native_id, i.native_id AS sender_native_id`
   const MESSAGE_JOINS = `JOIN chats c ON c.pk = m.chat_pk LEFT JOIN identities i ON i.pk = m.sender_identity_pk`
 
@@ -420,39 +555,28 @@ const storeOver = (database: CacheDatabase, now: () => number): MessageStore => 
       return changed
     },
 
-    search: (query, { limit, account }) => {
-      const trimmed = query.trim()
-      if ([...trimmed].length < 3) {
-        throw new CliError("validation_error", "search needs at least three characters")
-      }
-      const scope = account ? "AND a.provider = ? AND a.native_id = ?" : ""
+    search: (query, { limit, account }) => find({ text: query, limit, ...(account ? { account } : {}) }),
+
+    find: (filter) => find(filter),
+
+    savePeople: (provider, people) =>
+      inTransaction(() => {
+        for (const person of people) identityPk(provider, person.id, person.name, person)
+      }),
+
+    people: (provider, { account } = {}) => {
+      const scope = account
+        ? `AND pk IN (SELECT m.sender_identity_pk FROM messages m JOIN accounts a ON a.pk = m.account_pk
+                      WHERE a.provider = ? AND a.native_id = ?)`
+        : ""
       const rows = all(
-        `SELECT ${MESSAGE_COLUMNS}, c.title AS chat_title, a.provider AS provider, a.native_id AS account_native_id
-         FROM messages_fts f JOIN messages m ON m.pk = f.rowid ${MESSAGE_JOINS} JOIN accounts a ON a.pk = m.account_pk
-         WHERE messages_fts MATCH ? AND m.deleted_at IS NULL ${scope}
-         ORDER BY m.sent_at DESC, m.pk DESC LIMIT ?`,
-        `"${trimmed.replaceAll('"', '""')}"`,
-        ...(account ? [account.provider, account.account] : []),
-        limit + 1,
+        `SELECT native_id, name, username FROM identities WHERE provider = ? ${scope}`,
+        provider,
+        ...(account ? [provider, account] : []),
       )
-      const page = rows.slice(0, limit)
-      const messages = toMessages(page)
-      return {
-        items: page.map((row, index) => {
-          const message = messages[index] as Message
-          return {
-            ...message,
-            chatTitle: (row.chat_title as string | null) ?? null,
-            locator: formatLocator({
-              provider: String(row.provider),
-              account: String(row.account_native_id),
-              chat: message.chatId,
-              message: message.id,
-            }),
-          }
-        }),
-        hasMore: rows.length > limit,
-      }
+      const everyone = rows.map(toContact)
+      const byId = new Map(everyone.map((person) => [person.id, person]))
+      return { get: (id) => byId.get(id), all: () => everyone }
     },
 
     close: () => database.close(),
@@ -473,6 +597,14 @@ const parsed = <T>(text: unknown): T | undefined => (typeof text === "string" ? 
 
 const present = <T extends Record<string, unknown>>(entries: T) =>
   Object.fromEntries(Object.entries(entries).filter(([, value]) => value !== null && value !== undefined))
+
+const toContact = (row: Record<string, unknown>): Contact => ({
+  id: String(row.native_id),
+  name: (row.name as string | null) ?? null,
+  username: (row.username as string | null) ?? null,
+  description: null,
+  lastMessagedAt: null,
+})
 
 const toChat = (row: Record<string, unknown>): Chat => ({
   id: String(row.native_id),
