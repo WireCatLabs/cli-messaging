@@ -36,6 +36,13 @@ export interface MessageStore {
    * necessarily the next one sent.
    */
   around(key: AccountKey, chatId: Id, messageId: Id, window: { before: number; after: number }): WindowedMessage[]
+  /**
+   * One message by its id. Without `chatId` it is looked up across the account, which is enough
+   * where ids are unique per account (MAX) and refused where two chats share one (Telegram).
+   */
+  message(key: AccountKey, messageId: Id, options?: { chatId?: Id }): Message | undefined
+  /** A tombstone, not a removal: the row stays, and reads and search stop returning it. */
+  markDeleted(key: AccountKey, messageIds: Id[], options?: { chatId?: Id }): number
   /** Newest first. At least three characters: a trigram index answers a shorter query with nothing. */
   search(query: string, options: { limit: number; account?: AccountKey }): Page<StoredHit>
   close(): void
@@ -375,6 +382,42 @@ const storeOver = (database: CacheDatabase, now: () => number): MessageStore => 
             )
       const rows = [...side("<", before).reverse(), anchor, ...side(">", after)]
       return toMessages(rows).map((message, index) => (rows[index] === anchor ? { ...message, anchor: true } : message))
+    },
+
+    message: (key, messageId, { chatId } = {}) => {
+      const accountKey = findAccountPk(key)
+      if (accountKey === undefined) return undefined
+      const rows = all(
+        `SELECT ${MESSAGE_COLUMNS} FROM messages m ${MESSAGE_JOINS}
+         WHERE m.account_pk = ? AND m.native_id = ? AND m.deleted_at IS NULL ${chatId === undefined ? "" : "AND c.native_id = ?"}
+         LIMIT 2`,
+        accountKey,
+        messageId,
+        ...(chatId === undefined ? [] : [chatId]),
+      )
+      if (rows.length > 1) {
+        throw new CliError("validation_error", `message ${messageId} is in more than one chat — name the chat`)
+      }
+      return toMessages(rows)[0]
+    },
+
+    markDeleted: (key, messageIds, { chatId } = {}) => {
+      const accountKey = findAccountPk(key)
+      if (accountKey === undefined || messageIds.length === 0) return 0
+      let changed = 0
+      inTransaction(() => {
+        for (const messageId of messageIds) {
+          changed += run(
+            `UPDATE messages SET deleted_at = ? WHERE account_pk = ? AND native_id = ? AND deleted_at IS NULL
+             ${chatId === undefined ? "" : "AND chat_pk = (SELECT pk FROM chats WHERE account_pk = ? AND native_id = ?)"}`,
+            now(),
+            accountKey,
+            messageId,
+            ...(chatId === undefined ? [] : [accountKey, chatId]),
+          ).changes
+        }
+      })
+      return changed
     },
 
     search: (query, { limit, account }) => {

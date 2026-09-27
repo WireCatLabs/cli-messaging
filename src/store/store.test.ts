@@ -145,6 +145,37 @@ describe("the message store", () => {
     store.close()
   })
 
+  it("finds one message by its id, and asks for the chat when two chats share the id", async () => {
+    const store = await openStore({ path: fresh() })
+    store.saveMessages(ME, chat.id, [message()], { via: "history" })
+    expect(store.message(ME, "42")?.text).toBe("empadronamiento renewal")
+    expect(store.message(ME, "43")).toBeUndefined()
+
+    store.saveMessages(ME, "555", [message({ chatId: "555" })], { via: "history" })
+    expect(() => store.message(ME, "42")).toThrow(expect.objectContaining({ code: "validation_error" }))
+    expect(store.message(ME, "42", { chatId: "555" })?.chatId).toBe("555")
+    store.close()
+  })
+
+  it("keeps a deleted message out of reads and search, in its own chat only", async () => {
+    const store = await openStore({ path: fresh() })
+    store.saveMessages(ME, chat.id, [message(), message({ id: "43" })], { via: "history" })
+    store.saveMessages(ME, "555", [message({ chatId: "555" })], { via: "history" })
+
+    expect(store.markDeleted(ME, ["42"], { chatId: chat.id })).toBe(1)
+    expect(store.markDeleted(ME, ["42"], { chatId: chat.id })).toBe(0)
+    expect(store.messages(ME, chat.id, { limit: 10 }).items.map((one) => one.id)).toEqual(["43"])
+    expect(store.message(ME, "42", { chatId: chat.id })).toBeUndefined()
+    expect(store.message(ME, "42", { chatId: "555" })).toBeDefined()
+    expect(
+      store
+        .search("empadronamiento", { limit: 10 })
+        .items.map((hit) => hit.chatId)
+        .sort(),
+    ).toEqual(["-1001234567890", "555"])
+    store.close()
+  })
+
   it("refuses a search too short for its index rather than answering nothing", async () => {
     const store = await openStore({ path: fresh() })
     expect(() => store.search("ab", { limit: 5 })).toThrow(expect.objectContaining({ code: "validation_error" }))
