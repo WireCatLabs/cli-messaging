@@ -1,5 +1,6 @@
 export { type AppIdentity, envName } from "./app.js"
 export { CONTRACT, commandsCommand } from "./commands-command.js"
+export { configCommand } from "./config-command.js"
 export {
   type BaseContext,
   type BaseEnvironment,
@@ -48,6 +49,7 @@ export {
 } from "./runs/run.js"
 export {
   type Config,
+  type Configuration,
   count,
   first,
   flag,
