@@ -3,7 +3,7 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { captureStreams } from "@leemour/cli-core"
 import { describe, expect, it } from "vitest"
-import type { Chat, Message } from "../../domain/models.js"
+import type { Chat, Message, WindowedMessage } from "../../domain/models.js"
 import { run } from "../program.js"
 import { settingsFor } from "../settings.js"
 import { accountFileFor } from "./accounts.js"
@@ -42,12 +42,24 @@ const message: Message = {
   reactions: null,
 }
 
+const thread: Message[] = ["1", "2", "3"].map((id, index) => ({
+  ...message,
+  id,
+  timestamp: `2026-09-27T10:0${index}:00.000Z`,
+}))
+
 const fake: MessengerAdapter = {
   self: () => "500",
   me: async () => ({ id: "500", name: "Owner", username: null }),
   chats: async () => ({ items: [chat], hasMore: false }),
   history: async () => ({ items: [message], hasMore: false }),
   resolve: async () => chat,
+  around: async (_chat, id, { before, after }) => {
+    const index = thread.findIndex((one) => one.id === id)
+    return thread
+      .slice(Math.max(0, index - before), index + after + 1)
+      .map((one) => (one.id === id ? { ...one, anchor: true as const } : one))
+  },
   send: async () => ({ message, sendId: "1" }),
   logout: async () => {},
   close: async () => {},
@@ -86,12 +98,30 @@ describe("the shared read commands", () => {
     for (const argv of [
       ["chats", "list", "--json"],
       ["messages", "list", "Book", "--json"],
+      ["messages", "context", "Book", "2", "--before", "1", "--after", "1", "--json"],
+      ["messages", "show", "msg:chat/500/7/3", "--json"],
     ]) {
       const live = await call(argv, online, env)
       const offline = await call([...argv, "--offline"], never, env)
       expect(live.code).toBe(0)
       expect(offline).toEqual({ ...live, stderr: [] })
     }
+  })
+
+  it("mark the message asked for, and name one by its locator", async () => {
+    const root = mkdtempSync(join(tmpdir(), "messenger-"))
+    const env = { CHAT_STATE_DIR: join(root, "state"), MESSAGING_STORE: join(root, "m.db") }
+    const context = await call(["messages", "context", "Book", "2", "--json"], async () => fake, env)
+    const shown = await call(["messages", "show", "msg:chat/500/7/3", "--json"], async () => fake, env)
+    const foreign = await call(["messages", "show", "msg:max/1/7/3"], async () => fake, env)
+
+    expect(JSON.parse(context.stdout[0] ?? "").items.map((one: WindowedMessage) => [one.id, one.anchor])).toEqual([
+      ["1", undefined],
+      ["2", true],
+      ["3", undefined],
+    ])
+    expect(JSON.parse(shown.stdout[0] ?? "")).toMatchObject({ id: "3", anchor: true })
+    expect(foreign.code).toBe(2)
   })
 
   it("keep the account file where tg-cli 0.x kept it", () => {

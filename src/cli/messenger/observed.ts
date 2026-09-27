@@ -58,6 +58,16 @@ export const observed = (messenger: MessengerAdapter, events: EventSink): Messen
         () => messenger.resolve(reference),
         (chat) => ({ ids: { chat: chat.id } }),
       ),
+    around: (reference, messageId, window) =>
+      timed(
+        "messages.around",
+        { ids: { message: messageId } },
+        () => messenger.around(reference, messageId, window),
+        (items) => ({
+          ...(items[0] ? { ids: { chat: items[0].chatId, message: messageId } } : {}),
+          counts: { messages: items.length },
+        }),
+      ),
     send: (chatId, text, options) =>
       timed(
         "messages.send",
