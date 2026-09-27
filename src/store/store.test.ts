@@ -197,6 +197,100 @@ describe("the message store", () => {
   })
 })
 
+describe("finding people and what they wrote", () => {
+  const BOT: AccountKey = { provider: "max-bot", account: "1" }
+  const OTHER_BOT: AccountKey = { provider: "max-bot", account: "2" }
+  const said = (id: string, chatId: string, senderId: string, text: string, minute: number): Message =>
+    message({
+      id,
+      chatId,
+      senderId,
+      senderName: `person ${senderId}`,
+      text,
+      timestamp: `2026-09-27T10:${String(minute).padStart(2, "0")}:00.000Z`,
+      attachments: [],
+      replyTo: null,
+      replyToId: undefined,
+    })
+
+  const seeded = async () => {
+    const store = await openStore({ path: fresh() })
+    store.saveMessages(
+      BOT,
+      "10",
+      [said("a", "10", "7", "hello from seven", 1), said("b", "10", "8", "eight here", 2)],
+      {
+        via: "history",
+      },
+    )
+    store.saveMessages(BOT, "20", [said("c", "20", "7", "seven alone", 3)], { via: "history" })
+    store.saveMessages(
+      OTHER_BOT,
+      "30",
+      [said("d", "30", "7", "seven again", 4), said("e", "30", "8", "eight again", 5), said("f", "30", "9", "nine", 6)],
+      { via: "history" },
+    )
+    return store
+  }
+
+  it("keeps the messages of any sender, newest first, in one account or across a provider", async () => {
+    const store = await seeded()
+    expect(store.find({ account: BOT, senders: ["7"], limit: 10 }).items.map(({ id }) => id)).toEqual(["c", "a"])
+    expect(store.find({ provider: "max-bot", senders: ["7", "9"], limit: 10 }).items.map(({ id }) => id)).toEqual([
+      "f",
+      "d",
+      "c",
+      "a",
+    ])
+    store.close()
+  })
+
+  it("keeps only the chats where every sender wrote, with `together`", async () => {
+    const store = await seeded()
+    const page = store.find({ provider: "max-bot", senders: ["7", "8"], together: true, limit: 10 })
+    expect(page.items.map(({ id }) => id)).toEqual(["e", "d", "b", "a"])
+    store.close()
+  })
+
+  it("caps each chat rather than all of them, with `perChat`", async () => {
+    const store = await seeded()
+    const page = store.find({ provider: "max-bot", senders: ["7", "8"], together: true, perChat: true, limit: 1 })
+    expect(page).toMatchObject({ items: [{ id: "e" }, { id: "b" }], hasMore: true })
+    store.close()
+  })
+
+  it("combines text with a sender and leaves a deleted message out", async () => {
+    const store = await seeded()
+    const page = store.find({ provider: "max-bot", senders: ["7"], text: "again", limit: 10 })
+    expect(page.items.map(({ id }) => id)).toEqual(["d"])
+    store.markDeleted(OTHER_BOT, ["d"])
+    expect(store.find({ provider: "max-bot", senders: ["7"], text: "again", limit: 10 }).items).toEqual([])
+    store.close()
+  })
+
+  it("finds nothing for a sender it has never seen, and refuses a filter with neither text nor sender", async () => {
+    const store = await seeded()
+    expect(store.find({ provider: "max-bot", senders: ["404"], limit: 10 }).items).toEqual([])
+    expect(() => store.find({ provider: "max-bot", limit: 10 })).toThrow("say what to find")
+    store.close()
+  })
+
+  it("remembers a username and a bot flag, and a later name alone does not erase them", async () => {
+    const store = await seeded()
+    store.savePeople("max-bot", [{ id: "7", name: "Seven", username: "seven", isBot: false }])
+    store.saveMessages(BOT, "10", [said("g", "10", "7", "renamed", 7)], { via: "update" })
+    expect(store.people("max-bot").get("7")).toMatchObject({ name: "person 7", username: "seven" })
+    expect(
+      store
+        .people("max-bot", { account: "1" })
+        .all()
+        .map(({ id }) => id)
+        .toSorted(),
+    ).toEqual(["7", "8"])
+    store.close()
+  })
+})
+
 describe("migrating the store", () => {
   const next = { version: 2, minCompatible: 1, statements: ["ALTER TABLE chats ADD COLUMN folder TEXT"] }
 

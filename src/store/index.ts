@@ -6,8 +6,10 @@ export { storePath } from "./path.js"
 export {
   type AccountKey,
   type IngestedVia,
+  type MessageFilter,
   type MessageStore,
   openStore,
+  type PersonFacts,
   type StoredHit,
   type StoreOptions,
 } from "./store.js"
