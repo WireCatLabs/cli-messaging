@@ -9,7 +9,7 @@ import { newSendId } from "../../sends/send-id.js"
 import type { AccountKey, MessageStore } from "../../store/store.js"
 import { environmentOf } from "../context.js"
 import { renderPage, window, withPaging } from "../paging.js"
-import { type Messenger, messengerContext } from "./context.js"
+import { type Messenger, type MessengerContext, messengerContext } from "./context.js"
 
 export const accountCommand = (messenger: Messenger): Command =>
   new Command("account").description("the logged-in account").addCommand(
@@ -340,20 +340,6 @@ export const watchCommand = (messenger: Messenger): Command =>
       if (context.settings.offline)
         throw new CliError("validation_error", "watch listens live; --offline has nothing to wait for")
 
-      const stop = new AbortController()
-      const given = environmentOf(this).signal
-      const end = () => stop.abort()
-      given?.addEventListener("abort", end, { once: true })
-      const signals = given ? [] : (["SIGINT", "SIGTERM"] as const)
-      for (const name of signals) process.once(name, end)
-      // `tg watch --jsonl | head -1`: once the reader is gone, the next write fails, and that is the end.
-      const closed = (error: NodeJS.ErrnoException) => {
-        if (error.code === "EPIPE") end()
-      }
-      if (!given) process.stdout.on("error", closed)
-      const timer =
-        context.settings.commandTimeoutMs === undefined ? undefined : setTimeout(end, context.settings.commandTimeoutMs)
-
       const render = (message: MessageHit) =>
         `${message.chatTitle ?? message.chatId}\n${renderMessages([message], {
           color: context.color,
@@ -365,6 +351,7 @@ export const watchCommand = (messenger: Messenger): Command =>
 
       // Without --events the stream is bare messages, as it always was: a reader of it never meets
       // a line of another shape.
+      const stop = new AbortController()
       const print = (event: MessageEvent) => {
         if (stop.signal.aborted || (!events && event.event !== "message")) return
         if (context.format === "jsonl") {
@@ -372,23 +359,49 @@ export const watchCommand = (messenger: Messenger): Command =>
         } else context.streams.data(describe(event, render))
       }
 
-      try {
-        await context.withMessenger(
-          async (connection) => {
-            if (!connection.watch) {
-              throw new CliError("validation_error", `${messenger.app.command} cannot listen for new messages`)
-            }
-            await connection.watch(print, stop.signal, () => context.renderer.note("listening — Ctrl-C to stop"))
-          },
-          { listen: true },
-        )
-      } finally {
-        if (timer) clearTimeout(timer)
-        for (const name of signals) process.off(name, end)
-        if (!given) process.stdout.off("error", closed)
-        given?.removeEventListener("abort", end)
-      }
+      await listenUntilStopped(this, context, messenger, print, { stop, pipe: true })
     })
+
+/**
+ * Listens until Ctrl-C, SIGTERM, `--timeout` or — with `pipe` — a reader that has gone away.
+ * Each ends it normally. Tests hand in `signal` instead of process-wide handlers.
+ */
+export const listenUntilStopped = async (
+  command: Command,
+  context: MessengerContext,
+  messenger: Messenger,
+  onEvent: (event: MessageEvent) => void,
+  { stop, pipe = false, catchUp = false }: { stop: AbortController; pipe?: boolean; catchUp?: boolean },
+): Promise<void> => {
+  const given = environmentOf(command).signal
+  const end = () => stop.abort()
+  given?.addEventListener("abort", end, { once: true })
+  const signals = given ? [] : (["SIGINT", "SIGTERM"] as const)
+  for (const name of signals) process.once(name, end)
+  // `tg watch --jsonl | head -1`: once the reader is gone, the next write fails, and that is the end.
+  const closed = (error: NodeJS.ErrnoException) => {
+    if (error.code === "EPIPE") end()
+  }
+  if (pipe && !given) process.stdout.on("error", closed)
+  const timer =
+    context.settings.commandTimeoutMs === undefined ? undefined : setTimeout(end, context.settings.commandTimeoutMs)
+  try {
+    await context.withMessenger(
+      async (connection) => {
+        if (!connection.watch) {
+          throw new CliError("validation_error", `${messenger.app.command} cannot listen for new messages`)
+        }
+        await connection.watch(onEvent, stop.signal, () => context.renderer.note("listening — Ctrl-C to stop"))
+      },
+      { listen: true, ...(catchUp ? { catchUp } : {}) },
+    )
+  } finally {
+    if (timer) clearTimeout(timer)
+    for (const name of signals) process.off(name, end)
+    if (pipe && !given) process.stdout.off("error", closed)
+    given?.removeEventListener("abort", end)
+  }
+}
 
 const describe = (event: MessageEvent, render: (message: MessageHit) => string): string => {
   switch (event.event) {

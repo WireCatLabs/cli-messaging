@@ -19,6 +19,7 @@ export { type ConnectOptions, type Messenger, type MessengerContext, messengerCo
 export { doctorCommand } from "./messenger/doctor-command.js"
 export { recipientsCommand, sendsCommand } from "./messenger/guard-commands.js"
 export type { MessengerAdapter, Sent } from "./messenger/port.js"
+export { serveCommand } from "./messenger/serve-command.js"
 export { renderPage, window, withPaging } from "./paging.js"
 export {
   asFirstWord,

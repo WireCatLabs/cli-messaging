@@ -14,6 +14,8 @@ import { stored } from "./stored.js"
 /** `listen` opens a connection that receives updates — only `watch` asks; the rest stay quiet. */
 export interface ConnectOptions {
   listen?: boolean
+  /** Fetch what arrived while nothing listened — `serve` only; `watch` starts from now. */
+  catchUp?: boolean
 }
 
 /** What one messenger CLI hands the shared commands. Everything else about it stays in its own code. */
