@@ -1,6 +1,6 @@
 {
   "name": "@leemour/cli-messaging",
-  "version": "0.12.0",
+  "version": "0.13.0",
   "description": "The messenger-neutral half of a messaging CLI: domain model, message locators, rendering, name resolution, the SQLite seam, the command skeleton and shared read commands, the send guard, run records and the message store",
   "license": "MIT",
   "author": "Viacheslav Ptsarev",
@@ -49,6 +49,7 @@
     "prepublishOnly": "pnpm build"
   },
   "dependencies": {
+    "@bomb.sh/tab": "0.0.22",
     "@leemour/cli-core": "0.7.0",
     "qrcode-generator": "2.0.4",
     "string-width": "8.3.0",

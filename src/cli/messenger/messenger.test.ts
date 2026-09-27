@@ -1,4 +1,4 @@
-import { mkdtempSync } from "node:fs"
+import { existsSync, mkdtempSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { captureStreams } from "@leemour/cli-core"
@@ -11,6 +11,7 @@ import { run } from "../program.js"
 import { settingsFor } from "../settings.js"
 import { accountFileFor } from "./accounts.js"
 import { accountCommand, chatsCommand, contactsCommand, messagesCommand } from "./commands.js"
+import { completeCommand } from "./complete-command.js"
 import type { Messenger } from "./context.js"
 import { recipientsCommand, sendsCommand } from "./guard-commands.js"
 import type { MessengerAdapter } from "./port.js"
@@ -111,6 +112,7 @@ const call = async (argv: string[], connect: Messenger["connect"], env: NodeJS.P
         recipientsCommand(messenger),
         sendsCommand(messenger),
         commandsCommand(app),
+        completeCommand(messenger, settingsFor(app)),
       ],
     },
     { streams, tty: false, env },
@@ -234,6 +236,26 @@ describe("the shared read commands", () => {
     expect(find(["messages", "send"])?.mutates).toBe(true)
     expect(find(["recipients", "add"])?.mutates).toBe(true)
     expect(find(["messages", "list"])?.mutates).toBeFalsy()
+  })
+
+  it("**complete a chat from the store** — its id as the word, its title as the description", async () => {
+    const root = mkdtempSync(join(tmpdir(), "messenger-"))
+    const env = { CHAT_STATE_DIR: join(root, "state"), MESSAGING_STORE: join(root, "m.db") }
+    await call(["chats", "list"], async () => fake, env)
+
+    const { stdout } = await call(["complete", "--", "chats", "show", ""], async () => fake, env)
+
+    expect(stdout.join("\n")).toContain("7\tBook club")
+  })
+
+  it("never creates the store on a Tab", async () => {
+    const root = mkdtempSync(join(tmpdir(), "messenger-"))
+    const env = { CHAT_STATE_DIR: join(root, "state"), MESSAGING_STORE: join(root, "m.db") }
+
+    const { code } = await call(["complete", "--", "chats", "show", ""], async () => fake, env)
+
+    expect(code).toBe(0)
+    expect(existsSync(join(root, "m.db"))).toBe(false)
   })
 
   it("keep the account file where tg-cli 0.x kept it", () => {
