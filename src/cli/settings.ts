@@ -1,11 +1,14 @@
 import { existsSync } from "node:fs"
 import { CliError, configFilePath, loadConfigFile, resolvePaths, saveConfigFile } from "@leemour/cli-core"
 import * as v from "valibot"
+import { PERMISSIONS, type Permission } from "../sends/permissions.js"
 import { type AppIdentity, envName } from "./app.js"
 import { DEFAULT_PROFILE, usableProfileName } from "./profile.js"
 
 const DEFAULT_LIMIT = 20
 const DEFAULT_KEEP_RUNS_FOR_DAYS = 30
+/** On by default: a limit that is off protects nobody from a loop. */
+const DEFAULT_SENDS_PER_HOUR = 30
 
 export const plain =
   (rule: string) =>
@@ -14,6 +17,10 @@ export const plain =
 const wholeNumber = plain("has to be a whole number, 1 or more")
 export const count = v.pipe(v.number(wholeNumber), v.integer(wholeNumber), v.minValue(1, wholeNumber))
 export const flag = v.boolean(plain("has to be true or false"))
+const permissionList = v.array(
+  v.picklist(PERMISSIONS, (issue) => `has to be one of ${PERMISSIONS.join(", ")}, not ${issue.received}`),
+  plain("has to be a list of actions, like send,reaction"),
+)
 
 /** valibot's own words ("Expected never but received …") mean nothing to someone editing a file. */
 const objectMessage =
@@ -38,6 +45,9 @@ const SHARED_PROFILE_ENTRIES = {
   senderColors: v.optional(flag),
   record: v.optional(flag),
   keepRunsForDays: v.optional(count),
+  readOnly: v.optional(flag),
+  allow: v.optional(permissionList),
+  sendsPerHour: v.optional(count),
 }
 
 /** One program, one version: whether to look for a newer one is not a per-profile matter. */
@@ -111,6 +121,10 @@ export interface Settings {
   /** A failed run is kept even unrecorded, unless recording was turned off by name. */
   keepFailedRuns: boolean
   keepRunsForDays: number
+  readOnly: boolean
+  /** `undefined` is every action; a list is only those. */
+  allow: readonly Permission[] | undefined
+  sendsPerHour: number
   updateCheck: boolean
   configPath: string
   configFound: boolean
@@ -242,6 +256,9 @@ export const settingsFor = (app: AppIdentity, extension: SettingsExtension = {})
     const color = fromFile<boolean | undefined>(scopes, "color", undefined)
     const senderColors = fromFile(scopes, "senderColors", false)
     const keepRunsForDays = fromFile(scopes, "keepRunsForDays", DEFAULT_KEEP_RUNS_FOR_DAYS)
+    const readOnly = fromFile(scopes, "readOnly", false)
+    const allow = fromFile<readonly Permission[] | undefined>(scopes, "allow", undefined)
+    const sendsPerHour = fromFile(scopes, "sendsPerHour", DEFAULT_SENDS_PER_HOUR)
     const updateCheck = first([["config defaults", shared.updateCheck as boolean | undefined]], true)
     const timeout = first<string | undefined>(
       [
@@ -272,6 +289,9 @@ export const settingsFor = (app: AppIdentity, extension: SettingsExtension = {})
       record: record.value,
       keepFailedRuns: record.value || record.from === "default",
       keepRunsForDays: keepRunsForDays.value,
+      readOnly: readOnly.value,
+      allow: allow.value,
+      sendsPerHour: sendsPerHour.value,
       updateCheck: updateCheck.value,
       configPath,
       configFound: existsSync(configPath),
@@ -285,6 +305,9 @@ export const settingsFor = (app: AppIdentity, extension: SettingsExtension = {})
         senderColors: senderColors.from,
         record: record.from,
         keepRunsForDays: keepRunsForDays.from,
+        readOnly: readOnly.from,
+        allow: allow.from,
+        sendsPerHour: sendsPerHour.from,
         updateCheck: updateCheck.from,
       },
       configured,

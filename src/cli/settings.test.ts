@@ -213,7 +213,7 @@ describe("the configuration file", () => {
     withConfig(JSON.stringify({ profiles: { default: { limitt: 5 } } }))
     expect(() => settings()).toThrowError(
       "profiles.default.limitt: unknown setting — the known ones are limit, timeoutMs, color, senderColors, record, " +
-        "keepRunsForDays",
+        "keepRunsForDays, readOnly, allow, sendsPerHour",
     )
 
     withConfig(JSON.stringify({ profiles: { default: { limit: 0, color: "yes" } } }))
