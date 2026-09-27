@@ -79,7 +79,7 @@ export const run = async (argv: string[], definition: ProgramDefinition, options
     out: (text) => streams.data(text.replace(/\n$/, "")),
     err: (text) => streams.diagnostic(text.replace(/\n$/, "")),
   })
-  provide(program, { ...options, streams })
+  provide(program, { ...options, streams, app: definition.app })
   // Depth-first: a subcommand left with the default behaviour kills the process from inside a test.
   forEachCommand(program, (child) => child.exitOverride())
 

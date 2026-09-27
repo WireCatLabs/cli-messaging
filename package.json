@@ -1,7 +1,7 @@
 {
   "name": "@leemour/cli-messaging",
-  "version": "0.2.0",
-  "description": "The messenger-neutral half of a messaging CLI: domain model, message locators, rendering, name resolution, the SQLite seam, the command skeleton and the send guard",
+  "version": "0.3.0",
+  "description": "The messenger-neutral half of a messaging CLI: domain model, message locators, rendering, name resolution, the SQLite seam, the command skeleton, the send guard and run records",
   "license": "MIT",
   "author": "Viacheslav Ptsarev",
   "repository": {

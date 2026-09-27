@@ -20,6 +20,26 @@ export {
   usableProfileName,
 } from "./profile.js"
 export { createProgram, type ProgramDefinition, type ProgramOptions, type RunOptions, run } from "./program.js"
+export { runsCommand } from "./runs/command.js"
+export {
+  type DiagnosticEvent,
+  type EventSink,
+  providerErrorKey,
+  type RequestEvent,
+  renderEvent,
+  type WarningEvent,
+} from "./runs/events.js"
+export { crashOf, type RecordingOptions, recorded } from "./runs/recording.js"
+export {
+  findRun,
+  KEEP_RUNS_FOR_DAYS,
+  listRuns,
+  pruneRuns,
+  type RunMetadata,
+  readEvents,
+  runsDirFor,
+  startRun,
+} from "./runs/run.js"
 export {
   type Config,
   count,
