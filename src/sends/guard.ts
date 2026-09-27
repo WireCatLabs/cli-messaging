@@ -249,7 +249,12 @@ export const sendGuard = ({
  * The guard a profile's configuration asks for — the command's, and a background server's for every
  * write it forwards. Built per request there, so `config set readOnly true` needs no restart.
  */
-export const guardFor = (app: AppIdentity, settings: Settings, warn: (message: string) => void): SendGuard =>
+export const guardFor = (
+  app: AppIdentity,
+  settings: Settings,
+  warn: (message: string) => void,
+  env: NodeJS.ProcessEnv = process.env,
+): SendGuard =>
   sendGuard({
     profile: settings.profile,
     command: app.command,
@@ -257,8 +262,8 @@ export const guardFor = (app: AppIdentity, settings: Settings, warn: (message: s
     readOnlyFrom: settings.sources.readOnly ?? "default",
     ...(settings.allow ? { allow: settings.allow, allowFrom: settings.sources.allow ?? "default" } : {}),
     sendsPerHour: settings.sendsPerHour,
-    journal: new SendJournal(sendsPathFor(app, settings.profile)),
-    recipients: new RecipientList(recipientsPathFor(app, settings.profile), app.command),
+    journal: new SendJournal(sendsPathFor(app, settings.profile, env)),
+    recipients: new RecipientList(recipientsPathFor(app, settings.profile, env), app.command),
     warn,
   })
 

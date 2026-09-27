@@ -4,7 +4,7 @@ import type { Id, Provider } from "../../domain/models.js"
 import { guardFor, type SendGuard } from "../../sends/guard.js"
 import { type AccountKey, type MessageStore, openStore } from "../../store/store.js"
 import type { AppIdentity } from "../app.js"
-import { type BaseContext, baseContext } from "../context.js"
+import { type BaseContext, baseContext, environmentOf } from "../context.js"
 import type { GlobalFlags, ResolveOptions, Settings } from "../settings.js"
 import { recalledAccount, rememberAccount } from "./accounts.js"
 import { observed } from "./observed.js"
@@ -29,6 +29,7 @@ export interface Messenger {
 
 export interface MessengerContext extends BaseContext {
   profile: string
+  stdin: NodeJS.ReadableStream & { isTTY?: boolean }
   /** Read-only, the allow-list, the recipient list and the hourly limit — asked before every write, told after. */
   guard: SendGuard
   /**
@@ -48,7 +49,8 @@ export const messengerContext = (command: Command, messenger: Messenger): Messen
   return {
     ...base,
     profile,
-    guard: guardFor(app, base.settings, base.renderer.warn),
+    stdin: environmentOf(command).stdin ?? process.stdin,
+    guard: guardFor(app, base.settings, base.renderer.warn, base.env),
     withMessenger: (work) =>
       base.run(async (events) => {
         if (base.settings.offline) {

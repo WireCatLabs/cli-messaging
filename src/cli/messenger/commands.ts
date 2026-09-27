@@ -4,6 +4,7 @@ import { isLocator, parseLocator } from "../../domain/locator.js"
 import type { Chat, Contact } from "../../domain/models.js"
 import { renderMessages } from "../../render/messages.js"
 import { pickChat } from "../../resolve.js"
+import { newSendId } from "../../sends/send-id.js"
 import type { AccountKey, MessageStore } from "../../store/store.js"
 import { renderPage, window, withPaging } from "../paging.js"
 import { type Messenger, messengerContext } from "./context.js"
@@ -61,7 +62,7 @@ export const chatsCommand = (messenger: Messenger): Command => {
   return chats
 }
 
-/** `messages` with `list`. A CLI adds its own subcommands — `send` — to what this returns. */
+/** `messages`: reading, and sending through the guard. A CLI may add its own subcommands. */
 export const messagesCommand = (messenger: Messenger): Command => {
   const messages = new Command("messages").description("read and send messages")
 
@@ -121,6 +122,29 @@ export const messagesCommand = (messenger: Messenger): Command => {
   }
 
   messages
+    .command("send")
+    .description("send a text message; without [text], the text is read from stdin")
+    .argument("<chat>", messenger.chatArgument)
+    .argument("[text]", "the message")
+    .option("--send-id <id>", "repeat a send whose outcome was unknown, without risking a second copy")
+    .action(async function (this: Command, chat: string, text: string | undefined) {
+      await sendText(this, messenger, chat, text, undefined)
+    })
+
+  messages
+    .command("reply")
+    .description("answer one message; without [text], the text is read from stdin")
+    .argument("<chat>", `${messenger.chatArgument}; or a msg: locator, with no message id after it`)
+    .argument("[message]", "the message id to answer")
+    .argument("[text]", "the reply")
+    .option("--send-id <id>", "repeat a reply whose outcome was unknown, without risking a second copy")
+    .action(async function (this: Command, chat: string, message: string | undefined, text: string | undefined) {
+      // With a locator the message is named already, so the second word is the text.
+      const target = isLocator(chat) ? targetOf(messenger, chat, undefined) : targetOf(messenger, chat, message)
+      await sendText(this, messenger, target.chat, isLocator(chat) ? message : text, target.message)
+    })
+
+  messages
     .command("show")
     .description("one message, by its chat and id or by its msg: locator")
     .argument("<chat>", `${messenger.chatArgument}; or a msg: locator, with no message id after it`)
@@ -142,6 +166,63 @@ export const messagesCommand = (messenger: Messenger): Command => {
     })
 
   return messages
+}
+
+/**
+ * **Asked before it goes, told after, on every outcome** — the guard's journal is the only record
+ * of what this profile tried to send, and it never holds the text.
+ */
+const sendText = async (
+  command: Command,
+  messenger: Messenger,
+  chat: string,
+  text: string | undefined,
+  replyTo: string | undefined,
+) => {
+  const context = messengerContext(command, messenger)
+  const { sendId } = command.opts<{ sendId?: string }>()
+  const body = text ?? (await readAll(context.stdin))
+  if (body.trim() === "") throw new CliError("validation_error", "nothing to send — give the text or pipe it in")
+  const sent = await context.withMessenger(async (connection) => {
+    const { guard } = context
+    const { id: chatId } = await connection.resolve(chat)
+    const attempt = {
+      chatId,
+      kind: "message" as const,
+      sendId: sendId ?? newSendId(),
+      length: body.length,
+      ...(replyTo === undefined ? {} : { replyTo }),
+    }
+    try {
+      guard.check(attempt)
+    } catch (error) {
+      guard.record({ ...attempt, outcome: "refused", errorCode: codeOf(error) })
+      throw error
+    }
+    try {
+      const done = await connection.send(chatId, body, {
+        sendId: attempt.sendId,
+        ...(replyTo === undefined ? {} : { replyTo }),
+      })
+      guard.record({ ...attempt, outcome: "sent", messageId: done.message.id })
+      return done
+    } catch (error) {
+      const code = codeOf(error)
+      guard.record({ ...attempt, outcome: code === "outcome_unknown" ? "outcome_unknown" : "failed", errorCode: code })
+      throw error
+    }
+  })
+  context.renderer.result({ sendId: sent.sendId, message: sent.message })
+}
+
+const codeOf = (error: unknown): string =>
+  typeof (error as { code?: unknown })?.code === "string" ? (error as { code: string }).code : "unknown"
+
+const readAll = async (input: NodeJS.ReadableStream & { isTTY?: boolean }): Promise<string> => {
+  if (input.isTTY) return ""
+  const chunks: Buffer[] = []
+  for await (const chunk of input) chunks.push(Buffer.from(chunk))
+  return Buffer.concat(chunks).toString("utf8")
 }
 
 type Window = { before: number; after: number }

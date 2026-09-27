@@ -85,7 +85,7 @@ export const observed = (messenger: MessengerAdapter, events: EventSink): Messen
     send: (chatId, text, options) =>
       timed(
         "messages.send",
-        { ids: { chat: chatId, send: options.sendId } },
+        { ids: { chat: chatId, send: options.sendId, ...(options.replyTo ? { reply: options.replyTo } : {}) } },
         () => messenger.send(chatId, text, options),
         (sent) => ({ ids: { message: sent.message.id } }),
       ),
