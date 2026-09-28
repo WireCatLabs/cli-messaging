@@ -290,6 +290,24 @@ describe("finding people and what they wrote", () => {
     store.close()
   })
 
+  it("reads a chosen few accounts, and never all of them by leaving the provider out", async () => {
+    const store = await seeded()
+    const ids = (accounts: string[]) =>
+      store.find({ provider: "max-bot", accounts, senders: ["7", "9"], limit: 10 }).items.map(({ id }) => id)
+    expect(ids(["1"])).toEqual(["c", "a"])
+    expect(ids(["1", "2"])).toEqual(["f", "d", "c", "a"])
+    expect(ids([])).toEqual([])
+    expect(() => store.find({ accounts: ["1"], senders: ["7"], limit: 10 })).toThrow(/provider/)
+    expect(
+      store
+        .people("max-bot", { accounts: ["1", "2"] })
+        .all()
+        .map(({ id }) => id)
+        .toSorted(),
+    ).toEqual(["7", "8", "9"])
+    store.close()
+  })
+
   it("keeps each account's people to itself: a person seen by one bot is not another's", async () => {
     const store = await seeded()
     store.savePeople(OTHER_BOT, [{ id: "11", name: "Only the other", username: "other" }])
