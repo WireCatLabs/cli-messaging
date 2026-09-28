@@ -487,8 +487,8 @@ never drift apart. A tool answers what the command's `--json` prints.
 
 | PR | What |
 |---|---|
-| 3.1 | `mcp` and `mcp config` in cli-messaging (`./mcp`, the SDK loaded only by `mcp`), copied from max-cli `src/mcp/`: a session that holds one connection (2 min idle, 5 min age, one call at a time, dropped after a connection error), the read tools over `MessengerAdapter` and the store, `<cli>_status`, the instructions under 2048 characters. Reads are saved and recorded exactly as a command's — one shared wrapper. Tools are named from `app.command` (`tg_chats_list`); a CLI adds its own |
-| 3.2 | `--allow-send`: `<cli>_messages_send` with `reply_to` and `send_id`, through the same guard function as the command; `--confirm-send`, max's elicitation form (HMAC-sealed, one use, 5 min), both protocol eras |
+| 3.1 | `mcp` and `mcp config` in cli-messaging (`./mcp`, the SDK loaded only by `mcp`), copied from max-cli `src/mcp/`: a session that holds one connection (2 min idle, 5 min age, one call at a time, dropped after a connection error), the read tools over `MessengerAdapter` and the store, `<cli>_status`, the instructions under 2048 characters. Reads are saved and recorded exactly as a command's — one shared wrapper. Tools are named from `app.command` (`tg_chats_list`); a CLI adds its own **Done 2026-09-28 (0.22.0)** — found live: a client that trims the environment leaves out `XDG_RUNTIME_DIR`, and the keyring with it; `mcp config` copies it |
+| 3.2 | `--allow-send`: `<cli>_messages_send` with `reply_to` and `send_id`, through the same guard function as the command; `--confirm-send`, max's elicitation form (HMAC-sealed, one use, 5 min), both protocol eras **Done 2026-09-28 (0.23.0)** |
 | 3.3 | prompts (`reply`, `find`; `catch-up` and `review` with their commands) and the chat resource from the store |
 | 3.4 | `skill show` and the skill file, copied from max-cli's `skills/max-cli/SKILL.md` |
 
