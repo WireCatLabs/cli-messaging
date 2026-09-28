@@ -10,9 +10,29 @@ const asked = (text: string): GetPromptResult => ({ messages: [{ role: "user", c
 /**
  * Slash commands in Claude Code, copied from max-cli's. Each names tools and steps only — fetching
  * is the tools' job, so no message text is ever part of a prompt. The owner's own argument goes in
- * quoted, as data. `catch-up` and `review` come with the commands they call.
+ * quoted, as data. `review` comes with the command it calls.
  */
 export const registerPrompts = (server: McpServer, { command, name }: { command: string; name: string }): void => {
+  server.registerPrompt(
+    "catch-up",
+    {
+      title: `Catch up on ${name}`,
+      description: "What came in, summarised per chat. Reads only.",
+      argsSchema: toStandardJsonSchema(
+        v.object({ since: v.optional(v.pipe(v.string(), v.description("an ISO 8601 time, or 2h / 1d ago"))) }),
+      ),
+    },
+    ({ since }) =>
+      asked(
+        [
+          `Catch me up on ${name}. Call ${command}_inbox once${since ? ` with since ${JSON.stringify(since)}` : ""}.`,
+          "Summarise per chat, busiest first: who wrote, what they want, and whether it needs my answer.",
+          "Do not send, react, forward or mark anything read.",
+          DATA,
+        ].join(" "),
+      ),
+  )
+
   server.registerPrompt(
     "reply",
     {

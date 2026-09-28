@@ -25,7 +25,7 @@ export const instructions = ({
     `The owner's personal ${name} account (profile "${profile}"). A mistake here reaches a real person.`,
     `Use these tools when asked to find a chat, read a conversation, find a message or a person in ${name}.`,
     "",
-    "- Reading never marks anything read. Read freely.",
+    `- Reading never marks anything read. Read freely. "What's new" is ${command}_inbox — one call, not a read per chat.`,
     allowSend
       ? '- Send only when the owner asked for this exact text in this exact chat. A draft or "we should reply" is not a request. A refusal (read-only profile, recipient not allowed, hourly limit) is final — do not work around it.'
       : "- Sending is off: this server was started without --allow-send. Say so if asked to send.",

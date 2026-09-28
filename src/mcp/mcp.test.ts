@@ -205,6 +205,7 @@ describe("the MCP server", () => {
       "chat_chats_show",
       "chat_contacts_list",
       "chat_contacts_show",
+      "chat_inbox",
       "chat_messages_context",
       "chat_messages_list",
       "chat_messages_search",
@@ -429,7 +430,7 @@ describe("MCP prompts and resources", () => {
     const telegram = scripted()
     const { client } = await connect(telegram)
 
-    expect((await client.listPrompts()).prompts.map((one) => one.name).sort()).toEqual(["find", "reply"])
+    expect((await client.listPrompts()).prompts.map((one) => one.name).sort()).toEqual(["catch-up", "find", "reply"])
     const { messages } = await client.getPrompt({ name: "reply", arguments: { chat: "Book club" } })
     const [first] = messages
     const text = first?.content.type === "text" ? first.content.text : ""
