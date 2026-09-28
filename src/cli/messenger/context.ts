@@ -5,6 +5,7 @@ import { guardFor, type SendGuard } from "../../sends/guard.js"
 import { type AccountKey, type MessageStore, openStore } from "../../store/store.js"
 import type { AppIdentity } from "../app.js"
 import { type BaseContext, baseContext, environmentOf } from "../context.js"
+import type { EventSink } from "../runs/events.js"
 import type { GlobalFlags, ResolveOptions, Settings } from "../settings.js"
 import { recalledAccount, rememberAccount } from "./accounts.js"
 import { observed } from "./observed.js"
@@ -22,6 +23,8 @@ export interface ConnectOptions {
 export interface Messenger {
   app: AppIdentity
   provider: Provider
+  /** The messenger's own name, as its users write it — `Telegram`, `MAX`. Defaults to the command. */
+  name?: string
   resolveSettings: (flags: GlobalFlags, options?: ResolveOptions) => Settings
   /**
    * Opens a connection for the command's profile, or throws a typed error saying how to log in.
@@ -49,7 +52,42 @@ export interface MessengerContext extends BaseContext {
    */
   withMessenger: <T>(work: (messenger: MessengerAdapter) => Promise<T>, options?: ConnectOptions) => Promise<T>
   /** Answers from the message store alone, for `--offline`. Never connects and needs no credentials. */
-  withStore: <T>(work: (store: MessageStore, account: AccountKey) => T) => Promise<T>
+  withStore: <T>(work: (store: MessageStore, account: AccountKey) => T, options?: { name?: string }) => Promise<T>
+}
+
+/**
+ * A connection as every shared reader sees it: its account remembered, each call a run event, what
+ * the reads answer saved to the store. `close` closes the connection and the store it opened. One
+ * function, so a command and an MCP tool call save and record exactly alike.
+ */
+export const connected = (
+  connection: MessengerAdapter,
+  { app, provider }: Pick<Messenger, "app" | "provider">,
+  { settings, env, renderer }: Pick<BaseContext, "settings" | "env" | "renderer">,
+  events: EventSink,
+): { adapter: MessengerAdapter; close: () => Promise<void> } => {
+  const self = connection.self()
+  if (self !== null) rememberAccount(app, settings.profile, self, env)
+  const adapter = observed(connection, events)
+  let store: Promise<MessageStore | undefined> | undefined
+  return {
+    adapter:
+      self === null
+        ? adapter
+        : stored(adapter, {
+            account: { provider, account: self },
+            store: () => {
+              store ??= openStore({ env })
+              return store
+            },
+            warn: renderer.warn,
+            events,
+          }),
+    close: async () => {
+      await connection.close()
+      if (store) (await store.catch(() => undefined))?.close()
+    },
+  }
 }
 
 export const messengerContext = (command: Command, messenger: Messenger): MessengerContext => {
@@ -73,46 +111,33 @@ export const messengerContext = (command: Command, messenger: Messenger): Messen
           }
           const connection = await messenger.connect(command, base, options)
           base.track(connection)
-          let store: Promise<MessageStore | undefined> | undefined
+          const { adapter, close } = connected(connection, messenger, base, events)
           try {
-            const self = connection.self()
-            if (self !== null) rememberAccount(app, profile, self, base.env)
-            const adapter = observed(connection, events)
-            return await work(
-              self === null
-                ? adapter
-                : stored(adapter, {
-                    account: { provider, account: self },
-                    store: () => {
-                      store ??= openStore({ env: base.env })
-                      return store
-                    },
-                    warn: base.renderer.warn,
-                    events,
-                  }),
-            )
+            return await work(adapter)
           } finally {
-            await connection.close()
-            if (store) (await store.catch(() => undefined))?.close()
+            await close()
           }
         },
         { unbounded: options.listen === true },
       ),
-    withStore: (work) =>
-      base.run(async () => {
-        const account = recalledAccount(app, provider, profile, base.env)
-        if (!account) {
-          throw new CliError(
-            "not_found",
-            `nothing recorded for profile "${profile}" yet — run the command once without --offline`,
-          )
-        }
-        const store = await openStore({ env: base.env })
-        try {
-          return work(store, account)
-        } finally {
-          store.close()
-        }
-      }),
+    withStore: (work, { name } = {}) =>
+      base.run(
+        async () => {
+          const account = recalledAccount(app, provider, profile, base.env)
+          if (!account) {
+            throw new CliError(
+              "not_found",
+              `nothing recorded for profile "${profile}" yet — run the command once without --offline`,
+            )
+          }
+          const store = await openStore({ env: base.env })
+          try {
+            return work(store, account)
+          } finally {
+            store.close()
+          }
+        },
+        name === undefined ? {} : { name },
+      ),
   }
 }

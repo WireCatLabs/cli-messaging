@@ -54,8 +54,11 @@ export interface BaseContext {
    * when `--record` asks or it fails. Whatever holds the process open — a connection — must be
    * tracked **before** it can block, or a timed-out command reports the timeout and then hangs.
    */
-  /** `unbounded` is for a command that ends itself at `--timeout` — `watch` — rather than failing there. */
-  run: <T>(body: (events: EventSink) => Promise<T>, options?: { unbounded?: boolean }) => Promise<T>
+  /**
+   * `unbounded` is for a command that ends itself at `--timeout` — `watch` — rather than failing there.
+   * `name` names the run when one command runs many — each MCP tool call is its own run.
+   */
+  run: <T>(body: (events: EventSink) => Promise<T>, options?: { unbounded?: boolean; name?: string }) => Promise<T>
   track: (closeable: Closeable) => void
 }
 
@@ -81,12 +84,12 @@ export const baseContext = (command: Command, resolveSettings: Resolve): BaseCon
     streams,
     env,
     // The deadline inside the record, so a timeout finishes the run as failed rather than leaving it running.
-    run: (body, { unbounded = false } = {}) =>
+    run: (body, { unbounded = false, name } = {}) =>
       environment.app
         ? recorded(
             {
               app: environment.app,
-              command: commandPath(command),
+              command: name ?? commandPath(command),
               profile: settings.profile,
               record: settings.record,
               keepFailed: settings.keepFailedRuns,
