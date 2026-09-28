@@ -1,3 +1,4 @@
+import { CliError } from "@leemour/cli-core"
 import type {
   Account,
   Chat,
@@ -20,6 +21,11 @@ export interface Sent {
  * What a messenger does for the shared commands. Each CLI implements it over its own library, and
  * nothing of that library's shape crosses it. A chat is passed as typed — a title, an id, a handle —
  * because only the adapter knows how its messenger finds one.
+ *
+ * **A method added from now on is optional** (`edit?`), so an adapter or a test fake that lacks it
+ * still compiles, and the command asks for it with `capability` — which refuses with a message
+ * instead of crashing. Such a method returns a promise: the wrappers time and pass it through
+ * without being told about it (`throughWrapper`).
  */
 export interface MessengerAdapter {
   /** The logged-in account's id, from what is stored locally — no request. `null` before a login. */
@@ -45,4 +51,37 @@ export interface MessengerAdapter {
   watch?(onEvent: (event: MessageEvent) => void, signal: AbortSignal, onReady?: () => void): Promise<void>
   logout(): Promise<void>
   close(): Promise<void>
+}
+
+type Method = (...args: never[]) => unknown
+
+/**
+ * `handled` for the methods a wrapper knows; any other method of `inner` still answers, through
+ * `wrap`. So a method added to the adapter reaches the command without an edit to every wrapper.
+ */
+export const throughWrapper = (
+  inner: MessengerAdapter,
+  handled: MessengerAdapter,
+  wrap: (name: string, call: (...args: unknown[]) => Promise<unknown>) => Method = (_, call) => call,
+): MessengerAdapter =>
+  new Proxy(handled, {
+    get: (own, key) => {
+      if (key in own) return own[key as keyof MessengerAdapter]
+      const value = inner[key as keyof MessengerAdapter] as unknown
+      return typeof value === "function"
+        ? wrap(String(key), (...args) => (value as (...a: unknown[]) => Promise<unknown>).apply(inner, args))
+        : value
+    },
+    has: (own, key) => key in own || key in inner,
+  })
+
+/** The adapter's `method`, or a refusal naming what this messenger cannot do. */
+export const capability = <K extends keyof MessengerAdapter>(
+  adapter: MessengerAdapter,
+  method: K,
+  what: string,
+): NonNullable<MessengerAdapter[K]> => {
+  const found = adapter[method]
+  if (typeof found !== "function") throw new CliError("validation_error", `this messenger cannot ${what}`)
+  return found.bind(adapter) as NonNullable<MessengerAdapter[K]>
 }

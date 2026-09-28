@@ -10,7 +10,8 @@ import { instructions } from "./instructions.js"
 import { registerPrompts } from "./prompts.js"
 import { registerResources } from "./resources.js"
 import { MessengerSession, type SessionOptions } from "./session.js"
-import { answered, failed, READ, readTools, registerTools, sendTools } from "./tools.js"
+import { answered, failed, READ, registerTools } from "./tool.js"
+import { readTools, sendTools } from "./tools.js"
 
 export interface ServerOptions extends SessionOptions {
   allowSend: boolean

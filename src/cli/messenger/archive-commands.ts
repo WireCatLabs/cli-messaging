@@ -1,7 +1,7 @@
 import { Command } from "commander"
 import { renderMessages } from "../../render/messages.js"
-import { storedChatId } from "./commands.js"
 import { type Messenger, messengerContext } from "./context.js"
+import { storedChatId } from "./messages-command.js"
 
 /**
  * What the local store holds, per chat — read from the store alone. Whether a backfill reached a
