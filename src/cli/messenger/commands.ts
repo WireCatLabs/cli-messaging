@@ -2,7 +2,7 @@ import { CliError } from "@leemour/cli-core"
 import { annotate } from "@leemour/cli-core/commands"
 import { Command } from "commander"
 import { isLocator, parseLocator } from "../../domain/locator.js"
-import type { Chat, Contact, MessageEvent, MessageHit } from "../../domain/models.js"
+import type { Chat, Contact, MessageEvent, MessageHit, Page } from "../../domain/models.js"
 import { renderMessages } from "../../render/messages.js"
 import { pickChat } from "../../resolve.js"
 import { newSendId } from "../../sends/send-id.js"
@@ -329,18 +329,7 @@ export const contactsCommand = (messenger: Messenger): Command => {
         const chats = context.settings.offline
           ? await context.withStore((store, account) => store.chats(account, {}).items)
           : await context.withMessenger(async (connection) => (await connection.chats({ offset: 0 })).items)
-        const wanted = search?.trim().toLowerCase()
-        const people = chats
-          .filter((chat) => chat.kind === "dialog")
-          .map(toContact)
-          .filter(
-            (person) =>
-              !wanted || [person.name, person.username].some((field) => field?.toLowerCase().includes(wanted)),
-          )
-          .sort(order === "name" ? byName : byRecency)
-        const { limit, offset } = window(context.settings)
-        const end = limit === undefined ? people.length : offset + limit
-        renderPage(context, { items: people.slice(offset, end), hasMore: people.length > end })
+        renderPage(context, contactsIn(chats, { order, ...(search ? { search } : {}), ...window(context.settings) }))
       }),
   )
 
@@ -354,6 +343,22 @@ export const contactsCommand = (messenger: Messenger): Command => {
     })
 
   return contacts
+}
+
+export const contactsIn = (
+  chats: readonly Chat[],
+  { order, search, limit, offset }: { order: "recent" | "name"; search?: string; limit?: number; offset: number },
+): Page<Contact> => {
+  const wanted = search?.trim().toLowerCase()
+  const people = chats
+    .filter((chat) => chat.kind === "dialog")
+    .map(toContact)
+    .filter(
+      (person) => !wanted || [person.name, person.username].some((field) => field?.toLowerCase().includes(wanted)),
+    )
+    .sort(order === "name" ? byName : byRecency)
+  const end = limit === undefined ? people.length : offset + limit
+  return { items: people.slice(offset, end), hasMore: people.length > end }
 }
 
 const toContact = (chat: Chat): Contact => ({

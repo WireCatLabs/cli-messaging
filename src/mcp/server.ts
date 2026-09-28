@@ -1,0 +1,107 @@
+import { McpServer } from "@modelcontextprotocol/server"
+import { serveStdio } from "@modelcontextprotocol/server/stdio"
+import { toStandardJsonSchema } from "@valibot/to-json-schema"
+import type { Command } from "commander"
+import * as v from "valibot"
+import { recalledAccount } from "../cli/messenger/accounts.js"
+import { connected, type Messenger, type MessengerContext } from "../cli/messenger/context.js"
+import { instructions } from "./instructions.js"
+import { MessengerSession, type SessionOptions } from "./session.js"
+import { answered, failed, READ, readTools, registerTools } from "./tools.js"
+
+export interface ServerOptions extends SessionOptions {
+  allowSend: boolean
+}
+
+/**
+ * A factory of servers over one session. `serveStdio` may build a probe instance and throw it away
+ * before settling on the protocol era, so each call is a fresh server — and all of them share the
+ * one connection, which is the thing that must not be opened twice.
+ */
+export const createServer = (
+  command: Command,
+  context: MessengerContext,
+  messenger: Messenger,
+  { allowSend, ...sessionOptions }: ServerOptions,
+) => {
+  const { app, provider } = messenger
+  const name = messenger.name ?? app.command
+  const { settings } = context
+  const session = new MessengerSession(
+    async (events) => connected(await messenger.connect(command, context, {}), messenger, context, events),
+    (run, body) => context.run(body, { name: run }),
+    sessionOptions,
+  )
+
+  const build = (): McpServer => {
+    const server = new McpServer(
+      { name: app.command, version: app.version },
+      {
+        instructions: instructions({
+          command: app.command,
+          name,
+          profile: settings.profile,
+          allowSend,
+          permitted: settings.allow,
+        }),
+      },
+    )
+    registerTools(server, readTools(messenger), {
+      command: app.command,
+      session,
+      withStore: context.withStore,
+      defaults: { limit: settings.limit },
+    })
+    server.registerTool(
+      `${app.command}_status`,
+      {
+        title: "This server's profile and login",
+        description:
+          "Which profile this server speaks for, which account it last logged in as here, and which writing tools " +
+          "are on. Never connects, so it answers when the login is what is broken.",
+        inputSchema: toStandardJsonSchema(v.object({})),
+        annotations: { ...READ, idempotentHint: true },
+      },
+      async () => {
+        try {
+          return answered({
+            profile: settings.profile,
+            account: recalledAccount(app, provider, settings.profile, context.env)?.account ?? null,
+            writes: [],
+            allow: settings.allow ?? "all",
+            ...(messenger.diagnose ? { [messenger.provider]: await messenger.diagnose(command, context) } : {}),
+          })
+        } catch (error) {
+          return failed(error)
+        }
+      },
+    )
+    return server
+  }
+  return { session, build }
+}
+
+/**
+ * Serves until the client closes stdin or the process is told to stop, then closes the connection.
+ * **Returning is what lets the process exit**: the transport lets go of stdin, and the session is
+ * the only other thing that could hold it open.
+ */
+export const serveOverStdio = async (
+  command: Command,
+  context: MessengerContext,
+  messenger: Messenger,
+  options: ServerOptions,
+): Promise<void> => {
+  const { session, build } = createServer(command, context, messenger, options)
+  const handle = serveStdio(build, { onerror: (error) => context.renderer.note(`mcp: ${error.message}`) })
+
+  await new Promise<void>((resolve) => {
+    process.stdin.once("end", resolve)
+    process.stdin.once("close", resolve)
+    process.once("SIGINT", resolve)
+    process.once("SIGTERM", resolve)
+  })
+
+  await handle.close()
+  await session.close()
+}
