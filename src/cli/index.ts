@@ -69,3 +69,4 @@ export {
   type Source,
   settingsFor,
 } from "./settings.js"
+export { skillCommand } from "./skill-command.js"
