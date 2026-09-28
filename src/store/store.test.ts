@@ -277,7 +277,7 @@ describe("finding people and what they wrote", () => {
 
   it("remembers a username and a bot flag, and a later name alone does not erase them", async () => {
     const store = await seeded()
-    store.savePeople("max-bot", [{ id: "7", name: "Seven", username: "seven", isBot: false }])
+    store.savePeople(BOT, [{ id: "7", name: "Seven", username: "seven", isBot: false }])
     store.saveMessages(BOT, "10", [said("g", "10", "7", "renamed", 7)], { via: "update" })
     expect(store.people("max-bot").get("7")).toMatchObject({ name: "person 7", username: "seven" })
     expect(
@@ -287,6 +287,31 @@ describe("finding people and what they wrote", () => {
         .map(({ id }) => id)
         .toSorted(),
     ).toEqual(["7", "8"])
+    store.close()
+  })
+
+  it("keeps each account's people to itself: a person seen by one bot is not another's", async () => {
+    const store = await seeded()
+    store.savePeople(OTHER_BOT, [{ id: "11", name: "Only the other", username: "other" }])
+    const ids = (account?: string) =>
+      store
+        .people("max-bot", account ? { account } : {})
+        .all()
+        .map(({ id }) => id)
+        .toSorted()
+
+    expect(ids("1")).toEqual(["7", "8"])
+    expect(ids("2")).toEqual(["11", "7", "8", "9"])
+    expect(ids()).toEqual(["11", "7", "8", "9"])
+    expect(store.people("max-bot", { account: "1" }).get("11")).toBeUndefined()
+    store.close()
+  })
+
+  it("counts a person saved for an account as seen by it, though they never wrote there", async () => {
+    const store = await seeded()
+    store.savePeople(BOT, [{ id: "12", name: "A member", username: null }])
+    expect(store.people("max-bot", { account: "1" }).get("12")).toMatchObject({ name: "A member" })
+    expect(store.people("max-bot", { account: "2" }).get("12")).toBeUndefined()
     store.close()
   })
 })
@@ -384,6 +409,25 @@ describe("migrating the store", () => {
       expect(store.search("across", { limit: 5 }).items.map((hit) => hit.id)).toEqual(["42"])
       store.close()
     }
+  })
+
+  it("counts every sender already stored as seen by the account they wrote to", async () => {
+    const path = fresh()
+    const older = await openCache(path)
+    migrate(older, { migrations: MIGRATIONS.filter(({ version }) => version <= 3) })
+    older.exec(`INSERT INTO accounts (pk, provider, native_id, created_at) VALUES (1, 'telegram', '100', 0)`)
+    older.exec(
+      `INSERT INTO chats (pk, account_pk, native_id, kind, updated_at) VALUES (1, 1, '${chat.id}', 'group', 0)`,
+    )
+    older.exec(`INSERT INTO identities (pk, provider, native_id, name, first_seen_at, updated_at)
+                VALUES (1, 'telegram', '7', 'Seven', 0, 0)`)
+    older.exec(`INSERT INTO messages (chat_pk, account_pk, native_id, sender_identity_pk, sent_at, text, ingested_at,
+                ingested_via) VALUES (1, 1, '42', 1, 1, 'hi', 0, 'history')`)
+    older.close()
+
+    const store = await openStore({ path })
+    expect(store.people("telegram", { account: "100" }).get("7")).toMatchObject({ name: "Seven" })
+    store.close()
   })
 
   it("brings an older file forward without losing a message", async () => {

@@ -86,8 +86,8 @@ export interface MessageStore {
   search(query: string, options: { limit: number; account?: AccountKey }): Page<StoredHit>
   /** Newest first — by text, by who wrote it, or both. */
   find(filter: MessageFilter): Page<StoredHit>
-  savePeople(provider: Provider, people: PersonFacts[]): void
-  /** Everyone this provider's accounts have seen; with `account`, only who wrote in its chats. */
+  savePeople(key: AccountKey, people: PersonFacts[]): void
+  /** Everyone this provider's accounts have seen; with `account`, only who that account has seen. */
   people(provider: Provider, options?: { account?: Id }): PeopleLookup
   /**
    * Records that every message from `from` to `to` (inclusive, by ordering key) is held, merging it
@@ -210,8 +210,26 @@ const storeOver = (database: CacheDatabase, now: () => number): MessageStore => 
       )?.pk,
     )
 
-  /** Every new identity gets its own person; linking two is a later, recorded act. */
+  /** An identity as `accountKey` saw it — recorded as seen by that account, so reads stay per account. */
   const identityPk = (
+    accountKey: number,
+    provider: Provider,
+    nativeId: Id,
+    name: string | null,
+    facts: Omit<PersonFacts, "id" | "name"> = {},
+  ): number => {
+    const identity = identityOf(provider, nativeId, name, facts)
+    run(
+      "INSERT OR IGNORE INTO account_identities (account_pk, identity_pk, first_seen_at) VALUES (?, ?, ?)",
+      accountKey,
+      identity,
+      now(),
+    )
+    return identity
+  }
+
+  /** Every new identity gets its own person; linking two is a later, recorded act. */
+  const identityOf = (
     provider: Provider,
     nativeId: Id,
     name: string | null,
@@ -283,7 +301,7 @@ const storeOver = (database: CacheDatabase, now: () => number): MessageStore => 
     const sender =
       message.senderId === null || message.senderIsChat
         ? null
-        : identityPk(key.provider, message.senderId, message.senderName)
+        : identityPk(accountKey, key.provider, message.senderId, message.senderName)
     const fields = {
       thread_native_id: message.threadId ?? null,
       sender_identity_pk: sender,
@@ -592,14 +610,15 @@ const storeOver = (database: CacheDatabase, now: () => number): MessageStore => 
 
     find: (filter) => find(filter),
 
-    savePeople: (provider, people) =>
+    savePeople: (key, people) =>
       inTransaction(() => {
-        for (const person of people) identityPk(provider, person.id, person.name, person)
+        const accountKey = accountPk(key)
+        for (const person of people) identityPk(accountKey, key.provider, person.id, person.name, person)
       }),
 
     people: (provider, { account } = {}) => {
       const scope = account
-        ? `AND pk IN (SELECT m.sender_identity_pk FROM messages m JOIN accounts a ON a.pk = m.account_pk
+        ? `AND pk IN (SELECT ai.identity_pk FROM account_identities ai JOIN accounts a ON a.pk = ai.account_pk
                       WHERE a.provider = ? AND a.native_id = ?)`
         : ""
       const rows = all(

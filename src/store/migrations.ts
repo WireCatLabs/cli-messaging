@@ -227,6 +227,23 @@ export const MIGRATIONS: Migration[] = [
       "INSERT INTO messages_fts (messages_fts) VALUES ('rebuild')",
     ],
   },
+  {
+    version: 4,
+    minCompatible: 1,
+    statements: [
+      // Which account has seen which identity. Identities are per provider so they can be linked
+      // across accounts; every read for one account goes through this table, so accounts stay apart.
+      `CREATE TABLE account_identities (
+         account_pk    INTEGER NOT NULL REFERENCES accounts (pk),
+         identity_pk   INTEGER NOT NULL REFERENCES identities (pk),
+         first_seen_at INTEGER NOT NULL,
+         PRIMARY KEY (account_pk, identity_pk)
+       )`,
+      `INSERT INTO account_identities (account_pk, identity_pk, first_seen_at)
+         SELECT account_pk, sender_identity_pk, min(sent_at) FROM messages
+         WHERE sender_identity_pk IS NOT NULL GROUP BY account_pk, sender_identity_pk`,
+    ],
+  },
 ]
 
 const HISTORY = `CREATE TABLE IF NOT EXISTS schema_migrations (
