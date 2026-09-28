@@ -29,7 +29,7 @@ at the same time; the order inside a lane is the order below.
 
 | Lane | What | Source |
 |---|---|---|
-| **L0 · foundation** — first, alone, one day | make parallel work cheap: §3 | — |
+| **L0 · foundation** — done 2026-09-29 | made parallel work cheap: §3 | — |
 | **L1 · reading** | `review` + its prompt (`--chat`, `--unanswered`) · `chats list --search --kind --unread` · `messages list --after` · `chats events` · `chats members list` · `contacts lookup` (phone from stdin) · `contacts sync` · `account sessions list` · `chats inspect <link>` · `topics list\|search` (forums) | max, tgcli |
 | **L2 · acting on messages** | `messages edit` · `messages delete` (`--for-everyone`, MCP `--allow-delete`) · `messages forward` · `messages pin\|unpin` · `reactions add\|remove` · `chats read` (MCP `--allow-mark-read`) · polls `vote\|create\|close` | max |
 | **L3 · richer sending** | `messages send --file\|--photo\|--voice\|--video` · `--silent` · `--md` / parse mode · `--no-preview` · `--at` + `messages scheduled` · `--topic` · album | max, tgcli |
@@ -41,55 +41,58 @@ at the same time; the order inside a lane is the order below.
 Out: `bot *` (a user account is not a bot); tgcli's `feedback` (sends from the owner's account to a
 stranger); tgcli's HTTP MCP without a token.
 
-## 3. L0 — what makes parallel lanes cheap
+## 3. L0 — what makes parallel lanes cheap — **done 2026-09-29**
 
-Six files would take a change from every lane and conflict on every merge. L0 fixes that once:
+The files every lane would have edited were split or taught to need no edit (cli-messaging 0.27.0,
+[#52](https://github.com/leemour/cli-messaging/pull/52)):
 
-1. **`MessengerAdapter` gets optional methods** (`edit?`, `forward?`, `react?` …) instead of
-   required ones, and a command whose method is missing refuses with `validation_error` ("this
-   messenger cannot …"). Then a lane adds a method without touching the five test fakes in tg
-   (`src/program.test.ts`, `runs.test.ts`, `send-guard.test.ts`, `offline.test.ts`,
-   `contract.test.ts`), and max can implement what it has.
-2. **`commands.ts` (484 lines) splits into one file per resource** — `chats-command.ts`,
-   `messages-command.ts`, `contacts-command.ts` — and a new resource is a new file.
-3. **`mcp/tools.ts` becomes `mcp/tools/<resource>.ts`**, each exporting its tools; the registry
-   only spreads them.
-4. **tg's adapter gets one file per area** behind the class (`telegram/messages.ts`,
-   `telegram/chats.ts` …), so two lanes do not edit the same method list.
-5. **One shared fake adapter for tg's tests** (`src/testing/fake-adapter.ts`) replaces the five copies.
-6. **The release train (§4).**
+1. `cli/messenger/commands.ts` is one file per resource (`chats-command.ts`, `messages-command.ts` …).
+2. `mcp/tools.ts` is `mcp/tool.ts` plus `mcp/tools/<resource>.ts`.
+3. A new `MessengerAdapter` method is optional and reached with `capability()`; `observed` and
+   `stored` pass through any method they do not list (`throughWrapper`), so the five test fakes in
+   tg and the two wrappers need no edit per method.
+4. Worktrees and permissions for agents: tg-cli [`docs/dev/agents.md`](../../../tg-cli/docs/dev/agents.md)
+   (`bin/lane`, `bin/agent`, `bin/try-messaging`, the write hook).
+
+Left out as not worth it now: splitting tg's `adapter.ts` per area and one shared test fake — with
+optional methods, lanes no longer edit the fakes, and two groups of methods at the end of one class
+rebase cleanly.
 
 ## 4. Releases while lanes run
 
-Parallel lanes that each bump the version collide (0.10.0 and 0.13.0 did). So: **a lane merges
-without a bump, and never releases.** The coordinating session releases cli-messaging and then tg
-when a lane has landed something usable — at most a few times a day — after `git fetch` and
-`npm view`. Before a release, a lane that needs an unreleased cli-messaging tests tg against a packed
-tarball (`pnpm pack`), never a committed `file:` path.
+**Each lane releases its own merged work** (NEED-10 → C, unchanged): `git fetch`, `npm view`, a
+`chore: release` PR raising the version from what is really published, `bin/release`. Two lanes
+racing is safe: `bin/release` refuses a version already on npm, and the second rebases, renumbers
+and retries. To try an unreleased cli-messaging in tg first: `bin/try-messaging` in the lane's tg
+worktree, never a committed `file:` path.
 
-Store migrations are the one thing lanes must not do blind: migration numbers are announced here
-before they are written (next is **4**). L1 `chats events` and L7 are the likely takers.
+**Store migrations are announced here before they are written.** The next free number is **5**
+(4 is `account_identities`, cli-messaging #48, 2026-09-29). Take it by editing this line in a PR of
+its own, merged before the migration. L1 `chats events` or members, and L7, are the likely takers.
 
 ## 5. How a lane runs
 
-- One session per lane, each in its own **git worktree** of both repositories:
-  `../cli-messaging-wt-<lane>` and `../tg-cli-wt-<lane>`, branch `feat/<lane>-<command>`.
-- Each lane starts from [the tg handoff](../../../tg-cli/HANDOFF.md) §3c (the path a new adapter
-  method takes) and copies max-cli's command and tool (`../max-cli/src/commands/`, `src/mcp/tools.ts`,
-  `docs/`), adjusting for Telegram.
-- Live checks: read-only through `bin/tg` of its own worktree; a send only to Saved Messages, and
-  only in L2/L3. Each worktree needs its own `bin/tg session start` — ask the owner, never copy `.tg/`.
-- A lane finishing a PR: rebase-merge when green (the owner's rule), then the next item.
-- Conflicts left after L0 — `README.md`, `docs/mcp.md`, `SKILL.md`, the proposal — are append-only
-  lists; rebase and keep both.
+tg-cli [`docs/dev/agents.md`](../../../tg-cli/docs/dev/agents.md): `bin/lane <lane>` makes the lane's
+worktrees of both repositories under tg-cli's `.worktrees/` and copies the owner's login in;
+`bin/agent <lane>` starts Claude Code there without prompts. Each lane reads its own handoff
+(standard: tg-cli [`docs/dev/handoff-standard.md`](../../../tg-cli/docs/dev/handoff-standard.md)):
+
+| Lane | Handoff |
+|---|---|
+| L1 · reading | [`docs/lanes/l1-reading.md`](../../../tg-cli/docs/lanes/l1-reading.md) |
+| L2 · acting on messages | [`docs/lanes/l2-actions.md`](../../../tg-cli/docs/lanes/l2-actions.md) |
+| L3 · richer sending | [`docs/lanes/l3-sending.md`](../../../tg-cli/docs/lanes/l3-sending.md) |
+
+L4–L7 get theirs when one of the first three finishes (NEED-21: three at once).
 
 ## 6. Decisions
 
-Already ruled this week: the MCP server may send, as max-cli's does (NEED-15 → B); aim at parity
-with max-cli and cover tgcli (NEED-15, 2026-09-29); `inbox` and `review` open tier P1 (NEED-18 → A).
+Ruled: the MCP server may send, as max-cli's (NEED-15 → B); parity with max-cli and tgcli
+(NEED-15); `inbox` and `review` open the reading lane (NEED-18 → A); `inbox` leaves out muted and
+archived chats unless they mention or answer the owner, `--all` for everything (NEED-19 → A, L1's
+first item); voice to text uses Telegram's own transcription when the account has Premium and the
+local model otherwise, **configurable** (NEED-20 → A, L4); three lanes at once, after a foundation
+that is solid but small (NEED-21, 2026-09-29).
 
-
-- **NEED-19** — whether `inbox` leaves out muted and archived chats (measured: 88 of the newest 100
-  chats have unread, 3.3 million unread in groups, none in one-to-one chats).
-- **NEED-20** — voice to text: Telegram's own transcription (Premium), max-cli's local model, or later.
-- **NEED-21** — how many lanes at once.
+Open: whether agents' shell commands run in the sandbox, which needs a root change on the owner's
+machine (NEED-22, tg-cli `docs/dev/agents.md`).
