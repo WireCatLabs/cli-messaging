@@ -52,8 +52,10 @@ bin/release --local   # from this machine: NPM_TOKEN if exported, else the keyri
 bin/release           # from GitHub Actions, once npm trusts .github/workflows/release.yml
 ```
 
-Both refuse a dirty tree, a branch other than `main`, an unpushed `main` and a version npm already
-has, run every check, and tag `v<version>` once npm shows it. The token is never printed and never
+Both refuse a dirty tree, a branch other than `main` and an unpushed `main`. When npm already has the
+version, or a higher one, they commit the next free version to `main` — the next minor for `x.y.0`,
+the next patch otherwise — and publish that. They run every check, and tag `v<version>` once npm
+shows it. The token is never printed and never
 written to a file. The GitHub form publishes from the job in the `npm` environment, which is what
 npm's trusted publisher names: `leemour` / `cli-messaging` / `release.yml` / environment `npm`.
 
