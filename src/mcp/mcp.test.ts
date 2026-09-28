@@ -1,9 +1,10 @@
-import { mkdtempSync } from "node:fs"
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { CliError, captureStreams } from "@leemour/cli-core"
-import { Client } from "@modelcontextprotocol/client"
+import { Client, type ElicitResult } from "@modelcontextprotocol/client"
 import { InMemoryTransport } from "@modelcontextprotocol/server"
+import { serveStdio } from "@modelcontextprotocol/server/stdio"
 import { Command } from "commander"
 import { afterEach, describe, expect, it } from "vitest"
 import { provide } from "../cli/context.js"
@@ -13,6 +14,7 @@ import type { MessengerAdapter } from "../cli/messenger/port.js"
 import { createProgram } from "../cli/program.js"
 import { settingsFor } from "../cli/settings.js"
 import type { Chat, Message } from "../domain/models.js"
+import { SendJournal, sendsPathFor } from "../sends/journal.js"
 import { instructions } from "./instructions.js"
 import { createServer, type ServerOptions } from "./server.js"
 
@@ -103,17 +105,27 @@ afterEach(async () => {
   for (const close of closers.splice(0)) await close()
 })
 
-const connect = async (
-  telegram: Scripted = scripted(),
-  options: Partial<ServerOptions> & { connect?: Messenger["connect"] } = {},
-) => {
+interface Harness {
+  connect?: Messenger["connect"]
+  /** Answers the server's form; without it the client says it cannot show one. */
+  form?: (message: string) => ElicitResult
+  era?: "legacy" | "modern"
+  /** The config file, for a profile's `allow` or `readOnly`. */
+  config?: object
+}
+
+const connect = async (telegram: Scripted = scripted(), options: Partial<ServerOptions> & Harness = {}) => {
   const root = mkdtempSync(join(tmpdir(), "mcp-"))
   const env = {
     CHAT_STATE_DIR: join(root, "state"),
     CHAT_CONFIG_DIR: join(root, "config"),
     MESSAGING_STORE: join(root, "m.db"),
   }
-  const { connect: connecting, ...serverOptions } = options
+  const { connect: connecting, form, era = "legacy", config, ...serverOptions } = options
+  if (config) {
+    mkdirSync(env.CHAT_CONFIG_DIR, { recursive: true })
+    writeFileSync(join(env.CHAT_CONFIG_DIR, "config.json"), JSON.stringify(config))
+  }
   const messenger: Messenger = {
     app,
     provider: "chat",
@@ -137,11 +149,29 @@ const connect = async (
   const { session, build } = made as ReturnType<typeof createServer>
 
   const [serverSide, clientSide] = InMemoryTransport.createLinkedPair()
-  await build().connect(serverSide)
-  const client = new Client({ name: "test", version: "1.0.0" })
+  // The modern era is chosen by `serveStdio`, as in `mcp`; a server connected directly only speaks the legacy one.
+  const served = era === "modern" ? serveStdio(build, { transport: serverSide }) : undefined
+  const server = served ? undefined : build()
+  await server?.connect(serverSide)
+  const client = new Client(
+    { name: "test", version: "1.0.0" },
+    {
+      ...(form ? { capabilities: { elicitation: {} } } : {}),
+      ...(era === "modern" ? { versionNegotiation: { mode: { pin: "2026-07-28" } } } : {}),
+    },
+  )
+  const forms: string[] = []
+  if (form) {
+    client.setRequestHandler("elicitation/create", async (request) => {
+      forms.push(request.params.message)
+      return form(request.params.message)
+    })
+  }
   await client.connect(clientSide)
   closers.push(async () => {
     await client.close()
+    await server?.close()
+    await served?.close()
     await session.close()
   })
   const call = async (name: string, args: Record<string, unknown> = {}) => {
@@ -149,7 +179,19 @@ const connect = async (
     const [first] = result.content as { type: string; text: string }[]
     return { isError: result.isError === true, body: JSON.parse(first?.text ?? "null") }
   }
-  return { client, call, session, streams }
+  return { client, call, session, streams, forms, env }
+}
+
+/** A messenger that records what it was asked to send. */
+const sending = () => {
+  const sent: { chatId: string; text: string; sendId: string; replyTo?: string }[] = []
+  const telegram = scripted({
+    send: async (chatId, text, { sendId, replyTo }) => {
+      sent.push({ chatId, text, sendId, ...(replyTo === undefined ? {} : { replyTo }) })
+      return { message: { ...message, id: "99", text, outgoing: true }, sendId }
+    },
+  })
+  return { telegram, sent }
 }
 
 describe("the MCP server", () => {
@@ -280,6 +322,105 @@ describe("the MCP server", () => {
       permitted: ["send"],
     })
     expect(text.length).toBeLessThanOrEqual(2048)
+  })
+})
+
+describe("sending over MCP", () => {
+  it("offers the send tool only with --allow-send, marked as one a person approves every time", async () => {
+    const reading = (await (await connect()).client.listTools()).tools.map((one) => one.name)
+    const { tools } = await (await connect(scripted(), { allowSend: true })).client.listTools()
+    const send = tools.find((one) => one.name === "chat_messages_send")
+
+    expect(reading).not.toContain("chat_messages_send")
+    expect(send?.annotations).toMatchObject({ readOnlyHint: false, destructiveHint: true })
+    expect(send?._meta).toMatchObject({ "anthropic/requiresUserInteraction": true })
+  })
+
+  it("sends through the guard, with the reply, and journals it without the text", async () => {
+    const { telegram, sent } = sending()
+    const { call, env } = await connect(telegram, { allowSend: true })
+
+    const { isError, body } = await call("chat_messages_send", { chat: "Book club", text: "see you", reply_to: "1" })
+
+    expect(isError).toBe(false)
+    expect(sent).toEqual([{ chatId: "7", text: "see you", sendId: body.sendId, replyTo: "1" }])
+    const [entry] = new SendJournal(sendsPathFor(app, "default", env)).entries()
+    expect(entry).toMatchObject({ outcome: "sent", chatId: "7", replyTo: "1", messageId: "99" })
+    expect(JSON.stringify(entry)).not.toContain("see you")
+  })
+
+  it("repeats the send_id it was given, so the messenger can drop a duplicate", async () => {
+    const { telegram, sent } = sending()
+    const { call } = await connect(telegram, { allowSend: true })
+
+    await call("chat_messages_send", { chat: "7", text: "again", send_id: "12345" })
+
+    expect(sent[0]?.sendId).toBe("12345")
+  })
+
+  it("refuses on a read-only profile, and sends nothing", async () => {
+    const { telegram, sent } = sending()
+    const { call } = await connect(telegram, { allowSend: true, config: { profiles: { default: { readOnly: true } } } })
+
+    const { isError, body } = await call("chat_messages_send", { chat: "7", text: "hi" })
+
+    expect(isError).toBe(true)
+    expect(body.error.code).toBe("permission_error")
+    expect(sent).toEqual([])
+  })
+
+  it("does not offer a tool the profile's allow list leaves out, whatever the flags", async () => {
+    const { client, call } = await connect(scripted(), {
+      allowSend: true,
+      config: { profiles: { default: { allow: ["reaction"] } } },
+    })
+
+    expect((await client.listTools()).tools.map((one) => one.name)).not.toContain("chat_messages_send")
+    expect((await call("chat_status")).body).toMatchObject({ writes: [], allow: ["reaction"] })
+  })
+
+  describe.each(["legacy", "modern"] as const)("with --confirm-send, on the %s protocol", (era) => {
+    it("shows the chat it resolved to and the whole text, and sends once the owner accepts", async () => {
+      const { telegram, sent } = sending()
+      const { call, forms } = await connect(telegram, {
+        allowSend: true,
+        confirmSend: true,
+        era,
+        form: () => ({ action: "accept", content: {} }),
+      })
+
+      const { isError } = await call("chat_messages_send", { chat: "Book", text: "see you on Friday" })
+
+      expect(isError).toBe(false)
+      expect(forms[0]).toContain('"Book club" (7)')
+      expect(forms[0]).toContain("see you on Friday")
+      expect(sent.map((one) => one.text)).toEqual(["see you on Friday"])
+    })
+
+    it("sends nothing when the owner declines", async () => {
+      const { telegram, sent } = sending()
+      const { call } = await connect(telegram, {
+        allowSend: true,
+        confirmSend: true,
+        era,
+        form: () => ({ action: "decline" }),
+      })
+
+      const { isError, body } = await call("chat_messages_send", { chat: "7", text: "no" })
+
+      expect(isError).toBe(true)
+      expect(body.error.code).toBe("confirmation_required")
+      expect(sent).toEqual([])
+    })
+  })
+
+  it("sends nothing when the client cannot show a form", async () => {
+    const { telegram, sent } = sending()
+    const { call } = await connect(telegram, { allowSend: true, confirmSend: true })
+
+    await call("chat_messages_send", { chat: "7", text: "hi" }).catch(() => undefined)
+
+    expect(sent).toEqual([])
   })
 })
 

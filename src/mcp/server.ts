@@ -5,12 +5,14 @@ import type { Command } from "commander"
 import * as v from "valibot"
 import { recalledAccount } from "../cli/messenger/accounts.js"
 import { connected, type Messenger, type MessengerContext } from "../cli/messenger/context.js"
+import { confirmer } from "./confirm.js"
 import { instructions } from "./instructions.js"
 import { MessengerSession, type SessionOptions } from "./session.js"
-import { answered, failed, READ, readTools, registerTools } from "./tools.js"
+import { answered, failed, READ, readTools, registerTools, sendTools } from "./tools.js"
 
 export interface ServerOptions extends SessionOptions {
   allowSend: boolean
+  confirmSend?: boolean
 }
 
 /**
@@ -22,11 +24,19 @@ export const createServer = (
   command: Command,
   context: MessengerContext,
   messenger: Messenger,
-  { allowSend, ...sessionOptions }: ServerOptions,
+  { allowSend, confirmSend = false, ...sessionOptions }: ServerOptions,
 ) => {
   const { app, provider } = messenger
   const name = messenger.name ?? app.command
   const { settings } = context
+  const permitted = settings.allow
+  // `allow` hides what the guard would refuse anyway, so an agent is not offered a tool that cannot work.
+  const writes = Object.fromEntries(
+    Object.entries(allowSend ? sendTools(messenger) : {}).filter(
+      ([, one]) => !permitted || (one.permission !== undefined && permitted.includes(one.permission)),
+    ),
+  )
+  const confirmed = confirmSend ? confirmer() : undefined
   const session = new MessengerSession(
     async (events) => connected(await messenger.connect(command, context, {}), messenger, context, events),
     (run, body) => context.run(body, { name: run }),
@@ -42,16 +52,22 @@ export const createServer = (
           name,
           profile: settings.profile,
           allowSend,
-          permitted: settings.allow,
+          confirmSend,
+          permitted,
         }),
       },
     )
-    registerTools(server, readTools(messenger), {
-      command: app.command,
-      session,
-      withStore: context.withStore,
-      defaults: { limit: settings.limit },
-    })
+    registerTools(
+      server,
+      { ...readTools(messenger), ...writes },
+      {
+        command: app.command,
+        session,
+        withStore: context.withStore,
+        defaults: { limit: settings.limit, guard: context.guard },
+        confirmed,
+      },
+    )
     server.registerTool(
       `${app.command}_status`,
       {
@@ -67,8 +83,9 @@ export const createServer = (
           return answered({
             profile: settings.profile,
             account: recalledAccount(app, provider, settings.profile, context.env)?.account ?? null,
-            writes: [],
-            allow: settings.allow ?? "all",
+            writes: Object.keys(writes).map((key) => `${app.command}_${key}`),
+            confirmSend,
+            allow: permitted ?? "all",
             ...(messenger.diagnose ? { [messenger.provider]: await messenger.diagnose(command, context) } : {}),
           })
         } catch (error) {
