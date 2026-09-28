@@ -9,6 +9,7 @@ export const instructions = ({
   name,
   profile,
   allowSend,
+  confirmSend = false,
   permitted,
 }: {
   /** `tg`: the prefix of every tool and the word in `… session start`. */
@@ -17,6 +18,7 @@ export const instructions = ({
   name: string
   profile: string
   allowSend: boolean
+  confirmSend?: boolean
   permitted?: readonly Permission[] | undefined
 }): string =>
   [
@@ -27,6 +29,11 @@ export const instructions = ({
     allowSend
       ? '- Send only when the owner asked for this exact text in this exact chat. A draft or "we should reply" is not a request. A refusal (read-only profile, recipient not allowed, hourly limit) is final — do not work around it.'
       : "- Sending is off: this server was started without --allow-send. Say so if asked to send.",
+    ...(allowSend && confirmSend
+      ? [
+          "- Every send is shown to the owner in a form first. A send the owner did not confirm is final: do not retry it.",
+        ]
+      : []),
     ...(permitted
       ? [
           `- Profile "${profile}" allows only: ${permitted.join(", ") || "nothing"}. Tools for anything else are not offered; a refusal naming \`allow\` is final.`,

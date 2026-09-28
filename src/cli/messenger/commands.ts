@@ -5,11 +5,13 @@ import { isLocator, parseLocator } from "../../domain/locator.js"
 import type { Chat, Contact, MessageEvent, MessageHit, Page } from "../../domain/models.js"
 import { renderMessages } from "../../render/messages.js"
 import { pickChat } from "../../resolve.js"
+import type { SendGuard } from "../../sends/guard.js"
 import { newSendId } from "../../sends/send-id.js"
 import type { AccountKey, MessageStore } from "../../store/store.js"
 import { environmentOf } from "../context.js"
 import { renderPage, window, withPaging } from "../paging.js"
 import { type Messenger, type MessengerContext, messengerContext } from "./context.js"
+import type { MessengerAdapter, Sent } from "./port.js"
 
 export const accountCommand = (messenger: Messenger): Command =>
   new Command("account").description("the logged-in account").addCommand(
@@ -223,36 +225,49 @@ const sendText = async (
   const { sendId } = command.opts<{ sendId?: string }>()
   const body = text ?? (await readAll(context.stdin))
   if (body.trim() === "") throw new CliError("validation_error", "nothing to send — give the text or pipe it in")
-  const sent = await context.withMessenger(async (connection) => {
-    const { guard } = context
-    const { id: chatId } = await connection.resolve(chat)
-    const attempt = {
-      chatId,
-      kind: "message" as const,
-      sendId: sendId ?? newSendId(),
-      length: body.length,
+  const sent = await context.withMessenger((connection) =>
+    guardedSend(context.guard, connection, {
+      chat,
+      text: body,
+      ...(sendId === undefined ? {} : { sendId }),
       ...(replyTo === undefined ? {} : { replyTo }),
-    }
-    try {
-      guard.check(attempt)
-    } catch (error) {
-      guard.record({ ...attempt, outcome: "refused", errorCode: codeOf(error) })
-      throw error
-    }
-    try {
-      const done = await connection.send(chatId, body, {
-        sendId: attempt.sendId,
-        ...(replyTo === undefined ? {} : { replyTo }),
-      })
-      guard.record({ ...attempt, outcome: "sent", messageId: done.message.id })
-      return done
-    } catch (error) {
-      const code = codeOf(error)
-      guard.record({ ...attempt, outcome: code === "outcome_unknown" ? "outcome_unknown" : "failed", errorCode: code })
-      throw error
-    }
-  })
+    }),
+  )
   context.renderer.result({ sendId: sent.sendId, message: sent.message })
+}
+
+/** Resolve → check → send → record: one path for `messages send`, `reply` and the MCP send tool. */
+export const guardedSend = async (
+  guard: SendGuard,
+  connection: MessengerAdapter,
+  { chat, text, sendId, replyTo }: { chat: string; text: string; sendId?: string; replyTo?: string },
+): Promise<Sent> => {
+  const { id: chatId } = await connection.resolve(chat)
+  const attempt = {
+    chatId,
+    kind: "message" as const,
+    sendId: sendId ?? newSendId(),
+    length: text.length,
+    ...(replyTo === undefined ? {} : { replyTo }),
+  }
+  try {
+    guard.check(attempt)
+  } catch (error) {
+    guard.record({ ...attempt, outcome: "refused", errorCode: codeOf(error) })
+    throw error
+  }
+  try {
+    const done = await connection.send(chatId, text, {
+      sendId: attempt.sendId,
+      ...(replyTo === undefined ? {} : { replyTo }),
+    })
+    guard.record({ ...attempt, outcome: "sent", messageId: done.message.id })
+    return done
+  } catch (error) {
+    const code = codeOf(error)
+    guard.record({ ...attempt, outcome: code === "outcome_unknown" ? "outcome_unknown" : "failed", errorCode: code })
+    throw error
+  }
 }
 
 const codeOf = (error: unknown): string =>
