@@ -492,6 +492,10 @@ never drift apart. A tool answers what the command's `--json` prints.
 | 3.3 | prompts (`reply`, `find`; `catch-up` and `review` with their commands) and the chat resource from the store **Done 2026-09-28 (0.24.0)** |
 | 3.4 | `skill show` and the skill file, copied from max-cli's `skills/max-cli/SKILL.md` **Done 2026-09-28 (0.24.0)**: `skillCommand(app, url)`; tg's skill is `skills/tg-cli/SKILL.md` |
 
+**The work runs in parallel lanes** — [2026-09-29-parity-lanes.md](2026-09-29-parity-lanes.md) replaces the tiers
+below as the plan (it adds what kfastov/tgcli has and what max-cli gained since); the tiers stay as
+the record of the first measurement.
+
 **Parity tiers** — the gap measured 2026-09-28 against max-cli 0.17.1 (`docs/commands.md`). Each row
 is a command in cli-messaging (a new `MessengerAdapter` method where it needs the messenger), its
 tool, and tg's adapter:
