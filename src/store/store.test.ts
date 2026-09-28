@@ -317,7 +317,7 @@ describe("finding people and what they wrote", () => {
 })
 
 describe("searching message text", () => {
-  it("**finds a Russian word by its stem, whatever its ending**, and every word asked for", async () => {
+  it("**finds any three letters inside a word**, whatever its ending, and every word asked for", async () => {
     const store = await openStore({ path: fresh() })
     store.saveMessages(
       ME,
@@ -337,7 +337,8 @@ describe("searching message text", () => {
 
     expect(ids("квартир")).toEqual(["1", "2"])
     expect(ids("квартир центр")).toEqual(["1"])
-    expect(ids("вартир")).toEqual([])
+    expect(ids("вартир")).toEqual(["1", "2"])
+    expect(ids("в центре")).toEqual(["1", "3"])
     store.close()
   })
 })

@@ -244,6 +244,30 @@ export const MIGRATIONS: Migration[] = [
          WHERE sender_identity_pk IS NOT NULL GROUP BY account_pk, sender_identity_pk`,
     ],
   },
+  {
+    version: 5,
+    minCompatible: 1,
+    statements: [
+      // Back to trigram for message text (owner, 2026-09-29): a search finds any three letters inside
+      // a word, as max-cli's personal search always has — worth the larger index.
+      "DROP TRIGGER messages_fts_ai",
+      "DROP TRIGGER messages_fts_au",
+      "DROP TRIGGER messages_fts_ad",
+      "DROP TABLE messages_fts",
+      "CREATE VIRTUAL TABLE messages_fts USING fts5(text, content='messages', content_rowid='pk', tokenize='trigram')",
+      `CREATE TRIGGER messages_fts_ai AFTER INSERT ON messages BEGIN
+         INSERT INTO messages_fts (rowid, text) VALUES (new.pk, new.text);
+       END`,
+      `CREATE TRIGGER messages_fts_au AFTER UPDATE OF text ON messages BEGIN
+         INSERT INTO messages_fts (messages_fts, rowid, text) VALUES ('delete', old.pk, old.text);
+         INSERT INTO messages_fts (rowid, text) VALUES (new.pk, new.text);
+       END`,
+      `CREATE TRIGGER messages_fts_ad AFTER DELETE ON messages BEGIN
+         INSERT INTO messages_fts (messages_fts, rowid, text) VALUES ('delete', old.pk, old.text);
+       END`,
+      "INSERT INTO messages_fts (messages_fts) VALUES ('rebuild')",
+    ],
+  },
 ]
 
 const HISTORY = `CREATE TABLE IF NOT EXISTS schema_migrations (

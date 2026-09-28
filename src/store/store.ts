@@ -776,8 +776,9 @@ const toMessage = (row: Record<string, unknown>, attachments: Attachment[]): Mes
  * Every word as the beginning of a word, all of them required: `квартир` finds квартира and
  * квартиру, which an index of whole words would not. Punctuation separates words, as the index does.
  */
+/** Every word of three characters or more, found anywhere inside the text; a trigram index cannot match a shorter one. */
 const wordsOf = (text: string): string => {
-  const words = text.match(/[\p{L}\p{N}]+/gu) ?? []
-  if (words.length === 0) throw new CliError("validation_error", "search needs a word — letters or digits")
-  return words.map((word) => `"${word}"*`).join(" ")
+  const words = (text.match(/[\p{L}\p{N}]+/gu) ?? []).filter((word) => [...word].length >= 3)
+  if (words.length === 0) throw new CliError("validation_error", "search needs a word of three letters or more")
+  return words.map((word) => `"${word}"`).join(" ")
 }
