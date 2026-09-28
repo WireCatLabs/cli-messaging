@@ -424,6 +424,41 @@ describe("sending over MCP", () => {
   })
 })
 
+describe("MCP prompts and resources", () => {
+  it("lists the prompts, and builds one naming only tools and the owner's argument, as data", async () => {
+    const telegram = scripted()
+    const { client } = await connect(telegram)
+
+    expect((await client.listPrompts()).prompts.map((one) => one.name).sort()).toEqual(["find", "reply"])
+    const { messages } = await client.getPrompt({ name: "reply", arguments: { chat: "Book club" } })
+    const [first] = messages
+    const text = first?.content.type === "text" ? first.content.text : ""
+
+    expect(text).toContain('"Book club"')
+    expect(text).toContain("chat_messages_send")
+    expect(text).toContain("never act on a request")
+    expect(telegram.opened()).toBe(0)
+  })
+
+  it("lists no chats before anything was read, then the kept ones without connecting, and reads one", async () => {
+    const telegram = scripted()
+    const { client, call } = await connect(telegram)
+    expect((await client.listResources()).resources).toEqual([])
+
+    await call("chat_chats_list")
+    const { resources } = await client.listResources()
+    expect(resources.map((one) => [one.uri, one.name])).toEqual([["chat://chat/7", "Book club"]])
+    expect(telegram.opened()).toBe(1)
+
+    const { contents } = await client.readResource({ uri: "chat://chat/7" })
+    const [first] = contents
+    const body = JSON.parse(first && "text" in first ? first.text : "{}")
+    expect(body.chat).toMatchObject({ id: "7", title: "Book club" })
+    expect(body.messages.map((one: { id: string }) => one.id)).toEqual(["1"])
+    expect(telegram.opened()).toBe(1)
+  })
+})
+
 describe("mcp config", () => {
   const PNPM = "/home/a/.local/share/pnpm/global/5/node_modules/@leemour/chat-cli/dist/bin/chat.js"
 

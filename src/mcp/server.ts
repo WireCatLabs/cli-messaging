@@ -7,6 +7,8 @@ import { recalledAccount } from "../cli/messenger/accounts.js"
 import { connected, type Messenger, type MessengerContext } from "../cli/messenger/context.js"
 import { confirmer } from "./confirm.js"
 import { instructions } from "./instructions.js"
+import { registerPrompts } from "./prompts.js"
+import { registerResources } from "./resources.js"
 import { MessengerSession, type SessionOptions } from "./session.js"
 import { answered, failed, READ, readTools, registerTools, sendTools } from "./tools.js"
 
@@ -68,6 +70,14 @@ export const createServer = (
         confirmed,
       },
     )
+    registerPrompts(server, { command: app.command, name })
+    registerResources(server, session, {
+      command: app.command,
+      name,
+      limit: settings.limit,
+      recorded: () => recalledAccount(app, provider, settings.profile, context.env) !== undefined,
+      withStore: context.withStore,
+    })
     server.registerTool(
       `${app.command}_status`,
       {
