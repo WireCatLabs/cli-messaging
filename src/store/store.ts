@@ -51,6 +51,8 @@ export interface PersonFacts {
 export interface MessageFilter {
   provider?: Provider
   account?: AccountKey
+  /** Several accounts of `provider`, by native id — a read across some of them, never all by accident. */
+  accounts?: Id[]
   senders?: Id[]
   together?: boolean
   text?: string
@@ -88,7 +90,7 @@ export interface MessageStore {
   find(filter: MessageFilter): Page<StoredHit>
   savePeople(key: AccountKey, people: PersonFacts[]): void
   /** Everyone this provider's accounts have seen; with `account`, only who that account has seen. */
-  people(provider: Provider, options?: { account?: Id }): PeopleLookup
+  people(provider: Provider, options?: { account?: Id; accounts?: Id[] }): PeopleLookup
   /**
    * Records that every message from `from` to `to` (inclusive, by ordering key) is held, merging it
    * with the stretches it overlaps or touches. Answers the merged stretch.
@@ -405,6 +407,7 @@ const storeOver = (database: CacheDatabase, now: () => number): MessageStore => 
   const find = ({
     provider,
     account,
+    accounts,
     senders,
     together = false,
     text,
@@ -426,6 +429,9 @@ const storeOver = (database: CacheDatabase, now: () => number): MessageStore => 
       parameters.push(wordsOf(trimmed))
     }
     const scopeProvider = account?.provider ?? provider
+    if (accounts && scopeProvider === undefined) {
+      throw new CliError("validation_error", "a read across accounts names their provider")
+    }
     if (scopeProvider !== undefined) {
       conditions.push("a.provider = ?")
       parameters.push(scopeProvider)
@@ -433,6 +439,10 @@ const storeOver = (database: CacheDatabase, now: () => number): MessageStore => 
     if (account) {
       conditions.push("a.native_id = ?")
       parameters.push(account.account)
+    }
+    if (accounts) {
+      conditions.push(`a.native_id IN (${accounts.map(() => "?").join(", ") || "NULL"})`)
+      parameters.push(...accounts)
     }
     if (chatId !== undefined) {
       conditions.push("c.native_id = ?")
@@ -616,15 +626,16 @@ const storeOver = (database: CacheDatabase, now: () => number): MessageStore => 
         for (const person of people) identityPk(accountKey, key.provider, person.id, person.name, person)
       }),
 
-    people: (provider, { account } = {}) => {
-      const scope = account
+    people: (provider, { account, accounts } = {}) => {
+      const within = accounts ?? (account === undefined ? undefined : [account])
+      const scope = within
         ? `AND pk IN (SELECT ai.identity_pk FROM account_identities ai JOIN accounts a ON a.pk = ai.account_pk
-                      WHERE a.provider = ? AND a.native_id = ?)`
+                      WHERE a.provider = ? AND a.native_id IN (${within.map(() => "?").join(", ") || "NULL"}))`
         : ""
       const rows = all(
         `SELECT native_id, name, username FROM identities WHERE provider = ? ${scope}`,
         provider,
-        ...(account ? [provider, account] : []),
+        ...(within ? [provider, ...within] : []),
       )
       const everyone = rows.map(toContact)
       const byId = new Map(everyone.map((person) => [person.id, person]))
