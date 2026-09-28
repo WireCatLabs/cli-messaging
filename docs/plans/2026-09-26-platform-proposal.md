@@ -479,6 +479,32 @@ large groups, search the whole history locally.
 operations, as in max-cli §17) with its session, tools and send confirmation; the skill; capability
 discovery. Telegram adds its own tools through the hook.
 
+**Owner's ruling, 2026-09-28:** the MCP server may send (option B: max-cli's model), and tg aims at
+**feature parity with max-cli** — copy max's commands, tools and docs, adjusted for Telegram, share
+as much as possible in cli-messaging, and add what Telegram allows beyond MAX; non-critical parts
+later. **Every command PR from here adds its MCP tool in the same PR**, so a command and its tool
+never drift apart. A tool answers what the command's `--json` prints.
+
+| PR | What |
+|---|---|
+| 3.1 | `mcp` and `mcp config` in cli-messaging (`./mcp`, the SDK loaded only by `mcp`), copied from max-cli `src/mcp/`: a session that holds one connection (2 min idle, 5 min age, one call at a time, dropped after a connection error), the read tools over `MessengerAdapter` and the store, `<cli>_status`, the instructions under 2048 characters. Reads are saved and recorded exactly as a command's — one shared wrapper. Tools are named from `app.command` (`tg_chats_list`); a CLI adds its own |
+| 3.2 | `--allow-send`: `<cli>_messages_send` with `reply_to` and `send_id`, through the same guard function as the command; `--confirm-send`, max's elicitation form (HMAC-sealed, one use, 5 min), both protocol eras |
+| 3.3 | prompts (`reply`, `find`; `catch-up` and `review` with their commands) and the chat resource from the store |
+| 3.4 | `skill show` and the skill file, copied from max-cli's `skills/max-cli/SKILL.md` |
+
+**Parity tiers** — the gap measured 2026-09-28 against max-cli 0.17.1 (`docs/commands.md`). Each row
+is a command in cli-messaging (a new `MessengerAdapter` method where it needs the messenger), its
+tool, and tg's adapter:
+
+| Tier | Commands |
+|---|---|
+| P1 — what an agent needs daily | `inbox`, `review`; `chats list --search --kind --unread`; `messages list --after`; `messages send --reply-to --silent --md --file`; `messages edit\|delete\|forward\|pin\|unpin`; `reactions add\|remove`; `chats read`; `messages download` and the photo tool; `messages send --at` and `messages scheduled` |
+| P2 — reading more | `chats events`, `chats members list`, `contacts lookup\|sync`, `account sessions`, `chats inspect\|join\|leave`, `polls vote\|create\|close`, voice to text, `export --format markdown`, `backfill` cost estimate, `doctor report`, `cache clear` |
+| P3 — administering | `chats create\|update\|settings\|link\|folders`, `chats members add\|remove`, `chats admins`, `contacts add\|remove\|block\|unblock\|rename\|import`, `account update`, `chats rules` and `chats check` (moderation) |
+| Out | `bot *` — a Telegram user account is not a bot, and the Telegram Bot API is another product |
+
+tg keeps what max lacks: `messages reply`, `sync status`, `watch --events`.
+
 **Phase 4 — the platform.** max-cli moves onto cli-messaging (under max-cli's own rules: worktree,
 `🚧` claim on its backlog, a plan in its `docs_ai/`); its existing history is imported into the
 shared store; the capability model is filled by both; `auto:self` and `auto:phone` identity links
@@ -488,7 +514,8 @@ imports no adapter. `tg` and `max` write the store; `msg` reads across it. This 
 commands will live later.
 
 **Not in any phase here:** CRM commands, notes, embeddings, AI summarisation, polls, stickers,
-stories, calls, admin features, a UI. If it does not help *read → sync → search → context → safe
+stories, calls, admin features, a UI. (**Superseded for polls and admin features** by the parity ruling
+above, 2026-09-28.) If it does not help *read → sync → search → context → safe
 action*, it waits.
 
 ## 9. The spike: definition and success criteria
