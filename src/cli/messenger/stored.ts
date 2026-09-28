@@ -1,7 +1,7 @@
 import type { MessageEvent } from "../../domain/models.js"
 import type { AccountKey, MessageStore } from "../../store/store.js"
 import type { EventSink } from "../runs/events.js"
-import type { MessengerAdapter } from "./port.js"
+import { type MessengerAdapter, throughWrapper } from "./port.js"
 
 export interface Saving {
   account: AccountKey
@@ -32,7 +32,8 @@ export const stored = (messenger: MessengerAdapter, { account, store, warn, even
     }
   }
 
-  return {
+  // A method not listed here saves nothing and passes through; a lane that should save adds its line.
+  return throughWrapper(messenger, {
     self: () => messenger.self(),
     resolve: (reference) => messenger.resolve(reference),
     chat: (reference) => messenger.chat(reference),
@@ -84,7 +85,7 @@ export const stored = (messenger: MessengerAdapter, { account, store, warn, even
       await save("messages.send", (opened) => opened.saveMessages(account, chatId, [sent.message], { via: "send" }))
       return sent
     },
-  }
+  })
 }
 
 /** Each change as the store keeps it: a message or an edit upserted, a deletion a tombstone, reactions replaced. */

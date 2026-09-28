@@ -4,8 +4,8 @@ import { CliError, resolvePaths, writeSecurely } from "@leemour/cli-core"
 import { Command } from "commander"
 import type { MessageEvent } from "../../domain/models.js"
 import type { AppIdentity } from "../app.js"
-import { listenUntilStopped } from "./commands.js"
 import { type Messenger, messengerContext } from "./context.js"
+import { listenUntilStopped } from "./watch-command.js"
 
 interface Lock {
   pid: number

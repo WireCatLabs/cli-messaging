@@ -1,6 +1,6 @@
 import { isCliFailure } from "../failures.js"
 import { type EventSink, providerErrorKey } from "../runs/events.js"
-import type { MessengerAdapter } from "./port.js"
+import { type MessengerAdapter, throughWrapper } from "./port.js"
 
 type Named = { ids?: Record<string, string>; counts?: Record<string, number> }
 
@@ -31,86 +31,93 @@ export const observed = (messenger: MessengerAdapter, events: EventSink): Messen
     }
   }
 
-  return {
-    self: () => messenger.self(),
-    me: () => timed("account.me", {}, () => messenger.me()),
-    chats: (window) =>
-      timed(
-        "chats.list",
-        {},
-        () => messenger.chats(window),
-        (page) => ({ counts: { chats: page.items.length } }),
-      ),
-    history: (reference, options) =>
-      timed(
-        "messages.list",
-        {},
-        () => messenger.history(reference, options),
-        (page) => ({
-          ...(page.items[0] ? { ids: { chat: page.items[0].chatId } } : {}),
-          counts: { messages: page.items.length },
-        }),
-      ),
-    resolve: (reference) =>
-      timed(
-        "chats.resolve",
-        {},
-        () => messenger.resolve(reference),
-        (chat) => ({ ids: { chat: chat.id } }),
-      ),
-    chat: (reference) =>
-      timed(
-        "chats.show",
-        {},
-        () => messenger.chat(reference),
-        (card) => ({ ids: { chat: card.id }, ...(card.members ? { counts: { members: card.members.length } } : {}) }),
-      ),
-    contact: (reference) =>
-      timed(
-        "contacts.show",
-        {},
-        () => messenger.contact(reference),
-        (card) => ({ ids: { person: card.id }, counts: { chats: card.chats.length } }),
-      ),
-    around: (reference, messageId, window) =>
-      timed(
-        "messages.around",
-        { ids: { message: messageId } },
-        () => messenger.around(reference, messageId, window),
-        (items) => ({
-          ...(items[0] ? { ids: { chat: items[0].chatId, message: messageId } } : {}),
-          counts: { messages: items.length },
-        }),
-      ),
-    send: (chatId, text, options) =>
-      timed(
-        "messages.send",
-        { ids: { chat: chatId, send: options.sendId, ...(options.replyTo ? { reply: options.replyTo } : {}) } },
-        () => messenger.send(chatId, text, options),
-        (sent) => ({ ids: { message: sent.message.id } }),
-      ),
-    ...(messenger.watch
-      ? {
-          watch: async (onEvent, signal, onReady) => {
-            const counts: Record<string, number> = {}
-            await timed(
-              "messages.watch",
-              {},
-              () =>
-                messenger.watch?.(
-                  (event) => {
-                    counts[event.event] = (counts[event.event] ?? 0) + 1
-                    onEvent(event)
-                  },
-                  signal,
-                  onReady,
-                ) ?? Promise.resolve(),
-              () => ({ counts }),
-            )
-          },
-        }
-      : {}),
-    logout: () => timed("session.logout", {}, () => messenger.logout()),
-    close: () => messenger.close(),
-  }
+  // A method not listed here is timed under its own name, with no ids until a line here names them.
+  return throughWrapper(
+    messenger,
+    {
+      self: () => messenger.self(),
+      me: () => timed("account.me", {}, () => messenger.me()),
+      chats: (window) =>
+        timed(
+          "chats.list",
+          {},
+          () => messenger.chats(window),
+          (page) => ({ counts: { chats: page.items.length } }),
+        ),
+      history: (reference, options) =>
+        timed(
+          "messages.list",
+          {},
+          () => messenger.history(reference, options),
+          (page) => ({
+            ...(page.items[0] ? { ids: { chat: page.items[0].chatId } } : {}),
+            counts: { messages: page.items.length },
+          }),
+        ),
+      resolve: (reference) =>
+        timed(
+          "chats.resolve",
+          {},
+          () => messenger.resolve(reference),
+          (chat) => ({ ids: { chat: chat.id } }),
+        ),
+      chat: (reference) =>
+        timed(
+          "chats.show",
+          {},
+          () => messenger.chat(reference),
+          (card) => ({ ids: { chat: card.id }, ...(card.members ? { counts: { members: card.members.length } } : {}) }),
+        ),
+      contact: (reference) =>
+        timed(
+          "contacts.show",
+          {},
+          () => messenger.contact(reference),
+          (card) => ({ ids: { person: card.id }, counts: { chats: card.chats.length } }),
+        ),
+      around: (reference, messageId, window) =>
+        timed(
+          "messages.around",
+          { ids: { message: messageId } },
+          () => messenger.around(reference, messageId, window),
+          (items) => ({
+            ...(items[0] ? { ids: { chat: items[0].chatId, message: messageId } } : {}),
+            counts: { messages: items.length },
+          }),
+        ),
+      send: (chatId, text, options) =>
+        timed(
+          "messages.send",
+          { ids: { chat: chatId, send: options.sendId, ...(options.replyTo ? { reply: options.replyTo } : {}) } },
+          () => messenger.send(chatId, text, options),
+          (sent) => ({ ids: { message: sent.message.id } }),
+        ),
+      ...(messenger.watch
+        ? {
+            watch: async (onEvent, signal, onReady) => {
+              const counts: Record<string, number> = {}
+              await timed(
+                "messages.watch",
+                {},
+                () =>
+                  messenger.watch?.(
+                    (event) => {
+                      counts[event.event] = (counts[event.event] ?? 0) + 1
+                      onEvent(event)
+                    },
+                    signal,
+                    onReady,
+                  ) ?? Promise.resolve(),
+                () => ({ counts }),
+              )
+            },
+          }
+        : {}),
+      logout: () => timed("session.logout", {}, () => messenger.logout()),
+      close: () => messenger.close(),
+    },
+    (name, call) =>
+      (...args: unknown[]) =>
+        timed(`adapter.${name}`, {}, () => call(...args)),
+  )
 }

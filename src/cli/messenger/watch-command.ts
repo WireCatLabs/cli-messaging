@@ -1,0 +1,102 @@
+import { CliError } from "@leemour/cli-core"
+import { Command } from "commander"
+import type { MessageEvent, MessageHit } from "../../domain/models.js"
+import { renderMessages } from "../../render/messages.js"
+import { environmentOf } from "../context.js"
+import { type Messenger, type MessengerContext, messengerContext } from "./context.js"
+
+/**
+ * New messages as they arrive, until Ctrl-C or `--timeout` — both a normal end, exit 0: listening
+ * for a minute is a complete answer. One `MessageHit` per line with `--jsonl`; `--json` is refused,
+ * because a stream is not one value. Nothing is marked read.
+ */
+export const watchCommand = (messenger: Messenger): Command =>
+  new Command("watch")
+    .description("print new messages as they arrive, until Ctrl-C or --timeout (either ends it normally)")
+    .option("--events", "also edits, deletions and reactions; every line then names its event")
+    .action(async function (this: Command) {
+      const events = this.opts<{ events?: boolean }>().events === true
+      const context = messengerContext(this, messenger)
+      if (context.format === "json") {
+        throw new CliError("validation_error", "watch is a stream — use --jsonl for one message per line")
+      }
+      if (context.settings.offline)
+        throw new CliError("validation_error", "watch listens live; --offline has nothing to wait for")
+
+      const render = (message: MessageHit) =>
+        `${message.chatTitle ?? message.chatId}\n${renderMessages([message], {
+          color: context.color,
+          verbosity: context.settings.detail,
+          senderColors: context.settings.senderColors,
+          profile: context.profile,
+          provider: messenger.provider,
+        })}`
+
+      // Without --events the stream is bare messages, as it always was: a reader of it never meets
+      // a line of another shape.
+      const stop = new AbortController()
+      const print = (event: MessageEvent) => {
+        if (stop.signal.aborted || (!events && event.event !== "message")) return
+        if (context.format === "jsonl") {
+          context.streams.data(JSON.stringify(events ? event : (event as { message: MessageHit }).message))
+        } else context.streams.data(describe(event, render))
+      }
+
+      await listenUntilStopped(this, context, messenger, print, { stop, pipe: true })
+    })
+
+/**
+ * Listens until Ctrl-C, SIGTERM, `--timeout` or — with `pipe` — a reader that has gone away.
+ * Each ends it normally. Tests hand in `signal` instead of process-wide handlers.
+ */
+export const listenUntilStopped = async (
+  command: Command,
+  context: MessengerContext,
+  messenger: Messenger,
+  onEvent: (event: MessageEvent) => void,
+  { stop, pipe = false, catchUp = false }: { stop: AbortController; pipe?: boolean; catchUp?: boolean },
+): Promise<void> => {
+  const given = environmentOf(command).signal
+  const end = () => stop.abort()
+  given?.addEventListener("abort", end, { once: true })
+  const signals = given ? [] : (["SIGINT", "SIGTERM"] as const)
+  for (const name of signals) process.once(name, end)
+  // `tg watch --jsonl | head -1`: once the reader is gone, the next write fails, and that is the end.
+  const closed = (error: NodeJS.ErrnoException) => {
+    if (error.code === "EPIPE") end()
+  }
+  if (pipe && !given) process.stdout.on("error", closed)
+  const timer =
+    context.settings.commandTimeoutMs === undefined ? undefined : setTimeout(end, context.settings.commandTimeoutMs)
+  try {
+    await context.withMessenger(
+      async (connection) => {
+        if (!connection.watch) {
+          throw new CliError("validation_error", `${messenger.app.command} cannot listen for new messages`)
+        }
+        await connection.watch(onEvent, stop.signal, () => context.renderer.note("listening — Ctrl-C to stop"))
+      },
+      { listen: true, ...(catchUp ? { catchUp } : {}) },
+    )
+  } finally {
+    if (timer) clearTimeout(timer)
+    for (const name of signals) process.off(name, end)
+    if (pipe && !given) process.stdout.off("error", closed)
+    given?.removeEventListener("abort", end)
+  }
+}
+
+const describe = (event: MessageEvent, render: (message: MessageHit) => string): string => {
+  switch (event.event) {
+    case "message":
+      return render(event.message)
+    case "edit":
+      return `edited — ${render(event.message)}`
+    case "delete":
+      return `deleted in ${event.chatTitle ?? event.chatId ?? "a private chat or small group"}: message ${event.messageId}\n`
+    case "reaction": {
+      const counts = event.reactions.counts.map(({ reaction, count }) => `${reaction} ${count}`).join(", ")
+      return `reactions in ${event.chatTitle ?? event.chatId} on message ${event.messageId}: ${counts || "none"}\n`
+    }
+  }
+}
