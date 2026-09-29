@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.44.0 — 29.09.2026
+
 ### Added
 
 - **`reactionsCommand` — `reactions add <chat> <message> <emoji>` and `reactions remove <chat> <message>`**,
