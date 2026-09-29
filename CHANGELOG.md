@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.42.0 — 29.09.2026
+
 ### Added
 
 - **`messages pin <chat> <message> [--notify]` and `messages unpin <chat> <message>`**, and with
