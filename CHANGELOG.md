@@ -8,6 +8,9 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Added
 
+- **`qrPng(link, scale?)`** — the login QR code as a PNG image, beside `terminalQr`, for a CLI to write
+  to a file an agent can pass on. 8-bit greyscale, 8 pixels a module by default, written with
+  `node:zlib` and no new runtime dependency.
 - **`doctor report` and `doctor report create [--run <id>] [--output <file>]`** — a problem report
   as one JSON file: what `doctor` answers, the failed run's requests (the newest, or the one named) and
   the last 20 send attempts. Every chat, message and account id becomes a label salted per report, the
