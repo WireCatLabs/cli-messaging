@@ -1,10 +1,11 @@
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
+import { Readable } from "node:stream"
 import { CliError, captureStreams } from "@leemour/cli-core"
 import type { CommandInfo } from "@leemour/cli-core/commands"
 import { describe, expect, it } from "vitest"
-import type { Chat, Message, WindowedMessage } from "../../domain/models.js"
+import type { Chat, Member, Message, WindowedMessage } from "../../domain/models.js"
 import { SendJournal, sendsPathFor } from "../../sends/journal.js"
 import { commandsCommand } from "../commands-command.js"
 import { type RunOptions, run } from "../program.js"
@@ -848,6 +849,44 @@ describe("the guard, account and mcp config commands", () => {
     expect(json(page.stdout)).toMatchObject({ items: [{ id: "9", role: "admin" }], page: 2, hasMore: true })
     expect(windows).toEqual([{ limit: 1, offset: 1 }, { offset: 0 }])
     expect((await call(["chats", "members", "list", "7"], async () => fake, env)).code).toBe(2)
+  })
+
+  it("**contacts lookup** reads the number from stdin, never argv, and refuses what is not a number", async () => {
+    const env = sandbox()
+    const phones: string[] = []
+    const finder: MessengerAdapter = {
+      ...fake,
+      lookup: async (phone) => {
+        phones.push(phone)
+        return { id: "21", name: "Adam", username: "adam_k" }
+      },
+    }
+    const piped = (text: string) => ({ stdin: Object.assign(Readable.from([text]), { isTTY: false }) })
+
+    const found = await call(["contacts", "lookup", "--json"], async () => finder, env, piped("+34 600-123 456\n"))
+    const typo = await call(["contacts", "lookup"], async () => finder, env, piped("call me"))
+    const inArgv = await call(["contacts", "lookup", "34600123456"], async () => finder, env, piped(""))
+
+    expect(json(found.stdout)).toEqual({ id: "21", name: "Adam", username: "adam_k" })
+    expect(phones).toEqual(["34600123456"])
+    expect([typo.code, inArgv.code]).toEqual([2, 2])
+    expect(inArgv.stderr.join("\n")).not.toContain("600123456")
+  })
+
+  it("**contacts sync** keeps the contact list in the store and counts what was new or changed", async () => {
+    const env = sandbox()
+    let people: Member[] = [{ id: "21", name: "Adam", username: "adam_k" }]
+    const book: MessengerAdapter = { ...fake, addressBook: async () => people }
+
+    const first = await call(["contacts", "sync", "--json"], async () => book, env)
+    people = [
+      { id: "21", name: "Adam K.", username: "adam_k" },
+      { id: "22", name: "Bea", username: null },
+    ]
+    const second = await call(["contacts", "sync", "--json"], async () => book, env)
+
+    expect(json(first.stdout)).toEqual({ added: 1, changed: 0, known: 1 })
+    expect(json(second.stdout)).toEqual({ added: 1, changed: 1, known: 2 })
   })
 
   it("refuses a --search under 3 characters and an unknown --kind, before connecting", async () => {

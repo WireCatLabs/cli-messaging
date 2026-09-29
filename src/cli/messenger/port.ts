@@ -7,6 +7,7 @@ import type {
   ChatEvents,
   GroupMember,
   Id,
+  Member,
   Message,
   MessageEvent,
   Page,
@@ -106,6 +107,10 @@ export interface MessengerAdapter {
   scheduled?(chat: string): Promise<Message[]>
   /** A voice or video note as text, by the messenger's own speech recognition. */
   transcribe?(chat: string, messageId: Id): Promise<Transcript>
+  /** The person with this phone number, where their privacy lets the owner find them; `not_found` otherwise. */
+  lookup?(phone: string): Promise<Member>
+  /** The owner's contact list as the messenger keeps it — the address book, not the chats. */
+  addressBook?(): Promise<Member[]>
   /** Everyone in a group, a page at a time; `limit` unset is every one the messenger will give. */
   members?(chat: string, window: { limit?: number; offset: number }): Promise<Page<GroupMember> & { chatId: Id }>
   /** Who joined, left, was added or removed since `since` (ms), from the chat's service messages. */

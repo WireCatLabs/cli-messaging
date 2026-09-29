@@ -1,6 +1,7 @@
 import * as v from "valibot"
-import { contactsIn } from "../../cli/messenger/contacts-command.js"
+import { contactsIn, phoneOf } from "../../cli/messenger/contacts-command.js"
 import type { Messenger } from "../../cli/messenger/context.js"
+import { capability } from "../../cli/messenger/port.js"
 import { type AnyTool, envelope, limit, page, paging, READ, tool } from "../tool.js"
 
 export const contactsTools = (_messenger: Messenger): Record<string, AnyTool> => {
@@ -21,6 +22,16 @@ export const contactsTools = (_messenger: Messenger): Record<string, AnyTool> =>
         const found = contactsIn(chats, { order: order ?? "recent", ...(search ? { search } : {}), ...window })
         return envelope(found, number, size)
       },
+    }),
+
+    contacts_lookup: tool({
+      title: "Find a person by phone",
+      description:
+        "Who has this phone number, where their privacy lets the owner find them: { id, name, username }. " +
+        "not_found otherwise. Nothing is added to the owner's contacts.",
+      input: v.object({ phone: v.pipe(v.string(), v.description("with the country code; spaces and + are fine")) }),
+      annotations: READ,
+      online: (adapter, args) => capability(adapter, "lookup", "find a person by phone")(phoneOf(args.phone)),
     }),
 
     contacts_show: tool({
