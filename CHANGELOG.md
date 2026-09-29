@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.41.0 — 29.09.2026
+
 ### Added
 
 - **`chats events <chat> [--since] [--event join,leave,…]`**, max-cli's, and the `chats_events` tool:
