@@ -6,6 +6,14 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- **`messages send --silent`, `--no-preview` and `--md`**, and `silent`, `no_preview` and `markdown` on
+  the MCP send tool. They reach the adapter as `SendOptions` (`silent`, `noPreview`, `markup`).
+  `--md` reads the same inline marks as max-cli's — `**bold**`, `_italic_`, `~~struck~~`, `` `code` `` —
+  and `parseMarkdown` is exported, so a messenger formats one message alike. An adapter that cannot
+  honour one of these options should refuse the send, not drop the option.
+
 ## 0.31.0 — 29.09.2026
 
 ### Added

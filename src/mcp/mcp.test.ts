@@ -10,7 +10,7 @@ import { afterEach, describe, expect, it } from "vitest"
 import { provide } from "../cli/context.js"
 import { type Messenger, messengerContext } from "../cli/messenger/context.js"
 import { serverEntry } from "../cli/messenger/mcp-command.js"
-import type { MessengerAdapter } from "../cli/messenger/port.js"
+import type { MessengerAdapter, SendOptions } from "../cli/messenger/port.js"
 import { createProgram } from "../cli/program.js"
 import { settingsFor } from "../cli/settings.js"
 import type { Chat, Message } from "../domain/models.js"
@@ -184,11 +184,11 @@ const connect = async (telegram: Scripted = scripted(), options: Partial<ServerO
 
 /** A messenger that records what it was asked to send. */
 const sending = () => {
-  const sent: { chatId: string; text: string; sendId: string; replyTo?: string }[] = []
+  const sent: ({ chatId: string; text: string } & SendOptions)[] = []
   const telegram = scripted({
-    send: async (chatId, text, { sendId, replyTo }) => {
-      sent.push({ chatId, text, sendId, ...(replyTo === undefined ? {} : { replyTo }) })
-      return { message: { ...message, id: "99", text, outgoing: true }, sendId }
+    send: async (chatId, text, options) => {
+      sent.push({ chatId, text, ...options })
+      return { message: { ...message, id: "99", text, outgoing: true }, sendId: options.sendId }
     },
   })
   return { telegram, sent }
@@ -370,6 +370,20 @@ describe("sending over MCP", () => {
     await call("chat_messages_send", { chat: "7", text: "again", send_id: "12345" })
 
     expect(sent[0]?.sendId).toBe("12345")
+  })
+
+  it("sends silently, without a preview, with the Markdown marks turned into spans", async () => {
+    const { telegram, sent } = sending()
+    const { call } = await connect(telegram, { allowSend: true })
+
+    await call("chat_messages_send", { chat: "7", text: "**hi**", silent: true, no_preview: true, markdown: true })
+
+    expect(sent[0]).toMatchObject({
+      text: "hi",
+      silent: true,
+      noPreview: true,
+      markup: [{ type: "bold", from: 0, length: 2 }],
+    })
   })
 
   it("refuses on a read-only profile, and sends nothing", async () => {

@@ -1,4 +1,5 @@
 import { CliError } from "@leemour/cli-core"
+import type { Markup } from "../../domain/markdown.js"
 import type {
   Account,
   Chat,
@@ -25,6 +26,18 @@ export interface RemoteFile {
 export interface Download {
   files: RemoteFile[]
   skipped: string[]
+}
+
+/** How one message goes. `markup` spans `text` as sent — the marks already taken out of it. */
+export interface SendOptions {
+  sendId: string
+  /** A message id in the same chat. */
+  replyTo?: Id
+  /** Delivered without a notification. */
+  silent?: boolean
+  /** No preview card for a link in the text. */
+  noPreview?: boolean
+  markup?: Markup[]
 }
 
 export interface Sent {
@@ -57,8 +70,8 @@ export interface MessengerAdapter {
   contact(person: string): Promise<PersonCard>
   /** One message and up to `before` and `after` either side, oldest first; the one asked for carries `anchor`. */
   around(chat: string, messageId: Id, window: { before: number; after: number }): Promise<WindowedMessage[]>
-  /** `replyTo` is a message id in the same chat. */
-  send(chatId: Id, text: string, options: { sendId: string; replyTo?: Id }): Promise<Sent>
+  /** An option the messenger has no way to honour is refused, never dropped. */
+  send(chatId: Id, text: string, options: SendOptions): Promise<Sent>
   /**
    * New messages and changes to messages as they arrive, until `signal` aborts. `onReady` once it is
    * actually listening — a caller that sends on "listening" must not race the connection. Only on a
