@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.33.1 — 29.09.2026
+
 ### Fixed
 
 - **`service install` writes a `$` in a path as itself in `Environment=`**, where systemd gives it no
