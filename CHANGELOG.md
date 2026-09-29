@@ -6,6 +6,14 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- **`chats list --search <text> --kind <kind> --unread`**, max-cli's, and `search`, `kind` and
+  `unread` on the `chats_list` tool. The filters combine; `--search` takes at least 3 characters and
+  matches the chat's name. A filtered list searches the newest 200 chats — paging through every chat
+  hit Telegram's rate limit once — and says so, `partial: true` on the tool, when older ones exist.
+  Offline it searches every stored chat.
+
 ## 0.39.0 — 29.09.2026
 
 ### Added
