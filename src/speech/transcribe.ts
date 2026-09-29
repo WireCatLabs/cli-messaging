@@ -1,0 +1,117 @@
+import { CliError, isCliError } from "@leemour/cli-core"
+import type { Messenger } from "../cli/messenger/context.js"
+import { capability, type MessengerAdapter, type RemoteFile, type Transcript } from "../cli/messenger/port.js"
+import { fromFile, type Settings } from "../cli/settings.js"
+import { installedBytes, isInstalled, megabytes, modelPath, modelsDirectory, vadPath } from "./install.js"
+import { orderedModels, type SpeechModel, speechModel } from "./models.js"
+
+/** `messenger`: its own recognition (Telegram Premium). `local`: a model on this machine. `auto`: the first, then the second. */
+export const TRANSCRIBE_WITH = ["auto", "messenger", "local"] as const
+export type TranscribeWith = (typeof TRANSCRIBE_WITH)[number]
+
+export interface Heard extends Transcript {
+  messageId: string
+  /** The messenger's provider, or `local`. */
+  via: string
+  /** The local model, when it was one. */
+  model?: string
+}
+
+/** A voice message is read into memory whole; minutes of Opus are a few megabytes. */
+const LARGEST_VOICE = 32 * 1024 * 1024
+
+export interface Choice {
+  with: TranscribeWith
+  model: SpeechModel
+  /** Where the models are, `modelsDirectory` for the command's environment. */
+  directory: string
+}
+
+/** The flag, then the profile's `transcribeWith` and `speechModel`, then `auto` and the CLI's first model. */
+export const choose = (
+  messenger: Messenger,
+  settings: Pick<Settings, "configured" | "shared">,
+  flags: { local?: boolean; model?: string },
+  env: NodeJS.ProcessEnv = process.env,
+): Choice => {
+  const model = flags.model ?? fromFile<string | undefined>(settings, "speechModel", undefined).value
+  return {
+    directory: modelsDirectory(env),
+    with:
+      flags.local || flags.model !== undefined
+        ? "local"
+        : fromFile<TranscribeWith>(settings, "transcribeWith", "auto").value,
+    model: model === undefined ? (orderedModels(messenger.speechModels)[0] as SpeechModel) : speechModel(model),
+  }
+}
+
+/** Never a download: a model is hundreds of MB, and whether to fetch one is the owner's call. */
+export const notDownloaded = (messenger: Messenger, model: SpeechModel): CliError =>
+  new CliError(
+    "not_found",
+    `the speech model ${model.id} is not on this machine — the owner downloads it once with ` +
+      `\`${messenger.app.command} models audio download ${model.id}\` (${megabytes(installedBytes(model))})`,
+  )
+
+/**
+ * Over an open connection: the messenger's own transcript, or the recording's bytes for a local model.
+ * The model runs after the connection closes — a minute of speech should not hold a socket open.
+ */
+export const hearOnline = async (
+  messenger: Messenger,
+  connection: MessengerAdapter,
+  chat: string,
+  messageId: string,
+  choice: Choice,
+): Promise<Heard | Uint8Array> => {
+  if (choice.with !== "local") {
+    const canAsk = typeof connection.transcribe === "function"
+    if (choice.with === "messenger" || canAsk) {
+      try {
+        const heard = await capability(connection, "transcribe", "transcribe voice messages")(chat, messageId)
+        return { messageId, ...heard, via: messenger.provider }
+      } catch (error) {
+        // `auto` falls back only when the messenger refuses this account; any other failure is real.
+        if (choice.with === "messenger" || !(isCliError(error) && error.code === "permission_error")) throw error
+      }
+    }
+  }
+  if (!isInstalled(choice.model, choice.directory)) throw notDownloaded(messenger, choice.model)
+  const { files } = await capability(connection, "download", "download attachments")(chat, messageId)
+  const voice = files.find((file) => file.kind === "voice" || file.mime === "audio/ogg")
+  if (!voice) throw new CliError("validation_error", "that message is not a voice message")
+  return readAll(voice)
+}
+
+/** The local model, on the bytes `hearOnline` fetched. */
+export const hearLocally = async (
+  bytes: Uint8Array,
+  messageId: string,
+  { model, directory }: Choice,
+): Promise<Heard> => {
+  const { decodeOgg, openRecognizer, toModelRate } = await import("./recognize.js")
+  const { samples, rate } = await decodeOgg(bytes)
+  const recognizer = openRecognizer(model, modelPath(directory, model), vadPath(directory))
+  try {
+    return {
+      messageId,
+      text: recognizer.recognize(toModelRate(samples, rate)),
+      pending: false,
+      via: "local",
+      model: model.id,
+    }
+  } finally {
+    recognizer.free()
+  }
+}
+
+const readAll = async (file: RemoteFile): Promise<Uint8Array> => {
+  const chunks: Uint8Array[] = []
+  let total = 0
+  for await (const chunk of file.bytes()) {
+    total += chunk.length
+    if (total > LARGEST_VOICE) throw new CliError("validation_error", "the voice message is larger than 32 MB")
+    chunks.push(chunk)
+  }
+  return new Uint8Array(Buffer.concat(chunks))
+}

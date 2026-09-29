@@ -20,6 +20,7 @@ import { safeName } from "./download-command.js"
 import { recipientsCommand, sendsCommand } from "./guard-commands.js"
 import { type McpEnvironment, mcpCommand } from "./mcp-command.js"
 import { messagesCommand } from "./messages-command.js"
+import { modelsCommand } from "./models-command.js"
 import type { MessengerAdapter, SendOptions } from "./port.js"
 
 const app = {
@@ -127,6 +128,7 @@ const call = async (
         syncCommand(messenger),
         exportCommand(messenger),
         mcpCommand(messenger),
+        modelsCommand(messenger),
       ],
     },
     { streams, tty: false, env, ...options },
@@ -480,7 +482,11 @@ describe("messages download", () => {
 describe("messages transcribe", () => {
   const env = () => {
     const root = mkdtempSync(join(tmpdir(), "messenger-"))
-    return { CHAT_STATE_DIR: join(root, "state"), MESSAGING_STORE: join(root, "m.db") }
+    return {
+      CHAT_STATE_DIR: join(root, "state"),
+      MESSAGING_STORE: join(root, "m.db"),
+      MESSAGING_CACHE_DIR: join(root, "cache"),
+    }
   }
 
   it("prints the text, and says on stderr when it was not finished", async () => {
@@ -495,16 +501,35 @@ describe("messages transcribe", () => {
       env(),
     )
 
-    expect(JSON.parse(done.stdout[0] ?? "")).toEqual({ messageId: "5", text: "hello", pending: false })
+    expect(JSON.parse(done.stdout[0] ?? "")).toEqual({ messageId: "5", text: "hello", pending: false, via: "chat" })
     expect(done.stderr).toEqual([])
     expect(pending.stderr.join("")).toContain("not finished")
   })
 
-  it("refuses on a messenger that cannot transcribe", async () => {
-    const { code, stderr } = await call(["messages", "transcribe", "Book", "5"], async () => fake, env())
+  it("**refuses --local before connecting** when the model is not downloaded, naming the command", async () => {
+    const never = async (): Promise<MessengerAdapter> => {
+      throw new Error("a missing model must not cost a connection")
+    }
+    const { code, stderr } = await call(["messages", "transcribe", "Book", "5", "--local"], never, env())
 
     expect(code).not.toBe(0)
-    expect(stderr.join("")).toContain("cannot transcribe voice messages")
+    expect(stderr.join("")).toContain("chat models audio download parakeet-v3")
+  })
+
+  it("lists the speech models Parakeet first, none downloaded, the first the default", async () => {
+    const { stdout } = await call(["models", "audio", "list", "--json"], async () => fake, env())
+
+    expect(
+      JSON.parse(stdout[0] ?? "").items.map((one: { id: string; downloaded: boolean; default: boolean }) => [
+        one.id,
+        one.downloaded,
+        one.default,
+      ]),
+    ).toEqual([
+      ["parakeet-v3", false, true],
+      ["gigaam-v3", false, false],
+      ["gigaam-v3-ctc", false, false],
+    ])
   })
 })
 

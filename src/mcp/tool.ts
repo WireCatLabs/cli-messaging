@@ -10,6 +10,7 @@ import * as v from "valibot"
 import { isCliFailure } from "../cli/failures.js"
 import type { Messenger } from "../cli/messenger/context.js"
 import type { MessengerAdapter } from "../cli/messenger/port.js"
+import type { Settings } from "../cli/settings.js"
 import type { SendGuard } from "../sends/guard.js"
 import type { Permission } from "../sends/permissions.js"
 import type { AccountKey, MessageStore } from "../store/store.js"
@@ -41,6 +42,9 @@ type Input = v.ObjectSchema<v.ObjectEntries, undefined>
 export interface Defaults {
   limit: number
   guard: SendGuard
+  /** The profile's own entries, for a tool reading a setting of its own — `transcribeWith`. */
+  settings: Pick<Settings, "configured" | "shared">
+  env: NodeJS.ProcessEnv
 }
 
 interface Tool<S extends Input> {

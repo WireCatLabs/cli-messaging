@@ -67,7 +67,7 @@ export const createServer = (
         command: app.command,
         session,
         withStore: context.withStore,
-        defaults: { limit: settings.limit, guard: context.guard },
+        defaults: { limit: settings.limit, guard: context.guard, settings, env: context.env },
         confirmed,
       },
     )

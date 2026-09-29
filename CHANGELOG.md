@@ -15,6 +15,10 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   both — whether serve runs, since when, whether it is listening yet, who started it (`unit`, `server` or
   `hand`) and the unit if there is one. `ServiceSystem` is `ServerSystem`, with `spawn` and `pause`.
   Unit names are unchanged, so a unit written by `service install` is still found.
+- **`Defaults`, what an MCP tool's `online` receives, carries `settings` and `env`.** A CLI that
+  builds its own tools from `tool()` and calls them directly must pass both.
+- **`@leemour/cli-messaging` now depends on `sherpa-onnx` and `ogg-opus-decoder`** (about 15 MB of
+  WebAssembly). Both are loaded only when a model runs.
 
 ### Added
 
@@ -34,6 +38,17 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   `listeningAt`. With a unit it goes through systemd or launchd. `server stop` signals only a serve that
   `server start` started (its environment says so); one started by hand is named and left alone.
 - **Sentences for a person** from every `server` subcommand; `--json` keeps the data.
+- **Speech recognition on this machine, shared by every messenger CLI.** `modelsCommand(messenger)`
+  adds `models audio list|download <id>`: Parakeet v3 (25 languages), GigaAM v3 and GigaAM v3 CTC
+  (Russian), each pinned to one commit and checked by sha256, run with sherpa-onnx — moved from
+  max-cli. The models live in one folder for every CLI (`<cache>/cli-messaging/models/audio`,
+  moved by `MESSAGING_CACHE_DIR`), so one download serves them all. **Parakeet is first by default**;
+  a CLI puts its own first with `Messenger.speechModels` — max-cli would pass `["gigaam-v3"]`.
+- **`messages transcribe` chooses between the messenger and this machine.** The profile's
+  `transcribeWith` is `auto` (default: the messenger, and the local model when it refuses the
+  account), `messenger` or `local`; `speechModel` picks the model. `--local` and `--model <id>` on
+  the command, `local` on the tool. The answer says `via` (the provider, or `local`) and `model`.
+  Nothing ever downloads a model by itself: a missing one is refused with the command that does.
 
 ### Fixed
 
