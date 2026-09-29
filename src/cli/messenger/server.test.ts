@@ -9,6 +9,7 @@ import { run } from "../program.js"
 import { settingsFor } from "../settings.js"
 import type { Messenger } from "./context.js"
 import type { MessengerAdapter } from "./port.js"
+import { servingProfiles } from "./serve-command.js"
 import { type Ran, type ServerSystem, serverCommand } from "./server-command.js"
 
 const app = { command: "chat", appName: "chat-cli", envPrefix: "CHAT", description: "A test", version: "1.0.0" }
@@ -179,6 +180,28 @@ describe("server without a unit", () => {
     expect((await call(["logs", "-n", "1", "--json"], env, machine("linux").system)).answer).toMatchObject({
       lines: ["no app credentials for profile default"],
     })
+  })
+
+  it("**says when the running serve is older than this CLI**, as max-cli's server status does", async () => {
+    const { env } = setup()
+    const stale = sleeper()
+    hold(env, {
+      pid: stale.pid,
+      startedAt: "2026-09-29T10:00:00.000Z",
+      listeningAt: "2026-09-29T10:00:01.000Z",
+      version: "0.9.9",
+    })
+
+    const json = await call(["status", "--json"], env, machine("linux").system)
+    expect(json.answer).toMatchObject({ running: true, version: "0.9.9" })
+    expect(json.stderr).toContain("It runs chat 0.9.9, and chat is now 1.0.0 — `chat server restart`.")
+    expect((await call(["status"], env, machine("linux").system, true)).text).toContain("chat is now 1.0.0")
+
+    expect(servingProfiles(app, env)).toEqual(["default"])
+    stale.kill()
+    await new Promise((resolve) => stale.on("exit", resolve))
+    expect(servingProfiles(app, env)).toEqual([])
+    expect(servingProfiles(app, { ...env, CHAT_STATE_DIR: join(env.CHAT_STATE_DIR, "nowhere") })).toEqual([])
   })
 
   it("says it in sentences for a person", async () => {
