@@ -547,6 +547,33 @@ describe("sending over MCP", () => {
     expect(entries.at(-1)).toMatchObject({ kind: "forward", outcome: "sent", messageId: "51" })
   })
 
+  it("pins and unpins through the guard, quietly unless asked", async () => {
+    const pins: unknown[] = []
+    const telegram = scripted({
+      pin: async (chatId, messageId, options) => {
+        pins.push(["pin", chatId, messageId, options])
+      },
+      unpin: async (chatId, messageId) => {
+        pins.push(["unpin", chatId, messageId])
+      },
+    })
+    const { call, env } = await connect(telegram, { allowSend: true })
+
+    const pinned = await call("chat_messages_pin", { chat: "7", message: "1" })
+    await call("chat_messages_unpin", { chat: "7", message: "1" })
+
+    expect(pinned.body).toEqual({ chatId: "7", messageId: "1", pinned: true })
+    expect(pins).toEqual([
+      ["pin", "7", "1", { notify: false }],
+      ["unpin", "7", "1"],
+    ])
+    const entries = new SendJournal(sendsPathFor(app, "default", env)).entries()
+    expect(entries.map((entry) => [entry.kind, entry.outcome])).toEqual([
+      ["pin", "sent"],
+      ["pin", "sent"],
+    ])
+  })
+
   it("does not offer a tool the profile's allow list leaves out, whatever the flags", async () => {
     const { client, call } = await connect(scripted(), {
       allowSend: true,
