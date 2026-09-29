@@ -8,6 +8,9 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Fixed
 
+- **`service install` writes a `$` in a path as itself in `Environment=`**, where systemd gives it no
+  meaning; it was doubled, which changed the path. `ExecStart=` still doubles it. On macOS `install`
+  now creates the folder the agent's log goes to, which launchd does not create.
 - **`backfill status` and `backfill cancel` confirm that a job's PID is still the job** — its
   environment names the job — before calling it running or signalling it. A PID is handed out again
   after a crash or a reboot; `cancel` could have sent SIGTERM to an unrelated process, and `status`
