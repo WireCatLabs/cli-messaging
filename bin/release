@@ -42,8 +42,9 @@ if [ "$next" != "$version" ]; then
   if published; then why="$version is already on npm"; else why="$version is not above npm's latest $latest"; fi
   echo "$why — publishing $next instead"
   node -e 'const fs = require("fs"); const [o, n] = process.argv.slice(1)
-    const text = fs.readFileSync("package.json", "utf8")
-    fs.writeFileSync("package.json", text.replace(`"version": "${o}"`, `"version": "${n}"`))' "$version" "$next"
+    const swap = (file, from, to) => fs.writeFileSync(file, fs.readFileSync(file, "utf8").replace(from, to))
+    swap("package.json", `"version": "${o}"`, `"version": "${n}"`)
+    swap("CHANGELOG.md", `\n## ${o} — `, `\n## ${n} — `)' "$version" "$next"
   git commit -q -am "chore: release $next" -m "bin/release: $why."
   git push -q origin main || {
     git reset -q --hard HEAD~1

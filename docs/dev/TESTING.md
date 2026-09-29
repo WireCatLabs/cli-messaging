@@ -1,0 +1,46 @@
+# Testing
+
+```sh
+pnpm lint
+pnpm typecheck      # the package, then the tests (tsconfig.test.json)
+pnpm test           # vitest
+pnpm test:coverage  # CI runs this; the report is in coverage/index.html
+pnpm docs:check     # every relative link and anchor, and the changelog's shape
+pnpm test:slow      # the 20 slowest tests and the 10 slowest files
+pnpm smoke:bun      # the SQLite seam, the store and run records, executed under Bun
+```
+
+CI runs all of them except `test:slow`, plus `pnpm build` and a secret scan — [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml).
+
+## No test touches the owner's store
+
+⚠ `src/testing/sandbox.ts` runs before every test file (vitest `setupFiles`) and points
+`MESSAGING_STORE`, the `MESSAGING_*` directories and the test apps' `APP_`, `CHAT_` and `TG_`
+directories at a temporary directory. The store is the owner's system of record and migrations are
+forward-only: a test that fell back to the default path would migrate the real file, and nothing
+undoes that. A test that defines a new app prefix adds it to the sandbox.
+
+## Coverage has a floor
+
+`vitest.config.ts` holds it: lines 92 %, statements 90 %, functions 89 %, branches 77 % over `src/`,
+and **every file at least 50 % of its lines**. The numbers sit just under what the suite reached on
+2026-09-29 (93.1 / 91.6 / 90.0 / 78.6). Raise them when coverage rises; never lower them to let a
+change through — write the test.
+
+Left out: the Bun driver, since `bun:sqlite` does not exist under Node and `pnpm smoke:bun` runs it.
+Types-only files have no code to count.
+
+## No test waits for real
+
+A unit test takes milliseconds; one that takes a round second is sleeping in the code under test,
+and on a slow CI runner a few of those cross vitest's 5 s limit (max-cli
+[`TESTING.md`](https://github.com/leemour/max-cli/blob/main/docs/dev/TESTING.md#no-test-waits-for-real)).
+On 2026-09-29 the slowest test here took 57 ms. The waits that exist are reached without sleeping:
+
+- `backfill --pace` is the pause between pages; a test passes `--pace 1ms`. A short "wait N
+  seconds" from the provider is slept, so a test's fake asks for a few milliseconds.
+- The MCP session takes `idleMs`, `maxAgeMs` and `now` (`src/mcp/session.ts`); a test hands in its
+  own clock.
+- `--timeout` is a setting a test sets short.
+
+A new wait in the code gets a seam like these, never a longer timeout in the test.
