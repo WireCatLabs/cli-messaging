@@ -6,7 +6,15 @@
     "useIgnoreFile": true
   },
   "files": {
-    "includes": ["**", "!**/dist", "!**/node_modules", "!pnpm-lock.yaml", "!bench", "!drizzle"]
+    "includes": [
+      "**",
+      "!**/dist",
+      "!**/node_modules",
+      "!pnpm-lock.yaml",
+      "!bench",
+      "!drizzle",
+      "!src/store/sqlite/migrations.generated.ts"
+    ]
   },
   "formatter": {
     "enabled": true,

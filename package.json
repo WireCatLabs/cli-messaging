@@ -42,6 +42,7 @@
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
     "db:generate": "drizzle-kit generate",
+    "db:bundle": "node scripts/bundle-migrations.ts",
     "docs:check": "node --experimental-strip-types scripts/docs-check.ts",
     "test": "vitest run",
     "test:watch": "vitest",
