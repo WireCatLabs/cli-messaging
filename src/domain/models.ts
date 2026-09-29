@@ -243,6 +243,14 @@ export interface Contact {
 /** Somebody in a chat, as much of them as a chat card shows. */
 export type Member = Pick<Contact, "id" | "name" | "username">
 
+/** Someone in a group as `chats members list` answers them. */
+export interface GroupMember extends Member {
+  /** Absent where the messenger does not say who runs the group. */
+  role?: "owner" | "admin" | "member"
+  /** ISO 8601, when they were last seen; `null` when their privacy hides it, absent where the messenger does not say. */
+  lastSeenAt?: string | null
+}
+
 /** One chat and who is in it. `members` is `null` where nobody recorded that — a channel, always. */
 export interface ChatCard extends Chat {
   members: Member[] | null

@@ -7,6 +7,7 @@ import {
   filteredChats,
 } from "../../cli/messenger/chats-command.js"
 import type { Messenger } from "../../cli/messenger/context.js"
+import { capability } from "../../cli/messenger/port.js"
 import { type AnyTool, chatOf, envelope, limit, page, paging, READ, tool } from "../tool.js"
 
 export const chatsTools = (messenger: Messenger): Record<string, AnyTool> => {
@@ -55,6 +56,20 @@ export const chatsTools = (messenger: Messenger): Record<string, AnyTool> => {
           { ...(args.since === undefined ? {} : { since: args.since }), ...(args.event ? { only: args.event } : {}) },
           "since",
         ),
+    }),
+
+    chats_members: tool({
+      title: "Everyone in a group",
+      description:
+        "A group's members, a page at a time: { id, name, username, role?, lastSeenAt? }. role is owner, admin or " +
+        "member; lastSeenAt is null when their privacy hides it. Returns { items, page, limit, hasMore }.",
+      input: v.object({ chat, limit, page }),
+      annotations: READ,
+      online: async (adapter, { chat: reference, ...rest }, defaults) => {
+        const { size, number, window } = paging(rest, defaults)
+        const found = await capability(adapter, "members", "list a group's members")(reference, window)
+        return { ...envelope(found, number, size), chatId: found.chatId }
+      },
     }),
 
     chats_show: tool({
