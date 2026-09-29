@@ -174,10 +174,11 @@ describe("a question", () => {
 
 describe("review, the command", () => {
   const recent = (minutes: number) => new Date(Date.now() - minutes * 60_000).toISOString()
-  const scripted = messengerWith([{ ...chatAt("1", 0), title: "Valencia", lastMessageAt: recent(60), muted: true }], {
+  const latest = recent(60)
+  const scripted = messengerWith([{ ...chatAt("1", 0), title: "Valencia", lastMessageAt: latest, muted: true }], {
     "1": [
       { ...said("10", 0, "¿vienes?"), timestamp: recent(60 * 30) },
-      { ...said("11", 0), timestamp: recent(60) },
+      { ...said("11", 0), timestamp: latest },
     ],
   })
   const messenger: Messenger = {
