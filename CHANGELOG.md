@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.32.0 — 29.09.2026
+
 ### Added
 
 - **`messages send --silent`, `--no-preview` and `--md`**, and `silent`, `no_preview` and `markdown` on
