@@ -8,6 +8,10 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Added
 
+- **`messages search --regex <pattern>`** — the words are one regular expression, case-insensitive,
+  tested against every stored message's text, newest first, until `--limit` match. No index serves it
+  and the store is unchanged: it reads the chat (`--chat`) or the whole account a chunk at a time.
+  `MessageFilter.pattern` does the same for a caller of the store.
 - **`export <chat> --format markdown`** — the chat as a transcript a person reads: a heading per day,
   `hh:mm Name`, replies and forwards quoted, attachments as links, control characters shown rather than
   obeyed (max-cli's `toMarkdown`). A reply Telegram sent only the id of is quoted from the export when
