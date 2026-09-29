@@ -87,12 +87,14 @@ describe("service on systemd", () => {
 
   it("one unit per profile, and a path's % and $ reach the program unexpanded", async () => {
     const { env } = setup()
-    const { system } = fakeSystem("linux")
+    const system = { ...fakeSystem("linux").system, entry: ["/opt/node", "/opt/$HOME/100%/chat.js"] }
     await call(["install"], { ...env, CHAT_PROFILE: "work", CHAT_STATE_DIR: "/data/100%$HOME" }, system)
 
     const unit = readFileSync(unitPath(env, "work"), "utf8")
     expect(unit).toContain('Environment="CHAT_PROFILE=work"')
-    expect(unit).toContain('Environment="CHAT_STATE_DIR=/data/100%%$$HOME"')
+    // systemd.exec(5): in Environment= "the \"$\" character has no special meaning"; in ExecStart= it does.
+    expect(unit).toContain('Environment="CHAT_STATE_DIR=/data/100%%$HOME"')
+    expect(unit).toContain('"/opt/$$HOME/100%%/chat.js"')
   })
 
   it("start reloads and starts; stop stops; neither without an installed unit", async () => {
@@ -197,6 +199,7 @@ describe("service on launchd", () => {
     expect(ran).toEqual([])
     const plist = readFileSync(path, "utf8")
     expect(plist).toContain("<string>/opt/chat/bin/chat.js</string>")
+    expect(existsSync(join(env.CHAT_STATE_DIR, "serve"))).toBe(true)
     expect(plist).toContain(`<string>${join(env.CHAT_STATE_DIR, "serve", "default.log")}</string>`)
 
     await call(["start"], env, system)

@@ -1,6 +1,6 @@
 import { execFile } from "node:child_process"
-import { existsSync, readFileSync, realpathSync, rmSync } from "node:fs"
-import { join } from "node:path"
+import { existsSync, mkdirSync, readFileSync, realpathSync, rmSync } from "node:fs"
+import { dirname, join } from "node:path"
 import { CliError, resolvePaths, writeSecurely } from "@leemour/cli-core"
 import { Command } from "commander"
 import type { AppIdentity } from "../app.js"
@@ -74,6 +74,8 @@ interface Platform {
   stop: (unit: Unit) => string[][]
   state: (unit: Unit) => Promise<{ loaded: boolean; active: boolean; pid?: number; detail?: string }>
   logs: (unit: Unit, lines: number) => Promise<string>
+  /** What must exist before the unit first runs. */
+  prepare?: (unit: Unit) => void
 }
 
 const home = (env: NodeJS.ProcessEnv): string => {
@@ -81,8 +83,11 @@ const home = (env: NodeJS.ProcessEnv): string => {
   return env.HOME
 }
 
-const systemdQuote = (value: string) =>
-  `"${value.replaceAll("\\", "\\\\").replaceAll('"', '\\"').replaceAll("%", "%%").replaceAll("$", "$$$$")}"`
+/** `%` is a specifier in both; `$` is a variable only in `ExecStart=` — in `Environment=` it is itself. */
+const systemdQuote = (value: string, { command = false } = {}) => {
+  const quoted = value.replaceAll("\\", "\\\\").replaceAll('"', '\\"').replaceAll("%", "%%")
+  return `"${command ? quoted.replaceAll("$", "$$$$") : quoted}"`
+}
 
 const systemd = (app: AppIdentity, system: ServiceSystem, env: NodeJS.ProcessEnv): Platform => {
   const folder = join(env.XDG_CONFIG_HOME ?? join(home(env), ".config"), "systemd", "user")
@@ -102,7 +107,7 @@ const systemd = (app: AppIdentity, system: ServiceSystem, env: NodeJS.ProcessEnv
         `Description=${app.command} serve — keep the local message archive current (profile ${unit.profile})`,
         "",
         "[Service]",
-        `ExecStart=${unit.command.map(systemdQuote).join(" ")}`,
+        `ExecStart=${unit.command.map((word) => systemdQuote(word, { command: true })).join(" ")}`,
         ...Object.entries(unit.environment).map(([name, value]) => `Environment=${systemdQuote(`${name}=${value}`)}`),
         "Restart=on-failure",
         "RestartSec=30",
@@ -203,6 +208,10 @@ const launchd = (app: AppIdentity, system: ServiceSystem, env: NodeJS.ProcessEnv
         ...(state ? { detail: state } : {}),
       }
     },
+    // launchd opens the log itself and does not create its folder.
+    prepare: (unit) => {
+      if (unit.logPath) mkdirSync(dirname(unit.logPath), { recursive: true, mode: 0o700 })
+    },
     logs: async (unit, lines) => {
       if (!unit.logPath || !existsSync(unit.logPath)) return ""
       return `${readFileSync(unit.logPath, "utf8").split("\n").filter(Boolean).slice(-lines).join("\n")}\n`
@@ -265,6 +274,7 @@ export const serviceCommand = (messenger: Messenger): Command => {
       const { context, platform, unit } = prepare(this)
       const replaced = existsSync(unit.path)
       writeSecurely(unit.path, platform.text(unit, app), 0o644)
+      platform.prepare?.(unit)
       context.renderer.result({
         profile: unit.profile,
         unit: unit.name,
