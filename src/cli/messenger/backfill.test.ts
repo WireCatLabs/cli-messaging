@@ -225,3 +225,49 @@ describe("backfill in the background", () => {
     expect((await call(["backfill", "list", "--json"], idle, env)).answer).toEqual([])
   })
 })
+
+describe("backfill --estimate", () => {
+  const untouchable = {
+    self: () => "500",
+    close: async () => {},
+    history: async () => {
+      throw new Error("an estimate asked the messenger")
+    },
+  } as unknown as MessengerAdapter
+
+  it("**prices what is not held at the density of what is, and asks the messenger nothing**", async () => {
+    const env = setup()
+    await call(["backfill", "7", "--max", "100", "--pace", "1ms"], chatOf({ newest: 250, asked: [] }), env)
+
+    const { code, answer } = await call(["backfill", "7", "--estimate", "--max", "100", "--json"], untouchable, env)
+    expect(code).toBe(0)
+    expect(answer).toEqual({
+      chat: "7",
+      held: 100,
+      ranges: [{ from: 151, to: 250 }],
+      missing: 150,
+      requests: 3,
+      runs: 2,
+      seconds: 4,
+    })
+  })
+
+  it("a chat held from its first message costs nothing more", async () => {
+    const env = setup()
+    await call(["backfill", "7", "--pace", "1ms"], chatOf({ newest: 50, asked: [] }), env)
+
+    expect((await call(["backfill", "7", "--estimate", "--json"], untouchable, env)).answer).toMatchObject({
+      missing: 0,
+      requests: 0,
+    })
+  })
+
+  it("with nothing held it says so rather than guess", async () => {
+    const env = setup()
+    await call(["backfill", "7", "--pace", "1ms"], chatOf({ newest: 5, asked: [] }), env)
+
+    const { answer, stderr } = await call(["backfill", "8", "--estimate", "--json"], untouchable, env)
+    expect(answer).toMatchObject({ held: 0, missing: null, requests: null })
+    expect(stderr).toContain("--max 100")
+  })
+})

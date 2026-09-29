@@ -10,6 +10,10 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Added
 
+- **`backfill <chat> --estimate`** — how many messages, requests, runs at `--max` and seconds a full
+  backfill would still take, from the store alone: no request. Message ids leave gaps, so the ids not
+  held are priced at the density of the stretches held — an estimate, and FloodWait comes on top. With
+  nothing held of the chat, `missing` is `null` and the note says to run a small backfill first.
 - **`backfill --background` runs a backfill as a job that outlives the command**, and `backfill list`,
   `backfill status [job]` and `backfill cancel <job>` follow it. A job is a detached process with a
   record and a log under the state folder (`backfill/<job>.json`, `.log`); the record holds its progress
