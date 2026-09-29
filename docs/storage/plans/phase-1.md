@@ -170,12 +170,15 @@ Older builds insert and edit messages without `normalized_text`. The rules:
   with no custom function, so it runs in every build. A custom SQL function in a trigger would fail
   in older builds with "no such function".
 - A backfill fills rows `WHERE normalizer_version IS NULL OR normalizer_version < current`, in
-  batches of 5,000, one short transaction per batch. It uses an index on `normalizer_version`. It
-  can be stopped and started again at any point, because it keeps no cursor. It runs only from
+  batches by `pk` range, one short transaction per batch. It needs no index, so version 6 builds
+  none. It can be stopped and started again at any point: a restart rescans ranges already done,
+  which is cheap next to writing them. It runs only from
   `db migrate` (and from phase 2's `search rebuild`), never inside an ordinary command, so a one-shot
   command stays fast.
 - `chats.message_count` is kept by triggers on insert, tombstone, un-tombstone and delete, so every
-  build keeps it right. The migration fills it once for existing rows.
+  build keeps it right. It is filled once for existing rows, per chat and as an absolute count, so
+  running the fill after the triggers already work is still correct. Whether the fill runs inside
+  version 6 or from `db migrate` depends on the measurement in item 6.
 
 Why the count: phase 2 must choose per query how a filter reaches the index. It needs the size of
 the filtered chat for that, cheaply (§7).
@@ -254,7 +257,7 @@ adds the optional field and the column. The adapters fill it when they can.
 
 Each item is one pull request based on `main`, never stacked. Each merges on its own with
 `pnpm lint && pnpm typecheck && pnpm test` green and the Bun smoke passing (`pnpm smoke:bun`).
-Releases go through `bin/release` after items 2, 5 and 7, plus whenever tg-cli asks.
+Releases go through `bin/release` after items 2, 6 and 8, plus whenever tg-cli asks.
 
 1. **Normalizer.** `src/store/normalize.ts` and its tests (§6). Not wired to anything yet.
 2. **Async `MessageStore` over today's SQL.** Every method returns a `Promise`. The callbacks of
@@ -264,21 +267,31 @@ Releases go through `bin/release` after items 2, 5 and 7, plus whenever tg-cli a
 3. **Drizzle in, with no behaviour change.** Pin `drizzle-orm` and `drizzle-kit` to `1.0.0-rc.4`
    exactly. Add `src/store/sqlite/schema.ts` mirroring version 5 (FTS tables and triggers left out),
    `drizzle.config.ts`, and the baseline generation. Add the baseline-accuracy test from §6. Load the
-   drivers by dynamic `import()`.
+   drivers by dynamic `import()`. Acceptance adds a run on Node 22: `engines` says `>=22`, CI runs
+   only Node 24 (`.github/workflows/ci.yml:16`), and the drivers were tried only on 24.
 4. **Migration runner over generated migrations.** Add the bundle script, `migrations.generated.ts`,
    the manifest, and `migrate` extended to run the frozen 1–5 then the manifest. Add the migration
    guard tests from §6.
-5. **Schema version 6.** Add the new columns from §4, the `normalizer_version` index, the three
-   triggers, and the one-time fill of `message_count`. It is one generated migration plus one
-   `--custom` migration for the triggers. Writes fill `normalized_text`. The backfill function
-   exists and is tested, but nothing calls it yet. Release.
-6. **Repository layer in Drizzle, writes.** `saveAccount`, `saveChats`, `saveMessages`,
+5. **Fixture on the real schema.** Add a `store` mode to `bench/search` that loads the corpus through
+   `openStore` and `saveMessages` into a real version 5 file. The fixture's own schema is not the
+   store's, so nothing in phase 1 can be measured without this loader. Make `DATA_DIR` default to a
+   directory under the OS temp folder instead of one session's path (`bench/search/common.ts:5-7`).
+6. **Schema version 6.** Add the new columns from §4 and the three triggers. It is one generated
+   migration plus one `--custom` migration for the triggers. Writes fill `normalized_text`. The
+   backfill function exists and is tested, but nothing calls it yet.
+   **Acceptance, before release:** run the version 5 → 6 upgrade on the 1M file from item 5. Version
+   6 is frozen once it is released, so this cannot wait. The one statement that reads every message
+   under `BEGIN IMMEDIATE` is the `message_count` fill: `deleted_at` is not in `messages_by_time`.
+   If it holds the write lock for more than 1 s at 1M, it leaves the migration and runs per chat from
+   `db migrate`. The target is 10M, and other processes wait at most `busy_timeout` (5 s). Release.
+7. **Repository layer in Drizzle, writes.** `saveAccount`, `saveChats`, `saveMessages`,
    `savePeople`, `saveReactions`, `markDeleted` and `markRange` are ported, module by module.
    Upserts that use `coalesce` stay `sql` fragments.
-7. **Repository layer in Drizzle, reads and search.** `chats`, `messages`, `around`, `message`,
+8. **Repository layer in Drizzle, reads and search.** `chats`, `messages`, `around`, `message`,
    `find`/`search`, `people`, `chatStats` and `ranges` are ported. `MATCH` stays in `sql`. Add the
-   `EXPLAIN QUERY PLAN` test (§6). Remove the stale doc comment at `store.ts:786-789`. Release.
-8. **`db info`, `db doctor`, `db migrate`.** `db migrate` applies pending migrations and runs the
+   `EXPLAIN QUERY PLAN` test (§6) and the store-against-raw timing (§6). Remove the stale doc comment
+   at `store.ts:786-789`. Release.
+9. **`db info`, `db doctor`, `db migrate`.** `db migrate` applies pending migrations and runs the
    backfill with a progress line on stderr. `db doctor` checks:
    - that the file opens;
    - the schema version, and whether this build can write to it;
@@ -289,22 +302,17 @@ Releases go through `bin/release` after items 2, 5 and 7, plus whenever tg-cli a
 
    §24's "extensions" and "enrichment consistency" do not apply to SQLite in phase 1 and are
    reported as such. The existing `doctor` keeps its short store summary.
-9. **`db backup` and `db restore`.** `backup` runs `VACUUM INTO <file>` (docs say it works under WAL
-   with readers and writers present). It creates the file mode 0600, and it refuses to overwrite a
-   file. `restore <file>`:
-   - opens the backup and checks that it opens and has a schema this build can write;
-   - holds `BEGIN IMMEDIATE` on the live file, and refuses if a write is in progress;
-   - refuses while a `serve` lock file for any profile is held;
-   - renames the live file to `messages.db.before-restore-<time>`, then moves the backup into place.
+10. **`db backup` and `db restore`.** `backup` runs `VACUUM INTO <file>` (docs say it works under WAL
+    with readers and writers present). It creates the file mode 0600, and it refuses to overwrite a
+    file. `restore <file>`:
+    - opens the backup and checks that it opens and has a schema this build can write;
+    - holds `BEGIN IMMEDIATE` on the live file, and refuses if a write is in progress;
+    - refuses while `tg serve` holds its lock file, or while a `max serve` socket answers;
+    - renames the live file to `messages.db.before-restore-<time>`, then moves the backup into place.
 
-   It never deletes the old file (§25). In WAL mode, SQLite cannot show whether another process only
-   has the file open: the docs say `EXCLUSIVE` acts like `IMMEDIATE` there. So `restore` also says,
-   on stderr, that any `mcp` or other long-running process must be restarted.
-10. **Fixture on the real schema.** Add a `store` mode to `bench/search` that loads the corpus
-    through `openStore` and `saveMessages`, for ingest rate with the new triggers. It also runs the
-    version 6 migration and the backfill on a 1M file at version 5, and times search through the
-    store against the raw baseline (§6). Make `DATA_DIR` default to a directory under the OS temp
-    folder instead of a session path (`bench/search/common.ts:5-7`).
+    It never deletes the old file (§25). In WAL mode, SQLite cannot show whether another process
+    only has the file open: the docs say `EXCLUSIVE` acts like `IMMEDIATE` there. So `restore` also
+    says, on stderr, that any `mcp` or other long-running process must be restarted.
 11. **Documentation.** `docs/dev/ARCHITECTURE.md` gets the store and the migration rules. Add the
     "how to add a migration" steps: generate, review for rebuilds, add a manifest row, bundle.
     `decisions.md` gets D5's deviations and the answers to §9.
@@ -357,36 +365,37 @@ Adoption, in the other repositories after the matching release:
 
 **Query plan:** the `find` query with text, chat and date filters is checked with
 `EXPLAIN QUERY PLAN`. The test fails if `messages_fts` is scanned once per message row, the
-`INDEX 0:=M1` shape the benchmark found (`research/2026-09-29-search-benchmark.md`). One more plan
-test covers the backfill's use of the `normalizer_version` index.
+`INDEX 0:=M1` shape the benchmark found (`research/2026-09-29-search-benchmark.md`).
 
 **Commands:**
 
 - `db backup` output opens, has equal counts and has mode 0600;
-- `db restore` refuses while another connection holds a write transaction, or while a `serve` lock
-  is held, and it keeps the old file;
+- `db restore` refuses while another connection holds a write transaction, or while a `serve` is
+  running, and it keeps the old file;
 - `db doctor` reports a corrupted FTS index (made by writing to the content table with the triggers
   dropped);
 - machine mode prints only JSON on stdout.
 
-**Fixture (item 10), at 100k and 1M on Node, 100k on Bun:**
+**Fixture (loader from item 5), at 100k and 1M on Node, 100k on Bun:**
 
-- ingest rate through `saveMessages`, before and after the triggers;
-- search p95 through the store against `sqlite.ts` on the same queries: Drizzle and async must add
-  under 1 ms;
-- the version 6 migration and the backfill on a 1M file: time, WAL size, and whether a concurrent
-  reader and writer stay under `busy_timeout` (5 s).
+- item 6: ingest rate through `saveMessages`, before and after the triggers;
+- item 6: the version 6 migration on a 1M file at version 5, with the time the write lock is held.
+  Also measure the backfill's time and WAL size, and whether a concurrent reader and writer stay
+  under `busy_timeout` (5 s) while it runs;
+- item 8: search p95 through the store against `sqlite.ts` on the same queries. Drizzle and async
+  must add under 1 ms.
 
-If filling `message_count` inside the migration holds the write lock near 5 s at 1M, it moves out of
-the migration into the backfill.
+**Bun:** `pnpm smoke:bun` already opens a store, saves a message and searches it
+(`scripts/smoke.ts:56-74`). From item 3 on it also exercises Drizzle's `bun-sqlite` driver, and from
+item 4 on the new migration runner.
 
 ## 7. Migration of existing `messages.db` files
 
 - No copy, no second database, no prompt. §25's migration was SQLite to PGlite, and the engine
   ruling removed it. The file upgrades in place, forward-only, as versions 2–5 did.
 - The first new-build process that opens the file applies version 6 under `BEGIN IMMEDIATE`. The
-  change is `ALTER TABLE … ADD`, the triggers, and one `UPDATE` for `message_count`. Other processes
-  wait up to `busy_timeout`.
+  change is `ALTER TABLE … ADD`, the triggers, and possibly the `message_count` fill (item 6 decides
+  by measurement). Other processes wait up to `busy_timeout`.
 - **Mixed versions on one file.** Say tg-cli is at 0.27 and max-cli at the new version, or the
   reverse:
   - the older build sees version 6 with `min_compatible` 1, and writes with its named-column
