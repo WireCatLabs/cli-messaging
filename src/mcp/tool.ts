@@ -54,12 +54,17 @@ interface Tool<S extends Input> {
   /** Over the session's connection. */
   online?: (adapter: MessengerAdapter, args: v.InferOutput<S>, defaults: Defaults) => Promise<object>
   /** From the local store alone; never connects. */
-  stored?: (store: MessageStore, account: AccountKey, args: v.InferOutput<S>, defaults: Defaults) => object
+  stored?: (store: MessageStore, account: AccountKey, args: v.InferOutput<S>, defaults: Defaults) => Promise<object>
 }
 
 export type AnyTool = Omit<Tool<Input>, "online" | "stored"> & {
   online?: (adapter: MessengerAdapter, args: Record<string, unknown>, defaults: Defaults) => Promise<object>
-  stored?: (store: MessageStore, account: AccountKey, args: Record<string, unknown>, defaults: Defaults) => object
+  stored?: (
+    store: MessageStore,
+    account: AccountKey,
+    args: Record<string, unknown>,
+    defaults: Defaults,
+  ) => Promise<object>
 }
 
 /** Typed where it is written; erased here because the SDK checks the arguments against `input` first. */
@@ -93,7 +98,10 @@ export const nameOf = (messenger: Messenger): string => messenger.name ?? messen
 export interface Registration {
   command: string
   session: MessengerSession
-  withStore: <T>(work: (store: MessageStore, account: AccountKey) => T, options: { name: string }) => Promise<T>
+  withStore: <T>(
+    work: (store: MessageStore, account: AccountKey) => Promise<T>,
+    options: { name: string },
+  ) => Promise<T>
   defaults: Defaults
   /** With `--confirm-send`: the owner sees every write in a form from the server first. */
   confirmed?: ReturnType<typeof confirmer> | undefined

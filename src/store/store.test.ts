@@ -51,37 +51,55 @@ const message = (overrides: Partial<Message> = {}): Message => ({
 describe("the message store", () => {
   it("**gives back exactly the chat and the message it was given**", async () => {
     const store = await openStore({ path: fresh() })
-    store.saveChats(ME, [chat])
-    store.saveMessages(ME, chat.id, [message()], { via: "history" })
+    await store.saveChats(ME, [chat])
+    await store.saveMessages(ME, chat.id, [message()], { via: "history" })
 
-    expect(store.chats(ME, {}).items).toEqual([chat])
-    expect(store.messages(ME, chat.id, { limit: 10 }).items).toEqual([message()])
-    store.close()
+    expect((await store.chats(ME, {})).items).toEqual([chat])
+    expect((await store.messages(ME, chat.id, { limit: 10 })).items).toEqual([message()])
+    await store.close()
+  })
+
+  it("saves two batches started together on one store, each whole", async () => {
+    const store = await openStore({ path: fresh() })
+    const batch = (ids: string[]) => ids.map((id) => message({ id, text: `text ${id}` }))
+    await Promise.all([
+      store.saveMessages(ME, chat.id, batch(["1", "2", "3"]), { via: "history" }),
+      store.saveMessages(ME, chat.id, batch(["4", "5", "6"]), { via: "update" }),
+    ])
+
+    const ids = (await store.messages(ME, chat.id, { limit: 10 })).items.map(({ id }) => id)
+    expect(ids).toEqual(["1", "2", "3", "4", "5", "6"])
+    await store.close()
   })
 
   it("keeps what an edit replaced, and searches only the new text", async () => {
     const path = fresh()
     const store = await openStore({ path })
-    store.saveMessages(ME, chat.id, [message()], { via: "history" })
-    store.saveMessages(ME, chat.id, [message()], { via: "history" })
-    store.saveMessages(ME, chat.id, [message({ text: "cita previa booked", editedAt: "2026-09-26T11:00:00.000Z" })], {
-      via: "update",
-    })
+    await store.saveMessages(ME, chat.id, [message()], { via: "history" })
+    await store.saveMessages(ME, chat.id, [message()], { via: "history" })
+    await store.saveMessages(
+      ME,
+      chat.id,
+      [message({ text: "cita previa booked", editedAt: "2026-09-26T11:00:00.000Z" })],
+      {
+        via: "update",
+      },
+    )
 
-    expect(store.search("cita previa", { limit: 5 }).items.map((hit) => hit.locator)).toEqual([
+    expect((await store.search("cita previa", { limit: 5 })).items.map((hit) => hit.locator)).toEqual([
       "msg:telegram/100/-1001234567890/42",
     ])
-    expect(store.search("empadronamiento", { limit: 5 }).items).toEqual([])
+    expect((await store.search("empadronamiento", { limit: 5 })).items).toEqual([])
     const database = await openCache(path)
     expect(database.prepare("SELECT text FROM message_revisions").all()).toEqual([{ text: "empadronamiento renewal" }])
     database.close()
-    store.close()
+    await store.close()
   })
 
   it("does not let a copy that knows less erase what was stored", async () => {
     const store = await openStore({ path: fresh() })
-    store.saveMessages(ME, chat.id, [message()], { via: "history" })
-    store.saveMessages(
+    await store.saveMessages(ME, chat.id, [message()], { via: "history" })
+    await store.saveMessages(
       ME,
       chat.id,
       [
@@ -97,17 +115,17 @@ describe("the message store", () => {
       { via: "send" },
     )
 
-    const [kept] = store.messages(ME, chat.id, { limit: 1 }).items
+    const [kept] = (await store.messages(ME, chat.id, { limit: 1 })).items
     expect(kept?.reactions?.total).toBe(2)
     expect(kept?.replyTo?.text).toBe("where?")
     expect(kept).toMatchObject({ senderId: "777", senderName: "Ana", threadId: "5", outgoing: false })
-    store.close()
+    await store.close()
   })
 
   it("gives every new sender an identity and a person of their own, and a channel neither", async () => {
     const path = fresh()
     const store = await openStore({ path })
-    store.saveMessages(
+    await store.saveMessages(
       ME,
       chat.id,
       [
@@ -118,7 +136,7 @@ describe("the message store", () => {
       ],
       { via: "history" },
     )
-    store.close()
+    await store.close()
 
     const database = await openCache(path)
     const count = (table: string) => database.prepare(`SELECT count(*) AS n FROM ${table}`).get()?.n
@@ -131,64 +149,67 @@ describe("the message store", () => {
   it("pages backwards from a message, oldest to newest within a page", async () => {
     const store = await openStore({ path: fresh() })
     const at = (minute: number) => `2026-09-26T10:0${minute}:00.000Z`
-    store.saveMessages(
+    await store.saveMessages(
       ME,
       chat.id,
       [1, 2, 3, 4].map((n) => message({ id: String(n), timestamp: at(n) })),
       { via: "history" },
     )
 
-    const newest = store.messages(ME, chat.id, { limit: 2 })
+    const newest = await store.messages(ME, chat.id, { limit: 2 })
     expect(newest.items.map((one) => one.id)).toEqual(["3", "4"])
     expect(newest.hasMore).toBe(true)
-    expect(store.messages(ME, chat.id, { limit: 2, before: "3" }).items.map((one) => one.id)).toEqual(["1", "2"])
-    store.close()
+    expect((await store.messages(ME, chat.id, { limit: 2, before: "3" })).items.map((one) => one.id)).toEqual([
+      "1",
+      "2",
+    ])
+    await store.close()
   })
 
   it("finds one message by its id, and asks for the chat when two chats share the id", async () => {
     const store = await openStore({ path: fresh() })
-    store.saveMessages(ME, chat.id, [message()], { via: "history" })
-    expect(store.message(ME, "42")?.text).toBe("empadronamiento renewal")
-    expect(store.message(ME, "43")).toBeUndefined()
+    await store.saveMessages(ME, chat.id, [message()], { via: "history" })
+    expect((await store.message(ME, "42"))?.text).toBe("empadronamiento renewal")
+    expect(await store.message(ME, "43")).toBeUndefined()
 
-    store.saveMessages(ME, "555", [message({ chatId: "555" })], { via: "history" })
-    expect(() => store.message(ME, "42")).toThrow(expect.objectContaining({ code: "validation_error" }))
-    expect(store.message(ME, "42", { chatId: "555" })?.chatId).toBe("555")
-    store.close()
+    await store.saveMessages(ME, "555", [message({ chatId: "555" })], { via: "history" })
+    await expect(store.message(ME, "42")).rejects.toThrow(expect.objectContaining({ code: "validation_error" }))
+    expect((await store.message(ME, "42", { chatId: "555" }))?.chatId).toBe("555")
+    await store.close()
   })
 
   it("keeps a deleted message out of reads and search, in its own chat only", async () => {
     const store = await openStore({ path: fresh() })
-    store.saveMessages(ME, chat.id, [message(), message({ id: "43" })], { via: "history" })
-    store.saveMessages(ME, "555", [message({ chatId: "555" })], { via: "history" })
+    await store.saveMessages(ME, chat.id, [message(), message({ id: "43" })], { via: "history" })
+    await store.saveMessages(ME, "555", [message({ chatId: "555" })], { via: "history" })
 
-    expect(store.markDeleted(ME, ["42"], { chatId: chat.id })).toBe(1)
-    expect(store.markDeleted(ME, ["42"], { chatId: chat.id })).toBe(0)
-    expect(store.messages(ME, chat.id, { limit: 10 }).items.map((one) => one.id)).toEqual(["43"])
-    expect(store.message(ME, "42", { chatId: chat.id })).toBeUndefined()
-    expect(store.message(ME, "42", { chatId: "555" })).toBeDefined()
-    expect(
-      store
-        .search("empadronamiento", { limit: 10 })
-        .items.map((hit) => hit.chatId)
-        .sort(),
-    ).toEqual(["-1001234567890", "555"])
-    store.close()
+    expect(await store.markDeleted(ME, ["42"], { chatId: chat.id })).toBe(1)
+    expect(await store.markDeleted(ME, ["42"], { chatId: chat.id })).toBe(0)
+    expect((await store.messages(ME, chat.id, { limit: 10 })).items.map((one) => one.id)).toEqual(["43"])
+    expect(await store.message(ME, "42", { chatId: chat.id })).toBeUndefined()
+    expect(await store.message(ME, "42", { chatId: "555" })).toBeDefined()
+    expect((await store.search("empadronamiento", { limit: 10 })).items.map((hit) => hit.chatId).sort()).toEqual([
+      "-1001234567890",
+      "555",
+    ])
+    await store.close()
   })
 
   it("refuses a search too short for its index rather than answering nothing", async () => {
     const store = await openStore({ path: fresh() })
-    expect(() => store.search("ab", { limit: 5 })).toThrow(expect.objectContaining({ code: "validation_error" }))
-    store.close()
+    await expect(store.search("ab", { limit: 5 })).rejects.toThrow(
+      expect.objectContaining({ code: "validation_error" }),
+    )
+    await store.close()
   })
 
   it.skipIf(process.platform === "win32")("**is readable by nobody else**, its journal files included", async () => {
     const path = fresh()
     const store = await openStore({ path })
-    store.saveMessages(ME, chat.id, [message()], { via: "history" })
+    await store.saveMessages(ME, chat.id, [message()], { via: "history" })
 
     for (const file of [path, `${path}-wal`, `${path}-shm`]) expect(statSync(file).mode & 0o777).toBe(0o600)
-    store.close()
+    await store.close()
   })
 
   it("defaults to the test sandbox, never the owner's file", () => {
@@ -215,7 +236,7 @@ describe("finding people and what they wrote", () => {
 
   const seeded = async () => {
     const store = await openStore({ path: fresh() })
-    store.saveMessages(
+    await store.saveMessages(
       BOT,
       "10",
       [said("a", "10", "7", "hello from seven", 1), said("b", "10", "8", "eight here", 2)],
@@ -223,8 +244,8 @@ describe("finding people and what they wrote", () => {
         via: "history",
       },
     )
-    store.saveMessages(BOT, "20", [said("c", "20", "7", "seven alone", 3)], { via: "history" })
-    store.saveMessages(
+    await store.saveMessages(BOT, "20", [said("c", "20", "7", "seven alone", 3)], { via: "history" })
+    await store.saveMessages(
       OTHER_BOT,
       "30",
       [said("d", "30", "7", "seven again", 4), said("e", "30", "8", "eight again", 5), said("f", "30", "9", "nine", 6)],
@@ -235,109 +256,106 @@ describe("finding people and what they wrote", () => {
 
   it("keeps the messages of any sender, newest first, in one account or across a provider", async () => {
     const store = await seeded()
-    expect(store.find({ account: BOT, senders: ["7"], limit: 10 }).items.map(({ id }) => id)).toEqual(["c", "a"])
-    expect(store.find({ provider: "max-bot", senders: ["7", "9"], limit: 10 }).items.map(({ id }) => id)).toEqual([
-      "f",
-      "d",
+    expect((await store.find({ account: BOT, senders: ["7"], limit: 10 })).items.map(({ id }) => id)).toEqual([
       "c",
       "a",
     ])
-    store.close()
+    expect(
+      (await store.find({ provider: "max-bot", senders: ["7", "9"], limit: 10 })).items.map(({ id }) => id),
+    ).toEqual(["f", "d", "c", "a"])
+    await store.close()
   })
 
   it("keeps only the chats where every sender wrote, with `together`", async () => {
     const store = await seeded()
-    const page = store.find({ provider: "max-bot", senders: ["7", "8"], together: true, limit: 10 })
+    const page = await store.find({ provider: "max-bot", senders: ["7", "8"], together: true, limit: 10 })
     expect(page.items.map(({ id }) => id)).toEqual(["e", "d", "b", "a"])
-    store.close()
+    await store.close()
   })
 
   it("caps each chat rather than all of them, with `perChat`", async () => {
     const store = await seeded()
-    const page = store.find({ provider: "max-bot", senders: ["7", "8"], together: true, perChat: true, limit: 1 })
+    const page = await store.find({ provider: "max-bot", senders: ["7", "8"], together: true, perChat: true, limit: 1 })
     expect(page).toMatchObject({ items: [{ id: "e" }, { id: "b" }], hasMore: true })
-    store.close()
+    await store.close()
   })
 
   it("combines text with a sender and leaves a deleted message out", async () => {
     const store = await seeded()
-    const page = store.find({ provider: "max-bot", senders: ["7"], text: "again", limit: 10 })
+    const page = await store.find({ provider: "max-bot", senders: ["7"], text: "again", limit: 10 })
     expect(page.items.map(({ id }) => id)).toEqual(["d"])
-    store.markDeleted(OTHER_BOT, ["d"])
-    expect(store.find({ provider: "max-bot", senders: ["7"], text: "again", limit: 10 }).items).toEqual([])
-    store.close()
+    await store.markDeleted(OTHER_BOT, ["d"])
+    expect((await store.find({ provider: "max-bot", senders: ["7"], text: "again", limit: 10 })).items).toEqual([])
+    await store.close()
   })
 
   it("finds nothing for a sender it has never seen, and refuses a filter with neither text nor sender", async () => {
     const store = await seeded()
-    expect(store.find({ provider: "max-bot", senders: ["404"], limit: 10 }).items).toEqual([])
-    expect(() => store.find({ provider: "max-bot", limit: 10 })).toThrow("say what to find")
-    store.close()
+    expect((await store.find({ provider: "max-bot", senders: ["404"], limit: 10 })).items).toEqual([])
+    await expect(store.find({ provider: "max-bot", limit: 10 })).rejects.toThrow("say what to find")
+    await store.close()
   })
 
   it("remembers a username and a bot flag, and a later name alone does not erase them", async () => {
     const store = await seeded()
-    store.savePeople(BOT, [{ id: "7", name: "Seven", username: "seven", isBot: false }])
-    store.saveMessages(BOT, "10", [said("g", "10", "7", "renamed", 7)], { via: "update" })
-    expect(store.people("max-bot").get("7")).toMatchObject({ name: "person 7", username: "seven" })
+    await store.savePeople(BOT, [{ id: "7", name: "Seven", username: "seven", isBot: false }])
+    await store.saveMessages(BOT, "10", [said("g", "10", "7", "renamed", 7)], { via: "update" })
+    expect((await store.people("max-bot")).get("7")).toMatchObject({ name: "person 7", username: "seven" })
     expect(
-      store
-        .people("max-bot", { account: "1" })
+      (await store.people("max-bot", { account: "1" }))
         .all()
         .map(({ id }) => id)
         .toSorted(),
     ).toEqual(["7", "8"])
-    store.close()
+    await store.close()
   })
 
   it("reads a chosen few accounts, and never all of them by leaving the provider out", async () => {
     const store = await seeded()
-    const ids = (accounts: string[]) =>
-      store.find({ provider: "max-bot", accounts, senders: ["7", "9"], limit: 10 }).items.map(({ id }) => id)
-    expect(ids(["1"])).toEqual(["c", "a"])
-    expect(ids(["1", "2"])).toEqual(["f", "d", "c", "a"])
-    expect(ids([])).toEqual([])
-    expect(() => store.find({ accounts: ["1"], senders: ["7"], limit: 10 })).toThrow(/provider/)
+    const ids = async (accounts: string[]) =>
+      (await store.find({ provider: "max-bot", accounts, senders: ["7", "9"], limit: 10 })).items.map(({ id }) => id)
+    expect(await ids(["1"])).toEqual(["c", "a"])
+    expect(await ids(["1", "2"])).toEqual(["f", "d", "c", "a"])
+    expect(await ids([])).toEqual([])
+    await expect(store.find({ accounts: ["1"], senders: ["7"], limit: 10 })).rejects.toThrow(/provider/)
     expect(
-      store
-        .people("max-bot", { accounts: ["1", "2"] })
+      (await store.people("max-bot", { accounts: ["1", "2"] }))
         .all()
         .map(({ id }) => id)
         .toSorted(),
     ).toEqual(["7", "8", "9"])
-    store.close()
+    await store.close()
   })
 
   it("keeps each account's people to itself: a person seen by one bot is not another's", async () => {
     const store = await seeded()
-    store.savePeople(OTHER_BOT, [{ id: "11", name: "Only the other", username: "other" }])
-    const ids = (account?: string) =>
-      store
-        .people("max-bot", account ? { account } : {})
+    await store.savePeople(OTHER_BOT, [{ id: "11", name: "Only the other", username: "other" }])
+    const ids = async (account?: string) =>
+      (await store.people("max-bot", account ? { account } : {}))
         .all()
         .map(({ id }) => id)
         .toSorted()
 
-    expect(ids("1")).toEqual(["7", "8"])
-    expect(ids("2")).toEqual(["11", "7", "8", "9"])
-    expect(ids()).toEqual(["11", "7", "8", "9"])
-    expect(store.people("max-bot", { account: "1" }).get("11")).toBeUndefined()
-    store.close()
+    expect(await ids("1")).toEqual(["7", "8"])
+    expect(await ids("2")).toEqual(["11", "7", "8", "9"])
+    expect(await ids()).toEqual(["11", "7", "8", "9"])
+    expect((await store.people("max-bot", { account: "1" })).get("11")).toBeUndefined()
+    await store.close()
   })
 
   it("counts a person saved for an account as seen by it, though they never wrote there", async () => {
     const store = await seeded()
-    store.savePeople(BOT, [{ id: "12", name: "A member", username: null }])
-    expect(store.people("max-bot", { account: "1" }).get("12")).toMatchObject({ name: "A member" })
-    expect(store.people("max-bot", { account: "2" }).get("12")).toBeUndefined()
-    store.close()
+    await store.savePeople(BOT, [{ id: "12", name: "A member", username: null }])
+    expect((await store.people("max-bot", { account: "1" })).get("12")).toMatchObject({ name: "A member" })
+    expect((await store.people("max-bot", { account: "2" })).get("12")).toBeUndefined()
+    await store.close()
   })
 })
 
 describe("searching message text", () => {
   it("**finds any three letters inside a word**, whatever its ending, and every word asked for", async () => {
     const store = await openStore({ path: fresh() })
-    store.saveMessages(
+    await store.saveMessages(
       ME,
       chat.id,
       [
@@ -347,17 +365,13 @@ describe("searching message text", () => {
       ],
       { via: "history" },
     )
-    const ids = (query: string) =>
-      store
-        .search(query, { limit: 10 })
-        .items.map((hit) => hit.id)
-        .sort()
+    const ids = async (query: string) => (await store.search(query, { limit: 10 })).items.map((hit) => hit.id).sort()
 
-    expect(ids("квартир")).toEqual(["1", "2"])
-    expect(ids("квартир центр")).toEqual(["1"])
-    expect(ids("вартир")).toEqual(["1", "2"])
-    expect(ids("в центре")).toEqual(["1", "3"])
-    store.close()
+    expect(await ids("квартир")).toEqual(["1", "2"])
+    expect(await ids("квартир центр")).toEqual(["1"])
+    expect(await ids("вартир")).toEqual(["1", "2"])
+    expect(await ids("в центре")).toEqual(["1", "3"])
+    await store.close()
   })
 })
 
@@ -365,7 +379,7 @@ describe("finding by pattern", () => {
   it("**reads newest first past a chunk until the limit matches**, and says when there are more", async () => {
     const store = await openStore({ path: fresh() })
     const minute = (n: number) => new Date(Date.UTC(2026, 8, 1) + n * 60_000).toISOString()
-    store.saveMessages(
+    await store.saveMessages(
       ME,
       chat.id,
       Array.from({ length: 1200 }, (_, n) =>
@@ -374,31 +388,31 @@ describe("finding by pattern", () => {
       { via: "history" },
     )
 
-    const page = store.find({ account: ME, pattern: /INVOICE #\d+/iu, limit: 2 })
+    const page = await store.find({ account: ME, pattern: /INVOICE #\d+/iu, limit: 2 })
     expect(page.items.map((hit) => hit.text)).toEqual(["invoice #800", "invoice #400"])
     expect(page.hasMore).toBe(true)
-    expect(store.find({ account: ME, pattern: /invoice #0$/u, limit: 5 })).toMatchObject({
+    expect(await store.find({ account: ME, pattern: /invoice #0$/u, limit: 5 })).toMatchObject({
       items: [{ id: "1" }],
       hasMore: false,
     })
-    expect(() => store.find({ account: ME, pattern: /x/u, perChat: true, limit: 1 })).toThrow("not per chat")
-    store.close()
+    await expect(store.find({ account: ME, pattern: /x/u, perChat: true, limit: 1 })).rejects.toThrow("not per chat")
+    await store.close()
   })
 })
 
 describe("the stretches held completely", () => {
   it("**merge when they overlap or touch**, and stay apart across a gap", async () => {
     const store = await openStore({ path: fresh() })
-    store.markRange(ME, chat.id, 100, 200)
-    store.markRange(ME, chat.id, 300, 400)
-    expect(store.markRange(ME, chat.id, 201, 250)).toEqual({ from: 100, to: 250 })
-    expect(store.ranges(ME, chat.id)).toEqual([
+    await store.markRange(ME, chat.id, 100, 200)
+    await store.markRange(ME, chat.id, 300, 400)
+    expect(await store.markRange(ME, chat.id, 201, 250)).toEqual({ from: 100, to: 250 })
+    expect(await store.ranges(ME, chat.id)).toEqual([
       { from: 100, to: 250 },
       { from: 300, to: 400 },
     ])
-    expect(store.markRange(ME, chat.id, 240, 310)).toEqual({ from: 100, to: 400 })
-    expect(store.ranges(ME, chat.id)).toEqual([{ from: 100, to: 400 }])
-    store.close()
+    expect(await store.markRange(ME, chat.id, 240, 310)).toEqual({ from: 100, to: 400 })
+    expect(await store.ranges(ME, chat.id)).toEqual([{ from: 100, to: 400 }])
+    await store.close()
   })
 })
 
@@ -413,9 +427,9 @@ describe("migrating the store", () => {
     newer.close()
 
     const store = await openStore({ path })
-    store.saveChats(ME, [chat])
-    expect(store.chats(ME, {}).items).toEqual([chat])
-    store.close()
+    await store.saveChats(ME, [chat])
+    expect((await store.chats(ME, {})).items).toEqual([chat])
+    await store.close()
   })
 
   it("**refuses a newer file it cannot write to**, and leaves it as it was", async () => {
@@ -447,11 +461,11 @@ describe("migrating the store", () => {
       older.close()
 
       const store = await openStore({ path })
-      expect(store.messages(ME, chat.id, { limit: 5 }).items.map((one) => one.text)).toEqual([
+      expect((await store.messages(ME, chat.id, { limit: 5 })).items.map((one) => one.text)).toEqual([
         "kept across the upgrade",
       ])
-      expect(store.search("across", { limit: 5 }).items.map((hit) => hit.id)).toEqual(["42"])
-      store.close()
+      expect((await store.search("across", { limit: 5 })).items.map((hit) => hit.id)).toEqual(["42"])
+      await store.close()
     }
   })
 
@@ -470,15 +484,15 @@ describe("migrating the store", () => {
     older.close()
 
     const store = await openStore({ path })
-    expect(store.people("telegram", { account: "100" }).get("7")).toMatchObject({ name: "Seven" })
-    store.close()
+    expect((await store.people("telegram", { account: "100" })).get("7")).toMatchObject({ name: "Seven" })
+    await store.close()
   })
 
   it("brings an older file forward without losing a message", async () => {
     const path = fresh()
     const store = await openStore({ path })
-    store.saveMessages(ME, chat.id, [message()], { via: "history" })
-    store.close()
+    await store.saveMessages(ME, chat.id, [message()], { via: "history" })
+    await store.close()
 
     const database = await openCache(path)
     migrate(database, { migrations: [...MIGRATIONS, next] })

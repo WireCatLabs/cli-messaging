@@ -70,10 +70,13 @@ const stored = {
   forwardedFrom: null,
   reactions: null,
 }
-store.saveMessages(account, "-1002", [stored], { via: "smoke" })
-check("the store gives a message back", store.messages(account, "-1002", { limit: 5 }).items[0]?.text === stored.text)
-check("the store finds a Cyrillic word by its beginning", store.search("Петр", { limit: 5 }).items.length === 1)
-store.close()
+await store.saveMessages(account, "-1002", [stored], { via: "smoke" })
+check(
+  "the store gives a message back",
+  (await store.messages(account, "-1002", { limit: 5 })).items[0]?.text === stored.text,
+)
+check("the store finds a Cyrillic word by its beginning", (await store.search("Петр", { limit: 5 })).items.length === 1)
+await store.close()
 check(
   "the normalizer folds accents, ё and й as under Node",
   normalize("Ёжик ﬁnds\tЙогурт в València") === "ежик finds иогурт в valencia",

@@ -21,10 +21,10 @@ export interface Saving {
  */
 export const stored = (messenger: MessengerAdapter, { account, store, warn, events }: Saving): MessengerAdapter => {
   let warned = false
-  const save = async (operation: string, write: (store: MessageStore) => void): Promise<void> => {
+  const save = async (operation: string, write: (store: MessageStore) => Promise<unknown>): Promise<void> => {
     try {
       const opened = await store()
-      if (opened) write(opened)
+      if (opened) await write(opened)
     } catch (error) {
       events({ event: "warning", code: "store_not_written", operation })
       if (!warned) warn(`not saved to the local store: ${error instanceof Error ? error.message : String(error)}`)
@@ -89,18 +89,18 @@ export const stored = (messenger: MessengerAdapter, { account, store, warn, even
 }
 
 /** Each change as the store keeps it: a message or an edit upserted, a deletion a tombstone, reactions replaced. */
-const keep = (store: MessageStore, account: AccountKey, event: MessageEvent): void => {
+const keep = async (store: MessageStore, account: AccountKey, event: MessageEvent): Promise<void> => {
   switch (event.event) {
     case "message":
     case "edit": {
       const { chatTitle, ...message } = event.message
-      store.saveMessages(account, message.chatId, [message], { via: "update" })
+      await store.saveMessages(account, message.chatId, [message], { via: "update" })
       return
     }
     case "delete":
-      store.markDeleted(account, [event.messageId], event.chatId === null ? {} : { chatId: event.chatId })
+      await store.markDeleted(account, [event.messageId], event.chatId === null ? {} : { chatId: event.chatId })
       return
     case "reaction":
-      store.saveReactions(account, event.chatId, event.messageId, event.reactions)
+      await store.saveReactions(account, event.chatId, event.messageId, event.reactions)
   }
 }

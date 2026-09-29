@@ -52,7 +52,10 @@ export interface MessengerContext extends BaseContext {
    */
   withMessenger: <T>(work: (messenger: MessengerAdapter) => Promise<T>, options?: ConnectOptions) => Promise<T>
   /** Answers from the message store alone, for `--offline`. Never connects and needs no credentials. */
-  withStore: <T>(work: (store: MessageStore, account: AccountKey) => T, options?: { name?: string }) => Promise<T>
+  withStore: <T>(
+    work: (store: MessageStore, account: AccountKey) => Promise<T>,
+    options?: { name?: string },
+  ) => Promise<T>
 }
 
 /**
@@ -85,7 +88,7 @@ export const connected = (
           }),
     close: async () => {
       await connection.close()
-      if (store) (await store.catch(() => undefined))?.close()
+      if (store) await (await store.catch(() => undefined))?.close()
     },
   }
 }
@@ -132,9 +135,9 @@ export const messengerContext = (command: Command, messenger: Messenger): Messen
           }
           const store = await openStore({ env: base.env })
           try {
-            return work(store, account)
+            return await work(store, account)
           } finally {
-            store.close()
+            await store.close()
           }
         },
         name === undefined ? {} : { name },

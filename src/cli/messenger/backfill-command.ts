@@ -57,14 +57,14 @@ export const backfillCommand = (messenger: Messenger): Command => {
       const pauseMs = parseDuration(pace, "--pace")
       const context = messengerContext(this, messenger)
       if (estimate) {
-        const answer = await context.withStore((store, account) => {
-          const chatId = storedChatId(messenger, chat, store, account)
-          const newest = Number(store.messages(account, chatId, { limit: 1 }).items[0]?.id)
+        const answer = await context.withStore(async (store, account) => {
+          const chatId = await storedChatId(messenger, chat, store, account)
+          const newest = Number((await store.messages(account, chatId, { limit: 1 })).items[0]?.id)
           return {
             chat: chatId,
             ...estimateBackfill({
-              ranges: store.ranges(account, chatId),
-              held: store.chatStats(account, chatId)[0]?.messages ?? 0,
+              ranges: await store.ranges(account, chatId),
+              held: (await store.chatStats(account, chatId))[0]?.messages ?? 0,
               newest: Number.isSafeInteger(newest) ? newest : undefined,
               page: PAGE,
               max,
@@ -103,7 +103,7 @@ export const backfillCommand = (messenger: Messenger): Command => {
               },
             })
           } finally {
-            store.close()
+            await store.close()
           }
         })
         if (jobId) updateJob(jobs, jobId, { finishedAt: new Date().toISOString(), result })
@@ -290,7 +290,7 @@ const walk = async (
     top ??= Math.max(...keys)
     fetched += page.items.length
     // This run's pages are contiguous, so everything from `low` to its first message is held.
-    const held: Range = store.markRange(account, chatId, low, top)
+    const held: Range = await store.markRange(account, chatId, low, top)
     onPage({ fetched, chatId, oldest: held.from })
     if (!page.hasMore) {
       reachedStart = true
@@ -301,7 +301,7 @@ const walk = async (
     await sleep(pauseMs, undefined, { signal: stop }).catch(() => {})
   }
 
-  const ranges = chatId === undefined ? [] : store.ranges(account, chatId)
+  const ranges = chatId === undefined ? [] : await store.ranges(account, chatId)
   return {
     chat: chatId ?? null,
     fetched,

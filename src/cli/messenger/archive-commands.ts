@@ -16,11 +16,10 @@ export const syncCommand = (messenger: Messenger): Command =>
       .argument("[chat]", messenger.chatArgument)
       .action(async function (this: Command, chat: string | undefined) {
         const context = messengerContext(this, messenger)
-        const rows = await context.withStore((store, account) => {
-          const only = chat === undefined ? undefined : storedChatId(messenger, chat, store, account)
-          return store
-            .chatStats(account, only)
-            .map((stats) => ({ ...stats, held: store.ranges(account, stats.chatId) }))
+        const rows = await context.withStore(async (store, account) => {
+          const only = chat === undefined ? undefined : await storedChatId(messenger, chat, store, account)
+          const stats = await store.chatStats(account, only)
+          return Promise.all(stats.map(async (one) => ({ ...one, held: await store.ranges(account, one.chatId) })))
         })
         context.renderer.stream(rows)
         if (rows.length === 0) context.renderer.note("the store holds no messages for this profile yet")
@@ -45,11 +44,11 @@ export const exportCommand = (messenger: Messenger): Command =>
         )
       }
       const context = messengerContext(this, messenger)
-      const { title, messages } = await context.withStore((store, account) => {
-        const chatId = storedChatId(messenger, chat, store, account)
+      const { title, messages } = await context.withStore(async (store, account) => {
+        const chatId = await storedChatId(messenger, chat, store, account)
         return {
-          title: store.chatStats(account, chatId)[0]?.title ?? chatId,
-          messages: store.messages(account, chatId, { limit: Number.MAX_SAFE_INTEGER }).items,
+          title: (await store.chatStats(account, chatId))[0]?.title ?? chatId,
+          messages: (await store.messages(account, chatId, { limit: Number.MAX_SAFE_INTEGER })).items,
         }
       })
       if (format === "markdown") context.streams.data(toMarkdown(title, messages).replace(/\n$/, ""))
