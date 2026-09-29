@@ -145,7 +145,24 @@ export const registerTools = (
   }
 }
 
+/** An answer that is a picture, not JSON: it goes to the client as `image` content, with `about` as text. */
+export class Picture {
+  constructor(
+    readonly bytes: Uint8Array,
+    readonly mimeType: string,
+    readonly about: object,
+  ) {}
+}
+
 export const answered = (value: object): CallToolResult => {
+  if (value instanceof Picture) {
+    return {
+      content: [
+        { type: "image", data: Buffer.from(value.bytes).toString("base64"), mimeType: value.mimeType },
+        { type: "text", text: JSON.stringify(value.about) },
+      ],
+    }
+  }
   const body = value as Record<string, unknown>
   return { content: [{ type: "text", text: JSON.stringify(body) }], structuredContent: body }
 }
