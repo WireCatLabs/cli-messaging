@@ -20,6 +20,12 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   (`<PREFIX>_CONFIG_DIR`/`_STATE_DIR`/`_CACHE_DIR`, `MESSAGING_STORE`) of that shell, so a unit written
   from a development checkout opens that checkout's files. `status` reads the unit and the serve lock.
 
+- **`messages download <chat> <message> [--output dir]`** saves every file of one message into a
+  folder (the current one by default, created if missing) and answers each file's path and size.
+  A name another person chose is stripped of folders, a leading dot and control or direction
+  characters; a file already there is never overwritten. The adapter supplies the bytes through the
+  new optional `download?()` method (`Download`, `RemoteFile`); a messenger without it refuses.
+
 ### Fixed
 
 - **`backfill` stops cleanly on Ctrl-C or SIGTERM** — which `backfill cancel` sends — after the page in

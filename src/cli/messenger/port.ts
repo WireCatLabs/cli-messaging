@@ -11,6 +11,22 @@ import type {
   WindowedMessage,
 } from "../../domain/models.js"
 
+/** One attachment's bytes, fetched over the adapter's connection when `bytes` is read — so read it before the command closes. */
+export interface RemoteFile {
+  kind: string
+  /** As the sender named it: other people's text, never a path to trust. */
+  name?: string
+  mime?: string
+  size?: number
+  bytes(): AsyncIterable<Uint8Array>
+}
+
+/** A message's files, and the kinds of attachment it has that are not files — a poll, a location. */
+export interface Download {
+  files: RemoteFile[]
+  skipped: string[]
+}
+
 export interface Sent {
   message: Message
   /** The send's identity. Repeat it after an unknown outcome, never a new one. */
@@ -49,6 +65,8 @@ export interface MessengerAdapter {
    * connection opened with `{ listen: true }`; a messenger that cannot listen leaves it out.
    */
   watch?(onEvent: (event: MessageEvent) => void, signal: AbortSignal, onReady?: () => void): Promise<void>
+  /** The files attached to one message, fetched fresh from the messenger: a stored reference may have expired. */
+  download?(chat: string, messageId: Id): Promise<Download>
   logout(): Promise<void>
   close(): Promise<void>
 }

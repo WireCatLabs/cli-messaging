@@ -8,6 +8,7 @@ import type { SendGuard } from "../../sends/guard.js"
 import { newSendId } from "../../sends/send-id.js"
 import type { AccountKey, MessageStore } from "../../store/store.js"
 import { type Messenger, messengerContext } from "./context.js"
+import { downloadSubcommand } from "./download-command.js"
 import type { MessengerAdapter, Sent } from "./port.js"
 
 /** `messages`: reading, and sending through the guard. A CLI may add its own subcommands. */
@@ -156,6 +157,8 @@ export const messagesCommand = (messenger: Messenger): Command => {
       const { before, after } = this.opts<Window>()
       await readWindow(this, chat, message, { before, after })
     })
+
+  downloadSubcommand(messages, messenger)
 
   return messages
 }
