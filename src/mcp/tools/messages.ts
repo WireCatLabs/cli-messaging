@@ -62,6 +62,18 @@ export const messagesTools = (messenger: Messenger): Record<string, AnyTool> => 
       }),
     }),
 
+    messages_scheduled: tool({
+      title: "Messages scheduled in a chat",
+      description:
+        "Messages waiting to be sent later in a chat, soonest first, each with scheduledFor. Look here after a " +
+        `scheduled send ended in outcome_unknown. Cancelling one is done in the ${name} app. Returns { items }.`,
+      input: v.object({ chat }),
+      annotations: READ,
+      online: async (adapter, args) => ({
+        items: await capability(adapter, "scheduled", "list scheduled messages")(args.chat),
+      }),
+    }),
+
     messages_search: tool({
       title: "Search messages",
       description:
