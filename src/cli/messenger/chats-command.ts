@@ -3,7 +3,24 @@ import { Command } from "commander"
 import type { Chat, ChatKind, Page } from "../../domain/models.js"
 import { renderPage, window, withPaging } from "../paging.js"
 import { type Messenger, messengerContext } from "./context.js"
-import type { MessengerAdapter } from "./port.js"
+import { momentOf } from "./inbox.js"
+import { capability, type MessengerAdapter } from "./port.js"
+
+/** How far back `chats events` looks without `--since`, as in max-cli. */
+export const EVENTS_DAYS = 7
+
+/** `chats events` and its tool alike; `only` keeps the events named, as typed. */
+export const chatEventsOf = async (
+  adapter: MessengerAdapter,
+  chat: string,
+  { since, only }: { since?: string; only?: string },
+  flag = "--since",
+) => {
+  const from = since === undefined ? Date.now() - EVENTS_DAYS * 86_400_000 : momentOf(since, flag)
+  const found = await capability(adapter, "chatEvents", "read who joined or left")(chat, { since: from })
+  const wanted = only === undefined ? undefined : new Set(only.split(",").map((name) => name.trim()))
+  return wanted ? { ...found, events: found.events.filter((one) => wanted.has(one.event)) } : found
+}
 
 /** A filtered list searches the newest this many: paging through every dialog hit FLOOD_WAIT (tg handoff §4.14). */
 export const CHAT_SCAN = 200
@@ -97,6 +114,39 @@ export const chatsCommand = (messenger: Messenger): Command => {
         })
       }),
   )
+
+  chats
+    .command("events")
+    .description("who joined, left, was added or removed, and by whom — from the chat's service messages")
+    .argument("<chat>", messenger.chatArgument)
+    .option("--since <time>", `ISO 8601, or 2h / 1d ago; ${EVENTS_DAYS} days ago if not given`)
+    .option("--event <names>", "only these, comma-separated: join, leave, add, remove, create, title, pin")
+    .action(async function (this: Command, chat: string) {
+      const context = messengerContext(this, messenger)
+      const { since, event } = this.opts<{ since?: string; event?: string }>()
+      if (context.settings.offline) {
+        throw new CliError(
+          "validation_error",
+          "`chats events` reads the chat's history; with `--offline` there is none",
+        )
+      }
+      const found = await context.withMessenger((adapter) =>
+        chatEventsOf(adapter, chat, { ...(since === undefined ? {} : { since }), ...(event ? { only: event } : {}) }),
+      )
+      if (context.format === "jsonl") context.renderer.stream(found.events)
+      else if (context.format !== "pretty") context.renderer.result(found)
+      else {
+        context.renderer.stream(
+          found.events.map((one) => ({
+            time: one.timestamp,
+            event: one.event,
+            by: one.by.name ?? one.by.id,
+            people: one.people.map((person) => person.name ?? person.id).join(", "),
+          })),
+        )
+      }
+      if (found.more) context.renderer.note("more history than one run reads; the newest are here — narrow --since")
+    })
 
   chats
     .command("show")

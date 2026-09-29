@@ -4,6 +4,7 @@ import type {
   Account,
   Chat,
   ChatCard,
+  ChatEvents,
   Id,
   Message,
   MessageEvent,
@@ -97,6 +98,8 @@ export interface MessengerAdapter {
   download?(chat: string, messageId: Id): Promise<Download>
   /** A voice or video note as text, by the messenger's own speech recognition. */
   transcribe?(chat: string, messageId: Id): Promise<Transcript>
+  /** Who joined, left, was added or removed since `since` (ms), from the chat's service messages. */
+  chatEvents?(chat: string, window: { since: number }): Promise<ChatEvents>
   /** A group's admins, whose answer counts as the group's in `review --unanswered`; `null` where the group hides them. */
   admins?(chat: string): Promise<Id[] | null>
   logout(): Promise<void>
