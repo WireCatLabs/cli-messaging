@@ -82,7 +82,10 @@ export const stored = (messenger: MessengerAdapter, { account, store, warn, even
       : {}),
     send: async (chatId, text, options) => {
       const sent = await messenger.send(chatId, text, options)
-      await save("messages.send", (opened) => opened.saveMessages(account, chatId, [sent.message], { via: "send" }))
+      // A scheduled message is not in the chat yet, and it will arrive under another id.
+      if (options.at === undefined) {
+        await save("messages.send", (opened) => opened.saveMessages(account, chatId, [sent.message], { via: "send" }))
+      }
       return sent
     },
   })

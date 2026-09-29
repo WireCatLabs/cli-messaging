@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { captureStreams } from "@leemour/cli-core"
+import { CliError, captureStreams } from "@leemour/cli-core"
 import type { CommandInfo } from "@leemour/cli-core/commands"
 import { describe, expect, it } from "vitest"
 import type { Chat, Message, WindowedMessage } from "../../domain/models.js"
@@ -267,6 +267,68 @@ describe("the shared read commands", () => {
     const journal = JSON.stringify(new SendJournal(sendsPathFor(app, "default", env)).entries())
     expect(journal).not.toContain("secret")
     expect(journal).not.toContain("bold")
+  })
+
+  it("**schedule a send with --at**, answer scheduledFor, journal it for that hour, and never repeat one", async () => {
+    const root = mkdtempSync(join(tmpdir(), "messenger-"))
+    const env = { CHAT_STATE_DIR: join(root, "state"), CHAT_CONFIG_DIR: join(root, "config") }
+    const sent: SendOptions[] = []
+    const later: MessengerAdapter = {
+      ...fake,
+      send: async (_chatId, text, options) => {
+        sent.push(options)
+        return { message: { ...message, text, scheduledFor: options.at }, sendId: options.sendId }
+      },
+      scheduled: async () => [{ ...message, scheduledFor: "2030-01-01T09:00:00.000Z" }],
+    }
+
+    const scheduled = await call(["messages", "send", "Book", "later", "--at", "30m", "--json"], async () => later, env)
+    const repeated = await call(
+      ["messages", "send", "Book", "x", "--at", "1h", "--send-id", "5"],
+      async () => later,
+      env,
+    )
+    const listed = await call(["messages", "scheduled", "Book", "--json"], async () => later, env)
+
+    expect(scheduled.code).toBe(0)
+    const { scheduledFor } = JSON.parse(scheduled.stdout[0] ?? "")
+    expect(sent.map((one) => one.at)).toEqual([scheduledFor])
+    expect(Date.parse(scheduledFor) - Date.now()).toBeGreaterThan(28 * 60_000)
+    expect(scheduled.stderr.join("\n")).toContain("scheduled for")
+    expect(new SendJournal(sendsPathFor(app, "default", env)).entries()).toMatchObject([
+      { outcome: "sent", scheduledFor },
+    ])
+    expect(repeated.code).toBe(2)
+    expect(JSON.parse(listed.stdout[0] ?? "").items[0].scheduledFor).toBe("2030-01-01T09:00:00.000Z")
+  })
+
+  it("**send nothing when --at is not a time**, and point at the queue when a scheduled send is lost", async () => {
+    const root = mkdtempSync(join(tmpdir(), "messenger-"))
+    const env = { CHAT_STATE_DIR: join(root, "state"), CHAT_CONFIG_DIR: join(root, "config") }
+    let opened = false
+    const lost: MessengerAdapter = {
+      ...fake,
+      send: async () => {
+        throw new CliError("outcome_unknown", "no answer — repeat with --send-id 1", { sendId: "1" })
+      },
+    }
+
+    const bad = await call(
+      ["messages", "send", "Book", "x", "--at", "tomorrow"],
+      async () => {
+        opened = true
+        return lost
+      },
+      env,
+    )
+    const unknown = await call(["messages", "send", "Book", "x", "--at", "1h"], async () => lost, env)
+
+    expect(bad.code).toBe(2)
+    expect(opened).toBe(false)
+    const error = JSON.parse(unknown.stderr[0] ?? "").error
+    expect(error.code).toBe("outcome_unknown")
+    expect(error.message).toContain("messages scheduled")
+    expect(error.sendId).toBeUndefined()
   })
 
   it("**edit the owner's message through the guard**, record it without the text, and answer the edited message", async () => {

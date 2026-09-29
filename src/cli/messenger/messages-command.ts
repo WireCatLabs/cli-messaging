@@ -3,6 +3,7 @@ import { annotate } from "@leemour/cli-core/commands"
 import { Command } from "commander"
 import { isLocator, parseLocator } from "../../domain/locator.js"
 import { parseMarkdown } from "../../domain/markdown.js"
+import { sendTime } from "../../domain/send-time.js"
 import { renderMessages } from "../../render/messages.js"
 import { pickChat } from "../../resolve.js"
 import type { SendGuard } from "../../sends/guard.js"
@@ -14,6 +15,7 @@ import { downloadSubcommand } from "./download-command.js"
 import { editCommand } from "./messages-edit-command.js"
 import { forwardCommand } from "./messages-forward-command.js"
 import { pinCommand, unpinCommand } from "./messages-pin-command.js"
+import { scheduledCommand } from "./messages-scheduled-command.js"
 import { capability, type MessengerAdapter, type Sent } from "./port.js"
 import { readAll } from "./stdin.js"
 import { transcribeSubcommand } from "./transcribe-command.js"
@@ -149,6 +151,10 @@ export const messagesCommand = (messenger: Messenger): Command => {
     .option("--silent", "deliver without a notification")
     .option("--no-preview", "no preview card for a link in the text")
     .option("--md, --markdown", "read **bold**, _italic_, ~~struck~~ and `code` in the text; \\ keeps a mark literal")
+    .option(
+      "--at <time>",
+      "let the messenger send it later, even with this machine off: 2026-09-25T09:00 (local time), or 30m, 2h, 1d from now",
+    )
     .action(async function (this: Command, chat: string, text: string | undefined) {
       await sendText(this, messenger, chat, text, undefined)
     })
@@ -193,6 +199,7 @@ export const messagesCommand = (messenger: Messenger): Command => {
   messages.addCommand(forwardCommand(messenger))
   messages.addCommand(pinCommand(messenger))
   messages.addCommand(unpinCommand(messenger))
+  messages.addCommand(scheduledCommand(messenger))
   return messages
 }
 
@@ -208,12 +215,14 @@ const sendText = async (
   replyTo: string | undefined,
 ) => {
   const context = messengerContext(command, messenger)
-  const { sendId, silent, preview, markdown } = command.opts<{
+  const { sendId, silent, preview, markdown, at } = command.opts<{
     sendId?: string
     silent?: boolean
     preview?: boolean
     markdown?: boolean
+    at?: string
   }>()
+  const scheduledFor = at === undefined ? undefined : sendTime(at)
   const body = text ?? (await readAll(context.stdin))
   if (body.trim() === "") throw new CliError("validation_error", "nothing to send — give the text or pipe it in")
   const sent = await context.withMessenger((connection) =>
@@ -225,17 +234,27 @@ const sendText = async (
       ...(silent === true ? { silent } : {}),
       ...(preview === false ? { noPreview: true } : {}),
       ...(markdown === true ? { markdown } : {}),
+      ...(scheduledFor === undefined ? {} : { at: scheduledFor }),
     }),
   )
-  context.renderer.result({ sendId: sent.sendId, message: sent.message })
+  if (scheduledFor !== undefined) {
+    context.renderer.note(`scheduled for ${scheduledFor} — it gets a new id when it is sent`)
+    context.renderer.result({ sendId: sent.sendId, message: sent.message, scheduledFor })
+  } else context.renderer.result({ sendId: sent.sendId, message: sent.message })
 }
 
 /** Resolve → check → send → record: one path for `messages send`, `reply` and the MCP send tool. */
 export const guardedSend = async (
   guard: SendGuard,
   connection: MessengerAdapter,
-  { chat, text: typed, sendId, replyTo, silent, noPreview, markdown }: GuardedSend,
+  { chat, text: typed, sendId, replyTo, silent, noPreview, markdown, at }: GuardedSend,
 ): Promise<Sent> => {
+  if (at !== undefined && sendId !== undefined) {
+    throw new CliError(
+      "validation_error",
+      "a scheduled send is never repeated: it would be scheduled twice — look in `messages scheduled` instead",
+    )
+  }
   const { text, markup } = markdown ? parseMarkdown(typed) : { text: typed, markup: [] }
   if (text.trim() === "") throw new CliError("validation_error", "nothing to send — the marks leave no text")
   const { id: chatId } = await connection.resolve(chat)
@@ -245,6 +264,7 @@ export const guardedSend = async (
     sendId: sendId ?? newSendId(),
     length: text.length,
     ...(replyTo === undefined ? {} : { replyTo }),
+    ...(at === undefined ? {} : { scheduledFor: at }),
   }
   try {
     guard.check(attempt)
@@ -259,12 +279,21 @@ export const guardedSend = async (
       ...(silent ? { silent } : {}),
       ...(noPreview ? { noPreview } : {}),
       ...(markup.length > 0 ? { markup } : {}),
+      ...(at === undefined ? {} : { at }),
     })
     guard.record({ ...attempt, outcome: "sent", messageId: done.message.id })
     return done
   } catch (error) {
     const code = codeOf(error)
     guard.record({ ...attempt, outcome: code === "outcome_unknown" ? "outcome_unknown" : "failed", errorCode: code })
+    if (at !== undefined && code === "outcome_unknown") {
+      throw new CliError(
+        "outcome_unknown",
+        "no answer — the message may have been scheduled. Look in `messages scheduled` before anything else; " +
+          "never send it again with --send-id",
+        { scheduledFor: at },
+      )
+    }
     throw error
   }
 }
@@ -278,6 +307,8 @@ interface GuardedSend {
   silent?: boolean
   noPreview?: boolean
   markdown?: boolean
+  /** ISO time to send it at; refused together with `sendId`. */
+  at?: string
 }
 
 const codeOf = (error: unknown): string =>

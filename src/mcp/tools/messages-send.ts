@@ -1,6 +1,7 @@
 import * as v from "valibot"
 import type { Messenger } from "../../cli/messenger/context.js"
 import { guardedSend } from "../../cli/messenger/messages-command.js"
+import { sendTime } from "../../domain/send-time.js"
 import { type AnyTool, APPROVE, chatOf, message, nameOf, tool, WRITE } from "../tool.js"
 
 /**
@@ -17,7 +18,9 @@ export const messageSendTools = (messenger: Messenger): Record<string, AnyTool> 
       description:
         "Send one text message as the owner. Only when the owner asked for this exact text to this exact chat. " +
         "A name that matches several chats is refused with the candidates — pick an id, never guess. " +
-        `On outcome_unknown, retry with the send_id it returns and ${name} drops the duplicate; never with a new one.`,
+        `On outcome_unknown, retry with the send_id it returns and ${name} drops the duplicate; never with a new one. ` +
+        `With \`at\`, ${name} sends it later and the answer carries scheduledFor; never retry a scheduled send — ` +
+        "read messages_scheduled instead.",
       input: v.object({
         chat,
         text: v.pipe(v.string(), v.minLength(1)),
@@ -28,11 +31,18 @@ export const messageSendTools = (messenger: Messenger): Record<string, AnyTool> 
         markdown: v.optional(
           v.pipe(v.boolean(), v.description("read **bold**, _italic_, ~~struck~~ and `code`; \\ keeps a mark literal")),
         ),
+        at: v.optional(
+          v.pipe(
+            v.string(),
+            v.description("send it later: 2026-09-25T09:00 (the owner's local time), or 30m, 2h, 1d from now"),
+          ),
+        ),
       }),
       annotations: WRITE,
       _meta: APPROVE,
       permission: "send",
       online: async (adapter, args, { guard }) => {
+        const at = args.at === undefined ? undefined : sendTime(args.at)
         const sent = await guardedSend(guard, adapter, {
           chat: args.chat,
           text: args.text,
@@ -41,8 +51,9 @@ export const messageSendTools = (messenger: Messenger): Record<string, AnyTool> 
           ...(args.silent === true ? { silent: true } : {}),
           ...(args.no_preview === true ? { noPreview: true } : {}),
           ...(args.markdown === true ? { markdown: true } : {}),
+          ...(at === undefined ? {} : { at }),
         })
-        return { sendId: sent.sendId, message: sent.message }
+        return { sendId: sent.sendId, message: sent.message, ...(at === undefined ? {} : { scheduledFor: at }) }
       },
     }),
   }

@@ -211,6 +211,7 @@ describe("the MCP server", () => {
       "chat_messages_context",
       "chat_messages_list",
       "chat_messages_photo",
+      "chat_messages_scheduled",
       "chat_messages_search",
       "chat_messages_transcribe",
       "chat_review",
@@ -497,6 +498,24 @@ describe("sending over MCP", () => {
     })
   })
 
+  it("schedules with `at`, answers scheduledFor, and lists the queue", async () => {
+    const sent: SendOptions[] = []
+    const telegram = scripted({
+      send: async (_chatId, text, options) => {
+        sent.push(options)
+        return { message: { ...message, text }, sendId: options.sendId }
+      },
+      scheduled: async () => [{ ...message, scheduledFor: "2030-01-01T09:00:00.000Z" }],
+    })
+    const { call } = await connect(telegram, { allowSend: true })
+
+    const { body } = await call("chat_messages_send", { chat: "7", text: "later", at: "30m" })
+    const queue = await call("chat_messages_scheduled", { chat: "7" })
+
+    expect(body.scheduledFor).toBe(sent[0]?.at)
+    expect(queue.body.items[0].scheduledFor).toBe("2030-01-01T09:00:00.000Z")
+  })
+
   it("refuses on a read-only profile, and sends nothing", async () => {
     const { telegram, sent } = sending()
     const { call } = await connect(telegram, { allowSend: true, config: { profiles: { default: { readOnly: true } } } })
@@ -600,6 +619,21 @@ describe("sending over MCP", () => {
       expect(forms[0]).toContain('"Book club" (7)')
       expect(forms[0]).toContain("see you on Friday")
       expect(sent.map((one) => one.text)).toEqual(["see you on Friday"])
+    })
+
+    it("shows the clock time a delay becomes", async () => {
+      const { telegram, sent } = sending()
+      const { call, forms } = await connect(telegram, {
+        allowSend: true,
+        confirmSend: true,
+        era,
+        form: () => ({ action: "accept", content: {} }),
+      })
+
+      await call("chat_messages_send", { chat: "7", text: "later", at: "2h" })
+
+      expect(forms[0]).toMatch(/at: "2h" — sends at \d{4}-\d{2}-\d{2}T/)
+      expect(sent[0]?.at).toMatch(/^\d{4}-\d{2}-\d{2}T/)
     })
 
     it("sends nothing when the owner declines", async () => {

@@ -13,6 +13,13 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   unless `--notify`; the send guard checks both as a `pin`, and only a pin that notifies counts toward
   the hourly limit. The answer is `{ chatId, messageId, pinned }`. An adapter offers them with the
   optional `pin` and `unpin`.
+- **`messages send --at <time>`** — the messenger sends it later: `2026-09-25T09:00` (local time) or
+  `30m`, `2h`, `1d` from now, rounded down to the minute, as in max-cli. The answer carries
+  `scheduledFor`, the journal counts it in the hour it goes, and the store does not keep it — it will
+  arrive under another id. Refused with `--send-id`: a repeat would schedule it twice.
+- **`messages scheduled <chat>`**, the MCP tool `messages_scheduled`, and `at` on the send tool. The
+  confirmation form shows the clock time a delay becomes. An adapter lists the queue with the optional
+  `scheduled(chat)` and receives the time as `SendOptions.at`.
 
 ## 0.41.0 — 29.09.2026
 

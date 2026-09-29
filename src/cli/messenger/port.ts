@@ -39,6 +39,8 @@ export interface SendOptions {
   /** No preview card for a link in the text. */
   noPreview?: boolean
   markup?: Markup[]
+  /** ISO time: the messenger holds it and sends it then, under a new id. */
+  at?: string
 }
 
 /** A voice message as text. `pending`: the messenger was still working on it when it answered. */
@@ -99,6 +101,8 @@ export interface MessengerAdapter {
   watch?(onEvent: (event: MessageEvent) => void, signal: AbortSignal, onReady?: () => void): Promise<void>
   /** The files attached to one message, fetched fresh from the messenger: a stored reference may have expired. */
   download?(chat: string, messageId: Id): Promise<Download>
+  /** Messages waiting to be sent later in a chat, soonest first, each with `scheduledFor`. */
+  scheduled?(chat: string): Promise<Message[]>
   /** A voice or video note as text, by the messenger's own speech recognition. */
   transcribe?(chat: string, messageId: Id): Promise<Transcript>
   /** Who joined, left, was added or removed since `since` (ms), from the chat's service messages. */
