@@ -6,6 +6,14 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- **`inbox` leaves out muted and archived chats** unless they mention the owner or reply to them;
+  `--all`, and `all` on the `inbox` tool, take them in. The answer's `quiet` counts the chats left out,
+  and a note says so. On the owner's Telegram account 83 of 88 unread chats were muted.
+- **`Chat` gains `muted`, `archived` and `unreadMentions`**, each absent where the messenger does not
+  say. A messenger fills them in its adapter.
+
 ## 0.33.1 — 29.09.2026
 
 ### Fixed
@@ -100,6 +108,7 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   `watch` and their own `--help` promise. They printed the whole page as one JSON line. A script that
   worked around it by reading `.items` from that line must now read each line as a message; the hint
   about older messages goes to stderr.
+||||||| parent of d951948 (feat(inbox): leave out muted and archived chats unless they mention the owner)
 
 ## 0.29.0 — 29.09.2026
 

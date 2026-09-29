@@ -96,6 +96,23 @@ describe("the unread inbox", () => {
     expect(read).toHaveLength(INBOX_CHATS)
     expect(inbox.skipped.map((chat) => chat.id)).toEqual([String(INBOX_CHATS), String(INBOX_CHATS + 1)])
   })
+
+  it("leaves out muted and archived chats unless they mention the owner, and counts them", async () => {
+    const chats = [
+      { ...chatAt("1", 5, 1), muted: true },
+      { ...chatAt("2", 4, 1), archived: true },
+      { ...chatAt("3", 3, 1), muted: true, unreadMentions: 1 },
+      { ...chatAt("4", 2, 1), muted: false },
+    ]
+    const histories = Object.fromEntries(chats.map((chat) => [chat.id, [messageAt(chat.id, "1", 1)]]))
+    const { adapter, read } = messengerWith(chats, histories)
+
+    const inbox = await unreadIn(adapter, { limit: 20 })
+
+    expect(read).toEqual(["3", "4"])
+    expect(inbox.quiet).toBe(2)
+    expect((await unreadIn(adapter, { limit: 20, all: true })).chats).toHaveLength(4)
+  })
 })
 
 describe("what is new since a moment", () => {
@@ -119,6 +136,18 @@ describe("what is new since a moment", () => {
     await newIn(adapter, { since: Date.parse(at(2)), limit: 20 })
 
     expect(read).toEqual(["1"])
+  })
+
+  it("leaves out a muted chat that changed, unless all", async () => {
+    const histories = { "1": [messageAt("1", "10", 3)], "2": [messageAt("2", "20", 4)] }
+    const { adapter } = messengerWith([chatAt("1", 3), { ...chatAt("2", 4), muted: true }], histories)
+
+    const quietly = await newIn(adapter, { since: Date.parse(at(2)), limit: 20 })
+    const everything = await newIn(adapter, { since: Date.parse(at(2)), limit: 20, all: true })
+
+    expect(quietly.chats.map((chat) => chat.id)).toEqual(["1"])
+    expect(quietly.quiet).toBe(1)
+    expect(everything.chats.map((chat) => chat.id)).toEqual(["2", "1"])
   })
 })
 
@@ -189,6 +218,15 @@ describe("inbox --new", () => {
     expect(first.answer.chats.map((one: { id: string }) => one.id)).toEqual(["1"])
     expect(second.answer.chats).toEqual([])
     expect(second.answer.since).toBe(recent)
+  })
+
+  it("--all takes in muted and archived chats", async () => {
+    const recent = new Date(Date.now() - 60_000).toISOString()
+    const chat = { ...chatAt("1", 0), lastMessageAt: recent, archived: true }
+    const { inbox } = setup({ "1": [{ ...messageAt("1", "10", 0), timestamp: recent }] }, [chat])
+
+    expect((await inbox(["--since", "1d"])).answer.chats).toEqual([])
+    expect((await inbox(["--since", "1d", "--all"])).answer.chats).toHaveLength(1)
   })
 
   it("looks back 24 hours the first time", async () => {

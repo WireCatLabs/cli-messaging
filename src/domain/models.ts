@@ -28,6 +28,11 @@ export interface Chat {
   /** ISO 8601, or `null` when the chat has never had a message. */
   lastMessageAt: string | null
   participantsCount: number | null
+  /** Absent where the messenger does not say. */
+  muted?: boolean
+  archived?: boolean
+  /** Unread messages that mention the owner or reply to them. */
+  unreadMentions?: number
   providerMetadata?: ProviderMetadata
 }
 
@@ -170,6 +175,8 @@ export interface Inbox {
   skipped: Pick<Chat, "id" | "title" | "lastMessageAt">[]
   /** Only part of the chat list was looked at, and there may be more. */
   partial: boolean
+  /** Muted or archived chats with something waiting, left out because nothing in them is for the owner. */
+  quiet: number
 }
 
 export interface Contact {

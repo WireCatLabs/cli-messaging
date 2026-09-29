@@ -20,6 +20,15 @@ const FIRST_LOOK_MS = 24 * 60 * 60 * 1000
 const byRecency = (chats: Chat[]): Chat[] =>
   chats.toSorted((a, b) => Date.parse(b.lastMessageAt ?? "") - Date.parse(a.lastMessageAt ?? ""))
 
+/** Muted or archived, and nothing in it mentions the owner or replies to them. */
+const isQuiet = (chat: Chat): boolean =>
+  (chat.muted === true || chat.archived === true) && (chat.unreadMentions ?? 0) === 0
+
+const heard = (chats: Chat[], all: boolean) =>
+  all
+    ? { heard: chats, quiet: 0 }
+    : { heard: chats.filter((chat) => !isQuiet(chat)), quiet: chats.filter(isQuiet).length }
+
 const capped = (chats: Chat[], most: number) => ({
   read: chats.slice(0, most),
   skipped: chats.slice(most).map(({ id, title, lastMessageAt }) => ({ id, title, lastMessageAt })),
@@ -29,10 +38,16 @@ const capped = (chats: Chat[], most: number) => ({
  * Other people's unread messages, as the messenger counts them: for each chat with a count, its
  * newest that many. Reading marks nothing read, so the same messages come back until they are read
  * somewhere else — right for a person, wrong for a scheduled run, which is what `since` is for.
+ *
+ * Muted and archived chats are left out unless `all`, or they mention the owner: on a busy account
+ * they are most of what is unread, and they would take the history reads a person's chat needs.
  */
-export const unreadIn = async (adapter: MessengerAdapter, { limit }: { limit: number }): Promise<Inbox> => {
+export const unreadIn = async (
+  adapter: MessengerAdapter,
+  { limit, all = false }: { limit: number; all?: boolean },
+): Promise<Inbox> => {
   const page = await adapter.chats({ limit: CHAT_WINDOW, offset: 0 })
-  const waiting = byRecency(page.items.filter((chat) => (chat.unreadCount ?? 0) > 0))
+  const { heard: waiting, quiet } = heard(byRecency(page.items.filter((chat) => (chat.unreadCount ?? 0) > 0)), all)
   const { read, skipped } = capped(waiting, INBOX_CHATS)
 
   const chats: InboxChat[] = []
@@ -43,7 +58,7 @@ export const unreadIn = async (adapter: MessengerAdapter, { limit }: { limit: nu
     const theirs = items.slice(-wanted).filter((message) => !message.outgoing)
     if (theirs.length > 0) chats.push({ id, title, kind, unreadCount, messages: theirs, more: count > limit })
   }
-  return { mode: "unread", chats, skipped, partial: page.hasMore }
+  return { mode: "unread", chats, skipped, partial: page.hasMore, quiet }
 }
 
 /**
@@ -56,14 +71,15 @@ export const unreadIn = async (adapter: MessengerAdapter, { limit }: { limit: nu
  */
 export const newIn = async (
   adapter: MessengerAdapter,
-  { since, limit }: { since: number; limit: number },
+  { since, limit, all = false }: { since: number; limit: number; all?: boolean },
 ): Promise<Inbox> => {
   const page = await adapter.chats({ limit: CHAT_WINDOW, offset: 0 })
   const changed = byRecency(
     page.items.filter((chat) => chat.lastMessageAt !== null && Date.parse(chat.lastMessageAt) > since),
   )
   const cut = Math.max(since, ...changed.map((chat) => Date.parse(chat.lastMessageAt ?? "")))
-  const { read, skipped } = capped(changed, INBOX_CHATS)
+  const { heard: wanted, quiet } = heard(changed, all)
+  const { read, skipped } = capped(wanted, INBOX_CHATS)
 
   let until = since
   const chats: InboxChat[] = []
@@ -86,6 +102,7 @@ export const newIn = async (
     skipped,
     // Every dialog in the window changed, so an older one past it may have too.
     partial: page.hasMore && changed.length === page.items.length,
+    quiet,
   }
 }
 
@@ -143,8 +160,9 @@ export const inboxCommand = (messenger: Messenger): Command =>
     .option("--new", "what arrived since the last check, each message once — for scheduled runs")
     .option("--since <time>", "what arrived after this ISO 8601 time, or 2h / 1d ago; the saved point stays put")
     .option("--limit <n>", "at most this many per chat, the newest", (value) => Number.parseInt(value, 10))
+    .option("--all", "muted and archived chats too — left out unless they mention you or reply to you")
     .action(async function (this: Command) {
-      const { new: fresh, since } = this.opts<{ new?: boolean; since?: string }>()
+      const { new: fresh, since, all } = this.opts<{ new?: boolean; since?: string; all?: boolean }>()
       const context = messengerContext(this, messenger)
       const { app } = messenger
       const { settings, renderer, format, streams, env } = context
@@ -165,8 +183,8 @@ export const inboxCommand = (messenger: Messenger): Command =>
             : undefined
       const inbox = await context.withMessenger((adapter) =>
         from === undefined
-          ? unreadIn(adapter, { limit: settings.limit })
-          : newIn(adapter, { since: from, limit: settings.limit }),
+          ? unreadIn(adapter, { limit: settings.limit, all })
+          : newIn(adapter, { since: from, limit: settings.limit, all }),
       )
 
       for (const chat of inbox.chats) {
@@ -180,6 +198,7 @@ export const inboxCommand = (messenger: Messenger): Command =>
         const names = inbox.skipped.map((chat) => chat.title ?? chat.id).join(", ")
         renderer.note(`not read — too many chats at once: ${names} — \`${app.command} messages list <chat>\` reads one`)
       }
+      if (inbox.quiet > 0) renderer.note(`${inbox.quiet} muted or archived chats left out — --all shows them`)
       if (inbox.partial)
         renderer.note(`only the ${CHAT_WINDOW} newest chats were looked at; an older one may have more`)
 
