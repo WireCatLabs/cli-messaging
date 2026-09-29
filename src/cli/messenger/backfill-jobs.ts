@@ -1,9 +1,9 @@
-import { execFileSync, spawn } from "node:child_process"
+import { spawn } from "node:child_process"
 import { closeSync, existsSync, mkdirSync, openSync, readdirSync, readFileSync, realpathSync } from "node:fs"
 import { join } from "node:path"
 import { resolvePaths, writeSecurely } from "@leemour/cli-core"
 import type { AppIdentity } from "../app.js"
-import { alive } from "./serve-command.js"
+import { carries } from "./processes.js"
 
 export interface Job {
   id: string
@@ -83,26 +83,5 @@ export const stateOf = (job: Job): JobState => {
   return job.cancelRequestedAt ? "cancelled" : "died"
 }
 
-/**
- * Whether the recorded PID is still **this job** — a PID is handed out again once its process is
- * gone, after a crash or a reboot, and `cancel` must never signal somebody else's process. The job
- * carries its id in its environment (`<PREFIX>_BACKFILL_JOB`), which only its owner may read.
- */
-export const isJob = (job: Job): boolean => {
-  // PID 0 would ask about this whole process group.
-  if (job.pid <= 0 || !alive(job.pid)) return false
-  const marker = `_BACKFILL_JOB=${job.id}`
-  try {
-    if (process.platform === "linux") {
-      return readFileSync(`/proc/${job.pid}/environ`, "latin1")
-        .split("\0")
-        .some((entry) => entry.endsWith(marker))
-    }
-    if (process.platform === "darwin") {
-      return execFileSync("ps", ["eww", "-o", "command=", "-p", String(job.pid)], { encoding: "utf8" }).includes(marker)
-    }
-  } catch {
-    return false
-  }
-  return false
-}
+/** Whether the recorded PID is still this job — its environment names it (`<PREFIX>_BACKFILL_JOB`). */
+export const isJob = (job: Job): boolean => carries(job.pid, `_BACKFILL_JOB=${job.id}`)

@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from "node:fs"
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { captureStreams } from "@leemour/cli-core"
@@ -32,6 +32,8 @@ const setup = () => {
   return { root, env: { CHAT_STATE_DIR: join(root, "state"), MESSAGING_STORE: join(root, "m.db") } }
 }
 
+const seen: { lock?: { pid: number; listeningAt?: string } } = {}
+
 const call = async (argv: string[], env: NodeJS.ProcessEnv, asked: ConnectOptions[] = [], signal?: AbortSignal) => {
   const connect = async (_: unknown, __: unknown, options?: ConnectOptions) => {
     asked.push(options ?? {})
@@ -40,6 +42,7 @@ const call = async (argv: string[], env: NodeJS.ProcessEnv, asked: ConnectOption
       close: async () => {},
       watch: async (onEvent: (event: MessageEvent) => void, stop: AbortSignal, onReady?: () => void) => {
         onReady?.()
+        seen.lock = JSON.parse(readFileSync(join(env.CHAT_STATE_DIR ?? "", "serve", "default.lock"), "utf8"))
         onEvent({ event: "message", message: hit })
         onEvent({ event: "delete", chatId: null, chatTitle: null, messageId: "1" })
         await new Promise((resolve) => stop.addEventListener("abort", resolve, { once: true }))
@@ -85,6 +88,7 @@ describe("serve", () => {
     expect(code).toBe(0)
     expect(asked).toEqual([{ listen: true, catchUp: true }])
     expect(answer).toMatchObject({ profile: "default", kept: { message: 1, delete: 1 } })
+    expect(seen.lock).toMatchObject({ pid: process.pid, listeningAt: expect.any(String) })
     expect(existsSync(lockOf(root))).toBe(false)
   })
 
@@ -95,13 +99,11 @@ describe("serve", () => {
     const { code, stderr } = await call(["serve"], env)
     expect(code).toBe(2)
     expect(stderr.join("\n")).toContain(`PID ${process.ppid}`)
-    expect((await call(["serve", "status", "--json"], env)).answer).toMatchObject({ running: true, pid: process.ppid })
   })
 
   it("takes over a lock whose process is gone", async () => {
     const { root, env } = setup()
     holdLock(root, 2 ** 22 + 12345)
-    expect((await call(["serve", "status", "--json"], env)).answer).toEqual({ profile: "default", running: false })
 
     const stop = new AbortController()
     setTimeout(() => stop.abort(), 20)

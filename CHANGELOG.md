@@ -6,6 +6,14 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Changed — may break callers
+
+- **`serviceCommand` is now `serverCommand`: `server start|stop|restart|status|logs|install|uninstall`**,
+  the words max-cli's `server` uses. `service …` and `serve status` are gone: `server status` answers for
+  both — whether serve runs, since when, whether it is listening yet, who started it (`unit`, `server` or
+  `hand`) and the unit if there is one. `ServiceSystem` is `ServerSystem`, with `spawn` and `pause`.
+  Unit names are unchanged, so a unit written by `service install` is still found.
+
 ### Added
 
 - **`chats list --search <text> --kind <kind> --unread`**, max-cli's, and `search`, `kind` and
@@ -13,6 +21,19 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   matches the chat's name. A filtered list searches the newest 200 chats — paging through every chat
   hit Telegram's rate limit once — and says so, `partial: true` on the tool, when older ones exist.
   Offline it searches every stored chat.
+- **`server start` runs `serve` in the background when no unit is installed**, as its own process with a
+  log in `<state>/serve/<profile>.log`, and answers only once `serve` is listening — the lock now records
+  `listeningAt`. With a unit it goes through systemd or launchd. `server stop` signals only a serve that
+  `server start` started (its environment says so); one started by hand is named and left alone.
+- **Sentences for a person** from every `server` subcommand; `--json` keeps the data.
+
+### Fixed
+
+- **A launchd agent no longer starts at the next login just because `server install` wrote it.** launchd
+  loads every agent in `~/Library/LaunchAgents` at login, so the file is written disabled; `server start`
+  enables it and `server stop` disables it again.
+- **`serve`'s log no longer says "Ctrl-C to stop"** — it says which profile it listens for.
+
 
 ## 0.39.0 — 29.09.2026
 
