@@ -1,0 +1,10 @@
+{
+  "name": "search-bench",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@electric-sql/pglite": "0.5.8",
+    "@electric-sql/pglite-pg_textsearch": "0.0.10",
+    "pg": "8.23.0"
+  }
+}
