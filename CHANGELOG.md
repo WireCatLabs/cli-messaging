@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.29.1 — 29.09.2026
+
 ### Fixed
 
 - **`messages list --jsonl` and `messages search --jsonl` print one message per line**, as `inbox`,
