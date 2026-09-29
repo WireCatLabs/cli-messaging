@@ -51,7 +51,7 @@ The files every lane would have edited were split or taught to need no edit (cli
 3. A new `MessengerAdapter` method is optional and reached with `capability()`; `observed` and
    `stored` pass through any method they do not list (`throughWrapper`), so the five test fakes in
    tg and the two wrappers need no edit per method.
-4. Worktrees and permissions for agents: tg-cli [`docs/dev/agents.md`](../../../tg-cli/docs/dev/agents.md)
+4. Worktrees and permissions for agents: tg-cli [`docs/dev/agents.md`](https://github.com/leemour/tg-cli/blob/main/docs/dev/agents.md)
    (`bin/lane`, `bin/agent`, `bin/try-messaging`, the write hook).
 
 Left out as not worth it now: splitting tg's `adapter.ts` per area and one shared test fake — with
@@ -73,16 +73,16 @@ its own, merged before the migration. L1 `chats events` or members, and L7, are 
 
 ## 5. How a lane runs
 
-tg-cli [`docs/dev/agents.md`](../../../tg-cli/docs/dev/agents.md): `bin/lane <lane>` makes the lane's
+tg-cli [`docs/dev/agents.md`](https://github.com/leemour/tg-cli/blob/main/docs/dev/agents.md): `bin/lane <lane>` makes the lane's
 worktrees of both repositories under tg-cli's `.worktrees/` and copies the owner's login in;
 `bin/agent <lane>` starts Claude Code there without prompts. Each lane reads its own handoff
-(standard: tg-cli [`docs/dev/handoff-standard.md`](../../../tg-cli/docs/dev/handoff-standard.md)):
+(standard: tg-cli [`docs/dev/handoff-standard.md`](https://github.com/leemour/tg-cli/blob/main/docs/dev/handoff-standard.md)):
 
 | Lane | Handoff |
 |---|---|
-| L1 · reading | [`docs/lanes/l1-reading.md`](../../../tg-cli/docs/lanes/l1-reading.md) |
-| L2 · acting on messages | [`docs/lanes/l2-actions.md`](../../../tg-cli/docs/lanes/l2-actions.md) |
-| L3 · richer sending | [`docs/lanes/l3-sending.md`](../../../tg-cli/docs/lanes/l3-sending.md) |
+| L1 · reading | [`docs/lanes/l1-reading.md`](https://github.com/leemour/tg-cli/blob/main/docs/lanes/l1-reading.md) |
+| L2 · acting on messages | [`docs/lanes/l2-actions.md`](https://github.com/leemour/tg-cli/blob/main/docs/lanes/l2-actions.md) |
+| L3 · richer sending | [`docs/lanes/l3-sending.md`](https://github.com/leemour/tg-cli/blob/main/docs/lanes/l3-sending.md) |
 
 L4–L7 get theirs when one of the first three finishes (NEED-21: three at once).
 
