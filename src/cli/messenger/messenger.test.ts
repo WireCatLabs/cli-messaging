@@ -7,7 +7,7 @@ import { describe, expect, it } from "vitest"
 import type { Chat, Message, WindowedMessage } from "../../domain/models.js"
 import { SendJournal, sendsPathFor } from "../../sends/journal.js"
 import { commandsCommand } from "../commands-command.js"
-import { run } from "../program.js"
+import { type RunOptions, run } from "../program.js"
 import { settingsFor } from "../settings.js"
 import { accountCommand } from "./account-command.js"
 import { accountFileFor } from "./accounts.js"
@@ -17,6 +17,7 @@ import { completeCommand } from "./complete-command.js"
 import { contactsCommand } from "./contacts-command.js"
 import type { Messenger } from "./context.js"
 import { recipientsCommand, sendsCommand } from "./guard-commands.js"
+import { type McpEnvironment, mcpCommand } from "./mcp-command.js"
 import { messagesCommand } from "./messages-command.js"
 import type { MessengerAdapter } from "./port.js"
 
@@ -95,7 +96,12 @@ const fake: MessengerAdapter = {
   close: async () => {},
 }
 
-const call = async (argv: string[], connect: Messenger["connect"], env: NodeJS.ProcessEnv) => {
+const call = async (
+  argv: string[],
+  connect: Messenger["connect"],
+  env: NodeJS.ProcessEnv,
+  options: Partial<RunOptions & McpEnvironment> = {},
+) => {
   const messenger: Messenger = {
     app,
     provider: "chat",
@@ -119,9 +125,10 @@ const call = async (argv: string[], connect: Messenger["connect"], env: NodeJS.P
         completeCommand(messenger, settingsFor(app)),
         syncCommand(messenger),
         exportCommand(messenger),
+        mcpCommand(messenger),
       ],
     },
-    { streams, tty: false, env },
+    { streams, tty: false, env, ...options },
   )
   return { code, stdout: streams.stdout, stderr: streams.stderr }
 }
@@ -300,5 +307,119 @@ describe("the shared read commands", () => {
   it("keep the account file where tg-cli 0.x kept it", () => {
     const tg = { command: "tg", appName: "tg-cli", envPrefix: "TG", description: "", version: "0" }
     expect(accountFileFor(tg, "work", { TG_STATE_DIR: "/state" })).toBe("/state/accounts/work.json")
+  })
+})
+
+describe("the guard, account and mcp config commands", () => {
+  const sandbox = () => {
+    const root = mkdtempSync(join(tmpdir(), "messenger-"))
+    return {
+      CHAT_STATE_DIR: join(root, "state"),
+      CHAT_CONFIG_DIR: join(root, "config"),
+      MESSAGING_STORE: join(root, "m.db"),
+    }
+  }
+  const json = (stdout: string[]) => JSON.parse(stdout[0] ?? "")
+
+  it("**turn the recipient list on with the first add** and off again, and refuse removing a stranger", async () => {
+    const env = sandbox()
+    const online = async () => fake
+
+    const off = await call(["recipients", "list", "--json"], online, env)
+    expect(json(off.stdout)).toEqual([])
+    expect(off.stderr.join("\n")).toContain("is off")
+
+    expect(json((await call(["recipients", "add", "Book", "--json"], online, env)).stdout)).toEqual({
+      id: "7",
+      title: "Book club",
+      added: true,
+    })
+    expect(json((await call(["recipients", "list", "--json"], online, env)).stdout)).toMatchObject([{ id: "7" }])
+
+    const stranger = await call(["recipients", "remove", "99"], online, env)
+    expect(stranger.code).not.toBe(0)
+    expect(stranger.stderr.join("\n")).toContain("99 is not on the recipient list")
+
+    expect(json((await call(["recipients", "remove", "7", "--json"], online, env)).stdout)).toMatchObject({
+      removed: true,
+    })
+    const empty = await call(["recipients", "list", "--json"], online, env)
+    expect(empty.stderr.join("\n")).toContain("on and empty")
+
+    expect(json((await call(["recipients", "off", "--json"], online, env)).stdout)).toEqual({ off: true, wasOn: true })
+  })
+
+  it("list attempts to send newest first, and say when there were none", async () => {
+    const env = sandbox()
+    const none = await call(["sends", "list", "--json"], async () => fake, env)
+    expect(none.stderr.join("\n")).toContain("has not tried to send anything")
+
+    await call(["messages", "send", "Book", "one"], async () => fake, env)
+    await call(["messages", "reply", "Book", "1", "two"], async () => fake, env)
+    const listed = await call(["sends", "list", "--limit", "1", "--json"], async () => fake, env)
+    expect(json(listed.stdout).map((entry: { replyTo?: string }) => entry.replyTo)).toEqual(["1"])
+  })
+
+  it("show who the profile is logged in as", async () => {
+    const { stdout } = await call(["account", "show", "--json"], async () => fake, sandbox())
+    expect(json(stdout)).toEqual({ id: "500", name: "Owner", username: null })
+  })
+
+  it("**print the mcp entry by full path**, and warn when node belongs to a version manager", async () => {
+    const env = sandbox()
+    const mcp = { execPath: "/home/o/.nvm/versions/node/v24/bin/node", scriptPath: "/usr/lib/chat/bin/chat.js" }
+    const { code, stdout, stderr } = await call(
+      ["work", "mcp", "config", "--allow-send", "--json"],
+      async () => fake,
+      env,
+      {
+        mcp,
+      },
+    )
+
+    expect(code).toBe(0)
+    expect(json(stdout).mcpServers["chat-work"]).toMatchObject({
+      command: mcp.execPath,
+      args: [mcp.scriptPath, "work", "mcp", "--allow-send"],
+      env: { MESSAGING_STORE: env.MESSAGING_STORE },
+    })
+    expect(stderr.join("\n")).toContain("belongs to one Node version")
+
+    const pretty = await call(["mcp", "config"], async () => fake, env, { mcp, tty: true })
+    expect(JSON.parse(pretty.stdout.join("\n")).mcpServers.chat.args).toEqual([mcp.scriptPath, "mcp"])
+  })
+
+  it("refuse --confirm-send without --allow-send, and a script in npx's cache", async () => {
+    const env = sandbox()
+    const mcp = { execPath: "/usr/bin/node", scriptPath: "/usr/lib/chat/bin/chat.js" }
+    const confirmOnly = await call(["mcp", "config", "--confirm-send"], async () => fake, env, { mcp })
+    expect(confirmOnly.code).toBe(2)
+    expect(confirmOnly.stderr.join("\n")).toContain("without `--allow-send`")
+
+    const npx = await call(["mcp", "config"], async () => fake, env, {
+      mcp: { ...mcp, scriptPath: "/home/o/.npm/_npx/abc/node_modules/chat/bin/chat.js" },
+    })
+    expect(npx.code).toBe(2)
+    expect(npx.stderr.join("\n")).toContain("npx's cache")
+  })
+
+  it("**page a listing the same way in every format**: the envelope, JSON lines, and a table with a note", async () => {
+    const env = sandbox()
+    const paged: MessengerAdapter = { ...fake, chats: async () => ({ items: [chat], hasMore: true }) }
+    const online = async () => paged
+
+    const envelope = await call(["chats", "list", "--limit", "1", "--page", "2", "--json"], online, env)
+    expect(json(envelope.stdout)).toMatchObject({ page: 2, limit: 1, hasMore: true })
+
+    const lines = await call(["chats", "list", "--limit", "1", "--jsonl"], online, env)
+    expect(lines.stdout.map((line) => JSON.parse(line).id)).toEqual(["7"])
+    expect(lines.stderr.join("\n")).toContain("--page 2")
+
+    const all = await call(["chats", "list", "--all", "--json"], online, env)
+    expect(json(all.stdout)).toMatchObject({ page: 1, limit: 1, hasMore: false })
+
+    const table = await call(["chats", "list", "--limit", "1"], online, env, { tty: true })
+    expect(table.code).toBe(0)
+    expect(table.stderr.join("\n")).toContain("page 1 of more")
   })
 })

@@ -244,6 +244,19 @@ describe("the MCP server", () => {
     expect(telegram.opened()).toBe(1)
   })
 
+  it("lists contacts as the one-to-one chats, and shows one person", async () => {
+    const dialogs: Chat[] = [
+      { ...chat, id: "20", kind: "dialog", title: "Zoe" },
+      { ...chat, id: "21", kind: "dialog", title: "Adam", lastMessageAt: "2026-09-26T09:00:00.000Z" },
+    ]
+    const { call } = await connect(scripted({ chats: async () => ({ items: [chat, ...dialogs], hasMore: false }) }))
+
+    const listed = await call("chat_contacts_list", { order: "name", limit: 1 })
+    expect(listed.body).toMatchObject({ items: [{ name: "Adam" }], page: 1, limit: 1, hasMore: true })
+    expect((await call("chat_contacts_list", { search: "zo" })).body.items).toMatchObject([{ name: "Zoe" }])
+    expect((await call("chat_contacts_show", { person: "Olga" })).body).toMatchObject({ id: "9", name: "Olga" })
+  })
+
   it("runs calls that arrive together one after another, over the one connection", async () => {
     const telegram = scripted()
     const { call } = await connect(telegram)
