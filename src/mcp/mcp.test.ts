@@ -501,6 +501,25 @@ describe("sending over MCP", () => {
     expect(JSON.stringify(entries)).not.toContain("fixed")
   })
 
+  it("forwards through the guard, as a forward into the target chat", async () => {
+    const forwards: unknown[] = []
+    const telegram = scripted({
+      forward: async (from, id, to, options) => {
+        forwards.push([from, id, to, options])
+        return { ...message, id: "51", chatId: to }
+      },
+    })
+    const { call, env } = await connect(telegram, { allowSend: true })
+
+    const { isError, body } = await call("chat_messages_forward", { chat: "7", message: "1", to: "Book club" })
+
+    expect(isError).toBe(false)
+    expect(body.message).toMatchObject({ id: "51" })
+    expect(forwards).toEqual([["7", "1", "7", {}]])
+    const entries = new SendJournal(sendsPathFor(app, "default", env)).entries()
+    expect(entries.at(-1)).toMatchObject({ kind: "forward", outcome: "sent", messageId: "51" })
+  })
+
   it("does not offer a tool the profile's allow list leaves out, whatever the flags", async () => {
     const { client, call } = await connect(scripted(), {
       allowSend: true,

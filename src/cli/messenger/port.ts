@@ -80,6 +80,8 @@ export interface MessengerAdapter {
   send(chatId: Id, text: string, options: SendOptions): Promise<Sent>
   /** The new text of one of the owner's own messages; the answer is the message as it now stands. */
   edit?(chatId: Id, messageId: Id, text: string): Promise<Message>
+  /** One message into another chat; the answer is the copy there. `silent` delivers it without a notification. */
+  forward?(fromChatId: Id, messageId: Id, toChatId: Id, options: { silent?: boolean }): Promise<Message>
   /**
    * New messages and changes to messages as they arrive, until `signal` aborts. `onReady` once it is
    * actually listening — a caller that sends on "listening" must not race the connection. Only on a

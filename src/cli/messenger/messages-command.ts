@@ -11,6 +11,7 @@ import type { AccountKey, MessageStore } from "../../store/store.js"
 import { type Messenger, messengerContext } from "./context.js"
 import { downloadSubcommand } from "./download-command.js"
 import { editCommand } from "./messages-edit-command.js"
+import { forwardCommand } from "./messages-forward-command.js"
 import type { MessengerAdapter, Sent } from "./port.js"
 import { readAll } from "./stdin.js"
 import { transcribeSubcommand } from "./transcribe-command.js"
@@ -171,6 +172,7 @@ export const messagesCommand = (messenger: Messenger): Command => {
   transcribeSubcommand(messages, messenger)
 
   messages.addCommand(editCommand(messenger))
+  messages.addCommand(forwardCommand(messenger))
   return messages
 }
 

@@ -293,6 +293,32 @@ describe("the shared read commands", () => {
     expect(JSON.stringify(journal)).not.toContain("new plan")
   })
 
+  it("**forward into the chat named by --to**, guarded against that chat, and answer the copy there", async () => {
+    const root = mkdtempSync(join(tmpdir(), "messenger-"))
+    const env = { CHAT_STATE_DIR: join(root, "state"), CHAT_CONFIG_DIR: join(root, "config") }
+    const forwards: unknown[] = []
+    const forwarding: MessengerAdapter = {
+      ...fake,
+      resolve: async (reference) => (reference === "Zoe" ? { ...chat, id: "20", title: "Zoe" } : chat),
+      forward: async (from, id, to, options) => {
+        forwards.push([from, id, to, options])
+        return { ...message, id: "50", chatId: to }
+      },
+    }
+
+    const done = await call(
+      ["messages", "forward", "Book", "3", "--to", "Zoe", "--silent", "--json"],
+      async () => forwarding,
+      env,
+    )
+
+    expect(done.code).toBe(0)
+    expect(JSON.parse(done.stdout[0] ?? "").message).toMatchObject({ id: "50", chatId: "20" })
+    expect(forwards).toEqual([["7", "3", "20", { silent: true }]])
+    const journal = new SendJournal(sendsPathFor(app, "default", env)).entries()
+    expect(journal.at(-1)).toMatchObject({ kind: "forward", outcome: "sent", chatId: "20", messageId: "50" })
+  })
+
   it("describe themselves for an agent, with the contract version and which ones write", async () => {
     const root = mkdtempSync(join(tmpdir(), "messenger-"))
     const { stdout } = await call(["commands", "--json"], async () => fake, { CHAT_STATE_DIR: root })
@@ -303,6 +329,7 @@ describe("the shared read commands", () => {
     expect(described).toMatchObject({ cli: "chat", contract: 0 })
     expect(find(["messages", "send"])?.mutates).toBe(true)
     expect(find(["messages", "edit"])?.mutates).toBe(true)
+    expect(find(["messages", "forward"])?.mutates).toBe(true)
     expect(find(["recipients", "add"])?.mutates).toBe(true)
     expect(find(["messages", "list"])?.mutates).toBeFalsy()
   })
