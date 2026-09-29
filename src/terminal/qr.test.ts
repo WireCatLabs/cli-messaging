@@ -1,5 +1,7 @@
+import jsqr from "jsqr"
+import { PNG } from "pngjs"
 import { describe, expect, it } from "vitest"
-import { terminalQr } from "./qr.js"
+import { qrPng, terminalQr } from "./qr.js"
 
 describe("terminalQr", () => {
   it("draws two modules per cell, black on white whatever the theme, with a quiet zone", () => {
@@ -20,5 +22,17 @@ describe("terminalQr", () => {
 
   it("grows with what it carries", () => {
     expect(terminalQr("x".repeat(200)).width).toBeGreaterThan(terminalQr("x").width)
+  })
+})
+
+describe("qrPng", () => {
+  it("**decodes, with decoders of its own, to the link it was given**", () => {
+    const link = "tg://login?token=not-a-real-token-for-the-test"
+    const image = PNG.sync.read(Buffer.from(qrPng(link)))
+
+    // jsqr is CommonJS with an ES default in its types: the function is `.default` under NodeNext.
+    const found = jsqr.default(new Uint8ClampedArray(image.data), image.width, image.height)
+    expect(found?.data).toBe(link)
+    expect(image.width).toBe(terminalQr(link).width * 8)
   })
 })
