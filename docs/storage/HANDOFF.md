@@ -68,7 +68,9 @@ Full description: [`../../README.md`](../../README.md).
 - `bench/search/node_modules`, generated data (it is deleted; `node gen.ts` makes it again).
 - max-cli's `docs_ai/journal/` — grep it for an id, never read it through.
 - tg-cli's code beyond its imports of `@leemour/cli-messaging` (listed in `current-state.md`).
-- The graph, AI enrichment and semantic phases — out of scope until lexical search ships.
+- The graph, AI enrichment and semantic phases — out of scope until lexical search ships. They
+  will run in **background workers** (ruled; [`daemon.md`](daemon.md)) — keep the store API usable
+  from a long-running process (no per-call global state, transactions short).
 - Do not rewrite `requirements.md`; record disagreements in `decisions.md`.
 
 ## Decisions you will make yourself — make them knowingly

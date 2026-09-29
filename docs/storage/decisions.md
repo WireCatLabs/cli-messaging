@@ -15,6 +15,7 @@ its journal id (`NEED-nnn`, max-cli's private journal) and is closed here when a
 | 2026-09-30 | **Engine: SQLite FTS5**, built behind a store interface a Postgres backend could implement later (NEED-374 A). |
 | 2026-09-30 | **Search requires every word, and falls back to any word when nothing is found** (NEED-375 A). **BM25 ranks, trigram typo matching corrects**: a word the corpus knows is used as typed; an unknown word gets candidates from a trigram index over the vocabulary, edit distance ≤ 2, and the search runs with the corrections (as in `bench/search/sqlite.ts`). |
 | 2026-09-30 | **No daemon in phases 1–2**; the store is opened directly with WAL (NEED-376 A). Whether one is needed later: [`daemon.md`](daemon.md). |
+| 2026-09-30 | **No daemon that owns the database, now or later.** `max serve` stays what it is — the daemon for MAX API requests — and does not become the database's owner. **Background workers are planned** for long jobs (sync, graph building, AI enrichment), from phase 3 on: they open the store like any command. See [`daemon.md`](daemon.md). |
 | 2026-09-29 | Ordinary search never calls an API; AI enrichment only on explicit request, with cost limits (requirements §3, §14, §15, §29). |
 
 ## Answered — the evidence behind the rulings above

@@ -4,6 +4,10 @@ Asked by the owner on 2026-09-30, after ruling "no daemon in phases 1–2": «do
 later? what are tradeoffs of each approach». Three shapes are possible. The facts about today's
 processes are in [`current-state.md`](current-state.md).
 
+**Ruled 2026-09-30:** no owner daemon; background workers later. `max serve` already exists as a
+daemon for MAX API requests — it keeps that job and writes pushed messages through the store like
+any other process; it is not the database's owner.
+
 ## The three shapes
 
 1. **No daemon.** Every command, MCP server and bot run opens the SQLite file itself. WAL lets
