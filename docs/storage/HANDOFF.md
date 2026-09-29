@@ -46,16 +46,16 @@ Full description: [`../../README.md`](../../README.md).
 ## 4. What will bite you
 
 - **tg-cli and max-cli write the same `messages.db`** from separate processes and different
-  versions (max-cli still pins cli-messaging 0.13.0). A schema change here reaches both; `min_compatible`
+  versions (~~max-cli still pins cli-messaging 0.13.0~~ **Correction 2026-09-30:** max-cli pins 0.29.0, tg-cli 0.27.0). A schema change here reaches both; `min_compatible`
   in `migrations.ts` is what lets an older CLI open a newer file today.
-- **The store is synchronous today** in both repositories (~83 call sites in max-cli read results
-  without `await`). Going async is ruled; do it store by store with the tests green after each.
+- **The store is synchronous today** in both repositories. **Correction 2026-09-30:** the ~83 call sites are max-cli's *own profile cache*, a later phase — cli-messaging's store has few callers (max-cli `src/bot/keep.ts`, `bot-people.ts`). Going async is ruled; do it store by store with the tests green after each.
 - **Drizzle's `node:sqlite` driver exists only in drizzle-orm 1.0 rc** (1.0.0-rc.4), not in stable
   0.45.3. Its SQLite drivers are synchronous; wrap them in the async interface. Each driver imports
   its runtime at top level — load by dynamic `import()`, or Bun breaks Node and vice versa.
+- **Drizzle's migrator** reads its log before a plain `BEGIN`, so two processes can apply one migration, and it never refuses a newer file; **`drizzle-kit generate` rebuilds a table (`DROP TABLE`) for a constraint change**, which on `messages` drops the search triggers. (Found by the phase 1 plan, 2026-09-30.)
 - **FTS5 and its triggers cannot be expressed in Drizzle** — a `drizzle-kit generate --custom`
   migration, and `sql` for `MATCH`/`bm25()`. Postgres extensions are the same story.
-- **`unicode61 remove_diacritics` strips Latin accents only** — normalize ё→е, й→и yourself.
+- **`unicode61 remove_diacritics` strips Latin accents only** — normalize ё→е, й→и yourself. **Correction 2026-09-30:** the fixture's normalizer already does, and folding merges real words too (мой/мои, año/ano) — decide it deliberately.
 - **SQLite picks a slow plan** for FTS5 plus filters with a plain `JOIN` (`MATCH` per row); write
   it as `CROSS JOIN` and check `EXPLAIN QUERY PLAN` in a test.
 - **PGlite was measured and ruled out** — do not reopen it without reading the research; the reasons
@@ -77,8 +77,7 @@ Full description: [`../../README.md`](../../README.md).
 
 - Whether max-cli's extra tables become generic cli-messaging tables or max-specific tables in the
   same database.
-- How filters reach the full-text index (FTS5 with the chat id as an unindexed column, per-chat
-  partial strategy, or pre-filter by rowid ranges) — measure with the fixture.
+- How filters reach the full-text index — **Correction 2026-09-30:** decided in phase 2 (`decisions.md`), not phase 1; the fixture's schema is not the store's, so store-level measurement needs a loader first. `./run.sh 1000000` also builds PGlite and Docker Postgres.
 - The bridge from `schema_migrations` to Drizzle's migration log for existing files.
 
 ## How to check

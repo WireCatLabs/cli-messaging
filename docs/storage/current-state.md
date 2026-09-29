@@ -2,6 +2,7 @@
 
 Read 2026-09-29 at cli-messaging `5dd667f` (0.27.0), max-cli `f5b9929` (0.19.0), tg-cli 0.4.0.
 Anchors are `repo: path:line`; they drift, so search for the named function if a line has moved.
+**Correction 2026-09-30:** by 2026-09-30 line numbers had moved 2–25 lines; the pins in the table below changed the same day.
 
 ## The two stores
 
@@ -23,8 +24,7 @@ Anchors are `repo: path:line`; they drift, so search for the named function if a
 - SQLite-specific: `INSERT OR IGNORE` (`store.ts:223`), FTS5 `MATCH` (`:425`), `BEGIN IMMEDIATE`
   (`:147`). Driver seam `src/store/driver.ts` (sync `exec`/`prepare`/`close`, `run` → `changes`),
   runtime picked between `node:sqlite` and `bun:sqlite` by dynamic import.
-- Openers inside the package: `connected()` lazily per connection (`src/cli/context.ts:80`),
-  `withStore` per offline command (`:133`), backfill (`backfill-command.ts:34`), completion only if
+- Openers inside the package: `connected()` lazily per connection, `withStore` per offline command — ~~`src/cli/context.ts:80`, `:133`~~ **Correction 2026-09-30:** `src/cli/messenger/context.ts` (`connected` 63, `withStore` 123), backfill (`backfill-command.ts:34`), completion only if
   the file exists (`complete-command.ts:55`), doctor with raw `openCache` (`doctor-command.ts:67`).
 - No CHANGELOG; released by `bin/release`, commits `chore: release x.y.z`.
 
@@ -49,12 +49,12 @@ Anchors are `repo: path:line`; they drift, so search for the named function if a
 
 | Program | Store | How |
 |---|---|---|
-| tg-cli 0.4.0 (pins cli-messaging 0.25.0) | messages.db | every command, `tg serve` and `tg mcp` open it directly (shared command set from `@leemour/cli-messaging/cli`) |
-| max-cli 0.19.0 (pins cli-messaging **0.13.0**) | messages.db | bot commands only, `openStore()` per call (max-cli: `src/bot/keep.ts:40,105`) |
+| tg-cli 0.4.0 (pins cli-messaging ~~0.25.0~~ 0.27.0, Correction 2026-09-30:) | messages.db | every command, `tg serve` and `tg mcp` open it directly (shared command set from `@leemour/cli-messaging/cli`) |
+| max-cli 0.19.0 (pins cli-messaging ~~0.13.0~~ 0.29.0, Correction 2026-09-30:) | messages.db | bot commands only, `openStore()` per call (max-cli: `src/bot/keep.ts:40,105`) |
 | max-cli | `<profile>.db` | every personal-account command (~35 sites), `max serve` (`src/commands/serve.ts:49`), `max mcp` per tool call (`src/mcp/tools.ts:112,231,458`), backup, export, cache clear, completion, doctor |
 
 **tg-cli and max-cli write the same messages.db**, from separate processes and different package
-versions (max's 0.13 opens tg's newer file because `min_compatible` is 1). SQLite's WAL and
+versions (~~max's 0.13~~ an older CLI opens a newer file because `min_compatible` is 1). SQLite's WAL and
 `busy_timeout` are what make that safe today.
 
 ## The servers that exist
