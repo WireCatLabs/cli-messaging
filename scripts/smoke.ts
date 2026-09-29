@@ -9,8 +9,10 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { listRuns, readEvents, recorded, settingsFor } from "../src/cli/index.js"
 import { formatLocator, parseLocator, renderMessages } from "../src/index.js"
-import { openCache, openStore } from "../src/store/index.js"
+import { migrate, openCache, openStore } from "../src/store/index.js"
 import { normalize } from "../src/store/normalize.js"
+import { openSqlite } from "../src/store/sqlite/open.js"
+import { accounts } from "../src/store/sqlite/schema.js"
 
 const runtime = typeof (globalThis as { Bun?: unknown }).Bun === "undefined" ? "node" : "bun"
 const failures: string[] = []
@@ -77,6 +79,11 @@ check(
 )
 check("the store finds a Cyrillic word by its beginning", (await store.search("Петр", { limit: 5 })).items.length === 1)
 await store.close()
+const sqlite = await openSqlite(join(mkdtempSync(join(tmpdir(), "cli-messaging-smoke-")), "messages.db"))
+migrate(sqlite.database)
+sqlite.database.prepare("INSERT INTO accounts (provider, native_id, created_at) VALUES ('telegram', '1', 0)").run()
+check("Drizzle reads the row the seam wrote", (await sqlite.orm.select().from(accounts))[0]?.nativeId === "1")
+sqlite.database.close()
 check(
   "the normalizer folds accents, ё and й as under Node",
   normalize("Ёжик ﬁnds\tЙогурт в València") === "ежик finds иогурт в valencia",

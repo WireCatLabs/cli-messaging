@@ -6,9 +6,9 @@ import type { CacheDatabase, SqlValue } from "../driver.js"
  * to stderr. Node 24 is silent. Left alone deliberately (`NEED-59`): suppressing warnings
  * process-wide to hide one line costs more than it saves.
  */
-export const openWithNodeSqlite = (path: string): CacheDatabase => {
-  const database = new DatabaseSync(path)
+export const openWithNodeSqlite = (path: string): CacheDatabase => cacheOverNodeSqlite(new DatabaseSync(path))
 
+export const cacheOverNodeSqlite = (database: DatabaseSync): CacheDatabase => {
   return {
     exec: (sql) => database.exec(sql),
     prepare: (sql) => {
