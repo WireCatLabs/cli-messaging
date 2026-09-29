@@ -303,6 +303,9 @@ describe("the shared read commands", () => {
     expect(exported.stdout.map((line) => JSON.parse(line).id)).toEqual(["1", "2", "3"])
     const one = await call(["export", "7", "--json"], never, env)
     expect(one.stdout).toHaveLength(1)
+    const transcript = await call(["export", "7", "--format", "markdown"], never, env)
+    expect(transcript.stdout.join("\n")).toMatch(/^# 7\n\n## \d{4}-\d{2}-\d{2}\n\n\*\*\d{2}:\d{2} /)
+    expect((await call(["export", "7", "--format", "html"], never, env)).code).not.toBe(0)
   })
 
   it("keep the account file where tg-cli 0.x kept it", () => {

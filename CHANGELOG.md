@@ -6,6 +6,13 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- **`export <chat> --format markdown`** — the chat as a transcript a person reads: a heading per day,
+  `hh:mm Name`, replies and forwards quoted, attachments as links, control characters shown rather than
+  obeyed (max-cli's `toMarkdown`). A reply Telegram sent only the id of is quoted from the export when
+  that message is in it. Any other `--format` is refused; `--json` and `--jsonl` stay the data formats.
+
 ## 0.30.0 — 29.09.2026
 
 ### Added
