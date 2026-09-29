@@ -82,7 +82,7 @@ fi
 
 echo "== checks for $version =="
 pnpm install --frozen-lockfile
-pnpm lint && pnpm typecheck && pnpm test
+pnpm lint && pnpm typecheck && pnpm test:coverage && pnpm docs:check
 pnpm build && pnpm smoke:bun
 
 if [ -z "${NPM_TOKEN:-}" ]; then
