@@ -120,7 +120,7 @@ const connect = async (telegram: Scripted = scripted(), options: Partial<ServerO
     CHAT_STATE_DIR: join(root, "state"),
     CHAT_CONFIG_DIR: join(root, "config"),
     MESSAGING_STORE: join(root, "m.db"),
-    MESSAGING_CACHE_DIR: join(root, "cache"),
+    CLI_COMMON_CACHE_DIR: join(root, "cache"),
   }
   const { connect: connecting, form, era = "legacy", config, ...serverOptions } = options
   if (config) {

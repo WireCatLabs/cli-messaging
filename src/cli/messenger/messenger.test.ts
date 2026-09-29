@@ -583,7 +583,7 @@ describe("messages transcribe", () => {
     return {
       CHAT_STATE_DIR: join(root, "state"),
       MESSAGING_STORE: join(root, "m.db"),
-      MESSAGING_CACHE_DIR: join(root, "cache"),
+      CLI_COMMON_CACHE_DIR: join(root, "cache"),
     }
   }
 
