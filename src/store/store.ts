@@ -56,6 +56,11 @@ export interface MessageFilter {
   senders?: Id[]
   together?: boolean
   text?: string
+  /**
+   * Tested against each stored message's text, newest first, in JavaScript — no index serves it, so
+   * it reads the chat (or the account) until `limit` match. Not with `text` or `perChat`.
+   */
+  pattern?: RegExp
   /** Only this chat of the account; needs `account`. */
   chatId?: Id
   /** With `perChat`, the newest `limit` of each chat rather than of all of them together. */
@@ -411,15 +416,17 @@ const storeOver = (database: CacheDatabase, now: () => number): MessageStore => 
     senders,
     together = false,
     text,
+    pattern,
     chatId,
     limit,
     perChat = false,
   }: MessageFilter): Page<StoredHit> => {
-    const trimmed = text?.trim()
+    const trimmed = pattern ? undefined : text?.trim()
     if (trimmed !== undefined && [...trimmed].length < 3) {
       throw new CliError("validation_error", "search needs at least three characters")
     }
-    if (!trimmed && !senders?.length) {
+    if (pattern && perChat) throw new CliError("validation_error", "a pattern search is not per chat")
+    if (!trimmed && !pattern && !senders?.length) {
       throw new CliError("validation_error", "say what to find: some text, or who wrote it")
     }
     const conditions = ["m.deleted_at IS NULL"]
@@ -467,9 +474,15 @@ const storeOver = (database: CacheDatabase, now: () => number): MessageStore => 
          ${perChat ? ", row_number() OVER (PARTITION BY m.chat_pk ORDER BY m.sent_at DESC, m.pk DESC) AS chat_rank" : ""}
        FROM messages m ${MESSAGE_JOINS} JOIN accounts a ON a.pk = m.account_pk
        WHERE ${conditions.join(" AND ")}`
-    const rows = perChat
-      ? all(`SELECT * FROM (${matching}) WHERE chat_rank <= ? ORDER BY sent_at DESC, pk DESC`, ...parameters, limit + 1)
-      : all(`${matching} ORDER BY m.sent_at DESC, m.pk DESC LIMIT ?`, ...parameters, limit + 1)
+    const rows = pattern
+      ? scan(matching, parameters, pattern, limit + 1)
+      : perChat
+        ? all(
+            `SELECT * FROM (${matching}) WHERE chat_rank <= ? ORDER BY sent_at DESC, pk DESC`,
+            ...parameters,
+            limit + 1,
+          )
+        : all(`${matching} ORDER BY m.sent_at DESC, m.pk DESC LIMIT ?`, ...parameters, limit + 1)
     const page = perChat ? rows.filter((row) => Number(row.chat_rank) <= limit) : rows.slice(0, limit)
     const messages = toMessages(page)
     return {
@@ -488,6 +501,28 @@ const storeOver = (database: CacheDatabase, now: () => number): MessageStore => 
       }),
       hasMore: rows.length > page.length,
     }
+  }
+
+  /** Newest first, a chunk at a time, until `wanted` rows match or the rows run out. */
+  const scan = (matching: string, parameters: SqlValue[], pattern: RegExp, wanted: number) => {
+    const found: Record<string, unknown>[] = []
+    let after: [number, number] | undefined
+    while (found.length < wanted) {
+      const chunk = all(
+        `${matching} ${after ? "AND (m.sent_at, m.pk) < (?, ?)" : ""} ORDER BY m.sent_at DESC, m.pk DESC LIMIT 500`,
+        ...parameters,
+        ...(after ?? []),
+      )
+      for (const row of chunk) {
+        pattern.lastIndex = 0
+        if (pattern.test(String(row.text ?? ""))) found.push(row)
+        if (found.length === wanted) break
+      }
+      const last = chunk.at(-1)
+      if (chunk.length < 500 || !last) break
+      after = [Number(last.sent_at), Number(last.pk)]
+    }
+    return found
   }
 
   const MESSAGE_COLUMNS = `m.*, c.native_id AS chat_native_id, i.native_id AS sender_native_id`

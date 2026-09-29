@@ -287,6 +287,11 @@ describe("the shared read commands", () => {
     expect(hits[0].locator).toBe("msg:chat/500/7/3")
     const elsewhere = await call(["messages", "search", "chapt", "--chat", "999", "--json"], never, env)
     expect(JSON.parse(elsewhere.stdout[0] ?? "").items).toEqual([])
+    const pattern = await call(["messages", "search", "--regex", "ch.pt", "--limit", "1", "--json"], never, env)
+    expect(JSON.parse(pattern.stdout[0] ?? "")).toMatchObject({ items: [{ id: "3" }], hasMore: true })
+    const broken = await call(["messages", "search", "--regex", "(", "--json"], never, env)
+    expect(broken.code).toBe(2)
+    expect(broken.stderr.join("\n")).toContain("not a regular expression")
   })
 
   it("**report and export what the store holds**, without connecting", async () => {

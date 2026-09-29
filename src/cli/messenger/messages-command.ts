@@ -81,13 +81,15 @@ export const messagesCommand = (messenger: Messenger): Command => {
     .argument("<words...>", "every word must appear, as a word or the start of one: квартир finds квартира")
     .option("--chat <chat>", `only this chat: ${messenger.chatArgument}`)
     .option("--limit <n>", "how many", (value) => Number.parseInt(value, 10))
+    .option("--regex", "the words are one regular expression, case-insensitive, tested against every stored text")
     .action(async function (this: Command, words: string[]) {
       const context = messengerContext(this, messenger)
-      const { chat } = this.opts<{ chat?: string }>()
+      const { chat, regex } = this.opts<{ chat?: string; regex?: boolean }>()
       const { limit } = context.settings
+      const pattern = regex ? patternOf(words.join(" ")) : undefined
       const page = await context.withStore((store, account) =>
         store.find({
-          text: words.join(" "),
+          ...(pattern ? { pattern } : { text: words.join(" ") }),
           account,
           limit,
           ...(chat === undefined ? {} : { chatId: storedChatId(messenger, chat, store, account) }),
@@ -256,6 +258,14 @@ const targetOf = (messenger: Messenger, chat: string, message: string | undefine
 }
 
 /** A chat as typed, found among the stored chats the way an adapter finds it among its own. */
+const patternOf = (source: string): RegExp => {
+  try {
+    return new RegExp(source, "iu")
+  } catch (error) {
+    throw new CliError("validation_error", `not a regular expression: ${(error as Error).message}`)
+  }
+}
+
 export const storedChatId = (
   messenger: Messenger,
   reference: string,
