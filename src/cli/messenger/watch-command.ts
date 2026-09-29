@@ -54,7 +54,12 @@ export const listenUntilStopped = async (
   context: MessengerContext,
   messenger: Messenger,
   onEvent: (event: MessageEvent) => void,
-  { stop, pipe = false, catchUp = false }: { stop: AbortController; pipe?: boolean; catchUp?: boolean },
+  {
+    stop,
+    pipe = false,
+    catchUp = false,
+    onReady = () => context.renderer.note("listening — Ctrl-C to stop"),
+  }: { stop: AbortController; pipe?: boolean; catchUp?: boolean; onReady?: () => void },
 ): Promise<void> => {
   const given = environmentOf(command).signal
   const end = () => stop.abort()
@@ -74,7 +79,7 @@ export const listenUntilStopped = async (
         if (!connection.watch) {
           throw new CliError("validation_error", `${messenger.app.command} cannot listen for new messages`)
         }
-        await connection.watch(onEvent, stop.signal, () => context.renderer.note("listening — Ctrl-C to stop"))
+        await connection.watch(onEvent, stop.signal, onReady)
       },
       { listen: true, ...(catchUp ? { catchUp } : {}) },
     )
