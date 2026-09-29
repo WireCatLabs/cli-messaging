@@ -1,6 +1,6 @@
 # Phase 1 — Drizzle, an async store, the §4–§5 schema, maintenance commands
 
-Plan, 2026-09-29, for review. Nothing here is built. It follows [`../decisions.md`](../decisions.md):
+Plan, 2026-09-29. **Approved by the owner 2026-09-30** (NEED-382 A). Nothing here is built yet. It follows [`../decisions.md`](../decisions.md):
 SQLite FTS5 behind an async store interface, Drizzle, no daemon that owns the database, background
 workers later. Requirements §30 phase 1 without the PGlite parts: Drizzle integration, async store,
 schema per §4–§5, migrations, migration of existing data, repository layer, backup and doctor.
@@ -431,16 +431,7 @@ kept.
 **Q1 — answered 2026-09-30: B.** Version 6 raises `min_compatible` to 6; older builds refuse the file
 and ask to be upgraded; tg-cli and max-cli ship together (D6).
 
-**Q2 · Message search is by substring today (trigram, the owner's ruling in migration 5). Phase 2
-brings BM25 over words. Keep substring search next to it, or drop it?**
-- Now: phase 1 keeps trigram and does not change search. The 2026-09-30 ruling (BM25, `unicode61`,
-  trigram typo correction over the vocabulary) replaces it in phase 2, and no document says whether
-  substring matching survives.
-- **A** Keep both indexes. BM25 over words is the default. Substring is the fallback when words find
-  nothing.
-- **B** Drop substring for message text. Words, word beginnings (`квартир*`) and typo correction
-  cover it. Chat and person names stay trigram.
-- Recommendation: **B**. Version 3 measured prefix search finding about 90% of what trigram finds for
-  a Russian stem (`migrations.ts:208-210`). Typo correction covers more. A second message index
-  costs roughly its own size again, and at 10M that is gigabytes (inferred).
-- If unanswered: phase 1 is unaffected. The phase 2 plan assumes B and asks again.
+**Q2 — answered 2026-09-30: A.** Keep the substring index over message text next to the word index;
+words with BM25 first, substring when words and typo correction find nothing. «I would implement it
+and then later, if we see that we don't need it, we can get rid of it.» How each index works:
+[`../search-indexes.md`](../search-indexes.md).
