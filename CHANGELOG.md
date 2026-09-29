@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.36.0 — 29.09.2026
+
 ### Changed — may break callers
 
 - **Every `MessageStore` method returns a `Promise`**, `close` included, so a store that is not
