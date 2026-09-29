@@ -161,28 +161,26 @@ A rename is a table rebuild, and the rebuild breaks installed builds (`migration
 table in §4 lists each field. I will add the naming deviations to `decisions.md` when this plan is
 approved.
 
-**D6 · Derived columns that older builds do not write.**
-Older builds insert and edit messages without `normalized_text`. The rules:
+**D6 · Version 6 locks older builds out (owner, 2026-09-30: Q1 B — «we need to make sure the stuff
+is in sync and force upgrade of clis»).**
 
-- `normalized_text` and `normalizer_version` are nullable. The new store fills both on every write.
-- A trigger, `AFTER UPDATE OF text ON messages WHEN new.normalized_text IS old.normalized_text`, sets
-  both to `NULL`. So an edit by an old build never leaves a stale normalized copy. It is pure SQL
-  with no custom function, so it runs in every build. A custom SQL function in a trigger would fail
-  in older builds with "no such function".
-- A backfill fills rows `WHERE normalizer_version IS NULL OR normalizer_version < current`, in
-  batches by `pk` range, one short transaction per batch. It needs no index, so version 6 builds
-  none. It can be stopped and started again at any point: a restart rescans ranges already done,
-  which is cheap next to writing them. It runs only from
-  `db migrate` (and from phase 2's `search rebuild`), never inside an ordinary command, so a one-shot
-  command stays fast.
-- `chats.message_count` is kept by triggers on insert, tombstone, un-tombstone and delete, so every
-  build keeps it right. It is filled once for existing rows, per chat and as an absolute count, so
-  running the fill after the triggers already work is still correct. Whether the fill runs inside
-  version 6 or from `db migrate` depends on the measurement in item 6.
+- Version 6 has `min_compatible` 6. Every tg and max build older than it refuses the file with
+  today's message — «the message store was written by a newer version … — upgrade this tool»
+  (`migrations.ts:301-306`) — so no old build ever writes a row without `normalized_text`. The
+  published builds' refusal is checked by test, not assumed (§6, "Installed builds").
+- It is a major release of cli-messaging, and **tg-cli and max-cli ship their bump the same day**.
+  The release that carries version 6 names the upgrade command for both CLIs in its changelog.
+- `normalized_text` and `normalizer_version` are filled by the store on every write. Rows written
+  before version 6 are filled once, by a backfill in batches by `pk` range, one short transaction per
+  batch, restartable at any point. It runs from `db migrate`, and from the first open when the file
+  is small enough (item 6 measures the limit); a larger file prints the `db migrate` command and
+  keeps working, search falling back to the raw text for rows not yet filled.
+- `chats.message_count` is kept by triggers on insert, tombstone, un-tombstone and delete, and filled
+  once for existing rows per chat as an absolute count.
+- No trigger for stale normalized copies: only version-6 builds write.
 
 Why the count: phase 2 must choose per query how a filter reaches the index. It needs the size of
 the filtered chat for that, cheaply (§7).
-`min_compatible` stays 1. Raising it is Q1.
 
 **D7 · The normalizer.** It is a pure function in `src/store/normalize.ts`:
 
@@ -276,9 +274,10 @@ Releases go through `bin/release` after items 2, 6 and 8, plus whenever tg-cli a
    `openStore` and `saveMessages` into a real version 5 file. The fixture's own schema is not the
    store's, so nothing in phase 1 can be measured without this loader. Make `DATA_DIR` default to a
    directory under the OS temp folder instead of one session's path (`bench/search/common.ts:5-7`).
-6. **Schema version 6.** Add the new columns from §4 and the three triggers. It is one generated
-   migration plus one `--custom` migration for the triggers. Writes fill `normalized_text`. The
-   backfill function exists and is tested, but nothing calls it yet.
+6. **Schema version 6, `min_compatible` 6.** Add the new columns from §4 and the `message_count`
+   triggers. It is one generated migration plus one `--custom` migration for the triggers. Writes fill
+   `normalized_text`. The backfill function exists and is tested; item 9 wires it to `db migrate`. A
+   major release of cli-messaging, released together with tg-cli and max-cli (D6).
    **Acceptance, before release:** run the version 5 → 6 upgrade on the 1M file from item 5. Version
    6 is frozen once it is released, so this cannot wait. The one statement that reads every message
    under `BEGIN IMMEDIATE` is the `message_count` fill: `deleted_at` is not in `messages_by_time`.
@@ -357,9 +356,8 @@ Adoption, in the other repositories after the matching release:
 - **Newer file.** A file whose `min_compatible` is above this build's version is refused, with
   today's message.
 - **Installed builds on a new file.** Published `@leemour/cli-messaging@0.13.0` and `0.27.0` are
-  installed as aliased dev dependencies. They open a version 6 file, save messages, edit one and
-  search. Then the new build confirms three things. The old rows have `normalized_text IS NULL`. The
-  edited row was nulled by the trigger. `message_count` is right.
+  installed as aliased dev dependencies. Each opens a version 6 file and is refused with the
+  "upgrade this tool" error, and the file is unchanged afterwards.
 - **Backfill.** It fills exactly the waiting rows, and it can be stopped after any batch and started
   again.
 
@@ -396,13 +394,9 @@ item 4 on the new migration runner.
 - The first new-build process that opens the file applies version 6 under `BEGIN IMMEDIATE`. The
   change is `ALTER TABLE … ADD`, the triggers, and possibly the `message_count` fill (item 6 decides
   by measurement). Other processes wait up to `busy_timeout`.
-- **Mixed versions on one file.** Say tg-cli is at 0.27 and max-cli at the new version, or the
-  reverse:
-  - the older build sees version 6 with `min_compatible` 1, and writes with its named-column
-    `INSERT`s;
-  - the new columns take their defaults or `NULL`;
-  - the triggers keep `message_count` and the stale-normalization mark right;
-  - `db migrate`, or phase 2's rebuild, fills what the old build left empty.
+- **Mixed versions on one file.** The first version-6 build to open the file upgrades it; from then on
+  the other CLI, if older, refuses the file and says to upgrade (D6). Nothing old writes to it again.
+
 - **Backup first.** `db migrate` offers `db backup` before a migration (§25 step 1). An automatic
   migration on open does not, because version 6 is additive and cannot lose data (inferred from the
   statements it contains).
@@ -434,17 +428,8 @@ kept.
 
 ## 9. Questions for the owner
 
-**Q1 · When an older tg or max build writes to a file that a newer build has upgraded, should we
-accept rows without a normalized copy and fill them later, or make old builds refuse the file?**
-- Now: `min_compatible` is 1. Every installed build can write to every upgraded file.
-- **A** Keep it that way. Triggers and the `db migrate` backfill repair what old builds leave out
-  (D6).
-- **B** Raise `min_compatible` to 6 at version 6. This is a major release of cli-messaging. Every
-  tg and max build older than it refuses the file until it is upgraded, so both CLIs must ship
-  together.
-- Recommendation: **A**. B makes two separately released CLIs a lock-step pair to protect a column
-  that can be derived.
-- If unanswered: A is built. B can still be chosen at any later version.
+**Q1 — answered 2026-09-30: B.** Version 6 raises `min_compatible` to 6; older builds refuse the file
+and ask to be upgraded; tg-cli and max-cli ship together (D6).
 
 **Q2 · Message search is by substring today (trigram, the owner's ruling in migration 5). Phase 2
 brings BM25 over words. Keep substring search next to it, or drop it?**
