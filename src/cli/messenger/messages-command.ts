@@ -13,6 +13,7 @@ import { downloadSubcommand } from "./download-command.js"
 import { editCommand } from "./messages-edit-command.js"
 import type { MessengerAdapter, Sent } from "./port.js"
 import { readAll } from "./stdin.js"
+import { transcribeSubcommand } from "./transcribe-command.js"
 
 /** `messages`: reading, and sending through the guard. A CLI may add its own subcommands. */
 export const messagesCommand = (messenger: Messenger): Command => {
@@ -167,6 +168,7 @@ export const messagesCommand = (messenger: Messenger): Command => {
     })
 
   downloadSubcommand(messages, messenger)
+  transcribeSubcommand(messages, messenger)
 
   messages.addCommand(editCommand(messenger))
   return messages
