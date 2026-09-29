@@ -6,6 +6,15 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- **`serviceCommand(messenger)` — `service install|uninstall|start|stop|status|logs`** runs `serve` as a
+  user service: a systemd user unit on Linux, a launchd agent on macOS, one per profile. `install` only
+  writes the file — nothing starts or enables it until `service start`, so serve never starts by itself. The unit runs the same
+  node binary and script that installed it, with the profile and the location variables
+  (`<PREFIX>_CONFIG_DIR`/`_STATE_DIR`/`_CACHE_DIR`, `MESSAGING_STORE`) of that shell, so a unit written
+  from a development checkout opens that checkout's files. `status` reads the unit and the serve lock.
+
 ## 0.29.1 — 29.09.2026
 
 ### Fixed

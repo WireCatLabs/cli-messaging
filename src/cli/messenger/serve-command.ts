@@ -12,10 +12,10 @@ interface Lock {
   startedAt: string
 }
 
-const lockPath = (app: AppIdentity, profile: string, env: NodeJS.ProcessEnv) =>
+export const lockPath = (app: AppIdentity, profile: string, env: NodeJS.ProcessEnv) =>
   join(resolvePaths({ appName: app.appName, prefix: app.envPrefix, env }).state, "serve", `${profile}.lock`)
 
-const readLock = (path: string): Lock | undefined => {
+export const readLock = (path: string): Lock | undefined => {
   try {
     const lock = JSON.parse(readFileSync(path, "utf8")) as Partial<Lock>
     return typeof lock.pid === "number" && typeof lock.startedAt === "string" ? (lock as Lock) : undefined
@@ -25,7 +25,7 @@ const readLock = (path: string): Lock | undefined => {
 }
 
 /** Signal 0 checks that the process exists without touching it. */
-const alive = (pid: number): boolean => {
+export const alive = (pid: number): boolean => {
   try {
     process.kill(pid, 0)
     return true

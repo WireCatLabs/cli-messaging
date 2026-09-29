@@ -26,6 +26,7 @@ export { type McpEnvironment, mcpCommand, serverEntry } from "./messenger/mcp-co
 export { messagesCommand } from "./messenger/messages-command.js"
 export type { MessengerAdapter, Sent } from "./messenger/port.js"
 export { serveCommand } from "./messenger/serve-command.js"
+export { type ServiceSystem, serviceCommand } from "./messenger/service-command.js"
 export { watchCommand } from "./messenger/watch-command.js"
 export { renderPage, window, withPaging } from "./paging.js"
 export {
