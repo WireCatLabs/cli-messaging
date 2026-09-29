@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.30.0 — 29.09.2026
+
 ### Added
 
 - **`backfill --background` runs a backfill as a job that outlives the command**, and `backfill list`,
