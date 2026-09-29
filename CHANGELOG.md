@@ -6,6 +6,12 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Changed
+
+- **Depends on `@leemour/cli-core` 0.8.0** (was 0.7.0), the version max-cli uses. With two versions a CLI
+  installed two copies, and `isCliError()` — an `instanceof` check — did not recognise an error made by
+  the other copy.
+
 Nothing in the package yet. The repository gained a coverage floor, `pnpm test:slow`,
 `pnpm docs:check` and developer docs, and `bin/release` takes the next free version itself.
 
