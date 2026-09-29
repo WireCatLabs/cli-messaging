@@ -1,4 +1,4 @@
-import { existsSync, mkdtempSync } from "node:fs"
+import { existsSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { captureStreams } from "@leemour/cli-core"
@@ -16,6 +16,7 @@ import { chatsCommand } from "./chats-command.js"
 import { completeCommand } from "./complete-command.js"
 import { contactsCommand } from "./contacts-command.js"
 import type { Messenger } from "./context.js"
+import { safeName } from "./download-command.js"
 import { recipientsCommand, sendsCommand } from "./guard-commands.js"
 import { type McpEnvironment, mcpCommand } from "./mcp-command.js"
 import { messagesCommand } from "./messages-command.js"
@@ -307,6 +308,82 @@ describe("the shared read commands", () => {
   it("keep the account file where tg-cli 0.x kept it", () => {
     const tg = { command: "tg", appName: "tg-cli", envPrefix: "TG", description: "", version: "0" }
     expect(accountFileFor(tg, "work", { TG_STATE_DIR: "/state" })).toBe("/state/accounts/work.json")
+  })
+})
+
+describe("messages download", () => {
+  const bytes = (text: string) =>
+    async function* () {
+      yield new TextEncoder().encode(text)
+    }
+  const withFiles: MessengerAdapter = {
+    ...fake,
+    download: async () => ({
+      files: [
+        { kind: "file", name: "../../.bashrc", mime: "text/plain", bytes: bytes("notes") },
+        { kind: "photo", bytes: bytes("jpeg") },
+      ],
+      skipped: ["poll"],
+    }),
+  }
+  const setup = () => {
+    const root = mkdtempSync(join(tmpdir(), "messenger-"))
+    return { root, env: { CHAT_STATE_DIR: join(root, "state"), MESSAGING_STORE: join(root, "m.db") } }
+  }
+
+  it("**saves every file into the folder under a safe name**, and answers paths and sizes", async () => {
+    const { root, env } = setup()
+    const into = join(root, "out")
+    const { code, stdout, stderr } = await call(
+      ["messages", "download", "Book", "1", "--output", into, "--json"],
+      async () => withFiles,
+      env,
+    )
+
+    expect(code).toBe(0)
+    expect(JSON.parse(stdout[0] ?? "").items).toEqual([
+      { kind: "file", path: join(into, "bashrc"), bytes: 5 },
+      { kind: "photo", path: join(into, "1-2.jpg"), bytes: 4 },
+    ])
+    expect(readFileSync(join(into, "bashrc"), "utf8")).toBe("notes")
+    expect(readdirSync(into).sort()).toEqual(["1-2.jpg", "bashrc"])
+    expect(stderr.join("")).toContain("poll")
+  })
+
+  it("**never overwrites a file already there**", async () => {
+    const { root, env } = setup()
+    writeFileSync(join(root, "bashrc"), "mine")
+    const { code, stderr } = await call(
+      ["messages", "download", "Book", "1", "--output", root],
+      async () => withFiles,
+      env,
+    )
+
+    expect(code).not.toBe(0)
+    expect(stderr.join("")).toContain("already exists")
+    expect(readFileSync(join(root, "bashrc"), "utf8")).toBe("mine")
+    expect(readdirSync(root).filter((name) => name.endsWith(".part"))).toEqual([])
+  })
+
+  it("refuses a message with no file, and a messenger that cannot download", async () => {
+    const { env } = setup()
+    const empty = await call(
+      ["messages", "download", "Book", "1"],
+      async () => ({ ...fake, download: async () => ({ files: [], skipped: [] }) }),
+      env,
+    )
+    const unable = await call(["messages", "download", "Book", "1"], async () => fake, env)
+
+    expect(empty.stderr.join("")).toContain("no file to download")
+    expect(unable.stderr.join("")).toContain("cannot download attachments")
+  })
+
+  it("strips what could climb out of the folder, hide the file or disguise its extension", () => {
+    expect(safeName("../../etc/passwd")).toBe("passwd")
+    expect(safeName("..\\evil.exe")).toBe("evil.exe")
+    expect(safeName(".hidden")).toBe("hidden")
+    expect(safeName("invoice\u202Efdp.exe")).toBe("invoicefdp.exe")
+    expect(safeName("..")).toBeUndefined()
   })
 })
 
