@@ -423,7 +423,9 @@ Not in phase 1. Recorded so that phase 1 does not block it.
 Every row is an additive migration. Nothing in versions 1–6 conflicts. Message ids are unique per
 chat, which MAX satisfies. Every row has `account_pk`, which lets `cache clear` forget one profile.
 The ~83 synchronous uses in max-cli (`src/resolve.ts`, `src/client.ts`, completion) become `await`
-in that phase. The copy from `<profile>.db` is §25's procedure: batches, counts checked, old file
+in that phase. **Correction 2026-09-29:** there is no copy — the owner ruled that personal profiles start fresh in
+`messages.db` and the old `<profile>.db` files are no longer read (max-cli `DECISIONS.md`, "One store";
+NEED-383 put the move on Drizzle, after this phase). Was: the copy from `<profile>.db` is §25's procedure: batches, counts checked, old file
 kept.
 
 ## 9. Questions for the owner
