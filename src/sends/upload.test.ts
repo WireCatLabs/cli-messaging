@@ -36,10 +36,11 @@ describe("readUpload", () => {
     const link = join(root, "innocent.txt")
     symlinkSync(key, link)
 
-    for (const path of [key, put("state/session"), put("store/m.db"), link]) {
+    for (const path of [key, put("state/session"), put("store/m.db"), put("store/m.db-wal"), link]) {
       await expect(readUpload("file", path, { app, env })).rejects.toThrow(/--allow-any-file/)
     }
     expect(await readUpload("file", key, { app, env, anyFile: true })).toMatchObject({ name: "id_ed25519" })
+    expect(await readUpload("file", put("store/report.pdf"), { app, env })).toMatchObject({ name: "report.pdf" })
   })
 
   it("says what is wrong with a path that is not a readable file", async () => {
