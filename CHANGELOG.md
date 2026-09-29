@@ -8,12 +8,22 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Added
 
+- **`backfill --background` runs a backfill as a job that outlives the command**, and `backfill list`,
+  `backfill status [job]` and `backfill cancel <job>` follow it. A job is a detached process with a
+  record and a log under the state folder (`backfill/<job>.json`, `.log`); the record holds its progress
+  after every page and how it ended, and `status` adds the stretches the store now holds of the chat.
+  One job per chat at a time. The job gets the profile pinned and none of the shell's `<PREFIX>_TIMEOUT`.
 - **`serviceCommand(messenger)` — `service install|uninstall|start|stop|status|logs`** runs `serve` as a
   user service: a systemd user unit on Linux, a launchd agent on macOS, one per profile. `install` only
   writes the file — nothing starts or enables it until `service start`, so serve never starts by itself. The unit runs the same
   node binary and script that installed it, with the profile and the location variables
   (`<PREFIX>_CONFIG_DIR`/`_STATE_DIR`/`_CACHE_DIR`, `MESSAGING_STORE`) of that shell, so a unit written
   from a development checkout opens that checkout's files. `status` reads the unit and the serve lock.
+
+### Fixed
+
+- **`backfill` stops cleanly on Ctrl-C or SIGTERM** — which `backfill cancel` sends — after the page in
+  hand, keeps it, and answers `"stopped": true`. It was killed mid-page before.
 
 ## 0.29.1 — 29.09.2026
 
