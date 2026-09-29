@@ -2,6 +2,7 @@ import { CliError } from "@leemour/cli-core"
 import { annotate } from "@leemour/cli-core/commands"
 import { Command } from "commander"
 import { isLocator, parseLocator } from "../../domain/locator.js"
+import { parseMarkdown } from "../../domain/markdown.js"
 import { renderMessages } from "../../render/messages.js"
 import { pickChat } from "../../resolve.js"
 import type { SendGuard } from "../../sends/guard.js"
@@ -123,6 +124,9 @@ export const messagesCommand = (messenger: Messenger): Command => {
     .argument("<chat>", messenger.chatArgument)
     .argument("[text]", "the message")
     .option("--send-id <id>", "repeat a send whose outcome was unknown, without risking a second copy")
+    .option("--silent", "deliver without a notification")
+    .option("--no-preview", "no preview card for a link in the text")
+    .option("--md, --markdown", "read **bold**, _italic_, ~~struck~~ and `code` in the text; \\ keeps a mark literal")
     .action(async function (this: Command, chat: string, text: string | undefined) {
       await sendText(this, messenger, chat, text, undefined)
     })
@@ -177,7 +181,12 @@ const sendText = async (
   replyTo: string | undefined,
 ) => {
   const context = messengerContext(command, messenger)
-  const { sendId } = command.opts<{ sendId?: string }>()
+  const { sendId, silent, preview, markdown } = command.opts<{
+    sendId?: string
+    silent?: boolean
+    preview?: boolean
+    markdown?: boolean
+  }>()
   const body = text ?? (await readAll(context.stdin))
   if (body.trim() === "") throw new CliError("validation_error", "nothing to send — give the text or pipe it in")
   const sent = await context.withMessenger((connection) =>
@@ -186,6 +195,9 @@ const sendText = async (
       text: body,
       ...(sendId === undefined ? {} : { sendId }),
       ...(replyTo === undefined ? {} : { replyTo }),
+      ...(silent === true ? { silent } : {}),
+      ...(preview === false ? { noPreview: true } : {}),
+      ...(markdown === true ? { markdown } : {}),
     }),
   )
   context.renderer.result({ sendId: sent.sendId, message: sent.message })
@@ -195,8 +207,10 @@ const sendText = async (
 export const guardedSend = async (
   guard: SendGuard,
   connection: MessengerAdapter,
-  { chat, text, sendId, replyTo }: { chat: string; text: string; sendId?: string; replyTo?: string },
+  { chat, text: typed, sendId, replyTo, silent, noPreview, markdown }: GuardedSend,
 ): Promise<Sent> => {
+  const { text, markup } = markdown ? parseMarkdown(typed) : { text: typed, markup: [] }
+  if (text.trim() === "") throw new CliError("validation_error", "nothing to send — the marks leave no text")
   const { id: chatId } = await connection.resolve(chat)
   const attempt = {
     chatId,
@@ -215,6 +229,9 @@ export const guardedSend = async (
     const done = await connection.send(chatId, text, {
       sendId: attempt.sendId,
       ...(replyTo === undefined ? {} : { replyTo }),
+      ...(silent ? { silent } : {}),
+      ...(noPreview ? { noPreview } : {}),
+      ...(markup.length > 0 ? { markup } : {}),
     })
     guard.record({ ...attempt, outcome: "sent", messageId: done.message.id })
     return done
@@ -223,6 +240,17 @@ export const guardedSend = async (
     guard.record({ ...attempt, outcome: code === "outcome_unknown" ? "outcome_unknown" : "failed", errorCode: code })
     throw error
   }
+}
+
+interface GuardedSend {
+  chat: string
+  /** As typed: with `markdown`, the marks are taken out before it is sent or measured. */
+  text: string
+  sendId?: string
+  replyTo?: string
+  silent?: boolean
+  noPreview?: boolean
+  markdown?: boolean
 }
 
 const codeOf = (error: unknown): string =>

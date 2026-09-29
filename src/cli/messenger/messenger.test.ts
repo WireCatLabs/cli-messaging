@@ -20,7 +20,7 @@ import { safeName } from "./download-command.js"
 import { recipientsCommand, sendsCommand } from "./guard-commands.js"
 import { type McpEnvironment, mcpCommand } from "./mcp-command.js"
 import { messagesCommand } from "./messages-command.js"
-import type { MessengerAdapter } from "./port.js"
+import type { MessengerAdapter, SendOptions } from "./port.js"
 
 const app = {
   command: "chat",
@@ -237,6 +237,34 @@ describe("the shared read commands", () => {
       ["sent", undefined],
     ])
     expect(JSON.stringify(journal)).not.toContain("see you there")
+  })
+
+  it("**send silently, without a preview, as Markdown** — and journal neither the text nor the marks", async () => {
+    const root = mkdtempSync(join(tmpdir(), "messenger-"))
+    const env = { CHAT_STATE_DIR: join(root, "state"), CHAT_CONFIG_DIR: join(root, "config") }
+    const sent: SendOptions[] = []
+    const texts: string[] = []
+    const recording: MessengerAdapter = {
+      ...fake,
+      send: async (_chatId, text, options) => {
+        texts.push(text)
+        sent.push(options)
+        return { message: { ...message, text }, sendId: options.sendId }
+      },
+    }
+
+    const argv = ["messages", "send", "Book", "**secret** plan", "--silent", "--no-preview", "--md"]
+    expect((await call(argv, async () => recording, env)).code).toBe(0)
+    expect((await call(["messages", "send", "Book", "**as typed**"], async () => recording, env)).code).toBe(0)
+
+    expect(texts).toEqual(["secret plan", "**as typed**"])
+    expect(sent[0]).toMatchObject({ silent: true, noPreview: true, markup: [{ type: "bold", from: 0, length: 6 }] })
+    expect(sent[1]).not.toHaveProperty("silent")
+    expect(sent[1]).not.toHaveProperty("noPreview")
+    expect(sent[1]).not.toHaveProperty("markup")
+    const journal = JSON.stringify(new SendJournal(sendsPathFor(app, "default", env)).entries())
+    expect(journal).not.toContain("secret")
+    expect(journal).not.toContain("bold")
   })
 
   it("describe themselves for an agent, with the contract version and which ones write", async () => {

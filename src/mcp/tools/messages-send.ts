@@ -23,6 +23,11 @@ export const messageSendTools = (messenger: Messenger): Record<string, AnyTool> 
         text: v.pipe(v.string(), v.minLength(1)),
         reply_to: v.optional(v.pipe(message, v.description("the message this answers, in the same chat"))),
         send_id: v.optional(v.pipe(v.string(), v.minLength(1), v.description("from an earlier outcome_unknown"))),
+        silent: v.optional(v.pipe(v.boolean(), v.description("deliver without a notification"))),
+        no_preview: v.optional(v.pipe(v.boolean(), v.description("no preview card for a link in the text"))),
+        markdown: v.optional(
+          v.pipe(v.boolean(), v.description("read **bold**, _italic_, ~~struck~~ and `code`; \\ keeps a mark literal")),
+        ),
       }),
       annotations: WRITE,
       _meta: APPROVE,
@@ -33,6 +38,9 @@ export const messageSendTools = (messenger: Messenger): Record<string, AnyTool> 
           text: args.text,
           ...(args.send_id === undefined ? {} : { sendId: args.send_id }),
           ...(args.reply_to === undefined ? {} : { replyTo: args.reply_to }),
+          ...(args.silent === true ? { silent: true } : {}),
+          ...(args.no_preview === true ? { noPreview: true } : {}),
+          ...(args.markdown === true ? { markdown: true } : {}),
         })
         return { sendId: sent.sendId, message: sent.message }
       },

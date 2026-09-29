@@ -1,5 +1,6 @@
 export type { Capabilities } from "./domain/capabilities.js"
 export { formatLocator, isLocator, type MessageLocator, parseLocator } from "./domain/locator.js"
+export { type Markup, parseMarkdown } from "./domain/markdown.js"
 export type * from "./domain/models.js"
 export { type OutputOptions, resolveOutput } from "./output.js"
 export { type RenderOptions, renderMessage, renderMessages } from "./render/messages.js"
