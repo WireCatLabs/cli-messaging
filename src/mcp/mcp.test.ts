@@ -201,6 +201,7 @@ describe("the MCP server", () => {
 
     expect(tools.map((one) => one.name).sort()).toEqual([
       "chat_account_show",
+      "chat_chats_events",
       "chat_chats_list",
       "chat_chats_show",
       "chat_contacts_list",

@@ -204,6 +204,28 @@ export interface Review {
   unanswered?: { olderThanHours: number }
 }
 
+/** One change to who is in a chat, or to the chat itself, read from a service message. */
+export interface ChatEvent {
+  messageId: Id
+  /** ISO 8601. */
+  timestamp: string
+  /** `join`, `leave`, `add`, `remove`, `create`, `title` or `pin`; a messenger may pass others through. */
+  event: string
+  by: { id: Id | null; name: string | null }
+  people: { id: Id; name: string | null }[]
+  /** `create` and `title` carry the chat's title. */
+  title?: string
+}
+
+export interface ChatEvents {
+  chatId: Id
+  since: string
+  /** Oldest first. */
+  events: ChatEvent[]
+  /** More history than one run reads; the newest are here. */
+  more: boolean
+}
+
 export interface Contact {
   id: Id
   name: string | null

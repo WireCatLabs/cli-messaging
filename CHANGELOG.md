@@ -6,6 +6,14 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- **`chats events <chat> [--since] [--event join,leave,…]`**, max-cli's, and the `chats_events` tool:
+  who joined, left, was added or removed, and by whom — plus `create`, `title` and `pin` — from the
+  chat's service messages, oldest first, seven days back without `--since`. A messenger offers it
+  with the optional `chatEvents` (types `ChatEvent`, `ChatEvents`); `more` says one run did not reach
+  back to `--since`.
+
 ## 0.40.0 — 29.09.2026
 
 ### Changed — may break callers

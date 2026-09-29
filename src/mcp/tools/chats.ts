@@ -1,5 +1,11 @@
 import * as v from "valibot"
-import { CHAT_SCAN, checkedFilter, filteredChats } from "../../cli/messenger/chats-command.js"
+import {
+  CHAT_SCAN,
+  chatEventsOf,
+  checkedFilter,
+  EVENTS_DAYS,
+  filteredChats,
+} from "../../cli/messenger/chats-command.js"
 import type { Messenger } from "../../cli/messenger/context.js"
 import { type AnyTool, chatOf, envelope, limit, page, paging, READ, tool } from "../tool.js"
 
@@ -28,6 +34,27 @@ export const chatsTools = (messenger: Messenger): Record<string, AnyTool> => {
         const found = await filteredChats({ adapter }, checkedFilter({ search, kind, unread }), window)
         return { ...envelope(found, number, size), ...(found.partial ? { partial: true } : {}) }
       },
+    }),
+
+    chats_events: tool({
+      title: "Who joined or left a chat",
+      description:
+        "A chat's service messages since `since`: who joined, left, was added or removed, and by whom, oldest " +
+        `first — event is join, leave, add, remove, create, title or pin. ${EVENTS_DAYS} days back if not given. ` +
+        "Returns { chatId, since, events: [{ messageId, timestamp, event, by, people, title? }], more }.",
+      input: v.object({
+        chat,
+        since: v.optional(v.pipe(v.string(), v.description("an ISO 8601 time, or 2h / 1d ago"))),
+        event: v.optional(v.pipe(v.string(), v.description("only these events, comma-separated"))),
+      }),
+      annotations: READ,
+      online: (adapter, args) =>
+        chatEventsOf(
+          adapter,
+          args.chat,
+          { ...(args.since === undefined ? {} : { since: args.since }), ...(args.event ? { only: args.event } : {}) },
+          "since",
+        ),
     }),
 
     chats_show: tool({

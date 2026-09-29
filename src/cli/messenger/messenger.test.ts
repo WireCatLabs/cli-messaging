@@ -677,6 +677,36 @@ describe("the guard, account and mcp config commands", () => {
     expect([unable.code, unable.stderr.join("\n")]).toEqual([2, expect.stringContaining("read forward")])
   })
 
+  it("**chats events** asks from 7 days back, keeps the --event names, and says when it was cut short", async () => {
+    const env = sandbox()
+    const asked: number[] = []
+    const events: MessengerAdapter = {
+      ...fake,
+      chatEvents: async (_chat, { since }) => {
+        asked.push(since)
+        return {
+          chatId: "7",
+          since: new Date(since).toISOString(),
+          more: true,
+          events: [
+            { messageId: "1", timestamp: message.timestamp, event: "join", by: { id: "9", name: "Olga" }, people: [] },
+            { messageId: "2", timestamp: message.timestamp, event: "pin", by: { id: "9", name: "Olga" }, people: [] },
+          ],
+        }
+      },
+    }
+    const online = async () => events
+
+    const all = await call(["chats", "events", "7", "--json"], online, env)
+    const joins = await call(["chats", "events", "7", "--event", "join, add", "--since", "1d", "--jsonl"], online, env)
+
+    expect(Date.now() - (asked[0] ?? 0)).toBeGreaterThanOrEqual(7 * 86_400_000 - 5000)
+    expect(json(all.stdout).events).toHaveLength(2)
+    expect(joins.stdout.map((line) => JSON.parse(line).event)).toEqual(["join"])
+    expect(joins.stderr.join("\n")).toContain("more history")
+    expect((await call(["chats", "events", "7"], async () => fake, env)).code).toBe(2)
+  })
+
   it("refuses a --search under 3 characters and an unknown --kind, before connecting", async () => {
     const env = sandbox()
     const never = async (): Promise<MessengerAdapter> => {
