@@ -14,22 +14,22 @@ import type { MessengerAdapter } from "./port.js"
  */
 export const INBOX_CHATS = 20
 /** The newest dialogs looked at. Walking every dialog hit FLOOD_WAIT once (tg handoff §4.14). */
-const CHAT_WINDOW = 100
+export const CHAT_WINDOW = 100
 const FIRST_LOOK_MS = 24 * 60 * 60 * 1000
 
-const byRecency = (chats: Chat[]): Chat[] =>
+export const byRecency = (chats: Chat[]): Chat[] =>
   chats.toSorted((a, b) => Date.parse(b.lastMessageAt ?? "") - Date.parse(a.lastMessageAt ?? ""))
 
 /** Muted or archived, and nothing in it mentions the owner or replies to them. */
 const isQuiet = (chat: Chat): boolean =>
   (chat.muted === true || chat.archived === true) && (chat.unreadMentions ?? 0) === 0
 
-const heard = (chats: Chat[], all: boolean) =>
+export const heard = (chats: Chat[], all: boolean) =>
   all
     ? { heard: chats, quiet: 0 }
     : { heard: chats.filter((chat) => !isQuiet(chat)), quiet: chats.filter(isQuiet).length }
 
-const capped = (chats: Chat[], most: number) => ({
+export const capped = (chats: Chat[], most: number) => ({
   read: chats.slice(0, most),
   skipped: chats.slice(most).map(({ id, title, lastMessageAt }) => ({ id, title, lastMessageAt })),
 })

@@ -179,6 +179,31 @@ export interface Inbox {
   quiet: number
 }
 
+/** One chat's share of `review`: both sides, oldest first, from `since` to `until`. */
+export interface ReviewChat extends Pick<Chat, "id" | "title" | "kind"> {
+  messages: Message[]
+  /** The chat had more in the window than one review reads; the newest are here. */
+  more: boolean
+  /** `--unanswered` only: whose words count as an answer. `owner` where the messenger did not say who the admins are. */
+  answeredBy?: "owner" | "owner-and-admins"
+}
+
+/** `review`: everything said since a point, for someone sorting out who owes what. */
+export interface Review {
+  /** ISO 8601. `until` is where the next review starts. */
+  since: string
+  until: string
+  /** Nothing skipped or cut short: the next review may start at `until`. */
+  complete: boolean
+  chats: ReviewChat[]
+  skipped: Pick<Chat, "id" | "title" | "lastMessageAt">[]
+  partial: boolean
+  /** Muted or archived chats that changed, left out because nothing in them is for the owner. */
+  quiet: number
+  /** `--unanswered`: only questions still open after this many hours are in `chats`. */
+  unanswered?: { olderThanHours: number }
+}
+
 export interface Contact {
   id: Id
   name: string | null

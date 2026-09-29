@@ -211,6 +211,7 @@ describe("the MCP server", () => {
       "chat_messages_photo",
       "chat_messages_search",
       "chat_messages_transcribe",
+      "chat_review",
       "chat_status",
     ])
     expect(tools.every((one) => one.annotations?.readOnlyHint === true)).toBe(true)
@@ -560,7 +561,12 @@ describe("MCP prompts and resources", () => {
     const telegram = scripted()
     const { client } = await connect(telegram)
 
-    expect((await client.listPrompts()).prompts.map((one) => one.name).sort()).toEqual(["catch-up", "find", "reply"])
+    expect((await client.listPrompts()).prompts.map((one) => one.name).sort()).toEqual([
+      "catch-up",
+      "find",
+      "reply",
+      "review",
+    ])
     const { messages } = await client.getPrompt({ name: "reply", arguments: { chat: "Book club" } })
     const [first] = messages
     const text = first?.content.type === "text" ? first.content.text : ""
