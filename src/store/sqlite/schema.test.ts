@@ -65,7 +65,9 @@ describe("the Drizzle schema", () => {
     const migrated = await open()
     migrate(migrated)
     const baseline = await open()
+    baseline.exec("BEGIN")
     for (const statement of baselineStatements()) baseline.exec(statement)
+    baseline.exec("COMMIT")
 
     expect(shape(baseline)).toEqual(shape(migrated))
   })
