@@ -6,6 +6,15 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- **`messages edit <chat> <message> [text]`** changes the text of the owner's own message, and
+  `--allow-send` adds its MCP tool `<cli>_messages_edit`. Both go through the send guard as an `edit`:
+  the profile's `allow`, the recipient list, the hourly limit, and a journal line without the text.
+  An adapter offers it with the optional `edit`; without it the command says the messenger cannot edit.
+- **`guardedWrite`** (`./sends`): check, act, then record on every outcome — the shape of a write
+  that is not a message send.
+
 ## 0.32.0 — 29.09.2026
 
 ### Added

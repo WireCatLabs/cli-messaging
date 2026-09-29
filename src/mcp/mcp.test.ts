@@ -397,6 +397,26 @@ describe("sending over MCP", () => {
     expect(sent).toEqual([])
   })
 
+  it("edits the owner's message through the guard, as an edit, without the text in the journal", async () => {
+    const edits: string[][] = []
+    const telegram = scripted({
+      edit: async (chatId, messageId, text) => {
+        edits.push([chatId, messageId, text])
+        return { ...message, id: messageId, text }
+      },
+    })
+    const { call, env } = await connect(telegram, { allowSend: true })
+
+    const { isError, body } = await call("chat_messages_edit", { chat: "Book club", message: "1", text: "fixed" })
+
+    expect(isError).toBe(false)
+    expect(body.message).toMatchObject({ id: "1", text: "fixed" })
+    expect(edits).toEqual([["7", "1", "fixed"]])
+    const entries = new SendJournal(sendsPathFor(app, "default", env)).entries()
+    expect(entries.at(-1)).toMatchObject({ kind: "edit", outcome: "sent", messageId: "1", length: 5 })
+    expect(JSON.stringify(entries)).not.toContain("fixed")
+  })
+
   it("does not offer a tool the profile's allow list leaves out, whatever the flags", async () => {
     const { client, call } = await connect(scripted(), {
       allowSend: true,
