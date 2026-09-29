@@ -208,6 +208,7 @@ describe("the MCP server", () => {
       "chat_inbox",
       "chat_messages_context",
       "chat_messages_list",
+      "chat_messages_photo",
       "chat_messages_search",
       "chat_status",
     ])
@@ -336,6 +337,59 @@ describe("the MCP server", () => {
       permitted: ["send"],
     })
     expect(text.length).toBeLessThanOrEqual(2048)
+  })
+})
+
+describe("the photo tool", () => {
+  const jpeg = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3])
+  const holding = (...files: { kind: string; size?: number; body?: Uint8Array }[]) =>
+    scripted({
+      download: async () => ({
+        files: files.map(({ kind, size, body = jpeg }) => ({
+          kind,
+          ...(size === undefined ? {} : { size }),
+          async *bytes() {
+            yield body
+          },
+        })),
+        skipped: [],
+      }),
+    })
+  const look = async (telegram: Scripted) => {
+    const { client } = await connect(telegram)
+    const result = await client.callTool({
+      name: "chat_messages_photo",
+      arguments: { chat: "Book club", message: "1" },
+    })
+    return { isError: result.isError === true, content: result.content as unknown as Record<string, string>[] }
+  }
+
+  it("**answers a photo as an image**, with what it is as text", async () => {
+    const { isError, content } = await look(holding({ kind: "photo" }))
+
+    expect(isError).toBe(false)
+    expect(content[0]).toEqual({ type: "image", mimeType: "image/jpeg", data: Buffer.from(jpeg).toString("base64") })
+    expect(JSON.parse(content[1]?.text ?? "")).toEqual({ chat: "Book club", messageId: "1", bytes: jpeg.length })
+  })
+
+  it("refuses anything else with the command that saves it", async () => {
+    const voice = await look(holding({ kind: "voice" }))
+    const large = await look(holding({ kind: "photo", size: 600 * 1024 }))
+    const unsized = await look(holding({ kind: "photo", body: new Uint8Array(600 * 1024).fill(0xff) }))
+    const unknown = await look(holding({ kind: "photo", body: new Uint8Array([1, 2, 3, 4]) }))
+
+    for (const refused of [voice, large, unsized, unknown]) {
+      expect(refused.isError).toBe(true)
+      expect(refused.content[0]?.text).toContain("chat messages download Book club 1")
+    }
+  })
+
+  it("refuses a message with no photo, and a messenger that cannot download", async () => {
+    const none = await look(holding())
+    const unable = await look(scripted())
+
+    expect(JSON.parse(none.content[0]?.text ?? "").error.code).toBe("not_found")
+    expect(unable.content[0]?.text).toContain("cannot download attachments")
   })
 })
 

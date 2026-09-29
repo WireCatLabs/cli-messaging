@@ -6,6 +6,13 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- **The MCP photo tool, `<cli>_messages_photo`**, answers a message's photo as image content, up to
+  512 KB, with the chat, message id and size as text. A larger photo, a file, a video or a voice
+  message is refused with the `messages download` command that saves it. A tool answer may now be a
+  `Picture` rather than JSON.
+
 ## 0.34.0 — 29.09.2026
 
 ### Added

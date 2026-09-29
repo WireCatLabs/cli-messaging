@@ -6,6 +6,7 @@ import { contactsTools } from "./tools/contacts.js"
 import { inboxTools } from "./tools/inbox.js"
 import { messagesTools } from "./tools/messages.js"
 import { messageActionTools } from "./tools/messages-actions.js"
+import { messagesPhotoTools } from "./tools/messages-photo.js"
 import { messageSendTools } from "./tools/messages-send.js"
 
 /**
@@ -18,6 +19,7 @@ export const readTools = (messenger: Messenger): Record<string, AnyTool> => ({
   ...chatsTools(messenger),
   ...contactsTools(messenger),
   ...messagesTools(messenger),
+  ...messagesPhotoTools(messenger),
 })
 
 /** Offered only with `--allow-send`. */
