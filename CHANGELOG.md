@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.43.0 — 29.09.2026
+
 ### Added
 
 - **`server status` says when the running `serve` is older than the CLI** — "It runs tg 0.8.0, and tg
