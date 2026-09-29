@@ -8,11 +8,11 @@ import { CliError, resolvePaths } from "@leemour/cli-core"
 import { type ModelFile, type SpeechModel, VAD } from "./models.js"
 
 /**
- * One folder for every messenger CLI, so a model downloaded for one serves them all — hundreds of MB
- * each. `MESSAGING_CACHE_DIR` moves it, as `MESSAGING_STORE` moves the store.
+ * `~/.cache/cli-common`: one folder for what every CLI of the family shares, whatever it talks to — a
+ * model is hundreds of MB and is downloaded once. `CLI_COMMON_CACHE_DIR` moves it.
  */
 export const modelsDirectory = (env: NodeJS.ProcessEnv = process.env): string =>
-  join(resolvePaths({ appName: "cli-messaging", prefix: "MESSAGING", env }).cache, "models", "audio")
+  join(resolvePaths({ appName: "cli-common", prefix: "CLI_COMMON", env }).cache, "models", "audio")
 
 /** No byte for this long and the download is given up — however large the file, it is moving or not. */
 const STALL_MS = 60_000

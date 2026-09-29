@@ -35,7 +35,7 @@ const call = async (argv: string[], speechModels?: string[], tty = false) => {
   const env = {
     CHAT_STATE_DIR: join(root, "state"),
     CHAT_CONFIG_DIR: join(root, "config"),
-    MESSAGING_CACHE_DIR: join(root, "cache"),
+    CLI_COMMON_CACHE_DIR: join(root, "cache"),
   }
   const messenger: Messenger = {
     app,

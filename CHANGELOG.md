@@ -6,6 +6,12 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Changed — may break callers
+
+- **Speech models move to `~/.cache/cli-common/models/audio`**, a folder named for the whole family of
+  CLIs rather than for this package, and `CLI_COMMON_CACHE_DIR` moves it (was `MESSAGING_CACHE_DIR`).
+  A model downloaded into `~/.cache/cli-messaging/models/audio` is not found there: move the folder.
+
 ### Added
 
 - **`chats members list <chat>`**, max-cli's, and the `chats_members` tool: everyone in a group, paged
