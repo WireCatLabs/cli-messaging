@@ -66,8 +66,9 @@ racing is safe: `bin/release` refuses a version already on npm, and the second r
 and retries. To try an unreleased cli-messaging in tg first: `bin/try-messaging` in the lane's tg
 worktree, never a committed `file:` path.
 
-**Store migrations are announced here before they are written.** The next free number is **6**
-(4 is `account_identities`, cli-messaging #48; 5 is message text back to trigram, #55 — taken
+**Store migrations are announced here before they are written.** The next free number is **7**
+(6 is the storage work's phase 1 — Drizzle and the forced upgrade, [`../storage/plans/phase-1.md`](../storage/plans/phase-1.md),
+announced 2026-09-29; 4 is `account_identities`, cli-messaging #48; 5 is message text back to trigram, #55 — taken
 without an announcement first, corrected here; both 2026-09-29). Take it by editing this line in a PR of
 its own, merged before the migration. L1 `chats events` or members, and L7, are the likely takers.
 
