@@ -44,6 +44,11 @@ export const messagesCommand = (messenger: Messenger): Command => {
         if (page.hasMore) context.renderer.note(`older messages: --before ${page.items[0]?.id}`)
         return
       }
+      if (context.format === "jsonl") {
+        context.renderer.stream(page.items)
+        if (page.hasMore) context.renderer.note(`older messages: --before ${page.items[0]?.id}`)
+        return
+      }
       context.renderer.result({ items: page.items, limit, hasMore: page.hasMore })
     })
 
@@ -106,7 +111,8 @@ export const messagesCommand = (messenger: Messenger): Command => {
           context.renderer.note("nothing found — only what is in the local store is searched")
         return
       }
-      context.renderer.result({ items: page.items, limit, hasMore: page.hasMore })
+      if (context.format === "jsonl") context.renderer.stream(page.items)
+      else context.renderer.result({ items: page.items, limit, hasMore: page.hasMore })
     })
 
   annotate(messages.command("send"), { mutates: true })
