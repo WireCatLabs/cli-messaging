@@ -641,6 +641,28 @@ describe("sending over MCP", () => {
     ])
   })
 
+  it("**offers chats_read only with --allow-mark-read**, which --allow-send does not imply", async () => {
+    const marks: unknown[] = []
+    const telegram = scripted({
+      markRead: async (chatId, until) => {
+        marks.push([chatId, until])
+      },
+    })
+    const sending = (await (await connect(telegram, { allowSend: true })).client.listTools()).tools.map(
+      (one) => one.name,
+    )
+    const { client, call } = await connect(telegram, { allowMarkRead: true })
+
+    const tools = (await client.listTools()).tools.map((one) => one.name)
+    const { body } = await call("chat_chats_read", { chat: "Book", until: "1" })
+
+    expect(sending).not.toContain("chat_chats_read")
+    expect(tools).toContain("chat_chats_read")
+    expect(tools).not.toContain("chat_messages_send")
+    expect(body).toEqual({ chatId: "7", until: "1" })
+    expect(marks).toEqual([["7", "1"]])
+  })
+
   it("does not offer a tool the profile's allow list leaves out, whatever the flags", async () => {
     const { client, call } = await connect(scripted(), {
       allowSend: true,

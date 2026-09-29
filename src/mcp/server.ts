@@ -11,11 +11,12 @@ import { registerPrompts } from "./prompts.js"
 import { registerResources } from "./resources.js"
 import { MessengerSession, type SessionOptions } from "./session.js"
 import { answered, failed, READ, registerTools } from "./tool.js"
-import { readTools, sendTools } from "./tools.js"
+import { markReadTools, readTools, sendTools } from "./tools.js"
 
 export interface ServerOptions extends SessionOptions {
   allowSend: boolean
   confirmSend?: boolean
+  allowMarkRead?: boolean
 }
 
 /**
@@ -27,7 +28,7 @@ export const createServer = (
   command: Command,
   context: MessengerContext,
   messenger: Messenger,
-  { allowSend, confirmSend = false, ...sessionOptions }: ServerOptions,
+  { allowSend, confirmSend = false, allowMarkRead = false, ...sessionOptions }: ServerOptions,
 ) => {
   const { app, provider } = messenger
   const name = messenger.name ?? app.command
@@ -35,9 +36,10 @@ export const createServer = (
   const permitted = settings.allow
   // `allow` hides what the guard would refuse anyway, so an agent is not offered a tool that cannot work.
   const writes = Object.fromEntries(
-    Object.entries(allowSend ? sendTools(messenger) : {}).filter(
-      ([, one]) => !permitted || (one.permission !== undefined && permitted.includes(one.permission)),
-    ),
+    Object.entries({
+      ...(allowSend ? sendTools(messenger) : {}),
+      ...(allowMarkRead ? markReadTools(messenger) : {}),
+    }).filter(([, one]) => !permitted || (one.permission !== undefined && permitted.includes(one.permission))),
   )
   const confirmed = confirmSend ? confirmer() : undefined
   const session = new MessengerSession(
@@ -56,6 +58,7 @@ export const createServer = (
           profile: settings.profile,
           allowSend,
           confirmSend,
+          allowMarkRead,
           permitted,
         }),
       },

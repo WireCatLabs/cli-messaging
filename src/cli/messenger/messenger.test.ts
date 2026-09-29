@@ -486,6 +486,33 @@ describe("the shared read commands", () => {
     ])
   })
 
+  it("**mark a chat read, to its newest message or --until one**, journaled as a read", async () => {
+    const root = mkdtempSync(join(tmpdir(), "messenger-"))
+    const env = { CHAT_STATE_DIR: join(root, "state"), CHAT_CONFIG_DIR: join(root, "config") }
+    const marks: unknown[] = []
+    const reading: MessengerAdapter = {
+      ...fake,
+      markRead: async (chatId, until) => {
+        marks.push([chatId, until])
+      },
+    }
+
+    const all = await call(["chats", "read", "Book", "--json"], async () => reading, env)
+    const some = await call(["chats", "read", "Book", "--until", "3", "--json"], async () => reading, env)
+
+    expect(JSON.parse(all.stdout[0] ?? "")).toEqual({ chatId: "7", until: null })
+    expect(JSON.parse(some.stdout[0] ?? "")).toEqual({ chatId: "7", until: "3" })
+    expect(marks).toEqual([
+      ["7", undefined],
+      ["7", "3"],
+    ])
+    const journal = new SendJournal(sendsPathFor(app, "default", env)).entries()
+    expect(journal.map((entry) => [entry.kind, entry.messageId])).toEqual([
+      ["read", undefined],
+      ["read", "3"],
+    ])
+  })
+
   it("describe themselves for an agent, with the contract version and which ones write", async () => {
     const root = mkdtempSync(join(tmpdir(), "messenger-"))
     const { stdout } = await call(["commands", "--json"], async () => fake, { CHAT_STATE_DIR: root })
@@ -760,7 +787,7 @@ describe("the guard, account and mcp config commands", () => {
     const env = sandbox()
     const mcp = { execPath: "/home/o/.nvm/versions/node/v24/bin/node", scriptPath: "/usr/lib/chat/bin/chat.js" }
     const { code, stdout, stderr } = await call(
-      ["work", "mcp", "config", "--allow-send", "--json"],
+      ["work", "mcp", "config", "--allow-send", "--allow-mark-read", "--json"],
       async () => fake,
       env,
       {
@@ -771,7 +798,7 @@ describe("the guard, account and mcp config commands", () => {
     expect(code).toBe(0)
     expect(json(stdout).mcpServers["chat-work"]).toMatchObject({
       command: mcp.execPath,
-      args: [mcp.scriptPath, "work", "mcp", "--allow-send"],
+      args: [mcp.scriptPath, "work", "mcp", "--allow-send", "--allow-mark-read"],
       env: { MESSAGING_STORE: env.MESSAGING_STORE },
     })
     expect(stderr.join("\n")).toContain("belongs to one Node version")
