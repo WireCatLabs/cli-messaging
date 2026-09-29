@@ -6,6 +6,14 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- **`reactionsCommand` — `reactions add <chat> <message> <emoji>` and `reactions remove <chat> <message>`**,
+  and with `--allow-send` the MCP tools `<cli>_reactions_add` and `<cli>_reactions_remove`. The send guard
+  checks them as a `reaction`, which never counts toward the hourly limit; the confirmation form shows
+  the emoji. The answer is `{ chatId, messageId, reaction }`, `null` once taken off. An adapter offers it
+  with the optional `react`; a CLI adds the command group itself.
+
 ## 0.43.0 — 29.09.2026
 
 ### Added

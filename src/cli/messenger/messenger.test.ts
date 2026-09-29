@@ -23,6 +23,7 @@ import { type McpEnvironment, mcpCommand } from "./mcp-command.js"
 import { messagesCommand } from "./messages-command.js"
 import { modelsCommand } from "./models-command.js"
 import type { MessengerAdapter, SendOptions } from "./port.js"
+import { reactionsCommand } from "./reactions-command.js"
 
 const app = {
   command: "chat",
@@ -121,6 +122,7 @@ const call = async (
         accountCommand(messenger),
         chatsCommand(messenger),
         messagesCommand(messenger),
+        reactionsCommand(messenger),
         contactsCommand(messenger),
         recipientsCommand(messenger),
         sendsCommand(messenger),
@@ -456,6 +458,34 @@ describe("the shared read commands", () => {
     ])
   })
 
+  it("**react with one emoji and take it off**, journaled as reactions that do not count toward the limit", async () => {
+    const root = mkdtempSync(join(tmpdir(), "messenger-"))
+    const env = { CHAT_STATE_DIR: join(root, "state"), CHAT_CONFIG_DIR: join(root, "config") }
+    mkdirSync(env.CHAT_CONFIG_DIR, { recursive: true })
+    writeFileSync(
+      join(env.CHAT_CONFIG_DIR, "config.json"),
+      JSON.stringify({ profiles: { default: { sendsPerHour: 1 } } }),
+    )
+    const reactions: unknown[] = []
+    const reacting: MessengerAdapter = {
+      ...fake,
+      react: async (chatId, messageId, emoji) => {
+        reactions.push([chatId, messageId, emoji])
+      },
+    }
+
+    await call(["messages", "send", "Book", "spends the hour"], async () => reacting, env)
+    const added = await call(["reactions", "add", "Book", "3", "👍", "--json"], async () => reacting, env)
+    const removed = await call(["reactions", "remove", "Book", "3", "--json"], async () => reacting, env)
+
+    expect(JSON.parse(added.stdout[0] ?? "")).toEqual({ chatId: "7", messageId: "3", reaction: "👍" })
+    expect(JSON.parse(removed.stdout[0] ?? "")).toEqual({ chatId: "7", messageId: "3", reaction: null })
+    expect(reactions).toEqual([
+      ["7", "3", "👍"],
+      ["7", "3", null],
+    ])
+  })
+
   it("describe themselves for an agent, with the contract version and which ones write", async () => {
     const root = mkdtempSync(join(tmpdir(), "messenger-"))
     const { stdout } = await call(["commands", "--json"], async () => fake, { CHAT_STATE_DIR: root })
@@ -469,6 +499,7 @@ describe("the shared read commands", () => {
     expect(find(["messages", "forward"])?.mutates).toBe(true)
     expect(find(["messages", "pin"])?.mutates).toBe(true)
     expect(find(["messages", "unpin"])?.mutates).toBe(true)
+    expect(find(["reactions", "add"])?.mutates).toBe(true)
     expect(find(["recipients", "add"])?.mutates).toBe(true)
     expect(find(["messages", "list"])?.mutates).toBeFalsy()
   })

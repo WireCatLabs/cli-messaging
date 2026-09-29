@@ -611,6 +611,35 @@ describe("sending over MCP", () => {
     ])
   })
 
+  it("reacts through the guard, shows the emoji in the confirmation form, and takes it off again", async () => {
+    const reactions: unknown[] = []
+    const telegram = scripted({
+      react: async (chatId, messageId, emoji) => {
+        reactions.push([chatId, messageId, emoji])
+      },
+    })
+    const { call, forms, env } = await connect(telegram, {
+      allowSend: true,
+      confirmSend: true,
+      form: () => ({ action: "accept", content: {} }),
+    })
+
+    const added = await call("chat_reactions_add", { chat: "Book", message: "1", emoji: "🔥" })
+    await call("chat_reactions_remove", { chat: "Book", message: "1" })
+
+    expect(added.body).toEqual({ chatId: "7", messageId: "1", reaction: "🔥" })
+    expect(forms[0]).toContain('emoji: "🔥"')
+    expect(reactions).toEqual([
+      ["7", "1", "🔥"],
+      ["7", "1", null],
+    ])
+    const entries = new SendJournal(sendsPathFor(app, "default", env)).entries()
+    expect(entries.map((entry) => [entry.kind, entry.outcome])).toEqual([
+      ["reaction", "sent"],
+      ["reaction", "sent"],
+    ])
+  })
+
   it("does not offer a tool the profile's allow list leaves out, whatever the flags", async () => {
     const { client, call } = await connect(scripted(), {
       allowSend: true,
@@ -618,7 +647,10 @@ describe("sending over MCP", () => {
     })
 
     expect((await client.listTools()).tools.map((one) => one.name)).not.toContain("chat_messages_send")
-    expect((await call("chat_status")).body).toMatchObject({ writes: [], allow: ["reaction"] })
+    expect((await call("chat_status")).body).toMatchObject({
+      writes: ["chat_reactions_add", "chat_reactions_remove"],
+      allow: ["reaction"],
+    })
   })
 
   describe.each(["legacy", "modern"] as const)("with --confirm-send, on the %s protocol", (era) => {
