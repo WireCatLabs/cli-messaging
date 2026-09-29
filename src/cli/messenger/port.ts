@@ -14,6 +14,7 @@ import type {
   PersonCard,
   WindowedMessage,
 } from "../../domain/models.js"
+import type { Upload } from "../../sends/upload.js"
 
 /** One attachment's bytes, fetched over the adapter's connection when `bytes` is read — so read it before the command closes. */
 export interface RemoteFile {
@@ -43,6 +44,8 @@ export interface SendOptions {
   markup?: Markup[]
   /** ISO time: the messenger holds it and sends it then, under a new id. */
   at?: string
+  /** Sent in one message, `text` as the caption. More than one is an album. */
+  attachments?: Upload[]
 }
 
 /** A voice message as text. `pending`: the messenger was still working on it when it answered. */

@@ -332,6 +332,44 @@ describe("the shared read commands", () => {
     expect(error.sendId).toBeUndefined()
   })
 
+  it("**send a photo with a caption**, journal its kind and size — never its name — and refuse a hidden file", async () => {
+    const root = mkdtempSync(join(tmpdir(), "messenger-"))
+    const env = { CHAT_STATE_DIR: join(root, "state"), CHAT_CONFIG_DIR: join(root, "config") }
+    writeFileSync(join(root, "holiday.png"), "12345")
+    mkdirSync(join(root, ".secrets"))
+    writeFileSync(join(root, ".secrets", "token"), "t")
+    const sent: SendOptions[] = []
+    const texts: string[] = []
+    const withFiles: MessengerAdapter = {
+      ...fake,
+      send: async (_chatId, text, options) => {
+        texts.push(text)
+        sent.push(options)
+        return { message: { ...message, text }, sendId: options.sendId }
+      },
+    }
+
+    const photo = await call(
+      ["messages", "send", "Book", "look", "--photo", join(root, "holiday.png")],
+      async () => withFiles,
+      env,
+    )
+    const hidden = await call(
+      ["messages", "send", "Book", "--file", join(root, ".secrets", "token")],
+      async () => withFiles,
+      env,
+    )
+
+    expect(photo.code).toBe(0)
+    expect(texts).toEqual(["look"])
+    expect(sent[0]?.attachments).toMatchObject([{ kind: "photo", name: "holiday.png" }])
+    const journal = new SendJournal(sendsPathFor(app, "default", env)).entries()
+    expect(journal).toMatchObject([{ outcome: "sent", attachments: [{ kind: "photo", bytes: 5 }] }])
+    expect(JSON.stringify(journal)).not.toContain("holiday")
+    expect(hidden.code).toBe(2)
+    expect(sent).toHaveLength(1)
+  })
+
   it("**edit the owner's message through the guard**, record it without the text, and answer the edited message", async () => {
     const root = mkdtempSync(join(tmpdir(), "messenger-"))
     const env = { CHAT_STATE_DIR: join(root, "state"), CHAT_CONFIG_DIR: join(root, "config") }
