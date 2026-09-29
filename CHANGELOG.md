@@ -6,6 +6,13 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Fixed
+
+- **`backfill status` and `backfill cancel` confirm that a job's PID is still the job** — its
+  environment names the job — before calling it running or signalling it. A PID is handed out again
+  after a crash or a reboot; `cancel` could have sent SIGTERM to an unrelated process, and `status`
+  reported such a job as running. Unconfirmed, it is `died`. Linux and macOS.
+
 ## 0.33.0 — 29.09.2026
 
 ### Added
