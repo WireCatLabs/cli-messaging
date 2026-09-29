@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.37.0 — 29.09.2026
+
 ### Added
 
 - **`messages transcribe <chat> <message>` and the MCP tool `<cli>_messages_transcribe`** turn a
