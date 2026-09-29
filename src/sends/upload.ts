@@ -1,6 +1,6 @@
 import { realpathSync } from "node:fs"
 import { readFile } from "node:fs/promises"
-import { basename, dirname, extname, isAbsolute, relative, resolve, sep } from "node:path"
+import { basename, extname, isAbsolute, relative, resolve, sep } from "node:path"
 import { CliError, resolvePaths } from "@leemour/cli-core"
 import type { AppIdentity } from "../cli/app.js"
 import { storePath } from "../store/path.js"
@@ -23,10 +23,9 @@ const PHOTO = new Set([".jpg", ".jpeg", ".png", ".webp"])
  * link does not hide where it points.
  */
 const refusedPlace = (path: string, app: AppIdentity, env: NodeJS.ProcessEnv): boolean => {
-  const own = [
-    ...Object.values(resolvePaths({ appName: app.appName, prefix: app.envPrefix, env })),
-    dirname(storePath(env)),
-  ]
+  const own = Object.values(resolvePaths({ appName: app.appName, prefix: app.envPrefix, env }))
+  // The store file and its -wal and -shm, not its folder: MESSAGING_STORE may sit in the home folder.
+  const store = resolve(storePath(env))
   let real = resolve(path)
   try {
     real = realpathSync(path)
@@ -34,7 +33,8 @@ const refusedPlace = (path: string, app: AppIdentity, env: NodeJS.ProcessEnv): b
   return [resolve(path), real].some(
     (candidate) =>
       candidate.split(sep).some((part) => part.startsWith(".") && part !== "." && part !== "..") ||
-      own.some((dir) => inside(candidate, dir)),
+      own.some((dir) => inside(candidate, dir)) ||
+      candidate.startsWith(store),
   )
 }
 
