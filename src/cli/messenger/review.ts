@@ -93,7 +93,7 @@ export const reviewIn = async (
 
   const open: ReviewChat[] = []
   for (const one of chats) {
-    const admins = one.kind === "dialog" ? [] : await adapter.admins?.(one.id)
+    const admins = one.kind === "dialog" ? [] : ((await adapter.admins?.(one.id)) ?? undefined)
     const questions = unanswered(one.messages, {
       answerers: new Set(admins ?? []),
       before: now - unansweredAfterHours * 3_600_000,

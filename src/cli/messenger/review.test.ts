@@ -47,7 +47,7 @@ const said = (id: string, minute: number, text = "hola", extra: Partial<Message>
 })
 
 /** `history` pages backwards by id, as Telegram's does: the newest `limit` older than `before`. */
-const messengerWith = (chats: Chat[], histories: Record<string, Message[]>, admins?: string[]) => {
+const messengerWith = (chats: Chat[], histories: Record<string, Message[]>, admins?: string[] | null) => {
   const pages: string[] = []
   const adapter: MessengerAdapter = {
     self: () => "500",
@@ -66,7 +66,7 @@ const messengerWith = (chats: Chat[], histories: Record<string, Message[]>, admi
     send: async () => {
       throw new Error("review never sends")
     },
-    ...(admins ? { admins: async () => admins } : {}),
+    ...(admins === undefined ? {} : { admins: async () => admins }),
     logout: async () => {},
     close: async () => {},
   }
@@ -135,7 +135,14 @@ describe("review", () => {
     })
 
     expect(withAdmins.chats[0]).toMatchObject({ answeredBy: "owner-and-admins", messages: [{ id: "12" }] })
+    const hidden = await reviewIn(messengerWith([chatAt("1", 6)], { "1": messages }, null).adapter, {
+      since,
+      unansweredAfterHours: 24,
+      now,
+    })
+
     expect(unknown.chats[0]?.answeredBy).toBe("owner")
+    expect(hidden.chats[0]?.answeredBy).toBe("owner")
     expect(unknown.chats[0]?.messages.map((one) => one.id)).toEqual(["10", "12"])
   })
 })
