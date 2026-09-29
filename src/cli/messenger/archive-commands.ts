@@ -1,4 +1,6 @@
+import { CliError } from "@leemour/cli-core"
 import { Command } from "commander"
+import { toMarkdown } from "../../render/markdown.js"
 import { renderMessages } from "../../render/messages.js"
 import { type Messenger, messengerContext } from "./context.js"
 import { storedChatId } from "./messages-command.js"
@@ -25,19 +27,33 @@ export const syncCommand = (messenger: Messenger): Command =>
       }),
   )
 
-/** One chat's stored messages, oldest first — `--jsonl` for a file or a pipe, one message per line. */
+/**
+ * One chat's stored messages, oldest first — `--jsonl` for a file or a pipe, one message per line,
+ * `--format markdown` for a transcript a person reads.
+ */
 export const exportCommand = (messenger: Messenger): Command =>
   new Command("export")
     .description("a chat's stored messages as JSON lines, oldest first; never asks the messenger")
     .argument("<chat>", messenger.chatArgument)
+    .option("--format <format>", "markdown: a transcript with a heading per day, replies and forwards quoted")
     .action(async function (this: Command, chat: string) {
+      const { format } = this.opts<{ format?: string }>()
+      if (format !== undefined && format !== "markdown") {
+        throw new CliError(
+          "validation_error",
+          `--format knows markdown, not "${format}" — --json and --jsonl give data`,
+        )
+      }
       const context = messengerContext(this, messenger)
-      const messages = await context.withStore(
-        (store, account) =>
-          store.messages(account, storedChatId(messenger, chat, store, account), { limit: Number.MAX_SAFE_INTEGER })
-            .items,
-      )
-      if (context.format === "json") context.renderer.result({ items: messages })
+      const { title, messages } = await context.withStore((store, account) => {
+        const chatId = storedChatId(messenger, chat, store, account)
+        return {
+          title: store.chatStats(account, chatId)[0]?.title ?? chatId,
+          messages: store.messages(account, chatId, { limit: Number.MAX_SAFE_INTEGER }).items,
+        }
+      })
+      if (format === "markdown") context.streams.data(toMarkdown(title, messages).replace(/\n$/, ""))
+      else if (context.format === "json") context.renderer.result({ items: messages })
       else if (context.format === "jsonl") for (const message of messages) context.streams.data(JSON.stringify(message))
       else
         context.streams.data(
