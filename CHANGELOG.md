@@ -6,7 +6,7 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
-## 0.44.0 — 29.09.2026
+## 0.45.0 — 29.09.2026
 
 ### Added
 
@@ -14,6 +14,11 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   in to the account — `current`, `client`, `device`, `location`, `lastActiveAt` (type
   `AccountSession`). It reads only. A messenger offers it with the optional `sessions`; `account
   sessions` is a command group of its own file, for `end-others` to join.
+
+## 0.44.0 — 29.09.2026
+
+### Added
+
 - **`reactionsCommand` — `reactions add <chat> <message> <emoji>` and `reactions remove <chat> <message>`**,
   and with `--allow-send` the MCP tools `<cli>_reactions_add` and `<cli>_reactions_remove`. The send guard
   checks them as a `reaction`, which never counts toward the hourly limit; the confirmation form shows
