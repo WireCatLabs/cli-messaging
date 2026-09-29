@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.42.0 — 29.09.2026
+
 ### Added
 
 - **`chats members list <chat>`**, max-cli's, and the `chats_members` tool: everyone in a group, paged
