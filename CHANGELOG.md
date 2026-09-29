@@ -6,6 +6,15 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- **`messages forward <chat> <message> --to <chat> [--silent]`** forwards one message, and
+  `--allow-send` adds its MCP tool `<cli>_messages_forward`. The send guard checks it as a `forward`
+  against the chat it goes to — the recipient list and the hourly limit apply there — and the
+  confirmation form shows both chats. The answer is the copy in the target chat. An adapter offers it
+  with the optional `forward`. There is no retry handle: after an unknown outcome, look in the target
+  chat before forwarding again.
+
 ## 0.38.0 — 29.09.2026
 
 ### Added
