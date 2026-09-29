@@ -243,6 +243,20 @@ export interface Contact {
 /** Somebody in a chat, as much of them as a chat card shows. */
 export type Member = Pick<Contact, "id" | "name" | "username">
 
+/** Somewhere this account is logged in — a device, a browser, this tool. */
+export interface AccountSession {
+  /** The session this tool is using. */
+  current: boolean
+  /** The app and its version, as the messenger names it. */
+  client: string | null
+  /** The device and its system. */
+  device: string | null
+  location: string | null
+  /** ISO 8601. */
+  lastActiveAt: string | null
+  createdAt?: string | null
+}
+
 /** Someone in a group as `chats members list` answers them. */
 export interface GroupMember extends Member {
   /** Absent where the messenger does not say who runs the group. */

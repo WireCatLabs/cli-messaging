@@ -958,6 +958,24 @@ describe("the guard, account and mcp config commands", () => {
     expect(json(second.stdout)).toEqual({ added: 1, changed: 1, known: 2 })
   })
 
+  it("**account sessions list** shows where the account is logged in, and a messenger without it refuses", async () => {
+    const env = sandbox()
+    const devices: MessengerAdapter = {
+      ...fake,
+      sessions: async () => [
+        { current: true, client: "tg 1.0", device: "Linux", location: "Valencia, ES", lastActiveAt: null },
+        { current: false, client: "Telegram iOS 11.2", device: "iPhone", location: null, lastActiveAt: null },
+      ],
+    }
+
+    const listed = await call(["account", "sessions", "list", "--json"], async () => devices, env)
+    const lines = await call(["account", "sessions", "list", "--jsonl"], async () => devices, env)
+
+    expect(json(listed.stdout).items.map((one: { current: boolean }) => one.current)).toEqual([true, false])
+    expect(lines.stdout).toHaveLength(2)
+    expect((await call(["account", "sessions", "list"], async () => fake, env)).code).toBe(2)
+  })
+
   it("refuses a --search under 3 characters and an unknown --kind, before connecting", async () => {
     const env = sandbox()
     const never = async (): Promise<MessengerAdapter> => {

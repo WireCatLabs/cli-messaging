@@ -2,6 +2,7 @@ import { CliError } from "@leemour/cli-core"
 import type { Markup } from "../../domain/markdown.js"
 import type {
   Account,
+  AccountSession,
   Chat,
   ChatCard,
   ChatEvents,
@@ -112,6 +113,8 @@ export interface MessengerAdapter {
   scheduled?(chat: string): Promise<Message[]>
   /** A voice or video note as text, by the messenger's own speech recognition. */
   transcribe?(chat: string, messageId: Id): Promise<Transcript>
+  /** Every device and app logged in to this account. Reading them ends nothing. */
+  sessions?(): Promise<AccountSession[]>
   /** The person with this phone number, where their privacy lets the owner find them; `not_found` otherwise. */
   lookup?(phone: string): Promise<Member>
   /** The owner's contact list as the messenger keeps it — the address book, not the chats. */

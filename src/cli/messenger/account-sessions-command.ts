@@ -1,0 +1,24 @@
+import { Command } from "commander"
+import { type Messenger, messengerContext } from "./context.js"
+import { capability } from "./port.js"
+
+/** `account sessions …` — where else the account is logged in, not this tool's own `session`. */
+export const accountSessionsCommand = (messenger: Messenger): Command => {
+  const sessions = new Command("sessions").description(
+    `where else this account is logged in — not \`${messenger.app.command} session\`, which is this tool's own login`,
+  )
+
+  sessions
+    .command("list")
+    .description("every device and app logged in to this account; nothing is ended")
+    .action(async function (this: Command) {
+      const context = messengerContext(this, messenger)
+      const found = await context.withMessenger((adapter) =>
+        capability(adapter, "sessions", "list the account's sessions")(),
+      )
+      if (context.format === "jsonl") context.renderer.stream(found)
+      else context.renderer.result(context.format === "pretty" ? found : { items: found })
+    })
+
+  return sessions
+}

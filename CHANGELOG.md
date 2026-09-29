@@ -10,6 +10,10 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Added
 
+- **`account sessions list`**, max-cli's, and the `account_sessions` tool: every device and app logged
+  in to the account — `current`, `client`, `device`, `location`, `lastActiveAt` (type
+  `AccountSession`). It reads only. A messenger offers it with the optional `sessions`; `account
+  sessions` is a command group of its own file, for `end-others` to join.
 - **`reactionsCommand` — `reactions add <chat> <message> <emoji>` and `reactions remove <chat> <message>`**,
   and with `--allow-send` the MCP tools `<cli>_reactions_add` and `<cli>_reactions_remove`. The send guard
   checks them as a `reaction`, which never counts toward the hourly limit; the confirmation form shows
