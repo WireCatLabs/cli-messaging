@@ -48,6 +48,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 - **`messages scheduled <chat>`**, the MCP tool `messages_scheduled`, and `at` on the send tool. The
   confirmation form shows the clock time a delay becomes. An adapter lists the queue with the optional
   `scheduled(chat)` and receives the time as `SendOptions.at`.
+- **`drizzle-orm` 1.0.0-rc.4 is a dependency** (about 16 MB installed), for the store's move to
+  Drizzle. Nothing loads it yet, so no command changes and startup time stays the same.
 
 ## 0.41.0 — 29.09.2026
 
