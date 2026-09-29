@@ -267,6 +267,32 @@ describe("the shared read commands", () => {
     expect(journal).not.toContain("bold")
   })
 
+  it("**edit the owner's message through the guard**, record it without the text, and answer the edited message", async () => {
+    const root = mkdtempSync(join(tmpdir(), "messenger-"))
+    const env = { CHAT_STATE_DIR: join(root, "state"), CHAT_CONFIG_DIR: join(root, "config") }
+    const edits: string[][] = []
+    const editing: MessengerAdapter = {
+      ...fake,
+      edit: async (chatId, messageId, text) => {
+        edits.push([chatId, messageId, text])
+        return { ...message, id: messageId, text, editedAt: "2026-09-29T10:00:00.000Z" }
+      },
+    }
+
+    const done = await call(["messages", "edit", "Book", "3", "new plan", "--json"], async () => editing, env)
+    const unable = await call(["messages", "edit", "Book", "3", "again"], async () => fake, env)
+
+    expect(done.code).toBe(0)
+    expect(JSON.parse(done.stdout[0] ?? "").message).toMatchObject({ id: "3", text: "new plan" })
+    expect(edits).toEqual([["7", "3", "new plan"]])
+    expect(unable.stderr.join("\n")).toContain("cannot edit a message")
+    const journal = new SendJournal(sendsPathFor(app, "default", env)).entries()
+    expect(journal.filter((entry) => entry.outcome !== "reserved")).toMatchObject([
+      { kind: "edit", outcome: "sent", chatId: "7", messageId: "3", length: 8 },
+    ])
+    expect(JSON.stringify(journal)).not.toContain("new plan")
+  })
+
   it("describe themselves for an agent, with the contract version and which ones write", async () => {
     const root = mkdtempSync(join(tmpdir(), "messenger-"))
     const { stdout } = await call(["commands", "--json"], async () => fake, { CHAT_STATE_DIR: root })
@@ -276,6 +302,7 @@ describe("the shared read commands", () => {
 
     expect(described).toMatchObject({ cli: "chat", contract: 0 })
     expect(find(["messages", "send"])?.mutates).toBe(true)
+    expect(find(["messages", "edit"])?.mutates).toBe(true)
     expect(find(["recipients", "add"])?.mutates).toBe(true)
     expect(find(["messages", "list"])?.mutates).toBeFalsy()
   })

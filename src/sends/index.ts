@@ -6,6 +6,7 @@ export {
   sendGuard,
   sharedJournal,
 } from "./guard.js"
+export { guardedWrite } from "./guarded.js"
 export {
   type AccountAction,
   type ChatAction,

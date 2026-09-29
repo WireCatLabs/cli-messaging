@@ -5,6 +5,7 @@ import { chatsTools } from "./tools/chats.js"
 import { contactsTools } from "./tools/contacts.js"
 import { inboxTools } from "./tools/inbox.js"
 import { messagesTools } from "./tools/messages.js"
+import { messageActionTools } from "./tools/messages-actions.js"
 import { messageSendTools } from "./tools/messages-send.js"
 
 /**
@@ -22,4 +23,5 @@ export const readTools = (messenger: Messenger): Record<string, AnyTool> => ({
 /** Offered only with `--allow-send`. */
 export const sendTools = (messenger: Messenger): Record<string, AnyTool> => ({
   ...messageSendTools(messenger),
+  ...messageActionTools(messenger),
 })

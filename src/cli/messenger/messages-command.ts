@@ -10,7 +10,9 @@ import { newSendId } from "../../sends/send-id.js"
 import type { AccountKey, MessageStore } from "../../store/store.js"
 import { type Messenger, messengerContext } from "./context.js"
 import { downloadSubcommand } from "./download-command.js"
+import { editCommand } from "./messages-edit-command.js"
 import type { MessengerAdapter, Sent } from "./port.js"
+import { readAll } from "./stdin.js"
 
 /** `messages`: reading, and sending through the guard. A CLI may add its own subcommands. */
 export const messagesCommand = (messenger: Messenger): Command => {
@@ -166,6 +168,7 @@ export const messagesCommand = (messenger: Messenger): Command => {
 
   downloadSubcommand(messages, messenger)
 
+  messages.addCommand(editCommand(messenger))
   return messages
 }
 
@@ -255,13 +258,6 @@ interface GuardedSend {
 
 const codeOf = (error: unknown): string =>
   typeof (error as { code?: unknown })?.code === "string" ? (error as { code: string }).code : "unknown"
-
-const readAll = async (input: NodeJS.ReadableStream & { isTTY?: boolean }): Promise<string> => {
-  if (input.isTTY) return ""
-  const chunks: Buffer[] = []
-  for await (const chunk of input) chunks.push(Buffer.from(chunk))
-  return Buffer.concat(chunks).toString("utf8")
-}
 
 type Window = { before: number; after: number }
 
