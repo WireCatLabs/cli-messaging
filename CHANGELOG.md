@@ -14,6 +14,12 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Added
 
+- **`contacts lookup`**, max-cli's: who has a phone number, read from stdin or asked for — **never an
+  argument**, which `ps` and shell history would keep; one given anyway is refused without being
+  repeated. Also the `contacts_lookup` tool. A messenger offers it with the optional `lookup`.
+- **`contacts sync`**: the messenger's own contact list — the address book, not the chats — into the
+  local store, answering `{ added, changed, known }`. A messenger offers it with the optional
+  `addressBook`.
 - **`chats members list <chat>`**, max-cli's, and the `chats_members` tool: everyone in a group, paged
   like every listing (`--limit`, `--page`, `--all`). A member may carry `role` (`owner`, `admin`,
   `member`) and `lastSeenAt` (`null` when their privacy hides it) — type `GroupMember`. A messenger
