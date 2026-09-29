@@ -31,6 +31,7 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 - **`contacts sync`**: the messenger's own contact list — the address book, not the chats — into the
   local store, answering `{ added, changed, known }`. A messenger offers it with the optional
   `addressBook`.
+
 - **`chats members list <chat>`**, max-cli's, and the `chats_members` tool: everyone in a group, paged
   like every listing (`--limit`, `--page`, `--all`). A member may carry `role` (`owner`, `admin`,
   `member`) and `lastSeenAt` (`null` when their privacy hides it) — type `GroupMember`. A messenger

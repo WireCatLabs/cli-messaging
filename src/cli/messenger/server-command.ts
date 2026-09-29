@@ -462,6 +462,12 @@ export const serverCommand = (messenger: Messenger): Command => {
       const state = isInstalled ? await platform.state(unit) : { loaded: false, active: false }
       const held = lock()
       const by = held ? await byOf(prepared, held) : null
+      // max-cli's server status says the same: an update leaves a running serve on the old code.
+      const stale =
+        held?.version && held.version !== app.version
+          ? `It runs ${app.command} ${held.version}, and ${app.command} is now ${app.version} — \`${app.command} server restart\`.`
+          : undefined
+      if (stale && context.format !== "pretty") context.renderer.note(stale)
       const unitLine = isInstalled
         ? `Unit: ${tilde(unit.path, context.env)} — ${state.detail ?? (state.active ? "active" : "inactive")}.`
         : `No unit installed — \`${app.command} server install\` adds one, for starting under systemd or launchd.`
@@ -478,6 +484,7 @@ export const serverCommand = (messenger: Messenger): Command => {
                 by,
               }
             : {}),
+          ...(held?.version ? { version: held.version } : {}),
           unit: { name: unit.name, path: unit.path, installed: isInstalled, ...state },
         },
         [
@@ -487,6 +494,7 @@ export const serverCommand = (messenger: Messenger): Command => {
               : `Starting profile ${unit.profile} since ${clock(held.startedAt)} (PID ${held.pid}) — not listening yet, ${how(by ?? "hand", unit)}.`
             : `Not serving profile ${unit.profile}.${isInstalled && state.detail?.startsWith("failed") ? ` The unit failed — \`${app.command} server logs\`.` : ""}`,
           unitLine,
+          ...(stale ? [stale] : []),
         ],
       )
     })

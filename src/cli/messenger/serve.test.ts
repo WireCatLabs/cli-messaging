@@ -32,7 +32,7 @@ const setup = () => {
   return { root, env: { CHAT_STATE_DIR: join(root, "state"), MESSAGING_STORE: join(root, "m.db") } }
 }
 
-const seen: { lock?: { pid: number; listeningAt?: string } } = {}
+const seen: { lock?: { pid: number; version?: string; listeningAt?: string } } = {}
 
 const call = async (argv: string[], env: NodeJS.ProcessEnv, asked: ConnectOptions[] = [], signal?: AbortSignal) => {
   const connect = async (_: unknown, __: unknown, options?: ConnectOptions) => {
@@ -88,7 +88,7 @@ describe("serve", () => {
     expect(code).toBe(0)
     expect(asked).toEqual([{ listen: true, catchUp: true }])
     expect(answer).toMatchObject({ profile: "default", kept: { message: 1, delete: 1 } })
-    expect(seen.lock).toMatchObject({ pid: process.pid, listeningAt: expect.any(String) })
+    expect(seen.lock).toMatchObject({ pid: process.pid, version: "1.0.0", listeningAt: expect.any(String) })
     expect(existsSync(lockOf(root))).toBe(false)
   })
 
