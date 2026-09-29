@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.33.0 — 29.09.2026
+
 ### Added
 
 - **`messages edit <chat> <message> [text]`** changes the text of the owner's own message, and
