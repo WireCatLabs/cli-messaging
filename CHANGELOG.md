@@ -8,12 +8,17 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Added
 
+- **`server status` says when the running `serve` is older than the CLI** — "It runs tg 0.8.0, and tg
+  is now 0.9.0 — `tg server restart`", as max-cli's does; `--json` gains `version`. `serve` records its
+  version in the lock. **`servingProfiles(app, env)`** names the profiles a serve runs for, for an
+  update to restart.
 - **`messages send --file <path>` and `--photo <path>`**, the text as the caption, and `file` and
   `photo` on the MCP send tool. A file is read before connecting, with max-cli's rule: hidden files
   and folders (`~/.ssh`), the CLI's own folders and the message store file are refused — the command takes
   `--allow-any-file`, the MCP tool never does. The journal records each attachment's kind and size,
   never its name. An adapter receives them as `SendOptions.attachments` (`Upload`: kind, name, bytes);
   `readUpload` is exported from `./sends`.
+
 
 ## 0.42.0 — 29.09.2026
 
