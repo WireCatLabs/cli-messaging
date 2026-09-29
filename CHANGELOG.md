@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.42.0 — 29.09.2026
+
 ### Changed — may break callers
 
 - **Speech models move to `~/.cache/cli-common/models/audio`**, a folder named for the whole family of
