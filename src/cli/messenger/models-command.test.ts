@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs"
+import { mkdirSync, mkdtempSync, truncateSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { captureStreams } from "@leemour/cli-core"
@@ -21,6 +21,12 @@ vi.mock("../../speech/recognize.js", async (original) => ({
     free: () => {},
   }),
 }))
+
+/** A sparse file at the pinned size — what `isInstalled` checks — without writing hundreds of MB. */
+const sized = (path: string, bytes: number) => {
+  writeFileSync(path, "")
+  truncateSync(path, bytes)
+}
 
 const app = {
   command: "chat",
@@ -51,8 +57,8 @@ const call = async (argv: string[], speechModels?: string[], tty = false) => {
     const model = speechModel(id)
     const directory = modelsDirectory(env)
     mkdirSync(join(directory, model.id), { recursive: true })
-    writeFileSync(vadPath(directory), new Uint8Array(VAD.bytes))
-    for (const file of model.files) writeFileSync(modelPath(directory, model)(file.name), new Uint8Array(file.bytes))
+    sized(vadPath(directory), VAD.bytes)
+    for (const file of model.files) sized(modelPath(directory, model)(file.name), file.bytes)
   }
   const go = async () => {
     const streams = captureStreams()

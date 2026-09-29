@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto"
-import { mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from "node:fs"
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, truncateSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { CliError } from "@leemour/cli-core"
@@ -19,6 +19,12 @@ vi.mock("./recognize.js", async (original) => ({
   }),
 }))
 
+/** A sparse file at the pinned size — what `isInstalled` checks — without writing hundreds of MB. */
+const sized = (path: string, bytes: number) => {
+  writeFileSync(path, "")
+  truncateSync(path, bytes)
+}
+
 const tone = new Uint8Array(readFileSync(new URL("../testing/fixtures/tone.ogg", import.meta.url)))
 const sha = (text: string) => createHash("sha256").update(text).digest("hex")
 
@@ -33,7 +39,7 @@ const tiny: SpeechModel = {
 
 const directoryWithVad = () => {
   const directory = mkdtempSync(join(tmpdir(), "models-"))
-  writeFileSync(vadPath(directory), new Uint8Array(VAD.bytes))
+  sized(vadPath(directory), VAD.bytes)
   return directory
 }
 
@@ -41,7 +47,7 @@ const directoryWithVad = () => {
 const installed = (model: SpeechModel) => {
   const directory = directoryWithVad()
   mkdirSync(join(directory, model.id))
-  for (const file of model.files) writeFileSync(modelPath(directory, model)(file.name), new Uint8Array(file.bytes))
+  for (const file of model.files) sized(modelPath(directory, model)(file.name), file.bytes)
   return directory
 }
 
