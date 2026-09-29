@@ -30,7 +30,8 @@ anything can catch it. `pnpm smoke:bun` is what proves the Bun half.
 
 `openStore` (`src/store/store.ts`) is the **one file for every messenger and account** — tg's
 profiles and max-cli's bots write the same database, keyed by provider and account. Its path comes
-from `storePath` (`src/store/path.ts`), the only reader of `MESSAGING_STORE`.
+from `storePath` (`src/store/path.ts`), the only place that turns `MESSAGING_STORE` into a path;
+`mcp config` copies the variable into the entry it prints, so the server it starts opens the same file.
 
 ### Migrations
 

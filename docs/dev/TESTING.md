@@ -7,10 +7,10 @@ pnpm test           # vitest
 pnpm test:coverage  # CI runs this; the report is in coverage/index.html
 pnpm docs:check     # every relative link and anchor, and the changelog's shape
 pnpm test:slow      # the 20 slowest tests and the 10 slowest files
-pnpm smoke:bun      # the store under Bun, actually executed
+pnpm smoke:bun      # the SQLite seam, the store and run records, executed under Bun
 ```
 
-CI runs all of them plus a secret scan — [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml).
+CI runs all of them except `test:slow`, plus `pnpm build` and a secret scan — [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml).
 
 ## No test touches the owner's store
 
