@@ -5,6 +5,7 @@ import type {
   Chat,
   ChatCard,
   ChatEvents,
+  GroupMember,
   Id,
   Message,
   MessageEvent,
@@ -105,6 +106,8 @@ export interface MessengerAdapter {
   scheduled?(chat: string): Promise<Message[]>
   /** A voice or video note as text, by the messenger's own speech recognition. */
   transcribe?(chat: string, messageId: Id): Promise<Transcript>
+  /** Everyone in a group, a page at a time; `limit` unset is every one the messenger will give. */
+  members?(chat: string, window: { limit?: number; offset: number }): Promise<Page<GroupMember> & { chatId: Id }>
   /** Who joined, left, was added or removed since `since` (ms), from the chat's service messages. */
   chatEvents?(chat: string, window: { since: number }): Promise<ChatEvents>
   /** A group's admins, whose answer counts as the group's in `review --unanswered`; `null` where the group hides them. */

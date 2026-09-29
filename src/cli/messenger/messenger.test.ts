@@ -830,6 +830,26 @@ describe("the guard, account and mcp config commands", () => {
     expect((await call(["chats", "events", "7"], async () => fake, env)).code).toBe(2)
   })
 
+  it("**chats members list** pages a group's members like every listing, and refuses a messenger without it", async () => {
+    const env = sandbox()
+    const windows: unknown[] = []
+    const group: MessengerAdapter = {
+      ...fake,
+      members: async (_chat, window) => {
+        windows.push(window)
+        return { chatId: "7", items: [{ id: "9", name: "Olga", username: null, role: "admin" }], hasMore: true }
+      },
+    }
+    const online = async () => group
+
+    const page = await call(["chats", "members", "list", "7", "--limit", "1", "--page", "2", "--json"], online, env)
+    await call(["chats", "members", "list", "7", "--all", "--json"], online, env)
+
+    expect(json(page.stdout)).toMatchObject({ items: [{ id: "9", role: "admin" }], page: 2, hasMore: true })
+    expect(windows).toEqual([{ limit: 1, offset: 1 }, { offset: 0 }])
+    expect((await call(["chats", "members", "list", "7"], async () => fake, env)).code).toBe(2)
+  })
+
   it("refuses a --search under 3 characters and an unknown --kind, before connecting", async () => {
     const env = sandbox()
     const never = async (): Promise<MessengerAdapter> => {

@@ -8,6 +8,11 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Added
 
+- **`chats members list <chat>`**, max-cli's, and the `chats_members` tool: everyone in a group, paged
+  like every listing (`--limit`, `--page`, `--all`). A member may carry `role` (`owner`, `admin`,
+  `member`) and `lastSeenAt` (`null` when their privacy hides it) — type `GroupMember`. A messenger
+  offers it with the optional `members`. `chats members` is its own command group, in
+  `chats-members-command.ts`, for the subcommands that change membership to join.
 - **`messages pin <chat> <message> [--notify]` and `messages unpin <chat> <message>`**, and with
   `--allow-send` their MCP tools `<cli>_messages_pin` and `<cli>_messages_unpin`. A pin is quiet
   unless `--notify`; the send guard checks both as a `pin`, and only a pin that notifies counts toward

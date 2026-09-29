@@ -2,6 +2,7 @@ import { CliError } from "@leemour/cli-core"
 import { Command } from "commander"
 import type { Chat, ChatKind, Page } from "../../domain/models.js"
 import { renderPage, window, withPaging } from "../paging.js"
+import { membersCommand } from "./chats-members-command.js"
 import { type Messenger, messengerContext } from "./context.js"
 import { momentOf } from "./inbox.js"
 import { capability, type MessengerAdapter } from "./port.js"
@@ -161,6 +162,8 @@ export const chatsCommand = (messenger: Messenger): Command => {
         context.renderer.note(`only ${members.length} of ${participantsCount} members could be read`)
       }
     })
+
+  chats.addCommand(membersCommand(messenger))
 
   return chats
 }
