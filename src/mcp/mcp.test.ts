@@ -201,6 +201,7 @@ describe("the MCP server", () => {
     const { tools } = await client.listTools()
 
     expect(tools.map((one) => one.name).sort()).toEqual([
+      "chat_account_sessions",
       "chat_account_show",
       "chat_chats_events",
       "chat_chats_list",

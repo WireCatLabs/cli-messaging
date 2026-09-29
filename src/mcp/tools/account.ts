@@ -1,5 +1,6 @@
 import * as v from "valibot"
 import type { Messenger } from "../../cli/messenger/context.js"
+import { capability } from "../../cli/messenger/port.js"
 import { type AnyTool, nameOf, READ, tool } from "../tool.js"
 
 export const accountTools = (messenger: Messenger): Record<string, AnyTool> => {
@@ -11,6 +12,16 @@ export const accountTools = (messenger: Messenger): Record<string, AnyTool> => {
       input: v.object({}),
       annotations: { ...READ, idempotentHint: true },
       online: (adapter) => adapter.me(),
+    }),
+
+    account_sessions: tool({
+      title: "Where the owner is logged in",
+      description:
+        `Every device and app logged in to the owner's ${name} account: { items: [{ current, client, device, ` +
+        "location, lastActiveAt, createdAt? }] }. Reads only; nothing is ended.",
+      input: v.object({}),
+      annotations: READ,
+      online: async (adapter) => ({ items: await capability(adapter, "sessions", "list the account's sessions")() }),
     }),
   }
 }
