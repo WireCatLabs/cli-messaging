@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.35.0 — 29.09.2026
+
 ### Added
 
 - **The MCP photo tool, `<cli>_messages_photo`**, answers a message's photo as image content, up to
