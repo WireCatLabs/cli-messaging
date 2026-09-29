@@ -1,9 +1,9 @@
-import { spawn } from "node:child_process"
+import { type ChildProcess, spawn } from "node:child_process"
 import { mkdtempSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { CliError, captureStreams } from "@leemour/cli-core"
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, onTestFinished } from "vitest"
 import type { Message } from "../../domain/models.js"
 import { run } from "../program.js"
 import { settingsFor } from "../settings.js"
@@ -131,16 +131,38 @@ describe("backfill in the background", () => {
     return { calls, spawnJob }
   }
   const idle = chatOf({ newest: 0, asked: [] })
+  /** A real process with the environment the job would get, standing in for the CLI it would run. */
+  const sleeping = () => {
+    const children: ChildProcess[] = []
+    const calls: { argv: string[]; env: NodeJS.ProcessEnv }[] = []
+    const spawnJob: SpawnJob = (argv, env) => {
+      calls.push({ argv, env })
+      const child = spawn(process.execPath, ["-e", "setTimeout(() => {}, 30000)"], { env })
+      children.push(child)
+      return child.pid ?? 0
+    }
+    const exited = () => new Promise((resolve) => children[0]?.on("exit", (_code, signal) => resolve(signal)))
+    return {
+      calls,
+      spawnJob,
+      children,
+      exited,
+      stop: () => {
+        for (const child of children) child.kill()
+      },
+    }
+  }
 
   it("**starts a job that runs the same backfill apart, pinned to the profile, with no shell timeout**", async () => {
     const env = { ...setup(), CHAT_TIMEOUT: "30s" }
-    const { calls, spawnJob } = spawned(process.pid)
+    const { calls, spawnJob, children, stop } = sleeping()
+    onTestFinished(stop)
 
     const started = await call(["backfill", "7", "--max", "50", "--pace", "1ms", "--background", "--json"], idle, env, {
       spawnJob,
     })
 
-    expect(started.answer).toMatchObject({ pid: process.pid, chat: "7" })
+    expect(started.answer).toMatchObject({ pid: children[0]?.pid, chat: "7" })
     const job = started.answer.job as string
     expect(calls).toHaveLength(1)
     expect(calls[0]?.argv).toEqual(["backfill", "7", "--max", "50", "--pace", "1ms", "--json"])
@@ -195,15 +217,33 @@ describe("backfill in the background", () => {
 
   it("cancel sends the job SIGTERM", async () => {
     const env = setup()
-    const sleeper = spawn(process.execPath, ["-e", "setTimeout(() => {}, 30000)"])
-    const exited = new Promise((resolve) => sleeper.on("exit", (_code, signal) => resolve(signal)))
-    const { job } = (await call(["backfill", "7", "--background", "--json"], idle, env, spawned(sleeper.pid ?? 0)))
-      .answer
+    const { spawnJob, exited, stop } = sleeping()
+    onTestFinished(stop)
+    const { job } = (await call(["backfill", "7", "--background", "--json"], idle, env, { spawnJob })).answer
 
+    const signal = exited()
     expect((await call(["backfill", "cancel", job, "--json"], idle, env)).answer).toEqual({ job, cancelled: true })
-    expect(await exited).toBe("SIGTERM")
+    expect(await signal).toBe("SIGTERM")
     expect((await call(["backfill", "status", job, "--json"], idle, env)).answer).toMatchObject({ state: "cancelled" })
   })
+
+  it.skipIf(process.platform !== "linux" && process.platform !== "darwin")(
+    "**a PID that is alive but no longer the job is not the job** — it is died, and cancel signals nothing",
+    async () => {
+      const env = setup()
+      const stranger = spawn(process.execPath, ["-e", "setTimeout(() => {}, 30000)"])
+      onTestFinished(() => {
+        stranger.kill()
+      })
+      const { job } = (await call(["backfill", "7", "--background", "--json"], idle, env, spawned(stranger.pid ?? 0)))
+        .answer
+
+      expect((await call(["backfill", "status", job, "--json"], idle, env)).answer).toMatchObject({ state: "died" })
+      expect((await call(["backfill", "cancel", job], idle, env)).code).not.toBe(0)
+      expect(stranger.exitCode).toBeNull()
+      expect(stranger.signalCode).toBeNull()
+    },
+  )
 
   it("a stop ends the run after the page in hand, with that page kept", async () => {
     const stop = new AbortController()
