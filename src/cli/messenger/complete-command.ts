@@ -4,8 +4,9 @@ import { CliError, singleLine } from "@leemour/cli-core"
 import { describeOptions, describeProgram } from "@leemour/cli-core/commands"
 import { type CompletionSources, formatSuggestions, type Suggestion, suggest } from "@leemour/cli-core/completion"
 import { Command } from "commander"
+import type { Chat } from "../../domain/models.js"
 import { storePath } from "../../store/path.js"
-import { type AccountKey, type MessageStore, openStore } from "../../store/store.js"
+import { openStore } from "../../store/store.js"
 import { envName } from "../app.js"
 import { environmentOf, outputFor } from "../context.js"
 import { commandWords, DEFAULT_PROFILE, liftProfile, rootOf, usableProfileName } from "../profile.js"
@@ -54,15 +55,17 @@ export const completeCommand = (messenger: Messenger, config: Configuration): Co
       const account = readable(wanted, lock) ? recalledAccount(app, messenger.provider, wanted, env) : undefined
       const store = account && existsSync(storePath(env)) ? await openStore({ env }).catch(() => undefined) : undefined
       try {
+        // Read up front: `suggest` asks its sources synchronously, and the store answers asynchronously.
+        const chats = store && account ? (await store.chats(account, { limit: 500 })).items : []
         const suggestions = suggest({
           commands: describeProgram(root),
           globalOptions: describeOptions(root),
           words: rest.length > 0 ? rest : [""],
-          sources: sourcesFrom(store, account, profile === undefined, () => profileNames(config, env)),
+          sources: sourcesFrom(chats, profile === undefined, () => profileNames(config, env)),
         })
         streams.data(formatSuggestions(suggestions))
       } finally {
-        store?.close()
+        await store?.close()
       }
     })
 
@@ -77,14 +80,9 @@ const readable = (profile: string, lock: string | undefined): boolean => {
   }
 }
 
-const sourcesFrom = (
-  store: MessageStore | undefined,
-  account: AccountKey | undefined,
-  atTheStart: boolean,
-  profiles: () => string[],
-): CompletionSources => {
-  const chats = () => (store && account ? chatSuggestions(store, account) : [])
-  const people = () => (store && account ? chatSuggestions(store, account, "dialog") : [])
+const sourcesFrom = (stored: Chat[], atTheStart: boolean, profiles: () => string[]): CompletionSources => {
+  const chats = () => chatSuggestions(stored)
+  const people = () => chatSuggestions(stored, "dialog")
   return {
     arguments: { chat: chats, person: people },
     options: { chat: chats },
@@ -97,10 +95,9 @@ const sourcesFrom = (
  * given, and a title is whatever somebody else typed — so the id is the word, and the title rides
  * along as a description, on one line: bash splits the answer on newlines.
  */
-const chatSuggestions = (store: MessageStore, account: AccountKey, kind?: string): Suggestion[] =>
-  store
-    .chats(account, { limit: 500 })
-    .items.filter((chat) => kind === undefined || chat.kind === kind)
+const chatSuggestions = (chats: Chat[], kind?: string): Suggestion[] =>
+  chats
+    .filter((chat) => kind === undefined || chat.kind === kind)
     .map((chat) => ({ value: chat.id, description: singleLine(chat.title ?? "") }))
 
 const profileNames = (config: Configuration, env: NodeJS.ProcessEnv): string[] => {

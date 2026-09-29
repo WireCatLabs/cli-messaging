@@ -25,7 +25,10 @@ export const registerResources = (
     limit: number
     /** Whether this profile has an account to read the store for — before the first read, it has not. */
     recorded: () => boolean
-    withStore: <T>(work: (store: MessageStore, account: AccountKey) => T, options: { name: string }) => Promise<T>
+    withStore: <T>(
+      work: (store: MessageStore, account: AccountKey) => Promise<T>,
+      options: { name: string },
+    ) => Promise<T>
   },
 ): void => {
   server.registerResource(
@@ -33,7 +36,7 @@ export const registerResources = (
     new ResourceTemplate(`${command}://chat/{id}`, {
       list: async () => {
         const chats = recorded()
-          ? await withStore((store, account) => store.chats(account, { limit: LISTED }).items, {
+          ? await withStore(async (store, account) => (await store.chats(account, { limit: LISTED })).items, {
               name: "mcp resources list",
             })
           : []

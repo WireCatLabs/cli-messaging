@@ -30,8 +30,8 @@ export const messagesCommand = (messenger: Messenger): Command => {
       const { limit } = context.settings
       const wanted = { limit, ...(before === undefined ? {} : { before }) }
       const page = context.settings.offline
-        ? await context.withStore((store, account) =>
-            store.messages(account, storedChatId(messenger, chat, store, account), wanted),
+        ? await context.withStore(async (store, account) =>
+            store.messages(account, await storedChatId(messenger, chat, store, account), wanted),
           )
         : await context.withMessenger((connection) => connection.history(chat, wanted))
       if (context.format === "pretty") {
@@ -60,8 +60,8 @@ export const messagesCommand = (messenger: Messenger): Command => {
     const context = messengerContext(command, messenger)
     const target = targetOf(messenger, chat, message)
     const found = context.settings.offline
-      ? await context.withStore((store, account) =>
-          store.around(account, storedChatId(messenger, target.chat, store, account), target.message, window),
+      ? await context.withStore(async (store, account) =>
+          store.around(account, await storedChatId(messenger, target.chat, store, account), target.message, window),
         )
       : await context.withMessenger((connection) => connection.around(target.chat, target.message, window))
     if (context.format === "pretty") {
@@ -90,12 +90,12 @@ export const messagesCommand = (messenger: Messenger): Command => {
       const { chat, regex } = this.opts<{ chat?: string; regex?: boolean }>()
       const { limit } = context.settings
       const pattern = regex ? patternOf(words.join(" ")) : undefined
-      const page = await context.withStore((store, account) =>
+      const page = await context.withStore(async (store, account) =>
         store.find({
           ...(pattern ? { pattern } : { text: words.join(" ") }),
           account,
           limit,
-          ...(chat === undefined ? {} : { chatId: storedChatId(messenger, chat, store, account) }),
+          ...(chat === undefined ? {} : { chatId: await storedChatId(messenger, chat, store, account) }),
         }),
       )
       if (context.format === "pretty") {
@@ -290,18 +290,18 @@ const patternOf = (source: string): RegExp => {
   }
 }
 
-export const storedChatId = (
+export const storedChatId = async (
   messenger: Messenger,
   reference: string,
   store: MessageStore,
   account: AccountKey,
-): string => {
+): Promise<string> => {
   const trimmed = reference.trim()
   if (messenger.savedChatId && ["me", "self", "saved"].includes(trimmed.toLowerCase())) {
     return messenger.savedChatId(account)
   }
   if (/^-?\d+$/.test(trimmed)) return trimmed
-  const chats = store.chats(account, {}).items
+  const chats = (await store.chats(account, {})).items
   if (trimmed.startsWith("@")) {
     const username = trimmed.slice(1).toLowerCase()
     const found = chats.find((one) => String(one.providerMetadata?.username ?? "").toLowerCase() === username)

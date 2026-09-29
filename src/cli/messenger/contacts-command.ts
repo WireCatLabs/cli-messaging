@@ -22,7 +22,7 @@ export const contactsCommand = (messenger: Messenger): Command => {
         }
         const context = messengerContext(this, messenger)
         const chats = context.settings.offline
-          ? await context.withStore((store, account) => store.chats(account, {}).items)
+          ? await context.withStore(async (store, account) => (await store.chats(account, {})).items)
           : await context.withMessenger(async (connection) => (await connection.chats({ offset: 0 })).items)
         renderPage(context, contactsIn(chats, { order, ...(search ? { search } : {}), ...window(context.settings) }))
       }),

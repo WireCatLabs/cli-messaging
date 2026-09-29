@@ -69,45 +69,50 @@ export interface MessageFilter {
 }
 
 export interface MessageStore {
-  saveAccount(key: AccountKey, account: { name: string | null }): void
-  saveChats(key: AccountKey, chats: Chat[]): void
+  saveAccount(key: AccountKey, account: { name: string | null }): Promise<void>
+  saveChats(key: AccountKey, chats: Chat[]): Promise<void>
   /** A scheduled message is not kept: it is not history yet. */
-  saveMessages(key: AccountKey, chatId: Id, messages: Message[], options: { via: IngestedVia }): void
-  chats(key: AccountKey, window: { limit?: number; offset?: number }): Page<Chat>
+  saveMessages(key: AccountKey, chatId: Id, messages: Message[], options: { via: IngestedVia }): Promise<void>
+  chats(key: AccountKey, window: { limit?: number; offset?: number }): Promise<Page<Chat>>
   /** Oldest to newest, like a provider's history page. */
-  messages(key: AccountKey, chatId: Id, window: { limit: number; before?: Id }): Page<Message>
+  messages(key: AccountKey, chatId: Id, window: { limit: number; before?: Id }): Promise<Page<Message>>
   /**
    * A stored message and its stored neighbours, oldest first, the one asked for with `anchor`. Until
    * backfill records which stretches are complete, a neighbour here is the nearest one kept, not
    * necessarily the next one sent.
    */
-  around(key: AccountKey, chatId: Id, messageId: Id, window: { before: number; after: number }): WindowedMessage[]
+  around(
+    key: AccountKey,
+    chatId: Id,
+    messageId: Id,
+    window: { before: number; after: number },
+  ): Promise<WindowedMessage[]>
   /**
    * One message by its id. Without `chatId` it is looked up across the account, which is enough
    * where ids are unique per account (MAX) and refused where two chats share one (Telegram).
    */
-  message(key: AccountKey, messageId: Id, options?: { chatId?: Id }): Message | undefined
+  message(key: AccountKey, messageId: Id, options?: { chatId?: Id }): Promise<Message | undefined>
   /** A tombstone, not a removal: the row stays, and reads and search stop returning it. */
-  markDeleted(key: AccountKey, messageIds: Id[], options?: { chatId?: Id }): number
+  markDeleted(key: AccountKey, messageIds: Id[], options?: { chatId?: Id }): Promise<number>
   /** Newest first. At least three characters: a trigram index answers a shorter query with nothing. */
-  search(query: string, options: { limit: number; account?: AccountKey }): Page<StoredHit>
+  search(query: string, options: { limit: number; account?: AccountKey }): Promise<Page<StoredHit>>
   /** Newest first — by text, by who wrote it, or both. */
-  find(filter: MessageFilter): Page<StoredHit>
-  savePeople(key: AccountKey, people: PersonFacts[]): void
+  find(filter: MessageFilter): Promise<Page<StoredHit>>
+  savePeople(key: AccountKey, people: PersonFacts[]): Promise<void>
   /** Everyone this provider's accounts have seen; with `account`, only who that account has seen. */
-  people(provider: Provider, options?: { account?: Id; accounts?: Id[] }): PeopleLookup
+  people(provider: Provider, options?: { account?: Id; accounts?: Id[] }): Promise<PeopleLookup>
+  /** A message's reactions as they are now; answers whether the message is held at all. */
+  saveReactions(key: AccountKey, chatId: Id, messageId: Id, reactions: Reactions): Promise<boolean>
   /**
    * Records that every message from `from` to `to` (inclusive, by ordering key) is held, merging it
    * with the stretches it overlaps or touches. Answers the merged stretch.
    */
-  /** A message's reactions as they are now; answers whether the message is held at all. */
-  saveReactions(key: AccountKey, chatId: Id, messageId: Id, reactions: Reactions): boolean
-  markRange(key: AccountKey, chatId: Id, from: number, to: number): Range
+  markRange(key: AccountKey, chatId: Id, from: number, to: number): Promise<Range>
   /** Per chat that has messages: how many, the oldest and newest, and when the last one was stored. */
-  chatStats(key: AccountKey, chatId?: Id): ChatStats[]
+  chatStats(key: AccountKey, chatId?: Id): Promise<ChatStats[]>
   /** The stretches held completely, oldest first. */
-  ranges(key: AccountKey, chatId: Id): Range[]
-  close(): void
+  ranges(key: AccountKey, chatId: Id): Promise<Range[]>
+  close(): Promise<void>
 }
 
 export interface ChatStats {
@@ -529,17 +534,17 @@ const storeOver = (database: CacheDatabase, now: () => number): MessageStore => 
   const MESSAGE_JOINS = `JOIN chats c ON c.pk = m.chat_pk LEFT JOIN identities i ON i.pk = m.sender_identity_pk`
 
   return {
-    saveAccount: (key, { name }) => {
+    saveAccount: async (key, { name }) => {
       accountPk(key, name)
     },
 
-    saveChats: (key, chats) =>
+    saveChats: async (key, chats) =>
       inTransaction(() => {
         const accountKey = accountPk(key)
         for (const chat of chats) upsertChat(accountKey, chat)
       }),
 
-    saveMessages: (key, chatId, messages, { via }) =>
+    saveMessages: async (key, chatId, messages, { via }) =>
       inTransaction(() => {
         const accountKey = accountPk(key)
         const chatKey = chatPkFor(accountKey, chatId)
@@ -548,7 +553,7 @@ const storeOver = (database: CacheDatabase, now: () => number): MessageStore => 
         }
       }),
 
-    chats: (key, { limit, offset = 0 }) => {
+    chats: async (key, { limit, offset = 0 }) => {
       const accountKey = findAccountPk(key)
       if (accountKey === undefined) return { items: [], hasMore: false }
       const rows = all(
@@ -561,7 +566,7 @@ const storeOver = (database: CacheDatabase, now: () => number): MessageStore => 
       return { items: rows.slice(0, limit).map(toChat), hasMore }
     },
 
-    messages: (key, chatId, { limit, before }) => {
+    messages: async (key, chatId, { limit, before }) => {
       const accountKey = findAccountPk(key)
       const chatKey = accountKey === undefined ? undefined : findChatPk(accountKey, chatId)
       if (chatKey === undefined) return { items: [], hasMore: false }
@@ -583,7 +588,7 @@ const storeOver = (database: CacheDatabase, now: () => number): MessageStore => 
       return { items: toMessages(rows.slice(0, limit)).reverse(), hasMore: rows.length > limit }
     },
 
-    around: (key, chatId, messageId, { before, after }) => {
+    around: async (key, chatId, messageId, { before, after }) => {
       const accountKey = findAccountPk(key)
       const chatKey = accountKey === undefined ? undefined : findChatPk(accountKey, chatId)
       const anchor =
@@ -615,7 +620,7 @@ const storeOver = (database: CacheDatabase, now: () => number): MessageStore => 
       return toMessages(rows).map((message, index) => (rows[index] === anchor ? { ...message, anchor: true } : message))
     },
 
-    message: (key, messageId, { chatId } = {}) => {
+    message: async (key, messageId, { chatId } = {}) => {
       const accountKey = findAccountPk(key)
       if (accountKey === undefined) return undefined
       const rows = all(
@@ -632,7 +637,7 @@ const storeOver = (database: CacheDatabase, now: () => number): MessageStore => 
       return toMessages(rows)[0]
     },
 
-    markDeleted: (key, messageIds, { chatId } = {}) => {
+    markDeleted: async (key, messageIds, { chatId } = {}) => {
       const accountKey = findAccountPk(key)
       if (accountKey === undefined || messageIds.length === 0) return 0
       let changed = 0
@@ -651,17 +656,17 @@ const storeOver = (database: CacheDatabase, now: () => number): MessageStore => 
       return changed
     },
 
-    search: (query, { limit, account }) => find({ text: query, limit, ...(account ? { account } : {}) }),
+    search: async (query, { limit, account }) => find({ text: query, limit, ...(account ? { account } : {}) }),
 
-    find: (filter) => find(filter),
+    find: async (filter) => find(filter),
 
-    savePeople: (key, people) =>
+    savePeople: async (key, people) =>
       inTransaction(() => {
         const accountKey = accountPk(key)
         for (const person of people) identityPk(accountKey, key.provider, person.id, person.name, person)
       }),
 
-    people: (provider, { account, accounts } = {}) => {
+    people: async (provider, { account, accounts } = {}) => {
       const within = accounts ?? (account === undefined ? undefined : [account])
       const scope = within
         ? `AND pk IN (SELECT ai.identity_pk FROM account_identities ai JOIN accounts a ON a.pk = ai.account_pk
@@ -677,7 +682,7 @@ const storeOver = (database: CacheDatabase, now: () => number): MessageStore => 
       return { get: (id) => byId.get(id), all: () => everyone }
     },
 
-    saveReactions: (key, chatId, messageId, reactions) => {
+    saveReactions: async (key, chatId, messageId, reactions) => {
       const accountKey = findAccountPk(key)
       const chatKey = accountKey === undefined ? undefined : findChatPk(accountKey, chatId)
       if (chatKey === undefined) return false
@@ -691,7 +696,7 @@ const storeOver = (database: CacheDatabase, now: () => number): MessageStore => 
       )
     },
 
-    markRange: (key, chatId, from, to) => {
+    markRange: async (key, chatId, from, to) => {
       let merged: Range = { from, to }
       inTransaction(() => {
         const chatKey = chatPkFor(accountPk(key), chatId)
@@ -713,7 +718,7 @@ const storeOver = (database: CacheDatabase, now: () => number): MessageStore => 
       return merged
     },
 
-    chatStats: (key, chatId) => {
+    chatStats: async (key, chatId) => {
       const accountKey = findAccountPk(key)
       if (accountKey === undefined) return []
       return all(
@@ -734,7 +739,7 @@ const storeOver = (database: CacheDatabase, now: () => number): MessageStore => 
       }))
     },
 
-    ranges: (key, chatId) => {
+    ranges: async (key, chatId) => {
       const accountKey = findAccountPk(key)
       const chatKey = accountKey === undefined ? undefined : findChatPk(accountKey, chatId)
       if (chatKey === undefined) return []
@@ -743,7 +748,7 @@ const storeOver = (database: CacheDatabase, now: () => number): MessageStore => 
       )
     },
 
-    close: () => database.close(),
+    close: async () => database.close(),
   }
 }
 

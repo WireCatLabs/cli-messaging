@@ -57,13 +57,13 @@ export const messagesTools = (messenger: Messenger): Record<string, AnyTool> => 
         limit,
       }),
       annotations: { ...READ, openWorldHint: false },
-      stored: (store, account, args, defaults) => {
+      stored: async (store, account, args, defaults) => {
         const size = args.limit ?? defaults.limit
-        const found = store.find({
+        const found = await store.find({
           text: args.text,
           account,
           limit: size,
-          ...(args.chat === undefined ? {} : { chatId: storedChatId(messenger, args.chat, store, account) }),
+          ...(args.chat === undefined ? {} : { chatId: await storedChatId(messenger, args.chat, store, account) }),
         })
         return { items: found.items, limit: size, hasMore: found.hasMore }
       },

@@ -6,6 +6,16 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Changed — may break callers
+
+- **Every `MessageStore` method returns a `Promise`**, `close` included, so a store that is not
+  SQLite can stand behind the same interface later. The work passed to `withStore`, and an MCP
+  tool's `stored`, return a `Promise` too. A caller adds `await`; one that keeps a store open around
+  its own work writes `return await work(store)` inside `try/finally`, or the store closes before
+  the work finishes. A refusal — a search too short, a `find` with neither text nor sender, a
+  `message` id two chats share — is now a rejected promise: a `try/catch` without `await` no longer
+  catches it.
+
 ## 0.35.0 — 29.09.2026
 
 ### Added
