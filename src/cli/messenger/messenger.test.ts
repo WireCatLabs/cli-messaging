@@ -422,4 +422,19 @@ describe("the guard, account and mcp config commands", () => {
     expect(table.code).toBe(0)
     expect(table.stderr.join("\n")).toContain("page 1 of more")
   })
+
+  it("**print one message per line** from `messages list` and `messages search` with --jsonl", async () => {
+    const env = sandbox()
+    const online = async (): Promise<MessengerAdapter> => ({
+      ...fake,
+      history: async () => ({ items: thread, hasMore: true }),
+    })
+
+    const listed = await call(["messages", "list", "7", "--jsonl"], online, env)
+    expect(listed.stdout.map((line) => JSON.parse(line).id)).toEqual(["1", "2", "3"])
+    expect(listed.stderr.join("\n")).toContain("--before 1")
+
+    const found = await call(["messages", "search", "chapt", "--jsonl"], online, env)
+    expect(found.stdout.map((line) => JSON.parse(line).id)).toEqual(["3", "2", "1"])
+  })
 })

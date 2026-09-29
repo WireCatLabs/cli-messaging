@@ -6,6 +6,13 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Fixed
+
+- **`messages list --jsonl` and `messages search --jsonl` print one message per line**, as `inbox`,
+  `watch` and their own `--help` promise. They printed the whole page as one JSON line. A script that
+  worked around it by reading `.items` from that line must now read each line as a message; the hint
+  about older messages goes to stderr.
+
 ## 0.29.0 — 29.09.2026
 
 ### Fixed
