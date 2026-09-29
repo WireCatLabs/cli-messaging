@@ -8,6 +8,12 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Added
 
+- **`doctor report` and `doctor report create [--run <id>] [--output <file>]`** — a problem report
+  as one JSON file: what `doctor` answers, the failed run's requests (the newest, or the one named) and
+  the last 20 send attempts. Every chat, message and account id becomes a label salted per report, the
+  home folder becomes `~`, and a run event keeps only its named fields — never message text, a title,
+  a name, a phone number or the session (copied from max-cli). `AppIdentity.issues`, when set, is where
+  the report says to send it.
 - **`messages search --regex <pattern>`** — the words are one regular expression, case-insensitive,
   tested against every stored message's text, newest first, until `--limit` match. No index serves it
   and the store is unchanged: it reads the chat (`--chat`) or the whole account a chunk at a time.
