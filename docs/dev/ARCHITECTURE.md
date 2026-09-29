@@ -35,8 +35,12 @@ from `storePath` (`src/store/path.ts`), the only place that turns `MESSAGING_STO
 
 ### Migrations
 
-`src/store/migrations.ts` is append-only: forward-only, additive, numbered, and a migration that
-reached anyone's file is never edited. `min_compatible` lets an older CLI keep using a file a newer
+Versions 1–5 are hand-written in `src/store/migrations.ts` and frozen. From version 6 on, a
+migration is SQL that `pnpm db:generate` writes into `drizzle/` from `src/store/sqlite/schema.ts`,
+`pnpm db:bundle` copies into `src/store/sqlite/migrations.generated.ts`, and a row in
+`src/store/sqlite/manifest.ts` numbers. Our runner (`migrate`) applies both, under `BEGIN IMMEDIATE`;
+Drizzle's own migrator is not used. Every migration is forward-only, additive, numbered, and never
+edited once it reached anyone's file — a test refuses a generated rebuild of a base table. `min_compatible` lets an older CLI keep using a file a newer
 one migrated; only a breaking change raises it, and that is a major version of this package. The
 rules are [proposal §4, Migrations](../plans/2026-09-26-platform-proposal.md#migrations).
 
