@@ -1,8 +1,9 @@
 # Handoff — storage and search for cli-messaging, then max-cli
 
 You are picking up the move of the message store to Drizzle, an async store API, and the search
-subsystem in the owner's requirements. The research is done; nothing is built. **Your first job is
-the phase 1 plan, not code** — and it cannot start until the engine is ruled (below).
+subsystem in the owner's requirements. The research is done and the engine is ruled — **SQLite FTS5
+behind an async store interface, no daemon in phases 1–2**; nothing is built. **Your first job is the
+phase 1 plan, not code**: write it, show it, wait for approval.
 
 ## 1. What this is
 
@@ -27,9 +28,10 @@ Full description: [`../../README.md`](../../README.md).
 
 ## 3. Read for this task, in this order
 
-1. [`decisions.md`](decisions.md) — which questions are open (engine NEED-374, search semantics
-   NEED-375, daemon NEED-376) and the recommended answers. If the owner has not answered, **stop and
-   ask**; do not pick.
+1. [`decisions.md`](decisions.md) — the rulings: SQLite FTS5 (NEED-374), every word with an
+   any-word fallback, BM25 plus trigram typo correction (NEED-375), no daemon in phases 1–2
+   (NEED-376), and why. The requirements still say PGlite in §2, §7, §8, §25 — the rulings override
+   them.
 2. [`current-state.md`](current-state.md) §"What this means" — the five problems any design must
    answer.
 3. [`research/2026-09-29-search-benchmark.md`](research/2026-09-29-search-benchmark.md) — which
@@ -56,10 +58,8 @@ Full description: [`../../README.md`](../../README.md).
 - **`unicode61 remove_diacritics` strips Latin accents only** — normalize ё→е, й→и yourself.
 - **SQLite picks a slow plan** for FTS5 plus filters with a plain `JOIN` (`MATCH` per row); write
   it as `CROSS JOIN` and check `EXPLAIN QUERY PLAN` in a test.
-- **If PGlite is ruled in:** two processes on one data directory corrupt it silently — own lock file
-  first; `pglite-socket` runs one query at a time and has open deadlocks; every minor PGlite upgrade
-  needs a dump and restore; with a chat filter, pg_textsearch 1.3.1 returned non-matching rows (keep
-  `score < 0`).
+- **PGlite was measured and ruled out** — do not reopen it without reading the research; the reasons
+  (no lock, dump on every minor upgrade, wrong rows under a filter, 5× memory) are in `research/`.
 - **Releases:** cli-messaging has no CHANGELOG and releases with `bin/release`; tg-cli asks for
   releases. Base every PR on `main`, never stack.
 

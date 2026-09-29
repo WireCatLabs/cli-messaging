@@ -9,6 +9,7 @@ millions of messages. Start with [`HANDOFF.md`](HANDOFF.md).
 | [`requirements.md`](requirements.md) | what the owner asked for, verbatim |
 | [`decisions.md`](decisions.md) | what is ruled, what is open, what is recommended |
 | [`current-state.md`](current-state.md) | the two stores today, who opens them, the servers that exist |
+| [`daemon.md`](daemon.md) | whether a daemon is needed, and which kind — trade-offs |
 | [`research/2026-09-29-search-benchmark.md`](research/2026-09-29-search-benchmark.md) | SQLite FTS5 vs PGlite vs Postgres at 100k and 1M |
 | [`research/2026-09-29-pglite-measured.md`](research/2026-09-29-pglite-measured.md) | PGlite 0.5.8, pgvector, pglite-socket, measured |
 | [`research/2026-09-29-pglite-web-check.md`](research/2026-09-29-pglite-web-check.md) | the PGlite findings against its docs, issues and source |
