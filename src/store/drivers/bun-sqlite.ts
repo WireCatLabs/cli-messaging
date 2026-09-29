@@ -6,7 +6,7 @@ interface BunStatement {
   all(...parameters: SqlValue[]): unknown[]
 }
 
-interface BunDatabase {
+export interface BunDatabase {
   exec(sql: string): void
   query(sql: string): BunStatement
   close(): void
@@ -20,8 +20,10 @@ interface BunDatabase {
 export const openWithBunSqlite = async (path: string): Promise<CacheDatabase> => {
   const specifier = "bun:sqlite"
   const { Database } = (await import(specifier)) as { Database: new (path: string) => BunDatabase }
-  const database = new Database(path)
+  return cacheOverBunSqlite(new Database(path))
+}
 
+export const cacheOverBunSqlite = (database: BunDatabase): CacheDatabase => {
   return {
     exec: (sql) => database.exec(sql),
     prepare: (sql) => {
