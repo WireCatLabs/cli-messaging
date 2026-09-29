@@ -10,6 +10,7 @@ import { envName } from "../app.js"
 import { type BaseEnvironment, environmentOf } from "../context.js"
 import { isCliFailure } from "../failures.js"
 import { parseDuration } from "../settings.js"
+import { estimateBackfill } from "./backfill-estimate.js"
 import {
   type Job,
   jobsDir,
@@ -22,6 +23,7 @@ import {
   updateJob,
 } from "./backfill-jobs.js"
 import { type Messenger, type MessengerContext, messengerContext } from "./context.js"
+import { storedChatId } from "./messages-command.js"
 import type { MessengerAdapter } from "./port.js"
 
 /** The most messages a provider hands out per history request — Telegram's cap. */
@@ -41,10 +43,43 @@ export const backfillCommand = (messenger: Messenger): Command => {
     .option("--max <n>", "at most this many messages in this run", wholeNumber, 1000)
     .option("--pace <duration>", "pause between pages, to stay under the provider's limits", "1s")
     .option("--background", "run as a job that outlives this command; `backfill status` follows it")
+    .option(
+      "--estimate",
+      "how many messages, requests and minutes a full backfill would still take — from the store, no request",
+    )
     .action(async function (this: Command, chat: string) {
-      const { max, pace, background } = this.opts<{ max: number; pace: string; background?: boolean }>()
+      const { max, pace, background, estimate } = this.opts<{
+        max: number
+        pace: string
+        background?: boolean
+        estimate?: boolean
+      }>()
       const pauseMs = parseDuration(pace, "--pace")
       const context = messengerContext(this, messenger)
+      if (estimate) {
+        const answer = await context.withStore((store, account) => {
+          const chatId = storedChatId(messenger, chat, store, account)
+          const newest = Number(store.messages(account, chatId, { limit: 1 }).items[0]?.id)
+          return {
+            chat: chatId,
+            ...estimateBackfill({
+              ranges: store.ranges(account, chatId),
+              held: store.chatStats(account, chatId)[0]?.messages ?? 0,
+              newest: Number.isSafeInteger(newest) ? newest : undefined,
+              page: PAGE,
+              max,
+              pauseMs,
+            }),
+          }
+        })
+        context.renderer.result(answer)
+        if (answer.missing === null) {
+          context.renderer.note(
+            `nothing held of this chat to measure by — \`${messenger.app.command} backfill ${chat} --max 100\` gives the estimate something to go on`,
+          )
+        } else if (answer.missing > 0) context.renderer.note("an estimate: provider waits (FloodWait) come on top")
+        return
+      }
       if (background) {
         startJob(this, context, messenger, { chat, max, pace })
         return
