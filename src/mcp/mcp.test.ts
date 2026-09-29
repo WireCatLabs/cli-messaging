@@ -518,6 +518,22 @@ describe("sending over MCP", () => {
     expect(queue.body.items[0].scheduledFor).toBe("2030-01-01T09:00:00.000Z")
   })
 
+  it("attaches a file from a path, and refuses a hidden one with no way around it", async () => {
+    const { telegram, sent } = sending()
+    const { call } = await connect(telegram, { allowSend: true })
+    const root = mkdtempSync(join(tmpdir(), "mcp-upload-"))
+    writeFileSync(join(root, "plan.pdf"), "pdf")
+    writeFileSync(join(root, ".env"), "SECRET=1")
+
+    const attached = await call("chat_messages_send", { chat: "7", file: join(root, "plan.pdf") })
+    const hidden = await call("chat_messages_send", { chat: "7", text: "here", file: join(root, ".env") })
+
+    expect(attached.isError).toBe(false)
+    expect(sent[0]?.attachments).toMatchObject([{ kind: "file", name: "plan.pdf" }])
+    expect(hidden.isError).toBe(true)
+    expect(sent).toHaveLength(1)
+  })
+
   it("refuses on a read-only profile, and sends nothing", async () => {
     const { telegram, sent } = sending()
     const { call } = await connect(telegram, { allowSend: true, config: { profiles: { default: { readOnly: true } } } })

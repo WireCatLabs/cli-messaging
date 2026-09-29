@@ -22,6 +22,12 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 - **`contacts sync`**: the messenger's own contact list — the address book, not the chats — into the
   local store, answering `{ added, changed, known }`. A messenger offers it with the optional
   `addressBook`.
+- **`messages send --file <path>` and `--photo <path>`**, the text as the caption, and `file` and
+  `photo` on the MCP send tool. A file is read before connecting, with max-cli's rule: hidden files
+  and folders (`~/.ssh`), the CLI's own folders and the message store are refused — the command takes
+  `--allow-any-file`, the MCP tool never does. The journal records each attachment's kind and size,
+  never its name. An adapter receives them as `SendOptions.attachments` (`Upload`: kind, name, bytes);
+  `readUpload` is exported from `./sends`.
 - **`chats members list <chat>`**, max-cli's, and the `chats_members` tool: everyone in a group, paged
   like every listing (`--limit`, `--page`, `--all`). A member may carry `role` (`owner`, `admin`,
   `member`) and `lastSeenAt` (`null` when their privacy hides it) — type `GroupMember`. A messenger

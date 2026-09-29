@@ -19,3 +19,4 @@ export {
 export { PERMISSIONS, type Permission, permissionFor } from "./permissions.js"
 export { type Recipient, RecipientList, recipientsPathFor } from "./recipients.js"
 export { newSendId } from "./send-id.js"
+export { readUpload, type Upload, type UploadKind } from "./upload.js"

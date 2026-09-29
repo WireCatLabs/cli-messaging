@@ -8,6 +8,7 @@ import { renderMessages } from "../../render/messages.js"
 import { pickChat } from "../../resolve.js"
 import type { SendGuard } from "../../sends/guard.js"
 import { newSendId } from "../../sends/send-id.js"
+import { readUpload, type Upload } from "../../sends/upload.js"
 import type { AccountKey, MessageStore } from "../../store/store.js"
 import { afterOf, oneDirection } from "./after.js"
 import { type Messenger, messengerContext } from "./context.js"
@@ -151,6 +152,9 @@ export const messagesCommand = (messenger: Messenger): Command => {
     .option("--silent", "deliver without a notification")
     .option("--no-preview", "no preview card for a link in the text")
     .option("--md, --markdown", "read **bold**, _italic_, ~~struck~~ and `code` in the text; \\ keeps a mark literal")
+    .option("--file <path>", "attach a file; the text becomes its caption")
+    .option("--photo <path>", "attach a .jpg, .png or .webp as a photo; the text becomes its caption")
+    .option("--allow-any-file", "send a file even from a hidden folder, ~/.ssh or this CLI's own folders")
     .option(
       "--at <time>",
       "let the messenger send it later, even with this machine off: 2026-09-25T09:00 (local time), or 30m, 2h, 1d from now",
@@ -215,16 +219,26 @@ const sendText = async (
   replyTo: string | undefined,
 ) => {
   const context = messengerContext(command, messenger)
-  const { sendId, silent, preview, markdown, at } = command.opts<{
+  const { sendId, silent, preview, markdown, at, file, photo, allowAnyFile } = command.opts<{
     sendId?: string
     silent?: boolean
     preview?: boolean
     markdown?: boolean
     at?: string
+    file?: string
+    photo?: string
+    allowAnyFile?: boolean
   }>()
   const scheduledFor = at === undefined ? undefined : sendTime(at)
-  const body = text ?? (await readAll(context.stdin))
-  if (body.trim() === "") throw new CliError("validation_error", "nothing to send — give the text or pipe it in")
+  const read = { app: messenger.app, env: context.env, anyFile: allowAnyFile === true }
+  const attachments = [
+    ...(photo === undefined ? [] : [await readUpload("photo", photo, read)]),
+    ...(file === undefined ? [] : [await readUpload("file", file, read)]),
+  ]
+  const body = text ?? (attachments.length > 0 ? "" : await readAll(context.stdin))
+  if (body.trim() === "" && attachments.length === 0) {
+    throw new CliError("validation_error", "nothing to send — give the text or pipe it in")
+  }
   const sent = await context.withMessenger((connection) =>
     guardedSend(context.guard, connection, {
       chat,
@@ -235,6 +249,7 @@ const sendText = async (
       ...(preview === false ? { noPreview: true } : {}),
       ...(markdown === true ? { markdown } : {}),
       ...(scheduledFor === undefined ? {} : { at: scheduledFor }),
+      ...(attachments.length > 0 ? { attachments } : {}),
     }),
   )
   if (scheduledFor !== undefined) {
@@ -247,7 +262,7 @@ const sendText = async (
 export const guardedSend = async (
   guard: SendGuard,
   connection: MessengerAdapter,
-  { chat, text: typed, sendId, replyTo, silent, noPreview, markdown, at }: GuardedSend,
+  { chat, text: typed, sendId, replyTo, silent, noPreview, markdown, at, attachments = [] }: GuardedSend,
 ): Promise<Sent> => {
   if (at !== undefined && sendId !== undefined) {
     throw new CliError(
@@ -256,7 +271,9 @@ export const guardedSend = async (
     )
   }
   const { text, markup } = markdown ? parseMarkdown(typed) : { text: typed, markup: [] }
-  if (text.trim() === "") throw new CliError("validation_error", "nothing to send — the marks leave no text")
+  if (text.trim() === "" && attachments.length === 0) {
+    throw new CliError("validation_error", "nothing to send — the marks leave no text")
+  }
   const { id: chatId } = await connection.resolve(chat)
   const attempt = {
     chatId,
@@ -265,6 +282,9 @@ export const guardedSend = async (
     length: text.length,
     ...(replyTo === undefined ? {} : { replyTo }),
     ...(at === undefined ? {} : { scheduledFor: at }),
+    ...(attachments.length === 0
+      ? {}
+      : { attachments: attachments.map(({ kind, bytes }) => ({ kind, bytes: bytes.byteLength })) }),
   }
   try {
     guard.check(attempt)
@@ -280,6 +300,7 @@ export const guardedSend = async (
       ...(noPreview ? { noPreview } : {}),
       ...(markup.length > 0 ? { markup } : {}),
       ...(at === undefined ? {} : { at }),
+      ...(attachments.length === 0 ? {} : { attachments }),
     })
     guard.record({ ...attempt, outcome: "sent", messageId: done.message.id })
     return done
@@ -309,6 +330,7 @@ interface GuardedSend {
   markdown?: boolean
   /** ISO time to send it at; refused together with `sendId`. */
   at?: string
+  attachments?: Upload[]
 }
 
 const codeOf = (error: unknown): string =>
