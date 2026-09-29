@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.40.0 — 29.09.2026
+
 ### Changed — may break callers
 
 - **`serviceCommand` is now `serverCommand`: `server start|stop|restart|status|logs|install|uninstall`**,
