@@ -621,6 +621,44 @@ describe("the guard, account and mcp config commands", () => {
     expect(table.stderr.join("\n")).toContain("page 1 of more")
   })
 
+  it("**filter chats list** by --search, --kind and --unread together, over the newest chats only", async () => {
+    const env = sandbox()
+    const asked: unknown[] = []
+    const busy: MessengerAdapter = {
+      ...fake,
+      chats: async (window) => {
+        asked.push(window)
+        return {
+          items: [chat, ...people, { ...people[0], id: "22", title: "Zoe's club", unreadCount: 3 } as Chat],
+          hasMore: true,
+        }
+      },
+    }
+    const online = async () => busy
+
+    const found = await call(
+      ["chats", "list", "--search", "ZOE", "--kind", "dialog", "--unread", "--json"],
+      online,
+      env,
+    )
+    const people_ = await call(["chats", "list", "--kind", "dialog", "--limit", "1", "--json"], online, env)
+
+    expect(json(found.stdout).items.map((one: Chat) => one.id)).toEqual(["22"])
+    expect(found.stderr.join("\n")).toContain("newest chats were searched")
+    expect(asked[0]).toEqual({ limit: 200, offset: 0 })
+    expect(json(people_.stdout)).toMatchObject({ items: [{ id: "20" }], hasMore: true })
+  })
+
+  it("refuses a --search under 3 characters and an unknown --kind, before connecting", async () => {
+    const env = sandbox()
+    const never = async (): Promise<MessengerAdapter> => {
+      throw new Error("must not connect")
+    }
+
+    expect((await call(["chats", "list", "--search", "zo"], never, env)).code).toBe(2)
+    expect((await call(["chats", "list", "--kind", "bot"], never, env)).code).toBe(2)
+  })
+
   it("**print one message per line** from `messages list` and `messages search` with --jsonl", async () => {
     const env = sandbox()
     const online = async (): Promise<MessengerAdapter> => ({

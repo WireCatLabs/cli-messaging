@@ -228,6 +228,14 @@ describe("the MCP server", () => {
     expect(telegram.opened()).toBe(0)
   })
 
+  it("filters chat_chats_list, and says when older chats were not searched", async () => {
+    const { call } = await connect(scripted())
+
+    const { body } = await call("chat_chats_list", { kind: "channel" })
+
+    expect(body).toMatchObject({ items: [], hasMore: false, partial: true })
+  })
+
   it("answers listings in the command's envelope, and connects once for several calls", async () => {
     const telegram = scripted()
     const { call } = await connect(telegram)
