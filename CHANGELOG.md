@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.38.0 — 29.09.2026
+
 ### Added
 
 - **`review`**, max-cli's: every message, the owner's too, in each chat that changed since `--since`
