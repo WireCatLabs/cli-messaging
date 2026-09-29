@@ -23,8 +23,9 @@ export const messagesPhotoTools = (messenger: Messenger): Record<string, AnyTool
     input: v.object({ chat: chatOf(messenger), message }),
     annotations: READ,
     online: async (adapter, args) => {
-      const saveIt = `the owner can save it with \`${messenger.app.command} messages download ${args.chat} ${args.message}\``
-      const { files } = await capability(adapter, "download", "download attachments")(args.chat, args.message)
+      const { id: chatId } = await adapter.resolve(args.chat)
+      const saveIt = `the owner can save it with \`${messenger.app.command} messages download ${chatId} ${args.message}\``
+      const { files } = await capability(adapter, "download", "download attachments")(chatId, args.message)
       const photo = files.find((file) => file.kind === "photo")
       if (!photo) {
         const kinds = files.map((file) => file.kind).join(", ")
@@ -38,7 +39,7 @@ export const messagesPhotoTools = (messenger: Messenger): Record<string, AnyTool
       const bytes = await readUpTo(photo, PHOTO_LIMIT, saveIt)
       const mimeType = IMAGE_TYPES.find(([, is]) => is(bytes))?.[0]
       if (!mimeType) throw new CliError("validation_error", `the photo is not JPEG, PNG or WebP — ${saveIt}`)
-      return new Picture(bytes, mimeType, { chat: args.chat, messageId: args.message, bytes: bytes.length })
+      return new Picture(bytes, mimeType, { chatId, messageId: args.message, bytes: bytes.length })
     },
   }),
 })

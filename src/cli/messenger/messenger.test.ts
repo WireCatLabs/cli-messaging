@@ -450,6 +450,37 @@ describe("messages download", () => {
   })
 })
 
+describe("messages transcribe", () => {
+  const env = () => {
+    const root = mkdtempSync(join(tmpdir(), "messenger-"))
+    return { CHAT_STATE_DIR: join(root, "state"), MESSAGING_STORE: join(root, "m.db") }
+  }
+
+  it("prints the text, and says on stderr when it was not finished", async () => {
+    const done = await call(
+      ["messages", "transcribe", "Book", "5", "--json"],
+      async () => ({ ...fake, transcribe: async () => ({ text: "hello", pending: false }) }),
+      env(),
+    )
+    const pending = await call(
+      ["messages", "transcribe", "Book", "5", "--json"],
+      async () => ({ ...fake, transcribe: async () => ({ text: "", pending: true }) }),
+      env(),
+    )
+
+    expect(JSON.parse(done.stdout[0] ?? "")).toEqual({ messageId: "5", text: "hello", pending: false })
+    expect(done.stderr).toEqual([])
+    expect(pending.stderr.join("")).toContain("not finished")
+  })
+
+  it("refuses on a messenger that cannot transcribe", async () => {
+    const { code, stderr } = await call(["messages", "transcribe", "Book", "5"], async () => fake, env())
+
+    expect(code).not.toBe(0)
+    expect(stderr.join("")).toContain("cannot transcribe voice messages")
+  })
+})
+
 describe("the guard, account and mcp config commands", () => {
   const sandbox = () => {
     const root = mkdtempSync(join(tmpdir(), "messenger-"))

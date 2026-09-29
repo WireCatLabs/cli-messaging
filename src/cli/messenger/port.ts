@@ -40,6 +40,12 @@ export interface SendOptions {
   markup?: Markup[]
 }
 
+/** A voice message as text. `pending`: the messenger was still working on it when it answered. */
+export interface Transcript {
+  text: string
+  pending: boolean
+}
+
 export interface Sent {
   message: Message
   /** The send's identity. Repeat it after an unknown outcome, never a new one. */
@@ -82,6 +88,8 @@ export interface MessengerAdapter {
   watch?(onEvent: (event: MessageEvent) => void, signal: AbortSignal, onReady?: () => void): Promise<void>
   /** The files attached to one message, fetched fresh from the messenger: a stored reference may have expired. */
   download?(chat: string, messageId: Id): Promise<Download>
+  /** A voice or video note as text, by the messenger's own speech recognition. */
+  transcribe?(chat: string, messageId: Id): Promise<Transcript>
   logout(): Promise<void>
   close(): Promise<void>
 }

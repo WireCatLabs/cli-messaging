@@ -6,6 +6,18 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- **`messages transcribe <chat> <message>` and the MCP tool `<cli>_messages_transcribe`** turn a
+  voice or video note into text with the messenger's own speech recognition, through the new
+  optional adapter method `transcribe?()` (`Transcript`). `pending: true` means the messenger was not
+  finished; the command says so on stderr.
+
+### Fixed
+
+- **The photo tool's refusal names a command that runs**: `messages download <chat id> <message>`,
+  with the chat resolved to its id, not the words the caller typed. Its text part says `chatId`.
+
 ## 0.36.0 — 29.09.2026
 
 ### Changed — may break callers

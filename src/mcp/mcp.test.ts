@@ -210,6 +210,7 @@ describe("the MCP server", () => {
       "chat_messages_list",
       "chat_messages_photo",
       "chat_messages_search",
+      "chat_messages_transcribe",
       "chat_status",
     ])
     expect(tools.every((one) => one.annotations?.readOnlyHint === true)).toBe(true)
@@ -369,7 +370,7 @@ describe("the photo tool", () => {
 
     expect(isError).toBe(false)
     expect(content[0]).toEqual({ type: "image", mimeType: "image/jpeg", data: Buffer.from(jpeg).toString("base64") })
-    expect(JSON.parse(content[1]?.text ?? "")).toEqual({ chat: "Book club", messageId: "1", bytes: jpeg.length })
+    expect(JSON.parse(content[1]?.text ?? "")).toEqual({ chatId: "7", messageId: "1", bytes: jpeg.length })
   })
 
   it("refuses anything else with the command that saves it", async () => {
@@ -380,7 +381,7 @@ describe("the photo tool", () => {
 
     for (const refused of [voice, large, unsized, unknown]) {
       expect(refused.isError).toBe(true)
-      expect(refused.content[0]?.text).toContain("chat messages download Book club 1")
+      expect(refused.content[0]?.text).toContain("chat messages download 7 1")
     }
   })
 
@@ -390,6 +391,34 @@ describe("the photo tool", () => {
 
     expect(JSON.parse(none.content[0]?.text ?? "").error.code).toBe("not_found")
     expect(unable.content[0]?.text).toContain("cannot download attachments")
+  })
+})
+
+describe("the transcribe tool", () => {
+  it("answers the text, and whether the messenger was still working on it", async () => {
+    let asked: unknown
+    const { call } = await connect(
+      scripted({
+        transcribe: async (chat, id) => {
+          asked = [chat, id]
+          return { text: "hello there", pending: false }
+        },
+      }),
+    )
+
+    expect((await call("chat_messages_transcribe", { chat: "Book club", message: "5" })).body).toEqual({
+      messageId: "5",
+      text: "hello there",
+      pending: false,
+    })
+    expect(asked).toEqual(["Book club", "5"])
+  })
+
+  it("refuses on a messenger that cannot transcribe", async () => {
+    const { isError, body } = await (await connect()).call("chat_messages_transcribe", { chat: "7", message: "5" })
+
+    expect(isError).toBe(true)
+    expect(body.error.message).toContain("cannot transcribe voice messages")
   })
 })
 
