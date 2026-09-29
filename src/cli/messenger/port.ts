@@ -46,6 +46,9 @@ export interface Transcript {
   pending: boolean
 }
 
+/** A message id — exact within one chat — or a moment in ms, which works in every chat. */
+export type After = { id: Id } | { time: number }
+
 export interface Sent {
   message: Message
   /** The send's identity. Repeat it after an unknown outcome, never a new one. */
@@ -69,6 +72,8 @@ export interface MessengerAdapter {
   chats(window: { limit?: number; offset: number }): Promise<Page<Chat>>
   /** Oldest to newest. `before` is a message id, or whatever the messenger pages by, as typed. */
   history(chat: string, window: { limit: number; before?: string }): Promise<Page<Message>>
+  /** The oldest `limit` newer than a message or a moment, oldest first; `hasMore` when newer ones remain. */
+  historyAfter?(chat: string, window: { limit: number; after: After }): Promise<Page<Message>>
   resolve(chat: string): Promise<Chat>
   /** One chat and who is in it; `members` is `null` where the messenger does not say — a channel, a hidden list. */
   chat(chat: string): Promise<ChatCard>

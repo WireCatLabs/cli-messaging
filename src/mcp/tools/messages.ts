@@ -1,6 +1,8 @@
 import * as v from "valibot"
+import { afterOf, oneDirection } from "../../cli/messenger/after.js"
 import type { Messenger } from "../../cli/messenger/context.js"
 import { storedChatId } from "../../cli/messenger/messages-command.js"
+import { capability } from "../../cli/messenger/port.js"
 import { type AnyTool, chatOf, limit, message, nameOf, READ, tool } from "../tool.js"
 
 export const messagesTools = (messenger: Messenger): Record<string, AnyTool> => {
@@ -11,19 +13,34 @@ export const messagesTools = (messenger: Messenger): Record<string, AnyTool> => 
       title: "Read a chat",
       description:
         "Recent messages in a chat, oldest first. Does not mark anything read. For older messages pass " +
-        "`before` = the id of the first item. Returns { items, limit, hasMore }.",
+        "`before` = the id of the first item; for newer ones, `after` = the id of the last item, or a time. " +
+        "Returns { items, limit, hasMore }.",
       input: v.object({
         chat,
         limit,
         before: v.optional(v.pipe(message, v.description("only messages older than this message id"))),
+        after: v.optional(
+          v.pipe(v.string(), v.description("only messages newer than this message id, ISO 8601 time, or 2h / 1d ago")),
+        ),
       }),
       annotations: READ,
       online: async (adapter, args, defaults) => {
         const size = args.limit ?? defaults.limit
-        const found = await adapter.history(args.chat, {
-          limit: size,
-          ...(args.before === undefined ? {} : { before: args.before }),
-        })
+        oneDirection(args.before, args.after)
+        const found =
+          args.after === undefined
+            ? await adapter.history(args.chat, {
+                limit: size,
+                ...(args.before === undefined ? {} : { before: args.before }),
+              })
+            : await capability(
+                adapter,
+                "historyAfter",
+                "read forward from a message",
+              )(args.chat, {
+                limit: size,
+                after: afterOf(args.after, "after"),
+              })
         return { items: found.items, limit: size, hasMore: found.hasMore }
       },
     }),

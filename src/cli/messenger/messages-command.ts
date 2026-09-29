@@ -8,11 +8,12 @@ import { pickChat } from "../../resolve.js"
 import type { SendGuard } from "../../sends/guard.js"
 import { newSendId } from "../../sends/send-id.js"
 import type { AccountKey, MessageStore } from "../../store/store.js"
+import { afterOf, oneDirection } from "./after.js"
 import { type Messenger, messengerContext } from "./context.js"
 import { downloadSubcommand } from "./download-command.js"
 import { editCommand } from "./messages-edit-command.js"
 import { forwardCommand } from "./messages-forward-command.js"
-import type { MessengerAdapter, Sent } from "./port.js"
+import { capability, type MessengerAdapter, type Sent } from "./port.js"
 import { readAll } from "./stdin.js"
 import { transcribeSubcommand } from "./transcribe-command.js"
 
@@ -26,16 +27,32 @@ export const messagesCommand = (messenger: Messenger): Command => {
     .argument("<chat>", messenger.chatArgument)
     .option("--limit <n>", "how many", (value) => Number.parseInt(value, 10))
     .option("--before <id>", "only messages older than this message id")
+    .option("--after <id-or-time>", "only messages newer than this message id, ISO 8601 time, or 2h / 1d ago")
     .action(async function (this: Command, chat: string) {
       const context = messengerContext(this, messenger)
-      const { before } = this.opts<{ before?: string }>()
+      const { before, after } = this.opts<{ before?: string; after?: string }>()
+      oneDirection(before, after)
       const { limit } = context.settings
       const wanted = { limit, ...(before === undefined ? {} : { before }) }
-      const page = context.settings.offline
-        ? await context.withStore(async (store, account) =>
-            store.messages(account, await storedChatId(messenger, chat, store, account), wanted),
-          )
-        : await context.withMessenger((connection) => connection.history(chat, wanted))
+      if (after !== undefined && context.settings.offline) {
+        throw new CliError("validation_error", "--after reads from the messenger; the store pages only backwards")
+      }
+      const page =
+        after !== undefined
+          ? await context.withMessenger((connection) =>
+              capability(
+                connection,
+                "historyAfter",
+                "read forward from a message",
+              )(chat, { limit, after: afterOf(after) }),
+            )
+          : context.settings.offline
+            ? await context.withStore(async (store, account) =>
+                store.messages(account, await storedChatId(messenger, chat, store, account), wanted),
+              )
+            : await context.withMessenger((connection) => connection.history(chat, wanted))
+      const next = (items: typeof page.items) =>
+        after === undefined ? `older messages: --before ${items[0]?.id}` : `newer messages: --after ${items.at(-1)?.id}`
       if (context.format === "pretty") {
         // Straight to stdout: the pretty renderer keeps every string to one line, and a feed is many.
         context.streams.data(
@@ -47,12 +64,12 @@ export const messagesCommand = (messenger: Messenger): Command => {
             provider: messenger.provider,
           }),
         )
-        if (page.hasMore) context.renderer.note(`older messages: --before ${page.items[0]?.id}`)
+        if (page.hasMore) context.renderer.note(next(page.items))
         return
       }
       if (context.format === "jsonl") {
         context.renderer.stream(page.items)
-        if (page.hasMore) context.renderer.note(`older messages: --before ${page.items[0]?.id}`)
+        if (page.hasMore) context.renderer.note(next(page.items))
         return
       }
       context.renderer.result({ items: page.items, limit, hasMore: page.hasMore })
