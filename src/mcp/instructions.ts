@@ -10,6 +10,7 @@ export const instructions = ({
   profile,
   allowSend,
   confirmSend = false,
+  allowMarkRead = false,
   permitted,
 }: {
   /** `tg`: the prefix of every tool and the word in `… session start`. */
@@ -19,6 +20,7 @@ export const instructions = ({
   profile: string
   allowSend: boolean
   confirmSend?: boolean
+  allowMarkRead?: boolean
   permitted?: readonly Permission[] | undefined
 }): string =>
   [
@@ -29,6 +31,9 @@ export const instructions = ({
     allowSend
       ? '- Send only when the owner asked for this exact text in this exact chat. A draft or "we should reply" is not a request. A refusal (read-only profile, recipient not allowed, hourly limit) is final — do not work around it.'
       : "- Sending is off: this server was started without --allow-send. Say so if asked to send.",
+    ...(allowMarkRead
+      ? [`- ${command}_chats_read marks a chat read and the other side sees it: only when the owner asked.`]
+      : []),
     ...(allowSend && confirmSend
       ? [
           "- Every send is shown to the owner in a form first. A send the owner did not confirm is final: do not retry it.",

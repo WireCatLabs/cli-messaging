@@ -6,6 +6,19 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- **`chats read <chat> [--until <message>]`** marks a chat read, to its newest message or to the one
+  named; the other side sees it. The MCP tool `<cli>_chats_read` is offered only with the new
+  `mcp --allow-mark-read`, which `--allow-send` does not imply, and `mcp config` carries the flag. The
+  send guard checks it as a `read`, which never counts toward the hourly limit. The answer is
+  `{ chatId, until }`. An adapter offers it with the optional `markRead`.
+
+### Changed — may break callers
+
+- **`--confirm-send` is accepted with `--allow-mark-read` alone**; it refused anything but `--allow-send`.
+  `ServerOptions` and `McpFlags` gain `allowMarkRead`.
+
 ## 0.45.0 — 29.09.2026
 
 ### Added

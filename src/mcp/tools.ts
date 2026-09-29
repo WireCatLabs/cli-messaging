@@ -2,6 +2,7 @@ import type { Messenger } from "../cli/messenger/context.js"
 import type { AnyTool } from "./tool.js"
 import { accountTools } from "./tools/account.js"
 import { chatsTools } from "./tools/chats.js"
+import { chatsReadTools } from "./tools/chats-read.js"
 import { contactsTools } from "./tools/contacts.js"
 import { inboxTools } from "./tools/inbox.js"
 import { messagesTools } from "./tools/messages.js"
@@ -26,6 +27,9 @@ export const readTools = (messenger: Messenger): Record<string, AnyTool> => ({
   ...messagesPhotoTools(messenger),
   ...messagesTranscribeTools(messenger),
 })
+
+/** Offered only with `--allow-mark-read`, which `--allow-send` does not imply: the other side sees it. */
+export const markReadTools = (messenger: Messenger): Record<string, AnyTool> => chatsReadTools(messenger)
 
 /** Offered only with `--allow-send`. */
 export const sendTools = (messenger: Messenger): Record<string, AnyTool> => ({
