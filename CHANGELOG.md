@@ -6,6 +6,14 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- **`messages pin <chat> <message> [--notify]` and `messages unpin <chat> <message>`**, and with
+  `--allow-send` their MCP tools `<cli>_messages_pin` and `<cli>_messages_unpin`. A pin is quiet
+  unless `--notify`; the send guard checks both as a `pin`, and only a pin that notifies counts toward
+  the hourly limit. The answer is `{ chatId, messageId, pinned }`. An adapter offers them with the
+  optional `pin` and `unpin`.
+
 ## 0.41.0 — 29.09.2026
 
 ### Added

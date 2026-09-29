@@ -2,6 +2,7 @@ import * as v from "valibot"
 import type { Messenger } from "../../cli/messenger/context.js"
 import { guardedEdit } from "../../cli/messenger/messages-edit-command.js"
 import { guardedForward } from "../../cli/messenger/messages-forward-command.js"
+import { guardedPin } from "../../cli/messenger/messages-pin-command.js"
 import { type AnyTool, APPROVE, chatOf, message, tool, WRITE } from "../tool.js"
 
 /** What changes a message others already have, offered with `--allow-send`, each behind its own `allow` permission. */
@@ -44,6 +45,37 @@ export const messageActionTools = (messenger: Messenger): Record<string, AnyTool
           silent: args.silent === true,
         }),
       }),
+    }),
+    messages_pin: tool({
+      title: "Pin a message",
+      description:
+        "Pin one message in a chat, quietly unless notify is true. Only when the owner asked for this pin. " +
+        "In a one-to-one chat the pin is on the owner's side only.",
+      input: v.object({
+        chat,
+        message,
+        notify: v.optional(v.pipe(v.boolean(), v.description("tell the chat's members"))),
+      }),
+      annotations: WRITE,
+      _meta: APPROVE,
+      permission: "pin",
+      online: (adapter, args, { guard }) =>
+        guardedPin(guard, adapter, {
+          chat: args.chat,
+          message: args.message,
+          pinned: true,
+          notify: args.notify === true,
+        }),
+    }),
+    messages_unpin: tool({
+      title: "Unpin a message",
+      description: "Unpin one message in a chat. Only when the owner asked for it.",
+      input: v.object({ chat, message }),
+      annotations: WRITE,
+      _meta: APPROVE,
+      permission: "pin",
+      online: (adapter, args, { guard }) =>
+        guardedPin(guard, adapter, { chat: args.chat, message: args.message, pinned: false, notify: false }),
     }),
   }
 }

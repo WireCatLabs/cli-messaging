@@ -1,4 +1,4 @@
-import { existsSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from "node:fs"
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { captureStreams } from "@leemour/cli-core"
@@ -321,6 +321,40 @@ describe("the shared read commands", () => {
     expect(journal.at(-1)).toMatchObject({ kind: "forward", outcome: "sent", chatId: "20", messageId: "50" })
   })
 
+  it("**pin quietly without counting toward the hourly limit**; a pin that notifies counts", async () => {
+    const root = mkdtempSync(join(tmpdir(), "messenger-"))
+    const env = { CHAT_STATE_DIR: join(root, "state"), CHAT_CONFIG_DIR: join(root, "config") }
+    mkdirSync(env.CHAT_CONFIG_DIR, { recursive: true })
+    writeFileSync(
+      join(env.CHAT_CONFIG_DIR, "config.json"),
+      JSON.stringify({ profiles: { default: { sendsPerHour: 1 } } }),
+    )
+    const pins: unknown[] = []
+    const pinning: MessengerAdapter = {
+      ...fake,
+      pin: async (chatId, messageId, options) => {
+        pins.push(["pin", chatId, messageId, options])
+      },
+      unpin: async (chatId, messageId) => {
+        pins.push(["unpin", chatId, messageId])
+      },
+    }
+
+    const quiet = await call(["messages", "pin", "Book", "3", "--json"], async () => pinning, env)
+    const loud = await call(["messages", "pin", "Book", "4", "--notify"], async () => pinning, env)
+    const over = await call(["messages", "pin", "Book", "5", "--notify"], async () => pinning, env)
+    const off = await call(["messages", "unpin", "Book", "3", "--json"], async () => pinning, env)
+
+    expect(JSON.parse(quiet.stdout[0] ?? "")).toEqual({ chatId: "7", messageId: "3", pinned: true })
+    expect([loud.code, over.code]).toEqual([0, 8])
+    expect(JSON.parse(off.stdout[0] ?? "")).toEqual({ chatId: "7", messageId: "3", pinned: false })
+    expect(pins).toEqual([
+      ["pin", "7", "3", { notify: false }],
+      ["pin", "7", "4", { notify: true }],
+      ["unpin", "7", "3"],
+    ])
+  })
+
   it("describe themselves for an agent, with the contract version and which ones write", async () => {
     const root = mkdtempSync(join(tmpdir(), "messenger-"))
     const { stdout } = await call(["commands", "--json"], async () => fake, { CHAT_STATE_DIR: root })
@@ -332,6 +366,8 @@ describe("the shared read commands", () => {
     expect(find(["messages", "send"])?.mutates).toBe(true)
     expect(find(["messages", "edit"])?.mutates).toBe(true)
     expect(find(["messages", "forward"])?.mutates).toBe(true)
+    expect(find(["messages", "pin"])?.mutates).toBe(true)
+    expect(find(["messages", "unpin"])?.mutates).toBe(true)
     expect(find(["recipients", "add"])?.mutates).toBe(true)
     expect(find(["messages", "list"])?.mutates).toBeFalsy()
   })
