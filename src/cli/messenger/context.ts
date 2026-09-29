@@ -37,6 +37,8 @@ export interface Messenger {
   savedChatId?: (account: AccountKey) => Id
   /** The other person in a one-to-one chat, when the chat says who — a recipient list matches on it. */
   partnerOf?: (chat: Chat) => Id | undefined
+  /** Speech model ids, most suitable first, for `messages transcribe --local`; the first is the default. */
+  speechModels?: readonly string[]
   /** What only this messenger can say about itself for `doctor`, read from disk — never a secret. */
   diagnose?: (command: Command, context: BaseContext) => Promise<Record<string, unknown>>
 }

@@ -120,6 +120,7 @@ const connect = async (telegram: Scripted = scripted(), options: Partial<ServerO
     CHAT_STATE_DIR: join(root, "state"),
     CHAT_CONFIG_DIR: join(root, "config"),
     MESSAGING_STORE: join(root, "m.db"),
+    MESSAGING_CACHE_DIR: join(root, "cache"),
   }
   const { connect: connecting, form, era = "legacy", config, ...serverOptions } = options
   if (config) {
@@ -435,15 +436,16 @@ describe("the transcribe tool", () => {
       messageId: "5",
       text: "hello there",
       pending: false,
+      via: "chat",
     })
     expect(asked).toEqual(["Book club", "5"])
   })
 
-  it("refuses on a messenger that cannot transcribe", async () => {
+  it("**names the download command, never downloads**, when the messenger cannot transcribe and no model is here", async () => {
     const { isError, body } = await (await connect()).call("chat_messages_transcribe", { chat: "7", message: "5" })
 
     expect(isError).toBe(true)
-    expect(body.error.message).toContain("cannot transcribe voice messages")
+    expect(body.error.message).toContain("chat models audio download parakeet-v3")
   })
 })
 

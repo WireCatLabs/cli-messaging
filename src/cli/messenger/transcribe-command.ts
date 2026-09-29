@@ -1,21 +1,30 @@
 import type { Command } from "commander"
+import { isInstalled } from "../../speech/install.js"
+import { choose, type Heard, hearLocally, hearOnline, notDownloaded } from "../../speech/transcribe.js"
 import { type Messenger, messengerContext } from "./context.js"
-import { capability } from "./port.js"
 
-/** `messages transcribe`: a voice message as text, by the messenger's own speech recognition. */
+/** `messages transcribe`: a voice message as text, by the messenger or by a model on this machine. */
 export const transcribeSubcommand = (messages: Command, messenger: Messenger): Command =>
   messages
     .command("transcribe")
-    .description(`a voice message as text, transcribed by ${messenger.name ?? messenger.app.command}`)
+    .description(
+      `a voice message as text — by ${messenger.name ?? messenger.app.command} where it can, else by a model on this machine`,
+    )
     .argument("<chat>", messenger.chatArgument)
     .argument("<message>", "the id of a voice message")
+    .option("--local", "use the model on this machine, never the messenger")
+    .option("--model <id>", "which downloaded model; implies --local (`models audio list`)")
     .action(async function (this: Command, chat: string, messageId: string) {
       const context = messengerContext(this, messenger)
+      const choice = choose(messenger, context.settings, this.opts<{ local?: boolean; model?: string }>(), context.env)
+      // Before connecting: a missing model should not cost a login.
+      if (choice.with === "local" && !isInstalled(choice.model, choice.directory)) {
+        throw notDownloaded(messenger, choice.model)
+      }
       const id = messageId.trim()
-      const transcript = await context.withMessenger((connection) =>
-        capability(connection, "transcribe", "transcribe voice messages")(chat, id),
-      )
-      if (transcript.pending) context.renderer.note("the transcription was not finished yet — ask again later")
-      if (context.format === "pretty") context.streams.data(`${transcript.text}\n`)
-      else context.renderer.result({ messageId: id, ...transcript })
+      const online = await context.withMessenger((connection) => hearOnline(messenger, connection, chat, id, choice))
+      const heard: Heard = online instanceof Uint8Array ? await hearLocally(online, id, choice) : online
+      if (heard.pending) context.renderer.note("the transcription was not finished yet — ask again later")
+      if (context.format === "pretty") context.streams.data(`${heard.text}\n`)
+      else context.renderer.result(heard)
     })

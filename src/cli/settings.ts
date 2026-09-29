@@ -48,6 +48,8 @@ const SHARED_PROFILE_ENTRIES = {
   readOnly: v.optional(flag),
   allow: v.optional(permissionList),
   sendsPerHour: v.optional(count),
+  transcribeWith: v.optional(v.picklist(["auto", "messenger", "local"], plain("has to be auto, messenger or local"))),
+  speechModel: v.optional(v.string(plain("has to be a model id from `models audio list`, in quotes"))),
 }
 
 /** One program, one version: whether to look for a newer one is not a per-profile matter. */
