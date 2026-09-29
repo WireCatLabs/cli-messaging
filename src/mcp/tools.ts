@@ -9,6 +9,7 @@ import { messageActionTools } from "./tools/messages-actions.js"
 import { messagesPhotoTools } from "./tools/messages-photo.js"
 import { messageSendTools } from "./tools/messages-send.js"
 import { messagesTranscribeTools } from "./tools/messages-transcribe.js"
+import { reactionTools } from "./tools/reactions.js"
 import { reviewTools } from "./tools/review.js"
 
 /**
@@ -30,4 +31,5 @@ export const readTools = (messenger: Messenger): Record<string, AnyTool> => ({
 export const sendTools = (messenger: Messenger): Record<string, AnyTool> => ({
   ...messageSendTools(messenger),
   ...messageActionTools(messenger),
+  ...reactionTools(messenger),
 })

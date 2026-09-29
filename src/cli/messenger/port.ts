@@ -98,6 +98,8 @@ export interface MessengerAdapter {
   /** `notify` tells the chat's members; without it the pin is quiet. */
   pin?(chatId: Id, messageId: Id, options: { notify: boolean }): Promise<void>
   unpin?(chatId: Id, messageId: Id): Promise<void>
+  /** The owner's reaction on one message: an emoji replaces the one there was, `null` takes it off. */
+  react?(chatId: Id, messageId: Id, emoji: string | null): Promise<void>
   /**
    * New messages and changes to messages as they arrive, until `signal` aborts. `onReady` once it is
    * actually listening — a caller that sends on "listening" must not race the connection. Only on a
