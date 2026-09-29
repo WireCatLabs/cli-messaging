@@ -8,6 +8,12 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Added
 
+- **`messages list --after <id-or-time>`**, max-cli's, and `after` on the `messages_list` tool: the
+  oldest messages newer than a message id or a moment, for reading a chat forward. Digits are a
+  message id — exact within one chat — anything else a time (ISO 8601, `2h`, `1d`). `--before` with
+  `--after` is exit 2, and so is `--after` offline. A messenger offers it with the optional
+  `historyAfter` (type `After`); without it the command says it cannot read forward.
+
 - **`chats list --search <text> --kind <kind> --unread`**, max-cli's, and `search`, `kind` and
   `unread` on the `chats_list` tool. The filters combine; `--search` takes at least 3 characters and
   matches the chat's name. A filtered list searches the newest 200 chats — paging through every chat

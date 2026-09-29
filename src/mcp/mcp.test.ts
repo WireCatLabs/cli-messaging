@@ -228,6 +228,22 @@ describe("the MCP server", () => {
     expect(telegram.opened()).toBe(0)
   })
 
+  it("reads forward with after on chat_messages_list, and refuses it with before", async () => {
+    const seen: unknown[] = []
+    const { call } = await connect(
+      scripted({
+        historyAfter: async (_chat, window) => {
+          seen.push(window.after)
+          return { items: [], hasMore: false }
+        },
+      }),
+    )
+
+    expect((await call("chat_messages_list", { chat: "7", after: "12" })).body).toMatchObject({ items: [] })
+    expect(seen).toEqual([{ id: "12" }])
+    expect((await call("chat_messages_list", { chat: "7", after: "12", before: "20" })).isError).toBe(true)
+  })
+
   it("filters chat_chats_list, and says when older chats were not searched", async () => {
     const { call } = await connect(scripted())
 

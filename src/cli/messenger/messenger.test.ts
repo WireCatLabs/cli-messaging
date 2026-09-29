@@ -649,6 +649,34 @@ describe("the guard, account and mcp config commands", () => {
     expect(json(people_.stdout)).toMatchObject({ items: [{ id: "20" }], hasMore: true })
   })
 
+  it("**read forward with messages list --after**, from a message id or a moment", async () => {
+    const env = sandbox()
+    const asked: unknown[] = []
+    const forward: MessengerAdapter = {
+      ...fake,
+      historyAfter: async (_chat, window) => {
+        asked.push(window.after)
+        return { items: thread, hasMore: true }
+      },
+    }
+
+    const byId = await call(["messages", "list", "7", "--after", "41", "--jsonl"], async () => forward, env)
+    await call(["messages", "list", "7", "--after", "2026-09-27T10:00:00Z", "--json"], async () => forward, env)
+
+    expect(asked).toEqual([{ id: "41" }, { time: Date.parse("2026-09-27T10:00:00Z") }])
+    expect(byId.stderr.join("\n")).toContain("--after 3")
+  })
+
+  it("refuses --before with --after, --after offline, and a messenger that cannot read forward", async () => {
+    const env = sandbox()
+    const online = async () => fake
+
+    expect((await call(["messages", "list", "7", "--before", "5", "--after", "2"], online, env)).code).toBe(2)
+    expect((await call(["messages", "list", "7", "--after", "2", "--offline"], online, env)).code).toBe(2)
+    const unable = await call(["messages", "list", "7", "--after", "2"], online, env)
+    expect([unable.code, unable.stderr.join("\n")]).toEqual([2, expect.stringContaining("read forward")])
+  })
+
   it("refuses a --search under 3 characters and an unknown --kind, before connecting", async () => {
     const env = sandbox()
     const never = async (): Promise<MessengerAdapter> => {
