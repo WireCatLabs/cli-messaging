@@ -10,6 +10,7 @@ import { join } from "node:path"
 import { listRuns, readEvents, recorded, settingsFor } from "../src/cli/index.js"
 import { formatLocator, parseLocator, renderMessages } from "../src/index.js"
 import { openCache, openStore } from "../src/store/index.js"
+import { normalize } from "../src/store/normalize.js"
 
 const runtime = typeof (globalThis as { Bun?: unknown }).Bun === "undefined" ? "node" : "bun"
 const failures: string[] = []
@@ -73,6 +74,10 @@ store.saveMessages(account, "-1002", [stored], { via: "smoke" })
 check("the store gives a message back", store.messages(account, "-1002", { limit: 5 }).items[0]?.text === stored.text)
 check("the store finds a Cyrillic word by its beginning", store.search("Петр", { limit: 5 }).items.length === 1)
 store.close()
+check(
+  "the normalizer folds accents, ё and й as under Node",
+  normalize("Ёжик ﬁnds\tЙогурт в València") === "ежик finds иогурт в valencia",
+)
 
 if (failures.length > 0) {
   console.error(`smoke failed under ${runtime}:\n${failures.map((one) => `  - ${one}`).join("\n")}`)
