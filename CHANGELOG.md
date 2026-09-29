@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.34.0 — 29.09.2026
+
 ### Added
 
 - **`inbox` leaves out muted and archived chats** unless they mention the owner or reply to them;
