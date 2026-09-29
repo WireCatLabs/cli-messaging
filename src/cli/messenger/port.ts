@@ -90,6 +90,8 @@ export interface MessengerAdapter {
   download?(chat: string, messageId: Id): Promise<Download>
   /** A voice or video note as text, by the messenger's own speech recognition. */
   transcribe?(chat: string, messageId: Id): Promise<Transcript>
+  /** A group's admins, whose answer counts as the group's in `review --unanswered`. */
+  admins?(chat: string): Promise<Id[]>
   logout(): Promise<void>
   close(): Promise<void>
 }

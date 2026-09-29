@@ -9,6 +9,7 @@ import { messageActionTools } from "./tools/messages-actions.js"
 import { messagesPhotoTools } from "./tools/messages-photo.js"
 import { messageSendTools } from "./tools/messages-send.js"
 import { messagesTranscribeTools } from "./tools/messages-transcribe.js"
+import { reviewTools } from "./tools/review.js"
 
 /**
  * The read tools, each answering what its command's `--json` prints. Named `<cli>_<command words>`,
@@ -16,6 +17,7 @@ import { messagesTranscribeTools } from "./tools/messages-transcribe.js"
  */
 export const readTools = (messenger: Messenger): Record<string, AnyTool> => ({
   ...inboxTools(messenger),
+  ...reviewTools(messenger),
   ...accountTools(messenger),
   ...chatsTools(messenger),
   ...contactsTools(messenger),

@@ -6,6 +6,16 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- **`review`**, max-cli's: every message, the owner's too, in each chat that changed since `--since`
+  (three days without it), cut at the chat list's newest message so `until` is where the next review
+  starts. `--chat` reads one chat, `--unanswered [hours]` keeps the questions nobody answered, `--all`
+  takes in muted and archived chats. The `review` tool and the `review` prompt answer the same.
+  History pages backwards from the newest message, so a chat cut short keeps its newest 300 and the
+  review says it is incomplete. A messenger that knows a group's admins offers the optional `admins`,
+  and their answers count too.
+
 ## 0.37.0 — 29.09.2026
 
 ### Added

@@ -25,6 +25,7 @@ export { INBOX_CHATS, inboxCommand, momentOf, newIn, unreadIn } from "./messenge
 export { type McpEnvironment, mcpCommand, serverEntry } from "./messenger/mcp-command.js"
 export { messagesCommand } from "./messenger/messages-command.js"
 export type { Download, MessengerAdapter, RemoteFile, SendOptions, Sent, Transcript } from "./messenger/port.js"
+export { REVIEW_CHATS, reviewCommand, reviewIn, unanswered } from "./messenger/review.js"
 export { serveCommand } from "./messenger/serve-command.js"
 export { type ServiceSystem, serviceCommand } from "./messenger/service-command.js"
 export { watchCommand } from "./messenger/watch-command.js"
