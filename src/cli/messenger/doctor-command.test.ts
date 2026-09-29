@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs"
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { CliError, captureStreams } from "@leemour/cli-core"
@@ -64,7 +64,12 @@ const call = async (argv: string[], env: NodeJS.ProcessEnv, connect: Messenger["
       env,
     },
   )
-  return { code, answer: streams.stdout[0] ? JSON.parse(streams.stdout[0]) : undefined }
+  return {
+    code,
+    answer: streams.stdout[0] ? JSON.parse(streams.stdout[0]) : undefined,
+    stdout: streams.stdout,
+    stderr: streams.stderr,
+  }
 }
 
 describe("doctor", () => {
@@ -126,5 +131,78 @@ describe("doctor", () => {
     const failed = await call(["doctor", "--online", "--json"], env, refused)
     expect(failed.code).toBe(0)
     expect(failed.answer.online).toMatchObject({ ok: false, errorCode: "authentication_error" })
+  })
+})
+
+describe("doctor report", () => {
+  const failedRun = (root: string) => {
+    const dir = join(root, "state", "runs", "2026-09-29", "20260929T100000Z-chats-list-abc123")
+    mkdirSync(dir, { recursive: true })
+    writeFileSync(
+      join(dir, "run.json"),
+      JSON.stringify({
+        runId: "20260929T100000Z-chats-list-abc123",
+        command: "chats list",
+        profile: "default",
+        startedAt: "2026-09-29T10:00:00.000Z",
+        status: "failed",
+        cliVersion: "1.0.0",
+        errorCode: "provider_error",
+      }),
+    )
+    writeFileSync(
+      join(dir, "events.jsonl"),
+      `${JSON.stringify({
+        level: 30,
+        hostname: "owners-laptop",
+        msg: "Book club",
+        event: "response",
+        operation: "chats.show",
+        ids: { chat: "-1001234567890" },
+        outcome: "error",
+        errorCode: "provider_error",
+      })}\n`,
+    )
+  }
+
+  it("**writes a file with no id, no title and no home folder in it**, and the same label for the same id", async () => {
+    const { root, env } = setup()
+    const home = join(root, "home")
+    await call(["chats", "list", "--json"], env, async () => connection)
+    failedRun(root)
+    mkdirSync(join(root, "state", "sends"), { recursive: true })
+    writeFileSync(
+      join(root, "state", "sends", "default.jsonl"),
+      `${JSON.stringify({ at: "2026-09-29T10:00:00.000Z", profile: "default", chatId: "-1001234567890", outcome: "sent", messageId: "42", length: 5 })}\n`,
+    )
+    const output = join(root, "report.json")
+
+    const { code, answer } = await call(
+      ["doctor", "report", "create", "--output", output, "--json"],
+      { ...env, HOME: root, CHAT_CONFIG_DIR: join(home, "config") },
+      refused,
+    )
+
+    expect(code).toBe(0)
+    expect(answer).toEqual({ path: output, run: "20260929T100000Z-chats-list-abc123" })
+    const text = readFileSync(output, "utf8")
+    for (const secret of ["-1001234567890", "Book club", "owners-laptop", root]) expect(text).not.toContain(secret)
+    const report = JSON.parse(text)
+    const label = report.run.events[0].ids.chat
+    expect(label).toMatch(/^id:[0-9a-f]{12}$/)
+    expect(report.sends[0]).toMatchObject({ chatId: label, outcome: "sent", length: 5 })
+    expect(report.doctor.account.remembered).toMatch(/^id:/)
+    expect(report.doctor.config.path).toBe("~/home/config/config.json")
+    expect(Object.keys(report.run.events[0]).sort()).toEqual(["errorCode", "event", "ids", "operation", "outcome"])
+  })
+
+  it("names a run that does not exist, and explains itself without writing", async () => {
+    const { env } = setup()
+    const missing = await call(["doctor", "report", "create", "--run", "nope"], env, refused)
+    expect(missing.code).not.toBe(0)
+    expect(missing.stderr.join("\n")).toContain("chat runs list")
+
+    const explained = await call(["doctor", "report", "--json"], env, refused)
+    expect(explained.answer).toMatchObject({ create: "chat doctor report create" })
   })
 })

@@ -8,6 +8,8 @@ export interface AppIdentity {
   envPrefix: string
   description: string
   version: string
+  /** Where a problem report goes — a new-issue page. `doctor report create` names it. */
+  issues?: string
 }
 
 export const envName = (app: AppIdentity, name: string): string => `${app.envPrefix}_${name}`
