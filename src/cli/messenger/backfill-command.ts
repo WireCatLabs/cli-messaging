@@ -24,12 +24,11 @@ import {
   updateJob,
 } from "./backfill-jobs.js"
 import { type Messenger, type MessengerContext, messengerContext } from "./context.js"
+import { patiently, stopOnSignal } from "./patience.js"
 import type { MessengerAdapter } from "./port.js"
 
 /** The most messages a provider hands out per history request — Telegram's cap. */
 const PAGE = 100
-/** Waits longer than this are not sat out: the run stops, and the next one resumes. */
-const LONGEST_WAIT_MS = 5 * 60 * 1000
 
 /**
  * A chat's history into the store, newest to oldest, **resumable**: after every page the stretch it
@@ -232,23 +231,6 @@ const startJob = (
   context.renderer.note(`started — \`${app.command} backfill status ${id}\` follows it`)
 }
 
-/** Ctrl-C and SIGTERM — which `backfill cancel` sends — end the run after the page in hand. */
-const stopOnSignal = (command: Command) => {
-  const stop = new AbortController()
-  const given = environmentOf(command).signal
-  const end = () => stop.abort()
-  given?.addEventListener("abort", end, { once: true })
-  const signals = given ? [] : (["SIGINT", "SIGTERM"] as const)
-  for (const name of signals) process.once(name, end)
-  return {
-    signal: stop.signal,
-    release: () => {
-      for (const name of signals) process.off(name, end)
-      given?.removeEventListener("abort", end)
-    },
-  }
-}
-
 interface Walk {
   max: number
   pauseMs: number
@@ -308,25 +290,6 @@ const walk = async (
     complete: reachedStart && ranges.length === 1,
     ranges,
     ...(stop.aborted ? { stopped: true } : {}),
-  }
-}
-
-/** Sits out a provider's "wait N seconds" when it is short, a few times; a long one ends the run. */
-const patiently = async <T>(
-  request: () => Promise<T>,
-  note: (message: string) => void,
-  stop: AbortSignal,
-): Promise<T> => {
-  for (let attempt = 1; ; attempt += 1) {
-    try {
-      return await request()
-    } catch (error) {
-      const wait = isCliFailure(error) && error.code === "rate_limited" ? Number(error.details?.retryAfterMs) : NaN
-      if (!Number.isFinite(wait) || wait > LONGEST_WAIT_MS || attempt >= 3) throw error
-      note(`asked to wait ${Math.ceil(wait / 1000)} s — waiting, then going on`)
-      await sleep(wait, undefined, { signal: stop }).catch(() => {})
-      if (stop.aborted) throw error
-    }
   }
 }
 

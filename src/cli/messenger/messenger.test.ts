@@ -777,6 +777,84 @@ describe("messages download", () => {
     expect(unable.stderr.join("")).toContain("cannot download attachments")
   })
 
+  describe("--all", () => {
+    const withIds = (ids: number[], kinds: Record<number, string>) =>
+      ids.map((id) => ({ ...message, id: String(id), attachments: kinds[id] ? [{ kind: kinds[id] }] : [] }))
+    const chatOf = (
+      ids: number[],
+      kinds: Record<number, string>,
+      asked: string[],
+      failOn?: string,
+    ): MessengerAdapter => ({
+      ...fake,
+      history: async (_chat, { before }) => {
+        const older = withIds(ids, kinds).filter((one) => before === undefined || Number(one.id) < Number(before))
+        return { items: older.slice(0, 2), hasMore: older.length > 2 }
+      },
+      download: async (_chat, id) => {
+        if (id === failOn) throw new CliError("network_error", "the connection dropped")
+        asked.push(id)
+        return {
+          files: [{ kind: "file", name: "notes.txt", mime: "text/plain", bytes: bytes(`notes ${id}`) }],
+          skipped: [],
+        }
+      },
+    })
+
+    it("**saves every file of the chat, page by page, asking only for messages that carry one**", async () => {
+      const { root, env } = setup()
+      const into = join(root, "out")
+      const asked: string[] = []
+      const { code, stdout } = await call(
+        ["messages", "download", "Book", "--all", "--pace", "1ms", "--output", into, "--json"],
+        async () => chatOf([5, 4, 3, 2, 1], { 5: "file", 4: "webpage", 2: "file" }, asked),
+        env,
+      )
+
+      expect(code).toBe(0)
+      expect(asked).toEqual(["5", "2"])
+      expect(JSON.parse(stdout[0] ?? "")).toMatchObject({
+        items: [{ path: join(into, "notes.txt") }, { path: join(into, "2-1-notes.txt") }],
+        saved: 2,
+        complete: true,
+      })
+      expect(readFileSync(join(into, "2-1-notes.txt"), "utf8")).toBe("notes 2")
+    })
+
+    it("**continues where a cut-short run stopped**, and asks for no file twice", async () => {
+      const { root, env } = setup()
+      const into = join(root, "out")
+      const kinds = { 6: "file", 5: "file", 3: "file", 1: "file" }
+      const first: string[] = []
+      const cut = await call(
+        ["messages", "download", "Book", "--all", "--pace", "1ms", "--output", into],
+        async () => chatOf([5, 4, 3, 2, 1], kinds, first, "3"),
+        env,
+      )
+      const second: string[] = []
+      const again = await call(
+        ["messages", "download", "Book", "--all", "--pace", "1ms", "--output", into, "--json"],
+        async () => chatOf([6, 5, 4, 3, 2, 1], kinds, second),
+        env,
+      )
+
+      expect(cut.code).not.toBe(0)
+      expect(first).toEqual(["5"])
+      expect(second).toEqual(["6", "3", "1"])
+      expect(JSON.parse(again.stdout[0] ?? "")).toMatchObject({ saved: 3, existing: 0, complete: true })
+      expect(readdirSync(into).filter((name) => !name.startsWith("."))).toHaveLength(4)
+    })
+
+    it("refuses a message id beside --all, and neither", async () => {
+      const { env } = setup()
+      const both = await call(["messages", "download", "Book", "1", "--all"], async () => withFiles, env)
+      const neither = await call(["messages", "download", "Book"], async () => withFiles, env)
+
+      expect(both.stderr.join("")).toContain("leave out the message id")
+      expect(neither.stderr.join("")).toContain("name a message id")
+    })
+  })
+
   it("strips what could climb out of the folder, hide the file or disguise its extension", () => {
     expect(safeName("../../etc/passwd")).toBe("passwd")
     expect(safeName("..\\evil.exe")).toBe("evil.exe")
