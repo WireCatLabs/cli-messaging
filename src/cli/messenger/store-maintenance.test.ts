@@ -1,4 +1,4 @@
-import { mkdtempSync } from "node:fs"
+import { mkdtempSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { captureStreams } from "@leemour/cli-core"
@@ -122,6 +122,30 @@ describe("store check", () => {
     expect(first.checks.searchIndexes).toBe(false)
     expect(first.searchIndexes.messages_fts).not.toBe("ok")
     expect((await call(["store", "check", "--json"], env)).answer.searchIndexes).toEqual(first.searchIndexes)
+  })
+})
+
+describe("a file that is empty or is not a database", () => {
+  it("answers for the empty file a store makes before its first migration", async () => {
+    const env = envFor()
+    writeFileSync(String(env.MESSAGING_STORE), "")
+
+    expect((await call(["store", "info", "--json"], env)).answer).toMatchObject({ schema: { version: 0 }, rows: {} })
+    const { answer, stdout } = await call(["store", "check", "--json"], env)
+    expect(stdout).toHaveLength(1)
+    expect(answer).toMatchObject({ opens: true, ok: false, checks: { schema: false }, searchIndexes: {} })
+  })
+
+  it("**says a file that will not open does not open**, instead of failing", async () => {
+    const env = envFor()
+    writeFileSync(String(env.MESSAGING_STORE), "not a database, not even close".repeat(40))
+
+    for (const command of ["info", "check"]) {
+      const { code, stdout, answer } = await call(["store", command, "--json"], env)
+      expect(code).toBe(0)
+      expect(stdout).toHaveLength(1)
+      expect(answer).toMatchObject({ exists: true, opens: false, error: expect.any(String) })
+    }
   })
 })
 

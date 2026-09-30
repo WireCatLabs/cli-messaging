@@ -12,10 +12,12 @@ import type { Messenger } from "./context.js"
 const SPEAKS = MIGRATIONS.at(-1)?.version ?? 0
 const SEARCH_INDEXES = ["messages_fts", "chats_fts", "identities_fts"]
 
+/** An empty file is normal: `openStore` creates it before the first migration runs. */
 const schemaOf = (database: CacheDatabase) => {
-  const row = database
-    .prepare("SELECT version, min_compatible FROM schema_migrations ORDER BY version DESC LIMIT 1")
-    .get()
+  const tracked = database.prepare("SELECT 1 FROM sqlite_master WHERE name = 'schema_migrations'").get()
+  const row = tracked
+    ? database.prepare("SELECT version, min_compatible FROM schema_migrations ORDER BY version DESC LIMIT 1").get()
+    : undefined
   const version = Number(row?.version ?? 0)
   const minCompatible = Number(row?.min_compatible ?? 0)
   return { version, minCompatible, writable: version <= SPEAKS || minCompatible <= SPEAKS }
@@ -79,7 +81,7 @@ const infoCommand = (): Command =>
         renderer.result({ path, exists: false })
         return
       }
-      const answer = await reading(path, (database) => {
+      const read = reading(path, (database) => {
         const { version, minCompatible, writable } = schemaOf(database)
         const tables = ["accounts", "chats", "messages", "attachments", "identities"]
         return {
@@ -91,7 +93,7 @@ const infoCommand = (): Command =>
           pendingNormalization: pendingIfKnown(database),
         }
       })
-      renderer.result(answer)
+      renderer.result(await read.catch((error) => ({ path, exists: true, opens: false, error: messageOf(error) })))
     })
 
 /**
@@ -109,57 +111,66 @@ const checkCommand = (messenger: Messenger): Command =>
         renderer.result({ path, exists: false, ok: true })
         return
       }
-      const answer = await reading(path, (database) => {
-        const schema = schemaOf(database)
-        const integrity = database
-          .prepare("PRAGMA quick_check(20)")
-          .all()
-          .map((row) => String(row.quick_check))
-        const foreignKeys = database.prepare("PRAGMA foreign_key_check").all().length
-        const searchIndexes = Object.fromEntries(
-          SEARCH_INDEXES.map((index) => [index, indexIntegrity(database, index)]),
-        )
-        const size = bytesOf(path) + bytesOf(`${path}-wal`)
-        const { bavail, bsize } = statfsSync(dirname(path))
-        const free = Number(bavail) * Number(bsize)
-        const behind = schema.version > 0 ? chatsBehind(database) : []
-        const checks = {
-          schema: schema.version === SPEAKS,
-          integrity: integrity.length === 1 && integrity[0] === "ok",
-          foreignKeys: foreignKeys === 0,
-          searchIndexes: Object.values(searchIndexes).every((state) => state === "ok"),
-          // A backup or a VACUUM needs about as much again.
-          disk: free >= size,
-        }
-        return {
-          path,
-          ok: Object.values(checks).every(Boolean),
-          checks,
-          schema: { ...schema, speaks: SPEAKS },
-          integrity,
-          foreignKeyViolations: foreignKeys,
-          searchIndexes,
-          disk: { free, needed: size },
-          pendingNormalization: pendingIfKnown(database),
-          chatsBehind: behind,
-          notApplicable: {
-            extensions: "SQLite needs none",
-            enrichment: "nothing is enriched yet, so there is no enrichment index to compare",
-          },
-        }
-      })
+      let answer: Awaited<ReturnType<typeof inspect>>
+      try {
+        answer = await inspect(path)
+      } catch (error) {
+        renderer.result({ path, exists: true, ok: false, opens: false, error: messageOf(error) })
+        return
+      }
       renderer.result(answer)
-      const command = messenger.app.command
+      const { command } = messenger.app
       if (answer.schema.version < SPEAKS) renderer.note(`the file is behind this build — \`${command} store migrate\``)
       if (answer.pendingNormalization) {
         renderer.note(`${answer.pendingNormalization} messages wait for normalization — \`${command} store migrate\``)
       }
-      if (answer.chatsBehind.length > 0) {
-        renderer.note(
-          `${answer.chatsBehind.length} chats hold less than their newest message — \`${command} store fetch <chat>\``,
-        )
-      }
+      const ours = answer.chatsBehind.filter((chat) => chat.provider === messenger.provider).length
+      if (ours > 0)
+        renderer.note(`${ours} chats hold less than their newest message — \`${command} store fetch <chat>\``)
     })
+
+const inspect = (path: string) =>
+  reading(path, (database) => {
+    const schema = schemaOf(database)
+    const integrity = database
+      .prepare("PRAGMA quick_check(20)")
+      .all()
+      .map((row) => String(row.quick_check))
+    const foreignKeys = database.prepare("PRAGMA foreign_key_check").all().length
+    const searchIndexes = Object.fromEntries(
+      schema.version > 0 ? SEARCH_INDEXES.map((index) => [index, indexIntegrity(database, index)]) : [],
+    )
+    const size = bytesOf(path) + bytesOf(`${path}-wal`)
+    const { bavail, bsize } = statfsSync(dirname(path))
+    const free = Number(bavail) * Number(bsize)
+    const behind = schema.version > 0 ? chatsBehind(database) : []
+    const checks = {
+      schema: schema.version === SPEAKS,
+      integrity: integrity.length === 1 && integrity[0] === "ok",
+      foreignKeys: foreignKeys === 0,
+      searchIndexes: Object.values(searchIndexes).every((state) => state === "ok"),
+      // A backup or a VACUUM needs about as much again.
+      disk: free >= size,
+    }
+    return {
+      path,
+      exists: true,
+      opens: true,
+      ok: Object.values(checks).every(Boolean),
+      checks,
+      schema: { ...schema, speaks: SPEAKS },
+      integrity,
+      foreignKeyViolations: foreignKeys,
+      searchIndexes,
+      disk: { free, needed: size },
+      pendingNormalization: pendingIfKnown(database),
+      chatsBehind: behind,
+      notApplicable: {
+        extensions: "SQLite needs none",
+        enrichment: "nothing is enriched yet, so there is no enrichment index to compare",
+      },
+    }
+  })
 
 /** `rank = 1` compares the index with its table; without it a stale external-content index passes. */
 const indexIntegrity = (database: CacheDatabase, index: string): string => {
