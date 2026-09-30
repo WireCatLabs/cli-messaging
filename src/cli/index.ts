@@ -25,7 +25,17 @@ export { INBOX_CHATS, inboxCommand, momentOf, newIn, unreadIn } from "./messenge
 export { type McpEnvironment, mcpCommand, serverEntry } from "./messenger/mcp-command.js"
 export { messagesCommand } from "./messenger/messages-command.js"
 export { modelsCommand } from "./messenger/models-command.js"
-export type { After, Download, MessengerAdapter, RemoteFile, SendOptions, Sent, Transcript } from "./messenger/port.js"
+export { pollsCommand } from "./messenger/polls-command.js"
+export type {
+  After,
+  Download,
+  MessengerAdapter,
+  NewPoll,
+  RemoteFile,
+  SendOptions,
+  Sent,
+  Transcript,
+} from "./messenger/port.js"
 export { reactionsCommand } from "./messenger/reactions-command.js"
 export { REVIEW_CHATS, reviewCommand, reviewIn, unanswered } from "./messenger/review.js"
 export { serveCommand, servingProfiles } from "./messenger/serve-command.js"

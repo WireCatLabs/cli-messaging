@@ -11,6 +11,7 @@ import { messageDeleteTools } from "./tools/messages-delete.js"
 import { messagesPhotoTools } from "./tools/messages-photo.js"
 import { messageSendTools } from "./tools/messages-send.js"
 import { messagesTranscribeTools } from "./tools/messages-transcribe.js"
+import { pollReadTools, pollWriteTools } from "./tools/polls.js"
 import { reactionTools } from "./tools/reactions.js"
 import { reviewTools } from "./tools/review.js"
 import { topicsTools } from "./tools/topics.js"
@@ -27,6 +28,7 @@ export const readTools = (messenger: Messenger): Record<string, AnyTool> => ({
   ...chatsTools(messenger),
   ...contactsTools(messenger),
   ...messagesTools(messenger),
+  ...pollReadTools(messenger),
   ...messagesPhotoTools(messenger),
   ...messagesTranscribeTools(messenger),
 })
@@ -42,4 +44,5 @@ export const sendTools = (messenger: Messenger): Record<string, AnyTool> => ({
   ...messageSendTools(messenger),
   ...messageActionTools(messenger),
   ...reactionTools(messenger),
+  ...pollWriteTools(messenger),
 })

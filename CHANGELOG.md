@@ -6,6 +6,17 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- **`pollsCommand` — `polls show|vote|close|create`**, max-cli's. `show` answers a poll (`Poll`,
+  `PollAnswer`) with each answer's id; `vote <chat> <message> <answer ids...>` votes by those ids, never
+  by position, and `--retract` takes the vote back; `close` closes the owner's own poll; `create <chat>
+  <question> <answers...> [--multiple] [--anonymous] [--silent] [--send-id]` sends one, public unless
+  `--anonymous`. The send guard checks a vote as a `reaction`, closing as an `edit` and a new poll as a
+  `message` with a send id, so a retry after an unknown outcome is safe. MCP: `<cli>_polls_show` reads;
+  `--allow-send` adds `<cli>_polls_vote`, `_close` and `_create`. An adapter offers the optional
+  `poll`, `vote`, `closePoll` and `createPoll`; a CLI adds the command group itself.
+
 ## 0.49.0 — 30.09.2026
 
 ### Changed — may break callers

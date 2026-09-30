@@ -14,6 +14,7 @@ import type {
   MessageEvent,
   Page,
   PersonCard,
+  Poll,
   Topic,
   WindowedMessage,
 } from "../../domain/models.js"
@@ -59,6 +60,14 @@ export interface Transcript {
 
 /** A message id — exact within one chat — or a moment in ms, which works in every chat. */
 export type After = { id: Id } | { time: number }
+
+/** What `polls create` asks for. */
+export interface NewPoll {
+  question: string
+  answers: string[]
+  multiple: boolean
+  anonymous: boolean
+}
 
 export interface Sent {
   message: Message
@@ -107,6 +116,13 @@ export interface MessengerAdapter {
   markRead?(chatId: Id, until?: Id): Promise<void>
   /** For the owner only, unless `forEveryone`; neither can be undone. */
   delete?(chatId: Id, messageIds: Id[], options: { forEveryone: boolean }): Promise<void>
+  /** The poll one message carries; a message without one is `not_found`. */
+  poll?(chatId: Id, messageId: Id): Promise<Poll>
+  /** The owner's vote, by answer ids; none takes it back. An id the poll does not have is refused. */
+  vote?(chatId: Id, messageId: Id, answerIds: Id[]): Promise<Poll>
+  /** Only the owner's own poll; it cannot be reopened. */
+  closePoll?(chatId: Id, messageId: Id): Promise<Poll>
+  createPoll?(chatId: Id, poll: NewPoll, options: { sendId: string; silent?: boolean }): Promise<Sent>
   /**
    * New messages and changes to messages as they arrive, until `signal` aborts. `onReady` once it is
    * actually listening — a caller that sends on "listening" must not race the connection. Only on a

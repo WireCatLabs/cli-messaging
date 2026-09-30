@@ -219,6 +219,7 @@ describe("the MCP server", () => {
       "chat_messages_scheduled",
       "chat_messages_search",
       "chat_messages_transcribe",
+      "chat_polls_show",
       "chat_review",
       "chat_status",
       "chat_topics_list",
@@ -743,6 +744,37 @@ describe("sending over MCP", () => {
     expect(deletions).toEqual([["7", ["1", "2"], { forEveryone: false }]])
   })
 
+  it("reads a poll without --allow-send, and votes by id only with it", async () => {
+    const votes: unknown[] = []
+    const poll = {
+      chatId: "7",
+      messageId: "1",
+      question: "Friday?",
+      answers: [{ id: "MA", text: "yes", voters: null, chosen: false }],
+      closed: false,
+      multiple: false,
+      anonymous: true,
+      voters: null,
+    }
+    const telegram = scripted({
+      poll: async () => poll,
+      vote: async (chatId, messageId, ids) => {
+        votes.push([chatId, messageId, ids])
+        return poll
+      },
+    })
+    const reading = await connect(telegram)
+    const writing = await connect(telegram, { allowSend: true })
+
+    const shown = await reading.call("chat_polls_show", { chat: "7", message: "1" })
+    const readingTools = (await reading.client.listTools()).tools.map((one) => one.name)
+    await writing.call("chat_polls_vote", { chat: "7", message: "1", answers: ["MA"] })
+
+    expect(shown.body.answers[0].id).toBe("MA")
+    expect(readingTools).not.toContain("chat_polls_vote")
+    expect(votes).toEqual([["7", "1", ["MA"]]])
+  })
+
   it("does not offer a tool the profile's allow list leaves out, whatever the flags", async () => {
     const { client, call } = await connect(scripted(), {
       allowSend: true,
@@ -751,7 +783,7 @@ describe("sending over MCP", () => {
 
     expect((await client.listTools()).tools.map((one) => one.name)).not.toContain("chat_messages_send")
     expect((await call("chat_status")).body).toMatchObject({
-      writes: ["chat_reactions_add", "chat_reactions_remove"],
+      writes: ["chat_reactions_add", "chat_reactions_remove", "chat_polls_vote"],
       allow: ["reaction"],
     })
   })
