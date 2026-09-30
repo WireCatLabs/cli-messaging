@@ -16,12 +16,12 @@ import type {
   WindowedMessage,
 } from "../domain/models.js"
 import type { PeopleLookup } from "../resolve.js"
-import type { CacheDatabase, SqlValue } from "./driver.js"
+import type { SqlValue } from "./driver.js"
 import { migrate } from "./migrations.js"
 import { NORMALIZER_VERSION, normalize } from "./normalize.js"
-import { openCache } from "./open.js"
 import { storePath } from "./path.js"
 import { backfillNormalized, pendingNormalization } from "./sqlite/backfill.js"
+import { openSqlite, type StoreContext } from "./sqlite/open.js"
 import { ulid } from "./ulid.js"
 
 /** Which account of which messenger a call is about. */
@@ -226,7 +226,7 @@ export const openStore = async ({ path, env, now = Date.now }: StoreOptions = {}
   mkdirSync(dirname(file), { recursive: true, mode: 0o700 })
   // Created before SQLite opens it: SQLite gives -wal and -shm the mode of the database file.
   writeFileSync(file, "", { flag: "a", mode: 0o600 })
-  const database = await openCache(file)
+  const { database, orm } = await openSqlite(file)
   try {
     migrate(database, { now })
     // A small file is filled on the spot; a larger one waits for `db migrate`, since nothing reads the copy yet.
@@ -236,13 +236,13 @@ export const openStore = async ({ path, env, now = Date.now }: StoreOptions = {}
     database.close()
     throw error
   }
-  return storeOver(database, now)
+  return storeOver({ database, orm, now })
 }
 
 /** Telegram's chat types that number their messages themselves, not per account. */
 const OWN_NUMBERING = "('channel', 'supergroup', 'gigagroup', 'monoforum')"
 
-const storeOver = (database: CacheDatabase, now: () => number): MessageStore => {
+const storeOver = ({ database, now }: StoreContext): MessageStore => {
   const one = (sql: string, ...parameters: SqlValue[]) => database.prepare(sql).get(...parameters)
   const all = (sql: string, ...parameters: SqlValue[]) => database.prepare(sql).all(...parameters)
   const run = (sql: string, ...parameters: SqlValue[]) => database.prepare(sql).run(...parameters)

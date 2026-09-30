@@ -10,6 +10,11 @@ export interface OpenedSqlite {
   orm: Orm
 }
 
+/** What each query module of the store takes: the connection seen both ways, and the clock. */
+export interface StoreContext extends OpenedSqlite {
+  now: () => number
+}
+
 /**
  * One SQLite connection, seen two ways: the `CacheDatabase` seam the hand-written SQL and the
  * migration runner use, and Drizzle. Each Drizzle driver imports its runtime at the top of its

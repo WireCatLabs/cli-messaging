@@ -2,7 +2,8 @@
  * The built package opens the store through bundled Drizzle, never through `node_modules`, where
  * `drizzle-orm` is only a development dependency. Run after `pnpm build`, under Node and under Bun.
  */
-import { readdirSync, readFileSync } from "node:fs"
+import { mkdtempSync, readdirSync, readFileSync } from "node:fs"
+import { tmpdir } from "node:os"
 import { join } from "node:path"
 
 const root = join(import.meta.dirname, "../dist")
@@ -21,4 +22,26 @@ store.database.prepare("INSERT INTO accounts (provider, native_id, created_at) V
 const rows = await store.orm.select().from(accounts)
 store.database.close()
 if (rows.length !== 1) throw new Error(`bundled Drizzle read ${rows.length} rows, not 1`)
+
+const { openStore } = await import(join(root, "store/index.js"))
+const messages = await openStore({ path: join(mkdtempSync(join(tmpdir(), "cli-messaging-dist-")), "messages.db") })
+const key = { provider: "telegram", account: "1" }
+const message = {
+  id: "3",
+  chatId: "-1002",
+  senderId: "7",
+  senderName: null,
+  timestamp: "2026-09-27T10:00:00.000Z",
+  editedAt: null,
+  text: "через openStore",
+  outgoing: false,
+  attachments: [],
+  replyTo: null,
+  forwardedFrom: null,
+  reactions: null,
+}
+await messages.saveMessages(key, "-1002", [message], { via: "check" })
+const read = await messages.messages(key, "-1002", { limit: 5 })
+await messages.close()
+if (read.items[0]?.text !== message.text) throw new Error("openStore from dist did not give the saved message back")
 console.log(`dist: Drizzle bundled and working under ${"Bun" in globalThis ? "Bun" : "Node"}`)
