@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.53.0 — 30.09.2026
+
 ### Added
 
 - **`messages download <chat> --all`** saves every file of a chat into `--output`, newest first, page
@@ -18,6 +20,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   `<message>` is now optional, and refused beside `--all`. No MCP tool: it runs long, and
   `<cli>_messages_download` covers one message.
 
+## 0.52.0 — 30.09.2026
+
 ### Fixed
 
 - **A deletion that names no chat no longer hides messages in other chats.** Telegram reports a
@@ -26,12 +30,12 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   id is a different message. Now it skips channels and supergroups, and skips the deletion when the
   id still matches more than one message.
 
-## 0.52.0 — 30.09.2026
+## 0.51.0 — 30.09.2026
 
 ### Added
 
 - **Services: each use case once, for commands and MCP tools alike** — the first step of
-  `docs/plans/2026-09-30-services.md`, shipped from 0.51.0. `withServices` on the messenger context
+  `docs/plans/2026-09-30-services.md`. `withServices` on the messenger context
   hands a command `services.messages` (`list`, `around`, `search`), which chooses between the
   messenger and the store; it opens the connection or the store only when asked, and closes them
   after. `messages list|context|show|search` and the MCP read tools use it. Nothing a person or a
