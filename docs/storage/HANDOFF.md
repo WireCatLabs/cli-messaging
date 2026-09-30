@@ -25,7 +25,7 @@ Full description: [`../../README.md`](../../README.md).
 | **The plan you build** | [`plans/phase-1.md`](plans/phase-1.md) — goal, decisions D1–D10, 11 work items, test plan, migration of existing files |
 | What is ruled and why | [`decisions.md`](decisions.md) — the rulings table at the top overrides [`requirements.md`](requirements.md) where they differ (PGlite §2/§7/§8/§25) |
 | How the search indexes work | [`search-indexes.md`](search-indexes.md) — phase 2 context; read once so phase 1 does not block it |
-| The stores today and who opens them | [`current-state.md`](current-state.md) |
+| The stores today and who opens them | [`current-state.md`](current-state.md) — **Correction 2026-09-30:** a snapshot of 0.27.0; today's store and how to add a migration: [ARCHITECTURE](../dev/ARCHITECTURE.md#the-store) |
 | Daemon or not | [`daemon.md`](daemon.md) — no daemon owns the database; `max serve` stays the MAX API daemon; background workers later |
 | Evidence | [`research/`](research/), and the benchmark fixture [`../../bench/search/`](../../bench/search/) |
 | This repository's rules | [`../dev/CONVENTIONS.md`](../dev/CONVENTIONS.md), [`../dev/TESTING.md`](../dev/TESTING.md) |
@@ -66,7 +66,8 @@ Full description: [`../../README.md`](../../README.md).
   purpose; do not "fix" it.
 - **SQLite picks a slow plan** for FTS5 plus filters with a plain `JOIN` — write `CROSS JOIN` and
   assert the plan with `EXPLAIN QUERY PLAN` (item 8).
-- **max-cli pins cli-messaging 0.29.0, tg-cli 0.27.0** — both open the same file; the store's callers
+- ~~**max-cli pins cli-messaging 0.29.0, tg-cli 0.27.0**~~ **Correction 2026-09-30:** both pin 0.61.0
+  (their `package.json` on `main`) — both open the same file; the store's callers
   in max-cli are `src/bot/keep.ts` and `bot-people.ts`.
 - **`bench/search` defaults to one session's temp directory** (`common.ts:5-7`, `run.sh`) — set
   `SEARCHBENCH_DATA` to a directory of your own; `./run.sh 1000000` also builds PGlite and Docker

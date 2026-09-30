@@ -15,6 +15,10 @@ its journal id (`NEED-nnn`, max-cli's private journal) and is closed here when a
 | 2026-09-30 | **Engine: SQLite FTS5**, built behind a store interface a Postgres backend could implement later (NEED-374 A). |
 | 2026-09-30 | **Search requires every word, and falls back to any word when nothing is found** (NEED-375 A). **BM25 ranks, trigram typo matching corrects**: a word the corpus knows is used as typed; an unknown word gets candidates from a trigram index over the vocabulary, edit distance ≤ 2, and the search runs with the corrections (as in `bench/search/sqlite.ts`). |
 | 2026-09-30 | **Keep the substring index over message text** (FTS5 `trigram`, as migration 5) next to the new word index: words with BM25 first, substring when words and typo correction find nothing. «I would implement it and then later, if we see that we don't need it, we can get rid of it» (NEED-379 A). |
+| 2026-09-30 | **Store version 6 locks older builds out**: `min_compatible` 6, so a tg or max built before it refuses `messages.db` and asks to be upgraded; tg-cli and max-cli ship their upgrade the same day. «we need to make sure the stuff is in sync and force upgrade of clis» (phase 1 plan §9 Q1 B, D6; shipped in 0.49.0). |
+| 2026-09-30 | **The substring index stays next to the word index** — the row above on the substring index is the phase 1 plan's §9 Q2, answered A. |
+| 2026-09-30 | **Phase 1 keeps today's column names** where §4–§5 of the requirements name the same field differently: a rename rebuilds the table, and a rebuild breaks every build already installed. The mapping is under [Names](#names-the-requirements-field-and-the-column-that-holds-it) (phase 1 plan D5). |
+| 2026-09-30 | **No messenger-only tables.** What max-cli's cache needs and Telegram has too becomes a generic table (versions 7–11: chat members, sync state, fetch leases, contact recency, transcripts); the rest goes into `provider_metadata` (phase 1 plan D8). |
 | 2026-09-30 | **No daemon in phases 1–2**; the store is opened directly with WAL (NEED-376 A). Whether one is needed later: [`daemon.md`](daemon.md). |
 | 2026-09-30 | **No daemon that owns the database, now or later.** `max serve` stays what it is — the daemon for MAX API requests — and does not become the database's owner. **Background workers are planned** for long jobs (sync, graph building, AI enrichment), from phase 3 on: they open the store like any command. See [`daemon.md`](daemon.md). |
 | 2026-09-29 | Ordinary search never calls an API; AI enrichment only on explicit request, with cost limits (requirements §3, §14, §15, §29). |
@@ -75,13 +79,38 @@ completion, doctor, bot commands and tests.
 or enrichment needs it · **B** daemon first, as written.
 Recommended: **A**.
 
+## Names: the requirements' field and the column that holds it
+
+Phase 1 plan D5. Only the fields whose name differs; the full table, with what phase 1 added, is
+[plan §4](plans/phase-1.md#4-45-against-the-schema).
+
+| Requirements (§4–§5) | Column |
+|---|---|
+| `messages.id`, `chats.id` | `pk` |
+| `source` | `accounts.provider`, through `account_pk` |
+| `source_message_id`, `source_chat_id` | `native_id` |
+| `account_id`, `chat_id`, `sender_id` | `account_pk`, `chat_pk`, `sender_identity_pk` (+ `sender_chat_native_id`) |
+| `reply_to_message_id` | `reply_to_native_id`, the provider's id; a link to our own row is phase 3 |
+| `forward_source` | `forward` (JSON) |
+| `created_at`, `updated_at` | `ingested_at`, `edited_at` |
+| `raw_metadata` | `provider_metadata` |
+| chat `name`, `type` | `title`, `kind` |
+
+Not stored: `quoted_message_id` and `topic_id` (phase 3; `thread_native_id` exists),
+`first_message_at` and `last_message_at` (an index lookup over `messages_by_time`; the chat's
+`last_message_at` column is the provider's value), `last_indexed_at` (phase 2, with its index).
+
 ## Consequences
 
 - The requirements' message and chat models (§4, §5) replace today's schemas: internal ids separate
   from provider ids, `normalized_text`, `membership_state`, `is_searchable`, `raw_metadata`.
+  **Correction 2026-09-30:** they do not replace them — version 6 added `normalized_text`,
+  `membership_state`, `is_searchable` and `message_count`, and every other field maps onto a column
+  that already existed ([Names](#names-the-requirements-field-and-the-column-that-holds-it)).
 - max-cli's cache tables that cli-messaging lacks (`chat_members`, `sync_marker`, `fetched`,
   `fetch_lease`, transcripts, recency) move into cli-messaging's schema or stay max-specific tables in
-  the same database — decided in the phase 1 plan, not here.
+  the same database — decided in the phase 1 plan, not here. **Correction 2026-09-30:** decided —
+  generic tables, versions 7–11 (ruling above); recency lives in `account_identities`.
 - Normalization folds ё→е and й→и explicitly: `unicode61 remove_diacritics` strips Latin accents only.
 - Filters are the performance problem, not ranking: the phase 2 plan must say how chat, sender and
   date filters reach the full-text index (the benchmark's small-chat rows; a small chat inside 10M is

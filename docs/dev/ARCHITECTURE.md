@@ -2,7 +2,8 @@
 
 What the package is made of and where the seams are. The design and its reasons are in
 [the platform proposal](../plans/2026-09-26-platform-proposal.md); this page is the map of what
-exists. Written 2026-09-29 against 0.28.0.
+exists. Written 2026-09-29 against 0.28.0. **Correction 2026-09-30:** the store and migration
+sections describe 0.61.0 — the async store, Drizzle and store versions 6–11 came in 0.36.0–0.60.0.
 
 ## The one rule
 
@@ -34,6 +35,34 @@ profiles and max-cli's bots write the same database, keyed by provider and accou
 from `storePath` (`src/store/path.ts`), the only place that turns `MESSAGING_STORE` into a path;
 `mcp config` copies the variable into the entry it prints, so the server it starts opens the same file.
 
+Every `MessageStore` method is async and is **one whole operation**: inside the SQLite store it runs
+as one synchronous `BEGIN IMMEDIATE` transaction, with no `await` between `BEGIN` and `COMMIT`. The
+interface has no `transaction(callback)`. The driver is synchronous, so an `await` inside a
+transaction would let the commit run before the awaited part; and since a method never yields
+mid-transaction, two calls on one store in `serve` or `mcp` cannot interleave inside one `BEGIN`
+([phase 1 plan, D3](../storage/plans/phase-1.md#3-decisions-made-here)). A large write therefore
+blocks the event loop while it runs — writes go in bounded batches.
+
+Opening a store also fills `messages.normalized_text` for rows stored before version 6, when at most
+5,000 of them wait (`BACKFILL_ON_OPEN`, about 40 ms); a larger file keeps working and waits for the
+maintenance command that fills it in batches.
+
+**Drizzle is bundled, not installed.** `drizzle-orm` is a development dependency. `pnpm build` runs
+`scripts/bundle-drizzle.ts`, which writes the Drizzle modules the store uses into
+`dist/store/sqlite/drizzle/`: loaded from `node_modules`, Drizzle costs Node about 200 ms per
+process, bundled about 6 ms. So:
+
+- Import Drizzle only through `src/store/sqlite/drizzle/` — `core.ts` for the query builder and
+  schema functions (add a name there when you need one), `node.ts` and `bun.ts` for the drivers.
+  Anywhere else, `biome.json` refuses `drizzle-orm` (`noRestrictedImports`, `biome.json:81-82`); the
+  folder itself and tests are exempt (`:92`). A direct import passes the tests and crashes tg and max
+  at runtime, where `drizzle-orm` is not installed.
+- The Node and Bun drivers are separate bundle entries and are loaded by dynamic `import()`: each
+  imports its own runtime's SQLite at the top of its file, so loading one under the other runtime
+  fails.
+- `scripts/check-dist.ts` refuses a `dist` that still imports `drizzle-orm` and reads a row through
+  the bundle. CI runs it under Node (`pnpm check:dist`) and under Bun (`bun scripts/check-dist.ts`).
+
 ### Migrations
 
 Versions 1–5 are hand-written in `src/store/migrations.ts` and frozen. From version 6 on, a
@@ -42,13 +71,50 @@ migration is SQL that `pnpm db:generate` writes into `drizzle/` from `src/store/
 `src/store/sqlite/manifest.ts` numbers. Our runner (`migrate`) applies both, under `BEGIN IMMEDIATE`;
 Drizzle's own migrator is not used. Every migration is forward-only, additive, numbered, and never
 edited once it reached anyone's file — a test refuses a generated rebuild of a base table. `min_compatible` lets an older CLI keep using a file a newer
-one migrated; only a breaking change raises it, and that is a major version of this package. The
-rules are [proposal §4, Migrations](../plans/2026-09-26-platform-proposal.md#migrations).
+one migrated; only a breaking change raises it, and that is a major version of this package.
+**Correction 2026-09-30:** version 6 raised it to 6 (0.49.0), so every build before 0.49.0 refuses
+a file a newer build has opened, and asks to be upgraded. Versions 7–11 kept it at 6. The rules are
+[proposal §4, Migrations](../plans/2026-09-26-platform-proposal.md#migrations).
 
 ⚠ **Announce a migration number before writing it.** Several sessions work in this repository at
 once, and two of them taking the same number is a conflict no rebase fixes. The next free number
 lives in [the lanes plan §4](../plans/2026-09-29-parity-lanes.md#4-releases-while-lanes-run); take
 it by editing that line in a PR of its own, merged before the migration.
+
+#### Adding a migration
+
+1. **Take the number** as the paragraph above says, and wait for that PR to merge.
+2. **Change `src/store/sqlite/schema.ts`**, then `pnpm db:generate --name version-<n>-<what>`. It
+   writes `drizzle/<timestamp>_version-<n>-<what>/migration.sql`.
+3. **Read the SQL before anything else.** For a constraint change (a new `NOT NULL`, a changed
+   default, a foreign key), drizzle-kit rebuilds the table: `CREATE TABLE __new_…`, copy, `DROP TABLE`,
+   `RENAME`. A build already installed breaks on that, and on `messages` the `DROP` also removes the
+   full-text triggers. Choose a change drizzle-kit can express as `ALTER TABLE … ADD` — a new column is
+   nullable or has a default — or a new table. The test "never rebuild a base table"
+   (`src/store/sqlite/manifest.test.ts:14-19`, `:47`) refuses the rest.
+4. **Triggers, FTS5 tables and data fills go in a custom migration**, since `schema.ts` holds neither
+   triggers nor FTS: `pnpm db:generate --custom --name version-<n>-<what>`, then write the SQL into
+   the empty file. Put `--> statement-breakpoint` between statements — the bundle splits on nothing
+   else (`scripts/bundle-migrations.ts:20`), so a trigger body with `;` inside stays whole. Generate
+   it right after step 2: folders apply in name order, which is their timestamp.
+5. **Add a row to `MANIFEST`** (`src/store/sqlite/manifest.ts`) for each new folder, with the same
+   `version`. Two folders with one version — the generated one and its custom one, as version 6 —
+   apply as one migration and write one `schema_migrations` row. Versions run on without a gap
+   (`manifest.test.ts:38-45`).
+6. **`minCompatible` stays where it is** — 6 today — for an additive change. Raising it locks every
+   older build out of the file: ask the owner first; it is a major version of this package, and
+   tg-cli and max-cli ship their upgrade the same day, as with version 6.
+7. **`pnpm db:bundle`** after every `db:generate` and every edit of a `migration.sql`. It rewrites
+   `src/store/sqlite/migrations.generated.ts`; `pnpm build` does not, and the test "are bundled
+   exactly as drizzle-kit wrote them" (`manifest.test.ts:22`) fails until you run it.
+8. **Test that the oldest build that must still open the file does.** The published 0.49.0 is a
+   development dependency, `cli-messaging-0.49`; the pattern is "a build on version 6, on a version 7
+   file" in `src/store/chat-members.test.ts`. "is what every migration builds"
+   (`src/store/sqlite/schema.test.ts:76`) checks that `schema.ts` and the migrations agree.
+9. **CHANGELOG**: an entry under `## Unreleased` that names the store version, as "Chat members in
+   the store (store version 7)" does.
+
+A migration is frozen once released: fix a mistake with the next version, never by editing a folder.
 
 ## The command skeleton
 
