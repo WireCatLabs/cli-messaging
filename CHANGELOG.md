@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.65.0 — 30.09.2026
+
 ### Added
 
 - **`events` in `ConnectOptions`**: `Messenger.connect` gets the run's diagnostics, from commands and
