@@ -49,7 +49,9 @@ working on the file.
 never answers another. Each method's test writes for two accounts.
 
 **D3 · No transaction callback on `MessageStore`** (phase 1 D3). What must change together is one
-method: `mergeDelta(key, { chats, people, members, marker })`.
+method, with no MAX words in its shape so tg-cli's catch-up can use it too:
+`applyDelta(key, { chats, people, members: Map<chatId, ids>, state?: Record<name, value> })`. MAX's
+login marker is `state["login.marker"]`.
 
 **D4 · Hand-written SQL now, as the rest of `store.ts`.** Items 7–8 port these with everything else;
 writing them twice would cost more than it saves.
@@ -57,11 +59,19 @@ writing them twice would cost more than it saves.
 **D5 · Transcripts stay in the hearing cache.** cli-messaging 0.47 keeps them per profile in the CLI's
 cache on purpose — derived, can be heard again, kept off the owner's files by a dev build
 (`src/speech/hearing.ts:40-58`). The one-store plan's "transcripts on the attachment" is dropped. So
-NEED-393 A's "clear its transcript" is the caller's job: the service that deletes a message also
-drops its line from the hearing cache.
+NEED-393 A's "clear its transcript" is the caller's job: the store cannot reach the hearing cache,
+so the service that deletes a message also drops its line there.
 
-**D6 · Deletion as ruled (NEED-393 A)** comes in with `forget` here, not in item 8, because max-cli's
-`forget` is the first caller that needs it.
+**D6 · Deletion as ruled (NEED-393 A) goes into `markDeleted` itself**, not a second method: the
+ruling is about the shared store, so tg-cli's deletions follow it too, and one method means one
+meaning. It comes here, not in item 8, because max-cli is the first caller that needs it.
+
+**D7 · Names grouped by concern.** Chats: `chats`, `countChats`, `saveMembers`, `members`,
+`chatsWith`. People: `contacts`, `countContacts`, `refreshRecency`. Sync: `syncState`,
+`setSyncState`, `clearSyncState`, `claim`, `release`, `applyDelta`. Messages: `messagesWindow` (by
+time) next to `around` (by id), which stays. They sit on the `MessageStore` facade for now; when the
+store is split into repositories after phase 1 (NEED-406 B), each group moves whole, without a
+rename.
 
 ## 4. Work items, in order
 
@@ -72,9 +82,9 @@ drops its line from the hearing cache.
 | 3 | 8 | `sync_state (account_pk, key, value, at)`, PK `(account_pk, key)` | `syncState(key, name)`, `setSyncState(key, name, value)`, `clearSyncState(key, name)` — the login marker, "list fetched at", a chat's "fresh" mark |
 | 4 | 9 | `fetch_leases (chat_pk, anchor, holder, expires_at)`, PK `(chat_pk, anchor)` | `claim(key, chatId, anchor, holder, forMs)` → whether this holder has it; `release(...)` |
 | 5 | 9 | `identities.description`, `account_identities.last_messaged_at` (both nullable) — same version as item 4 if they land together, else 10 | `contacts(key, { order: "recent" \| "name", query?, limit, offset })` + `countContacts`; `refreshRecency(key)` |
-| 6 | — | reads, no schema | `chats(key, { query?, kind?, unread? })` and `countChats`; `messagesWindow(key, chatId, { at, before, after })` by time; `messages(key, chatId, { since })` and `countSince` |
-| 7 | — | deletion and purge | `forget(key, chatId, ids)` as NEED-393 A; `saveMessages` skips deleted rows; `purge(key)` deletes one account's rows everywhere, FTS kept by the triggers |
-| 8 | — | `mergeDelta` (D3) | one transaction over items 2, 3 and `saveChats`/`savePeople` |
+| 6 | — | reads, no schema | `chats(key, { query?, kind?, unread? })` and `countChats`; `messagesWindow(key, chatId, { at, before, after })` by time, beside `around` by id; `messages(key, chatId, { since })` and `countSince` |
+| 7 | — | deletion and purge | `markDeleted` as NEED-393 A (D6); `saveMessages` skips deleted rows; `purge(key)` deletes one account's rows everywhere, FTS kept by the triggers |
+| 8 | — | `applyDelta` (D3) | one transaction over items 2, 3 and `saveChats`/`savePeople` |
 
 Items 2–5 each release, since the services cannot use a method before it is published. Items 6–8
 can share one release.
@@ -84,7 +94,7 @@ can share one release.
 - Per method: two accounts, and a row for one never answers the other (D2).
 - `saveMembers` twice: the second list replaces the first, and a person left out is gone.
 - `claim`: a second holder is refused until the first expires or releases.
-- `forget`: the message is gone from `messages`, `around`, `message`, `find`, `chatStats` and the
+- `markDeleted`: the message is gone from `messages`, `around`, `message`, `find`, `chatStats` and the
   counts; its text, normalized text and revisions are gone from the file; `message_count` drops;
   `saveMessages` of the same id afterwards changes nothing.
 - `purge`: one account's chats, messages, members, state, leases and seen identities go; another
@@ -94,8 +104,10 @@ can share one release.
 
 ## 6. Open questions
 
-**Q1 — for the max-cli session that builds layers step 6, not the owner:** do the method shapes in §4
-fit the services, or do the services want different ones? I ask before item 2 and adjust.
+**Q1 — answered 2026-09-30 by the max-cli session building layers step 6:** §4 fits the services,
+with four changes, now in the plan: deletion inside `markDeleted` (D6), `applyDelta` without MAX's
+words (D3), `messagesWindow` beside `around` rather than instead of it, and names grouped by concern
+(D7). The services call the `MessageStore` facade until the repository split.
 
 **Q2 — for the owner:** D5 drops transcripts from the shared store and leaves them in the hearing
 cache, as 0.47 built them. The one-store plan said the opposite. Keep D5?
