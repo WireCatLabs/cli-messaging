@@ -1,6 +1,6 @@
 import * as v from "valibot"
 import type { Messenger } from "../../cli/messenger/context.js"
-import { DELETE_AT_ONCE, messagesService, onlineDeps } from "../../services/index.js"
+import { DELETE_AT_ONCE, onlineDeps, servicesFor } from "../../services/index.js"
 import { type AnyTool, APPROVE, chatOf, message, tool, WRITE } from "../tool.js"
 
 export const messageDeleteTools = (messenger: Messenger): Record<string, AnyTool> => ({
@@ -17,7 +17,7 @@ export const messageDeleteTools = (messenger: Messenger): Record<string, AnyTool
     _meta: APPROVE,
     permission: "delete",
     online: (adapter, args, { guard }) =>
-      messagesService(onlineDeps(messenger, adapter, guard)).delete({
+      servicesFor(onlineDeps(messenger, adapter, guard)).messages.delete({
         chat: args.chat,
         messages: args.messages,
         forEveryone: false,

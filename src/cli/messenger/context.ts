@@ -2,7 +2,7 @@ import { CliError } from "@leemour/cli-core"
 import type { Command } from "commander"
 import type { Chat, Id, Provider } from "../../domain/models.js"
 import { guardFor, type SendGuard } from "../../sends/guard.js"
-import { OFFLINE, type ServiceDeps, type Services, servicesFor } from "../../services/index.js"
+import { OFFLINE, type Override, type ServiceDeps, type Services, servicesFor } from "../../services/index.js"
 import { type AccountKey, type MessageStore, openStore } from "../../store/store.js"
 import type { AppIdentity } from "../app.js"
 import { type BaseContext, baseContext, environmentOf } from "../context.js"
@@ -40,6 +40,8 @@ export interface Messenger {
   partnerOf?: (chat: Chat) => Id | undefined
   /** Speech model ids, most suitable first, for `messages transcribe --local`; the first is the default. */
   speechModels?: readonly string[]
+  /** Replaces shared use cases for this messenger; its commands and MCP tools both get the replacement. */
+  services?: Override
   /** What only this messenger can say about itself for `doctor`, read from disk — never a secret. */
   diagnose?: (command: Command, context: BaseContext) => Promise<Record<string, unknown>>
 }

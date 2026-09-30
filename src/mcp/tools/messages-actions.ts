@@ -2,14 +2,14 @@ import * as v from "valibot"
 import type { Messenger } from "../../cli/messenger/context.js"
 import type { MessengerAdapter } from "../../cli/messenger/port.js"
 import type { SendGuard } from "../../sends/guard.js"
-import { messagesService, onlineDeps } from "../../services/index.js"
+import { onlineDeps, servicesFor } from "../../services/index.js"
 import { type AnyTool, APPROVE, chatOf, message, tool, WRITE } from "../tool.js"
 
 /** What changes a message others already have, offered with `--allow-send`, each behind its own `allow` permission. */
 export const messageActionTools = (messenger: Messenger): Record<string, AnyTool> => {
   const chat = chatOf(messenger)
   const messages = (adapter: MessengerAdapter, guard: SendGuard) =>
-    messagesService(onlineDeps(messenger, adapter, guard))
+    servicesFor(onlineDeps(messenger, adapter, guard)).messages
   return {
     messages_edit: tool({
       title: "Edit a message",

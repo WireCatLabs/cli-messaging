@@ -6,6 +6,16 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- **`@leemour/cli-messaging/services`, and a CLI's own version of a use case** — the last step of
+  `docs/plans/2026-09-30-services.md`. The new entry exports the services (`messages`, `chats`,
+  `people`, `inbox`, `archive`), their factories, `ServiceDeps`, `onlineDeps`, `storedDeps` and
+  `Override`. `Messenger.services` takes an `Override`: it returns the services it changes and can
+  call the shared method inside, and commands and MCP tools both get the replacement. MCP tools now
+  build their services through `servicesFor`, so the override reaches them. Nothing changes for a
+  CLI that sets no override.
+
 ## 0.57.0 — 30.09.2026
 
 ### Changed — may break callers

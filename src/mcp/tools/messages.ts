@@ -2,7 +2,7 @@ import * as v from "valibot"
 import { afterOf, oneDirection } from "../../cli/messenger/after.js"
 import type { Messenger } from "../../cli/messenger/context.js"
 import { capability } from "../../cli/messenger/port.js"
-import { messagesService, onlineDeps, storedDeps } from "../../services/index.js"
+import { onlineDeps, servicesFor, storedDeps } from "../../services/index.js"
 import { heard, hearForTool } from "../../speech/hearing.js"
 import { type AnyTool, chatOf, limit, message, nameOf, READ, tool } from "../tool.js"
 
@@ -31,7 +31,7 @@ export const messagesTools = (messenger: Messenger): Record<string, AnyTool> => 
       online: async (adapter, args, defaults) => {
         const size = args.limit ?? defaults.limit
         oneDirection(args.before, args.after)
-        const found = await messagesService(onlineDeps(messenger, adapter, defaults.guard)).list(args.chat, {
+        const found = await servicesFor(onlineDeps(messenger, adapter, defaults.guard)).messages.list(args.chat, {
           limit: size,
           ...(args.before === undefined ? {} : { before: args.before }),
           ...(args.after === undefined ? {} : { after: afterOf(args.after, "after") }),
@@ -59,10 +59,14 @@ export const messagesTools = (messenger: Messenger): Record<string, AnyTool> => 
       }),
       annotations: READ,
       online: async (adapter, args, defaults) => ({
-        items: await messagesService(onlineDeps(messenger, adapter, defaults.guard)).around(args.chat, args.message, {
-          before: args.before ?? 0,
-          after: args.after ?? 0,
-        }),
+        items: await servicesFor(onlineDeps(messenger, adapter, defaults.guard)).messages.around(
+          args.chat,
+          args.message,
+          {
+            before: args.before ?? 0,
+            after: args.after ?? 0,
+          },
+        ),
       }),
     }),
 
@@ -92,7 +96,7 @@ export const messagesTools = (messenger: Messenger): Record<string, AnyTool> => 
       annotations: { ...READ, openWorldHint: false },
       stored: async (store, account, args, defaults) => {
         const size = args.limit ?? defaults.limit
-        const found = await messagesService(storedDeps(messenger, store, account, defaults.guard)).search({
+        const found = await servicesFor(storedDeps(messenger, store, account, defaults.guard)).messages.search({
           text: args.text,
           limit: size,
           ...(args.chat === undefined ? {} : { chat: args.chat }),

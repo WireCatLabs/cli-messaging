@@ -18,6 +18,7 @@ under `src/`. What only one provider has travels in `providerMetadata`. The boun
 | `.` | `src/domain/`, `src/render/`, `src/resolve.ts`, `src/terminal/` | the domain model (`models.ts`, types only), message locators, message rendering, name resolution that refuses rather than guesses, the secret prompt, the terminal QR code |
 | `./store` | `src/store/` | the SQLite seam and the shared message store |
 | `./sends` | `src/sends/` | the send guard: read-only, the allow-list, the recipient list, the hourly limit, the journal (never the text), the send id |
+| `./services` | `src/services/` | the use cases, once each, that commands and MCP tools call — see [Services](#services) |
 | `./cli` | `src/cli/`, `src/mcp/` | the command skeleton, the shared commands and the MCP server |
 
 The README's table lists what each export offers; this page does not repeat it.
@@ -65,6 +66,38 @@ they do not name.
 
 The MCP server (`src/mcp/`) holds one connection for minutes and runs one call at a time; each tool
 lives in `src/mcp/tools/<resource>.ts` and answers what the command's `--json` prints.
+
+## Services
+
+Five layers, each calling only the ones below it: the **domain** (`src/domain/`), the **adapters**
+(each CLI's own, behind `MessengerAdapter`), the **ports** (`port.ts`, the store), the **services**
+(`src/services/`) and the **interface** (the commands and the MCP tools). The layer design is in
+max-cli's private `docs_ai/plans/2026-09-30-layers.md`; how this package built its half is
+[the services plan](../plans/2026-09-30-services.md).
+
+A service is a plain object made by a factory over `ServiceDeps` (`src/services/deps.ts`): the
+messenger, `offline`, and a connection, a store and an account that are each opened on first use —
+so a read from the store never connects. `servicesFor(deps)` hands out `messages`, `chats`, `people`,
+`inbox` and `archive`. A command gets them from `withServices` on its context, which closes what was
+opened; an MCP tool builds them over the session's connection with `onlineDeps`, or over the store
+with `storedDeps`. Either way a command and its tool run the same method, and so answer the same
+error for the same input. Each caller still parses its own input, so an error names `--since` in a
+command and `since` in a tool.
+
+**A CLI replaces a use case, not a command.** `Messenger.services` is an `Override`: it gets the
+shared services and returns the ones it changes, and can call the shared method inside its own:
+
+```ts
+services: (base) => ({
+  messages: { ...base.messages, list: (chat, window) => maxList(base.messages, chat, window) },
+}),
+```
+
+Commands and MCP tools both see the replacement. To add a subcommand, a CLI calls `addCommand` on
+the command a factory returns.
+
+Saving what a read answered and timing each call stay decorators on the adapter (`stored.ts`,
+`observed.ts`), stacked by `connected()` in `context.ts`, so no service can forget to save.
 
 ## Who consumes it
 

@@ -2,14 +2,14 @@ import * as v from "valibot"
 import type { Messenger } from "../../cli/messenger/context.js"
 import type { MessengerAdapter } from "../../cli/messenger/port.js"
 import type { SendGuard } from "../../sends/guard.js"
-import { messagesService, onlineDeps } from "../../services/index.js"
+import { onlineDeps, servicesFor } from "../../services/index.js"
 import { type AnyTool, APPROVE, chatOf, message, tool, WRITE } from "../tool.js"
 
 /** Offered with `--allow-send`, under the `reaction` permission. */
 export const reactionTools = (messenger: Messenger): Record<string, AnyTool> => {
   const chat = chatOf(messenger)
   const messages = (adapter: MessengerAdapter, guard: SendGuard) =>
-    messagesService(onlineDeps(messenger, adapter, guard))
+    servicesFor(onlineDeps(messenger, adapter, guard)).messages
   return {
     reactions_add: tool({
       title: "React to a message",
