@@ -6,6 +6,24 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- **An `operationId` on every write.** Each write the send guard sees — send, edit, forward, delete,
+  pin, unpin, react, mark read, poll vote, close and create — has an id. It is in the write's answer,
+  on each of its lines in the send journal, and in the `--trace` and run events of the calls it makes,
+  so one write can be followed through all three. A send's `operationId` is its `sendId`.
+  `newOperationId` and `currentOperation` are exported from `./sends`.
+- **The send journal takes max-cli's entries.** Attachments may be `video` and `voice`; account
+  actions may be `contact-rename`, `contact-block` and `contact-unblock`, under the `contacts`
+  permission.
+
+### Changed — may break callers
+
+- **Every write's `--json` answer and MCP result gains `operationId`.** `messages edit` and
+  `messages forward` services return `{ operationId, message }` instead of a bare `Message`; the
+  commands already printed `{ message }`. `polls vote` and `polls close` print `{ operationId, poll }`
+  instead of a bare poll. `guardedWrite` requires an `operationId` in its attempt.
+
 ## 0.60.0 — 30.09.2026
 
 ### Removed

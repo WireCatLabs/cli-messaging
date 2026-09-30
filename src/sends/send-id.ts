@@ -5,3 +5,6 @@ import { randomBytes } from "node:crypto"
  * 64-bit integer as a string, which is what Telegram's `random_id` takes and what fits MAX's `cid`.
  */
 export const newSendId = (): string => randomBytes(8).readBigInt64BE().toString()
+
+/** One write's identity, for every write the guard sees. A send's is its send id, so a retry keeps it. */
+export const newOperationId = newSendId

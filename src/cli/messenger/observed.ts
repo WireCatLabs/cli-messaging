@@ -1,3 +1,4 @@
+import { currentOperation } from "../../sends/guarded.js"
 import { isCliFailure } from "../failures.js"
 import { type EventSink, providerErrorKey } from "../runs/events.js"
 import { type MessengerAdapter, throughWrapper } from "./port.js"
@@ -10,12 +11,15 @@ type Named = { ids?: Record<string, string>; counts?: Record<string, number> }
  */
 export const observed = (messenger: MessengerAdapter, events: EventSink): MessengerAdapter => {
   const timed = async <T>(operation: string, named: Named, work: () => Promise<T>, after?: (answer: T) => Named) => {
-    events({ event: "request", operation, ...named })
+    const write = currentOperation()
+    const marked = (part: Named = {}): Named =>
+      write === undefined ? part : { ...part, ids: { ...part.ids, operation: write } }
+    events({ event: "request", operation, ...marked(named) })
     const started = performance.now()
     const durationMs = () => Math.round(performance.now() - started)
     try {
       const answer = await work()
-      events({ event: "response", operation, durationMs: durationMs(), outcome: "ok", ...after?.(answer) })
+      events({ event: "response", operation, durationMs: durationMs(), outcome: "ok", ...marked(after?.(answer)) })
       return answer
     } catch (error) {
       const providerError = isCliFailure(error) ? providerErrorKey(error.details?.providerError) : undefined
@@ -26,6 +30,7 @@ export const observed = (messenger: MessengerAdapter, events: EventSink): Messen
         outcome: "error",
         errorCode: isCliFailure(error) ? error.code : "generic_failure",
         ...(providerError ? { providerError } : {}),
+        ...marked(),
       })
       throw error
     }

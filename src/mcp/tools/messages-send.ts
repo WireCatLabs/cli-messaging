@@ -73,7 +73,12 @@ export const messageSendTools = (messenger: Messenger): Record<string, AnyTool> 
           ...(args.markdown === true ? { markdown: true } : {}),
           ...(at === undefined ? {} : { at }),
         })
-        return { sendId: sent.sendId, message: sent.message, ...(at === undefined ? {} : { scheduledFor: at }) }
+        return {
+          sendId: sent.sendId,
+          operationId: sent.operationId,
+          message: sent.message,
+          ...(at === undefined ? {} : { scheduledFor: at }),
+        }
       },
     }),
   }

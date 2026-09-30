@@ -14,8 +14,7 @@ export const editCommand = (messenger: Messenger): Command =>
       const context = messengerContext(this, messenger)
       const body = text ?? (await readAll(context.stdin))
       if (body.trim() === "") throw new CliError("validation_error", "no new text — give it or pipe it in")
-      const edited = await context.withServices((services) =>
-        services.messages.edit({ chat, message: message.trim(), text: body }),
+      context.renderer.result(
+        await context.withServices((services) => services.messages.edit({ chat, message: message.trim(), text: body })),
       )
-      context.renderer.result({ message: edited })
     })

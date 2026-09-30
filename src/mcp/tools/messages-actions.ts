@@ -20,9 +20,8 @@ export const messageActionTools = (messenger: Messenger): Record<string, AnyTool
       annotations: WRITE,
       _meta: APPROVE,
       permission: "edit",
-      online: async (adapter, args, { guard }) => ({
-        message: await messages(adapter, guard).edit({ chat: args.chat, message: args.message, text: args.text }),
-      }),
+      online: (adapter, args, { guard }) =>
+        messages(adapter, guard).edit({ chat: args.chat, message: args.message, text: args.text }),
     }),
     messages_forward: tool({
       title: "Forward a message",
@@ -39,14 +38,13 @@ export const messageActionTools = (messenger: Messenger): Record<string, AnyTool
       annotations: WRITE,
       _meta: APPROVE,
       permission: "forward",
-      online: async (adapter, args, { guard }) => ({
-        message: await messages(adapter, guard).forward({
+      online: (adapter, args, { guard }) =>
+        messages(adapter, guard).forward({
           chat: args.chat,
           message: args.message,
           to: args.to,
           silent: args.silent === true,
         }),
-      }),
     }),
     messages_pin: tool({
       title: "Pin a message",

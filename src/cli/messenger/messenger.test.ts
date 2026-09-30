@@ -452,9 +452,19 @@ describe("the shared read commands", () => {
     const over = await call(["messages", "pin", "Book", "5", "--notify"], async () => pinning, env)
     const off = await call(["messages", "unpin", "Book", "3", "--json"], async () => pinning, env)
 
-    expect(JSON.parse(quiet.stdout[0] ?? "")).toEqual({ chatId: "7", messageId: "3", pinned: true })
+    expect(JSON.parse(quiet.stdout[0] ?? "")).toEqual({
+      operationId: expect.any(String),
+      chatId: "7",
+      messageId: "3",
+      pinned: true,
+    })
     expect([loud.code, over.code]).toEqual([0, 8])
-    expect(JSON.parse(off.stdout[0] ?? "")).toEqual({ chatId: "7", messageId: "3", pinned: false })
+    expect(JSON.parse(off.stdout[0] ?? "")).toEqual({
+      operationId: expect.any(String),
+      chatId: "7",
+      messageId: "3",
+      pinned: false,
+    })
     expect(pins).toEqual([
       ["pin", "7", "3", { notify: false }],
       ["pin", "7", "4", { notify: true }],
@@ -482,8 +492,18 @@ describe("the shared read commands", () => {
     const added = await call(["reactions", "add", "Book", "3", "👍", "--json"], async () => reacting, env)
     const removed = await call(["reactions", "remove", "Book", "3", "--json"], async () => reacting, env)
 
-    expect(JSON.parse(added.stdout[0] ?? "")).toEqual({ chatId: "7", messageId: "3", reaction: "👍" })
-    expect(JSON.parse(removed.stdout[0] ?? "")).toEqual({ chatId: "7", messageId: "3", reaction: null })
+    expect(JSON.parse(added.stdout[0] ?? "")).toEqual({
+      operationId: expect.any(String),
+      chatId: "7",
+      messageId: "3",
+      reaction: "👍",
+    })
+    expect(JSON.parse(removed.stdout[0] ?? "")).toEqual({
+      operationId: expect.any(String),
+      chatId: "7",
+      messageId: "3",
+      reaction: null,
+    })
     expect(reactions).toEqual([
       ["7", "3", "👍"],
       ["7", "3", null],
@@ -504,8 +524,8 @@ describe("the shared read commands", () => {
     const all = await call(["chats", "mark-read", "Book", "--json"], async () => reading, env)
     const some = await call(["chats", "mark-read", "Book", "--until", "3", "--json"], async () => reading, env)
 
-    expect(JSON.parse(all.stdout[0] ?? "")).toEqual({ chatId: "7", until: null })
-    expect(JSON.parse(some.stdout[0] ?? "")).toEqual({ chatId: "7", until: "3" })
+    expect(JSON.parse(all.stdout[0] ?? "")).toEqual({ operationId: expect.any(String), chatId: "7", until: null })
+    expect(JSON.parse(some.stdout[0] ?? "")).toEqual({ operationId: expect.any(String), chatId: "7", until: "3" })
     expect(marks).toEqual([
       ["7", undefined],
       ["7", "3"],
@@ -542,7 +562,7 @@ describe("the shared read commands", () => {
       env,
     )
     const done = await call(
-      ["messages", "delete", "Book", "3", "4", "--for-everyone", "--allow-dangerous", "--json"],
+      ["messages", "delete", "Book", "3", "4", "--for-everyone", "--allow-dangerous", "--json", "--trace"],
       async () => deleting,
       env,
     )
@@ -550,13 +570,15 @@ describe("the shared read commands", () => {
 
     expect(unasked.stderr.join("\n")).toContain("--allow-dangerous")
     expect(tooMany.stderr.join("\n")).toContain("at most 10")
-    expect(JSON.parse(done.stdout[0] ?? "")).toEqual({ chatId: "7", deleted: ["3", "4"], forEveryone: true })
+    const answer = JSON.parse(done.stdout[0] ?? "")
+    expect(answer).toEqual({ operationId: expect.any(String), chatId: "7", deleted: ["3", "4"], forEveryone: true })
     expect(over.code).toBe(8)
     expect(deletions).toEqual([["7", ["3", "4"], { forEveryone: true }]])
     const journal = new SendJournal(sendsPathFor(app, "default", env)).entries()
     expect(journal.filter((entry) => entry.outcome === "sent")).toMatchObject([
-      { kind: "delete", count: 2, forEveryone: true },
+      { kind: "delete", count: 2, forEveryone: true, operationId: answer.operationId },
     ])
+    expect(done.stderr.join("\n")).toContain(`"ids":{"operation":"${answer.operationId}"}`)
   })
 
   it("**show a poll with its answer ids, vote by id and take it back**, close it as an edit, create one as a message", async () => {
@@ -606,8 +628,8 @@ describe("the shared read commands", () => {
 
     expect(JSON.parse(shown.stdout[0] ?? "").answers.map((one: { id: string }) => one.id)).toEqual(["MA", "MQ"])
     expect(none.stderr.join("\n")).toContain("polls show")
-    expect(JSON.parse(closed.stdout[0] ?? "").closed).toBe(true)
-    expect(JSON.parse(created.stdout[0] ?? "")).toMatchObject({ sendId: "42", message: { id: "9" } })
+    expect(JSON.parse(closed.stdout[0] ?? "").poll.closed).toBe(true)
+    expect(JSON.parse(created.stdout[0] ?? "")).toMatchObject({ sendId: "42", operationId: "42", message: { id: "9" } })
     expect(calls).toEqual([
       ["vote", "7", "3", ["MQ"]],
       ["vote", "7", "3", []],
