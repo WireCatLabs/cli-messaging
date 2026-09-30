@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.47.0 — 30.09.2026
+
 ### Added
 
 - **`chats inspect <link>`**, max-cli's, and the `chats_inspect` tool: what an invite or public link
