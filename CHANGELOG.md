@@ -17,6 +17,11 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Added
 
+- **Services: the message writes too** — the second step of `docs/plans/2026-09-30-services.md`.
+  `services.messages` gains `send` (a reply is a send with `replyTo`), `edit`, `delete`, `forward`,
+  `pin`, `unpin` and `react`, each through the send guard. `messages send|reply|edit|delete|forward|pin|unpin`,
+  `reactions add|remove` and the MCP write tools call them. The internal `guarded*` helpers are gone;
+  `DELETE_AT_ONCE` now comes from `src/services/`. Nothing a person or a script sees changes.
 - **Chat members in the store** (store version 7): `saveMembers(key, chatId, ids)` replaces who is in
   a chat with the list given, `members(key, chatId)` reads them back by name, and
   `chatsWith(key, id)` lists the chats a person is in, newest first. Additive: a build on version 6
