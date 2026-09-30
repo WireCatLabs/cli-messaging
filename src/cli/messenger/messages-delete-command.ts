@@ -1,7 +1,7 @@
 import { CliError } from "@leemour/cli-core"
 import { annotate } from "@leemour/cli-core/commands"
 import { Command } from "commander"
-import type { Id } from "../../domain/models.js"
+import type { Deletion } from "../../domain/models.js"
 import type { SendGuard } from "../../sends/guard.js"
 import { guardedWrite } from "../../sends/guarded.js"
 import { type Messenger, messengerContext } from "./context.js"
@@ -9,12 +9,6 @@ import { capability, type MessengerAdapter } from "./port.js"
 
 /** max-cli's: many at once is what a ban for automation looks like. */
 export const DELETE_AT_ONCE = 10
-
-export interface Deleted {
-  chatId: Id
-  deleted: Id[]
-  forEveryone: boolean
-}
 
 /**
  * ⚠ **`--allow-dangerous` is required** and nothing asks instead: a deletion cannot be undone, and a
@@ -55,7 +49,7 @@ export const guardedDelete = async (
   guard: SendGuard,
   connection: MessengerAdapter,
   { chat, messages, forEveryone }: { chat: string; messages: string[]; forEveryone: boolean },
-): Promise<Deleted> => {
+): Promise<Deletion> => {
   if (messages.length > DELETE_AT_ONCE) {
     throw new CliError("validation_error", `at most ${DELETE_AT_ONCE} messages at once, got ${messages.length}`)
   }
