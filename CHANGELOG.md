@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.64.0 — 30.09.2026
+
 ### Added
 
 - **`newSendId()` on the adapter port, optional**: a send id in the messenger's own form. `messages
