@@ -71,6 +71,25 @@ interface Sherpa {
 
 const WINDOW = 512
 
+/** Where the voice detector cuts. Tested on a recording with a quiet stretch in the middle (`speech.test.ts`). */
+export const detector = (vadModel: string) => ({
+  sileroVad: {
+    model: vadModel,
+    // At the default 0.5 a quietly spoken stretch in the middle of a voice message never counted as
+    // speech and was lost; 0.3 keeps it for both models and changes nothing on clear speech (126508, 2026-09-30).
+    threshold: 0.3,
+    minSilenceDuration: 0.5,
+    minSpeechDuration: 0.25,
+    maxSpeechDuration: 20,
+    windowSize: WINDOW,
+  },
+  sampleRate: SAMPLE_RATE,
+  numThreads: 1,
+  provider: "cpu",
+  debug: 0,
+  bufferSizeInSeconds: 30,
+})
+
 /**
  * The model, and a voice detector that cuts the audio at pauses into pieces of at most 20 seconds.
  * The cutting is not optional: five minutes in one piece crash the WebAssembly build (measured).
@@ -84,23 +103,7 @@ export const openRecognizer = (model: SpeechModel, path: (name: string) => strin
     modelConfig: { ...model.config(path), numThreads: 1, provider: "cpu", debug: 0 },
     decodingMethod: "greedy_search",
   })
-  const vad = sherpa.createVad({
-    sileroVad: {
-      model: vadModel,
-      // At the default 0.5 a quietly spoken stretch in the middle of a voice message never counted as
-      // speech and was lost; 0.3 keeps it for both models and changes nothing on clear speech (126508, 2026-09-30).
-      threshold: 0.3,
-      minSilenceDuration: 0.5,
-      minSpeechDuration: 0.25,
-      maxSpeechDuration: 20,
-      windowSize: WINDOW,
-    },
-    sampleRate: SAMPLE_RATE,
-    numThreads: 1,
-    provider: "cpu",
-    debug: 0,
-    bufferSizeInSeconds: 30,
-  })
+  const vad = sherpa.createVad(detector(vadModel))
 
   const piece = (samples: Float32Array): string => {
     const stream = engine.createStream()
