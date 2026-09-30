@@ -1,0 +1,1237 @@
+{
+  "options": {
+    "--add": {
+      "value": "<chat>",
+      "meaning": "put a chat into a folder; repeat it for more"
+    },
+    "--after": {
+      "value": "<id-or-time>",
+      "meaning": "read what came after this message id, this ISO 8601 time, or 2h / 1d ago; not with --before"
+    },
+    "--all": {
+      "meaning": "every row, no paging"
+    },
+    "--all-can-pin": {
+      "value": "<on|off>",
+      "meaning": "every member may pin messages"
+    },
+    "--allow-any-file": {
+      "meaning": "send a --file even from a hidden folder, ~/.ssh or the tool's own folders"
+    },
+    "--allow-dangerous": {
+      "meaning": "do what a rule at consent level flag asks: delete messages, remove people"
+    },
+    "--allow-delete": {
+      "meaning": "offer the tool that deletes messages for you only; it cannot be undone"
+    },
+    "--allow-mark-read": {
+      "meaning": "offer the tool that marks a chat read; the other person sees it"
+    },
+    "--allow-moderate": {
+      "meaning": "offer the tool that applies a group's rules — delete others' messages, remove people"
+    },
+    "--allow-send": {
+      "meaning": "offer the send tool; without it the server can only read"
+    },
+    "--anonymous": {
+      "meaning": "nobody sees who voted for what"
+    },
+    "--app": {
+      "value": "<how>",
+      "meaning": "the first time only: how to get this profile's app from my.telegram.org",
+      "default": "browser"
+    },
+    "--as-file": {
+      "meaning": "send every --file as a plain file to download, a video included"
+    },
+    "--at": {
+      "value": "<time>",
+      "meaning": "let the messenger send it later, even with this machine off: a local time like 2026-09-25T09:00, or 30m"
+    },
+    "--background": {
+      "meaning": "run as a job that outlives this command; `store jobs show` follows it"
+    },
+    "--before": {
+      "value": "<id-or-time>",
+      "meaning": "read what came before this message id, this ISO 8601 time, or 2h / 1d ago",
+      "note": "tg's `messages list` spells the value `<id>`"
+    },
+    "--bot": {
+      "meaning": "the bot section of the profile's settings, rather than the personal account's"
+    },
+    "--can": {
+      "value": "<rights>",
+      "meaning": "what they may do, comma-separated: read, members, admins, info, pin, link, post, edit, delete"
+    },
+    "--channel": {
+      "meaning": "a private channel instead of a group; people join it by its link"
+    },
+    "--chat": {
+      "value": "<chat>",
+      "meaning": "a chat, by id or name; repeat it for more",
+      "note": "tg's `messages search` spells the value `<id>`; rule 6 says `<chat>`"
+    },
+    "--check": {
+      "meaning": "say whether a newer version exists, and install nothing"
+    },
+    "--confirm-send": {
+      "meaning": "show the owner every write the MCP server offers, in a form to approve"
+    },
+    "--defaults": {
+      "meaning": "change what every profile gets, rather than this profile"
+    },
+    "--description": {
+      "value": "<text>",
+      "meaning": "the new about text — of a chat or of your account"
+    },
+    "--detach": {
+      "meaning": "run in the background instead — the same as `server start`"
+    },
+    "--dry-run": {
+      "meaning": "judge and plan; do nothing"
+    },
+    "--estimate": {
+      "meaning": "only say what the fetch would cost, from this machine's copy; nothing is sent"
+    },
+    "--event": {
+      "value": "<names>",
+      "meaning": "only these events, comma-separated, as the messenger names them"
+    },
+    "--events": {
+      "meaning": "also print edits, deletions and reactions; every line then names its event"
+    },
+    "--file": {
+      "value": "<path>",
+      "meaning": "attach a file; images go as a photo, videos as a video. Repeat it for more"
+    },
+    "--first-name": {
+      "value": "<name>",
+      "meaning": "your first name"
+    },
+    "--for-everyone": {
+      "meaning": "delete for everyone in the chat, not only for you — they cannot get it back"
+    },
+    "--format": {
+      "value": "<format>",
+      "meaning": "jsonl or md"
+    },
+    "--history": {
+      "meaning": "the people added also see the messages from before they came"
+    },
+    "--idle": {
+      "value": "<duration>",
+      "meaning": "stop after this long with nobody using it — 15m, 1h is 60m"
+    },
+    "--json": {
+      "meaning": "machine-readable output: one JSON value on stdout, nothing else"
+    },
+    "--jsonl": {
+      "meaning": "machine-readable output: one JSON object per line, for streaming and jq"
+    },
+    "--kind": {
+      "value": "<kind>",
+      "meaning": "only chats of this kind: dialog, group or channel",
+      "note": "max spells the value `<dialog|group|channel>`; the choices belong in the description"
+    },
+    "--last": {
+      "value": "<n>",
+      "meaning": "the newest n messages",
+      "note": "clash with tg's `store fetch --max`"
+    },
+    "--last-name": {
+      "value": "<name>",
+      "meaning": "your last name"
+    },
+    "--limit": {
+      "value": "<n>",
+      "meaning": "how many to show"
+    },
+    "--lines": {
+      "value": "<n>",
+      "meaning": "how many lines",
+      "default": "50"
+    },
+    "--local": {
+      "meaning": "use the model on this machine, never the messenger"
+    },
+    "--mark-read": {
+      "meaning": "also mark the chat read up to the newest message shown; the other person sees it"
+    },
+    "--max": {
+      "value": "<n>",
+      "meaning": "at most this many messages in this run",
+      "default": "1000",
+      "note": "clash: the same limit as `--last` and `--max-pages` in max's `store fetch` — one of the two spellings goes"
+    },
+    "--max-actions": {
+      "value": "<n>",
+      "meaning": "at most this many actions in one run",
+      "default": "10"
+    },
+    "--max-pages": {
+      "value": "<n>",
+      "meaning": "at most this many pages in one run",
+      "default": "40",
+      "note": "clash with tg's `store fetch --max`"
+    },
+    "--md": {
+      "meaning": "read **bold**, _italic_, ~~struck~~ and `code` in the text; \\ keeps a mark literal"
+    },
+    "--members-see-link": {
+      "value": "<on|off>",
+      "meaning": "members may see the invite link"
+    },
+    "--model": {
+      "value": "<id>",
+      "meaning": "which downloaded speech model hears them; `models audio list` shows them"
+    },
+    "--multiple": {
+      "meaning": "people may pick several answers"
+    },
+    "--new": {
+      "meaning": "what arrived since the last check, each message once — for scheduled runs"
+    },
+    "--no-preview": {
+      "meaning": "no preview card for a link in the text"
+    },
+    "--no-record": {
+      "meaning": "do not keep it, whatever the configuration says"
+    },
+    "--no-serve": {
+      "meaning": "do not start it; log in on this command's own connection unless one is running"
+    },
+    "--notify": {
+      "meaning": "tell the chat's members about the pin"
+    },
+    "--offline": {
+      "meaning": "answer from what was recorded and never connect; fails if nothing was"
+    },
+    "--online": {
+      "meaning": "also log in once, read one chat and start the MCP server; sends nothing"
+    },
+    "--only-admins-add": {
+      "value": "<on|off>",
+      "meaning": "only admins may add members"
+    },
+    "--only-admins-call": {
+      "value": "<on|off>",
+      "meaning": "only admins may start a call"
+    },
+    "--only-owner-edits-info": {
+      "value": "<on|off>",
+      "meaning": "only the owner may change the name and photo"
+    },
+    "--order": {
+      "value": "<recent|name>",
+      "meaning": "newest conversation first, or alphabetical"
+    },
+    "--others": {
+      "meaning": "every session but this one"
+    },
+    "--output": {
+      "meaning": "where to write: a directory for `messages download`, a file for `store export`",
+      "default": ".",
+      "note": "clash: `<dir>` in one command, `<file>` in another"
+    },
+    "--page": {
+      "value": "<n>",
+      "meaning": "which page, starting at 1"
+    },
+    "--pause": {
+      "value": "<duration>",
+      "meaning": "the least wait between pages, 5s or 500ms; each is up to twice that",
+      "default": "5s"
+    },
+    "--personal": {
+      "meaning": "the personal account's section of the profile's settings"
+    },
+    "--photo": {
+      "value": "<file>",
+      "meaning": "an image file — a profile photo in `account update`, a photo to send in `messages send`",
+      "note": "tg's `messages send --photo` takes `<path>`; rule 6 says `<file>`"
+    },
+    "--qr-file": {
+      "value": "<png>",
+      "meaning": "write the QR code to this PNG instead of drawing it, for an agent to pass on"
+    },
+    "--quiet": {
+      "meaning": "diagnostics off"
+    },
+    "--record": {
+      "meaning": "keep this run under `runs` — ids and timings, never message content"
+    },
+    "--regex": {
+      "meaning": "the words are one regular expression, case-insensitive, tested against every stored text"
+    },
+    "--remove": {
+      "value": "<chat>",
+      "meaning": "take a chat out of a folder; repeat it for more"
+    },
+    "--reply-to": {
+      "value": "<message>",
+      "meaning": "answer this message id in the same chat"
+    },
+    "--retract": {
+      "meaning": "take your vote back, where the poll allows it"
+    },
+    "--revote": {
+      "meaning": "people may change their vote"
+    },
+    "--run": {
+      "value": "<id>",
+      "meaning": "the run the report is about; the newest failed one if not given"
+    },
+    "--search": {
+      "value": "<text>",
+      "meaning": "only chats whose name contains this; at least 3 characters"
+    },
+    "--send-id": {
+      "value": "<id>",
+      "meaning": "reuse the id of an earlier send whose outcome is unknown; the messenger drops the duplicate",
+      "note": "max spells the value `<n>`"
+    },
+    "--serve": {
+      "meaning": "start `serve` in the background if it is not running (the default)"
+    },
+    "--show-phone": {
+      "meaning": "print the whole phone number"
+    },
+    "--silent": {
+      "meaning": "deliver without a notification"
+    },
+    "--since": {
+      "value": "<id-or-time>",
+      "meaning": "from this message id, an ISO 8601 time, or 2h / 1d ago; each command says its default",
+      "note": "tg's `chats events`, `store fetch`, `inbox` and `review` spell the value `<time>` though they take the same"
+    },
+    "--stop": {
+      "meaning": "stop this profile's server — the same as `server stop`"
+    },
+    "--timeout": {
+      "value": "<duration>",
+      "meaning": "give up on the whole command after this — 30s, 2m, 500ms"
+    },
+    "--title": {
+      "value": "<title>",
+      "meaning": "the new name — of a chat or a folder"
+    },
+    "--to": {
+      "value": "<chat>",
+      "meaning": "the chat to forward it to: an id, or part of a chat name"
+    },
+    "--trace": {
+      "meaning": "one line per request on stderr: ids and timings, never message content"
+    },
+    "--transcribe": {
+      "meaning": "hear voice messages not heard yet, on this machine; slow, the model must be downloaded"
+    },
+    "--unanswered": {
+      "value": "[hours]",
+      "meaning": "only questions to you or a group's admins that nobody answered, asked at least this long ago; 24 hours if not given"
+    },
+    "--unread": {
+      "meaning": "only chats with unread messages"
+    },
+    "--until": {
+      "value": "<message>",
+      "meaning": "only up to this message id, inclusive; the newest by default"
+    },
+    "--verbose": {
+      "meaning": "more detail in what is shown: -v ids, -vv everything known",
+      "default": "0"
+    },
+    "--version": {
+      "meaning": "print the version number"
+    },
+    "--voice": {
+      "value": "<file>",
+      "meaning": "send an Ogg Opus file as a voice message, alone, with no text",
+      "note": "max spells the value `<path>`; rule 6 says `<file>`"
+    },
+    "--yes": {
+      "meaning": "yes, do it — for an action that cannot be undone"
+    }
+  },
+  "globalOptions": {
+    "--json": "both",
+    "--jsonl": "both",
+    "--no-record": "both",
+    "--no-serve": {
+      "state": "planned",
+      "by": "P6"
+    },
+    "--offline": "both",
+    "--quiet": "both",
+    "--record": "both",
+    "--serve": {
+      "state": "planned",
+      "by": "P6"
+    },
+    "--timeout": "both",
+    "--trace": "both",
+    "--verbose": "both",
+    "--version": "both"
+  },
+  "commands": {
+    "account": {
+      "state": "both"
+    },
+    "account sessions": {
+      "state": "both"
+    },
+    "account sessions end": {
+      "state": "planned",
+      "by": "P2",
+      "options": {
+        "--others": {
+          "state": "planned",
+          "by": "P2"
+        },
+        "--yes": {
+          "state": "planned",
+          "by": "P2"
+        }
+      }
+    },
+    "account sessions list": {
+      "state": "both"
+    },
+    "account show": {
+      "state": "both",
+      "options": {
+        "--show-phone": {
+          "state": "planned",
+          "by": "P1"
+        }
+      }
+    },
+    "account update": {
+      "state": "planned",
+      "by": "P2",
+      "options": {
+        "--description": {
+          "state": "planned",
+          "by": "P2"
+        },
+        "--first-name": {
+          "state": "planned",
+          "by": "P2"
+        },
+        "--last-name": {
+          "state": "planned",
+          "by": "P2"
+        },
+        "--photo": {
+          "state": "planned",
+          "by": "P2"
+        }
+      }
+    },
+    "bot": {
+      "state": "max-only",
+      "reason": "max's bot accounts through MAX's official Bot API; tg has no bot side"
+    },
+    "cache": {
+      "state": "planned",
+      "by": "T6"
+    },
+    "cache clear": {
+      "state": "planned",
+      "by": "T6"
+    },
+    "chats": {
+      "state": "both"
+    },
+    "chats admins": {
+      "state": "planned",
+      "by": "P2"
+    },
+    "chats admins add": {
+      "state": "planned",
+      "by": "P2",
+      "options": {
+        "--can": {
+          "state": "planned",
+          "by": "P2"
+        }
+      }
+    },
+    "chats admins remove": {
+      "state": "planned",
+      "by": "P2"
+    },
+    "chats check": {
+      "state": "planned",
+      "by": "P2",
+      "options": {
+        "--allow-dangerous": {
+          "state": "planned",
+          "by": "P2"
+        },
+        "--dry-run": {
+          "state": "planned",
+          "by": "P2"
+        },
+        "--max-actions": {
+          "state": "planned",
+          "by": "P2"
+        },
+        "--since": {
+          "state": "planned",
+          "by": "P2"
+        }
+      }
+    },
+    "chats create": {
+      "state": "planned",
+      "by": "P2",
+      "options": {
+        "--channel": {
+          "state": "planned",
+          "by": "P2"
+        }
+      }
+    },
+    "chats events": {
+      "state": "both",
+      "options": {
+        "--event": "both",
+        "--since": "both"
+      }
+    },
+    "chats folders": {
+      "state": "planned",
+      "by": "P2"
+    },
+    "chats folders create": {
+      "state": "planned",
+      "by": "P2",
+      "options": {
+        "--chat": {
+          "state": "planned",
+          "by": "P2"
+        }
+      }
+    },
+    "chats folders delete": {
+      "state": "planned",
+      "by": "P2"
+    },
+    "chats folders list": {
+      "state": "planned",
+      "by": "P2"
+    },
+    "chats folders update": {
+      "state": "planned",
+      "by": "P2",
+      "options": {
+        "--add": {
+          "state": "planned",
+          "by": "P2"
+        },
+        "--remove": {
+          "state": "planned",
+          "by": "P2"
+        },
+        "--title": {
+          "state": "planned",
+          "by": "P2"
+        }
+      }
+    },
+    "chats inspect": {
+      "state": "both"
+    },
+    "chats join": {
+      "state": "planned",
+      "by": "P2"
+    },
+    "chats leave": {
+      "state": "planned",
+      "by": "P2"
+    },
+    "chats link": {
+      "state": "planned",
+      "by": "P2"
+    },
+    "chats link reset": {
+      "state": "planned",
+      "by": "P2"
+    },
+    "chats link show": {
+      "state": "planned",
+      "by": "P2"
+    },
+    "chats list": {
+      "state": "both",
+      "options": {
+        "--all": "both",
+        "--kind": "both",
+        "--limit": "both",
+        "--page": "both",
+        "--search": "both",
+        "--unread": "both"
+      }
+    },
+    "chats mark-read": {
+      "state": "both",
+      "options": {
+        "--until": "both"
+      }
+    },
+    "chats members": {
+      "state": "both"
+    },
+    "chats members add": {
+      "state": "planned",
+      "by": "P2",
+      "options": {
+        "--history": {
+          "state": "planned",
+          "by": "P2"
+        }
+      }
+    },
+    "chats members list": {
+      "state": "both",
+      "options": {
+        "--all": {
+          "state": "planned",
+          "by": "T6"
+        },
+        "--limit": {
+          "state": "planned",
+          "by": "T6"
+        },
+        "--page": {
+          "state": "planned",
+          "by": "T6"
+        }
+      }
+    },
+    "chats members remove": {
+      "state": "planned",
+      "by": "P2"
+    },
+    "chats rules": {
+      "state": "planned",
+      "by": "P2"
+    },
+    "chats rules set": {
+      "state": "planned",
+      "by": "P2"
+    },
+    "chats rules show": {
+      "state": "planned",
+      "by": "P2"
+    },
+    "chats rules unset": {
+      "state": "planned",
+      "by": "P2"
+    },
+    "chats show": {
+      "state": "both"
+    },
+    "chats update": {
+      "state": "planned",
+      "by": "P2",
+      "options": {
+        "--all-can-pin": {
+          "state": "planned",
+          "by": "P2"
+        },
+        "--description": {
+          "state": "planned",
+          "by": "P2"
+        },
+        "--members-see-link": {
+          "state": "planned",
+          "by": "P2"
+        },
+        "--only-admins-add": {
+          "state": "planned",
+          "by": "P2"
+        },
+        "--only-admins-call": {
+          "state": "planned",
+          "by": "P2"
+        },
+        "--only-owner-edits-info": {
+          "state": "planned",
+          "by": "P2"
+        },
+        "--title": {
+          "state": "planned",
+          "by": "P2"
+        }
+      }
+    },
+    "commands": {
+      "state": "both"
+    },
+    "complete": {
+      "state": "both"
+    },
+    "config": {
+      "state": "both"
+    },
+    "config set": {
+      "state": "both",
+      "options": {
+        "--bot": {
+          "state": "max-only",
+          "reason": "a max profile holds a bot section and a personal section; tg has personal accounts only"
+        },
+        "--defaults": "both",
+        "--personal": {
+          "state": "max-only",
+          "reason": "a max profile holds a bot section and a personal section; tg has personal accounts only"
+        }
+      }
+    },
+    "config show": {
+      "state": "both",
+      "options": {
+        "--bot": {
+          "state": "max-only",
+          "reason": "a max profile holds a bot section and a personal section; tg has personal accounts only"
+        }
+      }
+    },
+    "config unset": {
+      "state": "both",
+      "options": {
+        "--bot": {
+          "state": "max-only",
+          "reason": "a max profile holds a bot section and a personal section; tg has personal accounts only"
+        },
+        "--defaults": "both",
+        "--personal": {
+          "state": "max-only",
+          "reason": "a max profile holds a bot section and a personal section; tg has personal accounts only"
+        }
+      }
+    },
+    "contacts": {
+      "state": "both"
+    },
+    "contacts add": {
+      "state": "planned",
+      "by": "P2"
+    },
+    "contacts block": {
+      "state": "planned",
+      "by": "P2"
+    },
+    "contacts import": {
+      "state": "planned",
+      "by": "P2"
+    },
+    "contacts list": {
+      "state": "both",
+      "options": {
+        "--all": "both",
+        "--limit": "both",
+        "--order": "both",
+        "--page": "both",
+        "--search": "both"
+      }
+    },
+    "contacts lookup": {
+      "state": "both"
+    },
+    "contacts remove": {
+      "state": "planned",
+      "by": "P2"
+    },
+    "contacts rename": {
+      "state": "planned",
+      "by": "P2"
+    },
+    "contacts show": {
+      "state": "both"
+    },
+    "contacts sync": {
+      "state": "both"
+    },
+    "contacts unblock": {
+      "state": "planned",
+      "by": "P2"
+    },
+    "doctor": {
+      "state": "both",
+      "options": {
+        "--online": "both"
+      }
+    },
+    "doctor report": {
+      "state": "both"
+    },
+    "doctor report create": {
+      "state": "both",
+      "options": {
+        "--output": "both",
+        "--run": "both"
+      }
+    },
+    "inbox": {
+      "state": "both",
+      "options": {
+        "--all": {
+          "state": "planned",
+          "by": "T6"
+        },
+        "--limit": "both",
+        "--model": {
+          "state": "planned",
+          "by": "P1"
+        },
+        "--new": "both",
+        "--since": "both",
+        "--transcribe": "both"
+      }
+    },
+    "mcp": {
+      "state": "both",
+      "options": {
+        "--allow-delete": "both",
+        "--allow-mark-read": "both",
+        "--allow-moderate": {
+          "state": "planned",
+          "by": "P2"
+        },
+        "--allow-send": "both",
+        "--confirm-send": "both"
+      }
+    },
+    "mcp config": {
+      "state": "both",
+      "options": {
+        "--allow-delete": "both",
+        "--allow-mark-read": "both",
+        "--allow-moderate": {
+          "state": "planned",
+          "by": "P2"
+        },
+        "--allow-send": "both",
+        "--confirm-send": "both"
+      }
+    },
+    "messages": {
+      "state": "both"
+    },
+    "messages context": {
+      "state": "both",
+      "options": {
+        "--after": "both",
+        "--before": "both"
+      }
+    },
+    "messages delete": {
+      "state": "both",
+      "options": {
+        "--allow-dangerous": "both",
+        "--for-everyone": "both"
+      }
+    },
+    "messages download": {
+      "state": "both",
+      "options": {
+        "--all": {
+          "state": "planned",
+          "by": "T6"
+        },
+        "--output": "both",
+        "--pause": {
+          "state": "planned",
+          "by": "T6"
+        }
+      }
+    },
+    "messages edit": {
+      "state": "both",
+      "options": {
+        "--md": {
+          "state": "planned",
+          "by": "P1"
+        }
+      }
+    },
+    "messages forward": {
+      "state": "both",
+      "options": {
+        "--send-id": {
+          "state": "planned",
+          "by": "P1"
+        },
+        "--silent": "both",
+        "--to": "both"
+      }
+    },
+    "messages list": {
+      "state": "both",
+      "options": {
+        "--after": "both",
+        "--before": "both",
+        "--limit": "both",
+        "--mark-read": {
+          "state": "planned",
+          "by": "P1"
+        },
+        "--model": {
+          "state": "planned",
+          "by": "P1"
+        },
+        "--transcribe": "both"
+      }
+    },
+    "messages pin": {
+      "state": "both",
+      "options": {
+        "--notify": "both"
+      }
+    },
+    "messages scheduled": {
+      "state": "both"
+    },
+    "messages search": {
+      "state": "both",
+      "options": {
+        "--chat": "both",
+        "--limit": "both",
+        "--regex": {
+          "state": "planned",
+          "by": "T6"
+        }
+      }
+    },
+    "messages send": {
+      "state": "both",
+      "options": {
+        "--allow-any-file": "both",
+        "--as-file": {
+          "state": "planned",
+          "by": "P1"
+        },
+        "--at": "both",
+        "--file": "both",
+        "--md": "both",
+        "--no-preview": {
+          "state": "planned",
+          "by": "T6"
+        },
+        "--photo": {
+          "state": "planned",
+          "by": "T6"
+        },
+        "--reply-to": "both",
+        "--send-id": "both",
+        "--silent": "both",
+        "--voice": {
+          "state": "planned",
+          "by": "P1"
+        }
+      }
+    },
+    "messages show": {
+      "state": "both"
+    },
+    "messages transcribe": {
+      "state": "both",
+      "options": {
+        "--local": {
+          "state": "tg-only",
+          "reason": "Telegram can transcribe on its side; MAX cannot, so max always uses the local model"
+        },
+        "--model": "both"
+      }
+    },
+    "messages unpin": {
+      "state": "both"
+    },
+    "models": {
+      "state": "both"
+    },
+    "models audio": {
+      "state": "both"
+    },
+    "models audio download": {
+      "state": "both"
+    },
+    "models audio list": {
+      "state": "both"
+    },
+    "polls": {
+      "state": "both"
+    },
+    "polls close": {
+      "state": "both"
+    },
+    "polls create": {
+      "state": "both",
+      "options": {
+        "--anonymous": "both",
+        "--multiple": "both",
+        "--revote": {
+          "state": "planned",
+          "by": "P1"
+        },
+        "--send-id": {
+          "state": "planned",
+          "by": "T6"
+        },
+        "--silent": "both"
+      }
+    },
+    "polls show": {
+      "state": "planned",
+      "by": "T6"
+    },
+    "polls vote": {
+      "state": "both",
+      "options": {
+        "--retract": "both"
+      }
+    },
+    "reactions": {
+      "state": "both"
+    },
+    "reactions add": {
+      "state": "both"
+    },
+    "reactions remove": {
+      "state": "both"
+    },
+    "recipients": {
+      "state": "both"
+    },
+    "recipients add": {
+      "state": "both"
+    },
+    "recipients clear": {
+      "state": "both"
+    },
+    "recipients list": {
+      "state": "both"
+    },
+    "recipients remove": {
+      "state": "both"
+    },
+    "review": {
+      "state": "both",
+      "options": {
+        "--all": {
+          "state": "planned",
+          "by": "T6"
+        },
+        "--chat": "both",
+        "--since": "both",
+        "--transcribe": {
+          "state": "planned",
+          "by": "P1"
+        },
+        "--unanswered": "both"
+      }
+    },
+    "runs": {
+      "state": "both"
+    },
+    "runs list": {
+      "state": "both",
+      "options": {
+        "--limit": "both"
+      }
+    },
+    "runs path": {
+      "state": "both"
+    },
+    "runs show": {
+      "state": "both"
+    },
+    "sends": {
+      "state": "both"
+    },
+    "sends list": {
+      "state": "both",
+      "options": {
+        "--limit": "both"
+      }
+    },
+    "serve": {
+      "state": "both",
+      "options": {
+        "--detach": {
+          "state": "planned",
+          "by": "P6"
+        },
+        "--idle": {
+          "state": "planned",
+          "by": "P6"
+        },
+        "--stop": {
+          "state": "planned",
+          "by": "P6"
+        }
+      }
+    },
+    "server": {
+      "state": "both"
+    },
+    "server install": {
+      "state": "planned",
+      "by": "P6"
+    },
+    "server logs": {
+      "state": "planned",
+      "by": "P6",
+      "options": {
+        "--lines": {
+          "state": "planned",
+          "by": "P6"
+        }
+      }
+    },
+    "server restart": {
+      "state": "both",
+      "options": {
+        "--idle": {
+          "state": "planned",
+          "by": "P6"
+        }
+      }
+    },
+    "server start": {
+      "state": "both",
+      "options": {
+        "--idle": {
+          "state": "planned",
+          "by": "P6"
+        }
+      }
+    },
+    "server status": {
+      "state": "both"
+    },
+    "server stop": {
+      "state": "both"
+    },
+    "server uninstall": {
+      "state": "planned",
+      "by": "P6"
+    },
+    "session": {
+      "state": "both"
+    },
+    "session end": {
+      "state": "both"
+    },
+    "session start": {
+      "state": "both",
+      "options": {
+        "--app": {
+          "state": "tg-only",
+          "reason": "Telegram asks each client for its own app from my.telegram.org; MAX has no such step"
+        },
+        "--qr-file": {
+          "state": "tg-only",
+          "reason": "ruled tg-only with the app registration it belongs to"
+        }
+      }
+    },
+    "skill": {
+      "state": "both"
+    },
+    "skill show": {
+      "state": "both"
+    },
+    "store": {
+      "state": "both"
+    },
+    "store check": {
+      "state": "planned",
+      "by": "T6"
+    },
+    "store export": {
+      "state": "both",
+      "options": {
+        "--format": "both",
+        "--output": {
+          "state": "planned",
+          "by": "P1"
+        },
+        "--since": {
+          "state": "planned",
+          "by": "P1"
+        }
+      }
+    },
+    "store fetch": {
+      "state": "both",
+      "options": {
+        "--background": {
+          "state": "planned",
+          "by": "T6"
+        },
+        "--estimate": "both",
+        "--last": {
+          "state": "planned",
+          "by": "P1"
+        },
+        "--max": {
+          "state": "planned",
+          "by": "P1"
+        },
+        "--max-pages": {
+          "state": "planned",
+          "by": "P1"
+        },
+        "--pause": "both",
+        "--since": "both"
+      }
+    },
+    "store info": {
+      "state": "planned",
+      "by": "T6"
+    },
+    "store jobs": {
+      "state": "planned",
+      "by": "T6"
+    },
+    "store jobs cancel": {
+      "state": "planned",
+      "by": "T6"
+    },
+    "store jobs list": {
+      "state": "planned",
+      "by": "T6"
+    },
+    "store jobs show": {
+      "state": "planned",
+      "by": "T6"
+    },
+    "store migrate": {
+      "state": "planned",
+      "by": "T6"
+    },
+    "store status": {
+      "state": "planned",
+      "by": "T6"
+    },
+    "topics": {
+      "state": "tg-only",
+      "reason": "MAX has no forum topics"
+    },
+    "upgrade": {
+      "state": "both",
+      "options": {
+        "--check": "both"
+      }
+    },
+    "watch": {
+      "state": "both",
+      "options": {
+        "--events": "both"
+      }
+    }
+  }
+}
