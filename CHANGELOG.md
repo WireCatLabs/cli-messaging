@@ -6,6 +6,12 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Changed — may break callers
+
+- **Depends on `@leemour/cli-core` 0.9.0.** A CLI that uses this package moves to cli-core 0.9.0 in the
+  same change: two copies of cli-core in one install lose the error codes, because an error from one
+  copy is not an instance of the other's classes.
+
 ## 0.69.0 — 30.09.2026
 
 ## 0.68.0 — 30.09.2026
