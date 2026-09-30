@@ -14,6 +14,7 @@ import type {
   MessageEvent,
   Page,
   PersonCard,
+  Topic,
   WindowedMessage,
 } from "../../domain/models.js"
 import type { Upload } from "../../sends/upload.js"
@@ -116,6 +117,8 @@ export interface MessengerAdapter {
   scheduled?(chat: string): Promise<Message[]>
   /** A voice or video note as text, by the messenger's own speech recognition. */
   transcribe?(chat: string, messageId: Id): Promise<Transcript>
+  /** A forum group's topics, newest activity first; `search` matches their titles. */
+  topics?(chat: string, window: { search?: string; limit?: number; offset: number }): Promise<Page<Topic>>
   /** What an invite or public link leads to. Reading it joins nothing. */
   inspect?(link: string): Promise<LinkTarget>
   /** Every device and app logged in to this account. Reading them ends nothing. */

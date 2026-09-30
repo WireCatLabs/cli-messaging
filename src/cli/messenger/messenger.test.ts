@@ -24,6 +24,7 @@ import { messagesCommand } from "./messages-command.js"
 import { modelsCommand } from "./models-command.js"
 import type { MessengerAdapter, SendOptions } from "./port.js"
 import { reactionsCommand } from "./reactions-command.js"
+import { topicsCommand } from "./topics-command.js"
 
 const app = {
   command: "chat",
@@ -132,6 +133,7 @@ const call = async (
         exportCommand(messenger),
         mcpCommand(messenger),
         modelsCommand(messenger),
+        topicsCommand(messenger),
       ],
     },
     { streams, tty: false, env, ...options },
@@ -1029,6 +1031,38 @@ describe("the guard, account and mcp config commands", () => {
     expect(links).toEqual(["https://t.me/+abc"])
     expect((await call(["chats", "inspect", "x", "--offline"], async () => reader, env)).code).toBe(2)
     expect((await call(["chats", "inspect", "x"], async () => fake, env)).code).toBe(2)
+  })
+
+  it("**topics list and search** page a forum's topics, search passing its words on", async () => {
+    const env = sandbox()
+    const asked: unknown[] = []
+    const forum: MessengerAdapter = {
+      ...fake,
+      topics: async (_chat, window) => {
+        asked.push(window)
+        const topic = {
+          id: "4",
+          title: "Pisos",
+          closed: false,
+          pinned: true,
+          unreadCount: 2,
+          lastMessageAt: null,
+          createdAt: null,
+        }
+        return { items: [topic], hasMore: false }
+      },
+    }
+    const online = async () => forum
+
+    const listed = await call(["topics", "list", "7", "--limit", "5", "--json"], online, env)
+    await call(["topics", "search", "7", "pisos", "--json"], online, env)
+
+    expect(json(listed.stdout).items).toEqual([expect.objectContaining({ id: "4", pinned: true })])
+    expect(asked).toEqual([
+      { limit: 5, offset: 0 },
+      { limit: 20, offset: 0, search: "pisos" },
+    ])
+    expect((await call(["topics", "list", "7"], async () => fake, env)).code).toBe(2)
   })
 
   it("refuses a --search under 3 characters and an unknown --kind, before connecting", async () => {

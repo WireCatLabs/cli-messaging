@@ -30,6 +30,7 @@ export { reactionsCommand } from "./messenger/reactions-command.js"
 export { REVIEW_CHATS, reviewCommand, reviewIn, unanswered } from "./messenger/review.js"
 export { serveCommand, servingProfiles } from "./messenger/serve-command.js"
 export { type ServerSystem, serverCommand } from "./messenger/server-command.js"
+export { topicsCommand } from "./messenger/topics-command.js"
 export { watchCommand } from "./messenger/watch-command.js"
 export { renderPage, window, withPaging } from "./paging.js"
 export {

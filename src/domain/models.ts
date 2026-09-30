@@ -243,6 +243,18 @@ export interface Contact {
 /** Somebody in a chat, as much of them as a chat card shows. */
 export type Member = Pick<Contact, "id" | "name" | "username">
 
+/** A topic of a forum group; its messages carry this id as `threadId`. */
+export interface Topic {
+  id: Id
+  title: string
+  closed: boolean
+  pinned: boolean
+  unreadCount: number | null
+  /** ISO 8601. */
+  lastMessageAt: string | null
+  createdAt: string | null
+}
+
 /** What a link leads to, read without joining. */
 export interface LinkTarget {
   kind: ChatKind
