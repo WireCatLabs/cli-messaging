@@ -6,6 +6,13 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- **Sync state in the store** (store version 8): `syncState(key, name)` answers what a sync remembered
+  for the account — a delta marker, when a list was last complete — with when it was set;
+  `setSyncState` and `clearSyncState` change it. Values are text; a caller encodes a number itself.
+  Additive: a build on version 6 keeps working on the file.
+
 ## 0.55.0 — 30.09.2026
 
 ### Added

@@ -92,6 +92,10 @@ export interface MessageStore {
   members(key: AccountKey, chatId: Id): Promise<Member[]>
   /** The chats a person is in, newest first — as far as the saved member lists go. */
   chatsWith(key: AccountKey, memberId: Id): Promise<Chat[]>
+  /** What a sync remembered under `name` for this account, and when; a caller encodes a number itself. */
+  syncState(key: AccountKey, name: string): Promise<{ value: string; at: string } | undefined>
+  setSyncState(key: AccountKey, name: string, value: string): Promise<void>
+  clearSyncState(key: AccountKey, name: string): Promise<void>
   /** Oldest to newest, like a provider's history page. */
   messages(key: AccountKey, chatId: Id, window: { limit: number; before?: Id }): Promise<Page<Message>>
   /**
@@ -644,6 +648,30 @@ const storeOver = (database: CacheDatabase, now: () => number): MessageStore => 
         key.provider,
         memberId,
       ).map(toChat)
+    },
+
+    syncState: async (key, name) => {
+      const accountKey = findAccountPk(key)
+      if (accountKey === undefined) return undefined
+      const row = one("SELECT value, at FROM sync_state WHERE account_pk = ? AND key = ?", accountKey, name)
+      return row ? { value: String(row.value), at: toIso(row.at) as string } : undefined
+    },
+
+    setSyncState: async (key, name, value) =>
+      inTransaction(() => {
+        run(
+          `INSERT INTO sync_state (account_pk, key, value, at) VALUES (?, ?, ?, ?)
+           ON CONFLICT (account_pk, key) DO UPDATE SET value = excluded.value, at = excluded.at`,
+          accountPk(key),
+          name,
+          value,
+          now(),
+        )
+      }),
+
+    clearSyncState: async (key, name) => {
+      const accountKey = findAccountPk(key)
+      if (accountKey !== undefined) run("DELETE FROM sync_state WHERE account_pk = ? AND key = ?", accountKey, name)
     },
 
     chats: async (key, { limit, offset = 0 }) => {
