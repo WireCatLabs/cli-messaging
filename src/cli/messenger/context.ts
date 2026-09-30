@@ -18,6 +18,8 @@ export interface ConnectOptions {
   listen?: boolean
   /** Fetch what arrived while nothing listened — `serve` only; `watch` starts from now. */
   catchUp?: boolean
+  /** The run's diagnostics, for a messenger that reports its own wire below the adapter's calls. */
+  events?: EventSink
 }
 
 /** What one messenger CLI hands the shared commands. Everything else about it stays in its own code. */
@@ -115,7 +117,7 @@ export const messengerContext = (command: Command, messenger: Messenger): Messen
       base.run(
         async (events) => {
           if (base.settings.offline) throw new CliError("validation_error", OFFLINE)
-          const connection = await messenger.connect(command, base, options)
+          const connection = await messenger.connect(command, base, { ...options, events })
           base.track(connection)
           const { adapter, close } = connected(connection, messenger, base, events)
           try {
@@ -157,7 +159,7 @@ export const messengerContext = (command: Command, messenger: Messenger): Messen
             connection: async () => {
               if (base.settings.offline) throw new CliError("validation_error", OFFLINE)
               if (!held) {
-                const connection = await messenger.connect(command, base)
+                const connection = await messenger.connect(command, base, { events })
                 base.track(connection)
                 held = connected(connection, messenger, base, events)
               }

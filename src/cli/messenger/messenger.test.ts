@@ -538,6 +538,21 @@ describe("the shared read commands", () => {
     expect((await call(["chats", "read", "Book"], async () => reading, env)).code).not.toBe(0)
   })
 
+  it("hands the run's diagnostics to connect, so a messenger can report its own wire", async () => {
+    const root = mkdtempSync(join(tmpdir(), "messenger-"))
+    const env = { CHAT_STATE_DIR: join(root, "state"), CHAT_CONFIG_DIR: join(root, "config") }
+    const traced = await call(
+      ["reactions", "add", "Book", "3", "👍", "--json", "--trace"],
+      async (_command, _context, options) => {
+        options?.events?.({ event: "request", operation: "wire.frame", opcode: 178, seq: 1 })
+        return { ...fake, react: async () => {} }
+      },
+      env,
+    )
+
+    expect(traced.stderr.join("\n")).toContain('"operation":"wire.frame","opcode":178')
+  })
+
   it("**delete only with --allow-dangerous**, each message counted toward the hourly limit", async () => {
     const root = mkdtempSync(join(tmpdir(), "messenger-"))
     const env = { CHAT_STATE_DIR: join(root, "state"), CHAT_CONFIG_DIR: join(root, "config") }
