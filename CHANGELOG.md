@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.57.0 — 30.09.2026
+
 ### Changed — may break callers
 
 - **A heard voice message is kept in the shared store, not in `transcripts-<profile>.db`.** The
