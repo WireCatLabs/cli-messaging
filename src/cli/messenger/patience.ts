@@ -6,7 +6,7 @@ import { isCliFailure } from "../failures.js"
 /** Waits longer than this are not sat out: the run stops, and the next one resumes. */
 const LONGEST_WAIT_MS = 5 * 60 * 1000
 
-/** Ctrl-C and SIGTERM — which `backfill cancel` sends — end a long run after the step in hand. */
+/** Ctrl-C and SIGTERM — which `store jobs cancel` sends — end a long run after the step in hand. */
 export const stopOnSignal = (command: Command): { signal: AbortSignal; release: () => void } => {
   const stop = new AbortController()
   const given = environmentOf(command).signal

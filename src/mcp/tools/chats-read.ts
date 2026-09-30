@@ -4,7 +4,7 @@ import type { Messenger } from "../../cli/messenger/context.js"
 import { type AnyTool, APPROVE, chatOf, message, tool, WRITE } from "../tool.js"
 
 export const chatsReadTools = (messenger: Messenger): Record<string, AnyTool> => ({
-  chats_read: tool({
+  chats_mark_read: tool({
     title: "Mark a chat read",
     description:
       "Mark a chat read up to a message, or up to its newest message. The other side sees that it was read. " +

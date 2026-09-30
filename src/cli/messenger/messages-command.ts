@@ -93,8 +93,8 @@ export const messagesCommand = (messenger: Messenger): Command => {
 
   messages
     .command("search")
-    .description("search the local store — what was read, backfilled or kept by serve; never asks the messenger")
-    .argument("<words...>", "every word must appear, as a word or the start of one: квартир finds квартира")
+    .description("search the local store — what was read, fetched or kept by serve; never asks the messenger")
+    .argument("<text...>", "every word must appear, as a word or the start of one: квартир finds квартира")
     .option("--chat <chat>", `only this chat: ${messenger.chatArgument}`)
     .option("--limit <n>", "how many", (value) => Number.parseInt(value, 10))
     .option("--regex", "the words are one regular expression, case-insensitive, tested against every stored text")
@@ -137,6 +137,7 @@ export const messagesCommand = (messenger: Messenger): Command => {
     .description("send a text message; without [text], the text is read from stdin")
     .argument("<chat>", messenger.chatArgument)
     .argument("[text]", "the message")
+    .option("--reply-to <message>", "answer this message, by its id in the same chat")
     .option("--send-id <id>", "repeat a send whose outcome was unknown, without risking a second copy")
     .option("--silent", "deliver without a notification")
     .option("--no-preview", "no preview card for a link in the text")
@@ -149,19 +150,7 @@ export const messagesCommand = (messenger: Messenger): Command => {
       "let the messenger send it later, even with this machine off: 2026-09-25T09:00 (local time), or 30m, 2h, 1d from now",
     )
     .action(async function (this: Command, chat: string, text: string | undefined) {
-      await sendText(this, messenger, chat, text, undefined)
-    })
-
-  annotate(messages.command("reply"), { mutates: true })
-    .description("answer one message; without [text], the text is read from stdin")
-    .argument("<chat>", `${messenger.chatArgument}; or a msg: locator, with no message id after it`)
-    .argument("[message]", "the message id to answer")
-    .argument("[text]", "the reply")
-    .option("--send-id <id>", "repeat a reply whose outcome was unknown, without risking a second copy")
-    .action(async function (this: Command, chat: string, message: string | undefined, text: string | undefined) {
-      // With a locator the message is named already, so the second word is the text.
-      const target = isLocator(chat) ? targetOf(messenger, chat, undefined) : targetOf(messenger, chat, message)
-      await sendText(this, messenger, target.chat, isLocator(chat) ? message : text, target.message)
+      await sendText(this, messenger, chat, text)
     })
 
   messages
@@ -201,15 +190,20 @@ export const messagesCommand = (messenger: Messenger): Command => {
  * **Asked before it goes, told after, on every outcome** — the guard's journal is the only record
  * of what this profile tried to send, and it never holds the text.
  */
-const sendText = async (
-  command: Command,
-  messenger: Messenger,
-  chat: string,
-  text: string | undefined,
-  replyTo: string | undefined,
-) => {
+const sendText = async (command: Command, messenger: Messenger, chat: string, text: string | undefined) => {
   const context = messengerContext(command, messenger)
-  const { sendId, silent, preview, markdown, at, file, photo, allowAnyFile } = command.opts<{
+  const {
+    replyTo: typedReplyTo,
+    sendId,
+    silent,
+    preview,
+    markdown,
+    at,
+    file,
+    photo,
+    allowAnyFile,
+  } = command.opts<{
+    replyTo?: string
     sendId?: string
     silent?: boolean
     preview?: boolean
@@ -220,6 +214,8 @@ const sendText = async (
     allowAnyFile?: boolean
   }>()
   const scheduledFor = at === undefined ? undefined : sendTime(at)
+  const replyTo = typedReplyTo?.trim()
+  if (replyTo === "") throw new CliError("validation_error", "--reply-to needs the id of the message to answer")
   const read = { app: messenger.app, env: context.env, anyFile: allowAnyFile === true }
   const attachments = [
     ...(photo === undefined ? [] : [await readUpload("photo", photo, read)]),

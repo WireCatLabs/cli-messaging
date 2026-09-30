@@ -29,15 +29,15 @@ export const downloadSubcommand = (messages: Command, messenger: Messenger): Com
     .argument("[message]", "the message id; left out with --all")
     .option("--output <dir>", "where to save them; created if missing", ".")
     .option("--all", "every file of the chat, newest first; run it again to continue where it stopped")
-    .option("--pace <duration>", "with --all, a pause between pages, to stay under the provider's limits", "1s")
+    .option("--pause <duration>", "with --all, a pause between pages, to stay under the provider's limits", "1s")
     .action(async function (this: Command, chat: string, messageId: string | undefined) {
       const context = messengerContext(this, messenger)
-      const { output, all, pace } = this.opts<{ output: string; all?: boolean; pace: string }>()
+      const { output, all, pause } = this.opts<{ output: string; all?: boolean; pause: string }>()
       if (all && messageId !== undefined) {
         throw new CliError("validation_error", "--all saves the whole chat; leave out the message id")
       }
       if (all) {
-        await downloadChat(this, context, chat, output, parseDuration(pace, "--pace"))
+        await downloadChat(this, context, chat, output, parseDuration(pause, "--pause"))
         return
       }
       if (messageId === undefined) throw new CliError("validation_error", "name a message id, or use --all")

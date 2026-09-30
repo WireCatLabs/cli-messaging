@@ -701,7 +701,7 @@ describe("sending over MCP", () => {
     ])
   })
 
-  it("**offers chats_read only with --allow-mark-read**, which --allow-send does not imply", async () => {
+  it("**offers chats_mark_read only with --allow-mark-read**, which --allow-send does not imply", async () => {
     const marks: unknown[] = []
     const telegram = scripted({
       markRead: async (chatId, until) => {
@@ -714,10 +714,10 @@ describe("sending over MCP", () => {
     const { client, call } = await connect(telegram, { allowMarkRead: true })
 
     const tools = (await client.listTools()).tools.map((one) => one.name)
-    const { body } = await call("chat_chats_read", { chat: "Book", until: "1" })
+    const { body } = await call("chat_chats_mark_read", { chat: "Book", until: "1" })
 
-    expect(sending).not.toContain("chat_chats_read")
-    expect(tools).toContain("chat_chats_read")
+    expect(sending).not.toContain("chat_chats_mark_read")
+    expect(tools).toContain("chat_chats_mark_read")
     expect(tools).not.toContain("chat_messages_send")
     expect(body).toEqual({ chatId: "7", until: "1" })
     expect(marks).toEqual([["7", "1"]])

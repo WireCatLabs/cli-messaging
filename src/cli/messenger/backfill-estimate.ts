@@ -12,7 +12,7 @@ export interface Estimate {
   seconds: number | null
 }
 
-/** A request's own round trip, on top of `--pace`: Telegram's history answers in a few hundred ms. */
+/** A request's own round trip, on top of `--pause`: Telegram's history answers in a few hundred ms. */
 const REQUEST_MS = 400
 
 /**

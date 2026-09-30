@@ -40,6 +40,29 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   a chat with the list given, `members(key, chatId)` reads them back by name, and
   `chatsWith(key, id)` lists the chats a person is in, newest first. Additive: a build on version 6
   keeps working on the file.
+- **`store fetch <chat> --since <time>`** stops after the page that reaches a message older than the
+  time: ISO 8601, or `2h` / `1d` ago. The answer then carries `reachedSince: true`. A background job
+  gets the time as ISO, so it does not move when the job starts later. Refused beside `--estimate`,
+  which prices a full fetch.
+
+### Changed — may break callers
+
+Commands follow one naming standard: a noun, then a verb. The old names are gone, with no aliases —
+they now fail as unknown commands or options.
+
+- **`export <chat>` is `store export <chat>`**, **`sync status [chat]` is `store status [chat]`**,
+  **`backfill <chat>` is `store fetch <chat>`**, and **`backfill list|status|cancel` is
+  `store jobs list|show|cancel`**. `store fetch` still fetches by default; `--estimate` only estimates.
+  Its `--pace` is **`--pause <duration>`**, and so is `messages download --all --pace`. `--max` keeps
+  its name: it counts messages, not pages. A CLI now adds one `storeCommand(messenger)` in place of
+  `exportCommand`, `syncCommand` and `backfillCommand`. Jobs started by an earlier version are still
+  listed.
+- **`messages reply` is gone**: `messages send <chat> [text] --reply-to <message>` answers a message,
+  with every send option. The locator form (`messages reply msg:… <text>`) has no replacement;
+  `--reply-to` takes the message id in the chat named. The MCP send tool already took `reply_to`.
+- **`chats read` is `chats mark-read`**, and its MCP tool `<cli>_chats_read` is
+  `<cli>_chats_mark_read`.
+- **`messages search <words...>` names its argument `<text...>`**; the search is unchanged.
 
 ## 0.54.0 — 30.09.2026
 

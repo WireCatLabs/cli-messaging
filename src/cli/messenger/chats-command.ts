@@ -3,7 +3,7 @@ import { Command } from "commander"
 import type { Chat, ChatKind, Page } from "../../domain/models.js"
 import { renderPage, window, withPaging } from "../paging.js"
 import { membersCommand } from "./chats-members-command.js"
-import { readCommand } from "./chats-read-command.js"
+import { markReadCommand } from "./chats-read-command.js"
 import { type Messenger, messengerContext } from "./context.js"
 import { momentOf } from "./inbox.js"
 import { capability, type MessengerAdapter } from "./port.js"
@@ -179,7 +179,7 @@ export const chatsCommand = (messenger: Messenger): Command => {
     })
 
   chats.addCommand(membersCommand(messenger))
-  chats.addCommand(readCommand(messenger))
+  chats.addCommand(markReadCommand(messenger))
 
   return chats
 }

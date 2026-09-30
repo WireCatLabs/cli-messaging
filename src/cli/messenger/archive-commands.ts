@@ -3,34 +3,42 @@ import { Command } from "commander"
 import { toMarkdown } from "../../render/markdown.js"
 import { renderMessages } from "../../render/messages.js"
 import { storedChatId } from "../../services/index.js"
+import { fetchCommand, jobsCommand } from "./backfill-command.js"
 import { type Messenger, messengerContext } from "./context.js"
 
+/** `store`: the local store of messages — what it holds, filling it, and reading it out. */
+export const storeCommand = (messenger: Messenger): Command =>
+  new Command("store")
+    .description("the local store of messages")
+    .addCommand(statusCommand(messenger))
+    .addCommand(fetchCommand(messenger))
+    .addCommand(jobsCommand(messenger))
+    .addCommand(exportCommand(messenger))
+
 /**
- * What the local store holds, per chat — read from the store alone. Whether a backfill reached a
+ * What the local store holds, per chat — read from the store alone. Whether a fetch reached a
  * chat's very first message is not recorded, so it is not claimed: the stretches held are shown.
  */
-export const syncCommand = (messenger: Messenger): Command =>
-  new Command("sync").description("what the local store holds").addCommand(
-    new Command("status")
-      .description("per chat: messages stored, the oldest and newest, and the stretches held completely")
-      .argument("[chat]", messenger.chatArgument)
-      .action(async function (this: Command, chat: string | undefined) {
-        const context = messengerContext(this, messenger)
-        const rows = await context.withStore(async (store, account) => {
-          const only = chat === undefined ? undefined : await storedChatId(messenger, chat, store, account)
-          const stats = await store.chatStats(account, only)
-          return Promise.all(stats.map(async (one) => ({ ...one, held: await store.ranges(account, one.chatId) })))
-        })
-        context.renderer.stream(rows)
-        if (rows.length === 0) context.renderer.note("the store holds no messages for this profile yet")
-      }),
-  )
+const statusCommand = (messenger: Messenger): Command =>
+  new Command("status")
+    .description("per chat: messages stored, the oldest and newest, and the stretches held completely")
+    .argument("[chat]", messenger.chatArgument)
+    .action(async function (this: Command, chat: string | undefined) {
+      const context = messengerContext(this, messenger)
+      const rows = await context.withStore(async (store, account) => {
+        const only = chat === undefined ? undefined : await storedChatId(messenger, chat, store, account)
+        const stats = await store.chatStats(account, only)
+        return Promise.all(stats.map(async (one) => ({ ...one, held: await store.ranges(account, one.chatId) })))
+      })
+      context.renderer.stream(rows)
+      if (rows.length === 0) context.renderer.note("the store holds no messages for this profile yet")
+    })
 
 /**
  * One chat's stored messages, oldest first — `--jsonl` for a file or a pipe, one message per line,
  * `--format markdown` for a transcript a person reads.
  */
-export const exportCommand = (messenger: Messenger): Command =>
+const exportCommand = (messenger: Messenger): Command =>
   new Command("export")
     .description("a chat's stored messages as JSON lines, oldest first; never asks the messenger")
     .argument("<chat>", messenger.chatArgument)
