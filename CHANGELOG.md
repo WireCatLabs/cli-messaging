@@ -6,6 +6,12 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- **`newSendId()` on the adapter port, optional**: a send id in the messenger's own form. `messages
+  send` and `polls create` ask the connection for one before falling back to `newSendId`. MAX's
+  official client sends a millisecond timestamp, and max-cli must look like it.
+
 ## 0.63.0 — 30.09.2026
 
 ### Added

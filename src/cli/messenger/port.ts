@@ -79,6 +79,11 @@ export interface Sent {
 export interface MessengerCore {
   /** The logged-in account's id, from what is stored locally — no request. `null` before a login. */
   self(): Id | null
+  /**
+   * A send id in the form this messenger's own client makes one, when that is not any 64-bit
+   * number — MAX's is a millisecond timestamp. Without it, `newSendId`.
+   */
+  newSendId?(): string
   me(): Promise<Account>
   chats(window: { limit?: number; offset: number }): Promise<Page<Chat>>
   /** Oldest to newest. `before` is a message id, or whatever the messenger pages by, as typed. */
