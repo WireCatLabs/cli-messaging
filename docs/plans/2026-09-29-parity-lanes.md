@@ -66,11 +66,13 @@ racing is safe: `bin/release` refuses a version already on npm, and the second r
 and retries. To try an unreleased cli-messaging in tg first: `bin/try-messaging` in the lane's tg
 worktree, never a committed `file:` path.
 
-**Store migrations are announced here before they are written.** The next free number is **7**
-(6 is the storage work's phase 1 — Drizzle and the forced upgrade, [`../storage/plans/phase-1.md`](../storage/plans/phase-1.md),
-announced 2026-09-29; 4 is `account_identities`, cli-messaging #48; 5 is message text back to trigram, #55 — taken
+**Store migrations are announced here before they are written.** The next free number is **12**
+(7–11 are the tables max-cli's personal data needs — chat members, sync state, fetch leases, contact
+recency, transcripts — [`../storage/plans/phase-1-max-tables.md`](../storage/plans/phase-1-max-tables.md),
+announced 2026-09-30; 6 is the storage work's phase 1 — Drizzle and the forced upgrade, released in
+0.49.0, [`../storage/plans/phase-1.md`](../storage/plans/phase-1.md), announced 2026-09-29; 4 is `account_identities`, cli-messaging #48; 5 is message text back to trigram, #55 — taken
 without an announcement first, corrected here; both 2026-09-29). Take it by editing this line in a PR of
-its own, merged before the migration. L1 `chats events` or members, and L7, are the likely takers.
+its own, merged before the migration. L7 is the likely next taker; chat members are in 7.
 
 **Services are coming to the command files (2026-09-30, [`2026-09-30-services.md`](2026-09-30-services.md)).**
 Commands and MCP tools stop calling the adapter and the store directly and call `services.*`
