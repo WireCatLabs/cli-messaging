@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.55.0 — 30.09.2026
+
 ### Added
 
 - **Chat members in the store** (store version 7): `saveMembers(key, chatId, ids)` replaces who is in
