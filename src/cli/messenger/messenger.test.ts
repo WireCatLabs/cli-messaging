@@ -1003,6 +1003,34 @@ describe("the guard, account and mcp config commands", () => {
     expect((await call(["account", "sessions", "list"], async () => fake, env)).code).toBe(2)
   })
 
+  it("**chats inspect** answers what a link leads to, and refuses offline and without the method", async () => {
+    const env = sandbox()
+    const links: string[] = []
+    const reader: MessengerAdapter = {
+      ...fake,
+      inspect: async (link) => {
+        links.push(link)
+        return {
+          kind: "group",
+          title: "Book club",
+          id: null,
+          username: null,
+          participantsCount: 40,
+          description: null,
+          member: false,
+          approvalNeeded: true,
+        }
+      },
+    }
+
+    const found = await call(["chats", "inspect", "https://t.me/+abc", "--json"], async () => reader, env)
+
+    expect(json(found.stdout)).toMatchObject({ title: "Book club", member: false, approvalNeeded: true })
+    expect(links).toEqual(["https://t.me/+abc"])
+    expect((await call(["chats", "inspect", "x", "--offline"], async () => reader, env)).code).toBe(2)
+    expect((await call(["chats", "inspect", "x"], async () => fake, env)).code).toBe(2)
+  })
+
   it("refuses a --search under 3 characters and an unknown --kind, before connecting", async () => {
     const env = sandbox()
     const never = async (): Promise<MessengerAdapter> => {

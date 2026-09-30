@@ -6,6 +6,13 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- **`chats inspect <link>`**, max-cli's, and the `chats_inspect` tool: what an invite or public link
+  leads to, read without joining — `LinkTarget`: kind, title, id (`null` for a private chat the owner
+  is not in), members, description, whether the owner is already in it, and whether joining needs
+  approval. A messenger offers it with the optional `inspect`.
+
 ## 0.46.0 — 30.09.2026
 
 ### Added

@@ -151,6 +151,20 @@ export const chatsCommand = (messenger: Messenger): Command => {
     })
 
   chats
+    .command("inspect")
+    .description("what an invite or public link leads to, without joining it")
+    .argument("<link>", "an invite link or a public one")
+    .action(async function (this: Command, link: string) {
+      const context = messengerContext(this, messenger)
+      if (context.settings.offline) {
+        throw new CliError("validation_error", "`chats inspect` asks the messenger about the link; not with --offline")
+      }
+      context.renderer.result(
+        await context.withMessenger((adapter) => capability(adapter, "inspect", "read a link")(link)),
+      )
+    })
+
+  chats
     .command("show")
     .description("one chat: its kind, unread count, last message time and who is in it")
     .argument("<chat>", messenger.chatArgument)
