@@ -6,6 +6,18 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- **`messages download <chat> --all`** saves every file of a chat into `--output`, newest first, page
+  by page with a `--pace` between pages (1 s). Messages with no file cost no download request. It is
+  resumable: the stretches of messages already walked are kept in `.download-<chat>.json` beside the
+  files, written after every file, so a run cut short by `--timeout` or Ctrl-C repeats at most the file
+  it was in; running it again jumps over what is done and picks up newer messages too. Rate limits
+  ("wait N seconds") up to five minutes are sat out. File names are as for one message; a name another
+  message already took gets the message's prefix (`<id>-<n>-<name>`), and nothing is overwritten.
+  `<message>` is now optional, and refused beside `--all`. No MCP tool: it runs long, and
+  `<cli>_messages_download` covers one message.
+
 ### Fixed
 
 - **A deletion that names no chat no longer hides messages in other chats.** Telegram reports a
