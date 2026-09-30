@@ -1,12 +1,12 @@
-import { mkdtempSync, statSync } from "node:fs"
+import { existsSync, mkdtempSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { CliError } from "@leemour/cli-core"
 import { describe, expect, it } from "vitest"
+import { rememberAccount } from "../cli/messenger/accounts.js"
 import type { Messenger } from "../cli/messenger/context.js"
 import type { MessengerAdapter, Transcript } from "../cli/messenger/port.js"
 import type { Message } from "../domain/models.js"
-import { openCache } from "../store/open.js"
 import { hearVoices, isVoice, type Kept, keyOf, openKept, spoken, withTranscript } from "./hearing.js"
 import { speechModel } from "./models.js"
 
@@ -34,11 +34,11 @@ const memory = (): Kept & { rows: Map<string, string> } => {
   const rows = new Map<string, string>()
   return {
     rows,
-    get: (one) => rows.get(keyOf(one)),
-    keep: (one, text) => {
+    get: async (one) => rows.get(keyOf(one)),
+    keep: async (one, text) => {
       if (text.trim() !== "") rows.set(keyOf(one), text)
     },
-    close: () => {},
+    close: async () => {},
   }
 }
 
@@ -109,37 +109,33 @@ describe("hearing voice messages in a list", () => {
     expect(isVoice({ ...voice("1"), attachments: [{ kind: "photo" }] })).toBe(false)
   })
 
-  it("**keeps transcripts per profile in the CLI's own cache**, readable by the owner only", async () => {
-    const env = { CHAT_CACHE_DIR: mkdtempSync(join(tmpdir(), "kept-")) }
+  it("**keeps transcripts in the shared store, for the account the profile logged in as**", async () => {
+    const root = mkdtempSync(join(tmpdir(), "kept-"))
+    const env = { CHAT_STATE_DIR: join(root, "state"), MESSAGING_STORE: join(root, "messages.db") }
+    rememberAccount(messenger.app, "work", "100", env)
+    rememberAccount(messenger.app, "home", "200", env)
     const kept = await openKept(messenger, "work", env)
-    kept.keep({ chatId: "7", messageId: "1" }, "hello", "gigaam-v3")
-    kept.keep({ chatId: "7", messageId: "2" }, "  ", "telegram")
-    kept.close()
+    await kept.keep({ chatId: "7", messageId: "1" }, "hello", "gigaam-v3")
+    await kept.keep({ chatId: "7", messageId: "2" }, "  ", "telegram")
+    await kept.close()
 
     const again = await openKept(messenger, "work", env)
-    expect(again.get({ chatId: "7", messageId: "1" })).toBe("hello")
-    expect(again.get({ chatId: "7", messageId: "2" })).toBeUndefined()
-    again.close()
-    expect(statSync(join(env.CHAT_CACHE_DIR, "transcripts-work.db")).mode & 0o777).toBe(0o600)
+    expect(await again.get({ chatId: "7", messageId: "1" })).toBe("hello")
+    expect(await again.get({ chatId: "7", messageId: "2" })).toBeUndefined()
+    await again.close()
+    const other = await openKept(messenger, "home", env)
+    expect(await other.get({ chatId: "7", messageId: "1" })).toBeUndefined()
+    await other.close()
   })
 
-  it("**forgets what local models heard before quiet speech was kept**, once, and keeps the messenger's", async () => {
-    const env = { CHAT_CACHE_DIR: mkdtempSync(join(tmpdir(), "kept-")) }
-    const path = join(env.CHAT_CACHE_DIR, "transcripts-work.db")
-    const old = await openCache(path)
-    old.exec(`CREATE TABLE transcripts (chat_id TEXT NOT NULL, message_id TEXT NOT NULL, text TEXT NOT NULL,
-      source TEXT NOT NULL, heard_at TEXT NOT NULL, PRIMARY KEY (chat_id, message_id));
-      INSERT INTO transcripts VALUES ('7', '1', 'clipped', 'gigaam-v3', ''), ('7', '2', 'whole', 'telegram', '')`)
-    old.close()
+  it("keeps nothing for a profile that has never been online, so the message is heard again", async () => {
+    const root = mkdtempSync(join(tmpdir(), "kept-"))
+    const env = { CHAT_STATE_DIR: join(root, "state"), MESSAGING_STORE: join(root, "messages.db") }
+    const kept = await openKept(messenger, "new", env)
+    await kept.keep({ chatId: "7", messageId: "1" }, "hello", "gigaam-v3")
 
-    const kept = await openKept(messenger, "work", env)
-    expect(kept.get({ chatId: "7", messageId: "1" })).toBeUndefined()
-    expect(kept.get({ chatId: "7", messageId: "2" })).toBe("whole")
-    kept.keep({ chatId: "7", messageId: "1" }, "heard again", "gigaam-v3")
-    kept.close()
-
-    const again = await openKept(messenger, "work", env)
-    expect(again.get({ chatId: "7", messageId: "1" })).toBe("heard again")
-    again.close()
+    expect(await kept.get({ chatId: "7", messageId: "1" })).toBeUndefined()
+    await kept.close()
+    expect(existsSync(env.MESSAGING_STORE)).toBe(false)
   })
 })

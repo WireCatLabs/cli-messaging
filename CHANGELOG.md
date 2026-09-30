@@ -6,6 +6,13 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Changed — may break callers
+
+- **A heard voice message is kept in the shared store, not in `transcripts-<profile>.db`.** The
+  transcript belongs to the account the profile last logged in as; a profile never online keeps none.
+  `Kept` answers promises now (`get`, `keep`, `close`). Transcripts kept in the old per-profile files
+  are not read: each voice message is heard once more, and the old files can be deleted.
+
 ### Added
 
 - **Contacts in the store** (store version 10): `contacts(key, { order: "recent" | "name", query?,
@@ -13,6 +20,9 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   lists go — with `countContacts` for the same filter; `refreshRecency(key)` works out again when each
   was last written to. A person now keeps `description` (`PersonFacts.description`). Additive: a
   build on version 6 keeps working on the file.
+- **Transcripts in the store** (store version 11): `transcript(key, chatId, messageId)` and
+  `keepTranscript(...)`, per account, keyed by chat and message id — a message can be heard before
+  the store holds it. Additive: a build on version 6 keeps working on the file.
 
 ## 0.56.0 — 30.09.2026
 

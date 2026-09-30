@@ -32,9 +32,9 @@ export const transcribeSubcommand = (messages: Command, messenger: Messenger): C
       else {
         const kept = await openKept(messenger, context.profile, context.env)
         try {
-          kept.keep({ chatId, messageId: id }, heard.text, heard.model ?? heard.via)
+          await kept.keep({ chatId, messageId: id }, heard.text, heard.model ?? heard.via)
         } finally {
-          kept.close()
+          await kept.close()
         }
       }
       if (context.format === "pretty") context.streams.data(`${heard.text}\n`)
