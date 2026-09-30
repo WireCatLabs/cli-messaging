@@ -35,13 +35,13 @@ profiles and max-cli's bots write the same database, keyed by provider and accou
 from `storePath` (`src/store/path.ts`), the only place that turns `MESSAGING_STORE` into a path;
 `mcp config` copies the variable into the entry it prints, so the server it starts opens the same file.
 
-Every `MessageStore` method is async and is **one whole operation**: inside the SQLite store it runs
-as one synchronous `BEGIN IMMEDIATE` transaction, with no `await` between `BEGIN` and `COMMIT`. The
-interface has no `transaction(callback)`. The driver is synchronous, so an `await` inside a
+Every `MessageStore` method is async and is **one whole operation**: inside the SQLite store each
+write runs as one synchronous `BEGIN IMMEDIATE` transaction, with no `await` between `BEGIN` and
+`COMMIT`. The interface has no `transaction(callback)`. The driver is synchronous, so an `await` inside a
 transaction would let the commit run before the awaited part; and since a method never yields
 mid-transaction, two calls on one store in `serve` or `mcp` cannot interleave inside one `BEGIN`
 ([phase 1 plan, D3](../storage/plans/phase-1.md#3-decisions-made-here)). A large write therefore
-blocks the event loop while it runs — writes go in bounded batches.
+blocks the event loop while it runs — keep writes in bounded batches.
 
 Opening a store also fills `messages.normalized_text` for rows stored before version 6, when at most
 5,000 of them wait (`BACKFILL_ON_OPEN`, about 40 ms); a larger file keeps working and waits for the
