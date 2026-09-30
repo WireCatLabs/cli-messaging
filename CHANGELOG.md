@@ -43,6 +43,9 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   as `around` reads around a message id. Type `StoredChatFilter`.
 - **`purge(key)`** removes everything one account holds — chats, messages, members, sync state,
   leases, transcripts, whom it has seen — for `cache clear`; other accounts stay whole.
+- **`applyDelta(key, { chats?, people?, members?, state? })`** writes a catch-up's whole answer in one
+  transaction — chats, people, each listed chat's members, sync state such as a delta marker — so a
+  failure leaves nothing half-written. Type `Delta`.
 
 ## 0.56.0 — 30.09.2026
 

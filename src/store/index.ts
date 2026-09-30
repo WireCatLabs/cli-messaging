@@ -6,6 +6,7 @@ export { storePath } from "./path.js"
 export {
   type AccountKey,
   type ChatStats,
+  type Delta,
   type IngestedVia,
   type MessageFilter,
   type MessageStore,
