@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process"
-import { existsSync, mkdtempSync, readdirSync, realpathSync, statSync, writeFileSync } from "node:fs"
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, realpathSync, statSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { dirname, join } from "node:path"
 import { captureStreams } from "@leemour/cli-core"
@@ -11,6 +11,7 @@ import { settingsFor } from "../settings.js"
 import { storeCommand } from "./archive-commands.js"
 import type { Messenger } from "./context.js"
 import { holdersOf } from "./processes.js"
+import { lockPath } from "./serve-command.js"
 
 const app = { command: "chat", appName: "chat-cli", envPrefix: "CHAT", description: "A test", version: "1.0.0" }
 const latest = MIGRATIONS.at(-1)?.version ?? 0
@@ -255,6 +256,22 @@ describe("store restore", () => {
       }
     },
   )
+
+  it("refuses while this CLI's serve runs, before that serve has opened the store", async () => {
+    const { env, file } = await backedUp()
+    const serve = spawn(process.execPath, ["-e", "setInterval(() => {}, 1000)"], { stdio: "ignore" })
+    try {
+      const lock = lockPath(app, "default", env)
+      mkdirSync(dirname(lock), { recursive: true })
+      writeFileSync(lock, JSON.stringify({ pid: serve.pid, startedAt: new Date().toISOString() }))
+
+      const { code, stderr } = await call(["store", "restore", file, "--json"], env)
+      expect(code).not.toBe(0)
+      expect(stderr.join("\n")).toContain("chat serve is running for default")
+    } finally {
+      serve.kill()
+    }
+  })
 
   it("refuses a backup a newer version wrote, with the upgrade message", async () => {
     const { env, file } = await backedUp()

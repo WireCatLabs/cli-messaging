@@ -22,6 +22,7 @@ import { backfillNormalized, pendingNormalization } from "../../store/sqlite/bac
 import { environmentOf, outputFor } from "../context.js"
 import type { Messenger } from "./context.js"
 import { holdersOf } from "./processes.js"
+import { servingProfiles } from "./serve-command.js"
 
 const SPEAKS = MIGRATIONS.at(-1)?.version ?? 0
 const SEARCH_INDEXES = ["messages_fts", "chats_fts", "identities_fts"]
@@ -275,7 +276,8 @@ const backupCommand = (): Command =>
 
 /**
  * Puts a backup in place of the store, keeping the store it replaces beside it. Refuses while any
- * process has the file open: a process holding it would go on writing to the file set aside.
+ * process has the file open — it would go on writing to the file set aside — or while this CLI's
+ * `serve` runs: that opens the store on its first write, so until then it holds nothing to see.
  */
 const restoreCommand = (messenger: Messenger): Command =>
   new Command("restore")
@@ -291,11 +293,20 @@ const restoreCommand = (messenger: Messenger): Command =>
       }
       const schema = await backupSchema(backup)
 
-      const kept = existsSync(path) ? `${path}.before-restore-${new Date().toISOString().replace(/[:.]/g, "-")}` : null
+      const env = environmentOf(this).env ?? process.env
+      const serving = servingProfiles(messenger.app, env)
+      if (serving.length > 0) {
+        throw new CliError(
+          "validation_error",
+          `${messenger.app.command} serve is running for ${serving.join(", ")} — \`${messenger.app.command} server stop\` first`,
+        )
+      }
+      const stamp = new Date().toISOString().replace(/[:.]/g, "-")
+      const kept = existsSync(path) ? `${path}.before-restore-${stamp}` : null
       if (kept) await quiesce(path, messenger, (message) => renderer.warn(message))
       else mkdirSync(dirname(path), { recursive: true, mode: 0o700 })
 
-      const incoming = `${path}.restoring`
+      const incoming = `${path}.restoring-${stamp}`
       copyFileSync(backup, incoming, constants.COPYFILE_EXCL)
       chmodSync(incoming, 0o600)
       if (kept) {
@@ -307,6 +318,8 @@ const restoreCommand = (messenger: Messenger): Command =>
 
       renderer.result({ path, restoredFrom: backup, keptAt: kept, schema: schema.version })
       if (kept) renderer.note(`the store it replaced is kept at ${kept}`)
+      // One that has not touched the store yet holds nothing open, and was not seen.
+      renderer.note("restart every serve and mcp of either CLI that was running, so they read the restored store")
       if (schema.version < SPEAKS) {
         renderer.note(
           `the backup is behind this build; the next command migrates it — \`${messenger.app.command} store migrate\` now`,
