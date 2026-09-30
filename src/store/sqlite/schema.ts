@@ -1,8 +1,8 @@
-import { desc } from "drizzle-orm"
+import { desc, sql } from "drizzle-orm"
 import { index, integer, primaryKey, real, sqliteTable, text, unique } from "drizzle-orm/sqlite-core"
 
 /**
- * The store's base tables as migrations 1–5 left them — what `drizzle-kit generate` diffs against.
+ * The store's base tables — what `drizzle-kit generate` diffs against.
  * A change here becomes a migration, so it follows the rules at the top of `../migrations.ts`. The
  * FTS5 tables and their triggers are not modelled by Drizzle and live in hand-written SQL.
  */
@@ -91,6 +91,12 @@ export const chats = sqliteTable(
     participantsCount: integer("participants_count"),
     providerMetadata: text("provider_metadata"),
     updatedAt: integer("updated_at").notNull(),
+    username: text("username"),
+    /** `NULL` is unknown. Searchable does not follow from it: a chat left keeps its messages. */
+    membershipState: text("membership_state"),
+    isSearchable: integer("is_searchable").notNull().default(1),
+    /** Kept by triggers, so phase 2 can choose per query how a filter reaches the index. */
+    messageCount: integer("message_count").notNull().default(0),
   },
   (table) => [
     unique().on(table.accountPk, table.nativeId),
@@ -125,12 +131,16 @@ export const messages = sqliteTable(
     providerMetadata: text("provider_metadata"),
     ingestedAt: integer("ingested_at").notNull(),
     ingestedVia: text("ingested_via").notNull(),
+    normalizedText: text("normalized_text"),
+    normalizerVersion: integer("normalizer_version"),
   },
   (table) => [
     unique().on(table.chatPk, table.nativeId),
     index("messages_by_time").on(table.chatPk, desc(table.sentAt)),
     index("messages_by_account").on(table.accountPk, table.nativeId),
     index("messages_by_sender").on(table.senderIdentityPk),
+    // Empty once the backfill is done, so every open can ask "anything left?" without reading the table.
+    index("messages_to_normalize").on(table.pk).where(sql`normalized_text IS NULL AND deleted_at IS NULL`),
   ],
 )
 

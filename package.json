@@ -72,6 +72,8 @@
     "@types/node": "^22.20.4",
     "@types/pngjs": "6.0.5",
     "@vitest/coverage-v8": "^5.0.2",
+    "cli-messaging-0.13": "npm:@leemour/cli-messaging@0.13.0",
+    "cli-messaging-0.27": "npm:@leemour/cli-messaging@0.27.0",
     "commander": "15.0.0",
     "drizzle-kit": "1.0.0-rc.4",
     "jsqr": "1.4.0",
