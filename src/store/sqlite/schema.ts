@@ -1,5 +1,4 @@
-import { desc, sql } from "drizzle-orm"
-import { index, integer, primaryKey, real, sqliteTable, text, unique } from "drizzle-orm/sqlite-core"
+import { desc, index, integer, primaryKey, real, sql, sqliteTable, text, unique } from "./drizzle/core.js"
 
 /**
  * The store's base tables — what `drizzle-kit generate` diffs against.
