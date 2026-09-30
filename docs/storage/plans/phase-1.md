@@ -298,6 +298,10 @@ Releases go through `bin/release` after items 2, 6 and 8, plus whenever tg-cli a
    - FTS5 `integrity-check` on the three indexes;
    - free disk space against the file size;
    - rows waiting for normalization.
+   - `PRAGMA foreign_key_check`: a file written with foreign keys off (by an older build or by hand);
+   - per chat, whether the held history reaches the chat's newest message (`chats.last_message_at`
+     against the newest message held), and how long ago the chat was refreshed. This is what lets a
+     user tell "nothing was said" from "not fetched" (added 2026-09-30, NEED-399 A).
 
    §24's "extensions" and "enrichment consistency" do not apply to SQLite in phase 1 and are
    reported as such. The existing `doctor` keeps its short store summary.
