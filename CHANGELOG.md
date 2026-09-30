@@ -16,6 +16,15 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## 0.52.0 — 30.09.2026
 
+### Added
+
+- **Services: each use case once, for commands and MCP tools alike** — the first step of
+  `docs/plans/2026-09-30-services.md`, shipped from 0.51.0. `withServices` on the messenger context
+  hands a command `services.messages` (`list`, `around`, `search`), which chooses between the
+  messenger and the store; it opens the connection or the store only when asked, and closes them
+  after. `messages list|context|show|search` and the MCP read tools use it. Nothing a person or a
+  script sees changes.
+
 ### Fixed
 
 - **A local model no longer drops quietly spoken speech.** The voice detector that cuts a recording
