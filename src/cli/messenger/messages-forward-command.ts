@@ -12,8 +12,9 @@ export const forwardCommand = (messenger: Messenger): Command =>
     .action(async function (this: Command, chat: string, message: string) {
       const context = messengerContext(this, messenger)
       const { to, silent } = this.opts<{ to: string; silent?: boolean }>()
-      const forwarded = await context.withServices((services) =>
-        services.messages.forward({ chat, message: message.trim(), to, silent: silent === true }),
+      context.renderer.result(
+        await context.withServices((services) =>
+          services.messages.forward({ chat, message: message.trim(), to, silent: silent === true }),
+        ),
       )
-      context.renderer.result({ message: forwarded })
     })

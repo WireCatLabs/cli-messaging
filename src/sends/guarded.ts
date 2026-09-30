@@ -1,12 +1,21 @@
+import { AsyncLocalStorage } from "node:async_hooks"
 import type { SendGuard } from "./guard.js"
 import type { SendEntry } from "./journal.js"
 
-type Attempt = Omit<SendEntry, "at" | "profile" | "outcome">
+type Attempt = Omit<SendEntry, "at" | "profile" | "outcome"> & { operationId: string }
+
+/** A write's answer, with the id its journal lines and run events carry. */
+export type Operated<T> = T & { operationId: string }
+
+const current = new AsyncLocalStorage<string>()
+
+/** The write in progress, so the run events of the calls it makes name it without the port passing it along. */
+export const currentOperation = (): string | undefined => current.getStore()
 
 /**
- * **Checked before it goes, recorded after, on every outcome** — the shape of every write that is
- * not a message send. The chat must already be resolved and the adapter's method found: a throw
- * between `check` and `record` would leave a reservation counted against the hourly limit.
+ * **Checked before it goes, recorded after, on every outcome** — the shape of every write. The chat
+ * must already be resolved and the adapter's method found: a throw between `check` and `record`
+ * would leave a reservation counted against the hourly limit.
  */
 export const guardedWrite = async <T>(
   guard: SendGuard,
@@ -21,7 +30,7 @@ export const guardedWrite = async <T>(
     throw error
   }
   try {
-    const done = await act()
+    const done = await current.run(attempt.operationId, act)
     guard.record({ ...attempt, ...settled(done), outcome: "sent" })
     return done
   } catch (error) {

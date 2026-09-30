@@ -240,8 +240,8 @@ const sendText = async (command: Command, messenger: Messenger, chat: string, te
   )
   if (scheduledFor !== undefined) {
     context.renderer.note(`scheduled for ${scheduledFor} — it gets a new id when it is sent`)
-    context.renderer.result({ sendId: sent.sendId, message: sent.message, scheduledFor })
-  } else context.renderer.result({ sendId: sent.sendId, message: sent.message })
+    context.renderer.result({ sendId: sent.sendId, operationId: sent.operationId, message: sent.message, scheduledFor })
+  } else context.renderer.result({ sendId: sent.sendId, operationId: sent.operationId, message: sent.message })
 }
 
 type Window = { before: number; after: number }

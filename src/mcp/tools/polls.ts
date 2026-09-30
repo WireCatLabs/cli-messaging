@@ -72,7 +72,7 @@ export const pollWriteTools = (messenger: Messenger): Record<string, AnyTool> =>
           silent: false,
           ...(args.send_id === undefined ? {} : { sendId: args.send_id }),
         })
-        return { sendId: sent.sendId, message: sent.message }
+        return { sendId: sent.sendId, operationId: sent.operationId, message: sent.message }
       },
     }),
   }

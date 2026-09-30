@@ -30,6 +30,9 @@ export type AccountAction =
   | "contact-add"
   | "contact-remove"
   | "contact-import"
+  | "contact-rename"
+  | "contact-block"
+  | "contact-unblock"
   | "profile"
   | "folder-create"
   | "folder-update"
@@ -56,11 +59,16 @@ export interface SendEntry {
    * string: Telegram's is 64-bit. A retry repeats it, and the provider delivers one message for both.
    */
   sendId?: string
+  /**
+   * One write's id — in its answer, on each of its lines here and in its run events. A send's is its
+   * `sendId`. Absent on lines written before writes had one.
+   */
+  operationId?: string
   /** The message a reply answers. */
   replyTo?: Id
   length?: number
   /** What was attached, by kind and size — never a file name. */
-  attachments?: { kind: "photo" | "file"; bytes: number }[]
+  attachments?: { kind: "photo" | "file" | "video" | "voice"; bytes: number }[]
   /** When the provider will send it; it counts toward the limit of that hour, not of the hour it was queued. */
   scheduledFor?: string
   /** Whether a pin told the members. */

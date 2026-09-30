@@ -4,8 +4,8 @@ import { type After, capability, type Sent } from "../cli/messenger/port.js"
 import { parseMarkdown } from "../domain/markdown.js"
 import type { Deletion, Id, Message, Page, WindowedMessage } from "../domain/models.js"
 import { pickChat } from "../resolve.js"
-import { codeOf, guardedWrite } from "../sends/guarded.js"
-import { newSendId } from "../sends/send-id.js"
+import { codeOf, guardedWrite, type Operated } from "../sends/guarded.js"
+import { newOperationId, newSendId } from "../sends/send-id.js"
 import type { Upload } from "../sends/upload.js"
 import type { AccountKey, MessageStore, StoredHit } from "../store/store.js"
 import type { ServiceDeps } from "./deps.js"
@@ -72,17 +72,17 @@ export interface MessagesService {
   /** From the local store only; never asks the messenger. */
   search(query: SearchQuery): Promise<Page<StoredHit>>
   /** A reply is a send with `replyTo`. */
-  send(request: SendRequest): Promise<Sent>
-  edit(target: MessageTarget & { text: string }): Promise<Message>
+  send(request: SendRequest): Promise<Operated<Sent>>
+  edit(target: MessageTarget & { text: string }): Promise<Operated<{ message: Message }>>
   /** Each message counts toward the hourly limit. */
-  delete(request: { chat: string; messages: string[]; forEveryone: boolean }): Promise<Deletion>
+  delete(request: { chat: string; messages: string[]; forEveryone: boolean }): Promise<Operated<Deletion>>
   /** Guarded against the chat it goes to: that is where somebody new reads it. */
-  forward(target: MessageTarget & { to: string; silent: boolean }): Promise<Message>
+  forward(target: MessageTarget & { to: string; silent: boolean }): Promise<Operated<{ message: Message }>>
   /** Counts toward the hourly limit only when it notifies. */
-  pin(target: MessageTarget & { notify: boolean }): Promise<Pinned>
-  unpin(target: MessageTarget): Promise<Pinned>
+  pin(target: MessageTarget & { notify: boolean }): Promise<Operated<Pinned>>
+  unpin(target: MessageTarget): Promise<Operated<Pinned>>
   /** `null` takes the reaction off. A reaction never counts toward the hourly limit. */
-  react(target: MessageTarget & { emoji: string | null }): Promise<Reacted>
+  react(target: MessageTarget & { emoji: string | null }): Promise<Operated<Reacted>>
 }
 
 export const messagesService = (deps: ServiceDeps): MessagesService => {
@@ -90,16 +90,21 @@ export const messagesService = (deps: ServiceDeps): MessagesService => {
   const inStore = async <T>(read: (store: MessageStore, account: AccountKey) => Promise<T>): Promise<T> =>
     read(await deps.store(), await deps.account())
 
-  const pinning = async ({ chat, message }: MessageTarget, pinned: boolean, notify: boolean): Promise<Pinned> => {
+  const pinning = async (
+    { chat, message }: MessageTarget,
+    pinned: boolean,
+    notify: boolean,
+  ): Promise<Operated<Pinned>> => {
     const connection = await deps.connection()
     const act = pinned
       ? capability(connection, "pin", "pin a message")
       : capability(connection, "unpin", "unpin a message")
     const { id: chatId } = await connection.resolve(chat)
-    await guardedWrite(guard, { chatId, kind: "pin", messageId: message, notify }, () =>
+    const operationId = newOperationId()
+    await guardedWrite(guard, { operationId, chatId, kind: "pin", messageId: message, notify }, () =>
       act(chatId, message, { notify }),
     )
-    return { chatId, messageId: message, pinned }
+    return { operationId, chatId, messageId: message, pinned }
   }
 
   return {
@@ -151,10 +156,12 @@ export const messagesService = (deps: ServiceDeps): MessagesService => {
         throw new CliError("validation_error", "nothing to send — the marks leave no text")
       }
       const { id: chatId } = await connection.resolve(chat)
+      const id = sendId ?? newSendId()
       const attempt = {
         chatId,
         kind: "message" as const,
-        sendId: sendId ?? newSendId(),
+        sendId: id,
+        operationId: id,
         length: text.length,
         ...(replyTo === undefined ? {} : { replyTo }),
         ...(at === undefined ? {} : { scheduledFor: at }),
@@ -163,31 +170,24 @@ export const messagesService = (deps: ServiceDeps): MessagesService => {
           : { attachments: attachments.map(({ kind, bytes }) => ({ kind, bytes: bytes.byteLength })) }),
       }
       try {
-        guard.check(attempt)
+        const done = await guardedWrite(
+          guard,
+          attempt,
+          () =>
+            connection.send(chatId, text, {
+              sendId: id,
+              ...(replyTo === undefined ? {} : { replyTo }),
+              ...(silent ? { silent } : {}),
+              ...(noPreview ? { noPreview } : {}),
+              ...(markup.length > 0 ? { markup } : {}),
+              ...(at === undefined ? {} : { at }),
+              ...(attachments.length === 0 ? {} : { attachments }),
+            }),
+          (sent) => ({ messageId: sent.message.id }),
+        )
+        return { ...done, operationId: id }
       } catch (error) {
-        guard.record({ ...attempt, outcome: "refused", errorCode: codeOf(error) })
-        throw error
-      }
-      try {
-        const done = await connection.send(chatId, text, {
-          sendId: attempt.sendId,
-          ...(replyTo === undefined ? {} : { replyTo }),
-          ...(silent ? { silent } : {}),
-          ...(noPreview ? { noPreview } : {}),
-          ...(markup.length > 0 ? { markup } : {}),
-          ...(at === undefined ? {} : { at }),
-          ...(attachments.length === 0 ? {} : { attachments }),
-        })
-        guard.record({ ...attempt, outcome: "sent", messageId: done.message.id })
-        return done
-      } catch (error) {
-        const code = codeOf(error)
-        guard.record({
-          ...attempt,
-          outcome: code === "outcome_unknown" ? "outcome_unknown" : "failed",
-          errorCode: code,
-        })
-        if (at !== undefined && code === "outcome_unknown") {
+        if (at !== undefined && codeOf(error) === "outcome_unknown") {
           throw new CliError(
             "outcome_unknown",
             "no answer — the message may have been scheduled. Look in `messages scheduled` before anything else; " +
@@ -203,9 +203,13 @@ export const messagesService = (deps: ServiceDeps): MessagesService => {
       const connection = await deps.connection()
       const edit = capability(connection, "edit", "edit a message")
       const { id: chatId } = await connection.resolve(chat)
-      return guardedWrite(guard, { chatId, kind: "edit", messageId: message, length: text.length }, () =>
-        edit(chatId, message, text),
+      const operationId = newOperationId()
+      const edited = await guardedWrite(
+        guard,
+        { operationId, chatId, kind: "edit", messageId: message, length: text.length },
+        () => edit(chatId, message, text),
       )
+      return { operationId, message: edited }
     },
 
     delete: async ({ chat, messages, forEveryone }) => {
@@ -215,10 +219,11 @@ export const messagesService = (deps: ServiceDeps): MessagesService => {
       }
       const remove = capability(connection, "delete", "delete messages")
       const { id: chatId } = await connection.resolve(chat)
-      await guardedWrite(guard, { chatId, kind: "delete", count: messages.length, forEveryone }, () =>
+      const operationId = newOperationId()
+      await guardedWrite(guard, { operationId, chatId, kind: "delete", count: messages.length, forEveryone }, () =>
         remove(chatId, messages, { forEveryone }),
       )
-      return { chatId, deleted: messages, forEveryone }
+      return { operationId, chatId, deleted: messages, forEveryone }
     },
 
     forward: async ({ chat, message, to, silent }) => {
@@ -226,12 +231,14 @@ export const messagesService = (deps: ServiceDeps): MessagesService => {
       const forward = capability(connection, "forward", "forward a message")
       const { id: fromChatId } = await connection.resolve(chat)
       const { id: toChatId } = await connection.resolve(to)
-      return guardedWrite(
+      const operationId = newOperationId()
+      const forwarded = await guardedWrite(
         guard,
-        { chatId: toChatId, kind: "forward" },
+        { operationId, chatId: toChatId, kind: "forward" },
         () => forward(fromChatId, message, toChatId, silent ? { silent } : {}),
         (done) => ({ messageId: done.id }),
       )
+      return { operationId, message: forwarded }
     },
 
     pin: ({ notify, ...target }) => pinning(target, true, notify),
@@ -242,8 +249,11 @@ export const messagesService = (deps: ServiceDeps): MessagesService => {
       if (emoji === "") throw new CliError("validation_error", "which emoji? give one, for example 👍")
       const react = capability(connection, "react", "react to a message")
       const { id: chatId } = await connection.resolve(chat)
-      await guardedWrite(guard, { chatId, kind: "reaction", messageId: message }, () => react(chatId, message, emoji))
-      return { chatId, messageId: message, reaction: emoji }
+      const operationId = newOperationId()
+      await guardedWrite(guard, { operationId, chatId, kind: "reaction", messageId: message }, () =>
+        react(chatId, message, emoji),
+      )
+      return { operationId, chatId, messageId: message, reaction: emoji }
     },
   }
 }

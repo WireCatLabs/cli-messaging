@@ -3,8 +3,8 @@ import { annotate } from "@leemour/cli-core/commands"
 import { Command } from "commander"
 import type { Id, Poll } from "../../domain/models.js"
 import type { SendGuard } from "../../sends/guard.js"
-import { guardedWrite } from "../../sends/guarded.js"
-import { newSendId } from "../../sends/send-id.js"
+import { guardedWrite, type Operated } from "../../sends/guarded.js"
+import { newOperationId, newSendId } from "../../sends/send-id.js"
 import { type Messenger, messengerContext } from "./context.js"
 import { capability, type MessengerAdapter, type NewPoll, type Sent } from "./port.js"
 
@@ -97,7 +97,7 @@ export const pollsCommand = (messenger: Messenger): Command => {
           ...(sendId === undefined ? {} : { sendId }),
         }),
       )
-      context.renderer.result({ sendId: sent.sendId, message: sent.message })
+      context.renderer.result({ sendId: sent.sendId, operationId: sent.operationId, message: sent.message })
     })
 
   return polls
@@ -108,10 +108,14 @@ export const guardedVote = async (
   guard: SendGuard,
   connection: MessengerAdapter,
   { chat, message, answers }: { chat: string; message: string; answers: Id[] },
-): Promise<Poll> => {
+): Promise<Operated<{ poll: Poll }>> => {
   const vote = capability(connection, "vote", "vote in a poll")
   const { id: chatId } = await connection.resolve(chat)
-  return guardedWrite(guard, { chatId, kind: "reaction", messageId: message }, () => vote(chatId, message, answers))
+  const operationId = newOperationId()
+  const poll = await guardedWrite(guard, { operationId, chatId, kind: "reaction", messageId: message }, () =>
+    vote(chatId, message, answers),
+  )
+  return { operationId, poll }
 }
 
 /** Closing changes the owner's own message for everyone in the chat, like an edit. */
@@ -119,10 +123,14 @@ export const guardedClose = async (
   guard: SendGuard,
   connection: MessengerAdapter,
   { chat, message }: { chat: string; message: string },
-): Promise<Poll> => {
+): Promise<Operated<{ poll: Poll }>> => {
   const close = capability(connection, "closePoll", "close a poll")
   const { id: chatId } = await connection.resolve(chat)
-  return guardedWrite(guard, { chatId, kind: "edit", messageId: message }, () => close(chatId, message))
+  const operationId = newOperationId()
+  const poll = await guardedWrite(guard, { operationId, chatId, kind: "edit", messageId: message }, () =>
+    close(chatId, message),
+  )
+  return { operationId, poll }
 }
 
 /** A new poll is a new message: the recipient list and the hourly limit apply, and a send id makes a retry safe. */
@@ -130,15 +138,16 @@ export const guardedCreatePoll = async (
   guard: SendGuard,
   connection: MessengerAdapter,
   { chat, poll, silent, sendId }: { chat: string; poll: NewPoll; silent: boolean; sendId?: string },
-): Promise<Sent> => {
+): Promise<Operated<Sent>> => {
   if (poll.answers.length < 2) throw new CliError("validation_error", "a poll needs two answers or more")
   const create = capability(connection, "createPoll", "create a poll")
   const { id: chatId } = await connection.resolve(chat)
   const id = sendId ?? newSendId()
-  return guardedWrite(
+  const sent = await guardedWrite(
     guard,
-    { chatId, kind: "message", sendId: id, length: poll.question.length },
+    { chatId, kind: "message", sendId: id, operationId: id, length: poll.question.length },
     () => create(chatId, poll, { sendId: id, ...(silent ? { silent } : {}) }),
     (done) => ({ messageId: done.message.id }),
   )
+  return { ...sent, operationId: id }
 }

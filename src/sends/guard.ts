@@ -25,6 +25,7 @@ export interface GuardRequest {
   /** Messages a deletion names, or people a chat change adds. */
   count?: number
   sendId?: string
+  operationId?: string
   scheduledFor?: string
   notify?: boolean
   personIds?: Id[]
@@ -212,7 +213,7 @@ export const sendGuard = ({
       journal.locked(() => {
         if (!withinLimit(request, journal.entries())) return
         const id = randomUUID()
-        const { chatId, kind, action, sendId, scheduledFor, notify } = request
+        const { chatId, kind, action, sendId, operationId, scheduledFor, notify } = request
         journal.append({
           at: now().toISOString(),
           profile,
@@ -223,6 +224,7 @@ export const sendGuard = ({
           ...(action ? { action } : {}),
           ...(asked.people === undefined ? {} : kind === "delete" ? { count: asked.people } : { people: asked.people }),
           ...(sendId === undefined ? {} : { sendId }),
+          ...(operationId === undefined ? {} : { operationId }),
           ...(scheduledFor ? { scheduledFor } : {}),
           ...(notify === undefined ? {} : { notify }),
         })

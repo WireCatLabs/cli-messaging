@@ -660,7 +660,7 @@ describe("sending over MCP", () => {
     const pinned = await call("chat_messages_pin", { chat: "7", message: "1" })
     await call("chat_messages_unpin", { chat: "7", message: "1" })
 
-    expect(pinned.body).toEqual({ chatId: "7", messageId: "1", pinned: true })
+    expect(pinned.body).toEqual({ operationId: expect.any(String), chatId: "7", messageId: "1", pinned: true })
     expect(pins).toEqual([
       ["pin", "7", "1", { notify: false }],
       ["unpin", "7", "1"],
@@ -688,7 +688,7 @@ describe("sending over MCP", () => {
     const added = await call("chat_reactions_add", { chat: "Book", message: "1", emoji: "🔥" })
     await call("chat_reactions_remove", { chat: "Book", message: "1" })
 
-    expect(added.body).toEqual({ chatId: "7", messageId: "1", reaction: "🔥" })
+    expect(added.body).toEqual({ operationId: expect.any(String), chatId: "7", messageId: "1", reaction: "🔥" })
     expect(forms[0]).toContain('emoji: "🔥"')
     expect(reactions).toEqual([
       ["7", "1", "🔥"],
@@ -719,7 +719,7 @@ describe("sending over MCP", () => {
     expect(sending).not.toContain("chat_chats_mark_read")
     expect(tools).toContain("chat_chats_mark_read")
     expect(tools).not.toContain("chat_messages_send")
-    expect(body).toEqual({ chatId: "7", until: "1" })
+    expect(body).toEqual({ operationId: expect.any(String), chatId: "7", until: "1" })
     expect(marks).toEqual([["7", "1"]])
   })
 
@@ -740,7 +740,7 @@ describe("sending over MCP", () => {
 
     expect(sending).not.toContain("chat_messages_delete")
     expect(tools).toContain("chat_messages_delete")
-    expect(body).toEqual({ chatId: "7", deleted: ["1", "2"], forEveryone: false })
+    expect(body).toEqual({ operationId: expect.any(String), chatId: "7", deleted: ["1", "2"], forEveryone: false })
     expect(deletions).toEqual([["7", ["1", "2"], { forEveryone: false }]])
   })
 

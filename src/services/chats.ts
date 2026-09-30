@@ -1,7 +1,8 @@
 import { CliError } from "@leemour/cli-core"
 import { capability } from "../cli/messenger/port.js"
 import type { Chat, ChatCard, ChatEvents, GroupMember, Id, LinkTarget, Page } from "../domain/models.js"
-import { guardedWrite } from "../sends/guarded.js"
+import { guardedWrite, type Operated } from "../sends/guarded.js"
+import { newOperationId } from "../sends/send-id.js"
 import type { ServiceDeps } from "./deps.js"
 
 /** How far back `events` looks without `since`, as in max-cli. */
@@ -40,7 +41,7 @@ export interface ChatsService {
   events(chat: string, options: { since?: number; only?: string }): Promise<ChatEvents>
   inspect(link: string): Promise<LinkTarget>
   /** Through the guard; never counts toward the hourly limit. */
-  markRead(request: { chat: string; until?: string }): Promise<MarkedRead>
+  markRead(request: { chat: string; until?: string }): Promise<Operated<MarkedRead>>
 }
 
 export const chatsService = (deps: ServiceDeps): ChatsService => ({
@@ -92,10 +93,13 @@ export const chatsService = (deps: ServiceDeps): ChatsService => ({
     const connection = await deps.connection()
     const markRead = capability(connection, "markRead", "mark a chat read")
     const { id: chatId } = await connection.resolve(chat)
-    await guardedWrite(deps.guard, { chatId, kind: "read", ...(until === undefined ? {} : { messageId: until }) }, () =>
-      markRead(chatId, until),
+    const operationId = newOperationId()
+    await guardedWrite(
+      deps.guard,
+      { operationId, chatId, kind: "read", ...(until === undefined ? {} : { messageId: until }) },
+      () => markRead(chatId, until),
     )
-    return { chatId, until: until ?? null }
+    return { operationId, chatId, until: until ?? null }
   },
 })
 
