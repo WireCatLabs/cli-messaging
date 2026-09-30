@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.61.0 — 30.09.2026
+
 ### Added
 
 - **An `operationId` on every write.** Each write the send guard sees — send, edit, forward, delete,
