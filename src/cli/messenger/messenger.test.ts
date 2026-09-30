@@ -22,6 +22,7 @@ import { recipientsCommand, sendsCommand } from "./guard-commands.js"
 import { type McpEnvironment, mcpCommand } from "./mcp-command.js"
 import { messagesCommand } from "./messages-command.js"
 import { modelsCommand } from "./models-command.js"
+import { pollsCommand } from "./polls-command.js"
 import type { MessengerAdapter, SendOptions } from "./port.js"
 import { reactionsCommand } from "./reactions-command.js"
 import { topicsCommand } from "./topics-command.js"
@@ -124,6 +125,7 @@ const call = async (
         chatsCommand(messenger),
         messagesCommand(messenger),
         reactionsCommand(messenger),
+        pollsCommand(messenger),
         contactsCommand(messenger),
         recipientsCommand(messenger),
         sendsCommand(messenger),
@@ -556,6 +558,70 @@ describe("the shared read commands", () => {
     ])
   })
 
+  it("**show a poll with its answer ids, vote by id and take it back**, close it as an edit, create one as a message", async () => {
+    const root = mkdtempSync(join(tmpdir(), "messenger-"))
+    const env = { CHAT_STATE_DIR: join(root, "state"), CHAT_CONFIG_DIR: join(root, "config") }
+    const poll = {
+      chatId: "7",
+      messageId: "3",
+      question: "Friday?",
+      answers: [
+        { id: "MA", text: "yes", voters: null, chosen: false },
+        { id: "MQ", text: "no", voters: null, chosen: false },
+      ],
+      closed: false,
+      multiple: false,
+      anonymous: false,
+      voters: null,
+    }
+    const calls: unknown[] = []
+    const polling: MessengerAdapter = {
+      ...fake,
+      poll: async () => poll,
+      vote: async (chatId, messageId, ids) => {
+        calls.push(["vote", chatId, messageId, ids])
+        return poll
+      },
+      closePoll: async (chatId, messageId) => {
+        calls.push(["close", chatId, messageId])
+        return { ...poll, closed: true }
+      },
+      createPoll: async (chatId, created, { sendId }) => {
+        calls.push(["create", chatId, created, sendId])
+        return { message: { ...message, id: "9" }, sendId }
+      },
+    }
+
+    const shown = await call(["polls", "show", "Book", "3", "--json"], async () => polling, env)
+    const none = await call(["polls", "vote", "Book", "3"], async () => polling, env)
+    await call(["polls", "vote", "Book", "3", "MQ"], async () => polling, env)
+    await call(["polls", "vote", "Book", "3", "--retract"], async () => polling, env)
+    const closed = await call(["polls", "close", "Book", "3", "--json"], async () => polling, env)
+    const created = await call(
+      ["polls", "create", "Book", "Where?", "here", "there", "--multiple", "--send-id", "42", "--json"],
+      async () => polling,
+      env,
+    )
+
+    expect(JSON.parse(shown.stdout[0] ?? "").answers.map((one: { id: string }) => one.id)).toEqual(["MA", "MQ"])
+    expect(none.stderr.join("\n")).toContain("polls show")
+    expect(JSON.parse(closed.stdout[0] ?? "").closed).toBe(true)
+    expect(JSON.parse(created.stdout[0] ?? "")).toMatchObject({ sendId: "42", message: { id: "9" } })
+    expect(calls).toEqual([
+      ["vote", "7", "3", ["MQ"]],
+      ["vote", "7", "3", []],
+      ["close", "7", "3"],
+      ["create", "7", { question: "Where?", answers: ["here", "there"], multiple: true, anonymous: false }, "42"],
+    ])
+    const journal = new SendJournal(sendsPathFor(app, "default", env)).entries().filter((one) => one.outcome === "sent")
+    expect(journal.map((one) => [one.kind, one.messageId])).toEqual([
+      ["reaction", "3"],
+      ["reaction", "3"],
+      ["edit", "3"],
+      ["message", "9"],
+    ])
+  })
+
   it("describe themselves for an agent, with the contract version and which ones write", async () => {
     const root = mkdtempSync(join(tmpdir(), "messenger-"))
     const { stdout } = await call(["commands", "--json"], async () => fake, { CHAT_STATE_DIR: root })
@@ -571,6 +637,8 @@ describe("the shared read commands", () => {
     expect(find(["messages", "unpin"])?.mutates).toBe(true)
     expect(find(["reactions", "add"])?.mutates).toBe(true)
     expect(find(["messages", "delete"])?.mutates).toBe(true)
+    expect(find(["polls", "vote"])?.mutates).toBe(true)
+    expect(find(["polls", "show"])?.mutates).toBeFalsy()
     expect(find(["recipients", "add"])?.mutates).toBe(true)
     expect(find(["messages", "list"])?.mutates).toBeFalsy()
   })

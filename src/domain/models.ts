@@ -81,6 +81,28 @@ export interface Deletion {
   forEveryone: boolean
 }
 
+/** One answer of a poll. `id` is the provider's own, not a position: a vote names it. */
+export interface PollAnswer {
+  id: Id
+  text: string
+  /** `null` until the owner has voted or the poll is closed — the provider does not say before. */
+  voters: number | null
+  chosen: boolean
+}
+
+/** A poll as the message that carries it has it now. */
+export interface Poll {
+  chatId: Id
+  messageId: Id
+  question: string
+  answers: PollAnswer[]
+  closed: boolean
+  multiple: boolean
+  /** Nobody sees who voted for what. */
+  anonymous: boolean
+  voters: number | null
+}
+
 /** A chat marked read up to `messageId`, inclusive. `unread` is what the provider says is left, or `null`. */
 export interface ReadMark {
   chatId: Id
