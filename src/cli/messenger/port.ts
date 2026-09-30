@@ -105,6 +105,8 @@ export interface MessengerAdapter {
   react?(chatId: Id, messageId: Id, emoji: string | null): Promise<void>
   /** Marks the chat read up to `until`, or to its newest message; the other side sees it. */
   markRead?(chatId: Id, until?: Id): Promise<void>
+  /** For the owner only, unless `forEveryone`; neither can be undone. */
+  delete?(chatId: Id, messageIds: Id[], options: { forEveryone: boolean }): Promise<void>
   /**
    * New messages and changes to messages as they arrive, until `signal` aborts. `onReady` once it is
    * actually listening — a caller that sends on "listening" must not race the connection. Only on a

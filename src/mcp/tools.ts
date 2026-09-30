@@ -7,6 +7,7 @@ import { contactsTools } from "./tools/contacts.js"
 import { inboxTools } from "./tools/inbox.js"
 import { messagesTools } from "./tools/messages.js"
 import { messageActionTools } from "./tools/messages-actions.js"
+import { messageDeleteTools } from "./tools/messages-delete.js"
 import { messagesPhotoTools } from "./tools/messages-photo.js"
 import { messageSendTools } from "./tools/messages-send.js"
 import { messagesTranscribeTools } from "./tools/messages-transcribe.js"
@@ -32,6 +33,9 @@ export const readTools = (messenger: Messenger): Record<string, AnyTool> => ({
 
 /** Offered only with `--allow-mark-read`, which `--allow-send` does not imply: the other side sees it. */
 export const markReadTools = (messenger: Messenger): Record<string, AnyTool> => chatsReadTools(messenger)
+
+/** Offered only with `--allow-delete`: the owner's own copy, never for everyone — that is the command's alone. */
+export const deleteTools = (messenger: Messenger): Record<string, AnyTool> => messageDeleteTools(messenger)
 
 /** Offered only with `--allow-send`. */
 export const sendTools = (messenger: Messenger): Record<string, AnyTool> => ({

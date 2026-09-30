@@ -6,6 +6,16 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- **`messages delete <chat> <messages...> [--for-everyone] --allow-dangerous`**, max-cli's: at most 10
+  messages, for the owner only unless `--for-everyone`, and nothing without `--allow-dangerous` — no
+  prompt asks instead. The send guard checks it as a `delete` and counts each message toward the hourly
+  limit. The answer is `{ chatId, deleted, forEveryone }`. An adapter offers it with the optional `delete`.
+- **`mcp --allow-delete`** offers `<cli>_messages_delete`, which deletes the owner's own copy only; for
+  everyone is the command's alone. `--allow-send` does not imply it, and `mcp config` carries it.
+  `ServerOptions` and `McpFlags` gain `allowDelete`, and `--confirm-send` is accepted with it alone.
+
 ## 0.47.0 — 30.09.2026
 
 ### Added

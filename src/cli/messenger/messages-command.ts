@@ -14,6 +14,7 @@ import { afterOf, oneDirection } from "./after.js"
 import { type Messenger, messengerContext } from "./context.js"
 import { downloadSubcommand } from "./download-command.js"
 import { heardItems, hearForCommand, hearingFields, spokenItems, TRANSCRIBE_OPTION } from "./hearing-command.js"
+import { deleteCommand } from "./messages-delete-command.js"
 import { editCommand } from "./messages-edit-command.js"
 import { forwardCommand } from "./messages-forward-command.js"
 import { pinCommand, unpinCommand } from "./messages-pin-command.js"
@@ -208,6 +209,7 @@ export const messagesCommand = (messenger: Messenger): Command => {
   transcribeSubcommand(messages, messenger)
 
   messages.addCommand(editCommand(messenger))
+  messages.addCommand(deleteCommand(messenger))
   messages.addCommand(forwardCommand(messenger))
   messages.addCommand(pinCommand(messenger))
   messages.addCommand(unpinCommand(messenger))

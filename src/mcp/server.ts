@@ -11,12 +11,13 @@ import { registerPrompts } from "./prompts.js"
 import { registerResources } from "./resources.js"
 import { MessengerSession, type SessionOptions } from "./session.js"
 import { answered, failed, READ, registerTools } from "./tool.js"
-import { markReadTools, readTools, sendTools } from "./tools.js"
+import { deleteTools, markReadTools, readTools, sendTools } from "./tools.js"
 
 export interface ServerOptions extends SessionOptions {
   allowSend: boolean
   confirmSend?: boolean
   allowMarkRead?: boolean
+  allowDelete?: boolean
 }
 
 /**
@@ -28,7 +29,7 @@ export const createServer = (
   command: Command,
   context: MessengerContext,
   messenger: Messenger,
-  { allowSend, confirmSend = false, allowMarkRead = false, ...sessionOptions }: ServerOptions,
+  { allowSend, confirmSend = false, allowMarkRead = false, allowDelete = false, ...sessionOptions }: ServerOptions,
 ) => {
   const { app, provider } = messenger
   const name = messenger.name ?? app.command
@@ -39,6 +40,7 @@ export const createServer = (
     Object.entries({
       ...(allowSend ? sendTools(messenger) : {}),
       ...(allowMarkRead ? markReadTools(messenger) : {}),
+      ...(allowDelete ? deleteTools(messenger) : {}),
     }).filter(([, one]) => !permitted || (one.permission !== undefined && permitted.includes(one.permission))),
   )
   const confirmed = confirmSend ? confirmer() : undefined
@@ -59,6 +61,7 @@ export const createServer = (
           allowSend,
           confirmSend,
           allowMarkRead,
+          allowDelete,
           permitted,
         }),
       },
