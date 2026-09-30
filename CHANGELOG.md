@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.46.0 — 30.09.2026
+
 ### Added
 
 - **`chats read <chat> [--until <message>]`** marks a chat read, to its newest message or to the one
