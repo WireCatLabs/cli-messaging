@@ -981,7 +981,11 @@ describe("the guard, account and mcp config commands", () => {
     const empty = await call(["recipients", "list", "--json"], online, env)
     expect(empty.stderr.join("\n")).toContain("on and empty")
 
-    expect(json((await call(["recipients", "off", "--json"], online, env)).stdout)).toEqual({ off: true, wasOn: true })
+    expect(json((await call(["recipients", "clear", "--json"], online, env)).stdout)).toEqual({
+      off: true,
+      wasOn: true,
+    })
+    expect((await call(["recipients", "off"], online, env)).code).not.toBe(0)
   })
 
   it("list attempts to send newest first, and say when there were none", async () => {

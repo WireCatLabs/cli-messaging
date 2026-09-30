@@ -45,7 +45,7 @@ export class RecipientList {
       throw new CliError(
         "configuration_error",
         `the recipient list ${this.path} cannot be read (${error instanceof Error ? error.message : String(error)}) — ` +
-          `fix the file or turn the list off with \`${this.command} recipients off\``,
+          `fix the file or turn the list off with \`${this.command} recipients clear\``,
       )
     }
   }

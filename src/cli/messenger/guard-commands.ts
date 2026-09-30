@@ -6,7 +6,7 @@ import { RecipientList, recipientsPathFor } from "../../sends/recipients.js"
 import { type Messenger, messengerContext } from "./context.js"
 
 /**
- * The chats this profile may send to. Off until the first `add`; `off` turns it off again. It stops
+ * The chats this profile may send to. Off until the first `add`; `clear` deletes it, which turns it off again. It stops
  * a model that a message talked into writing somewhere, not an agent set on getting around it.
  */
 export const recipientsCommand = (messenger: Messenger): Command => {
@@ -52,8 +52,8 @@ export const recipientsCommand = (messenger: Messenger): Command => {
       renderer.result({ id: gone.id, title: gone.title, removed: true })
     })
 
-  annotate(command.command("off"), { mutates: true })
-    .description("turn the list off: this profile may send to any chat again")
+  annotate(command.command("clear"), { mutates: true })
+    .description("delete the list, which turns it off: this profile may send to any chat again")
     .action(async function (this: Command) {
       const { settings, renderer, env } = messengerContext(this, messenger)
       renderer.result({ off: true, wasOn: listFor(settings.profile, env).off() })

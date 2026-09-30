@@ -63,6 +63,8 @@ they now fail as unknown commands or options.
 - **`chats read` is `chats mark-read`**, and its MCP tool `<cli>_chats_read` is
   `<cli>_chats_mark_read`.
 - **`messages search <words...>` names its argument `<text...>`**; the search is unchanged.
+- **`recipients off` is `recipients clear`**: it deletes the list. The answer is unchanged,
+  `{ off: true, wasOn }`.
 
 ## 0.54.0 — 30.09.2026
 
