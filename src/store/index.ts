@@ -12,6 +12,7 @@ export {
   openStore,
   type PersonFacts,
   type Range,
+  type StoredChatFilter,
   type StoredHit,
   type StoreOptions,
 } from "./store.js"

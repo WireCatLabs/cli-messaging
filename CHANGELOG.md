@@ -28,6 +28,10 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 - **Transcripts in the store** (store version 11): `transcript(key, chatId, messageId)` and
   `keepTranscript(...)`, per account, keyed by chat and message id — a message can be heard before
   the store holds it. Additive: a build on version 6 keeps working on the file.
+- **Store reads for the services** (no schema change): `chats` takes `query` (three letters or more
+  of a title), `kind` and `unread`, with `countChats` for the same filter; `messages` takes `since`,
+  with `countMessages`; `messagesWindow(key, chatId, { at, before, after })` reads around a moment,
+  as `around` reads around a message id. Type `StoredChatFilter`.
 
 ## 0.56.0 — 30.09.2026
 
