@@ -253,6 +253,35 @@ describe("the MCP server", () => {
     expect((await call("chat_messages_list", { chat: "7", after: "12", before: "20" })).isError).toBe(true)
   })
 
+  it("lists a forum's topics with chat_topics_list, passing search on", async () => {
+    const seen: unknown[] = []
+    const topic = {
+      id: "4",
+      title: "Pisos",
+      closed: false,
+      pinned: false,
+      unreadCount: 0,
+      lastMessageAt: null,
+      createdAt: null,
+    }
+    const { call } = await connect(
+      scripted({
+        topics: async (_chat, window) => {
+          seen.push(window)
+          return { items: [topic], hasMore: false }
+        },
+      }),
+    )
+
+    expect((await call("chat_topics_list", { chat: "7", search: "pis", limit: 5 })).body).toEqual({
+      items: [topic],
+      page: 1,
+      limit: 5,
+      hasMore: false,
+    })
+    expect(seen).toEqual([{ limit: 5, offset: 0, search: "pis" }])
+  })
+
   it("filters chat_chats_list, and says when older chats were not searched", async () => {
     const { call } = await connect(scripted())
 
