@@ -1,16 +1,13 @@
-import { existsSync } from "node:fs"
 import { resolve } from "node:path"
 import { writeSecurely } from "@leemour/cli-core"
 import { Command } from "commander"
 import { SendJournal, sendsPathFor } from "../../sends/journal.js"
-import { MIGRATIONS } from "../../store/migrations.js"
-import { openCache } from "../../store/open.js"
-import { storePath } from "../../store/path.js"
 import { type BaseContext, baseContext, environmentOf, outputFor } from "../context.js"
 import { listRuns, runsDirFor, runtime } from "../runs/run.js"
 import { recalledAccount } from "./accounts.js"
 import { type Messenger, messengerContext } from "./context.js"
 import { buildReport, reportFileName } from "./report.js"
+import { storeSummary } from "./store-maintenance-command.js"
 
 /**
  * The state this installation is in, read from disk and **never from the messenger unless
@@ -140,42 +137,13 @@ const diagnose = async (
       profile,
       config: { path: settings.configPath, found: settings.configFound },
       account: { remembered: account?.account ?? null },
-      store: await storeState(env),
+      store: await storeSummary(env),
       sends: sendsState(new SendJournal(sendsPathFor(app, profile, env))),
       runs: { directory: runsDirFor(app, env), kept: listRuns(runsDirFor(app, env)).length },
       [provider]: await (messenger.diagnose?.(command, context) ?? Promise.resolve({})).catch((error) => ({
         error: messageOf(error),
       })),
     },
-  }
-}
-
-/** Read without migrating: a doctor that upgraded the file would change what it was asked to look at. */
-const storeState = async (env: NodeJS.ProcessEnv) => {
-  const path = storePath(env)
-  if (!existsSync(path)) return { path, exists: false }
-  try {
-    const database = await openCache(path)
-    try {
-      const schema = database
-        .prepare("SELECT version, min_compatible FROM schema_migrations ORDER BY version DESC LIMIT 1")
-        .get()
-      const speaks = MIGRATIONS.at(-1)?.version ?? 0
-      const version = Number(schema?.version ?? 0)
-      const count = (table: string) => Number(database.prepare(`SELECT count(*) AS n FROM ${table}`).get()?.n ?? 0)
-      return {
-        path,
-        exists: true,
-        schema: version,
-        speaks,
-        writable: version <= speaks || Number(schema?.min_compatible ?? 0) <= speaks,
-        ...(version > 0 ? { chats: count("chats"), messages: count("messages") } : {}),
-      }
-    } finally {
-      database.close()
-    }
-  } catch (error) {
-    return { path, exists: true, error: messageOf(error) }
   }
 }
 

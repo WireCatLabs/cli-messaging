@@ -4,15 +4,19 @@ import { toMarkdown } from "../../render/markdown.js"
 import { renderMessages } from "../../render/messages.js"
 import { fetchCommand, jobsCommand } from "./backfill-command.js"
 import { type Messenger, messengerContext } from "./context.js"
+import { storeMaintenanceCommands } from "./store-maintenance-command.js"
 
-/** `store`: the local store of messages — what it holds, filling it, and reading it out. */
-export const storeCommand = (messenger: Messenger): Command =>
-  new Command("store")
+/** `store`: the local store of messages — what it holds, filling it, reading it out, and looking after the file. */
+export const storeCommand = (messenger: Messenger): Command => {
+  const store = new Command("store")
     .description("the local store of messages")
     .addCommand(statusCommand(messenger))
     .addCommand(fetchCommand(messenger))
     .addCommand(jobsCommand(messenger))
     .addCommand(exportCommand(messenger))
+  for (const command of storeMaintenanceCommands(messenger)) store.addCommand(command)
+  return store
+}
 
 /**
  * What the local store holds, per chat — read from the store alone. Whether a fetch reached a
