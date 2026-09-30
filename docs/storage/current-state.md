@@ -72,7 +72,7 @@ versions (~~max's 0.13~~ an older CLI opens a newer file because `min_compatible
 
 ## What runs without any server today
 
-`--offline` (both CLIs), `max cache clear`, `max backup`, `max export`, `doctor` (reads the schema
+`--offline` (both CLIs), `max cache clear`, `max store fetch`, `max store export`, `doctor` (reads the schema
 version without migrating), shell completion (latency-sensitive), `max mcp`, every bot command
 (HTTP Bot API, no socket), `serve` itself as a second writer, and the test suites of all three
 repositories, which open stores directly.
