@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.51.0 — 30.09.2026
+
 ### Fixed
 
 - **A local model no longer drops quietly spoken speech.** The voice detector that cuts a recording
