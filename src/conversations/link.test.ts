@@ -45,9 +45,9 @@ describe("linkMessages", () => {
     expect(links).toContainEqual(expect.objectContaining({ messageId: "3", kind: "mention", source: "rule" }))
   })
 
-  it("joins one sender's quick follow-up, and not one after a two-minute gap", () => {
+  it("joins one sender's quick follow-up, and not one after a five-minute gap", () => {
     const messages = [said("1", "a", "I tried that school"), said("2", "a", "last year")]
-    clock += 3 * 60_000
+    clock += 6 * 60_000
     messages.push(said("3", "a", "anyway"))
     const { parents } = linkMessages(messages)
     expect(parents.get("2")).toBe("1")

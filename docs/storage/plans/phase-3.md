@@ -129,7 +129,7 @@ deleted after it was written. A stale link is not chosen; phase 4 asks the agent
 | reply | `reply_to_native_id` → that message, when held | 1 (source `provider`) |
 | thread | never choose a parent in another forum thread | a boundary, not a link |
 | mention | `@handle` in the text → that person's latest message in the previous 50 | 0.8 (starting value) |
-| same sender | the sender's own previous message, when it is among the previous 3 and under 2 minutes old | 0.5 (starting value) |
+| same sender | the sender's own previous message, when it is among the previous 10 and under 5 minutes old (tuned 2026-09-30, `bench/disentangle/sweep.ts`) | 0.5 — below mention, which measured better at every setting |
 | none of the above | no parent: the message starts a conversation | — |
 
 `@handle` is read from the text at build time, so it works on history already downloaded, for both
@@ -211,6 +211,7 @@ Valencia Expats · 12 May 10:01–10:05 · 4 messages · Alice, Carol
 4. **Forum threads in MAX**: does MAX have them at all? `threadId` is filled by tg-cli only today.
 5. **Mentions in MAX**: needs a capture of a message that mentions someone, before item 3 covers MAX.
 6. **Telegram senders have no username in the store** (0 of 1,535 identities in a development copy,
-   2026-09-30), so the mention rule cannot fire on Telegram: the held-out check found 2 of 397 hidden
-   replies. `Message` carries `senderName` but no handle. Item 3 must also store each sender's username,
-   or the mention rule is IRC-only. See [`bench/disentangle/README.md`](../../../bench/disentangle/README.md).
+   2026-09-30), so the mention rule cannot fire on Telegram. `Message` carries `senderName` but no
+   handle, and tg-cli does not pass one; the store keeps a username once given. Storing it is tg-cli's
+   change. Whether it helps is not measured: the held-out check (2 of 397 found) tests button replies,
+   where these rules are weakest by design. See [`bench/disentangle/README.md`](../../../bench/disentangle/README.md).
