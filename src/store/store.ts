@@ -18,14 +18,14 @@ import type {
 import type { PeopleLookup } from "../resolve.js"
 import type { SqlValue } from "./driver.js"
 import { migrate } from "./migrations.js"
-import { NORMALIZER_VERSION, normalize } from "./normalize.js"
 import { storePath } from "./path.js"
 import * as accounts from "./sqlite/accounts.js"
 import { backfillNormalized, pendingNormalization } from "./sqlite/backfill.js"
 import * as chatQueries from "./sqlite/chats.js"
 import * as identities from "./sqlite/identities.js"
+import * as messageWrites from "./sqlite/messages.js"
 import { openSqlite, type StoreContext } from "./sqlite/open.js"
-import { json, parsed, present, toIso, toMs } from "./sqlite/values.js"
+import { parsed, present, toIso, toMs } from "./sqlite/values.js"
 
 /** Which account of which messenger a call is about. */
 export interface AccountKey {
@@ -283,109 +283,7 @@ const storeOver = (context: StoreContext): MessageStore => {
     message: Message,
     via: string,
     seenAt?: number,
-  ) => {
-    const sender =
-      message.senderId === null || message.senderIsChat
-        ? null
-        : identityPk(
-            accountKey,
-            key.provider,
-            message.senderId,
-            message.senderName,
-            message.senderUsername === undefined ? {} : { username: message.senderUsername },
-          )
-    const fields = {
-      thread_native_id: message.threadId ?? null,
-      sender_identity_pk: sender,
-      sender_chat_native_id: message.senderIsChat ? message.senderId : null,
-      sender_name: message.senderName,
-      sent_at: toMs(message.timestamp) ?? 0,
-      edited_at: toMs(message.editedAt),
-      reply_to_native_id: message.replyToId ?? message.replyTo?.id ?? null,
-      reply_to: json(message.replyTo ?? undefined),
-      forward: json(message.forwardedFrom ?? undefined),
-      outgoing: message.outgoing === null ? null : Number(message.outgoing),
-      reactions: json(message.reactions ?? undefined),
-      provider_metadata: json(message.providerMetadata),
-    } satisfies Record<string, SqlValue>
-
-    const found = one(
-      "SELECT pk, text, edited_at, deleted_at FROM messages WHERE chat_pk = ? AND native_id = ?",
-      chatKey,
-      message.id,
-    )
-    const revived = found?.deleted_at != null && seenAt !== undefined && Number(found.deleted_at) < seenAt
-    // A deleted message leaves no text behind, and a sync that still carries it does not bring it back.
-    if (found?.deleted_at != null && !revived) return
-    const normalized = searchable(message.text)
-    let pk: number
-    if (!found) {
-      const columns = [...Object.keys(fields), ...Object.keys(normalized)]
-      pk = Number(
-        one(
-          `INSERT INTO messages (chat_pk, account_pk, native_id, text, ingested_at, ingested_via, ${columns.join(", ")})
-           VALUES (?, ?, ?, ?, ?, ?, ${columns.map(() => "?").join(", ")}) RETURNING pk`,
-          chatKey,
-          accountKey,
-          message.id,
-          message.text,
-          now(),
-          via,
-          ...Object.values(fields),
-          ...Object.values(normalized),
-        )?.pk,
-      )
-    } else {
-      pk = Number(found.pk)
-      // A copy that knows less — no reactions asked for, no quote sent, no sender — never erases what we had.
-      const assignments = [...Object.keys(fields), ...Object.keys(normalized)].map(
-        (column) => `${column} = coalesce(?, ${column})`,
-      )
-      run(
-        `UPDATE messages SET ${assignments.join(", ")} WHERE pk = ?`,
-        ...Object.values(fields),
-        ...Object.values(normalized),
-        pk,
-      )
-      // A tombstone emptied the text: there is no earlier version to keep.
-      if (found.text !== message.text && !revived) {
-        run(
-          "INSERT INTO message_revisions (message_pk, text, edited_at, captured_at) VALUES (?, ?, ?, ?)",
-          pk,
-          String(found.text),
-          (found.edited_at as number | null) ?? null,
-          now(),
-        )
-        run("UPDATE messages SET text = ? WHERE pk = ?", message.text, pk)
-      }
-      if (revived) run("UPDATE messages SET deleted_at = NULL, text = ? WHERE pk = ?", message.text, pk)
-    }
-
-    message.attachments.forEach((attachment, position) => {
-      // Upserted by position, never replaced: a later fetch must not lose where the bytes were saved.
-      run(
-        `INSERT INTO attachments (message_pk, position, kind, mime, name, title, url, size, width, height, duration,
-                                  provider_ref)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-         ON CONFLICT (message_pk, position) DO UPDATE SET
-           kind = excluded.kind, mime = excluded.mime, name = excluded.name, title = excluded.title,
-           url = excluded.url, size = excluded.size, width = excluded.width, height = excluded.height,
-           duration = excluded.duration, provider_ref = excluded.provider_ref`,
-        pk,
-        position,
-        attachment.kind,
-        attachment.mime ?? null,
-        attachment.name ?? null,
-        attachment.title ?? null,
-        attachment.url ?? null,
-        attachment.size ?? null,
-        attachment.width ?? null,
-        attachment.height ?? null,
-        attachment.duration ?? null,
-        json(attachment.providerRef),
-      )
-    })
-  }
+  ) => messageWrites.upsertMessage(context, key, accountKey, chatKey, message, via, seenAt)
 
   const attachmentsOf = (rows: Record<string, unknown>[]): Map<number, Attachment[]> => {
     const byMessage = new Map<number, Attachment[]>()
@@ -538,26 +436,7 @@ const storeOver = (context: StoreContext): MessageStore => {
     )
   }
 
-  /**
-   * The owner's ruling (NEED-393 A): a deleted message keeps its row, so a later sync cannot bring it
-   * back, and leaves no text — not in the row, the search copy, the edit history or a transcript.
-   */
-  const tombstone = (pk: number): number => {
-    const row = one(
-      `UPDATE messages SET deleted_at = ?, text = '', normalized_text = NULL
-       WHERE pk = ? AND deleted_at IS NULL RETURNING chat_pk, native_id`,
-      now(),
-      pk,
-    )
-    if (!row) return 0
-    run("DELETE FROM message_revisions WHERE message_pk = ?", pk)
-    run(
-      "DELETE FROM transcripts WHERE chat_pk = ? AND message_native_id = ?",
-      Number(row.chat_pk),
-      String(row.native_id),
-    )
-    return 1
-  }
+  const tombstone = (pk: number) => messageWrites.tombstone(context, pk)
 
   const MESSAGE_COLUMNS = `m.*, c.native_id AS chat_native_id, i.native_id AS sender_native_id`
   const MESSAGE_JOINS = `JOIN chats c ON c.pk = m.chat_pk LEFT JOIN identities i ON i.pk = m.sender_identity_pk`
@@ -887,15 +766,7 @@ const storeOver = (context: StoreContext): MessageStore => {
     saveReactions: async (key, chatId, messageId, reactions) => {
       const accountKey = findAccountPk(key)
       const chatKey = accountKey === undefined ? undefined : findChatPk(accountKey, chatId)
-      if (chatKey === undefined) return false
-      return (
-        run(
-          "UPDATE messages SET reactions = ? WHERE chat_pk = ? AND native_id = ?",
-          JSON.stringify(reactions),
-          chatKey,
-          messageId,
-        ).changes > 0
-      )
+      return chatKey === undefined ? false : messageWrites.saveReactions(context, chatKey, messageId, reactions)
     },
 
     markRange: async (key, chatId, from, to) => {
@@ -953,8 +824,6 @@ const storeOver = (context: StoreContext): MessageStore => {
     close: async () => database.close(),
   }
 }
-
-const searchable = (text: string) => ({ normalized_text: normalize(text), normalizer_version: NORMALIZER_VERSION })
 
 const toAttachment = (row: Record<string, unknown>): Attachment =>
   ({
