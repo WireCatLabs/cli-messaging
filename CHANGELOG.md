@@ -14,7 +14,7 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   id is a different message. Now it skips channels and supergroups, and skips the deletion when the
   id still matches more than one message.
 
-## 0.51.0 — 30.09.2026
+## 0.52.0 — 30.09.2026
 
 ### Fixed
 
