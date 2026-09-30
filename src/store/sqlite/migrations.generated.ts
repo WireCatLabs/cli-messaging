@@ -56,5 +56,11 @@ export const GENERATED: { name: string; statements: string[] }[] = [
     "statements": [
       "CREATE TABLE `sync_state` (\n\t`account_pk` integer NOT NULL,\n\t`key` text NOT NULL,\n\t`value` text NOT NULL,\n\t`at` integer NOT NULL,\n\tCONSTRAINT `sync_state_pk` PRIMARY KEY(`account_pk`, `key`),\n\tCONSTRAINT `fk_sync_state_account_pk_accounts_pk_fk` FOREIGN KEY (`account_pk`) REFERENCES `accounts`(`pk`)\n);"
     ]
+  },
+  {
+    "name": "20260930024055_version-9-fetch-leases",
+    "statements": [
+      "CREATE TABLE `fetch_leases` (\n\t`chat_pk` integer NOT NULL,\n\t`anchor` text NOT NULL,\n\t`holder` text NOT NULL,\n\t`expires_at` integer NOT NULL,\n\tCONSTRAINT `fetch_leases_pk` PRIMARY KEY(`chat_pk`, `anchor`),\n\tCONSTRAINT `fk_fetch_leases_chat_pk_chats_pk_fk` FOREIGN KEY (`chat_pk`) REFERENCES `chats`(`pk`)\n);"
+    ]
   }
 ]

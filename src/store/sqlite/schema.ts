@@ -236,3 +236,17 @@ export const syncState = sqliteTable(
   },
   (table) => [primaryKey({ columns: [table.accountPk, table.key] })],
 )
+
+/** Who is fetching a stretch of a chat right now, so two processes do not fetch the same pages. */
+export const fetchLeases = sqliteTable(
+  "fetch_leases",
+  {
+    chatPk: integer("chat_pk")
+      .notNull()
+      .references(() => chats.pk),
+    anchor: text("anchor").notNull(),
+    holder: text("holder").notNull(),
+    expiresAt: integer("expires_at").notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.chatPk, table.anchor] })],
+)
