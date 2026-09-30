@@ -76,6 +76,30 @@
                   {
                     "group": ["@mtcute/*", "ws", "**/telegram/**", "**/max/**"],
                     "message": "cli-messaging speaks no provider: an adapter translates into the domain model, and nothing here may import a messenger library or an adapter"
+                  },
+                  {
+                    "group": ["drizzle-orm", "drizzle-orm/*"],
+                    "message": "drizzle-orm is a development dependency, bundled into dist at build time: import it through src/store/sqlite/drizzle/ (add what you need to core.ts), or tg and max crash at runtime"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/store/sqlite/drizzle/**", "src/**/*.test.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["@mtcute/*", "ws", "**/telegram/**", "**/max/**"],
+                    "message": "cli-messaging speaks no provider: an adapter translates into the domain model, and nothing here may import a messenger library or an adapter"
                   }
                 ]
               }
