@@ -121,6 +121,7 @@ const connect = async (telegram: Scripted = scripted(), options: Partial<ServerO
     CHAT_CONFIG_DIR: join(root, "config"),
     MESSAGING_STORE: join(root, "m.db"),
     CLI_COMMON_CACHE_DIR: join(root, "cache"),
+    CHAT_CACHE_DIR: join(root, "chat-cache"),
   }
   const { connect: connecting, form, era = "legacy", config, ...serverOptions } = options
   if (config) {
@@ -445,6 +446,33 @@ describe("the transcribe tool", () => {
       via: "chat",
     })
     expect(asked).toEqual(["Book club", "5"])
+  })
+
+  it("hears a chat's voice messages with `transcribe` on the list tool", async () => {
+    const { call } = await connect(
+      scripted({
+        history: async () => ({ items: [{ ...message, attachments: [{ kind: "voice" }] }], hasMore: false }),
+        transcribe: async () => ({ text: "read me", pending: false }),
+      }),
+    )
+
+    const { body } = await call("chat_messages_list", { chat: "7", transcribe: true })
+
+    expect(body).toMatchObject({ items: [{ transcript: "read me" }], unheard: [] })
+  })
+
+  it("hears unread voice messages with `transcribe` on the inbox tool", async () => {
+    const { call } = await connect(
+      scripted({
+        chats: async () => ({ items: [{ ...chat, unreadCount: 1 }], hasMore: false }),
+        history: async () => ({ items: [{ ...message, attachments: [{ kind: "voice" }] }], hasMore: false }),
+        transcribe: async () => ({ text: "read me", pending: false }),
+      }),
+    )
+
+    const { body } = await call("chat_inbox", { transcribe: true })
+
+    expect(body).toMatchObject({ chats: [{ messages: [{ transcript: "read me" }] }], unheard: [] })
   })
 
   it("**names the download command, never downloads**, when the messenger cannot transcribe and no model is here", async () => {

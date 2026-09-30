@@ -84,9 +84,12 @@ const sourced = (settings: Settings, setting: string) => {
     // No list is every action, and `null` would read as none.
     return { setting, value: setting === "allow" ? (value ?? "all") : (value ?? null), from: settings.sources[setting] }
   }
-  const { value, from } = fromFile<unknown>(settings, setting, null)
+  const { value, from } = fromFile<unknown>(settings, setting, UNLISTED_DEFAULTS[setting] ?? null)
   return { setting, value, from }
 }
+
+/** Settings read where they are used rather than in `resolveSettings`, and what an unset one means there. */
+const UNLISTED_DEFAULTS: Record<string, unknown> = { transcribeWith: "auto" }
 
 /** Profiles somebody has logged in to, whether or not the configuration file names them. */
 const profilesWithAccounts = (app: AppIdentity, env: NodeJS.ProcessEnv): string[] => {

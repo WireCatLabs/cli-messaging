@@ -6,6 +6,7 @@ import type { Chat, Inbox, InboxChat, MessageHit } from "../../domain/models.js"
 import { renderMessages } from "../../render/messages.js"
 import type { AppIdentity } from "../app.js"
 import { type Messenger, messengerContext } from "./context.js"
+import { heardItems, hearForCommand, hearingFields, spokenItems, TRANSCRIBE_OPTION } from "./hearing-command.js"
 import type { MessengerAdapter } from "./port.js"
 
 /**
@@ -161,8 +162,19 @@ export const inboxCommand = (messenger: Messenger): Command =>
     .option("--since <time>", "what arrived after this ISO 8601 time, or 2h / 1d ago; the saved point stays put")
     .option("--limit <n>", "at most this many per chat, the newest", (value) => Number.parseInt(value, 10))
     .option("--all", "muted and archived chats too — left out unless they mention you or reply to you")
+    .option(...TRANSCRIBE_OPTION)
     .action(async function (this: Command) {
-      const { new: fresh, since, all } = this.opts<{ new?: boolean; since?: string; all?: boolean }>()
+      const {
+        new: fresh,
+        since,
+        all,
+        transcribe,
+      } = this.opts<{
+        new?: boolean
+        since?: string
+        all?: boolean
+        transcribe?: boolean
+      }>()
       const context = messengerContext(this, messenger)
       const { app } = messenger
       const { settings, renderer, format, streams, env } = context
@@ -202,17 +214,24 @@ export const inboxCommand = (messenger: Messenger): Command =>
       if (inbox.partial)
         renderer.note(`only the ${CHAT_WINDOW} newest chats were looked at; an older one may have more`)
 
-      const messages: MessageHit[] = inbox.chats.flatMap((chat) =>
+      const read: MessageHit[] = inbox.chats.flatMap((chat) =>
         chat.messages.map((message) => ({ ...message, chatTitle: chat.title })),
       )
+      const hearing = await hearForCommand(context, messenger, read, transcribe === true)
+      const messages = heardItems(read, hearing)
       if (format === "jsonl") renderer.stream(messages)
-      else if (format !== "pretty") renderer.result(inbox)
-      else if (messages.length === 0) {
+      else if (format !== "pretty") {
+        renderer.result({
+          ...inbox,
+          chats: inbox.chats.map((chat) => ({ ...chat, messages: heardItems(chat.messages, hearing) })),
+          ...hearingFields(hearing, transcribe === true),
+        })
+      } else if (messages.length === 0) {
         renderer.note(inbox.mode === "unread" ? "nothing unread" : `nothing new since ${inbox.since}`)
       } else {
         messages.sort((a, b) => Date.parse(a.timestamp) - Date.parse(b.timestamp))
         streams.data(
-          renderMessages(messages, {
+          renderMessages(spokenItems(messages, hearing), {
             color: context.color,
             verbosity: settings.detail,
             senderColors: settings.senderColors,
