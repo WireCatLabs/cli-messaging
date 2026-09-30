@@ -18,6 +18,7 @@ export const MANIFEST: ManifestEntry[] = [
   // Older builds refuse the file from here on (plan D6): none of them writes normalized_text.
   { name: "20260930003739_version-6-columns", version: 6, minCompatible: 6 },
   { name: "20260930003740_version-6-message-count", version: 6, minCompatible: 6 },
+  { name: "20260930022658_version-7-chat-members", version: 7, minCompatible: 6 },
 ]
 
 export const generatedMigrations = (

@@ -43,5 +43,12 @@ export const GENERATED: { name: string; statements: string[] }[] = [
       "CREATE TRIGGER chats_count_untombstone AFTER UPDATE OF deleted_at ON messages\n  WHEN old.deleted_at IS NOT NULL AND new.deleted_at IS NULL BEGIN\n  UPDATE chats SET message_count = message_count + 1 WHERE pk = new.chat_pk;\nEND;",
       "UPDATE chats SET message_count = counted.n\n  FROM (SELECT chat_pk, count(*) AS n FROM messages WHERE deleted_at IS NULL GROUP BY chat_pk) AS counted\n  WHERE chats.pk = counted.chat_pk;"
     ]
+  },
+  {
+    "name": "20260930022658_version-7-chat-members",
+    "statements": [
+      "CREATE TABLE `chat_members` (\n\t`chat_pk` integer NOT NULL,\n\t`identity_pk` integer NOT NULL,\n\tCONSTRAINT `chat_members_pk` PRIMARY KEY(`chat_pk`, `identity_pk`),\n\tCONSTRAINT `fk_chat_members_chat_pk_chats_pk_fk` FOREIGN KEY (`chat_pk`) REFERENCES `chats`(`pk`),\n\tCONSTRAINT `fk_chat_members_identity_pk_identities_pk_fk` FOREIGN KEY (`identity_pk`) REFERENCES `identities`(`pk`)\n);",
+      "CREATE INDEX `chat_members_by_identity` ON `chat_members` (`identity_pk`);"
+    ]
   }
 ]
