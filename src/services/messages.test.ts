@@ -5,7 +5,8 @@ import { afterEach, describe, expect, it } from "vitest"
 import type { Messenger } from "../cli/messenger/context.js"
 import type { MessengerAdapter } from "../cli/messenger/port.js"
 import type { Chat, Message } from "../domain/models.js"
-import type { SendGuard } from "../sends/guard.js"
+import type { GuardRequest, SendGuard } from "../sends/guard.js"
+import type { SendEntry } from "../sends/journal.js"
 import { type MessageStore, openStore } from "../store/store.js"
 import { onlineDeps, storedDeps } from "./deps.js"
 import { messagesService } from "./messages.js"
@@ -99,5 +100,65 @@ describe("the messages service", () => {
 
     expect(found.items.map((one) => one.id).sort()).toEqual(["1", "2", "3"])
     expect(asked).toEqual([])
+  })
+})
+
+describe("the messages service's writes", () => {
+  const journal: Omit<SendEntry, "at" | "profile">[] = []
+  const guarding = (refuse: boolean): SendGuard =>
+    ({
+      check: (_request: GuardRequest) => {
+        if (refuse) throw Object.assign(new Error("not on the allow-list"), { code: "permission_denied" })
+      },
+      record: (entry: Omit<SendEntry, "at" | "profile">) => journal.push(entry),
+    }) as unknown as SendGuard
+  const writes: string[] = []
+  const writer = {
+    ...adapter,
+    resolve: async (reference: string) => ({ ...chat, id: reference === "Book" ? "7" : reference }),
+    send: async (chatId: string, text: string, options: { sendId: string }) => {
+      writes.push(`send ${chatId} ${text}`)
+      return { sendId: options.sendId, message: { ...thread[0], id: "4", chatId, text } }
+    },
+    delete: async (chatId: string, ids: string[]) => {
+      writes.push(`delete ${chatId} ${ids.join(",")}`)
+    },
+  } as unknown as MessengerAdapter
+
+  afterEach(() => {
+    journal.length = 0
+    writes.length = 0
+  })
+
+  it("sends to the resolved chat, without the markdown marks, and records it", async () => {
+    const sent = await messagesService(onlineDeps(messenger, writer, guarding(false))).send({
+      chat: "Book",
+      text: "**next** chapter",
+      markdown: true,
+    })
+
+    expect(writes).toEqual(["send 7 next chapter"])
+    expect(journal).toMatchObject([{ chatId: "7", kind: "message", outcome: "sent", messageId: "4", length: 12 }])
+    expect(sent.message.id).toBe("4")
+  })
+
+  it("refuses before the messenger is asked, and records the refusal", async () => {
+    const service = messagesService(onlineDeps(messenger, writer, guarding(true)))
+
+    await expect(service.send({ chat: "Book", text: "hi" })).rejects.toThrow(/allow-list/)
+    await expect(service.delete({ chat: "Book", messages: ["1"], forEveryone: false })).rejects.toThrow(/allow-list/)
+
+    expect(writes).toEqual([])
+    expect(journal.map((one) => [one.kind, one.outcome])).toEqual([
+      ["message", "refused"],
+      ["delete", "refused"],
+    ])
+  })
+
+  it("never writes offline", async () => {
+    const service = messagesService(storedDeps(messenger, await keptStore(), account, guarding(false)))
+
+    await expect(service.delete({ chat: "7", messages: ["1"], forEveryone: false })).rejects.toThrow(/--offline/)
+    expect(journal).toEqual([])
   })
 })

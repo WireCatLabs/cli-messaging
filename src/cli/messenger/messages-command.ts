@@ -2,12 +2,9 @@ import { CliError } from "@leemour/cli-core"
 import { annotate } from "@leemour/cli-core/commands"
 import { Command } from "commander"
 import { isLocator, parseLocator } from "../../domain/locator.js"
-import { parseMarkdown } from "../../domain/markdown.js"
 import { sendTime } from "../../domain/send-time.js"
 import { renderMessages } from "../../render/messages.js"
-import type { SendGuard } from "../../sends/guard.js"
-import { newSendId } from "../../sends/send-id.js"
-import { readUpload, type Upload } from "../../sends/upload.js"
+import { readUpload } from "../../sends/upload.js"
 import { afterOf, oneDirection } from "./after.js"
 import { type Messenger, messengerContext } from "./context.js"
 import { downloadSubcommand } from "./download-command.js"
@@ -17,7 +14,6 @@ import { editCommand } from "./messages-edit-command.js"
 import { forwardCommand } from "./messages-forward-command.js"
 import { pinCommand, unpinCommand } from "./messages-pin-command.js"
 import { scheduledCommand } from "./messages-scheduled-command.js"
-import type { MessengerAdapter, Sent } from "./port.js"
 import { readAll } from "./stdin.js"
 import { transcribeSubcommand } from "./transcribe-command.js"
 
@@ -233,8 +229,8 @@ const sendText = async (
   if (body.trim() === "" && attachments.length === 0) {
     throw new CliError("validation_error", "nothing to send — give the text or pipe it in")
   }
-  const sent = await context.withMessenger((connection) =>
-    guardedSend(context.guard, connection, {
+  const sent = await context.withServices((services) =>
+    services.messages.send({
       chat,
       text: body,
       ...(sendId === undefined ? {} : { sendId }),
@@ -251,84 +247,6 @@ const sendText = async (
     context.renderer.result({ sendId: sent.sendId, message: sent.message, scheduledFor })
   } else context.renderer.result({ sendId: sent.sendId, message: sent.message })
 }
-
-/** Resolve → check → send → record: one path for `messages send`, `reply` and the MCP send tool. */
-export const guardedSend = async (
-  guard: SendGuard,
-  connection: MessengerAdapter,
-  { chat, text: typed, sendId, replyTo, silent, noPreview, markdown, at, attachments = [] }: GuardedSend,
-): Promise<Sent> => {
-  if (at !== undefined && sendId !== undefined) {
-    throw new CliError(
-      "validation_error",
-      "a scheduled send is never repeated: it would be scheduled twice — look in `messages scheduled` instead",
-    )
-  }
-  const { text, markup } = markdown ? parseMarkdown(typed) : { text: typed, markup: [] }
-  if (text.trim() === "" && attachments.length === 0) {
-    throw new CliError("validation_error", "nothing to send — the marks leave no text")
-  }
-  const { id: chatId } = await connection.resolve(chat)
-  const attempt = {
-    chatId,
-    kind: "message" as const,
-    sendId: sendId ?? newSendId(),
-    length: text.length,
-    ...(replyTo === undefined ? {} : { replyTo }),
-    ...(at === undefined ? {} : { scheduledFor: at }),
-    ...(attachments.length === 0
-      ? {}
-      : { attachments: attachments.map(({ kind, bytes }) => ({ kind, bytes: bytes.byteLength })) }),
-  }
-  try {
-    guard.check(attempt)
-  } catch (error) {
-    guard.record({ ...attempt, outcome: "refused", errorCode: codeOf(error) })
-    throw error
-  }
-  try {
-    const done = await connection.send(chatId, text, {
-      sendId: attempt.sendId,
-      ...(replyTo === undefined ? {} : { replyTo }),
-      ...(silent ? { silent } : {}),
-      ...(noPreview ? { noPreview } : {}),
-      ...(markup.length > 0 ? { markup } : {}),
-      ...(at === undefined ? {} : { at }),
-      ...(attachments.length === 0 ? {} : { attachments }),
-    })
-    guard.record({ ...attempt, outcome: "sent", messageId: done.message.id })
-    return done
-  } catch (error) {
-    const code = codeOf(error)
-    guard.record({ ...attempt, outcome: code === "outcome_unknown" ? "outcome_unknown" : "failed", errorCode: code })
-    if (at !== undefined && code === "outcome_unknown") {
-      throw new CliError(
-        "outcome_unknown",
-        "no answer — the message may have been scheduled. Look in `messages scheduled` before anything else; " +
-          "never send it again with --send-id",
-        { scheduledFor: at },
-      )
-    }
-    throw error
-  }
-}
-
-interface GuardedSend {
-  chat: string
-  /** As typed: with `markdown`, the marks are taken out before it is sent or measured. */
-  text: string
-  sendId?: string
-  replyTo?: string
-  silent?: boolean
-  noPreview?: boolean
-  markdown?: boolean
-  /** ISO time to send it at; refused together with `sendId`. */
-  at?: string
-  attachments?: Upload[]
-}
-
-const codeOf = (error: unknown): string =>
-  typeof (error as { code?: unknown })?.code === "string" ? (error as { code: string }).code : "unknown"
 
 type Window = { before: number; after: number }
 

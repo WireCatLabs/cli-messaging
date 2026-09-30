@@ -1,13 +1,15 @@
 import * as v from "valibot"
 import type { Messenger } from "../../cli/messenger/context.js"
-import { guardedEdit } from "../../cli/messenger/messages-edit-command.js"
-import { guardedForward } from "../../cli/messenger/messages-forward-command.js"
-import { guardedPin } from "../../cli/messenger/messages-pin-command.js"
+import type { MessengerAdapter } from "../../cli/messenger/port.js"
+import type { SendGuard } from "../../sends/guard.js"
+import { messagesService, onlineDeps } from "../../services/index.js"
 import { type AnyTool, APPROVE, chatOf, message, tool, WRITE } from "../tool.js"
 
 /** What changes a message others already have, offered with `--allow-send`, each behind its own `allow` permission. */
 export const messageActionTools = (messenger: Messenger): Record<string, AnyTool> => {
   const chat = chatOf(messenger)
+  const messages = (adapter: MessengerAdapter, guard: SendGuard) =>
+    messagesService(onlineDeps(messenger, adapter, guard))
   return {
     messages_edit: tool({
       title: "Edit a message",
@@ -19,7 +21,7 @@ export const messageActionTools = (messenger: Messenger): Record<string, AnyTool
       _meta: APPROVE,
       permission: "edit",
       online: async (adapter, args, { guard }) => ({
-        message: await guardedEdit(guard, adapter, { chat: args.chat, message: args.message, text: args.text }),
+        message: await messages(adapter, guard).edit({ chat: args.chat, message: args.message, text: args.text }),
       }),
     }),
     messages_forward: tool({
@@ -38,7 +40,7 @@ export const messageActionTools = (messenger: Messenger): Record<string, AnyTool
       _meta: APPROVE,
       permission: "forward",
       online: async (adapter, args, { guard }) => ({
-        message: await guardedForward(guard, adapter, {
+        message: await messages(adapter, guard).forward({
           chat: args.chat,
           message: args.message,
           to: args.to,
@@ -60,12 +62,7 @@ export const messageActionTools = (messenger: Messenger): Record<string, AnyTool
       _meta: APPROVE,
       permission: "pin",
       online: (adapter, args, { guard }) =>
-        guardedPin(guard, adapter, {
-          chat: args.chat,
-          message: args.message,
-          pinned: true,
-          notify: args.notify === true,
-        }),
+        messages(adapter, guard).pin({ chat: args.chat, message: args.message, notify: args.notify === true }),
     }),
     messages_unpin: tool({
       title: "Unpin a message",
@@ -74,8 +71,7 @@ export const messageActionTools = (messenger: Messenger): Record<string, AnyTool
       annotations: WRITE,
       _meta: APPROVE,
       permission: "pin",
-      online: (adapter, args, { guard }) =>
-        guardedPin(guard, adapter, { chat: args.chat, message: args.message, pinned: false, notify: false }),
+      online: (adapter, args, { guard }) => messages(adapter, guard).unpin({ chat: args.chat, message: args.message }),
     }),
   }
 }

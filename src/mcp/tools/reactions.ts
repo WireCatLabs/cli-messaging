@@ -1,11 +1,15 @@
 import * as v from "valibot"
 import type { Messenger } from "../../cli/messenger/context.js"
-import { guardedReaction } from "../../cli/messenger/reactions-command.js"
+import type { MessengerAdapter } from "../../cli/messenger/port.js"
+import type { SendGuard } from "../../sends/guard.js"
+import { messagesService, onlineDeps } from "../../services/index.js"
 import { type AnyTool, APPROVE, chatOf, message, tool, WRITE } from "../tool.js"
 
 /** Offered with `--allow-send`, under the `reaction` permission. */
 export const reactionTools = (messenger: Messenger): Record<string, AnyTool> => {
   const chat = chatOf(messenger)
+  const messages = (adapter: MessengerAdapter, guard: SendGuard) =>
+    messagesService(onlineDeps(messenger, adapter, guard))
   return {
     reactions_add: tool({
       title: "React to a message",
@@ -21,7 +25,7 @@ export const reactionTools = (messenger: Messenger): Record<string, AnyTool> => 
       _meta: APPROVE,
       permission: "reaction",
       online: (adapter, args, { guard }) =>
-        guardedReaction(guard, adapter, { chat: args.chat, message: args.message, emoji: args.emoji }),
+        messages(adapter, guard).react({ chat: args.chat, message: args.message, emoji: args.emoji }),
     }),
     reactions_remove: tool({
       title: "Take a reaction off",
@@ -31,7 +35,7 @@ export const reactionTools = (messenger: Messenger): Record<string, AnyTool> => 
       _meta: APPROVE,
       permission: "reaction",
       online: (adapter, args, { guard }) =>
-        guardedReaction(guard, adapter, { chat: args.chat, message: args.message, emoji: null }),
+        messages(adapter, guard).react({ chat: args.chat, message: args.message, emoji: null }),
     }),
   }
 }
