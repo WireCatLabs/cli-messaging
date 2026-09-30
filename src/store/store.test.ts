@@ -197,6 +197,36 @@ describe("the message store", () => {
     await store.close()
   })
 
+  it("leaves a chat known only by its id out of a deletion that names no chat", async () => {
+    const store = await openStore({ path: fresh() })
+    const dialog: Chat = { ...chat, id: "555", kind: "dialog", providerMetadata: {} }
+    await store.saveChats(ME, [dialog])
+    await store.saveMessages(ME, dialog.id, [message({ chatId: dialog.id })], { via: "history" })
+    await store.saveMessages(ME, "-1009999", [message({ chatId: "-1009999" })], { via: "update" })
+
+    expect(await store.markDeleted(ME, ["42"])).toBe(1)
+    expect(await store.message(ME, "42", { chatId: dialog.id })).toBeUndefined()
+    expect(await store.message(ME, "42", { chatId: "-1009999" })).toBeDefined()
+    await store.close()
+  })
+
+  it("**lifts a tombstone older than a read that still returned the message**, and keeps a newer one", async () => {
+    let clock = 1_000
+    const store = await openStore({ path: fresh(), now: () => clock })
+    await store.saveMessages(ME, chat.id, [message(), message({ id: "43" })], { via: "history" })
+    await store.markDeleted(ME, ["42", "43"], { chatId: chat.id })
+    clock = 2_000
+
+    await store.saveMessages(ME, chat.id, [message()], { via: "history", seenAt: 1_500 })
+    await store.saveMessages(ME, chat.id, [message({ id: "43" })], { via: "history", seenAt: 500 })
+    await store.saveMessages(ME, chat.id, [message({ id: "43" })], { via: "history" })
+
+    expect(await store.message(ME, "42", { chatId: chat.id })).toBeDefined()
+    expect(await store.message(ME, "43", { chatId: chat.id })).toBeUndefined()
+    expect((await store.search("empadronamiento", { limit: 10 })).items.map((hit) => hit.id)).toEqual(["42"])
+    await store.close()
+  })
+
   it("keeps a deleted message out of reads and search, in its own chat only", async () => {
     const store = await openStore({ path: fresh() })
     await store.saveMessages(ME, chat.id, [message(), message({ id: "43" })], { via: "history" })

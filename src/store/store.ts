@@ -74,7 +74,16 @@ export interface MessageStore {
   saveAccount(key: AccountKey, account: { name: string | null }): Promise<void>
   saveChats(key: AccountKey, chats: Chat[]): Promise<void>
   /** A scheduled message is not kept: it is not history yet. */
-  saveMessages(key: AccountKey, chatId: Id, messages: Message[], options: { via: IngestedVia }): Promise<void>
+  /**
+   * `seenAt` is when the messenger was asked: a message it still returned is not deleted, so a
+   * tombstone older than that is lifted. A tombstone set after it stays — the deletion is newer.
+   */
+  saveMessages(
+    key: AccountKey,
+    chatId: Id,
+    messages: Message[],
+    options: { via: IngestedVia; seenAt?: number },
+  ): Promise<void>
   chats(key: AccountKey, window: { limit?: number; offset?: number }): Promise<Page<Chat>>
   /** Oldest to newest, like a provider's history page. */
   messages(key: AccountKey, chatId: Id, window: { limit: number; before?: Id }): Promise<Page<Message>>
@@ -323,7 +332,14 @@ const storeOver = (database: CacheDatabase, now: () => number): MessageStore => 
     return identity
   }
 
-  const upsertMessage = (key: AccountKey, accountKey: number, chatKey: number, message: Message, via: string) => {
+  const upsertMessage = (
+    key: AccountKey,
+    accountKey: number,
+    chatKey: number,
+    message: Message,
+    via: string,
+    seenAt?: number,
+  ) => {
     const sender =
       message.senderId === null || message.senderIsChat
         ? null
@@ -349,7 +365,8 @@ const storeOver = (database: CacheDatabase, now: () => number): MessageStore => 
       message.id,
     )
     // A deleted message gets no second copy of its text (the owner's ruling: deletion leaves no text).
-    const normalized: Record<string, SqlValue> = found?.deleted_at == null ? searchable(message.text) : {}
+    const revived = found?.deleted_at != null && seenAt !== undefined && Number(found.deleted_at) < seenAt
+    const normalized: Record<string, SqlValue> = found?.deleted_at == null || revived ? searchable(message.text) : {}
     let pk: number
     if (!found) {
       const columns = [...Object.keys(fields), ...Object.keys(normalized)]
@@ -389,6 +406,7 @@ const storeOver = (database: CacheDatabase, now: () => number): MessageStore => 
         )
         run("UPDATE messages SET text = ? WHERE pk = ?", message.text, pk)
       }
+      if (revived) run("UPDATE messages SET deleted_at = NULL WHERE pk = ?", pk)
     }
 
     message.attachments.forEach((attachment, position) => {
@@ -568,12 +586,12 @@ const storeOver = (database: CacheDatabase, now: () => number): MessageStore => 
         for (const chat of chats) upsertChat(accountKey, chat)
       }),
 
-    saveMessages: async (key, chatId, messages, { via }) =>
+    saveMessages: async (key, chatId, messages, { via, seenAt }) =>
       inTransaction(() => {
         const accountKey = accountPk(key)
         const chatKey = chatPkFor(accountKey, chatId)
         for (const message of messages) {
-          if (message.scheduledFor === undefined) upsertMessage(key, accountKey, chatKey, message, via)
+          if (message.scheduledFor === undefined) upsertMessage(key, accountKey, chatKey, message, via, seenAt)
         }
       }),
 
@@ -664,6 +682,9 @@ const storeOver = (database: CacheDatabase, now: () => number): MessageStore => 
     markDeleted: async (key, messageIds, { chatId } = {}) => {
       const accountKey = findAccountPk(key)
       if (accountKey === undefined || messageIds.length === 0) return 0
+      // A Telegram chat stored only by its id, from a message seen before the chat, has no kind yet —
+      // but a channel's or a supergroup's id is marked `-100…`, which says enough.
+      const stubs = key.provider === "telegram" ? "AND NOT (c.kind = 'unknown' AND c.native_id LIKE '-100%')" : ""
       let changed = 0
       inTransaction(() => {
         for (const messageId of messageIds) {
@@ -684,7 +705,7 @@ const storeOver = (database: CacheDatabase, now: () => number): MessageStore => 
           // means the id is ambiguous, and a missed tombstone is better than a wrong one.
           const candidates = all(
             `SELECT m.pk FROM messages m JOIN chats c ON c.pk = m.chat_pk
-             WHERE m.account_pk = ? AND m.native_id = ? AND m.deleted_at IS NULL AND c.kind <> 'channel'
+             WHERE m.account_pk = ? AND m.native_id = ? AND m.deleted_at IS NULL AND c.kind <> 'channel' ${stubs}
                AND coalesce(json_extract(c.provider_metadata, '$.chatType'), '') NOT IN ${OWN_NUMBERING}`,
             accountKey,
             messageId,
