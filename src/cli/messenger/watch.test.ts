@@ -77,7 +77,7 @@ describe("watch", () => {
     const { code, streams, env } = await call(["watch", "--jsonl"], listening([hit("1"), hit("2")], asked), stop.signal)
 
     expect(code).toBe(0)
-    expect(asked).toEqual([{ listen: true }])
+    expect(asked).toEqual([{ listen: true, events: expect.any(Function) }])
     expect(streams.stdout.map((line) => JSON.parse(line).id)).toEqual(["1", "2"])
     const offline = captureStreams()
     const messenger: Messenger = {
