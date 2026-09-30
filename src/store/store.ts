@@ -141,7 +141,17 @@ export interface MessageStore {
    * where ids are unique per account (MAX) and refused where two chats share one (Telegram).
    */
   message(key: AccountKey, messageId: Id, options?: { chatId?: Id }): Promise<Message | undefined>
-  /** A tombstone, not a removal: the row stays, and reads and search stop returning it. */
+  /**
+   * Everything one account holds — its chats, messages, members, state, leases, transcripts and whom
+   * it has seen — for `cache clear`. Other accounts, and identities they share, stay.
+   */
+  purge(key: AccountKey): Promise<void>
+  /**
+   * A tombstone, not a removal: the row stays, so a copy fetched before the deletion does not bring
+   * the message back, and reads and search stop returning it. Its text goes — from the row, the
+   * search copy, the edit history and the transcript. Only the messenger returning it again, when
+   * asked after the deletion, lifts the tombstone (`saveMessages`' `seenAt`).
+   */
   markDeleted(key: AccountKey, messageIds: Id[], options?: { chatId?: Id }): Promise<number>
   /** Newest first. At least three characters: a trigram index answers a shorter query with nothing. */
   search(query: string, options: { limit: number; account?: AccountKey }): Promise<Page<StoredHit>>
@@ -422,9 +432,10 @@ const storeOver = (database: CacheDatabase, now: () => number): MessageStore => 
       chatKey,
       message.id,
     )
-    // A deleted message gets no second copy of its text (the owner's ruling: deletion leaves no text).
     const revived = found?.deleted_at != null && seenAt !== undefined && Number(found.deleted_at) < seenAt
-    const normalized: Record<string, SqlValue> = found?.deleted_at == null || revived ? searchable(message.text) : {}
+    // A deleted message leaves no text behind, and a sync that still carries it does not bring it back.
+    if (found?.deleted_at != null && !revived) return
+    const normalized = searchable(message.text)
     let pk: number
     if (!found) {
       const columns = [...Object.keys(fields), ...Object.keys(normalized)]
@@ -454,7 +465,8 @@ const storeOver = (database: CacheDatabase, now: () => number): MessageStore => 
         ...Object.values(normalized),
         pk,
       )
-      if (found.text !== message.text) {
+      // A tombstone emptied the text: there is no earlier version to keep.
+      if (found.text !== message.text && !revived) {
         run(
           "INSERT INTO message_revisions (message_pk, text, edited_at, captured_at) VALUES (?, ?, ?, ?)",
           pk,
@@ -464,7 +476,7 @@ const storeOver = (database: CacheDatabase, now: () => number): MessageStore => 
         )
         run("UPDATE messages SET text = ? WHERE pk = ?", message.text, pk)
       }
-      if (revived) run("UPDATE messages SET deleted_at = NULL WHERE pk = ?", pk)
+      if (revived) run("UPDATE messages SET deleted_at = NULL, text = ? WHERE pk = ?", message.text, pk)
     }
 
     message.attachments.forEach((attachment, position) => {
@@ -628,6 +640,27 @@ const storeOver = (database: CacheDatabase, now: () => number): MessageStore => 
       after = [Number(last.sent_at), Number(last.pk)]
     }
     return found
+  }
+
+  /**
+   * The owner's ruling (NEED-393 A): a deleted message keeps its row, so a later sync cannot bring it
+   * back, and leaves no text — not in the row, the search copy, the edit history or a transcript.
+   */
+  const tombstone = (pk: number): number => {
+    const row = one(
+      `UPDATE messages SET deleted_at = ?, text = '', normalized_text = NULL
+       WHERE pk = ? AND deleted_at IS NULL RETURNING chat_pk, native_id`,
+      now(),
+      pk,
+    )
+    if (!row) return 0
+    run("DELETE FROM message_revisions WHERE message_pk = ?", pk)
+    run(
+      "DELETE FROM transcripts WHERE chat_pk = ? AND message_native_id = ?",
+      Number(row.chat_pk),
+      String(row.native_id),
+    )
+    return 1
   }
 
   const chatsWhere = (accountKey: number, { query, kind, unread }: StoredChatFilter) => {
@@ -955,15 +988,15 @@ const storeOver = (database: CacheDatabase, now: () => number): MessageStore => 
       inTransaction(() => {
         for (const messageId of messageIds) {
           if (chatId !== undefined) {
-            changed += run(
-              `UPDATE messages SET deleted_at = ? WHERE account_pk = ? AND native_id = ? AND deleted_at IS NULL
+            const found = one(
+              `SELECT pk FROM messages WHERE account_pk = ? AND native_id = ? AND deleted_at IS NULL
                AND chat_pk = (SELECT pk FROM chats WHERE account_pk = ? AND native_id = ?)`,
-              now(),
               accountKey,
               messageId,
               accountKey,
               chatId,
-            ).changes
+            )
+            if (found) changed += tombstone(Number(found.pk))
             continue
           }
           // Telegram names a deletion without its chat only where ids count per account; a channel or
@@ -977,10 +1010,33 @@ const storeOver = (database: CacheDatabase, now: () => number): MessageStore => 
             messageId,
           )
           if (candidates.length !== 1) continue
-          changed += run("UPDATE messages SET deleted_at = ? WHERE pk = ?", now(), candidates[0]?.pk as number).changes
+          changed += tombstone(Number(candidates[0]?.pk))
         }
       })
       return changed
+    },
+
+    purge: async (key) => {
+      const accountKey = findAccountPk(key)
+      if (accountKey === undefined) return
+      const chatsOf = "SELECT pk FROM chats WHERE account_pk = ?"
+      inTransaction(() => {
+        for (const sql of [
+          `DELETE FROM transcripts WHERE chat_pk IN (${chatsOf})`,
+          `DELETE FROM fetch_leases WHERE chat_pk IN (${chatsOf})`,
+          `DELETE FROM chat_members WHERE chat_pk IN (${chatsOf})`,
+          `DELETE FROM sync_ranges WHERE chat_pk IN (${chatsOf})`,
+          "DELETE FROM message_revisions WHERE message_pk IN (SELECT pk FROM messages WHERE account_pk = ?)",
+          "DELETE FROM attachments WHERE message_pk IN (SELECT pk FROM messages WHERE account_pk = ?)",
+          "DELETE FROM messages WHERE account_pk = ?",
+          "DELETE FROM chats WHERE account_pk = ?",
+          "DELETE FROM sync_state WHERE account_pk = ?",
+          "DELETE FROM account_identities WHERE account_pk = ?",
+          "DELETE FROM accounts WHERE pk = ?",
+        ]) {
+          run(sql, accountKey)
+        }
+      })
     },
 
     search: async (query, { limit, account }) => find({ text: query, limit, ...(account ? { account } : {}) }),

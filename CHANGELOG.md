@@ -12,6 +12,11 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   transcript belongs to the account the profile last logged in as; a profile never online keeps none.
   `Kept` answers promises now (`get`, `keep`, `close`). Transcripts kept in the old per-profile files
   are not read: each voice message is heard once more, and the old files can be deleted.
+- **A deleted message leaves no text behind.** `markDeleted` keeps the tombstone and now empties the
+  text, drops the search copy, the edit history and the transcript — in tg-cli and max-cli alike.
+  `saveMessages` leaves a deleted message as it is, unless `seenAt` says the messenger returned it
+  after the deletion: then it comes back with its text. A caller that read a deleted message's text
+  from the store gets `""`.
 
 ### Added
 
@@ -32,6 +37,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   of a title), `kind` and `unread`, with `countChats` for the same filter; `messages` takes `since`,
   with `countMessages`; `messagesWindow(key, chatId, { at, before, after })` reads around a moment,
   as `around` reads around a message id. Type `StoredChatFilter`.
+- **`purge(key)`** removes everything one account holds — chats, messages, members, sync state,
+  leases, transcripts, whom it has seen — for `cache clear`; other accounts stay whole.
 
 ## 0.56.0 — 30.09.2026
 
