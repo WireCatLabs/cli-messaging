@@ -12,6 +12,10 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   for the account — a delta marker, when a list was last complete — with when it was set;
   `setSyncState` and `clearSyncState` change it. Values are text; a caller encodes a number itself.
   Additive: a build on version 6 keeps working on the file.
+- **Fetch leases in the store** (store version 9): `claim(key, chatId, anchor, holder, forMs)` takes a
+  stretch of a chat for a while and answers whether this holder has it — refused while another
+  holder's lease runs, renewed for the same holder — and `release` gives it back. Two processes
+  backfilling one chat no longer fetch the same pages. Additive: a build on version 6 keeps working.
 
 ## 0.55.0 — 30.09.2026
 

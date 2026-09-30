@@ -96,6 +96,13 @@ export interface MessageStore {
   syncState(key: AccountKey, name: string): Promise<{ value: string; at: string } | undefined>
   setSyncState(key: AccountKey, name: string, value: string): Promise<void>
   clearSyncState(key: AccountKey, name: string): Promise<void>
+  /**
+   * Takes the stretch of a chat at `anchor` for `forMs`; answers whether `holder` has it. Refused
+   * while another holder's lease runs; the same holder renews its own.
+   */
+  claim(key: AccountKey, chatId: Id, anchor: string, holder: string, forMs: number): Promise<boolean>
+  /** Gives the stretch back, if `holder` still has it. */
+  release(key: AccountKey, chatId: Id, anchor: string, holder: string): Promise<void>
   /** Oldest to newest, like a provider's history page. */
   messages(key: AccountKey, chatId: Id, window: { limit: number; before?: Id }): Promise<Page<Message>>
   /**
@@ -672,6 +679,32 @@ const storeOver = (database: CacheDatabase, now: () => number): MessageStore => 
     clearSyncState: async (key, name) => {
       const accountKey = findAccountPk(key)
       if (accountKey !== undefined) run("DELETE FROM sync_state WHERE account_pk = ? AND key = ?", accountKey, name)
+    },
+
+    claim: async (key, chatId, anchor, holder, forMs) => {
+      let taken = false
+      inTransaction(() => {
+        const at = now()
+        taken =
+          run(
+            `INSERT INTO fetch_leases (chat_pk, anchor, holder, expires_at) VALUES (?, ?, ?, ?)
+             ON CONFLICT (chat_pk, anchor) DO UPDATE SET holder = excluded.holder, expires_at = excluded.expires_at
+             WHERE fetch_leases.holder = excluded.holder OR fetch_leases.expires_at <= ?`,
+            chatPkFor(accountPk(key), chatId),
+            anchor,
+            holder,
+            at + forMs,
+            at,
+          ).changes > 0
+      })
+      return taken
+    },
+
+    release: async (key, chatId, anchor, holder) => {
+      const accountKey = findAccountPk(key)
+      const chatKey = accountKey === undefined ? undefined : findChatPk(accountKey, chatId)
+      if (chatKey === undefined) return
+      run("DELETE FROM fetch_leases WHERE chat_pk = ? AND anchor = ? AND holder = ?", chatKey, anchor, holder)
     },
 
     chats: async (key, { limit, offset = 0 }) => {
