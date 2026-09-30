@@ -1,8 +1,8 @@
 import * as v from "valibot"
 import { afterOf, oneDirection } from "../../cli/messenger/after.js"
 import type { Messenger } from "../../cli/messenger/context.js"
-import { storedChatId } from "../../cli/messenger/messages-command.js"
 import { capability } from "../../cli/messenger/port.js"
+import { messagesService, onlineDeps, storedDeps } from "../../services/index.js"
 import { heard, hearForTool } from "../../speech/hearing.js"
 import { type AnyTool, chatOf, limit, message, nameOf, READ, tool } from "../tool.js"
 
@@ -31,20 +31,11 @@ export const messagesTools = (messenger: Messenger): Record<string, AnyTool> => 
       online: async (adapter, args, defaults) => {
         const size = args.limit ?? defaults.limit
         oneDirection(args.before, args.after)
-        const found =
-          args.after === undefined
-            ? await adapter.history(args.chat, {
-                limit: size,
-                ...(args.before === undefined ? {} : { before: args.before }),
-              })
-            : await capability(
-                adapter,
-                "historyAfter",
-                "read forward from a message",
-              )(args.chat, {
-                limit: size,
-                after: afterOf(args.after, "after"),
-              })
+        const found = await messagesService(onlineDeps(messenger, adapter, defaults.guard)).list(args.chat, {
+          limit: size,
+          ...(args.before === undefined ? {} : { before: args.before }),
+          ...(args.after === undefined ? {} : { after: afterOf(args.after, "after") }),
+        })
         const hearing = await hearForTool(messenger, adapter, found.items, args.transcribe === true, defaults)
         return {
           items: heard(found.items, hearing),
@@ -67,8 +58,11 @@ export const messagesTools = (messenger: Messenger): Record<string, AnyTool> => 
         after: v.optional(v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(100))),
       }),
       annotations: READ,
-      online: async (adapter, args) => ({
-        items: await adapter.around(args.chat, args.message, { before: args.before ?? 0, after: args.after ?? 0 }),
+      online: async (adapter, args, defaults) => ({
+        items: await messagesService(onlineDeps(messenger, adapter, defaults.guard)).around(args.chat, args.message, {
+          before: args.before ?? 0,
+          after: args.after ?? 0,
+        }),
       }),
     }),
 
@@ -98,11 +92,10 @@ export const messagesTools = (messenger: Messenger): Record<string, AnyTool> => 
       annotations: { ...READ, openWorldHint: false },
       stored: async (store, account, args, defaults) => {
         const size = args.limit ?? defaults.limit
-        const found = await store.find({
+        const found = await messagesService(storedDeps(messenger, store, account, defaults.guard)).search({
           text: args.text,
-          account,
           limit: size,
-          ...(args.chat === undefined ? {} : { chatId: await storedChatId(messenger, args.chat, store, account) }),
+          ...(args.chat === undefined ? {} : { chat: args.chat }),
         })
         return { items: found.items, limit: size, hasMore: found.hasMore }
       },

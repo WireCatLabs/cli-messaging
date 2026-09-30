@@ -5,11 +5,9 @@ import { isLocator, parseLocator } from "../../domain/locator.js"
 import { parseMarkdown } from "../../domain/markdown.js"
 import { sendTime } from "../../domain/send-time.js"
 import { renderMessages } from "../../render/messages.js"
-import { pickChat } from "../../resolve.js"
 import type { SendGuard } from "../../sends/guard.js"
 import { newSendId } from "../../sends/send-id.js"
 import { readUpload, type Upload } from "../../sends/upload.js"
-import type { AccountKey, MessageStore } from "../../store/store.js"
 import { afterOf, oneDirection } from "./after.js"
 import { type Messenger, messengerContext } from "./context.js"
 import { downloadSubcommand } from "./download-command.js"
@@ -19,7 +17,7 @@ import { editCommand } from "./messages-edit-command.js"
 import { forwardCommand } from "./messages-forward-command.js"
 import { pinCommand, unpinCommand } from "./messages-pin-command.js"
 import { scheduledCommand } from "./messages-scheduled-command.js"
-import { capability, type MessengerAdapter, type Sent } from "./port.js"
+import type { MessengerAdapter, Sent } from "./port.js"
 import { readAll } from "./stdin.js"
 import { transcribeSubcommand } from "./transcribe-command.js"
 
@@ -40,24 +38,13 @@ export const messagesCommand = (messenger: Messenger): Command => {
       const { before, after, transcribe } = this.opts<{ before?: string; after?: string; transcribe?: boolean }>()
       oneDirection(before, after)
       const { limit } = context.settings
-      const wanted = { limit, ...(before === undefined ? {} : { before }) }
-      if (after !== undefined && context.settings.offline) {
-        throw new CliError("validation_error", "--after reads from the messenger; the store pages only backwards")
-      }
-      const page =
-        after !== undefined
-          ? await context.withMessenger((connection) =>
-              capability(
-                connection,
-                "historyAfter",
-                "read forward from a message",
-              )(chat, { limit, after: afterOf(after) }),
-            )
-          : context.settings.offline
-            ? await context.withStore(async (store, account) =>
-                store.messages(account, await storedChatId(messenger, chat, store, account), wanted),
-              )
-            : await context.withMessenger((connection) => connection.history(chat, wanted))
+      const page = await context.withServices((services) =>
+        services.messages.list(chat, {
+          limit,
+          ...(before === undefined ? {} : { before }),
+          ...(after === undefined ? {} : { after: afterOf(after) }),
+        }),
+      )
       const hearing = await hearForCommand(context, messenger, page.items, transcribe === true)
       const next = (items: typeof page.items) =>
         after === undefined ? `older messages: --before ${items[0]?.id}` : `newer messages: --after ${items.at(-1)?.id}`
@@ -91,11 +78,9 @@ export const messagesCommand = (messenger: Messenger): Command => {
   const readWindow = async (command: Command, chat: string, message: string | undefined, window: Window) => {
     const context = messengerContext(command, messenger)
     const target = targetOf(messenger, chat, message)
-    const found = context.settings.offline
-      ? await context.withStore(async (store, account) =>
-          store.around(account, await storedChatId(messenger, target.chat, store, account), target.message, window),
-        )
-      : await context.withMessenger((connection) => connection.around(target.chat, target.message, window))
+    const found = await context.withServices((services) =>
+      services.messages.around(target.chat, target.message, window),
+    )
     if (context.format === "pretty") {
       context.streams.data(
         renderMessages(found, {
@@ -122,12 +107,11 @@ export const messagesCommand = (messenger: Messenger): Command => {
       const { chat, regex } = this.opts<{ chat?: string; regex?: boolean }>()
       const { limit } = context.settings
       const pattern = regex ? patternOf(words.join(" ")) : undefined
-      const page = await context.withStore(async (store, account) =>
-        store.find({
+      const page = await context.withServices((services) =>
+        services.messages.search({
           ...(pattern ? { pattern } : { text: words.join(" ") }),
-          account,
           limit,
-          ...(chat === undefined ? {} : { chatId: await storedChatId(messenger, chat, store, account) }),
+          ...(chat === undefined ? {} : { chat }),
         }),
       )
       if (context.format === "pretty") {
@@ -368,32 +352,10 @@ const targetOf = (messenger: Messenger, chat: string, message: string | undefine
   return { chat, message: message.trim() }
 }
 
-/** A chat as typed, found among the stored chats the way an adapter finds it among its own. */
 const patternOf = (source: string): RegExp => {
   try {
     return new RegExp(source, "iu")
   } catch (error) {
     throw new CliError("validation_error", `not a regular expression: ${(error as Error).message}`)
   }
-}
-
-export const storedChatId = async (
-  messenger: Messenger,
-  reference: string,
-  store: MessageStore,
-  account: AccountKey,
-): Promise<string> => {
-  const trimmed = reference.trim()
-  if (messenger.savedChatId && ["me", "self", "saved"].includes(trimmed.toLowerCase())) {
-    return messenger.savedChatId(account)
-  }
-  if (/^-?\d+$/.test(trimmed)) return trimmed
-  const chats = (await store.chats(account, {})).items
-  if (trimmed.startsWith("@")) {
-    const username = trimmed.slice(1).toLowerCase()
-    const found = chats.find((one) => String(one.providerMetadata?.username ?? "").toLowerCase() === username)
-    if (!found) throw new CliError("not_found", `no stored chat is ${trimmed}`)
-    return found.id
-  }
-  return pickChat(trimmed, chats).id
 }
