@@ -1,5 +1,18 @@
-import { existsSync, statfsSync, statSync } from "node:fs"
-import { dirname } from "node:path"
+import {
+  chmodSync,
+  constants,
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  realpathSync,
+  renameSync,
+  rmSync,
+  statfsSync,
+  statSync,
+  writeFileSync,
+} from "node:fs"
+import { dirname, resolve } from "node:path"
+import { CliError } from "@leemour/cli-core"
 import { Command } from "commander"
 import type { CacheDatabase } from "../../store/driver.js"
 import { MIGRATIONS, migrate } from "../../store/migrations.js"
@@ -8,6 +21,8 @@ import { storePath } from "../../store/path.js"
 import { backfillNormalized, pendingNormalization } from "../../store/sqlite/backfill.js"
 import { environmentOf, outputFor } from "../context.js"
 import type { Messenger } from "./context.js"
+import { holdersOf } from "./processes.js"
+import { servingProfiles } from "./serve-command.js"
 
 const SPEAKS = MIGRATIONS.at(-1)?.version ?? 0
 const SEARCH_INDEXES = ["messages_fts", "chats_fts", "identities_fts"]
@@ -69,6 +84,8 @@ export const storeMaintenanceCommands = (messenger: Messenger): Command[] => [
   infoCommand(),
   checkCommand(messenger),
   migrateCommand(messenger),
+  backupCommand(),
+  restoreCommand(messenger),
 ]
 
 const infoCommand = (): Command =>
@@ -120,7 +137,11 @@ const checkCommand = (messenger: Messenger): Command =>
       }
       renderer.result(answer)
       const { command } = messenger.app
-      if (answer.schema.version < SPEAKS) renderer.note(`the file is behind this build — \`${command} store migrate\``)
+      if (answer.schema.version < SPEAKS) {
+        renderer.note(
+          `the file is behind this build — a copy first, \`${command} store backup <file>\`, then \`${command} store migrate\``,
+        )
+      }
       if (answer.pendingNormalization) {
         renderer.note(`${answer.pendingNormalization} messages wait for normalization — \`${command} store migrate\``)
       }
@@ -226,6 +247,143 @@ const migrateCommand = (messenger: Messenger): Command =>
       })
       renderer.result(answer)
     })
+
+const backupCommand = (): Command =>
+  new Command("backup")
+    .description("copy the store into a new file, while it is in use; never overwrites a file")
+    .argument("<file>", "the new file")
+    .action(async function (this: Command, file: string) {
+      const { renderer } = outputFor(this)
+      const path = storePath(environmentOf(this).env ?? process.env)
+      const target = resolve(file)
+      if (!existsSync(path)) throw new CliError("not_found", `no store at ${path} to back up`)
+      if (existsSync(target))
+        throw new CliError("validation_error", `${target} exists — a backup never overwrites a file`)
+      // VACUUM INTO fills an empty file and keeps its mode; a file it creates itself is readable by all.
+      writeFileSync(target, "", { flag: "wx", mode: 0o600 })
+      try {
+        await reading(path, (database) => database.prepare("VACUUM INTO ?").run(target))
+      } catch (error) {
+        rmSync(target)
+        throw error
+      }
+      const copy = await reading(target, (database) => ({
+        schema: schemaOf(database).version,
+        rows: { chats: count(database, "chats"), messages: count(database, "messages") },
+      }))
+      renderer.result({ path: target, from: path, bytes: bytesOf(target), ...copy })
+    })
+
+/**
+ * Puts a backup in place of the store, keeping the store it replaces beside it. Refuses while any
+ * process has the file open — it would go on writing to the file set aside — or while this CLI's
+ * `serve` runs: that opens the store on its first write, so until then it holds nothing to see.
+ */
+const restoreCommand = (messenger: Messenger): Command =>
+  new Command("restore")
+    .description("put a backup in place of the store; the store it replaces is kept beside it, never deleted")
+    .argument("<file>", "a file `store backup` wrote")
+    .action(async function (this: Command, file: string) {
+      const { renderer } = outputFor(this)
+      const path = storePath(environmentOf(this).env ?? process.env)
+      const backup = resolve(file)
+      if (!existsSync(backup)) throw new CliError("not_found", `no file at ${backup}`)
+      if (existsSync(path) && realpathSync(backup) === realpathSync(path)) {
+        throw new CliError("validation_error", `${backup} is the store itself`)
+      }
+      const schema = await backupSchema(backup)
+
+      const env = environmentOf(this).env ?? process.env
+      const serving = servingProfiles(messenger.app, env)
+      if (serving.length > 0) {
+        throw new CliError(
+          "validation_error",
+          `${messenger.app.command} serve is running for ${serving.join(", ")} — \`${messenger.app.command} server stop\` first`,
+        )
+      }
+      const stamp = new Date().toISOString().replace(/[:.]/g, "-")
+      const kept = existsSync(path) ? `${path}.before-restore-${stamp}` : null
+      if (kept) await quiesce(path, messenger, (message) => renderer.warn(message))
+      else mkdirSync(dirname(path), { recursive: true, mode: 0o700 })
+
+      const incoming = `${path}.restoring-${stamp}`
+      copyFileSync(backup, incoming, constants.COPYFILE_EXCL)
+      chmodSync(incoming, 0o600)
+      if (kept) {
+        renameSync(path, kept)
+        for (const suffix of ["-wal", "-shm"])
+          if (existsSync(`${path}${suffix}`)) renameSync(`${path}${suffix}`, `${kept}${suffix}`)
+      }
+      renameSync(incoming, path)
+
+      renderer.result({ path, restoredFrom: backup, keptAt: kept, schema: schema.version })
+      if (kept) renderer.note(`the store it replaced is kept at ${kept}`)
+      // One that has not touched the store yet holds nothing open, and was not seen.
+      renderer.note("restart every serve and mcp of either CLI that was running, so they read the restored store")
+      if (schema.version < SPEAKS) {
+        renderer.note(
+          `the backup is behind this build; the next command migrates it — \`${messenger.app.command} store migrate\` now`,
+        )
+      }
+    })
+
+const backupSchema = async (backup: string) => {
+  let read: { integrity: string; schema: ReturnType<typeof schemaOf> }
+  try {
+    read = await reading(backup, (database) => ({
+      integrity: String(database.prepare("PRAGMA quick_check(1)").get()?.quick_check),
+      schema: schemaOf(database),
+    }))
+  } catch (error) {
+    throw new CliError("validation_error", `${backup} is not a store this tool can read: ${messageOf(error)}`)
+  }
+  const { integrity, schema } = read
+  if (schema.version === 0) throw new CliError("validation_error", `${backup} holds no message store`)
+  if (integrity !== "ok") throw new CliError("validation_error", `${backup} is damaged: ${integrity}`)
+  if (!schema.writable) {
+    throw new CliError(
+      "configuration_error",
+      `the backup was written by a newer version (schema ${schema.version}, needs at least ` +
+        `${schema.minCompatible}; this one speaks ${SPEAKS}) — upgrade this tool`,
+    )
+  }
+  return schema
+}
+
+/**
+ * No other process has the file open, no write is under way, and the write-ahead log is folded in,
+ * so the file set aside is whole on its own. In WAL mode SQLite cannot say who has the file open —
+ * `EXCLUSIVE` behaves as `IMMEDIATE` — so that is asked of the system.
+ */
+const quiesce = async (path: string, messenger: Messenger, warn: (message: string) => void) => {
+  const { command } = messenger.app
+  const files = [path, `${path}-wal`, `${path}-shm`]
+    .filter((file) => existsSync(file))
+    .map((file) => realpathSync(file))
+  const holders = holdersOf(files)
+  if (holders === undefined) {
+    warn(`this system cannot say which processes have the store open — restart every running serve and mcp after this`)
+  } else if (holders.length > 0) {
+    throw new CliError(
+      "validation_error",
+      `the store is open in process ${holders.join(", ")} — stop it first (a serve: \`${command} server stop\`, ` +
+        "or the other CLI's; an mcp: its client), then restore",
+    )
+  }
+  const database = await openCache(path)
+  try {
+    database.exec("PRAGMA busy_timeout = 1000")
+    database.exec("PRAGMA wal_checkpoint(TRUNCATE)")
+    try {
+      database.exec("BEGIN IMMEDIATE")
+    } catch {
+      throw new CliError("validation_error", "a write to the store is under way — try again in a moment")
+    }
+    database.exec("ROLLBACK")
+  } finally {
+    database.close()
+  }
+}
 
 const isoOf = (value: unknown) => new Date(Number(value)).toISOString()
 

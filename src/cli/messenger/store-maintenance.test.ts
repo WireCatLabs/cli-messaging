@@ -1,6 +1,7 @@
-import { mkdtempSync, writeFileSync } from "node:fs"
+import { spawn } from "node:child_process"
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, realpathSync, statSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
-import { join } from "node:path"
+import { dirname, join } from "node:path"
 import { captureStreams } from "@leemour/cli-core"
 import { describe, expect, it } from "vitest"
 import { MIGRATIONS, migrate } from "../../store/migrations.js"
@@ -9,6 +10,8 @@ import { run } from "../program.js"
 import { settingsFor } from "../settings.js"
 import { storeCommand } from "./archive-commands.js"
 import type { Messenger } from "./context.js"
+import { holdersOf } from "./processes.js"
+import { lockPath } from "./serve-command.js"
 
 const app = { command: "chat", appName: "chat-cli", envPrefix: "CHAT", description: "A test", version: "1.0.0" }
 const latest = MIGRATIONS.at(-1)?.version ?? 0
@@ -165,5 +168,121 @@ describe("store migrate", () => {
     ])
     database.close()
     expect((await call(["store", "migrate", "--json"], env)).answer).toMatchObject({ from: latest, normalized: 0 })
+  })
+})
+
+const messagesIn = async (path: string) => {
+  const database = await openCache(path)
+  try {
+    return Number(database.prepare("SELECT count(*) AS n FROM messages").get()?.n)
+  } finally {
+    database.close()
+  }
+}
+
+const backedUp = async () => {
+  const env = envFor()
+  ;(await seeded(env)).close()
+  const file = join(dirname(String(env.MESSAGING_STORE)), "copy.db")
+  const { answer } = await call(["store", "backup", file, "--json"], env)
+  return { env, file, answer }
+}
+
+describe("store backup", () => {
+  it("**writes a copy that opens with the same counts, readable by the owner alone**", async () => {
+    const { file, answer } = await backedUp()
+
+    expect(answer).toMatchObject({ path: file, schema: latest, rows: { chats: 2, messages: 2 } })
+    expect(await messagesIn(file)).toBe(2)
+    expect(statSync(file).mode & 0o777).toBe(0o600)
+  })
+
+  it("never overwrites a file", async () => {
+    const { env, file } = await backedUp()
+    const { code, stdout } = await call(["store", "backup", file, "--json"], env)
+    expect(code).not.toBe(0)
+    expect(stdout).toEqual([])
+  })
+})
+
+describe("store restore", () => {
+  it("**puts the backup in place and keeps the store it replaced**", async () => {
+    const { env, file } = await backedUp()
+    const database = await openCache(String(env.MESSAGING_STORE))
+    database.exec("DELETE FROM messages WHERE pk = 1")
+    database.close()
+
+    const { answer } = await call(["store", "restore", file, "--json"], env)
+    expect(answer).toMatchObject({ path: env.MESSAGING_STORE, restoredFrom: file, schema: latest })
+    expect(await messagesIn(String(env.MESSAGING_STORE))).toBe(2)
+    expect(await messagesIn(answer.keptAt)).toBe(1)
+    expect(existsSync(file)).toBe(true)
+  })
+
+  it("**refuses while another connection is writing**, and leaves the store where it was", async () => {
+    const { env, file } = await backedUp()
+    const writer = await openCache(String(env.MESSAGING_STORE))
+    writer.exec("BEGIN IMMEDIATE")
+    try {
+      const { code, stderr } = await call(["store", "restore", file, "--json"], env)
+      expect(code).not.toBe(0)
+      expect(stderr.join("\n")).toContain("a write to the store is under way")
+    } finally {
+      writer.exec("ROLLBACK")
+      writer.close()
+    }
+    expect(readdirSync(dirname(String(env.MESSAGING_STORE))).some((name) => name.includes("before-restore"))).toBe(
+      false,
+    )
+  })
+
+  it.skipIf(process.platform !== "linux")(
+    "**refuses while another process has the store open**, whichever CLI it is",
+    async () => {
+      const { env, file } = await backedUp()
+      const path = String(env.MESSAGING_STORE)
+      const holder = spawn(
+        process.execPath,
+        ["-e", `require("node:fs").openSync(${JSON.stringify(path)}, "r"); setInterval(() => {}, 1000)`],
+        { stdio: "ignore" },
+      )
+      try {
+        await expect.poll(() => holdersOf([realpathSync(path)])).toContain(holder.pid)
+        const { code, stderr } = await call(["store", "restore", file, "--json"], env)
+        expect(code).not.toBe(0)
+        expect(stderr.join("\n")).toContain(`the store is open in process ${holder.pid}`)
+      } finally {
+        holder.kill()
+      }
+    },
+  )
+
+  it("refuses while this CLI's serve runs, before that serve has opened the store", async () => {
+    const { env, file } = await backedUp()
+    const serve = spawn(process.execPath, ["-e", "setInterval(() => {}, 1000)"], { stdio: "ignore" })
+    try {
+      const lock = lockPath(app, "default", env)
+      mkdirSync(dirname(lock), { recursive: true })
+      writeFileSync(lock, JSON.stringify({ pid: serve.pid, startedAt: new Date().toISOString() }))
+
+      const { code, stderr } = await call(["store", "restore", file, "--json"], env)
+      expect(code).not.toBe(0)
+      expect(stderr.join("\n")).toContain("chat serve is running for default")
+    } finally {
+      serve.kill()
+    }
+  })
+
+  it("refuses a backup a newer version wrote, with the upgrade message", async () => {
+    const { env, file } = await backedUp()
+    const database = await openCache(file)
+    migrate(database, {
+      migrations: [...MIGRATIONS, { version: latest + 1, minCompatible: latest + 1, statements: [] }],
+    })
+    database.close()
+
+    const { code, stderr } = await call(["store", "restore", file, "--json"], env)
+    expect(code).not.toBe(0)
+    expect(stderr.join("\n")).toContain("upgrade this tool")
   })
 })
