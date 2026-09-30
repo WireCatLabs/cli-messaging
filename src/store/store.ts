@@ -72,6 +72,13 @@ export interface MessageFilter {
   perChat?: boolean
 }
 
+export interface Delta {
+  chats?: Chat[]
+  people?: PersonFacts[]
+  members?: Map<Id, Id[]>
+  state?: Record<string, string>
+}
+
 export interface StoredChatFilter {
   query?: string
   kind?: Chat["kind"]
@@ -105,6 +112,11 @@ export interface MessageStore {
   syncState(key: AccountKey, name: string): Promise<{ value: string; at: string } | undefined>
   setSyncState(key: AccountKey, name: string, value: string): Promise<void>
   clearSyncState(key: AccountKey, name: string): Promise<void>
+  /**
+   * A catch-up's whole answer in one transaction, so a reader never sees half of it: chats, people,
+   * each listed chat's members (replaced whole) and sync state such as a delta marker.
+   */
+  applyDelta(key: AccountKey, delta: Delta): Promise<void>
   /**
    * Takes the stretch of a chat at `anchor` for `forMs`; answers whether `holder` has it. Refused
    * while another holder's lease runs; the same holder renews its own.
@@ -642,6 +654,29 @@ const storeOver = (database: CacheDatabase, now: () => number): MessageStore => 
     return found
   }
 
+  const writeMembers = (key: AccountKey, accountKey: number, chatId: Id, memberIds: Id[]): void => {
+    const chatKey = chatPkFor(accountKey, chatId)
+    run("DELETE FROM chat_members WHERE chat_pk = ?", chatKey)
+    for (const id of new Set(memberIds)) {
+      run(
+        "INSERT INTO chat_members (chat_pk, identity_pk) VALUES (?, ?)",
+        chatKey,
+        identityPk(accountKey, key.provider, id, null),
+      )
+    }
+  }
+
+  const writeState = (accountKey: number, name: string, value: string): void => {
+    run(
+      `INSERT INTO sync_state (account_pk, key, value, at) VALUES (?, ?, ?, ?)
+       ON CONFLICT (account_pk, key) DO UPDATE SET value = excluded.value, at = excluded.at`,
+      accountKey,
+      name,
+      value,
+      now(),
+    )
+  }
+
   /**
    * The owner's ruling (NEED-393 A): a deleted message keeps its row, so a later sync cannot bring it
    * back, and leaves no text — not in the row, the search copy, the edit history or a transcript.
@@ -726,18 +761,7 @@ const storeOver = (database: CacheDatabase, now: () => number): MessageStore => 
       }),
 
     saveMembers: async (key, chatId, memberIds) =>
-      inTransaction(() => {
-        const accountKey = accountPk(key)
-        const chatKey = chatPkFor(accountKey, chatId)
-        run("DELETE FROM chat_members WHERE chat_pk = ?", chatKey)
-        for (const id of new Set(memberIds)) {
-          run(
-            "INSERT INTO chat_members (chat_pk, identity_pk) VALUES (?, ?)",
-            chatKey,
-            identityPk(accountKey, key.provider, id, null),
-          )
-        }
-      }),
+      inTransaction(() => writeMembers(key, accountPk(key), chatId, memberIds)),
 
     members: async (key, chatId) => {
       const accountKey = findAccountPk(key)
@@ -776,16 +800,15 @@ const storeOver = (database: CacheDatabase, now: () => number): MessageStore => 
       return row ? { value: String(row.value), at: toIso(row.at) as string } : undefined
     },
 
-    setSyncState: async (key, name, value) =>
+    setSyncState: async (key, name, value) => inTransaction(() => writeState(accountPk(key), name, value)),
+
+    applyDelta: async (key, { chats = [], people = [], members = new Map(), state = {} }) =>
       inTransaction(() => {
-        run(
-          `INSERT INTO sync_state (account_pk, key, value, at) VALUES (?, ?, ?, ?)
-           ON CONFLICT (account_pk, key) DO UPDATE SET value = excluded.value, at = excluded.at`,
-          accountPk(key),
-          name,
-          value,
-          now(),
-        )
+        const accountKey = accountPk(key)
+        for (const chat of chats) upsertChat(accountKey, chat)
+        for (const person of people) identityPk(accountKey, key.provider, person.id, person.name, person)
+        for (const [chatId, ids] of members) writeMembers(key, accountKey, chatId, ids)
+        for (const [name, value] of Object.entries(state)) writeState(accountKey, name, value)
       }),
 
     clearSyncState: async (key, name) => {
