@@ -8,6 +8,10 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Added
 
+- **Each write command on its own**, from `./cli`: `deleteCommand`, `editCommand`, `forwardCommand`,
+  `pinCommand`, `unpinCommand` and `markReadCommand`, for a CLI that moves its commands onto the
+  shared ones one at a time — max-cli, group by group.
+
 - **`parity.json`, the parity manifest of tg and max**, in the package: every command and option of
   both CLIs, each `both`, one-sided with a reason, or `planned` with who closes it, and the option
   catalogue — one name, one meaning. A CLI checks itself against it with
