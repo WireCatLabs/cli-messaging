@@ -222,3 +222,17 @@ export const chatMembers = sqliteTable(
     index("chat_members_by_identity").on(table.identityPk),
   ],
 )
+
+/** Per account, what a sync remembers between runs: a delta marker, when a list was last complete. */
+export const syncState = sqliteTable(
+  "sync_state",
+  {
+    accountPk: integer("account_pk")
+      .notNull()
+      .references(() => accounts.pk),
+    key: text("key").notNull(),
+    value: text("value").notNull(),
+    at: integer("at").notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.accountPk, table.key] })],
+)
