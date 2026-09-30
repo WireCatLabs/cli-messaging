@@ -26,6 +26,11 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   store saves it on the sender's identity, and a later message without it keeps the one saved, so
   `people` answers it and a mention can be matched to its sender. An adapter that leaves it out
   changes nothing.
+- **Services: inbox and archive**, the fourth step of `docs/plans/2026-09-30-services.md`.
+  `services.inbox` (`read`, `review`) and `services.archive` (`status`, `held`, `export`, `estimate`,
+  `fetch`) take over `inbox`, `review`, `store status|export|fetch` and the MCP `inbox` and `review`
+  tools. The `--offline` refusals of `inbox` and `review` moved into the service with the same words.
+  Nothing a person or a script sees changes.
 - **Services: chats and people** — the third step of `docs/plans/2026-09-30-services.md`.
   `services.chats` (`list`, `show`, `members`, `events`, `inspect`, `markRead` through the guard) and
   `services.people` (`list`, `show`, `lookup`, `sync`) take over `chats list|show|members list|events|inspect|mark-read`,

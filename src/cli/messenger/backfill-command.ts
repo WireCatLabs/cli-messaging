@@ -1,17 +1,12 @@
 import { randomBytes } from "node:crypto"
 import { mkdirSync } from "node:fs"
 import { join } from "node:path"
-import { setTimeout as sleep } from "node:timers/promises"
 import { CliError } from "@leemour/cli-core"
 import { Command } from "commander"
-import type { Id } from "../../domain/models.js"
-import { storedChatId } from "../../services/index.js"
-import { type AccountKey, type MessageStore, openStore, type Range } from "../../store/store.js"
 import { envName } from "../app.js"
 import { type BaseEnvironment, environmentOf } from "../context.js"
 import { isCliFailure } from "../failures.js"
 import { parseDuration } from "../settings.js"
-import { estimateBackfill } from "./backfill-estimate.js"
 import {
   type Job,
   jobsDir,
@@ -25,11 +20,7 @@ import {
 } from "./backfill-jobs.js"
 import { type Messenger, type MessengerContext, messengerContext } from "./context.js"
 import { momentOf } from "./inbox.js"
-import { patiently, stopOnSignal } from "./patience.js"
-import type { MessengerAdapter } from "./port.js"
-
-/** The most messages a provider hands out per history request — Telegram's cap. */
-const PAGE = 100
+import { stopOnSignal } from "./patience.js"
 
 /**
  * A chat's history into the store, newest to oldest, **resumable**: after every page the stretch it
@@ -64,21 +55,7 @@ export const fetchCommand = (messenger: Messenger): Command =>
         if (since !== undefined) {
           throw new CliError("validation_error", "--estimate prices a full fetch; --since does not narrow it")
         }
-        const answer = await context.withStore(async (store, account) => {
-          const chatId = await storedChatId(messenger, chat, store, account)
-          const newest = Number((await store.messages(account, chatId, { limit: 1 })).items[0]?.id)
-          return {
-            chat: chatId,
-            ...estimateBackfill({
-              ranges: await store.ranges(account, chatId),
-              held: (await store.chatStats(account, chatId))[0]?.messages ?? 0,
-              newest: Number.isSafeInteger(newest) ? newest : undefined,
-              page: PAGE,
-              max,
-              pauseMs,
-            }),
-          }
-        })
+        const answer = await context.withServices((services) => services.archive.estimate(chat, { max, pauseMs }))
         context.renderer.result(answer)
         if (answer.missing === null) {
           context.renderer.note(
@@ -100,25 +77,18 @@ export const fetchCommand = (messenger: Messenger): Command =>
       const jobId = context.env[envName(messenger.app, "BACKFILL_JOB")]
       const stop = stopOnSignal(this)
       try {
-        const result = await context.withMessenger(async (connection) => {
-          const self = connection.self()
-          if (self === null) throw new CliError("authentication_error", "not logged in — nothing to fetch for")
-          const store = await openStore({ env: context.env })
-          try {
-            return await walk(connection, store, { provider: messenger.provider, account: self }, chat, {
-              max,
-              pauseMs,
-              ...(sinceMs === undefined ? {} : { sinceMs }),
-              note: context.renderer.note,
-              stop: stop.signal,
-              onPage: (progress) => {
-                if (jobId) updateJob(jobs, jobId, { progress })
-              },
-            })
-          } finally {
-            await store.close()
-          }
-        })
+        const result = await context.withServices((services) =>
+          services.archive.fetch(chat, {
+            max,
+            pauseMs,
+            ...(sinceMs === undefined ? {} : { sinceMs }),
+            note: context.renderer.note,
+            stop: stop.signal,
+            onPage: (progress) => {
+              if (jobId) updateJob(jobs, jobId, { progress })
+            },
+          }),
+        )
         if (jobId) updateJob(jobs, jobId, { finishedAt: new Date().toISOString(), result })
         context.renderer.result(result)
       } catch (error) {
@@ -158,7 +128,7 @@ export const jobsCommand = (messenger: Messenger): Command => {
       const held =
         chatId === undefined
           ? undefined
-          : await context.withStore((store, account) => store.ranges(account, chatId)).catch(() => undefined)
+          : await context.withServices((services) => services.archive.held(chatId)).catch(() => undefined)
       context.renderer.result({ ...brief(job), ...(held ? { held } : {}), log: job.log })
     })
 
@@ -249,79 +219,6 @@ const startJob = (
   saveJob(dir, { ...job, pid })
   context.renderer.result({ job: id, pid, chat, log })
   context.renderer.note(`started — \`${app.command} store jobs show ${id}\` follows it`)
-}
-
-interface Walk {
-  max: number
-  pauseMs: number
-  /** Stop after the page that reaches a message older than this, epoch milliseconds. */
-  sinceMs?: number
-  note: (message: string) => void
-  stop: AbortSignal
-  onPage: (progress: { fetched: number; chatId: string; oldest: number }) => void
-}
-
-const walk = async (
-  connection: MessengerAdapter,
-  store: MessageStore,
-  account: AccountKey,
-  chat: string,
-  { max, pauseMs, sinceMs, note, stop, onPage }: Walk,
-) => {
-  let before: string | undefined
-  let chatId: Id | undefined
-  let top: number | undefined
-  let fetched = 0
-  let reachedStart = false
-  let reachedSince = false
-
-  while (fetched < max && !stop.aborted) {
-    const page = await patiently(
-      () => connection.history(chat, { limit: PAGE, ...(before ? { before } : {}) }),
-      note,
-      stop,
-    )
-    const first = page.items[0]
-    if (!first) {
-      reachedStart = true
-      break
-    }
-    chatId ??= first.chatId
-    const keys = page.items.map((message) => Number(message.id))
-    if (keys.some((key) => !Number.isSafeInteger(key))) {
-      throw new CliError(
-        "validation_error",
-        "this messenger's message ids do not order a chat, so it cannot fetch its history",
-      )
-    }
-    const low = Math.min(...keys)
-    top ??= Math.max(...keys)
-    fetched += page.items.length
-    // This run's pages are contiguous, so everything from `low` to its first message is held.
-    const held: Range = await store.markRange(account, chatId, low, top)
-    onPage({ fetched, chatId, oldest: held.from })
-    if (!page.hasMore) {
-      reachedStart = true
-      break
-    }
-    if (sinceMs !== undefined && page.items.some((message) => Date.parse(message.timestamp) < sinceMs)) {
-      reachedSince = true
-      break
-    }
-    before = String(held.from)
-    note(`${fetched} messages so far, back to ${held.from}`)
-    await sleep(pauseMs, undefined, { signal: stop }).catch(() => {})
-  }
-
-  const ranges = chatId === undefined ? [] : await store.ranges(account, chatId)
-  return {
-    chat: chatId ?? null,
-    fetched,
-    complete: reachedStart && ranges.length === 1,
-    ranges,
-    ...(reachedSince ? { reachedSince: true } : {}),
-    ...(stop.aborted ? { stopped: true } : {}),
-  }
 }
 
 const wholeNumber = (value: string): number => {

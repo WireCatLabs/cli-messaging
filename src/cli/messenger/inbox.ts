@@ -178,12 +178,6 @@ export const inboxCommand = (messenger: Messenger): Command =>
       const context = messengerContext(this, messenger)
       const { app } = messenger
       const { settings, renderer, format, streams, env } = context
-      if (settings.offline) {
-        throw new CliError(
-          "validation_error",
-          "`inbox` asks the messenger what is new; with `--offline` there is nothing new",
-        )
-      }
       const saved = savedPoint(app, settings.profile, env)
       const from =
         since !== undefined
@@ -193,10 +187,12 @@ export const inboxCommand = (messenger: Messenger): Command =>
               ? Date.now() - FIRST_LOOK_MS
               : Date.parse(saved)
             : undefined
-      const inbox = await context.withMessenger((adapter) =>
-        from === undefined
-          ? unreadIn(adapter, { limit: settings.limit, all })
-          : newIn(adapter, { since: from, limit: settings.limit, all }),
+      const inbox = await context.withServices((services) =>
+        services.inbox.read({
+          ...(from === undefined ? {} : { since: from }),
+          limit: settings.limit,
+          all: all === true,
+        }),
       )
 
       for (const chat of inbox.chats) {

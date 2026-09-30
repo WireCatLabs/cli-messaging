@@ -1,7 +1,8 @@
 import * as v from "valibot"
 import type { Messenger } from "../../cli/messenger/context.js"
 import { momentOf } from "../../cli/messenger/inbox.js"
-import { REVIEW_DAYS, reviewIn, reviewStart, UNANSWERED_HOURS } from "../../cli/messenger/review.js"
+import { REVIEW_DAYS, reviewStart, UNANSWERED_HOURS } from "../../cli/messenger/review.js"
+import { inboxService, onlineDeps } from "../../services/index.js"
 import { type AnyTool, chatOf, READ, tool } from "../tool.js"
 
 export const reviewTools = (messenger: Messenger): Record<string, AnyTool> => ({
@@ -27,8 +28,8 @@ export const reviewTools = (messenger: Messenger): Record<string, AnyTool> => ({
       all: v.optional(v.pipe(v.boolean(), v.description("muted and archived chats too"))),
     }),
     annotations: READ,
-    online: (adapter, args) =>
-      reviewIn(adapter, {
+    online: (adapter, args, { guard }) =>
+      inboxService(onlineDeps(messenger, adapter, guard)).review({
         since: args.since === undefined ? reviewStart() : momentOf(args.since, "since"),
         ...(args.chat === undefined ? {} : { chat: args.chat }),
         ...(args.all ? { all: true } : {}),

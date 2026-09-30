@@ -2,7 +2,6 @@ import { CliError } from "@leemour/cli-core"
 import { Command } from "commander"
 import { toMarkdown } from "../../render/markdown.js"
 import { renderMessages } from "../../render/messages.js"
-import { storedChatId } from "../../services/index.js"
 import { fetchCommand, jobsCommand } from "./backfill-command.js"
 import { type Messenger, messengerContext } from "./context.js"
 
@@ -25,11 +24,7 @@ const statusCommand = (messenger: Messenger): Command =>
     .argument("[chat]", messenger.chatArgument)
     .action(async function (this: Command, chat: string | undefined) {
       const context = messengerContext(this, messenger)
-      const rows = await context.withStore(async (store, account) => {
-        const only = chat === undefined ? undefined : await storedChatId(messenger, chat, store, account)
-        const stats = await store.chatStats(account, only)
-        return Promise.all(stats.map(async (one) => ({ ...one, held: await store.ranges(account, one.chatId) })))
-      })
+      const rows = await context.withServices((services) => services.archive.status(chat))
       context.renderer.stream(rows)
       if (rows.length === 0) context.renderer.note("the store holds no messages for this profile yet")
     })
@@ -52,13 +47,7 @@ const exportCommand = (messenger: Messenger): Command =>
         )
       }
       const context = messengerContext(this, messenger)
-      const { title, messages } = await context.withStore(async (store, account) => {
-        const chatId = await storedChatId(messenger, chat, store, account)
-        return {
-          title: (await store.chatStats(account, chatId))[0]?.title ?? chatId,
-          messages: (await store.messages(account, chatId, { limit: Number.MAX_SAFE_INTEGER })).items,
-        }
-      })
+      const { title, messages } = await context.withServices((services) => services.archive.export(chat))
       if (format === "markdown") context.streams.data(toMarkdown(title, messages).replace(/\n$/, ""))
       else if (context.format === "json") context.renderer.result({ items: messages })
       else if (context.format === "jsonl") for (const message of messages) context.streams.data(JSON.stringify(message))
