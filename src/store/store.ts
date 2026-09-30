@@ -20,9 +20,11 @@ import type { SqlValue } from "./driver.js"
 import { migrate } from "./migrations.js"
 import { NORMALIZER_VERSION, normalize } from "./normalize.js"
 import { storePath } from "./path.js"
+import * as accounts from "./sqlite/accounts.js"
 import { backfillNormalized, pendingNormalization } from "./sqlite/backfill.js"
+import * as identities from "./sqlite/identities.js"
 import { openSqlite, type StoreContext } from "./sqlite/open.js"
-import { ulid } from "./ulid.js"
+import { json, parsed, present, toIso, toMs } from "./sqlite/values.js"
 
 /** Which account of which messenger a call is about. */
 export interface AccountKey {
@@ -242,7 +244,8 @@ export const openStore = async ({ path, env, now = Date.now }: StoreOptions = {}
 /** Telegram's chat types that number their messages themselves, not per account. */
 const OWN_NUMBERING = "('channel', 'supergroup', 'gigagroup', 'monoforum')"
 
-const storeOver = ({ database, now }: StoreContext): MessageStore => {
+const storeOver = (context: StoreContext): MessageStore => {
+  const { database, now } = context
   const one = (sql: string, ...parameters: SqlValue[]) => database.prepare(sql).get(...parameters)
   const all = (sql: string, ...parameters: SqlValue[]) => database.prepare(sql).all(...parameters)
   const run = (sql: string, ...parameters: SqlValue[]) => database.prepare(sql).run(...parameters)
@@ -258,23 +261,8 @@ const storeOver = ({ database, now }: StoreContext): MessageStore => {
     }
   }
 
-  const accountPk = ({ provider, account }: AccountKey, name: string | null = null): number =>
-    Number(
-      one(
-        `INSERT INTO accounts (provider, native_id, name, created_at) VALUES (?, ?, ?, ?)
-         ON CONFLICT (provider, native_id) DO UPDATE SET name = coalesce(excluded.name, accounts.name)
-         RETURNING pk`,
-        provider,
-        account,
-        name,
-        now(),
-      )?.pk,
-    )
-
-  const findAccountPk = ({ provider, account }: AccountKey): number | undefined => {
-    const row = one("SELECT pk FROM accounts WHERE provider = ? AND native_id = ?", provider, account)
-    return row ? Number(row.pk) : undefined
-  }
+  const accountPk = (key: AccountKey, name: string | null = null) => accounts.accountPk(context, key, name)
+  const findAccountPk = (key: AccountKey) => accounts.findAccountPk(context, key)
 
   const findChatPk = (accountKey: number, chatId: Id): number | undefined => {
     const row = one("SELECT pk FROM chats WHERE account_pk = ? AND native_id = ?", accountKey, chatId)
@@ -317,100 +305,13 @@ const storeOver = ({ database, now }: StoreContext): MessageStore => {
       )?.pk,
     )
 
-  /** An identity as `accountKey` saw it — recorded as seen by that account, so reads stay per account. */
   const identityPk = (
     accountKey: number,
     provider: Provider,
     nativeId: Id,
     name: string | null,
-    facts: Omit<PersonFacts, "id" | "name"> = {},
-  ): number => {
-    const identity = identityOf(provider, nativeId, name, facts)
-    run(
-      "INSERT OR IGNORE INTO account_identities (account_pk, identity_pk, first_seen_at) VALUES (?, ?, ?)",
-      accountKey,
-      identity,
-      now(),
-    )
-    return identity
-  }
-
-  /** Every new identity gets its own person; linking two is a later, recorded act. */
-  const identityOf = (
-    provider: Provider,
-    nativeId: Id,
-    name: string | null,
-    facts: Omit<PersonFacts, "id" | "name"> = {},
-  ): number => {
-    const found = one(
-      "SELECT pk, name, username, is_bot, description FROM identities WHERE provider = ? AND native_id = ?",
-      provider,
-      nativeId,
-    )
-    if (found) {
-      const username = facts.username ?? found.username ?? null
-      const isBot = facts.isBot === undefined || facts.isBot === null ? (found.is_bot ?? null) : Number(facts.isBot)
-      const newName = name ?? found.name ?? null
-      const description = facts.description ?? found.description ?? null
-      // Only on a real change: the search trigger rewrites the index row on every update of `name`.
-      if (
-        newName !== found.name ||
-        username !== found.username ||
-        isBot !== found.is_bot ||
-        description !== found.description
-      ) {
-        run(
-          "UPDATE identities SET name = ?, username = ?, is_bot = ?, description = ?, updated_at = ? WHERE pk = ?",
-          newName as SqlValue,
-          username as SqlValue,
-          isBot as SqlValue,
-          description as SqlValue,
-          now(),
-          Number(found.pk),
-        )
-      }
-      return Number(found.pk)
-    }
-    const at = now()
-    const identity = Number(
-      one(
-        `INSERT INTO identities (provider, native_id, name, username, is_bot, description, first_seen_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING pk`,
-        provider,
-        nativeId,
-        name,
-        facts.username ?? null,
-        facts.isBot === undefined || facts.isBot === null ? null : Number(facts.isBot),
-        facts.description ?? null,
-        at,
-        at,
-      )?.pk,
-    )
-    const person = Number(
-      one(
-        "INSERT INTO persons (uid, name, created_at, updated_at) VALUES (?, ?, ?, ?) RETURNING pk",
-        ulid(at),
-        name,
-        at,
-        at,
-      )?.pk,
-    )
-    run(
-      `INSERT INTO identity_links (identity_pk, person_pk, method, confidence, linked_at, linked_by)
-       VALUES (?, ?, 'initial', 1, ?, 'ingest')`,
-      identity,
-      person,
-      at,
-    )
-    run(
-      `INSERT INTO identity_link_events (identity_pk, from_person_pk, to_person_pk, method, at, by)
-       VALUES (?, NULL, ?, 'initial', ?, 'ingest')`,
-      identity,
-      person,
-      at,
-    )
-    return identity
-  }
+    facts?: Omit<PersonFacts, "id" | "name">,
+  ) => identities.identityPk(context, accountKey, provider, nativeId, name, facts)
 
   const upsertMessage = (
     key: AccountKey,
@@ -720,27 +621,6 @@ const storeOver = ({ database, now }: StoreContext): MessageStore => {
     }
     if (unread) conditions.push("unread_count > 0")
     return { sql: `WHERE ${conditions.join(" AND ")}`, parameters }
-  }
-
-  /** A contact: someone other than the account itself, in one of its one-to-one chats. */
-  const contactsWhere = (accountKey: number, key: AccountKey, query: string | undefined) => {
-    const parameters: SqlValue[] = [accountKey, key.account]
-    let match = ""
-    if (query !== undefined) {
-      if (query.trim().length < 3) {
-        throw new CliError("validation_error", `a contact search takes at least 3 characters, got "${query}"`)
-      }
-      match = "AND i.pk IN (SELECT rowid FROM identities_fts WHERE identities_fts MATCH ?)"
-      parameters.push(`"${query.trim().replaceAll('"', '""')}"`)
-    }
-    return {
-      sql: `FROM account_identities ai JOIN identities i ON i.pk = ai.identity_pk
-            WHERE ai.account_pk = ? AND i.native_id != ?
-              AND EXISTS (SELECT 1 FROM chat_members cm JOIN chats c ON c.pk = cm.chat_pk
-                          WHERE cm.identity_pk = i.pk AND c.account_pk = ai.account_pk AND c.kind = 'dialog')
-              ${match}`,
-      parameters,
-    }
   }
 
   const MESSAGE_COLUMNS = `m.*, c.native_id AS chat_native_id, i.native_id AS sender_native_id`
@@ -1072,50 +952,20 @@ const storeOver = ({ database, now }: StoreContext): MessageStore => {
 
     find: async (filter) => find(filter),
 
-    contacts: async (key, { order, query, limit, offset = 0 }) => {
+    contacts: async (key, options) => {
       const accountKey = findAccountPk(key)
       if (accountKey === undefined) return { items: [], hasMore: false }
-      const where = contactsWhere(accountKey, key, query)
-      const rows = all(
-        `SELECT i.native_id, i.name, i.username, i.description, ai.last_messaged_at ${where.sql}
-         ORDER BY ${order === "recent" ? "ai.last_messaged_at DESC NULLS LAST, " : ""}i.name IS NULL, i.name, i.native_id
-         LIMIT ? OFFSET ?`,
-        ...where.parameters,
-        limit + 1,
-        offset,
-      )
-      return {
-        items: rows.slice(0, limit).map((row) => ({
-          id: String(row.native_id),
-          name: (row.name as string | null) ?? null,
-          username: (row.username as string | null) ?? null,
-          description: (row.description as string | null) ?? null,
-          lastMessagedAt: toIso(row.last_messaged_at),
-        })),
-        hasMore: rows.length > limit,
-      }
+      return identities.contacts(context, accountKey, key, options)
     },
 
     countContacts: async (key, { query } = {}) => {
       const accountKey = findAccountPk(key)
-      if (accountKey === undefined) return 0
-      const where = contactsWhere(accountKey, key, query)
-      return Number(one(`SELECT count(*) AS n ${where.sql}`, ...where.parameters)?.n)
+      return accountKey === undefined ? 0 : identities.countContacts(context, accountKey, key, query)
     },
 
     refreshRecency: async (key) => {
       const accountKey = findAccountPk(key)
-      if (accountKey === undefined) return
-      inTransaction(() => {
-        run(
-          `UPDATE account_identities SET last_messaged_at = (
-             SELECT max(c.last_message_at) FROM chat_members cm JOIN chats c ON c.pk = cm.chat_pk
-             WHERE cm.identity_pk = account_identities.identity_pk AND c.account_pk = account_identities.account_pk
-               AND c.kind = 'dialog')
-           WHERE account_pk = ?`,
-          accountKey,
-        )
-      })
+      if (accountKey !== undefined) identities.refreshRecency(context, accountKey)
     },
 
     savePeople: async (key, people) =>
@@ -1124,21 +974,7 @@ const storeOver = ({ database, now }: StoreContext): MessageStore => {
         for (const person of people) identityPk(accountKey, key.provider, person.id, person.name, person)
       }),
 
-    people: async (provider, { account, accounts } = {}) => {
-      const within = accounts ?? (account === undefined ? undefined : [account])
-      const scope = within
-        ? `AND pk IN (SELECT ai.identity_pk FROM account_identities ai JOIN accounts a ON a.pk = ai.account_pk
-                      WHERE a.provider = ? AND a.native_id IN (${within.map(() => "?").join(", ") || "NULL"}))`
-        : ""
-      const rows = all(
-        `SELECT native_id, name, username FROM identities WHERE provider = ? ${scope}`,
-        provider,
-        ...(within ? [provider, ...within] : []),
-      )
-      const everyone = rows.map(toContact)
-      const byId = new Map(everyone.map((person) => [person.id, person]))
-      return { get: (id) => byId.get(id), all: () => everyone }
-    },
+    people: async (provider, options = {}) => identities.people(context, provider, options),
 
     saveReactions: async (key, chatId, messageId, reactions) => {
       const accountKey = findAccountPk(key)
@@ -1211,29 +1047,6 @@ const storeOver = ({ database, now }: StoreContext): MessageStore => {
 }
 
 const searchable = (text: string) => ({ normalized_text: normalize(text), normalizer_version: NORMALIZER_VERSION })
-
-const toMs = (iso: string | null | undefined): number | null => {
-  if (iso === null || iso === undefined) return null
-  const ms = Date.parse(iso)
-  return Number.isNaN(ms) ? null : ms
-}
-
-const toIso = (ms: unknown): string | null => (typeof ms === "number" ? new Date(ms).toISOString() : null)
-
-const json = (value: unknown): string | null => (value === undefined ? null : JSON.stringify(value))
-
-const parsed = <T>(text: unknown): T | undefined => (typeof text === "string" ? (JSON.parse(text) as T) : undefined)
-
-const present = <T extends Record<string, unknown>>(entries: T) =>
-  Object.fromEntries(Object.entries(entries).filter(([, value]) => value !== null && value !== undefined))
-
-const toContact = (row: Record<string, unknown>): Contact => ({
-  id: String(row.native_id),
-  name: (row.name as string | null) ?? null,
-  username: (row.username as string | null) ?? null,
-  description: null,
-  lastMessagedAt: null,
-})
 
 const toChat = (row: Record<string, unknown>): Chat => ({
   id: String(row.native_id),

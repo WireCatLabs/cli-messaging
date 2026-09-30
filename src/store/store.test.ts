@@ -367,6 +367,26 @@ describe("finding people and what they wrote", () => {
     await store.close()
   })
 
+  it("leaves a person's row alone when a save says nothing new, and updates it when it does", async () => {
+    const path = fresh()
+    let clock = 1_000
+    const store = await openStore({ path, now: () => clock })
+    await store.savePeople(ME, [{ id: "7", name: "Vera", username: "vera", isBot: false }])
+    clock = 2_000
+    await store.savePeople(ME, [{ id: "7", name: "Vera", username: null }])
+    const updatedAt = async () => {
+      const database = await openCache(path)
+      const row = database.prepare("SELECT updated_at FROM identities WHERE native_id = '7'").get()
+      database.close()
+      return row?.updated_at
+    }
+    expect(await updatedAt()).toBe(1_000)
+    clock = 3_000
+    await store.savePeople(ME, [{ id: "7", name: "Vera P." }])
+    expect(await updatedAt()).toBe(3_000)
+    await store.close()
+  })
+
   it("reads a chosen few accounts, and never all of them by leaving the provider out", async () => {
     const store = await seeded()
     const ids = async (accounts: string[]) =>
