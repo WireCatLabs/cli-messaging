@@ -104,6 +104,10 @@ export interface MessageStore {
   claim(key: AccountKey, chatId: Id, anchor: string, holder: string, forMs: number): Promise<boolean>
   /** Gives the stretch back, if `holder` still has it. */
   release(key: AccountKey, chatId: Id, anchor: string, holder: string): Promise<void>
+  /** What a voice message said, when it was heard before, and by what. */
+  transcript(key: AccountKey, chatId: Id, messageId: Id): Promise<{ text: string; source: string } | undefined>
+  /** Keeps a finished transcript; an empty one is not kept, so the message is heard again. */
+  keepTranscript(key: AccountKey, chatId: Id, messageId: Id, text: string, source: string): Promise<void>
   /** Oldest to newest, like a provider's history page. */
   messages(key: AccountKey, chatId: Id, window: { limit: number; before?: Id }): Promise<Page<Message>>
   /**
@@ -747,6 +751,34 @@ const storeOver = (database: CacheDatabase, now: () => number): MessageStore => 
       const chatKey = accountKey === undefined ? undefined : findChatPk(accountKey, chatId)
       if (chatKey === undefined) return
       run("DELETE FROM fetch_leases WHERE chat_pk = ? AND anchor = ? AND holder = ?", chatKey, anchor, holder)
+    },
+
+    transcript: async (key, chatId, messageId) => {
+      const accountKey = findAccountPk(key)
+      const chatKey = accountKey === undefined ? undefined : findChatPk(accountKey, chatId)
+      if (chatKey === undefined) return undefined
+      const row = one(
+        "SELECT text, source FROM transcripts WHERE chat_pk = ? AND message_native_id = ?",
+        chatKey,
+        messageId,
+      )
+      return row ? { text: String(row.text), source: String(row.source) } : undefined
+    },
+
+    keepTranscript: async (key, chatId, messageId, text, source) => {
+      if (text.trim() === "") return
+      inTransaction(() => {
+        run(
+          `INSERT INTO transcripts (chat_pk, message_native_id, text, source, heard_at) VALUES (?, ?, ?, ?, ?)
+           ON CONFLICT (chat_pk, message_native_id) DO UPDATE SET
+             text = excluded.text, source = excluded.source, heard_at = excluded.heard_at`,
+          chatPkFor(accountPk(key), chatId),
+          messageId,
+          text,
+          source,
+          now(),
+        )
+      })
     },
 
     chats: async (key, { limit, offset = 0 }) => {

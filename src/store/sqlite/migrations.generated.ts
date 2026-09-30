@@ -69,5 +69,11 @@ export const GENERATED: { name: string; statements: string[] }[] = [
       "ALTER TABLE `account_identities` ADD `last_messaged_at` integer;",
       "ALTER TABLE `identities` ADD `description` text;"
     ]
+  },
+  {
+    "name": "20260930024933_version-11-transcripts",
+    "statements": [
+      "CREATE TABLE `transcripts` (\n\t`chat_pk` integer NOT NULL,\n\t`message_native_id` text NOT NULL,\n\t`text` text NOT NULL,\n\t`source` text NOT NULL,\n\t`heard_at` integer NOT NULL,\n\tCONSTRAINT `transcripts_pk` PRIMARY KEY(`chat_pk`, `message_native_id`),\n\tCONSTRAINT `fk_transcripts_chat_pk_chats_pk_fk` FOREIGN KEY (`chat_pk`) REFERENCES `chats`(`pk`)\n);"
+    ]
   }
 ]

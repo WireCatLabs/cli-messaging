@@ -40,7 +40,7 @@ export const hearForCommand = async (
     }
     return hearing
   } finally {
-    kept.close()
+    await kept.close()
   }
 }
 

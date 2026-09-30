@@ -254,3 +254,22 @@ export const fetchLeases = sqliteTable(
   },
   (table) => [primaryKey({ columns: [table.chatPk, table.anchor] })],
 )
+
+/**
+ * What a voice message said, keyed by chat and message id rather than a message row: a message can
+ * be heard before the store holds it. Derived — it can be heard again.
+ */
+export const transcripts = sqliteTable(
+  "transcripts",
+  {
+    chatPk: integer("chat_pk")
+      .notNull()
+      .references(() => chats.pk),
+    messageNativeId: text("message_native_id").notNull(),
+    text: text("text").notNull(),
+    /** The model or the messenger that heard it. */
+    source: text("source").notNull(),
+    heardAt: integer("heard_at").notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.chatPk, table.messageNativeId] })],
+)
