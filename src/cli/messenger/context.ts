@@ -44,6 +44,11 @@ export interface Messenger {
   speechModels?: readonly string[]
   /** Replaces shared use cases for this messenger; its commands and MCP tools both get the replacement. */
   services?: Override
+  /**
+   * The send guard for a command, when the messenger's is not the profile's plain one — max-cli's
+   * background server journals what it forwards, so a command over it records only its refusals.
+   */
+  guard?: (command: Command, settings: Settings, warn: (message: string) => void) => SendGuard
   /** What only this messenger can say about itself for `doctor`, read from disk — never a secret. */
   diagnose?: (command: Command, context: BaseContext) => Promise<Record<string, unknown>>
 }
@@ -106,7 +111,9 @@ export const messengerContext = (command: Command, messenger: Messenger): Messen
   const { app, provider } = messenger
   const base = baseContext(command, messenger.resolveSettings)
   const { profile } = base.settings
-  const guard = guardFor(app, base.settings, base.renderer.warn, base.env)
+  const guard =
+    messenger.guard?.(command, base.settings, base.renderer.warn) ??
+    guardFor(app, base.settings, base.renderer.warn, base.env)
 
   return {
     ...base,

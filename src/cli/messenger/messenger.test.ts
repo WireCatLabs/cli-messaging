@@ -107,6 +107,7 @@ const call = async (
   connect: Messenger["connect"],
   env: NodeJS.ProcessEnv,
   options: Partial<RunOptions & McpEnvironment> = {},
+  own: Partial<Messenger> = {},
 ) => {
   const messenger: Messenger = {
     app,
@@ -114,6 +115,7 @@ const call = async (
     resolveSettings: settingsFor(app).resolveSettings,
     connect,
     chatArgument: "a chat",
+    ...own,
   }
   const streams = captureStreams()
   const code = await run(
@@ -536,6 +538,33 @@ describe("the shared read commands", () => {
       ["read", "3"],
     ])
     expect((await call(["chats", "read", "Book"], async () => reading, env)).code).not.toBe(0)
+  })
+
+  it("guards with the messenger's own guard when it has one", async () => {
+    const root = mkdtempSync(join(tmpdir(), "messenger-"))
+    const env = { CHAT_STATE_DIR: join(root, "state"), CHAT_CONFIG_DIR: join(root, "config") }
+    const asked: unknown[] = []
+    const refusing = {
+      guard: () => ({
+        check: (request: unknown) => {
+          asked.push(request)
+          throw new CliError("permission_error", "the messenger's own guard said no")
+        },
+        record: () => {},
+      }),
+    }
+
+    const refused = await call(
+      ["reactions", "add", "Book", "3", "👍"],
+      async () => ({ ...fake, react: async () => {} }),
+      env,
+      {},
+      refusing,
+    )
+
+    expect(refused.code).toBe(5)
+    expect(refused.stderr.join("\n")).toContain("the messenger's own guard said no")
+    expect(asked).toMatchObject([{ chatId: "7", kind: "reaction", messageId: "3" }])
   })
 
   it("hands the run's diagnostics to connect, so a messenger can report its own wire", async () => {

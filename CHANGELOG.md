@@ -6,6 +6,12 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- **`guard` on `Messenger`, optional**: the send guard a command writes through, when the messenger's
+  is not the profile's plain one. max-cli's background server journals every write it forwards, so a
+  command going through it must record only its own refusals, or each write counts twice.
+
 ## 0.65.0 — 30.09.2026
 
 ### Added
