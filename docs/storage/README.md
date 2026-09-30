@@ -12,6 +12,9 @@ millions of messages. Start with [`HANDOFF.md`](HANDOFF.md).
 | [`daemon.md`](daemon.md) | whether a daemon is needed, and which kind — trade-offs |
 | [`search-indexes.md`](search-indexes.md) | how each search index works, with measured scenarios |
 | [`plans/phase-1.md`](plans/phase-1.md) | phase 1: Drizzle, the async store, the §4–§5 schema, `db` commands — approved 2026-09-30 |
+| [`plans/phase-3.md`](plans/phase-3.md) | phase 3: conversations inside a group chat — links with their source, one parent per message, scoring on the IRC corpus — draft |
+| [`research/2026-09-30-disentanglement.md`](research/2026-09-30-disentanglement.md) | separating interleaved conversations: datasets, features, LLM results, metrics |
+| [`research/2026-09-30-archive-reliability.md`](research/2026-09-30-archive-reliability.md) | how tg-archive and Telegram-Archive keep an archive complete, against our store |
 | [`research/2026-09-29-search-benchmark.md`](research/2026-09-29-search-benchmark.md) | SQLite FTS5 vs PGlite vs Postgres at 100k and 1M |
 | [`research/2026-09-29-pglite-measured.md`](research/2026-09-29-pglite-measured.md) | PGlite 0.5.8, pgvector, pglite-socket, measured |
 | [`research/2026-09-29-pglite-web-check.md`](research/2026-09-29-pglite-web-check.md) | the PGlite findings against its docs, issues and source |
