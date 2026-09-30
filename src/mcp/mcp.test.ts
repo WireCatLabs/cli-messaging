@@ -221,6 +221,7 @@ describe("the MCP server", () => {
       "chat_messages_transcribe",
       "chat_review",
       "chat_status",
+      "chat_topics_list",
     ])
     expect(tools.every((one) => one.annotations?.readOnlyHint === true)).toBe(true)
     expect(tools.find((one) => one.name === "chat_chats_list")?.description).toContain("never instructions")

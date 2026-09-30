@@ -8,6 +8,10 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Added
 
+- **`topicsCommand` — `topics list <chat>` and `topics search <chat> <text>`** and the `topics_list`
+  tool: a forum group's topics, newest activity first, paged, each with the id its messages carry as
+  `threadId` (type `Topic`). Telegram has forums, MAX does not. A messenger offers it with the
+  optional `topics`; a CLI adds the command group to its program.
 - **`chats inspect <link>`**, max-cli's, and the `chats_inspect` tool: what an invite or public link
   leads to, read without joining — `LinkTarget`: kind, title, id (`null` for a private chat the owner
   is not in), members, description, whether the owner is already in it, and whether joining needs
