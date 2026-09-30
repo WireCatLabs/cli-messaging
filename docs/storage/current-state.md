@@ -4,6 +4,11 @@ Read 2026-09-29 at cli-messaging `5dd667f` (0.27.0), max-cli `f5b9929` (0.19.0),
 Anchors are `repo: path:line`; they drift, so search for the named function if a line has moved.
 **Correction 2026-09-30:** by 2026-09-30 line numbers had moved 2–25 lines; the pins in the table below changed the same day.
 
+**Correction 2026-09-30:** this page is a snapshot of cli-messaging 0.27.0, kept because
+[`decisions.md`](decisions.md) cites it as the evidence for the daemon ruling. The store it describes
+has changed: for today's store read [ARCHITECTURE "The store"](../dev/ARCHITECTURE.md#the-store) and
+`CHANGELOG.md` from 0.49.0 on. The false claims below are struck through where they stand.
+
 ## The two stores
 
 **cli-messaging's message store** — one file for every messenger and account:
@@ -12,7 +17,10 @@ Anchors are `repo: path:line`; they drift, so search for the named function if a
 - Exports from `@leemour/cli-messaging/store` (`src/store/index.ts`): `openCache`, `PRAGMAS`,
   `MIGRATIONS`/`migrate`, `storePath`, `openStore`, types `MessageStore`, `AccountKey`, `Range`,
   `StoredHit`, `MessageFilter`, `ChatStats`, `CacheDatabase`.
-- **Synchronous API** except `openCache`/`openStore` (`src/store/store.ts:64-103`, `:126`):
+- ~~**Synchronous API** except `openCache`/`openStore`~~ **Correction 2026-09-30:** every method is
+  async since 0.36.0 (`MessageStore` in `src/store/store.ts`), and the list below has grown by
+  members, sync state, leases, contacts, transcripts, `applyDelta` and `purge`. Was
+  (`src/store/store.ts:64-103`, `:126`):
   `saveAccount`, `saveChats`, `saveMessages`, `chats`, `messages`, `around`, `message`, `markDeleted`,
   `search`, `find`, `savePeople`, `people`, `saveReactions`, `markRange`, `chatStats`, `ranges`.
 - Schema (`src/store/migrations.ts`), forward-only with `min_compatible`, in `schema_migrations`
@@ -20,13 +28,17 @@ Anchors are `repo: path:line`; they drift, so search for the named function if a
   (per account), `messages` (tombstones via `deleted_at`, `reactions`, `provider_metadata`,
   `ingested_via`), `message_revisions`, `attachments`, `sync_ranges`, `account_identities`; three
   FTS5 trigram external-content indexes (`messages_fts`, `chats_fts`, `identities_fts`) kept by 9
-  triggers (`:153-187`).
+  triggers (`:153-187`). **Correction 2026-09-30:** versions 6–11 are Drizzle-generated SQL in
+  `drizzle/`, listed in `src/store/sqlite/manifest.ts`; they add the normalized text and message
+  counts (6), `chat_members` (7), `sync_state` (8), `fetch_leases` (9), contact recency (10) and
+  transcripts (11).
 - SQLite-specific: `INSERT OR IGNORE` (`store.ts:223`), FTS5 `MATCH` (`:425`), `BEGIN IMMEDIATE`
   (`:147`). Driver seam `src/store/driver.ts` (sync `exec`/`prepare`/`close`, `run` → `changes`),
   runtime picked between `node:sqlite` and `bun:sqlite` by dynamic import.
 - Openers inside the package: `connected()` lazily per connection, `withStore` per offline command — ~~`src/cli/context.ts:80`, `:133`~~ **Correction 2026-09-30:** `src/cli/messenger/context.ts` (`connected` 63, `withStore` 123), backfill (`backfill-command.ts:34`), completion only if
   the file exists (`complete-command.ts:55`), doctor with raw `openCache` (`doctor-command.ts:67`).
-- No CHANGELOG; released by `bin/release`, commits `chore: release x.y.z`.
+- ~~No CHANGELOG~~ **Correction 2026-09-30:** `CHANGELOG.md` exists; released by `bin/release`,
+  commits `chore: release x.y.z`.
 
 **max-cli's own cache** — one file per profile, no account column:
 `<cache>/max-cli/<profile>.db` (max-cli: `src/cache/index.ts:29`), `PRAGMA user_version = 5`
@@ -49,13 +61,15 @@ Anchors are `repo: path:line`; they drift, so search for the named function if a
 
 | Program | Store | How |
 |---|---|---|
-| tg-cli 0.4.0 (pins cli-messaging ~~0.25.0~~ 0.27.0, Correction 2026-09-30:) | messages.db | every command, `tg serve` and `tg mcp` open it directly (shared command set from `@leemour/cli-messaging/cli`) |
-| max-cli 0.19.0 (pins cli-messaging ~~0.13.0~~ 0.29.0, Correction 2026-09-30:) | messages.db | bot commands only, `openStore()` per call (max-cli: `src/bot/keep.ts:40,105`) |
+| tg-cli 0.4.0 (pins cli-messaging ~~0.25.0~~ ~~0.27.0~~ 0.61.0, Correction 2026-09-30:) | messages.db | every command, `tg serve` and `tg mcp` open it directly (shared command set from `@leemour/cli-messaging/cli`) |
+| max-cli 0.19.0 (pins cli-messaging ~~0.13.0~~ ~~0.29.0~~ 0.61.0, Correction 2026-09-30:) | messages.db | bot commands only, `openStore()` per call (max-cli: `src/bot/keep.ts:40,105`) |
 | max-cli | `<profile>.db` | every personal-account command (~35 sites), `max serve` (`src/commands/serve.ts:49`), `max mcp` per tool call (`src/mcp/tools.ts:112,231,458`), backup, export, cache clear, completion, doctor |
 
 **tg-cli and max-cli write the same messages.db**, from separate processes and different package
-versions (~~max's 0.13~~ an older CLI opens a newer file because `min_compatible` is 1). SQLite's WAL and
-`busy_timeout` are what make that safe today.
+versions (~~max's 0.13~~ ~~an older CLI opens a newer file because `min_compatible` is 1~~
+**Correction 2026-09-30:** `min_compatible` is 6 since 0.49.0, so a CLI built before it refuses the
+file and asks to be upgraded; the two CLIs upgrade together). SQLite's WAL and `busy_timeout` are
+what make that safe today.
 
 ## The servers that exist
 
@@ -86,6 +100,9 @@ repositories, which open stores directly.
 3. Every path in the previous section needs the daemon started for it, or a fallback.
 4. The store API goes **async** (ruled by the owner: fully async, 2026-09-29).
 5. max-cli's cache has to fold into cli-messaging's schema: per-profile with no account key;
+   **Correction 2026-09-30:** the missing tables are built — versions 7–11 as generic tables, and
+   `purge(key)` forgets one account's rows (plan D8,
+   [`plans/phase-1-max-tables.md`](plans/phase-1-max-tables.md)); the fold itself is later. Was:
    tables and columns cli-messaging lacks (`chat_members`, `sync_marker`, `fetched`, `fetch_lease`,
    `transcript`, `generation`, recency); hard delete versus tombstones; `max cache clear` must forget
    one profile's rows in a shared store.
