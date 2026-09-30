@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.49.0 — 30.09.2026
+
 ### Changed — may break callers
 
 - **Store version 6, and builds before it refuse the file.** `min_compatible` rises to 6: a tg or
