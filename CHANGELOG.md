@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.68.0 — 30.09.2026
+
 ### Added
 
 - **`parity.json`, the parity manifest of tg and max**, in the package: every command and option of
