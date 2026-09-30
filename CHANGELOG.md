@@ -6,6 +6,18 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- **`store info`, `store check` and `store migrate`: looking after `messages.db`.** `store info` says
+  where the file is, its size, its schema and how many rows it holds. `store check` reports whether it
+  is healthy — SQLite's integrity check, foreign keys, the three search indexes against their tables,
+  free disk against the file's size, messages waiting for normalization — and names every chat whose
+  held history stops before the chat's newest message, with when the chat was last refreshed. It
+  repairs nothing. Neither of the two migrates the file. `store migrate` brings the file up to this
+  build's schema, then normalizes the messages stored before version 6, in batches, with the progress
+  on stderr; stopping it loses nothing. `pendingNormalization` and `backfillNormalized` are exported
+  from `./store`.
+
 ## 0.62.0 — 30.09.2026
 
 ### Added

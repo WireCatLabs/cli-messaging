@@ -290,7 +290,10 @@ Releases go through `bin/release` after items 2, 6 and 8, plus whenever tg-cli a
    `find`/`search`, `people`, `chatStats` and `ranges` are ported. `MATCH` stays in `sql`. Add the
    `EXPLAIN QUERY PLAN` test (§6) and the store-against-raw timing (§6). Remove the stale doc comment
    at `store.ts:786-789`. Release.
-9. **`db info`, `db doctor`, `db migrate`.** `db migrate` applies pending migrations and runs the
+9. **`db info`, `db doctor`, `db migrate`.** **Correction 2026-09-30:** built as `store info`, `store check` and
+   `store migrate`, inside the existing `store` group — the naming standard (0.57.0) puts the noun
+   first, and two groups for one file would confuse. `db backup`/`db restore` become `store backup`
+   and `store restore` the same way. `db migrate` applies pending migrations and runs the
    backfill with a progress line on stderr. `db doctor` checks:
    - that the file opens;
    - the schema version, and whether this build can write to it;

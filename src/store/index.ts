@@ -3,6 +3,7 @@ export { PRAGMAS } from "./driver.js"
 export { MIGRATIONS, type Migration, migrate } from "./migrations.js"
 export { openCache } from "./open.js"
 export { storePath } from "./path.js"
+export { backfillNormalized, pendingNormalization } from "./sqlite/backfill.js"
 export {
   type AccountKey,
   type ChatStats,
