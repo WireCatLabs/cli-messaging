@@ -6,6 +6,14 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Fixed
+
+- **A deletion that names no chat no longer hides messages in other chats.** Telegram reports a
+  deletion in a private chat or a basic group by message id alone. The store used to mark every
+  message of the account with that id as deleted, channels and supergroups included, where the same
+  id is a different message. Now it skips channels and supergroups, and skips the deletion when the
+  id still matches more than one message.
+
 ## 0.51.0 — 30.09.2026
 
 ### Fixed
