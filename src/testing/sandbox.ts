@@ -2,6 +2,8 @@ import { mkdtempSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { afterAll } from "vitest"
+// Every `openStore` loads Drizzle, about 200 ms from `node_modules`: loaded here, it is not charged to a test's timeout.
+import "../store/sqlite/drizzle/node.js"
 
 /** The shared store is the owner's system of record: a test that falls back to the default path would migrate it. */
 const sandbox = mkdtempSync(join(tmpdir(), "cli-messaging-test-"))
