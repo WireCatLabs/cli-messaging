@@ -8,8 +8,6 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## 0.60.0 — 30.09.2026
 
-## 0.59.0 — 30.09.2026
-
 ### Removed
 
 - **`drizzle-orm` is no longer installed with this package.** The store's Drizzle modules are bundled
