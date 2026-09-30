@@ -24,6 +24,7 @@ import {
   updateJob,
 } from "./backfill-jobs.js"
 import { type Messenger, type MessengerContext, messengerContext } from "./context.js"
+import { momentOf } from "./inbox.js"
 import { patiently, stopOnSignal } from "./patience.js"
 import type { MessengerAdapter } from "./port.js"
 
@@ -32,30 +33,37 @@ const PAGE = 100
 
 /**
  * A chat's history into the store, newest to oldest, **resumable**: after every page the stretch it
- * covered is recorded, so a stop — Ctrl-C, `--timeout`, `--max`, a long FloodWait — loses nothing,
- * and the next run jumps over what is already held. Needs numeric message ids, which order the chat.
+ * covered is recorded, so a stop — Ctrl-C, `--timeout`, `--max`, `--since`, a long FloodWait — loses
+ * nothing, and the next run jumps over what is already held. Needs numeric message ids, which order
+ * the chat.
  */
-export const backfillCommand = (messenger: Messenger): Command => {
-  const command = new Command("backfill")
+export const fetchCommand = (messenger: Messenger): Command =>
+  new Command("fetch")
     .description("fetch a chat's history into the local store, newest first; run it again to continue")
     .argument("<chat>", messenger.chatArgument)
     .option("--max <n>", "at most this many messages in this run", wholeNumber, 1000)
-    .option("--pace <duration>", "pause between pages, to stay under the provider's limits", "1s")
-    .option("--background", "run as a job that outlives this command; `backfill status` follows it")
+    .option("--pause <duration>", "pause between pages, to stay under the provider's limits", "1s")
+    .option("--since <time>", "stop once it reaches messages older than this: ISO 8601, or 2h / 1d ago")
+    .option("--background", "run as a job that outlives this command; `store jobs show` follows it")
     .option(
       "--estimate",
-      "how many messages, requests and minutes a full backfill would still take — from the store, no request",
+      "only estimate how many messages, requests and minutes a full fetch would still take — from the store, no request",
     )
     .action(async function (this: Command, chat: string) {
-      const { max, pace, background, estimate } = this.opts<{
+      const { max, pause, since, background, estimate } = this.opts<{
         max: number
-        pace: string
+        pause: string
+        since?: string
         background?: boolean
         estimate?: boolean
       }>()
-      const pauseMs = parseDuration(pace, "--pace")
+      const pauseMs = parseDuration(pause, "--pause")
+      const sinceMs = since === undefined ? undefined : momentOf(since)
       const context = messengerContext(this, messenger)
       if (estimate) {
+        if (since !== undefined) {
+          throw new CliError("validation_error", "--estimate prices a full fetch; --since does not narrow it")
+        }
         const answer = await context.withStore(async (store, account) => {
           const chatId = await storedChatId(messenger, chat, store, account)
           const newest = Number((await store.messages(account, chatId, { limit: 1 })).items[0]?.id)
@@ -74,13 +82,18 @@ export const backfillCommand = (messenger: Messenger): Command => {
         context.renderer.result(answer)
         if (answer.missing === null) {
           context.renderer.note(
-            `nothing held of this chat to measure by — \`${messenger.app.command} backfill ${chat} --max 100\` gives the estimate something to go on`,
+            `nothing held of this chat to measure by — \`${messenger.app.command} store fetch ${chat} --max 100\` gives the estimate something to go on`,
           )
         } else if (answer.missing > 0) context.renderer.note("an estimate: provider waits (FloodWait) come on top")
         return
       }
       if (background) {
-        startJob(this, context, messenger, { chat, max, pace })
+        startJob(this, context, messenger, {
+          chat,
+          max,
+          pause,
+          ...(sinceMs === undefined ? {} : { since: new Date(sinceMs).toISOString() }),
+        })
         return
       }
       const jobs = jobsDir(messenger.app, context.env)
@@ -89,12 +102,13 @@ export const backfillCommand = (messenger: Messenger): Command => {
       try {
         const result = await context.withMessenger(async (connection) => {
           const self = connection.self()
-          if (self === null) throw new CliError("authentication_error", "not logged in — nothing to backfill for")
+          if (self === null) throw new CliError("authentication_error", "not logged in — nothing to fetch for")
           const store = await openStore({ env: context.env })
           try {
             return await walk(connection, store, { provider: messenger.provider, account: self }, chat, {
               max,
               pauseMs,
+              ...(sinceMs === undefined ? {} : { sinceMs }),
               note: context.renderer.note,
               stop: stop.signal,
               onPage: (progress) => {
@@ -119,20 +133,24 @@ export const backfillCommand = (messenger: Messenger): Command => {
       }
     })
 
+/** `store jobs`: the background runs `store fetch --background` started. */
+export const jobsCommand = (messenger: Messenger): Command => {
+  const command = new Command("jobs").description("background fetch jobs")
+
   command
     .command("list")
-    .description("background backfill jobs, newest first")
+    .description("background fetch jobs, newest first")
     .action(function (this: Command) {
       const context = messengerContext(this, messenger)
       const jobs = listJobs(jobsDir(messenger.app, context.env)).filter((job) => job.profile === context.profile)
       context.renderer.stream(jobs.map(brief))
-      if (jobs.length === 0) context.renderer.note("no background backfill jobs for this profile")
+      if (jobs.length === 0) context.renderer.note("no background fetch jobs for this profile")
     })
 
   command
-    .command("status")
+    .command("show")
     .description("one background job — the newest when none is named — and what the store now holds of its chat")
-    .argument("[job]", "the job id `backfill --background` printed")
+    .argument("[job]", "the job id `store fetch --background` printed")
     .action(async function (this: Command, id: string | undefined) {
       const context = messengerContext(this, messenger)
       const job = findJob(messenger, context, id)
@@ -146,7 +164,7 @@ export const backfillCommand = (messenger: Messenger): Command => {
 
   command
     .command("cancel")
-    .description("stop a running background job after its current page; a later backfill resumes where it stopped")
+    .description("stop a running background job after its current page; a later fetch resumes where it stopped")
     .argument("<job>", "the job id")
     .action(function (this: Command, id: string) {
       const context = messengerContext(this, messenger)
@@ -181,7 +199,7 @@ const findJob = (messenger: Messenger, context: MessengerContext, id: string | u
   if (!job || job.profile !== context.profile) {
     throw new CliError(
       "not_found",
-      id === undefined ? "no background backfill jobs for this profile" : `no backfill job ${id} for this profile`,
+      id === undefined ? "no background fetch jobs for this profile" : `no fetch job ${id} for this profile`,
     )
   }
   return job
@@ -191,7 +209,7 @@ const startJob = (
   command: Command,
   context: MessengerContext,
   messenger: Messenger,
-  { chat, max, pace }: { chat: string; max: number; pace: string },
+  { chat, max, pause, since }: { chat: string; max: number; pause: string; since?: string },
 ) => {
   const { app } = messenger
   const dir = jobsDir(app, context.env)
@@ -201,7 +219,7 @@ const startJob = (
   if (running) {
     throw new CliError(
       "validation_error",
-      `job ${running.id} is already backfilling ${chat} (PID ${running.pid}) — \`${app.command} backfill status ${running.id}\``,
+      `job ${running.id} is already fetching ${chat} (PID ${running.pid}) — \`${app.command} store jobs show ${running.id}\``,
     )
   }
   const now = new Date()
@@ -210,12 +228,14 @@ const startJob = (
   const log = join(dir, `${id}.log`)
   const { timeout } = command.optsWithGlobals<{ timeout?: string }>()
   const argv = [
-    "backfill",
+    "store",
+    "fetch",
     chat,
     "--max",
     String(max),
-    "--pace",
-    pace,
+    "--pause",
+    pause,
+    ...(since === undefined ? [] : ["--since", since]),
     "--json",
     ...(timeout ? ["--timeout", timeout] : []),
   ]
@@ -228,12 +248,14 @@ const startJob = (
   const pid = spawnJob(argv, env, log)
   saveJob(dir, { ...job, pid })
   context.renderer.result({ job: id, pid, chat, log })
-  context.renderer.note(`started — \`${app.command} backfill status ${id}\` follows it`)
+  context.renderer.note(`started — \`${app.command} store jobs show ${id}\` follows it`)
 }
 
 interface Walk {
   max: number
   pauseMs: number
+  /** Stop after the page that reaches a message older than this, epoch milliseconds. */
+  sinceMs?: number
   note: (message: string) => void
   stop: AbortSignal
   onPage: (progress: { fetched: number; chatId: string; oldest: number }) => void
@@ -244,13 +266,14 @@ const walk = async (
   store: MessageStore,
   account: AccountKey,
   chat: string,
-  { max, pauseMs, note, stop, onPage }: Walk,
+  { max, pauseMs, sinceMs, note, stop, onPage }: Walk,
 ) => {
   let before: string | undefined
   let chatId: Id | undefined
   let top: number | undefined
   let fetched = 0
   let reachedStart = false
+  let reachedSince = false
 
   while (fetched < max && !stop.aborted) {
     const page = await patiently(
@@ -266,7 +289,10 @@ const walk = async (
     chatId ??= first.chatId
     const keys = page.items.map((message) => Number(message.id))
     if (keys.some((key) => !Number.isSafeInteger(key))) {
-      throw new CliError("validation_error", "this messenger's message ids do not order a chat, so it cannot backfill")
+      throw new CliError(
+        "validation_error",
+        "this messenger's message ids do not order a chat, so it cannot fetch its history",
+      )
     }
     const low = Math.min(...keys)
     top ??= Math.max(...keys)
@@ -276,6 +302,10 @@ const walk = async (
     onPage({ fetched, chatId, oldest: held.from })
     if (!page.hasMore) {
       reachedStart = true
+      break
+    }
+    if (sinceMs !== undefined && page.items.some((message) => Date.parse(message.timestamp) < sinceMs)) {
+      reachedSince = true
       break
     }
     before = String(held.from)
@@ -289,6 +319,7 @@ const walk = async (
     fetched,
     complete: reachedStart && ranges.length === 1,
     ranges,
+    ...(reachedSince ? { reachedSince: true } : {}),
     ...(stop.aborted ? { stopped: true } : {}),
   }
 }

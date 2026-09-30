@@ -12,8 +12,8 @@ export interface MarkedRead {
   until: Id | null
 }
 
-export const readCommand = (messenger: Messenger): Command =>
-  annotate(new Command("read"), { mutates: true })
+export const markReadCommand = (messenger: Messenger): Command =>
+  annotate(new Command("mark-read"), { mutates: true })
     .description("mark a chat read; the other side sees that you read it")
     .argument("<chat>", messenger.chatArgument)
     .option("--until <message>", "only up to this message id; the newest by default")
@@ -27,7 +27,7 @@ export const readCommand = (messenger: Messenger): Command =>
       )
     })
 
-/** One path for `chats read` and the MCP tool. Never counts toward the hourly limit. */
+/** One path for `chats mark-read` and the MCP tool. Never counts toward the hourly limit. */
 export const guardedMarkRead = async (
   guard: SendGuard,
   connection: MessengerAdapter,

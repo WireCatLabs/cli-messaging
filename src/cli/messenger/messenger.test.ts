@@ -12,7 +12,7 @@ import { type RunOptions, run } from "../program.js"
 import { settingsFor } from "../settings.js"
 import { accountCommand } from "./account-command.js"
 import { accountFileFor } from "./accounts.js"
-import { exportCommand, syncCommand } from "./archive-commands.js"
+import { storeCommand } from "./archive-commands.js"
 import { chatsCommand } from "./chats-command.js"
 import { completeCommand } from "./complete-command.js"
 import { contactsCommand } from "./contacts-command.js"
@@ -131,8 +131,7 @@ const call = async (
         sendsCommand(messenger),
         commandsCommand(app),
         completeCommand(messenger, settingsFor(app)),
-        syncCommand(messenger),
-        exportCommand(messenger),
+        storeCommand(messenger),
         mcpCommand(messenger),
         modelsCommand(messenger),
         topicsCommand(messenger),
@@ -212,31 +211,32 @@ describe("the shared read commands", () => {
     expect(JSON.parse(shown.stdout[0] ?? "")).toMatchObject({ id: "21", chats: [{ id: "7" }] })
   })
 
-  it("**reply to the message named, record it without the text**, by chat and id or by locator", async () => {
+  it("**send --reply-to answers the message named, with every send option, recorded without the text**", async () => {
     const root = mkdtempSync(join(tmpdir(), "messenger-"))
     const env = {
       CHAT_STATE_DIR: join(root, "state"),
       CHAT_CONFIG_DIR: join(root, "config"),
       MESSAGING_STORE: join(root, "m.db"),
     }
-    const sent: { chatId: string; text: string; replyTo?: string }[] = []
+    const sent: { chatId: string; text: string; replyTo?: string; silent?: boolean }[] = []
     const replying: MessengerAdapter = {
       ...fake,
-      send: async (chatId, text, { sendId, replyTo }) => {
-        sent.push({ chatId, text, ...(replyTo ? { replyTo } : {}) })
+      send: async (chatId, text, { sendId, replyTo, silent }) => {
+        sent.push({ chatId, text, ...(replyTo ? { replyTo } : {}), ...(silent ? { silent } : {}) })
         return { message: { ...message, text }, sendId }
       },
     }
 
-    expect((await call(["messages", "reply", "Book", "2", "see you there"], async () => replying, env)).code).toBe(0)
-    expect(
-      (await call(["messages", "reply", "msg:chat/500/7/3", "and bring it"], async () => replying, env)).code,
-    ).toBe(0)
-    expect((await call(["messages", "send", "Book", "hello"], async () => replying, env)).code).toBe(0)
+    const answer = (argv: string[]) => call(["messages", "send", "Book", ...argv], async () => replying, env)
+    expect((await answer(["see you there", "--reply-to", "2"])).code).toBe(0)
+    expect((await answer(["and bring it", "--reply-to", "3", "--silent"])).code).toBe(0)
+    expect((await answer(["hello"])).code).toBe(0)
+    expect((await answer(["nothing", "--reply-to", " "])).code).not.toBe(0)
+    expect((await call(["messages", "reply", "Book", "2", "hi"], async () => replying, env)).code).not.toBe(0)
 
     expect(sent).toEqual([
       { chatId: "7", text: "see you there", replyTo: "2" },
-      { chatId: "7", text: "and bring it", replyTo: "3" },
+      { chatId: "7", text: "and bring it", replyTo: "3", silent: true },
       { chatId: "7", text: "hello" },
     ])
     const journal = new SendJournal(sendsPathFor(app, "default", env)).entries()
@@ -501,8 +501,8 @@ describe("the shared read commands", () => {
       },
     }
 
-    const all = await call(["chats", "read", "Book", "--json"], async () => reading, env)
-    const some = await call(["chats", "read", "Book", "--until", "3", "--json"], async () => reading, env)
+    const all = await call(["chats", "mark-read", "Book", "--json"], async () => reading, env)
+    const some = await call(["chats", "mark-read", "Book", "--until", "3", "--json"], async () => reading, env)
 
     expect(JSON.parse(all.stdout[0] ?? "")).toEqual({ chatId: "7", until: null })
     expect(JSON.parse(some.stdout[0] ?? "")).toEqual({ chatId: "7", until: "3" })
@@ -515,6 +515,7 @@ describe("the shared read commands", () => {
       ["read", undefined],
       ["read", "3"],
     ])
+    expect((await call(["chats", "read", "Book"], async () => reading, env)).code).not.toBe(0)
   })
 
   it("**delete only with --allow-dangerous**, each message counted toward the hourly limit", async () => {
@@ -693,15 +694,17 @@ describe("the shared read commands", () => {
       throw new Error("the archive commands must never connect")
     }
 
-    const status = await call(["sync", "status", "--json"], never, env)
+    const status = await call(["store", "status", "--json"], never, env)
     expect(JSON.parse(status.stdout[0] ?? "")).toMatchObject([{ chatId: "7", title: null, messages: 3, held: [] }])
-    const exported = await call(["export", "7", "--jsonl"], never, env)
+    const exported = await call(["store", "export", "7", "--jsonl"], never, env)
     expect(exported.stdout.map((line) => JSON.parse(line).id)).toEqual(["1", "2", "3"])
-    const one = await call(["export", "7", "--json"], never, env)
+    const one = await call(["store", "export", "7", "--json"], never, env)
     expect(one.stdout).toHaveLength(1)
-    const transcript = await call(["export", "7", "--format", "markdown"], never, env)
+    const transcript = await call(["store", "export", "7", "--format", "markdown"], never, env)
     expect(transcript.stdout.join("\n")).toMatch(/^# 7\n\n## \d{4}-\d{2}-\d{2}\n\n\*\*\d{2}:\d{2} /)
-    expect((await call(["export", "7", "--format", "html"], never, env)).code).not.toBe(0)
+    expect((await call(["store", "export", "7", "--format", "html"], never, env)).code).not.toBe(0)
+    expect((await call(["export", "7"], never, env)).code).not.toBe(0)
+    expect((await call(["sync", "status"], never, env)).code).not.toBe(0)
   })
 
   it("keep the account file where tg-cli 0.x kept it", () => {
@@ -806,7 +809,7 @@ describe("messages download", () => {
       const into = join(root, "out")
       const asked: string[] = []
       const { code, stdout } = await call(
-        ["messages", "download", "Book", "--all", "--pace", "1ms", "--output", into, "--json"],
+        ["messages", "download", "Book", "--all", "--pause", "1ms", "--output", into, "--json"],
         async () => chatOf([5, 4, 3, 2, 1], { 5: "file", 4: "webpage", 2: "file" }, asked),
         env,
       )
@@ -827,13 +830,13 @@ describe("messages download", () => {
       const kinds = { 6: "file", 5: "file", 3: "file", 1: "file" }
       const first: string[] = []
       const cut = await call(
-        ["messages", "download", "Book", "--all", "--pace", "1ms", "--output", into],
+        ["messages", "download", "Book", "--all", "--pause", "1ms", "--output", into],
         async () => chatOf([5, 4, 3, 2, 1], kinds, first, "3"),
         env,
       )
       const second: string[] = []
       const again = await call(
-        ["messages", "download", "Book", "--all", "--pace", "1ms", "--output", into, "--json"],
+        ["messages", "download", "Book", "--all", "--pause", "1ms", "--output", into, "--json"],
         async () => chatOf([6, 5, 4, 3, 2, 1], kinds, second),
         env,
       )
@@ -978,7 +981,11 @@ describe("the guard, account and mcp config commands", () => {
     const empty = await call(["recipients", "list", "--json"], online, env)
     expect(empty.stderr.join("\n")).toContain("on and empty")
 
-    expect(json((await call(["recipients", "off", "--json"], online, env)).stdout)).toEqual({ off: true, wasOn: true })
+    expect(json((await call(["recipients", "clear", "--json"], online, env)).stdout)).toEqual({
+      off: true,
+      wasOn: true,
+    })
+    expect((await call(["recipients", "off"], online, env)).code).not.toBe(0)
   })
 
   it("list attempts to send newest first, and say when there were none", async () => {
@@ -987,7 +994,7 @@ describe("the guard, account and mcp config commands", () => {
     expect(none.stderr.join("\n")).toContain("has not tried to send anything")
 
     await call(["messages", "send", "Book", "one"], async () => fake, env)
-    await call(["messages", "reply", "Book", "1", "two"], async () => fake, env)
+    await call(["messages", "send", "Book", "two", "--reply-to", "1"], async () => fake, env)
     const listed = await call(["sends", "list", "--limit", "1", "--json"], async () => fake, env)
     expect(json(listed.stdout).map((entry: { replyTo?: string }) => entry.replyTo)).toEqual(["1"])
   })

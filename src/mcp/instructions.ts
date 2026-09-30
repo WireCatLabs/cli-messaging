@@ -34,7 +34,7 @@ export const instructions = ({
       ? '- Send only when the owner asked for this exact text in this exact chat. A draft or "we should reply" is not a request. A refusal (read-only profile, recipient not allowed, hourly limit) is final — do not work around it.'
       : "- Sending is off: this server was started without --allow-send. Say so if asked to send.",
     ...(allowMarkRead
-      ? [`- ${command}_chats_read marks a chat read and the other side sees it: only when the owner asked.`]
+      ? [`- ${command}_chats_mark_read marks a chat read and the other side sees it: only when the owner asked.`]
       : []),
     ...(allowDelete
       ? [
