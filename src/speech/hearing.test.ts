@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest"
 import type { Messenger } from "../cli/messenger/context.js"
 import type { MessengerAdapter, Transcript } from "../cli/messenger/port.js"
 import type { Message } from "../domain/models.js"
+import { openCache } from "../store/open.js"
 import { hearVoices, isVoice, type Kept, keyOf, openKept, spoken, withTranscript } from "./hearing.js"
 import { speechModel } from "./models.js"
 
@@ -120,5 +121,25 @@ describe("hearing voice messages in a list", () => {
     expect(again.get({ chatId: "7", messageId: "2" })).toBeUndefined()
     again.close()
     expect(statSync(join(env.CHAT_CACHE_DIR, "transcripts-work.db")).mode & 0o777).toBe(0o600)
+  })
+
+  it("**forgets what local models heard before quiet speech was kept**, once, and keeps the messenger's", async () => {
+    const env = { CHAT_CACHE_DIR: mkdtempSync(join(tmpdir(), "kept-")) }
+    const path = join(env.CHAT_CACHE_DIR, "transcripts-work.db")
+    const old = await openCache(path)
+    old.exec(`CREATE TABLE transcripts (chat_id TEXT NOT NULL, message_id TEXT NOT NULL, text TEXT NOT NULL,
+      source TEXT NOT NULL, heard_at TEXT NOT NULL, PRIMARY KEY (chat_id, message_id));
+      INSERT INTO transcripts VALUES ('7', '1', 'clipped', 'gigaam-v3', ''), ('7', '2', 'whole', 'telegram', '')`)
+    old.close()
+
+    const kept = await openKept(messenger, "work", env)
+    expect(kept.get({ chatId: "7", messageId: "1" })).toBeUndefined()
+    expect(kept.get({ chatId: "7", messageId: "2" })).toBe("whole")
+    kept.keep({ chatId: "7", messageId: "1" }, "heard again", "gigaam-v3")
+    kept.close()
+
+    const again = await openKept(messenger, "work", env)
+    expect(again.get({ chatId: "7", messageId: "1" })).toBe("heard again")
+    again.close()
   })
 })

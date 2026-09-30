@@ -6,6 +6,7 @@ import type { MessengerAdapter } from "../cli/messenger/port.js"
 import type { Settings } from "../cli/settings.js"
 import type { Message } from "../domain/models.js"
 import { openCache } from "../store/open.js"
+import { MODELS } from "./models.js"
 import { type Choice, choose, hearLocally, hearOnline } from "./transcribe.js"
 
 /** Telegram polls each voice message for up to a minute; a whole list gets this long, then says what is left. */
@@ -56,6 +57,14 @@ export const openKept = async (messenger: Messenger, profile: string, env: NodeJ
     heard_at TEXT NOT NULL,
     PRIMARY KEY (chat_id, message_id)
   )`)
+  const { user_version: version } = database.prepare("PRAGMA user_version").get() as { user_version: number }
+  if (version < 1) {
+    // Local models heard these with a voice detector that dropped quiet speech; hear them again.
+    database
+      .prepare(`DELETE FROM transcripts WHERE source IN (${MODELS.map(() => "?").join(", ")})`)
+      .run(...MODELS.map(({ id }) => id))
+    database.exec("PRAGMA user_version = 1")
+  }
   const read = database.prepare("SELECT text FROM transcripts WHERE chat_id = ? AND message_id = ?")
   const write = database.prepare(
     "INSERT OR REPLACE INTO transcripts (chat_id, message_id, text, source, heard_at) VALUES (?, ?, ?, ?, ?)",
