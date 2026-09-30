@@ -39,12 +39,17 @@ latest=$(npm view "$package" version --prefer-online 2>/dev/null || true)
 versions=$(npm view "$package" versions --json --prefer-online 2>/dev/null || true)
 next=$(node scripts/next-version.mjs "$version" "$latest" "$versions")
 if [ "$next" != "$version" ]; then
-  if published; then why="$version is already on npm"; else why="$version is not above npm's latest $latest"; fi
+  taken=""
+  if published; then taken=1; why="$version is already on npm"; else why="$version is not above npm's latest $latest"; fi
   echo "$why — publishing $next instead"
-  node -e 'const fs = require("fs"); const [o, n] = process.argv.slice(1)
+  # A version npm already has keeps its changelog section; the unreleased one becomes the new version.
+  # Renaming it instead moved 0.51.0's section under 0.52.0 (beb54e9, repaired in #155).
+  node -e 'const fs = require("fs"); const [o, n, taken] = process.argv.slice(1)
     const swap = (file, from, to) => fs.writeFileSync(file, fs.readFileSync(file, "utf8").replace(from, to))
     swap("package.json", `"version": "${o}"`, `"version": "${n}"`)
-    swap("CHANGELOG.md", `\n## ${o} — `, `\n## ${n} — `)' "$version" "$next"
+    const today = new Date().toLocaleDateString("en-GB").replaceAll("/", ".")
+    if (taken) swap("CHANGELOG.md", "\n## Unreleased\n", `\n## Unreleased\n\n## ${n} — ${today}\n`)
+    else swap("CHANGELOG.md", `\n## ${o} — `, `\n## ${n} — `)' "$version" "$next" "$taken"
   git commit -q -am "chore: release $next" -m "bin/release: $why."
   git push -q origin main || {
     git reset -q --hard HEAD~1
