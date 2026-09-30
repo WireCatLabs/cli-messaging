@@ -75,25 +75,14 @@ export interface Sent {
   sendId: string
 }
 
-/**
- * What a messenger does for the shared commands. Each CLI implements it over its own library, and
- * nothing of that library's shape crosses it. A chat is passed as typed — a title, an id, a handle —
- * because only the adapter knows how its messenger finds one.
- *
- * **A method added from now on is optional** (`edit?`), so an adapter or a test fake that lacks it
- * still compiles, and the command asks for it with `capability` — which refuses with a message
- * instead of crashing. Such a method returns a promise: the wrappers time and pass it through
- * without being told about it (`throughWrapper`).
- */
-export interface MessengerAdapter {
+/** What every messenger does: the shared read commands and `messages send` stand on these. */
+export interface MessengerCore {
   /** The logged-in account's id, from what is stored locally — no request. `null` before a login. */
   self(): Id | null
   me(): Promise<Account>
   chats(window: { limit?: number; offset: number }): Promise<Page<Chat>>
   /** Oldest to newest. `before` is a message id, or whatever the messenger pages by, as typed. */
   history(chat: string, window: { limit: number; before?: string }): Promise<Page<Message>>
-  /** The oldest `limit` newer than a message or a moment, oldest first; `hasMore` when newer ones remain. */
-  historyAfter?(chat: string, window: { limit: number; after: After }): Promise<Page<Message>>
   resolve(chat: string): Promise<Chat>
   /** One chat and who is in it; `members` is `null` where the messenger does not say — a channel, a hidden list. */
   chat(chat: string): Promise<ChatCard>
@@ -103,57 +92,122 @@ export interface MessengerAdapter {
   around(chat: string, messageId: Id, window: { before: number; after: number }): Promise<WindowedMessage[]>
   /** An option the messenger has no way to honour is refused, never dropped. */
   send(chatId: Id, text: string, options: SendOptions): Promise<Sent>
+  logout(): Promise<void>
+  close(): Promise<void>
+}
+
+/** Reading beyond the core: forward from a point, a forum's topics, where a link leads. */
+export interface ChatReading {
+  /** The oldest `limit` newer than a message or a moment, oldest first; `hasMore` when newer ones remain. */
+  historyAfter(chat: string, window: { limit: number; after: After }): Promise<Page<Message>>
+  /** A forum group's topics, newest activity first; `search` matches their titles. */
+  topics(chat: string, window: { search?: string; limit?: number; offset: number }): Promise<Page<Topic>>
+  /** What an invite or public link leads to. Reading it joins nothing. */
+  inspect(link: string): Promise<LinkTarget>
+}
+
+/** Changing a message already sent, or passing it on. */
+export interface MessageEditing {
   /** The new text of one of the owner's own messages; the answer is the message as it now stands. */
-  edit?(chatId: Id, messageId: Id, text: string): Promise<Message>
+  edit(chatId: Id, messageId: Id, text: string): Promise<Message>
   /** One message into another chat; the answer is the copy there. `silent` delivers it without a notification. */
-  forward?(fromChatId: Id, messageId: Id, toChatId: Id, options: { silent?: boolean }): Promise<Message>
-  /** `notify` tells the chat's members; without it the pin is quiet. */
-  pin?(chatId: Id, messageId: Id, options: { notify: boolean }): Promise<void>
-  unpin?(chatId: Id, messageId: Id): Promise<void>
-  /** The owner's reaction on one message: an emoji replaces the one there was, `null` takes it off. */
-  react?(chatId: Id, messageId: Id, emoji: string | null): Promise<void>
-  /** Marks the chat read up to `until`, or to its newest message; the other side sees it. */
-  markRead?(chatId: Id, until?: Id): Promise<void>
+  forward(fromChatId: Id, messageId: Id, toChatId: Id, options: { silent?: boolean }): Promise<Message>
   /** For the owner only, unless `forEveryone`; neither can be undone. */
-  delete?(chatId: Id, messageIds: Id[], options: { forEveryone: boolean }): Promise<void>
+  delete(chatId: Id, messageIds: Id[], options: { forEveryone: boolean }): Promise<void>
+}
+
+export interface MessagePins {
+  /** `notify` tells the chat's members; without it the pin is quiet. */
+  pin(chatId: Id, messageId: Id, options: { notify: boolean }): Promise<void>
+  unpin(chatId: Id, messageId: Id): Promise<void>
+}
+
+export interface MessageReactions {
+  /** The owner's reaction on one message: an emoji replaces the one there was, `null` takes it off. */
+  react(chatId: Id, messageId: Id, emoji: string | null): Promise<void>
+}
+
+export interface ReadState {
+  /** Marks the chat read up to `until`, or to its newest message; the other side sees it. */
+  markRead(chatId: Id, until?: Id): Promise<void>
+}
+
+export interface MessagePolls {
   /** The poll one message carries; a message without one is `not_found`. */
-  poll?(chatId: Id, messageId: Id): Promise<Poll>
+  poll(chatId: Id, messageId: Id): Promise<Poll>
   /** The owner's vote, by answer ids; none takes it back. An id the poll does not have is refused. */
-  vote?(chatId: Id, messageId: Id, answerIds: Id[]): Promise<Poll>
+  vote(chatId: Id, messageId: Id, answerIds: Id[]): Promise<Poll>
   /** Only the owner's own poll; it cannot be reopened. */
-  closePoll?(chatId: Id, messageId: Id): Promise<Poll>
-  createPoll?(chatId: Id, poll: NewPoll, options: { sendId: string; silent?: boolean }): Promise<Sent>
+  closePoll(chatId: Id, messageId: Id): Promise<Poll>
+  createPoll(chatId: Id, poll: NewPoll, options: { sendId: string; silent?: boolean }): Promise<Sent>
+}
+
+export interface LiveUpdates {
   /**
    * New messages and changes to messages as they arrive, until `signal` aborts. `onReady` once it is
    * actually listening — a caller that sends on "listening" must not race the connection. Only on a
    * connection opened with `{ listen: true }`; a messenger that cannot listen leaves it out.
    */
-  watch?(onEvent: (event: MessageEvent) => void, signal: AbortSignal, onReady?: () => void): Promise<void>
-  /** The files attached to one message, fetched fresh from the messenger: a stored reference may have expired. */
-  download?(chat: string, messageId: Id): Promise<Download>
-  /** Messages waiting to be sent later in a chat, soonest first, each with `scheduledFor`. */
-  scheduled?(chat: string): Promise<Message[]>
-  /** A voice or video note as text, by the messenger's own speech recognition. */
-  transcribe?(chat: string, messageId: Id): Promise<Transcript>
-  /** A forum group's topics, newest activity first; `search` matches their titles. */
-  topics?(chat: string, window: { search?: string; limit?: number; offset: number }): Promise<Page<Topic>>
-  /** What an invite or public link leads to. Reading it joins nothing. */
-  inspect?(link: string): Promise<LinkTarget>
-  /** Every device and app logged in to this account. Reading them ends nothing. */
-  sessions?(): Promise<AccountSession[]>
-  /** The person with this phone number, where their privacy lets the owner find them; `not_found` otherwise. */
-  lookup?(phone: string): Promise<Member>
-  /** The owner's contact list as the messenger keeps it — the address book, not the chats. */
-  addressBook?(): Promise<Member[]>
-  /** Everyone in a group, a page at a time; `limit` unset is every one the messenger will give. */
-  members?(chat: string, window: { limit?: number; offset: number }): Promise<Page<GroupMember> & { chatId: Id }>
-  /** Who joined, left, was added or removed since `since` (ms), from the chat's service messages. */
-  chatEvents?(chat: string, window: { since: number }): Promise<ChatEvents>
-  /** A group's admins, whose answer counts as the group's in `review --unanswered`; `null` where the group hides them. */
-  admins?(chat: string): Promise<Id[] | null>
-  logout(): Promise<void>
-  close(): Promise<void>
+  watch(onEvent: (event: MessageEvent) => void, signal: AbortSignal, onReady?: () => void): Promise<void>
 }
+
+/** A message's files and its speech, fetched from the messenger. */
+export interface MessageMedia {
+  /** The files attached to one message, fetched fresh from the messenger: a stored reference may have expired. */
+  download(chat: string, messageId: Id): Promise<Download>
+  /** A voice or video note as text, by the messenger's own speech recognition. */
+  transcribe(chat: string, messageId: Id): Promise<Transcript>
+}
+
+export interface ScheduledMessages {
+  /** Messages waiting to be sent later in a chat, soonest first, each with `scheduledFor`. */
+  scheduled(chat: string): Promise<Message[]>
+}
+
+/** Who is in a group, who runs it, and who came and went. */
+export interface GroupModeration {
+  /** Everyone in a group, a page at a time; `limit` unset is every one the messenger will give. */
+  members(chat: string, window: { limit?: number; offset: number }): Promise<Page<GroupMember> & { chatId: Id }>
+  /** A group's admins, whose answer counts as the group's in `review --unanswered`; `null` where the group hides them. */
+  admins(chat: string): Promise<Id[] | null>
+  /** Who joined, left, was added or removed since `since` (ms), from the chat's service messages. */
+  chatEvents(chat: string, window: { since: number }): Promise<ChatEvents>
+}
+
+/** The account itself: its sessions, and finding people outside the chats. */
+export interface AccountTools {
+  /** Every device and app logged in to this account. Reading them ends nothing. */
+  sessions(): Promise<AccountSession[]>
+  /** The person with this phone number, where their privacy lets the owner find them; `not_found` otherwise. */
+  lookup(phone: string): Promise<Member>
+  /** The owner's contact list as the messenger keeps it — the address book, not the chats. */
+  addressBook(): Promise<Member[]>
+}
+
+/**
+ * What a messenger does for the shared commands. Each CLI implements it over its own library, and
+ * nothing of that library's shape crosses it. A chat is passed as typed — a title, an id, a handle —
+ * because only the adapter knows how its messenger finds one.
+ *
+ * **Only `MessengerCore` is required; every group is optional**, so an adapter or a test fake that
+ * lacks one still compiles, and the command asks for a method with `capability` — which refuses with
+ * a message instead of crashing. An adapter that has a group can say `implements MessageEditing` to
+ * be held to all of it. A method added from now on goes into a group, never the core, and returns a
+ * promise: the wrappers time and pass it through without being told about it (`throughWrapper`).
+ */
+export interface MessengerAdapter
+  extends MessengerCore,
+    Partial<ChatReading>,
+    Partial<MessageEditing>,
+    Partial<MessagePins>,
+    Partial<MessageReactions>,
+    Partial<ReadState>,
+    Partial<MessagePolls>,
+    Partial<LiveUpdates>,
+    Partial<MessageMedia>,
+    Partial<ScheduledMessages>,
+    Partial<GroupModeration>,
+    Partial<AccountTools> {}
 
 type Method = (...args: never[]) => unknown
 

@@ -6,6 +6,15 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- **The adapter port in named groups** — step 3 of the layer design. `MessengerAdapter` is now
+  `MessengerCore` (the required methods) plus optional groups: `ChatReading`, `MessageEditing`,
+  `MessagePins`, `MessageReactions`, `ReadState`, `MessagePolls`, `LiveUpdates`, `MessageMedia`,
+  `ScheduledMessages`, `GroupModeration`, `AccountTools`, all exported from `./cli`. The type is the
+  same as before, so no adapter changes; one that has a group can say `implements MessageEditing` and
+  be held to the whole group.
+
 ## 0.58.0 — 30.09.2026
 
 ### Added

@@ -26,11 +26,23 @@ export { messagesCommand } from "./messenger/messages-command.js"
 export { modelsCommand } from "./messenger/models-command.js"
 export { pollsCommand } from "./messenger/polls-command.js"
 export type {
+  AccountTools,
   After,
+  ChatReading,
   Download,
+  GroupModeration,
+  LiveUpdates,
+  MessageEditing,
+  MessageMedia,
+  MessagePins,
+  MessagePolls,
+  MessageReactions,
   MessengerAdapter,
+  MessengerCore,
   NewPoll,
+  ReadState,
   RemoteFile,
+  ScheduledMessages,
   SendOptions,
   Sent,
   Transcript,
