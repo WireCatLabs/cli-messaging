@@ -72,6 +72,13 @@ announced 2026-09-29; 4 is `account_identities`, cli-messaging #48; 5 is message
 without an announcement first, corrected here; both 2026-09-29). Take it by editing this line in a PR of
 its own, merged before the migration. L1 `chats events` or members, and L7, are the likely takers.
 
+**Services are coming to the command files (2026-09-30, [`2026-09-30-services.md`](2026-09-30-services.md)).**
+Commands and MCP tools stop calling the adapter and the store directly and call `services.*`
+instead, one group per PR: message reads, message writes, chats and people, inbox and sync. A lane
+that adds a subcommand in a group already moved adds a service method and calls it; one in a group
+not yet moved writes it as today, and the services PR moves it. Each services PR is rebased on the
+lanes' merges, never the other way round.
+
 ## 5. How a lane runs
 
 tg-cli [`docs/dev/agents.md`](https://github.com/leemour/tg-cli/blob/main/docs/dev/agents.md): `bin/lane <lane>` makes the lane's
