@@ -1,6 +1,7 @@
 # Handoff — lane B: the store's maintenance commands (info, check, migrate, backup, restore)
 
-Phase 1 items 9 and 10 of [`../plans/phase-1.md`](../plans/phase-1.md). **Nothing of it is built yet.**
+Phase 1 items 9 and 10 of [`../plans/phase-1.md`](../plans/phase-1.md). **Correction 2026-09-30: built** —
+#199 (`store info`, `check`, `migrate`) and #205 (`store backup`, `restore`), released in 0.67.0.
 Lanes A and C run at the same time ([`README.md`](README.md)); this lane adds new command files and
 does not edit `src/store/store.ts`.
 
@@ -71,6 +72,9 @@ backfill, and a backup they can restore. Full picture: [`../README.md`](../READM
   them there; do not touch `store.ts`.
 - **Both CLIs must add the command.** A new subcommand inside `storeCommand` arrives by itself with the
   package bump. After the release, bump the pin in tg-cli and max-cli (the owner allows these PRs).
+  **Correction 2026-09-30:** true for tg-cli only. max-cli does not use `storeCommand`: its `max store`
+  is its own group over the profile cache (max-cli `src/commands/store.ts`), so the commands do not
+  reach `max` with the bump. Where they go in max-cli is an open question to the owner (NEED-445).
 
 ## 5. Do not read, do not touch
 
