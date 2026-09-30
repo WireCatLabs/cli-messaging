@@ -4,8 +4,9 @@ import { join } from "node:path"
 import { eq } from "drizzle-orm"
 import { afterEach, describe, expect, it } from "vitest"
 import type { CacheDatabase } from "../driver.js"
-import { migrate } from "../migrations.js"
+import { MIGRATIONS, migrate } from "../migrations.js"
 import { openCache } from "../open.js"
+import { generatedMigrations } from "./manifest.js"
 import { type OpenedSqlite, openSqlite } from "./open.js"
 import { accounts } from "./schema.js"
 
@@ -63,13 +64,25 @@ const shape = (database: CacheDatabase) => {
 describe("the Drizzle schema", () => {
   it("**builds the same tables, columns, keys and indexes as migrations 1–5**", async () => {
     const migrated = await open()
-    migrate(migrated)
+    migrate(migrated, { migrations: MIGRATIONS.filter(({ version }) => version <= 5) })
     const baseline = await open()
     baseline.exec("BEGIN")
     for (const statement of baselineStatements()) baseline.exec(statement)
     baseline.exec("COMMIT")
 
     expect(shape(baseline)).toEqual(shape(migrated))
+  })
+
+  it("**is what every migration builds**: the baseline and each generated one after it", async () => {
+    const migrated = await open()
+    migrate(migrated)
+    const generated = await open()
+    generated.exec("BEGIN")
+    for (const statement of baselineStatements()) generated.exec(statement)
+    for (const { statements } of generatedMigrations()) for (const statement of statements) generated.exec(statement)
+    generated.exec("COMMIT")
+
+    expect(shape(generated)).toEqual(shape(migrated))
   })
 
   it("reads through Drizzle what the hand-written SQL wrote, over one connection", async () => {

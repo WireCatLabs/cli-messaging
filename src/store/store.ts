@@ -17,8 +17,10 @@ import type {
 import type { PeopleLookup } from "../resolve.js"
 import type { CacheDatabase, SqlValue } from "./driver.js"
 import { migrate } from "./migrations.js"
+import { NORMALIZER_VERSION, normalize } from "./normalize.js"
 import { openCache } from "./open.js"
 import { storePath } from "./path.js"
+import { backfillNormalized, pendingNormalization } from "./sqlite/backfill.js"
 import { ulid } from "./ulid.js"
 
 /** Which account of which messenger a call is about. */
@@ -135,6 +137,9 @@ export interface StoreOptions {
   now?: () => number
 }
 
+/** About 40 ms of the first open (129k rows/s measured at 1M, 2026-09-30); Tab opens the store too. */
+export const BACKFILL_ON_OPEN = 5_000
+
 export const openStore = async ({ path, env, now = Date.now }: StoreOptions = {}): Promise<MessageStore> => {
   const file = path ?? storePath(env)
   mkdirSync(dirname(file), { recursive: true, mode: 0o700 })
@@ -143,6 +148,9 @@ export const openStore = async ({ path, env, now = Date.now }: StoreOptions = {}
   const database = await openCache(file)
   try {
     migrate(database, { now })
+    // A small file is filled on the spot; a larger one waits for `db migrate`, since nothing reads the copy yet.
+    const pending = pendingNormalization(database)
+    if (pending > 0 && pending <= BACKFILL_ON_OPEN) backfillNormalized(database)
   } catch (error) {
     database.close()
     throw error
@@ -192,12 +200,14 @@ const storeOver = (database: CacheDatabase, now: () => number): MessageStore => 
   const upsertChat = (accountKey: number, chat: Chat): void => {
     run(
       `INSERT INTO chats (account_pk, native_id, kind, title, unread_count, last_message_at, participants_count,
-                          provider_metadata, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                          provider_metadata, membership_state, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
        ON CONFLICT (account_pk, native_id) DO UPDATE SET
          kind = excluded.kind, title = excluded.title, unread_count = excluded.unread_count,
          last_message_at = excluded.last_message_at, participants_count = excluded.participants_count,
-         provider_metadata = excluded.provider_metadata, updated_at = excluded.updated_at`,
+         provider_metadata = excluded.provider_metadata,
+         membership_state = coalesce(excluded.membership_state, chats.membership_state),
+         updated_at = excluded.updated_at`,
       accountKey,
       chat.id,
       chat.kind,
@@ -206,6 +216,7 @@ const storeOver = (database: CacheDatabase, now: () => number): MessageStore => 
       toMs(chat.lastMessageAt),
       chat.participantsCount,
       json(chat.providerMetadata),
+      chat.membershipState ?? null,
       now(),
     )
   }
@@ -330,13 +341,15 @@ const storeOver = (database: CacheDatabase, now: () => number): MessageStore => 
     } satisfies Record<string, SqlValue>
 
     const found = one(
-      "SELECT pk, text, edited_at FROM messages WHERE chat_pk = ? AND native_id = ?",
+      "SELECT pk, text, edited_at, deleted_at FROM messages WHERE chat_pk = ? AND native_id = ?",
       chatKey,
       message.id,
     )
+    // A deleted message gets no second copy of its text (the owner's ruling: deletion leaves no text).
+    const normalized: Record<string, SqlValue> = found?.deleted_at == null ? searchable(message.text) : {}
     let pk: number
     if (!found) {
-      const columns = Object.keys(fields)
+      const columns = [...Object.keys(fields), ...Object.keys(normalized)]
       pk = Number(
         one(
           `INSERT INTO messages (chat_pk, account_pk, native_id, text, ingested_at, ingested_via, ${columns.join(", ")})
@@ -348,13 +361,21 @@ const storeOver = (database: CacheDatabase, now: () => number): MessageStore => 
           now(),
           via,
           ...Object.values(fields),
+          ...Object.values(normalized),
         )?.pk,
       )
     } else {
       pk = Number(found.pk)
       // A copy that knows less — no reactions asked for, no quote sent, no sender — never erases what we had.
-      const assignments = Object.keys(fields).map((column) => `${column} = coalesce(?, ${column})`)
-      run(`UPDATE messages SET ${assignments.join(", ")} WHERE pk = ?`, ...Object.values(fields), pk)
+      const assignments = [...Object.keys(fields), ...Object.keys(normalized)].map(
+        (column) => `${column} = coalesce(?, ${column})`,
+      )
+      run(
+        `UPDATE messages SET ${assignments.join(", ")} WHERE pk = ?`,
+        ...Object.values(fields),
+        ...Object.values(normalized),
+        pk,
+      )
       if (found.text !== message.text) {
         run(
           "INSERT INTO message_revisions (message_pk, text, edited_at, captured_at) VALUES (?, ?, ?, ?)",
@@ -752,6 +773,8 @@ const storeOver = (database: CacheDatabase, now: () => number): MessageStore => 
   }
 }
 
+const searchable = (text: string) => ({ normalized_text: normalize(text), normalizer_version: NORMALIZER_VERSION })
+
 const toMs = (iso: string | null | undefined): number | null => {
   if (iso === null || iso === undefined) return null
   const ms = Date.parse(iso)
@@ -782,7 +805,7 @@ const toChat = (row: Record<string, unknown>): Chat => ({
   unreadCount: (row.unread_count as number | null) ?? null,
   lastMessageAt: toIso(row.last_message_at),
   participantsCount: (row.participants_count as number | null) ?? null,
-  ...present({ providerMetadata: parsed(row.provider_metadata) }),
+  ...present({ membershipState: row.membership_state, providerMetadata: parsed(row.provider_metadata) }),
 })
 
 const toAttachment = (row: Record<string, unknown>): Attachment =>

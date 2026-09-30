@@ -38,10 +38,9 @@ describe("the generated migrations", () => {
   it("each have one manifest row, in order, numbered on from version 5 without a gap", () => {
     expect(MANIFEST.map(({ name }) => name)).toEqual(GENERATED.map(({ name }) => name))
     const numbered = MANIFEST.flatMap((entry) => ("version" in entry ? [entry] : []))
-    numbered.forEach((entry, index) => {
-      expect(entry.version).toBe(6 + index)
-      expect(entry.minCompatible).toBeLessThanOrEqual(entry.version)
-    })
+    const versions = [...new Set(numbered.map(({ version }) => version))]
+    expect(versions).toEqual(versions.map((_, index) => 6 + index))
+    for (const entry of numbered) expect(entry.minCompatible).toBeLessThanOrEqual(entry.version)
     expect(MIGRATIONS.map(({ version }) => version)).toEqual(MIGRATIONS.map((_, index) => index + 1))
   })
 
@@ -58,6 +57,31 @@ describe("the generated migrations", () => {
     expect(rebuilds("ALTER TABLE `chats` ADD `folder` text NOT NULL;")).toBe(true)
     expect(rebuilds("ALTER TABLE `chats` ADD `folder` text DEFAULT '' NOT NULL;")).toBe(false)
     expect(rebuilds("ALTER TABLE `chats` ADD `folder` text;")).toBe(false)
+  })
+
+  it("applies the folders of one version as one migration, and refuses them disagreeing", () => {
+    const generated = [
+      { name: "a", statements: ["SELECT 1"] },
+      { name: "b", statements: ["SELECT 2"] },
+    ]
+    expect(
+      generatedMigrations(
+        [
+          { name: "a", version: 6, minCompatible: 6 },
+          { name: "b", version: 6, minCompatible: 6 },
+        ],
+        generated,
+      ),
+    ).toEqual([{ version: 6, minCompatible: 6, statements: ["SELECT 1", "SELECT 2"] }])
+    expect(() =>
+      generatedMigrations(
+        [
+          { name: "a", version: 6, minCompatible: 6 },
+          { name: "b", version: 6, minCompatible: 1 },
+        ],
+        generated,
+      ),
+    ).toThrow(/disagree/)
   })
 
   it("refuses a manifest row with no bundled migration, and numbers the rest", () => {

@@ -19,6 +19,9 @@ export type ProviderMetadata = Record<string, unknown>
 /** `saved` is the account's notes-to-self chat. */
 export type ChatKind = "dialog" | "group" | "channel" | "saved" | "unknown"
 
+/** Where the owner stands in a chat. Kept apart from whether its messages are searchable: a chat left keeps them. */
+export type MembershipState = "joined" | "left" | "public" | "imported" | "archived" | "external"
+
 export interface Chat {
   id: Id
   title: string | null
@@ -33,6 +36,8 @@ export interface Chat {
   archived?: boolean
   /** Unread messages that mention the owner or reply to them. */
   unreadMentions?: number
+  /** Absent where the messenger does not say. */
+  membershipState?: MembershipState
   providerMetadata?: ProviderMetadata
 }
 

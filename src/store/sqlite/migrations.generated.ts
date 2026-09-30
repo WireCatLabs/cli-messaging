@@ -21,5 +21,27 @@ export const GENERATED: { name: string; statements: string[] }[] = [
       "CREATE INDEX `messages_by_account` ON `messages` (`account_pk`,`native_id`);",
       "CREATE INDEX `messages_by_sender` ON `messages` (`sender_identity_pk`);"
     ]
+  },
+  {
+    "name": "20260930003739_version-6-columns",
+    "statements": [
+      "ALTER TABLE `chats` ADD `username` text;",
+      "ALTER TABLE `chats` ADD `membership_state` text;",
+      "ALTER TABLE `chats` ADD `is_searchable` integer DEFAULT 1 NOT NULL;",
+      "ALTER TABLE `chats` ADD `message_count` integer DEFAULT 0 NOT NULL;",
+      "ALTER TABLE `messages` ADD `normalized_text` text;",
+      "ALTER TABLE `messages` ADD `normalizer_version` integer;",
+      "CREATE INDEX `messages_to_normalize` ON `messages` (`pk`) WHERE normalized_text IS NULL AND deleted_at IS NULL;"
+    ]
+  },
+  {
+    "name": "20260930003740_version-6-message-count",
+    "statements": [
+      "-- A chat's live messages, kept by triggers: a tombstone is not counted, and taking it back is.\nCREATE TRIGGER chats_count_ai AFTER INSERT ON messages WHEN new.deleted_at IS NULL BEGIN\n  UPDATE chats SET message_count = message_count + 1 WHERE pk = new.chat_pk;\nEND;",
+      "CREATE TRIGGER chats_count_ad AFTER DELETE ON messages WHEN old.deleted_at IS NULL BEGIN\n  UPDATE chats SET message_count = message_count - 1 WHERE pk = old.chat_pk;\nEND;",
+      "CREATE TRIGGER chats_count_tombstone AFTER UPDATE OF deleted_at ON messages\n  WHEN old.deleted_at IS NULL AND new.deleted_at IS NOT NULL BEGIN\n  UPDATE chats SET message_count = message_count - 1 WHERE pk = new.chat_pk;\nEND;",
+      "CREATE TRIGGER chats_count_untombstone AFTER UPDATE OF deleted_at ON messages\n  WHEN old.deleted_at IS NOT NULL AND new.deleted_at IS NULL BEGIN\n  UPDATE chats SET message_count = message_count + 1 WHERE pk = new.chat_pk;\nEND;",
+      "UPDATE chats SET message_count = counted.n\n  FROM (SELECT chat_pk, count(*) AS n FROM messages WHERE deleted_at IS NULL GROUP BY chat_pk) AS counted\n  WHERE chats.pk = counted.chat_pk;"
+    ]
   }
 ]

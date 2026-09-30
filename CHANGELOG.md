@@ -6,6 +6,26 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Changed — may break callers
+
+- **Store version 6, and builds before it refuse the file.** `min_compatible` rises to 6: a tg or
+  max built on an earlier cli-messaging opens an upgraded `messages.db` only to say «the message
+  store was written by a newer version … — upgrade this tool». Release a CLI's bump of this package
+  together with the other's, then upgrade both: `npm install -g @leemour/tg-cli@latest
+  @leemour/max-cli@latest`. Version 6 adds `chats.username`, `membership_state`, `is_searchable` and
+  `message_count` (kept by triggers), and `messages.normalized_text` with `normalizer_version`. The
+  upgrade holds the write lock for about 0.4 s on a million messages.
+
+### Added
+
+- **Every saved message keeps a normalized copy of its text** — accents and marks removed, ё as е,
+  lowercase, whitespace collapsed — for the word search to come; the original text is untouched. A
+  deleted message gets none. Messages stored before version 6 are filled on the first open when
+  there are at most 5,000 of them; a larger store is filled by `db migrate`, still to come, and
+  nothing reads the copy before then.
+- **`Chat.membershipState`** (`joined`, `left`, `public`, `imported`, `archived`, `external`), absent
+  where the messenger does not say. The store keeps the last one it was told.
+
 ## 0.48.0 — 30.09.2026
 
 ### Added
