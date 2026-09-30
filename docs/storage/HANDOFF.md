@@ -4,6 +4,11 @@ You build **phase 1** of the approved plan, [`plans/phase-1.md`](plans/phase-1.m
 store API, the new message and chat model, the migration of existing files, and the `db` commands. The
 research is done, the engine is ruled, the plan is approved (2026-09-30). **Start with work item 1.**
 
+**Correction 2026-09-30:** items 1–6 are built and released (up to 0.60.0), and so are max-cli's tables
+(versions 7–11). What is left runs as three parallel lanes — **start from
+[`handoffs/README.md`](handoffs/README.md)**, which says who owns which files, then your lane's handoff.
+The rest of this page is the original brief; its "what will bite you" still holds.
+
 ## 1. What this is
 
 `@leemour/cli-messaging` is the messenger-neutral half of two published CLIs, `tg-cli` (Telegram)
