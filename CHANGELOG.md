@@ -6,6 +6,14 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- **`parity.json`, the parity manifest of tg and max**, in the package: every command and option of
+  both CLIs, each `both`, one-sided with a reason, or `planned` with who closes it, and the option
+  catalogue — one name, one meaning. A CLI checks itself against it with
+  `<tool> commands --json | cli-messaging-parity <max|tg>`, which exits 1 and names each difference;
+  `@leemour/cli-messaging/parity` exports the same check.
+
 ## 0.67.0 — 30.09.2026
 
 ### Added

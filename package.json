@@ -15,6 +15,7 @@
   "packageManager": "pnpm@11.20.0",
   "files": [
     "dist",
+    "parity.json",
     "README.md",
     "LICENSE"
   ],
@@ -38,7 +39,12 @@
     "./services": {
       "types": "./dist/services/index.d.ts",
       "default": "./dist/services/index.js"
-    }
+    },
+    "./parity": {
+      "types": "./dist/parity/index.d.ts",
+      "default": "./dist/parity/index.js"
+    },
+    "./parity.json": "./parity.json"
   },
   "scripts": {
     "build": "tsc --build && node scripts/bundle-drizzle.ts",
@@ -56,7 +62,8 @@
     "smoke:bun": "bun run scripts/smoke.ts",
     "prepare": "lefthook install || true",
     "secrets:scan": "gitleaks git --no-banner --redact .",
-    "prepublishOnly": "pnpm build"
+    "prepublishOnly": "pnpm build",
+    "parity:seed": "node --experimental-strip-types scripts/parity-seed.ts"
   },
   "dependencies": {
     "@bomb.sh/tab": "0.0.22",
@@ -94,5 +101,8 @@
   },
   "peerDependencies": {
     "commander": ">=15"
+  },
+  "bin": {
+    "cli-messaging-parity": "dist/parity/bin.js"
   }
 }

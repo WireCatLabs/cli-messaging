@@ -15,6 +15,8 @@ export default defineConfig({
         "src/store/drivers/bun-sqlite.ts",
         // Declarations whose callbacks drizzle-kit runs, in its own process; the baseline test checks its output.
         "src/store/sqlite/schema.ts",
+        // stdin, argv and an exit code around parityProblems, which the parity tests cover.
+        "src/parity/bin.ts",
       ],
       reporter: ["text-summary", "json-summary", "html"],
       // A little under what the suite reaches (2026-09-29), so coverage can rise and not fall.
