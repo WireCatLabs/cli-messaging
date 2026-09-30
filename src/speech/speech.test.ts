@@ -1,14 +1,16 @@
 import { createHash } from "node:crypto"
 import { mkdirSync, mkdtempSync, readdirSync, readFileSync, truncateSync, writeFileSync } from "node:fs"
+import { createRequire } from "node:module"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
+import { fileURLToPath } from "node:url"
 import { CliError } from "@leemour/cli-core"
 import { describe, expect, it, vi } from "vitest"
 import type { Messenger } from "../cli/messenger/context.js"
 import type { MessengerAdapter } from "../cli/messenger/port.js"
 import { install, isInstalled, modelPath, vadPath } from "./install.js"
 import { DEFAULT_ORDER, orderedModels, type SpeechModel, speechModel, VAD } from "./models.js"
-import { SAMPLE_RATE, toModelRate } from "./recognize.js"
+import { decodeOgg, detector, SAMPLE_RATE, toModelRate } from "./recognize.js"
 import { type Choice, choose, hearLocally, hearOnline } from "./transcribe.js"
 
 vi.mock("./recognize.js", async (original) => ({
@@ -91,6 +93,56 @@ describe("audio for the model", () => {
 
     expect(pcm.length).toBe(SAMPLE_RATE / 2 + 2)
     expect([...pcm.subarray(SAMPLE_RATE / 2)].map((sample) => sample.toFixed(2))).toEqual(["0.30", "0.60"])
+  })
+})
+
+describe("the voice detector", () => {
+  const fixture = (name: string) => new URL(`../testing/fixtures/${name}`, import.meta.url)
+  interface Vad {
+    acceptWaveform(samples: Float32Array): void
+    isEmpty(): boolean
+    front(): { start: number; samples: Float32Array }
+    pop(): void
+    flush(): void
+    free(): void
+  }
+  const sherpa = createRequire(import.meta.url)("sherpa-onnx") as { createVad(config: object): Vad }
+
+  /** The stretches, in seconds of the recording, that the detector hands to the model. */
+  const heard = (pcm: Float32Array, config: ReturnType<typeof detector>) => {
+    const vad = sherpa.createVad(config)
+    const lead = SAMPLE_RATE / 2
+    const stretches: [number, number][] = []
+    const drain = () => {
+      for (; !vad.isEmpty(); vad.pop()) {
+        const { start, samples } = vad.front()
+        stretches.push([(start - lead) / SAMPLE_RATE, (start + samples.length - lead) / SAMPLE_RATE])
+      }
+    }
+    const window = config.sileroVad.windowSize
+    for (let i = 0; i + window <= pcm.length; i += window) {
+      vad.acceptWaveform(pcm.subarray(i, i + window))
+      drain()
+    }
+    vad.flush()
+    drain()
+    vad.free()
+    return stretches
+  }
+  const covers = (stretches: [number, number][], from: number, to: number) =>
+    stretches.some(([start, end]) => start <= from && to <= end)
+
+  it("**keeps a quietly spoken sentence between two loud ones**, which the default setting dropped", async () => {
+    // A LibriVox reading (public domain) with "На славу вышел кисель. Всем по нраву пришёлся, всем угодил."
+    // at 10.6–16.7 s made 25 dB quieter: fixtures/README.md.
+    const { samples, rate } = await decodeOgg(new Uint8Array(readFileSync(fixture("quiet-middle.ogg"))))
+    const pcm = toModelRate(samples, rate)
+    const config = detector(fileURLToPath(fixture("silero_vad.onnx")))
+    const kept = heard(pcm, config)
+    const before = heard(pcm, { ...config, sileroVad: { ...config.sileroVad, threshold: 0.5 } })
+
+    expect(covers(kept, 11, 12.8) && covers(kept, 13.8, 16.4)).toBe(true)
+    expect(before.some(([start, end]) => end > 11 && start < 16.4)).toBe(false)
   })
 })
 
