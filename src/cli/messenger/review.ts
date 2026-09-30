@@ -163,13 +163,10 @@ export const reviewCommand = (messenger: Messenger): Command =>
       const options = this.opts<{ since?: string; chat?: string; unanswered?: string | true; all?: boolean }>()
       const context = messengerContext(this, messenger)
       const { settings, renderer, format, streams } = context
-      if (settings.offline) {
-        throw new CliError("validation_error", "`review` asks the messenger what changed; with `--offline` nothing did")
-      }
       const since = options.since === undefined ? reviewStart() : momentOf(options.since)
       const hours = options.unanswered === undefined ? undefined : unansweredHours(options.unanswered)
-      const found = await context.withMessenger((adapter) =>
-        reviewIn(adapter, {
+      const found = await context.withServices((services) =>
+        services.inbox.review({
           since,
           ...(options.chat === undefined ? {} : { chat: options.chat }),
           ...(options.all ? { all: true } : {}),
