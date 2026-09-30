@@ -174,11 +174,11 @@ Valencia Expats · 12 May 10:01–10:05 · 4 messages · Alice, Carol
    transaction per chat, `conversations(chat, window)`, `conversation(pk)`; nothing Drizzle-typed crosses.
 3. **Mentions** (optional): the nullable `mentions` column; tg-cli fills it from the message's
    mention entities; max-cli after a capture. Only new downloads get it.
-4. 🚧 `feat/conversation-rules` · **The builder**: a pure function from a chat's messages (in order, streamed in batches of `pk`) to
+4. ✅ 2026-09-30, `src/conversations/link.ts` (the pure function; reading the store waits for phase 1) · **The builder**: a pure function from a chat's messages (in order, streamed in batches of `pk`) to
    links and conversations. Reads by `pk` range, holds a 50-message look-back, never the whole chat in
    memory.
 5. **The `conversations` service and commands** of C7, and the two MCP tools.
-6. 🚧 `feat/conversation-rules` · **Scoring**: `bench/disentangle/` — downloads the IRC corpus into a directory outside the repository
+6. ✅ 2026-09-30, [`bench/disentangle/`](../../../bench/disentangle/README.md) · **Scoring**: `bench/disentangle/` — downloads the IRC corpus into a directory outside the repository
    (never committed), converts it to our messages, runs the builder, writes links in the IRC graph
    format, and runs the corpus's own `conversation-eval` scorers (Python, via `uv`). Also scores against
    our own replies: hide a random 20% of reply links in a local archive, rebuild, count how many the
@@ -197,7 +197,9 @@ Valencia Expats · 12 May 10:01–10:05 · 4 messages · Alice, Carol
 - `replaceDerived` in one transaction: a failed build leaves the previous conversations intact.
 - Dropping the four tables leaves every message and search result unchanged.
 - Machine output: `--json` for every command, stdout only data.
-- Scoring script: run in CI on a 1,000-line fixture made of invented messages, not on the IRC data.
+- ~~Scoring script: run in CI on a 1,000-line fixture made of invented messages, not on the IRC data.~~
+  **Correction 2026-09-30:** not run in CI, like `bench/search`; the rules have their own tests in
+  `src/conversations/link.test.ts`, and the script is run by hand when a rule changes.
 
 ## 7. Open questions
 
@@ -208,3 +210,7 @@ Valencia Expats · 12 May 10:01–10:05 · 4 messages · Alice, Carol
    conversation and keeps its reply link; the next rebuild joins it once the parent is downloaded.
 4. **Forum threads in MAX**: does MAX have them at all? `threadId` is filled by tg-cli only today.
 5. **Mentions in MAX**: needs a capture of a message that mentions someone, before item 3 covers MAX.
+6. **Telegram senders have no username in the store** (0 of 1,535 identities in a development copy,
+   2026-09-30), so the mention rule cannot fire on Telegram: the held-out check found 2 of 397 hidden
+   replies. `Message` carries `senderName` but no handle. Item 3 must also store each sender's username,
+   or the mention rule is IRC-only. See [`bench/disentangle/README.md`](../../../bench/disentangle/README.md).
