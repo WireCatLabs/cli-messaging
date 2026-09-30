@@ -6,6 +6,16 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- **Diagnostic events for a frame protocol.** A request or response event may carry `opcode`, `seq`,
+  `status` and `bytes`; a new `cache` event says a read was answered locally, and why; a warning may
+  carry `detail`. `renderEvent` shows them. max-cli writes its run records in this one format.
+- **`startRecording`**: `recorded` in two halves, for a caller that starts a run before its command
+  and ends it after. Exported from `./cli` with `Recording`, `wasSettled` and `runtime`.
+- **`allowFix` on the send guard**: the command that changes `allow`, for a CLI whose configuration
+  has more places than profiles and defaults.
+
 ## 0.61.0 — 30.09.2026
 
 ### Added

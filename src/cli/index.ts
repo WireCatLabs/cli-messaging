@@ -66,6 +66,7 @@ export {
 export { createProgram, type ProgramDefinition, type ProgramOptions, type RunOptions, run } from "./program.js"
 export { runsCommand } from "./runs/command.js"
 export {
+  type CacheEvent,
   type DiagnosticEvent,
   type EventSink,
   providerErrorKey,
@@ -73,7 +74,14 @@ export {
   renderEvent,
   type WarningEvent,
 } from "./runs/events.js"
-export { crashOf, type RecordingOptions, recorded } from "./runs/recording.js"
+export {
+  crashOf,
+  type Recording,
+  type RecordingOptions,
+  recorded,
+  startRecording,
+  wasSettled,
+} from "./runs/recording.js"
 export {
   findRun,
   KEEP_RUNS_FOR_DAYS,
@@ -82,6 +90,7 @@ export {
   type RunMetadata,
   readEvents,
   runsDirFor,
+  runtime,
   startRun,
 } from "./runs/run.js"
 export {

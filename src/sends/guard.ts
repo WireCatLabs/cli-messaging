@@ -51,6 +51,8 @@ export interface SendGuardOptions {
   /** `undefined` allows every action; a list only those (`CLI-37`). */
   allow?: readonly Permission[]
   allowFrom?: string
+  /** The command that changes `allow`, when the CLI's configuration has more places than profiles and defaults. */
+  allowFix?: string
   sendsPerHour: number
   journal: SendJournal
   recipients: RecipientList
@@ -98,6 +100,7 @@ export const sendGuard = ({
   readOnlyFrom,
   allow,
   allowFrom = "default",
+  allowFix,
   sendsPerHour,
   journal,
   recipients,
@@ -117,9 +120,10 @@ export const sendGuard = ({
     const permission = permissionFor(kind, action)
     if (allow && !allow.includes(permission)) {
       const fix =
-        allowFrom === "config defaults"
+        allowFix ??
+        (allowFrom === "config defaults"
           ? `${command} config set --defaults allow`
-          : `${command} ${profile} config set allow`
+          : `${command} ${profile} config set allow`)
       throw new CliError(
         "permission_error",
         `profile ${profile} does not allow ${permission} (allow: ${allow.join(", ") || "nothing"} — from the ${allowFrom}); ` +

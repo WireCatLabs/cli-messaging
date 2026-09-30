@@ -30,6 +30,26 @@ export interface RecordingOptions {
  * is the quiet one: a run directory left saying `running` because the command threw on the way out.
  */
 export const recorded = async <T>(options: RecordingOptions, body: (events: EventSink) => Promise<T>): Promise<T> => {
+  const recording = startRecording(options)
+  try {
+    const answer = await body(recording.events)
+    await recording.succeed()
+    return answer
+  } catch (error) {
+    await recording.fail(error)
+    throw error
+  }
+}
+
+export interface Recording {
+  events: EventSink
+  succeed: () => Promise<void>
+  /** Marks the error as dealt with, so the program's last catch does not keep it a second time. */
+  fail: (error: unknown) => Promise<void>
+}
+
+/** `recorded` in two halves, for a caller that starts a run before its command and ends it after (max-cli's `max bot`). */
+export const startRecording = (options: RecordingOptions): Recording => {
   const streams = options.streams ?? processStreams
   const now = options.now ?? (() => new Date())
 
@@ -66,22 +86,23 @@ export const recorded = async <T>(options: RecordingOptions, body: (events: Even
     }
   }
 
-  try {
-    const answer = await body(events)
-    await run?.finish("success", { requests })
-    return answer
-  } catch (error) {
-    const failed = run ?? (held ? keep(open({ startedAt }), held) : undefined)
-    if (failed) {
-      if (!isCliFailure(error)) failed.logger.info(crashOf(error))
-      await failed.finish("failed", {
-        requests,
-        ...outcomeOf(error),
-        ...(run ? {} : { keptBecauseFailed: true }),
-      })
-    }
-    if (typeof error === "object" && error !== null) settled.add(error)
-    throw error
+  return {
+    events,
+    succeed: async () => {
+      await run?.finish("success", { requests })
+    },
+    fail: async (error) => {
+      const failed = run ?? (held ? keep(open({ startedAt }), held) : undefined)
+      if (failed) {
+        if (!isCliFailure(error)) failed.logger.info(crashOf(error))
+        await failed.finish("failed", {
+          requests,
+          ...outcomeOf(error),
+          ...(run ? {} : { keptBecauseFailed: true }),
+        })
+      }
+      if (typeof error === "object" && error !== null) settled.add(error)
+    },
   }
 }
 
