@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.50.0 — 30.09.2026
+
 ### Added
 
 - **`pollsCommand` — `polls show|vote|close|create`**, max-cli's. `show` answers a poll (`Poll`,
