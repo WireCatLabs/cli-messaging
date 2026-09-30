@@ -835,3 +835,20 @@ file — one account per source, a chat per corpus chat, a sender identity per c
 About 12 times slower than `sqlite.ts` loading inline (94,798 rows/s at 100k). Per message the store
 upserts the sender's identity and `account_identities`, looks the message up before it writes, and its
 message index is trigram (migration 5), not `unicode61`. Where the time goes is not measured yet.
+
+## The real store after the message writes moved to Drizzle
+
+Lane A slice 4 against the store just before lane A (`0e32cc2`, schema 11, hand-written SQL), same corpus,
+same machine, 2026-09-30. At 100k the two builds ran alternately, four rounds each; at 1M once each.
+
+| build | N | load | disk | peak RSS |
+|---|---|---|---|---|
+| hand-written SQL | 100,000 | 6,867 rows/s (mean of 7,028 · 6,834 · 6,895 · 6,710) | 126 MB | 530 MB |
+| Drizzle, per-message statements prepared once | 100,000 | 7,942 rows/s (mean of 8,349 · 7,519 · 7,884 · 8,015) | 126 MB | 348 MB |
+| hand-written SQL | 1,000,000 | 6,900 rows/s (144.93 s) | 1218 MB | 1376 MB |
+| Drizzle, per-message statements prepared once | 1,000,000 | 9,131 rows/s (109.52 s) | 1218 MB | 1138 MB |
+
+Faster, not slower: the hand-written store compiled every statement on every call, and the port
+prepares the lookup, insert, update and attachment upsert once per store. Built per call instead,
+Drizzle cost about a quarter of the load rate (measured on the identity queries alone, slice 2).
+The schema 5 numbers above are not comparable: versions 6–11 added columns and triggers since.
