@@ -39,6 +39,12 @@ becomes `''`, `normalized_text` `NULL`, its `message_revisions` go — and a lat
 it back. Today `saveMessages` rewrites the text of a deleted row (verified, `src/store/store.ts:356-376`
 at `979f0a6`).
 
+**A deletion that names no chat is a guess (0.52.0, #150).** Telegram reports deletions in private
+chats and basic groups by id alone. Since 0.52.0 `markDeleted` without a chat leaves out channels and
+chats whose `chatType` numbers its own messages, and skips the deletion when more than one message
+matches. A supergroup stored only as a stub (`kind = 'unknown'`, no metadata) is still not recognised.
+Today a wrong match only hides a message; once deletion erases the text (D6), it destroys it.
+
 ## 3. Decisions
 
 **D1 · One migration per table, numbered 7, 8, 9**, each in its own PR, announced in the lanes plan
@@ -65,6 +71,9 @@ so the service that deletes a message also drops its line there.
 **D6 · Deletion as ruled (NEED-393 A) goes into `markDeleted` itself**, not a second method: the
 ruling is about the shared store, so tg-cli's deletions follow it too, and one method means one
 meaning. It comes here, not in item 8, because max-cli is the first caller that needs it.
+It keeps 0.52.0's rule for a deletion that names no chat, and adds one: such a deletion also leaves
+out chats of kind `'unknown'`. Erasing is not reversible, so a guess must not reach a chat whose kind
+we do not know; a deletion missed there costs a message that should be hidden, not one that is lost.
 
 **D7 · Names grouped by concern.** Chats: `chats`, `countChats`, `saveMembers`, `members`,
 `chatsWith`. People: `contacts`, `countContacts`, `refreshRecency`. Sync: `syncState`,
@@ -79,7 +88,7 @@ rename.
 |---|---|---|---|
 | 1 | — | the lanes plan takes 7–9 | — |
 | 2 | 7 | `chat_members (chat_pk, identity_pk)`, PK both, index by identity | `saveMembers(key, chatId, ids)` replaces a chat's membership whole; `members(key, chatId)`; `chatsWith(key, identityId)` newest first |
-| 3 | 8 | `sync_state (account_pk, key, value, at)`, PK `(account_pk, key)` | `syncState(key, name)`, `setSyncState(key, name, value)`, `clearSyncState(key, name)` — the login marker, "list fetched at", a chat's "fresh" mark |
+| 3 | 8 | `sync_state (account_pk, key, value, at)`, PK `(account_pk, key)` | `syncState(key, name)`, `setSyncState(key, name, value)`, `clearSyncState(key, name)` — the login marker, "list fetched at", a chat's "fresh" mark, and a chat's "history reaches its first message" mark, which `db doctor`'s completeness check reads (phase 1 item 9) |
 | 4 | 9 | `fetch_leases (chat_pk, anchor, holder, expires_at)`, PK `(chat_pk, anchor)` | `claim(key, chatId, anchor, holder, forMs)` → whether this holder has it; `release(...)` |
 | 5 | 9 | `identities.description`, `account_identities.last_messaged_at` (both nullable) — same version as item 4 if they land together, else 10 | `contacts(key, { order: "recent" \| "name", query?, limit, offset })` + `countContacts`; `refreshRecency(key)` |
 | 6 | — | reads, no schema | `chats(key, { query?, kind?, unread? })` and `countChats`; `messagesWindow(key, chatId, { at, before, after })` by time, beside `around` by id; `messages(key, chatId, { since })` and `countSince` |
@@ -97,6 +106,8 @@ can share one release.
 - `markDeleted`: the message is gone from `messages`, `around`, `message`, `find`, `chatStats` and the
   counts; its text, normalized text and revisions are gone from the file; `message_count` drops;
   `saveMessages` of the same id afterwards changes nothing.
+- `markDeleted` without a chat: 0.52.0's test keeps passing, and a message in a chat of kind
+  `'unknown'` keeps its text.
 - `purge`: one account's chats, messages, members, state, leases and seen identities go; another
   account's and the FTS index of both stay consistent (`integrity-check`).
 - The migration guards from item 4 cover each new version; the published 0.49.0 keeps opening a
