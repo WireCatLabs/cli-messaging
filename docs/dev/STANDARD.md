@@ -1,0 +1,168 @@
+# The standard for tg and max
+
+tg-cli and max-cli are one tool with two messengers behind it. This page holds the rules that make
+them one: how a command, an option, an answer and an MCP tool are named and shaped, where code
+lives, and which documents each has. It lives here because this package is where the two meet;
+both CLIs' `CONVENTIONS.md` link it instead of keeping a copy.
+
+A rule changes here first, in its own pull request, and the owner approves new wording — a new verb
+or option name especially. Then the code follows. A difference between the two CLIs is allowed only
+where one messenger lacks the feature, and it is written down with its reason in the
+[parity manifest](#the-parity-manifest).
+
+## Command names
+
+A name a person reads once should say what the command does; a name an agent reads should be
+guessable from the others.
+
+1. **`<tool> [profile] <resource> <verb> [arguments]`.** The resource is a noun: **plural** for a
+   collection (`chats`, `contacts`, `messages`, `polls`, `reactions`, `recipients`, `sends`,
+   `runs`, `topics`, `models`), **singular** for what a profile has exactly one of (`session`,
+   `account`, `config`, `server`, `store`, `skill`, `cache`). A group is never named with a verb.
+2. **Top-level words** only for what spans every chat or is the tool itself: `inbox`, `review`,
+   `watch`, `serve`, `doctor`, `upgrade`, `commands`, `complete`, `mcp`. A new one needs a reason
+   in its pull request.
+3. **Verbs come from this list, each with one meaning.** A verb not on it is added here first.
+   - `list` many · `show` one · `search` find by text — the description says where it looks
+   - `info` facts about a singular thing itself — where it is, its size, its version, its schema
+     (`store info`) · `status` how a thing stands right now — a running process (`server status`)
+     or what the store holds per chat (`store status`)
+   - `check` verify, and change nothing — the answer says what is wrong and how to fix it
+     (`store check`)
+   - `create` / `delete` make or destroy a thing · `add` / `remove` put an existing thing into or
+     out of a set (members, admins, contacts, recipients, reactions) · `clear` empty a set
+   - `update` change a thing's fields · `set` / `unset` one named key · `rename` its name only
+   - `start` / `stop` / `restart` a running process · `start` / `end` a login session
+     · `install` / `uninstall` a system unit · `cancel` a job
+   - `fetch` from the messenger into the store · `export` from the store to a file · `import` ·
+     `download` · `transcribe` · `sync` take a whole list again
+   - `migrate` bring a file up to this build's schema · `backup` copy it somewhere safe ·
+     `restore` put a backup back in its place
+   - `lookup` ask the messenger who is behind a phone number · `inspect` look at a link without
+     joining it
+   - the messenger's plain verbs: `send`, `edit`, `forward`, `pin`, `unpin`, `vote`, `close`,
+     `join`, `leave`, `block`, `unblock`, `mark-read`, `reset` (replace; the old one stops
+     working), `moderate` (apply a chat's rules: delete what breaks them, act on who broke them)
+   - A **noun as the last word** names a view and shows it: `server logs`, `chats events`,
+     `messages scheduled`, `messages context`, `runs path`, `mcp config`.
+4. **One action, one command.** A variant is an option, never a sibling command, and no command
+   both shows and changes.
+5. **Options are plain words, never a wire field** (`--send-id`, not `--cid`). One meaning, one
+   name, in every command of both tools. **A length of time is a `<duration>`** (`500ms`,
+   `30s`, `2m`), parsed as `--timeout` is; `--since` takes a duration or a time.
+6. **Arguments have fixed names:** `<chat>`, `<message>`, `<person>`, `<text>`, `<link>`,
+   `<file>`, `<job>`.
+7. **One word per idea** in help, docs and errors. The **local store** is the message database
+   both tools share; max's per-profile **cache** is a different thing until it is replaced, and
+   keeps its name until then. `session` is this tool's login; `account sessions` are the other
+   devices.
+8. **An MCP tool is named after its command** — see [MCP](#mcp).
+9. **No aliases.** A renamed command's old name stops working, and the release notes say so under
+   "may break scripts".
+
+`max bot api` is exempt: its names mirror the official Bot API's operations.
+
+## Output
+
+1. **Every list answers one envelope** in `--json`: `{ items, page, limit, hasMore }` —
+   `renderPage` in [`src/cli/paging.ts`](../../src/cli/paging.ts) prints it. `--jsonl` streams the
+   items one per line. A list never answers a bare array; `runs list`, `sends list` and
+   `recipients list` still do, and move to the envelope.
+2. **A write answers what it did**: `{ operationId, … }`, the ids it touched after it. The same
+   id is in the send journal.
+3. **A one-thing view answers the object itself** (`account show`, `store info`).
+4. **An error is one JSON object on stderr** in the machine modes —
+   `{ "error": { "code", "message" } }` — stdout stays empty, and the exit code says which kind of
+   failure it was. Commander's own parse errors (a missing argument, a missing required option)
+   still print a text line and exit 1; they move to `validation_error` and 2. The codes are
+   cli-core's and the same in both tools:
+
+   | Code | Meaning |
+   |---|---|
+   | 0 | ok |
+   | 1 | generic failure |
+   | 2 | validation error — the command line is wrong |
+   | 3 | configuration error |
+   | 4 | authentication error |
+   | 5 | permission error |
+   | 6 | not found |
+   | 7 | confirmation required |
+   | 8 | rate limited |
+   | 9 | timeout |
+   | 10 | network error |
+   | 11 | provider error — the messenger refused |
+   | 12 | provider unavailable |
+   | 13 | invalid response |
+   | 14 | outcome unknown — a write may or may not have happened |
+   | 130 | cancelled |
+
+5. **A shared command answers the same shape in both tools.** What only one messenger knows goes
+   under `providerMetadata`, never as a top-level field one tool has and the other lacks.
+
+## MCP
+
+1. **A tool is named `<tool>_<resource>_<verb>`** after its command: `max_store_export`,
+   `tg_chats_list`. A tool with no command (`<tool>_status`) is named after what it answers.
+2. **Arguments are the command's options in snake_case**, with the option's name: `--send-id` is
+   `send_id`, `--since` is `since`.
+3. **Every tool that only reads says `readOnlyHint: true`**; every tool that writes says what it
+   destroys with `destructiveHint`.
+4. **One permission flag per risk**, off by default: `--allow-send`, `--allow-mark-read`,
+   `--allow-delete`, `--allow-moderate`. A tool that needs one is not offered without it.
+5. **A tool and its command run the same service method**, so they answer the same result and the
+   same error for the same input.
+
+## Help text
+
+1. **A description says what the command does, as the user sees it**, in one line, lower case, no
+   full stop, no internal term — no wire field, no port, no adapter.
+2. **A shared command has the same sentence in both tools.** It is one command; the shared factory
+   writes the description, and a CLI changes it only to name its messenger.
+3. **An option's description says what it changes and its unit**: `--pause <duration>` "wait this
+   long between pages".
+
+## Layers and sharing
+
+1. **Shared by default.** Code goes here unless it names a messenger. A feature one messenger has
+   and the other could have (topics, polls) is still a port group and a shared command; it is
+   CLI-local only when the other messenger cannot have it — MAX's socket server, Telegram's app
+   registration.
+2. **Layers:** command or MCP tool → service → port group → adapter. A command never calls an
+   adapter method directly for a use case a service owns ([ARCHITECTURE](ARCHITECTURE.md#services)).
+   A new adapter method goes into a named group in `port.ts`, never the core.
+3. **No messenger type above the adapter.** Here, `biome.json` refuses the import; in a CLI, the
+   adapter translates into the domain model and nothing above it imports the messenger library.
+4. **A CLI replaces a use case, not a command** — through `Messenger.services`, so its command and
+   its MCP tool both get the replacement.
+
+## Documents
+
+1. **Each user page of max has a tg page on the same question**, at the same depth: installing,
+   using, configuring, security, troubleshooting, diagnostics, groups. max's pages are Russian,
+   tg's English.
+2. **Both READMEs have the same sections in the same order**: what it does, why it is good, how it
+   differs from the alternatives, logging in, using it, for scripts and agents (skill, MCP, JSON),
+   security, documentation, development, roadmap, licence, contributing.
+3. **A change to a command changes its page in both tools** in the same docs pull request.
+
+## The parity manifest
+
+`parity.json`, shipped in this package, lists every command path and option of both tools. Each
+CLI's CI checks its own `commands --json` against its column of the manifest in the version of this
+package it installed (`pnpm parity:check`).
+
+A row is one of:
+
+| State | Meaning | What `parity:check` checks |
+|---|---|---|
+| `both` | the command or option exists in both tools | present in this tool |
+| `max-only`, `tg-only` | one messenger lacks it; `reason` says why | present in that tool, absent in the other |
+| `planned` | the gap is known and owned; `by` names the workstream | nothing — present or absent both pass |
+
+A row under a one-sided command covers every path below it: `max bot` is one row.
+
+**How a new command or option reaches CI without a release of this package per row.** The docs
+pull request that introduces it adds its row as `planned`, here, before any code. `planned` passes
+whether the command exists or not, so the code pull request in either CLI lands on the manifest
+already released. The flip to `both` goes into the next release of this package with whatever else
+it carries; a row is never the only reason for a release.
