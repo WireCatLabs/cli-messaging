@@ -6,6 +6,12 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- **`events` in `ConnectOptions`**: `Messenger.connect` gets the run's diagnostics, from commands and
+  from MCP alike, so a messenger can report its own wire — max-cli's frames, with opcode and size —
+  beside the adapter's calls.
+
 ## 0.64.0 — 30.09.2026
 
 ### Added

@@ -45,7 +45,7 @@ export const createServer = (
   )
   const confirmed = confirmSend ? confirmer() : undefined
   const session = new MessengerSession(
-    async (events) => connected(await messenger.connect(command, context, {}), messenger, context, events),
+    async (events) => connected(await messenger.connect(command, context, { events }), messenger, context, events),
     (run, body) => context.run(body, { name: run }),
     sessionOptions,
   )
