@@ -1,12 +1,13 @@
 import type { Id, Message } from "../domain/models.js"
 
-export const RULES_VERSION = 1
+export const RULES_VERSION = 2
 
 /** How far back a rule looks, in messages: 97% of reply parents sat within 50 in a measured group. */
 export const LOOK_BACK = 50
 
-const SAME_SENDER_WITHIN = 3
-const SAME_SENDER_MS = 2 * 60_000
+// Tuned on the IRC dev split (bench/disentangle/sweep.ts); wider windows gained nothing.
+const SAME_SENDER_WITHIN = 10
+const SAME_SENDER_MS = 5 * 60_000
 
 export type LinkInput = Pick<Message, "id" | "senderId" | "text" | "timestamp" | "replyToId" | "threadId">
 
@@ -90,7 +91,7 @@ const sameSenderLink = (message: LinkInput, window: LinkInput[]): Link[] => {
       sameThread(candidate, message) &&
       at - Date.parse(candidate.timestamp) <= SAME_SENDER_MS,
   )
-  return target ? [link(message, target.id, "rule", "same_sender", 0.5, "same-sender-v1")] : []
+  return target ? [link(message, target.id, "rule", "same_sender", 0.5, "same-sender-v2")] : []
 }
 
 /** `@handle` anywhere, or a known handle opening the message as IRC and many groups address people: `ana: …`. */
