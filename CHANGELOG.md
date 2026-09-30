@@ -6,6 +6,16 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Fixed
+
+- **A deletion that names no chat skips a Telegram supergroup or channel the store knows only by its id.**
+  0.52.0 recognised them by their kind or chat type; a chat first seen through one of its messages has
+  neither yet, but its id is marked `-100…`. Only Telegram accounts are affected; other providers as before.
+- **A message the store marked deleted by mistake comes back on the next read that returns it.**
+  `saveMessages` takes `seenAt`, when the messenger was asked; a tombstone older than that is lifted and
+  the message is searchable again, a newer one stays. `history`, `around` and live edits pass it, so the
+  messages an earlier version wrongly marked deleted reappear once their chat is read again.
+
 ## 0.53.0 — 30.09.2026
 
 ### Added

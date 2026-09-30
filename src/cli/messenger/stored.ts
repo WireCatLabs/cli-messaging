@@ -51,19 +51,25 @@ export const stored = (messenger: MessengerAdapter, { account, store, warn, even
       return page
     },
     history: async (reference, options) => {
+      const seenAt = Date.now()
       const page = await messenger.history(reference, options)
       const chatId = page.items[0]?.chatId
       if (chatId !== undefined) {
-        await save("messages.list", (opened) => opened.saveMessages(account, chatId, page.items, { via: "history" }))
+        await save("messages.list", (opened) =>
+          opened.saveMessages(account, chatId, page.items, { via: "history", seenAt }),
+        )
       }
       return page
     },
     around: async (reference, messageId, window) => {
+      const seenAt = Date.now()
       const items = await messenger.around(reference, messageId, window)
       const chatId = items[0]?.chatId
       if (chatId !== undefined) {
         const plain = items.map(({ anchor, ...message }) => message)
-        await save("messages.around", (opened) => opened.saveMessages(account, chatId, plain, { via: "context" }))
+        await save("messages.around", (opened) =>
+          opened.saveMessages(account, chatId, plain, { via: "context", seenAt }),
+        )
       }
       return items
     },
@@ -72,7 +78,8 @@ export const stored = (messenger: MessengerAdapter, { account, store, warn, even
           watch: (onEvent, signal, onReady) =>
             messenger.watch?.(
               (event) => {
-                void save("messages.watch", (opened) => keep(opened, account, event))
+                const seenAt = Date.now()
+                void save("messages.watch", (opened) => keep(opened, account, event, seenAt))
                 onEvent(event)
               },
               signal,
@@ -92,12 +99,12 @@ export const stored = (messenger: MessengerAdapter, { account, store, warn, even
 }
 
 /** Each change as the store keeps it: a message or an edit upserted, a deletion a tombstone, reactions replaced. */
-const keep = async (store: MessageStore, account: AccountKey, event: MessageEvent): Promise<void> => {
+const keep = async (store: MessageStore, account: AccountKey, event: MessageEvent, seenAt: number): Promise<void> => {
   switch (event.event) {
     case "message":
     case "edit": {
       const { chatTitle, ...message } = event.message
-      await store.saveMessages(account, message.chatId, [message], { via: "update" })
+      await store.saveMessages(account, message.chatId, [message], { via: "update", seenAt })
       return
     }
     case "delete":
