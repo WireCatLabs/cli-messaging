@@ -6,6 +6,12 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Removed
+
+- **`drizzle-orm` is no longer installed with this package.** The store's Drizzle modules are bundled
+  into `dist/` at build time: loaded from `node_modules`, Drizzle cost Node about 200 ms per process;
+  bundled, opening it takes about 6 ms. About 16 MB less for tg-cli and max-cli to install.
+
 ## 0.59.0 — 30.09.2026
 
 ### Added

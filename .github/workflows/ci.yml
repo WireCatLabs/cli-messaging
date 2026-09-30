@@ -21,6 +21,7 @@ jobs:
       - run: pnpm test:coverage
       - run: pnpm docs:check
       - run: pnpm build
+      - run: pnpm check:dist
 
   bun:
     runs-on: ubuntu-latest
