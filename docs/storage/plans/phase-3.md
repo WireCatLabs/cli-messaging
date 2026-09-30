@@ -174,11 +174,11 @@ Valencia Expats · 12 May 10:01–10:05 · 4 messages · Alice, Carol
    transaction per chat, `conversations(chat, window)`, `conversation(pk)`; nothing Drizzle-typed crosses.
 3. **Mentions** (optional): the nullable `mentions` column; tg-cli fills it from the message's
    mention entities; max-cli after a capture. Only new downloads get it.
-4. **The builder**: a pure function from a chat's messages (in order, streamed in batches of `pk`) to
+4. 🚧 `feat/conversation-rules` · **The builder**: a pure function from a chat's messages (in order, streamed in batches of `pk`) to
    links and conversations. Reads by `pk` range, holds a 50-message look-back, never the whole chat in
    memory.
 5. **The `conversations` service and commands** of C7, and the two MCP tools.
-6. **Scoring**: `bench/disentangle/` — downloads the IRC corpus into a directory outside the repository
+6. 🚧 `feat/conversation-rules` · **Scoring**: `bench/disentangle/` — downloads the IRC corpus into a directory outside the repository
    (never committed), converts it to our messages, runs the builder, writes links in the IRC graph
    format, and runs the corpus's own `conversation-eval` scorers (Python, via `uv`). Also scores against
    our own replies: hide a random 20% of reply links in a local archive, rebuild, count how many the

@@ -1,0 +1,90 @@
+import { describe, expect, it } from "vitest"
+import { type LinkInput, linkMessages } from "./link.js"
+
+let clock = Date.parse("2026-05-12T10:00:00.000Z")
+
+const said = (id: string, senderId: string, text: string, extra: Partial<LinkInput> = {}): LinkInput => {
+  clock += 30_000
+  return { id, senderId, text, timestamp: new Date(clock).toISOString(), ...extra }
+}
+
+const handles = new Map([
+  ["alice", "a"],
+  ["bob", "b"],
+  ["carol", "c"],
+  ["dave", "d"],
+])
+
+describe("linkMessages", () => {
+  it("separates two interleaved conversations joined by replies and a mention", () => {
+    const { parents, conversations } = linkMessages(
+      [
+        said("1", "a", "Anyone know a good dentist?"),
+        said("2", "b", "did you deploy it?"),
+        said("3", "c", "@Alice yes, Clínica X"),
+        said("4", "d", "prod is broken again", { replyToId: "2" }),
+        said("5", "a", "thanks, where is it?", { replyToId: "3" }),
+        said("6", "b", "yes, 10 min ago", { replyToId: "4" }),
+        said("7", "c", "Ruzafa", { replyToId: "5" }),
+      ],
+      { handles },
+    )
+    expect(parents.get("3")).toBe("1")
+    expect(conversations).toEqual([
+      ["1", "3", "5", "7"],
+      ["2", "4", "6"],
+    ])
+  })
+
+  it("links a mention to the mentioned person's latest message, not the one just before", () => {
+    const { parents, links } = linkMessages(
+      [said("1", "a", "school X?"), said("2", "b", "off topic"), said("3", "c", "alice: our son goes there")],
+      { handles },
+    )
+    expect(parents.get("3")).toBe("1")
+    expect(links).toContainEqual(expect.objectContaining({ messageId: "3", kind: "mention", source: "rule" }))
+  })
+
+  it("joins one sender's quick follow-up, and not one after a two-minute gap", () => {
+    const messages = [said("1", "a", "I tried that school"), said("2", "a", "last year")]
+    clock += 3 * 60_000
+    messages.push(said("3", "a", "anyway"))
+    const { parents } = linkMessages(messages)
+    expect(parents.get("2")).toBe("1")
+    expect(parents.get("3")).toBeNull()
+  })
+
+  it("prefers the messenger's reply over any rule", () => {
+    const { parents } = linkMessages(
+      [said("1", "b", "first"), said("2", "a", "hello"), said("3", "a", "@bob hi", { replyToId: "2" })],
+      { handles },
+    )
+    expect(parents.get("3")).toBe("2")
+  })
+
+  it("never links across forum threads by a rule, but keeps an explicit reply", () => {
+    const { parents } = linkMessages(
+      [
+        said("1", "a", "visa question", { threadId: "t1" }),
+        said("2", "a", "also", { threadId: "t2" }),
+        said("3", "b", "@alice which one?", { threadId: "t2" }),
+        said("4", "b", "answering", { threadId: "t2", replyToId: "1" }),
+      ],
+      { handles },
+    )
+    expect(parents.get("2")).toBeNull()
+    expect(parents.get("3")).toBe("2")
+    expect(parents.get("4")).toBe("1")
+  })
+
+  it("starts a conversation for a reply to a message it does not hold", () => {
+    const { parents, links } = linkMessages([said("9", "a", "as I said", { replyToId: "1" })])
+    expect(parents.get("9")).toBeNull()
+    expect(links).toEqual([])
+  })
+
+  it("ignores a mention of oneself and an unknown opening word", () => {
+    const { parents } = linkMessages([said("1", "a", "hi"), said("2", "b", "note: @bob is me")], { handles })
+    expect(parents.get("2")).toBeNull()
+  })
+})
