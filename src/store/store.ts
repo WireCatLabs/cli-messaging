@@ -22,6 +22,7 @@ import { NORMALIZER_VERSION, normalize } from "./normalize.js"
 import { storePath } from "./path.js"
 import * as accounts from "./sqlite/accounts.js"
 import { backfillNormalized, pendingNormalization } from "./sqlite/backfill.js"
+import * as chatQueries from "./sqlite/chats.js"
 import * as identities from "./sqlite/identities.js"
 import { openSqlite, type StoreContext } from "./sqlite/open.js"
 import { json, parsed, present, toIso, toMs } from "./sqlite/values.js"
@@ -264,46 +265,8 @@ const storeOver = (context: StoreContext): MessageStore => {
   const accountPk = (key: AccountKey, name: string | null = null) => accounts.accountPk(context, key, name)
   const findAccountPk = (key: AccountKey) => accounts.findAccountPk(context, key)
 
-  const findChatPk = (accountKey: number, chatId: Id): number | undefined => {
-    const row = one("SELECT pk FROM chats WHERE account_pk = ? AND native_id = ?", accountKey, chatId)
-    return row ? Number(row.pk) : undefined
-  }
-
-  const upsertChat = (accountKey: number, chat: Chat): void => {
-    run(
-      `INSERT INTO chats (account_pk, native_id, kind, title, unread_count, last_message_at, participants_count,
-                          provider_metadata, membership_state, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-       ON CONFLICT (account_pk, native_id) DO UPDATE SET
-         kind = excluded.kind, title = excluded.title, unread_count = excluded.unread_count,
-         last_message_at = excluded.last_message_at, participants_count = excluded.participants_count,
-         provider_metadata = excluded.provider_metadata,
-         membership_state = coalesce(excluded.membership_state, chats.membership_state),
-         updated_at = excluded.updated_at`,
-      accountKey,
-      chat.id,
-      chat.kind,
-      chat.title,
-      chat.unreadCount,
-      toMs(chat.lastMessageAt),
-      chat.participantsCount,
-      json(chat.providerMetadata),
-      chat.membershipState ?? null,
-      now(),
-    )
-  }
-
-  /** A chat known only from its messages, until the chat list names it. */
-  const chatPkFor = (accountKey: number, chatId: Id): number =>
-    findChatPk(accountKey, chatId) ??
-    Number(
-      one(
-        "INSERT INTO chats (account_pk, native_id, kind, updated_at) VALUES (?, ?, 'unknown', ?) RETURNING pk",
-        accountKey,
-        chatId,
-        now(),
-      )?.pk,
-    )
+  const findChatPk = (accountKey: number, chatId: Id) => chatQueries.findChatPk(context, accountKey, chatId)
+  const chatPkFor = (accountKey: number, chatId: Id) => chatQueries.chatPkFor(context, accountKey, chatId)
 
   const identityPk = (
     accountKey: number,
@@ -561,17 +524,8 @@ const storeOver = (context: StoreContext): MessageStore => {
     return found
   }
 
-  const writeMembers = (key: AccountKey, accountKey: number, chatId: Id, memberIds: Id[]): void => {
-    const chatKey = chatPkFor(accountKey, chatId)
-    run("DELETE FROM chat_members WHERE chat_pk = ?", chatKey)
-    for (const id of new Set(memberIds)) {
-      run(
-        "INSERT INTO chat_members (chat_pk, identity_pk) VALUES (?, ?)",
-        chatKey,
-        identityPk(accountKey, key.provider, id, null),
-      )
-    }
-  }
+  const writeMembers = (key: AccountKey, accountKey: number, chatId: Id, memberIds: Id[]) =>
+    chatQueries.writeMembers(context, key, accountKey, chatId, memberIds)
 
   const writeState = (accountKey: number, name: string, value: string): void => {
     run(
@@ -605,24 +559,6 @@ const storeOver = (context: StoreContext): MessageStore => {
     return 1
   }
 
-  const chatsWhere = (accountKey: number, { query, kind, unread }: StoredChatFilter) => {
-    const conditions = ["account_pk = ?"]
-    const parameters: SqlValue[] = [accountKey]
-    if (query !== undefined) {
-      if (query.trim().length < 3) {
-        throw new CliError("validation_error", `a chat search takes at least 3 characters, got "${query}"`)
-      }
-      conditions.push("pk IN (SELECT rowid FROM chats_fts WHERE chats_fts MATCH ?)")
-      parameters.push(`"${query.trim().replaceAll('"', '""')}"`)
-    }
-    if (kind !== undefined) {
-      conditions.push("kind = ?")
-      parameters.push(kind)
-    }
-    if (unread) conditions.push("unread_count > 0")
-    return { sql: `WHERE ${conditions.join(" AND ")}`, parameters }
-  }
-
   const MESSAGE_COLUMNS = `m.*, c.native_id AS chat_native_id, i.native_id AS sender_native_id`
   const MESSAGE_JOINS = `JOIN chats c ON c.pk = m.chat_pk LEFT JOIN identities i ON i.pk = m.sender_identity_pk`
 
@@ -631,10 +567,10 @@ const storeOver = (context: StoreContext): MessageStore => {
       accountPk(key, name)
     },
 
-    saveChats: async (key, chats) =>
+    saveChats: async (key, list) =>
       inTransaction(() => {
         const accountKey = accountPk(key)
-        for (const chat of chats) upsertChat(accountKey, chat)
+        for (const chat of list) chatQueries.upsertChat(context, accountKey, chat)
       }),
 
     saveMessages: async (key, chatId, messages, { via, seenAt }) =>
@@ -652,31 +588,12 @@ const storeOver = (context: StoreContext): MessageStore => {
     members: async (key, chatId) => {
       const accountKey = findAccountPk(key)
       const chatKey = accountKey === undefined ? undefined : findChatPk(accountKey, chatId)
-      if (chatKey === undefined) return []
-      return all(
-        `SELECT i.native_id, i.name, i.username FROM chat_members cm JOIN identities i ON i.pk = cm.identity_pk
-         WHERE cm.chat_pk = ? ORDER BY i.name IS NULL, i.name, i.native_id`,
-        chatKey,
-      ).map((row) => ({
-        id: String(row.native_id),
-        name: (row.name as string | null) ?? null,
-        username: (row.username as string | null) ?? null,
-      }))
+      return chatKey === undefined ? [] : chatQueries.members(context, chatKey)
     },
 
     chatsWith: async (key, memberId) => {
       const accountKey = findAccountPk(key)
-      if (accountKey === undefined) return []
-      return all(
-        `SELECT c.* FROM chat_members cm
-         JOIN chats c ON c.pk = cm.chat_pk
-         JOIN identities i ON i.pk = cm.identity_pk
-         WHERE c.account_pk = ? AND i.provider = ? AND i.native_id = ?
-         ORDER BY c.last_message_at DESC NULLS LAST, c.pk`,
-        accountKey,
-        key.provider,
-        memberId,
-      ).map(toChat)
+      return accountKey === undefined ? [] : chatQueries.chatsWith(context, accountKey, key, memberId)
     },
 
     syncState: async (key, name) => {
@@ -691,7 +608,7 @@ const storeOver = (context: StoreContext): MessageStore => {
     applyDelta: async (key, { chats = [], people = [], members = new Map(), state = {} }) =>
       inTransaction(() => {
         const accountKey = accountPk(key)
-        for (const chat of chats) upsertChat(accountKey, chat)
+        for (const chat of chats) chatQueries.upsertChat(context, accountKey, chat)
         for (const person of people) identityPk(accountKey, key.provider, person.id, person.name, person)
         for (const [chatId, ids] of members) writeMembers(key, accountKey, chatId, ids)
         for (const [name, value] of Object.entries(state)) writeState(accountKey, name, value)
@@ -756,25 +673,16 @@ const storeOver = (context: StoreContext): MessageStore => {
       })
     },
 
-    chats: async (key, { limit, offset = 0, ...filter }) => {
+    chats: async (key, window) => {
       const accountKey = findAccountPk(key)
-      if (accountKey === undefined) return { items: [], hasMore: false }
-      const where = chatsWhere(accountKey, filter)
-      const rows = all(
-        `SELECT * FROM chats ${where.sql} ORDER BY last_message_at DESC NULLS LAST, pk LIMIT ? OFFSET ?`,
-        ...where.parameters,
-        limit === undefined ? -1 : limit + 1,
-        offset,
-      )
-      const hasMore = limit !== undefined && rows.length > limit
-      return { items: rows.slice(0, limit).map(toChat), hasMore }
+      return accountKey === undefined
+        ? { items: [], hasMore: false }
+        : chatQueries.listChats(context, accountKey, window)
     },
 
     countChats: async (key, filter = {}) => {
       const accountKey = findAccountPk(key)
-      if (accountKey === undefined) return 0
-      const where = chatsWhere(accountKey, filter)
-      return Number(one(`SELECT count(*) AS n FROM chats ${where.sql}`, ...where.parameters)?.n)
+      return accountKey === undefined ? 0 : chatQueries.countChats(context, accountKey, filter)
     },
 
     countMessages: async (key, chatId, { since } = {}) => {
@@ -1047,16 +955,6 @@ const storeOver = (context: StoreContext): MessageStore => {
 }
 
 const searchable = (text: string) => ({ normalized_text: normalize(text), normalizer_version: NORMALIZER_VERSION })
-
-const toChat = (row: Record<string, unknown>): Chat => ({
-  id: String(row.native_id),
-  title: (row.title as string | null) ?? null,
-  kind: row.kind as Chat["kind"],
-  unreadCount: (row.unread_count as number | null) ?? null,
-  lastMessageAt: toIso(row.last_message_at),
-  participantsCount: (row.participants_count as number | null) ?? null,
-  ...present({ membershipState: row.membership_state, providerMetadata: parsed(row.provider_metadata) }),
-})
 
 const toAttachment = (row: Record<string, unknown>): Attachment =>
   ({
