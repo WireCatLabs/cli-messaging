@@ -11,6 +11,12 @@ export interface RequestEvent {
   event: "request" | "response"
   /** Ours, not the messenger's: `messages.send`. */
   operation: string
+  /** A frame protocol's own numbering (max-cli's personal protocol); an HTTP API says `status` instead. */
+  opcode?: number
+  seq?: number
+  status?: number
+  /** The size of what went out or came back. */
+  bytes?: number
   ids?: Record<string, string>
   /** How many things, per field: `{ messages: 3 }`. */
   counts?: Record<string, number>
@@ -27,9 +33,22 @@ export interface WarningEvent {
   event: "warning"
   code: string
   operation?: string
+  /** Field paths and types for an answer of an unexpected shape — built without the values. */
+  detail?: string
 }
 
-export type DiagnosticEvent = RequestEvent | WarningEvent
+/** A read answered locally, without asking the messenger, and why. */
+export interface CacheEvent {
+  event: "cache"
+  operation: string
+  reason: string
+  ids?: Record<string, string>
+  counts?: Record<string, number>
+  /** How old the kept answer was. */
+  ageMs?: number
+}
+
+export type DiagnosticEvent = RequestEvent | CacheEvent | WarningEvent
 
 export type EventSink = (event: DiagnosticEvent) => void
 
@@ -46,16 +65,36 @@ export const providerErrorKey = (value: unknown): string | undefined =>
  * ```
  */
 export const renderEvent = (event: DiagnosticEvent): string => {
-  if (event.event === "warning") return `${MARK.warning} ${(event.operation ?? "").padEnd(16)} ${event.code}`
+  if (event.event === "warning") {
+    return [`${MARK.warning} ${(event.operation ?? "").padEnd(16)} ${event.code}`, event.detail]
+      .filter(Boolean)
+      .join("  ")
+  }
 
   const parts: string[] = []
+  if (event.event === "cache") {
+    parts.push(event.reason)
+    if (event.ageMs !== undefined) parts.push(`cached ${age(event.ageMs)}`)
+  } else {
+    if (event.opcode !== undefined) parts.push(`op ${event.opcode}`, `seq ${event.seq}`)
+    if (event.status !== undefined) parts.push(`${event.status}`)
+  }
   if (event.ids) for (const [name, value] of Object.entries(event.ids)) parts.push(`${name} ${value}`)
-  if (event.durationMs !== undefined) parts.push(`${event.durationMs}ms`)
+  if (event.event !== "cache") {
+    if (event.durationMs !== undefined) parts.push(`${event.durationMs}ms`)
+    if (event.bytes !== undefined) parts.push(size(event.bytes))
+  }
   if (event.counts) for (const [field, count] of Object.entries(event.counts)) parts.push(`${count} ${field}`)
-  if (event.errorCode) parts.push(event.errorCode)
-  if (event.providerError) parts.push(event.providerError)
+  if (event.event !== "cache") {
+    if (event.errorCode) parts.push(event.errorCode)
+    if (event.providerError) parts.push(event.providerError)
+  }
 
   return `${MARK[event.event]} ${event.operation.padEnd(16)} ${parts.join("  ")}`.trimEnd()
 }
 
-const MARK = { request: "→", response: "←", warning: "!" } as const
+const MARK = { request: "→", response: "←", cache: "•", warning: "!" } as const
+
+const age = (ms: number): string => (ms < 1000 ? `${ms}ms` : `${Math.round(ms / 1000)}s`)
+
+const size = (bytes: number): string => (bytes < 1000 ? `${bytes} B` : `${(bytes / 1000).toFixed(1)} kB`)

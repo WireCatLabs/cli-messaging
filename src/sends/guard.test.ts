@@ -166,6 +166,30 @@ describe("a retry of a send whose outcome was unknown", () => {
   })
 })
 
+describe("an allow-list refusal", () => {
+  const refused = (allowFix?: string) =>
+    sendGuard({
+      profile: "work",
+      command: "max",
+      readOnly: false,
+      readOnlyFrom: "default",
+      allow: ["reaction"],
+      allowFrom: "config file: personal.defaults",
+      ...(allowFix ? { allowFix } : {}),
+      sendsPerHour: 10,
+      journal: new SendJournal(sendsPathFor("g-allow")),
+      recipients: new RecipientList(recipientsPathFor("g-allow")),
+      warn: () => {},
+    })
+
+  it("names the command that allows it, the CLI's own when it gives one", () => {
+    expect(() => refused().check({ chatId: "1" })).toThrow("to allow it: max work config set allow reaction,send")
+    expect(() => refused("max config set --personal --defaults allow").check({ chatId: "1" })).toThrow(
+      "to allow it: max config set --personal --defaults allow reaction,send",
+    )
+  })
+})
+
 describe("the journal written by max-cli before it was shared", () => {
   it("reads its numeric cid as the send id", () => {
     const journal = new SendJournal(sendsPathFor("g-cid"))
