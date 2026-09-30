@@ -5,6 +5,12 @@
 file is the plan for that thread of work; the backlog stays [the proposal's §8](2026-09-26-platform-proposal.md#8-phases--small-independently-shippable-pull-requests),
 which links here.
 
+
+**Correction 2026-09-30:** the open part of this plan continues as the parity plan (max-cli's
+private `docs_ai/plans/2026-09-30-parity-plan.md`, handoffs in `docs_ai/plans/parity/`): P0 one
+standard (`docs/dev/STANDARD.md`) and a parity manifest checked in both CLIs' CI; P1 options on the
+shared commands; P2 administration built shared here (replaces lane L6); P4 tg's documents; P5 tg's
+release checks. Every PR is reviewed against `docs/dev/REVIEW.md`, and a change starts with its docs.
 ## 1. Where things stand
 
 - **Done:** Phases 1–3 (reading, the store and search, MCP with `--allow-send`/`--confirm-send`,
