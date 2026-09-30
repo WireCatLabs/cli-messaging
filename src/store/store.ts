@@ -72,6 +72,12 @@ export interface MessageFilter {
   perChat?: boolean
 }
 
+export interface StoredChatFilter {
+  query?: string
+  kind?: Chat["kind"]
+  unread?: boolean
+}
+
 export interface MessageStore {
   saveAccount(key: AccountKey, account: { name: string | null }): Promise<void>
   saveChats(key: AccountKey, chats: Chat[]): Promise<void>
@@ -86,7 +92,9 @@ export interface MessageStore {
     messages: Message[],
     options: { via: IngestedVia; seenAt?: number },
   ): Promise<void>
-  chats(key: AccountKey, window: { limit?: number; offset?: number }): Promise<Page<Chat>>
+  /** Newest first. `query` matches three letters or more of a title; `unread` keeps chats with unread messages. */
+  chats(key: AccountKey, window: { limit?: number; offset?: number } & StoredChatFilter): Promise<Page<Chat>>
+  countChats(key: AccountKey, filter?: StoredChatFilter): Promise<number>
   /** Replaces who is in a chat with this list, whole: a person left out has left. */
   saveMembers(key: AccountKey, chatId: Id, memberIds: Id[]): Promise<void>
   /** Who is in a chat, by name, as the last list said; empty when no list was ever saved. */
@@ -109,7 +117,14 @@ export interface MessageStore {
   /** Keeps a finished transcript; an empty one is not kept, so the message is heard again. */
   keepTranscript(key: AccountKey, chatId: Id, messageId: Id, text: string, source: string): Promise<void>
   /** Oldest to newest, like a provider's history page. */
-  messages(key: AccountKey, chatId: Id, window: { limit: number; before?: Id }): Promise<Page<Message>>
+  messages(key: AccountKey, chatId: Id, window: { limit: number; before?: Id; since?: string }): Promise<Page<Message>>
+  /** How many stored messages the chat has, sent at `since` or later when it is given. */
+  countMessages(key: AccountKey, chatId: Id, options?: { since?: string }): Promise<number>
+  /**
+   * By time rather than by id: `before` messages sent at `at` or earlier and `after` sent later,
+   * oldest first. `around` answers the same question for a message id.
+   */
+  messagesWindow(key: AccountKey, chatId: Id, window: { at: string; before: number; after: number }): Promise<Message[]>
   /**
    * A stored message and its stored neighbours, oldest first, the one asked for with `anchor`. Until
    * backfill records which stretches are complete, a neighbour here is the nearest one kept, not
@@ -615,6 +630,24 @@ const storeOver = (database: CacheDatabase, now: () => number): MessageStore => 
     return found
   }
 
+  const chatsWhere = (accountKey: number, { query, kind, unread }: StoredChatFilter) => {
+    const conditions = ["account_pk = ?"]
+    const parameters: SqlValue[] = [accountKey]
+    if (query !== undefined) {
+      if (query.trim().length < 3) {
+        throw new CliError("validation_error", `a chat search takes at least 3 characters, got "${query}"`)
+      }
+      conditions.push("pk IN (SELECT rowid FROM chats_fts WHERE chats_fts MATCH ?)")
+      parameters.push(`"${query.trim().replaceAll('"', '""')}"`)
+    }
+    if (kind !== undefined) {
+      conditions.push("kind = ?")
+      parameters.push(kind)
+    }
+    if (unread) conditions.push("unread_count > 0")
+    return { sql: `WHERE ${conditions.join(" AND ")}`, parameters }
+  }
+
   /** A contact: someone other than the account itself, in one of its one-to-one chats. */
   const contactsWhere = (accountKey: number, key: AccountKey, query: string | undefined) => {
     const parameters: SqlValue[] = [accountKey, key.account]
@@ -781,12 +814,13 @@ const storeOver = (database: CacheDatabase, now: () => number): MessageStore => 
       })
     },
 
-    chats: async (key, { limit, offset = 0 }) => {
+    chats: async (key, { limit, offset = 0, ...filter }) => {
       const accountKey = findAccountPk(key)
       if (accountKey === undefined) return { items: [], hasMore: false }
+      const where = chatsWhere(accountKey, filter)
       const rows = all(
-        `SELECT * FROM chats WHERE account_pk = ? ORDER BY last_message_at DESC NULLS LAST, pk LIMIT ? OFFSET ?`,
-        accountKey,
+        `SELECT * FROM chats ${where.sql} ORDER BY last_message_at DESC NULLS LAST, pk LIMIT ? OFFSET ?`,
+        ...where.parameters,
         limit === undefined ? -1 : limit + 1,
         offset,
       )
@@ -794,7 +828,51 @@ const storeOver = (database: CacheDatabase, now: () => number): MessageStore => 
       return { items: rows.slice(0, limit).map(toChat), hasMore }
     },
 
-    messages: async (key, chatId, { limit, before }) => {
+    countChats: async (key, filter = {}) => {
+      const accountKey = findAccountPk(key)
+      if (accountKey === undefined) return 0
+      const where = chatsWhere(accountKey, filter)
+      return Number(one(`SELECT count(*) AS n FROM chats ${where.sql}`, ...where.parameters)?.n)
+    },
+
+    countMessages: async (key, chatId, { since } = {}) => {
+      const accountKey = findAccountPk(key)
+      const chatKey = accountKey === undefined ? undefined : findChatPk(accountKey, chatId)
+      if (chatKey === undefined) return 0
+      return Number(
+        one(
+          `SELECT count(*) AS n FROM messages WHERE chat_pk = ? AND deleted_at IS NULL AND sent_at >= ?`,
+          chatKey,
+          since === undefined ? Number.MIN_SAFE_INTEGER : (toMs(since) as number),
+        )?.n,
+      )
+    },
+
+    messagesWindow: async (key, chatId, { at, before, after }) => {
+      const accountKey = findAccountPk(key)
+      const chatKey = accountKey === undefined ? undefined : findChatPk(accountKey, chatId)
+      if (chatKey === undefined) return []
+      const moment = toMs(at) as number
+      const earlier = all(
+        `SELECT ${MESSAGE_COLUMNS} FROM messages m ${MESSAGE_JOINS}
+         WHERE m.chat_pk = ? AND m.deleted_at IS NULL AND m.sent_at <= ?
+         ORDER BY m.sent_at DESC, m.pk DESC LIMIT ?`,
+        chatKey,
+        moment,
+        before,
+      )
+      const later = all(
+        `SELECT ${MESSAGE_COLUMNS} FROM messages m ${MESSAGE_JOINS}
+         WHERE m.chat_pk = ? AND m.deleted_at IS NULL AND m.sent_at > ?
+         ORDER BY m.sent_at, m.pk LIMIT ?`,
+        chatKey,
+        moment,
+        after,
+      )
+      return toMessages([...earlier.reverse(), ...later])
+    },
+
+    messages: async (key, chatId, { limit, before, since }) => {
       const accountKey = findAccountPk(key)
       const chatKey = accountKey === undefined ? undefined : findChatPk(accountKey, chatId)
       if (chatKey === undefined) return { items: [], hasMore: false }
@@ -808,9 +886,11 @@ const storeOver = (database: CacheDatabase, now: () => number): MessageStore => 
       const rows = all(
         `SELECT ${MESSAGE_COLUMNS} FROM messages m ${MESSAGE_JOINS}
          WHERE m.chat_pk = ? AND m.deleted_at IS NULL ${anchor ? "AND (m.sent_at, m.pk) < (?, ?)" : ""}
+           ${since === undefined ? "" : "AND m.sent_at >= ?"}
          ORDER BY m.sent_at DESC, m.pk DESC LIMIT ?`,
         chatKey,
         ...(anchor ? [anchor.sent_at as number, anchor.pk as number] : []),
+        ...(since === undefined ? [] : [toMs(since) as number]),
         limit + 1,
       )
       return { items: toMessages(rows.slice(0, limit)).reverse(), hasMore: rows.length > limit }
