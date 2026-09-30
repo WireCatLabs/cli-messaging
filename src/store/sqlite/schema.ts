@@ -41,6 +41,8 @@ export const identities = sqliteTable(
     providerMetadata: text("provider_metadata"),
     firstSeenAt: integer("first_seen_at").notNull(),
     updatedAt: integer("updated_at").notNull(),
+    /** What they wrote about themselves. */
+    description: text("description"),
   },
   (table) => [unique().on(table.provider, table.nativeId)],
 )
@@ -202,6 +204,8 @@ export const accountIdentities = sqliteTable(
       .notNull()
       .references(() => identities.pk),
     firstSeenAt: integer("first_seen_at").notNull(),
+    /** Their one-to-one chat's newest message, as `refreshRecency` last worked it out: the contact order. */
+    lastMessagedAt: integer("last_messaged_at"),
   },
   (table) => [primaryKey({ columns: [table.accountPk, table.identityPk] })],
 )

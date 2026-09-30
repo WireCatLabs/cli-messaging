@@ -43,6 +43,7 @@ export interface PersonFacts {
   name: string | null
   username?: string | null
   isBot?: boolean | null
+  description?: string | null
 }
 
 /**
@@ -128,6 +129,18 @@ export interface MessageStore {
   /** Newest first — by text, by who wrote it, or both. */
   find(filter: MessageFilter): Promise<Page<StoredHit>>
   savePeople(key: AccountKey, people: PersonFacts[]): Promise<void>
+  /**
+   * The people this account has a one-to-one chat with — as far as the saved member lists go —
+   * newest conversation first or by name. `query` matches three letters or more of a name or
+   * username.
+   */
+  contacts(
+    key: AccountKey,
+    options: { order: "recent" | "name"; query?: string; limit: number; offset?: number },
+  ): Promise<Page<Contact>>
+  countContacts(key: AccountKey, options?: { query?: string }): Promise<number>
+  /** Works out again when each contact was last written to, from their one-to-one chats. */
+  refreshRecency(key: AccountKey): Promise<void>
   /** Everyone this provider's accounts have seen; with `account`, only who that account has seen. */
   people(provider: Provider, options?: { account?: Id; accounts?: Id[] }): Promise<PeopleLookup>
   /** A message's reactions as they are now; answers whether the message is held at all. */
@@ -289,7 +302,7 @@ const storeOver = (database: CacheDatabase, now: () => number): MessageStore => 
     facts: Omit<PersonFacts, "id" | "name"> = {},
   ): number => {
     const found = one(
-      "SELECT pk, name, username, is_bot FROM identities WHERE provider = ? AND native_id = ?",
+      "SELECT pk, name, username, is_bot, description FROM identities WHERE provider = ? AND native_id = ?",
       provider,
       nativeId,
     )
@@ -297,13 +310,20 @@ const storeOver = (database: CacheDatabase, now: () => number): MessageStore => 
       const username = facts.username ?? found.username ?? null
       const isBot = facts.isBot === undefined || facts.isBot === null ? (found.is_bot ?? null) : Number(facts.isBot)
       const newName = name ?? found.name ?? null
+      const description = facts.description ?? found.description ?? null
       // Only on a real change: the search trigger rewrites the index row on every update of `name`.
-      if (newName !== found.name || username !== found.username || isBot !== found.is_bot) {
+      if (
+        newName !== found.name ||
+        username !== found.username ||
+        isBot !== found.is_bot ||
+        description !== found.description
+      ) {
         run(
-          "UPDATE identities SET name = ?, username = ?, is_bot = ?, updated_at = ? WHERE pk = ?",
+          "UPDATE identities SET name = ?, username = ?, is_bot = ?, description = ?, updated_at = ? WHERE pk = ?",
           newName as SqlValue,
           username as SqlValue,
           isBot as SqlValue,
+          description as SqlValue,
           now(),
           Number(found.pk),
         )
@@ -313,13 +333,14 @@ const storeOver = (database: CacheDatabase, now: () => number): MessageStore => 
     const at = now()
     const identity = Number(
       one(
-        `INSERT INTO identities (provider, native_id, name, username, is_bot, first_seen_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING pk`,
+        `INSERT INTO identities (provider, native_id, name, username, is_bot, description, first_seen_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING pk`,
         provider,
         nativeId,
         name,
         facts.username ?? null,
         facts.isBot === undefined || facts.isBot === null ? null : Number(facts.isBot),
+        facts.description ?? null,
         at,
         at,
       )?.pk,
@@ -590,6 +611,27 @@ const storeOver = (database: CacheDatabase, now: () => number): MessageStore => 
     return found
   }
 
+  /** A contact: someone other than the account itself, in one of its one-to-one chats. */
+  const contactsWhere = (accountKey: number, key: AccountKey, query: string | undefined) => {
+    const parameters: SqlValue[] = [accountKey, key.account]
+    let match = ""
+    if (query !== undefined) {
+      if (query.trim().length < 3) {
+        throw new CliError("validation_error", `a contact search takes at least 3 characters, got "${query}"`)
+      }
+      match = "AND i.pk IN (SELECT rowid FROM identities_fts WHERE identities_fts MATCH ?)"
+      parameters.push(`"${query.trim().replaceAll('"', '""')}"`)
+    }
+    return {
+      sql: `FROM account_identities ai JOIN identities i ON i.pk = ai.identity_pk
+            WHERE ai.account_pk = ? AND i.native_id != ?
+              AND EXISTS (SELECT 1 FROM chat_members cm JOIN chats c ON c.pk = cm.chat_pk
+                          WHERE cm.identity_pk = i.pk AND c.account_pk = ai.account_pk AND c.kind = 'dialog')
+              ${match}`,
+      parameters,
+    }
+  }
+
   const MESSAGE_COLUMNS = `m.*, c.native_id AS chat_native_id, i.native_id AS sender_native_id`
   const MESSAGE_JOINS = `JOIN chats c ON c.pk = m.chat_pk LEFT JOIN identities i ON i.pk = m.sender_identity_pk`
 
@@ -832,6 +874,52 @@ const storeOver = (database: CacheDatabase, now: () => number): MessageStore => 
     search: async (query, { limit, account }) => find({ text: query, limit, ...(account ? { account } : {}) }),
 
     find: async (filter) => find(filter),
+
+    contacts: async (key, { order, query, limit, offset = 0 }) => {
+      const accountKey = findAccountPk(key)
+      if (accountKey === undefined) return { items: [], hasMore: false }
+      const where = contactsWhere(accountKey, key, query)
+      const rows = all(
+        `SELECT i.native_id, i.name, i.username, i.description, ai.last_messaged_at ${where.sql}
+         ORDER BY ${order === "recent" ? "ai.last_messaged_at DESC NULLS LAST, " : ""}i.name IS NULL, i.name, i.native_id
+         LIMIT ? OFFSET ?`,
+        ...where.parameters,
+        limit + 1,
+        offset,
+      )
+      return {
+        items: rows.slice(0, limit).map((row) => ({
+          id: String(row.native_id),
+          name: (row.name as string | null) ?? null,
+          username: (row.username as string | null) ?? null,
+          description: (row.description as string | null) ?? null,
+          lastMessagedAt: toIso(row.last_messaged_at),
+        })),
+        hasMore: rows.length > limit,
+      }
+    },
+
+    countContacts: async (key, { query } = {}) => {
+      const accountKey = findAccountPk(key)
+      if (accountKey === undefined) return 0
+      const where = contactsWhere(accountKey, key, query)
+      return Number(one(`SELECT count(*) AS n ${where.sql}`, ...where.parameters)?.n)
+    },
+
+    refreshRecency: async (key) => {
+      const accountKey = findAccountPk(key)
+      if (accountKey === undefined) return
+      inTransaction(() => {
+        run(
+          `UPDATE account_identities SET last_messaged_at = (
+             SELECT max(c.last_message_at) FROM chat_members cm JOIN chats c ON c.pk = cm.chat_pk
+             WHERE cm.identity_pk = account_identities.identity_pk AND c.account_pk = account_identities.account_pk
+               AND c.kind = 'dialog')
+           WHERE account_pk = ?`,
+          accountKey,
+        )
+      })
+    },
 
     savePeople: async (key, people) =>
       inTransaction(() => {

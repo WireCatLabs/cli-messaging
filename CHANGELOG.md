@@ -6,6 +6,14 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- **Contacts in the store** (store version 10): `contacts(key, { order: "recent" | "name", query?,
+  limit, offset? })` lists the people in the account's one-to-one chats — as far as the saved member
+  lists go — with `countContacts` for the same filter; `refreshRecency(key)` works out again when each
+  was last written to. A person now keeps `description` (`PersonFacts.description`). Additive: a
+  build on version 6 keeps working on the file.
+
 ## 0.56.0 — 30.09.2026
 
 ### Added

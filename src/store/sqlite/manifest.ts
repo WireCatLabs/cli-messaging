@@ -21,6 +21,7 @@ export const MANIFEST: ManifestEntry[] = [
   { name: "20260930022658_version-7-chat-members", version: 7, minCompatible: 6 },
   { name: "20260930023839_version-8-sync-state", version: 8, minCompatible: 6 },
   { name: "20260930024055_version-9-fetch-leases", version: 9, minCompatible: 6 },
+  { name: "20260930024643_version-10-contacts", version: 10, minCompatible: 6 },
 ]
 
 export const generatedMigrations = (
