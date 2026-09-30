@@ -191,7 +191,7 @@ Valencia Expats · 12 May 10:01–10:05 · 4 messages · Alice, Carol
 
 - Builder, on invented messages: a reply chain; two interleaved conversations joined only by replies;
   a mention that picks the mentioned person's message, not the previous one; a same-sender run broken by
-  a two-minute gap; a thread boundary; a reply to a message not held (behaviour per open question 3); a deleted message.
+  a two-minute gap; a thread boundary; a reply to a message not held (starts a conversation; joins after the parent arrives and the chat is rebuilt); a deleted message.
 - Choice order: a provider link beats an agent link, which beats a rule link.
 - Rebuild keeps agent links and marks one stale after an edit to its parent.
 - `replaceDerived` in one transaction: a failed build leaves the previous conversations intact.
@@ -204,7 +204,7 @@ Valencia Expats · 12 May 10:01–10:05 · 4 messages · Alice, Carol
 1. ~~Names~~ — answered 2026-09-30 (NEED-421 A): `conversations build|list|show` and `messages links`.
 2. ~~Same-sender links~~ — answered 2026-09-30 (NEED-422 A): a candidate, as C5, its confidence and
    threshold set by the scores of item 6; never joined automatically.
-3. **A reply to a message we do not hold**: start a new conversation, or keep a dangling group that joins
-   when the parent is downloaded? The large group has 148 such replies.
+3. ~~A reply to a message we do not hold~~ — answered 2026-09-30 (NEED-423 A): it starts a new
+   conversation and keeps its reply link; the next rebuild joins it once the parent is downloaded.
 4. **Forum threads in MAX**: does MAX have them at all? `threadId` is filled by tg-cli only today.
 5. **Mentions in MAX**: needs a capture of a message that mentions someone, before item 3 covers MAX.
