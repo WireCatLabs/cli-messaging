@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.59.0 — 30.09.2026
+
 ### Added
 
 - **The adapter port in named groups** — step 3 of the layer design. `MessengerAdapter` is now
