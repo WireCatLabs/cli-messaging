@@ -1,10 +1,12 @@
 import * as v from "valibot"
-import { contactsIn, phoneOf } from "../../cli/messenger/contacts-command.js"
 import type { Messenger } from "../../cli/messenger/context.js"
-import { capability } from "../../cli/messenger/port.js"
+import type { MessengerAdapter } from "../../cli/messenger/port.js"
+import type { SendGuard } from "../../sends/guard.js"
+import { onlineDeps, peopleService, phoneOf } from "../../services/index.js"
 import { type AnyTool, envelope, limit, page, paging, READ, tool } from "../tool.js"
 
-export const contactsTools = (_messenger: Messenger): Record<string, AnyTool> => {
+export const contactsTools = (messenger: Messenger): Record<string, AnyTool> => {
+  const people = (adapter: MessengerAdapter, guard: SendGuard) => peopleService(onlineDeps(messenger, adapter, guard))
   return {
     contacts_list: tool({
       title: "List contacts",
@@ -18,8 +20,11 @@ export const contactsTools = (_messenger: Messenger): Record<string, AnyTool> =>
       annotations: READ,
       online: async (adapter, { search, order, ...rest }, defaults) => {
         const { size, number, window } = paging(rest, defaults)
-        const chats = (await adapter.chats({ offset: 0 })).items
-        const found = contactsIn(chats, { order: order ?? "recent", ...(search ? { search } : {}), ...window })
+        const found = await people(adapter, defaults.guard).list({
+          order: order ?? "recent",
+          ...(search ? { search } : {}),
+          ...window,
+        })
         return envelope(found, number, size)
       },
     }),
@@ -31,7 +36,7 @@ export const contactsTools = (_messenger: Messenger): Record<string, AnyTool> =>
         "not_found otherwise. Nothing is added to the owner's contacts.",
       input: v.object({ phone: v.pipe(v.string(), v.description("with the country code; spaces and + are fine")) }),
       annotations: READ,
-      online: (adapter, args) => capability(adapter, "lookup", "find a person by phone")(phoneOf(args.phone)),
+      online: (adapter, args, { guard }) => people(adapter, guard).lookup(phoneOf(args.phone)),
     }),
 
     contacts_show: tool({
@@ -41,7 +46,7 @@ export const contactsTools = (_messenger: Messenger): Record<string, AnyTool> =>
         person: v.pipe(v.string(), v.minLength(1), v.description("person id, @username, or part of a name")),
       }),
       annotations: READ,
-      online: (adapter, args) => adapter.contact(args.person),
+      online: (adapter, args, { guard }) => people(adapter, guard).show(args.person),
     }),
   }
 }

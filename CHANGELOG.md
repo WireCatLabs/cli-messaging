@@ -15,6 +15,11 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Added
 
+- **Services: chats and people** — the third step of `docs/plans/2026-09-30-services.md`.
+  `services.chats` (`list`, `show`, `members`, `events`, `inspect`, `markRead` through the guard) and
+  `services.people` (`list`, `show`, `lookup`, `sync`) take over `chats list|show|members list|events|inspect|mark-read`,
+  `contacts list|show|lookup|sync` and their MCP tools. `CHAT_SCAN`, `EVENTS_DAYS` and `phoneOf` now come
+  from `src/services/`. Nothing a person or a script sees changes.
 - **Contacts in the store** (store version 10): `contacts(key, { order: "recent" | "name", query?,
   limit, offset? })` lists the people in the account's one-to-one chats — as far as the saved member
   lists go — with `countContacts` for the same filter; `refreshRecency(key)` works out again when each

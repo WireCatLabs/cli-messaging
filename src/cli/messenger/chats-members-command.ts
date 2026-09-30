@@ -1,7 +1,6 @@
 import { Command } from "commander"
 import { renderPage, window, withPaging } from "../paging.js"
 import { type Messenger, messengerContext } from "./context.js"
-import { capability } from "./port.js"
 
 /** `chats members …`; a subcommand that changes membership belongs here too. */
 export const membersCommand = (messenger: Messenger): Command => {
@@ -15,9 +14,7 @@ export const membersCommand = (messenger: Messenger): Command => {
     ).action(async function (this: Command, chat: string) {
       const context = messengerContext(this, messenger)
       const wanted = window(context.settings)
-      const page = await context.withMessenger((adapter) =>
-        capability(adapter, "members", "list a group's members")(chat, wanted),
-      )
+      const page = await context.withServices((services) => services.chats.members(chat, wanted))
       renderPage(context, page)
     }),
   )
