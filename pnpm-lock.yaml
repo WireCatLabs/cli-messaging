@@ -12,8 +12,8 @@ importers:
         specifier: 0.0.22
         version: 0.0.22(commander@15.0.0)
       '@leemour/cli-core':
-        specifier: 0.8.0
-        version: 0.8.0(commander@15.0.0)(typescript@7.0.2)
+        specifier: 0.9.0
+        version: 0.9.0(commander@15.0.0)(typescript@7.0.2)
       '@modelcontextprotocol/server':
         specifier: 2.1.0
         version: 2.1.0
@@ -377,6 +377,15 @@ packages:
 
   '@leemour/cli-core@0.8.0':
     resolution: {integrity: sha512-r70UNQTTGd3jeKNCOvAUtufVVKLkG5t+ownKE4epOA6UFR4I691b5ZWQe/OByB+2jEE6Q2WfNho7OU7T5qPFDA==}
+    engines: {node: '>=22'}
+    peerDependencies:
+      commander: '>=15'
+    peerDependenciesMeta:
+      commander:
+        optional: true
+
+  '@leemour/cli-core@0.9.0':
+    resolution: {integrity: sha512-ABbzzNcQKfDRntCsg68UGzBqH3LyfLNyYBX69X4UAGw7cY4EXWlM1rC1NJVZ4oOiFrayQZ5LgDscAQSmp02+vw==}
     engines: {node: '>=22'}
     peerDependencies:
       commander: '>=15'
@@ -1614,6 +1623,19 @@ snapshots:
       - typescript
 
   '@leemour/cli-core@0.8.0(commander@15.0.0)(typescript@7.0.2)':
+    dependencies:
+      cli-table3: 0.6.5
+      env-paths: 4.0.0
+      picocolors: 1.1.1
+      pino: 10.3.1
+      valibot: 1.5.0(typescript@7.0.2)
+    optionalDependencies:
+      '@napi-rs/keyring': 2.1.0
+      commander: 15.0.0
+    transitivePeerDependencies:
+      - typescript
+
+  '@leemour/cli-core@0.9.0(commander@15.0.0)(typescript@7.0.2)':
     dependencies:
       cli-table3: 0.6.5
       env-paths: 4.0.0
