@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.66.0 — 30.09.2026
+
 ### Added
 
 - **`guard` on `Messenger`, optional**: the send guard a command writes through, when the messenger's
