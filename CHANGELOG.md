@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.56.0 — 30.09.2026
+
 ### Added
 
 - **Sync state in the store** (store version 8): `syncState(key, name)` answers what a sync remembered
