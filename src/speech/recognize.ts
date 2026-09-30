@@ -87,7 +87,9 @@ export const openRecognizer = (model: SpeechModel, path: (name: string) => strin
   const vad = sherpa.createVad({
     sileroVad: {
       model: vadModel,
-      threshold: 0.5,
+      // At the default 0.5 a quietly spoken stretch in the middle of a voice message never counted as
+      // speech and was lost; 0.3 keeps it for both models and changes nothing on clear speech (126508, 2026-09-30).
+      threshold: 0.3,
       minSilenceDuration: 0.5,
       minSpeechDuration: 0.25,
       maxSpeechDuration: 20,

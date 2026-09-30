@@ -6,6 +6,14 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Fixed
+
+- **A local model no longer drops quietly spoken speech.** The voice detector that cuts a recording
+  into pieces took a quiet stretch for silence and threw it away: in a 19-second voice message both
+  GigaAM and Parakeet lost the middle 10 seconds that Telegram heard. Its threshold goes from 0.5 to
+  0.3. Transcripts a local model kept before are forgotten once, so `--transcribe` hears them again;
+  the messenger's are kept.
+
 ## 0.50.0 — 30.09.2026
 
 ### Added
