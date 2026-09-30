@@ -722,6 +722,27 @@ describe("sending over MCP", () => {
     expect(marks).toEqual([["7", "1"]])
   })
 
+  it("**offers messages_delete only with --allow-delete**, and never deletes for everyone", async () => {
+    const deletions: unknown[] = []
+    const telegram = scripted({
+      delete: async (chatId, ids, options) => {
+        deletions.push([chatId, ids, options])
+      },
+    })
+    const sending = (await (await connect(telegram, { allowSend: true })).client.listTools()).tools.map(
+      (one) => one.name,
+    )
+    const { client, call } = await connect(telegram, { allowDelete: true })
+
+    const tools = (await client.listTools()).tools.map((one) => one.name)
+    const { body } = await call("chat_messages_delete", { chat: "7", messages: ["1", "2"], for_everyone: true })
+
+    expect(sending).not.toContain("chat_messages_delete")
+    expect(tools).toContain("chat_messages_delete")
+    expect(body).toEqual({ chatId: "7", deleted: ["1", "2"], forEveryone: false })
+    expect(deletions).toEqual([["7", ["1", "2"], { forEveryone: false }]])
+  })
+
   it("does not offer a tool the profile's allow list leaves out, whatever the flags", async () => {
     const { client, call } = await connect(scripted(), {
       allowSend: true,

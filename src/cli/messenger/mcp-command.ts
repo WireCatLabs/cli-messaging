@@ -15,6 +15,7 @@ export interface McpFlags {
   allowSend?: boolean
   confirmSend?: boolean
   allowMarkRead?: boolean
+  allowDelete?: boolean
 }
 
 const withFlags = (command: Command): Command =>
@@ -22,12 +23,13 @@ const withFlags = (command: Command): Command =>
     .option("--allow-send", "offer the send tool; without it the server can only read")
     .option("--confirm-send", "show the owner every send in a form from the server first")
     .option("--allow-mark-read", "offer the tool that marks a chat read; the other side sees it")
+    .option("--allow-delete", "offer the tool that deletes the owner's own copy of messages; never for everyone")
 
 const checked = (flags: McpFlags): McpFlags => {
-  if (flags.confirmSend && !flags.allowSend && !flags.allowMarkRead) {
+  if (flags.confirmSend && !flags.allowSend && !flags.allowMarkRead && !flags.allowDelete) {
     throw new CliError(
       "validation_error",
-      "`--confirm-send` confirms writes, and without `--allow-send` or `--allow-mark-read` there are none",
+      "`--confirm-send` confirms writes, and without `--allow-send`, `--allow-mark-read` or `--allow-delete` there are none",
     )
   }
   return flags
@@ -40,13 +42,14 @@ export const mcpCommand = (messenger: Messenger): Command => {
       `serve this profile to an agent over MCP, on stdin and stdout — \`claude mcp add ${app.command} -- ${app.command} mcp\``,
     ),
   ).action(async function (this: Command) {
-    const { allowSend, confirmSend, allowMarkRead } = checked(this.opts<McpFlags>())
+    const { allowSend, confirmSend, allowMarkRead, allowDelete } = checked(this.opts<McpFlags>())
     // Loaded here, not at the top: every other command would otherwise pay for the SDK.
     const { serveOverStdio } = await import("../../mcp/server.js")
     await serveOverStdio(this, messengerContext(this, messenger), messenger, {
       allowSend: allowSend === true,
       confirmSend: confirmSend === true,
       allowMarkRead: allowMarkRead === true,
+      allowDelete: allowDelete === true,
     })
   })
 
@@ -118,6 +121,7 @@ export const serverEntry = (
       ...(flags.allowSend ? ["--allow-send"] : []),
       ...(flags.confirmSend ? ["--confirm-send"] : []),
       ...(flags.allowMarkRead ? ["--allow-mark-read"] : []),
+      ...(flags.allowDelete ? ["--allow-delete"] : []),
     ],
     ...(Object.keys(directories).length > 0 ? { env: directories } : {}),
   }

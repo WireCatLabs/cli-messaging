@@ -11,6 +11,7 @@ export const instructions = ({
   allowSend,
   confirmSend = false,
   allowMarkRead = false,
+  allowDelete = false,
   permitted,
 }: {
   /** `tg`: the prefix of every tool and the word in `… session start`. */
@@ -21,6 +22,7 @@ export const instructions = ({
   allowSend: boolean
   confirmSend?: boolean
   allowMarkRead?: boolean
+  allowDelete?: boolean
   permitted?: readonly Permission[] | undefined
 }): string =>
   [
@@ -33,6 +35,11 @@ export const instructions = ({
       : "- Sending is off: this server was started without --allow-send. Say so if asked to send.",
     ...(allowMarkRead
       ? [`- ${command}_chats_read marks a chat read and the other side sees it: only when the owner asked.`]
+      : []),
+    ...(allowDelete
+      ? [
+          `- ${command}_messages_delete removes the owner's own copy only and cannot be undone: only the exact messages the owner named.`,
+        ]
       : []),
     ...(allowSend && confirmSend
       ? [

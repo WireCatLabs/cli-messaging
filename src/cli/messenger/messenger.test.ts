@@ -515,6 +515,47 @@ describe("the shared read commands", () => {
     ])
   })
 
+  it("**delete only with --allow-dangerous**, each message counted toward the hourly limit", async () => {
+    const root = mkdtempSync(join(tmpdir(), "messenger-"))
+    const env = { CHAT_STATE_DIR: join(root, "state"), CHAT_CONFIG_DIR: join(root, "config") }
+    mkdirSync(env.CHAT_CONFIG_DIR, { recursive: true })
+    writeFileSync(
+      join(env.CHAT_CONFIG_DIR, "config.json"),
+      JSON.stringify({ profiles: { default: { sendsPerHour: 3 } } }),
+    )
+    const deletions: unknown[] = []
+    const deleting: MessengerAdapter = {
+      ...fake,
+      delete: async (chatId, ids, options) => {
+        deletions.push([chatId, ids, options])
+      },
+    }
+    const eleven = Array.from({ length: 11 }, (_, index) => String(index + 1))
+
+    const unasked = await call(["messages", "delete", "Book", "3"], async () => deleting, env)
+    const tooMany = await call(
+      ["messages", "delete", "Book", ...eleven, "--allow-dangerous"],
+      async () => deleting,
+      env,
+    )
+    const done = await call(
+      ["messages", "delete", "Book", "3", "4", "--for-everyone", "--allow-dangerous", "--json"],
+      async () => deleting,
+      env,
+    )
+    const over = await call(["messages", "delete", "Book", "5", "6", "--allow-dangerous"], async () => deleting, env)
+
+    expect(unasked.stderr.join("\n")).toContain("--allow-dangerous")
+    expect(tooMany.stderr.join("\n")).toContain("at most 10")
+    expect(JSON.parse(done.stdout[0] ?? "")).toEqual({ chatId: "7", deleted: ["3", "4"], forEveryone: true })
+    expect(over.code).toBe(8)
+    expect(deletions).toEqual([["7", ["3", "4"], { forEveryone: true }]])
+    const journal = new SendJournal(sendsPathFor(app, "default", env)).entries()
+    expect(journal.filter((entry) => entry.outcome === "sent")).toMatchObject([
+      { kind: "delete", count: 2, forEveryone: true },
+    ])
+  })
+
   it("describe themselves for an agent, with the contract version and which ones write", async () => {
     const root = mkdtempSync(join(tmpdir(), "messenger-"))
     const { stdout } = await call(["commands", "--json"], async () => fake, { CHAT_STATE_DIR: root })
@@ -529,6 +570,7 @@ describe("the shared read commands", () => {
     expect(find(["messages", "pin"])?.mutates).toBe(true)
     expect(find(["messages", "unpin"])?.mutates).toBe(true)
     expect(find(["reactions", "add"])?.mutates).toBe(true)
+    expect(find(["messages", "delete"])?.mutates).toBe(true)
     expect(find(["recipients", "add"])?.mutates).toBe(true)
     expect(find(["messages", "list"])?.mutates).toBeFalsy()
   })
@@ -813,7 +855,7 @@ describe("the guard, account and mcp config commands", () => {
     const env = sandbox()
     const mcp = { execPath: "/home/o/.nvm/versions/node/v24/bin/node", scriptPath: "/usr/lib/chat/bin/chat.js" }
     const { code, stdout, stderr } = await call(
-      ["work", "mcp", "config", "--allow-send", "--allow-mark-read", "--json"],
+      ["work", "mcp", "config", "--allow-send", "--allow-mark-read", "--allow-delete", "--json"],
       async () => fake,
       env,
       {
@@ -824,7 +866,7 @@ describe("the guard, account and mcp config commands", () => {
     expect(code).toBe(0)
     expect(json(stdout).mcpServers["chat-work"]).toMatchObject({
       command: mcp.execPath,
-      args: [mcp.scriptPath, "work", "mcp", "--allow-send", "--allow-mark-read"],
+      args: [mcp.scriptPath, "work", "mcp", "--allow-send", "--allow-mark-read", "--allow-delete"],
       env: { MESSAGING_STORE: env.MESSAGING_STORE },
     })
     expect(stderr.join("\n")).toContain("belongs to one Node version")
