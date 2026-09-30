@@ -1,14 +1,8 @@
 import { CliError } from "@leemour/cli-core"
 import { annotate } from "@leemour/cli-core/commands"
 import { Command } from "commander"
-import type { Deletion } from "../../domain/models.js"
-import type { SendGuard } from "../../sends/guard.js"
-import { guardedWrite } from "../../sends/guarded.js"
+import { DELETE_AT_ONCE } from "../../services/index.js"
 import { type Messenger, messengerContext } from "./context.js"
-import { capability, type MessengerAdapter } from "./port.js"
-
-/** max-cli's: many at once is what a ban for automation looks like. */
-export const DELETE_AT_ONCE = 10
 
 /**
  * ⚠ **`--allow-dangerous` is required** and nothing asks instead: a deletion cannot be undone, and a
@@ -34,8 +28,8 @@ export const deleteCommand = (messenger: Messenger): Command =>
         )
       }
       context.renderer.result(
-        await context.withMessenger((connection) =>
-          guardedDelete(context.guard, connection, {
+        await context.withServices((services) =>
+          services.messages.delete({
             chat,
             messages: messages.map((one) => one.trim()),
             forEveryone: everyone,
@@ -43,20 +37,3 @@ export const deleteCommand = (messenger: Messenger): Command =>
         ),
       )
     })
-
-/** Each message counts toward the hourly limit. */
-export const guardedDelete = async (
-  guard: SendGuard,
-  connection: MessengerAdapter,
-  { chat, messages, forEveryone }: { chat: string; messages: string[]; forEveryone: boolean },
-): Promise<Deletion> => {
-  if (messages.length > DELETE_AT_ONCE) {
-    throw new CliError("validation_error", `at most ${DELETE_AT_ONCE} messages at once, got ${messages.length}`)
-  }
-  const remove = capability(connection, "delete", "delete messages")
-  const { id: chatId } = await connection.resolve(chat)
-  await guardedWrite(guard, { chatId, kind: "delete", count: messages.length, forEveryone }, () =>
-    remove(chatId, messages, { forEveryone }),
-  )
-  return { chatId, deleted: messages, forEveryone }
-}

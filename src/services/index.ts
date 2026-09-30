@@ -3,8 +3,17 @@ import { type MessagesService, messagesService } from "./messages.js"
 
 export type { ServiceDeps } from "./deps.js"
 export { OFFLINE, onlineDeps, storedDeps } from "./deps.js"
-export type { AroundWindow, ListWindow, MessagesService, SearchQuery } from "./messages.js"
-export { messagesService, storedChatId } from "./messages.js"
+export type {
+  AroundWindow,
+  ListWindow,
+  MessagesService,
+  MessageTarget,
+  Pinned,
+  Reacted,
+  SearchQuery,
+  SendRequest,
+} from "./messages.js"
+export { DELETE_AT_ONCE, messagesService, storedChatId } from "./messages.js"
 
 export interface Services {
   messages: MessagesService
