@@ -156,7 +156,7 @@ export const messagesService = (deps: ServiceDeps): MessagesService => {
         throw new CliError("validation_error", "nothing to send — the marks leave no text")
       }
       const { id: chatId } = await connection.resolve(chat)
-      const id = sendId ?? newSendId()
+      const id = sendId ?? connection.newSendId?.() ?? newSendId()
       const attempt = {
         chatId,
         kind: "message" as const,

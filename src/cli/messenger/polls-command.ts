@@ -142,7 +142,7 @@ export const guardedCreatePoll = async (
   if (poll.answers.length < 2) throw new CliError("validation_error", "a poll needs two answers or more")
   const create = capability(connection, "createPoll", "create a poll")
   const { id: chatId } = await connection.resolve(chat)
-  const id = sendId ?? newSendId()
+  const id = sendId ?? connection.newSendId?.() ?? newSendId()
   const sent = await guardedWrite(
     guard,
     { chatId, kind: "message", sendId: id, operationId: id, length: poll.question.length },

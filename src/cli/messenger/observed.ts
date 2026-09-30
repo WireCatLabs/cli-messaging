@@ -36,11 +36,13 @@ export const observed = (messenger: MessengerAdapter, events: EventSink): Messen
     }
   }
 
+  const mint = messenger.newSendId
   // A method not listed here is timed under its own name, with no ids until a line here names them.
   return throughWrapper(
     messenger,
     {
       self: () => messenger.self(),
+      ...(mint ? { newSendId: () => mint.call(messenger) } : {}),
       me: () => timed("account.me", {}, () => messenger.me()),
       chats: (window) =>
         timed(

@@ -142,6 +142,17 @@ describe("the messages service's writes", () => {
     expect(sent.message.id).toBe("4")
   })
 
+  it("sends with the messenger's own form of send id when it has one", async () => {
+    const minting = { ...writer, newSendId: () => "1790000000000" } as MessengerAdapter
+    const sent = await messagesService(onlineDeps(messenger, minting, guarding(false))).send({
+      chat: "Book",
+      text: "hi",
+    })
+
+    expect(sent).toMatchObject({ sendId: "1790000000000", operationId: "1790000000000" })
+    expect(journal).toMatchObject([{ sendId: "1790000000000", operationId: "1790000000000" }])
+  })
+
   it("refuses before the messenger is asked, and records the refusal", async () => {
     const service = messagesService(onlineDeps(messenger, writer, guarding(true)))
 
