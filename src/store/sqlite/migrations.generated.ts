@@ -62,5 +62,12 @@ export const GENERATED: { name: string; statements: string[] }[] = [
     "statements": [
       "CREATE TABLE `fetch_leases` (\n\t`chat_pk` integer NOT NULL,\n\t`anchor` text NOT NULL,\n\t`holder` text NOT NULL,\n\t`expires_at` integer NOT NULL,\n\tCONSTRAINT `fetch_leases_pk` PRIMARY KEY(`chat_pk`, `anchor`),\n\tCONSTRAINT `fk_fetch_leases_chat_pk_chats_pk_fk` FOREIGN KEY (`chat_pk`) REFERENCES `chats`(`pk`)\n);"
     ]
+  },
+  {
+    "name": "20260930024643_version-10-contacts",
+    "statements": [
+      "ALTER TABLE `account_identities` ADD `last_messaged_at` integer;",
+      "ALTER TABLE `identities` ADD `description` text;"
+    ]
   }
 ]
