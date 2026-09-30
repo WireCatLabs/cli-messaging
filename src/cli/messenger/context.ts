@@ -2,6 +2,7 @@ import { CliError } from "@leemour/cli-core"
 import type { Command } from "commander"
 import type { Chat, Id, Provider } from "../../domain/models.js"
 import { guardFor, type SendGuard } from "../../sends/guard.js"
+import { OFFLINE, type ServiceDeps, type Services, servicesFor } from "../../services/index.js"
 import { type AccountKey, type MessageStore, openStore } from "../../store/store.js"
 import type { AppIdentity } from "../app.js"
 import { type BaseContext, baseContext, environmentOf } from "../context.js"
@@ -58,6 +59,8 @@ export interface MessengerContext extends BaseContext {
     work: (store: MessageStore, account: AccountKey) => Promise<T>,
     options?: { name?: string },
   ) => Promise<T>
+  /** The shared use cases, over a connection and a store each opened only if a service asks for it. */
+  withServices: <T>(work: (services: Services) => Promise<T>, options?: { name?: string }) => Promise<T>
 }
 
 /**
@@ -99,21 +102,17 @@ export const messengerContext = (command: Command, messenger: Messenger): Messen
   const { app, provider } = messenger
   const base = baseContext(command, messenger.resolveSettings)
   const { profile } = base.settings
+  const guard = guardFor(app, base.settings, base.renderer.warn, base.env)
 
   return {
     ...base,
     profile,
     stdin: environmentOf(command).stdin ?? process.stdin,
-    guard: guardFor(app, base.settings, base.renderer.warn, base.env),
+    guard,
     withMessenger: (work, options = {}) =>
       base.run(
         async (events) => {
-          if (base.settings.offline) {
-            throw new CliError(
-              "validation_error",
-              "--offline answers only from what is kept locally: `chats list`, `messages list|show|context` and `contacts list`",
-            )
-          }
+          if (base.settings.offline) throw new CliError("validation_error", OFFLINE)
           const connection = await messenger.connect(command, base, options)
           base.track(connection)
           const { adapter, close } = connected(connection, messenger, base, events)
@@ -140,6 +139,48 @@ export const messengerContext = (command: Command, messenger: Messenger): Messen
             return await work(store, account)
           } finally {
             await store.close()
+          }
+        },
+        name === undefined ? {} : { name },
+      ),
+    withServices: (work, { name } = {}) =>
+      base.run(
+        async (events) => {
+          let held: ReturnType<typeof connected> | undefined
+          let store: Promise<MessageStore> | undefined
+          const deps: ServiceDeps = {
+            messenger,
+            offline: base.settings.offline,
+            guard,
+            connection: async () => {
+              if (base.settings.offline) throw new CliError("validation_error", OFFLINE)
+              if (!held) {
+                const connection = await messenger.connect(command, base)
+                base.track(connection)
+                held = connected(connection, messenger, base, events)
+              }
+              return held.adapter
+            },
+            account: async () => {
+              const account = recalledAccount(app, provider, profile, base.env)
+              if (!account) {
+                throw new CliError(
+                  "not_found",
+                  `nothing recorded for profile "${profile}" yet — run the command once without --offline`,
+                )
+              }
+              return account
+            },
+            store: () => {
+              store ??= openStore({ env: base.env })
+              return store
+            },
+          }
+          try {
+            return await work(servicesFor(deps))
+          } finally {
+            await held?.close()
+            if (store) await (await store.catch(() => undefined))?.close()
           }
         },
         name === undefined ? {} : { name },

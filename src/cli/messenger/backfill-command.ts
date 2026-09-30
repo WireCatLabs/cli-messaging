@@ -5,6 +5,7 @@ import { setTimeout as sleep } from "node:timers/promises"
 import { CliError } from "@leemour/cli-core"
 import { Command } from "commander"
 import type { Id } from "../../domain/models.js"
+import { storedChatId } from "../../services/index.js"
 import { type AccountKey, type MessageStore, openStore, type Range } from "../../store/store.js"
 import { envName } from "../app.js"
 import { type BaseEnvironment, environmentOf } from "../context.js"
@@ -23,7 +24,6 @@ import {
   updateJob,
 } from "./backfill-jobs.js"
 import { type Messenger, type MessengerContext, messengerContext } from "./context.js"
-import { storedChatId } from "./messages-command.js"
 import type { MessengerAdapter } from "./port.js"
 
 /** The most messages a provider hands out per history request — Telegram's cap. */

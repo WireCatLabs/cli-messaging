@@ -2,8 +2,8 @@ import { CliError } from "@leemour/cli-core"
 import { Command } from "commander"
 import { toMarkdown } from "../../render/markdown.js"
 import { renderMessages } from "../../render/messages.js"
+import { storedChatId } from "../../services/index.js"
 import { type Messenger, messengerContext } from "./context.js"
-import { storedChatId } from "./messages-command.js"
 
 /**
  * What the local store holds, per chat — read from the store alone. Whether a backfill reached a
