@@ -3,6 +3,7 @@ import { afterOf, oneDirection } from "../../cli/messenger/after.js"
 import type { Messenger } from "../../cli/messenger/context.js"
 import { storedChatId } from "../../cli/messenger/messages-command.js"
 import { capability } from "../../cli/messenger/port.js"
+import { heard, hearForTool } from "../../speech/hearing.js"
 import { type AnyTool, chatOf, limit, message, nameOf, READ, tool } from "../tool.js"
 
 export const messagesTools = (messenger: Messenger): Record<string, AnyTool> => {
@@ -14,13 +15,16 @@ export const messagesTools = (messenger: Messenger): Record<string, AnyTool> => 
       description:
         "Recent messages in a chat, oldest first. Does not mark anything read. For older messages pass " +
         "`before` = the id of the first item; for newer ones, `after` = the id of the last item, or a time. " +
-        "Returns { items, limit, hasMore }.",
+        "A voice message carries `transcript` once heard; `transcribe` hears the rest. Returns { items, limit, hasMore }.",
       input: v.object({
         chat,
         limit,
         before: v.optional(v.pipe(message, v.description("only messages older than this message id"))),
         after: v.optional(
           v.pipe(v.string(), v.description("only messages newer than this message id, ISO 8601 time, or 2h / 1d ago")),
+        ),
+        transcribe: v.optional(
+          v.pipe(v.boolean(), v.description("turn voice messages not heard yet into text; can take minutes")),
         ),
       }),
       annotations: READ,
@@ -41,7 +45,13 @@ export const messagesTools = (messenger: Messenger): Record<string, AnyTool> => 
                 limit: size,
                 after: afterOf(args.after, "after"),
               })
-        return { items: found.items, limit: size, hasMore: found.hasMore }
+        const hearing = await hearForTool(messenger, adapter, found.items, args.transcribe === true, defaults)
+        return {
+          items: heard(found.items, hearing),
+          limit: size,
+          hasMore: found.hasMore,
+          ...(args.transcribe ? { unheard: hearing?.unheard ?? [] } : {}),
+        }
       },
     }),
 

@@ -1,6 +1,7 @@
 import * as v from "valibot"
 import type { Messenger } from "../../cli/messenger/context.js"
 import { momentOf, newIn, unreadIn } from "../../cli/messenger/inbox.js"
+import { heard, hearForTool } from "../../speech/hearing.js"
 import { type AnyTool, READ, tool } from "../tool.js"
 
 /** Per chat: unread across many chats at a hundred each would outgrow what a client keeps of one answer. */
@@ -15,20 +16,32 @@ export const inboxTools = (messenger: Messenger): Record<string, AnyTool> => {
         `\`since\` everything after that point. Marks nothing read and moves no saved point — the owner's ` +
         `\`${messenger.app.command} inbox --new\` is unaffected. Muted and archived chats are left out unless they ` +
         "mention the owner or reply to them, or `all` is set. Returns { mode, chats: [{ id, title, messages, more }], " +
-        "skipped, partial, quiet }, where quiet counts the chats left out.",
+        "skipped, partial, quiet }, where quiet counts the chats left out. A voice message carries `transcript` once " +
+        "heard; `transcribe` hears the rest.",
       input: v.object({
         since: v.optional(v.pipe(v.string(), v.description("an ISO 8601 time, or 2h / 1d ago"))),
         all: v.optional(v.pipe(v.boolean(), v.description("muted and archived chats too"))),
         limit: v.optional(
           v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(100), v.description("at most this many per chat")),
         ),
+        transcribe: v.optional(
+          v.pipe(v.boolean(), v.description("turn voice messages not heard yet into text; can take minutes")),
+        ),
       }),
       annotations: READ,
-      online: (adapter, args) => {
+      online: async (adapter, args, defaults) => {
         const limit = args.limit ?? INBOX_LIMIT
-        return args.since === undefined
-          ? unreadIn(adapter, { limit, all: args.all })
-          : newIn(adapter, { since: momentOf(args.since, "since"), limit, all: args.all })
+        const inbox =
+          args.since === undefined
+            ? await unreadIn(adapter, { limit, all: args.all })
+            : await newIn(adapter, { since: momentOf(args.since, "since"), limit, all: args.all })
+        const messages = inbox.chats.flatMap((chat) => chat.messages)
+        const hearing = await hearForTool(messenger, adapter, messages, args.transcribe === true, defaults)
+        return {
+          ...inbox,
+          chats: inbox.chats.map((chat) => ({ ...chat, messages: heard(chat.messages, hearing) })),
+          ...(args.transcribe ? { unheard: hearing?.unheard ?? [] } : {}),
+        }
       },
     }),
   }

@@ -12,6 +12,17 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   leads to, read without joining — `LinkTarget`: kind, title, id (`null` for a private chat the owner
   is not in), members, description, whether the owner is already in it, and whether joining needs
   approval. A messenger offers it with the optional `inspect`.
+- **Voice messages carry their text in `messages list` and `inbox`.** A transcript heard once is kept
+  per profile in the CLI's own cache (`transcripts-<profile>.db`, not the store) and shows on every
+  later read as `transcript` — under the text, with 🎤, for a person. `--transcribe` hears the rest —
+  by the messenger or a model on this machine, as `messages transcribe` chooses — within two minutes
+  for the whole list; what is left is in `unheard`, never a failure. `transcribe` on the list and
+  inbox tools does the same. `messages transcribe` keeps what it hears too.
+
+### Fixed
+
+- **`config show` says `transcribeWith` is `auto` when unset**, not `null`.
+
 
 ## 0.46.0 — 30.09.2026
 

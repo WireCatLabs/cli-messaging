@@ -681,6 +681,7 @@ describe("messages transcribe", () => {
       CHAT_STATE_DIR: join(root, "state"),
       MESSAGING_STORE: join(root, "m.db"),
       CLI_COMMON_CACHE_DIR: join(root, "cache"),
+      CHAT_CACHE_DIR: join(root, "chat-cache"),
     }
   }
 
@@ -709,6 +710,29 @@ describe("messages transcribe", () => {
 
     expect(code).not.toBe(0)
     expect(stderr.join("")).toContain("chat models audio download parakeet-v3")
+  })
+
+  it("**lists a chat with its voice messages heard**, and shows them again later without asking", async () => {
+    const root = env()
+    const spoken = { ...message, attachments: [{ kind: "voice", mime: "audio/ogg" }] }
+    let asked = 0
+    const hearing = {
+      ...fake,
+      history: async () => ({ items: [spoken], hasMore: false }),
+      transcribe: async () => {
+        asked++
+        return { text: "read me", pending: false }
+      },
+    }
+
+    const first = await call(["messages", "list", "Book", "--transcribe", "--json"], async () => hearing, root)
+    const again = await call(["messages", "list", "Book", "--json"], async () => hearing, root)
+    const person = await call(["messages", "list", "Book"], async () => hearing, root, { tty: true })
+
+    expect(JSON.parse(first.stdout[0] ?? "")).toMatchObject({ items: [{ transcript: "read me" }], unheard: [] })
+    expect(JSON.parse(again.stdout[0] ?? "").items[0].transcript).toBe("read me")
+    expect(person.stdout.join("")).toContain("🎤 read me")
+    expect(asked).toBe(1)
   })
 
   it("lists the speech models Parakeet first, none downloaded, the first the default", async () => {

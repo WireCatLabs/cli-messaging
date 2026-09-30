@@ -15,6 +15,7 @@ for (const prefix of ["APP", "CHAT", "TG"]) {
   process.env[`${prefix}_STATE_DIR`] = join(sandbox, prefix, "state")
   process.env[`${prefix}_CONFIG_DIR`] = join(sandbox, prefix, "config")
   process.env[`${prefix}_CACHE_DIR`] = join(sandbox, prefix, "cache")
+  process.env[`${prefix}_CACHE_DIR`] = join(sandbox, prefix, "cache")
 }
 process.env.TMPDIR = sandbox
 

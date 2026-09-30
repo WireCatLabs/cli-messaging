@@ -13,6 +13,7 @@ import type { AccountKey, MessageStore } from "../../store/store.js"
 import { afterOf, oneDirection } from "./after.js"
 import { type Messenger, messengerContext } from "./context.js"
 import { downloadSubcommand } from "./download-command.js"
+import { heardItems, hearForCommand, hearingFields, spokenItems, TRANSCRIBE_OPTION } from "./hearing-command.js"
 import { editCommand } from "./messages-edit-command.js"
 import { forwardCommand } from "./messages-forward-command.js"
 import { pinCommand, unpinCommand } from "./messages-pin-command.js"
@@ -32,9 +33,10 @@ export const messagesCommand = (messenger: Messenger): Command => {
     .option("--limit <n>", "how many", (value) => Number.parseInt(value, 10))
     .option("--before <id>", "only messages older than this message id")
     .option("--after <id-or-time>", "only messages newer than this message id, ISO 8601 time, or 2h / 1d ago")
+    .option(...TRANSCRIBE_OPTION)
     .action(async function (this: Command, chat: string) {
       const context = messengerContext(this, messenger)
-      const { before, after } = this.opts<{ before?: string; after?: string }>()
+      const { before, after, transcribe } = this.opts<{ before?: string; after?: string; transcribe?: boolean }>()
       oneDirection(before, after)
       const { limit } = context.settings
       const wanted = { limit, ...(before === undefined ? {} : { before }) }
@@ -55,12 +57,13 @@ export const messagesCommand = (messenger: Messenger): Command => {
                 store.messages(account, await storedChatId(messenger, chat, store, account), wanted),
               )
             : await context.withMessenger((connection) => connection.history(chat, wanted))
+      const hearing = await hearForCommand(context, messenger, page.items, transcribe === true)
       const next = (items: typeof page.items) =>
         after === undefined ? `older messages: --before ${items[0]?.id}` : `newer messages: --after ${items.at(-1)?.id}`
       if (context.format === "pretty") {
         // Straight to stdout: the pretty renderer keeps every string to one line, and a feed is many.
         context.streams.data(
-          renderMessages(page.items, {
+          renderMessages(spokenItems(page.items, hearing), {
             color: context.color,
             verbosity: context.settings.detail,
             senderColors: context.settings.senderColors,
@@ -72,11 +75,16 @@ export const messagesCommand = (messenger: Messenger): Command => {
         return
       }
       if (context.format === "jsonl") {
-        context.renderer.stream(page.items)
+        context.renderer.stream(heardItems(page.items, hearing))
         if (page.hasMore) context.renderer.note(next(page.items))
         return
       }
-      context.renderer.result({ items: page.items, limit, hasMore: page.hasMore })
+      context.renderer.result({
+        items: heardItems(page.items, hearing),
+        limit,
+        hasMore: page.hasMore,
+        ...hearingFields(hearing, transcribe === true),
+      })
     })
 
   const readWindow = async (command: Command, chat: string, message: string | undefined, window: Window) => {

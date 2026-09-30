@@ -43,7 +43,7 @@ export interface Defaults {
   limit: number
   guard: SendGuard
   /** The profile's own entries, for a tool reading a setting of its own — `transcribeWith`. */
-  settings: Pick<Settings, "configured" | "shared">
+  settings: Pick<Settings, "configured" | "shared" | "profile">
   env: NodeJS.ProcessEnv
 }
 
