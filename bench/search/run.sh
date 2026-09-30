@@ -4,7 +4,7 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 N="$1"
-DATA="${SEARCHBENCH_DATA:-/tmp/claude-1000/-home-leemour-Projects-AI-max-cli/acc4d3ed-02a6-41d5-8e9a-d5b4a62b9ac4/scratchpad/searchbench-data}"
+DATA="${SEARCHBENCH_DATA:-${TMPDIR:-/tmp}/searchbench-data}"
 R=results.md
 build_header() {
   { echo; echo "#### Build — $1"; echo

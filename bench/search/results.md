@@ -819,3 +819,19 @@ Where the bottleneck is:
 **PGlite correctness finding:** when a btree pre-filters rows, pg_textsearch 1.3.1 in PGlite returns
 **non-matching rows with score 0** (337 of 400 returned rows in the small-chat test). Native 1.4.0 does not.
 Any PGlite use must filter `score < 0`.
+
+## The real store (`store.ts`), before phase 1 changes it
+
+Storage phase 1, item 5: the same corpus loaded through `openStore` and `saveMessages` into a schema 5
+file — one account per source, a chat per corpus chat, a sender identity per corpus sender, batches of
+1,000 per chat. This is the baseline items 6–8 compare against. Measured 2026-09-30 on the machine above.
+
+| path | runtime | N | batching | load | index | disk | peak RSS |
+|---|---|---|---|---|---|---|---|
+| store | node v24.19.0 | 100,000 | batches of 1000 per chat | 8,157 rows/s (12.26 s) | FTS by triggers, inline | 98 MB | 664 MB |
+| store | bun 1.3.14 | 100,000 | batches of 1000 per chat | 10,481 rows/s (9.54 s) | FTS by triggers, inline | 98 MB | 315 MB |
+| store | node v24.19.0 | 1,000,000 | batches of 1000 per chat | 7,614 rows/s (131.34 s) | FTS by triggers, inline | 937 MB | 1545 MB |
+
+About 12 times slower than `sqlite.ts` loading inline (94,798 rows/s at 100k). Per message the store
+upserts the sender's identity and `account_identities`, looks the message up before it writes, and its
+message index is trigram (migration 5), not `unicode61`. Where the time goes is not measured yet.
