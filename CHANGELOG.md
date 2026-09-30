@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.70.0 — 30.09.2026
+
 ### Changed — may break callers
 
 - **Depends on `@leemour/cli-core` 0.9.0.** A CLI that uses this package moves to cli-core 0.9.0 in the
