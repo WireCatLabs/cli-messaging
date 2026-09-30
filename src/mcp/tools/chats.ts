@@ -1,17 +1,15 @@
 import * as v from "valibot"
-import {
-  CHAT_SCAN,
-  chatEventsOf,
-  checkedFilter,
-  EVENTS_DAYS,
-  filteredChats,
-} from "../../cli/messenger/chats-command.js"
+import { checkedFilter } from "../../cli/messenger/chats-command.js"
 import type { Messenger } from "../../cli/messenger/context.js"
-import { capability } from "../../cli/messenger/port.js"
+import { momentOf } from "../../cli/messenger/inbox.js"
+import type { MessengerAdapter } from "../../cli/messenger/port.js"
+import type { SendGuard } from "../../sends/guard.js"
+import { CHAT_SCAN, chatsService, EVENTS_DAYS, onlineDeps } from "../../services/index.js"
 import { type AnyTool, chatOf, envelope, limit, page, paging, READ, tool } from "../tool.js"
 
 export const chatsTools = (messenger: Messenger): Record<string, AnyTool> => {
   const chat = chatOf(messenger)
+  const chats = (adapter: MessengerAdapter, guard: SendGuard) => chatsService(onlineDeps(messenger, adapter, guard))
   return {
     chats_list: tool({
       title: "List chats",
@@ -29,10 +27,7 @@ export const chatsTools = (messenger: Messenger): Record<string, AnyTool> => {
       annotations: READ,
       online: async (adapter, { search, kind, unread, ...rest }, defaults) => {
         const { size, number, window } = paging(rest, defaults)
-        if (search === undefined && kind === undefined && !unread) {
-          return envelope(await adapter.chats(window), number, size)
-        }
-        const found = await filteredChats({ adapter }, checkedFilter({ search, kind, unread }), window)
+        const found = await chats(adapter, defaults.guard).list(checkedFilter({ search, kind, unread }), window)
         return { ...envelope(found, number, size), ...(found.partial ? { partial: true } : {}) }
       },
     }),
@@ -49,13 +44,11 @@ export const chatsTools = (messenger: Messenger): Record<string, AnyTool> => {
         event: v.optional(v.pipe(v.string(), v.description("only these events, comma-separated"))),
       }),
       annotations: READ,
-      online: (adapter, args) =>
-        chatEventsOf(
-          adapter,
-          args.chat,
-          { ...(args.since === undefined ? {} : { since: args.since }), ...(args.event ? { only: args.event } : {}) },
-          "since",
-        ),
+      online: (adapter, args, { guard }) =>
+        chats(adapter, guard).events(args.chat, {
+          ...(args.since === undefined ? {} : { since: momentOf(args.since, "since") }),
+          ...(args.event ? { only: args.event } : {}),
+        }),
     }),
 
     chats_members: tool({
@@ -67,7 +60,7 @@ export const chatsTools = (messenger: Messenger): Record<string, AnyTool> => {
       annotations: READ,
       online: async (adapter, { chat: reference, ...rest }, defaults) => {
         const { size, number, window } = paging(rest, defaults)
-        const found = await capability(adapter, "members", "list a group's members")(reference, window)
+        const found = await chats(adapter, defaults.guard).members(reference, window)
         return { ...envelope(found, number, size), chatId: found.chatId }
       },
     }),
@@ -79,7 +72,7 @@ export const chatsTools = (messenger: Messenger): Record<string, AnyTool> => {
         "participantsCount, description, member, approvalNeeded? }. id is null for a private chat the owner is not in.",
       input: v.object({ link: v.pipe(v.string(), v.minLength(1), v.description("an invite link or a public one")) }),
       annotations: READ,
-      online: (adapter, args) => capability(adapter, "inspect", "read a link")(args.link),
+      online: (adapter, args, { guard }) => chats(adapter, guard).inspect(args.link),
     }),
 
     chats_show: tool({
@@ -87,7 +80,7 @@ export const chatsTools = (messenger: Messenger): Record<string, AnyTool> => {
       description: "One chat: its kind, unread count, last message time and who is in it.",
       input: v.object({ chat }),
       annotations: READ,
-      online: (adapter, args) => adapter.chat(args.chat),
+      online: (adapter, args, { guard }) => chats(adapter, guard).show(args.chat),
     }),
   }
 }
