@@ -8,6 +8,7 @@ import type {
   ChatEvents,
   GroupMember,
   Id,
+  LinkTarget,
   Member,
   Message,
   MessageEvent,
@@ -115,6 +116,8 @@ export interface MessengerAdapter {
   scheduled?(chat: string): Promise<Message[]>
   /** A voice or video note as text, by the messenger's own speech recognition. */
   transcribe?(chat: string, messageId: Id): Promise<Transcript>
+  /** What an invite or public link leads to. Reading it joins nothing. */
+  inspect?(link: string): Promise<LinkTarget>
   /** Every device and app logged in to this account. Reading them ends nothing. */
   sessions?(): Promise<AccountSession[]>
   /** The person with this phone number, where their privacy lets the owner find them; `not_found` otherwise. */

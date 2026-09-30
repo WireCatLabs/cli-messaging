@@ -243,6 +243,21 @@ export interface Contact {
 /** Somebody in a chat, as much of them as a chat card shows. */
 export type Member = Pick<Contact, "id" | "name" | "username">
 
+/** What a link leads to, read without joining. */
+export interface LinkTarget {
+  kind: ChatKind
+  title: string | null
+  /** `null` for a private chat the owner is not in: the invite does not say. */
+  id: Id | null
+  username: string | null
+  participantsCount: number | null
+  description: string | null
+  /** Whether the owner is already in it; `null` where the messenger does not say. */
+  member: boolean | null
+  /** Joining waits for an admin's approval. */
+  approvalNeeded?: boolean
+}
+
 /** Somewhere this account is logged in — a device, a browser, this tool. */
 export interface AccountSession {
   /** The session this tool is using. */

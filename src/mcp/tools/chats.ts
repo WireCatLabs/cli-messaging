@@ -72,6 +72,16 @@ export const chatsTools = (messenger: Messenger): Record<string, AnyTool> => {
       },
     }),
 
+    chats_inspect: tool({
+      title: "What a link leads to",
+      description:
+        "What an invite or public link leads to, read without joining: { kind, title, id, username, " +
+        "participantsCount, description, member, approvalNeeded? }. id is null for a private chat the owner is not in.",
+      input: v.object({ link: v.pipe(v.string(), v.minLength(1), v.description("an invite link or a public one")) }),
+      annotations: READ,
+      online: (adapter, args) => capability(adapter, "inspect", "read a link")(args.link),
+    }),
+
     chats_show: tool({
       title: "Show a chat",
       description: "One chat: its kind, unread count, last message time and who is in it.",
