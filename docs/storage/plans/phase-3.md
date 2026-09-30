@@ -1,6 +1,6 @@
 # Phase 3 — conversations inside a group chat
 
-Plan, 2026-09-30. **Draft for the owner's review; nothing is built.** It follows
+Plan, 2026-09-30. **Approved by the owner 2026-09-30** (NEED-420 A). Nothing is built yet. It follows
 [`../decisions.md`](../decisions.md), in particular the ruling of 2026-09-30 that the CLI never calls an
 AI model to link messages and the user's own agent does it (phase 4). Requirements §12, §13 stages 1–2,
 §16 and §28 are the brief; §13 stage 3, §14, §15 and §27 are replaced by that ruling.
@@ -144,7 +144,7 @@ replies (item 6), is dropped.
 **C6 · Only chats the user enables.** `conversations build --chat X` enables and builds; nothing builds on
 sync (requirements §22). `conversation_state` says which chats are enabled and how fresh they are.
 
-**C7 · Commands** (names are open question 1):
+**C7 · Commands** (owner, NEED-421 A):
 
 - `conversations build --chat <chat> [--rebuild]` — the rules, then the grouping; prints counts.
 - `conversations list --chat <chat> [--after] [--before]` — one line each: first message, size, people, span.
@@ -201,10 +201,9 @@ Valencia Expats · 12 May 10:01–10:05 · 4 messages · Alice, Carol
 
 ## 7. Open questions
 
-1. **Names**: `conversations …` as its own group, or `search enrich` / `search conversations` as
-   requirements §14 and §23 suggest?
-2. **Same-sender links**: always a candidate (as C5), or chosen automatically under a short gap? The
-   literature says a guess; the small group's 29% says it matters there.
+1. ~~Names~~ — answered 2026-09-30 (NEED-421 A): `conversations build|list|show` and `messages links`.
+2. ~~Same-sender links~~ — answered 2026-09-30 (NEED-422 A): a candidate, as C5, its confidence and
+   threshold set by the scores of item 6; never joined automatically.
 3. **A reply to a message we do not hold**: start a new conversation, or keep a dangling group that joins
    when the parent is downloaded? The large group has 148 such replies.
 4. **Forum threads in MAX**: does MAX have them at all? `threadId` is filled by tg-cli only today.
