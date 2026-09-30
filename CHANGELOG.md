@@ -20,6 +20,10 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Added
 
+- **`Message.senderUsername`** — the sender's handle without `@`, where the messenger has one. The
+  store saves it on the sender's identity, and a later message without it keeps the one saved, so
+  `people` answers it and a mention can be matched to its sender. An adapter that leaves it out
+  changes nothing.
 - **Services: chats and people** — the third step of `docs/plans/2026-09-30-services.md`.
   `services.chats` (`list`, `show`, `members`, `events`, `inspect`, `markRead` through the guard) and
   `services.people` (`list`, `show`, `lookup`, `sync`) take over `chats list|show|members list|events|inspect|mark-read`,

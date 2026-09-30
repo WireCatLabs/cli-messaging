@@ -146,6 +146,14 @@ describe("the message store", () => {
     database.close()
   })
 
+  it("keeps a sender's username from a message, and a later message without one does not erase it", async () => {
+    const store = await openStore({ path: fresh() })
+    await store.saveMessages(ME, chat.id, [message({ id: "1", senderUsername: "ana_v" })], { via: "history" })
+    await store.saveMessages(ME, chat.id, [message({ id: "2" })], { via: "update" })
+    expect((await store.people("telegram")).get("777")).toMatchObject({ name: "Ana", username: "ana_v" })
+    await store.close()
+  })
+
   it("pages backwards from a message, oldest to newest within a page", async () => {
     const store = await openStore({ path: fresh() })
     const at = (minute: number) => `2026-09-26T10:0${minute}:00.000Z`

@@ -212,6 +212,7 @@ Valencia Expats · 12 May 10:01–10:05 · 4 messages · Alice, Carol
 5. **Mentions in MAX**: needs a capture of a message that mentions someone, before item 3 covers MAX.
 6. **Telegram senders have no username in the store** (0 of 1,535 identities in a development copy,
    2026-09-30), so the mention rule cannot fire on Telegram. `Message` carries `senderName` but no
-   handle, and tg-cli does not pass one; the store keeps a username once given. Storing it is tg-cli's
-   change. Whether it helps is not measured: the held-out check (2 of 397 found) tests button replies,
+   handle, and tg-cli does not pass one; the store keeps a username once given. **Update 2026-09-30:**
+   `Message.senderUsername` added and saved by the store; tg-cli fills it (owner: «it should be built
+   into messaging»). Whether it helps is not measured: the held-out check (2 of 397 found) tests button replies,
    where these rules are weakest by design. See [`bench/disentangle/README.md`](../../../bench/disentangle/README.md).

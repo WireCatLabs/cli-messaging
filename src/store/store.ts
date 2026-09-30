@@ -411,7 +411,13 @@ const storeOver = (database: CacheDatabase, now: () => number): MessageStore => 
     const sender =
       message.senderId === null || message.senderIsChat
         ? null
-        : identityPk(accountKey, key.provider, message.senderId, message.senderName)
+        : identityPk(
+            accountKey,
+            key.provider,
+            message.senderId,
+            message.senderName,
+            message.senderUsername === undefined ? {} : { username: message.senderUsername },
+          )
     const fields = {
       thread_native_id: message.threadId ?? null,
       sender_identity_pk: sender,
