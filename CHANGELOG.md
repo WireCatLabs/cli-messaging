@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.67.0 — 30.09.2026
+
 ### Added
 
 - **`store backup <file>` and `store restore <file>`.** `store backup` copies `messages.db` into a new
