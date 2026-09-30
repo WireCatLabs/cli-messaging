@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.47.0 — 30.09.2026
+
 ### Added
 
 - **`topicsCommand` — `topics list <chat>` and `topics search <chat> <text>`** and the `topics_list`
