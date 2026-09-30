@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.54.0 — 30.09.2026
+
 ### Fixed
 
 - **A deletion that names no chat skips a Telegram supergroup or channel the store knows only by its id.**
