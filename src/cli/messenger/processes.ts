@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process"
-import { readFileSync } from "node:fs"
+import { readdirSync, readFileSync, readlinkSync } from "node:fs"
 
 /** Signal 0 checks that the process exists without touching it. */
 export const alive = (pid: number): boolean => {
@@ -32,4 +32,44 @@ export const carries = (pid: number, marker: string): boolean => {
     return false
   }
   return false
+}
+
+/**
+ * The other processes that have any of `paths` open, whichever app they belong to — a `serve` keeps
+ * its lock under its own app's directory, where the other CLI cannot look. `undefined` when this
+ * system cannot tell: no `/proc`, no `lsof`. `paths` must be real paths, as the kernel reports them.
+ */
+export const holdersOf = (paths: string[]): number[] | undefined => {
+  if (process.platform === "linux") {
+    const wanted = new Set(paths)
+    return readdirSync("/proc")
+      .filter((entry) => /^\d+$/.test(entry) && Number(entry) !== process.pid)
+      .filter((pid) => {
+        try {
+          return readdirSync(`/proc/${pid}/fd`).some((fd) => {
+            try {
+              return wanted.has(readlinkSync(`/proc/${pid}/fd/${fd}`))
+            } catch {
+              return false
+            }
+          })
+        } catch {
+          return false
+        }
+      })
+      .map(Number)
+  }
+  const pids = (listed: string) =>
+    listed
+      .split("\n")
+      .filter(Boolean)
+      .map(Number)
+      .filter((pid) => pid !== process.pid)
+  try {
+    return pids(execFileSync("lsof", ["-t", "--", ...paths], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }))
+  } catch (error) {
+    // lsof exits 1 when some file is open by nobody, and fails to start when it is not installed.
+    const { status, stdout } = error as { status?: number; stdout?: string }
+    return status === 1 ? pids(stdout ?? "") : undefined
+  }
 }
