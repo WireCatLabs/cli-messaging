@@ -34,6 +34,10 @@
     "./sends": {
       "types": "./dist/sends/index.d.ts",
       "default": "./dist/sends/index.js"
+    },
+    "./services": {
+      "types": "./dist/services/index.d.ts",
+      "default": "./dist/services/index.js"
     }
   },
   "scripts": {

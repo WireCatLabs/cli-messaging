@@ -1,7 +1,7 @@
 import * as v from "valibot"
 import type { Messenger } from "../../cli/messenger/context.js"
 import { momentOf } from "../../cli/messenger/inbox.js"
-import { inboxService, onlineDeps } from "../../services/index.js"
+import { onlineDeps, servicesFor } from "../../services/index.js"
 import { heard, hearForTool } from "../../speech/hearing.js"
 import { type AnyTool, READ, tool } from "../tool.js"
 
@@ -32,7 +32,7 @@ export const inboxTools = (messenger: Messenger): Record<string, AnyTool> => {
       annotations: READ,
       online: async (adapter, args, defaults) => {
         const limit = args.limit ?? INBOX_LIMIT
-        const inbox = await inboxService(onlineDeps(messenger, adapter, defaults.guard)).read({
+        const inbox = await servicesFor(onlineDeps(messenger, adapter, defaults.guard)).inbox.read({
           ...(args.since === undefined ? {} : { since: momentOf(args.since, "since") }),
           limit,
           all: args.all === true,

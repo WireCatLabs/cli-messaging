@@ -3,7 +3,7 @@ import * as v from "valibot"
 import type { Messenger } from "../../cli/messenger/context.js"
 import { sendTime } from "../../domain/send-time.js"
 import { readUpload } from "../../sends/upload.js"
-import { messagesService, onlineDeps } from "../../services/index.js"
+import { onlineDeps, servicesFor } from "../../services/index.js"
 import { type AnyTool, APPROVE, chatOf, message, nameOf, tool, WRITE } from "../tool.js"
 
 /**
@@ -62,7 +62,7 @@ export const messageSendTools = (messenger: Messenger): Record<string, AnyTool> 
         if ((args.text ?? "").trim() === "" && attachments.length === 0) {
           throw new CliError("validation_error", "nothing to send — give text, a file or a photo")
         }
-        const sent = await messagesService(onlineDeps(messenger, adapter, guard)).send({
+        const sent = await servicesFor(onlineDeps(messenger, adapter, guard)).messages.send({
           chat: args.chat,
           text: args.text ?? "",
           ...(attachments.length === 0 ? {} : { attachments }),

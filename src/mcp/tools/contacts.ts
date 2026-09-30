@@ -2,11 +2,12 @@ import * as v from "valibot"
 import type { Messenger } from "../../cli/messenger/context.js"
 import type { MessengerAdapter } from "../../cli/messenger/port.js"
 import type { SendGuard } from "../../sends/guard.js"
-import { onlineDeps, peopleService, phoneOf } from "../../services/index.js"
+import { onlineDeps, phoneOf, servicesFor } from "../../services/index.js"
 import { type AnyTool, envelope, limit, page, paging, READ, tool } from "../tool.js"
 
 export const contactsTools = (messenger: Messenger): Record<string, AnyTool> => {
-  const people = (adapter: MessengerAdapter, guard: SendGuard) => peopleService(onlineDeps(messenger, adapter, guard))
+  const people = (adapter: MessengerAdapter, guard: SendGuard) =>
+    servicesFor(onlineDeps(messenger, adapter, guard)).people
   return {
     contacts_list: tool({
       title: "List contacts",

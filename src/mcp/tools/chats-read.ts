@@ -1,6 +1,6 @@
 import * as v from "valibot"
 import type { Messenger } from "../../cli/messenger/context.js"
-import { chatsService, onlineDeps } from "../../services/index.js"
+import { onlineDeps, servicesFor } from "../../services/index.js"
 import { type AnyTool, APPROVE, chatOf, message, tool, WRITE } from "../tool.js"
 
 export const chatsReadTools = (messenger: Messenger): Record<string, AnyTool> => ({
@@ -14,7 +14,7 @@ export const chatsReadTools = (messenger: Messenger): Record<string, AnyTool> =>
     _meta: APPROVE,
     permission: "read",
     online: (adapter, args, { guard }) =>
-      chatsService(onlineDeps(messenger, adapter, guard)).markRead({
+      servicesFor(onlineDeps(messenger, adapter, guard)).chats.markRead({
         chat: args.chat,
         ...(args.until === undefined ? {} : { until: args.until }),
       }),

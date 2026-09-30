@@ -4,12 +4,13 @@ import type { Messenger } from "../../cli/messenger/context.js"
 import { momentOf } from "../../cli/messenger/inbox.js"
 import type { MessengerAdapter } from "../../cli/messenger/port.js"
 import type { SendGuard } from "../../sends/guard.js"
-import { CHAT_SCAN, chatsService, EVENTS_DAYS, onlineDeps } from "../../services/index.js"
+import { CHAT_SCAN, EVENTS_DAYS, onlineDeps, servicesFor } from "../../services/index.js"
 import { type AnyTool, chatOf, envelope, limit, page, paging, READ, tool } from "../tool.js"
 
 export const chatsTools = (messenger: Messenger): Record<string, AnyTool> => {
   const chat = chatOf(messenger)
-  const chats = (adapter: MessengerAdapter, guard: SendGuard) => chatsService(onlineDeps(messenger, adapter, guard))
+  const chats = (adapter: MessengerAdapter, guard: SendGuard) =>
+    servicesFor(onlineDeps(messenger, adapter, guard)).chats
   return {
     chats_list: tool({
       title: "List chats",

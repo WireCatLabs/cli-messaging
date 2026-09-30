@@ -35,10 +35,20 @@ export interface Services {
   archive: ArchiveService
 }
 
-export const servicesFor = (deps: ServiceDeps): Services => ({
-  messages: messagesService(deps),
-  chats: chatsService(deps),
-  people: peopleService(deps),
-  inbox: inboxService(deps),
-  archive: archiveService(deps),
-})
+/**
+ * How a CLI replaces a use case: it returns the services it changes, whole, and can call the shared
+ * method inside its own — `messages: { ...base.messages, list: (chat, window) => … base.messages.list … }`.
+ */
+export type Override = (base: Services, deps: ServiceDeps) => Partial<Services>
+
+/** The shared services, with the messenger's `services` override applied — commands and MCP tools alike. */
+export const servicesFor = (deps: ServiceDeps): Services => {
+  const base: Services = {
+    messages: messagesService(deps),
+    chats: chatsService(deps),
+    people: peopleService(deps),
+    inbox: inboxService(deps),
+    archive: archiveService(deps),
+  }
+  return deps.messenger.services ? { ...base, ...deps.messenger.services(base, deps) } : base
+}
