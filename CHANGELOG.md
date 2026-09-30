@@ -6,6 +6,16 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- **`store backup <file>` and `store restore <file>`.** `store backup` copies `messages.db` into a new
+  file while it is in use, readable by the owner alone, and never overwrites a file. `store restore`
+  puts a backup in place of the store and keeps the store it replaces beside it, as
+  `messages.db.before-restore-<time>`; nothing is deleted. It refuses a backup that is damaged or that
+  a newer version wrote, a store that another process has open or is writing to, and a store this
+  CLI's `serve` is keeping; it ends by saying to restart any running `serve` and `mcp`. `store check`
+  now suggests a backup before `store migrate`.
+
 ## 0.66.0 — 30.09.2026
 
 ### Added
@@ -34,12 +44,6 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Added
 
-- **`store backup <file>` and `store restore <file>`.** `store backup` copies `messages.db` into a new
-  file while it is in use, readable by the owner alone, and never overwrites a file. `store restore`
-  puts a backup in place of the store and keeps the store it replaces beside it, as
-  `messages.db.before-restore-<time>`; nothing is deleted. It refuses a backup that is damaged or that
-  a newer version wrote, a store that another process has open — a `serve` or an `mcp` of either CLI —
-  and a store being written to. `store check` now suggests a backup before `store migrate`.
 - **`store info`, `store check` and `store migrate`: looking after `messages.db`.** `store info` says
   where the file is, its size, its schema and how many rows it holds. `store check` reports whether it
   is healthy — SQLite's integrity check, foreign keys, the three search indexes against their tables,
