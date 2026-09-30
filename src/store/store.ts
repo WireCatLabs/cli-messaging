@@ -158,6 +158,9 @@ export const openStore = async ({ path, env, now = Date.now }: StoreOptions = {}
   return storeOver(database, now)
 }
 
+/** Telegram's chat types that number their messages themselves, not per account. */
+const OWN_NUMBERING = "('channel', 'supergroup', 'gigagroup', 'monoforum')"
+
 const storeOver = (database: CacheDatabase, now: () => number): MessageStore => {
   const one = (sql: string, ...parameters: SqlValue[]) => database.prepare(sql).get(...parameters)
   const all = (sql: string, ...parameters: SqlValue[]) => database.prepare(sql).all(...parameters)
@@ -664,14 +667,30 @@ const storeOver = (database: CacheDatabase, now: () => number): MessageStore => 
       let changed = 0
       inTransaction(() => {
         for (const messageId of messageIds) {
-          changed += run(
-            `UPDATE messages SET deleted_at = ? WHERE account_pk = ? AND native_id = ? AND deleted_at IS NULL
-             ${chatId === undefined ? "" : "AND chat_pk = (SELECT pk FROM chats WHERE account_pk = ? AND native_id = ?)"}`,
-            now(),
+          if (chatId !== undefined) {
+            changed += run(
+              `UPDATE messages SET deleted_at = ? WHERE account_pk = ? AND native_id = ? AND deleted_at IS NULL
+               AND chat_pk = (SELECT pk FROM chats WHERE account_pk = ? AND native_id = ?)`,
+              now(),
+              accountKey,
+              messageId,
+              accountKey,
+              chatId,
+            ).changes
+            continue
+          }
+          // Telegram names a deletion without its chat only where ids count per account; a channel or
+          // supergroup numbers its own, so the same id there is another message. Two candidates left
+          // means the id is ambiguous, and a missed tombstone is better than a wrong one.
+          const candidates = all(
+            `SELECT m.pk FROM messages m JOIN chats c ON c.pk = m.chat_pk
+             WHERE m.account_pk = ? AND m.native_id = ? AND m.deleted_at IS NULL AND c.kind <> 'channel'
+               AND coalesce(json_extract(c.provider_metadata, '$.chatType'), '') NOT IN ${OWN_NUMBERING}`,
             accountKey,
             messageId,
-            ...(chatId === undefined ? [] : [accountKey, chatId]),
-          ).changes
+          )
+          if (candidates.length !== 1) continue
+          changed += run("UPDATE messages SET deleted_at = ? WHERE pk = ?", now(), candidates[0]?.pk as number).changes
         }
       })
       return changed

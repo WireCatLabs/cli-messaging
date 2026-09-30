@@ -178,6 +178,25 @@ describe("the message store", () => {
     await store.close()
   })
 
+  it("applies a deletion that names no chat only where ids count per account, and only when one message matches", async () => {
+    const store = await openStore({ path: fresh() })
+    const dialog: Chat = { ...chat, id: "555", kind: "dialog", providerMetadata: {} }
+    const basicGroup: Chat = { ...chat, id: "-4001", kind: "group", providerMetadata: { chatType: "group" } }
+    await store.saveChats(ME, [chat, dialog, basicGroup])
+    await store.saveMessages(ME, chat.id, [message(), message({ id: "43" })], { via: "history" })
+    const inDialog = [message({ chatId: dialog.id }), message({ id: "44", chatId: dialog.id })]
+    await store.saveMessages(ME, dialog.id, inDialog, { via: "history" })
+    await store.saveMessages(ME, basicGroup.id, [message({ id: "44", chatId: basicGroup.id })], { via: "history" })
+
+    expect(await store.markDeleted(ME, ["42", "43", "44"])).toBe(1)
+    expect(await store.message(ME, "42", { chatId: dialog.id })).toBeUndefined()
+    expect(await store.message(ME, "42", { chatId: chat.id })).toBeDefined()
+    expect(await store.message(ME, "43", { chatId: chat.id })).toBeDefined()
+    expect(await store.message(ME, "44", { chatId: dialog.id })).toBeDefined()
+    expect(await store.message(ME, "44", { chatId: basicGroup.id })).toBeDefined()
+    await store.close()
+  })
+
   it("keeps a deleted message out of reads and search, in its own chat only", async () => {
     const store = await openStore({ path: fresh() })
     await store.saveMessages(ME, chat.id, [message(), message({ id: "43" })], { via: "history" })
