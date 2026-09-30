@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.58.0 — 30.09.2026
+
 ### Added
 
 - **`@leemour/cli-messaging/services`, and a CLI's own version of a use case** — the last step of
