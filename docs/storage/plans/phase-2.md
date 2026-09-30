@@ -30,6 +30,10 @@ max-cli's personal `max messages search` reads max's own profile cache until the
 
 No schema change forces an upgrade: `min_compatible` stays 6 (§7).
 
+**Not in phase 2: one search over several accounts or both messengers.** Requirements §7 asks for "one
+messenger, all messengers" and `--source`. Search stays inside the account the command runs as, as
+today; whether to add it here or later is **NEED-456** (§9).
+
 ## 2. Current state
 
 **Search is substring search, newest first.** `find` (`src/store/store.ts:411`) matches
@@ -90,10 +94,26 @@ benchmark corpus (`bench/search/gen.ts 1000000 42`: 1M messages, a 500k chat, a 
    Any word across all chats, ranked inside FTS5 (`ORDER BY rank LIMIT 20` before the join): rare 26,
    common **118**.
 4. **The vocabulary through `fts5vocab`** works over the contentless index: 528,053 terms at 1M, one
-   term looked up in 0.01–2.1 ms, every term listed in 348 ms.
+   term looked up in 0.01–2.1 ms, every term listed in 348 ms. A word whose only message is deleted
+   leaves `fts5vocab` at once (checked on a small table, Node and Bun).
+5. **The cost on writes.** 200,000 inserts in transactions of 200 rows: no index 4.7 µs a row, today's
+   trigram index 77.6 µs, trigram plus the word index 110.4 µs. So the word index adds about 33 µs a
+   message; on the store's 7,614 rows/s at 1M (lane A's baseline) that is roughly 6,100 rows/s
+   (inferred), 3 ms more for a page of 100 messages.
 
 So: word beginnings cost about what whole words cost; a scope token turns small-scope "any word" from
-~100 ms into ~5 ms and makes a big chat worse; "any word" across a big scope stays 118–146 ms.
+~100 ms into ~5 ms and makes a big chat worse; "any word" across a big scope stays 118–146 ms; writing
+gets about a fifth slower.
+
+**Every runtime in use has what S1 needs.** `contentless_delete` needs SQLite 3.43 (docs say). All
+three packages require Node ≥ 22; node:sqlite in Node 22.5.0 is SQLite 3.46.0, in 22.13.0 3.47.2
+(verified, `npx node@22.5.0`); Bun 1.3 on Linux is 3.53.0. Bun on macOS may use the system's SQLite,
+which is older on older macOS (inferred, not checked) — item 1 checks it.
+
+**The store rewrites a message's sender and normalized text on every re-save.** The update sets each
+field to `coalesce(new, old)` (`src/store/sqlite/messages.ts:57-64`, at `cbd7ce7`), `senderIdentityPk`
+and `normalizedText` among them (`:89`). So a sender unknown at first is filled in later, and the
+normalized text is written again even when it did not change. **verified**
 
 ## 3. Decisions made here
 
@@ -112,7 +132,10 @@ Why: it survives being filled after the triggers exist (§2, measurement 1), whi
 today. Triggers, hand-written in a `--custom` migration:
 
 - after insert on `messages`: insert `(pk, normalized_text, scope)`;
-- after update of `normalized_text` (edit, tombstone, backfill, un-tombstone): delete by rowid, insert;
+- after update of `normalized_text`, `sender_identity_pk` or `chat_pk` (edit, tombstone, backfill,
+  un-tombstone, a sender learned later), **only when one of them really changed**
+  (`WHEN old.x IS NOT new.x OR …`): delete by rowid, insert. Without that guard every re-save of a
+  message — each fetch of a page already held — rewrites its index entry;
 - after delete: delete by rowid.
 
 `scope` is `'c' || chat_pk` and, when there is one, `' s' || sender_identity_pk` — store keys, never
@@ -128,7 +151,9 @@ the index is filled up to it in batches of `pk`, one `BEGIN IMMEDIATE` each, `IN
 `backfillNormalized`. Batches of 5,000 rows (about 60 ms, inferred from measurement 2) keep other
 processes' wait far under the 5 s `busy_timeout`. Rows written after the migration are indexed by the
 triggers. Who runs the batches is **NEED-453**: `store migrate` always; and, recommended, `messages
-search` too, up to ~200 ms per call.
+search` too, up to ~200 ms per call — **both fills in that slice**: the normalization backfill first,
+then the word index. Otherwise a max user with more than 5,000 messages waiting for normalization never
+reaches "ready", since only `store migrate` normalizes them and max has none.
 
 **The word index is ready** when the fill reached the watermark and no live message waits for its
 normalized text. **Until then, search answers exactly as today** — substring, newest first — and says
@@ -142,7 +167,9 @@ except step 2, which tops step 1 up:
 2. **Every word as a word beginning** (`квартир*`), when step 1 returned fewer than the limit; new hits
    are added after step 1's. Words under three letters stay whole (`tv`).
 3. **Typo correction**: each word the vocabulary does not know is replaced by its nearest known words,
-   then steps 1–2 run again.
+   then steps 1–2 run again. A word counts as known when it is a whole term **or the beginning of one**
+   (a range lookup on `fts5vocab`, `LIMIT 1`): otherwise `квартир valenca` would correct `квартир` to
+   `квартира` and lose `квартиру`.
 4. **Any word** instead of every word, as beginnings, with the corrections.
 5. **Substring** over the raw text, every piece of three letters or more required.
 
@@ -268,7 +295,8 @@ value    := word | '"' words '"'
 Built **after lane A's slice 6** (reads and `find` on Drizzle, released): items 1 and 3 change the module
 lane A lands for reads and search. One PR each, based on `main`.
 
-1. **The migration** — the next free number, taken in
+1. **The migration** — first, `select sqlite_version()` under Bun on macOS; below 3.43 it is a question
+   for the owner before anything else. Then the next free number, taken in
    [`../../plans/2026-09-29-parity-lanes.md`](../../plans/2026-09-29-parity-lanes.md) first. `message_words`
    and its triggers (S1), `search_terms`, `search_term_trigrams` (S7), `search_index_state(name, watermark,
    filled_through, terms_through, normalizer_version, built_at)`. Drizzle schema for the plain tables; a
@@ -301,7 +329,8 @@ lane A lands for reads and search. One PR each, based on `main`.
   delete and a backfill of rows on both sides of the fill — `integrity-check` passes, and every live
   message is found once the fill completes.
 - **Triggers**: every write path of the store keeps `message_words` in step; a deleted message is not
-  found by any step.
+  found by any step; a sender learned on a later save is found by `from:` through the token; re-saving a
+  message unchanged does not touch the index.
 - **Installed builds**: a version-11 build writes into a file of the new version; its rows are found by
   words. The phase 1 "No rebuild" test covers the migration.
 - **Readiness**: with the index half filled, or a message waiting for normalization, search answers by
@@ -328,6 +357,7 @@ lane A lands for reads and search. One PR each, based on `main`.
 | the whole chain when every word finds nothing, all chats | ≤ 200 ms | inferred |
 | typo correction alone | ≤ 20 ms | 15 at 1M (prototype, `results.md`) |
 | filling 1M | ≤ 20 s total, no batch over 500 ms | 14.4 s, 408 ms at 20k per batch |
+| storing messages (`bench/search/store.ts`, 1M) | ≥ 6,000 rows/s | ~6,100, inferred from §2 measurement 5 |
 
 Fuzzy: 100% recall on the four typos of the benchmark (as measured); precision reported with the
 look-alike words item 8 adds, no gate until the owner sets one. A Drizzle-and-async overhead of under
@@ -363,3 +393,7 @@ look-alike words item 8 adds, no gate until the owner sets one. A Drizzle-and-as
    `store info` / `store check` / `store reindex` (**A**, recommended), or a `search` group (**B**)?
 3. **NEED-455** — completeness per chat: from three facts, recording "reached the start" in
    `sync_state` (**A**, recommended), or from `sync_ranges` alone as the ruling is worded (**B**)?
+4. **NEED-456** — one search across accounts and messengers (requirements §7, `--source`): after
+   phase 2, as its own item (**A**, recommended — the store's filter already takes several accounts;
+   what is missing is naming and opening a chat of another messenger in the answer), or inside phase 2
+   (**B**)?
