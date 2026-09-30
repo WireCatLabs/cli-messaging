@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.48.0 — 30.09.2026
+
 ### Added
 
 - **`messages delete <chat> <messages...> [--for-everyone] --allow-dangerous`**, max-cli's: at most 10
