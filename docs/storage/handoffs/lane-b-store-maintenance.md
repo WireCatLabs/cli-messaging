@@ -74,7 +74,8 @@ backfill, and a backup they can restore. Full picture: [`../README.md`](../READM
   package bump. After the release, bump the pin in tg-cli and max-cli (the owner allows these PRs).
   **Correction 2026-09-30:** true for tg-cli only. max-cli does not use `storeCommand`: its `max store`
   is its own group over the profile cache (max-cli `src/commands/store.ts`), so the commands do not
-  reach `max` with the bump. Where they go in max-cli is an open question to the owner (NEED-445).
+  reach `max` with the bump. The owner's answer: they reach `max` at the fold-in of its profile cache,
+  not before (NEED-445 A, [`../decisions.md`](../decisions.md)).
 
 ## 5. Do not read, do not touch
 
