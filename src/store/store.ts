@@ -7,6 +7,7 @@ import type {
   Chat,
   Contact,
   Id,
+  Member,
   Message,
   MessageHit,
   Page,
@@ -85,6 +86,12 @@ export interface MessageStore {
     options: { via: IngestedVia; seenAt?: number },
   ): Promise<void>
   chats(key: AccountKey, window: { limit?: number; offset?: number }): Promise<Page<Chat>>
+  /** Replaces who is in a chat with this list, whole: a person left out has left. */
+  saveMembers(key: AccountKey, chatId: Id, memberIds: Id[]): Promise<void>
+  /** Who is in a chat, by name, as the last list said; empty when no list was ever saved. */
+  members(key: AccountKey, chatId: Id): Promise<Member[]>
+  /** The chats a person is in, newest first — as far as the saved member lists go. */
+  chatsWith(key: AccountKey, memberId: Id): Promise<Chat[]>
   /** Oldest to newest, like a provider's history page. */
   messages(key: AccountKey, chatId: Id, window: { limit: number; before?: Id }): Promise<Page<Message>>
   /**
@@ -594,6 +601,50 @@ const storeOver = (database: CacheDatabase, now: () => number): MessageStore => 
           if (message.scheduledFor === undefined) upsertMessage(key, accountKey, chatKey, message, via, seenAt)
         }
       }),
+
+    saveMembers: async (key, chatId, memberIds) =>
+      inTransaction(() => {
+        const accountKey = accountPk(key)
+        const chatKey = chatPkFor(accountKey, chatId)
+        run("DELETE FROM chat_members WHERE chat_pk = ?", chatKey)
+        for (const id of new Set(memberIds)) {
+          run(
+            "INSERT INTO chat_members (chat_pk, identity_pk) VALUES (?, ?)",
+            chatKey,
+            identityPk(accountKey, key.provider, id, null),
+          )
+        }
+      }),
+
+    members: async (key, chatId) => {
+      const accountKey = findAccountPk(key)
+      const chatKey = accountKey === undefined ? undefined : findChatPk(accountKey, chatId)
+      if (chatKey === undefined) return []
+      return all(
+        `SELECT i.native_id, i.name, i.username FROM chat_members cm JOIN identities i ON i.pk = cm.identity_pk
+         WHERE cm.chat_pk = ? ORDER BY i.name IS NULL, i.name, i.native_id`,
+        chatKey,
+      ).map((row) => ({
+        id: String(row.native_id),
+        name: (row.name as string | null) ?? null,
+        username: (row.username as string | null) ?? null,
+      }))
+    },
+
+    chatsWith: async (key, memberId) => {
+      const accountKey = findAccountPk(key)
+      if (accountKey === undefined) return []
+      return all(
+        `SELECT c.* FROM chat_members cm
+         JOIN chats c ON c.pk = cm.chat_pk
+         JOIN identities i ON i.pk = cm.identity_pk
+         WHERE c.account_pk = ? AND i.provider = ? AND i.native_id = ?
+         ORDER BY c.last_message_at DESC NULLS LAST, c.pk`,
+        accountKey,
+        key.provider,
+        memberId,
+      ).map(toChat)
+    },
 
     chats: async (key, { limit, offset = 0 }) => {
       const accountKey = findAccountPk(key)

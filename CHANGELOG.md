@@ -6,6 +6,13 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- **Chat members in the store** (store version 7): `saveMembers(key, chatId, ids)` replaces who is in
+  a chat with the list given, `members(key, chatId)` reads them back by name, and
+  `chatsWith(key, id)` lists the chats a person is in, newest first. Additive: a build on version 6
+  keeps working on the file.
+
 ## 0.54.0 — 30.09.2026
 
 ### Fixed

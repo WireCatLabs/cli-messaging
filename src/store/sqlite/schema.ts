@@ -205,3 +205,20 @@ export const accountIdentities = sqliteTable(
   },
   (table) => [primaryKey({ columns: [table.accountPk, table.identityPk] })],
 )
+
+/** Who is in a chat, as the account last saw it: a list replaces the chat's membership whole. */
+export const chatMembers = sqliteTable(
+  "chat_members",
+  {
+    chatPk: integer("chat_pk")
+      .notNull()
+      .references(() => chats.pk),
+    identityPk: integer("identity_pk")
+      .notNull()
+      .references(() => identities.pk),
+  },
+  (table) => [
+    primaryKey({ columns: [table.chatPk, table.identityPk] }),
+    index("chat_members_by_identity").on(table.identityPk),
+  ],
+)

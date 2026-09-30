@@ -63,6 +63,9 @@ importers:
       cli-messaging-0.27:
         specifier: npm:@leemour/cli-messaging@0.27.0
         version: '@leemour/cli-messaging@0.27.0(commander@15.0.0)(typescript@7.0.2)'
+      cli-messaging-0.49:
+        specifier: npm:@leemour/cli-messaging@0.49.0
+        version: '@leemour/cli-messaging@0.49.0(commander@15.0.0)(typescript@7.0.2)(zod@4.6.5)'
       commander:
         specifier: 15.0.0
         version: 15.0.0
@@ -386,6 +389,12 @@ packages:
 
   '@leemour/cli-messaging@0.27.0':
     resolution: {integrity: sha512-WADCe2KjTpsjMupJQVFMuCvyevzTQc4ejgLDBFcOP7AEuFESWIij/+A5SjVKw0xT6s+XrXn5R/W8FoiVPPEIsQ==}
+    engines: {node: '>=22'}
+    peerDependencies:
+      commander: '>=15'
+
+  '@leemour/cli-messaging@0.49.0':
+    resolution: {integrity: sha512-6bzfX8LyR30sNCFhXnH+AKnEXUAICg6qW6cdffZRKYEieayCcdshQE4DIZseidvAxqUZByg+fz4sZOzIbl004g==}
     engines: {node: '>=22'}
     peerDependencies:
       commander: '>=15'
@@ -1640,6 +1649,71 @@ snapshots:
       - cac
       - citty
       - typescript
+
+  '@leemour/cli-messaging@0.49.0(commander@15.0.0)(typescript@7.0.2)(zod@4.6.5)':
+    dependencies:
+      '@bomb.sh/tab': 0.0.22(commander@15.0.0)
+      '@leemour/cli-core': 0.8.0(commander@15.0.0)(typescript@7.0.2)
+      '@modelcontextprotocol/server': 2.1.0
+      '@valibot/to-json-schema': 1.8.0(valibot@1.5.0(typescript@7.0.2))
+      commander: 15.0.0
+      drizzle-orm: 1.0.0-rc.4(valibot@1.5.0(typescript@7.0.2))(zod@4.6.5)
+      ogg-opus-decoder: 1.7.5
+      qrcode-generator: 2.0.4
+      sherpa-onnx: 1.13.8
+      string-width: 8.3.0
+      valibot: 1.5.0(typescript@7.0.2)
+      wrap-ansi: 10.0.2
+    transitivePeerDependencies:
+      - '@aws-sdk/client-rds-data'
+      - '@cloudflare/workers-types'
+      - '@effect/sql-d1'
+      - '@effect/sql-libsql'
+      - '@effect/sql-mysql2'
+      - '@effect/sql-pg'
+      - '@effect/sql-pglite'
+      - '@effect/sql-sqlite-bun'
+      - '@effect/sql-sqlite-do'
+      - '@effect/sql-sqlite-node'
+      - '@effect/sql-sqlite-wasm'
+      - '@electric-sql/pglite'
+      - '@libsql/client'
+      - '@libsql/client-wasm'
+      - '@neondatabase/serverless'
+      - '@op-engineering/op-sqlite'
+      - '@opentelemetry/api'
+      - '@planetscale/database'
+      - '@sinclair/typebox'
+      - '@sqlitecloud/drivers'
+      - '@tidbcloud/serverless'
+      - '@tursodatabase/database'
+      - '@tursodatabase/database-common'
+      - '@tursodatabase/database-wasm'
+      - '@tursodatabase/serverless'
+      - '@tursodatabase/sync'
+      - '@types/better-sqlite3'
+      - '@types/mssql'
+      - '@types/pg'
+      - '@types/sql.js'
+      - '@upstash/redis'
+      - '@vercel/postgres'
+      - '@xata.io/client'
+      - arktype
+      - better-sqlite3
+      - bun-types
+      - cac
+      - citty
+      - effect
+      - expo-sqlite
+      - mssql
+      - mysql2
+      - pg
+      - postgres
+      - sql.js
+      - sqlite3
+      - typebox
+      - typescript
+      - zod
 
   '@modelcontextprotocol/client@2.1.0':
     dependencies:
