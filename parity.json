@@ -428,8 +428,9 @@
       }
     },
     "bot": {
-      "state": "max-only",
-      "reason": "max's bot accounts through MAX's official Bot API; tg has no bot side"
+      "state": "planned",
+      "by": "tg bot — not scheduled",
+      "subtree": true
     },
     "cache": {
       "state": "planned",
@@ -679,13 +680,13 @@
       "state": "both",
       "options": {
         "--bot": {
-          "state": "max-only",
-          "reason": "a max profile holds a bot section and a personal section; tg has personal accounts only"
+          "state": "planned",
+          "by": "tg bot — not scheduled"
         },
         "--defaults": "both",
         "--personal": {
-          "state": "max-only",
-          "reason": "a max profile holds a bot section and a personal section; tg has personal accounts only"
+          "state": "planned",
+          "by": "tg bot — not scheduled"
         }
       }
     },
@@ -693,8 +694,8 @@
       "state": "both",
       "options": {
         "--bot": {
-          "state": "max-only",
-          "reason": "a max profile holds a bot section and a personal section; tg has personal accounts only"
+          "state": "planned",
+          "by": "tg bot — not scheduled"
         }
       }
     },
@@ -702,13 +703,13 @@
       "state": "both",
       "options": {
         "--bot": {
-          "state": "max-only",
-          "reason": "a max profile holds a bot section and a personal section; tg has personal accounts only"
+          "state": "planned",
+          "by": "tg bot — not scheduled"
         },
         "--defaults": "both",
         "--personal": {
-          "state": "max-only",
-          "reason": "a max profile holds a bot section and a personal section; tg has personal accounts only"
+          "state": "planned",
+          "by": "tg bot — not scheduled"
         }
       }
     },
@@ -1147,6 +1148,10 @@
     "store": {
       "state": "both"
     },
+    "store backup": {
+      "state": "planned",
+      "by": "T6"
+    },
     "store check": {
       "state": "planned",
       "by": "T6"
@@ -1210,6 +1215,10 @@
       "by": "T6"
     },
     "store migrate": {
+      "state": "planned",
+      "by": "T6"
+    },
+    "store restore": {
       "state": "planned",
       "by": "T6"
     },

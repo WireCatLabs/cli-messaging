@@ -10,6 +10,8 @@ export interface CommandRow {
   state: State
   reason?: string
   by?: string
+  /** On a planned row: it stands for every path below it, which then have no rows of their own. */
+  subtree?: boolean
   options?: Record<string, Entry>
 }
 
@@ -59,13 +61,13 @@ const unsorted = (where: string, keys: string[]): string[] => {
 
 const oneSided = (state: State) => state === "max-only" || state === "tg-only"
 
-/** The one-sided row above `path`, which covers it and everything else below it. */
+/** The row above `path` that covers it and everything else below it: one-sided, or planned as a subtree. */
 export const coveringRow = (manifest: Manifest, path: string): string | undefined => {
   const words = path.split(" ")
   for (let length = words.length - 1; length > 0; length--) {
     const parent = words.slice(0, length).join(" ")
     const row = manifest.commands[parent]
-    if (row && oneSided(row.state)) return parent
+    if (row && (oneSided(row.state) || row.subtree)) return parent
   }
   return undefined
 }
@@ -90,6 +92,7 @@ export const manifestProblems = (manifest: Manifest): string[] => {
   optionEntries("(global)", manifest.globalOptions)
   for (const [path, row] of Object.entries(manifest.commands)) {
     problems.push(...entryProblems(path, row))
+    if (row.subtree && row.state !== "planned") problems.push(`${path}: subtree on a ${row.state} row`)
     const parent = path.split(" ").slice(0, -1).join(" ")
     if (parent && !manifest.commands[parent]) problems.push(`${path}: no row for its parent "${parent}"`)
     const cover = coveringRow(manifest, path)

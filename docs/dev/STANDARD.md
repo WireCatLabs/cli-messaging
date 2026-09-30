@@ -159,7 +159,8 @@ A row is one of:
 | `max-only`, `tg-only` | one messenger lacks it; `reason` says why | present in that tool, absent in the other |
 | `planned` | the gap is known and owned; `by` names the workstream | nothing — present or absent both pass |
 
-A row under a one-sided command covers every path below it: `max bot` is one row.
+A one-sided row covers every path below it. A `planned` row with `"subtree": true` does the same, for
+a whole command tree one tool has yet to build: `bot`, planned for tg, is one row.
 
 **How a new command or option reaches CI without a release of this package per row.** The docs
 pull request that introduces it adds its row as `planned`, here, before any code. `planned` passes

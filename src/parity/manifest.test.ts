@@ -61,6 +61,7 @@ describe("parityProblems", () => {
     store: { state: "both" },
     "store fetch": { state: "both", options: { "--all": "both", "--max": { state: "planned", by: "P1" } } },
     "store jobs": { state: "planned", by: "T6" },
+    bot: { state: "planned", by: "tg bot", subtree: true },
     topics: { state: "tg-only", reason: "MAX has none" },
   })
 
@@ -69,7 +70,10 @@ describe("parityProblems", () => {
       command("store", [], [command("store fetch", ["--all", "--max <n>"]), command("store jobs")]),
       command("topics", [], [command("topics list")]),
     )
-    const max = program(command("store", [], [command("store fetch", ["--all"])]))
+    const max = program(
+      command("store", [], [command("store fetch", ["--all"])]),
+      command("bot", [], [command("bot messages send", ["--text <text>"])]),
+    )
 
     expect(parityProblems(rows, "tg", tg)).toEqual([])
     expect(parityProblems(rows, "max", max)).toEqual([])
