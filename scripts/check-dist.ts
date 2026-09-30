@@ -1,17 +1,16 @@
 /**
  * The built package opens the store through bundled Drizzle, never through `node_modules`, where
- * `drizzle-orm` is only a development dependency. Run after `pnpm build`.
+ * `drizzle-orm` is only a development dependency. Run after `pnpm build`, under Node and under Bun.
  */
 import { readdirSync, readFileSync } from "node:fs"
 import { join } from "node:path"
 
-const dist = join(import.meta.dirname, "../dist/store/sqlite")
-const leaks = readdirSync(join(dist, "drizzle"))
+const root = join(import.meta.dirname, "../dist")
+const dist = join(root, "store/sqlite")
+const leaks = readdirSync(root, { recursive: true, encoding: "utf8" })
   .filter((name) => name.endsWith(".js"))
-  .filter((name) =>
-    /from\s*"drizzle-orm|import\(\s*"drizzle-orm/.test(readFileSync(join(dist, "drizzle", name), "utf8")),
-  )
-if (leaks.length > 0) throw new Error(`the bundle still imports drizzle-orm: ${leaks.join(", ")}`)
+  .filter((name) => /\b(from|import)\s*\(?\s*"drizzle-orm/.test(readFileSync(join(root, name), "utf8")))
+if (leaks.length > 0) throw new Error(`dist still imports drizzle-orm: ${leaks.join(", ")}`)
 
 const { openSqlite } = await import(join(dist, "open.js"))
 const { migrate } = await import(join(dist, "../migrations.js"))
@@ -22,4 +21,4 @@ store.database.prepare("INSERT INTO accounts (provider, native_id, created_at) V
 const rows = await store.orm.select().from(accounts)
 store.database.close()
 if (rows.length !== 1) throw new Error(`bundled Drizzle read ${rows.length} rows, not 1`)
-console.log("dist: Drizzle bundled and working")
+console.log(`dist: Drizzle bundled and working under ${"Bun" in globalThis ? "Bun" : "Node"}`)

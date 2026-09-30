@@ -37,6 +37,8 @@ jobs:
       # The second runtime, actually executed. A type check proves nothing about a runtime that
       # does not have the module — node:sqlite is absent in Bun and bun:sqlite is absent in Node.
       - run: pnpm smoke:bun
+      # The smoke runs the sources; only this loads the Bun half of the Drizzle bundle in dist.
+      - run: pnpm build && bun scripts/check-dist.ts
 
   version:
     if: github.event_name == 'pull_request'
