@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.63.0 — 30.09.2026
+
 ### Added
 
 - **`store info`, `store check` and `store migrate`: looking after `messages.db`.** `store info` says
