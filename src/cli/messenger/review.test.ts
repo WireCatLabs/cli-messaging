@@ -210,12 +210,12 @@ describe("review, the command", () => {
   }
 
   it("reads since --since, --all takes in a muted chat, and says where the next review starts", async () => {
-    const quiet = await review(["--since", "2d"])
-    const all = await review(["--since", "2d", "--all"])
+    const quiet = await review(["--since-time", "2d"])
+    const all = await review(["--since-time", "2d", "--all"])
 
     expect(quiet.answer.chats).toEqual([])
     expect(all.answer.chats[0].messages.map((one: Message) => one.id)).toEqual(["10", "11"])
-    expect(all.stderr).toContain(`--since ${all.answer.until}`)
+    expect(all.stderr).toContain(`--since-time ${all.answer.until}`)
   })
 
   it("--chat and --unanswered narrow it to one chat's open questions; three days back without --since", async () => {
@@ -228,8 +228,8 @@ describe("review, the command", () => {
   })
 
   it("--transcribe says which voice messages stay unheard; --model alone is refused", async () => {
-    const heard = await review(["--since", "2d", "--all", "--transcribe"])
-    const lonely = await review(["--since", "2d", "--model", "gigaam-v3"])
+    const heard = await review(["--since-time", "2d", "--all", "--transcribe"])
+    const lonely = await review(["--since-time", "2d", "--model", "gigaam-v3"])
 
     expect(heard.code).toBe(0)
     expect(heard.answer.unheard).toEqual([])

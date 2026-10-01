@@ -44,15 +44,15 @@ export const chatsCommand = (messenger: Messenger): Command => {
     .command("events")
     .description("who joined, left, was added or removed, and by whom — from the chat's service messages")
     .argument("<chat>", messenger.chatArgument)
-    .option("--since <time>", `ISO 8601, or 2h / 1d ago; ${EVENTS_DAYS} days ago if not given`)
-    .option("--event <names>", "only these, comma-separated: join, leave, add, remove, create, title, pin")
+    .option("--since-time <time>", `ISO 8601, or 2h / 1d ago; ${EVENTS_DAYS} days ago if not given`)
+    .option("--type <names>", "only these, comma-separated: join, leave, add, remove, create, title, pin")
     .action(async function (this: Command, chat: string) {
       const context = messengerContext(this, messenger)
-      const { since, event } = this.opts<{ since?: string; event?: string }>()
+      const { sinceTime: since, type } = this.opts<{ sinceTime?: string; type?: string }>()
       const found = await context.withServices((services) =>
         services.chats.events(chat, {
-          ...(since === undefined ? {} : { since: momentOf(since, "--since") }),
-          ...(event ? { only: event } : {}),
+          ...(since === undefined ? {} : { since: momentOf(since, "--since-time") }),
+          ...(type ? { only: type } : {}),
         }),
       )
       if (context.format === "jsonl") context.renderer.stream(found.events)
@@ -69,7 +69,8 @@ export const chatsCommand = (messenger: Messenger): Command => {
           })),
         )
       }
-      if (found.more) context.renderer.note("more history than one run reads; the newest are here — narrow --since")
+      if (found.more)
+        context.renderer.note("more history than one run reads; the newest are here — narrow --since-time")
     })
 
   chats

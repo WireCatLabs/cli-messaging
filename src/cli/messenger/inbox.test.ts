@@ -227,8 +227,8 @@ describe("inbox --new", () => {
     const chat = { ...chatAt("1", 0), lastMessageAt: recent, archived: true }
     const { inbox } = setup({ "1": [{ ...messageAt("1", "10", 0), timestamp: recent }] }, [chat])
 
-    expect((await inbox(["--since", "1d"])).answer.chats).toEqual([])
-    expect((await inbox(["--since", "1d", "--all"])).answer.chats).toHaveLength(1)
+    expect((await inbox(["--since-time", "1d"])).answer.chats).toEqual([])
+    expect((await inbox(["--since-time", "1d", "--all"])).answer.chats).toHaveLength(1)
   })
 
   it("looks back 24 hours the first time", async () => {
@@ -247,7 +247,7 @@ describe("inbox --new", () => {
     fail(true)
     expect((await inbox(["--new"])).code).not.toBe(0)
     fail(false)
-    expect((await inbox(["--new", "--since", "1d"])).answer.chats).toHaveLength(1)
+    expect((await inbox(["--new", "--since-time", "1d"])).answer.chats).toHaveLength(1)
     const { answer } = await inbox(["--new"])
 
     expect(answer.chats.map((one: { id: string }) => one.id)).toEqual(["1"])

@@ -25,6 +25,17 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Changed — may break callers
 
+- **Options name the kind of value they take** (STANDARD rule 5; no aliases, the old names are
+  unknown options now):
+  - `messages list --before` → `--before-id`; `--after` → `--after-id` or `--after-time`, so a
+    message id that looks like a time is never read as one;
+  - `messages context --before`/`--after` → `--before-n`/`--after-n`;
+  - `--since` → `--since-time` in `chats events`, `inbox`, `review`, `store export`, `store fetch`;
+  - `store fetch --max-pages` → `--limit <n>`, messages in one run, and `--page-size <n>`, messages
+    per request; the run stops at exactly `--limit`. A job records `limit` and `pageSize`.
+    `FetchOptions` and `archive.estimate` take `limit` and `pageSize` instead of `maxPages`;
+    `Fetching.maxPages` stays, as the messenger's default;
+  - `messages download --output` → `--output-dir`; `chats events --event` → `--type`.
 - **`review --unanswered` takes a duration** — `4h`, `1d` — not bare hours; `24h` without a value,
   as before. `--unanswered 4` is now refused, with the units it takes. The MCP tool's `unanswered` stays
   a number of hours.

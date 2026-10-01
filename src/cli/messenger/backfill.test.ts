@@ -122,15 +122,11 @@ describe("store fetch", () => {
     expect(estimate.code).toBe(2)
   })
 
-  it("**stops at --max-pages keeping what it read, and the next run fetches only what is missing**", async () => {
+  it("**stops at --limit keeping what it read, and the next run fetches only what is missing**", async () => {
     const env = setup()
     const state = { newest: 250, asked: [] as (string | undefined)[] }
 
-    const first = await call(
-      ["store", "fetch", "7", "--max-pages", "2", "--pause", "1ms", "--json"],
-      chatOf(state),
-      env,
-    )
+    const first = await call(["store", "fetch", "7", "--limit", "200", "--pause", "1ms", "--json"], chatOf(state), env)
     expect(first.answer).toEqual({ chat: "7", fetched: 200, complete: false, ranges: [{ from: 51, to: 250 }] })
 
     state.newest = 260
@@ -141,7 +137,20 @@ describe("store fetch", () => {
     expect(state.asked).toEqual([undefined, "51"])
   })
 
-  it("**--last stops once the newest n messages are held**, and refuses --since beside it", async () => {
+  it("**--page-size sets each request and --limit stops at that many messages**, the last request asking for the rest", async () => {
+    const state = { newest: 250, asked: [] as (string | undefined)[] }
+
+    const { answer } = await call(
+      ["store", "fetch", "7", "--limit", "120", "--page-size", "50", "--pause", "1ms", "--json"],
+      chatOf(state),
+      setup(),
+    )
+
+    expect(answer).toMatchObject({ fetched: 120, complete: false, ranges: [{ from: 131, to: 250 }] })
+    expect(state.asked).toHaveLength(3)
+  })
+
+  it("**--last stops once the newest n messages are held**, and refuses --since-time beside it", async () => {
     const env = setup()
     const state = { newest: 250, asked: [] as (string | undefined)[] }
 
@@ -150,7 +159,7 @@ describe("store fetch", () => {
       chatOf(state),
       env,
     )
-    const both = await call(["store", "fetch", "7", "--last", "5", "--since", "1d", "--json"], chatOf(state), env)
+    const both = await call(["store", "fetch", "7", "--last", "5", "--since-time", "1d", "--json"], chatOf(state), env)
 
     expect(answer).toMatchObject({ fetched: 200, complete: false, reachedLast: true, ranges: [{ from: 51, to: 250 }] })
     expect(both.code).toBe(2)
@@ -167,7 +176,7 @@ describe("store fetch", () => {
   it("stops at a long wait with what it had read kept", async () => {
     const env = setup()
     const state = { newest: 250, asked: [] as (string | undefined)[] }
-    await call(["store", "fetch", "7", "--max-pages", "1", "--pause", "1ms"], chatOf(state), env)
+    await call(["store", "fetch", "7", "--limit", "100", "--pause", "1ms"], chatOf(state), env)
 
     const refused = await call(["store", "fetch", "7", "--pause", "1ms"], chatOf({ ...state, wait: 10 * 60_000 }), env)
     expect(refused.code).toBe(8)
@@ -175,11 +184,11 @@ describe("store fetch", () => {
     expect(resumed.answer).toMatchObject({ complete: true, ranges: [{ from: 1, to: 250 }] })
   })
 
-  it("**--since stops after the page that reaches an older message**", async () => {
+  it("**--since-time stops after the page that reaches an older message**", async () => {
     const state = { newest: 250, asked: [] as (string | undefined)[] }
     const since = new Date(Date.UTC(2026, 0, 1) + 180 * 60_000).toISOString()
     const { answer } = await call(
-      ["store", "fetch", "7", "--since", since, "--pause", "1ms", "--json"],
+      ["store", "fetch", "7", "--since-time", since, "--pause", "1ms", "--json"],
       chatOf(state),
       setup(),
     )
@@ -192,10 +201,10 @@ describe("store fetch", () => {
       ranges: [{ from: 151, to: 250 }],
     })
     expect(state.asked).toEqual([undefined])
-    expect((await call(["store", "fetch", "7", "--since", "7"], chatOf(state), setup())).code).not.toBe(0)
-    expect((await call(["store", "fetch", "7", "--since", since, "--estimate"], chatOf(state), setup())).code).not.toBe(
-      0,
-    )
+    expect((await call(["store", "fetch", "7", "--since-time", "7"], chatOf(state), setup())).code).not.toBe(0)
+    expect(
+      (await call(["store", "fetch", "7", "--since-time", since, "--estimate"], chatOf(state), setup())).code,
+    ).not.toBe(0)
   })
 
   it("keeps no old name: backfill and --pace are unknown", async () => {
@@ -244,7 +253,7 @@ describe("store fetch in the background", () => {
     onTestFinished(stop)
 
     const started = await call(
-      ["store", "fetch", "7", "--max-pages", "3", "--last", "250", "--pause", "1ms", "--background", "--json"],
+      ["store", "fetch", "7", "--limit", "300", "--last", "250", "--pause", "1ms", "--background", "--json"],
       idle,
       env,
       {
@@ -259,8 +268,10 @@ describe("store fetch in the background", () => {
       "store",
       "fetch",
       "7",
-      "--max-pages",
-      "3",
+      "--limit",
+      "300",
+      "--page-size",
+      "100",
       "--pause",
       "1ms",
       "--last",
@@ -270,7 +281,7 @@ describe("store fetch in the background", () => {
     expect(calls[0]?.env).toMatchObject({ CHAT_PROFILE: "default", CHAT_BACKFILL_JOB: job })
     expect(calls[0]?.env.CHAT_TIMEOUT).toBeUndefined()
     expect((await call(["store", "jobs", "list", "--json"], idle, env)).answer).toEqual({
-      items: [expect.objectContaining({ job, state: "running", fetched: 0, maxPages: 3, last: 250 })],
+      items: [expect.objectContaining({ job, state: "running", fetched: 0, limit: 300, pageSize: 100, last: 250 })],
       page: 1,
       limit: 1,
       hasMore: false,
@@ -393,10 +404,10 @@ describe("store fetch --estimate", () => {
 
   it("**prices what is not held at the density of what is, and asks the messenger nothing**", async () => {
     const env = setup()
-    await call(["store", "fetch", "7", "--max-pages", "1", "--pause", "1ms"], chatOf({ newest: 250, asked: [] }), env)
+    await call(["store", "fetch", "7", "--limit", "100", "--pause", "1ms"], chatOf({ newest: 250, asked: [] }), env)
 
     const { code, answer } = await call(
-      ["store", "fetch", "7", "--estimate", "--max-pages", "1", "--json"],
+      ["store", "fetch", "7", "--estimate", "--limit", "100", "--json"],
       untouchable,
       env,
     )
@@ -428,6 +439,6 @@ describe("store fetch --estimate", () => {
 
     const { answer, stderr } = await call(["store", "fetch", "8", "--estimate", "--json"], untouchable, env)
     expect(answer).toMatchObject({ held: 0, missing: null, requests: null })
-    expect(stderr).toContain("--max-pages 1")
+    expect(stderr).toContain("--limit 100")
   })
 })

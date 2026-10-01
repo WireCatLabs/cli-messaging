@@ -160,7 +160,7 @@ describe("the shared read commands", () => {
     for (const argv of [
       ["chats", "list", "--json"],
       ["messages", "list", "Book", "--json"],
-      ["messages", "context", "Book", "2", "--before", "1", "--after", "1", "--json"],
+      ["messages", "context", "Book", "2", "--before-n", "1", "--after-n", "1", "--json"],
       ["messages", "show", "msg:chat/500/7/3", "--json"],
       ["contacts", "list", "--json"],
     ]) {
@@ -1015,7 +1015,7 @@ describe("the shared read commands", () => {
     const file = join(root, "book.jsonl")
 
     const written = await call(
-      ["store", "export", "7", "--output", file, "--since", "2026-09-27T10:01:00Z", "--json"],
+      ["store", "export", "7", "--output", file, "--since-time", "2026-09-27T10:01:00Z", "--json"],
       never,
       env,
     )
@@ -1032,7 +1032,7 @@ describe("the shared read commands", () => {
     ).toEqual(["2", "3"])
     expect(again.code).toBe(2)
     expect(again.stderr.join("\n")).toContain("never overwrites")
-    expect((await call(["store", "export", "7", "--since", "4242"], never, env)).code).toBe(2)
+    expect((await call(["store", "export", "7", "--since-time", "4242"], never, env)).code).toBe(2)
   })
 
   it("keep the account file where tg-cli 0.x kept it", () => {
@@ -1065,7 +1065,7 @@ describe("messages download", () => {
     const { root, env } = setup()
     const into = join(root, "out")
     const { code, stdout, stderr } = await call(
-      ["messages", "download", "Book", "1", "--output", into, "--json"],
+      ["messages", "download", "Book", "1", "--output-dir", into, "--json"],
       async () => withFiles,
       env,
     )
@@ -1084,7 +1084,7 @@ describe("messages download", () => {
     const { root, env } = setup()
     writeFileSync(join(root, "bashrc"), "mine")
     const { code, stderr } = await call(
-      ["messages", "download", "Book", "1", "--output", root],
+      ["messages", "download", "Book", "1", "--output-dir", root],
       async () => withFiles,
       env,
     )
@@ -1137,7 +1137,7 @@ describe("messages download", () => {
       const into = join(root, "out")
       const asked: string[] = []
       const { code, stdout } = await call(
-        ["messages", "download", "Book", "--all", "--pause", "1ms", "--output", into, "--json"],
+        ["messages", "download", "Book", "--all", "--pause", "1ms", "--output-dir", into, "--json"],
         async () => chatOf([5, 4, 3, 2, 1], { 5: "file", 4: "webpage", 2: "file" }, asked),
         env,
       )
@@ -1158,13 +1158,13 @@ describe("messages download", () => {
       const kinds = { 6: "file", 5: "file", 3: "file", 1: "file" }
       const first: string[] = []
       const cut = await call(
-        ["messages", "download", "Book", "--all", "--pause", "1ms", "--output", into],
+        ["messages", "download", "Book", "--all", "--pause", "1ms", "--output-dir", into],
         async () => chatOf([5, 4, 3, 2, 1], kinds, first, "3"),
         env,
       )
       const second: string[] = []
       const again = await call(
-        ["messages", "download", "Book", "--all", "--pause", "1ms", "--output", into, "--json"],
+        ["messages", "download", "Book", "--all", "--pause", "1ms", "--output-dir", into, "--json"],
         async () => chatOf([6, 5, 4, 3, 2, 1], kinds, second),
         env,
       )
@@ -1183,7 +1183,11 @@ describe("messages download", () => {
         ...chatOf([], {}, asked),
         history: async () => ({ items: withIds([3, 1, 2], { 3: "file", 1: "file", 2: "file" }), hasMore: false }),
       }
-      await call(["messages", "download", "Book", "--all", "--output", join(root, "out")], async () => shuffled, env)
+      await call(
+        ["messages", "download", "Book", "--all", "--output-dir", join(root, "out")],
+        async () => shuffled,
+        env,
+      )
 
       expect(asked).toEqual(["2", "1", "3"])
     })
@@ -1199,7 +1203,7 @@ describe("messages download", () => {
         }),
       }
       const { code, stderr } = await call(
-        ["messages", "download", "Book", "--all", "--output", join(root, "out")],
+        ["messages", "download", "Book", "--all", "--output-dir", join(root, "out")],
         async () => opaque,
         env,
       )
@@ -1476,11 +1480,11 @@ describe("the guard, account and mcp config commands", () => {
       },
     }
 
-    const byId = await call(["messages", "list", "7", "--after", "41", "--jsonl"], async () => forward, env)
-    await call(["messages", "list", "7", "--after", "2026-09-27T10:00:00Z", "--json"], async () => forward, env)
-    await call(["messages", "list", "7", "--after", "2026-09-27", "--json"], async () => forward, env)
-    await call(["messages", "list", "7", "--after", "urn:li:msg:4F2", "--json"], async () => forward, env)
-    await call(["messages", "list", "7", "--after", "2h", "--json"], async () => forward, env)
+    const byId = await call(["messages", "list", "7", "--after-id", "41", "--jsonl"], async () => forward, env)
+    await call(["messages", "list", "7", "--after-time", "2026-09-27T10:00:00Z", "--json"], async () => forward, env)
+    await call(["messages", "list", "7", "--after-time", "2026-09-27", "--json"], async () => forward, env)
+    await call(["messages", "list", "7", "--after-id", "urn:li:msg:4F2", "--json"], async () => forward, env)
+    await call(["messages", "list", "7", "--after-time", "2h", "--json"], async () => forward, env)
 
     expect(asked.slice(0, 4)).toEqual([
       { id: "41" },
@@ -1489,20 +1493,24 @@ describe("the guard, account and mcp config commands", () => {
       { id: "urn:li:msg:4F2" },
     ])
     expect(asked[4]).toEqual({ time: expect.any(Number) })
-    expect(byId.stderr.join("\n")).toContain("--after 3")
+    expect(byId.stderr.join("\n")).toContain("--after-id 3")
   })
 
   it("refuses --before with --after, --after offline, and a messenger that cannot read forward", async () => {
     const env = sandbox()
     const online = async () => fake
 
-    expect((await call(["messages", "list", "7", "--before", "5", "--after", "2"], online, env)).code).toBe(2)
-    expect((await call(["messages", "list", "7", "--after", "2", "--offline"], online, env)).code).toBe(2)
-    const unable = await call(["messages", "list", "7", "--after", "2"], online, env)
+    expect((await call(["messages", "list", "7", "--before-id", "5", "--after-id", "2"], online, env)).code).toBe(2)
+    expect((await call(["messages", "list", "7", "--after-id", "2", "--offline"], online, env)).code).toBe(2)
+    const unable = await call(["messages", "list", "7", "--after-id", "2"], online, env)
     expect([unable.code, unable.stderr.join("\n")]).toEqual([2, expect.stringContaining("read forward")])
-    for (const bad of ["2026-13-45", "4 2", " "]) {
-      const refused = await call(["messages", "list", "7", "--after", bad], online, env)
-      expect([refused.code, refused.stderr.join("\n")]).toEqual([2, expect.stringContaining("--after takes")])
+    for (const [flag, bad] of [
+      ["--after-time", "2026-13-45"],
+      ["--after-id", "4 2"],
+      ["--after-id", " "],
+    ] as const) {
+      const refused = await call(["messages", "list", "7", flag, bad], online, env)
+      expect([refused.code, refused.stderr.join("\n")]).toEqual([2, expect.stringContaining(`${flag} takes`)])
     }
   })
 
@@ -1527,7 +1535,11 @@ describe("the guard, account and mcp config commands", () => {
     const online = async () => events
 
     const all = await call(["chats", "events", "7", "--json"], online, env)
-    const joins = await call(["chats", "events", "7", "--event", "join, add", "--since", "1d", "--jsonl"], online, env)
+    const joins = await call(
+      ["chats", "events", "7", "--type", "join, add", "--since-time", "1d", "--jsonl"],
+      online,
+      env,
+    )
 
     expect(Date.now() - (asked[0] ?? 0)).toBeGreaterThanOrEqual(7 * 86_400_000 - 5000)
     expect(json(all.stdout)).toMatchObject({ page: 1, hasMore: true })
@@ -1692,7 +1704,7 @@ describe("the guard, account and mcp config commands", () => {
 
     const listed = await call(["messages", "list", "7", "--jsonl"], online, env)
     expect(listed.stdout.map((line) => JSON.parse(line).id)).toEqual(["1", "2", "3"])
-    expect(listed.stderr.join("\n")).toContain("--before 1")
+    expect(listed.stderr.join("\n")).toContain("--before-id 1")
 
     const found = await call(["messages", "search", "chapt", "--jsonl"], online, env)
     expect(found.stdout.map((line) => JSON.parse(line).id)).toEqual(["3", "2", "1"])

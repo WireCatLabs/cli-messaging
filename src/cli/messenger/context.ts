@@ -31,7 +31,7 @@ export interface Fetching {
   pause: string
   /** Each wait drawn between `pause` and twice that, as a person scrolls rather than a clock. */
   jitter?: boolean
-  /** Pages per run when `--max-pages` is not given. */
+  /** `store fetch` takes this many pages' worth of messages when `--limit` is not given. */
   maxPages: number
   /**
    * What a held stretch is keyed by: the message id, or its send time where ids pass 2^53 and do
