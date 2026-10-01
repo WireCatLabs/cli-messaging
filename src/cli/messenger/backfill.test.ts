@@ -269,9 +269,12 @@ describe("store fetch in the background", () => {
     ])
     expect(calls[0]?.env).toMatchObject({ CHAT_PROFILE: "default", CHAT_BACKFILL_JOB: job })
     expect(calls[0]?.env.CHAT_TIMEOUT).toBeUndefined()
-    expect((await call(["store", "jobs", "list", "--json"], idle, env)).answer).toEqual([
-      expect.objectContaining({ job, state: "running", fetched: 0, maxPages: 3, last: 250 }),
-    ])
+    expect((await call(["store", "jobs", "list", "--json"], idle, env)).answer).toEqual({
+      items: [expect.objectContaining({ job, state: "running", fetched: 0, maxPages: 3, last: 250 })],
+      page: 1,
+      limit: 1,
+      hasMore: false,
+    })
 
     const again = await call(["store", "fetch", "7", "--background"], idle, env, { spawnJob })
     expect(again.code).not.toBe(0)
@@ -370,7 +373,12 @@ describe("store fetch in the background", () => {
     const env = setup()
     expect((await call(["store", "jobs", "show"], idle, env)).stderr).toContain("no background fetch jobs")
     expect((await call(["store", "jobs", "cancel", "nope"], idle, env)).stderr).toContain("no fetch job nope")
-    expect((await call(["store", "jobs", "list", "--json"], idle, env)).answer).toEqual([])
+    expect((await call(["store", "jobs", "list", "--json"], idle, env)).answer).toEqual({
+      items: [],
+      page: 1,
+      limit: 0,
+      hasMore: false,
+    })
   })
 })
 

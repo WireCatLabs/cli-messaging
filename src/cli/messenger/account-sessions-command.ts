@@ -1,4 +1,5 @@
 import { Command } from "commander"
+import { listed } from "../paging.js"
 import { type Messenger, messengerContext } from "./context.js"
 import { capability } from "./port.js"
 
@@ -17,7 +18,7 @@ export const accountSessionsCommand = (messenger: Messenger): Command => {
         capability(adapter, "sessions", "list the account's sessions")(),
       )
       if (context.format === "jsonl") context.renderer.stream(found)
-      else context.renderer.result(context.format === "pretty" ? found : { items: found })
+      else context.renderer.result(context.format === "pretty" ? found : listed(found))
     })
 
   return sessions

@@ -11,6 +11,7 @@ import {
 import { orderedModels, speechModel, VAD } from "../../speech/models.js"
 import { choose } from "../../speech/transcribe.js"
 import { baseContext } from "../context.js"
+import { listed } from "../paging.js"
 import type { Messenger } from "./context.js"
 
 /**
@@ -43,7 +44,7 @@ export const modelsCommand = (messenger: Messenger): Command => {
             `${item.default ? "*" : " "} ${item.id.padEnd(14)} ${item.size.padStart(7)}  ${item.downloaded ? "downloaded" : "—".padEnd(10)}  ${item.languages}`
           context.streams.data(`${items.map(line).join("\n")}\n`)
         } else if (context.format === "jsonl") context.renderer.stream(items)
-        else context.renderer.result({ items, directory })
+        else context.renderer.result({ ...listed(items), directory })
       })
     })
 

@@ -988,7 +988,10 @@ describe("the shared read commands", () => {
     }
 
     const status = await call(["store", "status", "--json"], never, env)
-    expect(JSON.parse(status.stdout[0] ?? "")).toMatchObject([{ chatId: "7", title: null, messages: 3, held: [] }])
+    expect(JSON.parse(status.stdout[0] ?? "")).toMatchObject({
+      items: [{ chatId: "7", title: null, messages: 3, held: [] }],
+      hasMore: false,
+    })
     const exported = await call(["store", "export", "7", "--jsonl"], never, env)
     expect(exported.stdout.map((line) => JSON.parse(line).id)).toEqual(["1", "2", "3"])
     const lines = await call(["store", "export", "7", "--format", "jsonl"], never, env)
@@ -1494,7 +1497,8 @@ describe("the guard, account and mcp config commands", () => {
     const joins = await call(["chats", "events", "7", "--event", "join, add", "--since", "1d", "--jsonl"], online, env)
 
     expect(Date.now() - (asked[0] ?? 0)).toBeGreaterThanOrEqual(7 * 86_400_000 - 5000)
-    expect(json(all.stdout).events).toHaveLength(2)
+    expect(json(all.stdout)).toMatchObject({ page: 1, hasMore: true })
+    expect(json(all.stdout).items).toHaveLength(2)
     expect(joins.stdout.map((line) => JSON.parse(line).event)).toEqual(["join"])
     expect(joins.stderr.join("\n")).toContain("more history")
     expect((await call(["chats", "events", "7"], async () => fake, env)).code).toBe(2)

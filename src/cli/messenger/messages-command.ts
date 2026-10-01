@@ -5,7 +5,7 @@ import { isLocator, parseLocator } from "../../domain/locator.js"
 import { sendTime } from "../../domain/send-time.js"
 import { renderMessages } from "../../render/messages.js"
 import { readAttachments } from "../../sends/upload.js"
-import { positiveCount } from "../paging.js"
+import { listed, positiveCount } from "../paging.js"
 import { afterOf, oneDirection } from "./after.js"
 import { type Messenger, messengerContext } from "./context.js"
 import { downloadSubcommand } from "./download-command.js"
@@ -93,6 +93,7 @@ export const messagesCommand = (messenger: Messenger): Command => {
       }
       context.renderer.result({
         items: heardItems(page.items, hearing),
+        page: 1,
         limit,
         hasMore: page.hasMore,
         ...hearingFields(hearing, transcribe === true),
@@ -118,7 +119,7 @@ export const messagesCommand = (messenger: Messenger): Command => {
         }),
       )
     } else if (context.format === "jsonl") context.renderer.stream(found)
-    else context.renderer.result(window.before === 0 && window.after === 0 ? found[0] : { items: found })
+    else context.renderer.result(window.before === 0 && window.after === 0 ? found[0] : listed(found))
   }
 
   messages

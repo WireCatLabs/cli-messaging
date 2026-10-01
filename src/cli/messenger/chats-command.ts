@@ -2,7 +2,7 @@ import { CliError } from "@leemour/cli-core"
 import { Command } from "commander"
 import type { ChatKind } from "../../domain/models.js"
 import { CHAT_SCAN, type ChatFilter, EVENTS_DAYS } from "../../services/index.js"
-import { renderPage, window, withPaging } from "../paging.js"
+import { listed, renderPage, window, withPaging } from "../paging.js"
 import { groupCommands } from "./admin-commands.js"
 import { foldersCommand } from "./admin-folders-command.js"
 import { membersCommand } from "./chats-members-command.js"
@@ -75,8 +75,10 @@ export const chatsCommand = (messenger: Messenger): Command => {
         }),
       )
       if (context.format === "jsonl") context.renderer.stream(found.events)
-      else if (context.format !== "pretty") context.renderer.result(found)
-      else {
+      else if (context.format !== "pretty") {
+        const { events, more, ...rest } = found
+        context.renderer.result({ ...listed(events), hasMore: more, ...rest })
+      } else {
         context.renderer.stream(
           found.events.map((one) => ({
             time: one.timestamp,

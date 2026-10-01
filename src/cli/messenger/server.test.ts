@@ -178,7 +178,7 @@ describe("server without a unit", () => {
     const { env } = setup()
     await call(["start"], env, machine("linux").system)
     expect((await call(["logs", "-n", "1", "--json"], env, machine("linux").system)).answer).toMatchObject({
-      lines: ["no app credentials for profile default"],
+      items: ["no app credentials for profile default"],
     })
   })
 
@@ -314,7 +314,7 @@ describe("server with a systemd unit", () => {
     const { system, ran } = machine("linux", { answers: { journalctl: { stdout: "one\ntwo\n" } } })
     await call(["install"], env, system)
 
-    expect((await call(["logs", "-n", "2", "--json"], env, system)).answer).toMatchObject({ lines: ["one", "two"] })
+    expect((await call(["logs", "-n", "2", "--json"], env, system)).answer).toMatchObject({ items: ["one", "two"] })
     expect(ran.at(-1)).toEqual(["journalctl", "--user", "-u", "chat-serve-default.service", "-n", "2", "--no-pager"])
   })
 })
