@@ -29,7 +29,7 @@ export { editCommand } from "./messenger/messages-edit-command.js"
 export { forwardCommand } from "./messenger/messages-forward-command.js"
 export { pinCommand, unpinCommand } from "./messenger/messages-pin-command.js"
 export { modelsCommand } from "./messenger/models-command.js"
-export { pollsCommand } from "./messenger/polls-command.js"
+export { guardedClose, guardedCreatePoll, guardedVote, pollsCommand } from "./messenger/polls-command.js"
 export type {
   AccountTools,
   After,
