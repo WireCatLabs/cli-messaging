@@ -13,6 +13,12 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   checked instead of the one it runs as, and refuses `in:` and `source` beside them;
   `SearchQuery.senders` keeps any of several people, and refuses `from:` beside them. `SearchFound`
   and `FoundMessage` are exported.
+- **`models text list|download`**: the embedding models search by meaning will use (storage phase 5),
+  downloaded once into the shared models folder (`~/.cache/cli-common/models/text/`), each file pinned to a
+  commit and checked by sha256. `e5-small` (MIT, 135 MB) is the default; `embeddinggemma` (219 MB) comes
+  under Google's Gemma terms and downloads only with `--accept-terms`. A download loads the model once to
+  check it works. They run through `@leemour/cli-messaging-onnx`, ONNX Runtime's WebAssembly build for
+  Node and Bun in 15 MB — a new dependency, with `@huggingface/tokenizers`.
 - **`bot watch`, `bot callbacks answer`, `bot commands list|set|clear`, `bot webhooks list|set|delete`**,
   the shared commands over four new optional groups on `BotAdapter`: `BotUpdates`, `BotCallbacks`,
   `BotMenu`, `BotWebhooks`. `bot watch` has the personal `watch`'s shape (`--events`, `--jsonl`, Ctrl-C

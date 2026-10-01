@@ -1,8 +1,10 @@
 import { mkdirSync, mkdtempSync, truncateSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
-import { join } from "node:path"
+import { dirname, join } from "node:path"
 import { captureStreams } from "@leemour/cli-core"
 import { describe, expect, it, vi } from "vitest"
+import { placedText, textModelsDirectory } from "../../embeddings/embed.js"
+import { textModel } from "../../embeddings/models.js"
 import { modelPath, modelsDirectory, vadPath } from "../../speech/install.js"
 import { speechModel, VAD } from "../../speech/models.js"
 import { run } from "../program.js"
@@ -101,5 +103,37 @@ describe("models audio", () => {
 
     expect(lines.map((line) => line.slice(0, 16).trim())).toEqual(["* gigaam-v3", "parakeet-v3", "gigaam-v3-ctc"])
     expect(lines[0]).toContain("downloaded")
+  })
+})
+
+describe("models text", () => {
+  it("**lists the embedding models**, e5-small the default, marking the downloaded ones", async () => {
+    const { go, env } = await call(["models", "text", "list", "--json"])
+    const model = textModel("e5-small")
+    for (const [file, path] of placedText(model, textModelsDirectory(env))) {
+      mkdirSync(dirname(path), { recursive: true })
+      sized(path, file.bytes)
+    }
+
+    const { code, stdout } = await go()
+
+    expect(code).toBe(0)
+    const { items } = JSON.parse(stdout[0] ?? "")
+    expect(
+      items.map(({ id, downloaded, default: chosen }: Record<string, unknown>) => [id, downloaded, chosen]),
+    ).toEqual([
+      ["e5-small", true, true],
+      ["embeddinggemma", false, false],
+    ])
+  })
+
+  it("refuses a model with its own licence until its terms are accepted, downloading nothing", async () => {
+    const { go } = await call(["models", "text", "download", "embeddinggemma", "--json"])
+
+    const { code, stderr } = await go()
+
+    expect(code).not.toBe(0)
+    expect(stderr.join("")).toContain("--accept-terms")
+    expect(stderr.join("")).toContain("https://ai.google.dev/gemma/terms")
   })
 })

@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto"
 import { createWriteStream, mkdirSync, statSync } from "node:fs"
 import { rename, rm } from "node:fs/promises"
-import { join } from "node:path"
+import { dirname, join } from "node:path"
 import { Readable, Transform } from "node:stream"
 import { pipeline } from "node:stream/promises"
 import { CliError, resolvePaths } from "@leemour/cli-core"
@@ -11,8 +11,10 @@ import { type ModelFile, type SpeechModel, VAD } from "./models.js"
  * `~/.cache/cli-common`: one folder for what every CLI of the family shares, whatever it talks to — a
  * model is hundreds of MB and is downloaded once. `CLI_COMMON_CACHE_DIR` moves it.
  */
-export const modelsDirectory = (env: NodeJS.ProcessEnv = process.env): string =>
-  join(resolvePaths({ appName: "cli-common", prefix: "CLI_COMMON", env }).cache, "models", "audio")
+export const sharedModelsDirectory = (kind: "audio" | "text", env: NodeJS.ProcessEnv = process.env): string =>
+  join(resolvePaths({ appName: "cli-common", prefix: "CLI_COMMON", env }).cache, "models", kind)
+
+export const modelsDirectory = (env: NodeJS.ProcessEnv = process.env): string => sharedModelsDirectory("audio", env)
 
 /** No byte for this long and the download is given up — however large the file, it is moving or not. */
 const STALL_MS = 60_000
@@ -49,8 +51,10 @@ const placed = (model: SpeechModel, directory: string): [ModelFile, string][] =>
  * Size, not hash: hashing 650 MB on every call would cost more than the transcription. The hash is
  * checked once, as the file arrives, and a file only reaches its name after passing it.
  */
-export const isInstalled = (model: SpeechModel, directory: string): boolean =>
-  placed(model, directory).every(([file, path]) => sizeOf(path) === file.bytes)
+export const isInstalled = (model: SpeechModel, directory: string): boolean => filesPresent(placed(model, directory))
+
+export const filesPresent = (files: [ModelFile, string][]): boolean =>
+  files.every(([file, path]) => sizeOf(path) === file.bytes)
 
 const sizeOf = (path: string): number | undefined => {
   try {
@@ -70,8 +74,17 @@ export const install = async (
   { fetch: get = fetch, progress }: { fetch?: Fetch; progress?: (line: string) => void } = {},
 ): Promise<void> => {
   mkdirSync(join(directory, model.id), { recursive: true, mode: 0o700 })
-  for (const [file, path] of placed(model, directory)) {
+  await installFiles(placed(model, directory), { fetch: get, ...(progress ? { progress } : {}) })
+}
+
+/** Each file not already in place, downloaded and checked against its sha256 before it takes its name. */
+export const installFiles = async (
+  files: [ModelFile, string][],
+  { fetch: get = fetch, progress }: { fetch?: Fetch; progress?: (line: string) => void } = {},
+): Promise<void> => {
+  for (const [file, path] of files) {
     if (sizeOf(path) === file.bytes) continue
+    mkdirSync(dirname(path), { recursive: true, mode: 0o700 })
     progress?.(`downloading ${file.name} (${megabytes(file.bytes)})`)
     await fetchVerified(file, path, get)
   }
