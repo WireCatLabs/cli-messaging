@@ -979,7 +979,7 @@
         "--multiple": "both",
         "--revote": {
           "state": "planned",
-          "by": "P1"
+          "by": "T6"
         },
         "--send-id": "both",
         "--silent": "both"
