@@ -6,6 +6,10 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- **`sendCommand`**, `messages send` on its own from `./cli`, for max-cli's group 4 move.
+
 ## 0.70.0 — 30.09.2026
 
 ### Changed — may break callers
