@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.74.0 — 01.10.2026
+
 ### Added
 
 - **`account show --show-phone`.** `Account` gains `phone`, filled where the messenger tells it;
