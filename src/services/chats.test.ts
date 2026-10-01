@@ -129,6 +129,18 @@ describe("the people service", () => {
     expect(found.items.map((one) => one.name)).toEqual(["Olga", "Anton"])
   })
 
+  it("lists the dialogs online when the store does not know whose account this is yet", async () => {
+    const adapter = { self: () => null, chats: async () => ({ items: chats, hasMore: false }) }
+    const service = peopleService({
+      ...onlineDeps(messenger, adapter as unknown as MessengerAdapter, guard),
+      store: async () => keptStore(),
+    })
+
+    const found = await service.list({ order: "name", offset: 0 })
+
+    expect(found.items.map((one) => one.name)).toEqual(["Anton", "Olga"])
+  })
+
   it("shows a person offline with the chats the saved member lists share", async () => {
     const store = await keptStore()
     await store.applyDelta(account, { people, members: new Map([["7", ["500", "23"]]]) })

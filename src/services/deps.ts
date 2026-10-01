@@ -19,10 +19,15 @@ export interface ServiceDeps {
   guard: SendGuard
 }
 
-/** Online, the store only adds to an answer the messenger already gave, so a store that will not open loses nothing. */
-export const storeIfOpen = async (deps: ServiceDeps): Promise<MessageStore | undefined> => {
+/**
+ * Online, the store only adds to an answer the messenger already gave, so a store that will not open,
+ * or that does not know whose account this is yet, loses nothing.
+ */
+export const storeIfOpen = async (
+  deps: ServiceDeps,
+): Promise<{ store: MessageStore; account: AccountKey } | undefined> => {
   try {
-    return await deps.store()
+    return { store: await deps.store(), account: await deps.account() }
   } catch {
     return undefined
   }
