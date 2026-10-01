@@ -157,10 +157,10 @@ links under them change.
    permission key (A10).
 4. ✅ 2026-10-01 in cli-messaging (`skills/link-conversations/SKILL.md`, `skill show <name>` from cli-core 0.13.0); the line in tg-cli's and max-cli's SKILL.md follows their bump · **The skill** — `skills/link-conversations/SKILL.md`, `skill show <name>` (A8), one line in tg-cli's and
    max-cli's SKILL.md (a PR in each).
-5. ✅ 2026-10-01, the scripted half, as a test (`src/conversations/agent-loop.test.ts`, an invented chat with known parents rather than the IRC gold links: same proof, no download, runs in CI); the real-agent run on the IRC dev split is still to do by hand · **Scoring the loop** — `bench/disentangle/` runs the loop with a scripted "agent" that answers from the
+5. ✅ 2026-10-01, the scripted half, as a test (`src/conversations/agent-loop.test.ts`, an invented chat with known parents rather than the IRC gold links: same proof, no download, runs in CI); the real-agent run on the IRC dev split done the same day, link F 53.7 → 76.3 ([bench README](../../../bench/disentangle/README.md)) · **Scoring the loop** — `bench/disentangle/` runs the loop with a scripted "agent" that answers from the
    IRC gold links, to prove batches + answers + build reproduce the gold conversations exactly; and, by
    hand, once with a real agent on the IRC dev split, link F1 against the rules alone. Numbers only.
-6. ◐ 2026-10-01: the changelog shipped in 0.96.0, `docs/dev/ARCHITECTURE.md` has the store facts (batches, the id, the check, the choice, the permission), `parity.json` keeps `conversations` planned; released in 0.96.0 and 0.97.0; tg-cli's bump (tg-cli #205, on 0.97.0) and max-cli's are still to do · **Docs, changelog, parity rows** (planned until tg and max mount them), release; tg-cli and max-cli
+6. ✅ 2026-10-01: the changelog shipped in 0.96.0; `docs/dev/ARCHITECTURE.md` has the store facts (cli-messaging #353); `parity.json` has a row per subcommand in both CLIs (#355); tg mounts them on 0.97.0 (tg-cli #205), max since max-cli #308 · **Docs, changelog, parity rows** (planned until tg and max mount them), release; tg-cli and max-cli
    bump.
 
 ## 6. Test plan
