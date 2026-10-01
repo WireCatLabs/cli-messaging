@@ -40,39 +40,6 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Fixed
 
-- **Saving messages compiled every SQL statement again on every call.** The store now queries through
-  Drizzle, one module per kind of record under `src/store/sqlite/`, and prepares the statements each
-  saved message runs once per open store: 9,131 rows/s at a million messages instead of 6,900, with a
-  sixth less peak memory. Search answers as before. `MessageStore` does not change.
-
-## 0.76.0 — 01.10.2026
-
-### Added
-
-- **`polls create --revote`**, and `revote` on the `polls_create` tool: people may change their vote.
-  Without it they cannot, in every messenger — MAX's default, and now Telegram's too: a tg poll made
-  without `--revote` stops allowing a changed vote. `NewPoll.revote`; an adapter treats it absent as
-  `false`.
-- **`store fetch --last <n>`**: stop once the newest n messages of the chat are held, counted in the
-  store, so a later run with the same `--last` asks for nothing. Not with `--since`. `FetchOptions.last`;
-  the answer carries `reachedLast: true` when it stopped there.
-- **`chats show` and `contacts show` answer with `--offline`**, from the store. `chats show` fills
-  `members` from the member list the store holds, online too when the messenger gave none; with no
-  list saved it stays `null`. `contacts show` fills the shared chats the same way.
-- **`contacts list` reads the store's contacts where it holds who is in each one-to-one chat** —
-  ordered by the newest conversation, or by name — and from the dialogs as before where it does not.
-
-### Changed — may break callers
-
-- **`store fetch --max <n>` is gone; `--max-pages <n>` caps a run instead**, in pages of 100 (10 by
-  default, so 1000 messages, as `--max` was). The same names as max-cli's, so one limit has one name
-  in both. No alias.
-  `FetchOptions.max` and the `estimate` option `max` become `maxPages`; `estimate`'s `runs` counts
-  requests per run, a held stretch to step over included. A background job records `maxPages` and
-  `last` instead of `max`, and `store jobs` prints them; a job started before shows neither.
-
-### Fixed
-
 - **A `--limit` or `--page` that is not a whole number is refused as typed**: `--limit abc` said
   `not NaN`, and `--limit 12abc` was quietly read as 12. Both are now `validation_error` quoting the
   value. `positiveCount(flag)` in `cli/paging.ts` is the one parser for them.
@@ -80,16 +47,12 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   day headings and the word for your own messages in every command that prints a conversation;
   tg printed `вы` and `3 января 2026`. Unset, it stays `ru-RU`, so max-cli does not change.
 
-## 0.75.0 — 01.10.2026
+- **Saving messages compiled every SQL statement again on every call.** The store now queries through
+  Drizzle, one module per kind of record under `src/store/sqlite/`, and prepares the statements each
+  saved message runs once per open store: 9,131 rows/s at a million messages instead of 6,900, with a
+  sixth less peak memory. Search answers as before. `MessageStore` does not change.
 
-### Changed — may break callers
-
-- **`runs list`, `sends list` and `recipients list` answer the list envelope** in `--json`,
-  `{ items, page, limit, hasMore }`, as every other list does; they printed a bare array. A script
-  that read `.[]` reads `.items[]`. `--jsonl` is unchanged: one item per line. `sends list` and
-  `runs list` say `hasMore: true` when `--limit` cut the list short.
-- **`messages delete` asks instead of refusing** when `--allow-dangerous` is missing and someone is
-  at a terminal; with nobody there it is refused as before.
+## 0.76.0 — 01.10.2026
 
 ### Added
 
@@ -110,6 +73,40 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   `fromOldSettings`, `keyForWrite`; `sendGuard` takes `permissions` and `ask`, and without them
   decides as before; `SendGuard.ask` is the question `guardedWrite` awaits before `check`, and
   `check` refuses an `ask` write that was never asked. MCP is unchanged for now.
+
+- **`polls create --revote`**, and `revote` on the `polls_create` tool: people may change their vote.
+  Without it they cannot, in every messenger — MAX's default, and now Telegram's too: a tg poll made
+  without `--revote` stops allowing a changed vote. `NewPoll.revote`; an adapter treats it absent as
+  `false`.
+- **`store fetch --last <n>`**: stop once the newest n messages of the chat are held, counted in the
+  store, so a later run with the same `--last` asks for nothing. Not with `--since`. `FetchOptions.last`;
+  the answer carries `reachedLast: true` when it stopped there.
+- **`chats show` and `contacts show` answer with `--offline`**, from the store. `chats show` fills
+  `members` from the member list the store holds, online too when the messenger gave none; with no
+  list saved it stays `null`. `contacts show` fills the shared chats the same way.
+- **`contacts list` reads the store's contacts where it holds who is in each one-to-one chat** —
+  ordered by the newest conversation, or by name — and from the dialogs as before where it does not.
+
+### Changed — may break callers
+
+- **`messages delete` asks instead of refusing** when `--allow-dangerous` is missing and someone is
+  at a terminal; with nobody there it is refused as before.
+
+- **`store fetch --max <n>` is gone; `--max-pages <n>` caps a run instead**, in pages of 100 (10 by
+  default, so 1000 messages, as `--max` was). The same names as max-cli's, so one limit has one name
+  in both. No alias.
+  `FetchOptions.max` and the `estimate` option `max` become `maxPages`; `estimate`'s `runs` counts
+  requests per run, a held stretch to step over included. A background job records `maxPages` and
+  `last` instead of `max`, and `store jobs` prints them; a job started before shows neither.
+
+## 0.75.0 — 01.10.2026
+
+### Changed — may break callers
+
+- **`runs list`, `sends list` and `recipients list` answer the list envelope** in `--json`,
+  `{ items, page, limit, hasMore }`, as every other list does; they printed a bare array. A script
+  that read `.[]` reads `.items[]`. `--jsonl` is unchanged: one item per line. `sends list` and
+  `runs list` say `hasMore: true` when `--limit` cut the list short.
 
 ## 0.74.0 — 01.10.2026
 
