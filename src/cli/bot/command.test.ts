@@ -26,10 +26,11 @@ const bot: BotMessenger = {
   provider: "chat-bot",
   name: "Chat",
   resolveSettings: config.resolveSettings,
-  connect: async (_command, token) => {
+  connect: async (_command, token, { events } = {}) => {
     connected.push(token)
     return {
       me: async () => {
+        events?.({ event: "request", operation: "me" })
         if (token !== "good") throw new CliError("authentication_error", "the messenger did not accept this token")
         return SALES
       },
@@ -83,6 +84,13 @@ describe("bot auth", () => {
     expect(done.code).toBe(4)
     expect(done.stderr).toContain("chat sales bot auth set")
     expect(connected).toEqual([])
+  })
+
+  it("**hands the client the run's events**, so --trace shows each request", async () => {
+    await call(["sales", "bot", "auth", "set"])
+    const done = await call(["sales", "bot", "auth", "show", "--trace", "--json"])
+
+    expect(done.stderr).toContain('"operation":"me"')
   })
 
   it("refuses --offline on a command that has to ask the messenger", async () => {
