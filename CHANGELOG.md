@@ -6,6 +6,13 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- **`store export --output <file> --since <time>`.** `--output` writes JSON lines, or the transcript
+  with `--format markdown`, to a new file with mode 600 and answers `{ path, format, count }`; it
+  refuses a file that exists. `--since` exports from an ISO 8601 time or `30m`/`2h`/`1d` ago on.
+  `ArchiveService.export` takes `{ since }`.
+
 ## 0.73.0 — 01.10.2026
 
 ### Added

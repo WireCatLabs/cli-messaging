@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from "node:fs"
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { Readable } from "node:stream"
@@ -831,6 +831,36 @@ describe("the shared read commands", () => {
     expect((await call(["store", "export", "7", "--format", "html"], never, env)).code).not.toBe(0)
     expect((await call(["export", "7"], never, env)).code).not.toBe(0)
     expect((await call(["sync", "status"], never, env)).code).not.toBe(0)
+  })
+
+  it("**export to a new file only the owner can read**, from --since on, and never over a file", async () => {
+    const root = mkdtempSync(join(tmpdir(), "messenger-"))
+    const env = { CHAT_STATE_DIR: join(root, "state"), MESSAGING_STORE: join(root, "m.db") }
+    await call(["messages", "context", "Book", "2", "--json"], async () => fake, env)
+    const never = async (): Promise<MessengerAdapter> => {
+      throw new Error("the archive commands must never connect")
+    }
+    const file = join(root, "book.jsonl")
+
+    const written = await call(
+      ["store", "export", "7", "--output", file, "--since", "2026-09-27T10:01:00Z", "--json"],
+      never,
+      env,
+    )
+    const again = await call(["store", "export", "7", "--output", file], never, env)
+
+    expect(written.code).toBe(0)
+    expect(JSON.parse(written.stdout[0] ?? "")).toEqual({ path: file, format: "jsonl", count: 2 })
+    expect(statSync(file).mode & 0o777).toBe(0o600)
+    expect(
+      readFileSync(file, "utf8")
+        .trim()
+        .split("\n")
+        .map((line) => JSON.parse(line).id),
+    ).toEqual(["2", "3"])
+    expect(again.code).toBe(2)
+    expect(again.stderr.join("\n")).toContain("never overwrites")
+    expect((await call(["store", "export", "7", "--since", "4242"], never, env)).code).toBe(2)
   })
 
   it("keep the account file where tg-cli 0.x kept it", () => {
