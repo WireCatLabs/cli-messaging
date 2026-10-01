@@ -1027,7 +1027,7 @@ describe("the shared read commands", () => {
     expect((await json("from:me", "chapter")).answer.items).toEqual([])
     expect((await json("from:Nadie", "chapter")).error).toBe('from:Nadie — nobody matches "Nadie"')
     expect((await json("has:photo")).error).toBe("has:photo — the store holds no photo; it holds attachment, link")
-    expect((await json("in:nowhere", "chapter")).error).toBe('in: takes chat, all — not "nowhere"')
+    expect((await json("in:nowhere", "chapter")).error).toBe('in: takes chat, personal, bots, all — not "nowhere"')
     const both = await json("chat:Elsewhere", "chapter", "--chat", "Book")
     expect(both.code).toBe(2)
     expect(both.error).toBe('--chat and chat: name different chats: "Book" and "Elsewhere"')
@@ -1099,7 +1099,9 @@ describe("the shared read commands", () => {
     expect(await failed("chapter", "in:chat", "--source", "other")).toContain(
       "--source and in: name different messengers: other and chat",
     )
-    expect(await failed("chapter", "--source", "nowhere")).toContain('--source takes chat, other, all — not "nowhere"')
+    expect(await failed("chapter", "--source", "nowhere")).toContain(
+      '--source takes chat, other, personal, bots, all — not "nowhere"',
+    )
     expect(await failed("--regex", "chapter", "--source", "all")).toContain("--regex reads the account it runs as")
     expect(await failed("from:Olga", "chapter", "in:all")).toContain('"Olga" matches 2 people in different accounts')
     expect(await failed("chapter", "--chat", "7", "in:all")).toContain('"7" matches 2 chats in different accounts')

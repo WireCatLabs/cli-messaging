@@ -1,5 +1,6 @@
 import { CliError } from "@leemour/cli-core"
 import type { Chat, Message, Provider } from "../../domain/models.js"
+import { isBotProvider } from "../../search/query.js"
 import type { AccountKey, IngestedVia, MessageStore, PersonFacts } from "../../store/index.js"
 import { openStore } from "../../store/index.js"
 
@@ -37,6 +38,11 @@ const quietly = async (write: (store: MessageStore) => Promise<unknown>, warn: (
  * and stored it would make a chat that does not exist.
  */
 export const botCopy = (provider: Provider) => {
+  if (!isBotProvider(provider)) {
+    throw new Error(
+      `a bot's provider ends in -bot, so a search can tell it from a person's account — not "${provider}"`,
+    )
+  }
   const accountOf = (botId: string): AccountKey => ({ provider, account: botId })
   const storable = (message: Message) => CHAT_ID.test(message.chatId) && message.id !== "unknown"
 

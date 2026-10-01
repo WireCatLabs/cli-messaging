@@ -186,7 +186,7 @@ export interface BotConnectOptions {
 /** What one messenger CLI hands the shared bot commands. */
 export interface BotMessenger {
   app: AppIdentity
-  /** How the store tells this messenger's bots from its personal accounts: `max-bot`, `telegram-bot`. */
+  /** How the store tells this messenger's bots from its personal accounts: it ends in `-bot` — `max-bot`, `telegram-bot`. */
   provider: Provider
   /** The messenger's own name, as its users write it — `MAX`, `Telegram`. */
   name?: string

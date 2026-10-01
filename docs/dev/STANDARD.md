@@ -195,7 +195,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--since` | `<id-or-time>` | from this message id, an ISO 8601 time, or 2h / 1d ago; each command says its default. **becomes `--since-time` everywhere — NEED-485** |  | `bot chats check` (planned), `chats events` (max-only), `inbox` (max-only), `review` (max-only) |
 | `--since-time` | `<time>` | from this ISO 8601 time, or 2h / 1d ago; each command says its default |  | `chats events` (planned), `chats moderate` (planned), `conversations list`, `inbox` (planned), `review` (planned), `store export`, `store fetch` |
 | `--size` | `<n>` | messages to answer per batch, 10–200; 50 by default |  | `conversations batches next`, `conversations batches status` |
-| `--source` | `<messenger>` | every account of this messenger held in the store, or all of them — the same as in: in the query |  | `messages search` |
+| `--source` | `<messenger>` | every account of this messenger held in the store; personal, bots or all — the same as in: in the query |  | `messages search` |
 | `--text` | `<text>` | the message's new text; - reads stdin |  | `bot callbacks answer` (planned) |
 | `--timeout` | `<duration>` | give up on the whole command after this — 30s, 2m, 500ms |  | every command |
 | `--title` | `<title>` | the new name — of a chat or a folder |  | `bot chats admins add`, `chats folders update`, `chats update` |

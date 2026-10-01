@@ -302,6 +302,9 @@ backend can implement them: `matchWords(query, scope, { every | any, beginnings,
   same id. `--regex` reads the account it runs as and refuses `--source`. `in:all` includes every
   account in the file, bots' (`max-bot`, `telegram-bot`) too: shared code has no rule telling a bot's
   provider from a person's.
+  **Correction 2026-10-02 (NEED-523, owner: "separate in:all from in:bots in:personal"):** `in:personal`
+  is every personal account, `in:bots` every bot's copy, `in:all` both. The rule is now that a bot's
+  provider ends in `-bot`; `botCopy` refuses one that does not.
 - The MCP tool gets an optional `source` input with the same values.
 
 ## 4. The query language

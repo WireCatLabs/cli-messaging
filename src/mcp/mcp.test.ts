@@ -413,7 +413,7 @@ describe("the MCP server", () => {
     expect((await call("chat_messages_search", { text: "chapter", source: "all" })).body.items).toHaveLength(1)
     const unheld = await call("chat_messages_search", { text: "chapter", source: "nowhere" })
     expect(unheld.isError).toBe(true)
-    expect(JSON.stringify(unheld.body)).toContain('--source takes chat, all — not \\"nowhere\\"')
+    expect(JSON.stringify(unheld.body)).toContain('--source takes chat, personal, bots, all — not \\"nowhere\\"')
     expect(telegram.opened()).toBe(1)
   })
 
