@@ -16,7 +16,6 @@ describe("the send guard", () => {
   const guardAt = (profile: string, time: string, sendsPerHour: number) =>
     sendGuard({
       profile,
-      command: app.command,
       readOnly: false,
       readOnlyFrom: "default",
       sendsPerHour,
@@ -46,7 +45,6 @@ describe("two senders at once", () => {
   const guard = (profile: string, sendsPerHour: number, time = "2026-09-24T09:00:00Z") =>
     sendGuard({
       profile,
-      command: app.command,
       readOnly: false,
       readOnlyFrom: "default",
       sendsPerHour,
@@ -107,7 +105,6 @@ describe("a reaction", () => {
   const guardFor = (profile: string, options: { readOnly?: boolean; sendsPerHour?: number } = {}) =>
     sendGuard({
       profile,
-      command: app.command,
       readOnly: options.readOnly ?? false,
       readOnlyFrom: "config file",
       sendsPerHour: options.sendsPerHour ?? 1,
@@ -127,7 +124,7 @@ describe("a reaction", () => {
       addedAt: "2026-09-24T00:00:00Z",
     })
     expect(() => guardFor("g-react-list").check({ chatId: "222", kind: "reaction" })).toThrow(
-      "not on the recipient list",
+      /not on the recipient list.*`app g-react-list recipients add 222`/s,
     )
 
     const journal = new SendJournal(sendsPathFor("g-react-limit"))
@@ -151,7 +148,6 @@ describe("a retry of a send whose outcome was unknown", () => {
   const guard = (profile: string) =>
     sendGuard({
       profile,
-      command: app.command,
       readOnly: false,
       readOnlyFrom: "default",
       sendsPerHour: 1,

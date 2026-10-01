@@ -25,14 +25,13 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 - **A message id is opaque, not digits.** An MCP tool's `message` or `before` takes any id up to 256
   characters with no space or control character, and `--after` / `after` reads a time only
-  when it looks like one — an ISO 8601 date or time, or `30m`, `2h`, `1d`. Anything else is passed
-  to the messenger as a message id, so a typo such as `--after yesterday` is now refused by the
-  messenger as an unknown message rather than by the argument check. Ids with a space are still
-  refused up front.
+  when it looks like one — an ISO 8601 date or time, or `30m`, `2h`, `1d`. Anything else now reaches
+  the messenger as a message id instead of being refused by the argument check, so the adapter must
+  check an id's shape itself. Ids with a space are still refused up front.
 
-- **`sendGuard` takes `command`, and `new RecipientList(path, command)` its second argument,
-  required.** The hints in a refusal no longer default to `tg`. A caller that left it out passes its
-  app's `command`.
+- **`new RecipientList(path, command)` requires its second argument**, the app's `command`; the hints
+  in a refusal no longer default to `tg`. `sendGuard` without `command` now takes the recipient
+  list's.
 
 ### Fixed
 
