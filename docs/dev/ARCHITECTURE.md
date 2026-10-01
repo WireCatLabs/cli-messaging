@@ -30,6 +30,11 @@ The README's table lists what each export offers; this page does not repeat it.
 imports are dynamic: a static import of the other runtime's module fails at load time, before
 anything can catch it. `pnpm smoke:bun` is what proves the Bun half.
 
+Before it opens the file, `openStore` checks once per process that the runtime's SQLite has the
+full-text search the migrations need (`assertStoreCapable`), and refuses with what to install. The
+version number does not tell: official Node 22.0–22.15 has SQLite 3.46–3.49 without FTS5. CI runs the
+built package on Node 22.15.0 to see the refusal (`scripts/check-old-node.mjs`).
+
 `openStore` (`src/store/store.ts`) is the **one file for every messenger and account** — tg's
 profiles and max-cli's bots write the same database, keyed by provider and account. Its path comes
 from `storePath` (`src/store/path.ts`), the only place that turns `MESSAGING_STORE` into a path;

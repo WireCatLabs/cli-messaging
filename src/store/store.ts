@@ -14,6 +14,7 @@ import type {
 } from "../domain/models.js"
 import type { PeopleLookup } from "../resolve.js"
 import { migrate } from "./migrations.js"
+import { storeCapable } from "./open.js"
 import { storePath } from "./path.js"
 import * as accounts from "./sqlite/accounts.js"
 import { backfillNormalized, pendingNormalization } from "./sqlite/backfill.js"
@@ -225,6 +226,7 @@ export interface StoreOptions {
 export const BACKFILL_ON_OPEN = 5_000
 
 export const openStore = async ({ path, env, now = Date.now }: StoreOptions = {}): Promise<MessageStore> => {
+  await storeCapable()
   const file = path ?? storePath(env)
   mkdirSync(dirname(file), { recursive: true, mode: 0o700 })
   // Created before SQLite opens it: SQLite gives -wal and -shm the mode of the database file.
