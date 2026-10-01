@@ -75,7 +75,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | Option | Value | Meaning | Default | Commands |
 |---|---|---|---|---|
 | `--add` | `<chat>` | put a chat into a folder; repeat it for more |  | `chats folders update` (planned) |
-| `--after` | `<id-or-time>` | read what came after this message id, this ISO 8601 time, or 2h / 1d ago; not with --before |  | `messages context`, `messages list` |
+| `--after` | `<id-or-time>` | read what came after this message id, this ISO 8601 time, or 2h / 1d ago; not with --before. **`messages context --after <n>` is a count, not a position (e1)** |  | `messages context`, `messages list` |
 | `--all` |  | every row, no paging |  | `chats list`, `chats members list` (planned), `contacts list`, `inbox` (planned), `messages download` (planned), `review` (planned) |
 | `--all-can-pin` | `<on\|off>` | every member may pin messages |  | `chats update` |
 | `--allow-any-file` |  | send a --file even from a hidden folder, ~/.ssh or the tool's own folders |  | `messages send` |
@@ -89,11 +89,11 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--as-file` |  | send every --file as a plain file to download, a video included |  | `messages send` |
 | `--at` | `<time>` | let the messenger send it later, even with this machine off: a local time like 2026-09-25T09:00, or 30m |  | `messages send` |
 | `--background` |  | run as a job that outlives this command; `store jobs show` follows it |  | `store fetch` (planned) |
-| `--before` | `<id-or-time>` | read what came before this message id, this ISO 8601 time, or 2h / 1d ago. **tg's `messages list` spells the value `<id>`** |  | `messages context`, `messages list` |
+| `--before` | `<id-or-time>` | read what came before this message id, this ISO 8601 time, or 2h / 1d ago. **`messages context --before <n>` is a count, not a position (e1); tg's `messages list` takes `<id>` only (e7)** |  | `messages context`, `messages list` |
 | `--bot` |  | the bot section of the profile's settings, rather than the personal account's |  | `config set` (planned), `config show` (planned), `config unset` (planned) |
 | `--can` | `<rights>` | what they may do, comma-separated: read, members, admins, info, pin, link, post, edit, delete |  | `chats admins add` |
 | `--channel` |  | a private channel instead of a group; people join it by its link |  | `chats create` |
-| `--chat` | `<chat>` | a chat, by id or name; repeat it for more. **tg's `messages search` spells the value `<id>`; rule 6 says `<chat>`** |  | `chats folders create` (planned), `messages search`, `review` |
+| `--chat` | `<chat>` | a chat, by id or name; repeat it for more. **max's `messages search` takes `<id>` only, since searching never connects to resolve a name; rule 6 says `<chat>` (e8)** |  | `chats folders create` (planned), `messages search`, `review` |
 | `--check` |  | say whether a newer version exists, and install nothing |  | `upgrade` |
 | `--confirm-send` |  | show the owner every write the MCP server offers, in a form to approve |  | `mcp`, `mcp config` |
 | `--defaults` |  | change what every profile gets, rather than this profile |  | `config set`, `config unset` |
@@ -101,17 +101,17 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--detach` |  | run in the background instead — the same as `server start` |  | `serve` (planned) |
 | `--dry-run` |  | judge and plan; do nothing |  | `chats moderate` (planned) |
 | `--estimate` |  | only say what the fetch would cost, from this machine's copy; nothing is sent |  | `store fetch` |
-| `--event` | `<names>` | only these events, comma-separated, as the messenger names them |  | `chats events` |
-| `--events` |  | also print edits, deletions and reactions; every line then names its event |  | `watch` |
-| `--file` | `<path>` | attach a file; images go as a photo, videos as a video. Repeat it for more |  | `messages send` |
+| `--event` | `<names>` | only these events, comma-separated, as the messenger names them. **differs by one letter from `watch --events`, a switch with an unrelated meaning (e12)** |  | `chats events` |
+| `--events` |  | also print edits, deletions and reactions; every line then names its event. **differs by one letter from `chats events --event`, a filter with an unrelated meaning (e12)** |  | `watch` |
+| `--file` | `<file>` | attach a file; images go as a photo, videos as a video. Repeat it for more. **`messages send --file` takes `<path>` in both tools; rule 6 says `<file>` (e11)** |  | `messages send` |
 | `--first-name` | `<name>` | your first name |  | `account update` (planned) |
 | `--for-everyone` |  | delete for everyone in the chat, not only for you — they cannot get it back |  | `messages delete` |
-| `--format` | `<format>` | jsonl or md |  | `store export` |
+| `--format` | `<format>` | jsonl, one message per line, or a markdown transcript. **the shared `store export` takes `jsonl` or `markdown`, max's own takes `jsonl` or `md` (e4)** |  | `store export` |
 | `--history` |  | the people added also see the messages from before they came |  | `chats members add` (max-only) |
 | `--idle` | `<duration>` | stop after this long with nobody using it — 15m, 1h is 60m |  | `serve` (planned), `server restart` (planned), `server start` (planned) |
 | `--json` |  | machine-readable output: one JSON value on stdout, nothing else |  | every command |
 | `--jsonl` |  | machine-readable output: one JSON object per line, for streaming and jq |  | every command |
-| `--kind` | `<kind>` | only chats of this kind: dialog, group or channel. **max spells the value `<dialog\|group\|channel>`; the choices belong in the description** |  | `chats list` |
+| `--kind` | `<kind>` | only chats of this kind: dialog, group, channel or saved |  | `chats list` |
 | `--last` | `<n>` | stop once the newest n messages are held; not with --since |  | `store fetch` |
 | `--last-name` | `<name>` | your last name |  | `account update` (planned) |
 | `--limit` | `<n>` | how many to show |  | `chats list`, `chats members list` (planned), `contacts list`, `inbox`, `messages list`, `messages search`, `runs list`, `sends list` |
@@ -119,8 +119,8 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--local` |  | use the model on this machine, never the messenger |  | `messages transcribe` (tg-only) |
 | `--mark-read` |  | also mark the chat read up to the newest message shown; the other person sees it |  | `messages list` |
 | `--max-actions` | `<n>` | at most this many actions in one run | `10` | `chats moderate` (planned) |
-| `--max-pages` | `<n>` | at most this many pages of 100 messages in one run | `10` | `store fetch` |
-| `--md` |  | read **bold**, _italic_, ~~struck~~ and `code` in the text; \ keeps a mark literal |  | `messages edit`, `messages send` |
+| `--max-pages` | `<n>` | at most this many pages in one run; a page is one request, and each messenger sets the default. **a page is 100 messages in tg and 30 in max — the same number fetches a different amount (e3)** |  | `store fetch` |
+| `--md` |  | read **bold**, _italic_, ~~struck~~ and `code` in the text; \ keeps a mark literal. **`messages send` and `messages edit` also accept `--markdown`, an alias the standard forbids (e5)** |  | `messages edit`, `messages send` |
 | `--members-see-link` | `<on\|off>` | members may see the invite link |  | `chats update` (max-only) |
 | `--model` | `<id>` | which downloaded speech model hears them; `models audio list` shows them |  | `inbox`, `messages list`, `messages transcribe`, `review` (planned) |
 | `--multiple` |  | people may pick several answers |  | `polls create` |
@@ -136,11 +136,11 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--only-owner-edits-info` | `<on\|off>` | only the owner may change the name and photo |  | `chats update` (max-only) |
 | `--order` | `<recent\|name>` | newest conversation first, or alphabetical |  | `contacts list` |
 | `--others` |  | every session but this one |  | `account sessions end` (planned) |
-| `--output` |  | where to write: a directory for `messages download`, a file for `store export`. **clash: `<dir>` in one command, `<file>` in another** | `.` | `doctor report create`, `messages download`, `store export` |
+| `--output` |  | where to write: a directory for `messages download`, a file for `store export`. **`<dir>` in `messages download`, `<file>` in `store export` (e10)** | `.` | `doctor report create`, `messages download`, `store export` |
 | `--page` | `<n>` | which page, starting at 1 |  | `chats list`, `chats members list` (planned), `contacts list` |
 | `--pause` | `<duration>` | the least wait between pages, 5s or 500ms; each is up to twice that | `5s` | `messages download` (planned), `store fetch` |
 | `--personal` |  | the personal account's section of the profile's settings |  | `config set` (planned), `config unset` (planned) |
-| `--photo` | `<file>` | an image file — a profile photo in `account update`, a photo to send in `messages send`. **tg's `messages send --photo` takes `<path>`; rule 6 says `<file>`** |  | `account update` (planned), `messages send` |
+| `--photo` | `<file>` | an image file — a profile photo in `account update`, a photo to send in `messages send`. **`messages send --photo` takes `<path>` in both tools; rule 6 says `<file>` (e11)** |  | `account update` (planned), `messages send` |
 | `--qr-file` | `<png>` | write the QR code to this PNG instead of drawing it, for an agent to pass on |  | `session start` (tg-only) |
 | `--quiet` |  | diagnostics off |  | every command |
 | `--record` |  | keep this run under `runs` — ids and timings, never message content |  | every command |
@@ -151,23 +151,23 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--revote` |  | people may change their vote |  | `polls create` |
 | `--run` | `<id>` | the run the report is about; the newest failed one if not given |  | `doctor report create` |
 | `--search` | `<text>` | only chats whose name contains this; at least 3 characters |  | `chats list`, `contacts list` |
-| `--send-id` | `<id>` | reuse the id of an earlier send whose outcome is unknown; the messenger drops the duplicate. **max spells the value `<n>`** |  | `messages forward`, `messages send`, `polls create` |
+| `--send-id` | `<id>` | reuse the id of an earlier send whose outcome is unknown; the messenger drops the duplicate |  | `messages forward`, `messages send`, `polls create` |
 | `--serve` |  | start `serve` in the background if it is not running (the default) |  | every command (planned) |
 | `--show-phone` |  | print the whole phone number |  | `account show` |
 | `--silent` |  | deliver without a notification |  | `messages forward`, `messages send`, `polls create` |
-| `--since` | `<id-or-time>` | from this message id, an ISO 8601 time, or 2h / 1d ago; each command says its default. **the shared `chats events`, `store fetch`, `store export`, `inbox` and `review` take `<time>` only, never a message id: a Telegram id is a counter within one chat** |  | `chats events`, `chats moderate` (planned), `inbox`, `review`, `store export`, `store fetch` |
+| `--since` | `<id-or-time>` | from this message id, an ISO 8601 time, or 2h / 1d ago; each command says its default. **max takes a message id too; the shared `chats events`, `store fetch`, `store export`, `inbox` and `review` take a time only — a Telegram id is a counter within one chat (e6)** |  | `chats events`, `chats moderate` (planned), `inbox`, `review`, `store export`, `store fetch` |
 | `--stop` |  | stop this profile's server — the same as `server stop` |  | `serve` (planned) |
 | `--timeout` | `<duration>` | give up on the whole command after this — 30s, 2m, 500ms |  | every command |
 | `--title` | `<title>` | the new name — of a chat or a folder |  | `chats folders update` (planned), `chats update` |
 | `--to` | `<chat>` | the chat to forward it to: an id, or part of a chat name |  | `messages forward` |
 | `--trace` |  | one line per request on stderr: ids and timings, never message content |  | every command |
 | `--transcribe` |  | hear voice messages not heard yet, on this machine; slow, the model must be downloaded |  | `inbox`, `messages list`, `review` |
-| `--unanswered` | `[hours]` | only questions to you or a group's admins that nobody answered, asked at least this long ago; 24 hours if not given |  | `review` |
+| `--unanswered` | `[hours]` | only questions to you or a group's admins that nobody answered, asked at least this long ago; 24 hours if not given. **takes bare hours, not a duration like `2h` (e2)** |  | `review` |
 | `--unread` |  | only chats with unread messages |  | `chats list` |
 | `--until` | `<message>` | only up to this message id, inclusive; the newest by default |  | `chats mark-read` |
 | `--verbose` |  | more detail in what is shown: -v ids, -vv everything known | `0` | every command |
 | `--version` |  | print the version number |  | every command |
-| `--voice` | `<file>` | send an Ogg Opus file as a voice message, alone, with no text. **max spells the value `<path>`; rule 6 says `<file>`** |  | `messages send` |
+| `--voice` | `<file>` | send an Ogg Opus file as a voice message, alone, with no text. **both tools spell the value `<path>`; rule 6 says `<file>` (e11)** |  | `messages send` |
 | `--yes` |  | go ahead without the question an ask level puts before a write |  | every command (planned), `account sessions end` (planned), `mcp` (planned), `mcp config` (planned) |
 
 <!-- end of the option catalogue -->

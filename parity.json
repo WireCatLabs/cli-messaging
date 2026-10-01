@@ -6,7 +6,8 @@
     },
     "--after": {
       "value": "<id-or-time>",
-      "meaning": "read what came after this message id, this ISO 8601 time, or 2h / 1d ago; not with --before"
+      "meaning": "read what came after this message id, this ISO 8601 time, or 2h / 1d ago; not with --before",
+      "note": "`messages context --after <n>` is a count, not a position (e1)"
     },
     "--all": {
       "meaning": "every row, no paging"
@@ -55,7 +56,7 @@
     "--before": {
       "value": "<id-or-time>",
       "meaning": "read what came before this message id, this ISO 8601 time, or 2h / 1d ago",
-      "note": "tg's `messages list` spells the value `<id>`"
+      "note": "`messages context --before <n>` is a count, not a position (e1); tg's `messages list` takes `<id>` only (e7)"
     },
     "--bot": {
       "meaning": "the bot section of the profile's settings, rather than the personal account's"
@@ -70,7 +71,7 @@
     "--chat": {
       "value": "<chat>",
       "meaning": "a chat, by id or name; repeat it for more",
-      "note": "tg's `messages search` spells the value `<id>`; rule 6 says `<chat>`"
+      "note": "max's `messages search` takes `<id>` only, since searching never connects to resolve a name; rule 6 says `<chat>` (e8)"
     },
     "--check": {
       "meaning": "say whether a newer version exists, and install nothing"
@@ -96,14 +97,17 @@
     },
     "--event": {
       "value": "<names>",
-      "meaning": "only these events, comma-separated, as the messenger names them"
+      "meaning": "only these events, comma-separated, as the messenger names them",
+      "note": "differs by one letter from `watch --events`, a switch with an unrelated meaning (e12)"
     },
     "--events": {
-      "meaning": "also print edits, deletions and reactions; every line then names its event"
+      "meaning": "also print edits, deletions and reactions; every line then names its event",
+      "note": "differs by one letter from `chats events --event`, a filter with an unrelated meaning (e12)"
     },
     "--file": {
-      "value": "<path>",
-      "meaning": "attach a file; images go as a photo, videos as a video. Repeat it for more"
+      "value": "<file>",
+      "meaning": "attach a file; images go as a photo, videos as a video. Repeat it for more",
+      "note": "`messages send --file` takes `<path>` in both tools; rule 6 says `<file>` (e11)"
     },
     "--first-name": {
       "value": "<name>",
@@ -114,7 +118,8 @@
     },
     "--format": {
       "value": "<format>",
-      "meaning": "jsonl or md"
+      "meaning": "jsonl, one message per line, or a markdown transcript",
+      "note": "the shared `store export` takes `jsonl` or `markdown`, max's own takes `jsonl` or `md` (e4)"
     },
     "--history": {
       "meaning": "the people added also see the messages from before they came"
@@ -131,8 +136,7 @@
     },
     "--kind": {
       "value": "<kind>",
-      "meaning": "only chats of this kind: dialog, group or channel",
-      "note": "max spells the value `<dialog|group|channel>`; the choices belong in the description"
+      "meaning": "only chats of this kind: dialog, group, channel or saved"
     },
     "--last": {
       "value": "<n>",
@@ -164,11 +168,12 @@
     },
     "--max-pages": {
       "value": "<n>",
-      "meaning": "at most this many pages of 100 messages in one run",
-      "default": "10"
+      "meaning": "at most this many pages in one run; a page is one request, and each messenger sets the default",
+      "note": "a page is 100 messages in tg and 30 in max — the same number fetches a different amount (e3)"
     },
     "--md": {
-      "meaning": "read **bold**, _italic_, ~~struck~~ and `code` in the text; \\ keeps a mark literal"
+      "meaning": "read **bold**, _italic_, ~~struck~~ and `code` in the text; \\ keeps a mark literal",
+      "note": "`messages send` and `messages edit` also accept `--markdown`, an alias the standard forbids (e5)"
     },
     "--members-see-link": {
       "value": "<on|off>",
@@ -224,7 +229,7 @@
     "--output": {
       "meaning": "where to write: a directory for `messages download`, a file for `store export`",
       "default": ".",
-      "note": "clash: `<dir>` in one command, `<file>` in another"
+      "note": "`<dir>` in `messages download`, `<file>` in `store export` (e10)"
     },
     "--page": {
       "value": "<n>",
@@ -241,7 +246,7 @@
     "--photo": {
       "value": "<file>",
       "meaning": "an image file — a profile photo in `account update`, a photo to send in `messages send`",
-      "note": "tg's `messages send --photo` takes `<path>`; rule 6 says `<file>`"
+      "note": "`messages send --photo` takes `<path>` in both tools; rule 6 says `<file>` (e11)"
     },
     "--qr-file": {
       "value": "<png>",
@@ -280,8 +285,7 @@
     },
     "--send-id": {
       "value": "<id>",
-      "meaning": "reuse the id of an earlier send whose outcome is unknown; the messenger drops the duplicate",
-      "note": "max spells the value `<n>`"
+      "meaning": "reuse the id of an earlier send whose outcome is unknown; the messenger drops the duplicate"
     },
     "--serve": {
       "meaning": "start `serve` in the background if it is not running (the default)"
@@ -295,7 +299,7 @@
     "--since": {
       "value": "<id-or-time>",
       "meaning": "from this message id, an ISO 8601 time, or 2h / 1d ago; each command says its default",
-      "note": "the shared `chats events`, `store fetch`, `store export`, `inbox` and `review` take `<time>` only, never a message id: a Telegram id is a counter within one chat"
+      "note": "max takes a message id too; the shared `chats events`, `store fetch`, `store export`, `inbox` and `review` take a time only — a Telegram id is a counter within one chat (e6)"
     },
     "--stop": {
       "meaning": "stop this profile's server — the same as `server stop`"
@@ -320,7 +324,8 @@
     },
     "--unanswered": {
       "value": "[hours]",
-      "meaning": "only questions to you or a group's admins that nobody answered, asked at least this long ago; 24 hours if not given"
+      "meaning": "only questions to you or a group's admins that nobody answered, asked at least this long ago; 24 hours if not given",
+      "note": "takes bare hours, not a duration like `2h` (e2)"
     },
     "--unread": {
       "meaning": "only chats with unread messages"
@@ -339,7 +344,7 @@
     "--voice": {
       "value": "<file>",
       "meaning": "send an Ogg Opus file as a voice message, alone, with no text",
-      "note": "max spells the value `<path>`; rule 6 says `<file>`"
+      "note": "both tools spell the value `<path>`; rule 6 says `<file>` (e11)"
     },
     "--yes": {
       "meaning": "go ahead without the question an ask level puts before a write"
@@ -423,16 +428,12 @@
     },
     "bot": {
       "state": "planned",
-      "by": "tg bot — not scheduled",
+      "by": "P8",
       "subtree": true
     },
     "cache": {
-      "state": "planned",
-      "by": "T6"
-    },
-    "cache clear": {
-      "state": "planned",
-      "by": "T6"
+      "state": "max-only",
+      "reason": "max's local cache, removed when the store replaces it (T6 group 6); tg never had one"
     },
     "chats": {
       "state": "both"
@@ -649,12 +650,12 @@
       "options": {
         "--bot": {
           "state": "planned",
-          "by": "tg bot — not scheduled"
+          "by": "P8"
         },
         "--defaults": "both",
         "--personal": {
           "state": "planned",
-          "by": "tg bot — not scheduled"
+          "by": "P8"
         }
       }
     },
@@ -663,7 +664,7 @@
       "options": {
         "--bot": {
           "state": "planned",
-          "by": "tg bot — not scheduled"
+          "by": "P8"
         }
       }
     },
@@ -672,12 +673,12 @@
       "options": {
         "--bot": {
           "state": "planned",
-          "by": "tg bot — not scheduled"
+          "by": "P8"
         },
         "--defaults": "both",
         "--personal": {
           "state": "planned",
-          "by": "tg bot — not scheduled"
+          "by": "P8"
         }
       }
     },
