@@ -98,7 +98,13 @@ export const moderationService = (deps: ServiceDeps): ModerationService => {
       const point = rules.checkedUntil(chatId)
       const from = since ?? (point === undefined ? Date.now() - FIRST_LOOK_MS : Date.parse(point))
       const found = await gather(connection, chatId, from)
-      const findings = judge({ ...found, rules: groupRules, now: Date.now() })
+      const { inviteLinks } = deps.messenger
+      const findings = judge({
+        ...found,
+        rules: groupRules,
+        now: Date.now(),
+        ...(inviteLinks ? { invites: inviteLinks } : {}),
+      })
       const rows = await act(moderatorOf(connection, deps), findings, {
         chatId,
         rules: groupRules,

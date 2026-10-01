@@ -1,8 +1,9 @@
 import { CliError } from "@leemour/cli-core"
+import type { Provider } from "../domain/models.js"
 
 export type Term = { kind: "word"; text: string } | { kind: "phrase"; words: string[] }
 
-export type Source = "telegram" | "max" | "all"
+export type Source = Provider | "all"
 
 /**
  * A parsed search (phase 2 plan §4). `required` is AND of groups, each group OR of terms — OR binds
@@ -23,7 +24,6 @@ export interface SearchQuery {
 
 const FILTERS = ["from", "chat", "after", "before", "has", "in"] as const
 type Filter = (typeof FILTERS)[number]
-const SOURCES: Source[] = ["telegram", "max", "all"]
 const DAY = 24 * 60 * 60 * 1000
 
 interface Token {
@@ -89,7 +89,12 @@ const day = (name: string, value: string, now: number): number => {
   return at.getTime()
 }
 
-export const parseQuery = (query: string, { now = Date.now() }: { now?: number } = {}): SearchQuery => {
+/** `providers` are the messengers the store holds; `in:` takes one of them, or `all`. */
+export const parseQuery = (
+  query: string,
+  { now = Date.now(), providers = [] }: { now?: number; providers?: readonly Provider[] } = {},
+): SearchQuery => {
+  const sources: Source[] = [...providers, "all"]
   const parsed: SearchQuery = { required: [], excluded: [], has: [] }
   const tokens = tokenize(query)
   for (let index = 0; index < tokens.length; index++) {
@@ -104,8 +109,8 @@ export const parseQuery = (query: string, { now = Date.now() }: { now?: number }
       if (parsed[filter] !== undefined) fail(`${filter}: is given twice`)
       if (filter === "after" || filter === "before") parsed[filter] = day(filter, text, now)
       else if (filter === "in") {
-        const source = text.toLowerCase() as Source
-        if (!SOURCES.includes(source)) fail(`in: takes ${SOURCES.join(", ")} — not "${text}"`)
+        const source = text.toLowerCase()
+        if (!sources.includes(source)) fail(`in: takes ${sources.join(", ")} — not "${text}"`)
         parsed.in = source
       } else parsed[filter] = text
       continue

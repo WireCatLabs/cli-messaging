@@ -3,7 +3,7 @@ import { parseQuery } from "./query.js"
 
 const NOW = new Date(2026, 9, 1, 12).getTime()
 const word = (text: string) => ({ kind: "word", text })
-const parse = (query: string) => parseQuery(query, { now: NOW })
+const parse = (query: string) => parseQuery(query, { now: NOW, providers: ["telegram", "max"] })
 
 describe("parseQuery", () => {
   it("**requires every word**, as typed", () => {
@@ -56,6 +56,11 @@ describe("parseQuery", () => {
 
   it("is a list of filters alone when no word is given", () => {
     expect(parse("from:alice after:2026-01-01")).toMatchObject({ required: [], excluded: [], from: "alice" })
+  })
+
+  it("**takes in: any messenger the store holds**, and only those", () => {
+    expect(parseQuery("piso in:WhatsApp", { now: NOW, providers: ["whatsapp"] }).in).toBe("whatsapp")
+    expect(() => parseQuery("piso in:telegram", { now: NOW })).toThrow('in: takes all — not "telegram"')
   })
 
   it('reads a quoted "OR" and a lower-case or as words', () => {

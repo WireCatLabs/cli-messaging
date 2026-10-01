@@ -74,6 +74,28 @@ describe("judge", () => {
     ])
   })
 
+  it("**finds the messenger's own invite links** beside Telegram's and MAX's, only when it names them", () => {
+    const messages = [
+      message("2", "https://t.me/+abc"),
+      message("3", "https://max.ru/join/abc"),
+      message("4", "https://chat.whatsapp.com/AbC123"),
+    ]
+    const ruled = rules({ invites: "delete", links: "report" })
+    const found = (invites?: RegExp) =>
+      judged({ rules: ruled, messages, ...(invites ? { invites } : {}) }).map(({ rule, personId }) => [rule, personId])
+
+    expect(found()).toEqual([
+      ["invites", "2"],
+      ["invites", "3"],
+      ["links", "4"],
+    ])
+    expect(found(/chat\.whatsapp\.com\//g)).toEqual([
+      ["invites", "2"],
+      ["invites", "3"],
+      ["invites", "4"],
+    ])
+  })
+
   it("takes the strongest action a message calls for, so blocking an author never softens it", () => {
     const found = judged({
       rules: rules({

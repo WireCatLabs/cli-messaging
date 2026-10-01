@@ -13,6 +13,11 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   tombstones a message only when exactly one live message with that id is left in the chats the rule
   accepts. A messenger that leaves it unset keeps Telegram's built-in rule for now; a later breaking
   release removes that rule, and then no rule means no tombstone without a chat.
+- **`Messenger.inviteLinks`**: a messenger's own invite links, which `chats moderate` judges under
+  `invites` beside the built-in Telegram and MAX ones; `judge` takes them as `invites`. The built-in
+  patterns stay until tg-cli and max-cli set the field; a later breaking release removes them.
+- **The search query's `in:` takes any messenger the store holds**, plus `all`: `parseQuery` is given
+  the store's providers instead of a fixed `telegram`/`max` list.
 
 ## 0.97.0 — 01.10.2026
 

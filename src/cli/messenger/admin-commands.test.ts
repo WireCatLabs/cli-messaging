@@ -554,4 +554,38 @@ describe("chats create, join and leave", () => {
     const saved = JSON.parse(readFileSync(join(env.CHAT_STATE_DIR, "profiles", "default.moderation.json"), "utf8"))
     expect(Object.keys(saved.checkedUntil ?? {})).toEqual(["7"])
   })
+
+  it("judges a link as an invite by the messenger's own `inviteLinks`", async () => {
+    const adapter: MessengerAdapter = {
+      ...base,
+      historyAfter: async () => ({
+        items: [
+          {
+            id: "1",
+            chatId: "7",
+            senderId: "8",
+            senderName: "Name 8",
+            timestamp: new Date().toISOString(),
+            editedAt: null,
+            text: "join https://chat.whatsapp.com/AbC123",
+            outgoing: false,
+            attachments: [],
+            replyTo: null,
+            forwardedFrom: null,
+            reactions: null,
+          },
+        ],
+        hasMore: false,
+      }),
+      chatEvents: async () => ({ chatId: "7", since: new Date().toISOString(), events: [], more: false }),
+      admins: async () => [],
+    }
+    const rule = async (own: Partial<Messenger>) => {
+      const { stdout } = await call(["chats", "moderate", "Book club", "--json"], adapter, sandbox(), own)
+      return JSON.parse(stdout[0] ?? "").rows.map((row: { rule: string }) => row.rule)
+    }
+
+    expect(await rule({})).toEqual(["links"])
+    expect(await rule({ inviteLinks: /chat\.whatsapp\.com\// })).toEqual(["invites"])
+  })
 })
