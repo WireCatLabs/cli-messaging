@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.73.0 — 01.10.2026
+
 ### Added
 
 - **`messages edit --md`**, and `markdown` on the `messages_edit` tool: the new text's marks become
