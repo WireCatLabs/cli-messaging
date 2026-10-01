@@ -8,6 +8,12 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Added
 
+- **`search(store, query, scope)`** (`src/search/search.ts`) runs the word search in order — every word
+  topped up by word beginnings, typo correction, any word, substring — and says which step found each
+  hit and what it corrected. `MessageStore` gains `matchFilters` (a search of filters alone, newest
+  first) and `chatCompleteness` (per chat: up to date, gaps, reaches its start, or `unknown` when never
+  fetched). `store fetch` records when it reaches a chat's first message. `messages search` does not
+  use it yet.
 - **`BotPeople.senders()`**, optional on `BotAdapter`: who wrote the messages the adapter decoded,
   with their handle and whether each is a bot. The bot's message commands keep them in its copy, so
   `@username` finds a person in what the bot read.

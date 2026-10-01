@@ -1,6 +1,6 @@
 # Phase 2 — search by words: BM25, typo correction, a query language
 
-Plan, 2026-09-30. **Approved by the owner 2026-10-01. Items 1–5 are built (the migration, filling and upkeep, the store's search steps, the query parser, typo correction); the rest is not.** Questions of §9 answered
+Plan, 2026-09-30. **Approved by the owner 2026-10-01. Items 1–5 are built (the migration, filling and upkeep, the store's search steps, the query parser, typo correction), and item 6 without context and name resolution, which come with item 7; the rest is not.** Questions of §9 answered
 2026-10-01: 1–3 A, 4 B. It follows [`../decisions.md`](../decisions.md):
 SQLite FTS5 (NEED-374 A); every word first, any word when nothing is found, BM25 ranks, trigram typo
 correction over the vocabulary (NEED-375 A); the substring index stays as the last fallback (NEED-379 A);
@@ -229,6 +229,8 @@ p95 for common words. It is reached only after every word, beginnings and correc
   the highest `pk` seen; a search tokenizes up to 20,000 newer messages' normalized text in JavaScript
   and adds their words, and `store migrate` does the rest. A word the refresh has not reached is still
   found by steps 1–2; only its typo is not corrected yet.
+- **Correction 2026-10-01:** a correction is at least three letters long (`SHORTEST_CORRECTION`): two-letter
+  words are nearly all filler, and without it `len` becomes `en` and never reaches the substring step.
 - Numbers-only words have no trigrams (as the prototype). Edit distance: ≤ 1 up to four letters, ≤ 2
   above; the nearest distance wins, then the most frequent; at most five per word (`common.ts`
   `maxEdits`, `pick`). The code moves from `bench/search/common.ts` into `src/search/`.

@@ -2,7 +2,7 @@ import { setTimeout as sleep } from "node:timers/promises"
 import { CliError } from "@leemour/cli-core"
 import type { Fetching } from "../cli/messenger/context.js"
 import type { Id, Message } from "../domain/models.js"
-import type { AccountKey, ChatStats, MessageStore, Range } from "../store/store.js"
+import { type AccountKey, type ChatStats, historyStartKey, type MessageStore, type Range } from "../store/store.js"
 import { type Estimate, estimateBackfill } from "./backfill-estimate.js"
 import type { ServiceDeps } from "./deps.js"
 
@@ -202,6 +202,10 @@ export const archiveService = (deps: ServiceDeps): ArchiveService => {
       }
 
       const ranges = chatId === undefined ? [] : await store.ranges(account, chatId)
+      // What a search says about completeness: a stretch held from the chat's very first message.
+      if (reachedStart && chatId !== undefined && ranges[0]) {
+        await store.setSyncState(account, historyStartKey(chatId), String(ranges[0].from))
+      }
       return {
         chat: chatId ?? null,
         fetched,

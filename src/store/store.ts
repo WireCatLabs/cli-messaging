@@ -22,6 +22,8 @@ import * as accounts from "./sqlite/accounts.js"
 import { backfillNormalized, pendingNormalization } from "./sqlite/backfill.js"
 import * as batches from "./sqlite/batches.js"
 import * as chatQueries from "./sqlite/chats.js"
+import type { ChatCompleteness } from "./sqlite/completeness.js"
+import * as completeness from "./sqlite/completeness.js"
 import * as conversationQueries from "./sqlite/conversations.js"
 import * as identities from "./sqlite/identities.js"
 import * as messageWrites from "./sqlite/messages.js"
@@ -242,6 +244,10 @@ export interface MessageStore {
   matchWords(query: WordQuery, scope: SearchScope, options: WordOptions): Promise<Page<ScoredHit>>
   /** The substring index, newest first (step 5); pieces under three letters are dropped. */
   matchSubstring(query: WordQuery, scope: SearchScope, options: { limit: number }): Promise<Page<ScoredHit>>
+  /** Messages matching the scope alone, newest first: a search with filters and no word. */
+  matchFilters(scope: SearchScope, options: { limit: number }): Promise<Page<ScoredHit>>
+  /** Per chat: whether its history is held up to date, without gaps, back to its start. */
+  chatCompleteness(key: AccountKey, chatIds: Id[]): Promise<ChatCompleteness[]>
   /** Of `terms`, those the index knows as a word or the beginning of one. */
   knownTerms(terms: string[]): Promise<Set<string>>
   /** Known words sharing these trigrams, within the lengths, most shared first. */
@@ -702,6 +708,13 @@ const storeOver = (context: StoreContext): MessageStore => {
 
     matchSubstring: async (query, scope, options) => words.matchSubstring(context, query, scope, options),
 
+    matchFilters: async (scope, options) => words.matchFilters(context, scope, options),
+
+    chatCompleteness: async (key, chatIds) => {
+      const accountKey = accounts.findAccountPk(context, key)
+      return accountKey === undefined ? [] : completeness.chatCompleteness(context, accountKey, chatIds)
+    },
+
     knownTerms: async (terms) => words.knownTerms(context, terms),
 
     termCandidates: async (trigrams, lengths) => words.termCandidates(context, trigrams, lengths),
@@ -763,3 +776,6 @@ const storeOver = (context: StoreContext): MessageStore => {
     close: async () => database.close(),
   }
 }
+
+export { type ChatCompleteness, historyStartKey } from "./sqlite/completeness.js"
+export type { ScoredHit, SearchScope, WordOptions, WordQuery } from "./sqlite/words.js"
