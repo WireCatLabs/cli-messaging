@@ -8,6 +8,16 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Added
 
+- **`chats rules show|set|unset` and `chats moderate`**, with the tools `chats_rules_show` and
+  `chats_moderate` (P2, `chats check` in max-cli). A group's rules live in
+  `<state>/profiles/<profile>.moderation.json` — max-cli's file, so its rules carry over, its
+  `forbid`/`flag`/`confirm` read as `deny`/`ask`/`ask`, the profile's own levels. Each kind of action has a level:
+  `deny` never acts, `readonly` reports, `ask` asks at the terminal (`--allow-dangerous` says yes;
+  over MCP it is planned), `allow` acts. Its deletions and removals go through the guard as
+  `chats.moderate`, so `messages.delete` does not ask again. Where the next run starts is kept in the
+  same file. `GroupMember.registeredAt`; `Messenger.knowsAccountAge: false` refuses the `newAccount`
+  rule. `judge`, `act` and `Moderator` are exported for a bot.
+- The manifest says the contact writes and `account update|sessions end` are in both tools.
 - **`@leemour/cli-messaging/background`** (P6): the lock per app and profile, `alive`/`carries`/
   `holdersOf`, the `ServerSystem` seam, and systemd and launchd units, moved out of the `serve` and
   `server` commands so max's server can use them too. The commands behave as before; `./cli` still

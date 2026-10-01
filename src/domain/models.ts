@@ -377,6 +377,8 @@ export interface GroupMember extends Member {
   role?: "owner" | "admin" | "member"
   /** ISO 8601, when they were last seen; `null` when their privacy hides it, absent where the messenger does not say. */
   lastSeenAt?: string | null
+  /** ISO 8601, when their account was made; absent where the messenger does not say — Telegram never does. */
+  registeredAt?: string | null
 }
 
 /** One chat and who is in it. `members` is `null` where nobody recorded that — a channel, always. */

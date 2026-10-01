@@ -17,6 +17,9 @@ export interface ServiceDeps {
   connection: () => Promise<MessengerAdapter>
   store: () => Promise<MessageStore>
   guard: SendGuard
+  /** For the profile's own files — a group's moderation rules. `default` and `process.env` when unset. */
+  profile?: string
+  env?: NodeJS.ProcessEnv
 }
 
 /**
@@ -37,8 +40,14 @@ export const OFFLINE =
   "--offline answers only from what is kept locally: `chats list|show`, `messages list|show|context` and `contacts list|show`"
 
 /** Over a connection that is already open — an MCP session holds one for minutes. */
-export const onlineDeps = (messenger: Messenger, adapter: MessengerAdapter, guard: SendGuard): ServiceDeps => ({
+export const onlineDeps = (
+  messenger: Messenger,
+  adapter: MessengerAdapter,
+  guard: SendGuard,
+  where: { profile?: string; env?: NodeJS.ProcessEnv } = {},
+): ServiceDeps => ({
   messenger,
+  ...where,
   offline: false,
   guard,
   connection: async () => adapter,

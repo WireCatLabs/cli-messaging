@@ -6,6 +6,7 @@ import type { ServiceDeps } from "./deps.js"
 import { type FoldersService, foldersService } from "./folders.js"
 import { type InboxService, inboxService } from "./inbox.js"
 import { type MessagesService, messagesService } from "./messages.js"
+import { type ModerationService, moderationService } from "./moderation.js"
 import { type PeopleService, peopleService } from "./people.js"
 
 export type { AccountService } from "./account.js"
@@ -33,6 +34,8 @@ export type {
   SendRequest,
 } from "./messages.js"
 export { DELETE_AT_ONCE, messagesService, storedChatId } from "./messages.js"
+export type { ModerateOptions, ModerationService, ShownRules } from "./moderation.js"
+export { moderationService } from "./moderation.js"
 export type { ContactSync, PeopleService } from "./people.js"
 export { peopleService, phoneOf } from "./people.js"
 
@@ -45,6 +48,7 @@ export interface Services {
   admin: AdminService
   folders: FoldersService
   account: AccountService
+  moderation: ModerationService
 }
 
 /**
@@ -64,6 +68,7 @@ export const servicesFor = (deps: ServiceDeps): Services => {
     admin: adminService(deps),
     folders: foldersService(deps),
     account: accountService(deps),
+    moderation: moderationService(deps),
   }
   return deps.messenger.services ? { ...base, ...deps.messenger.services(base, deps) } : base
 }

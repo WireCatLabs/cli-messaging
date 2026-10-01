@@ -47,6 +47,13 @@ const what = (key: string, { chatId, count, personIds, forEveryone }: Parameters
     .filter(Boolean)
     .join(", ")
 
+/** The owner's answer, or `null` with nobody at a terminal — and always under `--json` or `--jsonl`. */
+export const answerOf = async (command: Command, question: string): Promise<string | null> => {
+  const given = command.optsWithGlobals<{ json?: boolean; jsonl?: boolean }>()
+  if (given.json === true || given.jsonl === true) return null
+  return (environmentOf(command).answer ?? fromTerminal)(question)
+}
+
 /**
  * For a command a person typed: the flag says yes, or the terminal asks, or nobody can — and it is
  * refused. Never asks under `--json` or `--jsonl`: a program reads those, and a harness that gives

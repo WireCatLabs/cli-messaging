@@ -478,4 +478,80 @@ describe("chats create, join and leave", () => {
       "sessions-end",
     ])
   })
+
+  it("**moderates a group by its rules**: deletes and removes where they allow, plans what asks, and moves the point", async () => {
+    const env = sandbox()
+    const done: string[] = []
+    const at = (minutes: number) => new Date(Date.now() - minutes * 60_000).toISOString()
+    const say = (id: string, sender: string, text: string, minutes: number) => ({
+      id,
+      chatId: "7",
+      senderId: sender,
+      senderName: `Name ${sender}`,
+      timestamp: at(minutes),
+      editedAt: null,
+      text,
+      outgoing: false,
+      attachments: [],
+      replyTo: null,
+      forwardedFrom: null,
+      reactions: null,
+    })
+    const adapter: MessengerAdapter = {
+      ...base,
+      historyAfter: async (_chat, window) =>
+        "time" in window.after
+          ? { items: [say("1", "8", "buy https://spam.example", 30), say("2", "6", "hello", 20)], hasMore: true }
+          : { items: [say("3", "8", "again https://spam.example", 10)], hasMore: false },
+      chatEvents: async () => ({
+        chatId: "7",
+        since: at(60),
+        events: [
+          {
+            messageId: "0",
+            timestamp: at(40),
+            event: "add",
+            by: { id: "6", name: null },
+            people: [{ id: "9", name: "Bot" }],
+          },
+        ],
+        more: false,
+      }),
+      members: async () => ({ chatId: "7", items: [{ id: "9", name: "Bot", username: null }], hasMore: false }),
+      admins: async () => ["6"],
+      delete: async (_chat, ids) => {
+        done.push(`delete ${ids.join(",")}`)
+      },
+      removeMembers: async (_chat, people) => {
+        done.push(`remove ${people.join(",")}`)
+      },
+    }
+    const rules = async (...argv: string[]) => call(["chats", "rules", ...argv], adapter, env)
+
+    const unsaved = await rules("show", "Book club", "--json")
+    await rules("set", "Book club", "links", "delete")
+    await rules("set", "Book club", "blocked", "9")
+    await rules("set", "Book club", "blockedPeople", "remove")
+    await rules("set", "Book club", "consent.delete", "allow")
+    const planned = await call(["chats", "moderate", "Book club", "--json"], adapter, env)
+    const acted = await call(["chats", "moderate", "Book club", "--allow-dangerous", "--json"], adapter, env)
+    const noAge = await rules("set", "Book club", "newAccount.days", "3")
+    const telegram = await call(["chats", "rules", "set", "Book club", "newAccount.days", "3"], adapter, env, {
+      knowsAccountAge: false,
+    })
+
+    expect(JSON.parse(unsaved.stdout[0] ?? "")).toMatchObject({ chatId: "7", saved: false })
+    const first = JSON.parse(planned.stdout[0] ?? "").rows
+    expect(first.map((row: { rule: string; outcome: string }) => `${row.rule} ${row.outcome}`)).toEqual([
+      "blocked planned",
+      "links done",
+      "links done",
+    ])
+    expect(JSON.parse(acted.stdout[0] ?? "").rows.map((row: { outcome: string }) => row.outcome)).toContain("done")
+    expect(done).toEqual(["delete 1", "delete 3", "remove 9", "delete 1", "delete 3"])
+    expect([noAge.code, telegram.code]).toEqual([0, 2])
+    expect(telegram.stderr.join("\n")).toContain("does not say how old an account is")
+    const saved = JSON.parse(readFileSync(join(env.CHAT_STATE_DIR, "profiles", "default.moderation.json"), "utf8"))
+    expect(Object.keys(saved.checkedUntil ?? {})).toEqual(["7"])
+  })
 })
