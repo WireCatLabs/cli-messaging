@@ -6,10 +6,6 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
-## 0.99.0 — 02.10.2026
-
-Released early: tg-cli and max-cli cannot move to the breaking release, and three sessions wait on it; the owner asked to release now
-
 ### Added
 
 - **Chunks of conversations in the store (store version 14)**, for search by meaning (storage phase 5):
@@ -18,6 +14,21 @@ Released early: tg-cli and max-cli cannot move to the breaking release, and thre
   text. `chunk_vectors` holds one model's vector per chunk text, so a rebuild that leaves a
   conversation's text alone reuses it. Nothing fills it yet. `min_compatible` stays 6: older builds keep
   reading and writing the file.
+
+### Fixed
+
+- **`store fetch` by send time no longer skips a message at a page boundary.** Where a messenger pages by
+  time (MAX), two messages sent in the same millisecond could fall on either side of a page, and the
+  older one was never asked for. Each page now reaches back into the millisecond the previous one ended
+  at; ids already read are not counted twice in `fetched`. Only a millisecond holding more than a whole
+  page is stepped past.
+
+## 0.99.0 — 02.10.2026
+
+Released early: tg-cli and max-cli cannot move to the breaking release, and three sessions wait on it; the owner asked to release now
+
+### Added
+
 - **`searchStore(store, account, query)`** (`./services`): `messages search` over a store, for a caller
   with no `Messenger` — a bot's search. `SearchQuery.accounts` reads accounts the caller has already
   checked instead of the one it runs as, and refuses `in:` and `source` beside them;
@@ -108,11 +119,6 @@ What to change in a consumer:
 
 ### Fixed
 
-- **`store fetch` by send time no longer skips a message at a page boundary.** Where a messenger pages by
-  time (MAX), two messages sent in the same millisecond could fall on either side of a page, and the
-  older one was never asked for. Each page now reaches back into the millisecond the previous one ended
-  at; ids already read are not counted twice in `fetched`. Only a millisecond holding more than a whole
-  page is stepped past.
 - **A search in a chat ranks the same whatever the chat's size.** A chat of up to the limit below is
   filtered inside the word index by a token, and that token counted in bm25, so the order of hits
   depended on the chat's size. The scope column now weighs nothing in the rank.
