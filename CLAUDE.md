@@ -20,7 +20,8 @@ the one page that covers what you are about to touch:
 4. **A change reaches tg-cli and max-cli only through a release.** Both pin an exact version.
 5. **At most one release a day, and a breaking change to a stable export at most once a week** —
    [README, "How often, and what may break"](README.md#how-often-and-what-may-break). A consumer
-   blocked today is the one exception, and the changelog names it.
+   blocked today is the one exception, and the changelog names it. `bin/release` enforces the day:
+   it refuses within 24 hours of the last publish unless given `--blocked "<consumer and reason>"`.
 
 ## Comments
 

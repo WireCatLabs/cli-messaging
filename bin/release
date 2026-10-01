@@ -4,6 +4,7 @@
 #
 #   bin/release           # publishes from GitHub Actions (.github/workflows/release.yml)
 #   bin/release --local   # publishes from this machine: NPM_TOKEN if exported, else the keyring
+#   bin/release --blocked "<consumer and reason>"   # within a day of the last release, see README
 #
 # The npm token is never printed and never written to a file — not on success, not in an error.
 set -eu
@@ -12,11 +13,20 @@ cd "$(dirname "$0")/.."
 package=@leemour/cli-messaging
 
 mode=ci
-case "${1:-}" in
-  "") ;;
-  --local) mode=local ;;
-  *) echo "usage: bin/release [--local]" >&2; exit 2 ;;
-esac
+blocked=""
+usage() { echo 'usage: bin/release [--local] [--blocked "<consumer and reason>"]' >&2; exit 2; }
+# A function, so the arguments survive for the exec after the merge below.
+parse() {
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --local) mode=local ;;
+      --blocked) [ -n "${2:-}" ] || usage; blocked=$2; shift ;;
+      *) usage ;;
+    esac
+    shift
+  done
+}
+parse "$@"
 
 git fetch -q origin
 [ "$(git branch --show-current)" = "main" ] || { echo "not on main" >&2; exit 1; }
@@ -28,6 +38,29 @@ git merge -q --ff-only origin/main
 # The workflow publishes origin/main, so a local commit not pushed yet would silently not ship.
 [ "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)" ] || { echo "main is ahead of origin/main — push first" >&2; exit 1; }
 
+# The rule in README alone did not hold: twelve releases followed the day it merged (2026-10-01).
+times=$(npm view "$package" time --json --prefer-online 2>/dev/null) || {
+  echo "npm did not answer when $package was last published — not releasing" >&2
+  exit 1
+}
+early=$(node -e 'const times = JSON.parse(process.argv[1])
+  const [version, at] = Object.entries(times).filter(([key]) => key !== "created" && key !== "modified")
+    .map(([key, value]) => [key, new Date(value)]).sort((a, b) => b[1] - a[1])[0] ?? []
+  if (!at || Number.isNaN(at.getTime())) throw new Error("npm answered with no publish time")
+  const next = new Date(at.getTime() + 24 * 3600 * 1000)
+  const utc = (date) => `${date.toISOString().slice(0, 16).replace("T", " ")} UTC`
+  if (next > new Date()) console.log(`${version} was published ${utc(at)}; the next release may go at ${utc(next)}`)' \
+  "$times") || { echo "npm's publish times did not parse — not releasing" >&2; exit 1; }
+if [ -n "$early" ] && [ -z "$blocked" ]; then
+  echo "at most one release a day: $early." >&2
+  echo "a consumer blocked today may go now: bin/release --blocked \"<consumer and reason>\" (README, Releasing)" >&2
+  exit 1
+fi
+if [ -z "$early" ] && [ -n "$blocked" ]; then
+  echo "no release in the last 24 hours — --blocked is not needed, releasing as usual"
+  blocked=""
+fi
+
 version=$(node -p 'require("./package.json").version')
 # `npm view` rather than the registry document, which a CDN serves stale for minutes.
 published() {
@@ -38,6 +71,8 @@ published() {
 latest=$(npm view "$package" version --prefer-online 2>/dev/null || true)
 versions=$(npm view "$package" versions --json --prefer-online 2>/dev/null || true)
 next=$(node scripts/next-version.mjs "$version" "$latest" "$versions")
+subject=""
+body=""
 if [ "$next" != "$version" ]; then
   taken=""
   if published; then taken=1; why="$version is already on npm"; else why="$version is not above npm's latest $latest"; fi
@@ -50,13 +85,34 @@ if [ "$next" != "$version" ]; then
     const today = new Date().toLocaleDateString("en-GB").replaceAll("/", ".")
     if (taken) swap("CHANGELOG.md", "\n## Unreleased\n", `\n## Unreleased\n\n## ${n} — ${today}\n`)
     else swap("CHANGELOG.md", `\n## ${o} — `, `\n## ${n} — `)' "$version" "$next" "$taken"
-  git commit -q -am "chore: release $next" -m "bin/release: $why."
-  git push -q origin main || {
-    git reset -q --hard HEAD~1
-    echo "main moved on origin while raising the version — run bin/release again" >&2
+  subject="chore: release $next"
+  body="bin/release: $why."
+  version=$next
+fi
+if [ -n "$blocked" ]; then
+  # A rerun after a failed publish finds the line already there and adds no second one.
+  node -e 'const fs = require("fs"); const [version, reason] = process.argv.slice(1)
+    const text = fs.readFileSync("CHANGELOG.md", "utf8")
+    const start = text.indexOf(`\n## ${version} — `)
+    if (start < 0) process.exit(1)
+    const end = text.indexOf("\n", start + 1) + 1
+    const line = `Released early: ${reason}`
+    if (!text.slice(end).split("\n## ")[0].includes(line))
+      fs.writeFileSync("CHANGELOG.md", `${text.slice(0, end)}\n${line}\n${text.slice(end)}`)' "$version" "$blocked" || {
+    git checkout -q -- package.json CHANGELOG.md
+    echo "CHANGELOG.md has no \"## $version — \" section to name the blocked consumer in" >&2
     exit 1
   }
-  version=$next
+  subject=${subject:-"chore: release $version early"}
+  body="${body:+$body }Released early: $blocked"
+fi
+if [ -n "$(git status --porcelain --untracked-files=no)" ]; then
+  git commit -q -am "$subject" -m "$body"
+  git push -q origin main || {
+    git reset -q --hard HEAD~1
+    echo "main moved on origin while preparing the release — run bin/release again" >&2
+    exit 1
+  }
 fi
 if published; then
   echo "$version is already on npm — raise the version first" >&2
