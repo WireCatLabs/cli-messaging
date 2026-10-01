@@ -1,6 +1,7 @@
 import * as v from "valibot"
 import type { Messenger } from "../../cli/messenger/context.js"
 import type { MessengerAdapter } from "../../cli/messenger/port.js"
+import { listed } from "../../cli/paging.js"
 import type { SendGuard } from "../../sends/guard.js"
 import { checkedFilter } from "../../services/chats.js"
 import { CHAT_SCAN, EVENTS_DAYS, onlineDeps, servicesFor } from "../../services/index.js"
@@ -36,20 +37,23 @@ export const chatsTools = (messenger: Messenger): Record<string, AnyTool> => {
     chats_events: tool({
       title: "Who joined or left a chat",
       description:
-        "A chat's service messages since `since`: who joined, left, was added or removed, and by whom, oldest " +
+        "A chat's service messages since `since_time`: who joined, left, was added or removed, and by whom, oldest " +
         `first — event is join, leave, add, remove, create, title or pin. ${EVENTS_DAYS} days back if not given. ` +
-        "Returns { chatId, since, events: [{ messageId, timestamp, event, by, people, title? }], more }.",
+        "`type` keeps only those events. Returns { items: [{ messageId, timestamp, event, by, people, title? }], page, " +
+        "limit, hasMore, chatId, since }; hasMore when the history was longer than one run reads.",
       input: v.object({
         chat,
-        since: v.optional(v.pipe(v.string(), v.description("an ISO 8601 time, or 2h / 1d ago"))),
-        event: v.optional(v.pipe(v.string(), v.description("only these events, comma-separated"))),
+        since_time: v.optional(v.pipe(v.string(), v.description("an ISO 8601 time, or 2h / 1d ago"))),
+        type: v.optional(v.pipe(v.string(), v.description("only these events, comma-separated"))),
       }),
       annotations: READ,
-      online: (adapter, args, { guard }) =>
-        chats(adapter, guard).events(args.chat, {
-          ...(args.since === undefined ? {} : { since: momentOf(args.since, "since") }),
-          ...(args.event ? { only: args.event } : {}),
-        }),
+      online: async (adapter, args, { guard }) => {
+        const { events, more, ...rest } = await chats(adapter, guard).events(args.chat, {
+          ...(args.since_time === undefined ? {} : { since: momentOf(args.since_time, "since_time") }),
+          ...(args.type ? { only: args.type } : {}),
+        })
+        return { ...listed(events), hasMore: more, ...rest }
+      },
     }),
 
     chats_members: tool({

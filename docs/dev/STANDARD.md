@@ -324,7 +324,7 @@ many), `--allow-any-file` (which files).
 1. **A tool is named `<tool>_<resource>_<verb>`** after its command: `max_store_export`,
    `tg_chats_list`; a bot's, `<tool>_bot_<resource>_<verb>`: `tg_bot_messages_send`. A tool with no command (`<tool>_status`) is named after what it answers.
 2. **Arguments are the command's options in snake_case**, with the option's name: `--send-id` is
-   `send_id`, `--since` is `since`.
+   `send_id`, `--since-time` is `since_time`, `--before-n` is `before_n`.
 3. **Every tool that only reads says `readOnlyHint: true`**; every tool that writes says what it
    destroys with `destructiveHint`.
 4. **A tool is offered by its command's [permission](#permissions)**, never by a flag of its own:
