@@ -102,7 +102,9 @@ also writes `conversation_chunks`: a conversation cut at message boundaries into
 its text. The text is never stored. Chunks cascade with their conversation, so old builds' chunks go
 with them. `chunk_vectors` is keyed by model and that hash, with no chat: a rebuild writes new
 conversation rows, and a vector tied to them would be thrown away each time, while a chunk whose text
-did not change keeps its hash and finds its vector again.
+did not change keeps its hash and finds its vector again. `conversations embed` reads a chunk's messages
+again (`chunksToEmbed`, `src/store/sqlite/vectors.ts`), rebuilds its text with `chunkTextOf` and embeds it
+only when the hash still matches; a chunk whose messages changed since the build waits for the next one.
 
 **Where the queries live.** `src/store/store.ts` holds the `MessageStore` interface and `storeOver`, a
 facade that opens the transaction and delegates. The SQL is in `src/store/sqlite/`, one module per kind

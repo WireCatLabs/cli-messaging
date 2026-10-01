@@ -8,6 +8,14 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Added
 
+- **`conversations embed --chat <chat> [--model] [--workers <n>] [--threads <n>]`**, `conversations embed
+  status` and `conversations embed clear` (storage phase 5): a vector for each chunk of the chat's
+  current build, computed on this machine with a model from `models text`, a batch at a time; stopping
+  loses at most one batch, and running it again goes on. One session uses `min(8, cores)` threads;
+  `--workers` runs several, each with its own copy of the model, and refuses a count that does not fit in
+  free memory. A chunk whose messages changed since the build is skipped and counted. Keyed
+  `conversations.embed`, so a profile read-only on messages can still embed. `store check` reports
+  vectors per model and those no chunk points at any more; its "nothing is enriched yet" note is gone.
 - **Chunks of conversations in the store (store version 14)**, for search by meaning (storage phase 5):
   `conversations build` cuts each conversation into chunks of at most 1,200 characters at message
   boundaries and stores, per chunk, its first and last message and the sha256 of its text — never the

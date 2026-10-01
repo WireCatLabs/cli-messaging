@@ -4,6 +4,7 @@ import { type ArchiveService, archiveService } from "./archive.js"
 import { type ChatsService, chatsService } from "./chats.js"
 import { type ConversationsService, conversationsService } from "./conversations.js"
 import type { ServiceDeps } from "./deps.js"
+import { type EmbeddingsService, embeddingsService } from "./embeddings.js"
 import { type FoldersService, foldersService } from "./folders.js"
 import { type InboxService, inboxService } from "./inbox.js"
 import { type MessagesService, messagesService } from "./messages.js"
@@ -22,6 +23,8 @@ export type { BatchStatus, Built, ConversationsService, MessageLinks } from "./c
 export { BATCH_SIZE, conversationsService } from "./conversations.js"
 export type { ServiceDeps } from "./deps.js"
 export { OFFLINE, onlineDeps, storedDeps } from "./deps.js"
+export type { Embedded, EmbeddingsService, EmbedStatus } from "./embeddings.js"
+export { embeddingsService } from "./embeddings.js"
 export type { FolderEdit, FoldersService } from "./folders.js"
 export { foldersService } from "./folders.js"
 export type { InboxService } from "./inbox.js"
@@ -55,6 +58,7 @@ export interface Services {
   account: AccountService
   moderation: ModerationService
   conversations: ConversationsService
+  embeddings: EmbeddingsService
 }
 
 /**
@@ -76,6 +80,7 @@ export const servicesFor = (deps: ServiceDeps): Services => {
     account: accountService(deps),
     moderation: moderationService(deps),
     conversations: conversationsService(deps),
+    embeddings: embeddingsService(deps),
   }
   return deps.messenger.services ? { ...base, ...deps.messenger.services(base, deps) } : base
 }

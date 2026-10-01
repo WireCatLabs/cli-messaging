@@ -246,6 +246,8 @@ export const keyForCommand = (path: readonly string[]): PermissionKey | null | u
   if (top === "store" && next !== undefined && STORE_MAINTENANCE.has(next)) return null
   // The agent's answers write only to the local store: their own key, so read-only messages can still link (phase 4 A10).
   if (top === "conversations" && next === "links") return "conversations.links"
+  // Vectors are written to the local store only, and the text never leaves the machine (phase 5 E10).
+  if (top === "conversations" && next === "embed") return "conversations.embed"
   if (SHOW_MESSAGES.has(top)) return "messages"
   if ((RESOURCES as readonly string[]).includes(top)) return path.join(".")
   return undefined

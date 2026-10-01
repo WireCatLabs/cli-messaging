@@ -208,10 +208,8 @@ const inspect = (path: string) =>
       wordIndex: wordIndex ?? null,
       chatsBehind: behind,
       conversations: conversationsBuilt(database),
-      notApplicable: {
-        extensions: "SQLite needs none",
-        enrichment: "nothing is enriched yet, so there is no enrichment index to compare",
-      },
+      vectors: vectorsHeld(database),
+      notApplicable: { extensions: "SQLite needs none" },
     }
   })
 
@@ -223,6 +221,28 @@ const indexIntegrity = (database: CacheDatabase, index: string, rank = 1): strin
   } catch (error) {
     return messageOf(error)
   }
+}
+
+/**
+ * Vectors per model, and how many no chunk of any build points at any more — a rebuild that changed a
+ * conversation's text leaves its old vector behind until `conversations embed clear` (phase 5).
+ */
+const vectorsHeld = (database: CacheDatabase) => {
+  const exists = database.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'chunk_vectors'").get()
+  if (!exists) return null
+  const models = Object.fromEntries(
+    database
+      .prepare("SELECT model, count(*) AS n FROM chunk_vectors GROUP BY model ORDER BY model")
+      .all()
+      .map((row) => [String(row.model), Number(row.n)]),
+  )
+  const unused = database
+    .prepare(
+      `SELECT count(*) AS n FROM chunk_vectors v
+       WHERE NOT EXISTS (SELECT 1 FROM conversation_chunks k WHERE k.content_hash = v.content_hash)`,
+    )
+    .get()
+  return { models, unused: Number(unused?.n ?? 0) }
 }
 
 /**

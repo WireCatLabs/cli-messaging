@@ -36,6 +36,8 @@ import * as searchIndex from "./sqlite/search-index.js"
 import * as sync from "./sqlite/sync.js"
 import * as transcripts from "./sqlite/transcripts.js"
 import { toMs } from "./sqlite/values.js"
+import type { ChunkToEmbed } from "./sqlite/vectors.js"
+import * as vectors from "./sqlite/vectors.js"
 import type { ScoredHit, SearchScope, WordOptions, WordQuery } from "./sqlite/words.js"
 import * as words from "./sqlite/words.js"
 
@@ -181,6 +183,18 @@ export interface MessageStore {
   batchStatus(key: AccountKey, chatId: Id): Promise<{ messages: number; characters: number }>
   /** The earliest window holding a message the agent has not answered; `undefined` when none is left. */
   nextBatch(key: AccountKey, chatId: Id, options: { size: number }): Promise<LinkBatch | undefined>
+  /** Chunks of the chat's current build with no vector of `model`, by hash after `after` (phase 5). */
+  chunksToEmbed(
+    key: AccountKey,
+    chatId: Id,
+    model: string,
+    options: { after?: string; limit: number },
+  ): Promise<ChunkToEmbed[]>
+  saveVectors(model: string, dims: number, vectors: { hash: string; vector: Float32Array }[]): Promise<void>
+  /** The current build's distinct chunks, and how many have a vector of `model`. */
+  vectorStatus(key: AccountKey, chatId: Id, model: string): Promise<{ chunks: number; embedded: number }>
+  /** Drops the chat's vectors, or one model's; a vector another chat's chunk shares stays. */
+  clearVectors(key: AccountKey, chatId: Id, model?: string): Promise<number>
   /** Whether the chat's conversations were built, and when; `undefined` when never. */
   conversationState(
     key: AccountKey,
@@ -633,6 +647,30 @@ const storeOver = (context: StoreContext): MessageStore => {
           characters: left.characters - answered.reduce((sum, { text }) => sum + [...text].length, 0),
         },
       }
+    },
+
+    chunksToEmbed: async (key, chatId, model, options) => {
+      const chatKey = chatKeyOf(key, chatId)
+      return chatKey === undefined ? [] : vectors.chunksToEmbed(context, chatKey, model, options)
+    },
+
+    saveVectors: async (model, dims, rows) => {
+      inTransaction(() => vectors.saveVectors(context, model, dims, rows))
+    },
+
+    vectorStatus: async (key, chatId, model) => {
+      const chatKey = chatKeyOf(key, chatId)
+      return chatKey === undefined ? { chunks: 0, embedded: 0 } : vectors.vectorStatus(context, chatKey, model)
+    },
+
+    clearVectors: async (key, chatId, model) => {
+      const chatKey = chatKeyOf(key, chatId)
+      if (chatKey === undefined) return 0
+      let cleared = 0
+      inTransaction(() => {
+        cleared = vectors.clearVectors(context, chatKey, model)
+      })
+      return cleared
     },
 
     conversationState: async (key, chatId) => {

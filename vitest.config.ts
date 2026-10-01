@@ -15,6 +15,9 @@ export default defineConfig({
         "src/store/drivers/bun-sqlite.ts",
         // Declarations whose callbacks drizzle-kit runs, in its own process; the baseline test checks its output.
         "src/store/sqlite/schema.ts",
+        // Run only with real worker threads, from dist; `pnpm check:dist` drives two of them under Node and Bun.
+        "src/embeddings/worker.ts",
+        "src/embeddings/workers.ts",
         // stdin, argv and an exit code around parityProblems, which the parity tests cover.
         "src/parity/bin.ts",
       ],
