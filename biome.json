@@ -55,7 +55,7 @@
   },
   "overrides": [
     {
-      "includes": ["scripts/**"],
+      "includes": ["scripts/**", "packages/sqlite/probe.mjs"],
       "linter": {
         "rules": {
           "suspicious": {

@@ -8,3 +8,5 @@ coverage/
 # The working trail, kept on the machine doing the work.
 /docs_ai/
 .claude/settings.local.json
+packages/sqlite/lib/
+packages/sqlite/*.tgz

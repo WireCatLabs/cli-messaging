@@ -1,0 +1,24 @@
+{
+  "name": "@leemour/cli-messaging-sqlite",
+  "version": "1.0.0",
+  "description": "SQLite 3.53.4 builds for @leemour/cli-messaging where the runtime's own SQLite falls short",
+  "license": "MIT",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/leemour/cli-messaging.git",
+    "directory": "packages/sqlite"
+  },
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "default": "./index.js"
+    }
+  },
+  "files": [
+    "index.js",
+    "index.d.ts",
+    "lib/",
+    "README.md"
+  ]
+}
