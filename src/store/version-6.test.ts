@@ -105,12 +105,18 @@ describe("store version 6", () => {
     ])
   })
 
-  it("keeps a chat's membership, and a list that does not say keeps what was known", async () => {
+  it("keeps a chat's membership, and a list that does not say keeps what was known — except left", async () => {
     const store = await openStore({ path: fresh() })
-    await store.saveChats(ME, [{ ...chat, membershipState: "left" }])
+    await store.saveChats(ME, [{ ...chat, membershipState: "archived" }])
     await store.saveChats(ME, [chat])
 
-    expect((await store.chats(ME, {})).items).toEqual([{ ...chat, membershipState: "left" }])
+    expect((await store.chats(ME, {})).items).toEqual([{ ...chat, membershipState: "archived" }])
+
+    // A chat the list names again has been rejoined (NEED-488 B; plans/chats-left.md).
+    await store.saveChats(ME, [{ ...chat, membershipState: "left" }])
+    expect((await store.chats(ME, {})).items).toEqual([])
+    await store.saveChats(ME, [chat])
+    expect((await store.chats(ME, {})).items).toEqual([chat])
     await store.close()
   })
 

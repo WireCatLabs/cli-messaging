@@ -57,7 +57,16 @@ export const stored = (
     },
     chats: async (window) => {
       const page = await messenger.chats(window)
-      await save("chats.list", (opened) => opened.saveChats(account, page.items))
+      // Only a page that names every chat says the others were left; an empty one is a hiccup.
+      const complete = window.offset === 0 && !page.hasMore && page.items.length > 0
+      await save("chats.list", async (opened) => {
+        await opened.saveChats(account, page.items)
+        if (complete)
+          await opened.markChatsLeft(
+            account,
+            page.items.map((chat) => chat.id),
+          )
+      })
       return page
     },
     history: async (reference, options) => {

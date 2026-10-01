@@ -18,6 +18,7 @@ export const storeCommand = (messenger: Messenger): Command => {
     .addCommand(fetchCommand(messenger))
     .addCommand(jobsCommand(messenger))
     .addCommand(exportCommand(messenger))
+    .addCommand(clearCommand(messenger))
   for (const command of storeMaintenanceCommands(messenger)) store.addCommand(command)
   return store
 }
@@ -35,6 +36,40 @@ const statusCommand = (messenger: Messenger): Command =>
       const rows = await context.withServices((services) => services.archive.status(chat))
       renderList(context.renderer, context.format, rows)
       if (rows.length === 0) context.renderer.note("the store holds no messages for this profile yet")
+    })
+
+/**
+ * Deletes from the store, which is the archive: only what `--left` names, and only with
+ * `--allow-dangerous`, since a chat the account left cannot be fetched again. Emptying the whole
+ * store is not offered.
+ */
+const clearCommand = (messenger: Messenger): Command =>
+  new Command("clear")
+    .description("delete from the store the chats this account has left, with their messages")
+    .option("--left", "the chats this account has left — the only thing this clears")
+    .option("--allow-dangerous", "yes, delete — it cannot be undone, and a chat you left cannot be fetched again")
+    .action(async function (this: Command) {
+      const { left, allowDangerous } = this.opts<{ left?: boolean; allowDangerous?: boolean }>()
+      if (!left) {
+        throw new CliError(
+          "validation_error",
+          "say what to clear: --left, the chats this account has left — emptying the whole store is not offered",
+        )
+      }
+      const context = messengerContext(this, messenger)
+      const found = await context.withServices((services) => services.archive.left())
+      if (found.chats > 0 && !allowDangerous) {
+        throw new CliError(
+          "confirmation_required",
+          `this deletes ${found.chats} chat(s) this account has left and their ${found.messages} message(s) ` +
+            "from the store, and it cannot be undone — add --allow-dangerous to go ahead",
+        )
+      }
+      const cleared =
+        found.chats > 0 ? await context.withServices((services) => services.archive.left({ clear: true })) : found
+      context.renderer.result({ cleared: cleared.chats > 0, ...cleared })
+      if (cleared.chats === 0) context.renderer.note("the store holds no chats this account has left")
+      else context.renderer.success(`deleted ${cleared.chats} chat(s) and ${cleared.messages} message(s)`)
     })
 
 /**

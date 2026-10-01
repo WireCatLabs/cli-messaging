@@ -197,6 +197,13 @@ export interface MessageStore {
    */
   purge(key: AccountKey): Promise<void>
   /**
+   * Given every chat the account is in, marks the rest `left` and says how many it marked. Only
+   * ever from a complete list: a page or a cut list says nothing about the chats it leaves out.
+   */
+  markChatsLeft(key: AccountKey, present: Id[]): Promise<number>
+  /** The chats marked left and the messages they hold; with `clear`, deletes them and all under them. */
+  leftChats(key: AccountKey, options?: { clear?: boolean }): Promise<{ chats: number; messages: number }>
+  /**
    * A tombstone, not a removal: the row stays, so a copy fetched before the deletion does not bring
    * the message back, and reads and search stop returning it. Its text goes — from the row, the
    * search copy, the edit history and the transcript. Only the messenger returning it again, when
@@ -540,6 +547,22 @@ const storeOver = (context: StoreContext): MessageStore => {
       const accountKey = findAccountPk(key)
       if (accountKey === undefined) return
       inTransaction(() => accounts.purgeAccount(context, accountKey))
+    },
+
+    markChatsLeft: async (key, present) => {
+      const accountKey = findAccountPk(key)
+      return accountKey === undefined ? 0 : chatQueries.markLeft(context, accountKey, present)
+    },
+
+    leftChats: async (key, { clear = false } = {}) => {
+      const accountKey = findAccountPk(key)
+      if (accountKey === undefined) return { chats: 0, messages: 0 }
+      let found = { pks: [] as number[], messages: 0 }
+      inTransaction(() => {
+        found = chatQueries.leftChats(context, accountKey)
+        if (clear) chatQueries.purgeChats(context, found.pks)
+      })
+      return { chats: found.pks.length, messages: found.messages }
     },
 
     search: async (query, { limit, account }) =>
