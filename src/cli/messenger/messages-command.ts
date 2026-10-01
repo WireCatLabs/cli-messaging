@@ -4,7 +4,7 @@ import { Command } from "commander"
 import { isLocator, parseLocator } from "../../domain/locator.js"
 import { sendTime } from "../../domain/send-time.js"
 import { renderMessages } from "../../render/messages.js"
-import { readUpload } from "../../sends/upload.js"
+import { readAttachments } from "../../sends/upload.js"
 import { positiveCount } from "../paging.js"
 import { afterOf, oneDirection } from "./after.js"
 import { type Messenger, messengerContext } from "./context.js"
@@ -188,6 +188,8 @@ export const sendCommand = (messenger: Messenger): Command =>
     .option("--md, --markdown", "read **bold**, _italic_, ~~struck~~ and `code` in the text; \\ keeps a mark literal")
     .option("--file <path>", "attach a file; the text becomes its caption")
     .option("--photo <path>", "attach a .jpg, .png or .webp as a photo; the text becomes its caption")
+    .option("--as-file", "send the --file as a file to download, a video included")
+    .option("--voice <path>", "send an Ogg Opus file as a voice message, alone, with no text")
     .option("--allow-any-file", "send a file even from a hidden folder, ~/.ssh or this CLI's own folders")
     .option(
       "--at <time>",
@@ -208,6 +210,8 @@ const sendText = async (command: Command, messenger: Messenger, chat: string, te
     at,
     file,
     photo,
+    voice,
+    asFile,
     allowAnyFile,
   } = command.opts<{
     replyTo?: string
@@ -218,16 +222,24 @@ const sendText = async (command: Command, messenger: Messenger, chat: string, te
     at?: string
     file?: string
     photo?: string
+    voice?: string
+    asFile?: boolean
     allowAnyFile?: boolean
   }>()
   const scheduledFor = at === undefined ? undefined : sendTime(at)
   const replyTo = typedReplyTo?.trim()
   if (replyTo === "") throw new CliError("validation_error", "--reply-to needs the id of the message to answer")
   const read = { app: messenger.app, env: context.env, anyFile: allowAnyFile === true }
-  const attachments = [
-    ...(photo === undefined ? [] : [await readUpload("photo", photo, read)]),
-    ...(file === undefined ? [] : [await readUpload("file", file, read)]),
-  ]
+  const attachments = await readAttachments(
+    {
+      ...(photo === undefined ? {} : { photo }),
+      ...(file === undefined ? {} : { file }),
+      ...(voice === undefined ? {} : { voice }),
+      ...(text === undefined ? {} : { text }),
+      asFile: asFile === true,
+    },
+    read,
+  )
   const body = text ?? (attachments.length > 0 ? "" : await readAll(context.stdin))
   if (body.trim() === "" && attachments.length === 0) {
     throw new CliError("validation_error", "nothing to send — give the text or pipe it in")

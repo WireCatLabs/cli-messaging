@@ -394,6 +394,40 @@ describe("the shared read commands", () => {
     expect(sent).toHaveLength(1)
   })
 
+  it("**send a voice message alone, and a video as a file only with --as-file**", async () => {
+    const root = mkdtempSync(join(tmpdir(), "messenger-"))
+    const env = { CHAT_STATE_DIR: join(root, "state"), CHAT_CONFIG_DIR: join(root, "config") }
+    writeFileSync(join(root, "note.ogg"), "ogg")
+    writeFileSync(join(root, "note.mp3"), "mp3")
+    writeFileSync(join(root, "trip.mp4"), "mp4")
+    const sent: SendOptions[] = []
+    const recording: MessengerAdapter = {
+      ...fake,
+      send: async (_chatId, text, options) => {
+        sent.push(options)
+        return { message: { ...message, text }, sendId: options.sendId }
+      },
+    }
+    const send = (...argv: string[]) => call(["messages", "send", "Book", ...argv], async () => recording, env)
+
+    const voice = await send("--voice", join(root, "note.ogg"))
+    const video = await send("--file", join(root, "trip.mp4"))
+    const asFile = await send("--file", join(root, "trip.mp4"), "--as-file")
+    const withText = await send("hello", "--voice", join(root, "note.ogg"))
+    const notOpus = await send("--voice", join(root, "note.mp3"))
+    const nothingToKeep = await send("hi", "--as-file")
+
+    expect([voice.code, video.code, asFile.code]).toEqual([0, 0, 0])
+    expect(sent.map((options) => options.attachments)).toMatchObject([
+      [{ kind: "voice", name: "note.ogg" }],
+      [{ kind: "file", name: "trip.mp4" }],
+      [{ kind: "file", name: "trip.mp4", asFile: true }],
+    ])
+    expect(sent[1]?.attachments?.[0]).not.toHaveProperty("asFile")
+    expect([withText.code, notOpus.code, nothingToKeep.code]).toEqual([2, 2, 2])
+    expect(withText.stderr.join("\n")).toContain("goes alone")
+  })
+
   it("**edit the owner's message through the guard**, record it without the text, and answer the edited message", async () => {
     const root = mkdtempSync(join(tmpdir(), "messenger-"))
     const env = { CHAT_STATE_DIR: join(root, "state"), CHAT_CONFIG_DIR: join(root, "config") }

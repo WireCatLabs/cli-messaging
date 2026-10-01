@@ -922,7 +922,7 @@
         "--allow-any-file": "both",
         "--as-file": {
           "state": "planned",
-          "by": "P1"
+          "by": "T6"
         },
         "--at": "both",
         "--file": "both",
@@ -934,7 +934,7 @@
         "--silent": "both",
         "--voice": {
           "state": "planned",
-          "by": "P1"
+          "by": "T6"
         }
       }
     },

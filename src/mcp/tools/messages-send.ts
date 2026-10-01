@@ -2,7 +2,7 @@ import { CliError } from "@leemour/cli-core"
 import * as v from "valibot"
 import type { Messenger } from "../../cli/messenger/context.js"
 import { sendTime } from "../../domain/send-time.js"
-import { readUpload } from "../../sends/upload.js"
+import { readAttachments } from "../../sends/upload.js"
 import { onlineDeps, servicesFor } from "../../services/index.js"
 import { type AnyTool, APPROVE, chatOf, message, nameOf, tool, WRITE } from "../tool.js"
 
@@ -34,6 +34,12 @@ export const messageSendTools = (messenger: Messenger): Record<string, AnyTool> 
         photo: v.optional(
           v.pipe(v.string(), v.minLength(1), v.description("a .jpg, .png or .webp to attach as a photo")),
         ),
+        as_file: v.optional(
+          v.pipe(v.boolean(), v.description("send the file as a file to download, a video included")),
+        ),
+        voice: v.optional(
+          v.pipe(v.string(), v.minLength(1), v.description("an Ogg Opus file to send as a voice message, alone")),
+        ),
         reply_to: v.optional(v.pipe(message, v.description("the message this answers, in the same chat"))),
         send_id: v.optional(v.pipe(v.string(), v.minLength(1), v.description("from an earlier outcome_unknown"))),
         silent: v.optional(v.pipe(v.boolean(), v.description("deliver without a notification"))),
@@ -55,10 +61,16 @@ export const messageSendTools = (messenger: Messenger): Record<string, AnyTool> 
         const at = args.at === undefined ? undefined : sendTime(args.at)
         // Never anyFile here: a path an agent was talked into is how a key would leave the machine.
         const read = { app: messenger.app, env }
-        const attachments = [
-          ...(args.photo === undefined ? [] : [await readUpload("photo", args.photo, read)]),
-          ...(args.file === undefined ? [] : [await readUpload("file", args.file, read)]),
-        ]
+        const attachments = await readAttachments(
+          {
+            ...(args.photo === undefined ? {} : { photo: args.photo }),
+            ...(args.file === undefined ? {} : { file: args.file }),
+            ...(args.voice === undefined ? {} : { voice: args.voice }),
+            ...(args.text === undefined ? {} : { text: args.text }),
+            asFile: args.as_file === true,
+          },
+          read,
+        )
         if ((args.text ?? "").trim() === "" && attachments.length === 0) {
           throw new CliError("validation_error", "nothing to send — give text, a file or a photo")
         }
