@@ -6,6 +6,14 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- **`messages send --voice <file>`**: an Ogg Opus file (`.ogg`, `.oga`, `.opus`) as a voice message,
+  alone — no text, no file, no photo beside it. **`--as-file`** sends the `--file` as a file to
+  download even where the messenger would play it, a video included. The `messages_send` tool takes
+  `voice` and `as_file`. `UploadKind` gains `voice`, `Upload` gains `asFile`, and `readAttachments`
+  reads what a send attaches, the same for the command and the tool.
+
 ## 0.77.0 — 01.10.2026
 
 ### Changed — may break callers
