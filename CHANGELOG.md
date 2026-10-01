@@ -11,6 +11,13 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 - **`BotPeople.senders()`**, optional on `BotAdapter`: who wrote the messages the adapter decoded,
   with their handle and whether each is a bot. The bot's message commands keep them in its copy, so
   `@username` finds a person in what the bot read.
+- **`./testing`, the adapter kit** — not on the stable list yet. `fakeAdapter(seed)` is a messenger in
+  memory with every method group, for command tests. `contractCases({ connect, ids, orderBy })` gives
+  the port's promises as named cases that any test runner can run over an adapter: history oldest
+  first and paging back to the end, the `around` window and its anchor, an ambiguous title refused,
+  a send answering its send id and a repeat leaving one message, ids as strings, reads changing
+  nothing, `capability()` refusing what an adapter lacks. `contractSeed` is the data they read.
+  [`docs/dev/ADAPTERS.md`](docs/dev/ADAPTERS.md) is the guide for writing an adapter.
 - **`Messenger.deletedWithoutChat`**: which stored chats a deletion that names no chat may hit. `watch`
   passes it to the store as `markDeleted(…, { among })`, the new option of the same rule: the store
   tombstones a message only when exactly one live message with that id is left in the chats the rule

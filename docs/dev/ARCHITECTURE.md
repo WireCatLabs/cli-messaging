@@ -22,6 +22,7 @@ under `src/`. What only one provider has travels in `providerMetadata`. The boun
 | `./services` | `src/services/` | the use cases, once each, that commands and MCP tools call — see [Services](#services) |
 | `./background` | `src/background/` | what any background process needs and no messenger: the lock per app and profile, whether a PID is alive and ours, the machine seam tests replace, systemd and launchd units — `serve` and `server` are built on it, each CLI's server stays its own (NEED-492 C) |
 | `./cli` | `src/cli/`, `src/mcp/` | the command skeleton, the shared commands and the MCP server |
+| `./testing` | `src/kit/` | the adapter kit: a fake adapter, the contract cases and their seed — see [the adapter guide](ADAPTERS.md). `src/testing/` is this repository's own test setup and is not published |
 
 The README's table lists what each export offers; this page does not repeat it.
 
@@ -210,7 +211,8 @@ A CLI describes its messenger once — a `Messenger` (`src/cli/messenger/context
 commands, one file per resource in `src/cli/messenger/`. Two wrappers sit between a command and the
 adapter: `observed.ts` times each call into the run record, `stored.ts` saves what was read. A new
 adapter method is optional and reached with `capability()`; the wrappers pass through any method
-they do not name.
+they do not name. How to write an adapter for a new messenger, and test it with the contract cases,
+is [the adapter guide](ADAPTERS.md).
 
 The MCP server (`src/mcp/`) holds one connection for minutes and runs one call at a time; each tool
 lives in `src/mcp/tools/<resource>.ts` and answers what the command's `--json` prints.
