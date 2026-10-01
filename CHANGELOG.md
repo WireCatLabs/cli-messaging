@@ -97,9 +97,10 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 - **`messages download --all` works where message ids are not whole numbers.** It refused them, because
   its resume file compared ids as numbers — so it refused MAX, whose ids pass 2^53, and any messenger
   with ids made of letters. Where the messenger sets `fetching.orderBy: "time"`, it now keys by send
-  time, as `store fetch` does, and pages back by message id. Messages that share a second with a
-  stretch's first or last message are not skipped. The resume file gains `"by": "id" | "time"` and the
-  ids of each stretch's first and last message; a file without `by` is read as by id, so tg's files
+  time, as `store fetch` does, and pages back from an ISO time, as the adapter contract says. Messages
+  that share a moment with a page's oldest message or a stretch's end are not skipped and not
+  downloaded twice. The resume file gains `"by": "id" | "time"` and, by time, the ids walked at each
+  stretch's two ends; a file without `by` is read as by id, so tg's files
   still resume, and one keyed the other way is set aside with a note. `--all` pages through the
   messages service, so with `Messenger.history: "store"` it pages the local store and only the files
   come from the messenger.

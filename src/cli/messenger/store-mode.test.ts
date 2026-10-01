@@ -285,4 +285,36 @@ describe("a messenger whose history is read from the store", () => {
     expect(offline.code).toBe(0)
     expect(JSON.parse(offline.stdout).items).toEqual([])
   })
+
+  it("**download --all pages the store** and asks the messenger only for the files, resuming from the store", async () => {
+    const env = sandbox()
+    const withFiles = thread.map((one) => ({ ...one, attachments: one.id === "2" ? [] : [{ kind: "file" }] }))
+    const filling = async () => ({ ...server(), history: async () => ({ items: withFiles, hasMore: false }) })
+    for (const argv of [
+      ["chats", "list", "--json"],
+      ["messages", "list", "Book", "--json"],
+    ]) {
+      expect((await call(argv, env, filling)).code).toBe(0)
+    }
+    const asked: string[] = []
+    const files: Messenger["connect"] = async () => ({
+      ...server(),
+      history: async () => {
+        throw new Error("paged the messenger")
+      },
+      download: async (_chat, id) => {
+        asked.push(id)
+        return { files: [{ kind: "file", name: `${id}.txt`, bytes: async function* () {} }], skipped: [] }
+      },
+    })
+    const into = join(env.MESSAGING_STORE, "..", "out")
+    const argv = ["messages", "download", "Book", "--all", "--output-dir", into, "--json"]
+
+    const first = await call(argv, env, files, "store")
+    const again = await call(argv, env, files, "store")
+
+    expect(JSON.parse(first.stdout)).toMatchObject({ saved: 2, complete: true })
+    expect(JSON.parse(again.stdout)).toMatchObject({ saved: 0, complete: true })
+    expect(asked).toEqual(["3", "1"])
+  })
 })

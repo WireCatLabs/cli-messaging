@@ -1365,14 +1365,11 @@ describe("messages download", () => {
       return {
         ...chatOf([], {}, asked, failOn),
         history: async (_chat, { before }) => {
-          const older =
-            before === undefined
-              ? all
-              : all.slice(
-                  0,
-                  all.findIndex((one) => one.id === before),
-                )
-          return { items: older.slice(-2), hasMore: older.length > 2 }
+          if (before !== undefined && !/^\d{4}-\d{2}-\d{2}T/.test(before)) {
+            throw new CliError("validation_error", `this messenger pages back from a time, not from ${before}`)
+          }
+          const older = before === undefined ? all : all.filter((one) => one.timestamp < before)
+          return { items: older.slice(-3), hasMore: older.length > 3 }
         },
       }
     }

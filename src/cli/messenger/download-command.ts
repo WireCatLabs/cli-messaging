@@ -69,10 +69,9 @@ const NOT_FILES = new Set(["webpage", "share", "poll", "location", "contact"])
 interface Stretch {
   from: number
   to: number
-  /** The oldest message walked, which the next run pages back from: a time is not a message id. */
-  fromId?: Id
-  /** The newest message walked. By time, a stretch's first and last second may hold messages not walked. */
-  toId?: Id
+  /** By time only: the messages walked that were sent at `from`, and at `to` — others may share that moment. */
+  atFrom?: Id[]
+  atTo?: Id[]
 }
 
 type KeyedBy = "id" | "time"
@@ -128,6 +127,7 @@ const downloadChat = async (
         output,
         pauseMs,
         fetching: messenger.fetching ?? FETCHING,
+        fromStore: messenger.history === "store",
         stop: stop.signal,
         note: context.renderer.note,
         onSaved,
@@ -147,9 +147,27 @@ interface ChatWalk {
   output: string
   pauseMs: number
   fetching: Fetching
+  /** The history pages the local store, where walking past what is held costs no request. */
+  fromStore: boolean
   stop: AbortSignal
   note: (message: string) => void
   onSaved: (one: Saved) => void
+}
+
+/** Both stretches as one, keeping by time the messages walked at its two ends. */
+const joined = (a: Stretch, b: Stretch): Stretch => {
+  const from = Math.min(a.from, b.from)
+  const to = Math.max(a.to, b.to)
+  if (a.atFrom === undefined && b.atFrom === undefined) return { from, to }
+  const at = (moment: number) => [
+    ...new Set(
+      [a, b].flatMap((one) => [
+        ...(one.from === moment ? (one.atFrom ?? []) : []),
+        ...(one.to === moment ? (one.atTo ?? []) : []),
+      ]),
+    ),
+  ]
+  return { from, to, atFrom: at(from), atTo: at(to) }
 }
 
 /**
@@ -158,19 +176,26 @@ interface ChatWalk {
  * run walked is jumped over, and joins this run's, so the progress file stays a few stretches however
  * often the download is cut and resumed.
  *
- * By time, messages share a second, so a stretch's first and last second may hold messages it does not:
- * only its own two edge messages, or a time strictly between them, count as walked.
+ * By time, the messenger pages back from an ISO time (`Fetching.orderBy`), and messages share a moment:
+ * a page is asked for up to and including the oldest moment seen, so none sent then is skipped, and
+ * what this run already walked is passed over. A stretch's ends hold only the messages it names.
  */
 const walkChat = async (
   messages: Pick<MessagesService, "list" | "download">,
   chat: string,
-  { output, pauseMs, fetching, stop, note, onSaved }: ChatWalk,
+  { output, pauseMs, fetching, fromStore, stop, note, onSaved }: ChatWalk,
 ) => {
   const by: KeyedBy = fetching.orderBy ?? "id"
   const keyed = keyOf(fetching)
-  const inside = ({ from, to, fromId, toId }: Stretch, key: number, id: Id) =>
-    by === "time" ? (from < key && key < to) || id === fromId || id === toId : from <= key && key <= to
+  const pagesByTime = by === "time" && !fromStore
+  const inside = ({ from, to, atFrom, atTo }: Stretch, key: number, id: Id) =>
+    by === "time"
+      ? (from < key && key < to) || (key === from && !!atFrom?.includes(id)) || (key === to && !!atTo?.includes(id))
+      : from <= key && key <= to
+  const point = (key: number, id: Id): Stretch =>
+    by === "time" ? { from: key, to: key, atFrom: [id], atTo: [id] } : { from: key, to: key }
   let before: string | undefined
+  let beforeMs = Number.POSITIVE_INFINITY
   let chatId: Id | undefined
   let path = ""
   let done: Stretch[] = []
@@ -181,8 +206,9 @@ const walkChat = async (
   const remember = () => {
     if (chatId !== undefined) writeProgress(path, chatId, { by, done: run ? [...done, run] : done })
   }
-  const walked = (key: number, id: Id) => {
-    run = { from: key, to: run?.to ?? key, fromId: id, toId: run?.toId ?? id }
+  const backTo = (ms: number) => {
+    beforeMs = ms
+    before = new Date(ms).toISOString()
   }
 
   pages: while (!stop.aborted) {
@@ -206,20 +232,19 @@ const walkChat = async (
           : "a message here has no send time, so --all cannot resume",
       )
     }
+    let fresh = 0
     for (const { message, key } of newestFirst) {
       if (stop.aborted) break pages
+      if (run && inside(run, key, message.id)) continue
+      fresh += 1
       const known = done.find((one) => inside(one, key, message.id))
       if (known) {
         done = done.filter((one) => one !== known)
-        const toId = run ? run.toId : known.toId
-        run = {
-          from: known.from,
-          to: Math.max(run?.to ?? known.to, known.to),
-          ...(known.fromId === undefined ? {} : { fromId: known.fromId }),
-          ...(toId === undefined ? {} : { toId }),
-        }
+        run = run ? joined(run, known) : known
         remember()
-        before = known.fromId ?? String(known.from)
+        if (fromStore) continue
+        if (pagesByTime) backTo(known.from + 1)
+        else before = String(known.from)
         continue pages
       }
       if (message.attachments.some(({ kind }) => !NOT_FILES.has(kind))) {
@@ -234,17 +259,22 @@ const walkChat = async (
           else saved += 1
           onSaved(one)
         }
-        walked(key, message.id)
+        run = run ? joined(run, point(key, message.id)) : point(key, message.id)
         remember()
-      } else walked(key, message.id)
+      } else run = run ? joined(run, point(key, message.id)) : point(key, message.id)
     }
     remember()
     if (!page.hasMore) {
       complete = true
       break
     }
-    before = newestFirst.at(-1)?.message.id
-    note(`${saved} files so far, back to message ${before}`)
+    const oldest = newestFirst.at(-1)
+    if (pagesByTime && oldest) {
+      // A page of nothing new means one moment holds more than a page: step past it rather than loop.
+      if (fresh > 0) backTo(oldest.key + 1)
+      else backTo(Math.min(beforeMs - 1, oldest.key))
+    } else before = oldest?.message.id
+    note(`${saved} files so far, back to message ${oldest?.message.id}`)
     await sleep(pauseMs, undefined, { signal: stop }).catch(() => {})
   }
   remember()
