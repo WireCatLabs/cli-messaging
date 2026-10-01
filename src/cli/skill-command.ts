@@ -8,7 +8,17 @@ import { environmentOf, outputFor } from "./context.js"
  * package and in a checkout alike, so the skill printed is always this version's.
  */
 export const skillCommand = (app: AppIdentity, skill: URL): Command =>
-  sharedSkillCommand(app, skill, (command) => {
-    const { env } = environmentOf(command)
-    return { ...outputFor(command), ...(env ? { env } : {}) }
-  })
+  sharedSkillCommand(
+    app,
+    skill,
+    (command) => {
+      const { env } = environmentOf(command)
+      return { ...outputFor(command), ...(env ? { env } : {}) }
+    },
+    SHARED_SKILLS,
+  )
+
+/** Skills this package ships for every CLI on it, printed by `skill show <name>`: `skills/` beside `dist/` and `src/`. */
+const SHARED_SKILLS = {
+  "link-conversations": new URL("../../skills/link-conversations/SKILL.md", import.meta.url),
+}

@@ -35,6 +35,22 @@ describe("skill show", () => {
 
     expect(JSON.parse(stdout[0] ?? "")).toEqual({ name: "chat-cli", content: "---\nname: chat-cli\n---\n\n# chat" })
   })
+
+  it("**prints the shared link-conversations skill** with this CLI's command in it", async () => {
+    const { code, stdout } = await show(["skill", "show", "link-conversations"])
+    const out = stdout.join("\n")
+
+    expect(code).toBe(0)
+    expect(out).toMatch(/^---\nname: link-conversations\n/)
+    expect(out).toContain("chat conversations batches next")
+    expect(out).not.toContain("{{command}}")
+  })
+
+  it("has the agent send the skill's own version with every answer, so links can be told apart by prompt", async () => {
+    const out = (await show(["skill", "show", "link-conversations"])).stdout.join("\n")
+
+    expect(out).toContain(`"skill": "${/version: "(\d+)"/.exec(out)?.[1]}"`)
+  })
 })
 
 describe("the skill hint", () => {

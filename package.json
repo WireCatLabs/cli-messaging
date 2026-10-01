@@ -16,6 +16,7 @@
   "files": [
     "dist",
     "parity.json",
+    "skills",
     "README.md",
     "LICENSE"
   ],
@@ -77,7 +78,7 @@
   },
   "dependencies": {
     "@bomb.sh/tab": "0.0.22",
-    "@leemour/cli-core": "0.11.0",
+    "@leemour/cli-core": "0.13.0",
     "@leemour/cli-messaging-sqlite": "1.0.0",
     "@modelcontextprotocol/server": "2.1.0",
     "@valibot/to-json-schema": "1.8.0",

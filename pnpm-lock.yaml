@@ -12,8 +12,8 @@ importers:
         specifier: 0.0.22
         version: 0.0.22(commander@15.0.0)
       '@leemour/cli-core':
-        specifier: 0.11.0
-        version: 0.11.0(commander@15.0.0)(typescript@7.0.2)
+        specifier: 0.13.0
+        version: 0.13.0(commander@15.0.0)(typescript@7.0.2)
       '@leemour/cli-messaging-sqlite':
         specifier: 1.0.0
         version: 1.0.0
@@ -369,8 +369,8 @@ packages:
     resolution: {integrity: sha512-hloP58zRVCRSpgDxmqCWJNlizAlUgJFqG2ypq79DCvyv9tHjRYMDOcPFjzfl/A1/YxDvRCZz8wvZvmapQnKwFQ==}
     engines: {node: '>=12'}
 
-  '@leemour/cli-core@0.11.0':
-    resolution: {integrity: sha512-zHPlluUa2zprAeYjWh87kt1egD4mH1QhrvVeHxPBLQG00gjHRstd3kKU1qlF8ccXossNm7J2DZW6Pe/mOcgxbA==}
+  '@leemour/cli-core@0.13.0':
+    resolution: {integrity: sha512-kKVV6OYalZ8bN7scl+z3uvHW7QvVWMRYH16T2r4vO8x0g9ZW1WWQaZwTIzpaPJdhxX2zTqX+3Y3/KEX3znLd/g==}
     engines: {node: '>=22'}
     hasBin: true
     peerDependencies:
@@ -1616,7 +1616,7 @@ snapshots:
     dependencies:
       jsbi: 4.3.2
 
-  '@leemour/cli-core@0.11.0(commander@15.0.0)(typescript@7.0.2)':
+  '@leemour/cli-core@0.13.0(commander@15.0.0)(typescript@7.0.2)':
     dependencies:
       cli-table3: 0.6.5
       env-paths: 4.0.0
