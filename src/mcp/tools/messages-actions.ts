@@ -16,12 +16,24 @@ export const messageActionTools = (messenger: Messenger): Record<string, AnyTool
       description:
         "Replace the text of one of the owner's own messages. Only when the owner asked for this exact change. " +
         "The other side may have read the old text already. Repeating the same edit changes nothing.",
-      input: v.object({ chat, message, text: v.pipe(v.string(), v.minLength(1)) }),
+      input: v.object({
+        chat,
+        message,
+        text: v.pipe(v.string(), v.minLength(1)),
+        markdown: v.optional(
+          v.pipe(v.boolean(), v.description("read **bold**, _italic_, ~~struck~~ and `code`; \\ keeps a mark literal")),
+        ),
+      }),
       annotations: WRITE,
       _meta: APPROVE,
       permission: "edit",
       online: (adapter, args, { guard }) =>
-        messages(adapter, guard).edit({ chat: args.chat, message: args.message, text: args.text }),
+        messages(adapter, guard).edit({
+          chat: args.chat,
+          message: args.message,
+          text: args.text,
+          markdown: args.markdown === true,
+        }),
     }),
     messages_forward: tool({
       title: "Forward a message",

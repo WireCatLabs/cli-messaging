@@ -8,6 +8,9 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Added
 
+- **`messages edit --md`**, and `markdown` on the `messages_edit` tool: the new text's marks become
+  formatting, as in `messages send --md`. `MessageEditing.edit` receives `{ markup }` as a fourth
+  argument; an adapter that cannot format refuses it rather than dropping it.
 - **`messages forward --send-id <id>`**, and `send_id` on the `messages_forward` tool: a forward whose
   outcome was unknown is repeated with its send id, and the messenger keeps one copy. The answer now
   carries `sendId`. `MessageEditing.forward` receives `sendId` in its options; an adapter passes it as
