@@ -25,6 +25,9 @@ import * as chatQueries from "./sqlite/chats.js"
 import * as identities from "./sqlite/identities.js"
 import * as messageWrites from "./sqlite/messages.js"
 import { openSqlite, type StoreContext } from "./sqlite/open.js"
+import * as ranges from "./sqlite/ranges.js"
+import * as sync from "./sqlite/sync.js"
+import * as transcripts from "./sqlite/transcripts.js"
 import { parsed, present, toIso, toMs } from "./sqlite/values.js"
 
 /** Which account of which messenger a call is about. */
@@ -246,10 +249,9 @@ export const openStore = async ({ path, env, now = Date.now }: StoreOptions = {}
 const OWN_NUMBERING = "('channel', 'supergroup', 'gigagroup', 'monoforum')"
 
 const storeOver = (context: StoreContext): MessageStore => {
-  const { database, now } = context
+  const { database } = context
   const one = (sql: string, ...parameters: SqlValue[]) => database.prepare(sql).get(...parameters)
   const all = (sql: string, ...parameters: SqlValue[]) => database.prepare(sql).all(...parameters)
-  const run = (sql: string, ...parameters: SqlValue[]) => database.prepare(sql).run(...parameters)
 
   const inTransaction = (body: () => void): void => {
     database.exec("BEGIN IMMEDIATE")
@@ -425,16 +427,8 @@ const storeOver = (context: StoreContext): MessageStore => {
   const writeMembers = (key: AccountKey, accountKey: number, chatId: Id, memberIds: Id[]) =>
     chatQueries.writeMembers(context, key, accountKey, chatId, memberIds)
 
-  const writeState = (accountKey: number, name: string, value: string): void => {
-    run(
-      `INSERT INTO sync_state (account_pk, key, value, at) VALUES (?, ?, ?, ?)
-       ON CONFLICT (account_pk, key) DO UPDATE SET value = excluded.value, at = excluded.at`,
-      accountKey,
-      name,
-      value,
-      now(),
-    )
-  }
+  const writeState = (accountKey: number, name: string, value: string) =>
+    sync.writeState(context, accountKey, name, value)
 
   const tombstone = (pk: number) => messageWrites.tombstone(context, pk)
 
@@ -477,9 +471,7 @@ const storeOver = (context: StoreContext): MessageStore => {
 
     syncState: async (key, name) => {
       const accountKey = findAccountPk(key)
-      if (accountKey === undefined) return undefined
-      const row = one("SELECT value, at FROM sync_state WHERE account_pk = ? AND key = ?", accountKey, name)
-      return row ? { value: String(row.value), at: toIso(row.at) as string } : undefined
+      return accountKey === undefined ? undefined : sync.syncStateOf(context, accountKey, name)
     },
 
     setSyncState: async (key, name, value) => inTransaction(() => writeState(accountPk(key), name, value)),
@@ -495,24 +487,13 @@ const storeOver = (context: StoreContext): MessageStore => {
 
     clearSyncState: async (key, name) => {
       const accountKey = findAccountPk(key)
-      if (accountKey !== undefined) run("DELETE FROM sync_state WHERE account_pk = ? AND key = ?", accountKey, name)
+      if (accountKey !== undefined) sync.clearState(context, accountKey, name)
     },
 
     claim: async (key, chatId, anchor, holder, forMs) => {
       let taken = false
       inTransaction(() => {
-        const at = now()
-        taken =
-          run(
-            `INSERT INTO fetch_leases (chat_pk, anchor, holder, expires_at) VALUES (?, ?, ?, ?)
-             ON CONFLICT (chat_pk, anchor) DO UPDATE SET holder = excluded.holder, expires_at = excluded.expires_at
-             WHERE fetch_leases.holder = excluded.holder OR fetch_leases.expires_at <= ?`,
-            chatPkFor(accountPk(key), chatId),
-            anchor,
-            holder,
-            at + forMs,
-            at,
-          ).changes > 0
+        taken = sync.claim(context, chatPkFor(accountPk(key), chatId), anchor, holder, forMs)
       })
       return taken
     },
@@ -520,36 +501,20 @@ const storeOver = (context: StoreContext): MessageStore => {
     release: async (key, chatId, anchor, holder) => {
       const accountKey = findAccountPk(key)
       const chatKey = accountKey === undefined ? undefined : findChatPk(accountKey, chatId)
-      if (chatKey === undefined) return
-      run("DELETE FROM fetch_leases WHERE chat_pk = ? AND anchor = ? AND holder = ?", chatKey, anchor, holder)
+      if (chatKey !== undefined) sync.release(context, chatKey, anchor, holder)
     },
 
     transcript: async (key, chatId, messageId) => {
       const accountKey = findAccountPk(key)
       const chatKey = accountKey === undefined ? undefined : findChatPk(accountKey, chatId)
-      if (chatKey === undefined) return undefined
-      const row = one(
-        "SELECT text, source FROM transcripts WHERE chat_pk = ? AND message_native_id = ?",
-        chatKey,
-        messageId,
-      )
-      return row ? { text: String(row.text), source: String(row.source) } : undefined
+      return chatKey === undefined ? undefined : transcripts.transcript(context, chatKey, messageId)
     },
 
     keepTranscript: async (key, chatId, messageId, text, source) => {
       if (text.trim() === "") return
-      inTransaction(() => {
-        run(
-          `INSERT INTO transcripts (chat_pk, message_native_id, text, source, heard_at) VALUES (?, ?, ?, ?, ?)
-           ON CONFLICT (chat_pk, message_native_id) DO UPDATE SET
-             text = excluded.text, source = excluded.source, heard_at = excluded.heard_at`,
-          chatPkFor(accountPk(key), chatId),
-          messageId,
-          text,
-          source,
-          now(),
-        )
-      })
+      inTransaction(() =>
+        transcripts.keepTranscript(context, chatPkFor(accountPk(key), chatId), messageId, text, source),
+      )
     },
 
     chats: async (key, window) => {
@@ -715,24 +680,7 @@ const storeOver = (context: StoreContext): MessageStore => {
     purge: async (key) => {
       const accountKey = findAccountPk(key)
       if (accountKey === undefined) return
-      const chatsOf = "SELECT pk FROM chats WHERE account_pk = ?"
-      inTransaction(() => {
-        for (const sql of [
-          `DELETE FROM transcripts WHERE chat_pk IN (${chatsOf})`,
-          `DELETE FROM fetch_leases WHERE chat_pk IN (${chatsOf})`,
-          `DELETE FROM chat_members WHERE chat_pk IN (${chatsOf})`,
-          `DELETE FROM sync_ranges WHERE chat_pk IN (${chatsOf})`,
-          "DELETE FROM message_revisions WHERE message_pk IN (SELECT pk FROM messages WHERE account_pk = ?)",
-          "DELETE FROM attachments WHERE message_pk IN (SELECT pk FROM messages WHERE account_pk = ?)",
-          "DELETE FROM messages WHERE account_pk = ?",
-          "DELETE FROM chats WHERE account_pk = ?",
-          "DELETE FROM sync_state WHERE account_pk = ?",
-          "DELETE FROM account_identities WHERE account_pk = ?",
-          "DELETE FROM accounts WHERE pk = ?",
-        ]) {
-          run(sql, accountKey)
-        }
-      })
+      inTransaction(() => accounts.purgeAccount(context, accountKey))
     },
 
     search: async (query, { limit, account }) => find({ text: query, limit, ...(account ? { account } : {}) }),
@@ -772,21 +720,7 @@ const storeOver = (context: StoreContext): MessageStore => {
     markRange: async (key, chatId, from, to) => {
       let merged: Range = { from, to }
       inTransaction(() => {
-        const chatKey = chatPkFor(accountPk(key), chatId)
-        const touching = all(
-          "SELECT from_key, to_key FROM sync_ranges WHERE chat_pk = ? AND from_key <= ? AND to_key >= ?",
-          chatKey,
-          to + 1,
-          from - 1,
-        )
-        for (const row of touching) {
-          merged = {
-            from: Math.min(merged.from, Number(row.from_key)),
-            to: Math.max(merged.to, Number(row.to_key)),
-          }
-        }
-        run("DELETE FROM sync_ranges WHERE chat_pk = ? AND from_key <= ? AND to_key >= ?", chatKey, to + 1, from - 1)
-        run("INSERT INTO sync_ranges (chat_pk, from_key, to_key) VALUES (?, ?, ?)", chatKey, merged.from, merged.to)
+        merged = ranges.markRange(context, chatPkFor(accountPk(key), chatId), from, to)
       })
       return merged
     },
@@ -815,10 +749,7 @@ const storeOver = (context: StoreContext): MessageStore => {
     ranges: async (key, chatId) => {
       const accountKey = findAccountPk(key)
       const chatKey = accountKey === undefined ? undefined : findChatPk(accountKey, chatId)
-      if (chatKey === undefined) return []
-      return all("SELECT from_key, to_key FROM sync_ranges WHERE chat_pk = ? ORDER BY from_key", chatKey).map(
-        (row) => ({ from: Number(row.from_key), to: Number(row.to_key) }),
-      )
+      return chatKey === undefined ? [] : ranges.ranges(context, chatKey)
     },
 
     close: async () => database.close(),

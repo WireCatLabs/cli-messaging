@@ -1,4 +1,4 @@
-export { and, desc, eq, gt, inArray, isNull, ne, type Placeholder, sql } from "drizzle-orm"
+export { and, desc, eq, gt, gte, inArray, isNull, lte, ne, or, type Placeholder, sql } from "drizzle-orm"
 export {
   index,
   integer,
