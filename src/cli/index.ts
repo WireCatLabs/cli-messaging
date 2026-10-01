@@ -3,6 +3,9 @@ export { INBOX_CHATS, newIn, REVIEW_CHATS, reviewIn, unanswered, unreadIn } from
 export { momentOf } from "../services/moment.js"
 export { maskedAccount } from "../services/people.js"
 export { type AppIdentity, envName } from "./app.js"
+export type { BotAdapter, BotMessenger } from "./bot/port.js"
+export { botFiles, botsDirectory, ChatRegistry, registryProfiles, type SeenChat } from "./bot/registry.js"
+export { BotTokenStore, type BotTokenStoreOptions } from "./bot/token.js"
 export { CONTRACT, commandsCommand } from "./commands-command.js"
 export { configCommand } from "./config-command.js"
 export {

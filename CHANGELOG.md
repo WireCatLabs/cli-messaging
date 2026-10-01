@@ -21,6 +21,11 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   conversation rows with them. Each rebuild of a chat is written under its own build number and made
   current at once, so a big chat's rebuild never holds the write lock for long. `messages.mentions`
   keeps whom a message mentions by id, where the messenger says so.
+- **A bot's pieces, for the shared bot commands** (P8): `BotTokenStore` (keyring account
+  `bot:<profile>` under the app's own service, `<PREFIX>_BOT_TOKEN` first, then a 0600 file),
+  `ChatRegistry` and `registryProfiles` (the chats a bot has seen, one 0600 file per bot),
+  `botFiles` and `botsDirectory` (max-cli's paths, unchanged), and the types `BotMessenger` and
+  `BotAdapter`. From `@leemour/cli-messaging/cli`.
 - **A bot's settings** (P8): the file gains `personal` and `bot` sections, each with `defaults` and
   `profiles`; the most specific entry wins — this profile's bot entry, the profile, every bot,
   everyone. `resolveSettings(flags, { kind: "bot" })` reads them; `Settings` gains `kind` and
@@ -1020,7 +1025,6 @@ they now fail as unknown commands or options.
   `watch` and their own `--help` promise. They printed the whole page as one JSON line. A script that
   worked around it by reading `.items` from that line must now read each line as a message; the hint
   about older messages goes to stderr.
-||||||| parent of d951948 (feat(inbox): leave out muted and archived chats unless they mention the owner)
 
 ## 0.29.0 — 29.09.2026
 
