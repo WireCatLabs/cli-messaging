@@ -880,6 +880,13 @@
           "planned": {
             "tg": "P8"
           }
+        },
+        "--newest": {
+          "in": [],
+          "planned": {
+            "max": "phase 2 item 10b",
+            "tg": "P8"
+          }
         }
       }
     },

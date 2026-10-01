@@ -155,7 +155,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--model` | `<id>` | which downloaded speech model hears them; `models audio list` shows them. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | `conversations links clear` (planned), `inbox`, `messages list`, `messages transcribe`, `review` (planned) |
 | `--multiple` |  | people may pick several answers |  | `polls create` |
 | `--new` |  | what arrived since the last check, each message once — for scheduled runs |  | `inbox` |
-| `--newest` |  | newest first instead of best first |  | `messages search` (planned) |
+| `--newest` |  | newest first instead of best first |  | `bot messages search` (planned), `messages search` (planned) |
 | `--no-ban` |  | remove without banning; by default a removed person cannot come back by the link |  | `bot chats check` (planned) |
 | `--no-preview` |  | no preview card for a link in the text |  | `messages send` |
 | `--no-record` |  | do not keep it, whatever the configuration says |  | every command |
