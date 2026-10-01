@@ -8,11 +8,16 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Added
 
+- **A duration takes `h` and `d` too** — `--timeout 1h`, `--pause`, and every option that reads one
+  with `parseDuration`.
 - **`listed` and `renderList`** in `./cli`: a list with no pages in the envelope a paged one uses —
   `page: 1`, `limit` the count, `hasMore: false`.
 
 ### Changed — may break callers
 
+- **`review --unanswered` takes a duration** — `4h`, `1d` — not bare hours; `24h` without a value,
+  as before. `--unanswered 4` is now refused, with the units it takes. The MCP tool's `unanswered` stays
+  a number of hours.
 - **Every list answers `{ items, page, limit, hasMore }` in `--json`.** `store status` and
   `store jobs list` printed a bare array; `messages scheduled`, `messages context`,
   `account sessions list` and `models audio list` printed only `items` (`directory` stays beside

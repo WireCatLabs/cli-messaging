@@ -51,7 +51,7 @@ guessable from the others.
    both shows and changes.
 5. **Options are plain words, never a wire field** (`--send-id`, not `--cid`). One meaning, one
    name, in every command of both tools. **A length of time is a `<duration>`** (`500ms`,
-   `30s`, `2m`), parsed as `--timeout` is; `--since` takes a duration or a time.
+   `30s`, `2m`, `4h`, `1d`) — a number and a unit, never a bare number — parsed as `--timeout` is; `--since` takes a duration or a time.
 6. **Arguments have fixed names:** `<chat>`, `<message>`, `<person>`, `<text>`, `<link>`,
    `<file>`, `<job>`.
 7. **One word per idea** in help, docs and errors. The **local store** is the message database
@@ -108,7 +108,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--for-everyone` |  | delete for everyone in the chat, not only for you — they cannot get it back |  | `messages delete` |
 | `--format` | `<format>` | jsonl, one message per line, or a markdown transcript. **the shared `store export` takes `jsonl` or `markdown`, max's own takes `jsonl` or `md` (e4)** |  | `store export` |
 | `--history` |  | the people added also see the messages from before they came |  | `chats members add` (max-only) |
-| `--idle` | `<duration>` | stop after this long with nobody using it — 15m, 1h is 60m |  | `serve` (planned), `server restart` (planned), `server start` (planned) |
+| `--idle` | `<duration>` | stop after this long with nobody using it — 15m, 1h |  | `serve` (planned), `server restart` (planned), `server start` (planned) |
 | `--json` |  | machine-readable output: one JSON value on stdout, nothing else |  | every command |
 | `--jsonl` |  | machine-readable output: one JSON object per line, for streaming and jq |  | every command |
 | `--kind` | `<kind>` | only chats of this kind: dialog, group, channel or saved |  | `chats list` |
@@ -162,7 +162,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--to` | `<chat>` | the chat to forward it to: an id, or part of a chat name |  | `messages forward` |
 | `--trace` |  | one line per request on stderr: ids and timings, never message content |  | every command |
 | `--transcribe` |  | hear voice messages not heard yet, on this machine; slow, the model must be downloaded |  | `inbox`, `messages list`, `review` |
-| `--unanswered` | `[hours]` | only questions to you or a group's admins that nobody answered, asked at least this long ago; 24 hours if not given. **takes bare hours, not a duration like `2h` (e2)** |  | `review` |
+| `--unanswered` | `[duration]` | only questions to you or a group's admins that nobody answered, asked at least this long ago — 4h, 1d. **max's own `review` still takes bare hours until T6 moves it (e2)** | `24h` | `review` |
 | `--unread` |  | only chats with unread messages |  | `chats list` |
 | `--until` | `<message>` | only up to this message id, inclusive; the newest by default |  | `chats mark-read` |
 | `--verbose` |  | more detail in what is shown: -v ids, -vv everything known | `0` | every command |

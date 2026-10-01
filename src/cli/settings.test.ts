@@ -69,7 +69,7 @@ describe("--timeout", () => {
   it("**refuses a bare number**, because the unit is the whole question", () => {
     // `timeoutMs` in the configuration file is milliseconds and every comparable tool means
     // seconds. Either guess is a thirty-fold surprise, so it asks.
-    expect(() => settings({ timeout: "30" })).toThrow(/30s, 2m or 500ms/)
+    expect(() => settings({ timeout: "30" })).toThrow(/500ms, 30s, 2m, 4h or 1d/)
     expect(() => settings({ timeout: "abc" })).toThrow(/duration with a unit/)
   })
 
