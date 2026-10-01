@@ -1118,10 +1118,7 @@
     "store fetch": {
       "state": "both",
       "options": {
-        "--background": {
-          "state": "planned",
-          "by": "T6"
-        },
+        "--background": "both",
         "--estimate": "both",
         "--last": "both",
         "--max-pages": "both",
