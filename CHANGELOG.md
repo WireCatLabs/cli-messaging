@@ -8,6 +8,9 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Added
 
+- **`account show --show-phone`.** `Account` gains `phone`, filled where the messenger tells it;
+  `account show` prints its last four digits (`***1234`) unless `--show-phone` is given, and the
+  `account_show` tool always does. `maskedAccount` is exported from `./cli`.
 - **`store export --output <file> --since <time>`.** `--output` writes JSON lines, or the transcript
   with `--format markdown`, to a new file with mode 600 and answers `{ path, format, count }`; it
   refuses a file that exists. `--since` exports from an ISO 8601 time or `30m`/`2h`/`1d` ago on.

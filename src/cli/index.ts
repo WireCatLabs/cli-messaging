@@ -11,7 +11,7 @@ export {
 } from "./context.js"
 export { type Closeable, withDeadline } from "./deadline.js"
 export { isCliFailure, isCommanderFailure } from "./failures.js"
-export { accountCommand } from "./messenger/account-command.js"
+export { accountCommand, maskedAccount } from "./messenger/account-command.js"
 export { accountFileFor, rememberAccount } from "./messenger/accounts.js"
 export { storeCommand } from "./messenger/archive-commands.js"
 export { chatsCommand } from "./messenger/chats-command.js"

@@ -626,6 +626,17 @@ describe("sending over MCP", () => {
     expect(JSON.stringify(entries)).not.toContain("fixed")
   })
 
+  it("shows the account with the phone cut to its last four digits", async () => {
+    const telegram = scripted({
+      me: async () => ({ id: "500", name: "Owner", username: null, phone: "+00 000 000-1234" }),
+    })
+    const { call } = await connect(telegram)
+
+    const { body } = await call("chat_account_show", {})
+
+    expect(body).toMatchObject({ id: "500", phone: "***1234" })
+  })
+
   it("forwards through the guard, as a forward into the target chat", async () => {
     const forwards: unknown[] = []
     const telegram = scripted({

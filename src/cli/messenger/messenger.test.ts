@@ -1160,6 +1160,19 @@ describe("the guard, account and mcp config commands", () => {
     expect(json(stdout)).toEqual({ id: "500", name: "Owner", username: null })
   })
 
+  it("**show the phone's last four digits, the whole number only with --show-phone**", async () => {
+    const withPhone: MessengerAdapter = {
+      ...fake,
+      me: async () => ({ ...(await fake.me()), phone: "+00 000 000-1234" }),
+    }
+
+    const masked = await call(["account", "show", "--json"], async () => withPhone, sandbox())
+    const whole = await call(["account", "show", "--show-phone", "--json"], async () => withPhone, sandbox())
+
+    expect(json(masked.stdout).phone).toBe("***1234")
+    expect(json(whole.stdout).phone).toBe("+00 000 000-1234")
+  })
+
   it("**print the mcp entry by full path**, and warn when node belongs to a version manager", async () => {
     const env = sandbox()
     const mcp = { execPath: "/home/o/.nvm/versions/node/v24/bin/node", scriptPath: "/usr/lib/chat/bin/chat.js" }

@@ -152,7 +152,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--search` | `<text>` | only chats whose name contains this; at least 3 characters |  | `chats list`, `contacts list` |
 | `--send-id` | `<id>` | reuse the id of an earlier send whose outcome is unknown; the messenger drops the duplicate. **max spells the value `<n>`** |  | `messages forward`, `messages send`, `polls create` |
 | `--serve` |  | start `serve` in the background if it is not running (the default) |  | every command (planned) |
-| `--show-phone` |  | print the whole phone number |  | `account show` (planned) |
+| `--show-phone` |  | print the whole phone number |  | `account show` |
 | `--silent` |  | deliver without a notification |  | `messages forward`, `messages send`, `polls create` |
 | `--since` | `<id-or-time>` | from this message id, an ISO 8601 time, or 2h / 1d ago; each command says its default. **the shared `chats events`, `store fetch`, `store export`, `inbox` and `review` take `<time>` only, never a message id: a Telegram id is a counter within one chat** |  | `chats check` (planned), `chats events`, `inbox`, `review`, `store export`, `store fetch` |
 | `--stop` |  | stop this profile's server — the same as `server stop` |  | `serve` (planned) |
