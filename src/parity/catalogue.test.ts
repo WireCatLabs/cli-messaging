@@ -13,11 +13,12 @@ describe("the option catalogue", () => {
 
   it("lists an option once, with every command that takes it and how", () => {
     const table = renderCatalogue({
+      clis: ["max", "tg"],
       options: { "--max": { value: "<n>", meaning: "at most n", note: "clash with --last" } },
       globalOptions: {},
       commands: {
-        store: { state: "both" },
-        "store fetch": { state: "both", options: { "--max": { state: "planned", by: "P1" } } },
+        store: { in: "all" },
+        "store fetch": { in: "all", options: { "--max": { in: ["tg"], planned: { max: "P1" } } } },
       },
     })
 

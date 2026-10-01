@@ -25,12 +25,13 @@ const program: CommandsJson = {
 }
 
 const manifest: Manifest = {
+  clis: ["max", "tg"],
   options: {},
   globalOptions: {},
   commands: {
     "messages send": {
-      state: "both",
-      options: { "--voice": { state: "planned", by: "P1" }, "--sticker": { state: "max-only", reason: "MAX" } },
+      in: "all",
+      options: { "--voice": { in: [], planned: { max: "P1", tg: "P1" } }, "--sticker": { in: ["max"], reason: "MAX" } },
     },
   },
 }

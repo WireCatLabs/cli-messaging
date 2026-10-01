@@ -5,7 +5,11 @@ export const CATALOGUE_END = "<!-- end of the option catalogue -->"
 
 const cell = (text: string) => text.replaceAll("|", "\\|").replaceAll("\n", " ")
 
-const where = (entry: Entry) => (entry === "both" ? "" : entry.state === "planned" ? " (planned)" : ` (${entry.state})`)
+const where = (entry: Entry) => {
+  if (entry === "all" || entry.in === "all") return ""
+  if (Object.keys(entry.planned ?? {}).length > 0) return " (planned)"
+  return entry.in.length === 1 ? ` (${entry.in[0]}-only)` : ` (${entry.in.join(", ")} only)`
+}
 
 /** The option catalogue as a Markdown table: each option once, and the commands that take it. */
 export const renderCatalogue = (manifest: Manifest): string => {

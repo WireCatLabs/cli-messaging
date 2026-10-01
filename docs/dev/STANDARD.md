@@ -342,8 +342,8 @@ many), `--allow-any-file` (which files).
 3. **An option's description says what it changes and its unit**: `--pause <duration>` "wait this
    long between pages".
 4. **A shared option has one sentence in both tools**, checked by the parity workflow
-   (`cli-messaging-parity wording <max.json> <tg.json>`). A difference is allowed only where the
-   sentence names something the messenger's own way — how to name a chat, which rights or events it
+   (`cli-messaging-parity wording <max.json> <tg.json>`; each file is known by its `cli`, so it takes
+   any number, in any order). A difference is allowed only where the sentence names something the messenger's own way — how to name a chat, which rights or events it
    has — and the option's catalogue `note` says so; a note also marks a difference still open, and
    names who closes it.
 
@@ -384,40 +384,57 @@ many), `--allow-any-file` (which files).
 
 ## The parity manifest
 
-`parity.json`, shipped in this package, lists every command path and option of both tools. Each
-CLI's CI checks its own `commands --json` against its column of the manifest in the version of this
-package it installed (`pnpm parity:check`).
+`parity.json`, shipped in this package, lists every command path and option of every tool. Its
+`clis` names them (`["max", "tg"]`). Each CLI's CI checks its own `commands --json` against its
+column of the manifest in the version of this package it installed (`pnpm parity:check`).
 
-A row is one of:
+Each row says which CLIs have it:
 
-| State | Meaning | What `parity:check` checks |
+```json
+"messages list": { "in": "all" },
+"polls":         { "in": ["max"], "reason": "Telegram polls are …" },
+"store clear":   { "in": ["tg"], "planned": { "max": "T6" } }
+```
+
+| Field | Meaning | What `parity:check` checks for a CLI |
 |---|---|---|
-| `both` | the command or option exists in both tools | present in this tool |
-| `max-only`, `tg-only` | one messenger lacks it; `reason` says why | present in that tool, absent in the other |
-| `planned` | the gap is known and owned; `by` names the workstream | nothing — present or absent both pass |
+| `in` | `"all"`, or the CLIs from `clis` that have it | listed: present in this tool |
+| `planned` | a CLI outside `in` → who closes the gap (a workstream) | planned: nothing — present or absent both pass |
+| `reason` | why the CLIs neither in `in` nor planned lack it; required when there are any | neither: absent in this tool |
 
-A one-sided row covers every path below it. A `planned` row with `"subtree": true` does the same, for
-a whole command tree one tool has yet to build: `bot`, planned for tg, is one row.
+An option is the same object, or the bare string `"all"`. A row only one CLI has, with a `reason`,
+covers every path below it. A row with `"subtree": true` and a plan does the same, for a whole
+command tree a tool has yet to build: `bot` is one row.
+
+**A new CLI joins with one command:** `pnpm parity:seed --cli <name>` adds it to `clis` and plans
+every row and option for it, by `"?"`. Its parity check passes from its first pull request, and the
+gaps stay listed. Its author then narrows the rows:
+moves the CLI into `in` where it has the command, names who closes each plan, and gives a reason where
+it never will. `pnpm parity:seed <commands.json...>`, one file per CLI, adds the rows the CLIs have
+and the manifest lacks; a row already there is never changed.
 
 **How a new command or option reaches CI without a release of this package per row.** The docs
-pull request that introduces it adds its row as `planned`, here, before any code. `planned` passes
-whether the command exists or not, so the code pull request in either CLI lands on the manifest
-already released. The flip to `both` goes into the next release of this package with whatever else
+pull request that introduces it adds its row as planned, here, before any code. Planned passes
+whether the command exists or not, so the code pull request in any CLI lands on the manifest
+already released. The flip to `in` goes into the next release of this package with whatever else
 it carries; a row is never the only reason for a release.
 
-**A row says `both` only when both tools have it on their own `main`.** A shared command that one CLI
-does not use yet — max keeps its own `messages edit` until it moves onto the shared one — keeps that
-row `planned`, by the workstream that moves it. Flipped early, the row fails that CLI's
-`parity:check` on its next upgrade of this package and blocks the upgrade.
+**A row puts a CLI in `in` only when that tool has it on its own `main`.** A shared command that one
+CLI does not use yet — max keeps its own `messages edit` until it moves onto the shared one — stays
+planned for it, by the workstream that moves it. So does an option a CLI still has and is about to
+drop. Flipped early, the row fails that CLI's `parity:check` on its next upgrade of this package and
+blocks the upgrade.
 
-**This repository checks both tools' `main` against its own manifest** (`.github/workflows/parity.yml`):
+**This repository checks every tool's `main` against its own manifest** (`.github/workflows/parity.yml`):
 on a pull request that touches the manifest or the check, on every push to `main`, and daily. It
 builds tg-cli and max-cli from their `main` and runs the same check, so a row flipped early fails
 here, before the release that would carry it — not weeks later, when a CLI upgrades. The published
-CLIs are not the reference: a release always trails `main`, so they lag every new `both` row.
+CLIs are not the reference: a release always trails `main`, so they lag every row that gains a CLI.
+A new CLI is added to the workflow's matrix and its wording job when its repository exists.
 
-**The milestone audit is one command:** `pnpm parity:audit --fresh` clones and builds both tools'
+**The milestone audit is one command:** `pnpm parity:audit --fresh` clones and builds every tool's
 `main` and prints, besides the manifest's state, what CI does not fail on: the shared version each
 tool pins, the MCP tools each offers, the user pages and their headings, the README sections, and the
 release and QA scripts and skills. Each MCP server starts in an empty temporary home, so nothing
-reaches Telegram or MAX. `--max <dir> --tg <dir>` uses checkouts already built.
+reaches Telegram or MAX. `--max <dir> --tg <dir>`, one option per CLI in `clis`, uses checkouts already
+built.
