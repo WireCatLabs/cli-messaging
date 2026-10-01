@@ -1052,6 +1052,52 @@ describe("the shared read commands", () => {
     expect((await call(["conversations", "batches", "next", "--chat", "7"], never, env)).code).toBe(5)
   })
 
+  it("**stores the agent's answer from stdin** with messages read-only, and not with conversations.links read-only", async () => {
+    const root = mkdtempSync(join(tmpdir(), "messenger-"))
+    const env = {
+      CHAT_STATE_DIR: join(root, "state"),
+      CHAT_CONFIG_DIR: join(root, "config"),
+      MESSAGING_STORE: join(root, "m.db"),
+    }
+    await call(["messages", "context", "Book", "2", "--json"], async () => fake, env)
+    const never = async (): Promise<MessengerAdapter> => {
+      throw new Error("answers go to the store alone")
+    }
+    const permissions = (levels: Record<string, string>) => {
+      mkdirSync(env.CHAT_CONFIG_DIR, { recursive: true })
+      writeFileSync(
+        join(env.CHAT_CONFIG_DIR, "config.json"),
+        JSON.stringify({ profiles: { default: { permissions: levels } } }),
+      )
+    }
+    const piped = (text: string) => ({ stdin: Object.assign(Readable.from([text]), { isTTY: false }) })
+    const answer = (batch: string) =>
+      call(
+        ["conversations", "links", "add", "--batch", batch, "--json"],
+        never,
+        env,
+        piped(JSON.stringify({ model: "m", answers: [{ message: "2", parent: "1", confidence: 0.9 }] })),
+      )
+    const batch = JSON.parse(
+      (await call(["conversations", "batches", "next", "--chat", "7", "--json"], never, env)).stdout[0] ?? "",
+    ).batch
+
+    permissions({ messages: "readonly" })
+    expect(JSON.parse((await answer(batch)).stdout[0] ?? "")).toEqual({ chat: "7", stored: 1 })
+    expect((await call(["conversations", "links", "add", "--batch", batch], never, env, piped("not json"))).code).toBe(
+      2,
+    )
+
+    permissions({ "conversations.links": "readonly" })
+    const refused = await answer(batch)
+    expect(refused.code).toBe(5)
+    expect(refused.stderr.join("\n")).toContain("permissions.conversations.links is readonly")
+
+    permissions({})
+    const cleared = await call(["conversations", "links", "clear", "--chat", "7", "--json"], never, env)
+    expect(JSON.parse(cleared.stdout[0] ?? "")).toEqual({ chat: "7", cleared: 1 })
+  })
+
   it("**report and export what the store holds**, without connecting", async () => {
     const root = mkdtempSync(join(tmpdir(), "messenger-"))
     const env = { CHAT_STATE_DIR: join(root, "state"), MESSAGING_STORE: join(root, "m.db") }

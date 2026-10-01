@@ -72,6 +72,7 @@ describe("the permission key of a command", () => {
     expect(paths.filter((path) => keyForCommand(path) === undefined)).toEqual([])
     expect(keyForCommand(["store", "export"])).toBe("messages")
     expect(keyForCommand(["conversations", "show"])).toBe("messages")
+    expect(keyForCommand(["conversations", "links", "add"])).toBe("conversations.links")
     expect(keyForCommand(["store", "backup"])).toBeNull()
     expect(keyForCommand(["chats", "members", "list"])).toBe("chats.members.list")
   })

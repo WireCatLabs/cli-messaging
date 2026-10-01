@@ -1,7 +1,7 @@
 import { CliError } from "@leemour/cli-core"
 import { type LinkInput, linkMessages, RULES_VERSION } from "../conversations/link.js"
 import type { Id, Message, Page } from "../domain/models.js"
-import type { ConversationSummary, LinkBatch, StoredLink } from "../store/store.js"
+import type { AgentAnswer, ConversationSummary, LinkBatch, StoredLink } from "../store/store.js"
 import type { ServiceDeps } from "./deps.js"
 import { storedChatId } from "./messages.js"
 
@@ -45,6 +45,10 @@ export interface ConversationsService {
   batchStatus(chat: string, size: number): Promise<BatchStatus>
   /** The next window for the agent; `undefined` when every message is answered (A1–A4). */
   nextBatch(chat: string, size: number): Promise<LinkBatch | undefined>
+  /** Stores the agent's answer to a batch, all or nothing (A5); `conversations build` then uses it. */
+  addAnswers(batch: string, answer: AgentAnswer): Promise<{ chat: Id; stored: number }>
+  /** Drops the agent's answers for a chat, or one model's (A10). */
+  clearAnswers(chat: string, model?: string): Promise<{ chat: Id; cleared: number }>
 }
 
 export interface BatchStatus {
@@ -152,6 +156,16 @@ export const conversationsService = (deps: ServiceDeps): ConversationsService =>
     nextBatch: async (chat, size) => {
       const { store, account, chatId } = await found(chat)
       return store.nextBatch(account, chatId, { size: sized(size) })
+    },
+
+    addAnswers: async (batch, answer) => {
+      const store = await deps.store()
+      return store.saveAnswers(await deps.account(), batch, answer)
+    },
+
+    clearAnswers: async (chat, model) => {
+      const { store, account, chatId } = await found(chat)
+      return { chat: chatId, cleared: await store.clearAnswers(account, chatId, model) }
     },
 
     links: async (chat, message) => {
