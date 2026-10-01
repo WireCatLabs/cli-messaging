@@ -33,6 +33,15 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   `wordingProblems(manifest, programs)` takes a list of programs known by their `cli`, and the audit's
   `AuditInput` takes `sides` by CLI name. What to change: nothing, unless you import `./parity`.
 
+### Fixed
+
+- **A write cut off by `--timeout` is an unknown outcome, not a timeout.** When the command's time ran
+  out with a send, an edit or any other write still waiting for its answer, the error was `timeout`
+  — which reads as "nothing happened" and invites a second copy — and the journal had no line for
+  it. Now it is `outcome_unknown` ("check before repeating it", exit 14) with the write's
+  `operationIds`, and the journal records each one as `outcome_unknown`. Reads still time out as
+  before. Per command, so an MCP server's calls do not cut each other's writes.
+
 ## 0.97.0 — 01.10.2026
 
 Released early: max-cli 6c (T6 store group): its parity check needs the store rows planned (#333)
