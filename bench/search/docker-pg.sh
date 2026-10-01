@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Usage: docker-pg.sh start N | stop N. Keeps the container id in the data dir; stops by that id only.
 set -euo pipefail
-DATA="${SEARCHBENCH_DATA:-${TMPDIR:-/tmp}/searchbench-data}"
+DATA="${SEARCHBENCH_DATA:-${XDG_CACHE_HOME:-$HOME/.cache}/cli-messaging/searchbench}"
 N="$2"
 PGDIR="$DATA/pgdocker-$N"
 IDFILE="$DATA/pgdocker-$N.cid"

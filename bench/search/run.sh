@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # Usage: run.sh N [bun]. One engine at a time; each engine's database is removed after it is measured,
-# because the data dir is tmpfs and shares RAM with the engines.
+# so the corpus stays and the disk holds one engine at a time.
 set -euo pipefail
 cd "$(dirname "$0")"
 N="$1"
-DATA="${SEARCHBENCH_DATA:-${TMPDIR:-/tmp}/searchbench-data}"
+DATA="${SEARCHBENCH_DATA:-${XDG_CACHE_HOME:-$HOME/.cache}/cli-messaging/searchbench}"
 R=results.md
 build_header() {
   { echo; echo "#### Build — $1"; echo
