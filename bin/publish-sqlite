@@ -1,0 +1,39 @@
+#!/usr/bin/env sh
+# Publishes an empty @leemour/cli-messaging-sqlite@0.0.0 once, so the package exists and npm lets its
+# trusted publisher be set (npmjs.com → the package → Settings → Trusted Publisher: GitHub Actions,
+# leemour/cli-messaging, workflow sqlite.yml, environment npm). Every version with libraries is
+# published by that workflow, never from this machine.
+#
+#   bin/publish-sqlite
+set -eu
+
+package=@leemour/cli-messaging-sqlite
+if npm view "$package" version >/dev/null 2>&1; then
+  echo "$package is already on npm — set its trusted publisher, then run the SQLite workflow with publish"
+  exit 0
+fi
+
+if [ -z "${NPM_TOKEN:-}" ]; then
+  NPM_TOKEN=$(secret-tool lookup service npm account leemour 2>/dev/null) || {
+    echo "no npm token: export NPM_TOKEN, or store one with: secret-tool store --label=npm service npm account leemour" >&2
+    exit 1
+  }
+fi
+[ -n "$NPM_TOKEN" ] || { echo "the npm token is empty" >&2; exit 1; }
+export NPM_TOKEN
+
+work=$(mktemp -d)
+trap 'rm -rf "$work"' EXIT
+# A config that names the variable, not the value: the token stays in the environment.
+printf '//registry.npmjs.org/:_authToken=${NPM_TOKEN}\n' > "$work/.npmrc"
+cat > "$work/package.json" <<JSON
+{
+  "name": "$package",
+  "version": "0.0.0",
+  "description": "Placeholder: the SQLite builds for @leemour/cli-messaging are published from CI",
+  "license": "MIT",
+  "repository": { "type": "git", "url": "git+https://github.com/leemour/cli-messaging.git", "directory": "packages/sqlite" }
+}
+JSON
+(cd "$work" && npm publish --access public --userconfig "$work/.npmrc")
+echo "published $package@0.0.0 — now set its trusted publisher on npmjs.com (see the top of this file)"
