@@ -1,7 +1,7 @@
 import { CliError } from "@leemour/cli-core"
 import type { MessengerAdapter } from "../cli/messenger/port.js"
 import type { Chat, Id, Inbox, InboxChat, Message, Review, ReviewChat } from "../domain/models.js"
-import type { ServiceDeps } from "./deps.js"
+import { PUSHED, type ServiceDeps } from "./deps.js"
 
 /**
  * **At most this many history reads per `inbox`**, as in max-cli: a person opening twenty chats in
@@ -240,6 +240,7 @@ export const inboxService = (deps: ServiceDeps): InboxService => ({
         "`inbox` asks the messenger what is new; with `--offline` there is nothing new",
       )
     }
+    if (deps.reads === "store") throw new CliError("validation_error", `${PUSHED}; \`inbox\` does not read it yet`)
     const connection = await deps.connection()
     return since === undefined ? unreadIn(connection, { limit, all }) : newIn(connection, { since, limit, all })
   },
@@ -248,6 +249,7 @@ export const inboxService = (deps: ServiceDeps): InboxService => ({
     if (deps.offline) {
       throw new CliError("validation_error", "`review` asks the messenger what changed; with `--offline` nothing did")
     }
+    if (deps.reads === "store") throw new CliError("validation_error", `${PUSHED}; \`review\` does not read it yet`)
     return reviewIn(await deps.connection(), options)
   },
 })

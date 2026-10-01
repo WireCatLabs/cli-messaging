@@ -6,7 +6,7 @@ import { guardedWrite, type Operated } from "../sends/guarded.js"
 import { newOperationId } from "../sends/send-id.js"
 import type { AccountKey, MessageStore } from "../store/store.js"
 import type { PageWindow } from "./chats.js"
-import { type ServiceDeps, storeIfOpen } from "./deps.js"
+import { fromStore, type ServiceDeps, storeIfOpen } from "./deps.js"
 
 export interface ContactSync {
   added: number
@@ -60,15 +60,16 @@ export const peopleService = (deps: ServiceDeps): PeopleService => {
   return {
     list: async (options) => {
       // The chats first: a messenger whose login brings its people writes them before the store is asked.
-      const chats = deps.offline ? undefined : (await (await deps.connection()).chats({ offset: 0 })).items
-      const held = deps.offline ? { store: await deps.store(), account: await deps.account() } : await storeIfOpen(deps)
+      const stored = fromStore(deps)
+      const chats = stored ? undefined : (await (await deps.connection()).chats({ offset: 0 })).items
+      const held = stored ? { store: await deps.store(), account: await deps.account() } : await storeIfOpen(deps)
       if (held && (await held.store.countContacts(held.account)) > 0)
         return storedContacts(held.store, held.account, options)
       return contactsIn(chats ?? (await (await deps.store()).chats(await deps.account(), {})).items, options)
     },
 
     show: async (person) => {
-      if (deps.offline) {
+      if (fromStore(deps)) {
         const store = await deps.store()
         const account = await deps.account()
         const found = pickPerson(person, await store.people(account.provider, { account: account.account }))

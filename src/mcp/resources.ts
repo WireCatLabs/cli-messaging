@@ -1,4 +1,7 @@
 import { type McpServer, ResourceTemplate } from "@modelcontextprotocol/server"
+import type { Messenger } from "../cli/messenger/context.js"
+import type { SendGuard } from "../sends/guard.js"
+import { servicesFor, storedDeps } from "../services/index.js"
 import type { AccountKey, MessageStore } from "../store/store.js"
 import type { MessengerSession } from "./session.js"
 
@@ -19,6 +22,8 @@ export const registerResources = (
     limit,
     recorded,
     withStore,
+    messenger,
+    guard,
   }: {
     command: string
     name: string
@@ -29,6 +34,9 @@ export const registerResources = (
       work: (store: MessageStore, account: AccountKey) => Promise<T>,
       options: { name: string },
     ) => Promise<T>
+    /** Whose history is read from the store (`Messenger.history`), so the resource never connects either. */
+    messenger: Messenger
+    guard: SendGuard
   },
 ): void => {
   server.registerResource(
@@ -55,10 +63,22 @@ export const registerResources = (
       mimeType: "application/json",
     },
     async (uri, { id }) => {
-      const body = await session.use("mcp resource chat", async (adapter) => ({
-        chat: await adapter.chat(String(id)),
-        messages: (await adapter.history(String(id), { limit })).items,
-      }))
+      const body =
+        messenger.history === "store"
+          ? await withStore(
+              async (store, account) => {
+                const services = servicesFor(storedDeps(messenger, store, account, guard))
+                return {
+                  chat: await services.chats.show(String(id)),
+                  messages: (await services.messages.list(String(id), { limit })).items,
+                }
+              },
+              { name: "mcp resource chat" },
+            )
+          : await session.use("mcp resource chat", async (adapter) => ({
+              chat: await adapter.chat(String(id)),
+              messages: (await adapter.history(String(id), { limit })).items,
+            }))
       return { contents: [{ uri: uri.href, mimeType: "application/json", text: JSON.stringify(body) }] }
     },
   )

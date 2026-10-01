@@ -236,6 +236,14 @@ with `storedDeps`. Either way a command and its tool run the same method, and so
 error for the same input. Each caller still parses its own input, so an error names `--since` in a
 command and `since` in a tool.
 
+**A messenger that pushes its history reads it from the store.** `Messenger.history: "store"` sets
+`ServiceDeps.reads`, and every read that `--offline` answers from the store — `chats list|show`,
+`messages list|context`, `contacts list|show` — answers from it for that messenger without
+`--offline`, and never connects; writes still do. `serve` keeps the store filled, so such a read
+warns on stderr when no `serve` holds the profile, and a chat with nothing stored is `not_found`.
+`store fetch`, `inbox` and `review` refuse for now. The MCP chat resource reads the store too; the
+MCP tools still go through the session's connection.
+
 **A CLI replaces a use case, not a command.** `Messenger.services` is an `Override`: it gets the
 shared services and returns the ones it changes, and can call the shared method inside its own:
 

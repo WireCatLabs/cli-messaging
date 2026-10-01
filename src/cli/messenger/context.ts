@@ -1,5 +1,6 @@
 import { CliError } from "@leemour/cli-core"
 import type { Command } from "commander"
+import { servingProfiles } from "../../background/lock.js"
 import type { AdminRight, Chat, GroupSettings, Id, Provider } from "../../domain/models.js"
 import { guardFor, type SendGuard } from "../../sends/guard.js"
 import { keyForCommand, levelFor } from "../../sends/permissions.js"
@@ -79,6 +80,12 @@ export interface Messenger {
   deletedWithoutChat?: DeletionScope
   /** How `store fetch` reads this messenger's history, where Telegram's defaults do not fit it. */
   fetching?: Fetching
+  /**
+   * Where `chats`, `messages list|context` and `contacts` read from. `store` is for a messenger that
+   * pushes its history instead of answering for it: those reads answer from the local store, which
+   * `serve` keeps filled, and never connect; writes still do. `server` when unset.
+   */
+  history?: "server" | "store"
   /** Speech model ids, most suitable first, for `messages transcribe --local`; the first is the default. */
   speechModels?: readonly string[]
   /** Replaces shared use cases for this messenger; its commands and MCP tools both get the replacement. */
@@ -174,6 +181,34 @@ export const connected = (
   }
 }
 
+const unrecorded = (messenger: Messenger, profile: string): CliError =>
+  new CliError(
+    "not_found",
+    messenger.history === "store"
+      ? `nothing recorded for profile "${profile}" yet — run \`${messenger.app.command} serve\` or ` +
+          `\`${messenger.app.command} watch\` once to fill the local store`
+      : `nothing recorded for profile "${profile}" yet — run the command once without --offline`,
+  )
+
+/** NEED-506 A: without it, an agent cannot tell a quiet chat from a store nothing keeps up to date. */
+const warnUnserved = async (
+  messenger: Messenger,
+  profile: string,
+  { env, renderer }: Pick<BaseContext, "env" | "renderer">,
+  store: MessageStore,
+) => {
+  if (servingProfiles(messenger.app, env).includes(profile)) return
+  const account = recalledAccount(messenger.app, messenger.provider, profile, env)
+  if (!account) return
+  const newest = (await store.chatStats(account))
+    .map((one) => one.newestAt)
+    .reduce<string | null>((latest, at) => (at !== null && (latest === null || at > latest) ? at : latest), null)
+  renderer.warn(
+    `no \`${messenger.app.command} serve\` keeps profile "${profile}" up to date — ` +
+      (newest === null ? "the local store holds no messages yet" : `the newest stored message is from ${newest}`),
+  )
+}
+
 /** The words of a command below the program, `["messages", "list"]` — the profile word is not one of them. */
 const pathOf = (command: Command): string[] => {
   const words: string[] = []
@@ -229,12 +264,7 @@ export const messengerContext = (command: Command, messenger: Messenger): Messen
       base.run(
         async () => {
           const account = recalledAccount(app, provider, profile, base.env)
-          if (!account) {
-            throw new CliError(
-              "not_found",
-              `nothing recorded for profile "${profile}" yet — run the command once without --offline`,
-            )
-          }
+          if (!account) throw unrecorded(messenger, profile)
           const store = await openStore({ env: base.env })
           try {
             return await work(store, account)
@@ -254,6 +284,7 @@ export const messengerContext = (command: Command, messenger: Messenger): Messen
             profile,
             env: base.env,
             offline: base.settings.offline,
+            reads: messenger.history ?? "server",
             guard,
             connection: async () => {
               if (base.settings.offline) throw new CliError("validation_error", OFFLINE)
@@ -266,16 +297,14 @@ export const messengerContext = (command: Command, messenger: Messenger): Messen
             },
             account: async () => {
               const account = recalledAccount(app, provider, profile, base.env)
-              if (!account) {
-                throw new CliError(
-                  "not_found",
-                  `nothing recorded for profile "${profile}" yet — run the command once without --offline`,
-                )
-              }
+              if (!account) throw unrecorded(messenger, profile)
               return account
             },
             store: () => {
-              store ??= openStore({ env: base.env })
+              store ??= openStore({ env: base.env }).then(async (opened) => {
+                if (messenger.history === "store") await warnUnserved(messenger, profile, base, opened)
+                return opened
+              })
               return store
             },
           }

@@ -18,6 +18,15 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   a send answering its send id and a repeat leaving one message, ids as strings, reads changing
   nothing, `capability()` refusing what an adapter lacks. `contractSeed` is the data they read.
   [`docs/dev/ADAPTERS.md`](docs/dev/ADAPTERS.md) is the guide for writing an adapter.
+- **`Messenger.history: "store"`**, for a messenger that pushes its history instead of answering for
+  it: `chats list|show`, `messages list|context` and `contacts list|show` answer from the local store
+  and never connect, and writes still connect. A chat with nothing stored answers `not_found` with
+  "nothing stored for this chat yet — keep `<cli> serve` running"; an empty profile says to run
+  `<cli> serve` or `<cli> watch` once; a read warns on stderr when no `serve` holds the profile, with
+  the time of the newest stored message. `store fetch`, `--estimate`, `inbox`, `review`,
+  `--after-*` and `--before-time` refuse in this mode for now. The MCP chat resource reads the store
+  too. `ServiceDeps.reads` carries the mode. Unset, nothing changes.
+- **`Capabilities` is deprecated**: nothing reads it. A later breaking release removes it.
 - **`Messenger.deletedWithoutChat`**: which stored chats a deletion that names no chat may hit. `watch`
   passes it to the store as `markDeleted(…, { among })`, the new option of the same rule: the store
   tombstones a message only when exactly one live message with that id is left in the chats the rule

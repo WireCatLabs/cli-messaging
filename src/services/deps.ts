@@ -12,6 +12,8 @@ import type { AccountKey, MessageStore } from "../store/store.js"
 export interface ServiceDeps {
   messenger: Messenger
   offline: boolean
+  /** `store`: the messenger's history is read from the local store (`Messenger.history`); `server` when unset. */
+  reads?: "server" | "store"
   account: () => Promise<AccountKey>
   /** Already saving what its reads answer, and recording each call as a run event. */
   connection: () => Promise<MessengerAdapter>
@@ -35,6 +37,17 @@ export const storeIfOpen = async (
     return undefined
   }
 }
+
+/** Whether `chats`, `messages list|context` and `contacts` answer from the store instead of the messenger. */
+export const fromStore = (deps: Pick<ServiceDeps, "offline" | "reads">): boolean =>
+  deps.offline || deps.reads === "store"
+
+/** What a store-mode read answers for a chat the store holds nothing of. */
+export const nothingStored = (messenger: Messenger): string =>
+  `nothing stored for this chat yet — keep \`${messenger.app.command} serve\` running`
+
+/** Where a store-mode messenger's history comes from, for what it cannot do. */
+export const PUSHED = "this messenger's history is read from the local store"
 
 export const OFFLINE =
   "--offline answers only from what is kept locally: `chats list|show`, `messages list|show|context` and `contacts list|show`"
@@ -70,6 +83,7 @@ export const storedDeps = (
 ): ServiceDeps => ({
   messenger,
   offline: true,
+  reads: messenger.history ?? "server",
   guard,
   account: async () => account,
   store: async () => store,

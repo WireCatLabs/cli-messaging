@@ -5,8 +5,20 @@ import type { Id, Message } from "../domain/models.js"
 import type { AccountKey, ChatStats, MessageStore, Range } from "../store/store.js"
 import { type Estimate, estimateBackfill } from "./backfill-estimate.js"
 import type { ServiceDeps } from "./deps.js"
+
 import { storedChatId } from "./messages.js"
 import { patiently } from "./patience.js"
+
+/** NEED-505 A: a messenger that pushes its history answers a request for older messages later, through `serve`. */
+const pushed = (deps: ServiceDeps, what: string) => {
+  if (deps.reads === "store") {
+    throw new CliError(
+      "validation_error",
+      `${what} asks for older history, and this messenger pushes its history instead — keep ` +
+        `\`${deps.messenger.app.command} serve\` running`,
+    )
+  }
+}
 
 /** The most messages a provider hands out per history request — Telegram's cap. */
 export const PAGE = 100
@@ -94,6 +106,7 @@ export const archiveService = (deps: ServiceDeps): ArchiveService => {
     },
 
     estimate: async (chat, { limit, pageSize, pauseMs }) => {
+      pushed(deps, "--estimate")
       const fetching = deps.messenger.fetching ?? FETCHING
       if (fetching.orderBy === "time") {
         throw new CliError(
@@ -117,6 +130,7 @@ export const archiveService = (deps: ServiceDeps): ArchiveService => {
     },
 
     fetch: async (chat, { limit, pageSize, pauseMs, sinceMs, last, note, stop, onPage }) => {
+      pushed(deps, "`store fetch`")
       const fetching = deps.messenger.fetching ?? FETCHING
       const byTime = fetching.orderBy === "time"
       const keyOf = (message: Message) => (byTime ? Date.parse(message.timestamp) : Number(message.id))

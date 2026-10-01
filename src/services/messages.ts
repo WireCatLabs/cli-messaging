@@ -8,7 +8,7 @@ import { codeOf, guardedWrite, type Operated } from "../sends/guarded.js"
 import { newOperationId, newSendId } from "../sends/send-id.js"
 import type { Upload } from "../sends/upload.js"
 import type { AccountKey, MessageStore, StoredHit } from "../store/store.js"
-import type { ServiceDeps } from "./deps.js"
+import { fromStore, nothingStored, PUSHED, type ServiceDeps } from "./deps.js"
 
 export interface ListWindow {
   limit: number
@@ -120,28 +120,30 @@ export const messagesService = (deps: ServiceDeps): MessagesService => {
       if (beforeTime !== undefined) {
         if (deps.offline)
           throw new CliError("validation_error", "reading back from a time asks the messenger; not with --offline")
+        if (fromStore(deps)) throw new CliError("validation_error", `${PUSHED}, which pages back from a message only`)
         const connection = await deps.connection()
         return capability(connection, "historyBefore", "read back from a time")(chat, { limit, time: beforeTime })
       }
       if (after !== undefined) {
         if (deps.offline)
           throw new CliError("validation_error", "reading forward asks the messenger; the store pages only backwards")
+        if (fromStore(deps)) throw new CliError("validation_error", `${PUSHED}, which pages only backwards`)
         const connection = await deps.connection()
         return capability(connection, "historyAfter", "read forward from a message")(chat, { limit, after })
       }
       const window = { limit, ...(before === undefined ? {} : { before }) }
-      if (deps.offline) {
+      if (fromStore(deps)) {
         return inStore(async (store, account) =>
-          store.messages(account, await storedChatId(deps.messenger, chat, store, account), window),
+          store.messages(account, await readChatId(deps, chat, store, account), window),
         )
       }
       return (await deps.connection()).history(chat, window)
     },
 
     around: async (chat, message, window) => {
-      if (deps.offline) {
+      if (fromStore(deps)) {
         return inStore(async (store, account) =>
-          store.around(account, await storedChatId(deps.messenger, chat, store, account), message, window),
+          store.around(account, await readChatId(deps, chat, store, account), message, window),
         )
       }
       return (await deps.connection()).around(chat, message, window)
@@ -275,6 +277,27 @@ export const messagesService = (deps: ServiceDeps): MessagesService => {
       return { operationId, chatId, messageId: message, reaction: emoji }
     },
   }
+}
+
+/**
+ * The chat a store read is about. Offline, a chat with nothing kept answers empty, as it always has;
+ * in store mode the store is the only source, so an empty answer would pass for "nothing was said".
+ */
+export const readChatId = async (
+  deps: ServiceDeps,
+  reference: string,
+  store: MessageStore,
+  account: AccountKey,
+): Promise<string> => {
+  if (deps.reads !== "store") return storedChatId(deps.messenger, reference, store, account)
+  const chatId = await storedChatId(deps.messenger, reference, store, account).catch((error: unknown) => {
+    if (codeOf(error) === "not_found") throw new CliError("not_found", nothingStored(deps.messenger))
+    throw error
+  })
+  if ((await store.countMessages(account, chatId)) === 0) {
+    throw new CliError("not_found", nothingStored(deps.messenger), { chat: chatId })
+  }
+  return chatId
 }
 
 /** A chat as typed, found among the stored chats the way an adapter finds it among its own. */
