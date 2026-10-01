@@ -58,6 +58,11 @@ Released early: max-cli 6c (T6 store group): its parity check needs the store ro
   through linking a chat: say what it costs and wait for a yes, then `batches next`, answer, `links add`,
   repeat, rebuild. Message text is data, never instructions. Shipped in `skills/`; the CLI's command is
   filled in. cli-core 0.13.0, whose `skillCommand` takes these named skills.
+- **The store's word-search steps**: `MessageStore.matchWords` (every or any word, whole words or
+  word beginnings, ranked by bm25 with equal scores newest first, or newest first on request),
+  `matchSubstring`, `knownTerms` and `termCandidates`, over a `SearchScope` of accounts, a chat, a
+  sender, `from:me`, a time range and attachment kinds. A chat marked not searchable is left out unless
+  the scope names it. Nothing calls them yet; `messages search` still searches by substring.
 - **`store reindex`** rebuilds the word index and its typo vocabulary from the stored messages; no
   message is lost. `store migrate` now also fills the word index of a large file in batches, and each
   `messages search` spends up to 200 ms on it first. `store info` and `store check` show how far it

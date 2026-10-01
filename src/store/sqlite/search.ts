@@ -122,23 +122,39 @@ export const find = (context: StoreContext, filter: MessageFilter): Page<StoredH
   const page = perChat
     ? rows.filter((row) => (row as HitRow & { chatRank: number }).chatRank <= limit)
     : rows.slice(0, limit)
-  const found = toMessages(context, page)
-  return {
-    items: page.map((row, index) => {
-      const message = found[index] as Message
-      return {
-        ...message,
-        chatTitle: row.chatTitle,
-        locator: formatLocator({
-          provider: row.provider,
-          account: row.accountNativeId,
-          chat: message.chatId,
-          message: message.id,
-        }),
-      }
-    }),
-    hasMore: rows.length > page.length,
-  }
+  return { items: toHits(context, page), hasMore: rows.length > page.length }
+}
+
+const toHits = (context: StoreContext, rows: HitRow[]): StoredHit[] => {
+  const found = toMessages(context, rows)
+  return rows.map((row, index) => {
+    const message = found[index] as Message
+    return {
+      ...message,
+      chatTitle: row.chatTitle,
+      locator: formatLocator({
+        provider: row.provider,
+        account: row.accountNativeId,
+        chat: message.chatId,
+        message: message.id,
+      }),
+    }
+  })
+}
+
+/** The hits for these messages, in the order given. */
+export const hitsByPk = (context: StoreContext, pks: number[]): StoredHit[] => {
+  if (pks.length === 0) return []
+  const rows = new Map(
+    selectHits(context)
+      .where(inArray(messages.pk, pks))
+      .all()
+      .map((row) => [row.pk, row]),
+  )
+  return toHits(
+    context,
+    pks.flatMap((pk) => rows.get(pk) ?? []),
+  )
 }
 
 const perChatNewest = (context: StoreContext, where: SQL | undefined, wanted: number) => {
