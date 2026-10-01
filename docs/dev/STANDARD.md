@@ -92,7 +92,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | Option | Value | Meaning | Default | Commands |
 |---|---|---|---|---|
 | `--add` | `<chat>` | put a chat into a folder; repeat it for more |  | `chats folders update` |
-| `--after` | `<id-or-time>` | read what came after this message id, this ISO 8601 time, or 2h / 1d ago; not with --before. **becomes `--after-id`, `--after-time` (`messages list`) and `--after-n` (`messages context`) — NEED-485** |  | `messages context` (planned), `messages list` (planned) |
+| `--after` | `<id-or-time>` | read what came after this message id, this ISO 8601 time, or 2h / 1d ago; not with --before. **becomes `--after-id`, `--after-time` (`messages list`) and `--after-n` (`messages context`) — NEED-485** |  | `messages context` (max-only), `messages list` (max-only) |
 | `--after-id` | `<id>` | read what came after this message id; not with --after-time or the --before pair |  | `messages list` (planned) |
 | `--after-n` | `<n>` | how many messages after it |  | `messages context` (planned) |
 | `--after-time` | `<time>` | read what came after this ISO 8601 time, or 2h / 1d ago; not with --after-id or the --before pair |  | `messages list` (planned) |
@@ -110,7 +110,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--at` | `<time>` | let the messenger send it later, even with this machine off: a local time like 2026-09-25T09:00, or 30m. **becomes `--at-time` — NEED-493** |  | `messages send` (planned) |
 | `--at-time` | `<time>` | let the messenger send it later, even with this machine off: a local time like 2026-09-25T09:00, or 30m |  | `messages send` (planned) |
 | `--background` |  | run as a job that outlives this command; `store jobs show` follows it |  | `store fetch` (planned) |
-| `--before` | `<id-or-time>` | read what came before this message id, this ISO 8601 time, or 2h / 1d ago. **becomes `--before-id`, `--before-time` (`messages list`) and `--before-n` (`messages context`) — NEED-485** |  | `messages context` (planned), `messages list` (planned) |
+| `--before` | `<id-or-time>` | read what came before this message id, this ISO 8601 time, or 2h / 1d ago. **becomes `--before-id`, `--before-time` (`messages list`) and `--before-n` (`messages context`) — NEED-485** |  | `messages context` (max-only), `messages list` (max-only) |
 | `--before-id` | `<id>` | read what came before this message id; not with --before-time |  | `messages list` (planned) |
 | `--before-n` | `<n>` | how many messages before it |  | `messages context` (planned) |
 | `--before-time` | `<time>` | read what came before this ISO 8601 time, or 2h / 1d ago; not with --before-id |  | `messages list` (planned) |
@@ -125,7 +125,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--detach` |  | run in the background — leaves max in P6 for `server start`; one action, one command (ASK-113) |  | `serve` (planned) |
 | `--dry-run` |  | judge and plan; do nothing |  | `chats moderate` (planned) |
 | `--estimate` |  | only say what the fetch would cost, from this machine's copy; nothing is sent |  | `store fetch` |
-| `--event` | `<names>` | only these events, comma-separated, as the messenger names them. **becomes `--type` — e12** |  | `chats events` (planned) |
+| `--event` | `<names>` | only these events, comma-separated, as the messenger names them. **becomes `--type` — e12** |  | `chats events` (max-only) |
 | `--events` |  | also print edits, deletions and reactions; every line then names its event. **differs by one letter from `chats events --event`, a filter with an unrelated meaning (e12)** |  | `watch` |
 | `--file` | `<file>` | attach a file; images go as a photo, videos as a video. Repeat it for more |  | `messages send` |
 | `--first-name` | `<name>` | your first name |  | `account update` (planned) |
@@ -143,7 +143,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--local` |  | use the model on this machine, never the messenger |  | `messages transcribe` (tg-only) |
 | `--mark-read` |  | also mark the chat read up to the newest message shown; the other person sees it |  | `messages list` |
 | `--max-actions` | `<n>` | at most this many actions in one run | `10` | `chats moderate` (planned) |
-| `--max-pages` | `<n>` | at most this many pages in one run; a page is one request, and each messenger sets the default. **replaced by `--limit` (messages per run) and `--page-size` — NEED-486** |  | `store fetch` (planned) |
+| `--max-pages` | `<n>` | at most this many pages in one run; a page is one request, and each messenger sets the default. **replaced by `--limit` (messages per run) and `--page-size` — NEED-486** |  | `store fetch` (max-only) |
 | `--md` |  | read **bold**, _italic_, ~~struck~~ and `code` in the text; \ keeps a mark literal |  | `messages edit`, `messages send` |
 | `--members-see-link` | `<on\|off>` | members may see the invite link |  | `chats update` (max-only) |
 | `--model` | `<id>` | which downloaded speech model hears them; `models audio list` shows them |  | `inbox`, `messages list`, `messages transcribe`, `review` (planned) |
@@ -160,7 +160,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--only-owner-edits-info` | `<on\|off>` | only the owner may change the name and photo |  | `chats update` (max-only) |
 | `--order` | `<recent\|name>` | newest conversation first, or alphabetical |  | `contacts list` |
 | `--others` |  | every session but this one |  | `account sessions end` (planned) |
-| `--output` |  | where to write: a directory for `messages download`, a file for `store export`. **`messages download --output <dir>` becomes `--output-dir`; `--output` stays a file — e10** | `.` | `doctor report create`, `messages download` (planned), `store export` |
+| `--output` |  | where to write: a directory for `messages download`, a file for `store export`. **`messages download --output <dir>` becomes `--output-dir`; `--output` stays a file — e10** | `.` | `doctor report create`, `messages download` (max-only), `store export` |
 | `--output-dir` | `<dir>` | the folder to write into, created if missing | `.` | `messages download` (planned) |
 | `--page` | `<n>` | which page, starting at 1 |  | `chats list`, `chats members list` (planned), `contacts list` |
 | `--page-size` | `<n>` | how many items one request to the messenger asks for; the messenger's own if not given |  | `store fetch` (planned) |
@@ -181,7 +181,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--serve` |  | start `serve` in the background if it is not running (the default) |  | every command (planned) |
 | `--show-phone` |  | print the whole phone number |  | `account show` |
 | `--silent` |  | deliver without a notification |  | `messages forward`, `messages send`, `polls create` |
-| `--since` | `<id-or-time>` | from this message id, an ISO 8601 time, or 2h / 1d ago; each command says its default. **becomes `--since-time` everywhere — NEED-485** |  | `chats events` (planned), `chats moderate` (planned), `inbox` (planned), `review` (planned), `store export` (planned), `store fetch` (planned) |
+| `--since` | `<id-or-time>` | from this message id, an ISO 8601 time, or 2h / 1d ago; each command says its default. **becomes `--since-time` everywhere — NEED-485** |  | `chats events` (max-only), `chats moderate` (planned), `inbox` (max-only), `review` (max-only), `store export` (max-only), `store fetch` (max-only) |
 | `--since-time` | `<time>` | from this ISO 8601 time, or 2h / 1d ago; each command says its default |  | `chats events` (planned), `chats moderate` (planned), `inbox` (planned), `review` (planned), `store export` (planned), `store fetch` (planned) |
 | `--stop` |  | stop this profile's server — leaves max in P6 for `server stop`; one action, one command (ASK-113) |  | `serve` (planned) |
 | `--timeout` | `<duration>` | give up on the whole command after this — 30s, 2m, 500ms |  | every command |
