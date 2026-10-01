@@ -9,7 +9,7 @@ import type { GuardRequest, SendGuard } from "../sends/guard.js"
 import type { SendEntry } from "../sends/journal.js"
 import { type MessageStore, openStore } from "../store/store.js"
 import { onlineDeps, storedDeps } from "./deps.js"
-import { messagesService } from "./messages.js"
+import { messagesService, searchStore } from "./messages.js"
 
 const account = { provider: "test", account: "500" }
 const messenger = { provider: "test", chatArgument: "a chat" } as Messenger
@@ -127,6 +127,69 @@ describe("the messages service", () => {
 
     expect(slices).toHaveLength(1)
     expect(slices[0]?.until?.()).toBe(false)
+  })
+})
+
+describe("searchStore", () => {
+  const bot = (account: string) => ({ provider: "test-bot", account })
+  const said = (id: string, senderId: string, text: string): Message =>
+    ({ ...thread[0], id, senderId, senderName: `Person ${senderId}`, text }) as Message
+
+  const shared = async () => {
+    const store = await keptStore()
+    for (const [key, id] of [
+      [bot("1"), "11"],
+      [bot("2"), "21"],
+    ] as const) {
+      await store.saveChats(key, [chat])
+      await store.saveMessages(key, "7", [said(id, "8", "chapter one"), said(`${id}0`, "6", "chapter two")], {
+        via: "history",
+      })
+    }
+    return store
+  }
+  const locators = (found: { items: { locator: string }[] }) => found.items.map((hit) => hit.locator).sort()
+
+  it("**reads only the accounts it is given**, and any of several senders", async () => {
+    const store = await shared()
+    const bots = { accounts: [bot("1"), bot("2")], limit: 10 }
+
+    expect(locators(await searchStore(store, account, { ...bots, text: "chapter" }))).toEqual([
+      "msg:test-bot/1/7/11",
+      "msg:test-bot/1/7/110",
+      "msg:test-bot/2/7/21",
+      "msg:test-bot/2/7/210",
+    ])
+    const senders = [
+      { provider: "test-bot", id: "8" },
+      { provider: "test-bot", id: "5" },
+    ]
+    expect(locators(await searchStore(store, account, { ...bots, text: "chapter", senders }))).toEqual([
+      "msg:test-bot/1/7/11",
+      "msg:test-bot/2/7/21",
+    ])
+    expect(locators(await searchStore(store, account, { ...bots, senders }))).toEqual([
+      "msg:test-bot/1/7/11",
+      "msg:test-bot/2/7/21",
+    ])
+  })
+
+  it("refuses to widen the accounts it is given, or to name the senders twice", async () => {
+    const store = await shared()
+    const bots = { accounts: [bot("1")], limit: 10 }
+
+    await expect(searchStore(store, account, { ...bots, text: "chapter in:all" })).rejects.toThrow(
+      "this search reads the accounts it was given — not with in: or --source",
+    )
+    await expect(searchStore(store, account, { ...bots, text: "chapter", source: "test" })).rejects.toThrow(
+      /not with in: or --source/,
+    )
+    await expect(
+      searchStore(store, account, { ...bots, text: "from:Olga chapter", senders: [{ provider: "test-bot", id: "8" }] }),
+    ).rejects.toThrow("--from and from: together — name the people once")
+    await expect(searchStore(store, account, { accounts: [], text: "chapter", limit: 10 })).rejects.toThrow(
+      "a search names at least one account",
+    )
   })
 })
 

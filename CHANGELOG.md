@@ -8,6 +8,11 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Added
 
+- **`searchStore(store, account, query)`** (`./services`): `messages search` over a store, for a caller
+  with no `Messenger` — a bot's search. `SearchQuery.accounts` reads accounts the caller has already
+  checked instead of the one it runs as, and refuses `in:` and `source` beside them;
+  `SearchQuery.senders` keeps any of several people, and refuses `from:` beside them. `SearchFound`
+  and `FoundMessage` are exported.
 - **`bot watch`, `bot callbacks answer`, `bot commands list|set|clear`, `bot webhooks list|set|delete`**,
   the shared commands over four new optional groups on `BotAdapter`: `BotUpdates`, `BotCallbacks`,
   `BotMenu`, `BotWebhooks`. `bot watch` has the personal `watch`'s shape (`--events`, `--jsonl`, Ctrl-C

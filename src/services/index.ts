@@ -28,15 +28,17 @@ export type { InboxService } from "./inbox.js"
 export { inboxService } from "./inbox.js"
 export type {
   AroundWindow,
+  FoundMessage,
   ListWindow,
   MessagesService,
   MessageTarget,
   Pinned,
   Reacted,
+  SearchFound,
   SearchQuery,
   SendRequest,
 } from "./messages.js"
-export { DELETE_AT_ONCE, messagesService, storedChatId } from "./messages.js"
+export { DELETE_AT_ONCE, messagesService, searchStore, storedChatId } from "./messages.js"
 export type { ModerateOptions, ModerationService, ShownRules } from "./moderation.js"
 export { moderationService } from "./moderation.js"
 export type { ContactSync, PeopleService } from "./people.js"
