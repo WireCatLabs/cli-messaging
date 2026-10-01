@@ -11,6 +11,11 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 - **`cli-messaging-parity wording <max.json> <tg.json>`** and `wordingProblems` in `./parity`: every
   `both` option the two tools describe in different words, unless its catalogue entry has a `note`.
   The parity workflow runs it on both CLIs' `main`.
+- **The store reads and writes conversations**: `linkInputs` pages a chat's messages oldest first for
+  the rules, `replaceConversations` writes a chat's new build of links and conversations in short
+  transactions and makes it current in one (the agent's links stay, marked stale when their message
+  changed after them), and `conversations`, `conversation`, `conversationOf`, `links` and
+  `conversationState` read them back.
 
 ## 0.88.0 — 01.10.2026
 
@@ -232,6 +237,10 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   group, `GroupAdmin` (`people`, `createGroup`, `join`, `leave`), and `GroupCard` / `GroupSettings`
   in the domain; `Services.admin`. A messenger without the group refuses with "this messenger
   cannot …".
+  conversation rows with them.
+  Each rebuild of a chat is written under its own build number and made current at once, so a big
+  chat's rebuild never holds the write lock for long.
+  `messages.mentions` keeps whom a message mentions by id, where the messenger says so.
 
 ## 0.80.0 — 01.10.2026
 

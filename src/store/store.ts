@@ -1,5 +1,7 @@
 import { mkdirSync, writeFileSync } from "node:fs"
 import { dirname } from "node:path"
+import { CliError } from "@leemour/cli-core"
+import type { Link, LinkInput } from "../conversations/link.js"
 import type {
   Chat,
   Contact,
@@ -19,6 +21,7 @@ import { storePath } from "./path.js"
 import * as accounts from "./sqlite/accounts.js"
 import { backfillNormalized, pendingNormalization } from "./sqlite/backfill.js"
 import * as chatQueries from "./sqlite/chats.js"
+import * as conversationQueries from "./sqlite/conversations.js"
 import * as identities from "./sqlite/identities.js"
 import * as messageWrites from "./sqlite/messages.js"
 import { openSqlite, type StoreContext } from "./sqlite/open.js"
@@ -27,6 +30,7 @@ import * as reads from "./sqlite/reads.js"
 import * as search from "./sqlite/search.js"
 import * as sync from "./sqlite/sync.js"
 import * as transcripts from "./sqlite/transcripts.js"
+import { toMs } from "./sqlite/values.js"
 
 /** Which account of which messenger a call is about. */
 export interface AccountKey {
@@ -132,6 +136,33 @@ export interface MessageStore {
   transcript(key: AccountKey, chatId: Id, messageId: Id): Promise<{ text: string; source: string } | undefined>
   /** Keeps a finished transcript; an empty one is not kept, so the message is heard again. */
   keepTranscript(key: AccountKey, chatId: Id, messageId: Id, text: string, source: string): Promise<void>
+  /** A chat's live messages for the conversation rules, oldest first; pass `next` back as `after`. */
+  linkInputs(
+    key: AccountKey,
+    chatId: Id,
+    page: { after?: string; limit: number },
+  ): Promise<{ items: LinkInput[]; next: string | null }>
+  /** Who wrote in the chat, by lowercased username: what an `@mention` names. */
+  senderHandles(key: AccountKey, chatId: Id): Promise<Map<string, Id>>
+  /** The chat's provider and rule links and its conversations, replaced whole in one transaction. */
+  replaceConversations(key: AccountKey, chatId: Id, build: ConversationBuild): Promise<void>
+  /** Newest first; `after` and `before` bound when a conversation started. */
+  conversations(
+    key: AccountKey,
+    chatId: Id,
+    window: { limit: number; after?: string; before?: string },
+  ): Promise<Page<ConversationSummary>>
+  /** Its messages oldest first; `undefined` when the account has no such conversation. */
+  conversation(key: AccountKey, id: string): Promise<{ summary: ConversationSummary; messages: Message[] } | undefined>
+  /** Which conversation a message is in, once the chat is built. */
+  conversationOf(key: AccountKey, chatId: Id, messageId: Id): Promise<string | undefined>
+  /** Every link a message has, the messenger's first. */
+  links(key: AccountKey, chatId: Id, messageId: Id): Promise<StoredLink[]>
+  /** Whether the chat's conversations were built, and when; `undefined` when never. */
+  conversationState(
+    key: AccountKey,
+    chatId: Id,
+  ): Promise<{ enabledAt: string; builtAt: string | null; algorithmVersion: number | null } | undefined>
   /** Oldest to newest, like a provider's history page. */
   messages(key: AccountKey, chatId: Id, window: { limit: number; before?: Id; since?: string }): Promise<Page<Message>>
   /** How many stored messages the chat has, sent at `since` or later when it is given. */
@@ -209,6 +240,42 @@ export interface ChatStats {
   oldestAt: string | null
   newestAt: string | null
   lastStoredAt: string | null
+}
+
+/** One build of a chat's conversations, by message id; phase 3 plan C3. */
+export interface ConversationBuild {
+  /** When the build started reading: a change after it is not in the build. */
+  startedAt: number
+  algorithmVersion: number
+  links: Link[]
+  /** Message ids, each conversation oldest first. */
+  conversations: Id[][]
+}
+
+export interface ConversationSummary {
+  id: string
+  chatId: Id
+  firstMessageId: Id
+  firstAt: string
+  lastAt: string
+  messageCount: number
+  /** How many people wrote in it. */
+  senders: number
+  builtAt: string
+  algorithmVersion: number
+}
+
+export interface StoredLink {
+  /** `null`: the source says the message starts a conversation. */
+  parentId: Id | null
+  source: "provider" | "rule" | "agent"
+  kind: string
+  confidence: number
+  method: string
+  version: string | null
+  createdAt: string
+  /** An end changed after the link was written; it is not chosen. */
+  stale: boolean
 }
 
 export interface Range {
@@ -370,6 +437,56 @@ const storeOver = (context: StoreContext): MessageStore => {
       inTransaction(() =>
         transcripts.keepTranscript(context, chatPkFor(accountPk(key), chatId), messageId, text, source),
       )
+    },
+
+    linkInputs: async (key, chatId, page) => {
+      const chatKey = chatKeyOf(key, chatId)
+      return chatKey === undefined ? { items: [], next: null } : conversationQueries.linkInputs(context, chatKey, page)
+    },
+
+    senderHandles: async (key, chatId) => {
+      const chatKey = chatKeyOf(key, chatId)
+      return chatKey === undefined ? new Map() : conversationQueries.senderHandles(context, chatKey)
+    },
+
+    replaceConversations: async (key, chatId, build) => {
+      const chatKey = chatKeyOf(key, chatId)
+      if (chatKey === undefined) throw new CliError("not_found", `chat ${chatId} is not in the local copy`)
+      inTransaction(() => conversationQueries.replaceConversations(context, chatKey, build))
+    },
+
+    conversations: async (key, chatId, { limit, after, before }) => {
+      const chatKey = chatKeyOf(key, chatId)
+      return chatKey === undefined
+        ? { items: [], hasMore: false }
+        : conversationQueries.conversationPage(context, chatKey, {
+            limit,
+            ...(after === undefined ? {} : { after: toMs(after) as number }),
+            ...(before === undefined ? {} : { before: toMs(before) as number }),
+          })
+    },
+
+    conversation: async (key, id) => {
+      const accountKey = findAccountPk(key)
+      const pk = Number(id)
+      return accountKey === undefined || !Number.isSafeInteger(pk)
+        ? undefined
+        : conversationQueries.conversation(context, accountKey, pk)
+    },
+
+    conversationOf: async (key, chatId, messageId) => {
+      const chatKey = chatKeyOf(key, chatId)
+      return chatKey === undefined ? undefined : conversationQueries.conversationOf(context, chatKey, messageId)
+    },
+
+    links: async (key, chatId, messageId) => {
+      const chatKey = chatKeyOf(key, chatId)
+      return chatKey === undefined ? [] : conversationQueries.linksOf(context, chatKey, messageId)
+    },
+
+    conversationState: async (key, chatId) => {
+      const chatKey = chatKeyOf(key, chatId)
+      return chatKey === undefined ? undefined : conversationQueries.stateOf(context, chatKey)
     },
 
     chats: async (key, window) => {
