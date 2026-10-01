@@ -56,7 +56,13 @@ Both refuse a dirty tree, a branch other than `main` and an unpushed `main`. Whe
 version, or a higher one, they commit the next free version to `main` — the next minor for `x.y.0`,
 the next patch otherwise — and publish that. They run every check, and tag `v<version>` once npm
 shows it. The token is never printed and never
-written to a file. The GitHub form publishes from the job in the `npm` environment, which is what
+written to a file.
+
+Both also refuse within 24 hours of the last version npm shows, and say when the next one may go. A
+consumer blocked today is the exception (below): `bin/release --blocked "<consumer and reason>"`
+writes `Released early: <reason>` under the version's changelog heading, commits it to `main` and
+publishes. Name the consumer and what it cannot do, in plain words — `pnpm docs:check` refuses an
+internal id. When npm cannot be asked, they refuse rather than skip the check. The GitHub form publishes from the job in the `npm` environment, which is what
 npm's trusted publisher names: `leemour` / `cli-messaging` / `release.yml` / environment `npm`.
 
 ### How often, and what may break
