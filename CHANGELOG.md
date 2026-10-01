@@ -27,6 +27,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   account it runs as. `MessageStore.accounts()` lists the accounts the file holds.
 - **`BotNotice` for people coming and going has an optional `at`**, when it happened: `bot watch` may take
   an update long after, and a CLI that keeps joins needs the time it happened.
+- **`bot webhooks set --secret-stdin` asks for the secret only after the profile's permissions allow
+  setting a webhook**; a read-only bot profile is refused without the prompt.
 
 ### Changed — may break callers
 

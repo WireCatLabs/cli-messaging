@@ -155,13 +155,14 @@ export const botWebhooksCommand = (bot: BotMessenger): Command => {
             (bot.manyWebhooks ? ", or give --add to get every update at both" : ""),
         )
       }
-      const secret = options.secretStdin ? (await context.readSecret("Webhook secret: ")).trim() : undefined
-      if (options.secretStdin && !secret) throw new CliError("validation_error", "no secret given")
       const types = typesOf(options.types)
       const setWebhook = botCan(adapter, "setWebhook", bot, "set a webhook")
-      await botWrite(context, "bot.webhooks.set", () =>
-        setWebhook(url, { ...(types ? { types } : {}), ...(secret ? { secret } : {}) }),
-      )
+      // The secret is asked for only once the profile may set a webhook at all.
+      await botWrite(context, "bot.webhooks.set", async () => {
+        const secret = options.secretStdin ? (await context.readSecret("Webhook secret: ")).trim() : undefined
+        if (options.secretStdin && !secret) throw new CliError("validation_error", "no secret given")
+        await setWebhook(url, { ...(types ? { types } : {}), ...(secret ? { secret } : {}) })
+      })
       renderList(context.renderer, context.format, await list())
     })
   })
