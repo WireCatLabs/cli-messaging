@@ -1,4 +1,5 @@
 {
+  "clis": ["max", "tg"],
   "options": {
     "--add": {
       "value": "<chat>",
@@ -398,872 +399,1055 @@
     }
   },
   "globalOptions": {
-    "--json": "both",
-    "--jsonl": "both",
-    "--no-record": "both",
+    "--json": "all",
+    "--jsonl": "all",
+    "--no-record": "all",
     "--no-serve": {
-      "state": "planned",
-      "by": "P6"
+      "in": [],
+      "planned": {
+        "max": "P6",
+        "tg": "P6"
+      }
     },
-    "--offline": "both",
-    "--quiet": "both",
-    "--record": "both",
+    "--offline": "all",
+    "--quiet": "all",
+    "--record": "all",
     "--serve": {
-      "state": "planned",
-      "by": "P6"
+      "in": [],
+      "planned": {
+        "max": "P6",
+        "tg": "P6"
+      }
     },
-    "--timeout": "both",
-    "--trace": "both",
-    "--verbose": "both",
-    "--version": "both",
+    "--timeout": "all",
+    "--trace": "all",
+    "--verbose": "all",
+    "--version": "all",
     "--yes": {
-      "state": "planned",
-      "by": "P7"
+      "in": [],
+      "planned": {
+        "max": "P7",
+        "tg": "P7"
+      }
     }
   },
   "commands": {
     "account": {
-      "state": "both"
+      "in": "all"
     },
     "account sessions": {
-      "state": "both"
+      "in": "all"
     },
     "account sessions end": {
-      "state": "both",
+      "in": "all",
       "options": {
-        "--others": "both",
+        "--others": "all",
         "--yes": {
-          "state": "planned",
-          "by": "P2"
+          "in": [],
+          "planned": {
+            "max": "P2",
+            "tg": "P2"
+          }
         }
       }
     },
     "account sessions list": {
-      "state": "both"
+      "in": "all"
     },
     "account show": {
-      "state": "both",
+      "in": "all",
       "options": {
-        "--show-phone": "both"
+        "--show-phone": "all"
       }
     },
     "account update": {
-      "state": "both",
+      "in": "all",
       "options": {
-        "--description": "both",
-        "--first-name": "both",
-        "--last-name": "both",
-        "--photo": "both"
+        "--description": "all",
+        "--first-name": "all",
+        "--last-name": "all",
+        "--photo": "all"
       }
     },
     "bot": {
-      "state": "planned",
-      "by": "P8",
+      "in": [],
+      "planned": {
+        "max": "P8",
+        "tg": "P8"
+      },
       "subtree": true
     },
     "cache": {
-      "state": "max-only",
+      "in": ["max"],
       "reason": "max's local cache, removed when the store replaces it (T6 group 6); tg never had one"
     },
     "chats": {
-      "state": "both"
+      "in": "all"
     },
     "chats admins": {
-      "state": "both"
+      "in": "all"
     },
     "chats admins add": {
-      "state": "both",
+      "in": "all",
       "options": {
-        "--can": "both"
+        "--can": "all"
       }
     },
     "chats admins remove": {
-      "state": "both"
+      "in": "all"
     },
     "chats check": {
-      "state": "max-only",
+      "in": ["max"],
       "reason": "named chats moderate by the standard (check changes nothing); max keeps the old name until T6 moves the command"
     },
     "chats create": {
-      "state": "both",
+      "in": "all",
       "options": {
-        "--channel": "both"
+        "--channel": "all"
       }
     },
     "chats events": {
-      "state": "both",
+      "in": "all",
       "options": {
         "--event": {
-          "state": "max-only",
+          "in": ["max"],
           "reason": "max's own copy keeps the old name until T6 moves the command onto the shared one"
         },
         "--since": {
-          "state": "max-only",
+          "in": ["max"],
           "reason": "max's own copy keeps the old name until T6 moves the command onto the shared one"
         },
         "--since-time": {
-          "state": "planned",
-          "by": "T6"
+          "in": [],
+          "planned": {
+            "max": "T6",
+            "tg": "T6"
+          }
         },
         "--type": {
-          "state": "planned",
-          "by": "T6"
+          "in": [],
+          "planned": {
+            "max": "T6",
+            "tg": "T6"
+          }
         }
       }
     },
     "chats folders": {
-      "state": "both"
+      "in": "all"
     },
     "chats folders create": {
-      "state": "both",
+      "in": "all",
       "options": {
-        "--chat": "both"
+        "--chat": "all"
       }
     },
     "chats folders delete": {
-      "state": "both"
+      "in": "all"
     },
     "chats folders list": {
-      "state": "both"
+      "in": "all"
     },
     "chats folders update": {
-      "state": "both",
+      "in": "all",
       "options": {
-        "--add": "both",
-        "--remove": "both",
-        "--title": "both"
+        "--add": "all",
+        "--remove": "all",
+        "--title": "all"
       }
     },
     "chats inspect": {
-      "state": "both"
+      "in": "all"
     },
     "chats join": {
-      "state": "both"
+      "in": "all"
     },
     "chats leave": {
-      "state": "both"
+      "in": "all"
     },
     "chats link": {
-      "state": "both"
+      "in": "all"
     },
     "chats link reset": {
-      "state": "both"
+      "in": "all"
     },
     "chats link show": {
-      "state": "both"
+      "in": "all"
     },
     "chats list": {
-      "state": "both",
+      "in": "all",
       "options": {
-        "--all": "both",
-        "--kind": "both",
-        "--limit": "both",
-        "--page": "both",
-        "--search": "both",
-        "--unread": "both"
+        "--all": "all",
+        "--kind": "all",
+        "--limit": "all",
+        "--page": "all",
+        "--search": "all",
+        "--unread": "all"
       }
     },
     "chats mark-read": {
-      "state": "both",
+      "in": "all",
       "options": {
-        "--until": "both"
+        "--until": "all"
       }
     },
     "chats members": {
-      "state": "both"
+      "in": "all"
     },
     "chats members add": {
-      "state": "both",
+      "in": "all",
       "options": {
         "--history": {
-          "state": "max-only",
+          "in": ["max"],
           "reason": "Telegram shows history to new members only in legacy groups, and P2 makes supergroups"
         }
       }
     },
     "chats members list": {
-      "state": "both",
+      "in": "all",
       "options": {
         "--all": {
-          "state": "planned",
-          "by": "T6"
+          "in": [],
+          "planned": {
+            "max": "T6",
+            "tg": "T6"
+          }
         },
         "--limit": {
-          "state": "planned",
-          "by": "T6"
+          "in": [],
+          "planned": {
+            "max": "T6",
+            "tg": "T6"
+          }
         },
         "--page": {
-          "state": "planned",
-          "by": "T6"
+          "in": [],
+          "planned": {
+            "max": "T6",
+            "tg": "T6"
+          }
         }
       }
     },
     "chats members remove": {
-      "state": "both"
+      "in": "all"
     },
     "chats moderate": {
-      "state": "planned",
-      "by": "P2",
+      "in": [],
+      "planned": {
+        "max": "P2",
+        "tg": "P2"
+      },
       "options": {
         "--allow-dangerous": {
-          "state": "planned",
-          "by": "P2"
+          "in": [],
+          "planned": {
+            "max": "P2",
+            "tg": "P2"
+          }
         },
         "--dry-run": {
-          "state": "planned",
-          "by": "P2"
+          "in": [],
+          "planned": {
+            "max": "P2",
+            "tg": "P2"
+          }
         },
         "--max-actions": {
-          "state": "planned",
-          "by": "P2"
+          "in": [],
+          "planned": {
+            "max": "P2",
+            "tg": "P2"
+          }
         },
         "--since-time": {
-          "state": "planned",
-          "by": "P2"
+          "in": [],
+          "planned": {
+            "max": "P2",
+            "tg": "P2"
+          }
         }
       }
     },
     "chats rules": {
-      "state": "both"
+      "in": "all"
     },
     "chats rules set": {
-      "state": "both"
+      "in": "all"
     },
     "chats rules show": {
-      "state": "both"
+      "in": "all"
     },
     "chats rules unset": {
-      "state": "both"
+      "in": "all"
     },
     "chats show": {
-      "state": "both"
+      "in": "all"
     },
     "chats update": {
-      "state": "both",
+      "in": "all",
       "options": {
-        "--all-can-pin": "both",
-        "--description": "both",
+        "--all-can-pin": "all",
+        "--description": "all",
         "--members-see-link": {
-          "state": "max-only",
+          "in": ["max"],
           "reason": "Telegram shows a group's invite link to whoever may invite, not by a setting of its own"
         },
-        "--only-admins-add": "both",
+        "--only-admins-add": "all",
         "--only-admins-call": {
-          "state": "max-only",
+          "in": ["max"],
           "reason": "Telegram has no setting for who may start a call"
         },
         "--only-owner-edits-info": {
-          "state": "max-only",
+          "in": ["max"],
           "reason": "Telegram lets admins with the right change the info, never only the owner; a different meaning gets a different name"
         },
-        "--title": "both"
+        "--title": "all"
       }
     },
     "commands": {
-      "state": "both"
+      "in": "all"
     },
     "complete": {
-      "state": "both"
+      "in": "all"
     },
     "config": {
-      "state": "both"
+      "in": "all"
     },
     "config set": {
-      "state": "both",
+      "in": "all",
       "options": {
         "--bot": {
-          "state": "planned",
-          "by": "P8"
+          "in": [],
+          "planned": {
+            "max": "P8",
+            "tg": "P8"
+          }
         },
-        "--defaults": "both",
+        "--defaults": "all",
         "--personal": {
-          "state": "planned",
-          "by": "P8"
+          "in": [],
+          "planned": {
+            "max": "P8",
+            "tg": "P8"
+          }
         }
       }
     },
     "config show": {
-      "state": "both",
+      "in": "all",
       "options": {
         "--bot": {
-          "state": "planned",
-          "by": "P8"
+          "in": [],
+          "planned": {
+            "max": "P8",
+            "tg": "P8"
+          }
         }
       }
     },
     "config unset": {
-      "state": "both",
+      "in": "all",
       "options": {
         "--bot": {
-          "state": "planned",
-          "by": "P8"
+          "in": [],
+          "planned": {
+            "max": "P8",
+            "tg": "P8"
+          }
         },
-        "--defaults": "both",
+        "--defaults": "all",
         "--personal": {
-          "state": "planned",
-          "by": "P8"
+          "in": [],
+          "planned": {
+            "max": "P8",
+            "tg": "P8"
+          }
         }
       }
     },
     "contacts": {
-      "state": "both"
+      "in": "all"
     },
     "contacts add": {
-      "state": "both"
+      "in": "all"
     },
     "contacts block": {
-      "state": "both"
+      "in": "all"
     },
     "contacts import": {
-      "state": "both"
+      "in": "all"
     },
     "contacts list": {
-      "state": "both",
+      "in": "all",
       "options": {
-        "--all": "both",
-        "--limit": "both",
-        "--order": "both",
-        "--page": "both",
-        "--search": "both"
+        "--all": "all",
+        "--limit": "all",
+        "--order": "all",
+        "--page": "all",
+        "--search": "all"
       }
     },
     "contacts lookup": {
-      "state": "both"
+      "in": "all"
     },
     "contacts remove": {
-      "state": "both"
+      "in": "all"
     },
     "contacts rename": {
-      "state": "both"
+      "in": "all"
     },
     "contacts show": {
-      "state": "both"
+      "in": "all"
     },
     "contacts sync": {
-      "state": "both"
+      "in": "all"
     },
     "contacts unblock": {
-      "state": "both"
+      "in": "all"
     },
     "conversations": {
-      "state": "planned",
-      "by": "max: reads onto messages.db",
+      "in": [],
+      "planned": {
+        "max": "max: reads onto messages.db",
+        "tg": "max: reads onto messages.db"
+      },
       "subtree": true
     },
     "doctor": {
-      "state": "both",
+      "in": "all",
       "options": {
-        "--online": "both"
+        "--online": "all"
       }
     },
     "doctor report": {
-      "state": "both"
+      "in": "all"
     },
     "doctor report create": {
-      "state": "both",
+      "in": "all",
       "options": {
-        "--output": "both",
-        "--run": "both"
+        "--output": "all",
+        "--run": "all"
       }
     },
     "inbox": {
-      "state": "both",
+      "in": "all",
       "options": {
         "--all": {
-          "state": "planned",
-          "by": "T6"
+          "in": [],
+          "planned": {
+            "max": "T6",
+            "tg": "T6"
+          }
         },
-        "--limit": "both",
-        "--model": "both",
-        "--new": "both",
+        "--limit": "all",
+        "--model": "all",
+        "--new": "all",
         "--since": {
-          "state": "max-only",
+          "in": ["max"],
           "reason": "max's own copy keeps the old name until T6 moves the command onto the shared one"
         },
         "--since-time": {
-          "state": "planned",
-          "by": "T6"
+          "in": [],
+          "planned": {
+            "max": "T6",
+            "tg": "T6"
+          }
         },
-        "--transcribe": "both"
+        "--transcribe": "all"
       }
     },
     "mcp": {
-      "state": "both",
+      "in": "all",
       "options": {
         "--allow-dangerous": {
-          "state": "planned",
-          "by": "P7"
+          "in": [],
+          "planned": {
+            "max": "P7",
+            "tg": "P7"
+          }
         },
-        "--allow-delete": "both",
-        "--allow-mark-read": "both",
+        "--allow-delete": "all",
+        "--allow-mark-read": "all",
         "--allow-moderate": {
-          "state": "planned",
-          "by": "P7"
+          "in": [],
+          "planned": {
+            "max": "P7",
+            "tg": "P7"
+          }
         },
-        "--allow-send": "both",
-        "--confirm-send": "both",
+        "--allow-send": "all",
+        "--confirm-send": "all",
         "--yes": {
-          "state": "planned",
-          "by": "P7"
+          "in": [],
+          "planned": {
+            "max": "P7",
+            "tg": "P7"
+          }
         }
       }
     },
     "mcp config": {
-      "state": "both",
+      "in": "all",
       "options": {
         "--allow-dangerous": {
-          "state": "planned",
-          "by": "P7"
+          "in": [],
+          "planned": {
+            "max": "P7",
+            "tg": "P7"
+          }
         },
-        "--allow-delete": "both",
-        "--allow-mark-read": "both",
+        "--allow-delete": "all",
+        "--allow-mark-read": "all",
         "--allow-moderate": {
-          "state": "planned",
-          "by": "P7"
+          "in": [],
+          "planned": {
+            "max": "P7",
+            "tg": "P7"
+          }
         },
-        "--allow-send": "both",
-        "--confirm-send": "both",
+        "--allow-send": "all",
+        "--confirm-send": "all",
         "--yes": {
-          "state": "planned",
-          "by": "P7"
+          "in": [],
+          "planned": {
+            "max": "P7",
+            "tg": "P7"
+          }
         }
       }
     },
     "messages": {
-      "state": "both"
+      "in": "all"
     },
     "messages context": {
-      "state": "both",
+      "in": "all",
       "options": {
-        "--after-n": "both",
-        "--before-n": "both"
+        "--after-n": "all",
+        "--before-n": "all"
       }
     },
     "messages delete": {
-      "state": "both",
+      "in": "all",
       "options": {
-        "--allow-dangerous": "both",
-        "--for-everyone": "both"
+        "--allow-dangerous": "all",
+        "--for-everyone": "all"
       }
     },
     "messages download": {
-      "state": "both",
+      "in": "all",
       "options": {
         "--all": {
-          "state": "planned",
-          "by": "T6"
+          "in": [],
+          "planned": {
+            "max": "T6",
+            "tg": "T6"
+          }
         },
         "--output": {
-          "state": "max-only",
+          "in": ["max"],
           "reason": "max's own copy keeps the old name until T6 moves the command onto the shared one"
         },
         "--output-dir": {
-          "state": "planned",
-          "by": "T6"
+          "in": [],
+          "planned": {
+            "max": "T6",
+            "tg": "T6"
+          }
         },
         "--pause": {
-          "state": "planned",
-          "by": "T6"
+          "in": [],
+          "planned": {
+            "max": "T6",
+            "tg": "T6"
+          }
         }
       }
     },
     "messages edit": {
-      "state": "both",
+      "in": "all",
       "options": {
-        "--md": "both"
+        "--md": "all"
       }
     },
     "messages forward": {
-      "state": "both",
+      "in": "all",
       "options": {
-        "--send-id": "both",
-        "--silent": "both",
-        "--to": "both"
+        "--send-id": "all",
+        "--silent": "all",
+        "--to": "all"
       }
     },
     "messages links": {
-      "state": "planned",
-      "by": "max: reads onto messages.db"
+      "in": [],
+      "planned": {
+        "max": "max: reads onto messages.db",
+        "tg": "max: reads onto messages.db"
+      }
     },
     "messages list": {
-      "state": "both",
+      "in": "all",
       "options": {
-        "--after-id": "both",
-        "--after-time": "both",
-        "--before-id": "both",
-        "--before-time": "both",
-        "--limit": "both",
-        "--mark-read": "both",
-        "--model": "both",
-        "--transcribe": "both"
+        "--after-id": "all",
+        "--after-time": "all",
+        "--before-id": "all",
+        "--before-time": "all",
+        "--limit": "all",
+        "--mark-read": "all",
+        "--model": "all",
+        "--transcribe": "all"
       }
     },
     "messages pin": {
-      "state": "both",
+      "in": "all",
       "options": {
-        "--notify": "both"
+        "--notify": "all"
       }
     },
     "messages scheduled": {
-      "state": "both"
+      "in": "all"
     },
     "messages search": {
-      "state": "both",
+      "in": "all",
       "options": {
-        "--chat": "both",
-        "--limit": "both",
+        "--chat": "all",
+        "--limit": "all",
         "--regex": {
-          "state": "planned",
-          "by": "T6"
+          "in": [],
+          "planned": {
+            "max": "T6",
+            "tg": "T6"
+          }
         }
       }
     },
     "messages send": {
-      "state": "both",
+      "in": "all",
       "options": {
-        "--allow-any-file": "both",
-        "--as-file": "both",
-        "--at-time": "both",
-        "--file": "both",
-        "--md": "both",
-        "--no-preview": "both",
-        "--photo": "both",
-        "--reply-to": "both",
-        "--send-id": "both",
-        "--silent": "both",
-        "--voice": "both"
+        "--allow-any-file": "all",
+        "--as-file": "all",
+        "--at-time": "all",
+        "--file": "all",
+        "--md": "all",
+        "--no-preview": "all",
+        "--photo": "all",
+        "--reply-to": "all",
+        "--send-id": "all",
+        "--silent": "all",
+        "--voice": "all"
       }
     },
     "messages show": {
-      "state": "both"
+      "in": "all"
     },
     "messages transcribe": {
-      "state": "both",
+      "in": "all",
       "options": {
         "--local": {
-          "state": "tg-only",
+          "in": ["tg"],
           "reason": "Telegram can transcribe on its side; MAX cannot, so max always uses the local model"
         },
-        "--model": "both"
+        "--model": "all"
       }
     },
     "messages unpin": {
-      "state": "both"
+      "in": "all"
     },
     "models": {
-      "state": "both"
+      "in": "all"
     },
     "models audio": {
-      "state": "both"
+      "in": "all"
     },
     "models audio download": {
-      "state": "both"
+      "in": "all"
     },
     "models audio list": {
-      "state": "both"
+      "in": "all"
     },
     "polls": {
-      "state": "both"
+      "in": "all"
     },
     "polls close": {
-      "state": "both"
+      "in": "all"
     },
     "polls create": {
-      "state": "both",
+      "in": "all",
       "options": {
-        "--anonymous": "both",
-        "--multiple": "both",
-        "--revote": "both",
-        "--send-id": "both",
-        "--silent": "both"
+        "--anonymous": "all",
+        "--multiple": "all",
+        "--revote": "all",
+        "--send-id": "all",
+        "--silent": "all"
       }
     },
     "polls show": {
-      "state": "both"
+      "in": "all"
     },
     "polls vote": {
-      "state": "both",
+      "in": "all",
       "options": {
-        "--retract": "both"
+        "--retract": "all"
       }
     },
     "reactions": {
-      "state": "both"
+      "in": "all"
     },
     "reactions add": {
-      "state": "both"
+      "in": "all"
     },
     "reactions remove": {
-      "state": "both"
+      "in": "all"
     },
     "recipients": {
-      "state": "both"
+      "in": "all"
     },
     "recipients add": {
-      "state": "both"
+      "in": "all"
     },
     "recipients clear": {
-      "state": "both"
+      "in": "all"
     },
     "recipients list": {
-      "state": "both"
+      "in": "all"
     },
     "recipients remove": {
-      "state": "both"
+      "in": "all"
     },
     "review": {
-      "state": "both",
+      "in": "all",
       "options": {
         "--all": {
-          "state": "planned",
-          "by": "T6"
+          "in": [],
+          "planned": {
+            "max": "T6",
+            "tg": "T6"
+          }
         },
-        "--chat": "both",
+        "--chat": "all",
         "--model": {
-          "state": "planned",
-          "by": "T6"
+          "in": [],
+          "planned": {
+            "max": "T6",
+            "tg": "T6"
+          }
         },
         "--since": {
-          "state": "max-only",
+          "in": ["max"],
           "reason": "max's own copy keeps the old name until T6 moves the command onto the shared one"
         },
         "--since-time": {
-          "state": "planned",
-          "by": "T6"
+          "in": [],
+          "planned": {
+            "max": "T6",
+            "tg": "T6"
+          }
         },
-        "--transcribe": "both",
-        "--unanswered": "both"
+        "--transcribe": "all",
+        "--unanswered": "all"
       }
     },
     "runs": {
-      "state": "both"
+      "in": "all"
     },
     "runs list": {
-      "state": "both",
+      "in": "all",
       "options": {
-        "--limit": "both"
+        "--limit": "all"
       }
     },
     "runs path": {
-      "state": "both"
+      "in": "all"
     },
     "runs show": {
-      "state": "both"
+      "in": "all"
     },
     "sends": {
-      "state": "both"
+      "in": "all"
     },
     "sends list": {
-      "state": "both",
+      "in": "all",
       "options": {
-        "--limit": "both"
+        "--limit": "all"
       }
     },
     "serve": {
-      "state": "both",
+      "in": "all",
       "options": {
         "--idle": {
-          "state": "max-only",
+          "in": ["max"],
           "reason": "max's server stops when no command has used it for this long; tg's serve has no commands connected to it (NEED-495 A)"
         }
       }
     },
     "server": {
-      "state": "both"
+      "in": "all"
     },
     "server install": {
-      "state": "both"
+      "in": "all"
     },
     "server logs": {
-      "state": "both",
+      "in": "all",
       "options": {
-        "--lines": "both"
+        "--lines": "all"
       }
     },
     "server restart": {
-      "state": "both",
+      "in": "all",
       "options": {
         "--idle": {
-          "state": "max-only",
+          "in": ["max"],
           "reason": "max's server stops when no command has used it for this long; tg's serve has no commands connected to it (NEED-495 A)"
         }
       }
     },
     "server start": {
-      "state": "both",
+      "in": "all",
       "options": {
         "--idle": {
-          "state": "max-only",
+          "in": ["max"],
           "reason": "max's server stops when no command has used it for this long; tg's serve has no commands connected to it (NEED-495 A)"
         }
       }
     },
     "server status": {
-      "state": "both"
+      "in": "all"
     },
     "server stop": {
-      "state": "both"
+      "in": "all"
     },
     "server uninstall": {
-      "state": "both"
+      "in": "all"
     },
     "session": {
-      "state": "both"
+      "in": "all"
     },
     "session end": {
-      "state": "both"
+      "in": "all"
     },
     "session start": {
-      "state": "both",
+      "in": "all",
       "options": {
         "--app": {
-          "state": "tg-only",
+          "in": ["tg"],
           "reason": "Telegram asks each client for its own app from my.telegram.org; MAX has no such step"
         },
         "--qr-file": {
-          "state": "tg-only",
+          "in": ["tg"],
           "reason": "ruled tg-only with the app registration it belongs to"
         }
       }
     },
     "skill": {
-      "state": "both"
+      "in": "all"
     },
     "skill install": {
-      "state": "planned",
-      "by": "each CLI's cli-core 0.11.0 bump",
+      "in": [],
+      "planned": {
+        "max": "each CLI's cli-core 0.11.0 bump",
+        "tg": "each CLI's cli-core 0.11.0 bump"
+      },
       "options": {
         "--for": {
-          "state": "planned",
-          "by": "each CLI's cli-core 0.11.0 bump"
+          "in": [],
+          "planned": {
+            "max": "each CLI's cli-core 0.11.0 bump",
+            "tg": "each CLI's cli-core 0.11.0 bump"
+          }
         }
       }
     },
     "skill show": {
-      "state": "both"
+      "in": "all"
     },
     "store": {
-      "state": "both"
+      "in": "all"
     },
     "store backup": {
-      "state": "planned",
-      "by": "T6"
+      "in": [],
+      "planned": {
+        "max": "T6",
+        "tg": "T6"
+      }
     },
     "store check": {
-      "state": "planned",
-      "by": "T6"
+      "in": [],
+      "planned": {
+        "max": "T6",
+        "tg": "T6"
+      }
     },
     "store clear": {
-      "state": "planned",
-      "by": "T6",
+      "in": [],
+      "planned": {
+        "max": "T6",
+        "tg": "T6"
+      },
       "options": {
         "--allow-dangerous": {
-          "state": "planned",
-          "by": "T6"
+          "in": [],
+          "planned": {
+            "max": "T6",
+            "tg": "T6"
+          }
         },
         "--left": {
-          "state": "planned",
-          "by": "T6"
+          "in": [],
+          "planned": {
+            "max": "T6",
+            "tg": "T6"
+          }
         }
       }
     },
     "store export": {
-      "state": "both",
+      "in": "all",
       "options": {
-        "--format": "both",
-        "--output": "both",
+        "--format": "all",
+        "--output": "all",
         "--since": {
-          "state": "planned",
-          "by": "T6"
+          "in": [],
+          "planned": {
+            "max": "T6",
+            "tg": "T6"
+          }
         },
         "--since-time": {
-          "state": "planned",
-          "by": "T6"
+          "in": [],
+          "planned": {
+            "max": "T6",
+            "tg": "T6"
+          }
         }
       }
     },
     "store fetch": {
-      "state": "both",
+      "in": "all",
       "options": {
         "--background": {
-          "state": "planned",
-          "by": "T6"
+          "in": [],
+          "planned": {
+            "max": "T6",
+            "tg": "T6"
+          }
         },
-        "--estimate": "both",
-        "--last": "both",
+        "--estimate": "all",
+        "--last": "all",
         "--limit": {
-          "state": "planned",
-          "by": "T6"
+          "in": [],
+          "planned": {
+            "max": "T6",
+            "tg": "T6"
+          }
         },
         "--max-pages": {
-          "state": "planned",
-          "by": "T6"
+          "in": [],
+          "planned": {
+            "max": "T6",
+            "tg": "T6"
+          }
         },
         "--page-size": {
-          "state": "planned",
-          "by": "T6"
+          "in": [],
+          "planned": {
+            "max": "T6",
+            "tg": "T6"
+          }
         },
-        "--pause": "both",
+        "--pause": "all",
         "--since": {
-          "state": "planned",
-          "by": "T6"
+          "in": [],
+          "planned": {
+            "max": "T6",
+            "tg": "T6"
+          }
         },
         "--since-time": {
-          "state": "planned",
-          "by": "T6"
+          "in": [],
+          "planned": {
+            "max": "T6",
+            "tg": "T6"
+          }
         }
       }
     },
     "store info": {
-      "state": "planned",
-      "by": "T6"
+      "in": [],
+      "planned": {
+        "max": "T6",
+        "tg": "T6"
+      }
     },
     "store jobs": {
-      "state": "planned",
-      "by": "T6"
+      "in": [],
+      "planned": {
+        "max": "T6",
+        "tg": "T6"
+      }
     },
     "store jobs cancel": {
-      "state": "planned",
-      "by": "T6"
+      "in": [],
+      "planned": {
+        "max": "T6",
+        "tg": "T6"
+      }
     },
     "store jobs list": {
-      "state": "planned",
-      "by": "T6"
+      "in": [],
+      "planned": {
+        "max": "T6",
+        "tg": "T6"
+      }
     },
     "store jobs show": {
-      "state": "planned",
-      "by": "T6"
+      "in": [],
+      "planned": {
+        "max": "T6",
+        "tg": "T6"
+      }
     },
     "store migrate": {
-      "state": "planned",
-      "by": "T6"
+      "in": [],
+      "planned": {
+        "max": "T6",
+        "tg": "T6"
+      }
     },
     "store reindex": {
-      "state": "planned",
-      "by": "T6"
+      "in": [],
+      "planned": {
+        "max": "T6",
+        "tg": "T6"
+      }
     },
     "store restore": {
-      "state": "planned",
-      "by": "T6"
+      "in": [],
+      "planned": {
+        "max": "T6",
+        "tg": "T6"
+      }
     },
     "store status": {
-      "state": "planned",
-      "by": "T6"
+      "in": [],
+      "planned": {
+        "max": "T6",
+        "tg": "T6"
+      }
     },
     "topics": {
-      "state": "tg-only",
+      "in": ["tg"],
       "reason": "MAX has no forum topics"
     },
     "upgrade": {
-      "state": "both",
+      "in": "all",
       "options": {
-        "--check": "both"
+        "--check": "all"
       }
     },
     "watch": {
-      "state": "both",
+      "in": "all",
       "options": {
-        "--events": "both"
+        "--events": "all"
       }
     }
   }
