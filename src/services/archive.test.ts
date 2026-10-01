@@ -73,7 +73,8 @@ describe("the archive service", () => {
     const service = archiveService(deps)
 
     const fetched = await service.fetch("Book club", {
-      maxPages: 10,
+      limit: 1000,
+      pageSize: 100,
       pauseMs: 0,
       note: () => {},
       stop: new AbortController().signal,

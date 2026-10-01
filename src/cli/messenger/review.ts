@@ -28,7 +28,7 @@ export const reviewCommand = (messenger: Messenger): Command =>
   new Command("review")
     .description("every message, yours too, in chats that changed since a point — for reviewing who owes what")
     .option(
-      "--since <time>",
+      "--since-time <time>",
       `where the last review ended — ISO 8601, or 2h / 1d ago; ${REVIEW_DAYS} days ago if not given`,
     )
     .option("--chat <chat>", `only this chat: ${messenger.chatArgument}`)
@@ -41,7 +41,7 @@ export const reviewCommand = (messenger: Messenger): Command =>
     .option(...MODEL_OPTION)
     .action(async function (this: Command) {
       const options = this.opts<{
-        since?: string
+        sinceTime?: string
         chat?: string
         unanswered?: string | true
         all?: boolean
@@ -51,7 +51,7 @@ export const reviewCommand = (messenger: Messenger): Command =>
       const hearWith = modelWith(options.transcribe, options.model)
       const context = messengerContext(this, messenger)
       const { settings, renderer, format, streams } = context
-      const since = options.since === undefined ? reviewStart() : momentOf(options.since)
+      const since = options.sinceTime === undefined ? reviewStart() : momentOf(options.sinceTime, "--since-time")
       const hours = options.unanswered === undefined ? undefined : unansweredHours(options.unanswered)
       const found = await context.withServices((services) =>
         services.inbox.review({
@@ -111,7 +111,7 @@ const notes = (found: Review, command: string, note: (message: string) => void):
   }
   note(
     found.complete
-      ? `from ${found.since} to ${found.until} — the next review starts with --since ${found.until}`
-      : `from ${found.since} to ${found.until}, incomplete — keep --since ${found.since} for the next review`,
+      ? `from ${found.since} to ${found.until} — the next review starts with --since-time ${found.until}`
+      : `from ${found.since} to ${found.until}, incomplete — keep --since-time ${found.since} for the next review`,
   )
 }

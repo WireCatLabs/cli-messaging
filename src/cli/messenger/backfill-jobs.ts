@@ -11,8 +11,9 @@ export interface Job {
   profile: string
   pid: number
   startedAt: string
-  /** Absent on a job started before `--max-pages`. */
-  maxPages?: number
+  /** Absent on a job started before `--limit`. */
+  limit?: number
+  pageSize?: number
   last?: number
   log: string
   progress?: { fetched: number; chatId: string; oldest: number }

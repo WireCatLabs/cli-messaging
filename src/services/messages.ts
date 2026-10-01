@@ -114,7 +114,7 @@ export const messagesService = (deps: ServiceDeps): MessagesService => {
     list: async (chat, { limit, before, after }) => {
       if (after !== undefined) {
         if (deps.offline)
-          throw new CliError("validation_error", "--after reads from the messenger; the store pages only backwards")
+          throw new CliError("validation_error", "reading forward asks the messenger; the store pages only backwards")
         const connection = await deps.connection()
         return capability(connection, "historyAfter", "read forward from a message")(chat, { limit, after })
       }

@@ -7,7 +7,7 @@ import { renderMessages } from "../../render/messages.js"
 import { readAttachments } from "../../sends/upload.js"
 import { modelWith } from "../../speech/hearing.js"
 import { listed, positiveCount } from "../paging.js"
-import { afterOf, oneDirection } from "./after.js"
+import { listStart } from "./after.js"
 import { type Messenger, messengerContext } from "./context.js"
 import { downloadSubcommand } from "./download-command.js"
 import {
@@ -35,21 +35,30 @@ export const messagesCommand = (messenger: Messenger): Command => {
     .description("a chat's messages, oldest to newest")
     .argument("<chat>", messenger.chatArgument)
     .option("--limit <n>", "how many", positiveCount("--limit"))
-    .option("--before <id>", "only messages older than this message id")
-    .option("--after <id-or-time>", "only messages newer than this message id, ISO 8601 time, or 2h / 1d ago")
+    .option("--before-id <id>", "only messages older than this message id")
+    .option("--after-id <id>", "only messages newer than this message id")
+    .option("--after-time <time>", "only messages newer than this ISO 8601 time, or 2h / 1d ago")
     .option(...TRANSCRIBE_OPTION)
     .option(...MODEL_OPTION)
     .option("--mark-read", "also mark the chat read up to the newest message shown; the other person sees it")
     .action(async function (this: Command, chat: string) {
       const context = messengerContext(this, messenger)
-      const { before, after, transcribe, model, markRead } = this.opts<{
-        before?: string
-        after?: string
+      const {
+        beforeId: before,
+        afterId,
+        afterTime,
+        transcribe,
+        model,
+        markRead,
+      } = this.opts<{
+        beforeId?: string
+        afterId?: string
+        afterTime?: string
         transcribe?: boolean
         model?: string
         markRead?: boolean
       }>()
-      oneDirection(before, after)
+      const after = listStart(before, afterId, afterTime)
       const hearWith = modelWith(transcribe, model)
       if (markRead && context.settings.offline) {
         throw new CliError("validation_error", "--mark-read tells the messenger; not with --offline")
@@ -59,7 +68,7 @@ export const messagesCommand = (messenger: Messenger): Command => {
         services.messages.list(chat, {
           limit,
           ...(before === undefined ? {} : { before }),
-          ...(after === undefined ? {} : { after: afterOf(after) }),
+          ...(after === undefined ? {} : { after }),
         }),
       )
       const hearing = await hearForCommand(context, messenger, page.items, transcribe === true, hearWith)
@@ -70,7 +79,9 @@ export const messagesCommand = (messenger: Messenger): Command => {
           : undefined
       if (marked) context.renderer.note(`marked read up to ${marked.until}`)
       const next = (items: typeof page.items) =>
-        after === undefined ? `older messages: --before ${items[0]?.id}` : `newer messages: --after ${items.at(-1)?.id}`
+        after === undefined
+          ? `older messages: --before-id ${items[0]?.id}`
+          : `newer messages: --after-id ${items.at(-1)?.id}`
       if (context.format === "pretty") {
         // Straight to stdout: the pretty renderer keeps every string to one line, and a feed is many.
         context.streams.data(
@@ -181,10 +192,10 @@ export const messagesCommand = (messenger: Messenger): Command => {
     .description("a message and what came either side of it, oldest first")
     .argument("<chat>", `${messenger.chatArgument}; or a msg: locator, with no message id after it`)
     .argument("[message]", "the message id")
-    .option("--before <n>", "how many before it", count, 5)
-    .option("--after <n>", "how many after it", count, 5)
+    .option("--before-n <n>", "how many before it", count, 5)
+    .option("--after-n <n>", "how many after it", count, 5)
     .action(async function (this: Command, chat: string, message: string | undefined) {
-      const { before, after } = this.opts<Window>()
+      const { beforeN: before, afterN: after } = this.opts<{ beforeN: number; afterN: number }>()
       await readWindow(this, chat, message, { before, after })
     })
 

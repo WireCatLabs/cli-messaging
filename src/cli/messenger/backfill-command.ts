@@ -26,7 +26,7 @@ import { stopOnSignal } from "./patience.js"
 
 /**
  * A chat's history into the store, newest to oldest, **resumable**: after every page the stretch it
- * covered is recorded, so a stop — Ctrl-C, `--timeout`, `--max-pages`, `--since`, `--last`, a long FloodWait — loses
+ * covered is recorded, so a stop — Ctrl-C, `--timeout`, `--limit`, `--since-time`, `--last`, a long FloodWait — loses
  * nothing, and the next run jumps over what is already held. Needs numeric message ids, which order
  * the chat.
  */
@@ -36,11 +36,11 @@ export const fetchCommand = (messenger: Messenger): Command => {
     .description("fetch a chat's history into the local store, newest first; run it again to continue")
     .argument("<chat>", messenger.chatArgument)
     .option(
-      "--max-pages <n>",
-      `at most this many pages of ${fetching.page} in this run`,
+      "--limit <n>",
+      `at most this many messages in this run; ${fetching.maxPages * fetching.page} if not given`,
       wholeNumber,
-      fetching.maxPages,
     )
+    .option("--page-size <n>", `how many messages one request asks for; ${fetching.page} if not given`, wholeNumber)
     .option(
       "--pause <duration>",
       fetching.jitter
@@ -48,7 +48,7 @@ export const fetchCommand = (messenger: Messenger): Command => {
         : "pause between pages, to stay under the provider's limits",
       fetching.pause,
     )
-    .option("--since <time>", "stop once it reaches messages older than this: ISO 8601, or 2h / 1d ago")
+    .option("--since-time <time>", "stop once it reaches messages older than this: ISO 8601, or 2h / 1d ago")
     .option("--last <n>", "stop once the newest n messages are held", wholeNumber)
     .option("--background", "run as a job that outlives this command; `store jobs show` follows it")
     .option(
@@ -56,29 +56,44 @@ export const fetchCommand = (messenger: Messenger): Command => {
       "only estimate how many messages, requests and minutes a full fetch would still take — from the store, no request",
     )
     .action(async function (this: Command, chat: string) {
-      const { maxPages, pause, since, last, background, estimate } = this.opts<{
-        maxPages: number
+      const {
+        pause,
+        sinceTime: since,
+        last,
+        background,
+        estimate,
+        ...sizes
+      } = this.opts<{
+        limit?: number
+        pageSize?: number
         pause: string
-        since?: string
+        sinceTime?: string
         last?: number
         background?: boolean
         estimate?: boolean
       }>()
       if (since !== undefined && last !== undefined) {
-        throw new CliError("validation_error", "give --since or --last, not both: how far back the fetch goes")
+        throw new CliError("validation_error", "give --since-time or --last, not both: how far back the fetch goes")
       }
+      const pageSize = sizes.pageSize ?? fetching.page
+      const limit = sizes.limit ?? fetching.maxPages * fetching.page
       const pauseMs = parseDuration(pause, "--pause")
-      const sinceMs = since === undefined ? undefined : momentOf(since)
+      const sinceMs = since === undefined ? undefined : momentOf(since, "--since-time")
       const context = messengerContext(this, messenger)
       if (estimate) {
         if (since !== undefined || last !== undefined) {
-          throw new CliError("validation_error", "--estimate prices a full fetch; --since and --last do not narrow it")
+          throw new CliError(
+            "validation_error",
+            "--estimate prices a full fetch; --since-time and --last do not narrow it",
+          )
         }
-        const answer = await context.withServices((services) => services.archive.estimate(chat, { maxPages, pauseMs }))
+        const answer = await context.withServices((services) =>
+          services.archive.estimate(chat, { limit, pageSize, pauseMs }),
+        )
         context.renderer.result(answer)
         if (answer.missing === null) {
           context.renderer.note(
-            `nothing held of this chat to measure by — \`${messenger.app.command} store fetch ${chat} --max-pages 1\` gives the estimate something to go on`,
+            `nothing held of this chat to measure by — \`${messenger.app.command} store fetch ${chat} --limit ${pageSize}\` gives the estimate something to go on`,
           )
         } else if (answer.missing > 0) context.renderer.note("an estimate: provider waits (FloodWait) come on top")
         return
@@ -86,7 +101,8 @@ export const fetchCommand = (messenger: Messenger): Command => {
       if (background) {
         startJob(this, context, messenger, {
           chat,
-          maxPages,
+          limit,
+          pageSize,
           pause,
           ...(last === undefined ? {} : { last }),
           ...(sinceMs === undefined ? {} : { since: new Date(sinceMs).toISOString() }),
@@ -99,7 +115,8 @@ export const fetchCommand = (messenger: Messenger): Command => {
       try {
         const result = await context.withServices((services) =>
           services.archive.fetch(chat, {
-            maxPages,
+            limit,
+            pageSize,
             pauseMs,
             ...(sinceMs === undefined ? {} : { sinceMs }),
             ...(last === undefined ? {} : { last }),
@@ -180,7 +197,8 @@ const brief = (job: Job) => ({
   startedAt: job.startedAt,
   ...(job.finishedAt ? { finishedAt: job.finishedAt } : {}),
   fetched: Number(job.result?.fetched ?? job.progress?.fetched ?? 0),
-  ...(job.maxPages === undefined ? {} : { maxPages: job.maxPages }),
+  ...(job.limit === undefined ? {} : { limit: job.limit }),
+  ...(job.pageSize === undefined ? {} : { pageSize: job.pageSize }),
   ...(job.last === undefined ? {} : { last: job.last }),
   ...(job.result ? { complete: job.result.complete === true } : {}),
   ...(job.error ? { error: job.error } : {}),
@@ -204,11 +222,12 @@ const startJob = (
   messenger: Messenger,
   {
     chat,
-    maxPages,
+    limit,
+    pageSize,
     pause,
     since,
     last,
-  }: { chat: string; maxPages: number; pause: string; since?: string; last?: number },
+  }: { chat: string; limit: number; pageSize: number; pause: string; since?: string; last?: number },
 ) => {
   const { app } = messenger
   const dir = jobsDir(app, context.env)
@@ -230,11 +249,13 @@ const startJob = (
     "store",
     "fetch",
     chat,
-    "--max-pages",
-    String(maxPages),
+    "--limit",
+    String(limit),
+    "--page-size",
+    String(pageSize),
     "--pause",
     pause,
-    ...(since === undefined ? [] : ["--since", since]),
+    ...(since === undefined ? [] : ["--since-time", since]),
     ...(last === undefined ? [] : ["--last", String(last)]),
     "--json",
     ...(timeout ? ["--timeout", timeout] : []),
@@ -248,7 +269,8 @@ const startJob = (
     profile: context.profile,
     pid: 0,
     startedAt: now.toISOString(),
-    maxPages,
+    limit,
+    pageSize,
     ...(last === undefined ? {} : { last }),
     log,
   }

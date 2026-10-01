@@ -28,12 +28,12 @@ export const downloadSubcommand = (messages: Command, messenger: Messenger): Com
     .description("save a message's photos, files, videos and voice notes to a folder — or a whole chat's with --all")
     .argument("<chat>", messenger.chatArgument)
     .argument("[message]", "the message id; left out with --all")
-    .option("--output <dir>", "where to save them; created if missing", ".")
+    .option("--output-dir <dir>", "where to save them; created if missing", ".")
     .option("--all", "every file of the chat, newest first; run it again to continue where it stopped")
     .option("--pause <duration>", "with --all, a pause between pages, to stay under the provider's limits", "1s")
     .action(async function (this: Command, chat: string, messageId: string | undefined) {
       const context = messengerContext(this, messenger)
-      const { output, all, pause } = this.opts<{ output: string; all?: boolean; pause: string }>()
+      const { outputDir: output, all, pause } = this.opts<{ outputDir: string; all?: boolean; pause: string }>()
       if (all && messageId !== undefined) {
         throw new CliError("validation_error", "--all saves the whole chat; leave out the message id")
       }
@@ -276,7 +276,7 @@ export const save = async (
     }
     const path = resolve(join(directory, names.at(-1) ?? name))
     if (unique) return { kind: file.kind, path, bytes, existing: true }
-    throw new CliError("validation_error", `${path} already exists — nothing was overwritten; choose --output`)
+    throw new CliError("validation_error", `${path} already exists — nothing was overwritten; choose --output-dir`)
   } finally {
     await rm(partial, { force: true })
   }

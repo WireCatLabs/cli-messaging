@@ -43,14 +43,14 @@ const savedPoint = (app: AppIdentity, profile: string, env: NodeJS.ProcessEnv): 
  *
  * **`--new` — what arrived since the last check.** For a scheduled run: the point it starts from is
  * kept per profile and moved only by a run that printed, so each message shows once, and a run
- * that fails shows it again rather than never (max-cli `NEED-162`). `--since` is a one-off look
+ * that fails shows it again rather than never (max-cli `NEED-162`). `--since-time` is a one-off look
  * from a time of your choosing and leaves that point where it was.
  */
 export const inboxCommand = (messenger: Messenger): Command =>
   new Command("inbox")
     .description("other people's unread messages in every chat; --new for what arrived since the last check")
     .option("--new", "what arrived since the last check, each message once — for scheduled runs")
-    .option("--since <time>", "what arrived after this ISO 8601 time, or 2h / 1d ago; the saved point stays put")
+    .option("--since-time <time>", "what arrived after this ISO 8601 time, or 2h / 1d ago; the saved point stays put")
     .option("--limit <n>", "at most this many per chat, the newest", positiveCount("--limit"))
     .option("--all", "muted and archived chats too — left out unless they mention you or reply to you")
     .option(...TRANSCRIBE_OPTION)
@@ -58,13 +58,13 @@ export const inboxCommand = (messenger: Messenger): Command =>
     .action(async function (this: Command) {
       const {
         new: fresh,
-        since,
+        sinceTime: since,
         all,
         transcribe,
         model,
       } = this.opts<{
         new?: boolean
-        since?: string
+        sinceTime?: string
         all?: boolean
         transcribe?: boolean
         model?: string
@@ -76,7 +76,7 @@ export const inboxCommand = (messenger: Messenger): Command =>
       const saved = savedPoint(app, settings.profile, env)
       const from =
         since !== undefined
-          ? momentOf(since)
+          ? momentOf(since, "--since-time")
           : fresh
             ? saved === undefined
               ? Date.now() - FIRST_LOOK_MS

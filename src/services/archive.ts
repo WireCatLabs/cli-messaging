@@ -15,8 +15,10 @@ export const PAGE = 100
 export const FETCHING: Fetching = { page: PAGE, pause: "1s", maxPages: 10, orderBy: "id" }
 
 export interface FetchOptions {
-  /** Requests in this run, of up to `PAGE` messages each. */
-  maxPages: number
+  /** Messages in this run. */
+  limit: number
+  /** Messages per request. */
+  pageSize: number
   pauseMs: number
   /** Stop after the page that reaches a message older than this, epoch milliseconds. */
   sinceMs?: number
@@ -48,7 +50,10 @@ export interface ArchiveService {
   /** `since` is an ISO time: only what was sent then or later. */
   export(chat: string, options?: { since?: string }): Promise<{ title: string; messages: Message[] }>
   /** What a full fetch would still cost, from the store alone. */
-  estimate(chat: string, options: { maxPages: number; pauseMs: number }): Promise<Estimate & { chat: Id }>
+  estimate(
+    chat: string,
+    options: { limit: number; pageSize: number; pauseMs: number },
+  ): Promise<Estimate & { chat: Id }>
   /**
    * A chat's history into the store, newest to oldest, **resumable**: after every page the stretch
    * it covered is recorded, so a stop loses nothing and the next run jumps over what is held. Needs
@@ -84,7 +89,7 @@ export const archiveService = (deps: ServiceDeps): ArchiveService => {
       }
     },
 
-    estimate: async (chat, { maxPages, pauseMs }) => {
+    estimate: async (chat, { limit, pageSize, pauseMs }) => {
       const fetching = deps.messenger.fetching ?? FETCHING
       if (fetching.orderBy === "time") {
         throw new CliError(
@@ -100,14 +105,14 @@ export const archiveService = (deps: ServiceDeps): ArchiveService => {
           ranges: await store.ranges(account, chatId),
           held: (await store.chatStats(account, chatId))[0]?.messages ?? 0,
           newest: Number.isSafeInteger(newest) ? newest : undefined,
-          page: fetching.page,
-          maxPages,
+          page: pageSize,
+          maxPages: Math.ceil(limit / pageSize),
           pauseMs,
         }),
       }
     },
 
-    fetch: async (chat, { maxPages, pauseMs, sinceMs, last, note, stop, onPage }) => {
+    fetch: async (chat, { limit, pageSize, pauseMs, sinceMs, last, note, stop, onPage }) => {
       const fetching = deps.messenger.fetching ?? FETCHING
       const byTime = fetching.orderBy === "time"
       const keyOf = (message: Message) => (byTime ? Date.parse(message.timestamp) : Number(message.id))
@@ -120,14 +125,18 @@ export const archiveService = (deps: ServiceDeps): ArchiveService => {
       let chatId: Id | undefined
       let top: number | undefined
       let fetched = 0
-      let pages = 0
       let reachedStart = false
       let reachedSince = false
       let reachedLast = false
 
-      while (pages < maxPages && !stop.aborted) {
+      while (fetched < limit && !stop.aborted) {
         const page = await patiently(
-          () => connection.history(chat, { limit: fetching.page, reactions: false, ...(before ? { before } : {}) }),
+          () =>
+            connection.history(chat, {
+              limit: Math.min(pageSize, limit - fetched),
+              reactions: false,
+              ...(before ? { before } : {}),
+            }),
           note,
           stop,
         )
@@ -146,7 +155,6 @@ export const archiveService = (deps: ServiceDeps): ArchiveService => {
         }
         const low = Math.min(...keys)
         top ??= Math.max(...keys)
-        pages += 1
         fetched += page.items.length
         // This run's pages are contiguous, so everything from `low` to its first message is held.
         const held = await store.markRange(account, chatId, low, top)
