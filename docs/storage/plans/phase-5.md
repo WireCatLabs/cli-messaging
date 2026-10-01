@@ -225,7 +225,7 @@ the default). Facts: [`../research/2026-10-02-embedding-apis.md`](../research/20
    beside phase 4's `conversations.links`; without it the path is checked as `messages`), the batches and
    resume (E6), the status, `--clear`, `store check` counting
    vectors no chunk points at.
-4. **The external provider** (E11, E12) — `openai` with `--base-url`, the key commands, the consent
+4. ✅ 2026-10-02 · **The external provider** (E11, E12) — `openai` with `--base-url`, the key commands, the consent
    step and `--max-tokens`, `--concurrency`, retries; tested against a stand-in server, never a real key.
 5. 🟡 2026-10-02: the command, the scan and MCP `conversations_search` are built; not yet: keeping the vectors in memory in `serve` and `mcp`, and naming on stderr a chat embedded only with another model · **`conversations search`** — the scan (E3, E7), output and `--json`, MCP `conversations_search`, the
    in-memory copy in `serve` and `mcp`.

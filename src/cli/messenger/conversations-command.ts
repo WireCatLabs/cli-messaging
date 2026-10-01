@@ -1,11 +1,16 @@
 import { CliError } from "@leemour/cli-core"
 import { Command } from "commander"
+import { DEFAULT_TEXT_MODEL } from "../../embeddings/models.js"
+import { isLocal, remoteModel } from "../../embeddings/remote.js"
 import { renderMessages } from "../../render/messages.js"
 import { levelFor } from "../../sends/permissions.js"
 import { BATCH_SIZE } from "../../services/conversations.js"
+import type { EmbedStatus, ModelChoice } from "../../services/embeddings.js"
 import { momentOf } from "../../services/moment.js"
 import type { AgentAnswer, ConversationSummary } from "../../store/store.js"
+import { embeddingKeys } from "../embedding-keys.js"
 import { positiveCount } from "../paging.js"
+import { answerOf as askOwner } from "./ask.js"
 import { type Messenger, type MessengerContext, messengerContext } from "./context.js"
 import { readAll } from "./stdin.js"
 
@@ -89,26 +94,26 @@ export const conversationsCommand = (messenger: Messenger): Command => {
       else context.renderer.result({ ...summary, messages })
     })
 
-  conversations
-    .command("search")
+  withModelOptions(conversations.command("search"))
     .description(
       "the conversations nearest in meaning to a query, in one chat or every embedded one — " +
         "after `conversations embed`; runs on this machine",
     )
     .argument("<query>", "what to look for, in your own words, in any language the model reads")
     .option("--chat <chat>", `only this chat: ${messenger.chatArgument}`)
-    .option("--model <model>", "the model the chats were embedded with (default: e5-small)")
     .option("--since-time <time>", "only those still going at this ISO 8601 time, or 30m / 2h / 1d ago, or later")
     .option("--limit <n>", "how many", positiveCount("--limit"))
     .action(async function (this: Command, query: string) {
-      const { chat, model, sinceTime: since } = this.opts<{ chat?: string; model?: string; sinceTime?: string }>()
+      const options = this.opts<ModelOptions & { chat?: string; sinceTime?: string }>()
+      const { chat, sinceTime: since } = options
       const context = messengerContext(this, messenger)
+      const model = choiceOf(options, messenger, context)
       const { limit } = context.settings
       const found = await context.withServices((services) =>
         services.embeddings.search(query, {
           limit,
           ...(chat === undefined ? {} : { chat }),
-          ...(model === undefined ? {} : { model }),
+          model,
           ...(since === undefined ? {} : { since: new Date(momentOf(since, "--since-time")).toISOString() }),
         }),
       )
@@ -225,38 +230,47 @@ export const conversationsCommand = (messenger: Messenger): Command => {
       else context.renderer.result(cleared)
     })
 
-  const embed = new Command("embed")
-    .description(
-      "compute a vector for each chunk of a chat's conversations, on this machine, for search by meaning; " +
-        "resumes where it stopped",
-    )
-    .option("--chat <chat>", messenger.chatArgument)
-    .option("--model <model>", "a model id from `models text list` (default: e5-small)")
+  const embed = withModelOptions(
+    new Command("embed")
+      .description(
+        "compute a vector for each chunk of a chat's conversations for search by meaning — on this machine, or " +
+          "with --provider through a service and your key; resumes where it stopped",
+      )
+      .option("--chat <chat>", messenger.chatArgument),
+  )
     .option(
       "--workers <n>",
-      "sessions in parallel, each with its own copy of the model (~0.7 GB each)",
+      "local: sessions in parallel, each with its own copy of the model (~0.7 GB each)",
       positiveCount("--workers"),
     )
-    .option("--threads <n>", "threads in all (default: min(8, cores))", positiveCount("--threads"))
+    .option("--threads <n>", "local: threads in all (default: min(8, cores))", positiveCount("--threads"))
+    .option("--concurrency <n>", "remote: requests at once (default: 4)", positiveCount("--concurrency"))
+    .option(
+      "--max-tokens <n>",
+      "remote: stop before a run that could send more tokens than this",
+      positiveCount("--max-tokens"),
+    )
     .action(async function (this: Command) {
-      const { chat, model, workers, threads } = this.opts<{
-        chat?: string
-        model?: string
-        workers?: number
-        threads?: number
-      }>()
-      if (!chat) throw new CliError("validation_error", "--chat is required: the chat whose conversations to embed")
+      const options = this.optsWithGlobals<
+        ModelOptions & { chat?: string; workers?: number; threads?: number; maxTokens?: number; yes?: boolean }
+      >()
+      const chat = chatOf(options)
       const context = messengerContext(this, messenger)
       writable(context, messenger.app.command, EMBED_KEY)
+      const model = choiceOf(options, messenger, context)
       const done = await context.withServices(async (services) => {
         const status = await services.embeddings.status(chat, model)
         context.renderer.note(
-          `${status.left} of ${status.chunks} chunks to embed with ${status.model}, ${minutes(status.estimateSeconds)} on one session`,
+          `${status.left} of ${status.chunks} chunks to embed with ${status.model}` +
+            (status.estimateSeconds === null ? "" : `, ${minutes(status.estimateSeconds)} on one session`),
         )
+        if (typeof model !== "string" && status.left > 0 && !isLocal(model.remote.baseUrl)) {
+          await consent(this, status, model.remote.baseUrl, options)
+        }
         return services.embeddings.embed(chat, {
-          ...(model ? { model } : {}),
-          ...(workers ? { workers } : {}),
-          ...(threads ? { threads } : {}),
+          model,
+          ...(options.workers ? { workers: options.workers } : {}),
+          ...(options.threads ? { threads: options.threads } : {}),
           progress: (embedded, left) => context.renderer.note(`${embedded} embedded, ${left} left`),
         })
       })
@@ -267,37 +281,43 @@ export const conversationsCommand = (messenger: Messenger): Command => {
       } else context.renderer.result(done)
     })
 
-  embed
-    .command("status")
-    .description(
-      "how many chunks of a chat have a vector of the model, how many are left, and about how long they take",
-    )
-    .option("--chat <chat>", messenger.chatArgument)
-    .option("--model <model>", "a model id from `models text list` (default: e5-small)")
-    .action(async function (this: Command) {
-      const { chat, model } = embedOptions(this)
-      const context = messengerContext(this, messenger)
-      const status = await context.withServices((services) => services.embeddings.status(chat, model))
-      if (context.format === "pretty") {
-        context.streams.data(
-          `${status.embedded} of ${status.chunks} chunks embedded with ${status.model}; ${status.left} left, ${minutes(status.estimateSeconds)}\n`,
-        )
-      } else context.renderer.result(status)
-    })
+  withModelOptions(
+    embed
+      .command("status")
+      .description("how many chunks of a chat have a vector of the model, how many are left, and what is left costs")
+      .option("--chat <chat>", messenger.chatArgument),
+  ).action(async function (this: Command) {
+    const options = this.optsWithGlobals<ModelOptions & { chat?: string }>()
+    const chat = chatOf(options)
+    const context = messengerContext(this, messenger)
+    const model = choiceOf(options, messenger, context, { needKey: false })
+    const status = await context.withServices((services) => services.embeddings.status(chat, model))
+    if (context.format === "pretty") {
+      context.streams.data(
+        `${status.embedded} of ${status.chunks} chunks embedded with ${status.model}; ${status.left} left` +
+          (status.estimateSeconds === null ? "" : `, ${minutes(status.estimateSeconds)}`) +
+          (status.priceAtMost ? `, at most ${dollars(status.priceAtMost.usd)}` : "") +
+          "\n",
+      )
+    } else context.renderer.result(status)
+  })
 
-  embed
-    .command("clear")
-    .description("drop a chat's vectors, or only one model's; messages and conversations are never touched")
-    .option("--chat <chat>", messenger.chatArgument)
-    .option("--model <model>", "only this model's vectors")
-    .action(async function (this: Command) {
-      const { chat, model } = embedOptions(this)
-      const context = messengerContext(this, messenger)
-      writable(context, messenger.app.command, EMBED_KEY)
-      const cleared = await context.withServices((services) => services.embeddings.clear(chat, model))
-      if (context.format === "pretty") context.streams.data(`${cleared.cleared} vectors dropped\n`)
-      else context.renderer.result(cleared)
-    })
+  withModelOptions(
+    embed
+      .command("clear")
+      .description("drop a chat's vectors, or only one model's; messages and conversations are never touched")
+      .option("--chat <chat>", messenger.chatArgument),
+  ).action(async function (this: Command) {
+    const options = this.optsWithGlobals<ModelOptions & { chat?: string }>()
+    const chat = chatOf(options)
+    const context = messengerContext(this, messenger)
+    writable(context, messenger.app.command, EMBED_KEY)
+    const given = options.model !== undefined || options.provider !== undefined || options.baseUrl !== undefined
+    const model = given ? choiceOf(options, messenger, context, { needKey: false }) : undefined
+    const cleared = await context.withServices((services) => services.embeddings.clear(chat, model))
+    if (context.format === "pretty") context.streams.data(`${cleared.cleared} vectors dropped\n`)
+    else context.renderer.result(cleared)
+  })
 
   conversations.addCommand(embed)
 
@@ -321,18 +341,99 @@ const writable = (context: MessengerContext, command: string, permission = LINKS
   )
 }
 
+/**
+ * `embed` and its subcommands all take `--chat` and the model options, and commander gives each value to
+ * the group: a subcommand reads them with the group's (`optsWithGlobals`) and checks `--chat` itself.
+ */
+const chatOf = ({ chat }: { chat?: string }): string => {
+  if (!chat) throw new CliError("validation_error", "--chat is required: the chat whose conversations to embed")
+  return chat
+}
+
+interface ModelOptions {
+  model?: string
+  provider?: string
+  baseUrl?: string
+  dims?: number
+  concurrency?: number
+}
+
+const withModelOptions = (command: Command): Command =>
+  command
+    .option(
+      "--model <model>",
+      "local: a model id from `models text list` (default: e5-small); remote: the provider's model",
+    )
+    .option("--provider <provider>", "embed through a service with your key instead of on this machine: openai")
+    .option(
+      "--base-url <url>",
+      "a server with OpenAI's /v1/embeddings: Gemini, Jina, or Ollama and LM Studio on this machine",
+    )
+    .option(
+      "--dims <n>",
+      "remote: the vector size — needed with --base-url; shortens an OpenAI model's",
+      positiveCount("--dims"),
+    )
+
+/** A local model id, or a remote model with its key from `models text key set`. */
+const choiceOf = (
+  { model, provider, baseUrl, dims, concurrency }: ModelOptions,
+  messenger: Messenger,
+  context: MessengerContext,
+  { needKey = true }: { needKey?: boolean } = {},
+): ModelChoice => {
+  if (provider === undefined && baseUrl === undefined) return model ?? DEFAULT_TEXT_MODEL
+  if (provider !== undefined && provider !== "openai") {
+    throw new CliError("validation_error", `no provider ${provider} — openai, or a server with --base-url`)
+  }
+  const remote = remoteModel({
+    ...(model ? { model } : {}),
+    ...(baseUrl ? { baseUrl } : {}),
+    ...(dims ? { dims } : {}),
+  })
+  const keyName = baseUrl === undefined ? "openai" : new URL(baseUrl).host
+  const key = embeddingKeys(messenger.app, context.env).read(keyName)?.key
+  if (!key && needKey && baseUrl === undefined) {
+    throw new CliError(
+      "authentication_error",
+      `no OpenAI key — \`${messenger.app.command} models text key set openai\`, or OPENAI_API_KEY`,
+    )
+  }
+  return { remote, ...(key ? { apiKey: key } : {}), ...(concurrency ? { concurrency } : {}) }
+}
+
+/**
+ * The messages leave the machine: say where, how much and what it may cost, and wait for a yes — `--yes`
+ * in machine mode (E11). Every run asks again.
+ */
+const consent = async (
+  command: Command,
+  status: EmbedStatus,
+  baseUrl: string,
+  { yes, maxTokens }: { yes?: boolean; maxTokens?: number },
+) => {
+  if (maxTokens !== undefined && status.tokensAtMost > maxTokens) {
+    throw new CliError(
+      "validation_error",
+      `this run could send up to ${status.tokensAtMost} tokens, above --max-tokens ${maxTokens} — nothing was sent`,
+    )
+  }
+  const price = status.priceAtMost
+    ? `, at most ${dollars(status.priceAtMost.usd)} at the price read ${status.priceAtMost.read}`
+    : ""
+  const what =
+    `${status.left} chunks of chat ${status.chat}, up to ${status.tokensAtMost} tokens${price}, ` +
+    `go to ${status.model} (${new URL(baseUrl).host})`
+  if (yes) return
+  const answer = await askOwner(command, `${what}. Send them? [y/N] `)
+  if (answer === null) throw new CliError("confirmation_required", `${what} — add --yes to send them`)
+  if (!/^y(es)?$/i.test(answer.trim())) throw new CliError("cancelled", "cancelled — nothing was sent")
+}
+
 const LINKS_KEY = "conversations.links"
 const EMBED_KEY = "conversations.embed"
 
-/**
- * `--chat` and `--model` of `embed status|clear`. The `embed` group declares the same options, and
- * commander hands their values to it, not to the subcommand — so they are read with the group's.
- */
-const embedOptions = (command: Command): { chat: string; model?: string } => {
-  const { chat, model } = command.optsWithGlobals<{ chat?: string; model?: string }>()
-  if (!chat) throw new CliError("validation_error", "--chat is required: the chat whose vectors to read or drop")
-  return { chat, ...(model ? { model } : {}) }
-}
+const dollars = (usd: number) => (usd < 0.0001 ? "under $0.0001" : `$${usd.toFixed(4)}`)
 
 const minutes = (seconds: number) => (seconds < 90 ? `about ${seconds} s` : `about ${Math.round(seconds / 60)} min`)
 

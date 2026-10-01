@@ -18,6 +18,19 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 - **The parity manifest marks `messages search --newest`, `--context` and `--source` as in all CLIs**:
   tg-cli and max-cli are both on 0.99.0, which has them.
 
+### Added
+
+- **An external embedding model with your own key** (storage phase 5): `conversations embed`, `embed
+  status`, `embed clear` and `conversations search` take `--provider openai` (`text-embedding-3-small` by
+  default, `--dims` to shorten) or `--base-url <url>` with `--model` and `--dims` for any server with
+  OpenAI's `/v1/embeddings` — Gemini's compatibility URL, Jina, or Ollama and LM Studio on this machine.
+  Before chat text leaves the machine, `embed` says how many chunks, at most how many tokens and at most
+  what price, and waits for a yes; machine mode needs `--yes`, and `--max-tokens` stops a larger run. A
+  server on this machine is not asked about. Requests go 256 texts at a time, `--concurrency` (4) at once;
+  a 429 waits for `Retry-After`. Errors name the HTTP status and the provider's code, never the text or
+  the key. `models text key set|remove <provider>` keeps the key in the keyring (or
+  `<PREFIX>_OPENAI_API_KEY`, then `OPENAI_API_KEY`), read from a hidden prompt or stdin.
+
 ### Fixed
 
 - **`conversations embed status --chat` and `embed clear --chat` work**: they refused every call with

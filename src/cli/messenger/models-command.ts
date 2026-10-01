@@ -14,7 +14,9 @@ import {
 } from "../../speech/install.js"
 import { orderedModels, speechModel, VAD } from "../../speech/models.js"
 import { choose } from "../../speech/transcribe.js"
-import { baseContext } from "../context.js"
+import { readSecret } from "../../terminal/prompt.js"
+import { baseContext, environmentOf } from "../context.js"
+import { embeddingKeys } from "../embedding-keys.js"
 import { listed } from "../paging.js"
 import type { Messenger } from "./context.js"
 
@@ -148,6 +150,36 @@ export const modelsCommand = (messenger: Messenger): Command => {
         },
         { unbounded: true },
       )
+    })
+
+  const key = text
+    .command("key")
+    .description("the API key of an embedding service, for `conversations embed --provider`")
+
+  key
+    .command("set")
+    .argument("<provider>", "openai, or the host of a --base-url server that wants a key")
+    .description("store a key, typed at a hidden prompt or piped on stdin — never as an argument")
+    .action(async function (this: Command, provider: string) {
+      const context = baseContext(this, messenger.resolveSettings)
+      await context.run(async () => {
+        const stdin = environmentOf(this).stdin
+        const secret = (await readSecret(`API key for ${provider}: `, stdin ? { input: stdin } : {})).trim()
+        if (!secret) throw new CliError("validation_error", "no key was given — nothing was stored")
+        const source = embeddingKeys(messenger.app, context.env).write(provider, secret)
+        context.renderer.result({ provider, stored: source })
+      })
+    })
+
+  key
+    .command("remove")
+    .argument("<provider>", "openai, or a server's host")
+    .description("forget a stored key")
+    .action(async function (this: Command, provider: string) {
+      const context = baseContext(this, messenger.resolveSettings)
+      await context.run(async () => {
+        context.renderer.result({ provider, removed: embeddingKeys(messenger.app, context.env).remove(provider) })
+      })
     })
 
   return models

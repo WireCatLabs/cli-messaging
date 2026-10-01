@@ -4,7 +4,7 @@ import { join } from "node:path"
 import { Readable } from "node:stream"
 import { CliError, captureStreams } from "@leemour/cli-core"
 import type { CommandInfo } from "@leemour/cli-core/commands"
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 import type { Chat, Member, Message, WindowedMessage } from "../../domain/models.js"
 import { SendJournal, sendsPathFor } from "../../sends/journal.js"
 import { openStore } from "../../store/store.js"
@@ -1184,6 +1184,67 @@ describe("the shared read commands", () => {
       JSON.stringify({ profiles: { default: { permissions: { messages: "deny" } } } }),
     )
     expect((await call(["conversations", "batches", "next", "--chat", "7"], never, env)).code).toBe(5)
+  })
+
+  it("**asks before chat text leaves the machine**: --yes in machine mode, --max-tokens, none for a local server", async () => {
+    const root = mkdtempSync(join(tmpdir(), "messenger-"))
+    const env = {
+      CHAT_STATE_DIR: join(root, "state"),
+      CHAT_CONFIG_DIR: join(root, "config"),
+      MESSAGING_STORE: join(root, "m.db"),
+      CHAT_OPENAI_API_KEY: "sk-test",
+    }
+    await call(["messages", "context", "Book", "2", "--json"], async () => fake, env)
+    const never = async (): Promise<MessengerAdapter> => {
+      throw new Error("embedding reads the store alone")
+    }
+    expect((await call(["conversations", "build", "--chat", "7"], never, env)).code).toBe(0)
+    const sent: { url: string; auth: string | undefined }[] = []
+    vi.stubGlobal("fetch", async (url: string, init: RequestInit) => {
+      sent.push({ url, auth: (init.headers as Record<string, string>).authorization })
+      const { input, dimensions } = JSON.parse(String(init.body)) as { input: string[]; dimensions?: number }
+      const dims = dimensions ?? (url.startsWith("https://api.openai.com") ? 1536 : 8)
+      return new Response(
+        JSON.stringify({ data: input.map((_, index) => ({ index, embedding: [1, ...new Array(dims - 1).fill(0)] })) }),
+      )
+    })
+    try {
+      const unasked = await call(
+        ["conversations", "embed", "--chat", "7", "--provider", "openai", "--json"],
+        never,
+        env,
+      )
+      expect(unasked.code).not.toBe(0)
+      expect(unasked.stderr.join("\n")).toContain("add --yes to send them")
+      expect(sent).toEqual([])
+
+      const capped = await call(
+        ["conversations", "embed", "--chat", "7", "--provider", "openai", "--max-tokens", "1", "--yes", "--json"],
+        never,
+        env,
+      )
+      expect(capped.stderr.join("\n")).toContain("above --max-tokens 1 — nothing was sent")
+      expect(sent).toEqual([])
+
+      const agreed = await call(
+        ["conversations", "embed", "--chat", "7", "--provider", "openai", "--yes", "--json"],
+        never,
+        env,
+      )
+      expect(agreed.code).toBe(0)
+      expect(JSON.parse(agreed.stdout[0] ?? "")).toMatchObject({ model: "openai:text-embedding-3-small", skipped: 0 })
+      expect(sent[0]).toEqual({ url: "https://api.openai.com/v1/embeddings", auth: "Bearer sk-test" })
+      expect(agreed.stderr.join("\n")).not.toContain("sk-test")
+
+      sent.length = 0
+      const local = ["--base-url", "http://127.0.0.1:11434/v1", "--model", "m", "--dims", "8"]
+      expect((await call(["conversations", "embed", "--chat", "7", ...local, "--json"], never, env)).code).toBe(0)
+      expect(sent[0]?.url).toBe("http://127.0.0.1:11434/v1/embeddings")
+      const found = await call(["conversations", "search", "anything", ...local, "--json"], never, env)
+      expect(JSON.parse(found.stdout[0] ?? "").items.length).toBeGreaterThan(0)
+    } finally {
+      vi.unstubAllGlobals()
+    }
   })
 
   it("**stores the agent's answer from stdin** with messages read-only, and not with conversations.links read-only", async () => {
