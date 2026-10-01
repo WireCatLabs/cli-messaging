@@ -82,6 +82,16 @@ describe("the messages service", () => {
     expect(asked).toEqual([])
   })
 
+  it("reads a stored chat offline by an id that is not digits", async () => {
+    const store = await keptStore()
+    await store.saveChats(account, [{ ...chat, id: "room-b", title: "Garden" }])
+    await store.saveMessages(account, "room-b", [{ ...thread[0], chatId: "room-b" } as Message], { via: "history" })
+
+    const page = await messagesService(storedDeps(messenger, store, account, guard)).list("room-b", { limit: 5 })
+
+    expect(page.items.map((one) => one.chatId)).toEqual(["room-b"])
+  })
+
   it("refuses to read forward offline, and online when the messenger cannot", async () => {
     const offline = messagesService(storedDeps(messenger, await keptStore(), account, guard))
     const online = messagesService(onlineDeps(messenger, adapter, guard))

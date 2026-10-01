@@ -52,6 +52,17 @@ describe("a person named by name or @username", () => {
     expect(pickPerson("-5", lookup).name).toBe("Иван Петров")
   })
 
+  it("takes an id that is not digits as an id, as another messenger may hand out", () => {
+    const opaque = [...people, person("u_9f2", "Олег")]
+    expect(pickPerson("u_9f2", { get: (id) => opaque.find((one) => one.id === id), all: () => opaque }).name).toBe(
+      "Олег",
+    )
+  })
+
+  it("says nobody is known for a digit id it has not seen, rather than matching it as a name", () => {
+    expect(() => pickPerson("404", lookup)).toThrow(/no person 404/)
+  })
+
   it("asks which one when a fragment matches two", () => {
     expect(() => pickPerson("Иван", lookup)).toThrow(/matches 2 people/)
   })

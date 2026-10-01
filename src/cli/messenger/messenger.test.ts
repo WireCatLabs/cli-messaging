@@ -1120,7 +1120,7 @@ describe("messages download", () => {
       ...fake,
       history: async (_chat, { before }) => {
         const older = withIds(ids, kinds).filter((one) => before === undefined || Number(one.id) < Number(before))
-        return { items: older.slice(0, 2), hasMore: older.length > 2 }
+        return { items: older.slice(0, 2).toReversed(), hasMore: older.length > 2 }
       },
       download: async (_chat, id) => {
         if (id === failOn) throw new CliError("network_error", "the connection dropped")
@@ -1174,6 +1174,39 @@ describe("messages download", () => {
       expect(second).toEqual(["6", "3", "1"])
       expect(JSON.parse(again.stdout[0] ?? "")).toMatchObject({ saved: 3, existing: 0, complete: true })
       expect(readdirSync(into).filter((name) => !name.startsWith("."))).toHaveLength(4)
+    })
+
+    it("walks each page newest first in the order the messenger returned it", async () => {
+      const { root, env } = setup()
+      const asked: string[] = []
+      const shuffled: MessengerAdapter = {
+        ...chatOf([], {}, asked),
+        history: async () => ({ items: withIds([3, 1, 2], { 3: "file", 1: "file", 2: "file" }), hasMore: false }),
+      }
+      await call(["messages", "download", "Book", "--all", "--output", join(root, "out")], async () => shuffled, env)
+
+      expect(asked).toEqual(["2", "1", "3"])
+    })
+
+    it("refuses ids that are not numbers before downloading anything: the progress file compares them", async () => {
+      const { root, env } = setup()
+      const asked: string[] = []
+      const opaque: MessengerAdapter = {
+        ...chatOf([], {}, asked),
+        history: async () => ({
+          items: [{ ...message, id: "msg-b", attachments: [{ kind: "file" }] }],
+          hasMore: false,
+        }),
+      }
+      const { code, stderr } = await call(
+        ["messages", "download", "Book", "--all", "--output", join(root, "out")],
+        async () => opaque,
+        env,
+      )
+
+      expect(code).not.toBe(0)
+      expect(stderr.join("")).toContain("cannot resume")
+      expect(asked).toEqual([])
     })
 
     it("refuses a message id beside --all, and neither", async () => {

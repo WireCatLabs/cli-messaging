@@ -39,6 +39,15 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 - **`messages send --file`, `--photo`, `--voice` show their value as `<file>`**, the argument name
   the standard fixes. Only the help text changes.
 
+### Fixed
+
+- **A person or a stored chat named by an id that is not digits is found by that id.** `pickPerson`
+  looks the reference up as an id before matching names, and `--offline` reads match a stored chat's
+  exact id before titles. Telegram and MAX ids are digits and behave as before.
+- **`messages download --all` walks each page in the order the messenger returned it**, newest first,
+  instead of sorting the page by id as a number. Ids that are not safe integers are still refused,
+  since the progress file compares them. Telegram's history comes oldest first, so its order is unchanged.
+
 ## 0.85.0 — 01.10.2026
 
 ### Added

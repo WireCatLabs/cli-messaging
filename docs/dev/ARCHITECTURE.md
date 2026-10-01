@@ -166,8 +166,8 @@ Five layers, each calling only the ones below it: the **domain** (`src/domain/`)
 (`src/services/`) and the **interface** (the commands and the MCP tools). The layer design is in
 max-cli's private `docs_ai/plans/2026-09-30-layers.md`; how this package built its half is
 [the services plan](../plans/2026-09-30-services.md). `biome.json` refuses an import of `commander` or
-of a command file from `src/services/` and `src/sends/`: what a service shares with a command lives
-in the service, and the command imports it.
+of a command file from `src/services/`, `src/sends/` and `src/mcp/`: what a service or an MCP tool
+shares with a command lives in the service, and the command imports it.
 
 A service is a plain object made by a factory over `ServiceDeps` (`src/services/deps.ts`): the
 messenger, `offline`, and a connection, a store and an account that are each opened on first use —

@@ -5,6 +5,7 @@ import { isLocator, parseLocator } from "../../domain/locator.js"
 import { sendTime } from "../../domain/send-time.js"
 import { renderMessages } from "../../render/messages.js"
 import { readAttachments } from "../../sends/upload.js"
+import { modelWith } from "../../speech/hearing.js"
 import { listed, positiveCount } from "../paging.js"
 import { afterOf, oneDirection } from "./after.js"
 import { type Messenger, messengerContext } from "./context.js"
@@ -14,7 +15,6 @@ import {
   hearForCommand,
   hearingFields,
   MODEL_OPTION,
-  modelWith,
   spokenItems,
   TRANSCRIBE_OPTION,
 } from "./hearing-command.js"

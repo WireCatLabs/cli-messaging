@@ -1,6 +1,16 @@
 import { CliError } from "@leemour/cli-core"
 import { capability } from "../cli/messenger/port.js"
-import type { Chat, ChatCard, ChatEvents, GroupMember, Id, LinkTarget, Member, Page } from "../domain/models.js"
+import type {
+  Chat,
+  ChatCard,
+  ChatEvents,
+  ChatKind,
+  GroupMember,
+  Id,
+  LinkTarget,
+  Member,
+  Page,
+} from "../domain/models.js"
 import { guardedWrite, type Operated } from "../sends/guarded.js"
 import { newOperationId } from "../sends/send-id.js"
 import type { AccountKey, MessageStore } from "../store/store.js"
@@ -18,6 +28,23 @@ export interface ChatFilter {
   search?: string
   kind?: string
   unread?: boolean
+}
+
+export const CHAT_KINDS: ChatKind[] = ["dialog", "group", "channel", "saved"]
+
+/** Refuses a filter that would match nothing useful, before anything is asked. */
+export const checkedFilter = ({ search, kind, unread }: ChatFilter): ChatFilter => {
+  if (search !== undefined && search.trim().length < 3) {
+    throw new CliError("validation_error", `--search takes at least 3 characters, got "${search}"`)
+  }
+  if (kind !== undefined && !CHAT_KINDS.includes(kind as ChatKind)) {
+    throw new CliError("validation_error", `--kind is one of ${CHAT_KINDS.join(", ")} — not "${kind}"`)
+  }
+  return {
+    ...(search === undefined ? {} : { search: search.trim() }),
+    ...(kind ? { kind } : {}),
+    ...(unread ? { unread } : {}),
+  }
 }
 
 export interface PageWindow {

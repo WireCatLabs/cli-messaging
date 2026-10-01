@@ -1,3 +1,4 @@
+import { CliError } from "@leemour/cli-core"
 import { recalledAccount } from "../cli/messenger/accounts.js"
 import type { Messenger } from "../cli/messenger/context.js"
 import type { MessengerAdapter } from "../cli/messenger/port.js"
@@ -5,6 +6,14 @@ import type { Settings } from "../cli/settings.js"
 import type { Message } from "../domain/models.js"
 import { openStore } from "../store/store.js"
 import { type Choice, choose, hearLocally, hearOnline } from "./transcribe.js"
+
+/** `--model` chooses who hears what `--transcribe` asks for; alone it would quietly do nothing. */
+export const modelWith = (transcribe: boolean | undefined, model: string | undefined): string | undefined => {
+  if (model !== undefined && transcribe !== true) {
+    throw new CliError("validation_error", "--model picks who hears voice messages with --transcribe; add --transcribe")
+  }
+  return model
+}
 
 /** Telegram polls each voice message for up to a minute; a whole list gets this long, then says what is left. */
 export const HEARING_BUDGET_MS = 120_000

@@ -161,11 +161,11 @@ const walkChat = async (
       path = progressFile(output, chatId)
       done = readProgress(path)
     }
-    const newestFirst = page.items.map((message) => ({ message, key: Number(message.id) }))
+    const newestFirst = page.items.toReversed().map((message) => ({ message, key: Number(message.id) }))
+    // The stretches in the progress file compare ids as numbers; the order itself is the adapter's.
     if (newestFirst.some(({ key }) => !Number.isSafeInteger(key))) {
       throw new CliError("validation_error", "this messenger's message ids do not order a chat, so --all cannot resume")
     }
-    newestFirst.sort((a, b) => b.key - a.key)
     for (const { message, key } of newestFirst) {
       if (stop.aborted) break pages
       const walked = done.find(({ from, to }) => from <= key && key <= to)
@@ -197,7 +197,7 @@ const walkChat = async (
       complete = true
       break
     }
-    before = String(newestFirst.at(-1)?.key)
+    before = newestFirst.at(-1)?.message.id
     note(`${saved} files so far, back to message ${before}`)
     await sleep(pauseMs, undefined, { signal: stop }).catch(() => {})
   }

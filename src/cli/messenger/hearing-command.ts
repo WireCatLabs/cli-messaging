@@ -1,4 +1,3 @@
-import { CliError } from "@leemour/cli-core"
 import type { Message } from "../../domain/models.js"
 import { type Hearing, hearVoices, isVoice, openKept, spoken, withTranscript } from "../../speech/hearing.js"
 import { choose } from "../../speech/transcribe.js"
@@ -13,14 +12,6 @@ export const MODEL_OPTION = [
   "--model <id>",
   "which downloaded speech model hears them, with --transcribe; `models audio list` shows them",
 ] as const
-
-/** `--model` chooses who hears what `--transcribe` asks for; alone it would quietly do nothing. */
-export const modelWith = (transcribe: boolean | undefined, model: string | undefined): string | undefined => {
-  if (model !== undefined && transcribe !== true) {
-    throw new CliError("validation_error", "--model picks who hears voice messages with --transcribe; add --transcribe")
-  }
-  return model
-}
 
 /**
  * Kept transcripts on every read; new ones with `--transcribe`, over a connection of their own once

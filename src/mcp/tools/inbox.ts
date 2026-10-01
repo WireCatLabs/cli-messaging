@@ -1,9 +1,8 @@
 import * as v from "valibot"
 import type { Messenger } from "../../cli/messenger/context.js"
-import { modelWith } from "../../cli/messenger/hearing-command.js"
-import { momentOf } from "../../cli/messenger/inbox.js"
 import { onlineDeps, servicesFor } from "../../services/index.js"
-import { heard, hearForTool } from "../../speech/hearing.js"
+import { momentOf } from "../../services/moment.js"
+import { heard, hearForTool, modelWith } from "../../speech/hearing.js"
 import { type AnyTool, READ, tool } from "../tool.js"
 
 /** Per chat: unread across many chats at a hundred each would outgrow what a client keeps of one answer. */

@@ -89,7 +89,7 @@
       }
     },
     {
-      "includes": ["src/services/**", "src/sends/**"],
+      "includes": ["src/services/**", "src/sends/**", "src/mcp/**"],
       "linter": {
         "rules": {
           "style": {
@@ -112,7 +112,7 @@
                       "**/cli/messenger/inbox*",
                       "**/cli/messenger/review*"
                     ],
-                    "message": "a service or a send sits below the commands: move the function it needs into src/services/ or src/sends/ and import it from the command instead"
+                    "message": "a service, a send or an MCP tool sits beside or below the commands, never on them: move the function it needs into src/services/ or src/sends/ and import it from the command instead"
                   }
                 ]
               }

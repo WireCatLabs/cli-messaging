@@ -1,7 +1,7 @@
 import * as v from "valibot"
-import { maskedAccount } from "../../cli/messenger/account-command.js"
 import type { Messenger } from "../../cli/messenger/context.js"
 import { capability } from "../../cli/messenger/port.js"
+import { maskedAccount } from "../../services/people.js"
 import { type AnyTool, nameOf, READ, tool } from "../tool.js"
 
 export const accountTools = (messenger: Messenger): Record<string, AnyTool> => {
