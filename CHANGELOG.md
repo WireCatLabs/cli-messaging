@@ -17,6 +17,10 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   changed after them), and `conversations`, `conversation`, `conversationOf`, `links` and
   `conversationState` read them back.
 
+### Changed — may break callers
+
+- **`chat_messages_edit` takes `md`**, as `chat_messages_send` does; the option is `--md`.
+
 ## 0.88.0 — 01.10.2026
 
 ### Added

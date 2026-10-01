@@ -932,7 +932,7 @@
         },
         "--before-time": {
           "state": "planned",
-          "by": "P0b"
+          "by": "T6"
         },
         "--limit": "both",
         "--mark-read": "both",
@@ -966,12 +966,12 @@
         "--allow-any-file": "both",
         "--as-file": "both",
         "--at": {
-          "state": "planned",
-          "by": "P0b"
+          "state": "max-only",
+          "reason": "max pins a shared release from before --at-time; it goes with max's next upgrade"
         },
         "--at-time": {
           "state": "planned",
-          "by": "P0b"
+          "by": "T6"
         },
         "--file": "both",
         "--md": "both",

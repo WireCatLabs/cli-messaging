@@ -20,7 +20,7 @@ export const messageActionTools = (messenger: Messenger): Record<string, AnyTool
         chat,
         message,
         text: v.pipe(v.string(), v.minLength(1)),
-        markdown: v.optional(
+        md: v.optional(
           v.pipe(v.boolean(), v.description("read **bold**, _italic_, ~~struck~~ and `code`; \\ keeps a mark literal")),
         ),
       }),
@@ -32,7 +32,7 @@ export const messageActionTools = (messenger: Messenger): Record<string, AnyTool
           chat: args.chat,
           message: args.message,
           text: args.text,
-          markdown: args.markdown === true,
+          markdown: args.md === true,
         }),
     }),
     messages_forward: tool({

@@ -107,7 +107,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--anonymous` |  | nobody sees who voted for what |  | `polls create` |
 | `--app` | `<how>` | the first time only: how to get this profile's app from my.telegram.org | `browser` | `session start` (tg-only) |
 | `--as-file` |  | send every --file as a plain file to download, a video included |  | `messages send` |
-| `--at` | `<time>` | let the messenger send it later, even with this machine off: a local time like 2026-09-25T09:00, or 30m. **becomes `--at-time` — NEED-493** |  | `messages send` (planned) |
+| `--at` | `<time>` | let the messenger send it later, even with this machine off: a local time like 2026-09-25T09:00, or 30m. **becomes `--at-time` — NEED-493** |  | `messages send` (max-only) |
 | `--at-time` | `<time>` | let the messenger send it later, even with this machine off: a local time like 2026-09-25T09:00, or 30m |  | `messages send` (planned) |
 | `--background` |  | run as a job that outlives this command; `store jobs show` follows it |  | `store fetch` (planned) |
 | `--before` | `<id-or-time>` | read what came before this message id, this ISO 8601 time, or 2h / 1d ago. **becomes `--before-id`, `--before-time` (`messages list`) and `--before-n` (`messages context`) — NEED-485** |  | `messages context` (max-only), `messages list` (max-only) |
