@@ -21,6 +21,11 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   command, starts it again on that SQLite when a Linux distribution's Node brings one the store
   cannot use. On every other setup nothing changes.
 
+### Fixed
+
+- **`bot recipients`' help names `clear`**, the command that removes the list; it said `off`, which
+  does not exist.
+
 ## 0.95.0 — 01.10.2026
 
 ### Fixed
