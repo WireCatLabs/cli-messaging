@@ -67,7 +67,11 @@ export const peopleService = (deps: ServiceDeps): PeopleService => {
       const held = stored ? { store: await deps.store(), account: await deps.account() } : await storeIfOpen(deps)
       if (held && (await held.store.countContacts(held.account)) > 0)
         return storedContacts(held.store, held.account, options)
-      return contactsIn(chats ?? (await (await deps.store()).chats(await deps.account(), {})).items, options)
+      return contactsIn(
+        chats ?? (await (await deps.store()).chats(await deps.account(), {})).items,
+        options,
+        deps.messenger.partnerOf,
+      )
     },
 
     show: async (person) => {
@@ -192,14 +196,23 @@ const sharedChats = async (store: MessageStore, account: AccountKey, personId: s
     lastMessageAt,
   }))
 
+/**
+ * A dialog's id is its person's only where the messenger says so: without `partnerOf` it is (Telegram);
+ * with it, a dialog whose person the messenger cannot name is left out rather than listed under the
+ * chat's id (MAX, where a dialog's id is not the partner's).
+ */
 const contactsIn = (
   chats: readonly Chat[],
   { order, search, limit, offset }: { order: "recent" | "name"; search?: string } & PageWindow,
+  partnerOf?: (chat: Chat) => Id | undefined,
 ): Page<Contact> => {
   const wanted = search?.trim().toLowerCase()
   const people = chats
     .filter((chat) => chat.kind === "dialog")
-    .map(toContact)
+    .flatMap((chat) => {
+      const id = partnerOf ? partnerOf(chat) : chat.id
+      return id === undefined ? [] : [{ ...toContact(chat), id }]
+    })
     .filter(
       (person) => !wanted || [person.name, person.username].some((field) => field?.toLowerCase().includes(wanted)),
     )

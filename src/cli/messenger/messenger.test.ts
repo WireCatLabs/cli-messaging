@@ -232,6 +232,16 @@ describe("the shared read commands", () => {
     expect(JSON.parse(shown.stdout[0] ?? "")).toMatchObject({ id: "21", chats: [{ id: "7" }] })
   })
 
+  it("**list a dialog under its person's id where the messenger names one**, and leave out the dialogs it cannot", async () => {
+    const root = mkdtempSync(join(tmpdir(), "messenger-"))
+    const env = { CHAT_STATE_DIR: join(root, "state"), MESSAGING_STORE: join(root, "m.db") }
+    const partnerOf = (one: Chat) => (one.id === "20" ? "320" : undefined)
+
+    const listed = await call(["contacts", "list", "--json"], async () => fake, env, {}, { partnerOf })
+
+    expect(JSON.parse(listed.stdout[0] ?? "").items).toEqual([expect.objectContaining({ id: "320", name: "Zoe" })])
+  })
+
   it("**send --reply-to answers the message named, with every send option, recorded without the text**", async () => {
     const root = mkdtempSync(join(tmpdir(), "messenger-"))
     const env = {
