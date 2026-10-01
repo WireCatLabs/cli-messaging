@@ -1240,6 +1240,8 @@ describe("the shared read commands", () => {
       const local = ["--base-url", "http://127.0.0.1:11434/v1", "--model", "m", "--dims", "8"]
       expect((await call(["conversations", "embed", "--chat", "7", ...local, "--json"], never, env)).code).toBe(0)
       expect(sent[0]?.url).toBe("http://127.0.0.1:11434/v1/embeddings")
+      const status = await call(["conversations", "embed", "status", "--chat", "7", ...local, "--json"], never, env)
+      expect(JSON.parse(status.stdout[0] ?? "")).toMatchObject({ model: "url:127.0.0.1:11434:m", left: 0 })
       const found = await call(["conversations", "search", "anything", ...local, "--json"], never, env)
       expect(JSON.parse(found.stdout[0] ?? "").items.length).toBeGreaterThan(0)
     } finally {
