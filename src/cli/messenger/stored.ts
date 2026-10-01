@@ -9,6 +9,8 @@ export interface Saving {
   store: () => Promise<MessageStore | undefined>
   warn: (message: string) => void
   events: EventSink
+  /** Saves still writing, for the closer to wait on: `watch` does not hold the next event for one. */
+  pending?: Set<Promise<void>>
 }
 
 /**
@@ -19,9 +21,12 @@ export interface Saving {
  * would erase what `chats list` stored. Nor are `chat` and `contact`: a card's member list is not
  * known to be whole, and `saveMembers` replaces the list.
  */
-export const stored = (messenger: MessengerAdapter, { account, store, warn, events }: Saving): MessengerAdapter => {
+export const stored = (
+  messenger: MessengerAdapter,
+  { account, store, warn, events, pending }: Saving,
+): MessengerAdapter => {
   let warned = false
-  const save = async (operation: string, write: (store: MessageStore) => Promise<unknown>): Promise<void> => {
+  const attempt = async (operation: string, write: (store: MessageStore) => Promise<unknown>): Promise<void> => {
     try {
       const opened = await store()
       if (opened) await write(opened)
@@ -30,6 +35,11 @@ export const stored = (messenger: MessengerAdapter, { account, store, warn, even
       if (!warned) warn(`not saved to the local store: ${error instanceof Error ? error.message : String(error)}`)
       warned = true
     }
+  }
+  const save = (operation: string, writing: (store: MessageStore) => Promise<unknown>): Promise<void> => {
+    const saving = attempt(operation, writing)
+    pending?.add(saving)
+    return saving.finally(() => pending?.delete(saving))
   }
 
   // A method not listed here saves nothing and passes through; a lane that should save adds its line.

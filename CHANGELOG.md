@@ -21,6 +21,23 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   stdin: every `<cli> <command> --option` a page names must exist on that command, or be in the
   manifest for it and not only for the other tool. `pageProblems` in `./parity` is the same check.
 
+### Changed — may break callers
+
+- **A message id is opaque, not digits.** An MCP tool's `message` or `before` takes any id up to 256
+  characters with no space or control character, and `--after` / `after` reads a time only
+  when it looks like one — an ISO 8601 date or time, or `30m`, `2h`, `1d`. Anything else now reaches
+  the messenger as a message id instead of being refused by the argument check, so the adapter must
+  check an id's shape itself. Ids with a space are still refused up front.
+
+- **`new RecipientList(path, command)` requires its second argument**, the app's `command`; the hints
+  in a refusal no longer default to `tg`. `sendGuard` without `command` now takes the recipient
+  list's.
+
+### Fixed
+
+- **`watch` keeps the last messages before it exits.** Closing waits up to 5 seconds for the saves
+  still being written; one that takes longer is a warning, and the command still ends normally.
+
 ## 0.84.0 — 01.10.2026
 
 ### Added

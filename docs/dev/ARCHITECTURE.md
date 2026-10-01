@@ -81,7 +81,7 @@ process, bundled about 6 ms. So:
 - Import Drizzle only through `src/store/sqlite/drizzle/` — `core.ts` for the query builder and
   schema functions (add a name there when you need one), `node.ts` and `bun.ts` for the drivers.
   Anywhere else, `biome.json` refuses `drizzle-orm` (`noRestrictedImports`, `biome.json:81-82`); the
-  folder itself and tests are exempt (`:92`). A direct import passes the tests and crashes tg and max
+  folder itself and tests are exempt (`:125`). A direct import passes the tests and crashes tg and max
   at runtime, where `drizzle-orm` is not installed.
 - The Node and Bun drivers are separate bundle entries and are loaded by dynamic `import()`: each
   imports its own runtime's SQLite at the top of its file, so loading one under the other runtime
@@ -165,7 +165,9 @@ Five layers, each calling only the ones below it: the **domain** (`src/domain/`)
 (each CLI's own, behind `MessengerAdapter`), the **ports** (`port.ts`, the store), the **services**
 (`src/services/`) and the **interface** (the commands and the MCP tools). The layer design is in
 max-cli's private `docs_ai/plans/2026-09-30-layers.md`; how this package built its half is
-[the services plan](../plans/2026-09-30-services.md).
+[the services plan](../plans/2026-09-30-services.md). `biome.json` refuses an import of `commander` or
+of a command file from `src/services/` and `src/sends/`: what a service shares with a command lives
+in the service, and the command imports it.
 
 A service is a plain object made by a factory over `ServiceDeps` (`src/services/deps.ts`): the
 messenger, `offline`, and a connection, a store and an account that are each opened on first use —

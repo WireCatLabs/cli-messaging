@@ -20,7 +20,7 @@ describe("the send guard", () => {
       readOnlyFrom: "default",
       sendsPerHour,
       journal: new SendJournal(sendsPathFor(profile)),
-      recipients: new RecipientList(recipientsPathFor(profile)),
+      recipients: new RecipientList(recipientsPathFor(profile), app.command),
       warn: () => {},
       now: () => new Date(time),
     })
@@ -49,7 +49,7 @@ describe("two senders at once", () => {
       readOnlyFrom: "default",
       sendsPerHour,
       journal: new SendJournal(sendsPathFor(profile)),
-      recipients: new RecipientList(recipientsPathFor(profile)),
+      recipients: new RecipientList(recipientsPathFor(profile), app.command),
       warn: () => {},
       now: () => new Date(time),
     })
@@ -109,7 +109,7 @@ describe("a reaction", () => {
       readOnlyFrom: "config file",
       sendsPerHour: options.sendsPerHour ?? 1,
       journal: new SendJournal(sendsPathFor(profile)),
-      recipients: new RecipientList(recipientsPathFor(profile)),
+      recipients: new RecipientList(recipientsPathFor(profile), app.command),
       warn: () => {},
     })
 
@@ -118,13 +118,13 @@ describe("a reaction", () => {
       "cannot send, react, change chats or change the account",
     )
 
-    new RecipientList(recipientsPathFor("g-react-list")).add({
+    new RecipientList(recipientsPathFor("g-react-list"), app.command).add({
       id: "111",
       title: null,
       addedAt: "2026-09-24T00:00:00Z",
     })
     expect(() => guardFor("g-react-list").check({ chatId: "222", kind: "reaction" })).toThrow(
-      "not on the recipient list",
+      /not on the recipient list.*`app g-react-list recipients add 222`/s,
     )
 
     const journal = new SendJournal(sendsPathFor("g-react-limit"))
@@ -152,7 +152,7 @@ describe("a retry of a send whose outcome was unknown", () => {
       readOnlyFrom: "default",
       sendsPerHour: 1,
       journal: new SendJournal(sendsPathFor(profile)),
-      recipients: new RecipientList(recipientsPathFor(profile)),
+      recipients: new RecipientList(recipientsPathFor(profile), app.command),
       warn: () => {},
     })
 
@@ -178,7 +178,7 @@ describe("an allow-list refusal", () => {
       ...(allowFix ? { allowFix } : {}),
       sendsPerHour: 10,
       journal: new SendJournal(sendsPathFor("g-allow")),
-      recipients: new RecipientList(recipientsPathFor("g-allow")),
+      recipients: new RecipientList(recipientsPathFor("g-allow"), app.command),
       warn: () => {},
     })
 

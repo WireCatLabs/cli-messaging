@@ -7,9 +7,10 @@ import { setTimeout as sleep } from "node:timers/promises"
 import { CliError } from "@leemour/cli-core"
 import type { Command } from "commander"
 import type { Id } from "../../domain/models.js"
+import { patiently } from "../../services/patience.js"
 import { parseDuration } from "../settings.js"
 import { type Messenger, type MessengerContext, messengerContext } from "./context.js"
-import { patiently, stopOnSignal } from "./patience.js"
+import { stopOnSignal } from "./patience.js"
 import { capability, type MessengerAdapter, type RemoteFile } from "./port.js"
 
 export interface Saved {

@@ -1442,8 +1442,17 @@ describe("the guard, account and mcp config commands", () => {
 
     const byId = await call(["messages", "list", "7", "--after", "41", "--jsonl"], async () => forward, env)
     await call(["messages", "list", "7", "--after", "2026-09-27T10:00:00Z", "--json"], async () => forward, env)
+    await call(["messages", "list", "7", "--after", "2026-09-27", "--json"], async () => forward, env)
+    await call(["messages", "list", "7", "--after", "urn:li:msg:4F2", "--json"], async () => forward, env)
+    await call(["messages", "list", "7", "--after", "2h", "--json"], async () => forward, env)
 
-    expect(asked).toEqual([{ id: "41" }, { time: Date.parse("2026-09-27T10:00:00Z") }])
+    expect(asked.slice(0, 4)).toEqual([
+      { id: "41" },
+      { time: Date.parse("2026-09-27T10:00:00Z") },
+      { time: Date.parse("2026-09-27") },
+      { id: "urn:li:msg:4F2" },
+    ])
+    expect(asked[4]).toEqual({ time: expect.any(Number) })
     expect(byId.stderr.join("\n")).toContain("--after 3")
   })
 
@@ -1455,6 +1464,10 @@ describe("the guard, account and mcp config commands", () => {
     expect((await call(["messages", "list", "7", "--after", "2", "--offline"], online, env)).code).toBe(2)
     const unable = await call(["messages", "list", "7", "--after", "2"], online, env)
     expect([unable.code, unable.stderr.join("\n")]).toEqual([2, expect.stringContaining("read forward")])
+    for (const bad of ["2026-13-45", "4 2", " "]) {
+      const refused = await call(["messages", "list", "7", "--after", bad], online, env)
+      expect([refused.code, refused.stderr.join("\n")]).toEqual([2, expect.stringContaining("--after takes")])
+    }
   })
 
   it("**chats events** asks from 7 days back, keeps the --event names, and says when it was cut short", async () => {

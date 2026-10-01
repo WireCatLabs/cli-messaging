@@ -98,6 +98,23 @@ export interface MessengerContext extends BaseContext {
   withServices: <T>(work: (services: Services) => Promise<T>, options?: { name?: string }) => Promise<T>
 }
 
+/** Long enough for a local write; a store that hangs must not keep the process alive. */
+const SAVES_WAIT_MS = 5_000
+
+/** Whether every save finished within `ms`. Saves never reject: `stored` turns a failure into a warning. */
+const settled = async (pending: Set<Promise<void>>, ms: number): Promise<boolean> => {
+  if (pending.size === 0) return true
+  let timer: NodeJS.Timeout | undefined
+  const late = new Promise<false>((resolve) => {
+    timer = setTimeout(() => resolve(false), ms)
+  })
+  try {
+    return await Promise.race([Promise.all([...pending]).then(() => true as const), late])
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
 /**
  * A connection as every shared reader sees it: its account remembered, each call a run event, what
  * the reads answer saved to the store. `close` closes the connection and the store it opened. One
@@ -113,6 +130,7 @@ export const connected = (
   if (self !== null) rememberAccount(app, settings.profile, self, env)
   const adapter = observed(connection, events)
   let store: Promise<MessageStore | undefined> | undefined
+  const pending = new Set<Promise<void>>()
   return {
     adapter:
       self === null
@@ -125,9 +143,14 @@ export const connected = (
             },
             warn: renderer.warn,
             events,
+            pending,
           }),
     close: async () => {
       await connection.close()
+      if (!(await settled(pending, SAVES_WAIT_MS))) {
+        events({ event: "warning", code: "store_not_written", operation: "close" })
+        renderer.warn("not saved to the local store: the last messages were still being written at exit")
+      }
       if (store) await (await store.catch(() => undefined))?.close()
     },
   }

@@ -21,7 +21,14 @@ export const limit = v.optional(
   v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(100), v.description("how many")),
 )
 export const page = v.optional(v.pipe(v.number(), v.integer(), v.minValue(1), v.description("which page, from 1")))
-export const message = v.pipe(v.string(), v.regex(/^\d+$/), v.description("message id"))
+/** Opaque: another messenger's ids need not be digits. */
+export const message = v.pipe(
+  v.string(),
+  v.maxLength(256),
+  // biome-ignore lint/suspicious/noControlCharactersInRegex: refusing them is the point
+  v.regex(/^[^\s\x00-\x1F\x7F-\x9F]+$/, "a message id has no spaces or control characters"),
+  v.description("message id"),
+)
 
 export const READ: ToolAnnotations = { readOnlyHint: true, destructiveHint: false, openWorldHint: true }
 export const WRITE: ToolAnnotations = {

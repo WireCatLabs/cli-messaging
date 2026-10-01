@@ -1,7 +1,7 @@
 import * as v from "valibot"
 import type { Messenger } from "../../cli/messenger/context.js"
-import { guardedClose, guardedCreatePoll, guardedVote } from "../../cli/messenger/polls-command.js"
 import { capability } from "../../cli/messenger/port.js"
+import { guardedClose, guardedCreatePoll, guardedVote } from "../../sends/polls.js"
 import { type AnyTool, APPROVE, chatOf, message, READ, tool, WRITE } from "../tool.js"
 
 const answerId = v.pipe(v.string(), v.minLength(1), v.description("an answer id, as polls_show gives it"))

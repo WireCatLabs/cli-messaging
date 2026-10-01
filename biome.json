@@ -89,6 +89,39 @@
       }
     },
     {
+      "includes": ["src/services/**", "src/sends/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["@mtcute/*", "ws", "**/telegram/**", "**/max/**"],
+                    "message": "cli-messaging speaks no provider: an adapter translates into the domain model, and nothing here may import a messenger library or an adapter"
+                  },
+                  {
+                    "group": ["drizzle-orm", "drizzle-orm/*"],
+                    "message": "drizzle-orm is a development dependency, bundled into dist at build time: import it through src/store/sqlite/drizzle/ (add what you need to core.ts), or tg and max crash at runtime"
+                  },
+                  {
+                    "group": [
+                      "commander",
+                      "**/cli/messenger/*-command*",
+                      "**/cli/messenger/inbox*",
+                      "**/cli/messenger/review*"
+                    ],
+                    "message": "a service or a send sits below the commands: move the function it needs into src/services/ or src/sends/ and import it from the command instead"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
       "includes": ["src/store/sqlite/drizzle/**", "src/**/*.test.ts"],
       "linter": {
         "rules": {

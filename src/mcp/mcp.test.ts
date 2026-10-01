@@ -260,6 +260,31 @@ describe("the MCP server", () => {
     expect((await call("chat_messages_list", { chat: "7", after: "12", before: "20" })).isError).toBe(true)
   })
 
+  it("takes a message id that is not digits, and refuses one with a space or a control character", async () => {
+    const seen: unknown[] = []
+    const { call, client } = await connect(
+      scripted({
+        history: async (_chat, options) => {
+          seen.push(options.before)
+          return { items: [], hasMore: false }
+        },
+        historyAfter: async (_chat, window) => {
+          seen.push(window.after)
+          return { items: [], hasMore: false }
+        },
+      }),
+    )
+
+    expect((await call("chat_messages_list", { chat: "7", before: "urn:li:msg:4F2" })).isError).toBe(false)
+    expect((await call("chat_messages_list", { chat: "7", after: "wamid.HBgL" })).isError).toBe(false)
+    expect(seen).toEqual(["urn:li:msg:4F2", { id: "wamid.HBgL" }])
+    for (const before of ["4 2", "42\u0007", "", "9".repeat(257)]) {
+      const refused = await client.callTool({ name: "chat_messages_list", arguments: { chat: "7", before } })
+      expect(refused.isError).toBe(true)
+    }
+    expect(seen).toHaveLength(2)
+  })
+
   it("lists a forum's topics with chat_topics_list, passing search on", async () => {
     const seen: unknown[] = []
     const topic = {

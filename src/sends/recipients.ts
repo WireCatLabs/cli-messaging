@@ -31,7 +31,7 @@ export class RecipientList {
   /** `command` names the program in the hint that turns the list off. */
   constructor(
     readonly path: string,
-    readonly command = "tg",
+    readonly command: string,
   ) {}
 
   /** `undefined` when the list is off. A file that cannot be read refuses rather than opening up. */
