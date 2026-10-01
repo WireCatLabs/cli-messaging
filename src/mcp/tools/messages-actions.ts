@@ -27,13 +27,14 @@ export const messageActionTools = (messenger: Messenger): Record<string, AnyTool
       title: "Forward a message",
       description:
         "Forward one message to another chat, where new people will read it. Only when the owner asked for this " +
-        "message to go to this chat. On outcome_unknown, look in the target chat before forwarding again: a repeat " +
-        "is a second copy.",
+        "message to go to this chat. On outcome_unknown, retry with the send_id it returns, never a new one: " +
+        "a repeat without it is a second copy.",
       input: v.object({
         chat: v.pipe(v.string(), v.minLength(1), v.description("the chat the message is in")),
         message,
         to: v.pipe(v.string(), v.minLength(1), v.description(`where it goes: ${messenger.chatArgument}`)),
         silent: v.optional(v.pipe(v.boolean(), v.description("deliver without a notification"))),
+        send_id: v.optional(v.pipe(v.string(), v.minLength(1), v.description("from an earlier outcome_unknown"))),
       }),
       annotations: WRITE,
       _meta: APPROVE,
@@ -44,6 +45,7 @@ export const messageActionTools = (messenger: Messenger): Record<string, AnyTool
           message: args.message,
           to: args.to,
           silent: args.silent === true,
+          ...(args.send_id === undefined ? {} : { sendId: args.send_id }),
         }),
     }),
     messages_pin: tool({

@@ -77,7 +77,9 @@ export interface MessagesService {
   /** Each message counts toward the hourly limit. */
   delete(request: { chat: string; messages: string[]; forEveryone: boolean }): Promise<Operated<Deletion>>
   /** Guarded against the chat it goes to: that is where somebody new reads it. */
-  forward(target: MessageTarget & { to: string; silent: boolean }): Promise<Operated<{ message: Message }>>
+  forward(
+    target: MessageTarget & { to: string; silent: boolean; sendId?: string },
+  ): Promise<Operated<{ sendId: string; message: Message }>>
   /** Counts toward the hourly limit only when it notifies. */
   pin(target: MessageTarget & { notify: boolean }): Promise<Operated<Pinned>>
   unpin(target: MessageTarget): Promise<Operated<Pinned>>
@@ -226,19 +228,19 @@ export const messagesService = (deps: ServiceDeps): MessagesService => {
       return { operationId, chatId, deleted: messages, forEveryone }
     },
 
-    forward: async ({ chat, message, to, silent }) => {
+    forward: async ({ chat, message, to, silent, sendId }) => {
       const connection = await deps.connection()
       const forward = capability(connection, "forward", "forward a message")
       const { id: fromChatId } = await connection.resolve(chat)
       const { id: toChatId } = await connection.resolve(to)
-      const operationId = newOperationId()
+      const id = sendId ?? connection.newSendId?.() ?? newSendId()
       const forwarded = await guardedWrite(
         guard,
-        { operationId, chatId: toChatId, kind: "forward" },
-        () => forward(fromChatId, message, toChatId, silent ? { silent } : {}),
+        { operationId: id, sendId: id, chatId: toChatId, kind: "forward" },
+        () => forward(fromChatId, message, toChatId, { sendId: id, ...(silent ? { silent } : {}) }),
         (done) => ({ messageId: done.id }),
       )
-      return { operationId, message: forwarded }
+      return { operationId: id, sendId: id, message: forwarded }
     },
 
     pin: ({ notify, ...target }) => pinning(target, true, notify),

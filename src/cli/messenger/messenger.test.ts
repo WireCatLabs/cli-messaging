@@ -425,9 +425,42 @@ describe("the shared read commands", () => {
 
     expect(done.code).toBe(0)
     expect(JSON.parse(done.stdout[0] ?? "").message).toMatchObject({ id: "50", chatId: "20" })
-    expect(forwards).toEqual([["7", "3", "20", { silent: true }]])
+    expect(forwards).toEqual([["7", "3", "20", { sendId: expect.any(String), silent: true }]])
     const journal = new SendJournal(sendsPathFor(app, "default", env)).entries()
     expect(journal.at(-1)).toMatchObject({ kind: "forward", outcome: "sent", chatId: "20", messageId: "50" })
+  })
+
+  it("**a forward repeated with its --send-id after an unknown outcome leaves one copy**", async () => {
+    const root = mkdtempSync(join(tmpdir(), "messenger-"))
+    const env = { CHAT_STATE_DIR: join(root, "state"), CHAT_CONFIG_DIR: join(root, "config") }
+    const copies = new Map<string, Message>()
+    let answered = false
+    const deduplicating: MessengerAdapter = {
+      ...fake,
+      resolve: async (reference) => (reference === "Zoe" ? { ...chat, id: "20", title: "Zoe" } : chat),
+      forward: async (_from, _id, to, { sendId }) => {
+        const copy = copies.get(sendId) ?? { ...message, id: String(50 + copies.size), chatId: to }
+        copies.set(sendId, copy)
+        if (!answered) {
+          answered = true
+          throw new CliError("outcome_unknown", "no answer", { sendId })
+        }
+        return copy
+      },
+    }
+    const forward = ["messages", "forward", "Book", "3", "--to", "Zoe", "--send-id", "9001", "--json"]
+
+    expect((await call(forward, async () => deduplicating, env)).code).toBe(14)
+    const repeated = await call(forward, async () => deduplicating, env)
+
+    expect(repeated.code).toBe(0)
+    expect(JSON.parse(repeated.stdout[0] ?? "")).toMatchObject({ sendId: "9001", message: { id: "50" } })
+    expect(copies.size).toBe(1)
+    const journal = new SendJournal(sendsPathFor(app, "default", env)).entries()
+    expect(journal.filter((entry) => entry.outcome !== "reserved")).toMatchObject([
+      { kind: "forward", sendId: "9001", outcome: "outcome_unknown" },
+      { kind: "forward", sendId: "9001", outcome: "sent", messageId: "50" },
+    ])
   })
 
   it("**pin quietly without counting toward the hourly limit**; a pin that notifies counts", async () => {

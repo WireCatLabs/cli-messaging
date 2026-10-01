@@ -861,10 +861,7 @@
     "messages forward": {
       "state": "both",
       "options": {
-        "--send-id": {
-          "state": "planned",
-          "by": "P1"
-        },
+        "--send-id": "both",
         "--silent": "both",
         "--to": "both"
       }
