@@ -9,6 +9,7 @@ import { modelWith } from "../../speech/hearing.js"
 import { listed, positiveCount } from "../paging.js"
 import { listStart } from "./after.js"
 import { type Messenger, messengerContext } from "./context.js"
+import { linksCommand } from "./conversations-command.js"
 import { downloadSubcommand } from "./download-command.js"
 import {
   heardItems,
@@ -202,6 +203,7 @@ export const messagesCommand = (messenger: Messenger): Command => {
   messages.addCommand(pinCommand(messenger))
   messages.addCommand(unpinCommand(messenger))
   messages.addCommand(scheduledCommand(messenger))
+  messages.addCommand(linksCommand(messenger))
   return messages
 }
 

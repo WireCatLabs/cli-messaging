@@ -762,6 +762,11 @@
     "contacts unblock": {
       "state": "both"
     },
+    "conversations": {
+      "state": "planned",
+      "by": "storage phase 3",
+      "subtree": true
+    },
     "doctor": {
       "state": "both",
       "options": {
@@ -906,6 +911,10 @@
         "--silent": "both",
         "--to": "both"
       }
+    },
+    "messages links": {
+      "state": "planned",
+      "by": "storage phase 3"
     },
     "messages list": {
       "state": "both",

@@ -219,7 +219,7 @@ const BOT_HOUSEKEEPING = new Set(["auth", "list", "sends", "recipients", "mcp"])
 const STORE_MAINTENANCE = new Set(["info", "check", "migrate", "backup", "restore"])
 
 /** Commands outside `messages` that print what people wrote, so `deny messages` reaches them too. */
-const SHOW_MESSAGES = new Set(["inbox", "review", "watch", "serve", "store"])
+const SHOW_MESSAGES = new Set(["inbox", "review", "watch", "serve", "store", "conversations"])
 
 /**
  * The key a command path is checked against: `null` for housekeeping, which no level stops, and

@@ -2,6 +2,7 @@ import { type AccountService, accountService } from "./account.js"
 import { type AdminService, adminService } from "./admin.js"
 import { type ArchiveService, archiveService } from "./archive.js"
 import { type ChatsService, chatsService } from "./chats.js"
+import { type ConversationsService, conversationsService } from "./conversations.js"
 import type { ServiceDeps } from "./deps.js"
 import { type FoldersService, foldersService } from "./folders.js"
 import { type InboxService, inboxService } from "./inbox.js"
@@ -17,6 +18,8 @@ export type { ArchiveService, Fetched, FetchOptions } from "./archive.js"
 export { archiveService } from "./archive.js"
 export type { ChatFilter, ChatsService, MarkedRead, PageWindow } from "./chats.js"
 export { CHAT_SCAN, chatsService, EVENTS_DAYS } from "./chats.js"
+export type { Built, ConversationsService, MessageLinks } from "./conversations.js"
+export { conversationsService } from "./conversations.js"
 export type { ServiceDeps } from "./deps.js"
 export { OFFLINE, onlineDeps, storedDeps } from "./deps.js"
 export type { FolderEdit, FoldersService } from "./folders.js"
@@ -49,6 +52,7 @@ export interface Services {
   folders: FoldersService
   account: AccountService
   moderation: ModerationService
+  conversations: ConversationsService
 }
 
 /**
@@ -69,6 +73,7 @@ export const servicesFor = (deps: ServiceDeps): Services => {
     folders: foldersService(deps),
     account: accountService(deps),
     moderation: moderationService(deps),
+    conversations: conversationsService(deps),
   }
   return deps.messenger.services ? { ...base, ...deps.messenger.services(base, deps) } : base
 }

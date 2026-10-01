@@ -11,6 +11,7 @@ import { chatsCommand } from "./chats-command.js"
 import { completeCommand } from "./complete-command.js"
 import { contactsCommand } from "./contacts-command.js"
 import type { Messenger } from "./context.js"
+import { conversationsCommand } from "./conversations-command.js"
 import { doctorCommand } from "./doctor-command.js"
 import { recipientsCommand, sendsCommand } from "./guard-commands.js"
 import { inboxCommand } from "./inbox.js"
@@ -55,6 +56,7 @@ describe("the permission key of a command", () => {
       serveCommand(messenger),
       serverCommand(messenger),
       storeCommand(messenger),
+      conversationsCommand(messenger),
       recipientsCommand(messenger),
       sendsCommand(messenger),
       modelsCommand(messenger),
@@ -69,6 +71,7 @@ describe("the permission key of a command", () => {
 
     expect(paths.filter((path) => keyForCommand(path) === undefined)).toEqual([])
     expect(keyForCommand(["store", "export"])).toBe("messages")
+    expect(keyForCommand(["conversations", "show"])).toBe("messages")
     expect(keyForCommand(["store", "backup"])).toBeNull()
     expect(keyForCommand(["chats", "members", "list"])).toBe("chats.members.list")
   })
