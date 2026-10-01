@@ -1,6 +1,7 @@
 import { setTimeout as sleep } from "node:timers/promises"
 import { CliError } from "@leemour/cli-core"
 import { type Estimate, estimateBackfill } from "../cli/messenger/backfill-estimate.js"
+import type { Fetching } from "../cli/messenger/context.js"
 import { patiently } from "../cli/messenger/patience.js"
 import type { Id, Message } from "../domain/models.js"
 import type { AccountKey, ChatStats, MessageStore, Range } from "../store/store.js"
@@ -9,6 +10,9 @@ import { storedChatId } from "./messages.js"
 
 /** The most messages a provider hands out per history request — Telegram's cap. */
 export const PAGE = 100
+
+/** How `store fetch` reads a messenger's history, where it says nothing of its own. */
+export const FETCHING: Fetching = { page: PAGE, pause: "1s", maxPages: 10, orderBy: "id" }
 
 export interface FetchOptions {
   /** Requests in this run, of up to `PAGE` messages each. */
@@ -81,6 +85,13 @@ export const archiveService = (deps: ServiceDeps): ArchiveService => {
     },
 
     estimate: async (chat, { maxPages, pauseMs }) => {
+      const fetching = deps.messenger.fetching ?? FETCHING
+      if (fetching.orderBy === "time") {
+        throw new CliError(
+          "validation_error",
+          "--estimate counts the message ids missing between what is held; this messenger's ids do not count messages",
+        )
+      }
       const { store, account, chatId } = await found(chat)
       const newest = Number((await store.messages(account, chatId, { limit: 1 })).items[0]?.id)
       return {
@@ -89,7 +100,7 @@ export const archiveService = (deps: ServiceDeps): ArchiveService => {
           ranges: await store.ranges(account, chatId),
           held: (await store.chatStats(account, chatId))[0]?.messages ?? 0,
           newest: Number.isSafeInteger(newest) ? newest : undefined,
-          page: PAGE,
+          page: fetching.page,
           maxPages,
           pauseMs,
         }),
@@ -97,6 +108,9 @@ export const archiveService = (deps: ServiceDeps): ArchiveService => {
     },
 
     fetch: async (chat, { maxPages, pauseMs, sinceMs, last, note, stop, onPage }) => {
+      const fetching = deps.messenger.fetching ?? FETCHING
+      const byTime = fetching.orderBy === "time"
+      const keyOf = (message: Message) => (byTime ? Date.parse(message.timestamp) : Number(message.id))
       const connection = await deps.connection()
       const self = connection.self()
       if (self === null) throw new CliError("authentication_error", "not logged in — nothing to fetch for")
@@ -113,7 +127,7 @@ export const archiveService = (deps: ServiceDeps): ArchiveService => {
 
       while (pages < maxPages && !stop.aborted) {
         const page = await patiently(
-          () => connection.history(chat, { limit: PAGE, ...(before ? { before } : {}) }),
+          () => connection.history(chat, { limit: fetching.page, reactions: false, ...(before ? { before } : {}) }),
           note,
           stop,
         )
@@ -123,7 +137,7 @@ export const archiveService = (deps: ServiceDeps): ArchiveService => {
           break
         }
         chatId ??= first.chatId
-        const keys = page.items.map((message) => Number(message.id))
+        const keys = page.items.map(keyOf)
         if (keys.some((key) => !Number.isSafeInteger(key))) {
           throw new CliError(
             "validation_error",
@@ -149,13 +163,16 @@ export const archiveService = (deps: ServiceDeps): ArchiveService => {
           (at, message) => (message.timestamp < at ? message.timestamp : at),
           first.timestamp,
         )
-        if (last !== undefined && (await heldSince(store, account, chatId, held.from, low, oldestAt)) >= last) {
+        const fromAt =
+          held.from === low ? oldestAt : await timeOfKey(store, account, chatId, held.from, byTime, oldestAt)
+        if (last !== undefined && (await store.countMessages(account, chatId, { since: fromAt })) >= last) {
           reachedLast = true
           break
         }
-        before = String(held.from)
+        before = byTime ? new Date(held.from).toISOString() : String(held.from)
         note(`${fetched} messages so far, back to ${held.from}`)
-        await sleep(pauseMs, undefined, { signal: stop }).catch(() => {})
+        const wait = fetching.jitter ? pauseMs * (1 + Math.random()) : pauseMs
+        await sleep(wait, undefined, { signal: stop }).catch(() => {})
       }
 
       const ranges = chatId === undefined ? [] : await store.ranges(account, chatId)
@@ -172,22 +189,16 @@ export const archiveService = (deps: ServiceDeps): ArchiveService => {
   }
 }
 
-/**
- * How many stored messages are as new as the held stretch's first one: the depth a fetch has
- * reached. The page's own oldest time, unless the page joined an older stretch.
- */
-const heldSince = async (
+/** When the message a held stretch starts at was sent: by time the key is the time; by id, the stored message says. */
+const timeOfKey = async (
   store: MessageStore,
   account: AccountKey,
   chatId: Id,
-  from: number,
-  low: number,
-  oldestAt: string,
-): Promise<number> => {
-  const at =
-    from === low
-      ? oldestAt
-      : ((await store.around(account, chatId, String(from), { before: 0, after: 0 }).catch(() => []))[0]?.timestamp ??
-        oldestAt)
-  return store.countMessages(account, chatId, { since: at })
+  key: number,
+  byTime: boolean,
+  fallback: string,
+): Promise<string> => {
+  if (byTime) return new Date(key).toISOString()
+  const [message] = await store.around(account, chatId, String(key), { before: 0, after: 0 }).catch(() => [])
+  return message?.timestamp ?? fallback
 }

@@ -8,6 +8,15 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Added
 
+- **`Messenger.fetching`: how `store fetch` reads a messenger's history** — messages per request,
+  the least pause between requests (with `jitter`, each up to twice that), pages per run, and
+  `orderBy: "time"` for a messenger whose ids pass 2^53 and do not count messages: its held stretches
+  are kept by send time and `before` reaches the adapter as an ISO time; `--estimate` refuses there.
+  `--max-pages` and `--pause` default to the messenger's. Without it, nothing changes. `history`
+  takes `reactions: false`, which `store fetch` passes: a page it stores needs none.
+- **`store export --format jsonl`**, the default said out loud: one message per line, on stdout or
+  in `--output`.
+
 - **`cli-messaging-parity <cli> --pages <file...>`** checks user pages against the command tree on
   stdin: every `<cli> <command> --option` a page names must exist on that command, or be in the
   manifest for it and not only for the other tool. `pageProblems` in `./parity` is the same check.

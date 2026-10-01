@@ -24,6 +24,22 @@ export interface ConnectOptions {
   events?: EventSink
 }
 
+export interface Fetching {
+  /** Messages per history request. */
+  page: number
+  /** The least wait between requests, as `--pause` takes it. */
+  pause: string
+  /** Each wait drawn between `pause` and twice that, as a person scrolls rather than a clock. */
+  jitter?: boolean
+  /** Pages per run when `--max-pages` is not given. */
+  maxPages: number
+  /**
+   * What a held stretch is keyed by: the message id, or its send time where ids pass 2^53 and do
+   * not count messages (MAX). By time, `before` reaches the adapter as an ISO time.
+   */
+  orderBy?: "id" | "time"
+}
+
 /** What one messenger CLI hands the shared commands. Everything else about it stays in its own code. */
 export interface Messenger {
   app: AppIdentity
@@ -48,6 +64,8 @@ export interface Messenger {
   savedChatId?: (account: AccountKey) => Id
   /** The other person in a one-to-one chat, when the chat says who — a recipient list matches on it. */
   partnerOf?: (chat: Chat) => Id | undefined
+  /** How `store fetch` reads this messenger's history, where Telegram's defaults do not fit it. */
+  fetching?: Fetching
   /** Speech model ids, most suitable first, for `messages transcribe --local`; the first is the default. */
   speechModels?: readonly string[]
   /** Replaces shared use cases for this messenger; its commands and MCP tools both get the replacement. */

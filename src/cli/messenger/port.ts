@@ -93,8 +93,11 @@ export interface MessengerCore {
   newSendId?(): string
   me(): Promise<Account>
   chats(window: { limit?: number; offset: number }): Promise<Page<Chat>>
-  /** Oldest to newest. `before` is a message id, or whatever the messenger pages by, as typed. */
-  history(chat: string, window: { limit: number; before?: string }): Promise<Page<Message>>
+  /**
+   * Oldest to newest. `before` is a message id, or whatever the messenger pages by, as typed.
+   * `reactions: false` when they are not wanted — `store fetch` — where reading them costs a request.
+   */
+  history(chat: string, window: { limit: number; before?: string; reactions?: false }): Promise<Page<Message>>
   resolve(chat: string): Promise<Chat>
   /** One chat and who is in it; `members` is `null` where the messenger does not say — a channel, a hidden list. */
   chat(chat: string): Promise<ChatCard>

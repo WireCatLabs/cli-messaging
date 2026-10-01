@@ -18,7 +18,13 @@ export { chatsCommand } from "./messenger/chats-command.js"
 export { markReadCommand } from "./messenger/chats-read-command.js"
 export { completeCommand } from "./messenger/complete-command.js"
 export { contactsCommand } from "./messenger/contacts-command.js"
-export { type ConnectOptions, type Messenger, type MessengerContext, messengerContext } from "./messenger/context.js"
+export {
+  type ConnectOptions,
+  type Fetching,
+  type Messenger,
+  type MessengerContext,
+  messengerContext,
+} from "./messenger/context.js"
 export { doctorCommand } from "./messenger/doctor-command.js"
 export { recipientsCommand, sendsCommand } from "./messenger/guard-commands.js"
 export { INBOX_CHATS, inboxCommand, momentOf, newIn, unreadIn } from "./messenger/inbox.js"
