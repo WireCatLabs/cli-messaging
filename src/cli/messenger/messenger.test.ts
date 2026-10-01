@@ -1117,7 +1117,7 @@ describe("the guard, account and mcp config commands", () => {
     const online = async () => fake
 
     const off = await call(["recipients", "list", "--json"], online, env)
-    expect(json(off.stdout)).toEqual([])
+    expect(json(off.stdout)).toEqual({ items: [], page: 1, limit: 0, hasMore: false })
     expect(off.stderr.join("\n")).toContain("is off")
 
     expect(json((await call(["recipients", "add", "Book", "--json"], online, env)).stdout)).toEqual({
@@ -1125,7 +1125,9 @@ describe("the guard, account and mcp config commands", () => {
       title: "Book club",
       added: true,
     })
-    expect(json((await call(["recipients", "list", "--json"], online, env)).stdout)).toMatchObject([{ id: "7" }])
+    expect(json((await call(["recipients", "list", "--json"], online, env)).stdout)).toMatchObject({
+      items: [{ id: "7" }],
+    })
 
     const stranger = await call(["recipients", "remove", "99"], online, env)
     expect(stranger.code).not.toBe(0)
@@ -1152,7 +1154,9 @@ describe("the guard, account and mcp config commands", () => {
     await call(["messages", "send", "Book", "one"], async () => fake, env)
     await call(["messages", "send", "Book", "two", "--reply-to", "1"], async () => fake, env)
     const listed = await call(["sends", "list", "--limit", "1", "--json"], async () => fake, env)
-    expect(json(listed.stdout).map((entry: { replyTo?: string }) => entry.replyTo)).toEqual(["1"])
+    const page = json(listed.stdout)
+    expect(page.items.map((entry: { replyTo?: string }) => entry.replyTo)).toEqual(["1"])
+    expect(page.hasMore).toBe(true)
   })
 
   it("show who the profile is logged in as", async () => {

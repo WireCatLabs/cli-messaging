@@ -174,7 +174,10 @@ describe("the runs command", () => {
       return { code, answer: streams.stdout[0] ? JSON.parse(streams.stdout[0]) : undefined }
     }
 
-    expect((await read(["runs", "list", "--json"])).answer).toHaveLength(1)
+    expect((await read(["runs", "list", "--json"])).answer).toMatchObject({
+      items: [{ runId: metadata?.runId }],
+      hasMore: false,
+    })
     const shown = (await read(["runs", "show", metadata?.runId ?? "", "--json"])).answer
     expect(shown.events.map((event: { event: string }) => event.event)).toEqual(["request", "response"])
     expect(shown.events[0]).not.toHaveProperty("runId")
