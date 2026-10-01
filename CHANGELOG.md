@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.77.0 — 01.10.2026
+
 ### Changed — may break callers
 
 - **MCP offers tools by the profile's permissions, not by flags.** With the defaults, every write
