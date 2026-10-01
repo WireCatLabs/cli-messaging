@@ -110,5 +110,13 @@ export const GENERATED: { name: string; statements: string[] }[] = [
       "CREATE INDEX `message_links_by_parent` ON `message_links` (`parent_pk`);",
       "CREATE INDEX `message_links_by_build` ON `message_links` (`chat_pk`,`build`);"
     ]
+  },
+  {
+    "name": "20261001231437_version-14-chunks",
+    "statements": [
+      "CREATE TABLE `chunk_vectors` (\n\t`model` text NOT NULL,\n\t`content_hash` text NOT NULL,\n\t`dims` integer NOT NULL,\n\t`vector` blob NOT NULL,\n\t`created_at` integer NOT NULL,\n\tCONSTRAINT `chunk_vectors_pk` PRIMARY KEY(`model`, `content_hash`)\n);",
+      "CREATE TABLE `conversation_chunks` (\n\t`conversation_pk` integer NOT NULL,\n\t`ordinal` integer NOT NULL,\n\t`first_message_pk` integer NOT NULL,\n\t`last_message_pk` integer NOT NULL,\n\t`content_hash` text NOT NULL,\n\tCONSTRAINT `conversation_chunks_pk` PRIMARY KEY(`conversation_pk`, `ordinal`),\n\tCONSTRAINT `fk_conversation_chunks_conversation_pk_conversations_pk_fk` FOREIGN KEY (`conversation_pk`) REFERENCES `conversations`(`pk`) ON DELETE CASCADE,\n\tCONSTRAINT `fk_conversation_chunks_first_message_pk_messages_pk_fk` FOREIGN KEY (`first_message_pk`) REFERENCES `messages`(`pk`) ON DELETE CASCADE,\n\tCONSTRAINT `fk_conversation_chunks_last_message_pk_messages_pk_fk` FOREIGN KEY (`last_message_pk`) REFERENCES `messages`(`pk`) ON DELETE CASCADE\n);",
+      "CREATE INDEX `conversation_chunks_by_hash` ON `conversation_chunks` (`content_hash`);"
+    ]
   }
 ]

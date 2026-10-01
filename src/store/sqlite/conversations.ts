@@ -7,6 +7,7 @@ import type { StoreContext } from "./open.js"
 import { selectMessages, toMessages } from "./reads.js"
 import {
   chats,
+  conversationChunks,
   conversationMessages,
   conversationState,
   conversations,
@@ -30,6 +31,7 @@ export const linkInputs = (
       pk: messages.pk,
       id: messages.nativeId,
       senderId: sql<string | null>`coalesce(${messages.senderChatNativeId}, ${identities.nativeId})`,
+      senderName: messages.senderName,
       text: messages.text,
       sentAt: messages.sentAt,
       replyToId: messages.replyToNativeId,
@@ -53,6 +55,7 @@ export const linkInputs = (
     items: rows.map((row) => ({
       id: row.id,
       senderId: row.senderId,
+      senderName: row.senderName,
       text: row.text,
       timestamp: toIso(row.sentAt) as string,
       ...(row.replyToId === null ? {} : { replyToId: row.replyToId }),
@@ -130,7 +133,7 @@ const highestBuild = ({ orm }: StoreContext, chatKey: number): number =>
 export const replaceConversations = async (
   context: StoreContext,
   chatKey: number,
-  { startedAt, algorithmVersion, links, conversations: groups }: ConversationBuild,
+  { startedAt, algorithmVersion, links, conversations: groups, chunks = [] }: ConversationBuild,
   batch = 5_000,
 ): Promise<void> => {
   const { orm, now } = context
@@ -172,6 +175,16 @@ export const replaceConversations = async (
     .insert(conversationMessages)
     .values({ conversationPk: sql.placeholder("conversationPk"), messagePk: sql.placeholder("messagePk") })
     .prepare()
+  const insertChunk = orm
+    .insert(conversationChunks)
+    .values({
+      conversationPk: sql.placeholder("conversationPk"),
+      ordinal: sql.placeholder("ordinal"),
+      firstMessagePk: sql.placeholder("firstMessagePk"),
+      lastMessagePk: sql.placeholder("lastMessagePk"),
+      contentHash: sql.placeholder("contentHash"),
+    })
+    .prepare()
   await inTurns(
     context,
     (function* () {
@@ -182,7 +195,7 @@ export const replaceConversations = async (
         insertLink.run(row(link, message.pk, parent.pk))
         yield
       }
-      for (const ids of groups) {
+      for (const [index, ids] of groups.entries()) {
         const members = ids.flatMap((id) => held.get(id) ?? [])
         const first = members[0]
         if (!first) continue
@@ -202,6 +215,19 @@ export const replaceConversations = async (
           .get()
         for (const member of members) {
           insertMember.run({ conversationPk: created.pk, messagePk: member.pk })
+          yield
+        }
+        for (const [ordinal, chunk] of (chunks[index] ?? []).entries()) {
+          const from = held.get(chunk.firstId)
+          const to = held.get(chunk.lastId)
+          if (!from || !to) continue
+          insertChunk.run({
+            conversationPk: created.pk,
+            ordinal,
+            firstMessagePk: from.pk,
+            lastMessagePk: to.pk,
+            contentHash: chunk.hash,
+          })
           yield
         }
       }

@@ -122,3 +122,44 @@ describe("a build on version 6, on a version 13 file", () => {
     await older.close()
   })
 })
+
+describe("chunk tables (store version 14)", () => {
+  it("**chunks go with their conversation; vectors stay**, keyed by the text, for a later build to reuse", async () => {
+    const path = fresh()
+    await conversationIn(path)
+    await withDatabase(path, (run) => {
+      run(`INSERT INTO conversation_chunks (conversation_pk, ordinal, first_message_pk, last_message_pk, content_hash)
+           SELECT 1, 0, min(pk), max(pk), 'abc' FROM messages`)
+      run(`INSERT INTO chunk_vectors (model, content_hash, dims, vector, created_at)
+           VALUES ('local:e5-small:384', 'abc', 2, x'0000803f00000000', 0)`)
+    })
+
+    const store = await openStore({ path })
+    await store.purge(OWNER)
+    await store.close()
+
+    expect(
+      await withDatabase(path, (run) => [
+        Number(run("SELECT count(*) AS n FROM conversation_chunks")[0]?.n),
+        Number(run("SELECT count(*) AS n FROM chunk_vectors")[0]?.n),
+      ]),
+    ).toEqual([0, 1])
+  })
+})
+
+describe("a build on version 6, on a version 14 file", () => {
+  it("**keeps reading and writing**: version 14 only adds tables", async () => {
+    const path = fresh()
+    await conversationIn(path)
+    await withDatabase(path, (run) => {
+      run(`INSERT INTO conversation_chunks (conversation_pk, ordinal, first_message_pk, last_message_pk, content_hash)
+           SELECT 1, 0, min(pk), max(pk), 'abc' FROM messages`)
+    })
+
+    const { openStore: openOlder } = await import("cli-messaging-0.49/store")
+    const older = await openOlder({ path })
+    await older.saveMessages(OWNER, "-1", [message("3")], { via: "history" })
+    expect((await older.messages(OWNER, "-1", { limit: 10 })).items.map(({ id }) => id)).toEqual(["1", "2", "3"])
+    await older.close()
+  })
+})

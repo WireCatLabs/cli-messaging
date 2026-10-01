@@ -90,7 +90,9 @@ two short messages. A 5,000-message group takes minutes with either.
 
 **E1 · A chunk is a conversation, or a run of its messages.** The current build's conversations of an
 embedded chat, in order; a conversation longer than `CHUNK_TOKENS` (300, the measured size) is cut at
-message boundaries into consecutive pieces. The chunk's text is one line per message, `sender: text`,
+message boundaries into consecutive pieces. **Correction 2026-10-02, at build:** the limit is
+`CHUNK_CHARS` = 1,200 characters, not tokens, so a chunk is the same whichever model embeds it; e5's
+tokenizer reads 3.7 characters a token in Russian and 4.0 in English, so 1,200 is about 300 tokens. The chunk's text is one line per message, `sender: text`,
 which the model sees and nothing else. One-message conversations are chunks too: search has to find them.
 
 **E2 · Vectors are keyed by what they encode, not by the conversation.** A rebuild writes new
@@ -101,7 +103,8 @@ conversation row would be thrown away by every rebuild. Instead:
   derived per build, cascading with the conversation, written by `replaceConversations` with the rest of
   the build;
 - `chunk_vectors (model, content_hash, dims, vector BLOB, created_at)`, primary key `(model,
-  content_hash)` — the hash is sha256 of the chunk text and the model's input prefix.
+  content_hash)` — the hash is sha256 of the chunk text and the model's input prefix. **Correction 2026-10-02, at
+build:** of the chunk text only; the model is already in the key, and its prefix is added when it embeds.
 
 A rebuild that leaves a conversation's text alone leaves its hash alone, and the vector is reused.
 This replaces requirements §18's `conversation_embeddings(conversation_id, …)` and keeps its reasons:
@@ -215,7 +218,7 @@ the default). Facts: [`../research/2026-10-02-embedding-apis.md`](../research/20
    folder with sha256 (reusing `install`), the runtime from `@leemour/cli-messaging-onnx`, a new `packages/onnx` published like `packages/sqlite` (E4), tokenizer, one function
    `embed(texts) → Float32Array[]`. Proved on Node and Bun in CI with a tiny test model; `models text
    list|download`.
-2. **Version 14 and the chunks** — the migration (E8), `conversation_chunks` written by
+2. ✅ 2026-10-02 · **Version 14 and the chunks** — the migration (E8), `conversation_chunks` written by
    `replaceConversations`, the chunk cutter (E1) as a pure function with tests.
 3. **`conversations embed`** — threads and `--workers` (E12), the `conversations.embed` key in `keyForCommand` (`src/sends/permissions.ts`,
    beside phase 4's `conversations.links`; without it the path is checked as `messages`), the batches and
