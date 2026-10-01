@@ -9,7 +9,7 @@ import { run } from "../program.js"
 import { settingsFor } from "../settings.js"
 import { storeCommand } from "./archive-commands.js"
 import type { SpawnJob } from "./backfill-jobs.js"
-import type { Messenger } from "./context.js"
+import type { Fetching, Messenger } from "./context.js"
 import type { MessengerAdapter } from "./port.js"
 
 const app = { command: "chat", appName: "chat-cli", envPrefix: "CHAT", description: "A test", version: "1.0.0" }
@@ -57,7 +57,7 @@ const call = async (
   argv: string[],
   connection: MessengerAdapter,
   env: NodeJS.ProcessEnv,
-  extra: { spawnJob?: SpawnJob; signal?: AbortSignal } = {},
+  { fetching, ...extra }: { spawnJob?: SpawnJob; signal?: AbortSignal; fetching?: Fetching } = {},
 ) => {
   const messenger: Messenger = {
     app,
@@ -65,6 +65,7 @@ const call = async (
     resolveSettings: settingsFor(app).resolveSettings,
     connect: async () => connection,
     chatArgument: "a chat",
+    ...(fetching ? { fetching } : {}),
   }
   const streams = captureStreams()
   const code = await run(
@@ -85,7 +86,42 @@ const call = async (
   }
 }
 
+/** As MAX pages: ids past 2^53, and `before` a time that the page includes. */
+const timedChatOf = (count: number, asked: { before?: string; reactions?: false }[]): MessengerAdapter =>
+  ({
+    self: () => "500",
+    close: async () => {},
+    history: async (_chat: string, window: { limit: number; before?: string; reactions?: false }) => {
+      asked.push({
+        ...(window.before ? { before: window.before } : {}),
+        ...(window.reactions === false ? { reactions: false } : {}),
+      })
+      const all = Array.from({ length: count }, (_, index) => ({
+        ...message(index + 1),
+        id: String(116762160362694500n + BigInt(index)),
+      }))
+      const upTo = window.before === undefined ? all : all.filter((one) => one.timestamp <= String(window.before))
+      const items = upTo.slice(-window.limit)
+      return { items, hasMore: items.length >= window.limit }
+    },
+  }) as unknown as MessengerAdapter
+
 describe("store fetch", () => {
+  it("**fetches by send time where ids pass 2^53**, at the messenger's own page and pause, without reactions", async () => {
+    const env = setup()
+    const asked: { before?: string; reactions?: false }[] = []
+    const fetching: Fetching = { page: 3, pause: "1ms", maxPages: 10, orderBy: "time" }
+
+    const { code, answer } = await call(["store", "fetch", "7", "--json"], timedChatOf(7, asked), env, { fetching })
+
+    expect(code).toBe(0)
+    expect(answer).toMatchObject({ complete: true })
+    expect(asked.every((one) => one.reactions === false)).toBe(true)
+    expect(asked[1]?.before).toBe(message(5).timestamp)
+    const estimate = await call(["store", "fetch", "7", "--estimate", "--json"], timedChatOf(7, []), env, { fetching })
+    expect(estimate.code).toBe(2)
+  })
+
   it("**stops at --max-pages keeping what it read, and the next run fetches only what is missing**", async () => {
     const env = setup()
     const state = { newest: 250, asked: [] as (string | undefined)[] }

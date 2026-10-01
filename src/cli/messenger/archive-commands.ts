@@ -44,16 +44,16 @@ const exportCommand = (messenger: Messenger): Command =>
   new Command("export")
     .description("a chat's stored messages as JSON lines, oldest first; never asks the messenger")
     .argument("<chat>", messenger.chatArgument)
-    .option("--format <format>", "markdown: a transcript with a heading per day, replies and forwards quoted")
+    .option(
+      "--format <format>",
+      "jsonl (the default): one message per line; markdown: a transcript with a heading per day, replies and forwards quoted",
+    )
     .option("--since <time>", "only from this ISO 8601 time, or 30m / 2h / 1d ago, on")
     .option("--output <file>", "write JSON lines, or the transcript, to this new file, readable only by you")
     .action(async function (this: Command, chat: string) {
       const { format, since, output } = this.opts<{ format?: string; since?: string; output?: string }>()
-      if (format !== undefined && format !== "markdown") {
-        throw new CliError(
-          "validation_error",
-          `--format knows markdown, not "${format}" — --json and --jsonl give data`,
-        )
+      if (format !== undefined && format !== "markdown" && format !== "jsonl") {
+        throw new CliError("validation_error", `--format is jsonl or markdown, not "${format}"`)
       }
       const from = since === undefined ? undefined : new Date(momentOf(since)).toISOString()
       const context = messengerContext(this, messenger)
@@ -77,8 +77,9 @@ const exportCommand = (messenger: Messenger): Command =>
         return
       }
       if (format === "markdown") context.streams.data(toMarkdown(title, messages).replace(/\n$/, ""))
+      else if (format === "jsonl" || context.format === "jsonl")
+        for (const message of messages) context.streams.data(JSON.stringify(message))
       else if (context.format === "json") context.renderer.result({ items: messages })
-      else if (context.format === "jsonl") for (const message of messages) context.streams.data(JSON.stringify(message))
       else
         context.streams.data(
           renderMessages(messages, {

@@ -3,7 +3,7 @@ import { mkdirSync } from "node:fs"
 import { join } from "node:path"
 import { CliError } from "@leemour/cli-core"
 import { Command } from "commander"
-import { PAGE } from "../../services/archive.js"
+import { FETCHING } from "../../services/archive.js"
 import { envName } from "../app.js"
 import { type BaseEnvironment, environmentOf } from "../context.js"
 import { isCliFailure } from "../failures.js"
@@ -29,12 +29,24 @@ import { stopOnSignal } from "./patience.js"
  * nothing, and the next run jumps over what is already held. Needs numeric message ids, which order
  * the chat.
  */
-export const fetchCommand = (messenger: Messenger): Command =>
-  new Command("fetch")
+export const fetchCommand = (messenger: Messenger): Command => {
+  const fetching = messenger.fetching ?? FETCHING
+  return new Command("fetch")
     .description("fetch a chat's history into the local store, newest first; run it again to continue")
     .argument("<chat>", messenger.chatArgument)
-    .option("--max-pages <n>", `at most this many pages of ${PAGE} in this run`, wholeNumber, 10)
-    .option("--pause <duration>", "pause between pages, to stay under the provider's limits", "1s")
+    .option(
+      "--max-pages <n>",
+      `at most this many pages of ${fetching.page} in this run`,
+      wholeNumber,
+      fetching.maxPages,
+    )
+    .option(
+      "--pause <duration>",
+      fetching.jitter
+        ? "the least pause between pages, to stay under the provider's limits; each is up to twice that"
+        : "pause between pages, to stay under the provider's limits",
+      fetching.pause,
+    )
     .option("--since <time>", "stop once it reaches messages older than this: ISO 8601, or 2h / 1d ago")
     .option("--last <n>", "stop once the newest n messages are held", wholeNumber)
     .option("--background", "run as a job that outlives this command; `store jobs show` follows it")
@@ -110,6 +122,7 @@ export const fetchCommand = (messenger: Messenger): Command =>
         stop.release()
       }
     })
+}
 
 /** `store jobs`: the background runs `store fetch --background` started. */
 export const jobsCommand = (messenger: Messenger): Command => {

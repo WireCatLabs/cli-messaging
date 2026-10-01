@@ -991,6 +991,8 @@ describe("the shared read commands", () => {
     expect(JSON.parse(status.stdout[0] ?? "")).toMatchObject([{ chatId: "7", title: null, messages: 3, held: [] }])
     const exported = await call(["store", "export", "7", "--jsonl"], never, env)
     expect(exported.stdout.map((line) => JSON.parse(line).id)).toEqual(["1", "2", "3"])
+    const lines = await call(["store", "export", "7", "--format", "jsonl"], never, env)
+    expect(lines.stdout.map((line) => JSON.parse(line).id)).toEqual(["1", "2", "3"])
     const one = await call(["store", "export", "7", "--json"], never, env)
     expect(one.stdout).toHaveLength(1)
     const transcript = await call(["store", "export", "7", "--format", "markdown"], never, env)
