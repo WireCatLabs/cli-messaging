@@ -29,6 +29,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   an update long after, and a CLI that keeps joins needs the time it happened.
 - **`bot webhooks set --secret-stdin` asks for the secret only after the profile's permissions allow
   setting a webhook**; a read-only bot profile is refused without the prompt.
+- **The parity manifest plans `bot watch` for both CLIs**, and `bot updates watch` going from max, so each
+  CLI's check passes before and after its move to this release; the rows go to all CLIs once both moved.
 
 ### Changed — may break callers
 
