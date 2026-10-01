@@ -92,6 +92,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 
 | Option | Value | Meaning | Default | Commands |
 |---|---|---|---|---|
+| `--accept-terms` |  | accept the licence terms of a model that has its own, before it downloads |  | `models text download` |
 | `--add` | `<chat>` | put a chat into a folder; repeat it for more |  | `bot webhooks set` (max-only), `chats folders update` |
 | `--after-id` | `<id>` | read what came after this message id; not with --after-time or the --before pair |  | `messages list` |
 | `--after-n` | `<n>` | how many messages after it |  | `messages context` |

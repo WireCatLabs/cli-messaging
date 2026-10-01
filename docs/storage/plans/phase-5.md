@@ -211,7 +211,7 @@ the default). Facts: [`../research/2026-10-02-embedding-apis.md`](../research/20
 
 ## 5. Work items
 
-1. **Run a model from the shared folder** — `src/embeddings/`: the model list (E5), download into the shared
+1. 🟡 2026-10-02: the runtime package (cli-messaging #381, `@leemour/cli-messaging-onnx` 1.0.0 on npm), `src/embeddings/` and `models text list|download`; threads per E12, `--workers` with item 3 · **Run a model from the shared folder** — `src/embeddings/`: the model list (E5), download into the shared
    folder with sha256 (reusing `install`), the runtime from `@leemour/cli-messaging-onnx`, a new `packages/onnx` published like `packages/sqlite` (E4), tokenizer, one function
    `embed(texts) → Float32Array[]`. Proved on Node and Bun in CI with a tiny test model; `models text
    list|download`.

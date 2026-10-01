@@ -1,7 +1,11 @@
-import { Command } from "commander"
+import { CliError } from "@leemour/cli-core"
+import { Command, Option } from "commander"
+import { isTextModelInstalled, placedText, textModelsDirectory } from "../../embeddings/embed.js"
+import { DEFAULT_TEXT_MODEL, TEXT_MODELS, textModel } from "../../embeddings/models.js"
 import {
   install,
   installedBytes,
+  installFiles,
   isInstalled,
   megabytes,
   modelPath,
@@ -16,7 +20,7 @@ import type { Messenger } from "./context.js"
 
 /**
  * Models that run on this machine, by what they work on; `audio` is the speech models behind
- * `messages transcribe --local`. Nothing here talks to the messenger. The folder is shared by every
+ * `messages transcribe --local`, `text` the embedding models behind `conversations embed`. Nothing here talks to the messenger. The folder is shared by every
  * messenger CLI, so a model downloaded once serves them all.
  */
 export const modelsCommand = (messenger: Messenger): Command => {
@@ -73,6 +77,72 @@ export const modelsCommand = (messenger: Messenger): Command => {
             recognizer.recognize(new Float32Array(SAMPLE_RATE))
           } finally {
             recognizer.free()
+          }
+          context.renderer.result({ id: model.id, downloaded: true, works: true, directory })
+        },
+        { unbounded: true },
+      )
+    })
+
+  const text = models.command("text").description("embedding models for searching conversations by meaning")
+
+  text
+    .command("list")
+    .description("the embedding models, most suitable first, which are downloaded, and which one is the default")
+    .action(async function (this: Command) {
+      const context = baseContext(this, messenger.resolveSettings)
+      await context.run(async () => {
+        const directory = textModelsDirectory(context.env)
+        const items = TEXT_MODELS.map((model) => ({
+          id: model.id,
+          title: model.title,
+          languages: model.languages,
+          licence: model.licence,
+          size: megabytes(model.files.reduce((sum, file) => sum + file.bytes, 0)),
+          downloaded: isTextModelInstalled(model, directory),
+          default: model.id === DEFAULT_TEXT_MODEL,
+        }))
+        if (context.format === "pretty") {
+          const line = (item: (typeof items)[number]) =>
+            `${item.default ? "*" : " "} ${item.id.padEnd(16)} ${item.size.padStart(7)}  ${item.downloaded ? "downloaded" : "—".padEnd(10)}  ${item.licence}`
+          context.streams.data(`${items.map(line).join("\n")}\n`)
+        } else if (context.format === "jsonl") context.renderer.stream(items)
+        else context.renderer.result({ ...listed(items), directory })
+      })
+    })
+
+  text
+    .command("download")
+    .argument("<model>", "a model id from `models text list`")
+    .addOption(new Option("--accept-terms", "accept the model's licence terms, for a model that has its own"))
+    .description("download an embedding model once, checked against the sha256 this version expects")
+    .action(async function (this: Command, id: string, options: { acceptTerms?: boolean }) {
+      const context = baseContext(this, messenger.resolveSettings)
+      await context.run(
+        async () => {
+          const model = textModel(id)
+          if (model.terms && !options.acceptTerms) {
+            throw new CliError(
+              "validation_error",
+              `${model.id} comes under the ${model.licence} (${model.terms}): read them, then run this again with --accept-terms`,
+            )
+          }
+          const directory = textModelsDirectory(context.env)
+          if (!isTextModelInstalled(model, directory)) {
+            context.renderer.note(
+              `${model.id}: ${megabytes(model.files.reduce((sum, file) => sum + file.bytes, 0))} from Hugging Face`,
+            )
+            await installFiles(placedText(model, directory), { progress: (line) => context.renderer.note(line) })
+          }
+          context.renderer.note(`${model.id}: loading it once to check it works`)
+          const { openEmbedder } = await import("../../embeddings/embed.js")
+          const embedder = await openEmbedder(model, directory)
+          try {
+            const [vector] = await embedder.embed(["check"], "query")
+            if (vector?.length !== model.dims)
+              throw new CliError("invalid_response", `${model.id} gave a vector of the wrong size`)
+          } finally {
+            await embedder.close()
           }
           context.renderer.result({ id: model.id, downloaded: true, works: true, directory })
         },
