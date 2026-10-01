@@ -851,16 +851,16 @@
       "state": "both",
       "options": {
         "--after": {
-          "state": "max-only",
-          "reason": "max's own copy keeps the old name until T6 moves the command onto the shared one"
+          "state": "planned",
+          "by": "T6"
         },
         "--after-n": {
           "state": "planned",
           "by": "T6"
         },
         "--before": {
-          "state": "max-only",
-          "reason": "max's own copy keeps the old name until T6 moves the command onto the shared one"
+          "state": "planned",
+          "by": "T6"
         },
         "--before-n": {
           "state": "planned",
@@ -918,8 +918,8 @@
       "state": "both",
       "options": {
         "--after": {
-          "state": "max-only",
-          "reason": "max's own copy keeps the old name until T6 moves the command onto the shared one"
+          "state": "planned",
+          "by": "T6"
         },
         "--after-id": {
           "state": "planned",
@@ -930,8 +930,8 @@
           "by": "T6"
         },
         "--before": {
-          "state": "max-only",
-          "reason": "max's own copy keeps the old name until T6 moves the command onto the shared one"
+          "state": "planned",
+          "by": "T6"
         },
         "--before-id": {
           "state": "planned",

@@ -6,6 +6,12 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Fixed
+
+- **max can move `messages list|context` onto the shared commands.** The parity manifest required max to
+  keep `--before` and `--after` on both, so the move failed max's parity check; they are planned until
+  max's main moves.
+
 ## 0.94.0 — 01.10.2026
 
 ### Added
