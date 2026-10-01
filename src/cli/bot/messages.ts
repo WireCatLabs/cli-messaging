@@ -9,7 +9,7 @@ import { newOperationId } from "../../sends/send-id.js"
 import { readAttachments } from "../../sends/upload.js"
 import { environmentOf } from "../context.js"
 import { readAll } from "../messenger/stdin.js"
-import { listed } from "../paging.js"
+import { listed, positiveCount } from "../paging.js"
 import { type BotContext, botContext } from "./context.js"
 import type { BotAdapter, BotMessenger } from "./port.js"
 
@@ -51,6 +51,13 @@ const show = (context: BotContext, bot: BotMessenger, messages: Message[], one =
   } else if (context.format === "jsonl") context.renderer.stream(messages)
   else context.renderer.result(one ? messages[0] : listed(messages))
 }
+
+/** Says what fills the copy, rather than printing an empty list. */
+const nothingKept = (context: BotContext) =>
+  new CliError(
+    "not_found",
+    `this bot has kept nothing on this machine yet — run \`${context.words} messages list <chat>\` once without --offline`,
+  )
 
 const marks = (md: boolean | undefined, html: boolean | undefined) => {
   if (md && html) throw new CliError("validation_error", "--md and --html mark up the text two ways; use one")
@@ -138,10 +145,11 @@ const listCommand = (bot: BotMessenger): Command =>
         "the ones this bot has seen on this machine",
     )
     .argument("<chat>", "a chat id, user:<id> for a person, or the title of a chat this bot has seen")
+    .option("--limit <n>", "how many, the newest", positiveCount("--limit"))
     .action(async function (this: Command, chat: string) {
       const context = botContext(this, bot)
       const ref = context.chatRef(chat)
-      const limit = context.settings.limit
+      const limit = this.opts<{ limit?: number }>().limit ?? context.settings.limit
       await context.run(async (events) => {
         const fromCopy = async (botId: string) => {
           const page = await context.copy.read((store) => store.messages(context.copy.accountOf(botId), ref, { limit }))
@@ -149,7 +157,7 @@ const listCommand = (bot: BotMessenger): Command =>
         }
         if (context.settings.offline) {
           const botId = context.registry.botId()
-          if (!botId) throw new CliError("not_found", "this bot has kept nothing on this machine yet")
+          if (!botId) throw nothingKept(context)
           show(context, bot, await fromCopy(botId))
           return
         }
@@ -185,7 +193,7 @@ const showCommand = (bot: BotMessenger): Command =>
         }
         if (context.settings.offline) {
           const botId = context.registry.botId()
-          if (!botId) throw new CliError("not_found", "this bot has kept nothing on this machine yet")
+          if (!botId) throw nothingKept(context)
           show(context, bot, [await fromCopy(botId)], true)
           return
         }
