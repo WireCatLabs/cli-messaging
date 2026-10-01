@@ -3,7 +3,7 @@ import type { ErrorCode } from "@leemour/cli-core"
 import { isCliFailure } from "../cli/failures.js"
 import type { HistoryBatch } from "../cli/messenger/port.js"
 import { capability, type MessengerAdapter } from "../cli/messenger/port.js"
-import type { Id, Message } from "../domain/models.js"
+import type { Chat, Id, Message } from "../domain/models.js"
 import { newSendId } from "../sends/send-id.js"
 import { BUSY_PAGE, contractSeed, type IdMaker, type Seed, wordIds } from "./seed.js"
 
@@ -236,9 +236,22 @@ export const contractCases = ({
         },
       ],
       [
-        "resolve refuses a chat that does not exist with not_found",
+        "resolve refuses a chat that does not exist with not_found, or takes its id as a chat of kind unknown",
+        // A messenger may take an id without connecting, so a write its guard refuses never logs in first (max-cli).
+        // It may not answer another chat, or invent a title.
         async (adapter) => {
-          await refuses(adapter.resolve(unknownChat), "not_found")
+          let chat: Chat
+          try {
+            chat = await adapter.resolve(unknownChat)
+          } catch (error) {
+            assert.ok(isCliFailure(error), `expected a CliError with a code from the closed list, got ${String(error)}`)
+            assert.equal(error.code, "not_found")
+            return
+          }
+          assert.deepEqual(
+            { id: chat.id, kind: chat.kind, title: chat.title },
+            { id: unknownChat, kind: "unknown", title: null },
+          )
         },
       ],
       [

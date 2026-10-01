@@ -6,6 +6,12 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Fixed
+
+- **`contractCases`**: the case for `resolve` with a chat id nobody has now also accepts a chat of kind
+  `unknown` with that id and no title, besides `not_found`. max-cli takes an id without connecting, so a
+  write its guard refuses never logs in first.
+
 ## 0.98.0 — 01.10.2026
 
 Released early: tg-cli and max-cli: their command pages label config set, chats rules set and the recipient lists as changing the messenger; the fix (#360) needs this release, and the owner approved releasing it early
