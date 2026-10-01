@@ -20,8 +20,8 @@ const message = (id: string, text: string, chatId = "7"): Message => ({
   outgoing: true,
   attachments: [],
   replyTo: null,
-  replyToId: null,
   forwardedFrom: null,
+  reactions: null,
 })
 
 const opened: MessageStore[] = []
