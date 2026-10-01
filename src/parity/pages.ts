@@ -1,14 +1,12 @@
 import type { CommandInfo } from "@leemour/cli-core/commands"
-import type { Cli, CommandsJson, Entry, Manifest } from "./manifest.js"
+import { type Cli, type CommandsJson, expected, type Manifest } from "./manifest.js"
 
 const optionsOf = (flags: string): string[] => flags.match(/--[a-z][a-z-]*/g) ?? []
 
-const stateOf = (entry: Entry): string => (typeof entry === "string" ? entry : entry.state)
-
 /**
  * Every `<cli> <command> --option` on a user page whose option the command does not have. An option
- * the manifest plans or shares for that command passes — docs come first, the code follows — and one
- * the manifest gives only to the other CLI does not.
+ * the manifest gives or plans for this CLI on that command passes — docs come first, the code follows —
+ * and one this CLI lacks does not.
  */
 export const pageProblems = (page: string, cli: Cli, manifest: Manifest, program: CommandsJson): string[] => {
   const commands = new Map<string, Set<string>>()
@@ -18,7 +16,6 @@ export const pageProblems = (page: string, cli: Cli, manifest: Manifest, program
   }
   program.commands.forEach(walk)
   const globals = new Set(program.globalOptions.flatMap((option) => optionsOf(option.flags)))
-  const other = cli === "tg" ? "max-only" : "tg-only"
 
   const problems: string[] = []
   const line = new RegExp(`\\b${cli} ((?:[a-z][a-z-]* ?)+)([^\\n\`#|]*)`, "g")
@@ -33,7 +30,7 @@ export const pageProblems = (page: string, cli: Cli, manifest: Manifest, program
     for (const option of (rest ?? "").match(/(?<![\w-])--[a-z][a-z-]*/g) ?? []) {
       if (commands.get(command)?.has(option) || globals.has(option)) continue
       const entry = planned[option]
-      if (entry !== undefined && stateOf(entry) !== other) continue
+      if (entry !== undefined && expected(entry, cli) !== false) continue
       problems.push(`${cli} ${command} ${option}`)
     }
   }

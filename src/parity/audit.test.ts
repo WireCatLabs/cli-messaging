@@ -33,22 +33,28 @@ const side = (cli: string, overrides: Partial<CliSide> = {}): CliSide => ({
 })
 
 const manifest: Manifest = {
+  clis: ["max", "tg"],
   options: { "--allow-send": { meaning: "offer the send tool" } },
   globalOptions: {},
-  commands: { mcp: { state: "both", options: { "--allow-send": "both" } } },
+  commands: { mcp: { in: "all", options: { "--allow-send": "all" } } },
 }
 
 const input = (max: Partial<CliSide> = {}, tg: Partial<CliSide> = {}): AuditInput => ({
   shared: { commit: "def5678", version: "0.9.0" },
   manifest,
   standard: "## Documents\n\n- max `bot.md` — tg has no bot side.\n\n## The parity manifest\n",
-  max: side("max", max),
-  tg: side("tg", tg),
+  sides: { max: side("max", max), tg: side("tg", tg) },
 })
 
 describe("the parity audit", () => {
-  it("splits two lists into both, max only and tg only", () => {
-    expect(split(["a", "b"], ["b", "c"])).toEqual({ both: ["b"], max: ["a"], tg: ["c"] })
+  it("splits lists into what every one has and what only some have", () => {
+    expect(split({ max: ["a", "b"], tg: ["b", "c"], wa: ["b", "c"] })).toEqual({
+      all: ["b"],
+      some: [
+        ["a", ["max"]],
+        ["c", ["tg", "wa"]],
+      ],
+    })
   })
 
   it("passes every --allow- option of mcp, so the server offers every tool", () => {
@@ -61,13 +67,16 @@ describe("the parity audit", () => {
 
   it("knows a page one tool has alone only when STANDARD's Documents rule names it", () => {
     const pages = pageSplit(input({ pages: { "docs/bot.md": "", "docs/protocol.md": "" } }, { pages: {} }))
-    expect(pages.max).toEqual(["bot.md", "protocol.md"])
+    expect(pages.some).toEqual([
+      ["bot.md", ["max"]],
+      ["protocol.md", ["max"]],
+    ])
     expect(pages.explained("bot.md")).toBe(true)
     expect(pages.explained("protocol.md")).toBe(false)
   })
 
   it("leaves the generated command list and the docs index out of the pages", () => {
-    expect(pageSplit(input()).both).toEqual(["usage.md"])
+    expect(pageSplit(input()).all).toEqual(["usage.md"])
   })
 
   it("sees the page check behind a pnpm script and its absence", () => {
@@ -86,8 +95,19 @@ describe("the parity audit", () => {
       ),
     )
     expect(report).toContain("🔴 **tg against this manifest** — 1 difference(s) `mcp --allow-send:")
-    expect(report).toContain("- **max only** (1) — `chats_check`")
-    expect(report).toContain("🔴 `usage.md` — max 4 headings, tg 1 (7 and 1 lines)")
+    expect(report).toContain("| `chats_check` | ✅ | — |")
+    expect(report).toContain("🔴 `usage.md` — max 4, tg 1 headings (7, 1 lines)")
     expect(report).toContain("✅ **max against this manifest**")
+  })
+
+  it("gives each of three CLIs its own line and column", () => {
+    const report = renderAudit({
+      ...input(),
+      manifest: { ...manifest, clis: ["max", "tg", "wa"] },
+      sides: { max: side("max"), tg: side("tg"), wa: side("wa", { tools: [] }) },
+    })
+    expect(report).toContain("✅ **wa against this manifest**")
+    expect(report).toContain("| | max | tg | wa |")
+    expect(report).toContain("| `messages_send` | ✅ | ✅ | — |")
   })
 })

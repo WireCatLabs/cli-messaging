@@ -2,7 +2,7 @@ name: Parity
 
 # Each CLI checks only the manifest of the shared-package version it pins, so a row this repository
 # gets wrong shows up there weeks later. This checks both CLIs' main against this manifest now.
-# Their main, not npm: a row says `both` once both mains have it, and a release always trails that.
+# Their main, not npm: a row lists a CLI in `in` once its main has it, and a release always trails that.
 on:
   pull_request:
     paths:

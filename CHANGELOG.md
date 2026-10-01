@@ -18,6 +18,20 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   patterns stay until tg-cli and max-cli set the field; a later breaking release removes them.
 - **The search query's `in:` takes any messenger the store holds**, plus `all`: `parseQuery` is given
   the store's providers instead of a fixed `telegram`/`max` list.
+- **A third CLI can join the parity manifest:** `pnpm parity:seed --cli <name>` adds it to the
+  manifest's new `clis` list and plans every command and option for it, so its first parity check
+  passes and every gap stays listed. `cli-messaging-parity <cli>` accepts any CLI the manifest lists.
+
+### Changed — may break callers
+
+- **`parity.json` lists, for each command and option, the CLIs that have it** — `{ "in": "all" }`,
+  `{ "in": ["max"], "reason": … }`, `{ "in": [], "planned": { "max": "T6", "tg": "T6" } }` — instead
+  of `both`, `max-only`, `tg-only` and `planned`. Every planned row is now planned for both CLIs
+  with its old `by`, so max and tg pass or fail exactly as before; a difference says "the manifest
+  says all" where it said "both". `cli-messaging-parity` keeps its arguments, so `parity:check` does
+  not change. In `./parity`: `Cli` is a string, `Entry` and `CommandRow` take the new shape,
+  `wordingProblems(manifest, programs)` takes a list of programs known by their `cli`, and the audit's
+  `AuditInput` takes `sides` by CLI name. What to change: nothing, unless you import `./parity`.
 
 ## 0.97.0 — 01.10.2026
 

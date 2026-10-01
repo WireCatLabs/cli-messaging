@@ -1,12 +1,12 @@
 /**
- * The milestone parity audit: where tg and max stand, from `parity.json` — what both have, what is
- * planned and by whom, what stays one-sided and why, and the option clashes still open. Given both
- * CLIs' checkouts, built, it also measures them: the checks CI runs, the shared versions they pin,
- * their MCP tools, user pages, README sections and release tooling. Markdown on stdout.
+ * The milestone parity audit: where the CLIs stand, from `parity.json` — what all have, what is
+ * planned and by whom, what some lack and why, and the option clashes still open. Given every CLI's
+ * checkout, built, it also measures them: the checks CI runs, the shared versions they pin, their MCP
+ * tools, user pages, README sections and release tooling. Markdown on stdout.
  *
  *   pnpm parity:audit                          # the manifest alone
- *   pnpm parity:audit --max <dir> --tg <dir>   # and two built checkouts
- *   pnpm parity:audit --fresh                  # clones and builds both CLIs' main first
+ *   pnpm parity:audit --max <dir> --tg <dir>   # and a built checkout of each CLI in "clis"
+ *   pnpm parity:audit --fresh                  # clones and builds each CLI's main first
  *
  * Nothing contacts Telegram or MAX: each MCP server starts in an empty temporary home, with no
  * profile, and is asked only for its list of tools.
@@ -17,46 +17,64 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { parseArgs } from "node:util"
 import { allowFlags, type CliSide, renderAudit } from "../dist/parity/audit.js"
-import type { CommandsJson, Entry, Manifest } from "../dist/parity/manifest.js"
+import type { CommandRow, CommandsJson, Entry, Manifest } from "../dist/parity/manifest.js"
 
 const root = join(import.meta.dirname, "..")
 const manifest: Manifest = JSON.parse(readFileSync(join(root, "parity.json"), "utf8"))
 const { values } = parseArgs({
-  options: { max: { type: "string" }, tg: { type: "string" }, fresh: { type: "boolean" } },
+  options: {
+    ...Object.fromEntries(manifest.clis.map((cli) => [cli, { type: "string" as const }])),
+    fresh: { type: "boolean" as const },
+  },
 })
+const dirOf = (cli: string) => (values as Record<string, string | boolean | undefined>)[cli]
+const given = manifest.clis.filter((cli) => typeof dirOf(cli) === "string")
 
 interface Line {
   what: string
-  state: string
-  note: string
+  row: Exclude<Entry, "all">
 }
 const lines: Line[] = []
-const add = (what: string, entry: Entry | Manifest["commands"][string]) => {
-  if (typeof entry === "string") lines.push({ what, state: entry, note: "" })
-  else lines.push({ what, state: entry.state, note: entry.reason ?? entry.by ?? "" })
-}
+const add = (what: string, entry: Entry | CommandRow) =>
+  lines.push({ what, row: entry === "all" ? { in: "all" } : entry })
 for (const [name, entry] of Object.entries(manifest.globalOptions)) add(`(global) ${name}`, entry)
 for (const [path, row] of Object.entries(manifest.commands)) {
   add(path, row)
   for (const [name, entry] of Object.entries(row.options ?? {})) add(`${path} ${name}`, entry)
 }
 
-const count = (state: string, options: boolean) =>
-  lines.filter((line) => line.state === state && line.what.includes(" --") === options).length
-const out: string[] = ["# Parity of tg and max", "", "| State | Commands | Options |", "|---|---|---|"]
-for (const state of ["both", "planned", "max-only", "tg-only"])
-  out.push(`| ${state} | ${count(state, false)} | ${count(state, true)} |`)
+const has = (line: Line, cli: string) => line.row.in === "all" || line.row.in.includes(cli)
+const plannedFor = (line: Line, cli: string) => line.row.planned?.[cli]
+const lacks = (line: Line, cli: string) => !has(line, cli) && plannedFor(line, cli) === undefined
+const count = (test: (line: Line) => boolean, options: boolean) =>
+  lines.filter((line) => test(line) && line.what.includes(" --") === options).length
+const out: string[] = [`# Parity of ${manifest.clis.join(", ")}`, "", "| | Commands | Options |", "|---|---|---|"]
+const row = (label: string, test: (line: Line) => boolean) =>
+  out.push(`| ${label} | ${count(test, false)} | ${count(test, true)} |`)
+row("in every CLI", (line) => line.row.in === "all")
+for (const cli of manifest.clis) {
+  row(`planned for ${cli}`, (line) => plannedFor(line, cli) !== undefined)
+  row(`not in ${cli}, for a reason`, (line) => lacks(line, cli))
+}
 
-const planned = new Map<string, Line[]>()
-for (const line of lines.filter((one) => one.state === "planned"))
-  planned.set(line.note, [...(planned.get(line.note) ?? []), line])
+const planned = new Map<string, Map<string, string[]>>()
+for (const line of lines)
+  for (const [cli, by] of Object.entries(line.row.planned ?? {})) {
+    const group = planned.get(by) ?? new Map<string, string[]>()
+    group.set(line.what, [...(group.get(line.what) ?? []), cli])
+    planned.set(by, group)
+  }
 out.push("", "## Planned, by who closes it", "")
 for (const [by, group] of [...planned].sort(([a], [b]) => a.localeCompare(b)))
-  out.push(`- **${by}** (${group.length}): ${group.map((line) => `\`${line.what}\``).join(", ")}`)
+  out.push(
+    `- **${by}** (${group.size}): ${[...group].map(([what, clis]) => `\`${what}\` (${clis.join(", ")})`).join(", ")}`,
+  )
 
-out.push("", "## One-sided, and why", "")
-for (const line of lines.filter((one) => one.state.endsWith("-only")))
-  out.push(`- \`${line.what}\` — ${line.state}: ${line.note}`)
+out.push("", "## Not in every CLI, and why", "")
+for (const line of lines.filter((one) => one.row.reason))
+  out.push(
+    `- \`${line.what}\` — not in ${manifest.clis.filter((cli) => lacks(line, cli)).join(", ")}: ${line.row.reason}`,
+  )
 
 out.push("", "## Option clashes still open", "")
 for (const [name, option] of Object.entries(manifest.options))
@@ -64,16 +82,16 @@ for (const [name, option] of Object.entries(manifest.options))
 
 const git = (dir: string, ...args: string[]) => execFileSync("git", ["-C", dir, ...args], { encoding: "utf8" }).trim()
 
-const fresh = (): { max: string; tg: string } => {
+const fresh = (): Record<string, string> => {
   const dir = mkdtempSync(join(tmpdir(), "parity-audit-"))
-  for (const cli of ["max", "tg"]) {
+  for (const cli of manifest.clis) {
     const into = join(dir, cli)
     console.error(`cloning and building ${cli}-cli into ${into}`)
     execFileSync("git", ["clone", "-q", "--depth", "1", `https://github.com/leemour/${cli}-cli.git`, into])
     execFileSync("pnpm", ["install", "--frozen-lockfile", "--prefer-offline"], { cwd: into, stdio: "ignore" })
     execFileSync("pnpm", ["build"], { cwd: into, stdio: "ignore" })
   }
-  return { max: join(dir, "max"), tg: join(dir, "tg") }
+  return Object.fromEntries(manifest.clis.map((cli) => [cli, join(dir, cli)]))
 }
 
 const mcpTools = (bin: string, flags: string[]): Promise<string[]> => {
@@ -117,7 +135,7 @@ const mcpTools = (bin: string, flags: string[]): Promise<string[]> => {
 
 const markdown = (dir: string) => (existsSync(dir) ? readdirSync(dir).filter((name) => name.endsWith(".md")) : [])
 
-const side = async (cli: "max" | "tg", dir: string): Promise<CliSide> => {
+const side = async (cli: string, dir: string): Promise<CliSide> => {
   const bin = join(dir, "dist/bin", `${cli}.js`)
   const program: CommandsJson = JSON.parse(execFileSync("node", [bin, "commands", "--json"], { encoding: "utf8" }))
   const pkg = JSON.parse(readFileSync(join(dir, "package.json"), "utf8"))
@@ -147,9 +165,15 @@ const side = async (cli: "max" | "tg", dir: string): Promise<CliSide> => {
   }
 }
 
-const dirs = values.fresh ? fresh() : values.max && values.tg ? { max: values.max, tg: values.tg } : undefined
+const dirs = values.fresh
+  ? fresh()
+  : given.length === manifest.clis.length
+    ? Object.fromEntries(given.map((cli) => [cli, String(dirOf(cli))]))
+    : undefined
 if (dirs) {
-  const [max, tg] = await Promise.all([side("max", dirs.max), side("tg", dirs.tg)])
+  const sides = Object.fromEntries(
+    await Promise.all(Object.entries(dirs).map(async ([cli, dir]) => [cli, await side(cli, dir)] as const)),
+  )
   out.push(
     "",
     renderAudit({
@@ -159,12 +183,11 @@ if (dirs) {
       },
       manifest,
       standard: readFileSync(join(root, "docs/dev/STANDARD.md"), "utf8"),
-      max,
-      tg,
+      sides,
     }),
   )
-} else if (values.max || values.tg) {
-  console.error("usage: pnpm parity:audit [--fresh | --max <dir> --tg <dir>]")
+} else if (given.length > 0) {
+  console.error(`usage: pnpm parity:audit [--fresh | ${manifest.clis.map((cli) => `--${cli} <dir>`).join(" ")}]`)
   process.exit(2)
 }
 console.log(out.join("\n"))

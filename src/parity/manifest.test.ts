@@ -18,7 +18,8 @@ const command = (path: string, options: string[] = [], commands: CommandInfo[] =
 
 const program = (...commands: CommandInfo[]): CommandsJson => ({ cli: "tg", globalOptions: [], commands })
 
-const manifest = (commands: Manifest["commands"]): Manifest => ({
+const manifest = (commands: Manifest["commands"], clis = ["max", "tg"]): Manifest => ({
+  clis,
   options: { "--all": { meaning: "every row" }, "--max": { value: "<n>", meaning: "at most" } },
   globalOptions: {},
   commands,
@@ -31,38 +32,67 @@ describe("the shipped parity.json", () => {
 })
 
 describe("manifestProblems", () => {
-  it("wants a reason on a one-sided row, a workstream on a planned one, and every option catalogued", () => {
+  it("wants a reason where a CLI lacks it, who closes a plan, and every option catalogued", () => {
     const problems = manifestProblems(
       manifest({
-        chats: { state: "max-only" },
-        store: { state: "planned", options: { "--all": "both", "--max": "both", "--nope": "both" } },
+        chats: { in: ["max"] },
+        store: { in: [], planned: { max: "", tg: "T6" }, options: { "--all": "all", "--max": "all", "--nope": "all" } },
       }),
     )
 
     expect(problems).toEqual([
-      "chats: max-only without a reason",
-      'store: planned without "by"',
+      "chats: not in tg, without a reason",
+      "store: planned for max without who closes it",
       "store --nope: not in the option catalogue",
     ])
   })
 
-  it("refuses a row that a one-sided row above it already covers", () => {
+  it("refuses a row that a row only one CLI has, for a reason, already covers", () => {
     const problems = manifestProblems({
-      ...manifest({ topics: { state: "tg-only", reason: "MAX has none" }, "topics list": { state: "both" } }),
+      ...manifest({ topics: { in: ["tg"], reason: "MAX has none" }, "topics list": { in: "all" } }),
       options: {},
     })
 
     expect(problems).toEqual(['topics list: under "topics", which is tg-only and covers it'])
   })
+
+  it("knows only the CLIs it lists, and a plan only for a CLI that lacks the command", () => {
+    const problems = manifestProblems({
+      ...manifest(
+        {
+          chats: { in: ["max", "wa"], planned: { tg: "T6", li: "?" } },
+          store: { in: ["max", "tg", "wa"] },
+          topics: { in: ["tg"], planned: { tg: "P2", wa: "W1" }, reason: "MAX has none" },
+        },
+        ["max", "tg", "wa"],
+      ),
+      options: {},
+    })
+
+    expect(problems).toEqual([
+      'chats: no such CLI "li" — the manifest\'s clis are max, tg, wa',
+      'store: in every CLI — write "all"',
+      "topics: planned for tg, which has it",
+    ])
+  })
+
+  it("wants each CLI listed once, and a row no CLI has planned for every one of them", () => {
+    const empty = { ...manifest({}), options: {} }
+
+    expect(manifestProblems({ ...empty, clis: ["max", "max"] })).toEqual(["clis: a CLI named twice"])
+    expect(manifestProblems({ ...empty, commands: { bot: { in: [], planned: { tg: "P8" } } } })).toEqual([
+      "bot: not in max, without a reason",
+    ])
+  })
 })
 
 describe("parityProblems", () => {
   const rows = manifest({
-    store: { state: "both" },
-    "store fetch": { state: "both", options: { "--all": "both", "--max": { state: "planned", by: "P1" } } },
-    "store jobs": { state: "planned", by: "T6" },
-    bot: { state: "planned", by: "tg bot", subtree: true },
-    topics: { state: "tg-only", reason: "MAX has none" },
+    store: { in: "all" },
+    "store fetch": { in: "all", options: { "--all": "all", "--max": { in: [], planned: { max: "P1", tg: "P1" } } } },
+    "store jobs": { in: ["tg"], planned: { max: "T6" } },
+    bot: { in: [], planned: { max: "P8", tg: "P8" }, subtree: true },
+    topics: { in: ["tg"], reason: "MAX has none" },
   })
 
   it("passes a CLI that has what its column says, planned or not", () => {
@@ -79,6 +109,12 @@ describe("parityProblems", () => {
     expect(parityProblems(rows, "max", max)).toEqual([])
   })
 
+  it("passes a planned CLI that has the command already", () => {
+    const max = program(command("store", [], [command("store fetch", ["--all"]), command("store jobs")]))
+
+    expect(parityProblems(rows, "max", max)).toEqual([])
+  })
+
   it("names what is missing from the manifest, from the CLI, and on the wrong side", () => {
     const max = program(
       command("store", [], [command("store fetch", ["--background"]), command("store info")]),
@@ -86,10 +122,28 @@ describe("parityProblems", () => {
     )
 
     expect(parityProblems(rows, "max", max)).toEqual([
-      "store fetch --all: the manifest says both, max lacks it",
+      "store fetch --all: the manifest says all, max lacks it",
       "store fetch --background: not in the manifest — add its row first",
       "store info: not in the manifest — add its row first",
       "topics: max has it, the manifest says tg-only",
+    ])
+  })
+
+  it("checks each of three CLIs against its own column", () => {
+    const three = manifest(
+      {
+        chats: { in: "all" },
+        polls: { in: ["max", "tg"], reason: "WhatsApp polls cannot be read back" },
+        topics: { in: ["tg"], reason: "only Telegram has topics", planned: { wa: "W2" } },
+      },
+      ["max", "tg", "wa"],
+    )
+    const wa = program(command("chats"), command("polls"))
+
+    expect(parityProblems(three, "wa", wa)).toEqual(["polls: wa has it, the manifest says max+tg"])
+    expect(parityProblems(three, "wa", program(command("chats"), command("topics")))).toEqual([])
+    expect(parityProblems(three, "max", program(command("chats")))).toEqual([
+      "polls: the manifest says max+tg, max lacks it",
     ])
   })
 })

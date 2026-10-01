@@ -1,15 +1,22 @@
 import type { CommandInfo, OptionInfo } from "@leemour/cli-core/commands"
 
-export type Cli = "max" | "tg"
-export type State = "both" | "max-only" | "tg-only" | "planned"
+/** A name from the manifest's `clis`: `max`, `tg`, and whichever CLI joins next. */
+export type Cli = string
 
-/** `"both"`, or a one-sided or planned entry that says why (`reason`) or who closes it (`by`). */
-export type Entry = "both" | { state: Exclude<State, "both">; reason?: string; by?: string }
-
-export interface CommandRow {
-  state: State
+/**
+ * Which CLIs have a command or option. `in` lists them, or is `"all"`. A CLI outside `in` is either
+ * `planned` — who closes the gap, and nothing is checked for it — or lacks it for the row's `reason`.
+ */
+export interface Presence {
+  in: "all" | Cli[]
   reason?: string
-  by?: string
+  planned?: Record<Cli, string>
+}
+
+/** An option: `"all"` alone, or where it is and why not elsewhere. */
+export type Entry = "all" | Presence
+
+export interface CommandRow extends Presence {
   /** On a planned row: it stands for every path below it, which then have no rows of their own. */
   subtree?: boolean
   options?: Record<string, Entry>
@@ -23,6 +30,7 @@ export interface CatalogueOption {
 }
 
 export interface Manifest {
+  clis: Cli[]
   options: Record<string, CatalogueOption>
   globalOptions: Record<string, Entry>
   commands: Record<string, CommandRow>
@@ -35,21 +43,42 @@ export interface CommandsJson {
   commands: readonly CommandInfo[]
 }
 
-const STATES: readonly State[] = ["both", "max-only", "tg-only", "planned"]
-
 export const longName = (flags: string): string => flags.split(/[\s,|]+/).find((part) => part.startsWith("--")) ?? flags
 
-const stateOf = (entry: Entry | CommandRow): State => (typeof entry === "string" ? entry : entry.state)
+const presence = (entry: Entry | CommandRow): Presence => (typeof entry === "string" ? { in: entry } : entry)
 
-const entryProblems = (where: string, entry: Entry | CommandRow): string[] => {
-  if (typeof entry === "string") return entry === "both" ? [] : [`${where}: "${entry}" — only "both" stands alone`]
+/** `true` the CLI must have it, `false` it must not, `undefined` it is planned and either passes. */
+export const expected = (entry: Entry | CommandRow, cli: Cli): boolean | undefined => {
+  const row = presence(entry)
+  if (row.in === "all" || row.in.includes(cli)) return true
+  return row.planned?.[cli] === undefined ? false : undefined
+}
+
+/** A row only one CLI has, for a stated reason: everything below it is that CLI's alone, and unrowed. */
+export const solo = (row: CommandRow) => row.in !== "all" && row.in.length === 1 && row.reason !== undefined
+
+const describe = (row: Presence) =>
+  row.in === "all" ? "all" : row.in.length === 1 ? `${row.in[0]}-only` : row.in.join("+") || "in none"
+
+const entryProblems = (clis: readonly Cli[], where: string, entry: Entry | CommandRow): string[] => {
+  if (typeof entry === "string") return entry === "all" ? [] : [`${where}: "${entry}" — only "all" stands alone`]
   const problems: string[] = []
-  if (!STATES.includes(entry.state)) problems.push(`${where}: no such state "${entry.state}"`)
-  if (entry.state === "max-only" || entry.state === "tg-only") {
-    if (!entry.reason) problems.push(`${where}: ${entry.state} without a reason`)
-  } else if (entry.reason) problems.push(`${where}: a reason on a ${entry.state} row`)
-  if (entry.state === "planned" && !entry.by) problems.push(`${where}: planned without "by"`)
-  if (entry.state !== "planned" && entry.by) problems.push(`${where}: "by" on a ${entry.state} row`)
+  const names = entry.in === "all" ? [] : Array.isArray(entry.in) ? entry.in : undefined
+  if (names === undefined) return [`${where}: "in" is neither "all" nor a list of CLIs`]
+  const planned = Object.entries(entry.planned ?? {})
+  for (const name of [...names, ...planned.map(([name]) => name)])
+    if (!clis.includes(name))
+      problems.push(`${where}: no such CLI "${name}" — the manifest's clis are ${clis.join(", ")}`)
+  if (new Set(names).size !== names.length) problems.push(`${where}: a CLI named twice in "in"`)
+  if (names.length > 0 && clis.every((cli) => names.includes(cli)))
+    problems.push(`${where}: in every CLI — write "all"`)
+  for (const [name, by] of planned) {
+    if (names.includes(name) || entry.in === "all") problems.push(`${where}: planned for ${name}, which has it`)
+    if (!by) problems.push(`${where}: planned for ${name} without who closes it`)
+  }
+  const lacking = clis.filter((cli) => expected(entry, cli) === false)
+  if (lacking.length > 0 && !entry.reason) problems.push(`${where}: not in ${lacking.join(", ")}, without a reason`)
+  if (lacking.length === 0 && entry.reason) problems.push(`${where}: a reason, but no CLI lacks it unplanned`)
   return problems
 }
 
@@ -59,22 +88,23 @@ const unsorted = (where: string, keys: string[]): string[] => {
   return at === -1 ? [] : [`${where}: keys out of order at "${keys[at]}" — run the seed to sort`]
 }
 
-const oneSided = (state: State) => state === "max-only" || state === "tg-only"
-
-/** The row above `path` that covers it and everything else below it: one-sided, or planned as a subtree. */
+/** The row above `path` that covers it and everything else below it: one CLI's alone, or planned as a subtree. */
 export const coveringRow = (manifest: Manifest, path: string): string | undefined => {
   const words = path.split(" ")
   for (let length = words.length - 1; length > 0; length--) {
     const parent = words.slice(0, length).join(" ")
     const row = manifest.commands[parent]
-    if (row && (oneSided(row.state) || row.subtree)) return parent
+    if (row && (solo(row) || row.subtree)) return parent
   }
   return undefined
 }
 
 /** Everything wrong with the manifest itself; empty when it is well-formed. */
 export const manifestProblems = (manifest: Manifest): string[] => {
+  const clis = Array.isArray(manifest.clis) ? manifest.clis : []
   const problems: string[] = [
+    ...(clis.length === 0 ? ['clis: no CLIs — the manifest starts with "clis": ["max", "tg"]'] : []),
+    ...(new Set(clis).size === clis.length ? [] : ["clis: a CLI named twice"]),
     ...unsorted("options", Object.keys(manifest.options)),
     ...unsorted("globalOptions", Object.keys(manifest.globalOptions)),
     ...unsorted("commands", Object.keys(manifest.commands)),
@@ -85,18 +115,23 @@ export const manifestProblems = (manifest: Manifest): string[] => {
     for (const [name, entry] of Object.entries(options)) {
       used.add(name)
       if (!manifest.options[name]) problems.push(`${where} ${name}: not in the option catalogue`)
-      problems.push(...entryProblems(`${where} ${name}`, entry))
+      problems.push(...entryProblems(clis, `${where} ${name}`, entry))
     }
   }
 
   optionEntries("(global)", manifest.globalOptions)
   for (const [path, row] of Object.entries(manifest.commands)) {
-    problems.push(...entryProblems(path, row))
-    if (row.subtree && row.state !== "planned") problems.push(`${path}: subtree on a ${row.state} row`)
+    problems.push(...entryProblems(clis, path, row))
+    if (row.subtree && Object.keys(row.planned ?? {}).length === 0)
+      problems.push(`${path}: subtree on a row nobody plans`)
     const parent = path.split(" ").slice(0, -1).join(" ")
     if (parent && !manifest.commands[parent]) problems.push(`${path}: no row for its parent "${parent}"`)
     const cover = coveringRow(manifest, path)
-    if (cover) problems.push(`${path}: under "${cover}", which is ${manifest.commands[cover]?.state} and covers it`)
+    if (cover) {
+      const above = manifest.commands[cover]
+      const how = above?.subtree ? "planned" : above ? describe(above) : ""
+      problems.push(`${path}: under "${cover}", which is ${how} and covers it`)
+    }
     optionEntries(path, row.options ?? {})
   }
 
@@ -107,26 +142,23 @@ export const manifestProblems = (manifest: Manifest): string[] => {
   return problems
 }
 
-const present = (cli: Cli, state: State): boolean | undefined =>
-  state === "planned" ? undefined : state === "both" || state === `${cli}-only`
-
-const compare = (cli: Cli, where: string, state: State | undefined, has: boolean): string[] => {
-  if (state === undefined) return has ? [`${where}: not in the manifest — add its row first`] : []
-  const expected = present(cli, state)
-  if (expected === undefined || expected === has) return []
+const compare = (cli: Cli, where: string, entry: Entry | CommandRow | undefined, has: boolean): string[] => {
+  if (entry === undefined) return has ? [`${where}: not in the manifest — add its row first`] : []
+  const want = expected(entry, cli)
+  if (want === undefined || want === has) return []
+  const row = presence(entry)
   return has
-    ? [`${where}: ${cli} has it, the manifest says ${state}`]
-    : [`${where}: the manifest says ${state}, ${cli} lacks it`]
+    ? [`${where}: ${cli} has it, the manifest says ${describe(row)}`]
+    : [`${where}: the manifest says ${describe(row)}, ${cli} lacks it`]
 }
 
 const optionsOf = (options: readonly OptionInfo[]) => new Set(options.map((option) => longName(option.flags)))
 
 const compareOptions = (cli: Cli, where: string, entries: Record<string, Entry>, options: readonly OptionInfo[]) => {
   const has = optionsOf(options)
-  return [...new Set([...has, ...Object.keys(entries)])].sort().flatMap((name) => {
-    const entry = entries[name]
-    return compare(cli, `${where} ${name}`, entry === undefined ? undefined : stateOf(entry), has.has(name))
-  })
+  return [...new Set([...has, ...Object.keys(entries)])]
+    .sort()
+    .flatMap((name) => compare(cli, `${where} ${name}`, entries[name], has.has(name)))
 }
 
 /** Where a CLI's `commands --json` disagrees with its column of the manifest; empty when it agrees. */
@@ -144,8 +176,8 @@ export const parityProblems = (manifest: Manifest, cli: Cli, program: CommandsJs
     if (coveringRow(manifest, path)) continue
     const row = manifest.commands[path]
     const command = found.get(path)
-    problems.push(...compare(cli, path, row?.state, command !== undefined))
-    if (row && command && present(cli, row.state) !== false && !oneSided(row.state))
+    problems.push(...compare(cli, path, row, command !== undefined))
+    if (row && command && expected(row, cli) !== false && !solo(row))
       problems.push(...compareOptions(cli, path, row.options ?? {}, command.options))
   }
   return problems
