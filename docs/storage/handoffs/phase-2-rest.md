@@ -24,6 +24,15 @@ store runs on a SQLite new enough for that index. The full picture: [`../HANDOFF
 
 ### A · tg-cli and max-cli on the next cli-messaging release (SQLite plan item 5)
 
+**Status 2026-10-02:** `ensureSqlite()` first, `engines.node` and the Node 22.16 pages are merged
+on 0.98.0, which already exports `./sqlite-runtime` — max-cli
+[#313](https://github.com/leemour/max-cli/pull/313), tg-cli
+[#214](https://github.com/leemour/tg-cli/pull/214). Left: the move to 0.99.0 (the weekly breaking
+release, with #372) — tg by this thread, together with removing `TELEGRAM_CAPABILITIES`; max by the
+P8 bot thread, because max's own `bot callbacks|commands|webhooks` clash with the shared ones of #374
+and max fails at start until they go. Then one `parity.json` change: `--newest`, `--context` and
+`--source` of `messages search` to `in` for each CLI on 0.99.0.
+
 Waits for a cli-messaging release that has #318 and #362 (npm's `latest` was 0.97.0 without them).
 
 1. [`../plans/sqlite-runtime.md`](../plans/sqlite-runtime.md) §3 R2 and R5 — what `ensureSqlite()`
@@ -39,6 +48,8 @@ cli-messaging's `parity.json`, `messages search` `--newest` and `--context` move
 `in` for the CLI that has them.
 
 ### B · Search across accounts and messengers (phase 2 item 9, S13)
+
+**Done 2026-10-02:** [#377](https://github.com/leemour/cli-messaging/pull/377).
 
 1. [`../plans/phase-2.md`](../plans/phase-2.md) S13 — the default stays the current account;
    `in:<messenger>`, `in:all`, `--source`; resolution inside the chosen accounts; pretty output names
