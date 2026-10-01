@@ -148,7 +148,7 @@ export const replaceConversations = (
         chatPk: chatKey,
         firstMessagePk: first.pk,
         firstAt: first.sentAt,
-        lastAt: Math.max(...members.map((member) => member.sentAt)),
+        lastAt: members.reduce((last, member) => Math.max(last, member.sentAt), first.sentAt),
         messageCount: members.length,
         builtAt: startedAt,
         algorithmVersion,

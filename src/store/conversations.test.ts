@@ -141,6 +141,52 @@ describe("conversations in the store", () => {
     await store.close()
   })
 
+  it("builds one conversation of 200,000 messages", async () => {
+    const { store, path } = await opened()
+    await store.close()
+    const database = await openCache(path)
+    database
+      .prepare(
+        `INSERT INTO messages (account_pk, chat_pk, native_id, text, sent_at, ingested_at, ingested_via)
+         WITH RECURSIVE n(i) AS (SELECT 100 UNION ALL SELECT i + 1 FROM n WHERE i < 200099)
+         SELECT account_pk, chat_pk, i, '', i, 0, 'history' FROM messages, n WHERE native_id = '1'`,
+      )
+      .run()
+    database.close()
+    const again = await openStore({ path })
+    const ids = Array.from({ length: 200_000 }, (_, index) => String(index + 100))
+
+    await again.replaceConversations(OWNER, "-1", {
+      startedAt: 1,
+      algorithmVersion: 1,
+      links: [],
+      conversations: [ids],
+    })
+
+    expect((await again.conversations(OWNER, "-1", { limit: 1 })).items[0]).toMatchObject({ messageCount: 200_000 })
+    await again.close()
+  }, 30_000)
+
+  it("**are derived**: dropping the four tables leaves every message and search result as it was", async () => {
+    const { store, path } = await opened()
+    await build(store)
+    const read = async (from: MessageStore) => ({
+      messages: await from.messages(OWNER, "-1", { limit: 10 }),
+      found: await from.find({ text: "TIE", account: OWNER, limit: 10 }),
+    })
+    const before = await read(store)
+    await store.close()
+    const database = await openCache(path)
+    for (const table of ["conversation_messages", "conversations", "message_links", "conversation_state"]) {
+      database.exec(`DROP TABLE ${table}`)
+    }
+    database.close()
+
+    const again = await openStore({ path })
+    expect(await read(again)).toEqual(before)
+    await again.close()
+  })
+
   it("shows a conversation only to the account it belongs to", async () => {
     const { store } = await opened()
     await build(store)

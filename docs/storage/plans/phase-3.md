@@ -185,7 +185,7 @@ Valencia Expats · 12 May 10:01–10:05 · 4 messages · Alice, Carol
 
 1. **Migration**: the four tables of C2, number announced first. Drizzle schema plus a hand-checked SQL
    file; no rebuild of an existing table.
-2. **Store methods**: `saveLinks`, `links(message)`, `replaceDerived(chat, links, conversations)` in one
+2. **Correction 2026-10-01, at build:** built as `linkInputs`, `senderHandles`, `replaceConversations`, `conversations`, `conversation`, `conversationOf`, `links`, `conversationState`; `saveLinks` waits for phase 4, the only writer of agent links. · **Store methods**: `saveLinks`, `links(message)`, `replaceDerived(chat, links, conversations)` in one
    transaction per chat, `conversations(chat, window)`, `conversation(pk)`; nothing Drizzle-typed crosses.
 3. **Mentions** (optional): the nullable `mentions` column; tg-cli fills it from the message's
    mention entities; max-cli after a capture. Only new downloads get it.
