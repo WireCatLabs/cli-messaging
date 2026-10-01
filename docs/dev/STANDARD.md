@@ -99,7 +99,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--all` |  | every row, no paging |  | `chats list`, `chats members list` (planned), `contacts list`, `inbox` (planned), `messages download` (planned), `review` (planned) |
 | `--all-can-pin` | `<on\|off>` | every member may pin messages |  | `chats update` |
 | `--allow-any-file` |  | send a --file even from a hidden folder, ~/.ssh or the tool's own folders |  | `messages send` |
-| `--allow-dangerous` |  | go ahead without the question an ask level puts before a deletion |  | `chats moderate` (planned), `mcp` (planned), `mcp config` (planned), `messages delete`, `store clear` (tg-only) |
+| `--allow-dangerous` |  | go ahead without the question an ask level puts before a deletion |  | `chats moderate` (planned), `mcp` (planned), `mcp config` (planned), `messages delete`, `store clear` (planned) |
 | `--allow-delete` |  | offer the tool that deletes messages for you only; it cannot be undone. **max's own `mcp` is worded differently until the permission levels (P7) replace these flags there (e13)** |  | `mcp`, `mcp config` |
 | `--allow-mark-read` |  | offer the tool that marks a chat read; the other person sees it. **max's own `mcp` is worded differently until the permission levels (P7) replace these flags there (e13)** |  | `mcp`, `mcp config` |
 | `--allow-moderate` |  | offer the tool that applies a group's rules — delete others' messages, remove people. **max only, until permissions (P7) replace the MCP flags** |  | `mcp` (planned), `mcp config` (planned) |
@@ -138,7 +138,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--kind` | `<kind>` | only chats of this kind: dialog, group, channel or saved |  | `chats list` |
 | `--last` | `<n>` | stop once the newest n messages are held; not with --since. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | `store fetch` |
 | `--last-name` | `<name>` | your last name |  | `account update` |
-| `--left` |  | only the chats this account has left |  | `store clear` (tg-only) |
+| `--left` |  | only the chats this account has left |  | `store clear` (planned) |
 | `--limit` | `<n>` | how many: rows to show, or messages one run fetches. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | `chats list`, `chats members list` (planned), `contacts list`, `inbox`, `messages list`, `messages search`, `runs list`, `sends list`, `store fetch` (planned) |
 | `--lines` | `<n>` | how many lines | `50` | `server logs` (planned) |
 | `--local` |  | use the model on this machine, never the messenger |  | `messages transcribe` (tg-only) |

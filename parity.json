@@ -1219,16 +1219,16 @@
       "by": "T6"
     },
     "store clear": {
-      "state": "tg-only",
-      "reason": "max takes it with the other store maintenance commands at the fold-in of its profile cache (storage decisions, 2026-10-01); until then `max cache clear --left`",
+      "state": "planned",
+      "by": "tg-cli's next cli-messaging bump; then tg-only until max's fold-in",
       "options": {
         "--allow-dangerous": {
-          "state": "tg-only",
-          "reason": "with `store clear`, which max takes at the fold-in"
+          "state": "planned",
+          "by": "store clear"
         },
         "--left": {
-          "state": "tg-only",
-          "reason": "with `store clear`, which max takes at the fold-in"
+          "state": "planned",
+          "by": "store clear"
         }
       }
     },
