@@ -138,7 +138,8 @@ export type BotNotice =
       from: Member | null
       data: string
     }
-  | { event: "joined" | "left" | "added" | "removed"; chatId: Id; person: Member | null }
+  /** `at` is when it happened, ISO 8601, where the messenger says — `watch` may print it long after. */
+  | { event: "joined" | "left" | "added" | "removed"; chatId: Id; person: Member | null; at?: string }
   | { event: "started"; chatId: Id | null; person: Member | null }
   /** An update this adapter does not decode, under the messenger's own type name. */
   | { event: "other"; type: string; chatId: Id | null }
