@@ -72,6 +72,18 @@ const adapterFor = ({ history = true, edit = true } = {}): BotAdapter => ({
   action: async (chat, action) => {
     calls.push(`action ${chat} ${action}`)
   },
+  admins: async () => [
+    { id: "1", name: "Olga", username: null, role: "owner", rights: ["members", "admins", "pin"], title: null },
+  ],
+  addAdmin: async (chat, person, rights, { title }) => {
+    calls.push(`admin ${chat} ${person} ${rights.join(",")}${title ? ` "${title}"` : ""}`)
+  },
+  removeAdmin: async (chat, person) => {
+    calls.push(`unadmin ${chat} ${person}`)
+  },
+  removeMember: async (chat, person, { block }) => {
+    calls.push(`remove ${chat} ${person}${block ? " block" : ""}`)
+  },
   ...(history
     ? {
         senders: () => [{ id: botId, name: "Sales", username: "sales_bot", isBot: true }],
@@ -231,5 +243,69 @@ describe("bot chats show, leave, action", () => {
     await call(["sales", "bot", "chats", "action", "Team", "typing"])
     expect(calls).toEqual(["leave -100", "action -100 typing"])
     expect((await call(["sales", "bot", "chats", "action", "Team", "dancing"])).code).not.toBe(0)
+  })
+})
+
+describe("bot chats admins and members", () => {
+  it("**lists a chat's admins with their rights**, makes one with a title, and takes the rights back", async () => {
+    const listed = await call(["sales", "bot", "chats", "admins", "list", "Team", "--json"])
+    expect(listed.answer.items).toEqual([
+      { id: "1", name: "Olga", username: null, role: "owner", rights: ["members", "admins", "pin"], title: null },
+    ])
+
+    const made = await call([
+      "sales",
+      "bot",
+      "chats",
+      "admins",
+      "add",
+      "Team",
+      "91",
+      "--can",
+      "pin, members",
+      "--title",
+      "Mod",
+      "--json",
+    ])
+    await call(["sales", "bot", "chats", "admins", "remove", "Team", "91"])
+
+    expect(made.answer).toMatchObject({ chatId: "-100", personId: "91", rights: ["pin", "members"], title: "Mod" })
+    expect(calls).toEqual(['admin -100 91 pin,members "Mod"', "unadmin -100 91"])
+    expect(journal()).toMatchObject([
+      { chatId: "-100", kind: "chat", action: "admins.add", outcome: "sent" },
+      { chatId: "-100", kind: "chat", action: "admins.remove", outcome: "sent" },
+    ])
+  })
+
+  it("**offers only the rights this messenger has**, and a person only by their id", async () => {
+    const telegram = { ...bot, adminRights: ["members", "pin"] as const }
+    const streams = captureStreams()
+    const code = await run(
+      ["sales", "bot", "chats", "admins", "add", "Team", "91", "--can", "read"],
+      { app, commands: () => [botCommand(telegram)] },
+      { streams, tty: false, env },
+    )
+
+    expect(code).toBe(2)
+    expect(streams.stderr.join("\n")).toContain("--can takes rights from: members, pin")
+    expect((await call(["sales", "bot", "chats", "admins", "add", "Team", "Ivan", "--can", "pin"])).code).toBe(2)
+    expect(calls).toEqual([])
+  })
+
+  it("**removes a person, and blocks them with --block**", async () => {
+    const removed = await call(["sales", "bot", "chats", "members", "remove", "Team", "91", "--json"])
+    await call(["sales", "bot", "chats", "members", "remove", "Team", "92", "--block"])
+
+    expect(removed.answer).toMatchObject({ chatId: "-100", removed: ["91"], blocked: false })
+    expect(calls).toEqual(["remove -100 91", "remove -100 92 block"])
+  })
+
+  it("**refuses when the profile does not let the bot change members**, before anything goes", async () => {
+    configure({ bot: { profiles: { sales: { permissions: { "bot.chats.members": "readonly" } } } } })
+    const refused = await call(["sales", "bot", "chats", "members", "remove", "Team", "91", "--json"])
+
+    expect(refused.code).toBe(5)
+    expect(refused.stderr).toContain("bot.chats.members.remove")
+    expect(calls).toEqual([])
   })
 })

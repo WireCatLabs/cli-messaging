@@ -5,22 +5,12 @@ import { guardedWrite } from "../../sends/guarded.js"
 import { newOperationId } from "../../sends/send-id.js"
 import { envName } from "../app.js"
 import { renderList } from "../paging.js"
-import { type BotContext, botContext } from "./context.js"
+import { botAdminsCommand, botMembersCommand } from "./admins.js"
+import { botContext, online } from "./context.js"
 import { botCan, botIdOf, botMessagesCommand } from "./messages.js"
 import { BOT_ACTIONS, type BotAction, type BotMessenger } from "./port.js"
 import { registryProfiles } from "./registry.js"
 import { BotTokenStore } from "./token.js"
-
-/** `--offline` reads the local copy; a command that has to ask the messenger refuses it rather than ignoring it. */
-const online = (context: BotContext, command: Command): BotContext => {
-  if (context.settings.offline) {
-    throw new CliError(
-      "validation_error",
-      `--offline reads the local copy; \`${command.name()}\` has to ask the messenger`,
-    )
-  }
-  return context
-}
 
 const authCommand = (bot: BotMessenger, tokenVariable: string): Command => {
   const auth = new Command("auth").description("the bot token this profile uses")
@@ -229,6 +219,8 @@ const chatsCommand = (bot: BotMessenger): Command => {
         context.renderer.result({ operationId, chatId: ref, action })
       })
     })
+  command.addCommand(botAdminsCommand(bot))
+  command.addCommand(botMembersCommand(bot))
   return command
 }
 

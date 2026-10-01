@@ -85,3 +85,14 @@ export const botContext = (command: Command, bot: BotMessenger) => {
 }
 
 export type BotContext = ReturnType<typeof botContext>
+
+/** `--offline` reads the local copy; a command that has to ask the messenger refuses it rather than ignoring it. */
+export const online = (context: BotContext, command: Command): BotContext => {
+  if (context.settings.offline) {
+    throw new CliError(
+      "validation_error",
+      `--offline reads the local copy; \`${command.name()}\` has to ask the messenger`,
+    )
+  }
+  return context
+}

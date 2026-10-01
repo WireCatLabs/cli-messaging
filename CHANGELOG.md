@@ -8,6 +8,11 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Added
 
+- **`bot chats admins list|add|remove`** and **`bot chats members remove [--block]`**, the shared commands
+  over two new optional groups on `BotAdapter`: `BotChatAdmins` (`admins`, `addAdmin` with an optional
+  title, `removeAdmin`) and `BotChatMembers` (`removeMember`). `--can` takes the personal account's
+  rights; `BotMessenger.adminRights` narrows them to what the messenger has. A person is their user id.
+  Keys `bot.chats.admins.*` and `bot.chats.members.remove`.
 - **`search(store, query, scope)`** (`src/search/search.ts`) runs the word search in order — every word
   topped up by word beginnings, typo correction, any word, substring — and says which step found each
   hit and what it corrected. `MessageStore` gains `matchFilters` (a search of filters alone, newest
