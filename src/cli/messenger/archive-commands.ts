@@ -87,6 +87,7 @@ const exportCommand = (messenger: Messenger): Command =>
             senderColors: context.settings.senderColors,
             profile: context.profile,
             provider: messenger.provider,
+            locale: messenger.app.locale,
           }),
         )
       context.renderer.note(`${messages.length} messages`)

@@ -199,6 +199,14 @@ describe("a conversation", () => {
     expect(out.startsWith("── 3 января 2026 ──\n\n10:05:12  Анна")).toBe(true)
     expect(out).toContain("── 4 января 2026 ──")
   })
+
+  it("speaks the app's language when it names one: day headings and you", () => {
+    const english = { ...plain, locale: "en-GB" }
+    const out = renderMessages([message({ outgoing: true, replyTo: quoted({ outgoing: true }) })], english)
+    expect(out.startsWith("── 3 January 2026 ──\n\n10:05:12  you")).toBe(true)
+    expect(out).toContain("↳ you: ")
+    expect(out).not.toMatch(/[а-я]{2,} 2026|вы/)
+  })
 })
 
 describe("text other people wrote", () => {
