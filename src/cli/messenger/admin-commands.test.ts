@@ -338,7 +338,7 @@ describe("chats create, join and leave", () => {
     const empty = await call(["chats", "folders", "update", "Work"], adapter, env)
     const deleted = await call(["chats", "folders", "delete", "6", "--json"], adapter, env)
 
-    expect(JSON.parse(listed.stdout[0] ?? "")).toHaveLength(3)
+    expect(JSON.parse(listed.stdout[0] ?? "").items).toHaveLength(3)
     expect(JSON.parse(made.stdout[0] ?? "")).toMatchObject({ folder: { id: "9", chatIds: ["7"] } })
     expect([renamed.code, unclear.code, missing.code, empty.code, deleted.code]).toEqual([0, 2, 6, 2, 0])
     expect(done).toEqual([

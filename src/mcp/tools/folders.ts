@@ -1,6 +1,7 @@
 import * as v from "valibot"
 import type { Messenger } from "../../cli/messenger/context.js"
 import type { MessengerAdapter } from "../../cli/messenger/port.js"
+import { listed } from "../../cli/paging.js"
 import type { SendGuard } from "../../sends/guard.js"
 import { onlineDeps, servicesFor } from "../../services/index.js"
 import { type AnyTool, APPROVE, READ, tool, WRITE } from "../tool.js"
@@ -15,10 +16,12 @@ export const folderTools = (messenger: Messenger): Record<string, AnyTool> => {
   return {
     chats_folders_list: tool({
       title: "Chat folders",
-      description: "The owner's chat folders, in the order the app shows them, with the chats added to each.",
+      description:
+        "The owner's chat folders, in the order the app shows them, with the chats added to each. Returns " +
+        "{ items, page, limit, hasMore }.",
       input: v.object({}),
       annotations: READ,
-      online: (adapter, _args, { guard }) => folders(adapter, guard).list(),
+      online: async (adapter, _args, { guard }) => listed(await folders(adapter, guard).list()),
     }),
     chats_folders_create: tool({
       title: "Create a chat folder",
