@@ -8,6 +8,11 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Added
 
+- **`store reindex`** rebuilds the word index and its typo vocabulary from the stored messages; no
+  message is lost. `store migrate` now also fills the word index of a large file in batches, and each
+  `messages search` spends up to 200 ms on it first. `store info` and `store check` show how far it
+  has come (`wordIndex`), and `store check` checks its structure. `MessageStore` gains
+  `searchIndexState()` and `fillSearchIndex()`.
 - **`conversations links add --batch <id>`** reads the user's agent's answer as JSON on stdin and stores
   it all or nothing: every message one the batch asked about, each parent in the batch and earlier, no
   message twice, confidence 0–1, a model named. A message's new answer replaces its earlier one.

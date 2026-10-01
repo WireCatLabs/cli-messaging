@@ -20,13 +20,16 @@ import type { CacheDatabase } from "../../store/driver.js"
 import { MIGRATIONS, migrate } from "../../store/migrations.js"
 import { openCache } from "../../store/open.js"
 import { storePath } from "../../store/path.js"
-import { backfillNormalized, pendingNormalization } from "../../store/sqlite/backfill.js"
+import { pendingNormalization } from "../../store/sqlite/backfill.js"
+import { fillSearchIndex, resetSearchIndex, searchIndexState } from "../../store/sqlite/search-index.js"
 import { environmentOf, outputFor } from "../context.js"
 import type { Messenger } from "./context.js"
 import { servingProfiles } from "./serve-command.js"
 
 const SPEAKS = MIGRATIONS.at(-1)?.version ?? 0
 const SEARCH_INDEXES = ["messages_fts", "chats_fts", "identities_fts"]
+/** Contentless: it has no table to be compared with, only its own structure to check. */
+const WORD_INDEX = "message_words"
 
 /** An empty file is normal: `openStore` creates it before the first migration runs. */
 const schemaOf = (database: CacheDatabase) => {
@@ -85,6 +88,7 @@ export const storeMaintenanceCommands = (messenger: Messenger): Command[] => [
   infoCommand(),
   checkCommand(messenger),
   migrateCommand(messenger),
+  reindexCommand(messenger),
   backupCommand(),
   restoreCommand(messenger),
 ]
@@ -109,6 +113,7 @@ const infoCommand = (): Command =>
           schema: { version, minCompatible, speaks: SPEAKS, writable },
           rows: version > 0 ? Object.fromEntries(tables.map((table) => [table, count(database, table)])) : {},
           pendingNormalization: pendingIfKnown(database),
+          wordIndex: searchIndexState(database) ?? null,
         }
       })
       renderer.result(await read.catch((error) => ({ path, exists: true, opens: false, error: messageOf(error) })))
@@ -146,6 +151,12 @@ const checkCommand = (messenger: Messenger): Command =>
       if (answer.pendingNormalization) {
         renderer.note(`${answer.pendingNormalization} messages wait for normalization — \`${command} store migrate\``)
       }
+      const words = answer.wordIndex
+      if (words && words.filledThrough < words.watermark) {
+        renderer.note(
+          `the word index reaches message ${words.filledThrough} of ${words.watermark} — \`${command} store migrate\` finishes it`,
+        )
+      }
       const ours = answer.chatsBehind.filter((chat) => chat.provider === messenger.provider).length
       if (ours > 0)
         renderer.note(`${ours} chats hold less than their newest message — \`${command} store fetch <chat>\``)
@@ -165,9 +176,11 @@ const inspect = (path: string) =>
       .all()
       .map((row) => String(row.quick_check))
     const foreignKeys = database.prepare("PRAGMA foreign_key_check").all().length
-    const searchIndexes = Object.fromEntries(
-      schema.version > 0 ? SEARCH_INDEXES.map((index) => [index, indexIntegrity(database, index)]) : [],
-    )
+    const wordIndex = searchIndexState(database)
+    const searchIndexes = Object.fromEntries([
+      ...(schema.version > 0 ? SEARCH_INDEXES.map((index) => [index, indexIntegrity(database, index)]) : []),
+      ...(wordIndex ? [[WORD_INDEX, indexIntegrity(database, WORD_INDEX, 0)]] : []),
+    ])
     const size = bytesOf(path) + bytesOf(`${path}-wal`)
     const { bavail, bsize } = statfsSync(dirname(path))
     const free = Number(bavail) * Number(bsize)
@@ -192,6 +205,7 @@ const inspect = (path: string) =>
       searchIndexes,
       disk: { free, needed: size },
       pendingNormalization: pendingIfKnown(database),
+      wordIndex: wordIndex ?? null,
       chatsBehind: behind,
       conversations: conversationsBuilt(database),
       notApplicable: {
@@ -202,9 +216,9 @@ const inspect = (path: string) =>
   })
 
 /** `rank = 1` compares the index with its table; without it a stale external-content index passes. */
-const indexIntegrity = (database: CacheDatabase, index: string): string => {
+const indexIntegrity = (database: CacheDatabase, index: string, rank = 1): string => {
   try {
-    database.prepare(`INSERT INTO ${index} (${index}, rank) VALUES ('integrity-check', 1)`).run()
+    database.prepare(`INSERT INTO ${index} (${index}, rank) VALUES ('integrity-check', ${rank})`).run()
     return "ok"
   } catch (error) {
     return messageOf(error)
@@ -276,12 +290,42 @@ const migrateCommand = (messenger: Messenger): Command =>
       const answer = await reading(path, (database) => {
         const from = schemaOf(database).version
         migrate(database)
-        const pending = pendingNormalization(database)
-        if (pending > 0) renderer.note(`normalizing ${pending} messages, in batches; stopping loses nothing`)
-        const normalized = backfillNormalized(database, {
-          onBatch: (filled) => renderer.note(`${filled} of ${pending}`),
-        })
-        return { path, exists: true, from, to: schemaOf(database).version, normalized }
+        const { normalized, indexed, terms } = buildWordIndex(database, (note) => renderer.note(note))
+        return { path, exists: true, from, to: schemaOf(database).version, normalized, indexed, terms }
+      })
+      renderer.result(answer)
+    })
+
+/** Normalizes, indexes and builds the typo vocabulary, saying how far each has gone. */
+const buildWordIndex = (database: CacheDatabase, note: (text: string) => void) => {
+  const state = searchIndexState(database)
+  const pending = pendingNormalization(database)
+  if (pending > 0) note(`normalizing ${pending} messages, in batches; stopping loses nothing`)
+  if (state && state.filledThrough < state.watermark) note(`indexing words up to message ${state.watermark}`)
+  return fillSearchIndex(database, {
+    onBatch: (step, done) => note(step === "normalized" ? `${done} of ${pending} normalized` : `${done} ${step}`),
+  })
+}
+
+const reindexCommand = (messenger: Messenger): Command =>
+  new Command("reindex")
+    .description("rebuild the word index and its typo vocabulary from the stored messages; loses no message")
+    .action(async function (this: Command) {
+      const { renderer } = outputFor(this)
+      const path = storePath(environmentOf(this).env ?? process.env)
+      if (!existsSync(path)) {
+        renderer.result({ path, exists: false })
+        return
+      }
+      const answer = await reading(path, (database) => {
+        if (schemaOf(database).version < SPEAKS) {
+          throw new CliError(
+            "validation_error",
+            `the store is behind this build — \`${messenger.app.command} store migrate\` first`,
+          )
+        }
+        resetSearchIndex(database)
+        return { path, exists: true, ...buildWordIndex(database, (note) => renderer.note(note)) }
       })
       renderer.result(answer)
     })

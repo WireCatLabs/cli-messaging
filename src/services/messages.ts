@@ -67,6 +67,9 @@ export interface Reacted {
 /** max-cli's: many at once is what a ban for automation looks like. */
 export const DELETE_AT_ONCE = 10
 
+/** How long a search may spend building the word index first (phase 2 plan S3: about 200 ms). */
+export const SEARCH_FILL_MS = 200
+
 /** Every write goes through the guard: asked before it goes, told after, on every outcome. */
 export interface MessagesService {
   list(chat: string, window: ListWindow): Promise<Page<Message>>
@@ -145,14 +148,17 @@ export const messagesService = (deps: ServiceDeps): MessagesService => {
     },
 
     search: ({ text, pattern, chat, limit }) =>
-      inStore(async (store, account) =>
-        store.find({
+      inStore(async (store, account) => {
+        // A large file builds its word index a slice per search as well as in `store migrate` (NEED-453 A).
+        const stop = Date.now() + SEARCH_FILL_MS
+        await store.fillSearchIndex({ until: () => Date.now() >= stop })
+        return store.find({
           ...(pattern ? { pattern } : { text: text ?? "" }),
           account,
           limit,
           ...(chat === undefined ? {} : { chatId: await storedChatId(deps.messenger, chat, store, account) }),
-        }),
-      ),
+        })
+      }),
 
     send: async ({ chat, text: typed, sendId, replyTo, silent, noPreview, markdown, at, attachments = [] }) => {
       const connection = await deps.connection()
