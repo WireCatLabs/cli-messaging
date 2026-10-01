@@ -181,6 +181,9 @@
       "value": "<name>",
       "meaning": "your last name"
     },
+    "--left": {
+      "meaning": "only the chats this account has left"
+    },
     "--limit": {
       "value": "<n>",
       "meaning": "how many: rows to show, or messages one run fetches",
@@ -1214,6 +1217,20 @@
     "store check": {
       "state": "planned",
       "by": "T6"
+    },
+    "store clear": {
+      "state": "planned",
+      "by": "tg-cli's next cli-messaging bump; then tg-only until max's fold-in",
+      "options": {
+        "--allow-dangerous": {
+          "state": "planned",
+          "by": "store clear"
+        },
+        "--left": {
+          "state": "planned",
+          "by": "store clear"
+        }
+      }
     },
     "store export": {
       "state": "both",

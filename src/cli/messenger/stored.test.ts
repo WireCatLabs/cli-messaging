@@ -79,3 +79,38 @@ describe("what the writes leave in the store", () => {
     expect(await found("tuesday")).toEqual(["90", "1"])
   })
 })
+
+describe("what a chat list leaves in the store", () => {
+  const listing = async (pages: { items: string[]; hasMore: boolean }, window: { limit?: number; offset: number }) => {
+    const store = await openStore({ path: join(mkdtempSync(join(tmpdir(), "stored-")), "m.db") })
+    opened.push(store)
+    const chat = (id: string) => ({
+      id,
+      title: id,
+      kind: "group" as const,
+      unreadCount: 0,
+      lastMessageAt: null,
+      participantsCount: 2,
+    })
+    await store.saveChats(account, [chat("7"), chat("8")])
+    const adapter = { self: () => "500", chats: async () => ({ items: pages.items.map(chat), hasMore: pages.hasMore }) }
+    const wrapped = stored(adapter as unknown as MessengerAdapter, {
+      account,
+      store: async () => store,
+      warn: () => {},
+      events: () => {},
+    })
+    await wrapped.chats(window)
+    return (await store.chats(account, {})).items.map((one) => one.id).sort()
+  }
+
+  it("a page that names every chat marks the others as left", async () => {
+    expect(await listing({ items: ["7"], hasMore: false }, { offset: 0 })).toEqual(["7"])
+  })
+
+  it("a later page, a page with more after it, or an empty answer marks nothing", async () => {
+    expect(await listing({ items: ["7"], hasMore: false }, { offset: 20 })).toEqual(["7", "8"])
+    expect(await listing({ items: ["7"], hasMore: true }, { limit: 1, offset: 0 })).toEqual(["7", "8"])
+    expect(await listing({ items: [], hasMore: false }, { offset: 0 })).toEqual(["7", "8"])
+  })
+})

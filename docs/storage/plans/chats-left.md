@@ -1,4 +1,4 @@
-# Chats the account has left — store version 14
+# Chats the account has left
 
 Plan, 2026-10-01. It applies the owner's ruling for max's cache (max-cli NEED-488 B: **a chat the
 account left is marked, not deleted**) to the shared store. Built in max-cli #285 for max's own
@@ -27,8 +27,11 @@ the store is a system of record.
 
 ## 3. Design
 
-1. **Version 14, additive:** `chats.left_at integer`, nullable. `min_compatible` stays at 6, so
-   older builds keep writing.
+1. ~~**Version 14, additive:** `chats.left_at integer`, nullable. `min_compatible` stays at 6, so
+   older builds keep writing.~~ **Correction 2026-10-01, while building:** no schema change. Version 6
+   already has `chats.membership_state`, and `MembershipState` already includes `"left"`
+   (`src/domain/models.ts:23`); nothing set it before. The mark is `membership_state = 'left'`, and
+   version 14 is released.
 2. **`saveChats` clears the mark** of every chat it writes: a chat that comes back has been
    rejoined.
 3. **`markChatsLeft(key, present)`:** sets `left_at` on this account's chats that are not in

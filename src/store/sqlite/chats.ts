@@ -1,10 +1,20 @@
 import { CliError } from "@leemour/cli-core"
 import type { Chat, Id, Member, Page } from "../../domain/models.js"
 import type { AccountKey, StoredChatFilter } from "../store.js"
-import { and, eq, gt, sql } from "./drizzle/core.js"
+import { and, eq, gt, inArray, sql } from "./drizzle/core.js"
 import { identityPk } from "./identities.js"
 import type { StoreContext } from "./open.js"
-import { chatMembers, chats, identities } from "./schema.js"
+import {
+  attachments,
+  chatMembers,
+  chats,
+  fetchLeases,
+  identities,
+  messageRevisions,
+  messages,
+  syncRanges,
+  transcripts,
+} from "./schema.js"
 import { json, parsed, present, toIso, toMs } from "./values.js"
 
 export const findChatPk = ({ orm }: StoreContext, accountKey: number, chatId: Id): number | undefined =>
@@ -49,7 +59,9 @@ export const upsertChat = ({ orm, now }: StoreContext, accountKey: number, chat:
         lastMessageAt: sql`excluded.last_message_at`,
         participantsCount: sql`excluded.participants_count`,
         providerMetadata: sql`excluded.provider_metadata`,
-        membershipState: sql`coalesce(excluded.membership_state, ${chats.membershipState})`,
+        // A chat the list names again has been rejoined; any other state it had is kept.
+        membershipState: sql`CASE WHEN excluded.membership_state IS NOT NULL THEN excluded.membership_state
+          WHEN ${chats.membershipState} = 'left' THEN NULL ELSE ${chats.membershipState} END`,
         updatedAt: sql`excluded.updated_at`,
       },
     })
@@ -85,6 +97,52 @@ export const members = ({ orm }: StoreContext, chatKey: number): Member[] =>
 
 const byRecency = [sql`${chats.lastMessageAt} DESC NULLS LAST`, chats.pk]
 
+const notLeft = sql`${chats.membershipState} IS NOT 'left'`
+
+/** Marks this account's chats that `present` does not name; only ever given a complete list. */
+export const markLeft = ({ orm }: StoreContext, accountKey: number, present: Id[]): number =>
+  orm
+    .update(chats)
+    .set({ membershipState: "left" })
+    .where(
+      and(
+        eq(chats.accountPk, accountKey),
+        notLeft,
+        sql`${chats.nativeId} NOT IN (SELECT value FROM json_each(${JSON.stringify(present)}))`,
+      ),
+    )
+    .returning({ pk: chats.pk })
+    .all().length
+
+/** The chats marked left, and how many messages they hold. */
+export const leftChats = ({ orm }: StoreContext, accountKey: number): { pks: number[]; messages: number } => {
+  const pks = orm
+    .select({ pk: chats.pk })
+    .from(chats)
+    .where(and(eq(chats.accountPk, accountKey), eq(chats.membershipState, "left")))
+    .all()
+    .map(({ pk }) => pk)
+  const count =
+    pks.length === 0
+      ? 0
+      : Number(orm.select({ n: sql<number>`count(*)` }).from(messages).where(inArray(messages.chatPk, pks)).get()?.n)
+  return { pks, messages: count }
+}
+
+/** These chats and everything under them, children before parents: the foreign keys are enforced. */
+export const purgeChats = ({ orm }: StoreContext, pks: number[]): void => {
+  if (pks.length === 0) return
+  const messagesOf = orm.select({ pk: messages.pk }).from(messages).where(inArray(messages.chatPk, pks))
+  orm.delete(transcripts).where(inArray(transcripts.chatPk, pks)).run()
+  orm.delete(fetchLeases).where(inArray(fetchLeases.chatPk, pks)).run()
+  orm.delete(chatMembers).where(inArray(chatMembers.chatPk, pks)).run()
+  orm.delete(syncRanges).where(inArray(syncRanges.chatPk, pks)).run()
+  orm.delete(messageRevisions).where(inArray(messageRevisions.messagePk, messagesOf)).run()
+  orm.delete(attachments).where(inArray(attachments.messagePk, messagesOf)).run()
+  orm.delete(messages).where(inArray(messages.chatPk, pks)).run()
+  orm.delete(chats).where(inArray(chats.pk, pks)).run()
+}
+
 export const chatsWith = ({ orm }: StoreContext, accountKey: number, key: AccountKey, memberId: Id): Chat[] =>
   orm
     .select({ chat: chats })
@@ -92,7 +150,12 @@ export const chatsWith = ({ orm }: StoreContext, accountKey: number, key: Accoun
     .innerJoin(chats, eq(chats.pk, chatMembers.chatPk))
     .innerJoin(identities, eq(identities.pk, chatMembers.identityPk))
     .where(
-      and(eq(chats.accountPk, accountKey), eq(identities.provider, key.provider), eq(identities.nativeId, memberId)),
+      and(
+        eq(chats.accountPk, accountKey),
+        notLeft,
+        eq(identities.provider, key.provider),
+        eq(identities.nativeId, memberId),
+      ),
     )
     .orderBy(...byRecency)
     .all()
@@ -104,6 +167,7 @@ const chatsWhere = (accountKey: number, { query, kind, unread }: StoredChatFilte
   }
   return and(
     eq(chats.accountPk, accountKey),
+    notLeft,
     query === undefined
       ? undefined
       : sql`${chats.pk} IN (SELECT rowid FROM chats_fts WHERE chats_fts MATCH ${`"${query.trim().replaceAll('"', '""')}"`})`,

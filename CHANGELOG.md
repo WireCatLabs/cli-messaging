@@ -25,6 +25,13 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Added
 
+- **A chat the account has left leaves the store's lists, and `store clear --left` deletes it.** A
+  chat list that names every chat (offset 0, nothing more) marks the chats it leaves out with
+  `membershipState: "left"`; `chats`, `countChats` and `chatsWith` skip them, their messages stay,
+  and a chat the list names again is unmarked. `markChatsLeft` and `leftChats` on the store,
+  `archive.left` on the services. `store clear --left --allow-dangerous` deletes this account's left
+  chats with their messages, members and leases; without `--allow-dangerous` it says how much it
+  would delete. No schema change: version 6's `membership_state` already holds `left`.
 - **`cli-messaging-parity wording <max.json> <tg.json>`** and `wordingProblems` in `./parity`: every
   `both` option the two tools describe in different words, unless its catalogue entry has a `note`.
   The parity workflow runs it on both CLIs' `main`.

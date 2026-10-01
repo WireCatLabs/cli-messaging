@@ -1035,6 +1035,28 @@ describe("the shared read commands", () => {
     expect((await call(["sync", "status"], never, env)).code).not.toBe(0)
   })
 
+  it("**store clear --left deletes the chats the account left**, only with --allow-dangerous, never the rest", async () => {
+    const root = mkdtempSync(join(tmpdir(), "messenger-"))
+    const env = { CHAT_STATE_DIR: join(root, "state"), MESSAGING_STORE: join(root, "m.db") }
+    await call(["messages", "context", "Book", "2", "--json"], async () => fake, env)
+    await call(["chats", "list", "--json"], async () => fake, env)
+    const left: MessengerAdapter = { ...fake, chats: async () => ({ items: people, hasMore: false }) }
+    await call(["chats", "list", "--json"], async () => left, env)
+    const never = async (): Promise<MessengerAdapter> => {
+      throw new Error("store clear must never connect")
+    }
+
+    expect((await call(["store", "clear"], never, env)).code).toBe(2)
+    const unconfirmed = await call(["store", "clear", "--left"], never, env)
+    expect(unconfirmed.code).not.toBe(0)
+    expect(unconfirmed.stderr.join("\n")).toContain("1 chat(s) this account has left and their 3 message(s)")
+    const cleared = await call(["store", "clear", "--left", "--allow-dangerous", "--json"], never, env)
+    expect(JSON.parse(cleared.stdout[0] ?? "")).toEqual({ cleared: true, chats: 1, messages: 3 })
+    const again = await call(["store", "clear", "--left", "--json"], never, env)
+    expect(JSON.parse(again.stdout[0] ?? "")).toEqual({ cleared: false, chats: 0, messages: 0 })
+    expect(JSON.parse((await call(["store", "status", "--json"], never, env)).stdout[0] ?? "").items).toEqual([])
+  })
+
   it("**export to a new file only the owner can read**, from --since on, and never over a file", async () => {
     const root = mkdtempSync(join(tmpdir(), "messenger-"))
     const env = { CHAT_STATE_DIR: join(root, "state"), MESSAGING_STORE: join(root, "m.db") }

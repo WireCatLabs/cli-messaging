@@ -60,6 +60,8 @@ export interface ArchiveService {
    * numeric message ids, which order the chat.
    */
   fetch(chat: string, options: FetchOptions): Promise<Fetched>
+  /** The chats this account has left, with their messages; `clear` deletes them. From the store alone. */
+  left(options?: { clear?: boolean }): Promise<{ chats: number; messages: number }>
 }
 
 export const archiveService = (deps: ServiceDeps): ArchiveService => {
@@ -79,6 +81,8 @@ export const archiveService = (deps: ServiceDeps): ArchiveService => {
     },
 
     held: async (chatId) => (await deps.store()).ranges(await deps.account(), chatId),
+
+    left: async (options) => (await deps.store()).leftChats(await deps.account(), options),
 
     export: async (chat, { since } = {}) => {
       const { store, account, chatId } = await found(chat)
