@@ -6,6 +6,14 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Changed — may break callers
+
+- **`@leemour/cli-core` is a peer dependency now**, `>=0.13.0 <0.15.0`, not a dependency of this
+  package. The install has one copy of it, the CLI's own: with two, `annotate()` marks went missing from
+  `commands --json` and an error from one copy was not an `instanceof` the other's class. What to
+  change: depend on `@leemour/cli-core` yourself, at 0.13.0 or 0.14.x (tg-cli is on 0.14.0; max-cli,
+  on 0.12.0, moves up), and drop the pnpm `overrides` entry for it once on this version.
+
 ## 0.96.0 — 01.10.2026
 
 ### Added

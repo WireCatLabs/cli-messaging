@@ -2,7 +2,8 @@
 
 The messenger-neutral half of a messaging command line tool, shared by
 [`tg-cli`](https://github.com/leemour/tg-cli) and, later, [`max-cli`](https://github.com/leemour/max-cli).
-Built on [`@leemour/cli-core`](https://github.com/leemour/cli-core).
+Built on [`@leemour/cli-core`](https://github.com/leemour/cli-core), a peer dependency: the CLI installs
+it itself, so the install holds one copy.
 
 **Status: on npm** — what each version changed is in [CHANGELOG.md](CHANGELOG.md). The domain model, message locators, message rendering, name
 resolution, the SQLite seam that runs under Node and Bun, and the first part of the command
