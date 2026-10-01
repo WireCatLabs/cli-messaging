@@ -38,6 +38,8 @@ Released early: max-cli 6c (T6 store group): its parity check needs the store ro
 
 ### Fixed
 
+- **`bot messages list --limit <n>`**: the option was missing, so a CLI without a global `--limit`
+  (max) could not set it. And with nothing kept yet, `--offline` names the command that fills the copy.
 - **`store reindex` has its parity row** (planned for max, T6): tg-cli's parity check failed on 0.96.0 without it.
 
 ## 0.96.0 — 01.10.2026

@@ -164,7 +164,7 @@ describe("bot messages send", () => {
 
 describe("bot messages list and show", () => {
   it("**asks the messenger where its Bot API has a history**, and keeps what it answered", async () => {
-    const listed = await call(["sales", "bot", "messages", "list", "Team", "--json"])
+    const listed = await call(["sales", "bot", "messages", "list", "Team", "--limit", "2", "--json"])
 
     expect(listed.answer.items.map((item: Message) => item.text)).toEqual(["first", "second"])
     expect((await call(["sales", "bot", "messages", "show", "Team", "2", "--json"])).answer.text).toBe(
@@ -180,6 +180,13 @@ describe("bot messages list and show", () => {
     expect(listed.answer.items.map((item: Message) => item.text)).toEqual(["kept"])
     expect(listed.stderr).toContain("gives a bot no history")
     expect((await call(["sales", "bot", "messages", "show", "Team", "999", "--json"])).code).toBe(6)
+  })
+
+  it("**says what fills the copy** when nothing is kept yet, rather than printing an empty list", async () => {
+    const empty = await call(["sales", "bot", "messages", "list", "Team", "--offline", "--json"])
+
+    expect(empty.code).toBe(6)
+    expect(empty.stderr).toContain("chat sales bot messages list <chat>` once")
   })
 })
 
