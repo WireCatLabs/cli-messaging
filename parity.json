@@ -640,20 +640,16 @@
       }
     },
     "chats rules": {
-      "state": "planned",
-      "by": "P2"
+      "state": "both"
     },
     "chats rules set": {
-      "state": "planned",
-      "by": "P2"
+      "state": "both"
     },
     "chats rules show": {
-      "state": "planned",
-      "by": "P2"
+      "state": "both"
     },
     "chats rules unset": {
-      "state": "planned",
-      "by": "P2"
+      "state": "both"
     },
     "chats show": {
       "state": "both"
