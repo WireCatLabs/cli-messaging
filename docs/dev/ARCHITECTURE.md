@@ -99,7 +99,11 @@ migration; a larger one records in `search_index_state` the highest `pk` the bat
 normalized text first, then the words, then the typo vocabulary (`search_terms`,
 `search_term_trigrams`) — from `store migrate`, `store reindex`, and up to 200 ms before each
 `messages search`. When everything is built it returns without taking the write lock. Nothing ranks
-by it yet ([phase 2](../storage/plans/phase-2.md)).
+by it yet ([phase 2](../storage/plans/phase-2.md)). The search's steps over it are in
+`src/store/sqlite/words.ts`: `matchWords` (every or any word, whole or as beginnings, bm25 then
+newest), `matchSubstring`, and `knownTerms` and `termCandidates` for typo correction. A chat or
+sender under `SCOPE_TOKEN_LIMIT` messages is filtered inside the index by its scope token, a larger
+one by a join; `src/store/search-plan.test.ts` fails if any step reads an index once per message.
 
 **Drizzle is bundled, not installed.** `drizzle-orm` is a development dependency. `pnpm build` runs
 `scripts/bundle-drizzle.ts`, which writes the Drizzle modules the store uses into

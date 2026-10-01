@@ -34,6 +34,8 @@ import * as searchIndex from "./sqlite/search-index.js"
 import * as sync from "./sqlite/sync.js"
 import * as transcripts from "./sqlite/transcripts.js"
 import { toMs } from "./sqlite/values.js"
+import type { ScoredHit, SearchScope, WordOptions, WordQuery } from "./sqlite/words.js"
+import * as words from "./sqlite/words.js"
 
 /** Which account of which messenger a call is about. */
 export interface AccountKey {
@@ -227,6 +229,20 @@ export interface MessageStore {
   search(query: string, options: { limit: number; account?: AccountKey }): Promise<Page<StoredHit>>
   /** Newest first — by text, by who wrote it, or both. */
   find(filter: MessageFilter): Promise<Page<StoredHit>>
+  /**
+   * The word index, ranked by bm25, ties newest first (phase 2 plan S4 steps 1, 2 and 4). Chats marked
+   * not searchable are left out unless the scope names the chat.
+   */
+  matchWords(query: WordQuery, scope: SearchScope, options: WordOptions): Promise<Page<ScoredHit>>
+  /** The substring index, newest first (step 5); pieces under three letters are dropped. */
+  matchSubstring(query: WordQuery, scope: SearchScope, options: { limit: number }): Promise<Page<ScoredHit>>
+  /** Of `terms`, those the index knows as a word or the beginning of one. */
+  knownTerms(terms: string[]): Promise<Set<string>>
+  /** Known words sharing these trigrams, within the lengths, most shared first. */
+  termCandidates(
+    trigrams: string[],
+    lengths: { shortest: number; longest: number },
+  ): Promise<{ term: string; docs: number }[]>
   /** How far the word index is built; `undefined` on a file before it existed. */
   searchIndexState(): Promise<SearchIndexState | undefined>
   /**
@@ -675,6 +691,14 @@ const storeOver = (context: StoreContext): MessageStore => {
       search.find(context, { text: query, limit, ...(account ? { account } : {}) }),
 
     find: async (filter) => search.find(context, filter),
+
+    matchWords: async (query, scope, options) => words.matchWords(context, query, scope, options),
+
+    matchSubstring: async (query, scope, options) => words.matchSubstring(context, query, scope, options),
+
+    knownTerms: async (terms) => words.knownTerms(context, terms),
+
+    termCandidates: async (trigrams, lengths) => words.termCandidates(context, trigrams, lengths),
 
     searchIndexState: async () => searchIndex.searchIndexState(database),
 
