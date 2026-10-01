@@ -10,7 +10,9 @@ import { botContext, online } from "./context.js"
 import { botCan, botIdOf, botMessagesCommand } from "./messages.js"
 import { BOT_ACTIONS, type BotAction, type BotMessenger } from "./port.js"
 import { registryProfiles } from "./registry.js"
+import { botCallbacksCommand, botMenuCommand, botWebhooksCommand } from "./setup.js"
 import { BotTokenStore } from "./token.js"
+import { botWatchCommand } from "./watch.js"
 
 const authCommand = (bot: BotMessenger, tokenVariable: string): Command => {
   const auth = new Command("auth").description("the bot token this profile uses")
@@ -240,4 +242,8 @@ export const botCommand = (bot: BotMessenger): Command => {
     .addCommand(botMessagesCommand(bot))
     .addCommand(recipientsCommand(bot))
     .addCommand(sendsCommand(bot))
+    .addCommand(botWatchCommand(bot))
+    .addCommand(botCallbacksCommand(bot))
+    .addCommand(botMenuCommand(bot))
+    .addCommand(botWebhooksCommand(bot))
 }

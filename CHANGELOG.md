@@ -6,6 +6,17 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- **`bot watch`, `bot callbacks answer`, `bot commands list|set|clear`, `bot webhooks list|set|delete`**,
+  the shared commands over four new optional groups on `BotAdapter`: `BotUpdates`, `BotCallbacks`,
+  `BotMenu`, `BotWebhooks`. `bot watch` has the personal `watch`'s shape (`--events`, `--jsonl`, Ctrl-C
+  or `--timeout` end it normally) plus `--types`; it keeps each batch — messages in the bot's copy,
+  button presses for `callbacks answer --text`, and what `BotMessenger.keepUpdates` keeps — before it
+  prints it, and moves its cursor only after. The cursor is `<bots>/updates/<profile>.json`, the file
+  max-cli writes. It reads, under `bot.messages`. `bot webhooks set` refuses a second address unless
+  `BotMessenger.manyWebhooks` and `--add`.
+
 ### Changed — may break callers
 
 - **`messages search` searches by words, best match first** — it listed the newest first: take

@@ -73,6 +73,8 @@ describe("a bot's files", () => {
       registry: join(bots, "sales.json"),
       recipients: join(bots, "recipients", "sales.json"),
       journal: join(bots, "sends", "sales.jsonl"),
+      updates: join(bots, "updates", "sales.json"),
+      presses: join(bots, "presses", "sales.json"),
     })
   })
 
