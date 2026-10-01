@@ -73,7 +73,8 @@ export interface MessagesService {
   search(query: SearchQuery): Promise<Page<StoredHit>>
   /** A reply is a send with `replyTo`. */
   send(request: SendRequest): Promise<Operated<Sent>>
-  edit(target: MessageTarget & { text: string }): Promise<Operated<{ message: Message }>>
+  /** With `markdown`, the marks are taken out as a send takes them. */
+  edit(target: MessageTarget & { text: string; markdown?: boolean }): Promise<Operated<{ message: Message }>>
   /** Each message counts toward the hourly limit. */
   delete(request: { chat: string; messages: string[]; forEveryone: boolean }): Promise<Operated<Deletion>>
   /** Guarded against the chat it goes to: that is where somebody new reads it. */
@@ -201,15 +202,17 @@ export const messagesService = (deps: ServiceDeps): MessagesService => {
       }
     },
 
-    edit: async ({ chat, message, text }) => {
+    edit: async ({ chat, message, text: typed, markdown }) => {
       const connection = await deps.connection()
       const edit = capability(connection, "edit", "edit a message")
+      const { text, markup } = markdown ? parseMarkdown(typed) : { text: typed, markup: [] }
+      if (text.trim() === "") throw new CliError("validation_error", "no new text — the marks leave nothing")
       const { id: chatId } = await connection.resolve(chat)
       const operationId = newOperationId()
       const edited = await guardedWrite(
         guard,
         { operationId, chatId, kind: "edit", messageId: message, length: text.length },
-        () => edit(chatId, message, text),
+        () => edit(chatId, message, text, markup.length > 0 ? { markup } : {}),
       )
       return { operationId, message: edited }
     },

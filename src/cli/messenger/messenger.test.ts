@@ -404,6 +404,33 @@ describe("the shared read commands", () => {
     expect(JSON.stringify(journal)).not.toContain("new plan")
   })
 
+  it("**edit with --md takes the marks out and sends them as markup**, as a send does", async () => {
+    const root = mkdtempSync(join(tmpdir(), "messenger-"))
+    const env = { CHAT_STATE_DIR: join(root, "state"), CHAT_CONFIG_DIR: join(root, "config") }
+    const edits: unknown[] = []
+    const editing: MessengerAdapter = {
+      ...fake,
+      edit: async (_chatId, messageId, text, options) => {
+        edits.push([text, options])
+        return { ...message, id: messageId, text }
+      },
+    }
+
+    const marked = await call(
+      ["messages", "edit", "Book", "3", "**new** plan", "--md", "--json"],
+      async () => editing,
+      env,
+    )
+    const plain = await call(["messages", "edit", "Book", "3", "**new** plan", "--json"], async () => editing, env)
+
+    expect(marked.code).toBe(0)
+    expect(plain.code).toBe(0)
+    expect(edits).toEqual([
+      ["new plan", { markup: [{ type: "bold", from: 0, length: 3 }] }],
+      ["**new** plan", {}],
+    ])
+  })
+
   it("**forward into the chat named by --to**, guarded against that chat, and answer the copy there", async () => {
     const root = mkdtempSync(join(tmpdir(), "messenger-"))
     const env = { CHAT_STATE_DIR: join(root, "state"), CHAT_CONFIG_DIR: join(root, "config") }

@@ -10,11 +10,15 @@ export const editCommand = (messenger: Messenger): Command =>
     .argument("<chat>", messenger.chatArgument)
     .argument("<message>", "the id of your own message")
     .argument("[text]", "the new text; without it, read from stdin")
+    .option("--md, --markdown", "read **bold**, _italic_, ~~struck~~ and `code` in the text; \\ keeps a mark literal")
     .action(async function (this: Command, chat: string, message: string, text: string | undefined) {
       const context = messengerContext(this, messenger)
+      const { markdown } = this.opts<{ markdown?: boolean }>()
       const body = text ?? (await readAll(context.stdin))
       if (body.trim() === "") throw new CliError("validation_error", "no new text — give it or pipe it in")
       context.renderer.result(
-        await context.withServices((services) => services.messages.edit({ chat, message: message.trim(), text: body })),
+        await context.withServices((services) =>
+          services.messages.edit({ chat, message: message.trim(), text: body, markdown: markdown === true }),
+        ),
       )
     })

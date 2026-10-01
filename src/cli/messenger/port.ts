@@ -113,8 +113,11 @@ export interface ChatReading {
 
 /** Changing a message already sent, or passing it on. */
 export interface MessageEditing {
-  /** The new text of one of the owner's own messages; the answer is the message as it now stands. */
-  edit(chatId: Id, messageId: Id, text: string): Promise<Message>
+  /**
+   * The new text of one of the owner's own messages; the answer is the message as it now stands.
+   * `markup` spans `text` as `SendOptions.markup` does.
+   */
+  edit(chatId: Id, messageId: Id, text: string, options: { markup?: Markup[] }): Promise<Message>
   /**
    * One message into another chat; the answer is the copy there. `silent` delivers it without a
    * notification. A repeat with the same `sendId` must leave one copy, as a send does.

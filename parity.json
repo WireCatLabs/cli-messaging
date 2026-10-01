@@ -852,10 +852,7 @@
     "messages edit": {
       "state": "both",
       "options": {
-        "--md": {
-          "state": "planned",
-          "by": "P1"
-        }
+        "--md": "both"
       }
     },
     "messages forward": {

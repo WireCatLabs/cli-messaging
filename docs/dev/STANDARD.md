@@ -119,7 +119,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--max` | `<n>` | at most this many messages in this run. **clash: the same limit as `--last` and `--max-pages` in max's `store fetch` — one of the two spellings goes** | `1000` | `store fetch` (planned) |
 | `--max-actions` | `<n>` | at most this many actions in one run | `10` | `chats check` (planned) |
 | `--max-pages` | `<n>` | at most this many pages in one run. **clash with tg's `store fetch --max`** | `40` | `store fetch` (planned) |
-| `--md` |  | read **bold**, _italic_, ~~struck~~ and `code` in the text; \ keeps a mark literal |  | `messages edit` (planned), `messages send` |
+| `--md` |  | read **bold**, _italic_, ~~struck~~ and `code` in the text; \ keeps a mark literal |  | `messages edit`, `messages send` |
 | `--members-see-link` | `<on\|off>` | members may see the invite link |  | `chats update` (planned) |
 | `--model` | `<id>` | which downloaded speech model hears them; `models audio list` shows them |  | `inbox` (planned), `messages list` (planned), `messages transcribe` |
 | `--multiple` |  | people may pick several answers |  | `polls create` |
