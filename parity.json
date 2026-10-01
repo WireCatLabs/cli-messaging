@@ -1238,6 +1238,10 @@
       "state": "planned",
       "by": "T6"
     },
+    "store reindex": {
+      "state": "planned",
+      "by": "T6"
+    },
     "store restore": {
       "state": "planned",
       "by": "T6"

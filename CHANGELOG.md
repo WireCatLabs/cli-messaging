@@ -25,6 +25,10 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   change: depend on `@leemour/cli-core` yourself, at 0.13.0 or 0.14.x (tg-cli is on 0.14.0; max-cli,
   on 0.12.0, moves up), and drop the pnpm `overrides` entry for it once on this version.
 
+### Fixed
+
+- **`store reindex` has its parity row** (planned for max, T6): tg-cli's parity check failed on 0.96.0 without it.
+
 ## 0.96.0 — 01.10.2026
 
 ### Added
