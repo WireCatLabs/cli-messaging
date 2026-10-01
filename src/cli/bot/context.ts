@@ -1,11 +1,15 @@
 import { CliError } from "@leemour/cli-core"
 import type { Command } from "commander"
+import { pickChat } from "../../resolve.js"
+import { sendGuard } from "../../sends/guard.js"
 import { SendJournal } from "../../sends/journal.js"
 import { RecipientList } from "../../sends/recipients.js"
 import { readSecret } from "../../terminal/prompt.js"
 import { baseContext, environmentOf } from "../context.js"
+import { terminalAsker } from "../messenger/ask.js"
 import { asFirstWord } from "../profile.js"
-import type { BotAdapter, BotConnectOptions, BotMessenger } from "./port.js"
+import { botCopy } from "./copy.js"
+import type { BotAdapter, BotChatRef, BotConnectOptions, BotMessenger } from "./port.js"
 import { botFiles, ChatRegistry } from "./registry.js"
 import { BotTokenStore } from "./token.js"
 
@@ -20,6 +24,9 @@ export const botContext = (command: Command, bot: BotMessenger) => {
   const files = botFiles(bot.app, profile, env)
   const tokens = bot.tokenStore?.(command, profile) ?? new BotTokenStore({ app: bot.app, profile, env })
   const words = botWords(bot, profile)
+  const registry = bot.registry?.(command, profile) ?? new ChatRegistry(bot.app, profile, env)
+  const recipients = () => new RecipientList(files.recipients, words)
+  const journal = () => new SendJournal(files.journal)
   const connect = async (token: string, options: BotConnectOptions = {}): Promise<BotAdapter> => {
     const adapter = await bot.connect(command, token, options)
     base.track(adapter)
@@ -30,9 +37,36 @@ export const botContext = (command: Command, bot: BotMessenger) => {
     profile,
     words,
     tokens,
-    registry: bot.registry?.(command, profile) ?? new ChatRegistry(bot.app, profile, env),
-    recipients: () => new RecipientList(files.recipients, words),
-    journal: () => new SendJournal(files.journal),
+    registry,
+    recipients,
+    journal,
+    /** What this bot has read, sent and received, in the shared store. */
+    copy: botCopy(bot.provider),
+    /**
+     * The profile's guard with this bot's recipient list and journal. `profile` reads as the words
+     * a fix is typed with — `max sales bot recipients add …` — and a bot has no hourly limit unless
+     * its section sets one.
+     */
+    guard: () =>
+      sendGuard({
+        profile: `${asFirstWord(profile)}bot`,
+        command: bot.app.command,
+        readOnly: settings.readOnly,
+        readOnlyFrom: settings.sources.readOnly ?? "default",
+        permissions: settings.permissions,
+        permissionSources: settings.permissionSources,
+        ask: terminalAsker(command),
+        sendsPerHour: settings.sendsPerHour,
+        journal: journal(),
+        recipients: recipients(),
+        warn: base.renderer.warn,
+      }),
+    /** A chat id, `user:<id>`, or the title of a chat this bot has seen — never a guess. */
+    chatRef: (typed: string): BotChatRef => {
+      const trimmed = typed.trim()
+      if (/^-?\d+$/.test(trimmed) || /^user:\d+$/.test(trimmed)) return trimmed
+      return pickChat(trimmed, registry.list()).id
+    },
     readSecret: (prompt: string) => {
       const stdin = environmentOf(command).stdin
       return bot.readSecret?.(command, prompt) ?? readSecret(prompt, stdin ? { input: stdin } : {})

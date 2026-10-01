@@ -8,7 +8,7 @@ import { environmentOf } from "../context.js"
 
 /** Deleting has its own word for "yes": the flag a person has to mean, not a habit (max-cli `NEED-238`). */
 export const skipFlagFor = (key: string): "--allow-dangerous" | "--yes" =>
-  key === "messages.delete" ? "--allow-dangerous" : "--yes"
+  key === "messages.delete" || key === "bot.messages.delete" ? "--allow-dangerous" : "--yes"
 
 /**
  * One line from the terminal itself, not stdin — stdin may be the text being sent. `null` when no
