@@ -4,10 +4,14 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 [semver](https://semver.org/); before `1.0.0` a minor version may break callers, and says how under
 "Changed — may break callers". `pnpm docs:check` checks the shape of this file.
 
-## Unreleased
+## 0.92.0 — 01.10.2026
 
 ### Changed — may break callers
 
+- **Depends on `@leemour/cli-core` 0.10.0.** A CLI that uses this package moves to cli-core 0.10.0 in
+  the same change, or pins one copy with a pnpm override: with two copies, a command marked as
+  changing something (`annotate`) loses the mark in the other copy's `describeProgram`, and errors
+  from one copy are not instances of the other's classes.
 - **`chats folders list` answers `{ items, page, limit, hasMore }`** in `--json`, and so does the tool
   `chats_folders_list`; they printed a bare array.
 
