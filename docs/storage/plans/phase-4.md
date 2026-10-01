@@ -1,6 +1,7 @@
 # Phase 4 — the user's own agent links messages into conversations
 
-Plan, 2026-10-01. **Not approved yet; nothing is built.** It follows [`../decisions.md`](../decisions.md), the
+Plan, 2026-10-01. **Approved by the owner 2026-10-01** («prepare plan for 4 and merge»); nothing is built.
+The two questions of §7 took the recommended option (A) by default — the owner asked not to be asked. It follows [`../decisions.md`](../decisions.md), the
 ruling of 2026-09-30 (NEED-405): **the CLI never calls an AI model to link messages; the user's own agent
 does it**, through a skill and CLI commands, only when the user asks. The CLI builds the free links
 (phase 3), hands out overlapping batches with candidate links, stores the links the agent returns with
@@ -181,7 +182,7 @@ links under them change.
 
 ## 7. Open questions
 
-1. **NEED-497** — a per-chat consent recorded by the CLI before batches, or only the skill asking the
+1. ~~**NEED-497**~~ — decided by default 2026-10-01: **A**, the skill asks; the CLI records nothing. A per-chat consent recorded by the CLI before batches, or only the skill asking the
    user (**A**, recommended)?
-2. **NEED-498** — MCP tools for batches and answers now (**B**), or CLI and skill only, MCP later (**A**,
+2. ~~**NEED-498**~~ — decided by default 2026-10-01: **A**, CLI and skill only; MCP later. MCP tools for batches and answers now (**B**), or CLI and skill only, MCP later (**A**,
    recommended)?
