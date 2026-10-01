@@ -10,6 +10,10 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Added
 
+- **The agent's answers decide conversations** (storage phase 4): `conversations build` reads the user's
+  agent's current answer for each message and chooses the messenger's reply first, then the agent's
+  answer, then the rules. An answer whose message or parent changed after it was written is left out.
+  Rules version 4, so `store check` names the chats to rebuild.
 - **`conversations batches status|next --chat <chat> [--size <n>]`** (storage phase 4): a chat in
   windows for the user's own AI agent to link — the messages it is asked about, which have no messenger
   reply and no current answer, and the 50 before them as context, with the rules' candidate links.

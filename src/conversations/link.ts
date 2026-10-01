@@ -1,6 +1,6 @@
 import type { Id, Message } from "../domain/models.js"
 
-export const RULES_VERSION = 3
+export const RULES_VERSION = 4
 
 /** How far back a rule looks, in messages: 97% of reply parents sat within 50 in a measured group. */
 export const LOOK_BACK = 50
@@ -31,13 +31,21 @@ export interface Linked {
 export interface LinkOptions {
   /** A handle as people type it, without `@` and lowercased, to the sender it names. */
   handles?: ReadonlyMap<string, Id>
+  /**
+   * The user's agent's current answer per message (phase 4): the earlier message it answers, or `null`
+   * for "starts a conversation". Chosen after the messenger's reply and before any rule.
+   */
+  answers?: ReadonlyMap<Id, Id | null>
 }
 
 /**
  * Links each message to the earlier one it answers, from the messenger's replies and a few rules, and
  * groups the chosen parents into conversations. `messages` must be one chat, oldest first.
  */
-export const linkMessages = (messages: Iterable<LinkInput>, { handles = new Map() }: LinkOptions = {}): Linked => {
+export const linkMessages = (
+  messages: Iterable<LinkInput>,
+  { handles = new Map(), answers = new Map() }: LinkOptions = {},
+): Linked => {
   const links: Link[] = []
   const parents = new Map<Id, Id | null>()
   const conversationOf = new Map<Id, number>()
@@ -51,7 +59,7 @@ export const linkMessages = (messages: Iterable<LinkInput>, { handles = new Map(
       ...sameSenderLink(message, window),
     ]
     links.push(...found)
-    const parent = choose(found)
+    const parent = choose(found, answers, message.id, conversationOf)
     parents.set(message.id, parent)
 
     const conversation = parent === null ? conversations.length : (conversationOf.get(parent) as number)
@@ -105,9 +113,18 @@ const mentioned = (text: string, handles: ReadonlyMap<string, Id>): Set<string> 
 }
 
 /** The messenger's reply first, then the most confident rule; on a tie, the one found first. */
-const choose = (links: Link[]): Id | null => {
+const choose = (
+  links: Link[],
+  answers: ReadonlyMap<Id, Id | null>,
+  id: Id,
+  held: ReadonlyMap<Id, number>,
+): Id | null => {
   const provider = links.find((one) => one.source === "provider")
   if (provider) return provider.parentId
+  // An answer naming a message this chat no longer holds, or a later one, leaves the choice to the rules.
+  const answer = answers.get(id)
+  if (answer === null) return null
+  if (answer !== undefined && held.has(answer)) return answer
   let best: Link | undefined
   for (const one of links) if (!best || one.confidence > best.confidence) best = one
   return best?.parentId ?? null

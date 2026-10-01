@@ -55,6 +55,43 @@ describe("linkMessages", () => {
     expect(parents.get("3")).toBe("1")
   })
 
+  it("**takes the agent's answer over the rules**, and the messenger's reply over the agent", () => {
+    const messages = [
+      said("1", "a", "school X?"),
+      said("2", "b", "dentist?"),
+      said("3", "a", "ok", { replyToId: "1" }),
+      said("4", "b", "alice: thanks"),
+      said("5", "c", "no idea"),
+    ]
+    const answers = new Map<string, string | null>([
+      ["3", "2"],
+      ["4", "2"],
+      ["5", null],
+    ])
+
+    const { parents } = linkMessages(messages, { handles, answers })
+
+    expect(parents.get("3")).toBe("1")
+    expect(parents.get("4")).toBe("2")
+    expect(parents.get("5")).toBeNull()
+  })
+
+  it("leaves the choice to the rules when the agent names a message not held, or a later one", () => {
+    const { parents } = linkMessages(
+      [said("1", "a", "school X?"), said("2", "c", "alice: which one?"), said("3", "b", "later")],
+      {
+        handles,
+        answers: new Map([
+          ["2", "99"],
+          ["1", "3"],
+        ]),
+      },
+    )
+
+    expect(parents.get("2")).toBe("1")
+    expect(parents.get("1")).toBeNull()
+  })
+
   it("joins one sender's quick follow-up, and not one after a five-minute gap", () => {
     const messages = [said("1", "a", "I tried that school"), said("2", "a", "last year")]
     clock += 6 * 60_000

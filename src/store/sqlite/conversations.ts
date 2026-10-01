@@ -422,3 +422,23 @@ export const stateOf = ({ orm }: StoreContext, chatKey: number) => {
       }
     : undefined
 }
+
+/**
+ * The user's agent's current answer per message (phase 4 plan A6): its parent, or `null` for "starts a
+ * conversation". An answer whose message or parent was edited or deleted after it was written is left
+ * out here already — a rebuild marks it stale only when it finishes.
+ */
+export const agentAnswers = ({ orm }: StoreContext, chatKey: number): Map<Id, Id | null> =>
+  new Map(
+    orm
+      .all<{ id: string; parent: string | null }>(
+        sql`SELECT m.native_id AS id, p.native_id AS parent FROM message_links l
+          JOIN messages m ON m.pk = l.message_pk LEFT JOIN messages p ON p.pk = l.parent_pk
+          WHERE l.chat_pk = ${chatKey} AND l.source = 'agent' AND l.stale_at IS NULL
+            AND NOT EXISTS (SELECT 1 FROM message_revisions r
+              WHERE r.message_pk IN (l.message_pk, l.parent_pk) AND r.captured_at > l.created_at)
+            AND NOT EXISTS (SELECT 1 FROM messages d
+              WHERE d.pk IN (l.message_pk, l.parent_pk) AND d.deleted_at > l.created_at)`,
+      )
+      .map(({ id, parent }) => [id, parent]),
+  )

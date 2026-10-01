@@ -89,7 +89,10 @@ export const conversationsService = (deps: ServiceDeps): ConversationsService =>
       if (inputs.length === 0) {
         throw new CliError("not_found", `the store holds no messages of chat ${chatId} — fetch them first`)
       }
-      const { links, conversations } = linkMessages(inputs, { handles: await store.senderHandles(account, chatId) })
+      const { links, conversations } = linkMessages(inputs, {
+        handles: await store.senderHandles(account, chatId),
+        answers: await store.agentAnswers(account, chatId),
+      })
       await store.replaceConversations(account, chatId, {
         startedAt,
         algorithmVersion: RULES_VERSION,

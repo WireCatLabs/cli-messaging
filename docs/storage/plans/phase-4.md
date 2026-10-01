@@ -151,7 +151,7 @@ links under them change.
 1. ✅ 2026-10-01 · **Batches** — store: messages needing the agent (A2), the window around them (A1), the batch id
    (A3); service and commands `conversations batches status|next` (A4, A7). Check that run records keep no
    output. No migration (A9).
-2. **Agent answers into the choice** — `LinkInput`/`linkMessages` take the chat's fresh agent answers;
+2. ✅ 2026-10-01 · **Agent answers into the choice** — `LinkInput`/`linkMessages` take the chat's fresh agent answers;
    `choose` in C1's order (A6); `RULES_VERSION` up so `store check` names chats to rebuild.
 3. **`conversations links add|clear`** — validation (A5), replace-per-message, the `conversations.links`
    permission key (A10).

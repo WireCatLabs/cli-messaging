@@ -57,7 +57,8 @@ const everyInput = async (store: MessageStore, limit: number) => {
 
 const build = async (store: MessageStore, startedAt = Date.parse("2026-10-01T20:00:00Z")) => {
   const handles = await store.senderHandles(OWNER, "-1")
-  const { links, conversations } = linkMessages(await everyInput(store, 3), { handles })
+  const answers = await store.agentAnswers(OWNER, "-1")
+  const { links, conversations } = linkMessages(await everyInput(store, 3), { handles, answers })
   await store.replaceConversations(OWNER, "-1", { startedAt, algorithmVersion: RULES_VERSION, links, conversations })
 }
 
@@ -132,6 +133,38 @@ describe("conversations in the store", () => {
     expect(await again.links(OWNER, "-1", "3")).toMatchObject([{ parentId: "2", source: "agent", stale: true }])
     expect((await again.links(OWNER, "-1", "2")).map(({ source }) => source)).toEqual(["provider"])
     await again.close()
+  })
+
+  it("**builds with the agent's current answers**, not one whose message changed after it", async () => {
+    const { store, path } = await opened()
+    const database = await openCache(path)
+    const answer = (message: string, parent: string) =>
+      database
+        .prepare(
+          `INSERT INTO message_links (chat_pk, message_pk, parent_pk, source, kind, confidence, method, created_at)
+           SELECT m.chat_pk, m.pk, p.pk, 'agent', 'answer', 0.9, 'model', ?
+           FROM messages m JOIN messages p ON p.native_id = ? WHERE m.native_id = ?`,
+        )
+        .run(Date.parse("2026-10-01T19:00:00Z"), parent, message)
+    answer("3", "2")
+    answer("4", "1")
+    database.close()
+    expect([...(await store.agentAnswers(OWNER, "-1"))]).toEqual([
+      ["3", "2"],
+      ["4", "1"],
+    ])
+
+    await store.saveMessages(OWNER, "-1", [message("4", "7", "Policía Nacional, calle X", "3")], { via: "update" })
+    await build(store, Date.parse("2026-10-02T12:00:00Z"))
+
+    expect(await store.agentAnswers(OWNER, "-1")).toEqual(new Map([["3", "2"]]))
+    const page = await store.conversations(OWNER, "-1", { limit: 10 })
+    expect(page.items.map(({ firstMessageId, messageCount }) => [firstMessageId, messageCount])).toEqual([["1", 4]])
+    expect(await store.links(OWNER, "-1", "4")).toMatchObject([
+      { source: "provider" },
+      { source: "agent", stale: true },
+    ])
+    await store.close()
   })
 
   it("**a failed build leaves the previous one** in place", async () => {
