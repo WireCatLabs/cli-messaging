@@ -23,10 +23,16 @@ export const oneDirection = (before: string | undefined, after: string | undefin
   }
 }
 
-/** A list reads one way from one place: at most one of `--before-id`, `--after-id`, `--after-time`. */
-export const listStart = (beforeId?: string, afterId?: string, afterTime?: string): After | undefined => {
+/** A list reads one way from one place: at most one of `--before-id`, `--before-time`, `--after-id`, `--after-time`. */
+export const listStart = (
+  beforeId?: string,
+  afterId?: string,
+  afterTime?: string,
+  beforeTime?: string,
+): After | undefined => {
   const given = [
     beforeId === undefined ? undefined : "--before-id",
+    beforeTime === undefined ? undefined : "--before-time",
     afterId === undefined ? undefined : "--after-id",
     afterTime === undefined ? undefined : "--after-time",
   ].filter((flag) => flag !== undefined)

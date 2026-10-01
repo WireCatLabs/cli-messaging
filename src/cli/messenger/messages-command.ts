@@ -5,6 +5,7 @@ import { isLocator, parseLocator } from "../../domain/locator.js"
 import { sendTime } from "../../domain/send-time.js"
 import { renderMessages } from "../../render/messages.js"
 import { readAttachments } from "../../sends/upload.js"
+import { momentOf } from "../../services/moment.js"
 import { modelWith } from "../../speech/hearing.js"
 import { listed, positiveCount } from "../paging.js"
 import { listStart } from "./after.js"
@@ -36,6 +37,7 @@ export const messagesCommand = (messenger: Messenger): Command => {
     .argument("<chat>", messenger.chatArgument)
     .option("--limit <n>", "how many", positiveCount("--limit"))
     .option("--before-id <id>", "only messages older than this message id")
+    .option("--before-time <time>", "only messages older than this ISO 8601 time, or 2h / 1d ago")
     .option("--after-id <id>", "only messages newer than this message id")
     .option("--after-time <time>", "only messages newer than this ISO 8601 time, or 2h / 1d ago")
     .option(...TRANSCRIBE_OPTION)
@@ -45,6 +47,7 @@ export const messagesCommand = (messenger: Messenger): Command => {
       const context = messengerContext(this, messenger)
       const {
         beforeId: before,
+        beforeTime,
         afterId,
         afterTime,
         transcribe,
@@ -52,13 +55,14 @@ export const messagesCommand = (messenger: Messenger): Command => {
         markRead,
       } = this.opts<{
         beforeId?: string
+        beforeTime?: string
         afterId?: string
         afterTime?: string
         transcribe?: boolean
         model?: string
         markRead?: boolean
       }>()
-      const after = listStart(before, afterId, afterTime)
+      const after = listStart(before, afterId, afterTime, beforeTime)
       const hearWith = modelWith(transcribe, model)
       if (markRead && context.settings.offline) {
         throw new CliError("validation_error", "--mark-read tells the messenger; not with --offline")
@@ -68,6 +72,7 @@ export const messagesCommand = (messenger: Messenger): Command => {
         services.messages.list(chat, {
           limit,
           ...(before === undefined ? {} : { before }),
+          ...(beforeTime === undefined ? {} : { beforeTime: momentOf(beforeTime, "--before-time") }),
           ...(after === undefined ? {} : { after }),
         }),
       )
@@ -231,7 +236,7 @@ export const sendCommand = (messenger: Messenger): Command =>
     .option("--voice <file>", "send an Ogg Opus file as a voice message, alone, with no text")
     .option("--allow-any-file", "send a file even from a hidden folder, ~/.ssh or this CLI's own folders")
     .option(
-      "--at <time>",
+      "--at-time <time>",
       "let the messenger send it later, even with this machine off: 2026-09-25T09:00 (local time), or 30m, 2h, 1d from now",
     )
     .action(async function (this: Command, chat: string, text: string | undefined) {
@@ -246,7 +251,7 @@ const sendText = async (command: Command, messenger: Messenger, chat: string, te
     silent,
     preview,
     md: markdown,
-    at,
+    atTime: at,
     file,
     photo,
     voice,
@@ -258,7 +263,7 @@ const sendText = async (command: Command, messenger: Messenger, chat: string, te
     silent?: boolean
     preview?: boolean
     md?: boolean
-    at?: string
+    atTime?: string
     file?: string
     photo?: string
     voice?: string

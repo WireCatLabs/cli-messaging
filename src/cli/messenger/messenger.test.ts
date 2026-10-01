@@ -294,7 +294,7 @@ describe("the shared read commands", () => {
     expect(journal).not.toContain("bold")
   })
 
-  it("**schedule a send with --at**, answer scheduledFor, journal it for that hour, and never repeat one", async () => {
+  it("**schedule a send with --at-time**, answer scheduledFor, journal it for that hour, and never repeat one", async () => {
     const root = mkdtempSync(join(tmpdir(), "messenger-"))
     const env = { CHAT_STATE_DIR: join(root, "state"), CHAT_CONFIG_DIR: join(root, "config") }
     const sent: SendOptions[] = []
@@ -307,9 +307,13 @@ describe("the shared read commands", () => {
       scheduled: async () => [{ ...message, scheduledFor: "2030-01-01T09:00:00.000Z" }],
     }
 
-    const scheduled = await call(["messages", "send", "Book", "later", "--at", "30m", "--json"], async () => later, env)
+    const scheduled = await call(
+      ["messages", "send", "Book", "later", "--at-time", "30m", "--json"],
+      async () => later,
+      env,
+    )
     const repeated = await call(
-      ["messages", "send", "Book", "x", "--at", "1h", "--send-id", "5"],
+      ["messages", "send", "Book", "x", "--at-time", "1h", "--send-id", "5"],
       async () => later,
       env,
     )
@@ -327,7 +331,7 @@ describe("the shared read commands", () => {
     expect(JSON.parse(listed.stdout[0] ?? "").items[0].scheduledFor).toBe("2030-01-01T09:00:00.000Z")
   })
 
-  it("**send nothing when --at is not a time**, and point at the queue when a scheduled send is lost", async () => {
+  it("**send nothing when --at-time is not a time**, and point at the queue when a scheduled send is lost", async () => {
     const root = mkdtempSync(join(tmpdir(), "messenger-"))
     const env = { CHAT_STATE_DIR: join(root, "state"), CHAT_CONFIG_DIR: join(root, "config") }
     let opened = false
@@ -339,14 +343,14 @@ describe("the shared read commands", () => {
     }
 
     const bad = await call(
-      ["messages", "send", "Book", "x", "--at", "tomorrow"],
+      ["messages", "send", "Book", "x", "--at-time", "tomorrow"],
       async () => {
         opened = true
         return lost
       },
       env,
     )
-    const unknown = await call(["messages", "send", "Book", "x", "--at", "1h"], async () => lost, env)
+    const unknown = await call(["messages", "send", "Book", "x", "--at-time", "1h"], async () => lost, env)
 
     expect(bad.code).toBe(2)
     expect(opened).toBe(false)
@@ -1494,6 +1498,31 @@ describe("the guard, account and mcp config commands", () => {
     ])
     expect(asked[4]).toEqual({ time: expect.any(Number) })
     expect(byId.stderr.join("\n")).toContain("--after-id 3")
+  })
+
+  it("**read back from a moment with messages list --before-time**; a messenger that cannot is refused", async () => {
+    const env = sandbox()
+    const asked: unknown[] = []
+    const back: MessengerAdapter = {
+      ...fake,
+      historyBefore: async (_chat, window) => {
+        asked.push(window)
+        return { items: thread, hasMore: false }
+      },
+    }
+
+    const read = await call(
+      ["messages", "list", "7", "--before-time", "2026-09-27T10:00:00Z", "--json"],
+      async () => back,
+      env,
+    )
+    const unable = await call(["messages", "list", "7", "--before-time", "2h"], async () => fake, env)
+    const both = await call(["messages", "list", "7", "--before-time", "2h", "--before-id", "5"], async () => back, env)
+
+    expect(read.code).toBe(0)
+    expect(asked).toEqual([{ limit: expect.any(Number), time: Date.parse("2026-09-27T10:00:00Z") }])
+    expect([unable.code, unable.stderr.join("\n")]).toEqual([2, expect.stringContaining("read back from a time")])
+    expect(both.code).toBe(2)
   })
 
   it("refuses --before with --after, --after offline, and a messenger that cannot read forward", async () => {

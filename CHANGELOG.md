@@ -18,6 +18,13 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   `bot.messages.send`, `bot.chats.members.remove`; `bot auth|list|recipients|sends|mcp` are never
   gated. `bot.messages.delete` asks by default. A bot's old `readOnly` and `allow` become `bot.*`
   levels (`fromOldSettings(…, { bot: true })`) and leave the personal account's alone.
+- **`messages list --before-time`**, reading back from a moment, and the optional adapter method
+  `historyBefore` in `ChatReading` behind it. A messenger without it is refused, saying so.
+
+### Changed — may break callers
+
+- **`messages send --at` → `--at-time`**: every option that takes a time names it. No alias. The MCP
+  argument stays `at` until the MCP arguments follow the options.
 
 ## 0.87.0 — 01.10.2026
 

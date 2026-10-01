@@ -24,6 +24,6 @@ describe("sendTime", () => {
     ["more than a year ahead", "2030-01-01T09:00"],
     ["neither a time nor a delay", "tomorrow"],
   ])("refuses %s", (_, at) => {
-    expect(() => sendTime(at, Date.parse("2026-09-24T12:00:00"))).toThrow(/--at/)
+    expect(() => sendTime(at, Date.parse("2026-09-24T12:00:00"))).toThrow(/--at-time/)
   })
 })
