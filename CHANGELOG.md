@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.75.0 — 01.10.2026
+
 ### Changed — may break callers
 
 - **`runs list`, `sends list` and `recipients list` answer the list envelope** in `--json`,
