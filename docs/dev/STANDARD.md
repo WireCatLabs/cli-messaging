@@ -419,3 +419,9 @@ on a pull request that touches the manifest or the check, on every push to `main
 builds tg-cli and max-cli from their `main` and runs the same check, so a row flipped early fails
 here, before the release that would carry it — not weeks later, when a CLI upgrades. The published
 CLIs are not the reference: a release always trails `main`, so they lag every new `both` row.
+
+**The milestone audit is one command:** `pnpm parity:audit --fresh` clones and builds both tools'
+`main` and prints, besides the manifest's state, what CI does not fail on: the shared version each
+tool pins, the MCP tools each offers, the user pages and their length, the README sections, and the
+release and QA scripts and skills. Each MCP server starts in an empty temporary home, so nothing
+reaches Telegram or MAX. `--max <dir> --tg <dir>` uses checkouts already built.

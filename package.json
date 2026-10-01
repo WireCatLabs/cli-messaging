@@ -69,7 +69,7 @@
     "prepublishOnly": "pnpm build",
     "parity:seed": "node --experimental-strip-types scripts/parity-seed.ts",
     "parity:render": "node --experimental-strip-types scripts/parity-render.ts",
-    "parity:audit": "node --experimental-strip-types scripts/parity-audit.ts"
+    "parity:audit": "tsc --build && node --experimental-strip-types scripts/parity-audit.ts"
   },
   "dependencies": {
     "@bomb.sh/tab": "0.0.22",
