@@ -79,20 +79,28 @@ export const pollsCommand = (messenger: Messenger): Command => {
     .argument("<answers...>", "two answers or more")
     .option("--multiple", "people may pick several answers")
     .option("--anonymous", "nobody sees who voted for what")
+    .option("--revote", "people may change their vote")
     .option("--silent", "send without a notification")
     .option("--send-id <id>", "repeat a create whose outcome was unknown, without risking a second poll")
     .action(async function (this: Command, chat: string, question: string, answers: string[]) {
       const context = messengerContext(this, messenger)
-      const { multiple, anonymous, silent, sendId } = this.opts<{
+      const { multiple, anonymous, revote, silent, sendId } = this.opts<{
         multiple?: boolean
         anonymous?: boolean
+        revote?: boolean
         silent?: boolean
         sendId?: string
       }>()
       const sent = await context.withMessenger((connection) =>
         guardedCreatePoll(context.guard, connection, {
           chat,
-          poll: { question, answers, multiple: multiple === true, anonymous: anonymous === true },
+          poll: {
+            question,
+            answers,
+            multiple: multiple === true,
+            anonymous: anonymous === true,
+            revote: revote === true,
+          },
           silent: silent === true,
           ...(sendId === undefined ? {} : { sendId }),
         }),

@@ -67,6 +67,8 @@ export interface NewPoll {
   answers: string[]
   multiple: boolean
   anonymous: boolean
+  /** People may change their vote. Without it they cannot, in every messenger. */
+  revote?: boolean
 }
 
 export interface Sent {

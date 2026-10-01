@@ -971,10 +971,7 @@
       "options": {
         "--anonymous": "both",
         "--multiple": "both",
-        "--revote": {
-          "state": "planned",
-          "by": "P1"
-        },
+        "--revote": "both",
         "--send-id": "both",
         "--silent": "both"
       }

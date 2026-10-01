@@ -810,7 +810,7 @@ describe("the shared read commands", () => {
     await call(["polls", "vote", "Book", "3", "--retract"], async () => polling, env)
     const closed = await call(["polls", "close", "Book", "3", "--json"], async () => polling, env)
     const created = await call(
-      ["polls", "create", "Book", "Where?", "here", "there", "--multiple", "--send-id", "42", "--json"],
+      ["polls", "create", "Book", "Where?", "here", "there", "--multiple", "--revote", "--send-id", "42", "--json"],
       async () => polling,
       env,
     )
@@ -823,7 +823,12 @@ describe("the shared read commands", () => {
       ["vote", "7", "3", ["MQ"]],
       ["vote", "7", "3", []],
       ["close", "7", "3"],
-      ["create", "7", { question: "Where?", answers: ["here", "there"], multiple: true, anonymous: false }, "42"],
+      [
+        "create",
+        "7",
+        { question: "Where?", answers: ["here", "there"], multiple: true, anonymous: false, revote: true },
+        "42",
+      ],
     ])
     const journal = new SendJournal(sendsPathFor(app, "default", env)).entries().filter((one) => one.outcome === "sent")
     expect(journal.map((one) => [one.kind, one.messageId])).toEqual([
