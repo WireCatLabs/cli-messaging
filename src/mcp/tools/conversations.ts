@@ -37,6 +37,36 @@ export const conversationsTools = (messenger: Messenger): Record<string, AnyTool
       },
     }),
 
+    conversations_search: tool({
+      title: "Search conversations by meaning",
+      description:
+        "The conversations nearest in meaning to `query`, best first, in one chat or every chat embedded with " +
+        `\`${command} conversations embed --chat <chat>\`; runs a model on this machine. Returns { model, items, ` +
+        "limit }; each item has the conversation's summary, the chunk that matched and a score — its id goes " +
+        "to conversations_show.",
+      input: v.object({
+        query: v.pipe(v.string(), v.minLength(1), v.description("what to look for, in your own words")),
+        chat: v.optional(chat),
+        since: v.optional(
+          v.pipe(v.string(), v.description("only those still going at this ISO 8601 time, or 2h / 1d ago, or later")),
+        ),
+        limit,
+      }),
+      annotations: { ...READ, openWorldHint: false },
+      stored: async (store, account, args, defaults) => {
+        const size = args.limit ?? defaults.limit
+        const found = await servicesFor(storedDeps(messenger, store, account, defaults.guard)).embeddings.search(
+          args.query,
+          {
+            limit: size,
+            ...(args.chat === undefined ? {} : { chat: args.chat }),
+            ...(args.since === undefined ? {} : { since: new Date(momentOf(args.since, "since")).toISOString() }),
+          },
+        )
+        return { model: found.model, items: found.hits, limit: size }
+      },
+    }),
+
     conversations_show: tool({
       title: "Read a conversation",
       description:

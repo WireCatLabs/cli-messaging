@@ -89,6 +89,47 @@ export const conversationsCommand = (messenger: Messenger): Command => {
       else context.renderer.result({ ...summary, messages })
     })
 
+  conversations
+    .command("search")
+    .description(
+      "the conversations nearest in meaning to a query, in one chat or every embedded one — " +
+        "after `conversations embed`; runs on this machine",
+    )
+    .argument("<query>", "what to look for, in your own words, in any language the model reads")
+    .option("--chat <chat>", `only this chat: ${messenger.chatArgument}`)
+    .option("--model <model>", "the model the chats were embedded with (default: e5-small)")
+    .option("--since-time <time>", "only those still going at this ISO 8601 time, or 30m / 2h / 1d ago, or later")
+    .option("--limit <n>", "how many", positiveCount("--limit"))
+    .action(async function (this: Command, query: string) {
+      const { chat, model, sinceTime: since } = this.opts<{ chat?: string; model?: string; sinceTime?: string }>()
+      const context = messengerContext(this, messenger)
+      const { limit } = context.settings
+      const found = await context.withServices((services) =>
+        services.embeddings.search(query, {
+          limit,
+          ...(chat === undefined ? {} : { chat }),
+          ...(model === undefined ? {} : { model }),
+          ...(since === undefined ? {} : { since: new Date(momentOf(since, "--since-time")).toISOString() }),
+        }),
+      )
+      if (context.format === "pretty") {
+        context.streams.data(
+          found.hits
+            .map(
+              ({ summary, chunk, score }) =>
+                `${score.toFixed(3)}  ${line(summary)}  (messages ${chunk.firstMessageId}–${chunk.lastMessageId})\n`,
+            )
+            .join(""),
+        )
+        if (found.hits.length === 0) {
+          context.renderer.note(
+            `nothing embedded with ${found.model} matches — \`conversations embed --chat <chat>\` first`,
+          )
+        }
+      } else if (context.format === "jsonl") context.renderer.stream(found.hits)
+      else context.renderer.result({ model: found.model, items: found.hits, limit })
+    })
+
   const batches = conversations
     .command("batches")
     .description("windows of a chat for your own AI agent to link: which earlier message each one answers")

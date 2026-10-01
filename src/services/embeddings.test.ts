@@ -94,6 +94,26 @@ describe("embeddings", () => {
     await store.close()
   })
 
+  it("**finds the conversation nearest in meaning**, best first, with the chunk that matched", async () => {
+    const { store, embeddings } = await setUp()
+    await embeddings.embed("9", { model: "tiny", threads: 1 })
+
+    const { hits } = await embeddings.search("fish", { model: "tiny", limit: 3 })
+
+    expect(hits).toHaveLength(3)
+    expect([hits[0]?.summary.firstMessageId, hits[0]?.chunk]).toEqual([
+      "40",
+      { firstMessageId: "40", lastMessageId: "40" },
+    ])
+    expect(hits[0]?.score).toBeCloseTo(1)
+    expect(
+      (await embeddings.search("fish", { model: "tiny", chat: "9", limit: 5, since: "2026-10-03T00:00:00Z" })).hits.map(
+        ({ summary }) => summary.firstMessageId,
+      ),
+    ).toEqual(["80"])
+    await store.close()
+  })
+
   it("refuses a chat with no conversations, and a model that is not downloaded, naming what to run", async () => {
     const { store, embeddings } = await setUp({ build: false })
     await expect(embeddings.embed("9", { model: "tiny" })).rejects.toThrow("chat conversations build --chat 9")

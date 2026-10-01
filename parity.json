@@ -1472,6 +1472,14 @@
         "--since-time": "all"
       }
     },
+    "conversations search": {
+      "in": [],
+      "planned": {
+        "max": "storage phase 5: the cli-messaging bump after it ships",
+        "tg": "storage phase 5: the cli-messaging bump after it ships"
+      },
+      "subtree": true
+    },
     "conversations show": {
       "in": "all"
     },

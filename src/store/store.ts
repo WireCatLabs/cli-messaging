@@ -195,6 +195,11 @@ export interface MessageStore {
   vectorStatus(key: AccountKey, chatId: Id, model: string): Promise<{ chunks: number; embedded: number }>
   /** Drops the chat's vectors, or one model's; a vector another chat's chunk shares stays. */
   clearVectors(key: AccountKey, chatId: Id, model?: string): Promise<number>
+  /** The conversations nearest in meaning to `query`, in one chat or every one of the account, best first. */
+  nearestConversations(
+    key: AccountKey,
+    options: { chatId?: Id; model: string; since?: string; limit: number; query: Float32Array },
+  ): Promise<ConversationHit[]>
   /** Whether the chat's conversations were built, and when; `undefined` when never. */
   conversationState(
     key: AccountKey,
@@ -329,6 +334,13 @@ export interface ConversationBuild {
   conversations: Id[][]
   /** Each conversation's chunks, in the same order as `conversations` (phase 5). */
   chunks?: { firstId: Id; lastId: Id; hash: string }[][]
+}
+
+/** A conversation found by meaning: the chunk that matched best, and how near it is (−1 to 1). */
+export interface ConversationHit {
+  summary: ConversationSummary
+  chunk: { firstMessageId: Id; lastMessageId: Id }
+  score: number
 }
 
 export interface ConversationSummary {
@@ -671,6 +683,37 @@ const storeOver = (context: StoreContext): MessageStore => {
         cleared = vectors.clearVectors(context, chatKey, model)
       })
       return cleared
+    },
+
+    nearestConversations: async (key, { chatId, model, since, limit, query }) => {
+      const accountPk = findAccountPk(key)
+      if (accountPk === undefined) return []
+      const chatKey = chatId === undefined ? undefined : chatKeyOf(key, chatId)
+      if (chatId !== undefined && chatKey === undefined) return []
+      const nearest = vectors.nearestChunks(context, accountPk, {
+        ...(chatKey === undefined ? {} : { chatKey }),
+        ...(since === undefined ? {} : { since: Date.parse(since) }),
+        model,
+        limit,
+        query,
+      })
+      const found = conversationQueries.summariesOf(
+        context,
+        accountPk,
+        nearest.map(({ conversationPk }) => conversationPk),
+      )
+      const ids = vectors.messageIds(
+        context,
+        nearest.flatMap(({ firstMessagePk, lastMessagePk }) => [firstMessagePk, lastMessagePk]),
+      )
+      return nearest.flatMap(({ conversationPk, firstMessagePk, lastMessagePk, score }) => {
+        const summary = found.get(conversationPk)
+        const first = ids.get(firstMessagePk)
+        const last = ids.get(lastMessagePk)
+        return summary && first && last
+          ? [{ summary, chunk: { firstMessageId: first, lastMessageId: last }, score }]
+          : []
+      })
     },
 
     conversationState: async (key, chatId) => {

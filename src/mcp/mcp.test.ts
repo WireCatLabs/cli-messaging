@@ -247,6 +247,7 @@ describe("the MCP server", () => {
       "chat_contacts_lookup",
       "chat_contacts_show",
       "chat_conversations_list",
+      "chat_conversations_search",
       "chat_conversations_show",
       "chat_inbox",
       "chat_messages_context",

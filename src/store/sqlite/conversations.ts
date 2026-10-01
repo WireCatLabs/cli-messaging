@@ -369,6 +369,30 @@ export const conversationPage = (
   return { items: rows.slice(0, limit).map(toSummary), hasMore: rows.length > limit }
 }
 
+/** The current build's summaries of these conversations, by pk; another account's are left out. */
+export const summariesOf = (
+  context: StoreContext,
+  accountKey: number,
+  pks: number[],
+): Map<number, ConversationSummary> =>
+  new Map(
+    pks.length === 0
+      ? []
+      : summaries(context)
+          .where(
+            and(
+              sql`${conversations.pk} IN (${sql.join(
+                pks.map((pk) => sql`${pk}`),
+                sql`, `,
+              )})`,
+              eq(chats.accountPk, accountKey),
+              isCurrent,
+            ),
+          )
+          .all()
+          .map((row) => [row.pk, toSummary(row)]),
+  )
+
 /** Its messages oldest first — only an account's own conversation. */
 export const conversation = (
   context: StoreContext,
