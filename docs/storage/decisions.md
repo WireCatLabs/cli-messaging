@@ -29,6 +29,7 @@ its journal id (`NEED-nnn`, max-cli's private journal) and is closed here when a
 | 2026-10-01 | **No `search` command group**: requirements §23's `search status|rebuild` become `store info`, `store check` and `store reindex` (NEED-454 A; phase 2 plan S11). |
 | 2026-10-01 | **Phase 2 searches across accounts and messengers on request**: `in:telegram` / `in:max` / `in:all` and `--source` read every such account held in `messages.db`; the default stays the current account (NEED-456 B; [phase 2 plan](plans/phase-2.md) S13). |
 | 2026-10-01 | **The phase 2 plan is approved** ([`plans/phase-2.md`](plans/phase-2.md)); it is built after phase 1's lane A. |
+| 2026-10-01 | **A chat the account left is marked, not deleted, and `store clear --left` deletes the marked ones** with their messages, members and sync state (max-cli NEED-488 B, NEED-496 B). The command is shared; tg gets it with store version 14, max with the other store maintenance commands at the fold-in — until then `max cache clear --left`. It asks for `--allow-dangerous`, as `messages delete` does: what it deletes cannot be fetched again. Plan: [`plans/chats-left.md`](plans/chats-left.md). |
 | 2026-09-30 | **Phase 1's `db doctor` also reports completeness per chat**: chats whose history does not reach their newest message, and how long ago each chat was refreshed; plus `PRAGMA foreign_key_check` (NEED-399 A; plan item 9). |
 
 ## Answered — the evidence behind the rulings above
