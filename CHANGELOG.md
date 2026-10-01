@@ -32,6 +32,10 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   max can move onto the shared `store` group (max-cli T6, 6c); they go once max's main has moved.
   `store clear` is planned for max too: it comes with the store maintenance commands.
 
+### Fixed
+
+- **`store reindex` has its parity row** (planned for max, T6): tg-cli's parity check failed on 0.96.0 without it.
+
 ## 0.96.0 — 01.10.2026
 
 ### Added
