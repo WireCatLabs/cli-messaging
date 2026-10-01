@@ -338,3 +338,9 @@ it carries; a row is never the only reason for a release.
 does not use yet — max keeps its own `messages edit` until it moves onto the shared one — keeps that
 row `planned`, by the workstream that moves it. Flipped early, the row fails that CLI's
 `parity:check` on its next upgrade of this package and blocks the upgrade.
+
+**This repository checks both tools' `main` against its own manifest** (`.github/workflows/parity.yml`):
+on a pull request that touches the manifest or the check, on every push to `main`, and daily. It
+builds tg-cli and max-cli from their `main` and runs the same check, so a row flipped early fails
+here, before the release that would carry it — not weeks later, when a CLI upgrades. The published
+CLIs are not the reference: a release always trails `main`, so they lag every new `both` row.
