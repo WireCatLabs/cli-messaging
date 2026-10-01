@@ -3,7 +3,7 @@ import { annotate } from "@leemour/cli-core/commands"
 import { Command } from "commander"
 import { SendJournal, sendsPathFor } from "../../sends/journal.js"
 import { RecipientList, recipientsPathFor } from "../../sends/recipients.js"
-import { renderPage } from "../paging.js"
+import { positiveCount, renderPage } from "../paging.js"
 import { type Messenger, messengerContext } from "./context.js"
 
 /**
@@ -69,7 +69,7 @@ export const sendsCommand = (messenger: Messenger): Command =>
   new Command("sends").description("every attempt to send from this profile — never the text").addCommand(
     new Command("list")
       .description("attempts to send, newest first: sent, refused, failed, or not known")
-      .option("--limit <n>", "how many to show", (value) => Number.parseInt(value, 10))
+      .option("--limit <n>", "how many to show", positiveCount("--limit"))
       .action(async function (this: Command) {
         const context = messengerContext(this, messenger)
         const { settings, renderer, env } = context

@@ -2,7 +2,7 @@ import { CliError } from "@leemour/cli-core"
 import { Command } from "commander"
 import type { AppIdentity } from "../app.js"
 import { environmentOf, outputFor } from "../context.js"
-import { renderPage } from "../paging.js"
+import { positiveCount, renderPage } from "../paging.js"
 import { findRun, listRuns, readEvents, runsDirFor } from "./run.js"
 
 /** Reading the log is not itself worth recording, so **nothing here starts a run**. */
@@ -18,7 +18,7 @@ export const runsCommand = (app: AppIdentity): Command => {
   command
     .command("list")
     .description("recorded runs, newest first")
-    .option("--limit <n>", "how many to show", (value) => Number.parseInt(value, 10), 20)
+    .option("--limit <n>", "how many to show", positiveCount("--limit"), 20)
     .action(function (this: Command) {
       const { limit } = this.opts<{ limit: number }>()
       const output = outputFor(this)

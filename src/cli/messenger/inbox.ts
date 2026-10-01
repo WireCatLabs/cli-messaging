@@ -5,6 +5,7 @@ import { Command } from "commander"
 import type { Chat, Inbox, InboxChat, MessageHit } from "../../domain/models.js"
 import { renderMessages } from "../../render/messages.js"
 import type { AppIdentity } from "../app.js"
+import { positiveCount } from "../paging.js"
 import { type Messenger, messengerContext } from "./context.js"
 import { heardItems, hearForCommand, hearingFields, spokenItems, TRANSCRIBE_OPTION } from "./hearing-command.js"
 import type { MessengerAdapter } from "./port.js"
@@ -160,7 +161,7 @@ export const inboxCommand = (messenger: Messenger): Command =>
     .description("other people's unread messages in every chat; --new for what arrived since the last check")
     .option("--new", "what arrived since the last check, each message once — for scheduled runs")
     .option("--since <time>", "what arrived after this ISO 8601 time, or 2h / 1d ago; the saved point stays put")
-    .option("--limit <n>", "at most this many per chat, the newest", (value) => Number.parseInt(value, 10))
+    .option("--limit <n>", "at most this many per chat, the newest", positiveCount("--limit"))
     .option("--all", "muted and archived chats too — left out unless they mention you or reply to you")
     .option(...TRANSCRIBE_OPTION)
     .action(async function (this: Command) {

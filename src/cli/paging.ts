@@ -1,4 +1,4 @@
-import type { Renderer, RenderFormat, Streams } from "@leemour/cli-core"
+import { CliError, type Renderer, type RenderFormat, type Streams } from "@leemour/cli-core"
 import type { Command } from "commander"
 import type { Page } from "../domain/models.js"
 import type { Settings } from "./settings.js"
@@ -9,10 +9,19 @@ import type { Settings } from "./settings.js"
  * ⚠ **None of them gets a `default`.** With one, commander reports the flag as always given and a
  * configured `limit` could never win it; the number lives once, in `resolveSettings`.
  */
+/** Refused as typed: by the time a number reaches the settings, `abc` is `NaN` and `12abc` is `12`. */
+export const positiveCount =
+  (flag: string) =>
+  (value: string): number => {
+    if (!/^\d+$/.test(value.trim()) || Number(value) < 1)
+      throw new CliError("validation_error", `${flag} takes a whole number from 1 upwards, not "${value}"`)
+    return Number(value)
+  }
+
 export const withPaging = (command: Command): Command =>
   command
-    .option("--limit <n>", "how many to show", (value) => Number.parseInt(value, 10))
-    .option("--page <n>", "which page, starting at 1", (value) => Number.parseInt(value, 10))
+    .option("--limit <n>", "how many to show", positiveCount("--limit"))
+    .option("--page <n>", "which page, starting at 1", positiveCount("--page"))
     .option("--all", "every row, no paging")
 
 /**
