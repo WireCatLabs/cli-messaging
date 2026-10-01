@@ -340,3 +340,62 @@ describe("changing a setting", () => {
     expect(file()).toEqual({ profiles: { work: { limit: 5 } } })
   })
 })
+
+describe("a bot's settings", () => {
+  const bot = (flags = {}) => resolveSettings(flags, { env: {}, configDir, kind: "bot" })
+
+  it("**takes the most specific entry**: the bot's profile, the profile, every bot, everyone", () => {
+    withConfig(
+      JSON.stringify({
+        defaults: { limit: 10 },
+        profiles: { sales: { limit: 20, record: true } },
+        bot: { defaults: { limit: 30, keepRunsForDays: 3 }, profiles: { sales: { limit: 40 } } },
+      }),
+    )
+    const sales = bot({ profile: "sales" })
+    expect(sales.limit).toBe(40)
+    expect(sales.sources.limit).toBe("config file: bot.profiles.sales")
+    expect(sales.record).toBe(true)
+    expect(sales.keepRunsForDays).toBe(3)
+    expect(settings({ profile: "sales" }).limit).toBe(20)
+    expect(bot({ profile: "sales", limit: 5 }).limit).toBe(5)
+  })
+
+  it("**has no hourly limit** unless the bot section gives it one", () => {
+    withConfig(JSON.stringify({ defaults: { sendsPerHour: 10 }, bot: { profiles: { sales: { sendsPerHour: 200 } } } }))
+    expect(bot().sendsPerHour).toBe(Number.POSITIVE_INFINITY)
+    expect(bot({ profile: "sales" }).sendsPerHour).toBe(200)
+    expect(settings().sendsPerHour).toBe(10)
+  })
+
+  it("**reads other bots only when the bot section allows it**", () => {
+    withConfig(JSON.stringify({ bot: { profiles: { shop: { readOtherBots: ["news"] } } } }))
+    expect(bot({ profile: "shop" }).readOtherBots).toEqual(["news"])
+    expect(bot().readOtherBots).toBe(false)
+    expect(settings({ profile: "shop" }).readOtherBots).toBe(false)
+    expect(() =>
+      changeSetting(join(configDir, "config.json"), { profile: "shop", setting: "readOtherBots", value: "true" }),
+    ).toThrow(/--bot/)
+  })
+
+  it("**turns a bot's `readOnly` into `bot: readonly`**, which leaves the personal account writing", () => {
+    withConfig(JSON.stringify({ bot: { defaults: { readOnly: true } } }))
+    expect(bot().permissions).toMatchObject({ bot: "readonly" })
+    expect(settings().permissions).toEqual({})
+  })
+
+  it("**writes into the bot section** and tidies it when emptied", () => {
+    const path = join(configDir, "config.json")
+    changeSetting(path, { profile: "sales", setting: "sendsPerHour", value: "200", kind: "bot" })
+    changeSetting(path, { profile: undefined, setting: "readOtherBots", value: "true", kind: "bot" })
+    expect(JSON.parse(readFileSync(path, "utf8"))).toEqual({
+      profiles: {},
+      bot: { defaults: { readOtherBots: true }, profiles: { sales: { sendsPerHour: 200 } } },
+    })
+    expect(configuredProfiles({ env: {}, configDir })).toEqual(["sales"])
+
+    changeSetting(path, { profile: "sales", setting: "sendsPerHour", value: undefined, kind: "bot" })
+    changeSetting(path, { profile: undefined, setting: "readOtherBots", value: undefined, kind: "bot" })
+    expect(JSON.parse(readFileSync(path, "utf8"))).toEqual({ profiles: {} })
+  })
+})

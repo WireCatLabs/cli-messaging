@@ -73,6 +73,19 @@ const SHARED_PROFILE_ENTRIES = {
   speechModel: v.optional(v.string(plain("has to be a model id from `models audio list`, in quotes"))),
 }
 
+/**
+ * Only a bot reads these. `readOtherBots`: whether this bot may read the local copy of other bots on
+ * this machine — every one, or those named — when a command asks for it.
+ */
+const BOT_ONLY_ENTRIES = {
+  readOtherBots: v.optional(
+    v.union(
+      [flag, v.array(v.string(), plain("has to be a list of profile names"))],
+      plain("has to be true, false or a list of profile names"),
+    ),
+  ),
+}
+
 /** One program, one version: whether to look for a newer one is not a per-profile matter. */
 const SHARED_DEFAULTS_ONLY = {
   updateCheck: v.optional(flag),
@@ -90,10 +103,21 @@ export interface SettingsExtension {
 
 type Scope = Record<string, unknown>
 
+/** Which side of a profile a command speaks for: `<tool> <profile> bot …` is the bot, every other command the account. */
+export type ProfileKind = "personal" | "bot"
+
+/** Every personal account, or every bot, and then one of them by name. */
+interface KindSection {
+  defaults?: Scope
+  profiles?: Record<string, Scope>
+}
+
 export interface Config {
   defaultProfile?: string
   defaults?: Scope
   profiles: Record<string, Scope>
+  personal?: KindSection
+  bot?: KindSection
 }
 
 /** Whatever the command line carried. Everything is optional: absent means "not given here". */
@@ -155,6 +179,10 @@ export interface Settings {
   /** Where each key of `permissions` came from. */
   permissionSources: Readonly<Record<PermissionKey, Source>>
   sendsPerHour: number
+  /** The side these settings are for. */
+  kind: ProfileKind
+  /** A bot only: which other bots' local copy it may read when a command asks. Always `false` for the account. */
+  readOtherBots: boolean | readonly string[]
   updateCheck: boolean
   configPath: string
   configFound: boolean
@@ -170,6 +198,8 @@ export interface Settings {
 export interface ResolveOptions {
   env?: NodeJS.ProcessEnv
   configDir?: string
+  /** `personal` unless given. */
+  kind?: ProfileKind
 }
 
 /** The first candidate that is set, and which layer it came from. */
@@ -197,6 +227,15 @@ export const settingsFor = (app: AppIdentity, extension: SettingsExtension = {})
   const profileEntries = { ...SHARED_PROFILE_ENTRIES, ...extension.profile }
   const defaultsOnly = { ...SHARED_DEFAULTS_ONLY, ...extension.defaults }
   const defaultsEntries = { ...profileEntries, ...defaultsOnly }
+  const strictOf = (entries: v.ObjectEntries) => v.strictObject(entries, objectMessage(Object.keys(entries)))
+  const kindSection = (entries: v.ObjectEntries) =>
+    v.strictObject(
+      {
+        defaults: v.optional(strictOf(entries)),
+        profiles: v.optional(v.record(v.string(), strictOf(entries), "has to be an object of profiles, by name")),
+      },
+      objectMessage(["defaults", "profiles"]),
+    )
   const configEntries = {
     defaultProfile: v.optional(v.string(plain("has to be a profile name, in quotes"))),
     defaults: v.optional(v.strictObject(defaultsEntries, objectMessage(Object.keys(defaultsEntries)))),
@@ -208,10 +247,13 @@ export const settingsFor = (app: AppIdentity, extension: SettingsExtension = {})
       ),
       {},
     ),
+    personal: v.optional(kindSection(profileEntries)),
+    bot: v.optional(kindSection({ ...profileEntries, ...BOT_ONLY_ENTRIES })),
   }
   const schema = v.strictObject(configEntries, objectMessage(Object.keys(configEntries)))
   const defaultsOnlyKeys = Object.keys(defaultsOnly)
-  const allSettings = [...Object.keys(profileEntries), ...defaultsOnlyKeys]
+  const botOnlyKeys = Object.keys(BOT_ONLY_ENTRIES)
+  const allSettings = [...Object.keys(profileEntries), ...botOnlyKeys, ...defaultsOnlyKeys]
 
   const PROFILE = envName(app, "PROFILE")
   const PROFILE_LOCK = envName(app, "PROFILE_LOCK")
@@ -262,37 +304,52 @@ export const settingsFor = (app: AppIdentity, extension: SettingsExtension = {})
       ),
       given(env[PROFILE_LOCK]),
     )
-    const configured = config.profiles[usableProfileName(profile.value)] ?? {}
+    const kind = options.kind ?? "personal"
+    const name = usableProfileName(profile.value)
+    const configured = config.profiles[name] ?? {}
     const shared = config.defaults ?? {}
-    const scopes = { configured, shared }
+    const section = config[kind]
+    // The most specific entry wins: this profile's personal or bot entry, the profile, every
+    // personal account or every bot, everyone. Naming one account says more than naming them all.
+    const layers: [Source, Scope | undefined][] = [
+      [`config file: ${kind}.profiles.${name}`, section?.profiles?.[name]],
+      ["config file", configured],
+      [`config file: ${kind}.defaults`, section?.defaults],
+      ["config defaults", shared],
+    ]
+    const fromLayers = <T>(key: string, fallback: T, only = layers) =>
+      first<T>(
+        only.map(([from, scope]): [Source, T | undefined] => [from, scope?.[key] as T | undefined]),
+        fallback,
+      )
+    const kindLayers = layers.filter(([from]) => from.startsWith(`config file: ${kind}.`))
 
-    const limit = first<number>(
-      [
-        ["flag", flags.limit],
-        ["config file", configured.limit as number | undefined],
-        ["config defaults", shared.limit as number | undefined],
-      ],
-      DEFAULT_LIMIT,
-    )
-    const record = first<boolean>(
-      [
-        ["flag", flags.record],
-        ["config file", configured.record as boolean | undefined],
-        ["config defaults", shared.record as boolean | undefined],
-      ],
-      false,
-    )
-    const timeoutMs = fromFile<number | undefined>(scopes, "timeoutMs", undefined)
-    const color = fromFile<boolean | undefined>(scopes, "color", undefined)
-    const senderColors = fromFile(scopes, "senderColors", false)
-    const keepRunsForDays = fromFile(scopes, "keepRunsForDays", DEFAULT_KEEP_RUNS_FOR_DAYS)
-    const readOnly = fromFile(scopes, "readOnly", false)
-    const allow = fromFile<readonly Permission[] | undefined>(scopes, "allow", undefined)
-    const sendsPerHour = fromFile(scopes, "sendsPerHour", DEFAULT_SENDS_PER_HOUR)
+    const limit = flags.limit === undefined ? fromLayers("limit", DEFAULT_LIMIT) : { value: flags.limit, from: "flag" }
+    const record = flags.record === undefined ? fromLayers("record", false) : { value: flags.record, from: "flag" }
+    const timeoutMs = fromLayers<number | undefined>("timeoutMs", undefined)
+    const color = fromLayers<boolean | undefined>("color", undefined)
+    const senderColors = fromLayers("senderColors", false)
+    const keepRunsForDays = fromLayers("keepRunsForDays", DEFAULT_KEEP_RUNS_FOR_DAYS)
+    const readOnly = fromLayers("readOnly", false)
+    const allow = fromLayers<readonly Permission[] | undefined>("allow", undefined)
+    // A bot has no hourly limit unless the bot section gives it one: a bot that answers people is
+    // expected to send a lot, and a limit there is the owner's choice, not the tool's.
+    const sendsPerHour =
+      kind === "bot"
+        ? fromLayers("sendsPerHour", Number.POSITIVE_INFINITY, kindLayers)
+        : fromLayers("sendsPerHour", DEFAULT_SENDS_PER_HOUR)
+    const readOtherBots =
+      kind === "bot"
+        ? fromLayers<boolean | readonly string[]>("readOtherBots", false, kindLayers)
+        : { value: false, from: "default" }
     const permissions = layered([
-      [readOnly.value ? "readOnly" : "allow", fromOldSettings(readOnly.value, allow.value)],
-      ["config defaults", shared.permissions as Record<PermissionKey, Level> | undefined],
-      ["config file", configured.permissions as Record<PermissionKey, Level> | undefined],
+      [readOnly.value ? "readOnly" : "allow", fromOldSettings(readOnly.value, allow.value, { bot: kind === "bot" })],
+      ...[...layers]
+        .reverse()
+        .map(([from, scope]): [Source, Record<PermissionKey, Level> | undefined] => [
+          from,
+          scope?.permissions as Record<PermissionKey, Level> | undefined,
+        ]),
     ])
     const updateCheck = first([["config defaults", shared.updateCheck as boolean | undefined]], true)
     const timeout = first<string | undefined>(
@@ -329,10 +386,12 @@ export const settingsFor = (app: AppIdentity, extension: SettingsExtension = {})
       permissions: permissions.levels,
       permissionSources: permissions.sources,
       sendsPerHour: sendsPerHour.value,
+      kind,
+      readOtherBots: readOtherBots.value,
       updateCheck: updateCheck.value,
       configPath,
       configFound: existsSync(configPath),
-      configuredProfiles: Object.keys(config.profiles),
+      configuredProfiles: namedProfiles(config),
       sources: {
         profile: profile.from,
         limit: limit.from,
@@ -345,6 +404,7 @@ export const settingsFor = (app: AppIdentity, extension: SettingsExtension = {})
         readOnly: readOnly.from,
         allow: allow.from,
         sendsPerHour: sendsPerHour.from,
+        readOtherBots: readOtherBots.from,
         updateCheck: updateCheck.from,
       },
       configured,
@@ -367,12 +427,17 @@ export const settingsFor = (app: AppIdentity, extension: SettingsExtension = {})
   }
 
   const configuredProfiles = (options: ResolveOptions = {}): string[] =>
-    Object.keys(readConfig(configPathFor(options)).profiles).sort()
+    namedProfiles(readConfig(configPathFor(options)))
 
   /** `config set` and `config unset`: checked by the same schema the reader uses, so it never writes a file the reader refuses. */
   const changeSetting = (
     path: string,
-    { profile, setting, value }: { profile: string | undefined; setting: string; value: string | undefined },
+    {
+      profile,
+      setting,
+      value,
+      kind,
+    }: { profile: string | undefined; setting: string; value: string | undefined; kind?: ProfileKind | undefined },
   ): unknown => {
     const [name = setting, ...rest] = setting.split(".")
     const level = name === "permissions" && rest.length > 0 ? rest.join(".") : undefined
@@ -385,9 +450,24 @@ export const settingsFor = (app: AppIdentity, extension: SettingsExtension = {})
         `${setting} is one setting for the whole program, not per profile — add --defaults`,
       )
     }
+    if (kind !== undefined && defaultsOnlyKeys.includes(setting)) {
+      throw new CliError("validation_error", `${setting} is one setting for the whole program, not per side`)
+    }
+    if (kind !== "bot" && botOnlyKeys.includes(setting)) {
+      throw new CliError("validation_error", `${setting} is a bot's setting — add --bot`)
+    }
 
     const config = readConfig(path)
-    const scope: Scope = { ...(profile === undefined ? config.defaults : config.profiles[profile]) }
+    const section = kind === undefined ? undefined : (config[kind] ?? {})
+    const current =
+      section === undefined
+        ? profile === undefined
+          ? config.defaults
+          : config.profiles[profile]
+        : profile === undefined
+          ? section.defaults
+          : section.profiles?.[profile]
+    const scope: Scope = { ...current }
     if (level !== undefined) {
       const levels = { ...(scope.permissions as Record<PermissionKey, string> | undefined) }
       if (value === undefined) delete levels[level]
@@ -397,12 +477,26 @@ export const settingsFor = (app: AppIdentity, extension: SettingsExtension = {})
     } else if (value === undefined) delete scope[setting]
     else scope[setting] = parseValue(value)
 
-    const changed: Config =
-      profile === undefined
-        ? { ...config, defaults: scope }
-        : { ...config, profiles: { ...config.profiles, [profile]: scope } }
-    if (profile === undefined && Object.keys(scope).length === 0) delete changed.defaults
-    if (profile !== undefined && Object.keys(scope).length === 0) delete changed.profiles[profile]
+    const empty = Object.keys(scope).length === 0
+    let changed: Config
+    if (kind === undefined || section === undefined) {
+      changed =
+        profile === undefined
+          ? { ...config, defaults: scope }
+          : { ...config, profiles: { ...config.profiles, [profile]: scope } }
+      if (profile === undefined && empty) delete changed.defaults
+      if (profile !== undefined && empty) delete changed.profiles[profile]
+    } else {
+      const next: KindSection =
+        profile === undefined
+          ? { ...section, defaults: scope }
+          : { ...section, profiles: { ...section.profiles, [profile]: scope } }
+      if (profile === undefined && empty) delete next.defaults
+      if (profile !== undefined && empty && next.profiles) delete next.profiles[profile]
+      if (next.profiles && Object.keys(next.profiles).length === 0) delete next.profiles
+      changed = { ...config, [kind]: next }
+      if (Object.keys(next).length === 0) delete changed[kind]
+    }
 
     const checked = v.safeParse(schema, changed)
     if (!checked.success) {
@@ -417,6 +511,16 @@ export const settingsFor = (app: AppIdentity, extension: SettingsExtension = {})
 
   return { resolveSettings, configuredProfiles, changeSetting, allSettings, defaultsOnlyKeys, schema }
 }
+
+/** Every profile the file names, in any section. */
+const namedProfiles = (config: Config): string[] =>
+  [
+    ...new Set([
+      ...Object.keys(config.profiles),
+      ...Object.keys(config.personal?.profiles ?? {}),
+      ...Object.keys(config.bot?.profiles ?? {}),
+    ]),
+  ].sort()
 
 /** Later layers win key by key, and each key remembers the layer it came from. */
 const layered = (layers: [Source, Readonly<Record<PermissionKey, Level>> | undefined][]) => {

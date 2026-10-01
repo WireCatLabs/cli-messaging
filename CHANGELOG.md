@@ -6,6 +6,19 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- **A bot's settings** (P8): the file gains `personal` and `bot` sections, each with `defaults` and
+  `profiles`; the most specific entry wins — this profile's bot entry, the profile, every bot,
+  everyone. `resolveSettings(flags, { kind: "bot" })` reads them; `Settings` gains `kind` and
+  `readOtherBots` (a bot setting: which other bots' local copy it may read). A bot has no hourly
+  limit unless its section sets `sendsPerHour`. `config show --bot`, and `config set|unset --bot`
+  or `--personal`, write into a section.
+- **Bot permission keys**: `bot` is a resource, and every bot command is keyed under it —
+  `bot.messages.send`, `bot.chats.members.remove`; `bot auth|list|recipients|sends|mcp` are never
+  gated. `bot.messages.delete` asks by default. A bot's old `readOnly` and `allow` become `bot.*`
+  levels (`fromOldSettings(…, { bot: true })`) and leave the personal account's alone.
+
 ## 0.87.0 — 01.10.2026
 
 ### Added

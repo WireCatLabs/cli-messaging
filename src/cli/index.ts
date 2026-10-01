@@ -116,6 +116,7 @@ export {
   flag,
   fromFile,
   type GlobalFlags,
+  type ProfileKind,
   parseDuration,
   plain,
   type ResolveOptions,
