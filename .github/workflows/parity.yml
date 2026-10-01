@@ -45,3 +45,39 @@ jobs:
       - run: pnpm install --frozen-lockfile && pnpm build
         working-directory: cli
       - run: node cli/dist/bin/${{ matrix.cli }}.js commands --json | node shared/dist/parity/bin.js ${{ matrix.cli }}
+
+  wording:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          path: shared
+      - uses: actions/checkout@v7
+        with:
+          repository: leemour/max-cli
+          path: max
+      - uses: actions/checkout@v7
+        with:
+          repository: leemour/tg-cli
+          path: tg
+      - uses: pnpm/action-setup@v6
+        with:
+          package_json_file: shared/package.json
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: |
+            shared/pnpm-lock.yaml
+            max/pnpm-lock.yaml
+            tg/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile && pnpm build
+        working-directory: shared
+      - run: pnpm install --frozen-lockfile && pnpm build
+        working-directory: max
+      - run: pnpm install --frozen-lockfile && pnpm build
+        working-directory: tg
+      - run: |
+          node max/dist/bin/max.js commands --json > max.json
+          node tg/dist/bin/tg.js commands --json > tg.json
+          node shared/dist/parity/bin.js wording max.json tg.json

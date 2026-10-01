@@ -100,10 +100,10 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--all-can-pin` | `<on\|off>` | every member may pin messages |  | `chats update` |
 | `--allow-any-file` |  | send a --file even from a hidden folder, ~/.ssh or the tool's own folders |  | `messages send` |
 | `--allow-dangerous` |  | go ahead without the question an ask level puts before a deletion |  | `chats moderate` (planned), `mcp` (planned), `mcp config` (planned), `messages delete` |
-| `--allow-delete` |  | offer the tool that deletes messages for you only; it cannot be undone |  | `mcp`, `mcp config` |
-| `--allow-mark-read` |  | offer the tool that marks a chat read; the other person sees it |  | `mcp`, `mcp config` |
+| `--allow-delete` |  | offer the tool that deletes messages for you only; it cannot be undone. **max's own `mcp` is worded differently until the permission levels (P7) replace these flags there (e13)** |  | `mcp`, `mcp config` |
+| `--allow-mark-read` |  | offer the tool that marks a chat read; the other person sees it. **max's own `mcp` is worded differently until the permission levels (P7) replace these flags there (e13)** |  | `mcp`, `mcp config` |
 | `--allow-moderate` |  | offer the tool that applies a group's rules — delete others' messages, remove people. **max only, until permissions (P7) replace the MCP flags** |  | `mcp` (planned), `mcp config` (planned) |
-| `--allow-send` |  | offer the send tool; without it the server can only read |  | `mcp`, `mcp config` |
+| `--allow-send` |  | offer the send tool; without it the server can only read. **max's own `mcp` is worded differently until the permission levels (P7) replace these flags there (e13)** |  | `mcp`, `mcp config` |
 | `--anonymous` |  | nobody sees who voted for what |  | `polls create` |
 | `--app` | `<how>` | the first time only: how to get this profile's app from my.telegram.org | `browser` | `session start` (tg-only) |
 | `--as-file` |  | send every --file as a plain file to download, a video included |  | `messages send` |
@@ -115,16 +115,16 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--before-n` | `<n>` | how many messages before it |  | `messages context` (planned) |
 | `--before-time` | `<time>` | read what came before this ISO 8601 time, or 2h / 1d ago; not with --before-id |  | `messages list` (planned) |
 | `--bot` |  | the bot section of the profile's settings, rather than the personal account's |  | `config set` (planned), `config show` (planned), `config unset` (planned) |
-| `--can` | `<rights>` | what they may do, comma-separated: read, members, admins, info, pin, link, post, edit, delete |  | `chats admins add` |
+| `--can` | `<rights>` | what they may do, comma-separated: read, members, admins, info, pin, link, post, edit, delete. **lists the rights each messenger has — MAX has `read`, Telegram does not — so it differs on purpose (Help text rule 4)** |  | `chats admins add` |
 | `--channel` |  | a private channel instead of a group; people join it by its link |  | `chats create` |
 | `--chat` | `<chat>` | a chat, by id or name; repeat it for more. **max's `messages search` takes `<id>` only, since searching never connects to resolve a name; rule 6 says `<chat>` (e8)** |  | `chats folders create`, `messages search`, `review` |
 | `--check` |  | say whether a newer version exists, and install nothing |  | `upgrade` |
-| `--confirm-send` |  | show the owner every write the MCP server offers, in a form to approve |  | `mcp`, `mcp config` |
+| `--confirm-send` |  | show the owner every write the MCP server offers, in a form to approve. **max's own `mcp` is worded differently until the permission levels (P7) replace these flags there (e13)** |  | `mcp`, `mcp config` |
 | `--defaults` |  | change what every profile gets, rather than this profile |  | `config set`, `config unset` |
 | `--description` | `<text>` | the new about text — of a chat or of your account |  | `account update`, `chats update` |
 | `--detach` |  | run in the background — leaves max in P6 for `server start`; one action, one command (ASK-113) |  | `serve` (planned) |
 | `--dry-run` |  | judge and plan; do nothing |  | `chats moderate` (planned) |
-| `--estimate` |  | only say what the fetch would cost, from this machine's copy; nothing is sent |  | `store fetch` |
+| `--estimate` |  | only say what the fetch would cost, from this machine's copy; nothing is sent. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | `store fetch` |
 | `--event` | `<names>` | only these events, comma-separated, as the messenger names them. **becomes `--type` — e12** |  | `chats events` (max-only) |
 | `--events` |  | also print edits, deletions and reactions; every line then names its event. **differs by one letter from `chats events --event`, a filter with an unrelated meaning (e12)** |  | `watch` |
 | `--file` | `<file>` | attach a file; images go as a photo, videos as a video. Repeat it for more |  | `messages send` |
@@ -136,9 +136,9 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--json` |  | machine-readable output: one JSON value on stdout, nothing else |  | every command |
 | `--jsonl` |  | machine-readable output: one JSON object per line, for streaming and jq |  | every command |
 | `--kind` | `<kind>` | only chats of this kind: dialog, group, channel or saved |  | `chats list` |
-| `--last` | `<n>` | stop once the newest n messages are held; not with --since |  | `store fetch` |
+| `--last` | `<n>` | stop once the newest n messages are held; not with --since. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | `store fetch` |
 | `--last-name` | `<name>` | your last name |  | `account update` |
-| `--limit` | `<n>` | how many: rows to show, or messages one run fetches |  | `chats list`, `chats members list` (planned), `contacts list`, `inbox`, `messages list`, `messages search`, `runs list`, `sends list`, `store fetch` (planned) |
+| `--limit` | `<n>` | how many: rows to show, or messages one run fetches. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | `chats list`, `chats members list` (planned), `contacts list`, `inbox`, `messages list`, `messages search`, `runs list`, `sends list`, `store fetch` (planned) |
 | `--lines` | `<n>` | how many lines | `50` | `server logs` (planned) |
 | `--local` |  | use the model on this machine, never the messenger |  | `messages transcribe` (tg-only) |
 | `--mark-read` |  | also mark the chat read up to the newest message shown; the other person sees it |  | `messages list` |
@@ -146,7 +146,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--max-pages` | `<n>` | at most this many pages in one run; a page is one request, and each messenger sets the default. **replaced by `--limit` (messages per run) and `--page-size` — NEED-486** |  | `store fetch` (max-only) |
 | `--md` |  | read **bold**, _italic_, ~~struck~~ and `code` in the text; \ keeps a mark literal |  | `messages edit`, `messages send` |
 | `--members-see-link` | `<on\|off>` | members may see the invite link |  | `chats update` (max-only) |
-| `--model` | `<id>` | which downloaded speech model hears them; `models audio list` shows them |  | `inbox`, `messages list`, `messages transcribe`, `review` (planned) |
+| `--model` | `<id>` | which downloaded speech model hears them; `models audio list` shows them. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | `inbox`, `messages list`, `messages transcribe`, `review` (planned) |
 | `--multiple` |  | people may pick several answers |  | `polls create` |
 | `--new` |  | what arrived since the last check, each message once — for scheduled runs |  | `inbox` |
 | `--no-preview` |  | no preview card for a link in the text |  | `messages send` |
@@ -154,22 +154,22 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--no-serve` |  | do not start it; log in on this command's own connection unless one is running |  | every command (planned) |
 | `--notify` |  | tell the chat's members about the pin |  | `messages pin` |
 | `--offline` |  | answer from what was recorded and never connect; fails if nothing was |  | every command |
-| `--online` |  | also log in once, read one chat and start the MCP server; sends nothing |  | `doctor` |
+| `--online` |  | also log in once, read one chat and start the MCP server; sends nothing. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | `doctor` |
 | `--only-admins-add` | `<on\|off>` | only admins may add members |  | `chats update` |
 | `--only-admins-call` | `<on\|off>` | only admins may start a call |  | `chats update` (max-only) |
 | `--only-owner-edits-info` | `<on\|off>` | only the owner may change the name and photo |  | `chats update` (max-only) |
 | `--order` | `<recent\|name>` | newest conversation first, or alphabetical |  | `contacts list` |
-| `--others` |  | every session but this one |  | `account sessions end` |
+| `--others` |  | every session but this one. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | `account sessions end` |
 | `--output` |  | where to write: a directory for `messages download`, a file for `store export`. **`messages download --output <dir>` becomes `--output-dir`; `--output` stays a file — e10** | `.` | `doctor report create`, `messages download` (max-only), `store export` |
 | `--output-dir` | `<dir>` | the folder to write into, created if missing | `.` | `messages download` (planned) |
 | `--page` | `<n>` | which page, starting at 1 |  | `chats list`, `chats members list` (planned), `contacts list` |
 | `--page-size` | `<n>` | how many items one request to the messenger asks for; the messenger's own if not given |  | `store fetch` (planned) |
-| `--pause` | `<duration>` | the least wait between pages, 5s or 500ms; each is up to twice that | `5s` | `messages download` (planned), `store fetch` |
+| `--pause` | `<duration>` | the least wait between pages, 5s or 500ms; each is up to twice that. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** | `5s` | `messages download` (planned), `store fetch` |
 | `--personal` |  | the personal account's section of the profile's settings |  | `config set` (planned), `config unset` (planned) |
 | `--photo` | `<file>` | an image file — a profile photo in `account update`, a photo to send in `messages send` |  | `account update`, `messages send` |
 | `--qr-file` | `<png>` | write the QR code to this PNG instead of drawing it, for an agent to pass on |  | `session start` (tg-only) |
-| `--quiet` |  | diagnostics off |  | every command |
-| `--record` |  | keep this run under `runs` — ids and timings, never message content |  | every command |
+| `--quiet` |  | diagnostics off. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | every command |
+| `--record` |  | keep this run under `runs` — ids and timings, never message content. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | every command |
 | `--regex` |  | the words are one regular expression, case-insensitive, tested against every stored text |  | `messages search` (planned) |
 | `--remove` | `<chat>` | take a chat out of a folder; repeat it for more |  | `chats folders update` |
 | `--reply-to` | `<message>` | answer this message id in the same chat |  | `messages send` |
@@ -186,9 +186,9 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--stop` |  | stop this profile's server — leaves max in P6 for `server stop`; one action, one command (ASK-113) |  | `serve` (planned) |
 | `--timeout` | `<duration>` | give up on the whole command after this — 30s, 2m, 500ms |  | every command |
 | `--title` | `<title>` | the new name — of a chat or a folder |  | `chats folders update`, `chats update` |
-| `--to` | `<chat>` | the chat to forward it to: an id, or part of a chat name |  | `messages forward` |
-| `--trace` |  | one line per request on stderr: ids and timings, never message content |  | every command |
-| `--transcribe` |  | hear voice messages not heard yet, on this machine; slow, the model must be downloaded |  | `inbox`, `messages list`, `review` |
+| `--to` | `<chat>` | the chat to forward it to: an id, or part of a chat name. **the sentence says how to name a chat the messenger's way, so it differs on purpose (Help text rule 4)** |  | `messages forward` |
+| `--trace` |  | one line per request on stderr: ids and timings, never message content. **max logs one line per request, tg the connection's own lines: the same option, a different mechanism (Help text rule 4)** |  | every command |
+| `--transcribe` |  | hear voice messages not heard yet, on this machine; slow, the model must be downloaded. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | `inbox`, `messages list`, `review` |
 | `--type` | `<names>` | only events of these types, comma-separated, as the messenger names them |  | `chats events` (planned) |
 | `--unanswered` | `[duration]` | only questions to you or a group's admins that nobody answered, asked at least this long ago — 4h, 1d. **max's own `review` still takes bare hours until T6 moves it (e2)** | `24h` | `review` |
 | `--unread` |  | only chats with unread messages |  | `chats list` |
@@ -344,6 +344,11 @@ many), `--allow-any-file` (which files).
    writes the description, and a CLI changes it only to name its messenger.
 3. **An option's description says what it changes and its unit**: `--pause <duration>` "wait this
    long between pages".
+4. **A shared option has one sentence in both tools**, checked by the parity workflow
+   (`cli-messaging-parity wording <max.json> <tg.json>`). A difference is allowed only where the
+   sentence names something the messenger's own way — how to name a chat, which rights or events it
+   has — and the option's catalogue `note` says so; a note also marks a difference still open, and
+   names who closes it.
 
 ## Layers and sharing
 
