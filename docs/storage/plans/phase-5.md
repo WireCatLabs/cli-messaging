@@ -1,6 +1,6 @@
 # Phase 5 — search by meaning over a chat's conversations
 
-Plan, 2026-10-02. **Draft, not approved; nothing is built.** It follows [`../decisions.md`](../decisions.md):
+Plan, 2026-10-02. **Draft; the owner answered §7 on 2026-10-02 (NEED-517 A, NEED-518 A, NEED-519 A) and asked for an external API and parallel embedding, which §4 now plans (E11, E12); nothing is built.** It follows [`../decisions.md`](../decisions.md):
 embeddings are computed **locally**, by one small multilingual model or a short list, kept in the folder the
 speech models already share (NEED-412 A); they go on chunks of conversations, never on single messages,
 and are never used to link messages. Requirements §18, §19 and "Phase 5" ask for `conversation_documents`,
@@ -22,7 +22,8 @@ At the end of phase 5, for a chat whose conversations are built (phases 3–4):
   embedded one, and — once phase 2's search service is in — ranks them together with the word search;
 - MCP `conversations_search` does the same for agents.
 
-Nothing leaves the machine. No API key, no network except the one-time model download.
+By default nothing leaves the machine: no API key, no network except the one-time model download. With
+the user's own key, an external model is used instead, asked for each run (E11).
 
 ## 2. Depends on
 
@@ -108,14 +109,14 @@ This replaces requirements §18's `conversation_embeddings(conversation_id, …)
 several models side by side, rebuildable, droppable without touching `messages`. `store check` counts vectors no chunk points at;
 `conversations embed --clear` drops them.
 
-**E3 · Vectors in a plain table, scanned in JS** — no extension (**NEED-518**). Float32, normalised at
+**E3 · Vectors in a plain table, scanned in JS** — no extension (**NEED-518 A**, 2026-10-02). Float32, normalised at
 write so a dot product is the cosine. A search reads the scope's vectors in one statement and keeps the
 top `--limit`; `serve` and `mcp` keep what they read in memory between queries. sqlite-vec's ruled role
 (NEED-374 A) is not needed at the sizes measured, and it would add an extension per platform that official
 Node and Bun on Linux load from outside our SQLite. int8 storage and sqlite-vec stay open for when a real
 archive passes ~100k chunks.
 
-**E4 · Where the runtime comes from** (**NEED-519**). `onnxruntime-web` as a dependency adds 145 MB to every
+**E4 · Where the runtime comes from** — **our own package** (**NEED-519 A**, 2026-10-02). `onnxruntime-web` as a dependency adds 145 MB to every
 tg and max install, used or not, of which a run opens about 15 MB — what the owner asked to avoid
 (NEED-412). Downloading those 15 MB into `~/.cache/cli-common/models/` with the model would avoid it, but
 they are JavaScript, not data: the process that holds the owner's session would `import()` code from a
@@ -133,8 +134,7 @@ folder any program of the user can write to, and an installed model is checked t
 
 **E5 · Models: a short list, like speech.** `src/embeddings/models.ts` lists them, most suitable first, each
 with its input prefixes (Gemma's `task: search result | query: `, e5's `query: ` and `passage: `), its
-token limit and its files. The default is **NEED-517**. Threads: `min(4, cores / 2)`, set explicitly,
-since Bun otherwise takes 1. Granite's model card is read for a prefix before it is listed; the
+token limit and its files. The default is **e5-small**, Gemma in the list for whoever accepts its terms (**NEED-517 A**, 2026-10-02). Threads: see E12. Granite's model card is read for a prefix before it is listed; the
 measurement used none.
 
 **E6 · Opt-in per chat, run by the user.** `conversations embed --chat <chat> [--model <id>]` embeds only
@@ -164,25 +164,69 @@ so in its help. `messages search` itself is not changed here.
 `conversations.links`; `conversations search` shows message text and is checked as `messages`. In machine
 mode stdout is one JSON value; progress and the estimate go to stderr.
 
+**E11 · An external model with the user's own key** (owner, 2026-10-02 — amends NEED-412 A; local stays
+the default). Facts: [`../research/2026-10-02-embedding-apis.md`](../research/2026-10-02-embedding-apis.md).
+
+- **Providers.** `openai` first, as the owner suggested: `text-embedding-3-small` by default (1536 dims,
+  $0.02 per 1M tokens, 2,048 inputs and 300k tokens a request, no training on API inputs by default).
+  The same client takes `--base-url`, which covers what serves OpenAI's request shape — Gemini's
+  compatibility URL, Jina, Ollama and LM Studio on this machine. Providers whose own API carries a
+  query/document input type or names the size field differently (Voyage, Cohere, Gemini's native API)
+  get a small adapter each, later, when someone asks; none is built in this phase.
+- **The key** is kept as bot tokens are (`BotTokenStore`, `src/cli/bot/token.ts:22`, through cli-core's
+  `Credentials`): the keyring account `embeddings:<provider>`, then `<PREFIX>_OPENAI_API_KEY` or
+  `OPENAI_API_KEY`, then a 0600 file. `models text key set <provider>` reads it from a hidden prompt or
+  stdin, never from an argument; `models text key remove`. The key is never printed, logged or echoed in
+  an error.
+- **The text leaves the machine, so it is asked for each time.** `conversations embed --chat <chat>
+  --provider openai [--model <m>] [--base-url <url>]` prints, before sending anything: the chat, the
+  provider and model, the number of chunks and tokens, the price per 1M tokens from the model list with
+  the date it was read, and that the messages go to that provider. Interactive: it waits for a yes. Machine
+  mode: it refuses without `--yes`. `--max-tokens <n>` stops before a run above it (requirements §15's cost
+  limit). Every run asks again; a yes for one chat is not a yes for another. A `--base-url` on this machine
+  (`localhost`, `127.0.0.1`, `::1`) sends nothing out and asks nothing.
+- **Vectors from different models never mix** (both research files): `chunk_vectors.model` is
+  `<provider>:<model>:<dims>`, so `openai:text-embedding-3-small:1536` and the local e5 live side by side,
+  and a search uses one of them — `--model`, else the model the chat was embedded with most.
+- **Errors** name the HTTP status and the provider's error code, never the request body. 429 waits for
+  `Retry-After` and continues; 401 stops and says to set the key again.
+
+**E12 · Parallel embedding** (owner, 2026-10-02). Measured in
+[`../research/2026-10-02-embeddings.md`](../research/2026-10-02-embeddings.md#running-in-parallel):
+
+- **Local, by default: one session on `min(8, cores)` threads**, set explicitly (Bun otherwise takes 1):
+  ~1.45× the 4-thread speed for ~60 MB more. More threads gain nothing.
+- **`--workers <n>`** runs n sessions in `node:worker_threads`, each with its own copy of the model, the
+  threads split between them: 3 workers ~1.8×, 6 ~2.0× on this 12-core laptop, at ~0.6 GB a worker. The
+  command prints the memory it will take and refuses a count whose sessions would not fit in the free
+  memory (`os.freemem()`), so it never pushes the machine into swap. The main thread tokenizes and writes;
+  workers only run the model; one transaction per batch of results, as E6.
+- **External: requests in parallel.** `--concurrency <n>` (default 4) requests at once, each up to the
+  provider's limits — for OpenAI 2,048 inputs and 300k tokens a request; a 429 slows every request down to
+  its `Retry-After`. Results are written in the order they come back; a chunk is either written or asked
+  again on the next run (E6's resume).
+
 ## 5. Work items
 
 1. **Run a model from the shared folder** — `src/embeddings/`: the model list (E5), download into the shared
-   folder with sha256 (reusing `install`), the runtime as NEED-519 decides (E4), tokenizer, one function
+   folder with sha256 (reusing `install`), the runtime from `@leemour/cli-messaging-onnx`, a new `packages/onnx` published like `packages/sqlite` (E4), tokenizer, one function
    `embed(texts) → Float32Array[]`. Proved on Node and Bun in CI with a tiny test model; `models text
    list|download`.
 2. **Version 14 and the chunks** — the migration (E8), `conversation_chunks` written by
    `replaceConversations`, the chunk cutter (E1) as a pure function with tests.
-3. **`conversations embed`** — the `conversations.embed` key in `keyForCommand` (`src/sends/permissions.ts`,
+3. **`conversations embed`** — threads and `--workers` (E12), the `conversations.embed` key in `keyForCommand` (`src/sends/permissions.ts`,
    beside phase 4's `conversations.links`; without it the path is checked as `messages`), the batches and
    resume (E6), the status, `--clear`, `store check` counting
    vectors no chunk points at.
-4. **`conversations search`** — the scan (E3, E7), output and `--json`, MCP `conversations_search`, the
+4. **The external provider** (E11, E12) — `openai` with `--base-url`, the key commands, the consent
+   step and `--max-tokens`, `--concurrency`, retries; tested against a stand-in server, never a real key.
+5. **`conversations search`** — the scan (E3, E7), output and `--json`, MCP `conversations_search`, the
    in-memory copy in `serve` and `mcp`.
-5. **Docs, changelog, parity rows, skill line** — ARCHITECTURE's store section (the two tables, why vectors
+6. **Docs, changelog, parity rows, skill line** — ARCHITECTURE's store section (the two tables, why vectors
    are keyed by hash), `docs/commands.md`, one line in the shared skills; tg-cli and max-cli bump.
-6. **Hybrid** (E9), after phase 2 item 6 — RRF over the two lists; the IRC bench's queries cannot score it,
+7. **Hybrid** (E9), after phase 2 item 6 — RRF over the two lists; the IRC bench's queries cannot score it,
    so a small hand-written query set over a synthetic chat.
-7. **Measure** — `bench/embeddings/` (today the research scripts of §3): embed time and search time on the `bench/search` corpus at 100k
+8. **Measure** — `bench/embeddings/` (today the research scripts of §3): embed time and search time on the `bench/search` corpus at 100k
    messages through the real commands, Node and Bun, recorded in its README.
 
 ## 6. Test plan
@@ -200,6 +244,8 @@ mode stdout is one JSON value; progress and the estimate go to stderr.
 - **One-shot**: the process exits after `embed` and `search` — the WASM runtime's worker threads closed.
 
 ## 7. Questions for the owner
+
+Answered 2026-10-02: **1 A, 2 A, 3 A** («1 A 2 A 3 A»). Kept below as asked.
 
 1. **NEED-517 · Which model does `conversations embed` use by default?**
    - Now: no model is chosen. All three candidates run on this machine, under Node and Bun:

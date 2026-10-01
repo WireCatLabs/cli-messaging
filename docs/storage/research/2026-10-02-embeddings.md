@@ -90,3 +90,32 @@ measured on 4 threads only. Prefixes: e5 `query: ` / `passage: `, Gemma `task: s
 - Batching to 8 gains little in WASM; 4 threads give about 2.5–3× one thread.
 - Granite gave 8 on Node and 7 on Bun from the same files: probably a near-tie flipped by arithmetic order.
 - Not measured: the native `onnxruntime-node` for comparison.
+
+## Running in parallel
+
+e5-small, 300-token chunks one at a time, 96 chunks after a warm-up, tokenized before timing. Script and
+results in [`bench/embeddings/parallel/`](../../../bench/embeddings/parallel/) (`par.mjs`, `grid.sh`,
+`results.jsonl`, `rerun.jsonl`). Workers are `node:worker_threads` on both runtimes, each with its own
+session. The machine had 12 cores (24 threads) and about 7 GB free; load average rose to ~11 during the run.
+Where a cell ran twice, both values are given; pairs differ by about 10%.
+
+| sessions × threads | Node chunks/s | Node peak MB | Bun chunks/s | Bun peak MB | load ms Node / Bun |
+|---|---|---|---|---|---|
+| 1 × 1 | 4.0 | 1182 | 3.2 | 1037 | 585 / 830 |
+| 1 × 2 | 6.9 | 1185 | 7.2 | 1069 | 677 / 607 |
+| 1 × 4 | 10.2 / 10.4 | 1219 | 10.7 / 12.0 | 1116 | 618–1484 / 573–644 |
+| 1 × 8 | 15.2 / 14.7 | 1284 | 15.6 / 14.8 | 1206 | 518 / 575 |
+| 1 × 12 | 14.6 / 15.2 | 1341 | 15.7 / 14.8 | 1303 | 568 / 649 |
+| 2 workers × 4 | 16.1 | 1785 | 16.4 | 1803 | 781 / 887 |
+| 2 workers × 6 | 17.7 | 1864 | 17.1 | 1842 | 707 / 1037 |
+| 3 workers × 4 | 18.5 / 19.6 | 2334 | 17.7 / 18.8 | 2368 | 815 / 1449 |
+| 4 workers × 2 | 17.0 | 2753 | 17.9 | 2813 | 2121 / 1442 |
+| 4 workers × 3 | 15.8 / 19.5 | 2829 | 20.2 / 19.8 | 2854 | 874 / 1808 |
+| 6 workers × 1 | 15.8 | 3960 | 16.0 | 3763 | 1284 / 2042 |
+| 6 workers × 2 | 18.8 / 22.8 | 4062 | 19.8 / 21.3 | 3859 | 1109 / 2829 |
+
+- One session stops gaining at 8 threads. Workers do not share the model: each adds 550–650 MB.
+- WASM threads work inside a worker on both runtimes (one worker on 4 threads ran 10.0–10.7 chunks/s
+  against 3.2–4.0 on one; the process's thread count grew with the setting). Bun's own `Worker` was not tried.
+- Best: 6 workers × 2, ~2.0× one session on 4 threads, at ~4 GB. 3 × 4: ~1.8× at ~2.3 GB. 1 × 8: ~1.45× at
+  +60 MB.
