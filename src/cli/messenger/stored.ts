@@ -1,7 +1,7 @@
 import type { MessageEvent } from "../../domain/models.js"
 import type { AccountKey, MessageStore } from "../../store/store.js"
 import type { EventSink } from "../runs/events.js"
-import { type MessengerAdapter, throughWrapper } from "./port.js"
+import { capability, type MessengerAdapter, throughWrapper } from "./port.js"
 
 export interface Saving {
   account: AccountKey
@@ -85,6 +85,36 @@ export const stored = (messenger: MessengerAdapter, { account, store, warn, even
               signal,
               onReady,
             ) ?? Promise.resolve(),
+        }
+      : {}),
+    ...(messenger.edit
+      ? {
+          edit: async (chatId, messageId, text, options) => {
+            const seenAt = Date.now()
+            const edited = await capability(messenger, "edit", "edit")(chatId, messageId, text, options)
+            await save("messages.edit", (opened) =>
+              opened.saveMessages(account, chatId, [edited], { via: "update", seenAt }),
+            )
+            return edited
+          },
+        }
+      : {}),
+    ...(messenger.forward
+      ? {
+          forward: async (fromChatId, messageId, toChatId, options) => {
+            const copy = await capability(messenger, "forward", "forward")(fromChatId, messageId, toChatId, options)
+            await save("messages.forward", (opened) => opened.saveMessages(account, toChatId, [copy], { via: "send" }))
+            return copy
+          },
+        }
+      : {}),
+    // Without this, a message deleted here would still be found by `messages search` and read `--offline`.
+    ...(messenger.delete
+      ? {
+          delete: async (chatId, messageIds, options) => {
+            await capability(messenger, "delete", "delete")(chatId, messageIds, options)
+            await save("messages.delete", (opened) => opened.markDeleted(account, messageIds, { chatId }))
+          },
         }
       : {}),
     send: async (chatId, text, options) => {

@@ -10,7 +10,7 @@ class Adapter {
   self() {
     return "1"
   }
-  async edit(chat: string, text: string) {
+  async archive(chat: string, text: string) {
     this.#edits.push(`${chat}:${text}`)
     return this.#edits.length
   }
@@ -19,7 +19,7 @@ class Adapter {
 describe("a method the wrappers were never told about", () => {
   it("passes through both wrappers to the adapter, timed under its own name", async () => {
     const events: DiagnosticEvent[] = []
-    const inner = new Adapter() as unknown as MessengerAdapter & { edit: Adapter["edit"] }
+    const inner = new Adapter() as unknown as MessengerAdapter & { archive: Adapter["archive"] }
     const wrapped = stored(
       observed(inner, (event) => events.push(event)),
       {
@@ -30,10 +30,10 @@ describe("a method the wrappers were never told about", () => {
       },
     ) as typeof inner
 
-    expect(await wrapped.edit("7", "fixed")).toBe(1)
+    expect(await wrapped.archive("7", "fixed")).toBe(1)
     expect(events.map((event) => [event.event, "operation" in event ? event.operation : ""])).toEqual([
-      ["request", "adapter.edit"],
-      ["response", "adapter.edit"],
+      ["request", "adapter.archive"],
+      ["response", "adapter.archive"],
     ])
   })
 

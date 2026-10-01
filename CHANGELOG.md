@@ -14,6 +14,12 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   indexed. Saving messages is about a quarter slower and the file about 15% larger (measured, 100,000
   messages through the store).
 
+### Fixed
+
+- **A message deleted with `messages delete` is gone from the store too**, so `messages search` and
+  `messages list --offline` stop showing it; an edit replaces the stored text, and a forwarded copy is
+  kept in the chat it went to. Before, the store kept what the read before the write had saved.
+
 ## 0.82.0 — 01.10.2026
 
 ### Added
