@@ -59,6 +59,27 @@ shows it. The token is never printed and never
 written to a file. The GitHub form publishes from the job in the `npm` environment, which is what
 npm's trusted publisher names: `leemour` / `cli-messaging` / `release.yml` / environment `npm`.
 
+### How often, and what may break
+
+**At most one release a day.** Changes wait under `## Unreleased` and ship together. The one
+exception is a fix a consumer is blocked on today: it ships alone, and the changelog says which
+consumer and why.
+
+**These exports are stable.** A change that breaks them waits for a **breaking release**, at most one
+a week, whose changelog section says what to change in a consumer; tg-cli and max-cli move to it
+the same day.
+
+| Export | Stable |
+|---|---|
+| `.` | the domain types (`Chat`, `Message`, `Contact`, `Page`, …), the message locator |
+| `./cli` | `Messenger`, `MessengerAdapter` and its method groups, `createProgram`, `run`, `messengerContext`, the command factories' names and arguments |
+| `./store` | `openStore`, `MessageStore`, `storePath`, and the file format: `minCompatible` rises only in a breaking release |
+| `./sends` | `sendGuard`, `SendJournal`, the journal's line format |
+| `./services` | `servicesFor`, `Override` and the service names |
+
+Everything else may change in any release, and still goes under "Changed — may break callers" when
+it does. tg-cli and max-cli take new versions through Dependabot pull requests.
+
 ## Licence
 
 MIT.
