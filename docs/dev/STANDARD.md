@@ -5,6 +5,8 @@ them one: how a command, an option, an answer and an MCP tool are named and shap
 lives, and which documents each has. It lives here because this package is where the two meet;
 both CLIs' `CONVENTIONS.md` link it instead of keeping a copy.
 
+How a pull request is checked against these rules is [REVIEW.md](REVIEW.md).
+
 A rule changes here first, in its own pull request, and the owner approves new wording — a new verb
 or option name especially. Then the code follows. A difference between the two CLIs is allowed only
 where one messenger lacks the feature, and it is written down with its reason in the
