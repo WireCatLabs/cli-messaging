@@ -122,6 +122,7 @@ interface Harness {
   /** The config file, for a profile's `permissions`, `allow` or `readOnly`. */
   config?: object
   skill?: URL
+  history?: Messenger["history"]
 }
 
 const connect = async (telegram: Scripted = scripted(), options: Partial<ServerOptions> & Harness = {}) => {
@@ -133,7 +134,7 @@ const connect = async (telegram: Scripted = scripted(), options: Partial<ServerO
     CLI_COMMON_CACHE_DIR: join(root, "cache"),
     CHAT_CACHE_DIR: join(root, "chat-cache"),
   }
-  const { connect: connecting, form, era = "legacy", config, skill, ...serverOptions } = options
+  const { connect: connecting, form, era = "legacy", config, skill, history, ...serverOptions } = options
   if (config) {
     mkdirSync(env.CHAT_CONFIG_DIR, { recursive: true })
     writeFileSync(join(env.CHAT_CONFIG_DIR, "config.json"), JSON.stringify(config))
@@ -146,6 +147,7 @@ const connect = async (telegram: Scripted = scripted(), options: Partial<ServerO
     connect: connecting ?? telegram.connect,
     chatArgument: "a chat",
     ...(skill ? { skill } : {}),
+    ...(history ? { history } : {}),
   }
   const streams = captureStreams()
   let made: ReturnType<typeof createServer> | undefined
@@ -1221,6 +1223,30 @@ describe("MCP prompts and resources", () => {
     expect(body.chat).toMatchObject({ id: "7", title: "Book club" })
     expect(body.messages.map((one: { id: string }) => one.id)).toEqual(["1"])
     expect(telegram.opened()).toBe(1)
+  })
+
+  it("reads a chat from the store when the messenger's history is kept there", async () => {
+    let asked = 0
+    const telegram = scripted({
+      history: async () => {
+        asked += 1
+        return { items: [message], hasMore: false }
+      },
+    })
+    const { client, call } = await connect(telegram, { history: "store" })
+    await call("chat_chats_list")
+    await call("chat_messages_list", { chat: "7" })
+    const before = asked
+
+    const { contents } = await client.readResource({ uri: "chat://chat/7" })
+    const [first] = contents
+    const body = JSON.parse(first && "text" in first ? first.text : "{}")
+    const unknown = client.readResource({ uri: "chat://chat/99" })
+
+    expect(body.chat).toMatchObject({ id: "7", title: "Book club" })
+    expect(body.messages.map((one: { id: string }) => one.id)).toEqual(["1"])
+    expect(asked).toBe(before)
+    await expect(unknown).rejects.toThrow("nothing stored for this chat yet")
   })
 })
 

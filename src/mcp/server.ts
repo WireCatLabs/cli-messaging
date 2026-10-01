@@ -105,6 +105,8 @@ export const createServer = (
         limit: settings.limit,
         recorded: () => recalledAccount(app, provider, settings.profile, context.env) !== undefined,
         withStore: context.withStore,
+        messenger,
+        guard,
       })
     if (skill) {
       const { uri, name: resource, title, description, mimeType, read } = skill

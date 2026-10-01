@@ -4,6 +4,9 @@
  * chat list made only of the chats it has seen (max-cli `NEED-301`).
  *
  * Only fields some command reads are here; the list grows with the commands that need it.
+ *
+ * @deprecated Read by nothing: the port's optional groups say what a messenger can do, and
+ * `Messenger.history` says where its history is read from. A breaking release removes it.
  */
 export interface Capabilities {
   /** Whether past messages can be fetched at all. A bot sees only what arrives while it listens. */

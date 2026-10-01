@@ -11,10 +11,10 @@ import type {
   Member,
   Page,
 } from "../domain/models.js"
-import { guardedWrite, type Operated } from "../sends/guarded.js"
+import { codeOf, guardedWrite, type Operated } from "../sends/guarded.js"
 import { newOperationId } from "../sends/send-id.js"
 import type { AccountKey, MessageStore } from "../store/store.js"
-import { type ServiceDeps, storeIfOpen } from "./deps.js"
+import { fromStore, nothingStored, type ServiceDeps, storeIfOpen } from "./deps.js"
 import { storedChatId } from "./messages.js"
 
 /** How far back `events` looks without `since`, as in max-cli. */
@@ -77,12 +77,12 @@ export const chatsService = (deps: ServiceDeps): ChatsService => ({
   list: async (filter, window) => {
     const filtering = filter.search !== undefined || filter.kind !== undefined || filter.unread === true
     if (!filtering) {
-      const page = deps.offline
+      const page = fromStore(deps)
         ? await (await deps.store()).chats(await deps.account(), window)
         : await (await deps.connection()).chats(window)
       return { ...page, partial: false }
     }
-    const scanned = deps.offline
+    const scanned = fromStore(deps)
       ? await (await deps.store()).chats(await deps.account(), { offset: 0 })
       : await (await deps.connection()).chats({ limit: CHAT_SCAN, offset: 0 })
     const found = scanned.items.filter(matches(filter))
@@ -91,12 +91,17 @@ export const chatsService = (deps: ServiceDeps): ChatsService => ({
   },
 
   show: async (chat) => {
-    if (deps.offline) {
+    if (fromStore(deps)) {
       const store = await deps.store()
       const account = await deps.account()
-      const id = await storedChatId(deps.messenger, chat, store, account)
+      const pushed = deps.reads === "store"
+      const missing = (id: string) =>
+        new CliError("not_found", pushed ? nothingStored(deps.messenger) : `no stored chat ${id}`)
+      const id = await storedChatId(deps.messenger, chat, store, account).catch((error: unknown) => {
+        throw pushed && codeOf(error) === "not_found" ? missing(chat) : error
+      })
       const found = (await store.chats(account, {})).items.find((one) => one.id === id)
-      if (!found) throw new CliError("not_found", `no stored chat ${id}`)
+      if (!found) throw missing(id)
       return { ...found, members: await storedMembers(store, account, found.id) }
     }
     const connection = await deps.connection()
