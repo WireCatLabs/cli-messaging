@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.86.0 — 01.10.2026
+
 ### Added
 
 - **`contacts add|remove|block|unblock <person>`, `contacts rename <person> <first-name> [last-name]`
