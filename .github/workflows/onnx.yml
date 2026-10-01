@@ -1,0 +1,89 @@
+name: ONNX
+# Builds @leemour/cli-messaging-onnx (packages/onnx), runs a model through it on every system under
+# Node and Bun, and publishes it when started by hand with `publish` — npm trusts this file by name.
+on:
+  pull_request:
+    paths: ["packages/onnx/**", ".github/workflows/onnx.yml"]
+  push:
+    branches: [main]
+    paths: ["packages/onnx/**", ".github/workflows/onnx.yml"]
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: "Publish the package to npm"
+        type: boolean
+        default: false
+
+permissions: {}
+
+jobs:
+  pack:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - run: packages/onnx/build.sh
+      - run: npm pack ./packages/onnx
+      - uses: actions/upload-artifact@v7
+        with:
+          name: package
+          path: leemour-cli-messaging-onnx-*.tgz
+          if-no-files-found: error
+
+  probe:
+    needs: pack
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, ubuntu-24.04-arm, macos-15, windows-latest]
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+      - uses: actions/download-artifact@v8
+        with:
+          name: package
+          path: probe
+      - name: install the package as a user would
+        working-directory: probe
+        run: |
+          echo '{"type":"module"}' > package.json
+          npm install --no-audit --no-fund ./leemour-cli-messaging-onnx-*.tgz
+          cp ../packages/onnx/probe.mjs .
+          mkdir test && cp ../packages/onnx/test/multiply.onnx test/
+      - working-directory: probe
+        run: node probe.mjs
+      - working-directory: probe
+        run: bun probe.mjs
+
+  publish:
+    needs: probe
+    if: github.event_name == 'workflow_dispatch' && inputs.publish && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: npm
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+      - uses: actions/download-artifact@v8
+        with:
+          name: package
+      - run: npm publish leemour-cli-messaging-onnx-*.tgz --access public --provenance
