@@ -1,5 +1,6 @@
 import { annotate } from "@leemour/cli-core/commands"
 import { Command } from "commander"
+import { renderList } from "../paging.js"
 import { type Messenger, messengerContext } from "./context.js"
 
 const collect = (value: string, previous: string[] = []) => [...previous, value]
@@ -12,7 +13,7 @@ export const foldersCommand = (messenger: Messenger): Command => {
     .description("your chat folders, in the order the app shows them")
     .action(async function (this: Command) {
       const context = messengerContext(this, messenger)
-      context.renderer.result(await context.withServices((services) => services.folders.list()))
+      renderList(context.renderer, context.format, await context.withServices((services) => services.folders.list()))
     })
   folders.addCommand(
     annotate(new Command("create"), { mutates: true })

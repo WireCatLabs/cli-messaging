@@ -1000,7 +1000,7 @@ describe("sending over MCP", () => {
     await call("chat_chats_folders_update", { folder: "Work", title: "Job", add: ["7"], remove: ["7"] })
     const deleted = await call("chat_chats_folders_delete", { folder: "4" })
 
-    expect(listed.body).toEqual([folder])
+    expect(listed.body).toEqual({ items: [folder], page: 1, limit: 1, hasMore: false })
     expect(deleted.body).toEqual({ operationId: expect.any(String), folderId: "4" })
     expect(done).toEqual([
       ["create", "Home", ["7"]],

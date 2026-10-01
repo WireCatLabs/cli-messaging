@@ -1787,3 +1787,51 @@ describe("the guard, account and mcp config commands", () => {
     expect(found.stdout.map((line) => JSON.parse(line).id)).toEqual(["3", "2", "1"])
   })
 })
+
+describe("every list in --json", () => {
+  it("**answers { items, page, limit, hasMore }**, never a bare array or a shape of its own", async () => {
+    const root = mkdtempSync(join(tmpdir(), "messenger-"))
+    const env = {
+      CHAT_STATE_DIR: join(root, "state"),
+      CHAT_CONFIG_DIR: join(root, "config"),
+      CHAT_CACHE_DIR: join(root, "cache"),
+      MESSAGING_STORE: join(root, "m.db"),
+    }
+    const lists: MessengerAdapter = {
+      ...fake,
+      scheduled: async () => [message],
+      sessions: async () => [],
+      topics: async () => ({ items: [], hasMore: false }),
+      folders: async () => [],
+      members: async () => ({ items: [], hasMore: false, chatId: "7" }),
+      chatEvents: async () => ({ chatId: "7", since: "2026-09-20T00:00:00.000Z", events: [], more: false }),
+    }
+    const online = async () => lists
+
+    // messages search is the search session's to change, and still answers without `page`.
+    for (const argv of [
+      ["chats", "list"],
+      ["chats", "members", "list", "7"],
+      ["chats", "folders", "list"],
+      ["chats", "events", "7"],
+      ["contacts", "list"],
+      ["messages", "list", "7"],
+      ["messages", "context", "7", "2"],
+      ["messages", "scheduled", "7"],
+      ["account", "sessions", "list"],
+      ["models", "audio", "list"],
+      ["topics", "list", "7"],
+      ["store", "status"],
+      ["store", "jobs", "list"],
+      ["sends", "list"],
+      ["recipients", "list"],
+    ]) {
+      const { code, stdout, stderr } = await call([...argv, "--json"], online, env)
+      expect([argv.join(" "), code, stderr.join("\n")]).toEqual([argv.join(" "), 0, expect.any(String)])
+      expect([argv.join(" "), Object.keys(JSON.parse(stdout[0] ?? "null") ?? {})]).toEqual([
+        argv.join(" "),
+        expect.arrayContaining(["items", "page", "limit", "hasMore"]),
+      ])
+    }
+  })
+})
