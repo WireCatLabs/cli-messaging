@@ -119,7 +119,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--bots` | `<profiles>` | also read these bots' copies, comma separated — each allowed by readOtherBots |  | `bot messages between` (planned), `bot messages search` (planned), `bot people show` (planned) |
 | `--can` | `<rights>` | what they may do, comma-separated: read, members, admins, info, pin, link, post, edit, delete. **lists the rights each messenger has — MAX has `read`, Telegram does not — so it differs on purpose (Help text rule 4)** |  | `bot chats admins add`, `chats admins add` |
 | `--channel` |  | a private channel instead of a group; people join it by its link |  | `chats create` |
-| `--chat` | `<chat>` | a chat, by id or name; repeat it for more. **max's `messages search` takes `<id>` only, since searching never connects to resolve a name; rule 6 says `<chat>` (e8)** |  | `chats folders create`, `conversations batches next`, `conversations batches status`, `conversations build`, `conversations links clear` (planned), `conversations list`, `messages search`, `review` |
+| `--chat` | `<chat>` | a chat, by id or name; repeat it for more. **max's `messages search` takes `<id>` only, since searching never connects to resolve a name; rule 6 says `<chat>` (e8)** |  | `chats folders create`, `conversations batches next`, `conversations batches status`, `conversations build`, `conversations embed` (planned), `conversations links clear` (planned), `conversations list`, `messages search`, `review` |
 | `--check` |  | say whether a newer version exists, and install nothing. **`bot list --check` names the messenger until both CLIs take the release after 0.98.0, where it says "the messenger"; then this note goes** |  | `bot list`, `upgrade` |
 | `--confirm-send` |  | show the owner every write the MCP server offers, in a form to approve. **max's own `mcp` is worded differently until the permission levels (P7) replace these flags there (e13)** |  | `bot mcp` (planned), `bot mcp config` (planned), `mcp`, `mcp config` |
 | `--context` | `<n>` | messages before and after each hit |  | `messages search` |
@@ -152,7 +152,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--max-actions` | `<n>` | at most this many actions in one run | `10` | `bot chats check` (planned), `chats moderate` (planned) |
 | `--md` |  | read **bold**, _italic_, ~~struck~~ and `code` in the text; \ keeps a mark literal |  | `bot messages edit`, `bot messages send`, `messages edit`, `messages send` |
 | `--members-see-link` | `<on\|off>` | members may see the invite link |  | `chats update` (max-only) |
-| `--model` | `<id>` | which downloaded speech model hears them; `models audio list` shows them. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | `conversations links clear` (planned), `inbox`, `messages list`, `messages transcribe`, `review` (planned) |
+| `--model` | `<id>` | which downloaded speech model hears them; `models audio list` shows them. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | `conversations embed` (planned), `conversations links clear` (planned), `inbox`, `messages list`, `messages transcribe`, `review` (planned) |
 | `--multiple` |  | people may pick several answers |  | `polls create` |
 | `--new` |  | what arrived since the last check, each message once — for scheduled runs |  | `inbox` |
 | `--newest` |  | newest first instead of best first |  | `bot messages search` (planned), `messages search` |
@@ -197,6 +197,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--size` | `<n>` | messages to answer per batch, 10–200; 50 by default |  | `conversations batches next`, `conversations batches status` |
 | `--source` | `<messenger>` | every account of this messenger held in the store, or all of them — the same as in: in the query |  | `messages search` |
 | `--text` | `<text>` | the message's new text; - reads stdin |  | `bot callbacks answer` (planned) |
+| `--threads` | `<n>` | threads in all | `min(8, cores)` | `conversations embed` (planned) |
 | `--timeout` | `<duration>` | give up on the whole command after this — 30s, 2m, 500ms |  | every command |
 | `--title` | `<title>` | the new name — of a chat or a folder |  | `bot chats admins add`, `chats folders update`, `chats update` |
 | `--to` | `<chat>` | the chat to forward it to: an id, or part of a chat name. **the sentence says how to name a chat the messenger's way, so it differs on purpose (Help text rule 4)** |  | `messages forward` |
@@ -210,6 +211,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--verbose` |  | more detail in what is shown: -v ids, -vv everything known | `0` | every command |
 | `--version` |  | print the version number |  | every command |
 | `--voice` | `<file>` | send an Ogg Opus file as a voice message, alone, with no text |  | `bot messages send`, `messages send` |
+| `--workers` | `<n>` | sessions in parallel, each with its own copy of the model |  | `conversations embed` (planned) |
 | `--yes` |  | go ahead without the question an ask level puts before a write |  | every command (planned), `account sessions end` (planned), `mcp` (planned), `mcp config` (planned) |
 
 <!-- end of the option catalogue -->

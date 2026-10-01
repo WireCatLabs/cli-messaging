@@ -13,6 +13,10 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Fixed
 
+- **`conversations embed status --chat` and `embed clear --chat` work**: they refused every call with
+  "required option '--chat <chat>' not specified", because the `embed` group, which declares the same
+  option, took its value. The parity manifest lists `embed`'s own options, planned like the group, so
+  a CLI on this release passes its check.
 - **`contacts list` names a dialog's person by `Messenger.partnerOf`** when it falls back to the dialogs (no
   contacts stored yet). A messenger that sets `partnerOf` gets the person's id, not the chat's, and a dialog
   whose person it cannot name is left out; without `partnerOf` a dialog's id stays the person's, as on

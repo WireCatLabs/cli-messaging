@@ -400,6 +400,11 @@
       "value": "<text>",
       "meaning": "the message's new text; - reads stdin"
     },
+    "--threads": {
+      "value": "<n>",
+      "meaning": "threads in all",
+      "default": "min(8, cores)"
+    },
     "--timeout": {
       "value": "<duration>",
       "meaning": "give up on the whole command after this — 30s, 2m, 500ms"
@@ -452,6 +457,10 @@
     "--voice": {
       "value": "<file>",
       "meaning": "send an Ogg Opus file as a voice message, alone, with no text"
+    },
+    "--workers": {
+      "value": "<n>",
+      "meaning": "sessions in parallel, each with its own copy of the model"
     },
     "--yes": {
       "meaning": "go ahead without the question an ask level puts before a write"
@@ -1422,7 +1431,37 @@
         "max": "storage phase 5: the cli-messaging bump after it ships",
         "tg": "storage phase 5: the cli-messaging bump after it ships"
       },
-      "subtree": true
+      "subtree": true,
+      "options": {
+        "--chat": {
+          "in": [],
+          "planned": {
+            "max": "storage phase 5: the cli-messaging bump after it ships",
+            "tg": "storage phase 5: the cli-messaging bump after it ships"
+          }
+        },
+        "--model": {
+          "in": [],
+          "planned": {
+            "max": "storage phase 5: the cli-messaging bump after it ships",
+            "tg": "storage phase 5: the cli-messaging bump after it ships"
+          }
+        },
+        "--threads": {
+          "in": [],
+          "planned": {
+            "max": "storage phase 5: the cli-messaging bump after it ships",
+            "tg": "storage phase 5: the cli-messaging bump after it ships"
+          }
+        },
+        "--workers": {
+          "in": [],
+          "planned": {
+            "max": "storage phase 5: the cli-messaging bump after it ships",
+            "tg": "storage phase 5: the cli-messaging bump after it ships"
+          }
+        }
+      }
     },
     "conversations links": {
       "in": ["max"],

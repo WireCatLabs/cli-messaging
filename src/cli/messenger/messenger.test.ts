@@ -1128,6 +1128,17 @@ describe("the shared read commands", () => {
     const links = JSON.parse((await call(["messages", "links", "7", "3", "--json"], never, env)).stdout[0] ?? "")
     expect(links).toMatchObject({ links: [{ parentId: "2", kind: "same_sender", chosen: true }], chain: ["2", "1"] })
     expect((await call(["conversations", "show", "Book"], never, env)).code).toBe(2)
+
+    const status = await call(["conversations", "embed", "status", "--chat", "7", "--json"], never, env)
+    expect(status.stderr.join("\n")).toBe("")
+    expect(JSON.parse(status.stdout[0] ?? "")).toMatchObject({ embedded: 0 })
+    const cleared = await call(
+      ["conversations", "embed", "clear", "--chat", "7", "--model", "e5-small", "--json"],
+      never,
+      env,
+    )
+    expect(JSON.parse(cleared.stdout[0] ?? "")).toMatchObject({ cleared: 0 })
+    expect((await call(["conversations", "embed", "status"], never, env)).code).toBe(2)
   })
 
   it("**hands the agent a batch**, keeps its text out of the run record, and refuses it to a profile denying messages", async () => {
