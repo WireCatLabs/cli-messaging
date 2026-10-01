@@ -108,13 +108,14 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--as-file` |  | send every --file as a plain file to download, a video included |  | `messages send` |
 | `--at-time` | `<time>` | let the messenger send it later, even with this machine off: a local time like 2026-09-25T09:00, or 30m |  | `messages send` |
 | `--background` |  | run as a job that outlives this command; `store jobs show` follows it |  | `store fetch` |
+| `--batch` | `<id>` | the batch id `conversations batches next` printed |  | `conversations links add` (planned) |
 | `--before-id` | `<id>` | read what came before this message id; not with --before-time |  | `messages list` |
 | `--before-n` | `<n>` | how many messages before it |  | `messages context` |
 | `--before-time` | `<time>` | read what came before this ISO 8601 time, or 2h / 1d ago; not with --before-id |  | `messages list` |
 | `--bot` |  | the bot section of the profile's settings, rather than the personal account's |  | `config set` (planned), `config show` (planned), `config unset` (planned) |
 | `--can` | `<rights>` | what they may do, comma-separated: read, members, admins, info, pin, link, post, edit, delete. **lists the rights each messenger has — MAX has `read`, Telegram does not — so it differs on purpose (Help text rule 4)** |  | `chats admins add` |
 | `--channel` |  | a private channel instead of a group; people join it by its link |  | `chats create` |
-| `--chat` | `<chat>` | a chat, by id or name; repeat it for more. **max's `messages search` takes `<id>` only, since searching never connects to resolve a name; rule 6 says `<chat>` (e8)** |  | `chats folders create`, `messages search`, `review` |
+| `--chat` | `<chat>` | a chat, by id or name; repeat it for more. **max's `messages search` takes `<id>` only, since searching never connects to resolve a name; rule 6 says `<chat>` (e8)** |  | `chats folders create`, `conversations batches next`, `conversations batches status`, `conversations build`, `conversations links clear` (planned), `conversations list`, `messages search`, `review` |
 | `--check` |  | say whether a newer version exists, and install nothing |  | `upgrade` |
 | `--confirm-send` |  | show the owner every write the MCP server offers, in a form to approve. **max's own `mcp` is worded differently until the permission levels (P7) replace these flags there (e13)** |  | `mcp`, `mcp config` |
 | `--defaults` |  | change what every profile gets, rather than this profile |  | `config set`, `config unset` |
@@ -136,14 +137,14 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--last` | `<n>` | stop once the newest n messages are held; not with --since. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | `store fetch` |
 | `--last-name` | `<name>` | your last name |  | `account update` |
 | `--left` |  | only the chats this account has left |  | `store clear` |
-| `--limit` | `<n>` | how many: rows to show, or messages one run fetches. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | `chats list`, `chats members list` (planned), `contacts list`, `inbox`, `messages list`, `messages search`, `runs list`, `sends list`, `store fetch` |
+| `--limit` | `<n>` | how many: rows to show, or messages one run fetches. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | `chats list`, `chats members list` (planned), `contacts list`, `conversations list`, `inbox`, `messages list`, `messages search`, `runs list`, `sends list`, `store fetch` |
 | `--lines` | `<n>` | how many lines | `50` | `server logs` |
 | `--local` |  | use the model on this machine, never the messenger |  | `messages transcribe` (tg-only) |
 | `--mark-read` |  | also mark the chat read up to the newest message shown; the other person sees it |  | `messages list` |
 | `--max-actions` | `<n>` | at most this many actions in one run | `10` | `chats moderate` (planned) |
 | `--md` |  | read **bold**, _italic_, ~~struck~~ and `code` in the text; \ keeps a mark literal |  | `messages edit`, `messages send` |
 | `--members-see-link` | `<on\|off>` | members may see the invite link |  | `chats update` (max-only) |
-| `--model` | `<id>` | which downloaded speech model hears them; `models audio list` shows them. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | `inbox`, `messages list`, `messages transcribe`, `review` (planned) |
+| `--model` | `<id>` | which downloaded speech model hears them; `models audio list` shows them. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | `conversations links clear` (planned), `inbox`, `messages list`, `messages transcribe`, `review` (planned) |
 | `--multiple` |  | people may pick several answers |  | `polls create` |
 | `--new` |  | what arrived since the last check, each message once — for scheduled runs |  | `inbox` |
 | `--no-preview` |  | no preview card for a link in the text |  | `messages send` |
@@ -179,7 +180,8 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--show-phone` |  | print the whole phone number |  | `account show` |
 | `--silent` |  | deliver without a notification |  | `messages forward`, `messages send`, `polls create` |
 | `--since` | `<id-or-time>` | from this message id, an ISO 8601 time, or 2h / 1d ago; each command says its default. **becomes `--since-time` everywhere — NEED-485** |  | `chats events` (max-only), `inbox` (max-only), `review` (max-only) |
-| `--since-time` | `<time>` | from this ISO 8601 time, or 2h / 1d ago; each command says its default |  | `chats events` (planned), `chats moderate` (planned), `inbox` (planned), `review` (planned), `store export`, `store fetch` |
+| `--since-time` | `<time>` | from this ISO 8601 time, or 2h / 1d ago; each command says its default |  | `chats events` (planned), `chats moderate` (planned), `conversations list`, `inbox` (planned), `review` (planned), `store export`, `store fetch` |
+| `--size` | `<n>` | messages to answer per batch, 10–200; 50 by default |  | `conversations batches next`, `conversations batches status` |
 | `--timeout` | `<duration>` | give up on the whole command after this — 30s, 2m, 500ms |  | every command |
 | `--title` | `<title>` | the new name — of a chat or a folder |  | `chats folders update`, `chats update` |
 | `--to` | `<chat>` | the chat to forward it to: an id, or part of a chat name. **the sentence says how to name a chat the messenger's way, so it differs on purpose (Help text rule 4)** |  | `messages forward` |

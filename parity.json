@@ -64,6 +64,10 @@
     "--background": {
       "meaning": "run as a job that outlives this command; `store jobs show` follows it"
     },
+    "--batch": {
+      "value": "<id>",
+      "meaning": "the batch id `conversations batches next` printed"
+    },
     "--before-id": {
       "value": "<id>",
       "meaning": "read what came before this message id; not with --before-time"
@@ -340,6 +344,10 @@
     "--since-time": {
       "value": "<time>",
       "meaning": "from this ISO 8601 time, or 2h / 1d ago; each command says its default"
+    },
+    "--size": {
+      "value": "<n>",
+      "meaning": "messages to answer per batch, 10–200; 50 by default"
     },
     "--timeout": {
       "value": "<duration>",
@@ -803,12 +811,81 @@
       "in": "all"
     },
     "conversations": {
-      "in": [],
+      "in": "all"
+    },
+    "conversations batches": {
+      "in": "all"
+    },
+    "conversations batches next": {
+      "in": "all",
+      "options": {
+        "--chat": "all",
+        "--size": "all"
+      }
+    },
+    "conversations batches status": {
+      "in": "all",
+      "options": {
+        "--chat": "all",
+        "--size": "all"
+      }
+    },
+    "conversations build": {
+      "in": "all",
+      "options": {
+        "--chat": "all"
+      }
+    },
+    "conversations links": {
+      "in": ["max"],
       "planned": {
-        "max": "max: reads onto messages.db",
-        "tg": "max: reads onto messages.db"
+        "tg": "tg: cli-messaging 0.97.0 bump"
+      }
+    },
+    "conversations links add": {
+      "in": ["max"],
+      "planned": {
+        "tg": "tg: cli-messaging 0.97.0 bump"
       },
-      "subtree": true
+      "options": {
+        "--batch": {
+          "in": ["max"],
+          "planned": {
+            "tg": "tg: cli-messaging 0.97.0 bump"
+          }
+        }
+      }
+    },
+    "conversations links clear": {
+      "in": ["max"],
+      "planned": {
+        "tg": "tg: cli-messaging 0.97.0 bump"
+      },
+      "options": {
+        "--chat": {
+          "in": ["max"],
+          "planned": {
+            "tg": "tg: cli-messaging 0.97.0 bump"
+          }
+        },
+        "--model": {
+          "in": ["max"],
+          "planned": {
+            "tg": "tg: cli-messaging 0.97.0 bump"
+          }
+        }
+      }
+    },
+    "conversations list": {
+      "in": "all",
+      "options": {
+        "--chat": "all",
+        "--limit": "all",
+        "--since-time": "all"
+      }
+    },
+    "conversations show": {
+      "in": "all"
     },
     "doctor": {
       "in": "all",
@@ -975,11 +1052,7 @@
       }
     },
     "messages links": {
-      "in": [],
-      "planned": {
-        "max": "max: reads onto messages.db",
-        "tg": "max: reads onto messages.db"
-      }
+      "in": "all"
     },
     "messages list": {
       "in": "all",
