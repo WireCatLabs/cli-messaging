@@ -8,6 +8,9 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Added
 
+- **`BotPeople.senders()`**, optional on `BotAdapter`: who wrote the messages the adapter decoded,
+  with their handle and whether each is a bot. The bot's message commands keep them in its copy, so
+  `@username` finds a person in what the bot read.
 - **`Messenger.deletedWithoutChat`**: which stored chats a deletion that names no chat may hit. `watch`
   passes it to the store as `markDeleted(…, { among })`, the new option of the same rule: the store
   tombstones a message only when exactly one live message with that id is left in the chats the rule

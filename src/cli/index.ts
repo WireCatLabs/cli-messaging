@@ -17,6 +17,7 @@ export {
   type BotHistory,
   type BotMessaging,
   type BotMessenger,
+  type BotPeople,
   type BotSendOptions,
 } from "./bot/port.js"
 export { botFiles, botsDirectory, ChatRegistry, registryProfiles, type SeenChat } from "./bot/registry.js"

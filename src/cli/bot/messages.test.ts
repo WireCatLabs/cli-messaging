@@ -9,6 +9,7 @@ import { SendJournal } from "../../sends/journal.js"
 import { run } from "../program.js"
 import { settingsFor } from "../settings.js"
 import { botCommand } from "./command.js"
+import { botCopy } from "./copy.js"
 import type { BotAdapter, BotMessenger, BotSendOptions } from "./port.js"
 import { botFiles, ChatRegistry } from "./registry.js"
 import { BotTokenStore } from "./token.js"
@@ -73,6 +74,7 @@ const adapterFor = ({ history = true, edit = true } = {}): BotAdapter => ({
   },
   ...(history
     ? {
+        senders: () => [{ id: botId, name: "Sales", username: "sales_bot", isBot: true }],
         history: async (chat: string) => [message(chat, "1", "first"), message(chat, "2", "second")],
         message: async (chat: string, id: string) => message(chat, id, "from the messenger"),
       }
@@ -167,6 +169,10 @@ describe("bot messages list and show", () => {
     const listed = await call(["sales", "bot", "messages", "list", "Team", "--limit", "2", "--json"])
 
     expect(listed.answer.items.map((item: Message) => item.text)).toEqual(["first", "second"])
+    const handles = await botCopy("chat-bot").read((store) =>
+      store.senderHandles({ provider: "chat-bot", account: botId }, "-100"),
+    )
+    expect(handles.get("sales_bot")).toBe(botId)
     expect((await call(["sales", "bot", "messages", "show", "Team", "2", "--json"])).answer.text).toBe(
       "from the messenger",
     )
