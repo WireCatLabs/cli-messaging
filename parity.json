@@ -438,22 +438,16 @@
       "state": "both"
     },
     "chats admins": {
-      "state": "planned",
-      "by": "P2"
+      "state": "both"
     },
     "chats admins add": {
-      "state": "planned",
-      "by": "P2",
+      "state": "both",
       "options": {
-        "--can": {
-          "state": "planned",
-          "by": "P2"
-        }
+        "--can": "both"
       }
     },
     "chats admins remove": {
-      "state": "planned",
-      "by": "P2"
+      "state": "both"
     },
     "chats check": {
       "state": "max-only",
@@ -551,8 +545,7 @@
       "state": "both"
     },
     "chats members add": {
-      "state": "planned",
-      "by": "P2",
+      "state": "both",
       "options": {
         "--history": {
           "state": "max-only",
@@ -578,8 +571,7 @@
       }
     },
     "chats members remove": {
-      "state": "planned",
-      "by": "P2"
+      "state": "both"
     },
     "chats moderate": {
       "state": "planned",

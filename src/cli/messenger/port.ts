@@ -7,6 +7,8 @@ import type {
   Chat,
   ChatCard,
   ChatEvents,
+  Folder,
+  FolderChange,
   GroupCard,
   GroupChange,
   GroupMember,
@@ -226,6 +228,16 @@ export interface GroupAdmin {
   removeAdmin(chatId: Id, person: Id): Promise<void>
 }
 
+/** The owner's chat folders, which only the owner sees. */
+export interface ChatFolders {
+  /** In the order the messenger's app shows them. */
+  folders(): Promise<Folder[]>
+  createFolder(title: string, chatIds: Id[]): Promise<Folder>
+  updateFolder(folderId: string, change: FolderChange): Promise<Folder>
+  /** The chats in it stay. */
+  deleteFolder(folderId: string): Promise<void>
+}
+
 /**
  * What a messenger does for the shared commands. Each CLI implements it over its own library, and
  * nothing of that library's shape crosses it. A chat is passed as typed — a title, an id, a handle —
@@ -250,7 +262,8 @@ export interface MessengerAdapter
     Partial<ScheduledMessages>,
     Partial<GroupModeration>,
     Partial<AccountTools>,
-    Partial<GroupAdmin> {}
+    Partial<GroupAdmin>,
+    Partial<ChatFolders> {}
 
 type Method = (...args: never[]) => unknown
 
