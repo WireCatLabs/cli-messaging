@@ -13,6 +13,8 @@ Phase 3 item 6 ([plan](../../docs/storage/plans/phase-3.md)). Two checks of `lin
 - **`scale.ts`** — time and memory of the rules for one chat of N messages (phase 3 item 7): the first N
   rows of `bench/search`'s corpus as one chat, with invented replies (60%, parent within 50) and mentions
   (5%).
+- **`agent.ts`** — phase 4 item 5 by hand: a real agent links the IRC dev split through the same service
+  as `conversations batches next` and `links add`, then the result is scored against the rules alone.
 - **`holdout.ts`** — a real store: hides a share of the reply links, runs the rules, and counts how many
   come back. Prints counts per chat key only.
 
@@ -21,10 +23,37 @@ DISENTANGLE_DATA=~/data/irc-disentanglement ./run.sh test      # or dev
 DISENTANGLE_DATA=~/data/irc-disentanglement node --experimental-strip-types sweep.ts dev
 node --experimental-strip-types holdout.ts <messages.db> 0.2 200
 node --experimental-strip-types scale.ts 1000000    # corpus from bench/search/gen.ts 1000000 42
+DISENTANGLE_DATA=~/data/irc-disentanglement node --experimental-strip-types agent.ts prepare dev   # after pnpm build
 ```
 
 Needs `git`, Node 24, `python3` and `uv` (the conversation scorer runs on Python 3.10 with
 `ortools<9.4`, which still has `pywrapgraph`, and scikit-learn).
+
+## The user's agent, 2026-10-01
+
+`agent.ts` on the dev split (10 files). Each file is loaded from line 900, so 100 lines of context come
+before the 250 annotated ones. **Claude Sonnet 5.5**, one agent per file, was given
+`skills/link-conversations/SKILL.md` and the bench script in place of the CLI. Batches of 50: 7 per
+file, 3,500 answers, about 5,000 tokens of messages per file. The rules on the same input score as on
+the whole file (link F 53.7).
+
+| variant | link P / R / F | 1 − scaled VI | one-to-one | exact-match F |
+|---|---|---|---|---|
+| rules v2 | 54.8 / 52.6 / 53.7 | 85.5 | 64.0 | 13.6 |
+| **rules + the agent's answers** | **78.0 / 74.8 / 76.3** | **95.9** | **88.6** | **53.7** |
+
+What this says:
+
+- The agent adds 22.6 points of link F, and exact-match conversations go from 13.6 to 53.7 — above the
+  paper's trained model (72.3 link F, 36.2 exact-match F) and two human annotators (49.5 exact-match F).
+  The paper's numbers are on the test split, these on dev, from one run of one model: an order of size, not a ranking.
+- Six answers were refused for naming a parent outside the batch, 68–186 messages back. In all six the
+  true parent was a few messages back, so the check refused wrong answers and cost nothing. 41 of the
+  2,145 gold links (1.9%) reach further back than 50 messages; no batch can link those.
+- Five `add` calls printed nothing. One was `EAGAIN`: the script read stdin with `readFileSync(0)`, which
+  fails on a non-blocking pipe (fixed); one ran while the script was briefly moved away; the others' error
+  was hidden by `2>/dev/null` in the agents' instructions. Each batch was sent again and stored once — 350
+  rows per file, one per message.
 
 ## Scale, 2026-10-01
 
