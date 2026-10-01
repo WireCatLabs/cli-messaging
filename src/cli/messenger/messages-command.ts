@@ -133,25 +133,7 @@ export const messagesCommand = (messenger: Messenger): Command => {
       else context.renderer.result({ items: page.items, limit, hasMore: page.hasMore })
     })
 
-  annotate(messages.command("send"), { mutates: true })
-    .description("send a text message; without [text], the text is read from stdin")
-    .argument("<chat>", messenger.chatArgument)
-    .argument("[text]", "the message")
-    .option("--reply-to <message>", "answer this message, by its id in the same chat")
-    .option("--send-id <id>", "repeat a send whose outcome was unknown, without risking a second copy")
-    .option("--silent", "deliver without a notification")
-    .option("--no-preview", "no preview card for a link in the text")
-    .option("--md, --markdown", "read **bold**, _italic_, ~~struck~~ and `code` in the text; \\ keeps a mark literal")
-    .option("--file <path>", "attach a file; the text becomes its caption")
-    .option("--photo <path>", "attach a .jpg, .png or .webp as a photo; the text becomes its caption")
-    .option("--allow-any-file", "send a file even from a hidden folder, ~/.ssh or this CLI's own folders")
-    .option(
-      "--at <time>",
-      "let the messenger send it later, even with this machine off: 2026-09-25T09:00 (local time), or 30m, 2h, 1d from now",
-    )
-    .action(async function (this: Command, chat: string, text: string | undefined) {
-      await sendText(this, messenger, chat, text)
-    })
+  messages.addCommand(sendCommand(messenger))
 
   messages
     .command("show")
@@ -190,6 +172,27 @@ export const messagesCommand = (messenger: Messenger): Command => {
  * **Asked before it goes, told after, on every outcome** — the guard's journal is the only record
  * of what this profile tried to send, and it never holds the text.
  */
+export const sendCommand = (messenger: Messenger): Command =>
+  annotate(new Command("send"), { mutates: true })
+    .description("send a text message; without [text], the text is read from stdin")
+    .argument("<chat>", messenger.chatArgument)
+    .argument("[text]", "the message")
+    .option("--reply-to <message>", "answer this message, by its id in the same chat")
+    .option("--send-id <id>", "repeat a send whose outcome was unknown, without risking a second copy")
+    .option("--silent", "deliver without a notification")
+    .option("--no-preview", "no preview card for a link in the text")
+    .option("--md, --markdown", "read **bold**, _italic_, ~~struck~~ and `code` in the text; \\ keeps a mark literal")
+    .option("--file <path>", "attach a file; the text becomes its caption")
+    .option("--photo <path>", "attach a .jpg, .png or .webp as a photo; the text becomes its caption")
+    .option("--allow-any-file", "send a file even from a hidden folder, ~/.ssh or this CLI's own folders")
+    .option(
+      "--at <time>",
+      "let the messenger send it later, even with this machine off: 2026-09-25T09:00 (local time), or 30m, 2h, 1d from now",
+    )
+    .action(async function (this: Command, chat: string, text: string | undefined) {
+      await sendText(this, messenger, chat, text)
+    })
+
 const sendText = async (command: Command, messenger: Messenger, chat: string, text: string | undefined) => {
   const context = messengerContext(command, messenger)
   const {
