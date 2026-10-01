@@ -17,7 +17,10 @@ export const transcribeSubcommand = (messages: Command, messenger: Messenger): C
     .option("--model <id>", "which downloaded model; implies --local (`models audio list`)")
     .action(async function (this: Command, chat: string, messageId: string) {
       const context = messengerContext(this, messenger)
-      const choice = choose(messenger, context.settings, this.opts<{ local?: boolean; model?: string }>(), context.env)
+      const choice = {
+        ...choose(messenger, context.settings, this.opts<{ local?: boolean; model?: string }>(), context.env),
+        ...(context.recognizer ? { open: context.recognizer } : {}),
+      }
       // Before connecting: a missing model should not cost a login.
       if (choice.with === "local" && !isInstalled(choice.model, choice.directory)) {
         throw notDownloaded(messenger, choice.model)

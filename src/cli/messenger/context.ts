@@ -4,6 +4,7 @@ import type { AdminRight, Chat, GroupSettings, Id, Provider } from "../../domain
 import { guardFor, type SendGuard } from "../../sends/guard.js"
 import { keyForCommand, levelFor } from "../../sends/permissions.js"
 import { OFFLINE, type Override, type ServiceDeps, type Services, servicesFor } from "../../services/index.js"
+import type { OpenRecognizer } from "../../speech/transcribe.js"
 import { type AccountKey, type MessageStore, openStore } from "../../store/store.js"
 import type { AppIdentity } from "../app.js"
 import { type BaseContext, baseContext, environmentOf } from "../context.js"
@@ -82,6 +83,8 @@ export interface Messenger {
 export interface MessengerContext extends BaseContext {
   profile: string
   stdin: NodeJS.ReadableStream & { isTTY?: boolean }
+  /** The local speech recognizer, where a test hands one in. */
+  recognizer?: OpenRecognizer
   /** Read-only, the allow-list, the recipient list and the hourly limit — asked before every write, told after. */
   guard: SendGuard
   /**
@@ -190,6 +193,7 @@ export const messengerContext = (command: Command, messenger: Messenger): Messen
     ...base,
     profile,
     stdin: environmentOf(command).stdin ?? process.stdin,
+    ...(environmentOf(command).recognizer ? { recognizer: environmentOf(command).recognizer } : {}),
     guard,
     withMessenger: (work, options = {}) =>
       base.run(
