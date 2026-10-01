@@ -103,7 +103,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--estimate` |  | only say what the fetch would cost, from this machine's copy; nothing is sent |  | `store fetch` |
 | `--event` | `<names>` | only these events, comma-separated, as the messenger names them. **differs by one letter from `watch --events`, a switch with an unrelated meaning (e12)** |  | `chats events` |
 | `--events` |  | also print edits, deletions and reactions; every line then names its event. **differs by one letter from `chats events --event`, a filter with an unrelated meaning (e12)** |  | `watch` |
-| `--file` | `<file>` | attach a file; images go as a photo, videos as a video. Repeat it for more. **`messages send --file` takes `<path>` in both tools; rule 6 says `<file>` (e11)** |  | `messages send` |
+| `--file` | `<file>` | attach a file; images go as a photo, videos as a video. Repeat it for more |  | `messages send` |
 | `--first-name` | `<name>` | your first name |  | `account update` (planned) |
 | `--for-everyone` |  | delete for everyone in the chat, not only for you — they cannot get it back |  | `messages delete` |
 | `--format` | `<format>` | jsonl, one message per line, or a markdown transcript. **the shared `store export` takes `jsonl` or `markdown`, max's own takes `jsonl` or `md` (e4)** |  | `store export` |
@@ -120,7 +120,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--mark-read` |  | also mark the chat read up to the newest message shown; the other person sees it |  | `messages list` |
 | `--max-actions` | `<n>` | at most this many actions in one run | `10` | `chats moderate` (planned) |
 | `--max-pages` | `<n>` | at most this many pages in one run; a page is one request, and each messenger sets the default. **a page is 100 messages in tg and 30 in max — the same number fetches a different amount (e3)** |  | `store fetch` |
-| `--md` |  | read **bold**, _italic_, ~~struck~~ and `code` in the text; \ keeps a mark literal. **`messages send` and `messages edit` also accept `--markdown`, an alias the standard forbids (e5)** |  | `messages edit`, `messages send` |
+| `--md` |  | read **bold**, _italic_, ~~struck~~ and `code` in the text; \ keeps a mark literal |  | `messages edit`, `messages send` |
 | `--members-see-link` | `<on\|off>` | members may see the invite link |  | `chats update` (max-only) |
 | `--model` | `<id>` | which downloaded speech model hears them; `models audio list` shows them |  | `inbox`, `messages list`, `messages transcribe`, `review` (planned) |
 | `--multiple` |  | people may pick several answers |  | `polls create` |
@@ -140,7 +140,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--page` | `<n>` | which page, starting at 1 |  | `chats list`, `chats members list` (planned), `contacts list` |
 | `--pause` | `<duration>` | the least wait between pages, 5s or 500ms; each is up to twice that | `5s` | `messages download` (planned), `store fetch` |
 | `--personal` |  | the personal account's section of the profile's settings |  | `config set` (planned), `config unset` (planned) |
-| `--photo` | `<file>` | an image file — a profile photo in `account update`, a photo to send in `messages send`. **`messages send --photo` takes `<path>` in both tools; rule 6 says `<file>` (e11)** |  | `account update` (planned), `messages send` |
+| `--photo` | `<file>` | an image file — a profile photo in `account update`, a photo to send in `messages send` |  | `account update` (planned), `messages send` |
 | `--qr-file` | `<png>` | write the QR code to this PNG instead of drawing it, for an agent to pass on |  | `session start` (tg-only) |
 | `--quiet` |  | diagnostics off |  | every command |
 | `--record` |  | keep this run under `runs` — ids and timings, never message content |  | every command |
@@ -167,7 +167,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--until` | `<message>` | only up to this message id, inclusive; the newest by default |  | `chats mark-read` |
 | `--verbose` |  | more detail in what is shown: -v ids, -vv everything known | `0` | every command |
 | `--version` |  | print the version number |  | every command |
-| `--voice` | `<file>` | send an Ogg Opus file as a voice message, alone, with no text. **both tools spell the value `<path>`; rule 6 says `<file>` (e11)** |  | `messages send` |
+| `--voice` | `<file>` | send an Ogg Opus file as a voice message, alone, with no text |  | `messages send` |
 | `--yes` |  | go ahead without the question an ask level puts before a write |  | every command (planned), `account sessions end` (planned), `mcp` (planned), `mcp config` (planned) |
 
 <!-- end of the option catalogue -->
