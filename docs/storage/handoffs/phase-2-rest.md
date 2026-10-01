@@ -24,6 +24,11 @@ store runs on a SQLite new enough for that index. The full picture: [`../HANDOFF
 
 ### A · tg-cli and max-cli on the next cli-messaging release (SQLite plan item 5)
 
+**Done 2026-10-02:** tg-cli [#215](https://github.com/leemour/tg-cli/pull/215) and max-cli
+[#317](https://github.com/leemour/max-cli/pull/317) are on 0.99.0, and `parity.json` has the three
+`messages search` options in all CLIs ([#392](https://github.com/leemour/cli-messaging/pull/392)). The
+status below is how it stood mid-way.
+
 **Status 2026-10-02:** `ensureSqlite()` first, `engines.node` and the Node 22.16 pages are merged
 on 0.98.0, which already exports `./sqlite-runtime` — max-cli
 [#313](https://github.com/leemour/max-cli/pull/313), tg-cli
