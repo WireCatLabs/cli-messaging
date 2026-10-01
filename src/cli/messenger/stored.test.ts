@@ -22,7 +22,6 @@ const message = (id: string, text: string, chatId = "7"): Message => ({
   replyTo: null,
   replyToId: null,
   forwardedFrom: null,
-  threadId: null,
 })
 
 const opened: MessageStore[] = []
