@@ -13,7 +13,7 @@ process.env.MESSAGING_STATE_DIR = join(sandbox, "state")
 process.env.MESSAGING_CONFIG_DIR = join(sandbox, "config")
 process.env.CLI_COMMON_CACHE_DIR = join(sandbox, "cache")
 // The apps the tests define: a failure is kept as a run, and a test without its own directories would keep it at home.
-for (const prefix of ["APP", "CHAT", "TG"]) {
+for (const prefix of ["APP", "CHAT", "TG", "MAX"]) {
   process.env[`${prefix}_STATE_DIR`] = join(sandbox, prefix, "state")
   process.env[`${prefix}_CONFIG_DIR`] = join(sandbox, prefix, "config")
   process.env[`${prefix}_CACHE_DIR`] = join(sandbox, prefix, "cache")
