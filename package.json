@@ -24,6 +24,10 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
+    "./sqlite-runtime": {
+      "types": "./dist/sqlite-runtime.d.ts",
+      "default": "./dist/sqlite-runtime.js"
+    },
     "./store": {
       "types": "./dist/store/index.d.ts",
       "default": "./dist/store/index.js"
@@ -74,6 +78,7 @@
   "dependencies": {
     "@bomb.sh/tab": "0.0.22",
     "@leemour/cli-core": "0.11.0",
+    "@leemour/cli-messaging-sqlite": "1.0.0",
     "@modelcontextprotocol/server": "2.1.0",
     "@valibot/to-json-schema": "1.8.0",
     "ogg-opus-decoder": "1.7.5",

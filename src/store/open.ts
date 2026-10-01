@@ -33,6 +33,15 @@ const runtime = (): string => {
   return bun ? `Bun ${bun.version}` : `Node ${process.versions.node}`
 }
 
+/** The two kinds of full-text table the migrations create, made and dropped in `temp`. */
+export const CAPABILITY_STATEMENTS = [
+  `CREATE VIRTUAL TABLE temp.capability_words USING fts5(a, content = '', contentless_delete = 1,
+     tokenize = 'unicode61 remove_diacritics 2')`,
+  "CREATE VIRTUAL TABLE temp.capability_text USING fts5(a, tokenize = 'trigram')",
+  "DROP TABLE temp.capability_words",
+  "DROP TABLE temp.capability_text",
+]
+
 /**
  * Refuses a SQLite the store's migrations cannot run on, before anything is written. The version
  * number alone does not tell: official Node 22.0–22.15 ships SQLite 3.46–3.49 without FTS5, and
@@ -40,11 +49,7 @@ const runtime = (): string => {
  */
 export const assertStoreCapable = (database: CacheDatabase, on: string = runtime()): void => {
   try {
-    database.exec(`CREATE VIRTUAL TABLE temp.capability_words USING fts5(a, content = '', contentless_delete = 1,
-                     tokenize = 'unicode61 remove_diacritics 2')`)
-    database.exec("CREATE VIRTUAL TABLE temp.capability_text USING fts5(a, tokenize = 'trigram')")
-    database.exec("DROP TABLE temp.capability_words")
-    database.exec("DROP TABLE temp.capability_text")
+    for (const statement of CAPABILITY_STATEMENTS) database.exec(statement)
   } catch (error) {
     const version = String(database.prepare("SELECT sqlite_version() AS version").get()?.version)
     const remedy = on.startsWith("Bun")

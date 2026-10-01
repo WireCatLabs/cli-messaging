@@ -15,6 +15,11 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   Both are keyed `conversations.links`, a new permission resource, so a profile read-only on messages can
   still link; `readonly` or `deny` on it refuses. A batch id stays valid while its messages are answered,
   and not once a message inside it is added or deleted.
+- **Our own SQLite where the runtime's falls short.** Bun on macOS now always uses the SQLite of
+  `@leemour/cli-messaging-sqlite` (3.53.4) instead of the system's, which on macOS 13 is too old for
+  the message store. `ensureSqlite()` (`@leemour/cli-messaging/sqlite-runtime`), run first by a
+  command, starts it again on that SQLite when a Linux distribution's Node brings one the store
+  cannot use. On every other setup nothing changes.
 
 ## 0.95.0 — 01.10.2026
 

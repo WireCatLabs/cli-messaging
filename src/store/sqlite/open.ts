@@ -1,5 +1,4 @@
 import { type CacheDatabase, PRAGMAS } from "../driver.js"
-import type { BunDatabase } from "../drivers/bun-sqlite.js"
 import type { SQLiteAsyncDatabase } from "./drizzle/core.js"
 
 /** Drizzle over the store's connection. Synchronous inside: a transaction never awaits (plan D3). */
@@ -36,13 +35,11 @@ const openUnderNode = async (path: string): Promise<OpenedSqlite> => {
 }
 
 const openUnderBun = async (path: string): Promise<OpenedSqlite> => {
-  // A variable, not a literal: TypeScript would resolve `bun:sqlite`, whose types are not installed.
-  const runtime = "bun:sqlite"
-  const { Database } = (await import(runtime)) as { Database: new (path: string) => BunDatabase }
+  const { bunDatabase, cacheOverBunSqlite } = await import("../drivers/bun-sqlite.js")
+  const Database = await bunDatabase()
   const { drizzle } = (await import("./drizzle/bun.js")) as unknown as {
     drizzle: (config: { client: unknown }) => unknown
   }
-  const { cacheOverBunSqlite } = await import("../drivers/bun-sqlite.js")
   const client = new Database(path)
   return { database: cacheOverBunSqlite(client), orm: drizzle({ client }) as Orm }
 }
