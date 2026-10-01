@@ -1,6 +1,6 @@
 # Phase 2 — search by words: BM25, typo correction, a query language
 
-Plan, 2026-09-30. **Approved by the owner 2026-10-01; nothing is built yet.** Questions of §9 answered
+Plan, 2026-09-30. **Approved by the owner 2026-10-01. Item 1 (the migration, version 12) is built; the rest is not.** Questions of §9 answered
 2026-10-01: 1–3 A, 4 B. It follows [`../decisions.md`](../decisions.md):
 SQLite FTS5 (NEED-374 A); every word first, any word when nothing is found, BM25 ranks, trigram typo
 correction over the vocabulary (NEED-375 A); the substring index stays as the last fallback (NEED-379 A);
@@ -107,8 +107,11 @@ gets about a fifth slower.
 
 **Every runtime in use has what S1 needs.** `contentless_delete` needs SQLite 3.43 (docs say). All
 three packages require Node ≥ 22; node:sqlite in Node 22.5.0 is SQLite 3.46.0, in 22.13.0 3.47.2
-(verified, `npx node@22.5.0`); Bun 1.3 on Linux is 3.53.0. Bun on macOS may use the system's SQLite,
-which is older on older macOS (inferred, not checked) — item 1 checks it.
+(verified, `npx node@22.5.0`); Bun 1.3 on Linux is 3.53.0. **Correction 2026-10-01:** Bun on macOS uses the
+system's `libsqlite3.dylib` (docs say, Bun `nodejs-compat.mdx`): 3.43.2 on macOS 14 and 15, 3.51.0 on
+macOS 26, and the S1 table, `fts5vocab`, delete by rowid and `integrity-check` work on all three
+(measured, GitHub runners, run 36853255969). macOS 13 and older cannot be run there; their SQLite is
+probably below 3.43 (inferred), and under Bun the version-12 migration would fail on them.
 
 **The store rewrites a message's sender and normalized text on every re-save.** The update sets each
 field to `coalesce(new, old)` (`src/store/sqlite/messages.ts:57-64`, at `cbd7ce7`), `senderIdentityPk`
@@ -214,6 +217,11 @@ p95 for common words. It is reached only after every word, beginnings and correc
 
 - `search_terms(term PRIMARY KEY, length)` and `search_term_trigrams(trigram, length, term)`, both
   `WITHOUT ROWID` — the prototype's `vocab` and `vocab_tri` (`bench/search/sqlite.ts:96-111`).
+  **Correction 2026-10-01:** Drizzle cannot declare `WITHOUT ROWID` (verified, drizzle-orm 1.0.0-rc.4),
+  so both are in the `--custom` SQL of version 12, not in `schema.ts`; only `search_index_state` is.
+- The vocabulary of the index is `message_words_vocab`, an `fts5vocab` of type `col` (version 12). Every
+  read of it filters `col = 'normalized_text'`, and every word query names that column: the `scope`
+  tokens (`c12`, `s45`) are terms of the same index.
 - Whether a word is known, and in how many messages, is asked of `fts5vocab` over `message_words`
   (0.01–2 ms). A candidate from the trigram table is used only when `fts5vocab` still has it — so a
   word from a deleted message never comes back as a correction.

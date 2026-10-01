@@ -75,5 +75,25 @@ export const GENERATED: { name: string; statements: string[] }[] = [
     "statements": [
       "CREATE TABLE `transcripts` (\n\t`chat_pk` integer NOT NULL,\n\t`message_native_id` text NOT NULL,\n\t`text` text NOT NULL,\n\t`source` text NOT NULL,\n\t`heard_at` integer NOT NULL,\n\tCONSTRAINT `transcripts_pk` PRIMARY KEY(`chat_pk`, `message_native_id`),\n\tCONSTRAINT `fk_transcripts_chat_pk_chats_pk_fk` FOREIGN KEY (`chat_pk`) REFERENCES `chats`(`pk`)\n);"
     ]
+  },
+  {
+    "name": "20261001110735_version-12-search-state",
+    "statements": [
+      "CREATE TABLE `search_index_state` (\n\t`name` text PRIMARY KEY,\n\t`watermark` integer NOT NULL,\n\t`filled_through` integer NOT NULL,\n\t`terms_through` integer NOT NULL,\n\t`normalizer_version` integer NOT NULL,\n\t`built_at` integer\n);"
+    ]
+  },
+  {
+    "name": "20261001110736_version-12-word-index",
+    "statements": [
+      "-- Words of the normalized text, ranked by bm25. Contentless with delete support: an index filled in\n-- batches after its triggers exist stays consistent only this way (phase 2 plan, S1). `scope` holds\n-- `c<chat_pk>` and `s<sender_identity_pk>` so a small chat or a sender is filtered inside the index.\nCREATE VIRTUAL TABLE message_words USING fts5(\n  normalized_text, scope,\n  content = '', contentless_delete = 1,\n  tokenize = 'unicode61 remove_diacritics 2', prefix = '3');",
+      "-- 'col', not 'row': the scope tokens must never come back as a word or a correction.\nCREATE VIRTUAL TABLE message_words_vocab USING fts5vocab(message_words, 'col');",
+      "CREATE TRIGGER message_words_ai AFTER INSERT ON messages WHEN new.normalized_text <> '' BEGIN\n  INSERT INTO message_words (rowid, normalized_text, scope)\n    VALUES (new.pk, new.normalized_text, 'c' || new.chat_pk || coalesce(' s' || new.sender_identity_pk, ''));\nEND;",
+      "-- Every re-save of a message sets these columns; only a real change may touch the index.\nCREATE TRIGGER message_words_au AFTER UPDATE OF normalized_text, sender_identity_pk, chat_pk ON messages\n  WHEN old.normalized_text IS NOT new.normalized_text\n    OR old.sender_identity_pk IS NOT new.sender_identity_pk\n    OR old.chat_pk IS NOT new.chat_pk BEGIN\n  DELETE FROM message_words WHERE rowid = old.pk;\n  INSERT INTO message_words (rowid, normalized_text, scope)\n    SELECT new.pk, new.normalized_text, 'c' || new.chat_pk || coalesce(' s' || new.sender_identity_pk, '')\n    WHERE new.normalized_text <> '';\nEND;",
+      "CREATE TRIGGER message_words_ad AFTER DELETE ON messages BEGIN\n  DELETE FROM message_words WHERE rowid = old.pk;\nEND;",
+      "-- Drizzle cannot declare WITHOUT ROWID, so the vocabulary is written here and not in schema.ts.\nCREATE TABLE search_terms (\n  term   TEXT PRIMARY KEY,\n  length INTEGER NOT NULL\n) WITHOUT ROWID;",
+      "CREATE TABLE search_term_trigrams (\n  trigram TEXT NOT NULL,\n  length  INTEGER NOT NULL,\n  term    TEXT NOT NULL,\n  PRIMARY KEY (trigram, length, term)\n) WITHOUT ROWID;",
+      "-- 5,000 is BACKFILL_ON_OPEN and 1 is NORMALIZER_VERSION as of this version; a migration is frozen.\n-- A larger file is filled up to the watermark in batches, outside this transaction.\nINSERT INTO search_index_state (name, watermark, filled_through, terms_through, normalizer_version, built_at)\n  SELECT 'message_words', coalesce(max(pk), 0),\n    CASE WHEN count(*) <= 5000 THEN coalesce(max(pk), 0) ELSE 0 END,\n    0, 1,\n    CASE WHEN count(*) <= 5000 THEN CAST(unixepoch('subsec') * 1000 AS INTEGER) END\n  FROM messages;",
+      "INSERT INTO message_words (rowid, normalized_text, scope)\n  SELECT pk, normalized_text, 'c' || chat_pk || coalesce(' s' || sender_identity_pk, '')\n  FROM messages\n  WHERE normalized_text <> '' AND (SELECT count(*) FROM messages) <= 5000;"
+    ]
   }
 ]
