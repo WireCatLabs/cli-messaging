@@ -1,6 +1,7 @@
 import type { Messenger } from "../cli/messenger/context.js"
 import type { AnyTool } from "./tool.js"
 import { accountTools } from "./tools/account.js"
+import { adminTools } from "./tools/admin.js"
 import { chatsTools } from "./tools/chats.js"
 import { chatsReadTools } from "./tools/chats-read.js"
 import { contactsTools } from "./tools/contacts.js"
@@ -39,8 +40,9 @@ export const markReadTools = (messenger: Messenger): Record<string, AnyTool> => 
 /** Offered only with `--allow-delete`: the owner's own copy, never for everyone — that is the command's alone. */
 export const deleteTools = (messenger: Messenger): Record<string, AnyTool> => messageDeleteTools(messenger)
 
-/** Offered only with `--allow-send`. */
+/** The writes others see, offered by the profile's permissions like every write. */
 export const sendTools = (messenger: Messenger): Record<string, AnyTool> => ({
+  ...adminTools(messenger),
   ...messageSendTools(messenger),
   ...messageActionTools(messenger),
   ...reactionTools(messenger),

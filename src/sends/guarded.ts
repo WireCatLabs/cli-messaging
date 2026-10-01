@@ -1,9 +1,15 @@
 import { AsyncLocalStorage } from "node:async_hooks"
+import type { Id } from "../domain/models.js"
 import type { SendGuard } from "./guard.js"
 import type { SendEntry } from "./journal.js"
 import type { PermissionKey } from "./permissions.js"
 
-type Attempt = Omit<SendEntry, "at" | "profile" | "outcome"> & { operationId: string; key?: PermissionKey }
+/** `personIds` reach the guard's recipient check and never the journal. */
+type Attempt = Omit<SendEntry, "at" | "profile" | "outcome"> & {
+  operationId: string
+  key?: PermissionKey
+  personIds?: Id[]
+}
 
 /** A write's answer, with the id its journal lines and run events carry. */
 export type Operated<T> = T & { operationId: string }

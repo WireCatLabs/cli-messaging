@@ -6,6 +6,16 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- **`chats create <title> [person...]`, `chats join <link>`, `chats leave <chat>`**, and the tools
+  `chats_create`, `chats_join`, `chats_leave` (parity plan P2). Each goes through the guard as a
+  `chat` write and answers `{ operationId, chat }` (`leave`: `{ operationId, chatId }`); the people
+  added are resolved to ids first, so the recipient list and the hourly limit count them. A new port
+  group, `GroupAdmin` (`people`, `createGroup`, `join`, `leave`), and `GroupCard` / `GroupSettings`
+  in the domain; `Services.admin`. A messenger without the group refuses with "this messenger
+  cannot …".
+
 ## 0.80.0 — 01.10.2026
 
 ## 0.79.0 — 01.10.2026
