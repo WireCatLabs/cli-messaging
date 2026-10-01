@@ -74,8 +74,8 @@ export const chatsService = (deps: ServiceDeps): ChatsService => ({
     }
     const card = await (await deps.connection()).chat(chat)
     if (card.members !== null || card.kind === "channel") return card
-    const store = await storeIfOpen(deps)
-    return store ? { ...card, members: await storedMembers(store, await deps.account(), card.id) } : card
+    const held = await storeIfOpen(deps)
+    return held ? { ...card, members: await storedMembers(held.store, held.account, card.id) } : card
   },
 
   members: async (chat, window) =>

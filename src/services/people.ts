@@ -28,15 +28,12 @@ export interface PeopleService {
 
 export const peopleService = (deps: ServiceDeps): PeopleService => ({
   list: async (options) => {
-    // Connected first: a messenger whose login brings its people writes them before the store is asked.
-    const connection = deps.offline ? undefined : await deps.connection()
-    const store = deps.offline ? await deps.store() : await storeIfOpen(deps)
-    const account = store && (await deps.account())
-    if (store && account && (await store.countContacts(account)) > 0) return storedContacts(store, account, options)
-    const chats = connection
-      ? (await connection.chats({ offset: 0 })).items
-      : (await (await deps.store()).chats(await deps.account(), {})).items
-    return contactsIn(chats, options)
+    // The chats first: a messenger whose login brings its people writes them before the store is asked.
+    const chats = deps.offline ? undefined : (await (await deps.connection()).chats({ offset: 0 })).items
+    const held = deps.offline ? { store: await deps.store(), account: await deps.account() } : await storeIfOpen(deps)
+    if (held && (await held.store.countContacts(held.account)) > 0)
+      return storedContacts(held.store, held.account, options)
+    return contactsIn(chats ?? (await (await deps.store()).chats(await deps.account(), {})).items, options)
   },
 
   show: async (person) => {
@@ -48,8 +45,8 @@ export const peopleService = (deps: ServiceDeps): PeopleService => ({
     }
     const card = await (await deps.connection()).contact(person)
     if (card.chats.length > 0) return card
-    const store = await storeIfOpen(deps)
-    return store ? { ...card, chats: await sharedChats(store, await deps.account(), card.id) } : card
+    const held = await storeIfOpen(deps)
+    return held ? { ...card, chats: await sharedChats(held.store, held.account, card.id) } : card
   },
 
   lookup: async (phone) => capability(await deps.connection(), "lookup", "find a person by phone")(phone),

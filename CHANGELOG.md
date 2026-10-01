@@ -6,6 +6,14 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Fixed
+
+- **`chats show`, `contacts list` and `contacts show` no longer fail online when the store does not
+  know the profile's account yet** — before the first connection that names it. They answer with
+  what the messenger gave, as they did before they read the store.
+- **`contacts list` asks for the chats before it reads the store**, so on a messenger whose login
+  brings the people the first run lists them rather than the dialogs.
+
 ## 0.78.0 — 01.10.2026
 
 ### Added
