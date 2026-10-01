@@ -5,6 +5,7 @@ import { dirname, join } from "node:path"
 import { setTimeout as sleep } from "node:timers/promises"
 import { captureStreams } from "@leemour/cli-core"
 import { describe, expect, it, onTestFinished } from "vitest"
+import { unitScope } from "../../background/units.js"
 import { run } from "../program.js"
 import { settingsFor } from "../settings.js"
 import type { Messenger } from "./context.js"
@@ -113,8 +114,8 @@ const call = async (
   }
 }
 
-const unitPath = (env: { XDG_CONFIG_HOME: string }, profile = "default") =>
-  join(env.XDG_CONFIG_HOME, "systemd", "user", `chat-serve-${profile}.service`)
+const unitPath = (env: NodeJS.ProcessEnv & { XDG_CONFIG_HOME: string }, profile = "default") =>
+  join(env.XDG_CONFIG_HOME, "systemd", "user", `chat-serve-${unitScope(app, profile, env)}.service`)
 
 const showing = (active: string, pid = 0) => ({
   "systemctl --user show": { stdout: `LoadState=loaded\nActiveState=${active}\nSubState=running\nMainPID=${pid}\n` },
@@ -245,7 +246,11 @@ describe("server with a systemd unit", () => {
     const { answer } = await call(["install", "--json"], env, system)
 
     expect(ran).toEqual([])
-    expect(answer).toMatchObject({ unit: "chat-serve-default.service", path: unitPath(env), replaced: false })
+    expect(answer).toMatchObject({
+      unit: `chat-serve-${unitScope(app, "default", env)}.service`,
+      path: unitPath(env),
+      replaced: false,
+    })
     const unit = readFileSync(unitPath(env), "utf8")
     expect(unit).toContain('ExecStart="/opt/node" "/opt/chat/bin/chat.js" "serve"')
     expect(unit).toContain('Environment="CHAT_PROFILE=default"')
@@ -254,11 +259,25 @@ describe("server with a systemd unit", () => {
 
     expect((await call(["install"], env, system, true)).text).toBe(
       [
-        "Rewrote ~/.config/systemd/user/chat-serve-default.service — nothing started.",
+        `Rewrote ~/.config/systemd/user/chat-serve-${unitScope(app, "default", env)}.service — nothing started.`,
         "It runs: /opt/node /opt/chat/bin/chat.js serve",
-        "Start it now: chat server start · at every login too: systemctl --user enable chat-serve-default",
+        `Start it now: chat server start · at every login too: systemctl --user enable chat-serve-${unitScope(app, "default", env)}`,
       ].join("\n"),
     )
+  })
+
+  it("**a checkout's unit is not the installed tool's** — only one with no location variables keeps the bare name", async () => {
+    const { env } = setup()
+    const { CHAT_STATE_DIR: _state, MESSAGING_STORE: _store, ...installed } = env
+    const real = join(env.XDG_CONFIG_HOME, "systemd", "user", "chat-serve-default.service")
+
+    await call(["install"], installed, machine("linux").system)
+    expect(existsSync(real)).toBe(true)
+
+    const { system, ran } = machine("linux", { answers: showing("inactive") })
+    await call(["start"], env, system)
+    expect(ran.flat()).not.toContain("chat-serve-default.service")
+    expect(unitPath(env)).not.toBe(real)
   })
 
   it("one unit per profile, and a path's % and $ reach the program unexpanded", async () => {
@@ -266,7 +285,7 @@ describe("server with a systemd unit", () => {
     const system = { ...machine("linux").system, entry: ["/opt/node", "/opt/$HOME/100%/chat.js"] }
     await call(["install"], { ...env, CHAT_PROFILE: "work", CHAT_STATE_DIR: "/data/100%$HOME" }, system)
 
-    const unit = readFileSync(unitPath(env, "work"), "utf8")
+    const unit = readFileSync(unitPath({ ...env, CHAT_STATE_DIR: "/data/100%$HOME" }, "work"), "utf8")
     expect(unit).toContain('Environment="CHAT_PROFILE=work"')
     // systemd.exec(5): in Environment= "the \"$\" character has no special meaning"; in ExecStart= it does.
     expect(unit).toContain('Environment="CHAT_STATE_DIR=/data/100%%$HOME"')
@@ -284,7 +303,7 @@ describe("server with a systemd unit", () => {
     await call(["install"], env, system)
     system.run = async (argv) => {
       ran.push(argv)
-      if (argv.join(" ") === "systemctl --user start chat-serve-default.service") {
+      if (argv.join(" ") === `systemctl --user start chat-serve-${unitScope(app, "default", env)}.service`) {
         hold(env, { pid: process.pid, startedAt: "2026-09-29T10:00:00.000Z", listeningAt: "2026-09-29T10:00:02.000Z" })
       }
       const shown = argv[2] === "show" ? showing("active", process.pid)["systemctl --user show"].stdout : ""
@@ -298,9 +317,11 @@ describe("server with a systemd unit", () => {
       by: "unit",
       unit: { installed: true, active: true, detail: "active (running)" },
     })
-    expect((await call(["status"], env, system, true)).text).toContain("under systemd (chat-serve-default.service)")
+    expect((await call(["status"], env, system, true)).text).toContain(
+      `under systemd (chat-serve-${unitScope(app, "default", env)}.service)`,
+    )
     expect((await call(["stop", "--json"], env, system)).answer).toMatchObject({ stopped: true, by: "unit" })
-    expect(ran.at(-1)).toEqual(["systemctl", "--user", "stop", "chat-serve-default.service"])
+    expect(ran.at(-1)).toEqual(["systemctl", "--user", "stop", `chat-serve-${unitScope(app, "default", env)}.service`])
   })
 
   it("a failing systemctl is reported with what it said", async () => {
@@ -335,7 +356,15 @@ describe("server with a systemd unit", () => {
     await call(["install"], env, system)
 
     expect((await call(["logs", "-n", "2", "--json"], env, system)).answer).toMatchObject({ items: ["one", "two"] })
-    expect(ran.at(-1)).toEqual(["journalctl", "--user", "-u", "chat-serve-default.service", "-n", "2", "--no-pager"])
+    expect(ran.at(-1)).toEqual([
+      "journalctl",
+      "--user",
+      "-u",
+      `chat-serve-${unitScope(app, "default", env)}.service`,
+      "-n",
+      "2",
+      "--no-pager",
+    ])
   })
 })
 
@@ -343,10 +372,15 @@ describe("server with a launchd agent", () => {
   it("install writes an agent that is disabled until start enables it; stop disables it again", async () => {
     const { env } = setup()
     const { system, ran } = machine("darwin", { answers: { "launchctl print": { code: 113 } } })
-    const path = join(env.HOME, "Library", "LaunchAgents", "chat-cli.serve.default.plist")
+    const path = join(
+      env.HOME,
+      "Library",
+      "LaunchAgents",
+      `chat-cli.serve.${unitScope(app, "default", env, ".")}.plist`,
+    )
 
     expect((await call(["install", "--json"], env, system)).answer).toMatchObject({
-      unit: "chat-cli.serve.default",
+      unit: `chat-cli.serve.${unitScope(app, "default", env, ".")}`,
       path,
     })
     expect(ran).toEqual([])
@@ -357,7 +391,7 @@ describe("server with a launchd agent", () => {
 
     await call(["start"], env, system)
     expect(ran.filter((argv) => argv[1] !== "print")).toEqual([
-      ["launchctl", "enable", "gui/501/chat-cli.serve.default"],
+      ["launchctl", "enable", `gui/501/chat-cli.serve.${unitScope(app, "default", env, ".")}`],
       ["launchctl", "bootstrap", "gui/501", path],
     ])
   })
@@ -374,8 +408,8 @@ describe("server with a launchd agent", () => {
     })
     await call(["stop"], env, system)
     expect(ran.slice(-2)).toEqual([
-      ["launchctl", "bootout", "gui/501/chat-cli.serve.default"],
-      ["launchctl", "disable", "gui/501/chat-cli.serve.default"],
+      ["launchctl", "bootout", `gui/501/chat-cli.serve.${unitScope(app, "default", env, ".")}`],
+      ["launchctl", "disable", `gui/501/chat-cli.serve.${unitScope(app, "default", env, ".")}`],
     ])
   })
 })
@@ -469,7 +503,10 @@ describe("a CLI's own server process", () => {
     expect(unit).toContain('"/opt/chat/bin/chat.js" "--no-record" "serve"')
 
     await call(["install"], env, machine("darwin").system, false, options)
-    const agent = readFileSync(join(env.HOME, "Library", "LaunchAgents", "chat-cli.serve.default.plist"), "utf8")
+    const agent = readFileSync(
+      join(env.HOME, "Library", "LaunchAgents", `chat-cli.serve.${unitScope(app, "default", env, ".")}.plist`),
+      "utf8",
+    )
     expect(agent).not.toContain("KeepAlive")
   })
 })
