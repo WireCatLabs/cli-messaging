@@ -1,7 +1,9 @@
 import { CliError } from "@leemour/cli-core"
 import type { MessengerAdapter } from "../cli/messenger/port.js"
 import type { Chat, Id, Inbox, InboxChat, Message, Review, ReviewChat } from "../domain/models.js"
-import { PUSHED, type ServiceDeps } from "./deps.js"
+import type { AccountKey, MessageStore } from "../store/store.js"
+import type { ServiceDeps } from "./deps.js"
+import { readChatId } from "./messages.js"
 
 /**
  * **At most this many history reads per `inbox`**, as in max-cli: a person opening twenty chats in
@@ -28,6 +30,37 @@ export const heard = (chats: Chat[], all: boolean) =>
     ? { heard: chats, quiet: 0 }
     : { heard: chats.filter((chat) => !isQuiet(chat)), quiet: chats.filter(isQuiet).length }
 
+/** What `inbox` and `review` read: the messenger's own answers, or the local store's in store mode. */
+export type InboxReader = Pick<MessengerAdapter, "chats" | "history" | "resolve" | "admins">
+
+/**
+ * The stored chats and messages, read as the messenger would answer. Saving a message does not move
+ * its chat's last message time, so the newest stored message does — a chat that only `watch` heard
+ * from would otherwise never count as changed. The store knows no admins: questions count as
+ * answered by the owner alone.
+ */
+export const storeReader = (deps: ServiceDeps, store: MessageStore, account: AccountKey): InboxReader => ({
+  chats: async ({ limit, offset }) => {
+    const newest = new Map((await store.chatStats(account)).map((one) => [one.chatId, one.newestAt]))
+    const all = byRecency(
+      (await store.chats(account, {})).items.map((chat) => {
+        const at = newest.get(chat.id) ?? null
+        const later = at !== null && (chat.lastMessageAt === null || Date.parse(at) > Date.parse(chat.lastMessageAt))
+        return later ? { ...chat, lastMessageAt: at } : chat
+      }),
+    )
+    const end = limit === undefined ? all.length : offset + limit
+    return { items: all.slice(offset, end), hasMore: all.length > end }
+  },
+  history: (chat, window) => store.messages(account, chat, window),
+  resolve: async (reference) => {
+    const id = await readChatId(deps, reference, store, account)
+    const found = (await store.chats(account, {})).items.find((one) => one.id === id)
+    if (!found) throw new CliError("not_found", `no stored chat ${id}`)
+    return found
+  },
+})
+
 export const capped = (chats: Chat[], most: number) => ({
   read: chats.slice(0, most),
   skipped: chats.slice(most).map(({ id, title, lastMessageAt }) => ({ id, title, lastMessageAt })),
@@ -42,7 +75,7 @@ export const capped = (chats: Chat[], most: number) => ({
  * they are most of what is unread, and they would take the history reads a person's chat needs.
  */
 export const unreadIn = async (
-  adapter: MessengerAdapter,
+  adapter: InboxReader,
   { limit, all = false }: { limit: number; all?: boolean },
 ): Promise<Inbox> => {
   const page = await adapter.chats({ limit: CHAT_WINDOW, offset: 0 })
@@ -69,7 +102,7 @@ export const unreadIn = async (
  * newer waits for the next run and shows once there.
  */
 export const newIn = async (
-  adapter: MessengerAdapter,
+  adapter: InboxReader,
   { since, limit, all = false }: { since: number; limit: number; all?: boolean },
 ): Promise<Inbox> => {
   const page = await adapter.chats({ limit: CHAT_WINDOW, offset: 0 })
@@ -125,7 +158,7 @@ export interface ReviewOptions {
  * Telegram's cannot start from a time — so a chat cut short keeps its newest, and the review is
  * incomplete rather than silently missing the start.
  */
-const window = async (adapter: MessengerAdapter, chat: Id, since: number, cut: number) => {
+const window = async (adapter: InboxReader, chat: Id, since: number, cut: number) => {
   const messages: Message[] = []
   let before: string | undefined
   while (true) {
@@ -145,7 +178,7 @@ const window = async (adapter: MessengerAdapter, chat: Id, since: number, cut: n
  * message, as `inbox --new` is, so the next review starting at `until` misses nothing.
  */
 export const reviewIn = async (
-  adapter: MessengerAdapter,
+  adapter: InboxReader,
   { since, chat, all = false, unansweredAfterHours, now = Date.now() }: ReviewOptions,
 ): Promise<Review> => {
   const page = await adapter.chats({ limit: CHAT_WINDOW, offset: 0 })
@@ -232,24 +265,27 @@ export interface InboxService {
   review(options: ReviewOptions): Promise<Review>
 }
 
-export const inboxService = (deps: ServiceDeps): InboxService => ({
-  read: async ({ since, limit, all = false }) => {
-    if (deps.offline) {
-      throw new CliError(
-        "validation_error",
-        "`inbox` asks the messenger what is new; with `--offline` there is nothing new",
-      )
-    }
-    if (deps.reads === "store") throw new CliError("validation_error", `${PUSHED}; \`inbox\` does not read it yet`)
-    const connection = await deps.connection()
-    return since === undefined ? unreadIn(connection, { limit, all }) : newIn(connection, { since, limit, all })
-  },
+export const inboxService = (deps: ServiceDeps): InboxService => {
+  const reader = async (): Promise<InboxReader> =>
+    deps.reads === "store" ? storeReader(deps, await deps.store(), await deps.account()) : deps.connection()
 
-  review: async (options) => {
-    if (deps.offline) {
-      throw new CliError("validation_error", "`review` asks the messenger what changed; with `--offline` nothing did")
-    }
-    if (deps.reads === "store") throw new CliError("validation_error", `${PUSHED}; \`review\` does not read it yet`)
-    return reviewIn(await deps.connection(), options)
-  },
-})
+  return {
+    read: async ({ since, limit, all = false }) => {
+      if (deps.offline && deps.reads !== "store") {
+        throw new CliError(
+          "validation_error",
+          "`inbox` asks the messenger what is new; with `--offline` there is nothing new",
+        )
+      }
+      const from = await reader()
+      return since === undefined ? unreadIn(from, { limit, all }) : newIn(from, { since, limit, all })
+    },
+
+    review: async (options) => {
+      if (deps.offline && deps.reads !== "store") {
+        throw new CliError("validation_error", "`review` asks the messenger what changed; with `--offline` nothing did")
+      }
+      return reviewIn(await reader(), options)
+    },
+  }
+}

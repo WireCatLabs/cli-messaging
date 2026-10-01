@@ -3,7 +3,7 @@ import { listStart } from "../../cli/messenger/after.js"
 import type { Messenger } from "../../cli/messenger/context.js"
 import { capability } from "../../cli/messenger/port.js"
 import { listed } from "../../cli/paging.js"
-import { onlineDeps, servicesFor, storedDeps } from "../../services/index.js"
+import { servicesFor, storedDeps } from "../../services/index.js"
 import { heard, hearForTool, modelWith } from "../../speech/hearing.js"
 import { type AnyTool, chatOf, limit, message, nameOf, READ, snakeOf, tool } from "../tool.js"
 
@@ -41,7 +41,7 @@ export const messagesTools = (messenger: Messenger): Record<string, AnyTool> => 
         ),
       }),
       annotations: READ,
-      online: async (adapter, args, defaults) => {
+      served: async (services, args, defaults, connect) => {
         const size = args.limit ?? defaults.limit
         const start = listStart(
           {
@@ -52,13 +52,10 @@ export const messagesTools = (messenger: Messenger): Record<string, AnyTool> => 
           },
           snakeOf,
         )
-        const found = await servicesFor(onlineDeps(messenger, adapter, defaults.guard)).messages.list(args.chat, {
-          limit: size,
-          ...start,
-        })
+        const found = await services.messages.list(args.chat, { limit: size, ...start })
         const hearing = await hearForTool(
           messenger,
-          adapter,
+          connect,
           found.items,
           args.transcribe === true,
           defaults,
@@ -86,9 +83,9 @@ export const messagesTools = (messenger: Messenger): Record<string, AnyTool> => 
         after_n: v.optional(v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(100))),
       }),
       annotations: READ,
-      online: async (adapter, args, defaults) =>
+      served: async (services, args) =>
         listed(
-          await servicesFor(onlineDeps(messenger, adapter, defaults.guard)).messages.around(args.chat, args.message, {
+          await services.messages.around(args.chat, args.message, {
             before: args.before_n ?? 0,
             after: args.after_n ?? 0,
           }),

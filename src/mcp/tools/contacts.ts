@@ -19,9 +19,9 @@ export const contactsTools = (messenger: Messenger): Record<string, AnyTool> => 
         page,
       }),
       annotations: READ,
-      online: async (adapter, { search, order, ...rest }, defaults) => {
+      served: async (services, { search, order, ...rest }, defaults) => {
         const { size, number, window } = paging(rest, defaults)
-        const found = await people(adapter, defaults.guard).list({
+        const found = await services.people.list({
           order: order ?? "recent",
           ...(search ? { search } : {}),
           ...window,
@@ -47,7 +47,7 @@ export const contactsTools = (messenger: Messenger): Record<string, AnyTool> => 
         person: v.pipe(v.string(), v.minLength(1), v.description("person id, @username, or part of a name")),
       }),
       annotations: READ,
-      online: (adapter, args, { guard }) => people(adapter, guard).show(args.person),
+      served: (services, args) => services.people.show(args.person),
     }),
   }
 }

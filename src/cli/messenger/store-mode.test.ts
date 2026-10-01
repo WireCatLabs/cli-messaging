@@ -195,13 +195,70 @@ describe("a messenger whose history is read from the store", () => {
       ["store", "fetch", "Book", "--estimate"],
       ["messages", "list", "Book", "--after-id", "1"],
       ["messages", "list", "Book", "--before-time", "2h"],
-      ["inbox"],
-      ["review"],
     ]) {
       const { code, stderr } = await call(argv, env, connect, "store")
       expect(code, argv.join(" ")).toBe(2)
       expect(stderr).toContain("this messenger")
     }
+    expect(connects).toEqual([])
+  })
+
+  it("**answers `inbox` and `review` from the store as the messenger would**, never connecting", async () => {
+    const unread = { ...club, unreadCount: 2 }
+    const online = (): MessengerAdapter => ({ ...server(), chats: async () => ({ items: [unread], hasMore: false }) })
+    const env = sandbox()
+    for (const argv of [
+      ["chats", "list", "--json"],
+      ["messages", "list", "Book", "--json"],
+    ]) {
+      expect((await call(argv, env, async () => online())).code).toBe(0)
+    }
+    const { connects, connect } = pushing()
+    const since = "2026-09-27T10:00:30.000Z"
+
+    for (const argv of [
+      ["inbox", "--json"],
+      ["inbox", "--since-time", since, "--json"],
+      ["review", "--since-time", since, "--json"],
+      ["review", "--since-time", since, "--chat", "Book", "--unanswered", "1h", "--json"],
+    ]) {
+      const asked = await call(argv, env, async () => online())
+      const stored = await call(argv, env, connect, "store")
+      expect(stored.code, argv.join(" ")).toBe(0)
+      expect(JSON.parse(stored.stdout), argv.join(" ")).toEqual(JSON.parse(asked.stdout))
+    }
+    const inbox = JSON.parse((await call(["inbox", "--json"], env, connect, "store")).stdout)
+    expect(inbox.chats[0].messages.map((one: Message) => one.id)).toEqual(["2", "3"])
+    expect(connects).toEqual([])
+  })
+
+  it("**counts a chat as changed by its newest stored message**, not the chat's own older time", async () => {
+    const stale = { ...club, lastMessageAt: "2026-09-27T09:00:00.000Z" }
+    const env = sandbox()
+    const online = (): MessengerAdapter => ({ ...server(), chats: async () => ({ items: [stale], hasMore: false }) })
+    for (const argv of [
+      ["chats", "list", "--json"],
+      ["messages", "list", "Book", "--json"],
+    ]) {
+      expect((await call(argv, env, async () => online())).code).toBe(0)
+    }
+    const { connect } = pushing()
+
+    const fresh = await call(["inbox", "--since-time", "2026-09-27T09:30:00.000Z", "--json"], env, connect, "store")
+    const review = await call(["review", "--since-time", "2026-09-27T09:30:00.000Z", "--json"], env, connect, "store")
+
+    expect(JSON.parse(fresh.stdout).chats[0].messages.map((one: Message) => one.id)).toEqual(["1", "2", "3"])
+    expect(JSON.parse(review.stdout)).toMatchObject({ until: "2026-09-27T10:02:00.000Z", complete: true })
+  })
+
+  it("**answers not_found for `review --chat` with nothing stored**", async () => {
+    const env = await filled()
+    const { connects, connect } = pushing()
+
+    const { code, stderr } = await call(["review", "--chat", "Zoe", "--json"], env, connect, "store")
+
+    expect(code).not.toBe(0)
+    expect(stderr).toContain("nothing stored for this chat yet — keep `chat serve` running")
     expect(connects).toEqual([])
   })
 
