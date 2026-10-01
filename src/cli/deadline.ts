@@ -1,4 +1,5 @@
 import { CliError } from "@leemour/cli-core"
+import { type WriteInFlight, writesInFlight } from "../sends/guarded.js"
 
 /** Anything holding something that would keep the process alive — a messenger connection is one. */
 export interface Closeable {
@@ -33,9 +34,20 @@ export const withDeadline = async <T>(
 
   let timer: NodeJS.Timeout | undefined
   let timedOut: CliError | undefined
+  const writes = new Set<WriteInFlight>()
   const expired = new Promise<never>((_, reject) => {
     timer = setTimeout(() => {
-      timedOut = new CliError("timeout", `the command did not finish within ${ms}ms — \`--timeout\` ended it`)
+      const cut = [...writes]
+      for (const write of cut) write.cut()
+      timedOut =
+        cut.length > 0
+          ? new CliError(
+              "outcome_unknown",
+              `\`--timeout\` ended the command after ${ms}ms with ${cut.length === 1 ? "a write" : `${cut.length} writes`} ` +
+                "in flight; the messenger may or may not have carried it out — check before repeating it",
+              { operationIds: cut.map((write) => write.operationId), retryable: false },
+            )
+          : new CliError("timeout", `the command did not finish within ${ms}ms — \`--timeout\` ended it`)
       // Sockets first, then the message: the rejection is what the person reads, and the closing
       // is what lets the process actually end once they have read it.
       void Promise.allSettled(closeables.map((closeable) => closeable.close())).then(() => reject(timedOut))
@@ -43,7 +55,7 @@ export const withDeadline = async <T>(
   })
 
   try {
-    return await Promise.race([body(), expired])
+    return await Promise.race([writesInFlight.run(writes, body), expired])
   } catch (error) {
     // Closing rejects the body's own request, and that rejection arrives first.
     throw timedOut ?? error
