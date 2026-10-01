@@ -65,10 +65,11 @@ export type PermissionKey = string
 export const DEFAULT_PERMISSIONS: Readonly<Record<PermissionKey, Level>> = {
   "messages.delete": "ask",
   "account.sessions.end": "ask",
+  "bot.messages.delete": "ask",
 }
 
 /** The resources at the top of the command tree, which `readOnly` and `allow` turn read-only as a whole. */
-export const RESOURCES = ["messages", "reactions", "polls", "topics", "chats", "contacts", "account"] as const
+export const RESOURCES = ["messages", "reactions", "polls", "topics", "chats", "contacts", "account", "bot"] as const
 
 const OLD_WORDS: Record<Permission, PermissionKey[]> = {
   send: ["messages.send", "polls.create"],
@@ -99,15 +100,31 @@ const OLD_WORDS: Record<Permission, PermissionKey[]> = {
 export const keyOfWord = (word: Permission): PermissionKey => OLD_WORDS[word][0] as PermissionKey
 
 /** `readOnly` and `allow` as levels, so a file written before `permissions` keeps meaning what it meant. */
+/**
+ * A bot's old words meant its own writes: `profile` was its command menu, and `read` was taking
+ * updates, which every level but `deny` allows now.
+ */
+const botKeysOf = (word: Permission): PermissionKey[] => {
+  if (word === "profile") return ["bot.commands"]
+  if (word === "read") return []
+  return OLD_WORDS[word].map((key) => `bot.${key}`)
+}
+
+/** `bot` translates a bot's `readOnly` and `allow`, which only ever covered the bot. */
 export const fromOldSettings = (
   readOnly: boolean,
   allow: readonly Permission[] | undefined,
+  { bot = false }: { bot?: boolean } = {},
 ): Record<PermissionKey, Level> => {
   if (!readOnly && allow === undefined) return {}
-  const levels: Record<PermissionKey, Level> = Object.fromEntries(RESOURCES.map((resource) => [resource, "readonly"]))
+  const levels: Record<PermissionKey, Level> = bot
+    ? { bot: "readonly" }
+    : Object.fromEntries(RESOURCES.filter((resource) => resource !== "bot").map((resource) => [resource, "readonly"]))
   if (readOnly) return levels
   // A deletion needed its flag whatever `allow` said, so it keeps asking.
-  for (const word of allow ?? []) for (const key of OLD_WORDS[word]) levels[key] = DEFAULT_PERMISSIONS[key] ?? "allow"
+  for (const word of allow ?? []) {
+    for (const key of bot ? botKeysOf(word) : OLD_WORDS[word]) levels[key] = DEFAULT_PERMISSIONS[key] ?? "allow"
+  }
   return levels
 }
 
@@ -196,6 +213,9 @@ const HOUSEKEEPING = new Set([
   "mcp",
 ])
 
+/** Under `bot`: its token, its names, its lists and its MCP server. */
+const BOT_HOUSEKEEPING = new Set(["auth", "list", "sends", "recipients", "mcp"])
+
 const STORE_MAINTENANCE = new Set(["info", "check", "migrate", "backup", "restore"])
 
 /** Commands outside `messages` that print what people wrote, so `deny messages` reaches them too. */
@@ -207,6 +227,11 @@ const SHOW_MESSAGES = new Set(["inbox", "review", "watch", "serve", "store"])
  */
 export const keyForCommand = (path: readonly string[]): PermissionKey | null | undefined => {
   const [top, next] = path
+  if (top === "bot") {
+    if (next === undefined || BOT_HOUSEKEEPING.has(next)) return null
+    const inner = keyForCommand(path.slice(1))
+    return `bot.${inner ?? path.slice(1).join(".")}`
+  }
   if (top === undefined || HOUSEKEEPING.has(top)) return null
   if (top === "store" && next !== undefined && STORE_MAINTENANCE.has(next)) return null
   if (SHOW_MESSAGES.has(top)) return "messages"

@@ -17,8 +17,12 @@ export const configCommand = (app: AppIdentity, config: Configuration): Command 
   command
     .command("show")
     .description("the profile, the profiles that exist, and each setting with where it came from")
+    .option("--bot", "the settings a bot command on this profile gets, rather than the personal account's")
     .action(function (this: Command) {
-      const { settings, renderer, env } = baseContext(this, config.resolveSettings)
+      const bot = this.opts<{ bot?: boolean }>().bot === true
+      const { settings, renderer, env } = baseContext(this, (flags, options) =>
+        config.resolveSettings(flags, { ...options, ...(bot ? { kind: "bot" } : {}) }),
+      )
       const overridden = pathsAreOverridden({ appName: app.appName, prefix: app.envPrefix, env })
 
       renderer.result({
@@ -28,7 +32,9 @@ export const configCommand = (app: AppIdentity, config: Configuration): Command 
         configFile: settings.configPath,
         configFound: settings.configFound,
         pathsOverridden: overridden,
-        settings: [...config.allSettings, "commandTimeoutMs"].map((setting) => sourced(settings, setting)),
+        settings: [...config.allSettings, "commandTimeoutMs"]
+          .filter((setting) => bot || setting !== "readOtherBots")
+          .map((setting) => sourced(settings, setting)),
       })
 
       if (overridden) {
@@ -43,6 +49,8 @@ export const configCommand = (app: AppIdentity, config: Configuration): Command 
     const sub = annotate(command.command(action), { mutates: true })
       .argument("<setting>", `one of: ${config.allSettings.join(", ")}`)
       .option("--defaults", "change what every profile gets, rather than this profile")
+      .option("--personal", "only for personal accounts — the personal section of the file")
+      .option("--bot", "only for bots — the bot section of the file")
     if (action === "set")
       sub
         .argument("<value>", "a number, true or false, or for allow a list like send,reaction")
@@ -51,7 +59,15 @@ export const configCommand = (app: AppIdentity, config: Configuration): Command 
 
     sub.action(function (this: Command, setting: string, given: unknown) {
       const { settings, renderer, env } = baseContext(this, config.resolveSettings)
-      const defaults = this.opts<{ defaults?: boolean }>().defaults === true
+      const {
+        defaults: everyone,
+        personal,
+        bot,
+      } = this.opts<{ defaults?: boolean; personal?: boolean; bot?: boolean }>()
+      const defaults = everyone === true
+      if (personal && bot)
+        throw new CliError("validation_error", "--personal and --bot name different sections; use one")
+      const kind = bot ? "bot" : personal ? "personal" : undefined
       const lock = envName(app, "PROFILE_LOCK")
       if (defaults && env[lock]) {
         // The defaults are every other profile's settings too.
@@ -64,10 +80,11 @@ export const configCommand = (app: AppIdentity, config: Configuration): Command 
         profile: defaults ? undefined : settings.profile,
         setting,
         value: action === "set" ? String(given) : undefined,
+        kind,
       })
       renderer.result({
         configFile: settings.configPath,
-        scope: defaults ? "defaults" : `profiles.${settings.profile}`,
+        scope: scopeOf(kind, defaults ? undefined : settings.profile),
         setting,
         value: saved,
       })
@@ -76,6 +93,9 @@ export const configCommand = (app: AppIdentity, config: Configuration): Command 
 
   return command
 }
+
+const scopeOf = (kind: string | undefined, profile: string | undefined): string =>
+  [kind, profile === undefined ? "defaults" : `profiles.${profile}`].filter(Boolean).join(".")
 
 /** A shared setting from what was resolved; a messenger's own from the file, where it lives. */
 const sourced = (settings: Settings, setting: string) => {
