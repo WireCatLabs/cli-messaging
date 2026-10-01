@@ -2,6 +2,7 @@ import type { Command } from "commander"
 import type { Provider } from "../../domain/models.js"
 import type { AppIdentity } from "../app.js"
 import type { MessengerCore } from "../messenger/port.js"
+import type { EventSink } from "../runs/events.js"
 import type { GlobalFlags, ResolveOptions, Settings } from "../settings.js"
 import type { ChatRegistry } from "./registry.js"
 import type { BotTokenStore } from "./token.js"
@@ -12,6 +13,11 @@ import type { BotTokenStore } from "./token.js"
  */
 export type BotAdapter = Pick<MessengerCore, "me" | "close">
 
+export interface BotConnectOptions {
+  stop?: AbortSignal
+  events?: EventSink
+}
+
 /** What one messenger CLI hands the shared bot commands. */
 export interface BotMessenger {
   app: AppIdentity
@@ -21,8 +27,11 @@ export interface BotMessenger {
   name?: string
   /** Called with `kind: "bot"`. */
   resolveSettings: (flags: GlobalFlags, options?: ResolveOptions) => Settings
-  /** A client for this token; `stop` ends a command that runs until told to, and its request in flight. */
-  connect: (command: Command, token: string, stop?: AbortSignal) => Promise<BotAdapter>
+  /**
+   * A client for this token. `stop` ends a command that runs until told to, and its request in
+   * flight; `events` is the run's, for each request's trace line and record.
+   */
+  connect: (command: Command, token: string, options?: BotConnectOptions) => Promise<BotAdapter>
   /** Where the token lives; the shared `BotTokenStore` when unset. A CLI's tests put their own here. */
   tokenStore?: (command: Command, profile: string) => BotTokenStore
   /** The chats the bot has seen; the shared `ChatRegistry` when unset. */

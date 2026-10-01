@@ -6,6 +6,12 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Changed — may break callers
+
+- **`BotMessenger.connect(command, token, { stop, events })`** (P8): the bot client gets the run's
+  events, so `bot auth show --trace` prints each request and the run record counts it. The third
+  argument was `stop` alone; no CLI implements it yet.
+
 ## 0.93.0 — 01.10.2026
 
 ### Added

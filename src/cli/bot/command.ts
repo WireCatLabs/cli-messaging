@@ -37,10 +37,10 @@ const authCommand = (bot: BotMessenger, tokenVariable: string): Command => {
     )
     .action(async function (this: Command) {
       const context = online(botContext(this, bot), this)
-      await context.run(async () => {
+      await context.run(async (events) => {
         const token = (await context.readSecret("Bot token: ")).trim()
         if (!token) throw new CliError("validation_error", "no token given")
-        const account = await (await context.connect(token)).me()
+        const account = await (await context.connect(token, { events })).me()
         const stored = context.tokens.write(token)
         context.registry.touch()
         if (context.env[tokenVariable]) {
@@ -61,9 +61,9 @@ const authCommand = (bot: BotMessenger, tokenVariable: string): Command => {
     .description("where this profile's bot token comes from, and which bot it is")
     .action(async function (this: Command) {
       const context = online(botContext(this, bot), this)
-      await context.run(async () => {
+      await context.run(async (events) => {
         const source = context.tokens.read()?.source
-        const account = await (await context.authenticated()).me()
+        const account = await (await context.authenticated({ events })).me()
         context.renderer.result({
           profile: context.profile,
           source,
@@ -96,7 +96,7 @@ const listCommand = (bot: BotMessenger, tokenVariable: string): Command =>
       const context = botContext(this, bot)
       const check = this.opts<{ check?: boolean }>().check === true
       if (check) online(context, this)
-      await context.run(async () => {
+      await context.run(async (events) => {
         const names = [
           ...new Set(["default", ...context.settings.configuredProfiles, ...registryProfiles(bot.app, context.env)]),
         ].sort()
@@ -112,7 +112,7 @@ const listCommand = (bot: BotMessenger, tokenVariable: string): Command =>
           const row: Record<string, unknown> = { name, token: stored.source }
           if (check) {
             try {
-              const account = await (await context.connect(stored.token)).me()
+              const account = await (await context.connect(stored.token, { events })).me()
               Object.assign(row, { bot: account.username ?? account.name, id: account.id })
             } catch (error) {
               row.problem = (error as { code?: string }).code ?? "failed"
