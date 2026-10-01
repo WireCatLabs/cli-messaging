@@ -1,8 +1,8 @@
-import { CliError } from "@leemour/cli-core"
 import { Command } from "commander"
 import type { MessageHit, Review } from "../../domain/models.js"
 import { renderMessages } from "../../render/messages.js"
 import { CHAT_WINDOW } from "../../services/inbox.js"
+import { parseDuration } from "../settings.js"
 import { type Messenger, messengerContext } from "./context.js"
 import {
   heardItems,
@@ -20,15 +20,9 @@ export const REVIEW_DAYS = 3
 export const UNANSWERED_HOURS = 24
 export const reviewStart = (now = Date.now()): number => now - REVIEW_DAYS * 86_400_000
 
-/** `--unanswered` with no value is `true`; a value is hours, a fraction allowed. */
-export const unansweredHours = (value: unknown, flag = "--unanswered"): number => {
-  if (value === true) return UNANSWERED_HOURS
-  const hours = Number(value)
-  if (!Number.isFinite(hours) || hours < 0) {
-    throw new CliError("validation_error", `${flag} takes hours, a number 0 or more — got ${String(value)}`)
-  }
-  return hours
-}
+/** `--unanswered` with no value is `true`. */
+export const unansweredHours = (value: unknown, flag = "--unanswered"): number =>
+  value === true ? UNANSWERED_HOURS : parseDuration(String(value), flag) / 3_600_000
 
 /**
  * **Everything said since a point, both sides, in every chat that changed** — the reading half of a
@@ -44,8 +38,8 @@ export const reviewCommand = (messenger: Messenger): Command =>
     )
     .option("--chat <chat>", `only this chat: ${messenger.chatArgument}`)
     .option(
-      "--unanswered [hours]",
-      `only questions to you or a group's admins that nobody answered, asked at least this long ago; ${UNANSWERED_HOURS} hours if not given`,
+      "--unanswered [duration]",
+      `only questions to you or a group's admins that nobody answered, asked at least this long ago — 4h, 1d; ${UNANSWERED_HOURS}h if not given`,
     )
     .option("--all", "muted and archived chats too — left out unless they mention you or reply to you")
     .option(...TRANSCRIBE_OPTION)

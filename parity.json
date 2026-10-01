@@ -125,7 +125,7 @@
     },
     "--idle": {
       "value": "<duration>",
-      "meaning": "stop after this long with nobody using it — 15m, 1h is 60m"
+      "meaning": "stop after this long with nobody using it — 15m, 1h"
     },
     "--json": {
       "meaning": "machine-readable output: one JSON value on stdout, nothing else"
@@ -320,9 +320,10 @@
       "meaning": "hear voice messages not heard yet, on this machine; slow, the model must be downloaded"
     },
     "--unanswered": {
-      "value": "[hours]",
-      "meaning": "only questions to you or a group's admins that nobody answered, asked at least this long ago; 24 hours if not given",
-      "note": "takes bare hours, not a duration like `2h` (e2)"
+      "value": "[duration]",
+      "meaning": "only questions to you or a group's admins that nobody answered, asked at least this long ago — 4h, 1d",
+      "note": "max's own `review` still takes bare hours until T6 moves it (e2)",
+      "default": "24h"
     },
     "--unread": {
       "meaning": "only chats with unread messages"

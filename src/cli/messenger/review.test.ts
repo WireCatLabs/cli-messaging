@@ -219,7 +219,7 @@ describe("review, the command", () => {
   })
 
   it("--chat and --unanswered narrow it to one chat's open questions; three days back without --since", async () => {
-    const { code, answer } = await review(["--chat", "Valencia", "--unanswered", "12"])
+    const { code, answer } = await review(["--chat", "Valencia", "--unanswered", "12h"])
 
     expect(code).toBe(0)
     expect(Date.parse(answer.until) - Date.parse(answer.since)).toBeGreaterThan(2 * 86_400_000)
