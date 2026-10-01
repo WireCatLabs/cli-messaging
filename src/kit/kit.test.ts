@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 import type { MessengerAdapter } from "../cli/messenger/port.js"
+import type { Chat } from "../domain/models.js"
 import { type ContractCase, contractCases, contractSeed, digitIds, fakeAdapter, type Seed, wordIds } from "./index.js"
 
 const runAll = (cases: ContractCase[]) => {
@@ -22,6 +23,9 @@ describe("the fake adapter keeps every promise of the port", () => {
   })
   describe("with whole-number ids, paging by id", () => {
     runAll(contractCases({ connect: fakeAdapter, ids: digitIds }))
+  })
+  describe("pushing its history", () => {
+    runAll(contractCases({ connect: (seed) => fakeAdapter(seed, { feed: true }), ids: wordIds, orderBy: "time" }))
   })
 })
 
@@ -100,6 +104,32 @@ describe("the contract cases catch an adapter that breaks a promise", () => {
       watch: (_, signal) => new Promise<void>((resolve) => signal.addEventListener("abort", () => resolve())),
     }))
     await expect(cases.find((one) => one.name.startsWith("watch"))?.run()).rejects.toThrow(/never called onReady/)
+  })
+
+  it("a feed that pushes a chat the seed does not have, or never ends", async () => {
+    const stranger = broken(() => ({
+      feed: async (onBatch) => {
+        onBatch({ chats: [{ ...contractSeed().chats[0], id: "chat-elsewhere" } as Chat] })
+      },
+    }))
+    await expect(stranger.find((one) => one.name.startsWith("feed"))?.run()).rejects.toThrow(/not in the seed/)
+    const endless = broken(() => ({
+      feed: (onBatch) => {
+        onBatch({})
+        return new Promise<void>(() => {})
+      },
+    }))
+    await expect(endless.find((one) => one.name.startsWith("feed"))?.run()).rejects.toThrow(/did not end/)
+  })
+
+  it("skips the feed case for an adapter that does not push its history", async () => {
+    expect(
+      await contractCases({ connect: fakeAdapter })
+        .find((one) => one.name.startsWith("feed"))
+        ?.run(),
+    ).toEqual({
+      skipped: "the adapter has no feed",
+    })
   })
 
   it("skips a case for an optional method the adapter lacks", async () => {

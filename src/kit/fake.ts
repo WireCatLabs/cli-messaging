@@ -7,6 +7,7 @@ import type {
   ContactBook,
   GroupAdmin,
   GroupModeration,
+  HistoryBatch,
   LiveUpdates,
   MessageEditing,
   MessageMedia,
@@ -14,6 +15,7 @@ import type {
   MessagePolls,
   MessageReactions,
   MessengerCore,
+  PushedHistory,
   ReadState,
   ScheduledMessages,
   Sent,
@@ -53,7 +55,8 @@ export type FakeAdapter = MessengerCore &
   GroupAdmin &
   ChatFolders &
   ContactBook &
-  AccountEditing
+  AccountEditing &
+  Partial<PushedHistory>
 
 const NO_SETTINGS: GroupSettings = {
   allCanPin: null,
@@ -84,8 +87,11 @@ const missing = (what: string): CliError => new CliError("not_found", `the fake 
  * A messenger in memory, over `seed` (`contractSeed()` when not given), copied so a test may keep
  * using its seed. It keeps the port's promises — oldest first, `hasMore`, a repeated send id leaving
  * one message, `CliError` codes — and passes `contractCases`. Writes change only its own copy.
+ *
+ * With `{ feed: true }` it also pushes its history, as a messenger with `history: "store"` does:
+ * the chats and people in one batch, then each chat's messages in a batch of their own.
  */
-export const fakeAdapter = (seed: Seed = contractSeed()): FakeAdapter => {
+export const fakeAdapter = (seed: Seed = contractSeed(), options: { feed?: boolean } = {}): FakeAdapter => {
   const state = structuredClone(seed)
   let account: Account | null = state.account
   const sends = new Map<string, Sent>()
@@ -342,6 +348,20 @@ export const fakeAdapter = (seed: Seed = contractSeed()): FakeAdapter => {
       await new Promise<void>((resolve) => signal.addEventListener("abort", () => resolve(), { once: true }))
       listeners.delete(onEvent)
     },
+
+    ...(options.feed
+      ? {
+          feed: async (onBatch: (batch: HistoryBatch) => void, signal: AbortSignal) => {
+            if (signal.aborted) return
+            onBatch({ chats: structuredClone(state.chats), people: state.people.map(asMember) })
+            for (const chat of state.chats) {
+              const messages = messagesOf(chat.id)
+              if (messages.length > 0) onBatch({ messages: structuredClone(messages) })
+            }
+            await new Promise<void>((resolve) => signal.addEventListener("abort", () => resolve(), { once: true }))
+          },
+        }
+      : {}),
 
     download: async (reference, messageId) => {
       const message = messageOf(chatOf(reference).id, messageId)

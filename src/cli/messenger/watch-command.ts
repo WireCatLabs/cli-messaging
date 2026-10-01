@@ -48,7 +48,8 @@ export const watchCommand = (messenger: Messenger): Command =>
 
 /**
  * Listens until Ctrl-C, SIGTERM, `--timeout` or — with `pipe` — a reader that has gone away.
- * Each ends it normally. Tests hand in `signal` instead of process-wide handlers.
+ * Each ends it normally. Tests hand in `signal` instead of process-wide handlers. An adapter with
+ * `feed` runs it beside `watch`, so what the messenger pushes reaches the store (`stored`).
  */
 export const listenUntilStopped = async (
   command: Command,
@@ -82,7 +83,15 @@ export const listenUntilStopped = async (
         if (!connection.watch) {
           throw new CliError("validation_error", `${messenger.app.command} cannot listen for new messages`)
         }
-        await connection.watch(onEvent, stop.signal, onReady)
+        // A feed that ends early is fine — the push is done; one that fails ends the listening too.
+        const failing = (error: unknown) => {
+          stop.abort()
+          throw error
+        }
+        await Promise.all([
+          connection.watch(onEvent, stop.signal, onReady).catch(failing),
+          connection.feed?.(() => {}, stop.signal).catch(failing),
+        ])
       },
       { listen: true, ...(catchUp ? { catchUp } : {}) },
     )

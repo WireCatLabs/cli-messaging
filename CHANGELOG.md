@@ -32,6 +32,12 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   the time of the newest stored message. `store fetch`, `--estimate`, `inbox`, `review`,
   `--after-*` and `--before-time` refuse in this mode for now. The MCP chat resource reads the store
   too. `ServiceDeps.reads` carries the mode. Unset, nothing changes.
+- **`PushedHistory`**, a new optional group on `MessengerAdapter`, for a messenger with
+  `history: "store"`: `feed(onBatch, signal)` hands over chats, people and past messages as the
+  messenger pushes them, as `HistoryBatch` objects. `serve` and `watch` run it beside `watch` and save
+  each batch to the store — chats without marking the others as left, messages as history. A batch
+  the store cannot take is a warning; a `feed` that fails stops the command. `fakeAdapter(seed,
+  { feed: true })` pushes the seed, and `contractCases` has a case for `feed`, skipped without it.
 - **`Capabilities` is deprecated**: nothing reads it. A later breaking release removes it.
 - **`Messenger.deletedWithoutChat`**: which stored chats a deletion that names no chat may hit. `watch`
   passes it to the store as `markDeleted(…, { among })`, the new option of the same rule: the store

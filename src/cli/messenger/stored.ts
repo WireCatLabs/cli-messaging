@@ -1,7 +1,7 @@
-import type { MessageEvent } from "../../domain/models.js"
+import type { Message, MessageEvent } from "../../domain/models.js"
 import type { AccountKey, DeletionScope, MessageStore } from "../../store/store.js"
 import type { EventSink } from "../runs/events.js"
-import { capability, type MessengerAdapter, throughWrapper } from "./port.js"
+import { capability, type HistoryBatch, type MessengerAdapter, throughWrapper } from "./port.js"
 
 export interface Saving {
   account: AccountKey
@@ -107,6 +107,23 @@ export const stored = (
             ) ?? Promise.resolve(),
         }
       : {}),
+    ...(messenger.feed
+      ? {
+          feed: (onBatch, signal) => {
+            // In order: a batch's messages may belong to chats only an earlier batch named.
+            let previous: Promise<void> = Promise.resolve()
+            return (
+              messenger.feed?.((batch) => {
+                const saving = previous.then(() => attempt("history.feed", (opened) => fill(opened, account, batch)))
+                previous = saving
+                pending?.add(saving)
+                void saving.finally(() => pending?.delete(saving))
+                onBatch(batch)
+              }, signal) ?? Promise.resolve()
+            )
+          },
+        }
+      : {}),
     ...(messenger.edit
       ? {
           edit: async (chatId, messageId, text, options) => {
@@ -146,6 +163,19 @@ export const stored = (
       return sent
     },
   })
+}
+
+/**
+ * A pushed batch as the store keeps it. No `markChatsLeft`: a push names some chats, never all of them.
+ * No `seenAt`: a pushed snapshot may be older than a deletion this store already holds.
+ */
+const fill = async (store: MessageStore, account: AccountKey, batch: HistoryBatch): Promise<void> => {
+  if (batch.chats?.length) await store.saveChats(account, batch.chats)
+  if (batch.people?.length) await store.savePeople(account, batch.people)
+  const byChat = new Map<string, Message[]>()
+  for (const message of batch.messages ?? [])
+    byChat.set(message.chatId, [...(byChat.get(message.chatId) ?? []), message])
+  for (const [chatId, messages] of byChat) await store.saveMessages(account, chatId, messages, { via: "history" })
 }
 
 /** Each change as the store keeps it: a message or an edit upserted, a deletion a tombstone, reactions replaced. */
