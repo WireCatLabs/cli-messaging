@@ -13,6 +13,13 @@ export interface Unit {
   /** What the unit runs, and the variables it runs with. */
   command: string[]
   environment: Record<string, string>
+  /** What the server does, for `systemctl status` and the agent list. */
+  purpose?: string
+  /**
+   * Exit codes that must not start it again — a refused login retried every 30 s is a login per
+   * retry. launchd cannot leave out single codes, so with any of these its agent does not restart.
+   */
+  noRestartOn?: number[]
 }
 
 /**
@@ -68,13 +75,14 @@ export const systemd = (app: AppIdentity, system: ServerSystem, env: NodeJS.Proc
     text: (unit) =>
       [
         "[Unit]",
-        `Description=${app.command} serve — keep the local message archive current (profile ${unit.profile})`,
+        `Description=${app.command} serve — ${unit.purpose ?? "keep the local message archive current"} (profile ${unit.profile})`,
         "",
         "[Service]",
         `ExecStart=${unit.command.map((word) => systemdQuote(word, { command: true })).join(" ")}`,
         ...Object.entries(unit.environment).map(([name, value]) => `Environment=${systemdQuote(`${name}=${value}`)}`),
         "Restart=on-failure",
         "RestartSec=30",
+        ...(unit.noRestartOn?.length ? [`RestartPreventExitStatus=${unit.noRestartOn.join(" ")}`] : []),
         "",
         "[Install]",
         "WantedBy=default.target",
@@ -152,7 +160,7 @@ export const launchd = (app: AppIdentity, system: ServerSystem, env: NodeJS.Proc
         // launchd loads every agent here at login; disabled, it waits for `server start` to enable it.
         "  <key>Disabled</key><true/>",
         "  <key>RunAtLoad</key><true/>",
-        "  <key>KeepAlive</key><dict><key>SuccessfulExit</key><false/></dict>",
+        ...(unit.noRestartOn?.length ? [] : ["  <key>KeepAlive</key><dict><key>SuccessfulExit</key><false/></dict>"]),
         "  <key>ThrottleInterval</key><integer>30</integer>",
         `  <key>StandardOutPath</key><string>${xml(unit.logPath ?? "")}</string>`,
         `  <key>StandardErrorPath</key><string>${xml(unit.logPath ?? "")}</string>`,

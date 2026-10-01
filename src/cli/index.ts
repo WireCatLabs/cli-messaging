@@ -69,7 +69,13 @@ export type {
 export { reactionsCommand } from "./messenger/reactions-command.js"
 export { reviewCommand } from "./messenger/review.js"
 export { serveCommand, servingProfiles } from "./messenger/serve-command.js"
-export { type ServerSystem, serverCommand } from "./messenger/server-command.js"
+export {
+  type Running,
+  type ServerOptions,
+  type ServerProcess,
+  type ServerSystem,
+  serverCommand,
+} from "./messenger/server-command.js"
 export { topicsCommand } from "./messenger/topics-command.js"
 export { watchCommand } from "./messenger/watch-command.js"
 export { listed, renderList, renderPage, window, withPaging } from "./paging.js"

@@ -6,6 +6,19 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- **`serverCommand(messenger, options)`** — a CLI whose server is not tg's lock file says how it is
+  found, started and stopped (`options.process`: `probe`, `launch`, `stop`), where it logs, what a
+  unit runs (`serveArgv`), `--idle` on `start`/`restart` (`idle: true`), and the unit's purpose and
+  the exit codes that must not restart it (`unit.noRestartOn`: systemd's `RestartPreventExitStatus`;
+  launchd then does not restart at all). `start` takes the place of a server a command started.
+
+### Changed — may break callers
+
+- **`server` says "connected", not "listening"**, in its lines and errors; `server start` also
+  answers `startedAt` and `log`; `server stop` answers `by` as `status` does.
+
 ## 0.89.0 — 01.10.2026
 
 ### Added
