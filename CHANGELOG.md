@@ -6,6 +6,10 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.99.0 — 02.10.2026
+
+Released early: tg-cli and max-cli cannot move to the breaking release, and three sessions wait on it; the owner asked to release now
+
 ### Added
 
 - **`searchStore(store, account, query)`** (`./services`): `messages search` over a store, for a caller
