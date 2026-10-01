@@ -120,7 +120,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--mark-read` |  | also mark the chat read up to the newest message shown; the other person sees it |  | `messages list` (planned) |
 | `--max-actions` | `<n>` | at most this many actions in one run | `10` | `chats check` (planned) |
 | `--max-pages` | `<n>` | at most this many pages of 100 messages in one run | `10` | `store fetch` |
-| `--md` |  | read **bold**, _italic_, ~~struck~~ and `code` in the text; \ keeps a mark literal |  | `messages edit`, `messages send` |
+| `--md` |  | read **bold**, _italic_, ~~struck~~ and `code` in the text; \ keeps a mark literal |  | `messages edit` (planned), `messages send` |
 | `--members-see-link` | `<on\|off>` | members may see the invite link |  | `chats update` (planned) |
 | `--model` | `<id>` | which downloaded speech model hears them; `models audio list` shows them |  | `inbox` (planned), `messages list` (planned), `messages transcribe` |
 | `--multiple` |  | people may pick several answers |  | `polls create` |
@@ -151,7 +151,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--revote` |  | people may change their vote |  | `polls create` (planned) |
 | `--run` | `<id>` | the run the report is about; the newest failed one if not given |  | `doctor report create` |
 | `--search` | `<text>` | only chats whose name contains this; at least 3 characters |  | `chats list`, `contacts list` |
-| `--send-id` | `<id>` | reuse the id of an earlier send whose outcome is unknown; the messenger drops the duplicate. **max spells the value `<n>`** |  | `messages forward`, `messages send`, `polls create` |
+| `--send-id` | `<id>` | reuse the id of an earlier send whose outcome is unknown; the messenger drops the duplicate. **max spells the value `<n>`** |  | `messages forward` (planned), `messages send`, `polls create` |
 | `--serve` |  | start `serve` in the background if it is not running (the default) |  | every command (planned) |
 | `--show-phone` |  | print the whole phone number |  | `account show` |
 | `--silent` |  | deliver without a notification |  | `messages forward`, `messages send`, `polls create` |
@@ -327,3 +327,8 @@ pull request that introduces it adds its row as `planned`, here, before any code
 whether the command exists or not, so the code pull request in either CLI lands on the manifest
 already released. The flip to `both` goes into the next release of this package with whatever else
 it carries; a row is never the only reason for a release.
+
+**A row says `both` only when both tools have it on their own `main`.** A shared command that one CLI
+does not use yet — max keeps its own `messages edit` until it moves onto the shared one — keeps that
+row `planned`, by the workstream that moves it. Flipped early, the row fails that CLI's
+`parity:check` on its next upgrade of this package and blocks the upgrade.

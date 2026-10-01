@@ -862,13 +862,19 @@
     "messages edit": {
       "state": "both",
       "options": {
-        "--md": "both"
+        "--md": {
+          "state": "planned",
+          "by": "T6"
+        }
       }
     },
     "messages forward": {
       "state": "both",
       "options": {
-        "--send-id": "both",
+        "--send-id": {
+          "state": "planned",
+          "by": "T6"
+        },
         "--silent": "both",
         "--to": "both"
       }
