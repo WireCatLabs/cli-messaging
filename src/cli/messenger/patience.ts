@@ -8,7 +8,9 @@ export const stopOnSignal = (command: Command): { signal: AbortSignal; release: 
   const end = () => stop.abort()
   given?.addEventListener("abort", end, { once: true })
   const signals = given ? [] : (["SIGINT", "SIGTERM"] as const)
-  for (const name of signals) process.once(name, end)
+  // `on`, not `once`: mtcute closes its storage on the signal and then sends it again, which with no
+  // listener left kills the process before its `finally` — a serve's lock outlived it.
+  for (const name of signals) process.on(name, end)
   return {
     signal: stop.signal,
     release: () => {

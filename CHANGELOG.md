@@ -28,6 +28,13 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   events, so `bot auth show --trace` prints each request and the run record counts it. The third
   argument was `stop` alone; no CLI implements it yet.
 
+
+### Fixed
+
+- **`serve` and `watch` stopped by SIGTERM or Ctrl-C finish normally.** Telegram's library closes its
+  storage on the signal and then sends it again; with the command's handler already spent, the second
+  one ended the process at once — `serve` left its lock (`server status` said `stale`) and printed no
+  result. The handler now stays until the run is over.
 ## 0.93.0 — 01.10.2026
 
 ### Added
