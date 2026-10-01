@@ -1,9 +1,12 @@
+import { writeFileSync } from "node:fs"
+import { resolve } from "node:path"
 import { CliError } from "@leemour/cli-core"
 import { Command } from "commander"
 import { toMarkdown } from "../../render/markdown.js"
 import { renderMessages } from "../../render/messages.js"
 import { fetchCommand, jobsCommand } from "./backfill-command.js"
 import { type Messenger, messengerContext } from "./context.js"
+import { momentOf } from "./inbox.js"
 import { storeMaintenanceCommands } from "./store-maintenance-command.js"
 
 /** `store`: the local store of messages — what it holds, filling it, reading it out, and looking after the file. */
@@ -42,16 +45,37 @@ const exportCommand = (messenger: Messenger): Command =>
     .description("a chat's stored messages as JSON lines, oldest first; never asks the messenger")
     .argument("<chat>", messenger.chatArgument)
     .option("--format <format>", "markdown: a transcript with a heading per day, replies and forwards quoted")
+    .option("--since <time>", "only from this ISO 8601 time, or 30m / 2h / 1d ago, on")
+    .option("--output <file>", "write JSON lines, or the transcript, to this new file, readable only by you")
     .action(async function (this: Command, chat: string) {
-      const { format } = this.opts<{ format?: string }>()
+      const { format, since, output } = this.opts<{ format?: string; since?: string; output?: string }>()
       if (format !== undefined && format !== "markdown") {
         throw new CliError(
           "validation_error",
           `--format knows markdown, not "${format}" — --json and --jsonl give data`,
         )
       }
+      const from = since === undefined ? undefined : new Date(momentOf(since)).toISOString()
       const context = messengerContext(this, messenger)
-      const { title, messages } = await context.withServices((services) => services.archive.export(chat))
+      const { title, messages } = await context.withServices((services) =>
+        services.archive.export(chat, from === undefined ? {} : { since: from }),
+      )
+      if (output !== undefined) {
+        const path = resolve(output)
+        const body =
+          format === "markdown"
+            ? toMarkdown(title, messages)
+            : messages.map((message) => `${JSON.stringify(message)}\n`).join("")
+        try {
+          writeFileSync(path, body, { flag: "wx", mode: 0o600 })
+        } catch (error) {
+          if ((error as NodeJS.ErrnoException).code === "EEXIST")
+            throw new CliError("validation_error", `${path} exists — an export never overwrites a file`)
+          throw error
+        }
+        context.renderer.result({ path, format: format ?? "jsonl", count: messages.length })
+        return
+      }
       if (format === "markdown") context.streams.data(toMarkdown(title, messages).replace(/\n$/, ""))
       else if (context.format === "json") context.renderer.result({ items: messages })
       else if (context.format === "jsonl") for (const message of messages) context.streams.data(JSON.stringify(message))

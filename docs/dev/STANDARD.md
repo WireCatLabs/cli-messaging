@@ -135,7 +135,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--only-owner-edits-info` | `<on\|off>` | only the owner may change the name and photo |  | `chats update` (planned) |
 | `--order` | `<recent\|name>` | newest conversation first, or alphabetical |  | `contacts list` |
 | `--others` |  | every session but this one |  | `account sessions end` (planned) |
-| `--output` |  | where to write: a directory for `messages download`, a file for `store export`. **clash: `<dir>` in one command, `<file>` in another** | `.` | `doctor report create`, `messages download`, `store export` (planned) |
+| `--output` |  | where to write: a directory for `messages download`, a file for `store export`. **clash: `<dir>` in one command, `<file>` in another** | `.` | `doctor report create`, `messages download`, `store export` |
 | `--page` | `<n>` | which page, starting at 1 |  | `chats list`, `chats members list` (planned), `contacts list` |
 | `--pause` | `<duration>` | the least wait between pages, 5s or 500ms; each is up to twice that | `5s` | `messages download` (planned), `store fetch` |
 | `--personal` |  | the personal account's section of the profile's settings |  | `config set` (planned), `config unset` (planned) |
@@ -154,7 +154,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--serve` |  | start `serve` in the background if it is not running (the default) |  | every command (planned) |
 | `--show-phone` |  | print the whole phone number |  | `account show` (planned) |
 | `--silent` |  | deliver without a notification |  | `messages forward`, `messages send`, `polls create` |
-| `--since` | `<id-or-time>` | from this message id, an ISO 8601 time, or 2h / 1d ago; each command says its default. **tg's `chats events`, `store fetch`, `inbox` and `review` spell the value `<time>` though they take the same** |  | `chats check` (planned), `chats events`, `inbox`, `review`, `store export` (planned), `store fetch` |
+| `--since` | `<id-or-time>` | from this message id, an ISO 8601 time, or 2h / 1d ago; each command says its default. **the shared `chats events`, `store fetch`, `store export`, `inbox` and `review` take `<time>` only, never a message id: a Telegram id is a counter within one chat** |  | `chats check` (planned), `chats events`, `inbox`, `review`, `store export`, `store fetch` |
 | `--stop` |  | stop this profile's server — the same as `server stop` |  | `serve` (planned) |
 | `--timeout` | `<duration>` | give up on the whole command after this — 30s, 2m, 500ms |  | every command |
 | `--title` | `<title>` | the new name — of a chat or a folder |  | `chats folders update` (planned), `chats update` (planned) |

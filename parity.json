@@ -302,7 +302,7 @@
     "--since": {
       "value": "<id-or-time>",
       "meaning": "from this message id, an ISO 8601 time, or 2h / 1d ago; each command says its default",
-      "note": "tg's `chats events`, `store fetch`, `inbox` and `review` spell the value `<time>` though they take the same"
+      "note": "the shared `chats events`, `store fetch`, `store export`, `inbox` and `review` take `<time>` only, never a message id: a Telegram id is a counter within one chat"
     },
     "--stop": {
       "meaning": "stop this profile's server — the same as `server stop`"
@@ -1144,14 +1144,8 @@
       "state": "both",
       "options": {
         "--format": "both",
-        "--output": {
-          "state": "planned",
-          "by": "P1"
-        },
-        "--since": {
-          "state": "planned",
-          "by": "P1"
-        }
+        "--output": "both",
+        "--since": "both"
       }
     },
     "store fetch": {

@@ -37,7 +37,8 @@ export interface ArchiveService {
   /** The stretches held of a chat already found by id. */
   held(chatId: Id): Promise<Range[]>
   /** One chat's stored messages, oldest first, and its title. */
-  export(chat: string): Promise<{ title: string; messages: Message[] }>
+  /** `since` is an ISO time: only what was sent then or later. */
+  export(chat: string, options?: { since?: string }): Promise<{ title: string; messages: Message[] }>
   /** What a full fetch would still cost, from the store alone. */
   estimate(chat: string, options: { max: number; pauseMs: number }): Promise<Estimate & { chat: Id }>
   /**
@@ -66,11 +67,12 @@ export const archiveService = (deps: ServiceDeps): ArchiveService => {
 
     held: async (chatId) => (await deps.store()).ranges(await deps.account(), chatId),
 
-    export: async (chat) => {
+    export: async (chat, { since } = {}) => {
       const { store, account, chatId } = await found(chat)
+      const window = { limit: Number.MAX_SAFE_INTEGER, ...(since === undefined ? {} : { since }) }
       return {
         title: (await store.chatStats(account, chatId))[0]?.title ?? chatId,
-        messages: (await store.messages(account, chatId, { limit: Number.MAX_SAFE_INTEGER })).items,
+        messages: (await store.messages(account, chatId, window)).items,
       }
     },
 
