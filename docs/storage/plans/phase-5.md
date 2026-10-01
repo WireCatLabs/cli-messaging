@@ -154,7 +154,8 @@ with no model the query uses is named on stderr, not searched silently. One-shot
 ~1–1.5 s, then the scan (§3).
 
 **E8 · Store version 14, additive.** The two tables of E2. `min_compatible` stays 6. Taken in the lanes
-plan first. **Addition 2026-10-02 (owner, NEED-521 A):** the same migration rebuilds `messages_fts` so the
+plan first. **Addition 2026-10-02 (owner, NEED-521 A):** ~~the same migration rebuilds~~ **Correction 2026-10-02:** version
+14 shipped in 0.99.0 without it; the next store version that phase 5 (or anything else) needs rebuilds `messages_fts` so the
 substring index ignores accents, and the substring query is normalized to match
 ([ruling](../decisions.md#ruled)). It touches phase 2's substring step in `src/store/`, which this
 plan otherwise leaves alone; on a large store the rebuild is
