@@ -77,7 +77,8 @@ guessable from the others.
     `bot chats members remove`, `bot chats moderate`, `bot contacts show`, `bot watch`. What only a
     bot has: `bot auth`, `bot list`, `bot callbacks`, `bot commands` (the menu people see on `/`),
     `bot webhooks`, `bot uploads`, `bot api`. A bot's send is never repeated — neither Bot API makes
-    a repeat safe — so `bot messages send` has no `--send-id`.
+    a repeat safe — so `bot messages send` has no `--send-id`. A bot command may add an option only a
+    bot has, as `bot watch --types` does.
 
 `bot api` is exempt: its names mirror each messenger's official Bot API operations.
 

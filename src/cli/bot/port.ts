@@ -1,6 +1,6 @@
 import type { Command } from "commander"
 import type { Markup } from "../../domain/markdown.js"
-import type { AdminRight, Chat, Id, Member, Message, Provider } from "../../domain/models.js"
+import type { AdminRight, Chat, Id, Member, Message, MessageEvent, Provider } from "../../domain/models.js"
 import type { Upload } from "../../sends/upload.js"
 import type { PersonFacts } from "../../store/index.js"
 import type { AppIdentity } from "../app.js"
@@ -84,6 +84,82 @@ export interface BotChatMembers {
   removeMember(chat: BotChatRef, person: Id, options: { block: boolean }): Promise<void>
 }
 
+/** One command in the menu people see when they type `/`. */
+export interface BotMenuEntry {
+  /** Without the `/`. */
+  name: string
+  description: string | null
+}
+
+/** The bot's command menu. */
+export interface BotMenu {
+  menu(): Promise<BotMenuEntry[]>
+  /** Replaces the whole menu; an empty list clears it. */
+  setMenu(entries: BotMenuEntry[]): Promise<void>
+}
+
+/** Where a pressed button was, as `bot watch` kept it. */
+export interface BotPress {
+  chatId: Id
+  messageId: Id
+}
+
+/** Answering a button someone pressed under the bot's message. */
+export interface BotCallbacks {
+  /**
+   * `notification` is shown to the person who pressed; `text` replaces the message the button was
+   * on. `press` is where that was, when `bot watch` kept it — a messenger that cannot find the
+   * message from the callback id alone needs it for `text`.
+   */
+  answer(callbackId: string, answer: { notification?: string; text?: string; press?: BotPress }): Promise<void>
+}
+
+/** An address the messenger pushes this bot's updates to. */
+export interface BotWebhook {
+  url: string
+  /** The update types it gets, in the messenger's words; `null` is all of them. */
+  types: string[] | null
+}
+
+/** While a webhook is set, the messenger gives polling nothing. */
+export interface BotWebhooks {
+  webhooks(): Promise<BotWebhook[]>
+  setWebhook(url: string, options: { types?: string[]; secret?: string }): Promise<void>
+  deleteWebhook(url: string): Promise<void>
+}
+
+/** What happened in the bot's chats besides messages: a button, people coming and going, a start. */
+export type BotNotice =
+  | {
+      event: "callback"
+      callbackId: string
+      chatId: Id | null
+      messageId: Id | null
+      from: Member | null
+      data: string
+    }
+  | { event: "joined" | "left" | "added" | "removed"; chatId: Id; person: Member | null }
+  | { event: "started"; chatId: Id | null; person: Member | null }
+  /** An update this adapter does not decode, under the messenger's own type name. */
+  | { event: "other"; type: string; chatId: Id | null }
+
+/** One update as `bot watch` prints it. */
+export type BotEvent = MessageEvent | BotNotice
+
+export interface BotUpdatesPage {
+  events: BotEvent[]
+  /** Where the next call starts; the same as given when nothing came. Opaque to the caller. */
+  cursor: string | undefined
+}
+
+/** Taking the bot's updates by polling. A call waits up to `waitSeconds` for the first one. */
+export interface BotUpdates {
+  updates(
+    cursor: string | undefined,
+    options: { types?: string[]; waitSeconds: number; signal: AbortSignal },
+  ): Promise<BotUpdatesPage>
+}
+
 /**
  * The part of the personal core a bot can do, and the groups its Bot API has. A bot never gets
  * `chats` from this type: neither Bot API lists a bot's chats.
@@ -95,6 +171,10 @@ export type BotAdapter = Pick<MessengerCore, "me" | "close"> &
   Partial<BotChatTools> &
   Partial<BotChatAdmins> &
   Partial<BotChatMembers> &
+  Partial<BotMenu> &
+  Partial<BotCallbacks> &
+  Partial<BotWebhooks> &
+  Partial<BotUpdates> &
   Partial<BotPeople>
 
 export interface BotConnectOptions {
@@ -111,6 +191,13 @@ export interface BotMessenger {
   name?: string
   /** The admin rights `--can` offers; every shared one when unset. */
   adminRights?: readonly AdminRight[]
+  /** Whether `bot webhooks set --add` keeps the other addresses; a messenger with one address has no `--add`. */
+  manyWebhooks?: boolean
+  /**
+   * Called by `bot watch` with each batch, after the copy took it and before it is printed. A throw
+   * holds the cursor, so the batch comes again — keep what it writes safe to write twice.
+   */
+  keepUpdates?: (command: Command, profile: string, events: readonly BotEvent[]) => void
   /** Called with `kind: "bot"`. */
   resolveSettings: (flags: GlobalFlags, options?: ResolveOptions) => Settings
   /**

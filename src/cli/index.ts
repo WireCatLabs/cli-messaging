@@ -13,20 +13,31 @@ export {
   BOT_ACTIONS,
   type BotAction,
   type BotAdapter,
+  type BotCallbacks,
   type BotChatAdmin,
   type BotChatAdmins,
   type BotChatMembers,
   type BotChatRef,
   type BotChatTools,
   type BotConnectOptions,
+  type BotEvent,
   type BotHistory,
+  type BotMenu,
+  type BotMenuEntry,
   type BotMessaging,
   type BotMessenger,
+  type BotNotice,
   type BotPeople,
+  type BotPress,
   type BotSendOptions,
+  type BotUpdates,
+  type BotUpdatesPage,
+  type BotWebhook,
+  type BotWebhooks,
 } from "./bot/port.js"
 export { botFiles, botsDirectory, ChatRegistry, registryProfiles, type SeenChat } from "./bot/registry.js"
 export { BotTokenStore, type BotTokenStoreOptions } from "./bot/token.js"
+export { PressLog, UpdatesCursor } from "./bot/updates.js"
 export { CONTRACT, commandsCommand } from "./commands-command.js"
 export { configCommand } from "./config-command.js"
 export {

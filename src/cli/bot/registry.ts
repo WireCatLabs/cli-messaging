@@ -20,6 +20,8 @@ export const botFiles = (app: AppIdentity, profile: string, env: NodeJS.ProcessE
     registry: join(directory, `${profile}.json`),
     recipients: join(directory, "recipients", `${profile}.json`),
     journal: join(directory, "sends", `${profile}.jsonl`),
+    updates: join(directory, "updates", `${profile}.json`),
+    presses: join(directory, "presses", `${profile}.json`),
   }
 }
 
