@@ -1,6 +1,6 @@
 # Phase 2 — search by words: BM25, typo correction, a query language
 
-Plan, 2026-09-30. **Not approved yet; nothing is built.** It follows [`../decisions.md`](../decisions.md):
+Plan, 2026-09-30. **Not approved yet; nothing is built.** Questions 1–3 of §9 answered A on 2026-10-01. It follows [`../decisions.md`](../decisions.md):
 SQLite FTS5 (NEED-374 A); every word first, any word when nothing is found, BM25 ranks, trigram typo
 correction over the vocabulary (NEED-375 A); the substring index stays as the last fallback (NEED-379 A);
 a typed query language and completeness per chat (NEED-400 A). Requirements §3, §6–§11, §22–§23, §26,
@@ -150,7 +150,7 @@ the index in the same transaction. Otherwise it records a watermark — the high
 the index is filled up to it in batches of `pk`, one `BEGIN IMMEDIATE` each, `INSERT OR REPLACE`, like
 `backfillNormalized`. Batches of 5,000 rows (about 60 ms, inferred from measurement 2) keep other
 processes' wait far under the 5 s `busy_timeout`. Rows written after the migration are indexed by the
-triggers. Who runs the batches is **NEED-453**: `store migrate` always; and, recommended, `messages
+triggers. Who runs the batches (**NEED-453 A**, owner 2026-10-01): `store migrate` always, and `messages
 search` too, up to ~200 ms per call — **both fills in that slice**: the normalization backfill first,
 then the word index. Otherwise a max user with more than 5,000 messages waiting for normalization never
 reaches "ready", since only `store migrate` normalizes them and max has none.
@@ -234,8 +234,8 @@ ranking is one function in `src/search/` until a second ranker exists.
 names the chat (`chat:` or `--chat`): then it is searched, with a note. Nothing sets the flag yet; the
 command that does is not part of phase 2.
 
-**S10 · Completeness per chat** — how it is worked out is **NEED-455**. Recommended: three facts per
-chat the answer draws from:
+**S10 · Completeness per chat** — three facts per chat the answer draws from (**NEED-455 A**, owner
+2026-10-01):
 
 - **up to date**: the newest message held against the chat's newest by the chat list (as `store check`);
 - **gaps**: more than one stretch in `sync_ranges`;
@@ -248,7 +248,7 @@ output gets one stderr line for the chats that are not complete.
 **S11 · Commands.** `messages search` keeps its name and gains `--newest`, `--context <n>` (default 2 in
 pretty output, 0 otherwise) and the operators; `--chat` stays and means `chat:`; both given and
 different is an error. `--regex` stays as it is, without operators. Requirements §23's
-`search status|rebuild` maps onto the `store` group — **NEED-454**: `store info` shows the index state
+`search status|rebuild` maps onto the `store` group (**NEED-454 A**, owner 2026-10-01): `store info` shows the index state
 (filled to, ready, vocabulary refreshed to, `last_indexed_at`), `store check` runs FTS5
 `integrity-check` on `message_words` too, `store reindex` rebuilds it.
 
@@ -386,12 +386,12 @@ look-alike words item 8 adds, no gate until the owner sets one. A Drizzle-and-as
 
 ## 9. Questions for the owner
 
-1. **NEED-453** — who finishes the word index on a large file while max has no `store` commands:
+1. ~~**NEED-453**~~ — answered 2026-10-01: **A**. Who finishes the word index on a large file while max has no `store` commands:
    `messages search` a slice at a time plus `tg store migrate` (**A**, recommended), or only
    `tg store migrate` (**B**)?
-2. **NEED-454** — requirements §23's `search status|rebuild`: into the `store` group as
+2. ~~**NEED-454**~~ — answered 2026-10-01: **A**. Requirements §23's `search status|rebuild`: into the `store` group as
    `store info` / `store check` / `store reindex` (**A**, recommended), or a `search` group (**B**)?
-3. **NEED-455** — completeness per chat: from three facts, recording "reached the start" in
+3. ~~**NEED-455**~~ — answered 2026-10-01: **A**. Completeness per chat: from three facts, recording "reached the start" in
    `sync_state` (**A**, recommended), or from `sync_ranges` alone as the ruling is worded (**B**)?
 4. **NEED-456** — one search across accounts and messengers (requirements §7, `--source`): after
    phase 2, as its own item (**A**, recommended — the store's filter already takes several accounts;
