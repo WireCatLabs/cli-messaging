@@ -306,6 +306,10 @@ many), `--allow-any-file` (which files).
    differs from the alternatives, logging in, using it, for scripts and agents (skill, MCP, JSON),
    security, documentation, development, roadmap, licence, contributing.
 3. **A change to a command changes its page in both tools** in the same docs pull request.
+4. **A page names only options that exist or are planned.** Each CLI's CI runs
+   `<cli> commands --json | cli-messaging-parity <cli> --pages README.md docs/*.md`: an option a user
+   page puts on a command must be on that command, or be in this manifest for it and not only for the
+   other tool. A change that drops an option fails until its pages stop naming it.
 
 ## The parity manifest
 
