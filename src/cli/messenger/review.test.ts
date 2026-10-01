@@ -4,11 +4,12 @@ import { join } from "node:path"
 import { captureStreams } from "@leemour/cli-core"
 import { describe, expect, it } from "vitest"
 import type { Chat, Message } from "../../domain/models.js"
+import { reviewIn, unanswered } from "../../services/inbox.js"
 import { run } from "../program.js"
 import { settingsFor } from "../settings.js"
 import type { Messenger } from "./context.js"
 import type { MessengerAdapter } from "./port.js"
-import { reviewCommand, reviewIn, unanswered } from "./review.js"
+import { reviewCommand } from "./review.js"
 
 const app = {
   command: "chat",

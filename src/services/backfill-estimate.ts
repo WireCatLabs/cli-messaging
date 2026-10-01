@@ -1,4 +1,4 @@
-import type { Range } from "../../store/store.js"
+import type { Range } from "../store/store.js"
 
 export interface Estimate {
   /** Messages the store holds of the chat. */

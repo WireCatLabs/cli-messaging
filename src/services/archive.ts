@@ -1,12 +1,12 @@
 import { setTimeout as sleep } from "node:timers/promises"
 import { CliError } from "@leemour/cli-core"
-import { type Estimate, estimateBackfill } from "../cli/messenger/backfill-estimate.js"
 import type { Fetching } from "../cli/messenger/context.js"
-import { patiently } from "../cli/messenger/patience.js"
 import type { Id, Message } from "../domain/models.js"
 import type { AccountKey, ChatStats, MessageStore, Range } from "../store/store.js"
+import { type Estimate, estimateBackfill } from "./backfill-estimate.js"
 import type { ServiceDeps } from "./deps.js"
 import { storedChatId } from "./messages.js"
+import { patiently } from "./patience.js"
 
 /** The most messages a provider hands out per history request — Telegram's cap. */
 export const PAGE = 100

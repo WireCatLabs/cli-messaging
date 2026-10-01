@@ -1,8 +1,224 @@
 import { CliError } from "@leemour/cli-core"
-import { newIn, unreadIn } from "../cli/messenger/inbox.js"
-import { type ReviewOptions, reviewIn } from "../cli/messenger/review.js"
-import type { Inbox, Review } from "../domain/models.js"
+import type { MessengerAdapter } from "../cli/messenger/port.js"
+import type { Chat, Id, Inbox, InboxChat, Message, Review, ReviewChat } from "../domain/models.js"
 import type { ServiceDeps } from "./deps.js"
+
+/**
+ * **At most this many history reads per `inbox`**, as in max-cli: a person opening twenty chats in
+ * one burst is already more than a person does, and the rest are named in `skipped`, not lost.
+ */
+export const INBOX_CHATS = 20
+/** The newest dialogs looked at. Walking every dialog hit FLOOD_WAIT once (tg handoff §4.14). */
+export const CHAT_WINDOW = 100
+
+export const byRecency = (chats: Chat[]): Chat[] =>
+  chats.toSorted((a, b) => Date.parse(b.lastMessageAt ?? "") - Date.parse(a.lastMessageAt ?? ""))
+
+/** Muted or archived, and nothing in it mentions the owner or replies to them. */
+const isQuiet = (chat: Chat): boolean =>
+  (chat.muted === true || chat.archived === true) && (chat.unreadMentions ?? 0) === 0
+
+export const heard = (chats: Chat[], all: boolean) =>
+  all
+    ? { heard: chats, quiet: 0 }
+    : { heard: chats.filter((chat) => !isQuiet(chat)), quiet: chats.filter(isQuiet).length }
+
+export const capped = (chats: Chat[], most: number) => ({
+  read: chats.slice(0, most),
+  skipped: chats.slice(most).map(({ id, title, lastMessageAt }) => ({ id, title, lastMessageAt })),
+})
+
+/**
+ * Other people's unread messages, as the messenger counts them: for each chat with a count, its
+ * newest that many. Reading marks nothing read, so the same messages come back until they are read
+ * somewhere else — right for a person, wrong for a scheduled run, which is what `since` is for.
+ *
+ * Muted and archived chats are left out unless `all`, or they mention the owner: on a busy account
+ * they are most of what is unread, and they would take the history reads a person's chat needs.
+ */
+export const unreadIn = async (
+  adapter: MessengerAdapter,
+  { limit, all = false }: { limit: number; all?: boolean },
+): Promise<Inbox> => {
+  const page = await adapter.chats({ limit: CHAT_WINDOW, offset: 0 })
+  const { heard: waiting, quiet } = heard(byRecency(page.items.filter((chat) => (chat.unreadCount ?? 0) > 0)), all)
+  const { read, skipped } = capped(waiting, INBOX_CHATS)
+
+  const chats: InboxChat[] = []
+  for (const { id, title, kind, unreadCount } of read) {
+    const count = unreadCount ?? 0
+    const wanted = Math.min(count, limit)
+    const { items } = await adapter.history(id, { limit: wanted })
+    const theirs = items.slice(-wanted).filter((message) => !message.outgoing)
+    if (theirs.length > 0) chats.push({ id, title, kind, unreadCount, messages: theirs, more: count > limit })
+  }
+  return { mode: "unread", chats, skipped, partial: page.hasMore, quiet }
+}
+
+/**
+ * Other people's messages in every chat that changed after `since`.
+ *
+ * **Everything is cut at the chat list's newest message**, the snapshot taken first. The reads run
+ * one after another, so a chat read early can gain a message while a later one is read; had the
+ * saved point followed the later read, that message would sit behind it and never show. Anything
+ * newer waits for the next run and shows once there.
+ */
+export const newIn = async (
+  adapter: MessengerAdapter,
+  { since, limit, all = false }: { since: number; limit: number; all?: boolean },
+): Promise<Inbox> => {
+  const page = await adapter.chats({ limit: CHAT_WINDOW, offset: 0 })
+  const changed = byRecency(
+    page.items.filter((chat) => chat.lastMessageAt !== null && Date.parse(chat.lastMessageAt) > since),
+  )
+  const cut = Math.max(since, ...changed.map((chat) => Date.parse(chat.lastMessageAt ?? "")))
+  const { heard: wanted, quiet } = heard(changed, all)
+  const { read, skipped } = capped(wanted, INBOX_CHATS)
+
+  let until = since
+  const chats: InboxChat[] = []
+  for (const { id, title, kind, unreadCount } of read) {
+    const { items } = await adapter.history(id, { limit })
+    const fresh = items.filter((message) => {
+      const time = Date.parse(message.timestamp)
+      return time > since && time <= cut
+    })
+    for (const message of fresh) until = Math.max(until, Date.parse(message.timestamp))
+    const theirs = fresh.filter((message) => !message.outgoing)
+    if (theirs.length > 0) chats.push({ id, title, kind, unreadCount, messages: theirs, more: fresh.length >= limit })
+  }
+
+  return {
+    mode: "new",
+    since: new Date(since).toISOString(),
+    until: new Date(until).toISOString(),
+    chats,
+    skipped,
+    // Every dialog in the window changed, so an older one past it may have too.
+    partial: page.hasMore && changed.length === page.items.length,
+    quiet,
+  }
+}
+
+/** Every page is a history request; 20 chats of 3 pages stays well inside what one account may ask. */
+export const REVIEW_CHATS = 20
+const REVIEW_PAGE = 100
+const REVIEW_PER_CHAT = 300
+
+export interface ReviewOptions {
+  since: number
+  /** A chat as typed; only that one is read, muted or not. */
+  chat?: string
+  all?: boolean
+  /** Keep only questions nobody answered in this many hours. */
+  unansweredAfterHours?: number
+  now?: number
+}
+
+/**
+ * The chat's messages after `since` and up to `cut`, oldest first. The history pages backwards —
+ * Telegram's cannot start from a time — so a chat cut short keeps its newest, and the review is
+ * incomplete rather than silently missing the start.
+ */
+const window = async (adapter: MessengerAdapter, chat: Id, since: number, cut: number) => {
+  const messages: Message[] = []
+  let before: string | undefined
+  while (true) {
+    const page = await adapter.history(chat, { limit: REVIEW_PAGE, ...(before === undefined ? {} : { before }) })
+    const time = (message: Message) => Date.parse(message.timestamp)
+    messages.unshift(...page.items.filter((message) => time(message) > since && time(message) <= cut))
+    const oldest = page.items[0]
+    if (!page.hasMore || !oldest || time(oldest) <= since) return { messages, more: false }
+    if (messages.length >= REVIEW_PER_CHAT) return { messages: messages.slice(-REVIEW_PER_CHAT), more: true }
+    before = oldest.id
+  }
+}
+
+/**
+ * **Every message, both sides, in each chat that changed after `since`** — what a review of who
+ * owes what reads, where `inbox` reads only other people's newest few. Cut at the chat list's newest
+ * message, as `inbox --new` is, so the next review starting at `until` misses nothing.
+ */
+export const reviewIn = async (
+  adapter: MessengerAdapter,
+  { since, chat, all = false, unansweredAfterHours, now = Date.now() }: ReviewOptions,
+): Promise<Review> => {
+  const page = await adapter.chats({ limit: CHAT_WINDOW, offset: 0 })
+  const changed = byRecency(
+    page.items.filter((one) => one.lastMessageAt !== null && Date.parse(one.lastMessageAt) > since),
+  )
+  const cut = Math.max(since, ...changed.map((one) => Date.parse(one.lastMessageAt ?? "")))
+  const only = chat === undefined ? undefined : (await adapter.resolve(chat)).id
+  const { heard: wanted, quiet } =
+    only === undefined ? heard(changed, all) : { heard: changed.filter((one) => one.id === only), quiet: 0 }
+  const { read, skipped } = capped(wanted, REVIEW_CHATS)
+
+  const chats: ReviewChat[] = []
+  for (const { id, title, kind } of read) {
+    const { messages, more } = await window(adapter, id, since, cut)
+    if (messages.length > 0) chats.push({ id, title, kind, messages, more })
+  }
+  const partial = page.hasMore && changed.length === page.items.length
+  const found: Review = {
+    since: new Date(since).toISOString(),
+    until: new Date(cut).toISOString(),
+    complete: skipped.length === 0 && !partial && chats.every((one) => !one.more),
+    chats,
+    skipped,
+    partial,
+    quiet,
+  }
+  if (unansweredAfterHours === undefined) return found
+
+  const open: ReviewChat[] = []
+  for (const one of chats) {
+    const admins = one.kind === "dialog" ? [] : ((await adapter.admins?.(one.id)) ?? undefined)
+    const questions = unanswered(one.messages, {
+      answerers: new Set(admins ?? []),
+      before: now - unansweredAfterHours * 3_600_000,
+    })
+    if (questions.length > 0) {
+      open.push({ ...one, messages: questions, answeredBy: admins === undefined ? "owner" : "owner-and-admins" })
+    }
+  }
+  return { ...found, chats: open, unanswered: { olderThanHours: unansweredAfterHours } }
+}
+
+/** A shared link's query string is not a question. */
+const LINKS = /https?:\/\/\S+/g
+
+/**
+ * Questions from others still waiting, as max-cli counts them. A question is a message with `?` in
+ * it, or a reply to the owner or an admin. It is answered when one of them replied to it, or was the
+ * next to speak after the person who asked — "the next to speak" rather than "spoke later", because
+ * in a busy group an admin answering somebody else says nothing about this question.
+ */
+export const unanswered = (
+  messages: Message[],
+  { answerers, before }: { answerers: ReadonlySet<Id>; before: number },
+): Message[] => {
+  const answers = (message: Message) =>
+    message.outgoing === true || (message.senderId !== null && answerers.has(message.senderId))
+  const byId = new Map(messages.map((message) => [message.id, message]))
+  // Telegram names only the id a reply answers; the message itself is found in the window, or not at all.
+  const repliesToAnswerer = (message: Message) => {
+    const to = message.replyTo?.id ?? message.replyToId
+    const quoted = to === undefined ? undefined : byId.get(to)
+    if (quoted) return answers(quoted)
+    return (
+      message.replyTo !== null && (message.replyTo.outgoing === true || answerers.has(message.replyTo.senderId ?? ""))
+    )
+  }
+
+  return messages.filter((message, index) => {
+    if (answers(message) || Date.parse(message.timestamp) >= before) return false
+    if (!message.text.replace(LINKS, "").includes("?") && !repliesToAnswerer(message)) return false
+    const later = messages.slice(index + 1)
+    if (later.some((reply) => (reply.replyTo?.id ?? reply.replyToId) === message.id && answers(reply))) return false
+    const next = later.find((other) => other.senderId !== message.senderId)
+    return !(next && answers(next))
+  })
+}
 
 export interface InboxService {
   /** Other people's unread messages; with `since` (ms, parsed by the caller), what arrived after it instead. */

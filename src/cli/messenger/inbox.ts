@@ -2,8 +2,9 @@ import { readFileSync } from "node:fs"
 import { join } from "node:path"
 import { CliError, resolvePaths, writeSecurely } from "@leemour/cli-core"
 import { Command } from "commander"
-import type { Chat, Inbox, InboxChat, MessageHit } from "../../domain/models.js"
+import type { MessageHit } from "../../domain/models.js"
 import { renderMessages } from "../../render/messages.js"
+import { CHAT_WINDOW } from "../../services/inbox.js"
 import type { AppIdentity } from "../app.js"
 import { positiveCount } from "../paging.js"
 import { type Messenger, messengerContext } from "./context.js"
@@ -16,105 +17,8 @@ import {
   spokenItems,
   TRANSCRIBE_OPTION,
 } from "./hearing-command.js"
-import type { MessengerAdapter } from "./port.js"
 
-/**
- * **At most this many history reads per `inbox`**, as in max-cli: a person opening twenty chats in
- * one burst is already more than a person does, and the rest are named in `skipped`, not lost.
- */
-export const INBOX_CHATS = 20
-/** The newest dialogs looked at. Walking every dialog hit FLOOD_WAIT once (tg handoff §4.14). */
-export const CHAT_WINDOW = 100
 const FIRST_LOOK_MS = 24 * 60 * 60 * 1000
-
-export const byRecency = (chats: Chat[]): Chat[] =>
-  chats.toSorted((a, b) => Date.parse(b.lastMessageAt ?? "") - Date.parse(a.lastMessageAt ?? ""))
-
-/** Muted or archived, and nothing in it mentions the owner or replies to them. */
-const isQuiet = (chat: Chat): boolean =>
-  (chat.muted === true || chat.archived === true) && (chat.unreadMentions ?? 0) === 0
-
-export const heard = (chats: Chat[], all: boolean) =>
-  all
-    ? { heard: chats, quiet: 0 }
-    : { heard: chats.filter((chat) => !isQuiet(chat)), quiet: chats.filter(isQuiet).length }
-
-export const capped = (chats: Chat[], most: number) => ({
-  read: chats.slice(0, most),
-  skipped: chats.slice(most).map(({ id, title, lastMessageAt }) => ({ id, title, lastMessageAt })),
-})
-
-/**
- * Other people's unread messages, as the messenger counts them: for each chat with a count, its
- * newest that many. Reading marks nothing read, so the same messages come back until they are read
- * somewhere else — right for a person, wrong for a scheduled run, which is what `since` is for.
- *
- * Muted and archived chats are left out unless `all`, or they mention the owner: on a busy account
- * they are most of what is unread, and they would take the history reads a person's chat needs.
- */
-export const unreadIn = async (
-  adapter: MessengerAdapter,
-  { limit, all = false }: { limit: number; all?: boolean },
-): Promise<Inbox> => {
-  const page = await adapter.chats({ limit: CHAT_WINDOW, offset: 0 })
-  const { heard: waiting, quiet } = heard(byRecency(page.items.filter((chat) => (chat.unreadCount ?? 0) > 0)), all)
-  const { read, skipped } = capped(waiting, INBOX_CHATS)
-
-  const chats: InboxChat[] = []
-  for (const { id, title, kind, unreadCount } of read) {
-    const count = unreadCount ?? 0
-    const wanted = Math.min(count, limit)
-    const { items } = await adapter.history(id, { limit: wanted })
-    const theirs = items.slice(-wanted).filter((message) => !message.outgoing)
-    if (theirs.length > 0) chats.push({ id, title, kind, unreadCount, messages: theirs, more: count > limit })
-  }
-  return { mode: "unread", chats, skipped, partial: page.hasMore, quiet }
-}
-
-/**
- * Other people's messages in every chat that changed after `since`.
- *
- * **Everything is cut at the chat list's newest message**, the snapshot taken first. The reads run
- * one after another, so a chat read early can gain a message while a later one is read; had the
- * saved point followed the later read, that message would sit behind it and never show. Anything
- * newer waits for the next run and shows once there.
- */
-export const newIn = async (
-  adapter: MessengerAdapter,
-  { since, limit, all = false }: { since: number; limit: number; all?: boolean },
-): Promise<Inbox> => {
-  const page = await adapter.chats({ limit: CHAT_WINDOW, offset: 0 })
-  const changed = byRecency(
-    page.items.filter((chat) => chat.lastMessageAt !== null && Date.parse(chat.lastMessageAt) > since),
-  )
-  const cut = Math.max(since, ...changed.map((chat) => Date.parse(chat.lastMessageAt ?? "")))
-  const { heard: wanted, quiet } = heard(changed, all)
-  const { read, skipped } = capped(wanted, INBOX_CHATS)
-
-  let until = since
-  const chats: InboxChat[] = []
-  for (const { id, title, kind, unreadCount } of read) {
-    const { items } = await adapter.history(id, { limit })
-    const fresh = items.filter((message) => {
-      const time = Date.parse(message.timestamp)
-      return time > since && time <= cut
-    })
-    for (const message of fresh) until = Math.max(until, Date.parse(message.timestamp))
-    const theirs = fresh.filter((message) => !message.outgoing)
-    if (theirs.length > 0) chats.push({ id, title, kind, unreadCount, messages: theirs, more: fresh.length >= limit })
-  }
-
-  return {
-    mode: "new",
-    since: new Date(since).toISOString(),
-    until: new Date(until).toISOString(),
-    chats,
-    skipped,
-    // Every dialog in the window changed, so an older one past it may have too.
-    partial: page.hasMore && changed.length === page.items.length,
-    quiet,
-  }
-}
 
 const AGO = /^(\d+)(m|h|d)$/
 const AGO_MS: Record<string, number> = { m: 60_000, h: 3_600_000, d: 86_400_000 }
