@@ -117,12 +117,12 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--limit` | `<n>` | how many to show |  | `chats list`, `chats members list` (planned), `contacts list`, `inbox`, `messages list`, `messages search`, `runs list`, `sends list` |
 | `--lines` | `<n>` | how many lines | `50` | `server logs` (planned) |
 | `--local` |  | use the model on this machine, never the messenger |  | `messages transcribe` (tg-only) |
-| `--mark-read` |  | also mark the chat read up to the newest message shown; the other person sees it |  | `messages list` (planned) |
+| `--mark-read` |  | also mark the chat read up to the newest message shown; the other person sees it |  | `messages list` |
 | `--max-actions` | `<n>` | at most this many actions in one run | `10` | `chats check` (planned) |
 | `--max-pages` | `<n>` | at most this many pages of 100 messages in one run | `10` | `store fetch` |
 | `--md` |  | read **bold**, _italic_, ~~struck~~ and `code` in the text; \ keeps a mark literal |  | `messages edit` (planned), `messages send` |
 | `--members-see-link` | `<on\|off>` | members may see the invite link |  | `chats update` (planned) |
-| `--model` | `<id>` | which downloaded speech model hears them; `models audio list` shows them |  | `inbox` (planned), `messages list` (planned), `messages transcribe` |
+| `--model` | `<id>` | which downloaded speech model hears them; `models audio list` shows them |  | `inbox`, `messages list`, `messages transcribe` |
 | `--multiple` |  | people may pick several answers |  | `polls create` |
 | `--new` |  | what arrived since the last check, each message once — for scheduled runs |  | `inbox` |
 | `--no-preview` |  | no preview card for a link in the text |  | `messages send` |
@@ -161,7 +161,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--title` | `<title>` | the new name — of a chat or a folder |  | `chats folders update` (planned), `chats update` (planned) |
 | `--to` | `<chat>` | the chat to forward it to: an id, or part of a chat name |  | `messages forward` |
 | `--trace` |  | one line per request on stderr: ids and timings, never message content |  | every command |
-| `--transcribe` |  | hear voice messages not heard yet, on this machine; slow, the model must be downloaded |  | `inbox`, `messages list`, `review` (planned) |
+| `--transcribe` |  | hear voice messages not heard yet, on this machine; slow, the model must be downloaded |  | `inbox`, `messages list`, `review` |
 | `--unanswered` | `[hours]` | only questions to you or a group's admins that nobody answered, asked at least this long ago; 24 hours if not given |  | `review` |
 | `--unread` |  | only chats with unread messages |  | `chats list` |
 | `--until` | `<message>` | only up to this message id, inclusive; the newest by default |  | `chats mark-read` |

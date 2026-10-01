@@ -124,6 +124,7 @@ export const hearForTool = async (
   messages: readonly Message[],
   transcribe: boolean,
   { settings, env }: { settings: Pick<Settings, "configured" | "shared" | "profile">; env: NodeJS.ProcessEnv },
+  model?: string,
 ): Promise<Hearing | undefined> => {
   if (!messages.some(isVoice)) return undefined
   const kept = await openKept(messenger, settings.profile, env)
@@ -132,7 +133,12 @@ export const hearForTool = async (
       messenger,
       messages,
       kept,
-      transcribe ? { choice: choose(messenger, settings, {}, env), connect: (work) => work(adapter) } : undefined,
+      transcribe
+        ? {
+            choice: choose(messenger, settings, model === undefined ? {} : { model }, env),
+            connect: (work) => work(adapter),
+          }
+        : undefined,
     )
   } finally {
     kept.close()

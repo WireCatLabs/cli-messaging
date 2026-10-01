@@ -1,8 +1,10 @@
 import * as v from "valibot"
 import type { Messenger } from "../../cli/messenger/context.js"
+import { modelWith } from "../../cli/messenger/hearing-command.js"
 import { momentOf } from "../../cli/messenger/inbox.js"
 import { REVIEW_DAYS, reviewStart, UNANSWERED_HOURS } from "../../cli/messenger/review.js"
 import { onlineDeps, servicesFor } from "../../services/index.js"
+import { heard, hearForTool } from "../../speech/hearing.js"
 import { type AnyTool, chatOf, READ, tool } from "../tool.js"
 
 export const reviewTools = (messenger: Messenger): Record<string, AnyTool> => ({
@@ -26,14 +28,36 @@ export const reviewTools = (messenger: Messenger): Record<string, AnyTool> => ({
         ),
       ),
       all: v.optional(v.pipe(v.boolean(), v.description("muted and archived chats too"))),
+      transcribe: v.optional(
+        v.pipe(v.boolean(), v.description("turn voice messages not heard yet into text; can take minutes")),
+      ),
+      model: v.optional(
+        v.pipe(v.string(), v.minLength(1), v.description("which downloaded speech model hears them, with transcribe")),
+      ),
     }),
     annotations: READ,
-    online: (adapter, args, { guard }) =>
-      servicesFor(onlineDeps(messenger, adapter, guard)).inbox.review({
+    online: async (adapter, args, defaults) => {
+      const model = modelWith(args.transcribe, args.model)
+      const found = await servicesFor(onlineDeps(messenger, adapter, defaults.guard)).inbox.review({
         since: args.since === undefined ? reviewStart() : momentOf(args.since, "since"),
         ...(args.chat === undefined ? {} : { chat: args.chat }),
         ...(args.all ? { all: true } : {}),
         ...(args.unanswered === undefined ? {} : { unansweredAfterHours: args.unanswered }),
-      }),
+      })
+      const transcribe = args.transcribe === true
+      const hearing = await hearForTool(
+        messenger,
+        adapter,
+        found.chats.flatMap((chat) => chat.messages),
+        transcribe,
+        defaults,
+        model,
+      )
+      return {
+        ...found,
+        chats: found.chats.map((chat) => ({ ...chat, messages: heard(chat.messages, hearing) })),
+        ...(transcribe ? { unheard: hearing?.unheard ?? [] } : {}),
+      }
+    },
   }),
 })

@@ -777,10 +777,7 @@
           "by": "T6"
         },
         "--limit": "both",
-        "--model": {
-          "state": "planned",
-          "by": "P1"
-        },
+        "--model": "both",
         "--new": "both",
         "--since": "both",
         "--transcribe": "both"
@@ -885,14 +882,8 @@
         "--after": "both",
         "--before": "both",
         "--limit": "both",
-        "--mark-read": {
-          "state": "planned",
-          "by": "P1"
-        },
-        "--model": {
-          "state": "planned",
-          "by": "P1"
-        },
+        "--mark-read": "both",
+        "--model": "both",
         "--transcribe": "both"
       }
     },
@@ -1027,10 +1018,7 @@
         },
         "--chat": "both",
         "--since": "both",
-        "--transcribe": {
-          "state": "planned",
-          "by": "P1"
-        },
+        "--transcribe": "both",
         "--unanswered": "both"
       }
     },

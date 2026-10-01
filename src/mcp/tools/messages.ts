@@ -1,6 +1,7 @@
 import * as v from "valibot"
 import { afterOf, oneDirection } from "../../cli/messenger/after.js"
 import type { Messenger } from "../../cli/messenger/context.js"
+import { modelWith } from "../../cli/messenger/hearing-command.js"
 import { capability } from "../../cli/messenger/port.js"
 import { onlineDeps, servicesFor, storedDeps } from "../../services/index.js"
 import { heard, hearForTool } from "../../speech/hearing.js"
@@ -26,6 +27,13 @@ export const messagesTools = (messenger: Messenger): Record<string, AnyTool> => 
         transcribe: v.optional(
           v.pipe(v.boolean(), v.description("turn voice messages not heard yet into text; can take minutes")),
         ),
+        model: v.optional(
+          v.pipe(
+            v.string(),
+            v.minLength(1),
+            v.description("which downloaded speech model hears them, with transcribe"),
+          ),
+        ),
       }),
       annotations: READ,
       online: async (adapter, args, defaults) => {
@@ -36,7 +44,14 @@ export const messagesTools = (messenger: Messenger): Record<string, AnyTool> => 
           ...(args.before === undefined ? {} : { before: args.before }),
           ...(args.after === undefined ? {} : { after: afterOf(args.after, "after") }),
         })
-        const hearing = await hearForTool(messenger, adapter, found.items, args.transcribe === true, defaults)
+        const hearing = await hearForTool(
+          messenger,
+          adapter,
+          found.items,
+          args.transcribe === true,
+          defaults,
+          modelWith(args.transcribe, args.model),
+        )
         return {
           items: heard(found.items, hearing),
           limit: size,
