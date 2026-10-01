@@ -134,10 +134,14 @@ export const messagesCommand = (messenger: Messenger): Command => {
     .argument(
       "<query...>",
       'every word must appear, best match first; "a phrase", -word, a OR b, and the filters from: chat: ' +
-        "after: before: has: — a typo is corrected, and a word that matches nothing falls back to any word, " +
+        "after: before: has: in: — a typo is corrected, and a word that matches nothing falls back to any word, " +
         "then to a piece of a word",
     )
     .option("--chat <chat>", `only this chat — the same as chat: in the query; ${messenger.chatArgument}`)
+    .option(
+      "--source <messenger>",
+      "every account of this messenger held in the store, or all of them — the same as in: in the query",
+    )
     .option("--limit <n>", "how many", positiveCount("--limit"))
     .option("--newest", "newest first instead of best first")
     .option("--context <n>", "messages before and after each hit; 2 in the terminal, 0 otherwise", wholeCount)
@@ -146,11 +150,13 @@ export const messagesCommand = (messenger: Messenger): Command => {
       const context = messengerContext(this, messenger)
       const {
         chat,
+        source,
         regex,
         newest,
         context: around,
       } = this.opts<{
         chat?: string
+        source?: string
         regex?: boolean
         newest?: boolean
         context?: number
@@ -164,6 +170,7 @@ export const messagesCommand = (messenger: Messenger): Command => {
           newest: newest === true,
           context: around ?? (context.format === "pretty" ? 2 : 0),
           ...(chat === undefined ? {} : { chat }),
+          ...(source === undefined ? {} : { source }),
         }),
       )
       const { command } = messenger.app
@@ -188,14 +195,22 @@ export const messagesCommand = (messenger: Messenger): Command => {
           provider: messenger.provider,
           locale: messenger.app.locale,
         }
+        const hits = found.items.map((hit) => ({ hit, at: parseLocator(hit.locator) }))
+        const spans = new Set(hits.map(({ at }) => `${at.provider}/${at.account}`)).size > 1
         context.streams.data(
-          found.items
-            .map(
-              (hit) =>
-                `${hit.chatTitle ?? hit.chatId}  ${hit.locator}\n${renderMessages(hit.context ?? [hit], options)}`,
-            )
+          hits
+            .map(({ hit, at }) => {
+              const title = hit.chatTitle ?? hit.chatId
+              return `${spans ? `${at.provider} · ${title}` : title}  ${hit.locator}\n${renderMessages(hit.context ?? [hit], options)}`
+            })
             .join("\n\n"),
         )
+        const elsewhere = [...new Set(hits.map(({ at }) => at.provider))].filter((one) => one !== messenger.provider)
+        if (elsewhere.length > 0) {
+          context.renderer.note(
+            `hits in ${elsewhere.join(", ")} open in that messenger's own CLI, by the locator: messages context msg:…`,
+          )
+        }
         if (found.items.length === 0)
           context.renderer.note("nothing found — only what is in the local store is searched")
         return

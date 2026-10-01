@@ -1,6 +1,6 @@
 # Phase 2 — search by words: BM25, typo correction, a query language
 
-Plan, 2026-09-30. **Approved by the owner 2026-10-01. Items 1–7 are built — `messages search` and the MCP tool search by words — except `in:`/`--source`, which is item 9; items 8–10 are not.** Questions of §9 answered
+Plan, 2026-09-30. **Approved by the owner 2026-10-01. Items 1–7 and 9 are built — `messages search` and the MCP tool search by words, across accounts and messengers with `in:`/`--source`/`source`; items 8 and 10 are not.** Questions of §9 answered
 2026-10-01: 1–3 A, 4 B. It follows [`../decisions.md`](../decisions.md):
 SQLite FTS5 (NEED-374 A); every word first, any word when nothing is found, BM25 ranks, trigram typo
 correction over the vocabulary (NEED-375 A); the substring index stays as the last fallback (NEED-379 A);
@@ -287,6 +287,15 @@ backend can implement them: `matchWords(query, scope, { every | any, beginnings,
   title when the answer spans more than one account, and says which CLI opens the chat (`max …`,
   `tg …`). Whether the other CLI takes a locator as its chat argument is checked in item 6 (inferred,
   not verified).
+  **Correction 2026-10-02 (item 9, built):** shared code names no messenger (#345), so it cannot know
+  that `telegram` opens in `tg`. The pretty output names the messenger (`telegram · Book club  msg:…`)
+  and, when a hit is another messenger's, says once that it opens in that messenger's own CLI by its
+  locator. That works: `messages show` and `messages context` take a `msg:` locator of their own
+  messenger (`targetOf`, `src/cli/messenger/messages-command.ts`) — **verified** by reading the code.
+  Each `completeness` row names its `provider` and `account`, since two accounts can hold a chat of the
+  same id. `--regex` reads the account it runs as and refuses `--source`. `in:all` includes every
+  account in the file, bots' (`max-bot`, `telegram-bot`) too: shared code has no rule telling a bot's
+  provider from a person's.
 - The MCP tool gets an optional `source` input with the same values.
 
 ## 4. The query language

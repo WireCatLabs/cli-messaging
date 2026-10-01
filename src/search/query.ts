@@ -89,12 +89,19 @@ const day = (name: string, value: string, now: number): number => {
   return at.getTime()
 }
 
+/** `in:` and `--source` take a messenger the store holds, or `all`. */
+export const sourceOf = (name: string, value: string, providers: readonly Provider[]): Source => {
+  const sources: Source[] = [...providers, "all"]
+  const source = value.toLowerCase()
+  if (!sources.includes(source)) fail(`${name} takes ${sources.join(", ")} — not "${value}"`)
+  return source
+}
+
 /** `providers` are the messengers the store holds; `in:` takes one of them, or `all`. */
 export const parseQuery = (
   query: string,
   { now = Date.now(), providers = [] }: { now?: number; providers?: readonly Provider[] } = {},
 ): SearchQuery => {
-  const sources: Source[] = [...providers, "all"]
   const parsed: SearchQuery = { required: [], excluded: [], has: [] }
   const tokens = tokenize(query)
   for (let index = 0; index < tokens.length; index++) {
@@ -108,11 +115,8 @@ export const parseQuery = (
       }
       if (parsed[filter] !== undefined) fail(`${filter}: is given twice`)
       if (filter === "after" || filter === "before") parsed[filter] = day(filter, text, now)
-      else if (filter === "in") {
-        const source = text.toLowerCase()
-        if (!sources.includes(source)) fail(`in: takes ${sources.join(", ")} — not "${text}"`)
-        parsed.in = source
-      } else parsed[filter] = text
+      else if (filter === "in") parsed.in = sourceOf("in:", text, providers)
+      else parsed[filter] = text
       continue
     }
     if (token.text === "") continue

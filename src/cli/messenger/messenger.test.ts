@@ -7,6 +7,7 @@ import type { CommandInfo } from "@leemour/cli-core/commands"
 import { describe, expect, it } from "vitest"
 import type { Chat, Member, Message, WindowedMessage } from "../../domain/models.js"
 import { SendJournal, sendsPathFor } from "../../sends/journal.js"
+import { openStore } from "../../store/store.js"
 import { commandsCommand } from "../commands-command.js"
 import { type RunOptions, run } from "../program.js"
 import { settingsFor } from "../settings.js"
@@ -1016,7 +1017,7 @@ describe("the shared read commands", () => {
     expect((await json("from:me", "chapter")).answer.items).toEqual([])
     expect((await json("from:Nadie", "chapter")).error).toBe('from:Nadie — nobody matches "Nadie"')
     expect((await json("has:photo")).error).toBe("has:photo — the store holds no photo; it holds attachment, link")
-    expect((await json("in:all", "chapter")).error).toContain("in: is not searched yet")
+    expect((await json("in:nowhere", "chapter")).error).toBe('in: takes chat, all — not "nowhere"')
     const both = await json("chat:Elsewhere", "chapter", "--chat", "Book")
     expect(both.code).toBe(2)
     expect(both.error).toBe('--chat and chat: name different chats: "Book" and "Elsewhere"')
@@ -1026,6 +1027,73 @@ describe("the shared read commands", () => {
     })
     expect(pretty.stdout.join("\n").match(/chapter three/g)).toHaveLength(2)
     expect((await json("chapter", "--context", "1", "--limit", "1")).answer.items[0].context).toHaveLength(2)
+  })
+
+  it("**searches other accounts and messengers** held in the file only when asked, naming each hit's messenger", async () => {
+    const root = mkdtempSync(join(tmpdir(), "messenger-"))
+    const env = { CHAT_STATE_DIR: join(root, "state"), MESSAGING_STORE: join(root, "m.db") }
+    await call(["messages", "context", "Book", "2", "--json"], async () => fake, env)
+    const other = await openStore({ path: join(root, "m.db") })
+    const elsewhere = { provider: "other", account: "600" }
+    await other.saveChats(elsewhere, [{ ...chat, title: "Reading circle" }])
+    await other.saveMessages(
+      elsewhere,
+      "7",
+      [{ ...thread[0], id: "40", text: "chapter four", timestamp: "2026-09-27T11:00:00.000Z" } as Message],
+      {
+        via: "history",
+      },
+    )
+    await other.close()
+    const never = async (): Promise<MessengerAdapter> => {
+      throw new Error("search must never connect")
+    }
+    const search = (...argv: string[]) => call(["messages", "search", ...argv], never, env)
+    const locators = async (...argv: string[]) =>
+      JSON.parse((await search(...argv, "--json")).stdout[0] ?? "").items.map((hit: { locator: string }) => hit.locator)
+
+    expect(await locators("chapter")).not.toContain("msg:other/600/7/40")
+    expect(await locators("chapter", "in:other")).toEqual(["msg:other/600/7/40"])
+    expect(await locators("chapter", "--source", "all", "--newest")).toEqual([
+      "msg:other/600/7/40",
+      "msg:chat/500/7/3",
+      "msg:chat/500/7/2",
+      "msg:chat/500/7/1",
+    ])
+    const wide = JSON.parse((await search("chapter", "in:all", "--context", "1", "--json")).stdout[0] ?? "")
+    expect(wide.completeness).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ provider: "chat", account: "500", chatId: "7" }),
+        expect.objectContaining({ provider: "other", account: "600", chatId: "7" }),
+      ]),
+    )
+    expect(
+      wide.items
+        .find((hit: { locator: string }) => hit.locator.startsWith("msg:other"))
+        .context.map((one: { id: string }) => one.id),
+    ).toEqual(["40"])
+
+    const pretty = await call(["messages", "search", "chapter", "in:all"], never, env, { tty: true })
+    expect(pretty.stdout.join("\n")).toContain("other · Reading circle  msg:other/600/7/40")
+    expect(pretty.stdout.join("\n")).toContain("chat · 7  msg:chat/500/7/3")
+    expect(pretty.stderr.join("\n")).toContain("hits in other open in that messenger's own CLI")
+    const own = await call(["messages", "search", "chapter"], never, env, { tty: true })
+    expect(own.stdout.join("\n")).toMatch(/^7 {2}msg:chat\/500\/7\/3$/m)
+    expect(own.stdout.join("\n")).not.toContain("chat · ")
+
+    const failed = async (...argv: string[]) =>
+      (await search(...argv, "--json")).stderr
+        .filter((line) => line.startsWith("{"))
+        .map((line) => String(JSON.parse(line).error?.message))
+        .join("\n")
+    expect(await failed("chapter", "in:chat", "--source", "other")).toContain(
+      "--source and in: name different messengers: other and chat",
+    )
+    expect(await failed("chapter", "--source", "nowhere")).toContain('--source takes chat, other, all — not "nowhere"')
+    expect(await failed("--regex", "chapter", "--source", "all")).toContain("--regex reads the account it runs as")
+    expect(await failed("from:Olga", "chapter", "in:all")).toContain('"Olga" matches 2 people in different accounts')
+    expect(await failed("chapter", "--chat", "7", "in:all")).toContain('"7" matches 2 chats in different accounts')
+    expect(await locators("chapter", "--chat", "Reading", "in:all")).toEqual(["msg:other/600/7/40"])
   })
 
   it("**builds a chat's conversations** and explains a message's place in one, without connecting", async () => {

@@ -109,12 +109,21 @@ export const messagesTools = (messenger: Messenger): Record<string, AnyTool> => 
       description:
         `Find messages in what this machine has kept — it never asks ${name}, so an empty answer means ` +
         '"not in what was kept", not "never said" (see completeness). Every word must appear, best match ' +
-        'first; "a phrase", -word, a OR b, and from: chat: after: before: has: work as in the CLI. A typo is ' +
+        'first; "a phrase", -word, a OR b, and from: chat: after: before: has: in: work as in the CLI. A typo is ' +
         "corrected (listed in corrections); with no match it falls back to any word, then to a piece of a " +
-        "word — each hit says which in match, and score is its relevance, higher better. Returns { items, limit, hasMore, corrections, completeness, wordsReady }.",
+        "word — each hit says which in match, and score is its relevance, higher better. It searches the " +
+        "account it runs as; `source` (a messenger, or all) searches every account of it held on this machine, " +
+        "and each hit's locator names its messenger and account. Returns { items, limit, hasMore, corrections, completeness, wordsReady }.",
       input: v.object({
         text: v.pipe(v.string(), v.minLength(1), v.description("the query: words, phrases and filters")),
         chat: v.optional(chat),
+        source: v.optional(
+          v.pipe(
+            v.string(),
+            v.minLength(1),
+            v.description("a messenger held on this machine, or all — as in: in text"),
+          ),
+        ),
         newest: v.optional(v.pipe(v.boolean(), v.description("newest first instead of best first"))),
         context: v.optional(
           v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(20), v.description("messages around each hit")),
@@ -130,6 +139,7 @@ export const messagesTools = (messenger: Messenger): Record<string, AnyTool> => 
           newest: args.newest === true,
           context: args.context ?? 0,
           ...(args.chat === undefined ? {} : { chat: args.chat }),
+          ...(args.source === undefined ? {} : { source: args.source }),
         })
         return { ...found, limit: size }
       },

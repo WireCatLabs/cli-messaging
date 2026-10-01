@@ -1,10 +1,11 @@
-import { CliError } from "@leemour/cli-core"
+import { CliError, singleLine } from "@leemour/cli-core"
 import type { Messenger } from "../cli/messenger/context.js"
 import { type After, capability, type Download, type Sent } from "../cli/messenger/port.js"
+import { parseLocator } from "../domain/locator.js"
 import { parseMarkdown } from "../domain/markdown.js"
-import type { Deletion, Id, Message, Page, WindowedMessage } from "../domain/models.js"
-import { pickChat, pickPerson } from "../resolve.js"
-import { parseQuery } from "../search/query.js"
+import type { Chat, Deletion, Id, Message, Page, Provider, WindowedMessage } from "../domain/models.js"
+import { isId, pickChat, pickPerson } from "../resolve.js"
+import { parseQuery, sourceOf } from "../search/query.js"
 import { type Match, search } from "../search/search.js"
 import { codeOf, guardedWrite, type Operated } from "../sends/guarded.js"
 import { newOperationId, newSendId } from "../sends/send-id.js"
@@ -31,6 +32,8 @@ export interface SearchQuery {
   text?: string
   pattern?: RegExp
   chat?: string
+  /** A messenger the store holds, or `all` — the same as `in:` in the query. The account it runs as when unset. */
+  source?: string
   limit: number
   /** Newest first instead of best first. */
   newest?: boolean
@@ -43,7 +46,7 @@ export type FoundMessage = StoredHit & { match?: Match; score?: number | null; c
 export interface SearchFound extends Page<FoundMessage> {
   corrections: { from: string; to: string[] }[]
   /** Per chat of the page: how much of its history the store holds. */
-  completeness: ChatCompleteness[]
+  completeness: (ChatCompleteness & AccountKey)[]
   /** `false` while the word index is being built: the answer came from the substring index. */
   wordsReady: boolean
 }
@@ -171,11 +174,14 @@ export const messagesService = (deps: ServiceDeps): MessagesService => {
     download: async (chat, message) =>
       capability(await deps.connection(), "download", "download attachments")(chat, message),
 
-    search: ({ text, pattern, chat, limit, newest = false, context = 0 }) =>
+    search: ({ text, pattern, chat, source, limit, newest = false, context = 0 }) =>
       inStore(async (store, account): Promise<SearchFound> => {
         // A large file builds its word index a slice per search as well as in `store migrate` (NEED-453 A).
         const stop = Date.now() + SEARCH_FILL_MS
         await store.fillSearchIndex({ until: () => Date.now() >= stop })
+        if (pattern && source !== undefined) {
+          throw new CliError("validation_error", "--regex reads the account it runs as; --source is for a word search")
+        }
         const found = pattern
           ? {
               ...(await store.find({
@@ -187,19 +193,22 @@ export const messagesService = (deps: ServiceDeps): MessagesService => {
               corrections: [],
               wordsReady: true,
             }
-          : await search(store, ...(await scopeOf(deps.messenger, store, account, text ?? "", chat)), { limit, newest })
-        const chats = [...new Set(found.items.map((hit) => hit.chatId))]
+          : await search(
+              store,
+              ...(await scopeOf(deps.messenger, store, account, { text: text ?? "", chat, source })),
+              { limit, newest },
+            )
         const items = await Promise.all(
           found.items.map(async (hit) =>
             context > 0
               ? {
                   ...hit,
-                  context: await store.around(account, hit.chatId, hit.id, { before: context, after: context }),
+                  context: await store.around(accountOf(hit), hit.chatId, hit.id, { before: context, after: context }),
                 }
               : hit,
           ),
         )
-        return { ...found, items, completeness: await store.chatCompleteness(account, chats) }
+        return { ...found, items, completeness: await completenessOf(store, found.items) }
       }),
 
     send: async ({ chat, text: typed, sendId, replyTo, silent, noPreview, markdown, at, attachments = [] }) => {
@@ -364,39 +373,158 @@ export const storedChatId = async (
   return pickChat(trimmed, chats).id
 }
 
+const accountOf = (hit: StoredHit): AccountKey => {
+  const { provider, account } = parseLocator(hit.locator)
+  return { provider, account }
+}
+
+const keyOf = ({ provider, account }: AccountKey) => `${provider}/${account}`
+
+/** Each chat's completeness from the account that holds it: a search may span several. */
+const completenessOf = async (store: MessageStore, hits: StoredHit[]): Promise<(ChatCompleteness & AccountKey)[]> => {
+  const chats = new Map<string, { account: AccountKey; chatIds: Set<Id> }>()
+  for (const hit of hits) {
+    const account = accountOf(hit)
+    const held = chats.get(keyOf(account)) ?? { account, chatIds: new Set() }
+    held.chatIds.add(hit.chatId)
+    chats.set(keyOf(account), held)
+  }
+  const found = await Promise.all(
+    [...chats.values()].map(async ({ account, chatIds }) =>
+      (await store.chatCompleteness(account, [...chatIds])).map((one) => ({ ...one, ...account })),
+    ),
+  )
+  return found.flat()
+}
+
+/** Several candidates in different accounts: which messenger each is in says which one was meant. */
+const ambiguousAcross = (
+  reference: string,
+  what: string,
+  candidates: { provider: Provider; id: Id; label: string }[],
+) => {
+  const width = Math.max(...candidates.map(({ provider, id }) => `${provider}  ${id}`.length))
+  const lines = candidates.map(({ provider, id, label }) => `  ${`${provider}  ${id}`.padEnd(width)}  ${label}`)
+  return new CliError(
+    "validation_error",
+    `"${singleLine(reference)}" matches ${candidates.length} ${what} in different accounts — ` +
+      `name one by its id, or narrow the search with in:<messenger>:\n${lines.join("\n")}`,
+    { candidates: candidates.map(({ provider, id }) => ({ provider, id })) },
+  )
+}
+
+const missing = (error: unknown) => {
+  if (codeOf(error) === "not_found") return undefined
+  throw error
+}
+
+/** A chat as `--chat` names it, in whichever of the accounts holds it — one of them, or it is an error. */
+const chatAmong = async (
+  messenger: Messenger,
+  store: MessageStore,
+  accounts: AccountKey[],
+  reference: string,
+): Promise<{ account: AccountKey; chatId: Id }> => {
+  const [only] = accounts
+  if (accounts.length === 1 && only)
+    return { account: only, chatId: await storedChatId(messenger, reference, store, only) }
+  const found = (
+    await Promise.all(
+      accounts.map(async (account) => {
+        const held: Chat[] = (await store.chats(account, {})).items
+        const chatId = await storedChatId(messenger, reference, store, account).catch(missing)
+        const chat = held.find((one) => one.id === chatId)
+        return chat ? [{ account, chat }] : []
+      }),
+    )
+  ).flat()
+  const [one] = found
+  if (found.length === 1 && one) return { account: one.account, chatId: one.chat.id }
+  if (found.length === 0) throw new CliError("not_found", `no stored chat matches "${singleLine(reference)}"`)
+  throw ambiguousAcross(
+    reference,
+    "chats",
+    found.map(({ account, chat }) => ({
+      provider: account.provider,
+      id: chat.id,
+      label: singleLine(chat.title ?? ""),
+    })),
+  )
+}
+
+/** A sender, through the names each messenger's accounts have seen; `from:` names one person. */
+const senderAmong = async (store: MessageStore, accounts: AccountKey[], reference: string) => {
+  const providers = [...new Set(accounts.map(({ provider }) => provider))]
+  const [only] = accounts
+  try {
+    if (accounts.length === 1 && only) {
+      const person = pickPerson(reference, await store.people(only.provider, { account: only.account }))
+      return { provider: only.provider, id: person.id }
+    }
+    const found = (
+      await Promise.all(
+        providers.map(async (provider) => {
+          const ids = accounts.filter((one) => one.provider === provider).map(({ account }) => account)
+          const person = await store
+            .people(provider, { accounts: ids })
+            .then((people) => pickPerson(reference, people))
+            .catch(missing)
+          return person ? [{ provider, person }] : []
+        }),
+      )
+    ).flat()
+    const [one] = found
+    if (found.length === 1 && one) return { provider: one.provider, id: one.person.id }
+    if (found.length === 0) {
+      throw new CliError(
+        "not_found",
+        isId(reference) ? `no person ${reference} in what these accounts have seen` : `nobody matches "${reference}"`,
+      )
+    }
+    throw ambiguousAcross(
+      reference,
+      "people",
+      found.map(({ provider, person }) => ({ provider, id: person.id, label: singleLine(person.name ?? "") })),
+    )
+  } catch (error) {
+    if (error instanceof CliError && error.code === "not_found") {
+      throw new CliError("not_found", `from:${reference} — ${error.message}`)
+    }
+    throw error
+  }
+}
+
 /**
- * The parsed query and the scope it names, resolved in this account: `chat:` as `--chat` is, `from:`
- * through the names `contacts search` uses, `from:me` as what the account sent.
+ * The parsed query and the scope it names: the account the command runs as, or every account of the
+ * messenger `in:` or `--source` names. `chat:` resolves as `--chat` does, `from:` through the names
+ * `contacts search` uses, `from:me` as what the accounts sent — all inside the accounts chosen.
  */
 const scopeOf = async (
   messenger: Messenger,
   store: MessageStore,
   account: AccountKey,
-  text: string,
-  chat: string | undefined,
+  { text, chat, source }: { text: string; chat: string | undefined; source: string | undefined },
 ): Promise<[WordQuery, SearchScope]> => {
-  const parsed = parseQuery(text)
+  const held = await store.accounts()
+  const providers = [...new Set(held.map(({ provider }) => provider))]
+  const parsed = parseQuery(text, { providers })
   if (chat !== undefined && parsed.chat !== undefined && parsed.chat !== chat) {
     throw new CliError("validation_error", `--chat and chat: name different chats: "${chat}" and "${parsed.chat}"`)
   }
-  if (parsed.in !== undefined) {
-    throw new CliError("validation_error", "in: is not searched yet — a search covers the account it runs as")
+  const sourced = source === undefined ? undefined : sourceOf("--source", source, providers)
+  if (sourced !== undefined && parsed.in !== undefined && sourced !== parsed.in) {
+    throw new CliError("validation_error", `--source and in: name different messengers: ${sourced} and ${parsed.in}`)
   }
+  const wanted = parsed.in ?? sourced
+  const accounts =
+    wanted === undefined || held.length === 0
+      ? [account]
+      : held.filter(({ provider }) => wanted === "all" || provider === wanted)
   const named = parsed.chat ?? chat
-  const scope: SearchScope = { accounts: [account] }
-  if (named !== undefined) scope.chat = { account, chatId: await storedChatId(messenger, named, store, account) }
+  const scope: SearchScope = { accounts }
+  if (named !== undefined) scope.chat = await chatAmong(messenger, store, accounts, named)
   if (parsed.from?.toLowerCase() === "me") scope.outgoing = true
-  else if (parsed.from !== undefined) {
-    try {
-      const person = pickPerson(parsed.from, await store.people(account.provider, { account: account.account }))
-      scope.sender = { provider: account.provider, id: person.id }
-    } catch (error) {
-      if (error instanceof CliError && error.code === "not_found") {
-        throw new CliError("not_found", `from:${parsed.from} — ${error.message}`)
-      }
-      throw error
-    }
-  }
+  else if (parsed.from !== undefined) scope.sender = await senderAmong(store, accounts, parsed.from)
   if (parsed.after !== undefined) scope.after = parsed.after
   if (parsed.before !== undefined) scope.before = parsed.before
   if (parsed.has.length > 0) {

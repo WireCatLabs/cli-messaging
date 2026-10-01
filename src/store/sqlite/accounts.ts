@@ -1,5 +1,5 @@
 import type { AccountKey } from "../store.js"
-import { and, eq, inArray, sql } from "./drizzle/core.js"
+import { and, asc, eq, inArray, sql } from "./drizzle/core.js"
 import type { StoreContext } from "./open.js"
 import {
   accountIdentities,
@@ -35,6 +35,13 @@ export const findAccountPk = ({ orm }: StoreContext, { provider, account }: Acco
     .from(accounts)
     .where(and(eq(accounts.provider, provider), eq(accounts.nativeId, account)))
     .get()?.pk
+
+export const heldAccounts = ({ orm }: StoreContext): AccountKey[] =>
+  orm
+    .select({ provider: accounts.provider, account: accounts.nativeId })
+    .from(accounts)
+    .orderBy(asc(accounts.provider), asc(accounts.nativeId))
+    .all()
 
 /** Everything the account holds, children before parents: the foreign keys are enforced. */
 export const purgeAccount = ({ orm }: StoreContext, accountKey: number): void => {
