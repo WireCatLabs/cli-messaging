@@ -183,7 +183,7 @@ Valencia Expats · 12 May 10:01–10:05 · 4 messages · Alice, Carol
    format, and runs the corpus's own `conversation-eval` scorers (Python, via `uv`). Also scores against
    our own replies: hide a random 20% of reply links in a local archive, rebuild, count how many the
    rules recover — numbers only, the archive never leaves the machine.
-7. **Measure**: build time and memory for 5k, 100k and 1M generated messages (`bench/search`'s
+7. ✅ 2026-10-01, rules only — 1.8 s and 285 MB for one chat of 1M ([`bench/disentangle/`](../../../bench/disentangle/README.md#scale-2026-10-01)); writing to the store waits for item 2 · **Measure**: build time and memory for 5k, 100k and 1M generated messages (`bench/search`'s
    generator); if 1M takes more than a minute, plan region rebuilds.
 8. **`db doctor`** reports per enabled chat: built with which version, stale agent links.
 
