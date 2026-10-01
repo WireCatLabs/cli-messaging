@@ -3,6 +3,9 @@
 **How commands, options, answers and MCP tools of tg and max are named and shaped is
 [`STANDARD.md`](STANDARD.md)** — it lives here, and both CLIs link it.
 
+**How tg and max are released and checked live is [`RELEASING.md`](RELEASING.md)**: the steps
+their `release` and `test-live` skills share.
+
 **The shared rules are max-cli's** —
 [max-cli `docs/dev/CONVENTIONS.md`](https://github.com/leemour/max-cli/blob/main/docs/dev/CONVENTIONS.md):
 the linter decides formatting, strict TypeScript with no `any`, sparse comments that say *why*,
