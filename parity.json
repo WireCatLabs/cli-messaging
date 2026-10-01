@@ -116,7 +116,7 @@
       "meaning": "the new about text — of a chat or of your account"
     },
     "--detach": {
-      "meaning": "run in the background instead — the same as `server start`"
+      "meaning": "run in the background — leaves max in P6 for `server start`; one action, one command (ASK-113)"
     },
     "--dry-run": {
       "meaning": "judge and plan; do nothing"
@@ -341,7 +341,7 @@
       "meaning": "from this ISO 8601 time, or 2h / 1d ago; each command says its default"
     },
     "--stop": {
-      "meaning": "stop this profile's server — the same as `server stop`"
+      "meaning": "stop this profile's server — leaves max in P6 for `server stop`; one action, one command (ASK-113)"
     },
     "--timeout": {
       "value": "<duration>",
@@ -1126,8 +1126,8 @@
           "by": "P6"
         },
         "--idle": {
-          "state": "planned",
-          "by": "P6"
+          "state": "max-only",
+          "reason": "max's server stops when no command has used it for this long; tg's serve has no commands connected to it (NEED-495 A)"
         },
         "--stop": {
           "state": "planned",
@@ -1156,8 +1156,8 @@
       "state": "both",
       "options": {
         "--idle": {
-          "state": "planned",
-          "by": "P6"
+          "state": "max-only",
+          "reason": "max's server stops when no command has used it for this long; tg's serve has no commands connected to it (NEED-495 A)"
         }
       }
     },
@@ -1165,8 +1165,8 @@
       "state": "both",
       "options": {
         "--idle": {
-          "state": "planned",
-          "by": "P6"
+          "state": "max-only",
+          "reason": "max's server stops when no command has used it for this long; tg's serve has no commands connected to it (NEED-495 A)"
         }
       }
     },
