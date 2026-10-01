@@ -1,3 +1,4 @@
+import { CliError } from "@leemour/cli-core"
 import { type CacheDatabase, PRAGMAS } from "./driver.js"
 
 /**
@@ -25,4 +26,48 @@ const openUnderBun = async (path: string): Promise<CacheDatabase> => {
 const openUnderNode = async (path: string): Promise<CacheDatabase> => {
   const { openWithNodeSqlite } = await import("./drivers/node-sqlite.js")
   return openWithNodeSqlite(path)
+}
+
+const runtime = (): string => {
+  const bun = (globalThis as { Bun?: { version: string } }).Bun
+  return bun ? `Bun ${bun.version}` : `Node ${process.versions.node}`
+}
+
+/**
+ * Refuses a SQLite the store's migrations cannot run on, before anything is written. The version
+ * number alone does not tell: official Node 22.0–22.15 ships SQLite 3.46–3.49 without FTS5, and
+ * Bun on macOS uses the system library, which can predate `contentless_delete` (3.43).
+ */
+export const assertStoreCapable = (database: CacheDatabase, on: string = runtime()): void => {
+  try {
+    database.exec(`CREATE VIRTUAL TABLE temp.capability_words USING fts5(a, content = '', contentless_delete = 1,
+                     tokenize = 'unicode61 remove_diacritics 2')`)
+    database.exec("CREATE VIRTUAL TABLE temp.capability_text USING fts5(a, tokenize = 'trigram')")
+    database.exec("DROP TABLE temp.capability_words")
+    database.exec("DROP TABLE temp.capability_text")
+  } catch (error) {
+    const version = String(database.prepare("SELECT sqlite_version() AS version").get()?.version)
+    const remedy = on.startsWith("Bun")
+      ? "Run it under Node 22.16 or newer instead"
+      : "Update Node to 22.16 or newer, or run it under Bun"
+    throw new CliError(
+      "configuration_error",
+      `the message store needs full-text search that this SQLite (${version}, ${on}) does not have. ${remedy}.`,
+      { sqlite: version, runtime: on, cause: error instanceof Error ? error.message : String(error) },
+    )
+  }
+}
+
+let capable: Promise<void> | undefined
+
+/** Once per process: the runtime's SQLite does not change while it runs. */
+export const storeCapable = (): Promise<void> => {
+  capable ??= openCache(":memory:").then((database) => {
+    try {
+      assertStoreCapable(database)
+    } finally {
+      database.close()
+    }
+  })
+  return capable
 }

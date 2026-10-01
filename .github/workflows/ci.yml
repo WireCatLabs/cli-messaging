@@ -40,6 +40,23 @@ jobs:
       # The smoke runs the sources; only this loads the Bun half of the Drizzle bundle in dist.
       - run: pnpm build && bun scripts/check-dist.ts
 
+  old-node:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      # The last official Node whose SQLite has no FTS5 (measured 2026-10-01).
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22.15.0
+      - run: node scripts/check-old-node.mjs
+
   version:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest

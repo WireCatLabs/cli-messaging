@@ -8,6 +8,11 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Fixed
 
+- **On a SQLite without full-text search, the store refuses with a message that says what to do**,
+  before it writes anything: official Node 22.0–22.15 and 23.x ship one, and so may Bun on an old
+  macOS. Before, the store failed on such a Node with `no such module: fts5` and could not be used at
+  all. `engines.node` is now `^22.16.0 || >=24`, the Node versions the store works on.
+
 - **A message deleted with `messages delete` is gone from the store too**, so `messages search` and
   `messages list --offline` stop showing it; an edit replaces the stored text, and a forwarded copy is
   kept in the chat it went to. Before, the store kept what the read before the write had saved.
