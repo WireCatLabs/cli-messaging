@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs"
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { captureStreams } from "@leemour/cli-core"
@@ -8,6 +8,7 @@ import { SendJournal, sendsPathFor } from "../../sends/journal.js"
 import { run } from "../program.js"
 import { settingsFor } from "../settings.js"
 import { chatsCommand } from "./chats-command.js"
+import { contactsCommand } from "./contacts-command.js"
 import type { Messenger } from "./context.js"
 import type { MessengerAdapter } from "./port.js"
 
@@ -59,7 +60,11 @@ const call = async (
     ...own,
   }
   const streams = captureStreams()
-  const code = await run(argv, { app, commands: () => [chatsCommand(messenger)] }, { streams, tty: false, env })
+  const code = await run(
+    argv,
+    { app, commands: () => [chatsCommand(messenger), contactsCommand(messenger)] },
+    { streams, tty: false, env },
+  )
   return { code, stdout: streams.stdout, stderr: streams.stderr }
 }
 
@@ -345,5 +350,91 @@ describe("chats create, join and leave", () => {
       "folder-update",
       "folder-delete",
     ])
+  })
+
+  it("**changes the address book through the guard**, each as its own account action", async () => {
+    const env = sandbox()
+    const done: unknown[] = []
+    const ivan = { id: "91", name: "Ivan", username: null }
+    const adapter: MessengerAdapter = {
+      ...base,
+      people: async () => ["91"],
+      addContact: async (id) => {
+        done.push(["add", id])
+        return ivan
+      },
+      removeContact: async (id) => {
+        done.push(["remove", id])
+      },
+      block: async (id) => {
+        done.push(["block", id])
+      },
+      unblock: async (id) => {
+        done.push(["unblock", id])
+      },
+      renameContact: async (id, first, last) => {
+        done.push(["rename", id, first, last])
+        return { ...ivan, name: `${first} ${last}` }
+      },
+    }
+
+    const added = await call(["contacts", "add", "Ivan", "--json"], adapter, env)
+    for (const verb of ["remove", "block", "unblock"]) await call(["contacts", verb, "Ivan"], adapter, env)
+    const renamed = await call(["contacts", "rename", "Ivan", "Vanya", "P.", "--json"], adapter, env)
+
+    expect(JSON.parse(added.stdout[0] ?? "")).toEqual({ operationId: expect.any(String), person: ivan })
+    expect(JSON.parse(renamed.stdout[0] ?? "")).toMatchObject({ person: { name: "Vanya P." } })
+    expect(done).toEqual([
+      ["add", "91"],
+      ["remove", "91"],
+      ["block", "91"],
+      ["unblock", "91"],
+      ["rename", "91", "Vanya", "P."],
+    ])
+    expect(new SendJournal(sendsPathFor(app, "default", env)).entries().map((one) => one.action)).toEqual([
+      "contact-add",
+      "contact-remove",
+      "contact-block",
+      "contact-unblock",
+      "contact-rename",
+    ])
+  })
+
+  it("**imports a file of numbers**, never printing or journaling one, and names a bad line by its number", async () => {
+    const env = sandbox()
+    const root = mkdtempSync(join(tmpdir(), "phones-"))
+    const good = join(root, "good.txt")
+    const bad = join(root, "bad.txt")
+    writeFileSync(good, "+34 600 111 222, Ivan\n\n34600333444\tOlga\n")
+    writeFileSync(bad, "34600111222; Ivan\nnot a number, Olga\n")
+    const sent: unknown[] = []
+    const adapter: MessengerAdapter = {
+      ...base,
+      importContacts: async (entries) => {
+        sent.push(entries)
+        return [{ id: "91", name: "Ivan", username: null }]
+      },
+    }
+
+    const imported = await call(["contacts", "import", good, "--json"], adapter, env)
+    const refused = await call(["contacts", "import", bad], adapter, env)
+
+    expect(JSON.parse(imported.stdout[0] ?? "")).toEqual({
+      operationId: expect.any(String),
+      sent: 2,
+      recognised: [{ id: "91", name: "Ivan", username: null }],
+    })
+    expect(sent).toEqual([
+      [
+        { phone: "34600111222", name: "Ivan" },
+        { phone: "34600333444", name: "Olga" },
+      ],
+    ])
+    expect(refused.code).toBe(2)
+    expect(refused.stderr.join("\n")).toContain("line 2")
+    expect(refused.stderr.join("\n")).not.toContain("Olga")
+    const journal = readFileSync(sendsPathFor(app, "default", env), "utf8")
+    expect(journal).toContain('"action":"contact-import"')
+    expect(journal).not.toContain("600")
   })
 })

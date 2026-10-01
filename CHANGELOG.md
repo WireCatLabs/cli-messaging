@@ -8,6 +8,14 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Added
 
+- **`contacts add|remove|block|unblock <person>`, `contacts rename <person> <first-name> [last-name]`
+  and `contacts import <file>`**, with the tools `contacts_add|remove|block|unblock|rename` (P2).
+  Each goes through the guard as an `account` write. `import` reads a file — one `number, name` per
+  line, comma, tab or semicolon between — so no number is on the command line; a bad line is named
+  by its number only, and the answer and the journal hold counts, never a number. It has no MCP
+  tool. A new port group, `ContactBook`; `PhoneBookEntry` in the domain; `PeopleService` gains the
+  writes.
+- The manifest says `chats folders list|create|update|delete` are in both tools.
 - **A duration takes `h` and `d` too** — `--timeout 1h`, `--pause`, and every option that reads one
   with `parseDuration`.
 - **`listed` and `renderList`** in `./cli`: a list with no pages in the envelope a paged one uses —

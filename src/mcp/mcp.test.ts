@@ -978,6 +978,43 @@ describe("sending over MCP", () => {
     ])
   })
 
+  it("**adds, removes, blocks, unblocks and renames contacts** over MCP", async () => {
+    const done: unknown[] = []
+    const ivan = { id: "91", name: "Ivan", username: null }
+    const telegram = scripted({
+      people: async () => ["91"],
+      addContact: async (id) => {
+        done.push(["add", id])
+        return ivan
+      },
+      removeContact: async (id) => {
+        done.push(["remove", id])
+      },
+      block: async (id) => {
+        done.push(["block", id])
+      },
+      unblock: async (id) => {
+        done.push(["unblock", id])
+      },
+      renameContact: async (id, first, last) => {
+        done.push(["rename", id, first, last])
+        return ivan
+      },
+    })
+    const { call } = await connect(telegram, {})
+
+    for (const verb of ["add", "remove", "block", "unblock"]) await call(`chat_contacts_${verb}`, { person: "Ivan" })
+    await call("chat_contacts_rename", { person: "Ivan", first_name: "Vanya" })
+
+    expect(done).toEqual([
+      ["add", "91"],
+      ["remove", "91"],
+      ["block", "91"],
+      ["unblock", "91"],
+      ["rename", "91", "Vanya", undefined],
+    ])
+  })
+
   it("reads a poll on a read-only profile, and votes by id where it may", async () => {
     const votes: unknown[] = []
     const poll = {
