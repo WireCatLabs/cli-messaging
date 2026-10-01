@@ -8,7 +8,7 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## 0.98.0 — 01.10.2026
 
-Released early: tg-cli and max-cli: their command pages label config set, chats rules set and the recipient lists as changing the messenger; the fix (#360) needs this release, owner approved the early release (NEED-513)
+Released early: tg-cli and max-cli: their command pages label config set, chats rules set and the recipient lists as changing the messenger; the fix (#360) needs this release, and the owner approved releasing it early
 
 ### Added
 
