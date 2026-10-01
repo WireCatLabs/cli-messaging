@@ -10,6 +10,9 @@ Phase 3 item 6 ([plan](../../docs/storage/plans/phase-3.md)). Two checks of `lin
   `graph-eval.py` and `conversation-eval.py`.
 - **`sweep.ts`** — tunes the same-sender rule on the **dev** split only: its window in messages and
   minutes, and whether it or the mention rule wins. The test split is then scored once with `run.sh`.
+- **`scale.ts`** — time and memory of the rules for one chat of N messages (phase 3 item 7): the first N
+  rows of `bench/search`'s corpus as one chat, with invented replies (60%, parent within 50) and mentions
+  (5%).
 - **`holdout.ts`** — a real store: hides a share of the reply links, runs the rules, and counts how many
   come back. Prints counts per chat key only.
 
@@ -17,10 +20,25 @@ Phase 3 item 6 ([plan](../../docs/storage/plans/phase-3.md)). Two checks of `lin
 DISENTANGLE_DATA=~/data/irc-disentanglement ./run.sh test      # or dev
 DISENTANGLE_DATA=~/data/irc-disentanglement node --experimental-strip-types sweep.ts dev
 node --experimental-strip-types holdout.ts <messages.db> 0.2 200
+node --experimental-strip-types scale.ts 1000000    # corpus from bench/search/gen.ts 1000000 42
 ```
 
 Needs `git`, Node 24, `python3` and `uv` (the conversation scorer runs on Python 3.10 with
 `ortools<9.4`, which still has `pywrapgraph`, and scikit-learn).
+
+## Scale, 2026-10-01
+
+`scale.ts`, Node 24, one process per row. "Heap after" is what the result holds; peak RSS includes the
+script holding all N input messages, which the store's build will read in batches instead.
+
+| messages | rules | rate | links | conversations | heap after | peak RSS |
+|---|---|---|---|---|---|---|
+| 5,000 | 0.02 s | 245,852 msg/s | 3,418 | 1,835 | 3 MB | 99 MB |
+| 100,000 | 0.17 s | 593,420 msg/s | 68,762 | 36,612 | 50 MB | 338 MB |
+| 1,000,000 | 1.78 s | 561,832 msg/s | 688,812 | 364,976 | 285 MB | 1,426 MB |
+
+The rules are far under the plan's one minute at 1M, so a chat is rebuilt whole (plan C3). Writing the
+result to the store is measured once the store methods exist (item 2).
 
 ## Results, 2026-09-30
 
