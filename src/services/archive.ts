@@ -154,6 +154,8 @@ export const archiveService = (deps: ServiceDeps): ArchiveService => {
       let chatId: Id | undefined
       let top: number | undefined
       let fetched = 0
+      // By time a page reaches back into the moment the last one ended at, so its ids repeat.
+      const seen = new Set<Id>()
       let reachedStart = false
       let reachedSince = false
       let reachedLast = false
@@ -184,7 +186,9 @@ export const archiveService = (deps: ServiceDeps): ArchiveService => {
         }
         const low = Math.min(...keys)
         top ??= Math.max(...keys)
-        fetched += page.items.length
+        const fresh = page.items.filter((message) => !seen.has(message.id)).length
+        for (const message of page.items) seen.add(message.id)
+        fetched += fresh
         // This run's pages are contiguous, so everything from `low` to its first message is held.
         const held = await store.markRange(account, chatId, low, top)
         onPage({ fetched, chatId, oldest: held.from })
@@ -206,7 +210,9 @@ export const archiveService = (deps: ServiceDeps): ArchiveService => {
           reachedLast = true
           break
         }
-        before = byTime ? new Date(held.from).toISOString() : String(held.from)
+        // Two messages can share a millisecond, and the page may have ended between them: ask up to and including
+        // it. A page with nothing new means that moment holds a whole page, so step past it rather than loop.
+        before = byTime ? new Date(held.from + (fresh > 0 ? 1 : 0)).toISOString() : String(held.from)
         note(`${fetched} messages so far, back to ${held.from}`)
         const wait = fetching.jitter ? pauseMs * (1 + Math.random()) : pauseMs
         await sleep(wait, undefined, { signal: stop }).catch(() => {})
