@@ -14,7 +14,11 @@ export const pendingNormalization = (database: CacheDatabase): number =>
  */
 export const backfillNormalized = (
   database: CacheDatabase,
-  { batch = 5_000, onBatch }: { batch?: number; onBatch?: (filled: number) => void } = {},
+  {
+    batch = 5_000,
+    onBatch,
+    until = () => false,
+  }: { batch?: number; onBatch?: (filled: number) => void; until?: () => boolean } = {},
 ): number => {
   const next = database.prepare(
     `SELECT pk, text FROM messages WHERE normalized_text IS NULL AND deleted_at IS NULL AND pk > ? ORDER BY pk LIMIT ?`,
@@ -23,6 +27,7 @@ export const backfillNormalized = (
   let filled = 0
   let after = 0
   for (;;) {
+    if (until()) return filled
     database.exec("BEGIN IMMEDIATE")
     let rows: Record<string, unknown>[]
     try {

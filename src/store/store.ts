@@ -29,6 +29,8 @@ import { openSqlite, type StoreContext } from "./sqlite/open.js"
 import * as ranges from "./sqlite/ranges.js"
 import * as reads from "./sqlite/reads.js"
 import * as search from "./sqlite/search.js"
+import type { SearchIndexFill, SearchIndexState } from "./sqlite/search-index.js"
+import * as searchIndex from "./sqlite/search-index.js"
 import * as sync from "./sqlite/sync.js"
 import * as transcripts from "./sqlite/transcripts.js"
 import { toMs } from "./sqlite/values.js"
@@ -225,6 +227,13 @@ export interface MessageStore {
   search(query: string, options: { limit: number; account?: AccountKey }): Promise<Page<StoredHit>>
   /** Newest first — by text, by who wrote it, or both. */
   find(filter: MessageFilter): Promise<Page<StoredHit>>
+  /** How far the word index is built; `undefined` on a file before it existed. */
+  searchIndexState(): Promise<SearchIndexState | undefined>
+  /**
+   * Builds the word index towards "ready" in short batches — the normalized text, the messages up to
+   * the watermark, the typo vocabulary — until done or `until` says stop. Each batch is its own write.
+   */
+  fillSearchIndex(options?: { until?: () => boolean }): Promise<SearchIndexFill>
   savePeople(key: AccountKey, people: PersonFacts[]): Promise<void>
   /**
    * The people this account has a one-to-one chat with — as far as the saved member lists go —
@@ -666,6 +675,11 @@ const storeOver = (context: StoreContext): MessageStore => {
       search.find(context, { text: query, limit, ...(account ? { account } : {}) }),
 
     find: async (filter) => search.find(context, filter),
+
+    searchIndexState: async () => searchIndex.searchIndexState(database),
+
+    fillSearchIndex: async ({ until } = {}) =>
+      searchIndex.fillSearchIndex(database, { now: context.now, ...(until ? { until } : {}) }),
 
     contacts: async (key, options) => {
       const accountKey = findAccountPk(key)

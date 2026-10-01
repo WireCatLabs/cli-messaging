@@ -180,8 +180,16 @@ describe("store migrate", () => {
     ;(await seeded(env, 5)).close()
 
     const { answer, stderr } = await call(["store", "migrate", "--json"], env)
-    expect(answer).toEqual({ path: env.MESSAGING_STORE, exists: true, from: 5, to: latest, normalized: 2 })
-    expect(stderr.join("\n")).toContain("2 of 2")
+    expect(answer).toEqual({
+      path: env.MESSAGING_STORE,
+      exists: true,
+      from: 5,
+      to: latest,
+      normalized: 2,
+      indexed: 0,
+      terms: 4,
+    })
+    expect(stderr.join("\n")).toContain("2 of 2 normalized")
 
     const database = await openCache(String(env.MESSAGING_STORE))
     expect(database.prepare("SELECT normalized_text FROM messages ORDER BY pk").all()).toEqual([
@@ -190,6 +198,54 @@ describe("store migrate", () => {
     ])
     database.close()
     expect((await call(["store", "migrate", "--json"], env)).answer).toMatchObject({ from: latest, normalized: 0 })
+  })
+})
+
+describe("the word index", () => {
+  const words = async (env: NodeJS.ProcessEnv, word: string) => {
+    const database = await openCache(String(env.MESSAGING_STORE))
+    try {
+      return database
+        .prepare("SELECT rowid FROM message_words WHERE message_words MATCH ?")
+        .all(`normalized_text: ${word}`).length
+    } finally {
+      database.close()
+    }
+  }
+
+  it("**`store reindex` rebuilds it and its vocabulary** from the stored messages", async () => {
+    const env = envFor()
+    ;(await seeded(env)).close()
+    await call(["store", "migrate", "--json"], env)
+
+    const { answer } = await call(["store", "reindex", "--json"], env)
+
+    expect(answer).toEqual({ path: env.MESSAGING_STORE, exists: true, normalized: 0, indexed: 2, terms: 4 })
+    expect(await words(env, "hola")).toBe(1)
+    const { answer: info } = await call(["store", "info", "--json"], env)
+    expect(info.wordIndex).toMatchObject({ watermark: 2, filledThrough: 2, ready: true, pendingNormalization: 0 })
+  })
+
+  it("**`store check` checks it, and says how far a large file's fill has come**", async () => {
+    const env = envFor()
+    const database = await seeded(env)
+    database.exec("UPDATE search_index_state SET watermark = 10, filled_through = 1")
+    database.close()
+
+    const { answer, stderr } = await call(["store", "check", "--json"], env)
+
+    expect(answer.searchIndexes.message_words).toBe("ok")
+    expect(answer.wordIndex).toMatchObject({ watermark: 10, filledThrough: 1, ready: false })
+    expect(stderr.join("\n")).toContain("the word index reaches message 1 of 10 — `chat store migrate` finishes it")
+  })
+
+  it("`store reindex` refuses a file behind this build", async () => {
+    const env = envFor()
+    ;(await seeded(env, 11)).close()
+
+    const { code, stderr } = await call(["store", "reindex", "--json"], env)
+    expect(code).not.toBe(0)
+    expect(stderr.join("\n")).toContain("`chat store migrate` first")
   })
 })
 
