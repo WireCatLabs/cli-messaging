@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.93.0 — 01.10.2026
+
 ### Added
 
 - **`conversations batches status|next --chat <chat> [--size <n>]`** (storage phase 4): a chat in
