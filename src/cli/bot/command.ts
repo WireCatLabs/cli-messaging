@@ -126,7 +126,7 @@ const listCommand = (bot: BotMessenger, tokenVariable: string): Command =>
 
 const recipientsCommand = (bot: BotMessenger): Command => {
   const command = new Command("recipients").description(
-    "the chats this bot may write to; with no list, every chat — `off` removes the list",
+    "the chats this bot may write to; with no list, every chat — `clear` removes the list",
   )
   command
     .command("list")
