@@ -2,20 +2,53 @@ import { existsSync, rmSync } from "node:fs"
 import { join } from "node:path"
 import { CliError, resolvePaths, writeSecurely } from "@leemour/cli-core"
 import { Command } from "commander"
-import { type Lock, lockPath, readLock } from "../../background/lock.js"
+import { lockPath, readLock } from "../../background/lock.js"
 import { alive, carries } from "../../background/processes.js"
 import { type ServerSystem, thisMachine } from "../../background/system.js"
 import { locationVariables, platformFor, tail, type Unit } from "../../background/units.js"
+import type { AppIdentity } from "../app.js"
 import { type BaseEnvironment, environmentOf } from "../context.js"
 import { listed } from "../paging.js"
-import { type Messenger, messengerContext } from "./context.js"
+import { parseDuration } from "../settings.js"
+import { type Messenger, type MessengerContext, messengerContext } from "./context.js"
 
 export type { Ran, ServerSystem } from "../../background/system.js"
 
 /** How many looks, a pause apart, `start` gives `serve` to connect — about 30 seconds on a real machine. */
 const LOOKS = 120
 
-type By = "unit" | "server" | "hand"
+type By = "unit" | "server" | "hand" | "command"
+
+/** A running server, as its CLI can tell. */
+export interface Running {
+  pid: number
+  startedAt: string
+  connected: boolean
+  connectedAt?: string
+  version?: string
+  /** The server says a command that needed it started it (max); `start` takes its place. */
+  byCommand?: boolean
+}
+
+/** How a CLI finds, starts and stops its server. Without one, `server` uses tg's: the lock file and a signal. */
+export interface ServerProcess {
+  probe: () => Promise<Running | undefined>
+  /** Starts `serve` apart from this process with `args` and the variables in `env` added; its PID. Throws when it cannot start now. */
+  launch: (args: string[], env: Record<string, string>) => number
+  /** Asks it to stop; `server` then waits for its PID to be gone. */
+  stop: (running: Running) => Promise<void>
+}
+
+export interface ServerOptions {
+  process?: (context: MessengerContext, system: ServerSystem, logPath: string) => ServerProcess
+  /** Where a server started without a unit writes its log. tg's: `<state>/serve/<profile>.log`. */
+  logPath?: (context: MessengerContext) => string
+  /** The words after the CLI's own entry that run `serve` in the foreground — what a unit runs. */
+  serveArgv?: string[]
+  /** `start` and `restart` take `--idle <duration>` and hand it to `serve`. */
+  idle?: boolean
+  unit?: Pick<Unit, "purpose" | "noRestartOn">
+}
 
 /** A person reads paths under their home as `~/…`. */
 const tilde = (path: string, env: NodeJS.ProcessEnv) =>
@@ -28,45 +61,80 @@ const clock = (iso: string) => {
   return when.toDateString() === new Date().toDateString() ? time : `${when.toLocaleDateString("sv-SE")} ${time}`
 }
 
+const lockProcess =
+  (app: AppIdentity, marker: string, serveArgv: string[]) =>
+  (context: MessengerContext, system: ServerSystem, logPath: string): ServerProcess => ({
+    probe: async () => {
+      const held = readLock(lockPath(app, context.profile, context.env))
+      if (!held || !alive(held.pid)) return undefined
+      return {
+        pid: held.pid,
+        startedAt: held.startedAt,
+        connected: held.listeningAt !== undefined,
+        ...(held.listeningAt ? { connectedAt: held.listeningAt } : {}),
+        ...(held.version ? { version: held.version } : {}),
+      }
+    },
+    launch: (args, env) => {
+      // A shell's --timeout default would end a server meant to outlive the shell.
+      const { [`${app.envPrefix}_TIMEOUT`]: _timeout, ...inherited } = context.env
+      return system.spawn(
+        [...serveArgv, ...args],
+        { ...inherited, [`${app.envPrefix}_PROFILE`]: context.profile, ...env },
+        logPath,
+      )
+    },
+    stop: async ({ pid }) => {
+      if (!carries(pid, marker)) {
+        throw new CliError(
+          "validation_error",
+          `serve for profile ${context.profile} (PID ${pid}) was not started by \`${app.command} server start\` — stop it where it runs`,
+        )
+      }
+      process.kill(pid, "SIGTERM")
+    },
+  })
+
 /**
- * `serve` in the background, the way max-cli's `server` is: `start`, `stop`, `restart`, `status`,
- * `logs`. Without a unit, `start` runs `serve` as a process of its own; with one — `install`, a
- * systemd user unit or a launchd agent — it goes through systemd or launchd. **Nothing starts until
- * `start` is typed** (NEED-9): `install` only writes the file.
+ * `serve` in the background: `start`, `stop`, `restart`, `status`, `logs`. Without a unit, `start`
+ * runs `serve` as a process of its own; with one — `install`, a systemd user unit or a launchd
+ * agent — it goes through systemd or launchd. **Nothing starts until `start` is typed** (NEED-9):
+ * `install` only writes the file. What the server does stays each CLI's; `options.process` says how
+ * to find, start and stop it.
  */
-export const serverCommand = (messenger: Messenger): Command => {
+export const serverCommand = (messenger: Messenger, options: ServerOptions = {}): Command => {
   const { app } = messenger
   const command = new Command("server").description(
     `\`${app.command} serve\` in the background: start, stop, restart, status, logs; install adds a systemd or launchd unit`,
   )
   const marker = (profile: string) => `${app.envPrefix}_SERVER=${profile}`
+  const serveArgv = options.serveArgv ?? ["serve"]
 
   const prepare = (self: Command) => {
     const context = messengerContext(self, messenger)
     const system = environmentOf<BaseEnvironment & { system?: ServerSystem }>(self).system ?? thisMachine()
     const platform = platformFor(app, system, context.env)
     const state = resolvePaths({ appName: app.appName, prefix: app.envPrefix, env: context.env }).state
+    const logPath = options.logPath?.(context) ?? join(state, "serve", `${context.profile}.log`)
     const unit = platform.unit({
       profile: context.profile,
-      command: [...system.entry, "serve"],
+      command: [...system.entry, ...serveArgv],
       environment: { [`${app.envPrefix}_PROFILE`]: context.profile, ...locationVariables(app, context.env) },
-      logPath: join(state, "serve", `${context.profile}.log`),
+      logPath,
+      ...options.unit,
     })
+    const server = (options.process ?? lockProcess(app, marker(context.profile), serveArgv))(context, system, logPath)
     const each = async (argvs: string[][]) => {
       for (const argv of argvs) {
         const ran = await system.run(argv, context.env)
         if (ran.code !== 0) throw new CliError("configuration_error", `${argv.join(" ")} failed: ${ran.stderr.trim()}`)
       }
     }
-    const lock = () => {
-      const held = readLock(lockPath(app, unit.profile, context.env))
-      return held && alive(held.pid) ? held : undefined
-    }
     const say = (value: object, lines: string[]) => {
       if (context.format === "pretty") context.streams.data(lines.join("\n"))
       else context.renderer.result(value)
     }
-    return { context, system, platform, unit, each, lock, say }
+    return { context, system, platform, unit, server, each, say }
   }
   type Prepared = ReturnType<typeof prepare>
 
@@ -79,9 +147,10 @@ export const serverCommand = (messenger: Messenger): Command => {
     }
   }
 
-  const byOf = async ({ platform, unit }: Prepared, held: Lock): Promise<By> => {
-    if (existsSync(unit.path) && (await platform.state(unit)).pid === held.pid) return "unit"
-    return carries(held.pid, marker(unit.profile)) ? "server" : "hand"
+  const byOf = async ({ platform, unit }: Prepared, running: Running): Promise<By> => {
+    if (existsSync(unit.path) && (await platform.state(unit)).pid === running.pid) return "unit"
+    if (running.byCommand) return "command"
+    return carries(running.pid, marker(unit.profile)) ? "server" : "hand"
   }
 
   const how = (by: By, unit: Unit) =>
@@ -89,14 +158,16 @@ export const serverCommand = (messenger: Messenger): Command => {
       ? `under ${unit.path.endsWith(".plist") ? "launchd" : "systemd"} (${unit.name})`
       : by === "server"
         ? `started by \`${app.command} server start\``
-        : `started by hand — \`${app.command} server stop\` leaves it alone`
+        : by === "command"
+          ? `started by a ${app.command} command that needed it — it stops once unused`
+          : `started by hand — \`${app.command} server stop\` leaves it alone`
 
-  const start = async (prepared: Prepared) => {
-    const { context, system, platform, unit, each, lock, say } = prepared
-    const held = lock()
-    if (held) {
-      say({ profile: unit.profile, started: false, running: true, pid: held.pid, startedAt: held.startedAt }, [
-        `Already serving profile ${unit.profile} since ${clock(held.startedAt)} (PID ${held.pid}).`,
+  const start = async (prepared: Prepared, args: string[]) => {
+    const { system, platform, unit, server, each, say } = prepared
+    const before = await server.probe()
+    if (before && !before.byCommand) {
+      say({ profile: unit.profile, started: false, running: true, pid: before.pid, startedAt: before.startedAt }, [
+        `Already serving profile ${unit.profile} since ${clock(before.startedAt)} (PID ${before.pid}).`,
       ])
       return
     }
@@ -106,98 +177,109 @@ export const serverCommand = (messenger: Messenger): Command => {
       await each(platform.start(unit))
       by = "unit"
     } else {
-      // A shell's --timeout default would end a server meant to outlive the shell.
-      const { [`${app.envPrefix}_TIMEOUT`]: _timeout, ...inherited } = context.env
       const [name = "", value = ""] = marker(unit.profile).split("=")
-      spawned = system.spawn(
-        ["serve"],
-        { ...inherited, [`${app.envPrefix}_PROFILE`]: unit.profile, [name]: value },
-        unit.logPath ?? "",
-      )
+      spawned = server.launch(args, { [name]: value })
       by = "server"
     }
     for (let look = 0; look < LOOKS; look++) {
-      const now = lock()
-      if (now?.listeningAt) {
-        say({ profile: unit.profile, started: true, by, pid: now.pid, connectedAt: now.listeningAt }, [
-          `Started: serving profile ${unit.profile} (PID ${now.pid}), listening since ${clock(now.listeningAt)}, ${how(by, unit)}.`,
-          `Its log: ${app.command} server logs`,
-        ])
+      const now = await server.probe()
+      // A server a command started answers until the new one takes its place.
+      if (now?.connected && now.pid !== before?.pid) {
+        say(
+          {
+            profile: unit.profile,
+            started: true,
+            by,
+            pid: now.pid,
+            startedAt: now.startedAt,
+            ...(now.connectedAt ? { connectedAt: now.connectedAt } : {}),
+            log: unit.logPath,
+          },
+          [
+            `Started: serving profile ${unit.profile} (PID ${now.pid}), connected${now.connectedAt ? ` since ${clock(now.connectedAt)}` : ""}, ${how(by, unit)}.`,
+            `Its log: ${app.command} server logs`,
+          ],
+        )
         return
       }
       const gone = spawned !== undefined ? !alive(spawned) : look > 8 && !(await platform.state(unit)).active
       if (gone) {
         const last = (by === "unit" ? await platform.logs(unit, 5) : tail(unit.logPath, 5)).trim()
-        throw new CliError("provider_unavailable", `serve stopped before it was listening${last ? `:\n${last}` : ""}`)
+        throw new CliError("provider_unavailable", `serve stopped before it was connected${last ? `:\n${last}` : ""}`)
       }
       await system.pause()
     }
     throw new CliError(
       "timeout",
-      `serve is running but not listening yet — \`${app.command} server status\`, \`${app.command} server logs\``,
+      `serve is running but not connected yet — \`${app.command} server status\`, \`${app.command} server logs\``,
     )
   }
 
   const stop = async (prepared: Prepared) => {
-    const { platform, unit, each, lock, say, system } = prepared
+    const { platform, unit, server, each, say, system } = prepared
     if (existsSync(unit.path) && (await platform.state(unit)).active) {
       await each(platform.stop(unit))
       say({ profile: unit.profile, stopped: true, by: "unit" }, [`Stopped ${unit.name}.`])
       return
     }
-    const held = lock()
-    if (!held) {
+    const running = await server.probe()
+    if (!running) {
       say({ profile: unit.profile, stopped: false }, [`Nothing to stop: profile ${unit.profile} is not being served.`])
       return
     }
-    if (!carries(held.pid, marker(unit.profile))) {
-      throw new CliError(
-        "validation_error",
-        `serve for profile ${unit.profile} (PID ${held.pid}) was not started by \`${app.command} server start\` — stop it where it runs`,
-      )
-    }
-    process.kill(held.pid, "SIGTERM")
-    for (let look = 0; look < LOOKS && alive(held.pid); look++) await system.pause()
-    say({ profile: unit.profile, stopped: true, by: "server", pid: held.pid }, [
-      `Stopped serving profile ${unit.profile} (PID ${held.pid}).`,
+    const by = await byOf(prepared, running)
+    await server.stop(running)
+    for (let look = 0; look < LOOKS && alive(running.pid); look++) await system.pause()
+    say({ profile: unit.profile, stopped: true, by, pid: running.pid }, [
+      `Stopped serving profile ${unit.profile} (PID ${running.pid}).`,
     ])
   }
 
-  command
-    .command("start")
-    .description("start serve in the background — through the unit if one is installed — and answer once it listens")
-    .action(async function (this: Command) {
-      await start(prepare(this))
-    })
+  const idleArgs = (self: Command): string[] => {
+    const { idle } = self.opts<{ idle?: string }>()
+    if (idle === undefined) return []
+    parseDuration(idle, "--idle")
+    return ["--idle", idle]
+  }
+  const withIdle = (sub: Command) =>
+    options.idle ? sub.option("--idle <duration>", "stop after this long with nobody using it — 15m, 1h") : sub
+
+  withIdle(
+    command
+      .command("start")
+      .description(
+        "start serve in the background — through the unit if one is installed — and answer once it connects",
+      ),
+  ).action(async function (this: Command) {
+    await start(prepare(this), idleArgs(this))
+  })
 
   command
     .command("stop")
-    .description("stop the serve that `server start` or the unit started")
+    .description("stop this profile's serve — through the unit if it runs under one")
     .action(async function (this: Command) {
       await stop(prepare(this))
     })
 
-  command
-    .command("restart")
-    .description("stop it and start it again")
-    .action(async function (this: Command) {
-      const prepared = prepare(this)
-      await stop({ ...prepared, say: () => {} })
-      await start(prepared)
-    })
+  withIdle(command.command("restart").description("stop it and start it again")).action(async function (this: Command) {
+    const args = idleArgs(this)
+    const prepared = prepare(this)
+    await stop({ ...prepared, say: () => {} })
+    await start(prepared, args)
+  })
 
   command
     .command("status")
     .description("whether serve runs for this profile, since when, who started it, and the unit if there is one")
     .action(async function (this: Command) {
       const prepared = prepare(this)
-      const { context, platform, unit, lock, say } = prepared
+      const { context, platform, unit, server, say } = prepared
       const isInstalled = existsSync(unit.path)
       const state = isInstalled ? await platform.state(unit) : { loaded: false, active: false }
-      const held = lock()
+      const held = await server.probe()
       const by = held ? await byOf(prepared, held) : null
       const left = held ? undefined : readLock(lockPath(app, unit.profile, context.env))
-      // max-cli's server status says the same: an update leaves a running serve on the old code.
+      // An update leaves a running serve on the old code.
       const outdated =
         held?.version && held.version !== app.version
           ? `It runs ${app.command} ${held.version}, and ${app.command} is now ${app.version} — \`${app.command} server restart\`.`
@@ -214,8 +296,8 @@ export const serverCommand = (messenger: Messenger): Command => {
             ? {
                 pid: held.pid,
                 startedAt: held.startedAt,
-                connected: held.listeningAt !== undefined,
-                ...(held.listeningAt ? { connectedAt: held.listeningAt } : {}),
+                connected: held.connected,
+                ...(held.connectedAt ? { connectedAt: held.connectedAt } : {}),
                 by,
               }
             : {}),
@@ -227,9 +309,9 @@ export const serverCommand = (messenger: Messenger): Command => {
         },
         [
           held
-            ? held.listeningAt
-              ? `Serving profile ${unit.profile} since ${clock(held.startedAt)} (PID ${held.pid}), listening since ${clock(held.listeningAt)}, ${how(by ?? "hand", unit)}.`
-              : `Starting profile ${unit.profile} since ${clock(held.startedAt)} (PID ${held.pid}) — not listening yet, ${how(by ?? "hand", unit)}.`
+            ? held.connected
+              ? `Serving profile ${unit.profile} since ${clock(held.startedAt)} (PID ${held.pid}), connected${held.connectedAt ? ` since ${clock(held.connectedAt)}` : ""}, ${how(by ?? "hand", unit)}.`
+              : `Starting profile ${unit.profile} since ${clock(held.startedAt)} (PID ${held.pid}) — not connected yet, ${how(by ?? "hand", unit)}.`
             : `Not serving profile ${unit.profile}.${isInstalled && state.detail?.startsWith("failed") ? ` The unit failed — \`${app.command} server logs\`.` : ""}`,
           ...(left
             ? [

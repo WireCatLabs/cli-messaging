@@ -10,7 +10,7 @@ import { settingsFor } from "../settings.js"
 import type { Messenger } from "./context.js"
 import type { MessengerAdapter } from "./port.js"
 import { servingProfiles } from "./serve-command.js"
-import { type Ran, type ServerSystem, serverCommand } from "./server-command.js"
+import { type Ran, type Running, type ServerOptions, type ServerSystem, serverCommand } from "./server-command.js"
 
 const app = { command: "chat", appName: "chat-cli", envPrefix: "CHAT", description: "A test", version: "1.0.0" }
 const messenger: Messenger = {
@@ -91,11 +91,17 @@ const machine = (
   return { system, ran, spawned }
 }
 
-const call = async (argv: string[], env: NodeJS.ProcessEnv, system: ServerSystem, tty = false) => {
+const call = async (
+  argv: string[],
+  env: NodeJS.ProcessEnv,
+  system: ServerSystem,
+  tty = false,
+  options: ServerOptions = {},
+) => {
   const streams = captureStreams()
   const code = await run(
     ["server", ...argv],
-    { app, commands: () => [serverCommand(messenger)] },
+    { app, commands: () => [serverCommand(messenger, options)] },
     { streams, tty, env, system },
   )
   const first = streams.stdout[0]
@@ -145,7 +151,7 @@ describe("server without a unit", () => {
     const { code, stderr } = await call(["start"], env, machine("linux", { serve: "dies" }).system)
 
     expect(code).not.toBe(0)
-    expect(stderr).toContain("stopped before it was listening")
+    expect(stderr).toContain("stopped before it was connected")
     expect(stderr).toContain("no app credentials")
   })
 
@@ -154,7 +160,7 @@ describe("server without a unit", () => {
     const { code, stderr } = await call(["start"], env, machine("linux", { serve: "silent" }).system)
 
     expect(code).not.toBe(0)
-    expect(stderr).toContain("not listening yet")
+    expect(stderr).toContain("not connected yet")
     expect((await call(["status", "--json"], env, machine("linux").system)).answer).toMatchObject({
       running: true,
       connected: false,
@@ -226,7 +232,7 @@ describe("server without a unit", () => {
       "Not serving profile default.\nNo unit installed — `chat server install` adds one, for starting under systemd or launchd.",
     )
     expect((await call(["start"], env, system, true)).text).toMatch(
-      /^Started: serving profile default \(PID \d+\), listening since \d\d:\d\d, started by `chat server start`\.\nIts log: chat server logs$/,
+      /^Started: serving profile default \(PID \d+\), connected since \d\d:\d\d, started by `chat server start`\.\nIts log: chat server logs$/,
     )
   })
 })
@@ -381,4 +387,89 @@ it("where there is neither, install is refused and start still runs serve in the
   expect(refused.stderr).toContain("chat server start")
 
   expect((await call(["start", "--json"], env, machine("win32").system)).answer).toMatchObject({ started: true })
+})
+
+describe("a CLI's own server process", () => {
+  /** max's shape: the server answers for itself, and one a command started gives way to a start by hand. */
+  const own = (first?: Running) => {
+    let now = first
+    const launched: { args: string[]; env: Record<string, string> }[] = []
+    const stopped: number[] = []
+    const options: ServerOptions = {
+      idle: true,
+      serveArgv: ["--no-record", "serve"],
+      unit: { purpose: "hold one connection", noRestartOn: [4, 8, 11] },
+      process: () => ({
+        probe: async () => now,
+        launch: (args, env) => {
+          launched.push({ args, env })
+          const child = sleeper()
+          now = { pid: child.pid ?? 0, startedAt: new Date().toISOString(), connected: true }
+          return child.pid ?? 0
+        },
+        stop: async (running) => {
+          stopped.push(running.pid)
+          now = undefined
+        },
+      }),
+    }
+    return { options, launched, stopped }
+  }
+
+  it("**start takes the place of a server a command started**, and passes --idle on", async () => {
+    const { env } = setup()
+    const { options, launched } = own({
+      pid: process.pid,
+      startedAt: "2026-10-01T10:00:00.000Z",
+      connected: true,
+      byCommand: true,
+    })
+
+    const { answer } = await call(["start", "--idle", "30m", "--json"], env, machine("linux").system, false, options)
+    expect(answer).toMatchObject({ started: true, by: "server" })
+    expect(answer.pid).not.toBe(process.pid)
+    expect(launched).toEqual([{ args: ["--idle", "30m"], env: { CHAT_SERVER: "default" } }])
+  })
+
+  it("leaves alone a server started by hand, and stop goes through the CLI's own way", async () => {
+    const { env } = setup()
+    const stranger = sleeper()
+    const { options, launched, stopped } = own({
+      pid: stranger.pid ?? 0,
+      startedAt: "2026-10-01T10:00:00.000Z",
+      connected: true,
+    })
+
+    expect((await call(["start", "--json"], env, machine("linux").system, false, options)).answer).toMatchObject({
+      started: false,
+      running: true,
+    })
+    expect(launched).toEqual([])
+    stranger.kill()
+    expect((await call(["stop", "--json"], env, machine("linux").system, false, options)).answer).toMatchObject({
+      stopped: true,
+      by: "hand",
+    })
+    expect(stopped).toEqual([stranger.pid])
+  })
+
+  it("--idle is only there for a CLI that asks for it", async () => {
+    const { env } = setup()
+    expect((await call(["start", "--idle", "30m"], env, machine("linux").system)).code).not.toBe(0)
+    expect((await call(["start", "--idle", "soon"], env, machine("linux").system, false, own().options)).code).toBe(2)
+  })
+
+  it("**its unit does not restart after a refused login** — systemd leaves out the codes, launchd does not restart", async () => {
+    const { env } = setup()
+    const { options } = own()
+    await call(["install"], env, machine("linux").system, false, options)
+    const unit = readFileSync(unitPath(env), "utf8")
+    expect(unit).toContain("Description=chat serve — hold one connection (profile default)")
+    expect(unit).toContain("RestartPreventExitStatus=4 8 11")
+    expect(unit).toContain('"/opt/chat/bin/chat.js" "--no-record" "serve"')
+
+    await call(["install"], env, machine("darwin").system, false, options)
+    const agent = readFileSync(join(env.HOME, "Library", "LaunchAgents", "chat-cli.serve.default.plist"), "utf8")
+    expect(agent).not.toContain("KeepAlive")
+  })
 })
