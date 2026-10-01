@@ -24,6 +24,11 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Changed — may break callers
 
+- **The parity manifest marks max's whole `store` group as in both tools** — `status`, `jobs`, `clear`,
+  `info`, `check`, `migrate`, `backup`, `restore`, `fetch --background|--limit|--page-size|--since-time`,
+  `export --since-time` — and drops `store fetch|export --since` and `--max-pages`: max's main moved onto the
+  shared group (max-cli #307). A max older than that fails this manifest's parity check. `store reindex`
+  stays planned until tg moves to 0.97.0; `--page-size`'s default differs by messenger, as its note says.
 - **`parity.json` lists, for each command and option, the CLIs that have it** — `{ "in": "all" }`,
   `{ "in": ["max"], "reason": … }`, `{ "in": [], "planned": { "max": "T6", "tg": "T6" } }` — instead
   of `both`, `max-only`, `tg-only` and `planned`. Every planned row is now planned for both CLIs
