@@ -16,6 +16,15 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   prints it, and moves its cursor only after. The cursor is `<bots>/updates/<profile>.json`, the file
   max-cli writes. It reads, under `bot.messages`. `bot webhooks set` refuses a second address unless
   `BotMessenger.manyWebhooks` and `--add`.
+- **`messages search` across accounts and messengers.** `in:telegram`, `in:max` (any messenger the
+  store holds) and `in:all` in the query, or `--source <messenger|all>`, search every account of it
+  kept in the shared file; the default stays the account the command runs as. Both given and
+  different is an error. `chat:` and `from:` resolve inside the chosen accounts, and a name found in
+  two of them lists the candidates with their messenger. Context and completeness come from each hit's
+  own account; each `completeness` row now names its `provider` and `account`. Pretty output names the
+  messenger before the chat title when the hits span accounts, and says another messenger's hit opens
+  in that messenger's CLI by its locator. MCP `messages_search` takes `source`. `--regex` stays on the
+  account it runs as. `MessageStore.accounts()` lists the accounts the file holds.
 
 ### Changed — may break callers
 
@@ -27,8 +36,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   word, then to a piece of a word. `--context <n>` shows messages around each hit (2 in the terminal).
   The JSON keeps `items`, `limit` and `hasMore`, and adds `match` and `score` (higher is better) to
   each hit, `corrections`, `completeness` (per chat: held in full or not) and `wordsReady`. The MCP
-  tool `messages_search` takes the same query, `newest` and `context`. `in:` is refused until a
-  search can span accounts.
+  tool `messages_search` takes the same query, `newest` and `context`. `in:` searches other accounts
+  (under Added).
 
 - **The parity manifest checks the `bot` commands**, a row each, in place of one planned row. What max
   and tg both have is in all CLIs. `bot api`, `bot comments`, `bot uploads`, `bot chats members

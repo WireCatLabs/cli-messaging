@@ -392,6 +392,10 @@
       "value": "<n>",
       "meaning": "messages to answer per batch, 10–200; 50 by default"
     },
+    "--source": {
+      "value": "<messenger>",
+      "meaning": "every account of this messenger held in the store, or all of them — the same as in: in the query"
+    },
     "--text": {
       "value": "<text>",
       "meaning": "the message's new text; - reads stdin"
@@ -1643,6 +1647,13 @@
           "planned": {
             "max": "T6",
             "tg": "T6"
+          }
+        },
+        "--source": {
+          "in": [],
+          "planned": {
+            "max": "each CLI's cli-messaging bump with phase 2",
+            "tg": "each CLI's cli-messaging bump with phase 2"
           }
         }
       }

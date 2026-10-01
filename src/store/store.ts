@@ -278,6 +278,8 @@ export interface MessageStore {
   countContacts(key: AccountKey, options?: { query?: string }): Promise<number>
   /** Works out again when each contact was last written to, from their one-to-one chats. */
   refreshRecency(key: AccountKey): Promise<void>
+  /** Every account of every messenger the file holds, by messenger then id. */
+  accounts(): Promise<AccountKey[]>
   /** Everyone this provider's accounts have seen; with `account`, only who that account has seen. */
   people(provider: Provider, options?: { account?: Id; accounts?: Id[] }): Promise<PeopleLookup>
   /** A message's reactions as they are now; answers whether the message is held at all. */
@@ -718,6 +720,8 @@ const storeOver = (context: StoreContext): MessageStore => {
         .map((row) => String(row.kind)),
 
     matchFilters: async (scope, options) => words.matchFilters(context, scope, options),
+
+    accounts: async () => accounts.heldAccounts(context),
 
     chatCompleteness: async (key, chatIds) => {
       const accountKey = accounts.findAccountPk(context, key)
