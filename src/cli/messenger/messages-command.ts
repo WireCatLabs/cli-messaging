@@ -212,11 +212,11 @@ export const sendCommand = (messenger: Messenger): Command =>
     .option("--send-id <id>", "repeat a send whose outcome was unknown, without risking a second copy")
     .option("--silent", "deliver without a notification")
     .option("--no-preview", "no preview card for a link in the text")
-    .option("--md, --markdown", "read **bold**, _italic_, ~~struck~~ and `code` in the text; \\ keeps a mark literal")
-    .option("--file <path>", "attach a file; the text becomes its caption")
-    .option("--photo <path>", "attach a .jpg, .png or .webp as a photo; the text becomes its caption")
+    .option("--md", "read **bold**, _italic_, ~~struck~~ and `code` in the text; \\ keeps a mark literal")
+    .option("--file <file>", "attach a file; the text becomes its caption")
+    .option("--photo <file>", "attach a .jpg, .png or .webp as a photo; the text becomes its caption")
     .option("--as-file", "send the --file as a file to download, a video included")
-    .option("--voice <path>", "send an Ogg Opus file as a voice message, alone, with no text")
+    .option("--voice <file>", "send an Ogg Opus file as a voice message, alone, with no text")
     .option("--allow-any-file", "send a file even from a hidden folder, ~/.ssh or this CLI's own folders")
     .option(
       "--at <time>",
@@ -233,7 +233,7 @@ const sendText = async (command: Command, messenger: Messenger, chat: string, te
     sendId,
     silent,
     preview,
-    markdown,
+    md: markdown,
     at,
     file,
     photo,
@@ -245,7 +245,7 @@ const sendText = async (command: Command, messenger: Messenger, chat: string, te
     sendId?: string
     silent?: boolean
     preview?: boolean
-    markdown?: boolean
+    md?: boolean
     at?: string
     file?: string
     photo?: string

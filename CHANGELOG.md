@@ -6,6 +6,13 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Changed — may break callers
+
+- **`messages send` and `messages edit` drop `--markdown`; `--md` stays.** The standard allows no
+  alias. A script that types `--markdown` now fails with an unknown option.
+- **`messages send --file`, `--photo`, `--voice` show their value as `<file>`**, the argument name
+  the standard fixes. Only the help text changes.
+
 ## 0.85.0 — 01.10.2026
 
 ### Added

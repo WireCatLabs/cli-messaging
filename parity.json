@@ -106,8 +106,7 @@
     },
     "--file": {
       "value": "<file>",
-      "meaning": "attach a file; images go as a photo, videos as a video. Repeat it for more",
-      "note": "`messages send --file` takes `<path>` in both tools; rule 6 says `<file>` (e11)"
+      "meaning": "attach a file; images go as a photo, videos as a video. Repeat it for more"
     },
     "--first-name": {
       "value": "<name>",
@@ -172,8 +171,7 @@
       "note": "a page is 100 messages in tg and 30 in max — the same number fetches a different amount (e3)"
     },
     "--md": {
-      "meaning": "read **bold**, _italic_, ~~struck~~ and `code` in the text; \\ keeps a mark literal",
-      "note": "`messages send` and `messages edit` also accept `--markdown`, an alias the standard forbids (e5)"
+      "meaning": "read **bold**, _italic_, ~~struck~~ and `code` in the text; \\ keeps a mark literal"
     },
     "--members-see-link": {
       "value": "<on|off>",
@@ -245,8 +243,7 @@
     },
     "--photo": {
       "value": "<file>",
-      "meaning": "an image file — a profile photo in `account update`, a photo to send in `messages send`",
-      "note": "`messages send --photo` takes `<path>` in both tools; rule 6 says `<file>` (e11)"
+      "meaning": "an image file — a profile photo in `account update`, a photo to send in `messages send`"
     },
     "--qr-file": {
       "value": "<png>",
@@ -343,8 +340,7 @@
     },
     "--voice": {
       "value": "<file>",
-      "meaning": "send an Ogg Opus file as a voice message, alone, with no text",
-      "note": "both tools spell the value `<path>`; rule 6 says `<file>` (e11)"
+      "meaning": "send an Ogg Opus file as a voice message, alone, with no text"
     },
     "--yes": {
       "meaning": "go ahead without the question an ask level puts before a write"
