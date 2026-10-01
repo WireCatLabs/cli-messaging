@@ -6,6 +6,11 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Changed — may break callers
+
+- **The parity manifest marks `messages search --newest`, `--context` and `--source` as in all CLIs**:
+  tg-cli and max-cli are both on 0.99.0, which has them.
+
 ### Fixed
 
 - **`contacts list` names a dialog's person by `Messenger.partnerOf`** when it falls back to the dialogs (no
