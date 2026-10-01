@@ -27,7 +27,7 @@ Phase 3 is planned and approved ([`plans/phase-3.md`](plans/phase-3.md)).
 | What | Where |
 |---|---|
 | **The work in flight — start here** | [`handoffs/README.md`](handoffs/README.md): the lanes, which files each owns, the rules every lane keeps |
-| The plans | [`plans/phase-1.md`](plans/phase-1.md), [`plans/phase-3.md`](plans/phase-3.md) and [`plans/phase-2.md`](plans/phase-2.md) (approved; item 1 built) |
+| The plans | [`plans/phase-1.md`](plans/phase-1.md), [`plans/phase-3.md`](plans/phase-3.md) and [`plans/phase-2.md`](plans/phase-2.md) (approved; item 1 built); [`plans/phase-4.md`](plans/phase-4.md) (written, waiting for review) |
 | What is ruled | [`decisions.md`](decisions.md) — overrides [`requirements.md`](requirements.md) where they differ |
 | How search works and will work | [`search-indexes.md`](search-indexes.md) |
 | Today's store and migrations | [`../dev/ARCHITECTURE.md`](../dev/ARCHITECTURE.md#the-store) ([`current-state.md`](current-state.md) is a 0.27.0 snapshot) |
