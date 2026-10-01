@@ -28,7 +28,7 @@ export const recipientsCommand = (messenger: Messenger): Command => {
       else if (chats.length === 0) renderer.note("the recipient list is on and empty — this profile may send nowhere")
     })
 
-  annotate(command.command("add"), { mutates: true })
+  annotate(command.command("add"), { mutates: true, local: true })
     .argument("<chat>", messenger.chatArgument)
     .description("allow sending to this chat; the first add turns the list on")
     .action(async function (this: Command, chat: string) {
@@ -44,7 +44,7 @@ export const recipientsCommand = (messenger: Messenger): Command => {
       context.renderer.result({ id: found.id, title: found.title, added })
     })
 
-  annotate(command.command("remove"), { mutates: true })
+  annotate(command.command("remove"), { mutates: true, local: true })
     .argument("<chat>", "chat id, or the title as the list shows it")
     .description("stop allowing this chat; the list stays on")
     .action(async function (this: Command, chat: string) {
@@ -54,7 +54,7 @@ export const recipientsCommand = (messenger: Messenger): Command => {
       renderer.result({ id: gone.id, title: gone.title, removed: true })
     })
 
-  annotate(command.command("clear"), { mutates: true })
+  annotate(command.command("clear"), { mutates: true, local: true })
     .description("delete the list, which turns it off: this profile may send to any chat again")
     .action(async function (this: Command) {
       const { settings, renderer, env } = messengerContext(this, messenger)

@@ -46,7 +46,7 @@ export const configCommand = (app: AppIdentity, config: Configuration): Command 
     })
 
   for (const action of ["set", "unset"] as const) {
-    const sub = annotate(command.command(action), { mutates: true })
+    const sub = annotate(command.command(action), { mutates: true, local: true })
       .argument("<setting>", `one of: ${config.allSettings.join(", ")}`)
       .option("--defaults", "change what every profile gets, rather than this profile")
       .option("--personal", "only for personal accounts — the personal section of the file")

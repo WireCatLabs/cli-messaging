@@ -21,7 +21,7 @@ export const rulesCommand = (messenger: Messenger): Command => {
       context.renderer.result(await context.withServices((services) => services.moderation.rules(chat)))
     })
   rules.addCommand(
-    annotate(new Command("set"), { mutates: true })
+    annotate(new Command("set"), { mutates: true, local: true })
       .description("change one rule; the group's first change writes every rule with its default")
       .argument("<chat>", messenger.chatArgument)
       .argument("<key>", `one of: ${RULE_KEYS.join(", ")}`)
@@ -32,7 +32,7 @@ export const rulesCommand = (messenger: Messenger): Command => {
       }),
   )
   rules.addCommand(
-    annotate(new Command("unset"), { mutates: true })
+    annotate(new Command("unset"), { mutates: true, local: true })
       .description("put one rule back to its default")
       .argument("<chat>", messenger.chatArgument)
       .argument("<key>", `one of: ${RULE_KEYS.join(", ")}`)
