@@ -232,6 +232,22 @@ export interface GroupAdmin {
   removeAdmin(chatId: Id, person: Id): Promise<void>
 }
 
+/** What `account update` changes; a field left out stays. */
+export interface ProfileChange {
+  firstName?: string
+  lastName?: string
+  /** "About": the line under the name. */
+  description?: string
+  photo?: Upload
+}
+
+/** The owner's own profile and logins — what everyone sees, and every device signed in. */
+export interface AccountEditing {
+  updateProfile(change: ProfileChange): Promise<Account>
+  /** Every login but this one, the phone's included; answers the sessions that remain. */
+  endOtherSessions(): Promise<AccountSession[]>
+}
+
 /** The owner's address book. A person by id: `GroupAdmin.people` finds them. */
 export interface ContactBook {
   /** Under the name they show, until the owner gives one. */
@@ -283,7 +299,8 @@ export interface MessengerAdapter
     Partial<AccountTools>,
     Partial<GroupAdmin>,
     Partial<ChatFolders>,
-    Partial<ContactBook> {}
+    Partial<ContactBook>,
+    Partial<AccountEditing> {}
 
 type Method = (...args: never[]) => unknown
 

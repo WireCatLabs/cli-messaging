@@ -6,6 +6,15 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- **`account update`** — `--first-name`, `--last-name`, `--description`, `--photo <file>` — and
+  **`account sessions end --others`**, with the tool `account_update` (P2). The answer masks the
+  phone as `account show` does. Ending other sessions logs the owner out of the phone too: it asks
+  first by default (`account.sessions.end: ask`; `--yes` answers), and it has no MCP tool at any
+  level. A new port group, `AccountEditing` (`updateProfile`, `endOtherSessions`), `ProfileChange`,
+  and `Services.account`.
+
 ## 0.86.0 — 01.10.2026
 
 ### Added

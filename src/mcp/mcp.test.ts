@@ -1015,6 +1015,24 @@ describe("sending over MCP", () => {
     ])
   })
 
+  it("**changes the profile, and never offers ending other sessions**", async () => {
+    const changes: unknown[] = []
+    const telegram = scripted({
+      updateProfile: async (change) => {
+        changes.push(change)
+        return { id: "500", name: "New", username: null }
+      },
+      endOtherSessions: async () => [],
+    })
+    const { client, call } = await connect(telegram, {})
+
+    const tools = (await client.listTools()).tools.map((one) => one.name)
+    await call("chat_account_update", { first_name: "New", description: "hi" })
+
+    expect(tools).not.toContain("chat_account_sessions_end")
+    expect(changes).toEqual([{ firstName: "New", description: "hi" }])
+  })
+
   it("reads a poll on a read-only profile, and votes by id where it may", async () => {
     const votes: unknown[] = []
     const poll = {

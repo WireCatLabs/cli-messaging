@@ -1,3 +1,4 @@
+import { type AccountService, accountService } from "./account.js"
 import { type AdminService, adminService } from "./admin.js"
 import { type ArchiveService, archiveService } from "./archive.js"
 import { type ChatsService, chatsService } from "./chats.js"
@@ -7,6 +8,8 @@ import { type InboxService, inboxService } from "./inbox.js"
 import { type MessagesService, messagesService } from "./messages.js"
 import { type PeopleService, peopleService } from "./people.js"
 
+export type { AccountService } from "./account.js"
+export { accountService } from "./account.js"
 export type { AdminService, NewGroup } from "./admin.js"
 export { adminService } from "./admin.js"
 export type { ArchiveService, Fetched, FetchOptions } from "./archive.js"
@@ -41,6 +44,7 @@ export interface Services {
   archive: ArchiveService
   admin: AdminService
   folders: FoldersService
+  account: AccountService
 }
 
 /**
@@ -59,6 +63,7 @@ export const servicesFor = (deps: ServiceDeps): Services => {
     archive: archiveService(deps),
     admin: adminService(deps),
     folders: foldersService(deps),
+    account: accountService(deps),
   }
   return deps.messenger.services ? { ...base, ...deps.messenger.services(base, deps) } : base
 }

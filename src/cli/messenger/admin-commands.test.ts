@@ -7,6 +7,7 @@ import type { Chat, GroupCard } from "../../domain/models.js"
 import { SendJournal, sendsPathFor } from "../../sends/journal.js"
 import { run } from "../program.js"
 import { settingsFor } from "../settings.js"
+import { accountCommand } from "./account-command.js"
 import { chatsCommand } from "./chats-command.js"
 import { contactsCommand } from "./contacts-command.js"
 import type { Messenger } from "./context.js"
@@ -62,7 +63,7 @@ const call = async (
   const streams = captureStreams()
   const code = await run(
     argv,
-    { app, commands: () => [chatsCommand(messenger), contactsCommand(messenger)] },
+    { app, commands: () => [chatsCommand(messenger), contactsCommand(messenger), accountCommand(messenger)] },
     { streams, tty: false, env },
   )
   return { code, stdout: streams.stdout, stderr: streams.stderr }
@@ -436,5 +437,45 @@ describe("chats create, join and leave", () => {
     const journal = readFileSync(sendsPathFor(app, "default", env), "utf8")
     expect(journal).toContain('"action":"contact-import"')
     expect(journal).not.toContain("600")
+  })
+
+  it("**changes the profile with a photo**, masking the phone, and ends other sessions only with --others", async () => {
+    const env = sandbox()
+    const root = mkdtempSync(join(tmpdir(), "photo-"))
+    const photo = join(root, "me.jpg")
+    writeFileSync(photo, new Uint8Array([0xff, 0xd8, 0xff]))
+    const changes: unknown[] = []
+    const ended: number[] = []
+    const adapter: MessengerAdapter = {
+      ...base,
+      updateProfile: async (change) => {
+        changes.push({ ...change, photo: change.photo?.name })
+        return { id: "500", name: "New Name", username: null, phone: "34600111222" }
+      },
+      endOtherSessions: async () => {
+        ended.push(1)
+        return []
+      },
+    }
+
+    const updated = await call(
+      ["account", "update", "--first-name", "New", "--description", "hi", "--photo", photo, "--json"],
+      adapter,
+      env,
+    )
+    const empty = await call(["account", "update"], adapter, env)
+    const without = await call(["account", "sessions", "end", "--yes"], adapter, env)
+    const unasked = await call(["account", "sessions", "end", "--others"], adapter, env)
+    const ended1 = await call(["account", "sessions", "end", "--others", "--yes", "--json"], adapter, env)
+
+    expect(JSON.parse(updated.stdout[0] ?? "")).toMatchObject({ account: { name: "New Name", phone: "***1222" } })
+    expect(changes).toEqual([{ firstName: "New", description: "hi", photo: "me.jpg" }])
+    expect([empty.code, without.code, unasked.code, ended1.code]).toEqual([2, 2, 7, 0])
+    expect(ended).toEqual([1])
+    expect(new SendJournal(sendsPathFor(app, "default", env)).entries().map((one) => one.action)).toEqual([
+      "profile",
+      "sessions-end",
+      "sessions-end",
+    ])
   })
 })

@@ -1,3 +1,5 @@
+import { CliError } from "@leemour/cli-core"
+import { annotate } from "@leemour/cli-core/commands"
 import { Command } from "commander"
 import { listed } from "../paging.js"
 import { type Messenger, messengerContext } from "./context.js"
@@ -20,6 +22,20 @@ export const accountSessionsCommand = (messenger: Messenger): Command => {
       if (context.format === "jsonl") context.renderer.stream(found)
       else context.renderer.result(context.format === "pretty" ? found : listed(found))
     })
+
+  // No MCP tool, at any permission level: it logs the owner out of the phone.
+  sessions.addCommand(
+    annotate(new Command("end"), { mutates: true })
+      .description("log out every other device, your phone included; this one stays")
+      .option("--others", "every session but this one")
+      .action(async function (this: Command) {
+        if (this.opts<{ others?: boolean }>().others !== true) {
+          throw new CliError("validation_error", "only every other session can be ended at once — add --others")
+        }
+        const context = messengerContext(this, messenger)
+        context.renderer.result(await context.withServices((services) => services.account.endOtherSessions()))
+      }),
+  )
 
   return sessions
 }
