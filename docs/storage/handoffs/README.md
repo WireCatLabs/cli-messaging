@@ -10,7 +10,7 @@ how to check.
 | B | items 9–10: `store info`, `check`, `migrate`, `backup`, `restore` — **done 2026-09-30** (#199, #205; released in 0.67.0, in tg-cli by tg-cli #135) | new files in `src/cli/messenger/`, the `storeCommand` group, `src/store/sqlite/backfill.ts`, the exports in `src/store/index.ts` | [`lane-b-store-maintenance.md`](lane-b-store-maintenance.md) |
 | C | item 11: the storage and developer documents — **done 2026-09-30** (#196); a new fact about the store goes into [ARCHITECTURE](../../dev/ARCHITECTURE.md#the-store) with the PR that makes it | `docs/dev/ARCHITECTURE.md` (not the store layout paragraph), `docs/storage/*.md` | [`lane-c-docs.md`](lane-c-docs.md) |
 | D | the phase 2 search plan — **done, approved 2026-10-01** (#216); being built, item 1 (store version 12) first | `docs/storage/plans/phase-2.md` (new) | [`lane-d-phase-2-plan.md`](lane-d-phase-2-plan.md) |
-| Phase 4 finish | ship phase 4 to tg (release, tg-cli #205), item 6's documents, item 5's run with a real agent | `docs/dev/ARCHITECTURE.md` (the store section's phase 4 facts), `docs/storage/plans/phase-4.md`, `bench/disentangle/` | [`phase-4-finish.md`](phase-4-finish.md) |
+| Phase 4 finish | ship phase 4 to tg (release, tg-cli #205), item 6's documents, item 5's run with a real agent — **done 2026-10-01** (#353, #358; tg-cli #205, #209) | `docs/dev/ARCHITECTURE.md` (the store section's phase 4 facts), `docs/storage/plans/phase-4.md`, `bench/disentangle/` | [`phase-4-finish.md`](phase-4-finish.md) |
 
 **Done before the split:** items 1–6 (normalizer, async store, Drizzle schema and baseline, the
 migration runner, the benchmark loader, store version 6); versions 7–11 for max-cli
