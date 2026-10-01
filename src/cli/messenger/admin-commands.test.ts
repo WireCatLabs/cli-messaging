@@ -295,4 +295,55 @@ describe("chats create, join and leave", () => {
       ["remove", "7", "91"],
     ])
   })
+
+  it("**changes chat folders through the guard**, a folder named by its title, and refuses one it cannot tell apart", async () => {
+    const env = sandbox()
+    const done: unknown[] = []
+    const folders = [
+      { id: "4", title: "Work", chatIds: [] },
+      { id: "5", title: "Twins", chatIds: [] },
+      { id: "6", title: "Twins", chatIds: [] },
+    ]
+    const adapter: MessengerAdapter = {
+      ...base,
+      folders: async () => folders,
+      createFolder: async (title, chatIds) => {
+        done.push(["create", title, chatIds])
+        return { id: "9", title, chatIds }
+      },
+      updateFolder: async (id, change) => {
+        done.push(["update", id, change])
+        return { id, title: change.title ?? "Work", chatIds: [] }
+      },
+      deleteFolder: async (id) => {
+        done.push(["delete", id])
+      },
+    }
+
+    const listed = await call(["chats", "folders", "list", "--json"], adapter, env)
+    const made = await call(["chats", "folders", "create", "Home", "--chat", "Book club", "--json"], adapter, env)
+    const renamed = await call(
+      ["chats", "folders", "update", "Work", "--title", "Job", "--add", "Book club"],
+      adapter,
+      env,
+    )
+    const unclear = await call(["chats", "folders", "delete", "Twins"], adapter, env)
+    const missing = await call(["chats", "folders", "delete", "Nope"], adapter, env)
+    const empty = await call(["chats", "folders", "update", "Work"], adapter, env)
+    const deleted = await call(["chats", "folders", "delete", "6", "--json"], adapter, env)
+
+    expect(JSON.parse(listed.stdout[0] ?? "")).toHaveLength(3)
+    expect(JSON.parse(made.stdout[0] ?? "")).toMatchObject({ folder: { id: "9", chatIds: ["7"] } })
+    expect([renamed.code, unclear.code, missing.code, empty.code, deleted.code]).toEqual([0, 2, 6, 2, 0])
+    expect(done).toEqual([
+      ["create", "Home", ["7"]],
+      ["update", "4", { title: "Job", add: ["7"] }],
+      ["delete", "6"],
+    ])
+    expect(new SendJournal(sendsPathFor(app, "default", env)).entries().map((one) => one.action)).toEqual([
+      "folder-create",
+      "folder-update",
+      "folder-delete",
+    ])
+  })
 })

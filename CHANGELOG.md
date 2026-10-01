@@ -6,6 +6,14 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- **`chats folders list|create|update|delete`**, and the tools `chats_folders_list|create|update|delete`
+  (P2). A folder is named by its id or its title exactly; two with the same title are refused. Each
+  change goes through the guard as an `account` write (`folder-create`, `-update`, `-delete`). A new
+  port group, `ChatFolders`; `Folder` and `FolderChange` in the domain; `Services.folders`.
+- The manifest says `chats members add|remove` and `chats admins add|remove` are in both tools.
+
 ### Fixed
 
 - **On a SQLite without full-text search, the store refuses with a message that says what to do**,

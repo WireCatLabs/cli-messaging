@@ -2,6 +2,7 @@ import { type AdminService, adminService } from "./admin.js"
 import { type ArchiveService, archiveService } from "./archive.js"
 import { type ChatsService, chatsService } from "./chats.js"
 import type { ServiceDeps } from "./deps.js"
+import { type FoldersService, foldersService } from "./folders.js"
 import { type InboxService, inboxService } from "./inbox.js"
 import { type MessagesService, messagesService } from "./messages.js"
 import { type PeopleService, peopleService } from "./people.js"
@@ -14,6 +15,8 @@ export type { ChatFilter, ChatsService, MarkedRead, PageWindow } from "./chats.j
 export { CHAT_SCAN, chatsService, EVENTS_DAYS } from "./chats.js"
 export type { ServiceDeps } from "./deps.js"
 export { OFFLINE, onlineDeps, storedDeps } from "./deps.js"
+export type { FolderEdit, FoldersService } from "./folders.js"
+export { foldersService } from "./folders.js"
 export type { InboxService } from "./inbox.js"
 export { inboxService } from "./inbox.js"
 export type {
@@ -37,6 +40,7 @@ export interface Services {
   inbox: InboxService
   archive: ArchiveService
   admin: AdminService
+  folders: FoldersService
 }
 
 /**
@@ -54,6 +58,7 @@ export const servicesFor = (deps: ServiceDeps): Services => {
     inbox: inboxService(deps),
     archive: archiveService(deps),
     admin: adminService(deps),
+    folders: foldersService(deps),
   }
   return deps.messenger.services ? { ...base, ...deps.messenger.services(base, deps) } : base
 }

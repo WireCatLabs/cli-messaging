@@ -65,6 +65,21 @@ export const GROUP_SETTINGS = [
   "membersSeeLink",
 ] as const
 
+/** A chat folder. */
+export interface Folder {
+  id: string
+  title: string
+  /** Chats added to it by hand; a folder that selects chats by a rule of its own lists none. */
+  chatIds: Id[]
+}
+
+/** What `chats folders update` changes; chats by id. */
+export interface FolderChange {
+  title?: string
+  add?: Id[]
+  remove?: Id[]
+}
+
 /** What an admin may do, in max-cli's words; a messenger maps them onto its own. */
 export const ADMIN_RIGHTS = ["read", "members", "admins", "info", "pin", "link", "post", "edit", "delete"] as const
 

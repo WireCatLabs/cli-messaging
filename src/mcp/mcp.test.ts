@@ -208,6 +208,7 @@ describe("the MCP server", () => {
       "chat_account_sessions",
       "chat_account_show",
       "chat_chats_events",
+      "chat_chats_folders_list",
       "chat_chats_inspect",
       "chat_chats_link_show",
       "chat_chats_list",
@@ -916,6 +917,39 @@ describe("sending over MCP", () => {
       ["remove", "7", ["91"]],
       ["admin", "7", "91", ["pin"]],
       ["unadmin", "7", "91"],
+    ])
+  })
+
+  it("**lists, creates, changes and deletes chat folders** over MCP", async () => {
+    const done: unknown[] = []
+    const folder = { id: "4", title: "Work", chatIds: ["7"] }
+    const telegram = scripted({
+      folders: async () => [folder],
+      createFolder: async (title, chatIds) => {
+        done.push(["create", title, chatIds])
+        return { id: "5", title, chatIds }
+      },
+      updateFolder: async (id, change) => {
+        done.push(["update", id, change])
+        return folder
+      },
+      deleteFolder: async (id) => {
+        done.push(["delete", id])
+      },
+    })
+    const { call } = await connect(telegram, {})
+
+    const listed = await call("chat_chats_folders_list", {})
+    await call("chat_chats_folders_create", { title: "Home", chats: ["7"] })
+    await call("chat_chats_folders_update", { folder: "Work", title: "Job", add: ["7"], remove: ["7"] })
+    const deleted = await call("chat_chats_folders_delete", { folder: "4" })
+
+    expect(listed.body).toEqual([folder])
+    expect(deleted.body).toEqual({ operationId: expect.any(String), folderId: "4" })
+    expect(done).toEqual([
+      ["create", "Home", ["7"]],
+      ["update", "4", { title: "Job", add: ["7"], remove: ["7"] }],
+      ["delete", "4"],
     ])
   })
 

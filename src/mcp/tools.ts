@@ -5,6 +5,7 @@ import { adminTools } from "./tools/admin.js"
 import { chatsTools } from "./tools/chats.js"
 import { chatsReadTools } from "./tools/chats-read.js"
 import { contactsTools } from "./tools/contacts.js"
+import { folderTools } from "./tools/folders.js"
 import { inboxTools } from "./tools/inbox.js"
 import { messagesTools } from "./tools/messages.js"
 import { messageActionTools } from "./tools/messages-actions.js"
@@ -43,6 +44,7 @@ export const deleteTools = (messenger: Messenger): Record<string, AnyTool> => me
 /** The writes others see, offered by the profile's permissions like every write. */
 export const sendTools = (messenger: Messenger): Record<string, AnyTool> => ({
   ...adminTools(messenger),
+  ...folderTools(messenger),
   ...messageSendTools(messenger),
   ...messageActionTools(messenger),
   ...reactionTools(messenger),
