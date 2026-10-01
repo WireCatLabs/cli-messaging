@@ -49,10 +49,20 @@ mid-transaction, two calls on one store in `serve` or `mcp` cannot interleave in
 ([phase 1 plan, D3](../storage/plans/phase-1.md#3-decisions-made-here)). A large write therefore
 blocks the event loop while it runs — keep writes in bounded batches.
 
+**One method is several transactions on purpose:** `replaceConversations` (phase 3). A chat of 1M
+messages takes seconds to write, and every other process waits at most 5 s for the lock, so it writes a
+new **build** of the chat's links and conversations in transactions of ~250 ms with a 120 ms pause
+between them, makes the build current in one more, and drops older builds the same way. Each
+transaction runs synchronously to its `COMMIT`; the pause is between them. Readers see only
+`conversation_state.current_build`, so a half-written or failed build is never read. Without the pause
+the next `BEGIN IMMEDIATE` wins the lock again at once and a waiting process sees no gap
+([`bench/disentangle/`](../../bench/disentangle/README.md), plan
+[phase 3, C3](../storage/plans/phase-3.md#4-decisions-made-here)).
+
 **Where the queries live.** `src/store/store.ts` holds the `MessageStore` interface and `storeOver`, a
 facade that opens the transaction and delegates. The SQL is in `src/store/sqlite/`, one module per kind
 of record — `accounts`, `identities`, `chats`, `messages` (writes), `reads`, `search`, `ranges`,
-`sync` (state and fetch leases), `transcripts` — as plain functions taking a `StoreContext`: the
+`sync` (state and fetch leases), `transcripts`, `conversations` — as plain functions taking a `StoreContext`: the
 connection as the `CacheDatabase` seam and as Drizzle (`orm`), and the clock. Queries are Drizzle's
 builder, called synchronously (`.get()`, `.all()`, `.run()`); FTS `MATCH`, `json_extract` and the
 `coalesce(excluded.…)` upserts stay `sql` fragments. Use `inTransaction`, never Drizzle's

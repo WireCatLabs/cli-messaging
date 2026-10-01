@@ -5,6 +5,7 @@ import { dirname, join } from "node:path"
 import { captureStreams } from "@leemour/cli-core"
 import { describe, expect, it } from "vitest"
 import { holdersOf } from "../../background/processes.js"
+import { RULES_VERSION } from "../../conversations/link.js"
 import { MIGRATIONS, migrate } from "../../store/migrations.js"
 import { openCache } from "../../store/open.js"
 import { run } from "../program.js"
@@ -111,6 +112,27 @@ describe("store check", () => {
         refreshed: new Date(DAY).toISOString(),
       },
     ])
+  })
+
+  it("names the chats whose conversations older rules built, and the agent links gone stale", async () => {
+    const env = envFor()
+    const database = await seeded(env)
+    database.exec(
+      `INSERT INTO conversation_state (chat_pk, enabled_at, built_at, algorithm_version, current_build)
+       VALUES (1, 0, ${DAY}, 1, 1), (2, 0, ${2 * DAY}, ${RULES_VERSION}, 1)`,
+    )
+    database.exec(
+      `INSERT INTO message_links (chat_pk, message_pk, parent_pk, source, kind, confidence, method, created_at, stale_at)
+       SELECT chat_pk, pk, NULL, 'agent', 'start', 0.9, 'model', 0, ${DAY} FROM messages WHERE chat_pk = 1`,
+    )
+    database.close()
+
+    const { answer, stderr } = await call(["store", "check", "--json"], env)
+    expect(answer.conversations).toEqual([
+      expect.objectContaining({ chat: "8", rulesVersion: RULES_VERSION, current: true, staleAgentLinks: 0 }),
+      expect.objectContaining({ chat: "7", rulesVersion: 1, current: false, staleAgentLinks: 1 }),
+    ])
+    expect(stderr.join("\n")).toContain("1 chats' conversations were built by older rules — `chat conversations build")
   })
 
   it("**reports a search index that no longer matches its table**, and repairs nothing", async () => {

@@ -79,38 +79,30 @@ const inChat = (chatKey: number) => eq(messageLinks.chatPk, chatKey)
  * A long write cut into short transactions with a pause between them. Without the pause the next
  * `BEGIN IMMEDIATE` wins the lock again at once: a process waiting for it sleeps up to 100 ms at a time
  * and, measured, waited out the whole build (1.8 s of 1.9 s at 100k messages). It gives up at 5 s.
+ * `work` writes one row per step, synchronously: nothing awaits while a transaction is open (D3).
  */
-const inTurns = async (
-  { database }: StoreContext,
-  body: (wrote: () => Promise<void>) => Promise<void> | void,
-  { holdMs = 250, pauseMs = 120 } = {},
-) => {
-  let open = false
-  let since = 0
-  const begin = () => {
+const inTurns = async ({ database }: StoreContext, work: Iterator<unknown>, { holdMs = 250, pauseMs = 120 } = {}) => {
+  for (let done = false; !done; ) {
     database.exec("BEGIN IMMEDIATE")
-    open = true
-    since = performance.now()
-  }
-  const commit = () => {
-    database.exec("COMMIT")
-    open = false
-  }
-  const wrote = async () => {
-    if (performance.now() - since < holdMs) return
-    commit()
-    await setTimeout(pauseMs)
-    begin()
-  }
-  try {
-    begin()
-    await body(wrote)
-    commit()
-  } catch (error) {
-    if (open) database.exec("ROLLBACK")
-    throw error
+    try {
+      const since = performance.now()
+      do done = work.next().done === true
+      while (!done && performance.now() - since < holdMs)
+      database.exec("COMMIT")
+    } catch (error) {
+      database.exec("ROLLBACK")
+      throw error
+    }
+    if (!done) await setTimeout(pauseMs)
   }
 }
+
+const once = (body: () => void): Iterator<unknown> => ({
+  next: () => {
+    body()
+    return { done: true, value: undefined }
+  },
+})
 
 const highestBuild = ({ orm }: StoreContext, chatKey: number): number =>
   Number(
@@ -149,10 +141,14 @@ export const replaceConversations = async (
       .map((row) => [row.id, row]),
   )
   let build = 0
-  await inTurns(context, () => {
-    build = highestBuild(context, chatKey) + 1
-    orm.insert(conversationState).values({ chatPk: chatKey, enabledAt: startedAt }).onConflictDoNothing().run()
-  })
+  await inTurns(
+    context,
+    once(() => {
+      // By start time, so a build that started later is the newer one; never one already used.
+      build = Math.max(startedAt, highestBuild(context, chatKey) + 1)
+      orm.insert(conversationState).values({ chatPk: chatKey, enabledAt: startedAt }).onConflictDoNothing().run()
+    }),
+  )
 
   const insertLink = orm
     .insert(messageLinks)
@@ -174,88 +170,99 @@ export const replaceConversations = async (
     .insert(conversationMessages)
     .values({ conversationPk: sql.placeholder("conversationPk"), messagePk: sql.placeholder("messagePk") })
     .prepare()
-  await inTurns(context, async (wrote) => {
-    for (const link of links) {
-      const message = held.get(link.messageId)
-      const parent = held.get(link.parentId)
-      if (!message || !parent) continue
-      insertLink.run(row(link, message.pk, parent.pk))
-      await wrote()
-    }
-    for (const ids of groups) {
-      const members = ids.flatMap((id) => held.get(id) ?? [])
-      const first = members[0]
-      if (!first) continue
-      const created = orm
-        .insert(conversations)
-        .values({
-          chatPk: chatKey,
-          build,
-          firstMessagePk: first.pk,
-          firstAt: first.sentAt,
-          lastAt: members.reduce((last, member) => Math.max(last, member.sentAt), first.sentAt),
-          messageCount: members.length,
-          builtAt: startedAt,
-          algorithmVersion,
-        })
-        .returning({ pk: conversations.pk })
-        .get()
-      for (const member of members) {
-        insertMember.run({ conversationPk: created.pk, messagePk: member.pk })
-        await wrote()
+  await inTurns(
+    context,
+    (function* () {
+      for (const link of links) {
+        const message = held.get(link.messageId)
+        const parent = held.get(link.parentId)
+        if (!message || !parent) continue
+        insertLink.run(row(link, message.pk, parent.pk))
+        yield
       }
-    }
-  })
+      for (const ids of groups) {
+        const members = ids.flatMap((id) => held.get(id) ?? [])
+        const first = members[0]
+        if (!first) continue
+        const created = orm
+          .insert(conversations)
+          .values({
+            chatPk: chatKey,
+            build,
+            firstMessagePk: first.pk,
+            firstAt: first.sentAt,
+            lastAt: members.reduce((last, member) => Math.max(last, member.sentAt), first.sentAt),
+            messageCount: members.length,
+            builtAt: startedAt,
+            algorithmVersion,
+          })
+          .returning({ pk: conversations.pk })
+          .get()
+        for (const member of members) {
+          insertMember.run({ conversationPk: created.pk, messagePk: member.pk })
+          yield
+        }
+      }
+    })(),
+  )
 
   const changedSince = (end: SQL) => sql`(
     EXISTS (SELECT 1 FROM message_revisions r WHERE r.message_pk = ${end} AND r.captured_at > ${messageLinks.createdAt})
     OR EXISTS (SELECT 1 FROM messages d WHERE d.pk = ${end} AND d.deleted_at > ${messageLinks.createdAt}))`
-  await inTurns(context, () => {
-    orm
-      .update(messageLinks)
-      .set({ staleAt: now() })
-      .where(
-        and(
-          eq(messageLinks.source, "agent"),
-          isNull(messageLinks.staleAt),
-          inChat(chatKey),
-          sql`(${changedSince(sql`${messageLinks.messagePk}`)} OR ${changedSince(sql`${messageLinks.parentPk}`)})`,
-        ),
-      )
-      .run()
-    // A slower build that started earlier and finishes later must not replace a newer one.
-    orm
-      .update(conversationState)
-      .set({ currentBuild: build, builtAt: startedAt, algorithmVersion })
-      .where(and(eq(conversationState.chatPk, chatKey), sql`coalesce(${conversationState.currentBuild}, 0) < ${build}`))
-      .run()
-  })
+  await inTurns(
+    context,
+    once(() => {
+      orm
+        .update(messageLinks)
+        .set({ staleAt: now() })
+        .where(
+          and(
+            eq(messageLinks.source, "agent"),
+            isNull(messageLinks.staleAt),
+            inChat(chatKey),
+            sql`(${changedSince(sql`${messageLinks.messagePk}`)} OR ${changedSince(sql`${messageLinks.parentPk}`)})`,
+          ),
+        )
+        .run()
+      // A slower build that started earlier and finishes later must not replace a newer one.
+      orm
+        .update(conversationState)
+        .set({ currentBuild: build, builtAt: startedAt, algorithmVersion })
+        .where(
+          and(eq(conversationState.chatPk, chatKey), sql`coalesce(${conversationState.currentBuild}, 0) < ${build}`),
+        )
+        .run()
+    }),
+  )
 
   const current = sql`(SELECT ${conversationState.currentBuild} FROM ${conversationState}
     WHERE ${conversationState.chatPk} = ${chatKey})`
-  await inTurns(context, async (wrote) => {
-    for (;;) {
-      const removed =
-        orm
-          .delete(conversations)
-          .where(
-            sql`${conversations.pk} IN (SELECT ${conversations.pk} FROM ${conversations}
+  await inTurns(
+    context,
+    (function* () {
+      for (;;) {
+        const removed =
+          orm
+            .delete(conversations)
+            .where(
+              sql`${conversations.pk} IN (SELECT ${conversations.pk} FROM ${conversations}
               WHERE ${conversations.chatPk} = ${chatKey} AND ${conversations.build} < ${current} LIMIT ${batch})`,
-          )
-          .returning({ pk: conversations.pk })
-          .all().length +
-        orm
-          .delete(messageLinks)
-          .where(
-            sql`rowid IN (SELECT rowid FROM ${messageLinks} WHERE ${messageLinks.chatPk} = ${chatKey}
+            )
+            .returning({ pk: conversations.pk })
+            .all().length +
+          orm
+            .delete(messageLinks)
+            .where(
+              sql`rowid IN (SELECT rowid FROM ${messageLinks} WHERE ${messageLinks.chatPk} = ${chatKey}
               AND ${messageLinks.build} < ${current} LIMIT ${batch})`,
-          )
-          .returning({ pk: messageLinks.messagePk })
-          .all().length
-      if (removed === 0) return
-      await wrote()
-    }
-  })
+            )
+            .returning({ pk: messageLinks.messagePk })
+            .all().length
+        if (removed === 0) return
+        yield
+      }
+    })(),
+  )
 }
 
 const row = (link: Link, messagePk: number, parentPk: number) => ({

@@ -22,6 +22,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   **`messages links <chat> <message>`** says why a message is where it is. MCP: `conversations_list`,
   `conversations_show`. The commands are shared; tg and max get them when they mount
   `conversationsCommand`. A profile that denies `messages` is refused them too.
+- **`store check` reports conversations**: per built chat, the rules version that built it, whether it
+  is this build's, and how many of the agent's links went stale; a note names the chats to rebuild.
 
 ## 0.88.0 — 01.10.2026
 
