@@ -32,8 +32,7 @@ the user's own key, an external model is used instead, asked for each run (E11).
 - **Phase 2's search service** ([`phase-2.md`](phase-2.md) item 6) for the hybrid ranking only (item 6
   below). Everything before item 6 works without it. Phase 2's files (`src/store/sqlite/search*`,
   `words.ts`, `src/search/`) are not edited here.
-- **The next free store version — 14 today** — taken in [the lanes plan](../../plans/2026-09-29-parity-lanes.md)
-  by a PR of its own before item 2, after this plan is approved (E8).
+- **Store version 14**, taken in [the lanes plan](../../plans/2026-09-29-parity-lanes.md) on 2026-10-02 (E8).
 
 ## 3. What we know
 
