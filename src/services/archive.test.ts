@@ -6,7 +6,7 @@ import type { Messenger } from "../cli/messenger/context.js"
 import type { MessengerAdapter } from "../cli/messenger/port.js"
 import type { Chat, Message } from "../domain/models.js"
 import type { SendGuard } from "../sends/guard.js"
-import { type MessageStore, openStore } from "../store/store.js"
+import { historyStartKey, type MessageStore, openStore } from "../store/store.js"
 import { archiveService } from "./archive.js"
 import type { ServiceDeps } from "./deps.js"
 import { storedDeps } from "./deps.js"
@@ -86,6 +86,7 @@ describe("the archive service", () => {
     expect(exported.title).toBe("Book club")
     expect(exported.messages.map((one) => one.id)).toEqual(["1", "2", "3", "4", "5"])
     expect(await service.held("7")).toEqual([{ from: 1, to: 5 }])
+    expect(await store.syncState(account, historyStartKey("7"))).toMatchObject({ value: "1" })
   })
 })
 

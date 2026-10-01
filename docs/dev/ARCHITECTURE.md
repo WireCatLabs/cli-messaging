@@ -128,6 +128,10 @@ by it yet ([phase 2](../storage/plans/phase-2.md)). The search's steps over it a
 newest), `matchSubstring`, and `knownTerms` and `termCandidates` for typo correction. A chat or
 sender under `SCOPE_TOKEN_LIMIT` messages is filtered inside the index by its scope token, a larger
 one by a join; `src/store/search-plan.test.ts` fails if any step reads an index once per message.
+`search` (`src/search/search.ts`) runs them in the plan's order — every word topped up by beginnings,
+typo correction, any word unless the query chose with OR, substring — each only when the one before
+found nothing, and by substring alone until the word index is ready. Its tests are the owner's
+scenarios (`docs/storage/search-indexes.md`).
 
 **Drizzle is bundled, not installed.** `drizzle-orm` is a development dependency. `pnpm build` runs
 `scripts/bundle-drizzle.ts`, which writes the Drizzle modules the store uses into

@@ -219,6 +219,28 @@ export const matchWords = (
   return page(context, full(), limit)
 }
 
+/** A search of filters alone — `from:alice after:2026-01-01` — newest first (plan S5). */
+export const matchFilters = (
+  context: StoreContext,
+  scope: SearchScope,
+  { limit }: { limit: number },
+): Page<ScoredHit> => {
+  const resolved = resolve(context, scope)
+  if (!resolved) return { items: [], hasMore: false }
+  const { where, params } = rowConditions(resolved, scope, {
+    chat: resolved.chatPk !== undefined,
+    sender: resolved.senderPk !== undefined,
+  })
+  const rows = context.database
+    .prepare(
+      `SELECT m.pk AS pk FROM messages m CROSS JOIN chats c
+       WHERE c.pk = m.chat_pk AND ${where} ORDER BY m.sent_at DESC, m.pk DESC LIMIT ?`,
+    )
+    .all(...params, limit + 1)
+    .map((row) => ({ pk: Number(row.pk), score: null }))
+  return page(context, rows, limit)
+}
+
 /** Step 5 (plan S4): the substring index over the raw text, newest first. Pieces under three letters are dropped. */
 export const matchSubstring = (
   context: StoreContext,

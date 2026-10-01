@@ -10,6 +10,9 @@ export interface Vocabulary {
   ): Promise<{ term: string; docs: number }[]>
 }
 
+/** Two-letter words are nearly all filler — en, de, to — and would turn `len` into `en`. */
+const SHORTEST_CORRECTION = 3
+
 /** One edit for a word of up to four letters, two above: a short word has few letters to spare. */
 export const maxEdits = (word: string): number => (word.length <= 4 ? 1 : 2)
 
@@ -57,7 +60,10 @@ export const correctWords = async (vocabulary: Vocabulary, words: string[]): Pro
     if (known.has(typed) || /^\d*$/.test(word)) continue
     const max = maxEdits(word)
     const near = (
-      await vocabulary.termCandidates(trigrams(word), { shortest: word.length - max, longest: word.length + max })
+      await vocabulary.termCandidates(trigrams(word), {
+        shortest: Math.max(SHORTEST_CORRECTION, word.length - max),
+        longest: word.length + max,
+      })
     )
       .map((candidate) => ({ ...candidate, distance: editDistance(word, candidate.term, max) }))
       .filter((candidate) => candidate.distance <= max)
