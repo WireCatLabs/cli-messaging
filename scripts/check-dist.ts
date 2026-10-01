@@ -45,3 +45,7 @@ const read = await messages.messages(key, "-1002", { limit: 5 })
 await messages.close()
 if (read.items[0]?.text !== message.text) throw new Error("openStore from dist did not give the saved message back")
 console.log(`dist: Drizzle bundled and working under ${"Bun" in globalThis ? "Bun" : "Node"}`)
+
+const { contractCases, fakeAdapter } = await import(join(root, "kit/index.js"))
+for (const one of contractCases({ connect: fakeAdapter, orderBy: "time" })) await one.run()
+console.log("dist: ./testing exports the fake adapter, and it passes the contract cases")

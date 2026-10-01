@@ -1,0 +1,167 @@
+# Writing an adapter
+
+How a new messenger CLI joins this package. You write two things: an **adapter**, which speaks to
+the messenger, and a **`Messenger`**, which tells the shared commands about it. Then you run the
+**contract cases** over your adapter. You do not edit this package.
+
+The port is [`src/cli/messenger/port.ts`](../../src/cli/messenger/port.ts). Its doc comments are the
+contract. This page is the order to read them in, and the rules that are not in one method.
+
+## What to build first
+
+1. A `Messenger` with the required fields (below), and a `connect` that returns your adapter.
+2. The adapter's **required core**, `MessengerCore`. With it you get `account`, `chats`, `contacts`,
+   `messages list`, `show`, `context`, `send`, `inbox`, `store fetch` and the MCP read tools.
+3. The contract cases, passing. Do this before any optional group.
+4. Then the optional groups your messenger has, one at a time.
+
+## The `Messenger`
+
+`Messenger` is in [`src/cli/messenger/context.ts`](../../src/cli/messenger/context.ts).
+
+Required:
+
+| Field | What it is |
+|---|---|
+| `app` | the CLI's name, its environment prefix and its folders |
+| `provider` | the messenger's name in the store, for example `whatsapp`. It is part of every stored key; do not change it later |
+| `resolveSettings` | the CLI's settings; `settingsFor(app).resolveSettings` is enough to start |
+| `connect` | opens a connection for the profile, or throws `authentication_error` that says how to log in |
+| `chatArgument` | the help text for a `<chat>` argument, in your messenger's words |
+
+Optional fields fit the shared commands to your messenger. Leave each one out until a command
+needs it. The ones a new messenger usually sets:
+
+- `name` — the messenger's name as its users write it.
+- `fetching` — how `store fetch` pages your history. Set `orderBy: "time"` when your message ids
+  are not whole numbers below 2^53.
+- `deletedWithoutChat` — set it only if your messenger reports a deletion without its chat.
+- `inviteLinks` — your invite links, for `chats moderate`.
+- `groupSettings`, `adminRights`, `addsWithHistory`, `knowsAccountAge` — what your group commands
+  can offer.
+- `savedChatId`, `partnerOf` — the notes-to-self chat, and the other person in a one-to-one chat.
+
+## Required core and optional groups
+
+`MessengerCore` is required. Every other group is optional: `ChatReading`, `MessageEditing`,
+`MessagePins`, `MessageReactions`, `ReadState`, `MessagePolls`, `LiveUpdates`, `MessageMedia`,
+`ScheduledMessages`, `GroupModeration`, `AccountTools`, `GroupAdmin`, `ChatFolders`, `ContactBook`
+and `AccountEditing`.
+
+- A command reaches an optional method through `capability()`. When your adapter does not have
+  the method, the command fails with `validation_error` and "this messenger cannot …". It does not
+  crash.
+- Prefer a whole group to part of one. Write `implements MessageEditing` on the class, so the
+  compiler holds you to all of it.
+- An option your messenger cannot do is **refused with `validation_error`**. It is never dropped.
+  For example, a messenger with no silent messages refuses `silent: true`.
+
+## Ids
+
+- Every id is a **string**: chats, messages, people, polls, folders. Never a number, not even inside
+  the adapter's answers. Provider ids are often 64-bit, and a number loses digits.
+- Shared code does not read an id. It does not check for digits and does no arithmetic. Your ids
+  can have any shape, for example `123@s.whatsapp.net`.
+- One exception: when `fetching.orderBy` is `"id"` (the default), `store fetch` keys what it holds
+  by the message id as a number. So either your message ids are whole numbers below 2^53, or you
+  set `orderBy: "time"`. A contract case checks this.
+
+## Send ids and an unknown outcome
+
+Each `send` gets a `sendId`. It is the send's identity.
+
+- Pass it to the messenger as the client's own message id, when the messenger has one. Then the
+  server drops a repeat. `send` returns `{ message, sendId }` with the same `sendId`.
+- When your messenger's own client makes a send id in a special form, implement `newSendId()`.
+  MAX uses a millisecond timestamp, for example.
+- When the request went out and no answer came back, throw `outcome_unknown`. Do not throw
+  `network_error` or `timeout`, because they say the message did not go. After `outcome_unknown`,
+  the person repeats the send with the same `sendId` and gets one message, not two.
+- `forward` and `createPoll` take a `sendId` too, with the same rule.
+
+## Errors
+
+Throw a `CliError` from `@leemour/cli-core` with a code from its closed list: `validation_error`,
+`authentication_error`, `permission_error`, `not_found`, `rate_limited`, `timeout`,
+`network_error`, `provider_error`, `provider_unavailable`, `invalid_response`, `outcome_unknown` and
+the others in `errorCodes`.
+
+- Translate every error from your library into one of these. A library error that crosses the
+  adapter reaches the person as an unknown failure.
+- An unknown chat or message is `not_found`.
+- A name that matches more than one chat is `validation_error`, and lists the candidates. Use
+  `pickChat` and `pickPerson`: they already do this.
+- Shared code recognises an error by its name and code, not by its class. So a CLI with its own
+  copy of cli-core still works.
+
+## What never crosses the adapter
+
+No type from your messenger's library goes above the adapter. Every answer is a domain type from
+`.`, such as `Chat`, `Message` or `Page`. Put a field that only your messenger has into
+`providerMetadata`. Never put a token or a phone number there.
+
+## One socket per linked device
+
+Some messengers allow one connection per linked device. A second one pushes the first one off.
+WhatsApp over Baileys probably works like this; it has not been observed yet. For such a messenger:
+
+- A one-shot command must not open its own connection while `<cli> serve` holds one.
+- Reads come from the local store. Writes go through the process that holds the connection, as
+  max-cli's commands go through `max serve`.
+
+This is the adapter's work. The shared package does not enforce it.
+
+## History from the store (coming)
+
+Some messengers push history to the client instead of answering a request for it. A new
+`Messenger.history` field is coming for them, with two values: `"server"` (the default) and
+`"store"`.
+
+- With `"store"`, the shared services answer `chats`, `history`, `around` and `contact` from the
+  local store. They do not call the adapter.
+- `serve` keeps the store filled from what the messenger pushes.
+- Until the field is released, your adapter must implement those four methods.
+
+The changelog says when it ships.
+
+## Running the contract cases
+
+The `./testing` export has the kit. **It is not on the stable list yet**, so it can change in any
+release ([README, "How often, and what may break"](../../README.md#how-often-and-what-may-break)).
+
+- `contractSeed({ ids })` — a fixed set of chats, people and messages: a busy group with ten
+  messages, a one-to-one chat, and two groups with the same title.
+- `contractCases({ connect, ids, orderBy })` — the cases. `connect` gets the seed and returns a
+  fresh adapter over **your own fake client**, filled from that seed. Each case calls it once and
+  closes the adapter after.
+- `fakeAdapter(seed)` — an adapter in memory that passes every case. Use it in command tests, or
+  read it as an example.
+
+Each case checks with `node:assert/strict`, so the kit does not depend on a test runner. Under
+vitest:
+
+```ts
+import { contractCases, digitIds } from "@leemour/cli-messaging/testing"
+import { describe, it } from "vitest"
+
+describe("the adapter keeps the port's promises", () => {
+  for (const one of contractCases({ connect: (seed) => adapterOver(fakeClient(seed)), ids: digitIds }))
+    it(one.name, async (context) => {
+      const result = await one.run()
+      if (result) context.skip(result.skipped)
+    })
+})
+```
+
+- `ids` — how the seed names things. The default, `wordIds`, makes ids that are not digits.
+  `digitIds` makes small whole numbers. When your messenger's ids have a shape of their own, pass an
+  `IdMaker`; it gets the kind, a number, and the message's time.
+- `orderBy` — the same value as your `fetching.orderBy`. With `"time"`, the cases page `history` by
+  the oldest message's ISO time, not by its id.
+- A case for an optional method returns `{ skipped }` when your adapter does not have the method.
+- A case with `needs` asks more of your fake than holding the seed. For example, "a repeated send id
+  leaves one message" needs a fake that drops a repeat, as the real server does.
+- No case talks to a live service.
+
+`close` is the one promise the cases cannot check. Test it yourself: after `close`, nothing keeps
+the process alive.
