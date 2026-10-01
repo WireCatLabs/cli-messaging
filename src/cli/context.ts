@@ -1,6 +1,7 @@
 import type { Renderer, RenderFormat, Streams } from "@leemour/cli-core"
 import type { Command } from "commander"
 import { resolveOutput } from "../output.js"
+import type { OpenRecognizer } from "../speech/transcribe.js"
 import type { AppIdentity } from "./app.js"
 import { type Closeable, withDeadline } from "./deadline.js"
 import { rootOf } from "./profile.js"
@@ -22,6 +23,8 @@ export interface BaseEnvironment {
   answer?: (question: string) => Promise<string | null> | string | null
   /** Set by `run()`; a command's run is recorded only when it is known whose run it is. */
   app?: AppIdentity
+  /** The local speech recognizer in place of the downloaded model; tests hand one in. */
+  recognizer?: OpenRecognizer
 }
 
 const environments = new WeakMap<Command, BaseEnvironment>()

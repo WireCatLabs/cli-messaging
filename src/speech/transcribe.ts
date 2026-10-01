@@ -4,6 +4,7 @@ import { capability, type MessengerAdapter, type RemoteFile, type Transcript } f
 import { fromFile, type Settings } from "../cli/settings.js"
 import { installedBytes, isInstalled, megabytes, modelPath, modelsDirectory, vadPath } from "./install.js"
 import { orderedModels, type SpeechModel, speechModel } from "./models.js"
+import type { Recognizer } from "./recognize.js"
 
 /** `messenger`: its own recognition (Telegram Premium). `local`: a model on this machine. `auto`: the first, then the second. */
 export const TRANSCRIBE_WITH = ["auto", "messenger", "local"] as const
@@ -20,11 +21,15 @@ export interface Heard extends Transcript {
 /** A voice message is read into memory whole; minutes of Opus are a few megabytes. */
 const LARGEST_VOICE = 32 * 1024 * 1024
 
+export type OpenRecognizer = (model: SpeechModel, path: (name: string) => string, vadModel: string) => Recognizer
+
 export interface Choice {
   with: TranscribeWith
   model: SpeechModel
   /** Where the models are, `modelsDirectory` for the command's environment. */
   directory: string
+  /** The local recognizer, where a test hands one in. */
+  open?: OpenRecognizer
 }
 
 /** The flag, then the profile's `transcribeWith` and `speechModel`, then `auto` and the CLI's first model. */
@@ -87,11 +92,11 @@ export const hearOnline = async (
 export const hearLocally = async (
   bytes: Uint8Array,
   messageId: string,
-  { model, directory }: Choice,
+  { model, directory, open }: Choice,
 ): Promise<Heard> => {
   const { decodeOgg, openRecognizer, toModelRate } = await import("./recognize.js")
   const { samples, rate } = await decodeOgg(bytes)
-  const recognizer = openRecognizer(model, modelPath(directory, model), vadPath(directory))
+  const recognizer = (open ?? openRecognizer)(model, modelPath(directory, model), vadPath(directory))
   try {
     return {
       messageId,

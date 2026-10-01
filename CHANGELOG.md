@@ -8,6 +8,10 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Added
 
+- **A test can hand in the local speech recognizer**: `recognizer` in the environment `run()` and
+  `provide` take, used by `messages list --transcribe` and `messages transcribe` in place of the
+  downloaded model.
+
 - **A bot's settings** (P8): the file gains `personal` and `bot` sections, each with `defaults` and
   `profiles`; the most specific entry wins — this profile's bot entry, the profile, every bot,
   everyone. `resolveSettings(flags, { kind: "bot" })` reads them; `Settings` gains `kind` and

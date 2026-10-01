@@ -231,6 +231,12 @@ describe("hearing a voice message", () => {
     )
   })
 
+  it("hears with the recognizer a choice hands in, in place of the downloaded model", async () => {
+    const open = () => ({ recognize: () => "handed in", free: () => {} })
+
+    expect((await hearLocally(tone, "5", choice({ open }))).text).toBe("handed in")
+  })
+
   it("**names the download command instead of downloading** a missing model", async () => {
     await expect(
       hearOnline(messenger, adapter(refusing), "7", "5", choice({ directory: directoryWithVad() })),
