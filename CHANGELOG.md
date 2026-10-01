@@ -20,8 +20,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   `conversations build` cuts each conversation into chunks of at most 1,200 characters at message
   boundaries and stores, per chunk, its first and last message and the sha256 of its text — never the
   text. `chunk_vectors` holds one model's vector per chunk text, so a rebuild that leaves a
-  conversation's text alone reuses it. Nothing fills it yet. `min_compatible` stays 6: older builds keep
-  reading and writing the file.
+  conversation's text alone reuses it; `conversations embed` fills it. `min_compatible` stays 6: older
+  builds keep reading and writing the file.
 
 ### Fixed
 
