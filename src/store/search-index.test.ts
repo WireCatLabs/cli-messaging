@@ -105,6 +105,20 @@ describe("filling the word index", () => {
     expect(pieces("2026")).toBe(0)
   })
 
+  it("**adds the words of messages stored after the vocabulary was built**", async () => {
+    const database = await large(30)
+    fillSearchIndex(database)
+    database.exec(`INSERT INTO messages (chat_pk, account_pk, native_id, sent_at, text, normalized_text, normalizer_version,
+                     ingested_at, ingested_via) VALUES (1, 1, '31', 31, 'Ruzafa, piso', 'ruzafa, piso', 1, 0, 'history')`)
+    expect(searchIndexState(database)?.termsThrough).toBe(30)
+
+    expect(fillSearchIndex(database).terms).toBe(2)
+    const words = database.prepare("SELECT term FROM search_terms WHERE term IN ('ruzafa', 'piso')").all()
+    expect(words).toHaveLength(2)
+    expect(searchIndexState(database)?.termsThrough).toBe(31)
+    expect(fillSearchIndex(database)).toEqual({ normalized: 0, indexed: 0, terms: 0 })
+  })
+
   it("resumes the vocabulary after the last term written", async () => {
     const database = await large(30)
     let terms = 0
