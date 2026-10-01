@@ -251,8 +251,8 @@ whose values are levels. It holds for a command the owner types and for an agent
    as loose as the profile's level for `chats.moderate`.
 6. **The settings it replaces** — `readOnly`, `allow`, max's `mcpTools`, and the moderation words
    `forbid`, `flag`, `confirm` — are translated once by `config migrate`, then refused with a
-   message naming the new key. The MCP flags it replaces refuse for one release, naming the
-   setting, then go.
+   message naming the new key. The MCP flags it replaces are accepted with a warning naming the
+   setting for one release, so a configured agent still starts, then go.
 
 What it does not decide stays separate: the recipient list (which chats), `sendsPerHour` (how
 many), `--allow-any-file` (which files).
@@ -267,8 +267,10 @@ many), `--allow-any-file` (which files).
    destroys with `destructiveHint`.
 4. **A tool is offered by its command's [permission](#permissions)**, never by a flag of its own:
    `deny` hides it, `readonly` hides the writing ones, `ask` shows the owner a form before it acts
-   unless `mcp` was started with the command's skip flag, `allow` acts. The `--allow-send`,
-   `--allow-mark-read`, `--allow-delete` and `--confirm-send` flags go.
+   unless `mcp` was started with the command's skip flag, `allow` acts. `--confirm-send`
+   puts every write through the form, whatever its level. `--allow-send`, `--allow-mark-read` and
+   `--allow-delete` decide nothing any more: they are accepted with a warning, so an agent set up
+   with them still starts, and go in a later release.
 5. **A tool and its command run the same service method**, so they answer the same result and the
    same error for the same input.
 

@@ -1287,7 +1287,7 @@ describe("the guard, account and mcp config commands", () => {
     const env = sandbox()
     const mcp = { execPath: "/home/o/.nvm/versions/node/v24/bin/node", scriptPath: "/usr/lib/chat/bin/chat.js" }
     const { code, stdout, stderr } = await call(
-      ["work", "mcp", "config", "--allow-send", "--allow-mark-read", "--allow-delete", "--json"],
+      ["work", "mcp", "config", "--confirm-send", "--allow-dangerous", "--allow-send", "--json"],
       async () => fake,
       env,
       {
@@ -1298,22 +1298,19 @@ describe("the guard, account and mcp config commands", () => {
     expect(code).toBe(0)
     expect(json(stdout).mcpServers["chat-work"]).toMatchObject({
       command: mcp.execPath,
-      args: [mcp.scriptPath, "work", "mcp", "--allow-send", "--allow-mark-read", "--allow-delete"],
+      args: [mcp.scriptPath, "work", "mcp", "--confirm-send", "--allow-dangerous"],
       env: { MESSAGING_STORE: env.MESSAGING_STORE },
     })
     expect(stderr.join("\n")).toContain("belongs to one Node version")
+    expect(stderr.join("\n")).toContain("--allow-send no longer decides anything: the profile's permissions do")
 
     const pretty = await call(["mcp", "config"], async () => fake, env, { mcp, tty: true })
     expect(JSON.parse(pretty.stdout.join("\n")).mcpServers.chat.args).toEqual([mcp.scriptPath, "mcp"])
   })
 
-  it("refuse --confirm-send without --allow-send, and a script in npx's cache", async () => {
+  it("refuse a script in npx's cache", async () => {
     const env = sandbox()
     const mcp = { execPath: "/usr/bin/node", scriptPath: "/usr/lib/chat/bin/chat.js" }
-    const confirmOnly = await call(["mcp", "config", "--confirm-send"], async () => fake, env, { mcp })
-    expect(confirmOnly.code).toBe(2)
-    expect(confirmOnly.stderr.join("\n")).toContain("without `--allow-send`")
-
     const npx = await call(["mcp", "config"], async () => fake, env, {
       mcp: { ...mcp, scriptPath: "/home/o/.npm/_npx/abc/node_modules/chat/bin/chat.js" },
     })

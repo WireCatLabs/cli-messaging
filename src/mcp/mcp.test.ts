@@ -100,6 +100,9 @@ const scripted = (overrides: Partial<MessengerAdapter> = {}): Scripted => {
   }
 }
 
+const READ_ONLY = { profiles: { default: { readOnly: true } } }
+const levels = (permissions: Record<string, string>) => ({ profiles: { default: { permissions } } })
+
 const closers: (() => Promise<void>)[] = []
 afterEach(async () => {
   for (const close of closers.splice(0)) await close()
@@ -110,7 +113,7 @@ interface Harness {
   /** Answers the server's form; without it the client says it cannot show one. */
   form?: (message: string) => ElicitResult
   era?: "legacy" | "modern"
-  /** The config file, for a profile's `allow` or `readOnly`. */
+  /** The config file, for a profile's `permissions`, `allow` or `readOnly`. */
   config?: object
 }
 
@@ -142,7 +145,7 @@ const connect = async (telegram: Scripted = scripted(), options: Partial<ServerO
     app,
     commands: () => [
       new Command("probe").action(function (this: Command) {
-        made = createServer(this, messengerContext(this, messenger), messenger, { allowSend: false, ...serverOptions })
+        made = createServer(this, messengerContext(this, messenger), messenger, { ...serverOptions })
       }),
     ],
   })
@@ -197,8 +200,8 @@ const sending = () => {
 }
 
 describe("the MCP server", () => {
-  it("offers only reading, named after the command, each marked read-only", async () => {
-    const { client } = await connect()
+  it("offers only reading on a read-only profile, named after the command, each marked read-only", async () => {
+    const { client } = await connect(scripted(), { config: READ_ONLY })
     const { tools } = await client.listTools()
 
     expect(tools.map((one) => one.name).sort()).toEqual([
@@ -234,7 +237,8 @@ describe("the MCP server", () => {
 
     const { body } = await call("chat_status")
 
-    expect(body).toMatchObject({ profile: "default", account: null, writes: [], allow: "all" })
+    expect(body).toMatchObject({ profile: "default", account: null, permissions: {} })
+    expect(body.writes).toContain("chat_messages_send")
     expect(telegram.opened()).toBe(0)
   })
 
@@ -398,8 +402,8 @@ describe("the MCP server", () => {
       command: "chat",
       name: "Chat",
       profile: "a-long-profile-name",
-      allowSend: true,
-      permitted: ["send"],
+      writes: ["messages_send", "messages_delete", "chats_mark_read"],
+      confirmSend: true,
     })
     expect(text.length).toBeLessThanOrEqual(2048)
   })
@@ -515,9 +519,11 @@ describe("the transcribe tool", () => {
 })
 
 describe("sending over MCP", () => {
-  it("offers the send tool only with --allow-send, marked as one a person approves every time", async () => {
-    const reading = (await (await connect()).client.listTools()).tools.map((one) => one.name)
-    const { tools } = await (await connect(scripted(), { allowSend: true })).client.listTools()
+  it("offers the send tool unless the profile is read-only, marked as one a person approves every time", async () => {
+    const reading = (await (await connect(scripted(), { config: READ_ONLY })).client.listTools()).tools.map(
+      (one) => one.name,
+    )
+    const { tools } = await (await connect(scripted(), {})).client.listTools()
     const send = tools.find((one) => one.name === "chat_messages_send")
 
     expect(reading).not.toContain("chat_messages_send")
@@ -527,7 +533,7 @@ describe("sending over MCP", () => {
 
   it("sends through the guard, with the reply, and journals it without the text", async () => {
     const { telegram, sent } = sending()
-    const { call, env } = await connect(telegram, { allowSend: true })
+    const { call, env } = await connect(telegram, {})
 
     const { isError, body } = await call("chat_messages_send", { chat: "Book club", text: "see you", reply_to: "1" })
 
@@ -540,7 +546,7 @@ describe("sending over MCP", () => {
 
   it("repeats the send_id it was given, so the messenger can drop a duplicate", async () => {
     const { telegram, sent } = sending()
-    const { call } = await connect(telegram, { allowSend: true })
+    const { call } = await connect(telegram, {})
 
     await call("chat_messages_send", { chat: "7", text: "again", send_id: "12345" })
 
@@ -549,7 +555,7 @@ describe("sending over MCP", () => {
 
   it("sends silently, without a preview, with the Markdown marks turned into spans", async () => {
     const { telegram, sent } = sending()
-    const { call } = await connect(telegram, { allowSend: true })
+    const { call } = await connect(telegram, {})
 
     await call("chat_messages_send", { chat: "7", text: "**hi**", silent: true, no_preview: true, markdown: true })
 
@@ -570,7 +576,7 @@ describe("sending over MCP", () => {
       },
       scheduled: async () => [{ ...message, scheduledFor: "2030-01-01T09:00:00.000Z" }],
     })
-    const { call } = await connect(telegram, { allowSend: true })
+    const { call } = await connect(telegram, {})
 
     const { body } = await call("chat_messages_send", { chat: "7", text: "later", at: "30m" })
     const queue = await call("chat_messages_scheduled", { chat: "7" })
@@ -581,7 +587,7 @@ describe("sending over MCP", () => {
 
   it("attaches a file from a path, and refuses a hidden one with no way around it", async () => {
     const { telegram, sent } = sending()
-    const { call } = await connect(telegram, { allowSend: true })
+    const { call } = await connect(telegram, {})
     const root = mkdtempSync(join(tmpdir(), "mcp-upload-"))
     writeFileSync(join(root, "plan.pdf"), "pdf")
     writeFileSync(join(root, ".env"), "SECRET=1")
@@ -597,12 +603,9 @@ describe("sending over MCP", () => {
 
   it("refuses on a read-only profile, and sends nothing", async () => {
     const { telegram, sent } = sending()
-    const { call } = await connect(telegram, { allowSend: true, config: { profiles: { default: { readOnly: true } } } })
+    const { call } = await connect(telegram, { config: READ_ONLY })
 
-    const { isError, body } = await call("chat_messages_send", { chat: "7", text: "hi" })
-
-    expect(isError).toBe(true)
-    expect(body.error.code).toBe("permission_error")
+    await expect(call("chat_messages_send", { chat: "7", text: "hi" })).rejects.toThrow(/not found/)
     expect(sent).toEqual([])
   })
 
@@ -614,7 +617,7 @@ describe("sending over MCP", () => {
         return { ...message, id: messageId, text }
       },
     })
-    const { call, env } = await connect(telegram, { allowSend: true })
+    const { call, env } = await connect(telegram, {})
 
     const { isError, body } = await call("chat_messages_edit", { chat: "Book club", message: "1", text: "fixed" })
 
@@ -645,7 +648,7 @@ describe("sending over MCP", () => {
         return { ...message, id: "51", chatId: to }
       },
     })
-    const { call, env } = await connect(telegram, { allowSend: true })
+    const { call, env } = await connect(telegram, {})
 
     const { isError, body } = await call("chat_messages_forward", {
       chat: "7",
@@ -671,7 +674,7 @@ describe("sending over MCP", () => {
         pins.push(["unpin", chatId, messageId])
       },
     })
-    const { call, env } = await connect(telegram, { allowSend: true })
+    const { call, env } = await connect(telegram, {})
 
     const pinned = await call("chat_messages_pin", { chat: "7", message: "1" })
     await call("chat_messages_unpin", { chat: "7", message: "1" })
@@ -696,7 +699,6 @@ describe("sending over MCP", () => {
       },
     })
     const { call, forms, env } = await connect(telegram, {
-      allowSend: true,
       confirmSend: true,
       form: () => ({ action: "accept", content: {} }),
     })
@@ -717,50 +719,64 @@ describe("sending over MCP", () => {
     ])
   })
 
-  it("**offers chats_mark_read only with --allow-mark-read**, which --allow-send does not imply", async () => {
+  it("**offers chats_mark_read unless its level is deny**, and marks through the guard", async () => {
     const marks: unknown[] = []
     const telegram = scripted({
       markRead: async (chatId, until) => {
         marks.push([chatId, until])
       },
     })
-    const sending = (await (await connect(telegram, { allowSend: true })).client.listTools()).tools.map(
-      (one) => one.name,
-    )
-    const { client, call } = await connect(telegram, { allowMarkRead: true })
+    const denied = (
+      await (await connect(telegram, { config: levels({ "chats.mark-read": "deny" }) })).client.listTools()
+    ).tools.map((one) => one.name)
+    const { client, call } = await connect(telegram, {})
 
     const tools = (await client.listTools()).tools.map((one) => one.name)
     const { body } = await call("chat_chats_mark_read", { chat: "Book", until: "1" })
 
-    expect(sending).not.toContain("chat_chats_mark_read")
+    expect(denied).not.toContain("chat_chats_mark_read")
+    expect(denied).toContain("chat_messages_send")
     expect(tools).toContain("chat_chats_mark_read")
-    expect(tools).not.toContain("chat_messages_send")
     expect(body).toEqual({ operationId: expect.any(String), chatId: "7", until: "1" })
     expect(marks).toEqual([["7", "1"]])
   })
 
-  it("**offers messages_delete only with --allow-delete**, and never deletes for everyone", async () => {
+  it("**asks in a form before messages_delete**, skips it with --allow-dangerous, and never deletes for everyone", async () => {
     const deletions: unknown[] = []
     const telegram = scripted({
       delete: async (chatId, ids, options) => {
         deletions.push([chatId, ids, options])
       },
     })
-    const sending = (await (await connect(telegram, { allowSend: true })).client.listTools()).tools.map(
-      (one) => one.name,
-    )
-    const { client, call } = await connect(telegram, { allowDelete: true })
+    const formless = await connect(telegram, {})
+    const flagged = await connect(telegram, { allowDangerous: true })
+    const readonly = (
+      await (await connect(telegram, { config: levels({ messages: "readonly" }) })).client.listTools()
+    ).tools.map((one) => one.name)
 
-    const tools = (await client.listTools()).tools.map((one) => one.name)
-    const { body } = await call("chat_messages_delete", { chat: "7", messages: ["1", "2"], for_everyone: true })
+    await formless.call("chat_messages_delete", { chat: "7", messages: ["3"] }).catch(() => undefined)
+    const { body } = await flagged.call("chat_messages_delete", { chat: "7", messages: ["1", "2"], for_everyone: true })
 
-    expect(sending).not.toContain("chat_messages_delete")
-    expect(tools).toContain("chat_messages_delete")
+    expect(readonly).not.toContain("chat_messages_delete")
     expect(body).toEqual({ operationId: expect.any(String), chatId: "7", deleted: ["1", "2"], forEveryone: false })
     expect(deletions).toEqual([["7", ["1", "2"], { forEveryone: false }]])
   })
 
-  it("reads a poll without --allow-send, and votes by id only with it", async () => {
+  it("**shows a form before a write whose level is ask**, and not with --yes", async () => {
+    const { telegram, sent } = sending()
+    const config = levels({ "messages.send": "ask" })
+    const asked = await connect(telegram, { config, form: () => ({ action: "accept", content: {} }) })
+    const told = await connect(telegram, { config, yes: true })
+
+    await asked.call("chat_messages_send", { chat: "7", text: "one" })
+    await told.call("chat_messages_send", { chat: "7", text: "two" })
+
+    expect(asked.forms).toHaveLength(1)
+    expect(told.forms).toHaveLength(0)
+    expect(sent.map((one) => one.text)).toEqual(["one", "two"])
+  })
+
+  it("reads a poll on a read-only profile, and votes by id where it may", async () => {
     const votes: unknown[] = []
     const poll = {
       chatId: "7",
@@ -779,8 +795,8 @@ describe("sending over MCP", () => {
         return poll
       },
     })
-    const reading = await connect(telegram)
-    const writing = await connect(telegram, { allowSend: true })
+    const reading = await connect(telegram, { config: READ_ONLY })
+    const writing = await connect(telegram, {})
 
     const shown = await reading.call("chat_polls_show", { chat: "7", message: "1" })
     const readingTools = (await reading.client.listTools()).tools.map((one) => one.name)
@@ -791,16 +807,15 @@ describe("sending over MCP", () => {
     expect(votes).toEqual([["7", "1", ["MA"]]])
   })
 
-  it("does not offer a tool the profile's allow list leaves out, whatever the flags", async () => {
+  it("does not offer a tool the profile's allow list leaves out", async () => {
     const { client, call } = await connect(scripted(), {
-      allowSend: true,
       config: { profiles: { default: { allow: ["reaction"] } } },
     })
 
     expect((await client.listTools()).tools.map((one) => one.name)).not.toContain("chat_messages_send")
     expect((await call("chat_status")).body).toMatchObject({
       writes: ["chat_reactions_add", "chat_reactions_remove", "chat_polls_vote"],
-      allow: ["reaction"],
+      permissions: { messages: "readonly", polls: "readonly", chats: "readonly", "polls.vote": "allow" },
     })
   })
 
@@ -808,7 +823,6 @@ describe("sending over MCP", () => {
     it("shows the chat it resolved to and the whole text, and sends once the owner accepts", async () => {
       const { telegram, sent } = sending()
       const { call, forms } = await connect(telegram, {
-        allowSend: true,
         confirmSend: true,
         era,
         form: () => ({ action: "accept", content: {} }),
@@ -825,7 +839,6 @@ describe("sending over MCP", () => {
     it("shows the clock time a delay becomes", async () => {
       const { telegram, sent } = sending()
       const { call, forms } = await connect(telegram, {
-        allowSend: true,
         confirmSend: true,
         era,
         form: () => ({ action: "accept", content: {} }),
@@ -840,7 +853,6 @@ describe("sending over MCP", () => {
     it("sends nothing when the owner declines", async () => {
       const { telegram, sent } = sending()
       const { call } = await connect(telegram, {
-        allowSend: true,
         confirmSend: true,
         era,
         form: () => ({ action: "decline" }),
@@ -856,7 +868,7 @@ describe("sending over MCP", () => {
 
   it("sends nothing when the client cannot show a form", async () => {
     const { telegram, sent } = sending()
-    const { call } = await connect(telegram, { allowSend: true, confirmSend: true })
+    const { call } = await connect(telegram, { confirmSend: true })
 
     await call("chat_messages_send", { chat: "7", text: "hi" }).catch(() => undefined)
 
