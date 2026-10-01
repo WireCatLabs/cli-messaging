@@ -6,6 +6,21 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- **`store fetch --last <n>`**: stop once the newest n messages of the chat are held, counted in the
+  store, so a later run with the same `--last` asks for nothing. Not with `--since`. `FetchOptions.last`;
+  the answer carries `reachedLast: true` when it stopped there.
+
+### Changed — may break callers
+
+- **`store fetch --max <n>` is gone; `--max-pages <n>` caps a run instead**, in pages of 100 (10 by
+  default, so 1000 messages, as `--max` was). The same names as max-cli's, so one limit has one name
+  in both. No alias.
+  `FetchOptions.max` and the `estimate` option `max` become `maxPages`; `estimate`'s `runs` counts
+  requests per run, a held stretch to step over included. A background job records `maxPages` and
+  `last` instead of `max`, and `store jobs` prints them; a job started before shows neither.
+
 ## 0.75.0 — 01.10.2026
 
 ### Changed — may break callers

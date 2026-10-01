@@ -86,11 +86,15 @@ const call = async (
 }
 
 describe("store fetch", () => {
-  it("**stops at --max keeping what it read, and the next run fetches only what is missing**", async () => {
+  it("**stops at --max-pages keeping what it read, and the next run fetches only what is missing**", async () => {
     const env = setup()
     const state = { newest: 250, asked: [] as (string | undefined)[] }
 
-    const first = await call(["store", "fetch", "7", "--max", "120", "--pause", "1ms", "--json"], chatOf(state), env)
+    const first = await call(
+      ["store", "fetch", "7", "--max-pages", "2", "--pause", "1ms", "--json"],
+      chatOf(state),
+      env,
+    )
     expect(first.answer).toEqual({ chat: "7", fetched: 200, complete: false, ranges: [{ from: 51, to: 250 }] })
 
     state.newest = 260
@@ -99,6 +103,21 @@ describe("store fetch", () => {
     expect(second.answer).toEqual({ chat: "7", fetched: 150, complete: true, ranges: [{ from: 1, to: 260 }] })
     // The newest page, then straight past the 51..250 already held.
     expect(state.asked).toEqual([undefined, "51"])
+  })
+
+  it("**--last stops once the newest n messages are held**, and refuses --since beside it", async () => {
+    const env = setup()
+    const state = { newest: 250, asked: [] as (string | undefined)[] }
+
+    const { answer } = await call(
+      ["store", "fetch", "7", "--last", "120", "--pause", "1ms", "--json"],
+      chatOf(state),
+      env,
+    )
+    const both = await call(["store", "fetch", "7", "--last", "5", "--since", "1d", "--json"], chatOf(state), env)
+
+    expect(answer).toMatchObject({ fetched: 200, complete: false, reachedLast: true, ranges: [{ from: 51, to: 250 }] })
+    expect(both.code).toBe(2)
   })
 
   it("sits out a short wait the provider asks for", async () => {
@@ -112,7 +131,7 @@ describe("store fetch", () => {
   it("stops at a long wait with what it had read kept", async () => {
     const env = setup()
     const state = { newest: 250, asked: [] as (string | undefined)[] }
-    await call(["store", "fetch", "7", "--max", "100", "--pause", "1ms"], chatOf(state), env)
+    await call(["store", "fetch", "7", "--max-pages", "1", "--pause", "1ms"], chatOf(state), env)
 
     const refused = await call(["store", "fetch", "7", "--pause", "1ms"], chatOf({ ...state, wait: 10 * 60_000 }), env)
     expect(refused.code).toBe(8)
@@ -189,7 +208,7 @@ describe("store fetch in the background", () => {
     onTestFinished(stop)
 
     const started = await call(
-      ["store", "fetch", "7", "--max", "50", "--pause", "1ms", "--background", "--json"],
+      ["store", "fetch", "7", "--max-pages", "3", "--last", "250", "--pause", "1ms", "--background", "--json"],
       idle,
       env,
       {
@@ -200,11 +219,22 @@ describe("store fetch in the background", () => {
     expect(started.answer).toMatchObject({ pid: children[0]?.pid, chat: "7" })
     const job = started.answer.job as string
     expect(calls).toHaveLength(1)
-    expect(calls[0]?.argv).toEqual(["store", "fetch", "7", "--max", "50", "--pause", "1ms", "--json"])
+    expect(calls[0]?.argv).toEqual([
+      "store",
+      "fetch",
+      "7",
+      "--max-pages",
+      "3",
+      "--pause",
+      "1ms",
+      "--last",
+      "250",
+      "--json",
+    ])
     expect(calls[0]?.env).toMatchObject({ CHAT_PROFILE: "default", CHAT_BACKFILL_JOB: job })
     expect(calls[0]?.env.CHAT_TIMEOUT).toBeUndefined()
     expect((await call(["store", "jobs", "list", "--json"], idle, env)).answer).toEqual([
-      expect.objectContaining({ job, state: "running", fetched: 0, max: 50 }),
+      expect.objectContaining({ job, state: "running", fetched: 0, maxPages: 3, last: 250 }),
     ])
 
     const again = await call(["store", "fetch", "7", "--background"], idle, env, { spawnJob })
@@ -319,10 +349,10 @@ describe("store fetch --estimate", () => {
 
   it("**prices what is not held at the density of what is, and asks the messenger nothing**", async () => {
     const env = setup()
-    await call(["store", "fetch", "7", "--max", "100", "--pause", "1ms"], chatOf({ newest: 250, asked: [] }), env)
+    await call(["store", "fetch", "7", "--max-pages", "1", "--pause", "1ms"], chatOf({ newest: 250, asked: [] }), env)
 
     const { code, answer } = await call(
-      ["store", "fetch", "7", "--estimate", "--max", "100", "--json"],
+      ["store", "fetch", "7", "--estimate", "--max-pages", "1", "--json"],
       untouchable,
       env,
     )
@@ -333,7 +363,7 @@ describe("store fetch --estimate", () => {
       ranges: [{ from: 151, to: 250 }],
       missing: 150,
       requests: 3,
-      runs: 2,
+      runs: 3,
       seconds: 4,
     })
   })
@@ -354,6 +384,6 @@ describe("store fetch --estimate", () => {
 
     const { answer, stderr } = await call(["store", "fetch", "8", "--estimate", "--json"], untouchable, env)
     expect(answer).toMatchObject({ held: 0, missing: null, requests: null })
-    expect(stderr).toContain("--max 100")
+    expect(stderr).toContain("--max-pages 1")
   })
 })

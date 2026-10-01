@@ -112,15 +112,14 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--json` |  | machine-readable output: one JSON value on stdout, nothing else |  | every command |
 | `--jsonl` |  | machine-readable output: one JSON object per line, for streaming and jq |  | every command |
 | `--kind` | `<kind>` | only chats of this kind: dialog, group or channel. **max spells the value `<dialog\|group\|channel>`; the choices belong in the description** |  | `chats list` |
-| `--last` | `<n>` | the newest n messages. **clash with tg's `store fetch --max`** |  | `store fetch` (planned) |
+| `--last` | `<n>` | stop once the newest n messages are held; not with --since |  | `store fetch` |
 | `--last-name` | `<name>` | your last name |  | `account update` (planned) |
 | `--limit` | `<n>` | how many to show |  | `chats list`, `chats members list` (planned), `contacts list`, `inbox`, `messages list`, `messages search`, `runs list`, `sends list` |
 | `--lines` | `<n>` | how many lines | `50` | `server logs` (planned) |
 | `--local` |  | use the model on this machine, never the messenger |  | `messages transcribe` (tg-only) |
 | `--mark-read` |  | also mark the chat read up to the newest message shown; the other person sees it |  | `messages list` (planned) |
-| `--max` | `<n>` | at most this many messages in this run. **clash: the same limit as `--last` and `--max-pages` in max's `store fetch` — one of the two spellings goes** | `1000` | `store fetch` (planned) |
 | `--max-actions` | `<n>` | at most this many actions in one run | `10` | `chats check` (planned) |
-| `--max-pages` | `<n>` | at most this many pages in one run. **clash with tg's `store fetch --max`** | `40` | `store fetch` (planned) |
+| `--max-pages` | `<n>` | at most this many pages of 100 messages in one run | `10` | `store fetch` |
 | `--md` |  | read **bold**, _italic_, ~~struck~~ and `code` in the text; \ keeps a mark literal |  | `messages edit`, `messages send` |
 | `--members-see-link` | `<on\|off>` | members may see the invite link |  | `chats update` (planned) |
 | `--model` | `<id>` | which downloaded speech model hears them; `models audio list` shows them |  | `inbox` (planned), `messages list` (planned), `messages transcribe` |
