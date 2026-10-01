@@ -1,6 +1,7 @@
 # Phase 2 — search by words: BM25, typo correction, a query language
 
-Plan, 2026-09-30. **Not approved yet; nothing is built.** Questions 1–3 of §9 answered A on 2026-10-01. It follows [`../decisions.md`](../decisions.md):
+Plan, 2026-09-30. **Approved by the owner 2026-10-01; nothing is built yet.** Questions of §9 answered
+2026-10-01: 1–3 A, 4 B. It follows [`../decisions.md`](../decisions.md):
 SQLite FTS5 (NEED-374 A); every word first, any word when nothing is found, BM25 ranks, trigram typo
 correction over the vocabulary (NEED-375 A); the substring index stays as the last fallback (NEED-379 A);
 a typed query language and completeness per chat (NEED-400 A). Requirements §3, §6–§11, §22–§23, §26,
@@ -30,9 +31,8 @@ max-cli's personal `max messages search` reads max's own profile cache until the
 
 No schema change forces an upgrade: `min_compatible` stays 6 (§7).
 
-**Not in phase 2: one search over several accounts or both messengers.** Requirements §7 asks for "one
-messenger, all messengers" and `--source`. Search stays inside the account the command runs as, as
-today; whether to add it here or later is **NEED-456** (§9).
+**In phase 2 too: one search over several accounts and both messengers** (requirements §7, `--source`;
+**NEED-456 B**, owner 2026-10-01) — S13.
 
 ## 2. Current state
 
@@ -258,7 +258,26 @@ backend can implement them: `matchWords(query, scope, { every | any, beginnings,
 `searchIndexState()`, `fillSearchIndex({ batches })`. The chain of S4 lives in a service
 (`src/search/`), not in the store. `find` keeps its meaning — substring for `text`, plus `pattern` and
 `senders` — until max-cli's bot search moves over (item 9); then `text` leaves `find`.
-`MessageStore.search` (no callers) is removed.
+`MessageStore.search` (no callers) is removed. The `scope` of every step takes a list of accounts (S13).
+
+**S13 · Across accounts and messengers** (NEED-456 B).
+
+- **The default stays the account the command runs as** — the same answer as today for anyone who does
+  not ask for more.
+- `in:telegram`, `in:max` — every account of that messenger held in `messages.db`; `in:all` — every
+  account of every messenger. `--source <messenger|all>` means the same (requirements §7); both given
+  and different is an error.
+- It is a read of rows already in the shared file: nothing connects to the other messenger, and nothing
+  is sent or marked read.
+- In the database it is `account_pk IN (…)` in the join; S6 is unchanged.
+- `from:` and `chat:` resolve inside the chosen accounts; a name matching people or chats in two of them
+  fails with the candidates and their messenger, as an ambiguous name does today.
+- Each hit already carries its `locator` — messenger, account, chat, message (`store.ts`
+  `formatLocator`), so the JSON needs no new field. Pretty output names the messenger before the chat
+  title when the answer spans more than one account, and says which CLI opens the chat (`max …`,
+  `tg …`). Whether the other CLI takes a locator as its chat argument is checked in item 6 (inferred,
+  not verified).
+- The MCP tool gets an optional `source` input with the same values.
 
 ## 4. The query language
 
@@ -266,7 +285,7 @@ backend can implement them: `matchWords(query, scope, { every | any, beginnings,
 query    := part*
 part     := filter | "-"? atom | "OR"
 atom     := word | '"' words '"'
-filter   := ("from" | "chat" | "after" | "before" | "has") ":" value
+filter   := ("from" | "chat" | "after" | "before" | "has" | "in") ":" value
 value    := word | '"' words '"'
 ```
 
@@ -279,11 +298,12 @@ value    := word | '"' words '"'
 | `has:photo` (`video`, `voice`, `audio`, `file`, `sticker`, …) | an attachment of that kind | `EXISTS` in `attachments.kind` |
 | `has:attachment` | any attachment | `EXISTS` in `attachments` |
 | `has:link` | a link in the text | substring `://` in `messages_fts` |
+| `in:telegram`, `in:max`, `in:all` | other accounts and messengers held in the file (S13) | `account_pk IN (…)` |
 | `"a phrase"` | these words, in order | an FTS5 phrase |
 | `-word` | not this word | FTS5 `NOT` |
 | `a OR b` | either | FTS5 `OR`; binds tighter than the implied AND |
 
-- Only these five names are operators. `https://…` or `12:30` is text.
+- Only these six names are operators. `https://…` or `12:30` is text.
 - A value naming nobody fails before anything is searched: «from:alise — no one by that name; did you
   mean alice?» — the name indexes already answer that.
 - `has:` with a kind the store never saw lists the kinds it has.
@@ -320,7 +340,10 @@ lane A lands for reads and search. One PR each, based on `main`.
    1M; the generator gains near-look-alike words (`valence` next to `valencia`) so correction precision
    means something; sets the S6 threshold with chats of 10k, 50k and 100k. Numbers in the PR and in
    `bench/search/results.md`.
-9. **max-cli's bot search** — `bot messages search` calls the service instead of `find({ text })`; then
+9. **Across accounts and messengers** (S13) — `in:`, `--source`, the MCP `source` input, resolution and
+   pretty output over several accounts; a test with a Telegram and a MAX account in one file. May ride
+   with items 6–7 if small.
+10. **max-cli's bot search** — `bot messages search` calls the service instead of `find({ text })`; then
    `text` leaves `find` (S12). A max-cli PR plus a cli-messaging one.
 
 ## 6. Test plan
@@ -343,6 +366,8 @@ lane A lands for reads and search. One PR each, based on `main`.
   per message row.
 - **Not searchable**: left out of all chats, searched when named.
 - **Completeness**: up to date, gaps, reaches the start, unknown.
+- **Across accounts** (S13): without `in:` only the current account's rows; `in:all` finds a word in
+  both a Telegram and a MAX account of one file; an ambiguous `from:` across them fails with both.
 - **Machine mode**: stdout is one JSON value (or JSONL); notes on stderr only.
 
 **Acceptance**, p95 through the store, Node 24, 1M benchmark corpus (item 8):
@@ -393,7 +418,7 @@ look-alike words item 8 adds, no gate until the owner sets one. A Drizzle-and-as
    `store info` / `store check` / `store reindex` (**A**, recommended), or a `search` group (**B**)?
 3. ~~**NEED-455**~~ — answered 2026-10-01: **A**. Completeness per chat: from three facts, recording "reached the start" in
    `sync_state` (**A**, recommended), or from `sync_ranges` alone as the ruling is worded (**B**)?
-4. **NEED-456** — one search across accounts and messengers (requirements §7, `--source`): after
+4. ~~**NEED-456**~~ — answered 2026-10-01: **B**, inside phase 2 (S13). One search across accounts and messengers (requirements §7, `--source`): after
    phase 2, as its own item (**A**, recommended — the store's filter already takes several accounts;
    what is missing is naming and opening a chat of another messenger in the answer), or inside phase 2
    (**B**)?

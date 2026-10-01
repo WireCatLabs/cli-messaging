@@ -27,6 +27,8 @@ its journal id (`NEED-nnn`, max-cli's private journal) and is closed here when a
 | 2026-09-30 | **Phase 2 search takes a typed query language** — `from:` `chat:` `after:` `before:` `has:`, `"phrase"`, `-word`, `OR` — mapped onto the filters and FTS5, **and shows how complete the archive is for each chat searched**, from `sync_ranges` (NEED-400 A). **Refined 2026-10-01 (NEED-455 A):** from three facts — the newest message held against the chat's newest, gaps in `sync_ranges`, and a `sync_state` note that `store fetch` reached the chat's start. |
 | 2026-10-01 | **Phase 2's word index is finished in pieces by `messages search` itself** (up to ~200 ms a call, normalization first) as well as by `store migrate`, so a max user without tg gets it before the fold-in (NEED-453 A; [phase 2 plan](plans/phase-2.md) S3). |
 | 2026-10-01 | **No `search` command group**: requirements §23's `search status|rebuild` become `store info`, `store check` and `store reindex` (NEED-454 A; phase 2 plan S11). |
+| 2026-10-01 | **Phase 2 searches across accounts and messengers on request**: `in:telegram` / `in:max` / `in:all` and `--source` read every such account held in `messages.db`; the default stays the current account (NEED-456 B; [phase 2 plan](plans/phase-2.md) S13). |
+| 2026-10-01 | **The phase 2 plan is approved** ([`plans/phase-2.md`](plans/phase-2.md)); it is built after phase 1's lane A. |
 | 2026-09-30 | **Phase 1's `db doctor` also reports completeness per chat**: chats whose history does not reach their newest message, and how long ago each chat was refreshed; plus `PRAGMA foreign_key_check` (NEED-399 A; plan item 9). |
 
 ## Answered — the evidence behind the rulings above
