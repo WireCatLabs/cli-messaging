@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.90.0 — 01.10.2026
+
 ### Added
 
 - **`serverCommand(messenger, options)`** — a CLI whose server is not tg's lock file says how it is
