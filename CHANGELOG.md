@@ -29,6 +29,10 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 - **`Message.mentions`**: the people a message mentions by id, where the messenger marks them; the store
   keeps it and the mention rule follows it, so a mention by name with no `@handle` links too (rules v3).
 
+### Changed — may break callers
+
+- **`chat_messages_edit` takes `md`**, as `chat_messages_send` does; the option is `--md`.
+
 ## 0.88.0 — 01.10.2026
 
 ### Added
