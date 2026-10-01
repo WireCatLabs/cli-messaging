@@ -119,7 +119,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--can` | `<rights>` | what they may do, comma-separated: read, members, admins, info, pin, link, post, edit, delete. **lists the rights each messenger has — MAX has `read`, Telegram does not — so it differs on purpose (Help text rule 4)** |  | `bot chats admins add`, `chats admins add` |
 | `--channel` |  | a private channel instead of a group; people join it by its link |  | `chats create` |
 | `--chat` | `<chat>` | a chat, by id or name; repeat it for more. **max's `messages search` takes `<id>` only, since searching never connects to resolve a name; rule 6 says `<chat>` (e8)** |  | `chats folders create`, `conversations batches next`, `conversations batches status`, `conversations build`, `conversations links clear` (planned), `conversations list`, `messages search`, `review` |
-| `--check` |  | say whether a newer version exists, and install nothing |  | `bot list`, `upgrade` |
+| `--check` |  | say whether a newer version exists, and install nothing. **`bot list --check` names the messenger until both CLIs take the release after 0.98.0, where it says "the messenger"; then this note goes** |  | `bot list`, `upgrade` |
 | `--confirm-send` |  | show the owner every write the MCP server offers, in a form to approve. **max's own `mcp` is worded differently until the permission levels (P7) replace these flags there (e13)** |  | `bot mcp` (planned), `bot mcp config` (planned), `mcp`, `mcp config` |
 | `--context` | `<n>` | messages before and after each hit |  | `messages search` (planned) |
 | `--defaults` |  | change what every profile gets, rather than this profile |  | `config set`, `config unset` |
@@ -143,11 +143,11 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--last` | `<n>` | stop once the newest n messages are held; not with --since. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | `store fetch` |
 | `--last-name` | `<name>` | your last name |  | `account update` |
 | `--left` |  | only the chats this account has left |  | `store clear` |
-| `--limit` | `<n>` | how many: rows to show, or messages one run fetches. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | `bot chats members list`, `bot messages between` (planned), `bot messages list`, `bot messages search` (planned), `bot people show` (planned), `chats list`, `chats members list` (planned), `contacts list`, `conversations list`, `inbox`, `messages list`, `messages search`, `runs list`, `sends list`, `store fetch` |
+| `--limit` | `<n>` | how many: rows to show, or messages one run fetches. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | `bot chats members list` (max-only), `bot messages between` (planned), `bot messages list`, `bot messages search` (planned), `bot people show` (planned), `chats list`, `chats members list` (planned), `contacts list`, `conversations list`, `inbox`, `messages list`, `messages search`, `runs list`, `sends list`, `store fetch` |
 | `--lines` | `<n>` | how many lines | `50` | `server logs` |
 | `--local` |  | use the model on this machine, never the messenger |  | `messages transcribe` (tg-only) |
 | `--mark-read` |  | also mark the chat read up to the newest message shown; the other person sees it |  | `messages list` |
-| `--marker` | `<value>` | Marker |  | `bot chats members list` |
+| `--marker` | `<value>` | Marker |  | `bot chats members list` (max-only) |
 | `--max-actions` | `<n>` | at most this many actions in one run | `10` | `bot chats check` (planned), `chats moderate` (planned) |
 | `--md` |  | read **bold**, _italic_, ~~struck~~ and `code` in the text; \ keeps a mark literal |  | `bot messages edit`, `bot messages send`, `messages edit`, `messages send` |
 | `--members-see-link` | `<on\|off>` | members may see the invite link |  | `chats update` (max-only) |

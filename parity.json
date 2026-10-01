@@ -108,7 +108,8 @@
       "note": "max's `messages search` takes `<id>` only, since searching never connects to resolve a name; rule 6 says `<chat>` (e8)"
     },
     "--check": {
-      "meaning": "say whether a newer version exists, and install nothing"
+      "meaning": "say whether a newer version exists, and install nothing",
+      "note": "`bot list --check` names the messenger until both CLIs take the release after 0.98.0, where it says \"the messenger\"; then this note goes"
     },
     "--confirm-send": {
       "meaning": "show the owner every write the MCP server offers, in a form to approve",
@@ -644,8 +645,14 @@
     "bot chats members list": {
       "in": ["max"],
       "options": {
-        "--limit": "all",
-        "--marker": "all"
+        "--limit": {
+          "in": ["max"],
+          "reason": "Telegram's Bot API cannot list a chat's members, only its admins and a count"
+        },
+        "--marker": {
+          "in": ["max"],
+          "reason": "Telegram's Bot API cannot list a chat's members, only its admins and a count"
+        }
       },
       "reason": "Telegram's Bot API cannot list a chat's members, only its admins and a count"
     },

@@ -75,7 +75,7 @@ const listCommand = (bot: BotMessenger, tokenVariable: string): Command =>
     .description(
       `every name on this machine that has a bot token; --check asks ${bot.name ?? "the messenger"} which bot each is`,
     )
-    .option("--check", `ask ${bot.name ?? "the messenger"} who each bot is`)
+    .option("--check", "ask the messenger who each bot is, with its token")
     .action(async function (this: Command) {
       const context = botContext(this, bot)
       const check = this.opts<{ check?: boolean }>().check === true

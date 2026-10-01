@@ -12,6 +12,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   and tg both have is in all CLIs. `bot api`, `bot comments`, `bot uploads`, `bot chats members
   list|add` and `bot webhooks set --add` are max's alone, each with why. The rest is planned for tg
   in P8. The standard's README order no longer says the bot section is max's only.
+- **`bot list --check`** says "ask the messenger who each bot is, with its token" in every CLI, so the
+  option reads the same in max and tg.
 
 ### Fixed
 
