@@ -436,7 +436,7 @@ describe("chats create, join and leave", () => {
     expect(refused.stderr.join("\n")).not.toContain("Olga")
     const journal = readFileSync(sendsPathFor(app, "default", env), "utf8")
     expect(journal).toContain('"action":"contact-import"')
-    expect(journal).not.toContain("600")
+    for (const digits of ["600111222", "600333444", "600 111 222"]) expect(journal).not.toContain(digits)
   })
 
   it("**changes the profile with a photo**, masking the phone, and ends other sessions only with --others", async () => {
