@@ -1,9 +1,6 @@
 {
   "clis": ["max", "tg"],
   "options": {
-    "--accept-terms": {
-      "meaning": "accept the licence terms of a model that has its own, before it downloads"
-    },
     "--add": {
       "value": "<chat>",
       "meaning": "put a chat into a folder; repeat it for more"
@@ -1732,16 +1729,12 @@
       "in": "all"
     },
     "models text": {
-      "in": "all"
-    },
-    "models text download": {
-      "in": "all",
-      "options": {
-        "--accept-terms": "all"
-      }
-    },
-    "models text list": {
-      "in": "all"
+      "in": [],
+      "planned": {
+        "max": "storage phase 5: the cli-messaging bump after it ships",
+        "tg": "storage phase 5: the cli-messaging bump after it ships"
+      },
+      "subtree": true
     },
     "polls": {
       "in": "all"
