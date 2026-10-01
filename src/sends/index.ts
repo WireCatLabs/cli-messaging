@@ -1,4 +1,5 @@
 export {
+  type Asker,
   type GuardRequest,
   guardFor,
   type SendGuard,
@@ -16,7 +17,18 @@ export {
   type SendOutcome,
   sendsPathFor,
 } from "./journal.js"
-export { PERMISSIONS, type Permission, permissionFor } from "./permissions.js"
+export {
+  DEFAULT_PERMISSIONS,
+  fromOldSettings,
+  keyForWrite,
+  LEVELS,
+  type Level,
+  levelFor,
+  PERMISSIONS,
+  type Permission,
+  type PermissionKey,
+  permissionFor,
+} from "./permissions.js"
 export { type Recipient, RecipientList, recipientsPathFor } from "./recipients.js"
 export { newOperationId, newSendId } from "./send-id.js"
 export { readUpload, type Upload, type UploadKind } from "./upload.js"

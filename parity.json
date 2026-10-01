@@ -371,7 +371,11 @@
     "--timeout": "both",
     "--trace": "both",
     "--verbose": "both",
-    "--version": "both"
+    "--version": "both",
+    "--yes": {
+      "state": "planned",
+      "by": "P7"
+    }
   },
   "commands": {
     "account": {

@@ -1,8 +1,9 @@
 import { AsyncLocalStorage } from "node:async_hooks"
 import type { SendGuard } from "./guard.js"
 import type { SendEntry } from "./journal.js"
+import type { PermissionKey } from "./permissions.js"
 
-type Attempt = Omit<SendEntry, "at" | "profile" | "outcome"> & { operationId: string }
+type Attempt = Omit<SendEntry, "at" | "profile" | "outcome"> & { operationId: string; key?: PermissionKey }
 
 /** A write's answer, with the id its journal lines and run events carry. */
 export type Operated<T> = T & { operationId: string }
@@ -24,6 +25,7 @@ export const guardedWrite = async <T>(
   settled: (done: T) => Partial<Attempt> = () => ({}),
 ): Promise<T> => {
   try {
+    await guard.ask?.(attempt)
     guard.check(attempt)
   } catch (error) {
     guard.record({ ...attempt, outcome: "refused", errorCode: codeOf(error) })

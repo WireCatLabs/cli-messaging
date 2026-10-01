@@ -14,6 +14,23 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   `{ items, page, limit, hasMore }`, as every other list does; they printed a bare array. A script
   that read `.[]` reads `.items[]`. `--jsonl` is unchanged: one item per line. `sends list` and
   `runs list` say `hasMore: true` when `--limit` cut the list short.
+- **`messages delete` asks instead of refusing** when `--allow-dangerous` is missing and someone is
+  at a terminal; with nobody there it is refused as before.
+
+### Added
+
+- **Permissions: one level per command path.** A profile's `permissions` setting maps command paths
+  to `deny`, `readonly`, `ask` or `allow` — `config set permissions.messages.delete allow` — and the
+  most specific key wins. By default everything is allowed except `messages.delete` and
+  `account.sessions.end`, which ask; a built-in default only ever tightens a broader key. `ask`
+  asks y/N at the terminal (never under `--json` or `--jsonl`); `--allow-dangerous` (deleting) or the new global `--yes` (every other
+  write) answers yes, and with nobody at a terminal the write is refused (`confirmation_required`).
+  A key starts with a resource (`messages`, `reactions`, `polls`, `topics`, `chats`, `contacts`,
+  `account`), so a misspelled one is refused. `readOnly` and `allow` keep working, read as levels. Exports `LEVELS`, `levelFor`,
+  `DEFAULT_PERMISSIONS`, `fromOldSettings`, `keyForWrite`; `sendGuard` takes `permissions` and
+  `ask`, and without them decides as before; `SendGuard.ask` is the question `guardedWrite` awaits
+  before `check`, and `check` refuses an `ask` write that was not asked. MCP is unchanged for now,
+  and `deny` does not stop reads yet.
 
 ## 0.74.0 — 01.10.2026
 

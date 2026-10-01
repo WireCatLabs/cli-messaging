@@ -169,7 +169,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--verbose` |  | more detail in what is shown: -v ids, -vv everything known | `0` | every command |
 | `--version` |  | print the version number |  | every command |
 | `--voice` | `<file>` | send an Ogg Opus file as a voice message, alone, with no text. **max spells the value `<path>`; rule 6 says `<file>`** |  | `messages send` (planned) |
-| `--yes` |  | go ahead without the question an ask level puts before a write |  | `account sessions end` (planned), `mcp` (planned), `mcp config` (planned) |
+| `--yes` |  | go ahead without the question an ask level puts before a write |  | every command (planned), `account sessions end` (planned), `mcp` (planned), `mcp config` (planned) |
 
 <!-- end of the option catalogue -->
 
@@ -228,7 +228,8 @@ whose values are levels. It holds for a command the owner types and for an agent
      no flag the command answers `confirmation_required` (7). Over MCP, a form the owner answers.
    - `allow` — goes ahead and never asks.
 2. **A key is a command path**: `messages`, `messages.delete`, `chats.members.remove`,
-   `account.sessions.end`. **The most specific key wins**; there is no wildcard. Every command
+   `account.sessions.end`. **The most specific key the owner set wins**; there is no wildcard, and a
+   key starts with a resource, so a misspelled one is refused rather than ignored. Every command
    maps to exactly one key, checked by a test over `commands --json`:
    - a command that shows messages from outside `messages` counts as `messages` — `inbox`,
      `review`, `watch`, `serve`, `store fetch|export|search`, the MCP resources and prompts;
@@ -242,7 +243,9 @@ whose values are levels. It holds for a command the owner types and for an agent
    { "messages.delete": "ask", "account.sessions.end": "ask" }
    ```
 
-   A default is never tightened without the owner's word.
+   A default is never tightened without the owner's word. **A built-in default only ever tightens**:
+   against a broader key of the owner's, the stricter of the two holds — `messages: readonly` still
+   stops a deletion, and `messages: allow` keeps its question until `messages.delete` is named.
 4. **Limits no level lifts**: an agent never deletes for everyone and never ends other sessions.
 5. **A group's moderation rules use the same four levels** for each kind of action (delete,
    remove, accept, decline), `readonly` meaning "report it, do nothing". A rule's level can only be

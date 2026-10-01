@@ -213,7 +213,7 @@ describe("the configuration file", () => {
     withConfig(JSON.stringify({ profiles: { default: { limitt: 5 } } }))
     expect(() => settings()).toThrowError(
       "profiles.default.limitt: unknown setting — the known ones are limit, timeoutMs, color, senderColors, record, " +
-        "keepRunsForDays, readOnly, allow, sendsPerHour",
+        "keepRunsForDays, readOnly, allow, permissions, sendsPerHour",
     )
 
     withConfig(JSON.stringify({ profiles: { default: { limit: 0, color: "yes" } } }))
@@ -305,6 +305,25 @@ describe("changing a setting", () => {
     changeSetting(path(), { profile: "work", setting: "limit", value: undefined })
     changeSetting(path(), { profile: "work", setting: "record", value: undefined })
     expect(file()).toEqual({ profiles: {} })
+  })
+
+  it("**writes one permission key at a time**, refuses a level that is not one, and reads `readOnly` as levels", () => {
+    changeSetting(path(), { profile: "work", setting: "permissions.messages.delete", value: "allow" })
+    changeSetting(path(), { profile: "work", setting: "permissions.contacts", value: "readonly" })
+    expect(file()).toEqual({
+      profiles: { work: { permissions: { "messages.delete": "allow", contacts: "readonly" } } },
+    })
+    expect(() => changeSetting(path(), { profile: "work", setting: "permissions.contacts", value: "maybe" })).toThrow(
+      /deny, readonly, ask, allow/,
+    )
+    expect(() => changeSetting(path(), { profile: "work", setting: "permissions.mesages", value: "deny" })).toThrow(
+      /starts with one of messages/,
+    )
+
+    changeSetting(path(), { profile: "work", setting: "readOnly", value: "true" })
+    const work = settings({ profile: "work" })
+    expect(work.permissions).toMatchObject({ messages: "readonly", contacts: "readonly", "messages.delete": "allow" })
+    expect(work.permissionSources).toMatchObject({ messages: "readOnly", contacts: "config file" })
   })
 
   it("writes to `defaults` when no profile is named", () => {

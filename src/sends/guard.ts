@@ -11,7 +11,7 @@ import {
   type SendKind,
   sendsPathFor,
 } from "./journal.js"
-import { type Permission, permissionFor } from "./permissions.js"
+import { keyForWrite, type Level, levelFor, type Permission, type PermissionKey, permissionFor } from "./permissions.js"
 import { RecipientList, recipientsPathFor } from "./recipients.js"
 
 const HOUR_MS = 60 * 60 * 1000
@@ -29,7 +29,16 @@ export interface GuardRequest {
   scheduledFor?: string
   notify?: boolean
   personIds?: Id[]
+  forEveryone?: boolean
+  /** The command path, where the kind alone does not say it — a poll's vote is not a reaction's. */
+  key?: PermissionKey
 }
+
+/**
+ * Asked when a write's level is `ask`: resolves when the owner said yes — a flag, or an answer at
+ * the terminal — and rejects with `confirmation_required` or `cancelled` otherwise.
+ */
+export type Asker = (key: PermissionKey, request: GuardRequest) => Promise<void>
 
 /** What `MaxClient.messages.send` asks before it sends, and tells after — on every outcome. */
 export interface SendGuard {
@@ -38,6 +47,11 @@ export interface SendGuard {
    * the journal under a lock, unless `reserve` is false — over a background server, the server holds it.
    */
   check(request: GuardRequest, options?: { reserve?: boolean }): void
+  /**
+   * The question a write at level `ask` needs, before `check`: `check` refuses such a write unless
+   * this request was answered yes, so a caller that skips it is refused rather than let through.
+   */
+  ask?(request: GuardRequest): Promise<void>
   record(entry: Omit<SendEntry, "at" | "profile">): void
 }
 
@@ -53,6 +67,13 @@ export interface SendGuardOptions {
   allowFrom?: string
   /** The command that changes `allow`, when the CLI's configuration has more places than profiles and defaults. */
   allowFix?: string
+  /**
+   * The levels by command path, defaults included. Without it, `readOnly` and `allow` alone decide
+   * and nothing asks — the guard a CLI built before levels existed.
+   */
+  permissions?: Readonly<Record<PermissionKey, Level>>
+  permissionSources?: Readonly<Record<PermissionKey, string>>
+  ask?: Asker
   sendsPerHour: number
   journal: SendJournal
   recipients: RecipientList
@@ -101,6 +122,9 @@ export const sendGuard = ({
   allow,
   allowFrom = "default",
   allowFix,
+  permissions,
+  permissionSources = {},
+  ask = refuseToAsk,
   sendsPerHour,
   journal,
   recipients,
@@ -108,28 +132,45 @@ export const sendGuard = ({
   now = () => new Date(),
 }: SendGuardOptions): SendGuard => {
   let reservation: string | undefined
+  const answered = new WeakSet<GuardRequest>()
 
-  const permitted = ({ chatId, kind = "message", action, personIds }: GuardRequest) => {
-    if (readOnly) {
-      throw new CliError(
-        "permission_error",
-        `profile ${profile} is read-only (readOnly, from the ${readOnlyFrom}) — it cannot send, react, change chats or change the account`,
-      )
-    }
-
-    const permission = permissionFor(kind, action)
-    if (allow && !allow.includes(permission)) {
-      const fix =
-        allowFix ??
-        (allowFrom === "config defaults"
-          ? `${command} config set --defaults allow`
-          : `${command} ${profile} config set allow`)
-      throw new CliError(
-        "permission_error",
-        `profile ${profile} does not allow ${permission} (allow: ${allow.join(", ") || "nothing"} — from the ${allowFrom}); ` +
-          `to allow it: ${fix} ${[...allow, permission].join(",")}`,
-        { permission },
-      )
+  const permitted = (request: GuardRequest) => {
+    const { chatId, kind = "message", action, personIds } = request
+    if (permissions === undefined) {
+      if (readOnly) {
+        throw new CliError(
+          "permission_error",
+          `profile ${profile} is read-only (readOnly, from the ${readOnlyFrom}) — it cannot send, react, change chats or change the account`,
+        )
+      }
+      const permission = permissionFor(kind, action)
+      if (allow && !allow.includes(permission)) {
+        const fix =
+          allowFix ??
+          (allowFrom === "config defaults"
+            ? `${command} config set --defaults allow`
+            : `${command} ${profile} config set allow`)
+        throw new CliError(
+          "permission_error",
+          `profile ${profile} does not allow ${permission} (allow: ${allow.join(", ") || "nothing"} — from the ${allowFrom}); ` +
+            `to allow it: ${fix} ${[...allow, permission].join(",")}`,
+          { permission },
+        )
+      }
+    } else {
+      const key = request.key ?? keyForWrite(kind, action)
+      const { level, key: named } = levelFor(permissions, key)
+      if (level === "deny" || level === "readonly") {
+        throw new CliError(
+          "permission_error",
+          `profile ${profile} does not let ${key} write (permissions.${named} is ${level}, from the ` +
+            `${permissionSources[named ?? ""] ?? "default"}); to allow it: ${command} ${profile} config set permissions.${key} allow`,
+          { permission: key },
+        )
+      }
+      if (level === "ask" && !answered.has(request)) {
+        throw new CliError("confirmation_required", `${key} asks before it acts, and it was not asked`)
+      }
     }
 
     const allowed = recipients.read()
@@ -206,6 +247,14 @@ export const sendGuard = ({
   }
 
   return {
+    ask: async (request) => {
+      if (permissions === undefined) return
+      const key = request.key ?? keyForWrite(request.kind ?? "message", request.action)
+      if (levelFor(permissions, key).level !== "ask") return
+      await ask(key, request)
+      answered.add(request)
+    },
+
     check: (request, { reserve = true } = {}) => {
       permitted(request)
       const asked = { ...request, people: request.personIds?.length ?? request.count }
@@ -239,7 +288,7 @@ export const sendGuard = ({
     // After a send, a failure to write here must not become the command's answer: the message is
     // already with a person, and an error would invite the caller to send it again.
     record: (entry) => {
-      const { personIds: _, ...kept } = entry as typeof entry & { personIds?: Id[] }
+      const { personIds: _, key: __, ...kept } = entry as typeof entry & { personIds?: Id[]; key?: PermissionKey }
       const settles = entry.outcome === "refused" ? undefined : reservation
       reservation = undefined
       try {
@@ -251,6 +300,14 @@ export const sendGuard = ({
   }
 }
 
+const refuseToAsk: Asker = async (key) => {
+  throw new CliError(
+    "confirmation_required",
+    `${key} asks before it acts (its permission level is ask), and nobody is here to answer — ` +
+      `add ${key === "messages.delete" ? "--allow-dangerous" : "--yes"} to go ahead`,
+  )
+}
+
 /**
  * The guard a profile's configuration asks for — the command's, and a background server's for every
  * write it forwards. Built per request there, so `config set readOnly true` needs no restart.
@@ -260,6 +317,7 @@ export const guardFor = (
   settings: Settings,
   warn: (message: string) => void,
   env: NodeJS.ProcessEnv = process.env,
+  ask?: Asker,
 ): SendGuard =>
   sendGuard({
     profile: settings.profile,
@@ -267,6 +325,9 @@ export const guardFor = (
     readOnly: settings.readOnly,
     readOnlyFrom: settings.sources.readOnly ?? "default",
     ...(settings.allow ? { allow: settings.allow, allowFrom: settings.sources.allow ?? "default" } : {}),
+    permissions: settings.permissions,
+    permissionSources: settings.permissionSources,
+    ...(ask ? { ask } : {}),
     sendsPerHour: settings.sendsPerHour,
     journal: new SendJournal(sendsPathFor(app, settings.profile, env)),
     recipients: new RecipientList(recipientsPathFor(app, settings.profile, env), app.command),
@@ -283,6 +344,7 @@ export const sharedJournal = (guard: SendGuard, wire: { readonly journals: boole
         // The check comes before the connection, when `journals` cannot tell yet; the server
         // reserves under its own lock, and a command that falls back to its own socket goes unreserved.
         check: (request) => guard.check(request, { reserve: false }),
+        ...(guard.ask ? { ask: guard.ask } : {}),
         record: (entry) => {
           if (entry.outcome === "refused" || !wire.journals) guard.record(entry)
         },

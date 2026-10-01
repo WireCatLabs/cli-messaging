@@ -112,8 +112,10 @@ export const guardedVote = async (
   const vote = capability(connection, "vote", "vote in a poll")
   const { id: chatId } = await connection.resolve(chat)
   const operationId = newOperationId()
-  const poll = await guardedWrite(guard, { operationId, chatId, kind: "reaction", messageId: message }, () =>
-    vote(chatId, message, answers),
+  const poll = await guardedWrite(
+    guard,
+    { operationId, chatId, kind: "reaction", messageId: message, key: "polls.vote" },
+    () => vote(chatId, message, answers),
   )
   return { operationId, poll }
 }
@@ -127,8 +129,10 @@ export const guardedClose = async (
   const close = capability(connection, "closePoll", "close a poll")
   const { id: chatId } = await connection.resolve(chat)
   const operationId = newOperationId()
-  const poll = await guardedWrite(guard, { operationId, chatId, kind: "edit", messageId: message }, () =>
-    close(chatId, message),
+  const poll = await guardedWrite(
+    guard,
+    { operationId, chatId, kind: "edit", messageId: message, key: "polls.close" },
+    () => close(chatId, message),
   )
   return { operationId, poll }
 }
@@ -145,7 +149,7 @@ export const guardedCreatePoll = async (
   const id = sendId ?? connection.newSendId?.() ?? newSendId()
   const sent = await guardedWrite(
     guard,
-    { chatId, kind: "message", sendId: id, operationId: id, length: poll.question.length },
+    { chatId, kind: "message", sendId: id, operationId: id, length: poll.question.length, key: "polls.create" },
     () => create(chatId, poll, { sendId: id, ...(silent ? { silent } : {}) }),
     (done) => ({ messageId: done.message.id }),
   )

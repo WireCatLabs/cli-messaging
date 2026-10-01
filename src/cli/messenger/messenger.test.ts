@@ -685,6 +685,67 @@ describe("the shared read commands", () => {
     expect(done.stderr.join("\n")).toContain(`"ids":{"operation":"${answer.operationId}"}`)
   })
 
+  it("**asks before a write whose level is ask**, refuses one that is readonly, and never asks at allow", async () => {
+    const root = mkdtempSync(join(tmpdir(), "messenger-"))
+    const env = { CHAT_STATE_DIR: join(root, "state"), CHAT_CONFIG_DIR: join(root, "config") }
+    const config = (permissions: Record<string, string>) => {
+      mkdirSync(env.CHAT_CONFIG_DIR, { recursive: true })
+      writeFileSync(
+        join(env.CHAT_CONFIG_DIR, "config.json"),
+        JSON.stringify({ profiles: { default: { permissions } } }),
+      )
+    }
+    const deletions: unknown[] = []
+    const reactions: unknown[] = []
+    const adapter: MessengerAdapter = {
+      ...fake,
+      delete: async (chatId, ids) => {
+        deletions.push([chatId, ids])
+      },
+      react: async (chatId, id, emoji) => {
+        reactions.push([chatId, id, emoji])
+      },
+    }
+    const questions: string[] = []
+    const answering = (answer: string | null) => ({
+      answer: (question: string) => {
+        questions.push(question)
+        return answer
+      },
+    })
+
+    const declined = await call(["messages", "delete", "Book", "3"], async () => adapter, env, answering("n"))
+    const agreed = await call(["messages", "delete", "Book", "4"], async () => adapter, env, answering("y"))
+    const unattended = await call(["messages", "delete", "Book", "5"], async () => adapter, env, answering(null))
+    config({ reactions: "ask", "messages.delete": "allow" })
+    const reacted = await call(
+      ["reactions", "add", "Book", "6", "👍", "--yes"],
+      async () => adapter,
+      env,
+      answering(null),
+    )
+    const allowed = await call(["messages", "delete", "Book", "7"], async () => adapter, env, answering(null))
+    config({ messages: "readonly" })
+    const readonly = await call(["messages", "delete", "Book", "8", "--allow-dangerous"], async () => adapter, env)
+
+    expect(declined.code).toBe(130)
+    expect(unattended.code).toBe(7)
+    expect(unattended.stderr.join("\n")).toContain("--allow-dangerous")
+    expect(questions).toEqual([
+      "messages.delete, 1 item, in chat 7 — go ahead? [y/N] ",
+      "messages.delete, 1 item, in chat 7 — go ahead? [y/N] ",
+      "messages.delete, 1 item, in chat 7 — go ahead? [y/N] ",
+    ])
+    expect([agreed.code, reacted.code, allowed.code]).toEqual([0, 0, 0])
+    expect(deletions).toEqual([
+      ["7", ["4"]],
+      ["7", ["7"]],
+    ])
+    expect(reactions).toHaveLength(1)
+    expect(readonly.code).toBe(5)
+    expect(readonly.stderr.join("\n")).toContain("permissions.messages is readonly")
+  })
+
   it("**show a poll with its answer ids, vote by id and take it back**, close it as an edit, create one as a message", async () => {
     const root = mkdtempSync(join(tmpdir(), "messenger-"))
     const env = { CHAT_STATE_DIR: join(root, "state"), CHAT_CONFIG_DIR: join(root, "config") }

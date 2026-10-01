@@ -1,7 +1,15 @@
 import { existsSync } from "node:fs"
 import { CliError, configFilePath, loadConfigFile, resolvePaths, saveConfigFile } from "@leemour/cli-core"
 import * as v from "valibot"
-import { PERMISSIONS, type Permission } from "../sends/permissions.js"
+import {
+  fromOldSettings,
+  LEVELS,
+  type Level,
+  PERMISSIONS,
+  type Permission,
+  type PermissionKey,
+  RESOURCES,
+} from "../sends/permissions.js"
 import { type AppIdentity, envName } from "./app.js"
 import { DEFAULT_PROFILE, usableProfileName } from "./profile.js"
 
@@ -20,6 +28,18 @@ export const flag = v.boolean(plain("has to be true or false"))
 const permissionList = v.array(
   v.picklist(PERMISSIONS, (issue) => `has to be one of ${PERMISSIONS.join(", ")}, not ${issue.received}`),
   plain("has to be a list of actions, like send,reaction"),
+)
+
+const permissionLevels = v.record(
+  v.pipe(
+    v.string(),
+    v.regex(
+      new RegExp(`^(${RESOURCES.join("|")})(\\.[a-z][a-z-]*)*$`),
+      (issue) => `${issue.input} is not a command path — it starts with one of ${RESOURCES.join(", ")}`,
+    ),
+  ),
+  v.picklist(LEVELS, (issue) => `has to be one of ${LEVELS.join(", ")}, not ${issue.received}`),
+  plain('has to be an object of command paths and levels, like {"messages.delete": "ask"}'),
 )
 
 /** valibot's own words ("Expected never but received …") mean nothing to someone editing a file. */
@@ -47,6 +67,7 @@ const SHARED_PROFILE_ENTRIES = {
   keepRunsForDays: v.optional(count),
   readOnly: v.optional(flag),
   allow: v.optional(permissionList),
+  permissions: v.optional(permissionLevels),
   sendsPerHour: v.optional(count),
   transcribeWith: v.optional(v.picklist(["auto", "messenger", "local"], plain("has to be auto, messenger or local"))),
   speechModel: v.optional(v.string(plain("has to be a model id from `models audio list`, in quotes"))),
@@ -126,6 +147,13 @@ export interface Settings {
   readOnly: boolean
   /** `undefined` is every action; a list is only those. */
   allow: readonly Permission[] | undefined
+  /**
+   * The levels the owner set — `readOnly` and `allow` folded in under what the file's `permissions`
+   * says. The built-in defaults are not here: `levelFor` adds them, and they only ever tighten.
+   */
+  permissions: Readonly<Record<PermissionKey, Level>>
+  /** Where each key of `permissions` came from. */
+  permissionSources: Readonly<Record<PermissionKey, Source>>
   sendsPerHour: number
   updateCheck: boolean
   configPath: string
@@ -261,6 +289,11 @@ export const settingsFor = (app: AppIdentity, extension: SettingsExtension = {})
     const readOnly = fromFile(scopes, "readOnly", false)
     const allow = fromFile<readonly Permission[] | undefined>(scopes, "allow", undefined)
     const sendsPerHour = fromFile(scopes, "sendsPerHour", DEFAULT_SENDS_PER_HOUR)
+    const permissions = layered([
+      [readOnly.value ? "readOnly" : "allow", fromOldSettings(readOnly.value, allow.value)],
+      ["config defaults", shared.permissions as Record<PermissionKey, Level> | undefined],
+      ["config file", configured.permissions as Record<PermissionKey, Level> | undefined],
+    ])
     const updateCheck = first([["config defaults", shared.updateCheck as boolean | undefined]], true)
     const timeout = first<string | undefined>(
       [
@@ -293,6 +326,8 @@ export const settingsFor = (app: AppIdentity, extension: SettingsExtension = {})
       keepRunsForDays: keepRunsForDays.value,
       readOnly: readOnly.value,
       allow: allow.value,
+      permissions: permissions.levels,
+      permissionSources: permissions.sources,
       sendsPerHour: sendsPerHour.value,
       updateCheck: updateCheck.value,
       configPath,
@@ -339,7 +374,9 @@ export const settingsFor = (app: AppIdentity, extension: SettingsExtension = {})
     path: string,
     { profile, setting, value }: { profile: string | undefined; setting: string; value: string | undefined },
   ): unknown => {
-    if (!allSettings.includes(setting)) {
+    const [name = setting, ...rest] = setting.split(".")
+    const level = name === "permissions" && rest.length > 0 ? rest.join(".") : undefined
+    if (!allSettings.includes(setting) && level === undefined) {
       throw new CliError("validation_error", `no setting called "${setting}" — one of: ${allSettings.join(", ")}`)
     }
     if (profile !== undefined && defaultsOnlyKeys.includes(setting)) {
@@ -351,7 +388,13 @@ export const settingsFor = (app: AppIdentity, extension: SettingsExtension = {})
 
     const config = readConfig(path)
     const scope: Scope = { ...(profile === undefined ? config.defaults : config.profiles[profile]) }
-    if (value === undefined) delete scope[setting]
+    if (level !== undefined) {
+      const levels = { ...(scope.permissions as Record<PermissionKey, string> | undefined) }
+      if (value === undefined) delete levels[level]
+      else levels[level] = value.trim()
+      if (Object.keys(levels).length > 0) scope.permissions = levels
+      else delete scope.permissions
+    } else if (value === undefined) delete scope[setting]
     else scope[setting] = parseValue(value)
 
     const changed: Config =
@@ -369,10 +412,23 @@ export const settingsFor = (app: AppIdentity, extension: SettingsExtension = {})
       )
     }
     saveConfigFile(path, checked.output)
-    return scope[setting] ?? null
+    return level === undefined ? (scope[setting] ?? null) : ((scope.permissions as Scope | undefined)?.[level] ?? null)
   }
 
   return { resolveSettings, configuredProfiles, changeSetting, allSettings, defaultsOnlyKeys, schema }
+}
+
+/** Later layers win key by key, and each key remembers the layer it came from. */
+const layered = (layers: [Source, Readonly<Record<PermissionKey, Level>> | undefined][]) => {
+  const levels: Record<PermissionKey, Level> = {}
+  const sources: Record<PermissionKey, Source> = {}
+  for (const [from, layer] of layers) {
+    for (const [key, level] of Object.entries(layer ?? {})) {
+      levels[key] = level
+      sources[key] = from
+    }
+  }
+  return { levels, sources }
 }
 
 const DURATION = /^(\d+)(ms|s|m)$/
