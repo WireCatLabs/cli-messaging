@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.84.0 — 01.10.2026
+
 ### Added
 
 - **`chats folders list|create|update|delete`**, and the tools `chats_folders_list|create|update|delete`
