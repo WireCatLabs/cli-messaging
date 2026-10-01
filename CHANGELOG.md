@@ -8,6 +8,17 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Changed — may break callers
 
+- **`messages search` searches by words, best match first** — it listed the newest first: take
+  `--newest` for that order. In a query, `"a phrase"`, a leading `-`, `OR` and the filters `from:`
+  (a name, @username, or `me`), `chat:`, `after:`/`before:` (a day or `7d`) and `has:` (an attachment
+  kind, `attachment`, `link`) now mean something; a query of one or two letters is searched rather
+  than refused. A typo is corrected and said on stderr; no message with every word falls back to any
+  word, then to a piece of a word. `--context <n>` shows messages around each hit (2 in the terminal).
+  The JSON keeps `items`, `limit` and `hasMore`, and adds `match` and `score` (higher is better) to
+  each hit, `corrections`, `completeness` (per chat: held in full or not) and `wordsReady`. The MCP
+  tool `messages_search` takes the same query, `newest` and `context`. `in:` is refused until a
+  search can span accounts.
+
 - **The parity manifest checks the `bot` commands**, a row each, in place of one planned row. What max
   and tg both have is in all CLIs. `bot api`, `bot comments`, `bot uploads`, `bot chats members
   list|add` and `bot webhooks set --add` are max's alone, each with why. The rest is planned for tg
@@ -122,16 +133,6 @@ Released early: tg-cli and max-cli: their command pages label config set, chats 
 
 ### Changed — may break callers
 
-- **`messages search` searches by words, best match first** — it listed the newest first: take
-  `--newest` for that order. In a query, `"a phrase"`, a leading `-`, `OR` and the filters `from:`
-  (a name, @username, or `me`), `chat:`, `after:`/`before:` (a day or `7d`) and `has:` (an attachment
-  kind, `attachment`, `link`) now mean something; a query of one or two letters is searched rather
-  than refused. A typo is corrected and said on stderr; no message with every word falls back to any
-  word, then to a piece of a word. `--context <n>` shows messages around each hit (2 in the terminal).
-  The JSON keeps `items`, `limit` and `hasMore`, and adds `match` and `score` (higher is better) to
-  each hit, `corrections`, `completeness` (per chat: held in full or not) and `wordsReady`. The MCP
-  tool `messages_search` takes the same query, `newest` and `context`. `in:` is refused until a
-  search can span accounts.
 - **The parity manifest marks `conversations` and `messages links` as in all CLIs**, with a row per
   subcommand: max mounts them since max-cli #308. `conversations links add|clear` wait for tg's move to
   0.97.0.
