@@ -1,4 +1,5 @@
 import * as v from "valibot"
+import { maskedAccount } from "../../cli/messenger/account-command.js"
 import type { Messenger } from "../../cli/messenger/context.js"
 import { capability } from "../../cli/messenger/port.js"
 import { type AnyTool, nameOf, READ, tool } from "../tool.js"
@@ -11,7 +12,8 @@ export const accountTools = (messenger: Messenger): Record<string, AnyTool> => {
       description: `The ${name} account this server is logged in as.`,
       input: v.object({}),
       annotations: { ...READ, idempotentHint: true },
-      online: (adapter) => adapter.me(),
+      // An agent has no reason to hold the owner's number (max-cli NEED-209).
+      online: async (adapter) => maskedAccount(await adapter.me()),
     }),
 
     account_sessions: tool({

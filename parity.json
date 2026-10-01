@@ -399,10 +399,7 @@
     "account show": {
       "state": "both",
       "options": {
-        "--show-phone": {
-          "state": "planned",
-          "by": "P1"
-        }
+        "--show-phone": "both"
       }
     },
     "account update": {

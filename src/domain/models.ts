@@ -347,6 +347,8 @@ export interface Account {
   name: string | null
   /** The public handle, without `@`, when there is one. */
   username: string | null
+  /** The whole number, where the messenger tells it; printed as its last four digits unless asked. */
+  phone?: string | null
 }
 
 export interface Profile {
