@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.89.0 — 01.10.2026
+
 ### Added
 
 - **`cli-messaging-parity wording <max.json> <tg.json>`** and `wordingProblems` in `./parity`: every
