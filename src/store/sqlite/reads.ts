@@ -27,6 +27,7 @@ export const MESSAGE_FIELDS = {
   threadNativeId: messages.threadNativeId,
   reactions: messages.reactions,
   providerMetadata: messages.providerMetadata,
+  mentions: messages.mentions,
 }
 
 export interface MessageRow {
@@ -46,6 +47,7 @@ export interface MessageRow {
   threadNativeId: string | null
   reactions: string | null
   providerMetadata: string | null
+  mentions: string | null
 }
 
 export const selectMessages = ({ orm }: StoreContext) =>
@@ -254,6 +256,6 @@ const toMessage = (row: MessageRow, attachments: Attachment[]): Message => {
     forwardedFrom: parsed(row.forward) ?? null,
     ...present({ threadId: row.threadNativeId }),
     reactions: parsed(row.reactions) ?? null,
-    ...present({ providerMetadata: parsed(row.providerMetadata) }),
+    ...present({ providerMetadata: parsed(row.providerMetadata), mentions: parsed(row.mentions) }),
   } as Message
 }

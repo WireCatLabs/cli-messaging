@@ -15,6 +15,7 @@ import { dirname, resolve } from "node:path"
 import { CliError } from "@leemour/cli-core"
 import { Command } from "commander"
 import { holdersOf } from "../../background/processes.js"
+import { RULES_VERSION } from "../../conversations/link.js"
 import type { CacheDatabase } from "../../store/driver.js"
 import { MIGRATIONS, migrate } from "../../store/migrations.js"
 import { openCache } from "../../store/open.js"
@@ -148,6 +149,12 @@ const checkCommand = (messenger: Messenger): Command =>
       const ours = answer.chatsBehind.filter((chat) => chat.provider === messenger.provider).length
       if (ours > 0)
         renderer.note(`${ours} chats hold less than their newest message — \`${command} store fetch <chat>\``)
+      const older = answer.conversations.filter((chat) => chat.provider === messenger.provider && !chat.current).length
+      if (older > 0) {
+        renderer.note(
+          `${older} chats' conversations were built by older rules — \`${command} conversations build --chat <chat>\``,
+        )
+      }
     })
 
 const inspect = (path: string) =>
@@ -186,6 +193,7 @@ const inspect = (path: string) =>
       disk: { free, needed: size },
       pendingNormalization: pendingIfKnown(database),
       chatsBehind: behind,
+      conversations: conversationsBuilt(database),
       notApplicable: {
         extensions: "SQLite needs none",
         enrichment: "nothing is enriched yet, so there is no enrichment index to compare",
@@ -201,6 +209,36 @@ const indexIntegrity = (database: CacheDatabase, index: string): string => {
   } catch (error) {
     return messageOf(error)
   }
+}
+
+/**
+ * Per chat whose conversations were built: by which rules, whether those are this build's, and how many
+ * of the agent's links went stale — their message changed after they were written (phase 3 plan C4).
+ */
+const conversationsBuilt = (database: CacheDatabase) => {
+  const exists = database
+    .prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'conversation_state'")
+    .get()
+  if (!exists) return []
+  return database
+    .prepare(
+      `SELECT a.provider, a.native_id AS account, c.native_id AS chat, c.title, s.built_at, s.algorithm_version,
+         (SELECT count(*) FROM message_links l WHERE l.chat_pk = c.pk AND l.source = 'agent' AND l.stale_at IS NOT NULL)
+           AS stale
+       FROM conversation_state s JOIN chats c ON c.pk = s.chat_pk JOIN accounts a ON a.pk = c.account_pk
+       ORDER BY s.built_at DESC`,
+    )
+    .all()
+    .map((row) => ({
+      provider: String(row.provider),
+      account: String(row.account),
+      chat: String(row.chat),
+      title: row.title === null ? null : String(row.title),
+      builtAt: row.built_at === null ? null : isoOf(row.built_at),
+      rulesVersion: row.algorithm_version === null ? null : Number(row.algorithm_version),
+      current: Number(row.algorithm_version) === RULES_VERSION,
+      staleAgentLinks: Number(row.stale),
+    }))
 }
 
 const chatsBehind = (database: CacheDatabase) =>

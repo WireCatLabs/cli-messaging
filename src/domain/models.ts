@@ -196,6 +196,8 @@ export interface Message {
   senderName: string | null
   /** The sender's handle without `@`, where the messenger has one: what people type to mention them. */
   senderUsername?: string
+  /** People the text mentions by id, where the messenger marks them — a mention by name, with no `@handle`. */
+  mentions?: Id[]
   /** `senderId` is a chat, not a person — a channel post, or a message sent as the group. */
   senderIsChat?: boolean
   /** ISO 8601. */

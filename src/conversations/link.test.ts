@@ -45,6 +45,16 @@ describe("linkMessages", () => {
     expect(links).toContainEqual(expect.objectContaining({ messageId: "3", kind: "mention", source: "rule" }))
   })
 
+  it("links a mention by id, as the messenger marks it, with no @handle in the text", () => {
+    const { parents } = linkMessages([
+      said("1", "e", "who drives on Friday?"),
+      said("2", "b", "I'm in"),
+      said("3", "c", "Eva, I can take two", { mentions: ["e"] }),
+    ])
+
+    expect(parents.get("3")).toBe("1")
+  })
+
   it("joins one sender's quick follow-up, and not one after a five-minute gap", () => {
     const messages = [said("1", "a", "I tried that school"), said("2", "a", "last year")]
     clock += 6 * 60_000

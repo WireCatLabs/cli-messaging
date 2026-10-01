@@ -1,6 +1,6 @@
 import type { Id, Message } from "../domain/models.js"
 
-export const RULES_VERSION = 2
+export const RULES_VERSION = 3
 
 /** How far back a rule looks, in messages: 97% of reply parents sat within 50 in a measured group. */
 export const LOOK_BACK = 50
@@ -9,7 +9,7 @@ export const LOOK_BACK = 50
 const SAME_SENDER_WITHIN = 10
 const SAME_SENDER_MS = 5 * 60_000
 
-export type LinkInput = Pick<Message, "id" | "senderId" | "text" | "timestamp" | "replyToId" | "threadId">
+export type LinkInput = Pick<Message, "id" | "senderId" | "text" | "timestamp" | "replyToId" | "threadId" | "mentions">
 
 export interface Link {
   messageId: Id
@@ -72,9 +72,10 @@ const replyLink = (message: LinkInput, held: ReadonlyMap<Id, number>): Link[] =>
 
 const mentionLinks = (message: LinkInput, window: LinkInput[], handles: ReadonlyMap<string, Id>): Link[] => {
   const links: Link[] = []
-  for (const handle of mentioned(message.text, handles)) {
-    const sender = handles.get(handle)
-    if (sender === undefined || sender === message.senderId) continue
+  const people = new Set([...mentioned(message.text, handles)].flatMap((handle) => handles.get(handle) ?? []))
+  for (const id of message.mentions ?? []) people.add(id)
+  for (const sender of people) {
+    if (sender === message.senderId) continue
     const target = latest(window, (candidate) => candidate.senderId === sender && sameThread(candidate, message))
     if (target) links.push(link(message, target.id, "rule", "mention", 0.8, "mention-v1"))
   }
