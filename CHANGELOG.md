@@ -8,6 +8,10 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Added
 
+- **`@leemour/cli-messaging/background`** (P6): the lock per app and profile, `alive`/`carries`/
+  `holdersOf`, the `ServerSystem` seam, and systemd and launchd units, moved out of the `serve` and
+  `server` commands so max's server can use them too. The commands behave as before; `./cli` still
+  exports `servingProfiles` and `ServerSystem`.
 - **A test can hand in the local speech recognizer**: `recognizer` in the environment `run()` and
   `provide` take, used by `messages list --transcribe` and `messages transcribe` in place of the
   downloaded model.

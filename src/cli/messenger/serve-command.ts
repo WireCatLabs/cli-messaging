@@ -1,46 +1,12 @@
-import { existsSync, readdirSync, readFileSync, rmSync } from "node:fs"
-import { dirname, join } from "node:path"
-import { CliError, resolvePaths, writeSecurely } from "@leemour/cli-core"
+import { CliError } from "@leemour/cli-core"
 import { Command } from "commander"
+import { holdLock, lockPath, readLock, releaseLock } from "../../background/lock.js"
+import { alive } from "../../background/processes.js"
 import type { MessageEvent } from "../../domain/models.js"
-import type { AppIdentity } from "../app.js"
 import { type Messenger, messengerContext } from "./context.js"
-import { alive } from "./processes.js"
 import { listenUntilStopped } from "./watch-command.js"
 
-export interface Lock {
-  pid: number
-  startedAt: string
-  /** Set once the connection is open and updates arrive — before it, `serve` is still starting. */
-  listeningAt?: string
-  /** The CLI version this serve runs: after an update it goes on running the old code until restarted. */
-  version?: string
-}
-
-export const lockPath = (app: AppIdentity, profile: string, env: NodeJS.ProcessEnv) =>
-  join(resolvePaths({ appName: app.appName, prefix: app.envPrefix, env }).state, "serve", `${profile}.lock`)
-
-/** The profiles a serve is running for now — what an update must restart for its new code to run. */
-export const servingProfiles = (app: AppIdentity, env: NodeJS.ProcessEnv): string[] => {
-  const dir = dirname(lockPath(app, "default", env))
-  if (!existsSync(dir)) return []
-  return readdirSync(dir)
-    .filter((name) => name.endsWith(".lock"))
-    .map((name) => name.slice(0, -".lock".length))
-    .filter((profile) => {
-      const lock = readLock(lockPath(app, profile, env))
-      return lock !== undefined && alive(lock.pid)
-    })
-}
-
-export const readLock = (path: string): Lock | undefined => {
-  try {
-    const lock = JSON.parse(readFileSync(path, "utf8")) as Partial<Lock>
-    return typeof lock.pid === "number" && typeof lock.startedAt === "string" ? (lock as Lock) : undefined
-  } catch {
-    return undefined
-  }
-}
+export { type Lock, lockPath, readLock, servingProfiles } from "../../background/lock.js"
 
 /**
  * Keeps the store current: every new message, edit, deletion and reaction, and on start what arrived
@@ -64,12 +30,11 @@ export const serveCommand = (messenger: Messenger): Command => {
       )
     }
     const startedAt = new Date().toISOString()
-    const hold = (lock: Lock) => writeSecurely(path, `${JSON.stringify(lock)}\n`, 0o600)
     const { version } = messenger.app
-    hold({ pid: process.pid, startedAt, version })
+    holdLock(path, { pid: process.pid, startedAt, version })
     // `server start` answers on this, not on the lock alone: a lock is written before the connection opens.
     const onReady = () => {
-      hold({ pid: process.pid, startedAt, version, listeningAt: new Date().toISOString() })
+      holdLock(path, { pid: process.pid, startedAt, version, listeningAt: new Date().toISOString() })
       context.renderer.note(`listening for profile ${context.profile}, catching up on what arrived while it was down`)
     }
 
@@ -84,7 +49,7 @@ export const serveCommand = (messenger: Messenger): Command => {
         onReady,
       })
     } finally {
-      if (readLock(path)?.pid === process.pid) rmSync(path, { force: true })
+      releaseLock(path)
     }
     context.renderer.result({ profile: context.profile, startedAt, stoppedAt: new Date().toISOString(), kept: counts })
   })
