@@ -88,7 +88,8 @@ the others in `errorCodes`.
 
 - Translate every error from your library into one of these. A library error that crosses the
   adapter reaches the person as an unknown failure.
-- An unknown chat or message is `not_found`.
+- An unknown chat or message is `not_found`. One exception: `resolve` may take a chat id it does not know as it
+  is, a chat of kind `unknown` with that id and no title, so that a write the guard refuses never connects first.
 - A name that matches more than one chat is `validation_error`, and lists the candidates. Use
   `pickChat` and `pickPerson`: they already do this.
 - Shared code recognises an error by its name and code, not by its class. So a CLI with its own

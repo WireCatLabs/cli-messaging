@@ -66,6 +66,26 @@ describe("the contract cases catch an adapter that breaks a promise", () => {
     await failing(cases, "resolve refuses a title two chats share")
   })
 
+  it("an id nobody has answered as another chat, but not taken as a chat of kind unknown", async () => {
+    const unknown = (id: string): Chat => ({
+      id,
+      title: null,
+      kind: "unknown",
+      unreadCount: null,
+      lastMessageAt: null,
+      participantsCount: null,
+    })
+    const known = (fake: MessengerAdapter) => (chat: string) =>
+      contractSeed().chats.some((one) => one.id === chat) ? fake.resolve(chat) : null
+    const lenient = broken((fake) => ({ resolve: async (chat) => (await known(fake)(chat)) ?? unknown(chat) }))
+    await expect(lenient.find((one) => one.name.startsWith("resolve refuses a chat"))?.run()).resolves.toBeUndefined()
+
+    const wrong = broken((fake) => ({
+      resolve: async (chat) => (await known(fake)(chat)) ?? fake.resolve("Book club"),
+    }))
+    await failing(wrong, "resolve refuses a chat")
+  })
+
   it("a library error instead of a CliError", async () => {
     const cases = broken(() => ({
       history: async () => {
