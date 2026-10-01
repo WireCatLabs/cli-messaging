@@ -52,6 +52,19 @@ const userPages = (side: CliSide) =>
     .map((path) => path.slice("docs/".length))
 const lineCount = (text = "") => text.split("\n").length - 1
 
+const apart = (a: number, b: number) => Math.abs(a - b) > 2 && Math.min(a, b) < Math.max(a, b) * 0.75
+
+/** `##` and `###` headings outside code blocks — the same in both languages, unlike the number of lines. */
+export const headingCount = (text = "") => {
+  let fenced = false
+  let count = 0
+  for (const line of text.split("\n")) {
+    if (line.startsWith("```")) fenced = !fenced
+    else if (!fenced && /^#{2,3} /.test(line)) count++
+  }
+  return count
+}
+
 const documentsRule = (standard: string) => standard.split(/^## Documents$/m)[1]?.split(/^## /m)[0] ?? ""
 
 export const pageSplit = (input: AuditInput) => {
@@ -142,9 +155,12 @@ export const renderAudit = (input: AuditInput): string => {
   section("User pages")
   const pages = pageSplit(input)
   for (const name of pages.both) {
-    const lines = [lineCount(max.pages[`docs/${name}`]), lineCount(tg.pages[`docs/${name}`])] as const
-    const short = Math.min(...lines) / Math.max(...lines)
-    out.push(`- ${short >= 0.75 ? "✅" : "🔴"} \`${name}\` — max ${lines[0]} lines, tg ${lines[1]}`)
+    const [inMax, inTg] = [max.pages[`docs/${name}`], tg.pages[`docs/${name}`]]
+    const headings = [headingCount(inMax), headingCount(inTg)] as const
+    out.push(
+      `- ${mark(!apart(...headings))} \`${name}\` — max ${headings[0]} headings, tg ${headings[1]} ` +
+        `(${lineCount(inMax)} and ${lineCount(inTg)} lines)`,
+    )
   }
   for (const [cli, names] of [
     ["max", pages.max],
@@ -155,7 +171,10 @@ export const renderAudit = (input: AuditInput): string => {
         `- ${pages.explained(name) ? "⚪" : "🔴"} \`${name}\` — ${cli} only; ` +
           (pages.explained(name) ? "STANDARD says why" : "STANDARD gives no reason"),
       )
-  out.push("", "A pair is 🔴 when the shorter page has under three quarters of the longer one's lines.")
+  out.push(
+    "",
+    "A pair is 🔴 when one page has over a quarter, and more than two, fewer `##` and `###` headings. Lines are not compared: Russian runs longer than English.",
+  )
 
   section("README sections")
   const sections = [readmeSections(max.pages["README.md"]), readmeSections(tg.pages["README.md"])] as const

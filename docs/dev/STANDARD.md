@@ -423,6 +423,6 @@ CLIs are not the reference: a release always trails `main`, so they lag every ne
 
 **The milestone audit is one command:** `pnpm parity:audit --fresh` clones and builds both tools'
 `main` and prints, besides the manifest's state, what CI does not fail on: the shared version each
-tool pins, the MCP tools each offers, the user pages and their length, the README sections, and the
+tool pins, the MCP tools each offers, the user pages and their headings, the README sections, and the
 release and QA scripts and skills. Each MCP server starts in an empty temporary home, so nothing
 reaches Telegram or MAX. `--max <dir> --tg <dir>` uses checkouts already built.
