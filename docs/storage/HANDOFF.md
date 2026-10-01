@@ -20,14 +20,15 @@ version with all of it. Items 9–11 are done (lanes B and C: the `store info|ch
 commands, in tg-cli; max gets them when its cache folds into the store). Items 7–8 — lane A, the Drizzle port — are done: #194, #206, #208, #215, #232, #244, released in
 0.77.0. **Left:** phase 2, whose plan is approved ([`plans/phase-2.md`](plans/phase-2.md), 2026-10-01); its item 1,
 the word index (store version 12), is built.
-Phase 3 is planned and approved ([`plans/phase-3.md`](plans/phase-3.md)).
+Phase 3 is built ([`plans/phase-3.md`](plans/phase-3.md); #255, #297, #300, #301); phase 4's plan is
+approved ([`plans/phase-4.md`](plans/phase-4.md)).
 
 ## 2. Entry points
 
 | What | Where |
 |---|---|
 | **The work in flight — start here** | [`handoffs/README.md`](handoffs/README.md): the lanes, which files each owns, the rules every lane keeps |
-| The plans | [`plans/phase-1.md`](plans/phase-1.md), [`plans/phase-3.md`](plans/phase-3.md) and [`plans/phase-2.md`](plans/phase-2.md) (approved; item 1 built); [`plans/phase-4.md`](plans/phase-4.md) (written, waiting for review) |
+| The plans | [`plans/phase-1.md`](plans/phase-1.md), [`plans/phase-3.md`](plans/phase-3.md) and [`plans/phase-2.md`](plans/phase-2.md) (approved; item 1 built); [`plans/phase-4.md`](plans/phase-4.md) (approved 2026-10-01, not built). **Phase 3 is built** (#255, #297, #300, #301): tg and max still have to mount `conversationsCommand` |
 | What is ruled | [`decisions.md`](decisions.md) — overrides [`requirements.md`](requirements.md) where they differ |
 | How search works and will work | [`search-indexes.md`](search-indexes.md) |
 | Today's store and migrations | [`../dev/ARCHITECTURE.md`](../dev/ARCHITECTURE.md#the-store) ([`current-state.md`](current-state.md) is a 0.27.0 snapshot) |
