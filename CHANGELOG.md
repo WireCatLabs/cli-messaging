@@ -35,6 +35,7 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Fixed
 
+- **`bot messages send` and `edit` journal the text's length**, as the personal account's do — never the text.
 - **A write cut off by `--timeout` is an unknown outcome, not a timeout.** When the command's time ran
   out with a send, an edit or any other write still waiting for its answer, the error was `timeout`
   — which reads as "nothing happened" and invites a second copy — and the journal had no line for
