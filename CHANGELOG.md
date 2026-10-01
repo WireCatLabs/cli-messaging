@@ -6,14 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
-## 0.95.0 — 01.10.2026
-
-### Fixed
-
-- **max can move `messages list|context` onto the shared commands.** The parity manifest required max to
-  keep `--before` and `--after` on both, so the move failed max's parity check; they are planned until
-  max's main moves.
 ### Added
+
 - **`conversations links add --batch <id>`** reads the user's agent's answer as JSON on stdin and stores
   it all or nothing: every message one the batch asked about, each parent in the batch and earlier, no
   message twice, confidence 0–1, a model named. A message's new answer replaces its earlier one.
@@ -21,6 +15,14 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   Both are keyed `conversations.links`, a new permission resource, so a profile read-only on messages can
   still link; `readonly` or `deny` on it refuses. A batch id stays valid while its messages are answered,
   and not once a message inside it is added or deleted.
+
+## 0.95.0 — 01.10.2026
+
+### Fixed
+
+- **max can move `messages list|context` onto the shared commands.** The parity manifest required max to
+  keep `--before` and `--after` on both, so the move failed max's parity check; they are planned until
+  max's main moves.
 
 ## 0.94.0 — 01.10.2026
 
