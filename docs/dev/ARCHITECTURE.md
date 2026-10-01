@@ -72,6 +72,29 @@ the next `BEGIN IMMEDIATE` wins the lock again at once and a waiting process see
 ([`bench/disentangle/`](../../bench/disentangle/README.md), plan
 [phase 3, C3](../storage/plans/phase-3.md#4-decisions-made-here)).
 
+**The user's agent links what the rules leave open** (phase 4, [plan](../storage/plans/phase-4.md)). The CLI
+never calls a model ([NEED-405](../storage/decisions.md)); it hands the agent batches and stores its
+answers, in `src/store/sqlite/batches.ts`:
+
+- **A batch** is the earliest live message that needs the agent — no reply the messenger records, no
+  current agent answer — and the next `--size` live messages, plus `BATCH_CONTEXT` (50) messages before
+  it as context. The rules' current links come along as candidates. No table holds batches.
+- **The batch id** (`batchId`) names the chat, the first and last message to answer, and a hash of every
+  live message between them. `links add` reads that span again and refuses the answer when the hash
+  differs: a message added or deleted inside it means the agent answered a window that moved. Answering
+  some of its messages leaves the id valid.
+- **An answer is checked whole before anything is stored** (`saveAnswers`): every message one the batch
+  asks about, each parent in the batch and earlier than its message, no message twice, confidence 0–1, a
+  model named. One refusal stores nothing. A message's new answer replaces its earlier one; the rows are
+  `message_links` with `source = 'agent'`, outside any build, so a rebuild keeps them. An answer goes
+  stale when its message or parent changes after it was written, and the message needs the agent again.
+- **The choice** (`choose`, `src/conversations/link.ts`): the messenger's reply, then a fresh agent
+  answer — including "starts a conversation", which drops the rule's parent — then the most confident
+  rule. An answer naming a message the chat no longer holds leaves the choice to the rules.
+- **Permission**: `conversations links` has its own key, `conversations.links` (`keyForCommand`,
+  `src/sends/permissions.ts`), so a profile read-only on messages can still link — the answers write
+  only to the local store. `batches next` shows message text and is checked as `messages`.
+
 **Where the queries live.** `src/store/store.ts` holds the `MessageStore` interface and `storeOver`, a
 facade that opens the transaction and delegates. The SQL is in `src/store/sqlite/`, one module per kind
 of record — `accounts`, `identities`, `chats`, `messages` (writes), `reads`, `search`, `ranges`,

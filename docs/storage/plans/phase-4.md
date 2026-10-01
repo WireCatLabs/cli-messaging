@@ -160,7 +160,7 @@ links under them change.
 5. ✅ 2026-10-01, the scripted half, as a test (`src/conversations/agent-loop.test.ts`, an invented chat with known parents rather than the IRC gold links: same proof, no download, runs in CI); the real-agent run on the IRC dev split is still to do by hand · **Scoring the loop** — `bench/disentangle/` runs the loop with a scripted "agent" that answers from the
    IRC gold links, to prove batches + answers + build reproduce the gold conversations exactly; and, by
    hand, once with a real agent on the IRC dev split, link F1 against the rules alone. Numbers only.
-6. **Docs, changelog, parity rows** (planned until tg and max mount them), release; tg-cli and max-cli
+6. ◐ 2026-10-01: the changelog shipped in 0.96.0, `docs/dev/ARCHITECTURE.md` has the store facts (batches, the id, the check, the choice, the permission), `parity.json` keeps `conversations` planned; the release, tg-cli's bump (tg-cli #205) and max-cli's are still to do · **Docs, changelog, parity rows** (planned until tg and max mount them), release; tg-cli and max-cli
    bump.
 
 ## 6. Test plan
