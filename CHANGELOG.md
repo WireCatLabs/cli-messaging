@@ -27,6 +27,9 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Changed — may break callers
 
+- **The parity manifest marks `conversations` and `messages links` as in all CLIs**, with a row per
+  subcommand: max mounts them since max-cli #308. `conversations links add|clear` wait for tg's move to
+  0.97.0.
 - **The parity manifest marks max's whole `store` group as in both tools** — `status`, `jobs`, `clear`,
   `info`, `check`, `migrate`, `backup`, `restore`, `fetch --background|--limit|--page-size|--since-time`,
   `export --since-time` — and drops `store fetch|export --since` and `--max-pages`: max's main moved onto the
