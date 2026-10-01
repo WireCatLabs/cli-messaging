@@ -1,9 +1,10 @@
 import * as v from "valibot"
 import type { Messenger } from "../../cli/messenger/context.js"
 import type { MessengerAdapter } from "../../cli/messenger/port.js"
+import { GROUP_SETTINGS } from "../../domain/models.js"
 import type { SendGuard } from "../../sends/guard.js"
 import { onlineDeps, servicesFor } from "../../services/index.js"
-import { type AnyTool, APPROVE, chatOf, tool, WRITE } from "../tool.js"
+import { type AnyTool, APPROVE, chatOf, READ, tool, WRITE } from "../tool.js"
 
 /** Groups the owner makes, joins and leaves: other people see each one, so each is behind its permission level. */
 export const adminTools = (messenger: Messenger): Record<string, AnyTool> => {
@@ -44,6 +45,54 @@ export const adminTools = (messenger: Messenger): Record<string, AnyTool> => {
       _meta: APPROVE,
       permission: "groups",
       online: (adapter, args, { guard }) => admin(adapter, guard).leave(args.chat),
+    }),
+    chats_update: tool({
+      title: "Change a group",
+      description:
+        "Rename a group or channel, change its description, or turn its settings on or off; its members see the " +
+        "change. Only when the owner asked for this change.",
+      input: v.object({
+        chat: chatOf(messenger),
+        title: v.optional(v.pipe(v.string(), v.minLength(1))),
+        description: v.optional(v.string()),
+        settings: v.optional(
+          v.pipe(
+            v.partial(
+              v.object(
+                Object.fromEntries((messenger.groupSettings ?? GROUP_SETTINGS).map((key) => [key, v.boolean()])),
+              ),
+            ),
+            v.description("true turns a setting on, false off; one left out stays as it is"),
+          ),
+        ),
+      }),
+      annotations: WRITE,
+      _meta: APPROVE,
+      permission: "groups",
+      online: (adapter, args, { guard }) =>
+        admin(adapter, guard).update(args.chat, {
+          ...(args.title === undefined ? {} : { title: args.title }),
+          ...(args.description === undefined ? {} : { description: args.description }),
+          ...(args.settings === undefined ? {} : { settings: args.settings }),
+        }),
+    }),
+    chats_link_show: tool({
+      title: "A group's invite link",
+      description: "The invite link of a group or channel, when the owner may see it. Reading changes nothing.",
+      input: v.object({ chat: chatOf(messenger) }),
+      annotations: READ,
+      online: (adapter, args, { guard }) => admin(adapter, guard).link(args.chat),
+    }),
+    chats_link_reset: tool({
+      title: "Replace a group's invite link",
+      description:
+        "Make a new invite link for a group or channel; the old one stops working for everyone who has it. " +
+        "Only when the owner asked.",
+      input: v.object({ chat: chatOf(messenger) }),
+      annotations: WRITE,
+      _meta: APPROVE,
+      permission: "groups",
+      online: (adapter, args, { guard }) => admin(adapter, guard).resetLink(args.chat),
     }),
   }
 }

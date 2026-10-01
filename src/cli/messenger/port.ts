@@ -7,6 +7,7 @@ import type {
   ChatCard,
   ChatEvents,
   GroupCard,
+  GroupChange,
   GroupMember,
   Id,
   LinkTarget,
@@ -208,6 +209,12 @@ export interface GroupAdmin {
   join(link: string): Promise<GroupCard>
   /** The others see that the owner left. */
   leave(chat: string): Promise<{ chatId: Id }>
+  /** A group's description, invite link and settings. Reading changes nothing. */
+  group(chat: string): Promise<GroupCard>
+  /** Title, description and settings at once; a setting this messenger lacks is refused, never dropped. */
+  updateGroup(chatId: Id, change: GroupChange): Promise<GroupCard>
+  /** A new invite link; the old one stops working. */
+  resetInviteLink(chatId: Id): Promise<GroupCard>
 }
 
 /**

@@ -1,6 +1,6 @@
 import { CliError } from "@leemour/cli-core"
 import type { Command } from "commander"
-import type { Chat, Id, Provider } from "../../domain/models.js"
+import type { Chat, GroupSettings, Id, Provider } from "../../domain/models.js"
 import { guardFor, type SendGuard } from "../../sends/guard.js"
 import { keyForCommand, levelFor } from "../../sends/permissions.js"
 import { OFFLINE, type Override, type ServiceDeps, type Services, servicesFor } from "../../services/index.js"
@@ -38,6 +38,8 @@ export interface Messenger {
   connect: (command: Command, context: BaseContext, options?: ConnectOptions) => Promise<MessengerAdapter>
   /** The help for a `<chat>` argument, in this messenger's words. */
   chatArgument: string
+  /** The group settings this messenger has, as `chats update` offers them; every one when unset. */
+  groupSettings?: readonly (keyof GroupSettings)[]
   /** The chat `me` names, when the messenger has a notes-to-self chat. */
   savedChatId?: (account: AccountKey) => Id
   /** The other person in a one-to-one chat, when the chat says who — a recipient list matches on it. */

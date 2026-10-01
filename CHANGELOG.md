@@ -6,6 +6,16 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- **`chats update <chat>`** — `--title`, `--description` and the group's settings as `--<setting> on|off`,
+  one write — **`chats link show|reset`**, and the tools `chats_update`, `chats_link_show`,
+  `chats_link_reset` (P2). `chats show` adds a group's `description`, `link` and `settings` where
+  the messenger reads them. `GroupAdmin` gains `group`, `updateGroup` and `resetInviteLink`;
+  `Messenger.groupSettings` names the settings a messenger has, and `chats update` offers only those.
+  `GroupChange` and `GROUP_SETTINGS` in the domain.
+- The manifest says `chats create`, `join` and `leave` are in both tools.
+
 ## 0.81.0 — 01.10.2026
 
 ### Added

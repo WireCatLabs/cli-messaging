@@ -460,13 +460,9 @@
       "reason": "named chats moderate by the standard (check changes nothing); max keeps the old name until T6 moves the command"
     },
     "chats create": {
-      "state": "planned",
-      "by": "P2",
+      "state": "both",
       "options": {
-        "--channel": {
-          "state": "planned",
-          "by": "P2"
-        }
+        "--channel": "both"
       }
     },
     "chats events": {
@@ -520,12 +516,10 @@
       "state": "both"
     },
     "chats join": {
-      "state": "planned",
-      "by": "P2"
+      "state": "both"
     },
     "chats leave": {
-      "state": "planned",
-      "by": "P2"
+      "state": "both"
     },
     "chats link": {
       "state": "planned",

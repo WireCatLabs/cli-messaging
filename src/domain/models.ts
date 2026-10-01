@@ -50,6 +50,21 @@ export interface GroupSettings {
   membersSeeLink: boolean | null
 }
 
+/** What `chats update` changes; a field left out stays as it is. */
+export interface GroupChange {
+  title?: string
+  description?: string
+  settings?: Partial<GroupSettings>
+}
+
+export const GROUP_SETTINGS = [
+  "allCanPin",
+  "onlyAdminsAdd",
+  "onlyAdminsCall",
+  "onlyOwnerEditsInfo",
+  "membersSeeLink",
+] as const
+
 /** A group or channel as the commands that change one answer it. */
 export interface GroupCard extends Chat {
   description: string | null

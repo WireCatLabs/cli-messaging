@@ -92,7 +92,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--before` | `<id-or-time>` | read what came before this message id, this ISO 8601 time, or 2h / 1d ago. **tg's `messages list` spells the value `<id>`** |  | `messages context`, `messages list` |
 | `--bot` |  | the bot section of the profile's settings, rather than the personal account's |  | `config set` (planned), `config show` (planned), `config unset` (planned) |
 | `--can` | `<rights>` | what they may do, comma-separated: read, members, admins, info, pin, link, post, edit, delete |  | `chats admins add` (planned) |
-| `--channel` |  | a private channel instead of a group; people join it by its link |  | `chats create` (planned) |
+| `--channel` |  | a private channel instead of a group; people join it by its link |  | `chats create` |
 | `--chat` | `<chat>` | a chat, by id or name; repeat it for more. **tg's `messages search` spells the value `<id>`; rule 6 says `<chat>`** |  | `chats folders create` (planned), `messages search`, `review` |
 | `--check` |  | say whether a newer version exists, and install nothing |  | `upgrade` |
 | `--confirm-send` |  | show the owner every write the MCP server offers, in a form to approve |  | `mcp`, `mcp config` |
