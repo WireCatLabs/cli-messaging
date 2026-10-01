@@ -1,7 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/server"
 import { serveStdio } from "@modelcontextprotocol/server/stdio"
 import { toStandardJsonSchema } from "@valibot/to-json-schema"
-import type { Command } from "commander"
 import * as v from "valibot"
 import { recalledAccount } from "../cli/messenger/accounts.js"
 import { skipFlagFor } from "../cli/messenger/ask.js"
@@ -25,13 +24,15 @@ export interface ServerOptions extends SessionOptions {
   allowDangerous?: boolean
 }
 
+type Invocation = Parameters<Messenger["connect"]>[0]
+
 /**
  * A factory of servers over one session. `serveStdio` may build a probe instance and throw it away
  * before settling on the protocol era, so each call is a fresh server — and all of them share the
  * one connection, which is the thing that must not be opened twice.
  */
 export const createServer = (
-  command: Command,
+  command: Invocation,
   context: MessengerContext,
   messenger: Messenger,
   { confirmSend = false, yes = false, allowDangerous = false, ...sessionOptions }: ServerOptions,
@@ -137,7 +138,7 @@ export const createServer = (
  * the only other thing that could hold it open.
  */
 export const serveOverStdio = async (
-  command: Command,
+  command: Invocation,
   context: MessengerContext,
   messenger: Messenger,
   options: ServerOptions,

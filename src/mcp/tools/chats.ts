@@ -1,10 +1,10 @@
 import * as v from "valibot"
-import { checkedFilter } from "../../cli/messenger/chats-command.js"
 import type { Messenger } from "../../cli/messenger/context.js"
-import { momentOf } from "../../cli/messenger/inbox.js"
 import type { MessengerAdapter } from "../../cli/messenger/port.js"
 import type { SendGuard } from "../../sends/guard.js"
+import { checkedFilter } from "../../services/chats.js"
 import { CHAT_SCAN, EVENTS_DAYS, onlineDeps, servicesFor } from "../../services/index.js"
+import { momentOf } from "../../services/moment.js"
 import { type AnyTool, chatOf, envelope, limit, page, paging, READ, tool } from "../tool.js"
 
 export const chatsTools = (messenger: Messenger): Record<string, AnyTool> => {

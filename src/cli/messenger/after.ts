@@ -1,5 +1,5 @@
 import { CliError } from "@leemour/cli-core"
-import { isMoment, momentOf } from "./inbox.js"
+import { isMoment, momentOf } from "../../services/moment.js"
 import type { After } from "./port.js"
 
 /** Ids are opaque to us — digits in Telegram and MAX, anything in another messenger — so only a moment's shape is a time. */

@@ -11,6 +11,11 @@ export const INBOX_CHATS = 20
 /** The newest dialogs looked at. Walking every dialog hit FLOOD_WAIT once (tg handoff §4.14). */
 export const CHAT_WINDOW = 100
 
+/** Owner's ruling in max-cli: without a boundary, a review looks at the last three days. */
+export const REVIEW_DAYS = 3
+export const UNANSWERED_HOURS = 24
+export const reviewStart = (now = Date.now()): number => now - REVIEW_DAYS * 86_400_000
+
 export const byRecency = (chats: Chat[]): Chat[] =>
   chats.toSorted((a, b) => Date.parse(b.lastMessageAt ?? "") - Date.parse(a.lastMessageAt ?? ""))
 

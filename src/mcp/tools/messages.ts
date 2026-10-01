@@ -1,10 +1,9 @@
 import * as v from "valibot"
 import { afterOf, oneDirection } from "../../cli/messenger/after.js"
 import type { Messenger } from "../../cli/messenger/context.js"
-import { modelWith } from "../../cli/messenger/hearing-command.js"
 import { capability } from "../../cli/messenger/port.js"
 import { onlineDeps, servicesFor, storedDeps } from "../../services/index.js"
-import { heard, hearForTool } from "../../speech/hearing.js"
+import { heard, hearForTool, modelWith } from "../../speech/hearing.js"
 import { type AnyTool, chatOf, limit, message, nameOf, READ, tool } from "../tool.js"
 
 export const messagesTools = (messenger: Messenger): Record<string, AnyTool> => {

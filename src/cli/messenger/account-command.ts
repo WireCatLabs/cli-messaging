@@ -1,11 +1,7 @@
 import { Command } from "commander"
-import type { Account } from "../../domain/models.js"
+import { maskedAccount } from "../../services/people.js"
 import { accountSessionsCommand } from "./account-sessions-command.js"
 import { type Messenger, messengerContext } from "./context.js"
-
-/** The phone cut to its last four digits: enough to tell two accounts apart. */
-export const maskedAccount = (account: Account): Account =>
-  account.phone ? { ...account, phone: `***${account.phone.replace(/\D/g, "").slice(-4)}` } : account
 
 export const accountCommand = (messenger: Messenger): Command =>
   new Command("account")

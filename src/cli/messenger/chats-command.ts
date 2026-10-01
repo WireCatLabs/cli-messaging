@@ -1,31 +1,12 @@
-import { CliError } from "@leemour/cli-core"
 import { Command } from "commander"
-import type { ChatKind } from "../../domain/models.js"
-import { CHAT_SCAN, type ChatFilter, EVENTS_DAYS } from "../../services/index.js"
+import { CHAT_KINDS, CHAT_SCAN, type ChatFilter, checkedFilter, EVENTS_DAYS } from "../../services/chats.js"
+import { momentOf } from "../../services/moment.js"
 import { listed, renderPage, window, withPaging } from "../paging.js"
 import { groupCommands } from "./admin-commands.js"
 import { foldersCommand } from "./admin-folders-command.js"
 import { membersCommand } from "./chats-members-command.js"
 import { markReadCommand } from "./chats-read-command.js"
 import { type Messenger, messengerContext } from "./context.js"
-import { momentOf } from "./inbox.js"
-
-const KINDS: ChatKind[] = ["dialog", "group", "channel", "saved"]
-
-/** Refuses a filter that would match nothing useful, before anything is asked. */
-export const checkedFilter = ({ search, kind, unread }: ChatFilter): ChatFilter => {
-  if (search !== undefined && search.trim().length < 3) {
-    throw new CliError("validation_error", `--search takes at least 3 characters, got "${search}"`)
-  }
-  if (kind !== undefined && !KINDS.includes(kind as ChatKind)) {
-    throw new CliError("validation_error", `--kind is one of ${KINDS.join(", ")} — not "${kind}"`)
-  }
-  return {
-    ...(search === undefined ? {} : { search: search.trim() }),
-    ...(kind ? { kind } : {}),
-    ...(unread ? { unread } : {}),
-  }
-}
 
 export const chatsCommand = (messenger: Messenger): Command => {
   const chats = new Command("chats").description("the account's chats")
@@ -33,7 +14,7 @@ export const chatsCommand = (messenger: Messenger): Command => {
   chats.addCommand(
     withPaging(new Command("list").description("chats, newest first, archived ones included"))
       .option("--search <text>", "only chats whose name contains this; at least 3 characters")
-      .option("--kind <kind>", `only chats of this kind: ${KINDS.join(", ")}`)
+      .option("--kind <kind>", `only chats of this kind: ${CHAT_KINDS.join(", ")}`)
       .option("--unread", "only chats with unread messages")
       .action(async function (this: Command) {
         const context = messengerContext(this, messenger)

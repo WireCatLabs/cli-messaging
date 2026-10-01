@@ -1,6 +1,6 @@
 import { CliError } from "@leemour/cli-core"
 import { capability } from "../cli/messenger/port.js"
-import type { Chat, Contact, Id, Member, Page, PersonCard, PhoneBookEntry } from "../domain/models.js"
+import type { Account, Chat, Contact, Id, Member, Page, PersonCard, PhoneBookEntry } from "../domain/models.js"
 import { pickPerson } from "../resolve.js"
 import { guardedWrite, type Operated } from "../sends/guarded.js"
 import { newOperationId } from "../sends/send-id.js"
@@ -215,3 +215,7 @@ const toContact = (chat: Chat): Contact => ({
 
 const byRecency = (a: Contact, b: Contact) => (b.lastMessagedAt ?? "").localeCompare(a.lastMessagedAt ?? "")
 const byName = (a: Contact, b: Contact) => (a.name ?? "").localeCompare(b.name ?? "")
+
+/** The phone cut to its last four digits: enough to tell two accounts apart. */
+export const maskedAccount = (account: Account): Account =>
+  account.phone ? { ...account, phone: `***${account.phone.replace(/\D/g, "").slice(-4)}` } : account

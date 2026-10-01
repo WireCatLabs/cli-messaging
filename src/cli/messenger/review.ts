@@ -1,7 +1,9 @@
 import { Command } from "commander"
 import type { MessageHit, Review } from "../../domain/models.js"
 import { renderMessages } from "../../render/messages.js"
-import { CHAT_WINDOW } from "../../services/inbox.js"
+import { CHAT_WINDOW, REVIEW_DAYS, reviewStart, UNANSWERED_HOURS } from "../../services/inbox.js"
+import { momentOf } from "../../services/moment.js"
+import { modelWith } from "../../speech/hearing.js"
 import { parseDuration } from "../settings.js"
 import { type Messenger, messengerContext } from "./context.js"
 import {
@@ -9,16 +11,9 @@ import {
   hearForCommand,
   hearingFields,
   MODEL_OPTION,
-  modelWith,
   spokenItems,
   TRANSCRIBE_OPTION,
 } from "./hearing-command.js"
-import { momentOf } from "./inbox.js"
-
-/** Owner's ruling in max-cli: without a boundary, a review looks at the last three days. */
-export const REVIEW_DAYS = 3
-export const UNANSWERED_HOURS = 24
-export const reviewStart = (now = Date.now()): number => now - REVIEW_DAYS * 86_400_000
 
 /** `--unanswered` with no value is `true`. */
 export const unansweredHours = (value: unknown, flag = "--unanswered"): number =>

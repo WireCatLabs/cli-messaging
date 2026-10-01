@@ -1,10 +1,12 @@
 import { readFileSync } from "node:fs"
 import { join } from "node:path"
-import { CliError, resolvePaths, writeSecurely } from "@leemour/cli-core"
+import { resolvePaths, writeSecurely } from "@leemour/cli-core"
 import { Command } from "commander"
 import type { MessageHit } from "../../domain/models.js"
 import { renderMessages } from "../../render/messages.js"
 import { CHAT_WINDOW } from "../../services/inbox.js"
+import { momentOf } from "../../services/moment.js"
+import { modelWith } from "../../speech/hearing.js"
 import type { AppIdentity } from "../app.js"
 import { positiveCount } from "../paging.js"
 import { type Messenger, messengerContext } from "./context.js"
@@ -13,38 +15,11 @@ import {
   hearForCommand,
   hearingFields,
   MODEL_OPTION,
-  modelWith,
   spokenItems,
   TRANSCRIBE_OPTION,
 } from "./hearing-command.js"
 
 const FIRST_LOOK_MS = 24 * 60 * 60 * 1000
-
-const AGO = /^(\d+)(m|h|d)$/
-const AGO_MS: Record<string, number> = { m: 60_000, h: 3_600_000, d: 86_400_000 }
-const DATE = /^\d{4}-\d{2}-\d{2}/
-
-/** Shaped like a moment `momentOf` reads, whether or not it is a valid one. */
-export const isMoment = (reference: string): boolean => {
-  const wanted = reference.trim()
-  return AGO.test(wanted) || DATE.test(wanted)
-}
-
-/**
- * `--since` as a moment: ISO 8601, or `30m`, `2h`, `1d` ago. Unlike max-cli, never a message id —
- * a MAX id carries its time, and a Telegram id is only a counter within one chat.
- */
-export const momentOf = (reference: string, flag = "--since", now = Date.now()): number => {
-  const wanted = reference.trim()
-  const [, amount, unit] = AGO.exec(wanted) ?? []
-  // By shape: `Date.parse("12345")` is the year 12345, so a message id would pass as a date.
-  const time =
-    amount && unit ? now - Number(amount) * (AGO_MS[unit] ?? 0) : DATE.test(wanted) ? Date.parse(wanted) : Number.NaN
-  if (Number.isNaN(time)) {
-    throw new CliError("validation_error", `${flag} takes an ISO 8601 time or 30m, 2h, 1d ago — not "${wanted}"`)
-  }
-  return time
-}
 
 /** Where `inbox --new` stopped, per profile, beside the remembered account. */
 const pointFileFor = (app: AppIdentity, profile: string, env: NodeJS.ProcessEnv): string =>
