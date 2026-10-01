@@ -27,6 +27,7 @@ checks and stores its answers, and never calls a model itself. Full picture: [`.
 The tasks, in the order to do them:
 
 **T1 · Release, then land tg-cli #205.** Not before **2026-10-02 19:53 UTC**.
+**Correction 2026-10-01:** 0.97.0 was already out (`e3edc1d`) with #342 in it, so #205 moved to 0.97.0 the same day; no release was needed.
 1. [`../../../README.md`](../../../README.md#releasing), "At most one release a day" — when `bin/release`
    may run, and why `--blocked` is not the way here (the exception is for a fix that ships alone).
 2. [tg-cli #205](https://github.com/leemour/tg-cli/pull/205) — its description says the three steps:
