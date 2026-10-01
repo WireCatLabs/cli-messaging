@@ -369,6 +369,13 @@ many), `--allow-any-file` (which files).
 1. **Each user page of max has a tg page on the same question**, at the same depth: installing,
    using, configuring, security, troubleshooting, diagnostics, groups. max's pages are Russian,
    tg's English.
+   Pages one tool has alone, and why:
+   - max `bot.md` — tg has no bot side yet; its page comes with it (P8).
+   - max `protocol.md` — the MAX operations this project reverse-engineered, generated from its
+     spec. Telegram documents its own protocol and mtcute implements it, so tg has nothing to add.
+   - max `ROADMAP.md` — tg keeps its roadmap as a README section.
+   - tg `store.md` — the shared message store; max gets its page when its commands move onto the
+     shared store (T6).
 2. **Both READMEs have the same sections in the same order**: what it does, why it is good, how it
    differs from the alternatives, logging in, using it, for scripts and agents (skill, MCP, JSON),
    security, documentation, development, roadmap, licence, contributing.
