@@ -128,7 +128,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--dry-run` |  | judge and plan; do nothing |  | `bot chats check` (planned), `chats moderate` (planned) |
 | `--estimate` |  | only say what the fetch would cost, from this machine's copy; nothing is sent. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | `store fetch` |
 | `--event` | `<names>` | only these events, comma-separated, as the messenger names them. **becomes `--type` — e12** |  | `chats events` (max-only) |
-| `--events` |  | also print edits, deletions and reactions; every line then names its event. **differs by one letter from `chats events --event`, a filter with an unrelated meaning (e12)** |  | `watch` |
+| `--events` |  | also print edits, deletions and reactions; every line then names its event. **differs by one letter from `chats events --event`, a filter with an unrelated meaning (e12)** |  | `bot watch` (planned), `watch` |
 | `--file` | `<file>` | attach a file; images go as a photo, videos as a video. Repeat it for more |  | `bot messages send`, `messages send` |
 | `--first-name` | `<name>` | your first name |  | `account update` |
 | `--for` | `<agents>` | which agents a skill is installed for: claude, agents or all | `all` | `skill install` (planned) |
@@ -203,7 +203,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--trace` |  | one line per request on stderr: ids and timings, never message content. **max logs one line per request, tg the connection's own lines: the same option, a different mechanism (Help text rule 4)** |  | every command |
 | `--transcribe` |  | hear voice messages not heard yet, on this machine; slow, the model must be downloaded. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | `inbox`, `messages list`, `review` |
 | `--type` | `<names>` | only events of these types, comma-separated, as the messenger names them |  | `chats events` (planned) |
-| `--types` | `<value>` | Comma separated list of update types your bot want to receive |  | `bot updates watch` (planned), `bot webhooks set` (planned) |
+| `--types` | `<value>` | Comma separated list of update types your bot want to receive |  | `bot updates watch` (planned), `bot watch` (planned), `bot webhooks set` (planned) |
 | `--unanswered` | `[duration]` | only questions to you or a group's admins that nobody answered, asked at least this long ago — 4h, 1d. **max's own `review` still takes bare hours until T6 moves it (e2)** | `24h` | `review` |
 | `--unread` |  | only chats with unread messages |  | `chats list` |
 | `--until` | `<message>` | only up to this message id, inclusive; the newest by default |  | `chats mark-read` |

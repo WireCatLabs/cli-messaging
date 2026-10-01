@@ -148,6 +148,29 @@ describe("bot webhooks", () => {
     await call(["sales", "bot", "webhooks", "delete", "https://a.example/hook"])
     expect(webhooks.map((one) => one.url)).toEqual(["https://b.example/hook"])
   })
+
+  it("**asks for the secret only once the profile may set a webhook**", async () => {
+    mkdirSync(join(root, "config"), { recursive: true })
+    writeFileSync(
+      join(root, "config", "config.json"),
+      JSON.stringify({ bot: { profiles: { sales: { readOnly: true } } } }),
+    )
+    let asked = false
+    const secretive = botWith({
+      readSecret: async () => {
+        asked = true
+        return "s3cret"
+      },
+    })
+    const refused = await call(
+      ["sales", "bot", "webhooks", "set", "https://a.example/hook", "--secret-stdin"],
+      secretive,
+    )
+
+    expect(refused.code).toBe(5)
+    expect(asked).toBe(false)
+    expect(webhooks).toEqual([])
+  })
 })
 
 describe("bot watch", () => {

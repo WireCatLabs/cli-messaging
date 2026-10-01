@@ -963,20 +963,23 @@
       "in": "all"
     },
     "bot updates": {
-      "in": ["max"],
+      "in": [],
       "planned": {
+        "max": "P8 B4: becomes bot watch",
         "tg": "P8"
       }
     },
     "bot updates watch": {
-      "in": ["max"],
+      "in": [],
       "planned": {
+        "max": "P8 B4: becomes bot watch",
         "tg": "P8"
       },
       "options": {
         "--types": {
-          "in": ["max"],
+          "in": [],
           "planned": {
+            "max": "P8 B4: becomes bot watch",
             "tg": "P8"
           }
         }
@@ -985,6 +988,29 @@
     "bot uploads": {
       "in": ["max"],
       "reason": "Telegram has no upload-only step: a file goes up with the message that carries it"
+    },
+    "bot watch": {
+      "in": [],
+      "planned": {
+        "max": "P8 B4: max's bot watch comes with its move to the shared one",
+        "tg": "P8"
+      },
+      "options": {
+        "--events": {
+          "in": [],
+          "planned": {
+            "max": "P8 B4: max's bot watch comes with its move to the shared one",
+            "tg": "P8"
+          }
+        },
+        "--types": {
+          "in": [],
+          "planned": {
+            "max": "P8 B4: max's bot watch comes with its move to the shared one",
+            "tg": "P8"
+          }
+        }
+      }
     },
     "bot webhooks": {
       "in": ["max"],
