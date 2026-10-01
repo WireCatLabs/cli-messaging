@@ -1,0 +1,47 @@
+name: Parity
+
+# Each CLI checks only the manifest of the shared-package version it pins, so a row this repository
+# gets wrong shows up there weeks later. This checks both CLIs' main against this manifest now.
+# Their main, not npm: a row says `both` once both mains have it, and a release always trails that.
+on:
+  pull_request:
+    paths:
+      - parity.json
+      - src/parity/**
+      - .github/workflows/parity.yml
+  push:
+    branches: [main]
+  schedule:
+    - cron: "17 6 * * *"
+  workflow_dispatch:
+
+jobs:
+  main:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        cli: [max, tg]
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          path: shared
+      - uses: actions/checkout@v7
+        with:
+          repository: leemour/${{ matrix.cli }}-cli
+          path: cli
+      - uses: pnpm/action-setup@v6
+        with:
+          package_json_file: shared/package.json
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: |
+            shared/pnpm-lock.yaml
+            cli/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile && pnpm build
+        working-directory: shared
+      - run: pnpm install --frozen-lockfile && pnpm build
+        working-directory: cli
+      - run: node cli/dist/bin/${{ matrix.cli }}.js commands --json | node shared/dist/parity/bin.js ${{ matrix.cli }}
