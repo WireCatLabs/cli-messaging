@@ -22,8 +22,8 @@ guessable from the others.
    `runs`, `topics`, `models`), **singular** for what a profile has exactly one of (`session`,
    `account`, `config`, `server`, `store`, `skill`, `cache`). A group is never named with a verb.
 2. **Top-level words** only for what spans every chat or is the tool itself: `inbox`, `review`,
-   `watch`, `serve`, `doctor`, `upgrade`, `commands`, `complete`, `mcp`. A new one needs a reason
-   in its pull request.
+   `watch`, `serve`, `doctor`, `upgrade`, `commands`, `complete`, `mcp`, `bot`. A new one needs a
+   reason in its pull request.
 3. **Verbs come from this list, each with one meaning.** A verb not on it is added here first.
    - `list` many · `show` one · `search` find by text — the description says where it looks
    - `info` facts about a singular thing itself — where it is, its size, its version, its schema
@@ -70,7 +70,15 @@ guessable from the others.
 9. **No aliases.** A renamed command's old name stops working, and the release notes say so under
    "may break scripts".
 
-`max bot api` is exempt: its names mirror the official Bot API's operations.
+10. **`bot` is the profile's bot account**, through the messenger's official Bot API and a bot
+    token — never the personal login. Below it, a command the personal account also has takes the
+    same name, arguments and options: `bot messages send`, `bot messages show <chat> <message>`,
+    `bot chats members remove`, `bot chats moderate`, `bot contacts show`, `bot watch`. What only a
+    bot has: `bot auth`, `bot list`, `bot callbacks`, `bot commands` (the menu people see on `/`),
+    `bot webhooks`, `bot uploads`, `bot api`. A bot's send is never repeated — neither Bot API makes
+    a repeat safe — so `bot messages send` has no `--send-id`.
+
+`bot api` is exempt: its names mirror each messenger's official Bot API operations.
 
 ## Option catalogue
 
@@ -280,13 +288,20 @@ whose values are levels. It holds for a command the owner types and for an agent
    message naming the new key. The MCP flags it replaces are accepted with a warning naming the
    setting for one release, so a configured agent still starts, then go.
 
+7. **A bot's keys are the personal ones under `bot`**: `bot.messages.send`,
+   `bot.chats.members.remove`, `bot.webhooks`. A profile can allow its bot what it does not allow
+   its personal account, and the other way round; `bot` alone covers every bot command. The default
+   is the personal one's: `bot.messages.delete: ask`. Housekeeping under `bot` is never gated —
+   `bot auth`, `bot list`, `bot recipients`, `bot sends`, `bot mcp`. The bot's old `readOnly` and
+   `allow` words are translated by `config migrate` with the personal ones.
+
 What it does not decide stays separate: the recipient list (which chats), `sendsPerHour` (how
 many), `--allow-any-file` (which files).
 
 ## MCP
 
 1. **A tool is named `<tool>_<resource>_<verb>`** after its command: `max_store_export`,
-   `tg_chats_list`. A tool with no command (`<tool>_status`) is named after what it answers.
+   `tg_chats_list`; a bot's, `<tool>_bot_<resource>_<verb>`: `tg_bot_messages_send`. A tool with no command (`<tool>_status`) is named after what it answers.
 2. **Arguments are the command's options in snake_case**, with the option's name: `--send-id` is
    `send_id`, `--since` is `since`.
 3. **Every tool that only reads says `readOnlyHint: true`**; every tool that writes says what it
