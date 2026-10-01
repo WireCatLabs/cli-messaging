@@ -5,7 +5,20 @@ export { maskedAccount } from "../services/people.js"
 export { type AppIdentity, envName } from "./app.js"
 export { botCommand } from "./bot/command.js"
 export { type BotContext, botContext, botWords } from "./bot/context.js"
-export type { BotAdapter, BotConnectOptions, BotMessenger } from "./bot/port.js"
+export { type BotCopy, botCopy } from "./bot/copy.js"
+export { botCan, botIdOf, botMessagesCommand } from "./bot/messages.js"
+export {
+  BOT_ACTIONS,
+  type BotAction,
+  type BotAdapter,
+  type BotChatRef,
+  type BotChatTools,
+  type BotConnectOptions,
+  type BotHistory,
+  type BotMessaging,
+  type BotMessenger,
+  type BotSendOptions,
+} from "./bot/port.js"
 export { botFiles, botsDirectory, ChatRegistry, registryProfiles, type SeenChat } from "./bot/registry.js"
 export { BotTokenStore, type BotTokenStoreOptions } from "./bot/token.js"
 export { CONTRACT, commandsCommand } from "./commands-command.js"

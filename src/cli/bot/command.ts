@@ -1,11 +1,13 @@
 import { CliError } from "@leemour/cli-core"
 import { annotate } from "@leemour/cli-core/commands"
-import { Command } from "commander"
-import { pickChat } from "../../resolve.js"
+import { Argument, Command } from "commander"
+import { guardedWrite } from "../../sends/guarded.js"
+import { newOperationId } from "../../sends/send-id.js"
 import { envName } from "../app.js"
 import { renderList } from "../paging.js"
 import { type BotContext, botContext } from "./context.js"
-import type { BotMessenger } from "./port.js"
+import { botCan, botIdOf, botMessagesCommand } from "./messages.js"
+import { BOT_ACTIONS, type BotAction, type BotMessenger } from "./port.js"
 import { registryProfiles } from "./registry.js"
 import { BotTokenStore } from "./token.js"
 
@@ -18,14 +20,6 @@ const online = (context: BotContext, command: Command): BotContext => {
     )
   }
   return context
-}
-
-const DIGITS = /^-?\d+$/
-
-/** What the recipient list names: a chat id, `user:<id>` for a person, or the id of a seen chat with that title. */
-const recipientKey = (reference: string, context: BotContext): string => {
-  if (DIGITS.test(reference) || /^user:\d+$/.test(reference)) return reference
-  return pickChat(reference, context.registry.list()).id
 }
 
 const authCommand = (bot: BotMessenger, tokenVariable: string): Command => {
@@ -140,7 +134,7 @@ const recipientsCommand = (bot: BotMessenger): Command => {
     .action(async function (this: Command, chat: string) {
       const context = botContext(this, bot)
       await context.run(async () => {
-        const id = recipientKey(chat, context)
+        const id = context.chatRef(chat)
         const title = context.registry.list().find((seen) => seen.id === id)?.title ?? null
         context.recipients().add({ id, title, addedAt: new Date().toISOString() })
         renderList(context.renderer, context.format, context.recipients().read() ?? [])
@@ -182,6 +176,59 @@ const chatsCommand = (bot: BotMessenger): Command => {
       const context = botContext(this, bot)
       await context.run(async () => renderList(context.renderer, context.format, context.registry.list()))
     })
+
+  command
+    .command("show")
+    .description(`one chat from ${bot.name ?? "the messenger"}, and remember it`)
+    .argument("<chat>", "a chat id, user:<id> for a person, or the title of a chat this bot has seen")
+    .action(async function (this: Command, chat: string) {
+      const context = online(botContext(this, bot), this)
+      const ref = context.chatRef(chat)
+      await context.run(async (events) => {
+        const adapter = await context.authenticated({ events })
+        const found = await botCan(adapter, "chat", bot, "describe a chat")(ref)
+        context.registry.observe([found])
+        await context.copy.keepChat(await botIdOf(context, adapter), found, context.renderer.warn)
+        context.renderer.result(found)
+      })
+    })
+
+  annotate(command.command("leave"), { mutates: true })
+    .description("take the bot out of a chat; only an admin of the chat can bring it back")
+    .argument("<chat>", "a chat id, or the title of a chat this bot has seen")
+    .action(async function (this: Command, chat: string) {
+      const context = online(botContext(this, bot), this)
+      const ref = context.chatRef(chat)
+      await context.run(async (events) => {
+        const adapter = await context.authenticated({ events })
+        const leave = botCan(adapter, "leave", bot, "leave a chat")
+        const operationId = newOperationId()
+        await guardedWrite(
+          context.guard(),
+          { operationId, chatId: ref, kind: "chat", action: "leave", key: "bot.chats.leave" },
+          () => leave(ref),
+        )
+        context.renderer.result({ operationId, chatId: ref, left: true })
+      })
+    })
+
+  annotate(command.command("action"), { mutates: true })
+    .description("show what the bot is doing in a chat — typing, sending a photo — for a few seconds")
+    .argument("<chat>", "a chat id, user:<id> for a person, or the title of a chat this bot has seen")
+    .addArgument(new Argument("<action>", "what the chat sees").choices(BOT_ACTIONS))
+    .action(async function (this: Command, chat: string, action: BotAction) {
+      const context = online(botContext(this, bot), this)
+      const ref = context.chatRef(chat)
+      await context.run(async (events) => {
+        const adapter = await context.authenticated({ events })
+        const act = botCan(adapter, "action", bot, "show an action")
+        const operationId = newOperationId()
+        await guardedWrite(context.guard(), { operationId, chatId: ref, kind: "chat", key: "bot.chats.action" }, () =>
+          act(ref, action),
+        )
+        context.renderer.result({ operationId, chatId: ref, action })
+      })
+    })
   return command
 }
 
@@ -198,6 +245,7 @@ export const botCommand = (bot: BotMessenger): Command => {
     .addCommand(authCommand(bot, tokenVariable))
     .addCommand(listCommand(bot, tokenVariable))
     .addCommand(chatsCommand(bot))
+    .addCommand(botMessagesCommand(bot))
     .addCommand(recipientsCommand(bot))
     .addCommand(sendsCommand(bot))
 }

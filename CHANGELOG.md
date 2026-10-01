@@ -6,6 +6,17 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- **The bot's messages and chats** (P8): `bot messages send|list|show|edit|delete|pin|unpin` and
+  `bot chats show|leave|action`, under the personal account's names. `send` takes
+  `--md`, `--html`, `--file`, `--photo`, `--as-file`, `--voice`, `--reply-to` and `--silent`, and no
+  `--send-id`: a bot's send is never repeated. A message is `<chat> <message>` everywhere. Where a
+  messenger's Bot API reads no history — Telegram's — `list` and `show` answer from the bot's own copy
+  and say so. Every write goes through the bot's guard under a `bot.*` key; a delete asks
+  first, and `--allow-dangerous` answers. New port groups `BotMessaging`, `BotHistory`, `BotChatTools`
+  (and the personal `MessagePins`) on `BotAdapter`; `botCopy` keeps the bot's local copy per provider.
+
 ### Changed — may break callers
 
 - **`@leemour/cli-core` is a peer dependency now**, `>=0.13.0 <0.15.0`, not a dependency of this
