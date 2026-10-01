@@ -1,0 +1,12 @@
+{"runtime":"node v24.19.0","workers":0,"threadsPer":4,"chunks":96,"rssBeforeMB":369,"threadsSeen":4,"loadMs":618,"cps":10.4,"osThreads":10,"peakRssMB":1224}
+{"runtime":"node v24.19.0","workers":0,"threadsPer":8,"chunks":96,"rssBeforeMB":370,"threadsSeen":8,"loadMs":518,"cps":14.7,"osThreads":14,"peakRssMB":1284}
+{"runtime":"node v24.19.0","workers":0,"threadsPer":12,"chunks":96,"rssBeforeMB":372,"threadsSeen":12,"loadMs":568,"cps":15.2,"osThreads":18,"peakRssMB":1341}
+{"runtime":"node v24.19.0","workers":3,"threadsPer":4,"chunks":96,"rssBeforeMB":370,"threadsSeen":[4,4,4],"loadMs":837,"cps":19.6,"osThreads":19,"peakRssMB":2334}
+{"runtime":"node v24.19.0","workers":4,"threadsPer":3,"chunks":96,"rssBeforeMB":372,"threadsSeen":[3,3,3,3],"loadMs":874,"cps":19.5,"osThreads":19,"peakRssMB":2829}
+{"runtime":"node v24.19.0","workers":6,"threadsPer":2,"chunks":96,"rssBeforeMB":356,"threadsSeen":[2,2,2,2,2,2],"loadMs":1109,"cps":22.8,"osThreads":19,"peakRssMB":4062}
+{"runtime":"bun 1.3.14","workers":0,"threadsPer":4,"chunks":96,"rssBeforeMB":463,"threadsSeen":4,"loadMs":573,"cps":12,"osThreads":46,"peakRssMB":1116}
+{"runtime":"bun 1.3.14","workers":0,"threadsPer":8,"chunks":96,"rssBeforeMB":467,"threadsSeen":8,"loadMs":654,"cps":14.8,"osThreads":53,"peakRssMB":1195}
+{"runtime":"bun 1.3.14","workers":0,"threadsPer":12,"chunks":96,"rssBeforeMB":463,"threadsSeen":12,"loadMs":730,"cps":14.8,"osThreads":59,"peakRssMB":1282}
+{"runtime":"bun 1.3.14","workers":3,"threadsPer":4,"chunks":96,"rssBeforeMB":463,"threadsSeen":[4,4,4],"loadMs":1417,"cps":18.8,"osThreads":68,"peakRssMB":2368}
+{"runtime":"bun 1.3.14","workers":4,"threadsPer":3,"chunks":96,"rssBeforeMB":451,"threadsSeen":[3,3,3,3],"loadMs":1808,"cps":19.8,"osThreads":72,"peakRssMB":2854}
+{"runtime":"bun 1.3.14","workers":6,"threadsPer":2,"chunks":96,"rssBeforeMB":465,"threadsSeen":[2,2,2,2,2,2],"loadMs":2712,"cps":21.3,"osThreads":71,"peakRssMB":3859}

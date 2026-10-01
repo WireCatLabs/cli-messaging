@@ -1,0 +1,17 @@
+{"rt":"node v24.19.0","phase":"insert","N":1000000,"D":384,"kind":"f32","insertMs":1373,"genMs":11229,"fileMB":1958,"rssMB":59}
+tmpfs            16G  9.4G  5.7G  63% /tmp
+{"rt":"node v24.19.0","phase":"query","N":1000000,"D":384,"kind":"f32","coldMs":3249,"loadMs":3324.6,"warmMs":257.3,"rssColdMB":72,"rssWarmMB":1542,"same":true,"top":[967149,811250,934519]}
+{"rt":"node v24.19.0","phase":"vec0","N":1000000,"D":384,"kind":"f32","insertMs":6324,"fileMB":1489.7,"coldMs":412.6,"warmMs":415.4,"rssMB":64,"top":[967149,811250,934519]}
+{"rt":"bun 1.3.14","phase":"insert","N":1000000,"D":384,"kind":"f32","insertMs":1191,"genMs":14161,"fileMB":1958,"rssMB":93}
+tmpfs            16G  9.4G  5.7G  63% /tmp
+{"rt":"bun 1.3.14","phase":"query","N":1000000,"D":384,"kind":"f32","coldMs":1606.6,"loadMs":1863.7,"warmMs":253.5,"rssColdMB":89,"rssWarmMB":3283,"same":true,"top":[967149,811250,934519]}
+{"rt":"bun 1.3.14","phase":"vec0","N":1000000,"D":384,"kind":"f32","insertMs":5740,"fileMB":1489.7,"coldMs":432.7,"warmMs":403.6,"rssMB":100,"top":[967149,811250,934519]}
+{"rt":"node v24.19.0","phase":"insert","N":1000000,"D":768,"kind":"f32","insertMs":1984,"genMs":21686,"fileMB":3916.1,"rssMB":62}
+tmpfs            16G   12G  3.8G  75% /tmp
+{"rt":"node v24.19.0","phase":"query","N":1000000,"D":768,"kind":"f32","coldMs":3657.7,"loadMs":3855.4,"warmMs":507.6,"rssColdMB":72,"rssWarmMB":3005,"same":true,"top":[616456,899018,796010]}
+{"rt":"node v24.19.0","phase":"vec0","N":1000000,"D":768,"kind":"f32","insertMs":24805,"fileMB":2957.1,"coldMs":820.4,"warmMs":798.5,"rssMB":67,"top":[616456,899018,796010]}
+{"rt":"bun 1.3.14","phase":"insert","N":1000000,"D":768,"kind":"f32","insertMs":1933,"genMs":29201,"fileMB":3916.1,"rssMB":93}
+tmpfs            16G   12G  3.8G  75% /tmp
+{"rt":"bun 1.3.14","phase":"query","N":1000000,"D":768,"kind":"f32","coldMs":2401.5,"loadMs":3793.8,"warmMs":542.6,"rssColdMB":87,"rssWarmMB":6012,"same":true,"top":[616456,899018,796010]}
+{"rt":"bun 1.3.14","phase":"vec0","N":1000000,"D":768,"kind":"f32","insertMs":42709,"fileMB":2957.1,"coldMs":990,"warmMs":960.6,"rssMB":99,"top":[616456,899018,796010]}
+DONE
