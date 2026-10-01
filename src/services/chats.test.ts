@@ -129,6 +129,23 @@ describe("the people service", () => {
     expect(found.items.map((one) => one.name)).toEqual(["Olga", "Anton"])
   })
 
+  it("asks the store after the messenger's chats, so a login that brings the people counts", async () => {
+    const store = await keptStore()
+    const login = async () => {
+      await store.applyDelta(account, { people, members: new Map([["8", ["500", "21"]]]) })
+      return { items: chats, hasMore: false }
+    }
+    const adapter = { self: () => "500", chats: login }
+    const service = peopleService({
+      ...onlineDeps(messenger, adapter as unknown as MessengerAdapter, guard),
+      store: async () => store,
+    })
+
+    const found = await service.list({ order: "name", offset: 0 })
+
+    expect(found.items.map((one) => one.id)).toEqual(["21"])
+  })
+
   it("lists the dialogs online when the store does not know whose account this is yet", async () => {
     const adapter = { self: () => null, chats: async () => ({ items: chats, hasMore: false }) }
     const service = peopleService({

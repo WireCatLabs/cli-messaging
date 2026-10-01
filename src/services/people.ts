@@ -28,15 +28,12 @@ export interface PeopleService {
 
 export const peopleService = (deps: ServiceDeps): PeopleService => ({
   list: async (options) => {
-    // Connected first: a messenger whose login brings its people writes them before the store is asked.
-    const connection = deps.offline ? undefined : await deps.connection()
+    // The chats first: a messenger whose login brings its people writes them before the store is asked.
+    const chats = deps.offline ? undefined : (await (await deps.connection()).chats({ offset: 0 })).items
     const held = deps.offline ? { store: await deps.store(), account: await deps.account() } : await storeIfOpen(deps)
     if (held && (await held.store.countContacts(held.account)) > 0)
       return storedContacts(held.store, held.account, options)
-    const chats = connection
-      ? (await connection.chats({ offset: 0 })).items
-      : (await (await deps.store()).chats(await deps.account(), {})).items
-    return contactsIn(chats, options)
+    return contactsIn(chats ?? (await (await deps.store()).chats(await deps.account(), {})).items, options)
   },
 
   show: async (person) => {
