@@ -1,6 +1,6 @@
 import type { Command } from "commander"
 import type { Markup } from "../../domain/markdown.js"
-import type { Chat, Id, Message, Provider } from "../../domain/models.js"
+import type { AdminRight, Chat, Id, Member, Message, Provider } from "../../domain/models.js"
 import type { Upload } from "../../sends/upload.js"
 import type { PersonFacts } from "../../store/index.js"
 import type { AppIdentity } from "../app.js"
@@ -60,6 +60,30 @@ export interface BotChatTools {
   action(chat: BotChatRef, action: BotAction): Promise<void>
 }
 
+/** An admin of a chat, and what they may do. */
+export interface BotChatAdmin extends Member {
+  role: "owner" | "admin"
+  /** In the shared words; a right the messenger has and these words lack is left out. */
+  rights: AdminRight[]
+  /** The title shown beside their name, when they have one. */
+  title: string | null
+}
+
+/** Who runs a chat the bot is an admin in. */
+export interface BotChatAdmins {
+  admins(chat: BotChatRef): Promise<BotChatAdmin[]>
+  /** A right this messenger lacks is refused, never dropped. */
+  addAdmin(chat: BotChatRef, person: Id, rights: AdminRight[], options: { title?: string }): Promise<void>
+  /** They stay a member. */
+  removeAdmin(chat: BotChatRef, person: Id): Promise<void>
+}
+
+/** Taking people out of a chat the bot is an admin in. */
+export interface BotChatMembers {
+  /** Their messages stay; `block` also keeps them from coming back by the chat's link. */
+  removeMember(chat: BotChatRef, person: Id, options: { block: boolean }): Promise<void>
+}
+
 /**
  * The part of the personal core a bot can do, and the groups its Bot API has. A bot never gets
  * `chats` from this type: neither Bot API lists a bot's chats.
@@ -69,6 +93,8 @@ export type BotAdapter = Pick<MessengerCore, "me" | "close"> &
   Partial<BotHistory> &
   Partial<MessagePins> &
   Partial<BotChatTools> &
+  Partial<BotChatAdmins> &
+  Partial<BotChatMembers> &
   Partial<BotPeople>
 
 export interface BotConnectOptions {
@@ -83,6 +109,8 @@ export interface BotMessenger {
   provider: Provider
   /** The messenger's own name, as its users write it — `MAX`, `Telegram`. */
   name?: string
+  /** The admin rights `--can` offers; every shared one when unset. */
+  adminRights?: readonly AdminRight[]
   /** Called with `kind: "bot"`. */
   resolveSettings: (flags: GlobalFlags, options?: ResolveOptions) => Settings
   /**
