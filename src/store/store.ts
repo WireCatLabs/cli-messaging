@@ -162,6 +162,8 @@ export interface MessageStore {
   conversationOf(key: AccountKey, chatId: Id, messageId: Id): Promise<string | undefined>
   /** Every link a message has, the messenger's first. */
   links(key: AccountKey, chatId: Id, messageId: Id): Promise<StoredLink[]>
+  /** The user's agent's current answer per message: its parent, or `null` for "starts a conversation". */
+  agentAnswers(key: AccountKey, chatId: Id): Promise<Map<Id, Id | null>>
   /** How many messages still need the user's agent, and their characters (phase 4). */
   batchStatus(key: AccountKey, chatId: Id): Promise<{ messages: number; characters: number }>
   /** The earliest window holding a message the agent has not answered; `undefined` when none is left. */
@@ -523,6 +525,11 @@ const storeOver = (context: StoreContext): MessageStore => {
     links: async (key, chatId, messageId) => {
       const chatKey = chatKeyOf(key, chatId)
       return chatKey === undefined ? [] : conversationQueries.linksOf(context, chatKey, messageId)
+    },
+
+    agentAnswers: async (key, chatId) => {
+      const chatKey = chatKeyOf(key, chatId)
+      return chatKey === undefined ? new Map() : conversationQueries.agentAnswers(context, chatKey)
     },
 
     batchStatus: async (key, chatId) => {
