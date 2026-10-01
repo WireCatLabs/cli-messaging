@@ -157,7 +157,7 @@ links under them change.
    permission key (A10).
 4. **The skill** — `skills/link-conversations/SKILL.md`, `skill show <name>` (A8), one line in tg-cli's and
    max-cli's SKILL.md (a PR in each).
-5. **Scoring the loop** — `bench/disentangle/` runs the loop with a scripted "agent" that answers from the
+5. ✅ 2026-10-01, the scripted half, as a test (`src/conversations/agent-loop.test.ts`, an invented chat with known parents rather than the IRC gold links: same proof, no download, runs in CI); the real-agent run on the IRC dev split is still to do by hand · **Scoring the loop** — `bench/disentangle/` runs the loop with a scripted "agent" that answers from the
    IRC gold links, to prove batches + answers + build reproduce the gold conversations exactly; and, by
    hand, once with a real agent on the IRC dev split, link F1 against the rules alone. Numbers only.
 6. **Docs, changelog, parity rows** (planned until tg and max mount them), release; tg-cli and max-cli
