@@ -35,17 +35,20 @@
       "meaning": "go ahead without the question an ask level puts before a deletion"
     },
     "--allow-delete": {
-      "meaning": "offer the tool that deletes messages for you only; it cannot be undone"
+      "meaning": "offer the tool that deletes messages for you only; it cannot be undone",
+      "note": "max's own `mcp` is worded differently until the permission levels (P7) replace these flags there (e13)"
     },
     "--allow-mark-read": {
-      "meaning": "offer the tool that marks a chat read; the other person sees it"
+      "meaning": "offer the tool that marks a chat read; the other person sees it",
+      "note": "max's own `mcp` is worded differently until the permission levels (P7) replace these flags there (e13)"
     },
     "--allow-moderate": {
       "meaning": "offer the tool that applies a group's rules — delete others' messages, remove people",
       "note": "max only, until permissions (P7) replace the MCP flags"
     },
     "--allow-send": {
-      "meaning": "offer the send tool; without it the server can only read"
+      "meaning": "offer the send tool; without it the server can only read",
+      "note": "max's own `mcp` is worded differently until the permission levels (P7) replace these flags there (e13)"
     },
     "--anonymous": {
       "meaning": "nobody sees who voted for what"
@@ -92,7 +95,8 @@
     },
     "--can": {
       "value": "<rights>",
-      "meaning": "what they may do, comma-separated: read, members, admins, info, pin, link, post, edit, delete"
+      "meaning": "what they may do, comma-separated: read, members, admins, info, pin, link, post, edit, delete",
+      "note": "lists the rights each messenger has — MAX has `read`, Telegram does not — so it differs on purpose (Help text rule 4)"
     },
     "--channel": {
       "meaning": "a private channel instead of a group; people join it by its link"
@@ -106,7 +110,8 @@
       "meaning": "say whether a newer version exists, and install nothing"
     },
     "--confirm-send": {
-      "meaning": "show the owner every write the MCP server offers, in a form to approve"
+      "meaning": "show the owner every write the MCP server offers, in a form to approve",
+      "note": "max's own `mcp` is worded differently until the permission levels (P7) replace these flags there (e13)"
     },
     "--defaults": {
       "meaning": "change what every profile gets, rather than this profile"
@@ -122,7 +127,8 @@
       "meaning": "judge and plan; do nothing"
     },
     "--estimate": {
-      "meaning": "only say what the fetch would cost, from this machine's copy; nothing is sent"
+      "meaning": "only say what the fetch would cost, from this machine's copy; nothing is sent",
+      "note": "max's own copy is worded differently until T6 moves the command onto the shared one (e13)"
     },
     "--event": {
       "value": "<names>",
@@ -168,7 +174,8 @@
     },
     "--last": {
       "value": "<n>",
-      "meaning": "stop once the newest n messages are held; not with --since"
+      "meaning": "stop once the newest n messages are held; not with --since",
+      "note": "max's own copy is worded differently until T6 moves the command onto the shared one (e13)"
     },
     "--last-name": {
       "value": "<name>",
@@ -176,7 +183,8 @@
     },
     "--limit": {
       "value": "<n>",
-      "meaning": "how many: rows to show, or messages one run fetches"
+      "meaning": "how many: rows to show, or messages one run fetches",
+      "note": "max's own copy is worded differently until T6 moves the command onto the shared one (e13)"
     },
     "--lines": {
       "value": "<n>",
@@ -208,7 +216,8 @@
     },
     "--model": {
       "value": "<id>",
-      "meaning": "which downloaded speech model hears them; `models audio list` shows them"
+      "meaning": "which downloaded speech model hears them; `models audio list` shows them",
+      "note": "max's own copy is worded differently until T6 moves the command onto the shared one (e13)"
     },
     "--multiple": {
       "meaning": "people may pick several answers"
@@ -232,7 +241,8 @@
       "meaning": "answer from what was recorded and never connect; fails if nothing was"
     },
     "--online": {
-      "meaning": "also log in once, read one chat and start the MCP server; sends nothing"
+      "meaning": "also log in once, read one chat and start the MCP server; sends nothing",
+      "note": "max's own copy is worded differently until T6 moves the command onto the shared one (e13)"
     },
     "--only-admins-add": {
       "value": "<on|off>",
@@ -251,7 +261,8 @@
       "meaning": "newest conversation first, or alphabetical"
     },
     "--others": {
-      "meaning": "every session but this one"
+      "meaning": "every session but this one",
+      "note": "max's own copy is worded differently until T6 moves the command onto the shared one (e13)"
     },
     "--output": {
       "meaning": "where to write: a directory for `messages download`, a file for `store export`",
@@ -274,7 +285,8 @@
     "--pause": {
       "value": "<duration>",
       "meaning": "the least wait between pages, 5s or 500ms; each is up to twice that",
-      "default": "5s"
+      "default": "5s",
+      "note": "max's own copy is worded differently until T6 moves the command onto the shared one (e13)"
     },
     "--personal": {
       "meaning": "the personal account's section of the profile's settings"
@@ -288,10 +300,12 @@
       "meaning": "write the QR code to this PNG instead of drawing it, for an agent to pass on"
     },
     "--quiet": {
-      "meaning": "diagnostics off"
+      "meaning": "diagnostics off",
+      "note": "max's own copy is worded differently until T6 moves the command onto the shared one (e13)"
     },
     "--record": {
-      "meaning": "keep this run under `runs` — ids and timings, never message content"
+      "meaning": "keep this run under `runs` — ids and timings, never message content",
+      "note": "max's own copy is worded differently until T6 moves the command onto the shared one (e13)"
     },
     "--regex": {
       "meaning": "the words are one regular expression, case-insensitive, tested against every stored text"
@@ -353,13 +367,16 @@
     },
     "--to": {
       "value": "<chat>",
-      "meaning": "the chat to forward it to: an id, or part of a chat name"
+      "meaning": "the chat to forward it to: an id, or part of a chat name",
+      "note": "the sentence says how to name a chat the messenger's way, so it differs on purpose (Help text rule 4)"
     },
     "--trace": {
-      "meaning": "one line per request on stderr: ids and timings, never message content"
+      "meaning": "one line per request on stderr: ids and timings, never message content",
+      "note": "max logs one line per request, tg the connection's own lines: the same option, a different mechanism (Help text rule 4)"
     },
     "--transcribe": {
-      "meaning": "hear voice messages not heard yet, on this machine; slow, the model must be downloaded"
+      "meaning": "hear voice messages not heard yet, on this machine; slow, the model must be downloaded",
+      "note": "max's own copy is worded differently until T6 moves the command onto the shared one (e13)"
     },
     "--type": {
       "value": "<names>",

@@ -6,6 +6,12 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- **`cli-messaging-parity wording <max.json> <tg.json>`** and `wordingProblems` in `./parity`: every
+  `both` option the two tools describe in different words, unless its catalogue entry has a `note`.
+  The parity workflow runs it on both CLIs' `main`.
+
 ## 0.88.0 — 01.10.2026
 
 ### Added
