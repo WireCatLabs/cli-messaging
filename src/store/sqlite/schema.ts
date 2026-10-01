@@ -1,4 +1,16 @@
-import { desc, index, integer, primaryKey, real, sql, sqliteTable, text, unique, uniqueIndex } from "./drizzle/core.js"
+import {
+  blob,
+  desc,
+  index,
+  integer,
+  primaryKey,
+  real,
+  sql,
+  sqliteTable,
+  text,
+  unique,
+  uniqueIndex,
+} from "./drizzle/core.js"
 
 /**
  * The store's base tables — what `drizzle-kit generate` diffs against.
@@ -385,3 +397,46 @@ export const conversationState = sqliteTable("conversation_state", {
   /** The build readers see; a higher one is being written, or failed. */
   currentBuild: integer("current_build"),
 })
+
+/*
+ * Phase 5's search by meaning. Chunks are derived per build, as conversations are; a vector is keyed by
+ * the text it encodes, so a rebuild that leaves a conversation's text alone reuses it.
+ */
+
+/** A conversation, or a run of its messages when it is longer than one chunk. */
+export const conversationChunks = sqliteTable(
+  "conversation_chunks",
+  {
+    conversationPk: integer("conversation_pk")
+      .notNull()
+      .references(() => conversations.pk, { onDelete: "cascade" }),
+    ordinal: integer("ordinal").notNull(),
+    firstMessagePk: integer("first_message_pk")
+      .notNull()
+      .references(() => messages.pk, { onDelete: "cascade" }),
+    lastMessagePk: integer("last_message_pk")
+      .notNull()
+      .references(() => messages.pk, { onDelete: "cascade" }),
+    /** sha256 of the text the model is given, hex. The chunk's text itself is never stored. */
+    contentHash: text("content_hash").notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.conversationPk, table.ordinal] }),
+    index("conversation_chunks_by_hash").on(table.contentHash),
+  ],
+)
+
+/** One model's vector for one chunk text; no chat, so vectors outlive the builds that point at them. */
+export const chunkVectors = sqliteTable(
+  "chunk_vectors",
+  {
+    /** `<provider>:<model>:<dims>` — vectors of different models never mix. */
+    model: text("model").notNull(),
+    contentHash: text("content_hash").notNull(),
+    dims: integer("dims").notNull(),
+    /** Float32, little-endian, length one. */
+    vector: blob("vector", { mode: "buffer" }).notNull(),
+    createdAt: integer("created_at").notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.model, table.contentHash] })],
+)

@@ -17,6 +17,7 @@ export {
 } from "drizzle-orm"
 export {
   alias,
+  blob,
   index,
   integer,
   primaryKey,

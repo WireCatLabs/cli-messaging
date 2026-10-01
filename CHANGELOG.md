@@ -12,6 +12,12 @@ Released early: tg-cli and max-cli cannot move to the breaking release, and thre
 
 ### Added
 
+- **Chunks of conversations in the store (store version 14)**, for search by meaning (storage phase 5):
+  `conversations build` cuts each conversation into chunks of at most 1,200 characters at message
+  boundaries and stores, per chunk, its first and last message and the sha256 of its text — never the
+  text. `chunk_vectors` holds one model's vector per chunk text, so a rebuild that leaves a
+  conversation's text alone reuses it. Nothing fills it yet. `min_compatible` stays 6: older builds keep
+  reading and writing the file.
 - **`searchStore(store, account, query)`** (`./services`): `messages search` over a store, for a caller
   with no `Messenger` — a bot's search. `SearchQuery.accounts` reads accounts the caller has already
   checked instead of the one it runs as, and refuses `in:` and `source` beside them;

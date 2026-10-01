@@ -313,6 +313,8 @@ export interface ConversationBuild {
   links: Link[]
   /** Message ids, each conversation oldest first. */
   conversations: Id[][]
+  /** Each conversation's chunks, in the same order as `conversations` (phase 5). */
+  chunks?: { firstId: Id; lastId: Id; hash: string }[][]
 }
 
 export interface ConversationSummary {

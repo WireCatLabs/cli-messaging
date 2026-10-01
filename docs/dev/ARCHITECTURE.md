@@ -96,6 +96,14 @@ answers, in `src/store/sqlite/batches.ts`:
   `src/sends/permissions.ts`), so a profile read-only on messages can still link — the answers write
   only to the local store. `batches next` shows message text and is checked as `messages`.
 
+**Chunks and vectors** (phase 5, store version 14, [plan](../storage/plans/phase-5.md)). Each build
+also writes `conversation_chunks`: a conversation cut at message boundaries into pieces of at most
+`CHUNK_CHARS` (`src/conversations/chunks.ts`), each with its first and last message and the sha256 of
+its text. The text is never stored. Chunks cascade with their conversation, so old builds' chunks go
+with them. `chunk_vectors` is keyed by model and that hash, with no chat: a rebuild writes new
+conversation rows, and a vector tied to them would be thrown away each time, while a chunk whose text
+did not change keeps its hash and finds its vector again.
+
 **Where the queries live.** `src/store/store.ts` holds the `MessageStore` interface and `storeOver`, a
 facade that opens the transaction and delegates. The SQL is in `src/store/sqlite/`, one module per kind
 of record — `accounts`, `identities`, `chats`, `messages` (writes), `reads`, `search`, `ranges`,

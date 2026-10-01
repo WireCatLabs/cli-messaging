@@ -1,4 +1,5 @@
 import { CliError } from "@leemour/cli-core"
+import { cutChunks } from "../conversations/chunks.js"
 import { type LinkInput, linkMessages, RULES_VERSION } from "../conversations/link.js"
 import type { Id, Message, Page } from "../domain/models.js"
 import type { AgentAnswer, ConversationSummary, LinkBatch, StoredLink } from "../store/store.js"
@@ -97,11 +98,21 @@ export const conversationsService = (deps: ServiceDeps): ConversationsService =>
         handles: await store.senderHandles(account, chatId),
         answers: await store.agentAnswers(account, chatId),
       })
+      const byId = new Map(inputs.map((input) => [input.id, input]))
+      const chunks = conversations.map((ids) =>
+        cutChunks(
+          ids.flatMap((id) => {
+            const input = byId.get(id)
+            return input ? [{ id, sender: input.senderName ?? null, text: input.text }] : []
+          }),
+        ).map(({ firstId, lastId, hash }) => ({ firstId, lastId, hash })),
+      )
       await store.replaceConversations(account, chatId, {
         startedAt,
         algorithmVersion: RULES_VERSION,
         links,
         conversations,
+        chunks,
       })
       return {
         chat: chatId,

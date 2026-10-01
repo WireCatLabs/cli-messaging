@@ -9,7 +9,11 @@ export const LOOK_BACK = 50
 const SAME_SENDER_WITHIN = 10
 const SAME_SENDER_MS = 5 * 60_000
 
-export type LinkInput = Pick<Message, "id" | "senderId" | "text" | "timestamp" | "replyToId" | "threadId" | "mentions">
+export type LinkInput = Pick<
+  Message,
+  "id" | "senderId" | "text" | "timestamp" | "replyToId" | "threadId" | "mentions"
+> &
+  Partial<Pick<Message, "senderName">>
 
 export interface Link {
   messageId: Id

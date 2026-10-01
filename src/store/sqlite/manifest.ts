@@ -26,6 +26,7 @@ export const MANIFEST: ManifestEntry[] = [
   { name: "20261001110735_version-12-search-state", version: 12, minCompatible: 6 },
   { name: "20261001110736_version-12-word-index", version: 12, minCompatible: 6 },
   { name: "20261001170143_version-13-conversations", version: 13, minCompatible: 6 },
+  { name: "20261001231437_version-14-chunks", version: 14, minCompatible: 6 },
 ]
 
 export const generatedMigrations = (
