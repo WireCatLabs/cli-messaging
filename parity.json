@@ -974,8 +974,8 @@
         "--allow-any-file": "both",
         "--as-file": "both",
         "--at": {
-          "state": "max-only",
-          "reason": "max pins a shared release from before --at-time; it goes with max's next upgrade"
+          "state": "planned",
+          "by": "T6"
         },
         "--at-time": {
           "state": "planned",

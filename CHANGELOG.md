@@ -11,6 +11,12 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 - **`chats folders list` answers `{ items, page, limit, hasMore }`** in `--json`, and so does the tool
   `chats_folders_list`; they printed a bare array.
 
+### Fixed
+
+- **max can upgrade past `--at`.** The parity manifest required max to still have `messages send --at`,
+  so max's own parity check failed on any release with `--at-time`; both rows are planned until max's
+  main moves.
+
 ## 0.91.0 — 01.10.2026
 
 ## 0.90.0 — 01.10.2026
