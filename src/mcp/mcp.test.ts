@@ -209,6 +209,7 @@ describe("the MCP server", () => {
       "chat_account_show",
       "chat_chats_events",
       "chat_chats_inspect",
+      "chat_chats_link_show",
       "chat_chats_list",
       "chat_chats_members",
       "chat_chats_show",
@@ -837,6 +838,50 @@ describe("sending over MCP", () => {
       ["create", "Plans", ["91"], { channel: false }],
       ["join", "https://t.me/+abc"],
       ["leave", "7"],
+    ])
+  })
+
+  it("**changes a group, and shows and resets its link**, over MCP", async () => {
+    const group = {
+      id: "7",
+      title: "Book club",
+      kind: "group" as const,
+      unreadCount: 0,
+      lastMessageAt: null,
+      participantsCount: 2,
+      description: null,
+      link: "https://t.me/+old",
+      settings: {
+        allCanPin: null,
+        onlyAdminsAdd: null,
+        onlyAdminsCall: null,
+        onlyOwnerEditsInfo: null,
+        membersSeeLink: null,
+      },
+    }
+    const done: unknown[] = []
+    const telegram = scripted({
+      group: async () => group,
+      updateGroup: async (chatId, change) => {
+        done.push(["update", chatId, change])
+        return group
+      },
+      resetInviteLink: async (chatId) => {
+        done.push(["reset", chatId])
+        return { ...group, link: "https://t.me/+new" }
+      },
+    })
+    const { call } = await connect(telegram, {})
+
+    await call("chat_chats_update", { chat: "7", title: "Books", settings: { allCanPin: true } })
+    const shown = await call("chat_chats_link_show", { chat: "7" })
+    const reset = await call("chat_chats_link_reset", { chat: "7" })
+
+    expect(shown.body).toEqual({ chatId: "7", title: "Book club", link: "https://t.me/+old" })
+    expect(reset.body).toMatchObject({ chat: { link: "https://t.me/+new" } })
+    expect(done).toEqual([
+      ["update", "7", { title: "Books", settings: { allCanPin: true } }],
+      ["reset", "7"],
     ])
   })
 

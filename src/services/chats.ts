@@ -72,7 +72,14 @@ export const chatsService = (deps: ServiceDeps): ChatsService => ({
       if (!found) throw new CliError("not_found", `no stored chat ${id}`)
       return { ...found, members: await storedMembers(store, account, found.id) }
     }
-    const card = await (await deps.connection()).chat(chat)
+    const connection = await deps.connection()
+    const shown = await connection.chat(chat)
+    const card =
+      connection.group && (shown.kind === "group" || shown.kind === "channel")
+        ? (({ description, link, settings }) => ({ ...shown, description, link, settings }))(
+            await connection.group(shown.id),
+          )
+        : shown
     if (card.members !== null || card.kind === "channel") return card
     const held = await storeIfOpen(deps)
     return held ? { ...card, members: await storedMembers(held.store, held.account, card.id) } : card

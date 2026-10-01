@@ -44,13 +44,19 @@ const sandbox = () => {
   }
 }
 
-const call = async (argv: string[], adapter: MessengerAdapter, env: NodeJS.ProcessEnv) => {
+const call = async (
+  argv: string[],
+  adapter: MessengerAdapter,
+  env: NodeJS.ProcessEnv,
+  own: Partial<Messenger> = {},
+) => {
   const messenger: Messenger = {
     app,
     provider: "chat",
     resolveSettings: settingsFor(app).resolveSettings,
     connect: async () => adapter,
     chatArgument: "a chat",
+    ...own,
   }
   const streams = captureStreams()
   const code = await run(argv, { app, commands: () => [chatsCommand(messenger)] }, { streams, tty: false, env })
@@ -145,5 +151,71 @@ describe("chats create, join and leave", () => {
 
     expect(refused.code).toBe(2)
     expect(refused.stderr.join("\n")).toContain("this messenger cannot leave a chat")
+  })
+
+  it("**changes a title and a setting in one write**, and offers only the settings the messenger has", async () => {
+    const env = sandbox()
+    const changes: unknown[] = []
+    const adapter: MessengerAdapter = {
+      ...base,
+      updateGroup: async (chatId, change) => {
+        changes.push([chatId, change])
+        return card(chatId, change.title ?? "Book club")
+      },
+    }
+    const telegram = { groupSettings: ["allCanPin", "onlyAdminsAdd"] as const }
+
+    const renamed = await call(
+      ["chats", "update", "Book club", "--title", "Books", "--all-can-pin", "on", "--json"],
+      adapter,
+      env,
+      telegram,
+    )
+    const quiet = await call(["chats", "update", "Book club", "--only-admins-add", "off"], adapter, env, telegram)
+    const missing = await call(["chats", "update", "Book club", "--only-admins-call", "on"], adapter, env, telegram)
+    const unclear = await call(["chats", "update", "Book club", "--all-can-pin", "yes"], adapter, env)
+    const empty = await call(["chats", "update", "Book club"], adapter, env)
+
+    expect(JSON.parse(renamed.stdout[0] ?? "")).toMatchObject({
+      operationId: expect.any(String),
+      chat: { title: "Books" },
+    })
+    expect(changes).toEqual([
+      ["7", { title: "Books", settings: { allCanPin: true } }],
+      ["7", { settings: { onlyAdminsAdd: false } }],
+    ])
+    expect([quiet.code, unclear.code, empty.code]).toEqual([0, 2, 2])
+    expect(missing.stderr.join("\n")).toContain("unknown option '--only-admins-call'")
+    expect(new SendJournal(sendsPathFor(app, "default", env)).entries().map((one) => one.action)).toEqual([
+      "update",
+      "settings",
+    ])
+  })
+
+  it("**shows the invite link, or says it is hidden**, and journals a reset", async () => {
+    const env = sandbox()
+    let link: string | null = null
+    const adapter: MessengerAdapter = {
+      ...base,
+      group: async () => ({ ...card("7", "Book club"), link }),
+      resetInviteLink: async (chatId) => ({ ...card(chatId, "Book club"), link: "https://t.me/+new" }),
+    }
+
+    const hidden = await call(["chats", "link", "show", "Book club"], adapter, env)
+    link = "https://t.me/+old"
+    const shown = await call(["chats", "link", "show", "Book club", "--json"], adapter, env)
+    const reset = await call(["chats", "link", "reset", "Book club", "--json"], adapter, env)
+    const card7 = await call(["chats", "show", "Book club", "--json"], adapter, env)
+
+    expect(hidden.code).toBe(6)
+    expect(JSON.parse(shown.stdout[0] ?? "")).toEqual({ chatId: "7", title: "Book club", link: "https://t.me/+old" })
+    expect(JSON.parse(reset.stdout[0] ?? "")).toMatchObject({ chat: { link: "https://t.me/+new" } })
+    expect(JSON.parse(card7.stdout[0] ?? "")).toMatchObject({
+      link: "https://t.me/+old",
+      settings: { allCanPin: null },
+    })
+    expect(new SendJournal(sendsPathFor(app, "default", env)).entries()).toMatchObject([
+      { kind: "chat", action: "link.reset", chatId: "7", outcome: "sent" },
+    ])
   })
 })
