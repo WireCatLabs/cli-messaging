@@ -66,7 +66,9 @@ export const listenUntilStopped = async (
   const end = () => stop.abort()
   given?.addEventListener("abort", end, { once: true })
   const signals = given ? [] : (["SIGINT", "SIGTERM"] as const)
-  for (const name of signals) process.once(name, end)
+  // `on`, not `once`: mtcute closes its storage on the signal and then sends it again, which with no
+  // listener left kills the process before its `finally` — a serve's lock outlived it.
+  for (const name of signals) process.on(name, end)
   // `tg watch --jsonl | head -1`: once the reader is gone, the next write fails, and that is the end.
   const closed = (error: NodeJS.ErrnoException) => {
     if (error.code === "EPIPE") end()

@@ -69,6 +69,28 @@ const call = async (argv: string[], connect: Messenger["connect"], signal?: Abor
 }
 
 describe("watch", () => {
+  it("**a signal sent twice — as mtcute does after closing its storage — still ends the run normally**", async () => {
+    const before = process.listenerCount("SIGTERM")
+    let during = 0
+    const connect = async () =>
+      ({
+        self: () => "500",
+        close: async () => {},
+        watch: async (_: unknown, signal: AbortSignal, onReady?: () => void) => {
+          onReady?.()
+          process.emit("SIGTERM")
+          during = process.listenerCount("SIGTERM")
+          process.emit("SIGTERM")
+          if (!signal.aborted) await new Promise((resolve) => signal.addEventListener("abort", resolve, { once: true }))
+        },
+      }) as unknown as MessengerAdapter
+
+    const { code } = await call(["watch", "--jsonl"], connect)
+    expect(code).toBe(0)
+    expect(during).toBeGreaterThan(before)
+    expect(process.listenerCount("SIGTERM")).toBe(before)
+  })
+
   it("**streams each new message as one JSON line, keeps it, and ends normally when stopped**", async () => {
     const asked: ConnectOptions[] = []
     const stop = new AbortController()
