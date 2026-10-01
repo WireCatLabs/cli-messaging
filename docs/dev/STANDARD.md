@@ -122,7 +122,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--confirm-send` |  | show the owner every write the MCP server offers, in a form to approve |  | `mcp`, `mcp config` |
 | `--defaults` |  | change what every profile gets, rather than this profile |  | `config set`, `config unset` |
 | `--description` | `<text>` | the new about text — of a chat or of your account |  | `account update` (planned), `chats update` |
-| `--detach` |  | run in the background instead — the same as `server start` |  | `serve` (planned) |
+| `--detach` |  | run in the background — leaves max in P6 for `server start`; one action, one command (ASK-113) |  | `serve` (planned) |
 | `--dry-run` |  | judge and plan; do nothing |  | `chats moderate` (planned) |
 | `--estimate` |  | only say what the fetch would cost, from this machine's copy; nothing is sent |  | `store fetch` |
 | `--event` | `<names>` | only these events, comma-separated, as the messenger names them. **becomes `--type` — e12** |  | `chats events` (planned) |
@@ -132,7 +132,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--for-everyone` |  | delete for everyone in the chat, not only for you — they cannot get it back |  | `messages delete` |
 | `--format` | `<format>` | jsonl, one message per line, or a markdown transcript. **the shared `store export` takes `jsonl` or `markdown`, max's own takes `jsonl` or `md` (e4)** |  | `store export` |
 | `--history` |  | the people added also see the messages from before they came |  | `chats members add` (max-only) |
-| `--idle` | `<duration>` | stop after this long with nobody using it — 15m, 1h |  | `serve` (planned), `server restart` (planned), `server start` (planned) |
+| `--idle` | `<duration>` | stop after this long with nobody using it — 15m, 1h |  | `serve` (max-only), `server restart` (max-only), `server start` (max-only) |
 | `--json` |  | machine-readable output: one JSON value on stdout, nothing else |  | every command |
 | `--jsonl` |  | machine-readable output: one JSON object per line, for streaming and jq |  | every command |
 | `--kind` | `<kind>` | only chats of this kind: dialog, group, channel or saved |  | `chats list` |
@@ -183,7 +183,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--silent` |  | deliver without a notification |  | `messages forward`, `messages send`, `polls create` |
 | `--since` | `<id-or-time>` | from this message id, an ISO 8601 time, or 2h / 1d ago; each command says its default. **becomes `--since-time` everywhere — NEED-485** |  | `chats events` (planned), `chats moderate` (planned), `inbox` (planned), `review` (planned), `store export` (planned), `store fetch` (planned) |
 | `--since-time` | `<time>` | from this ISO 8601 time, or 2h / 1d ago; each command says its default |  | `chats events` (planned), `chats moderate` (planned), `inbox` (planned), `review` (planned), `store export` (planned), `store fetch` (planned) |
-| `--stop` |  | stop this profile's server — the same as `server stop` |  | `serve` (planned) |
+| `--stop` |  | stop this profile's server — leaves max in P6 for `server stop`; one action, one command (ASK-113) |  | `serve` (planned) |
 | `--timeout` | `<duration>` | give up on the whole command after this — 30s, 2m, 500ms |  | every command |
 | `--title` | `<title>` | the new name — of a chat or a folder |  | `chats folders update`, `chats update` |
 | `--to` | `<chat>` | the chat to forward it to: an id, or part of a chat name |  | `messages forward` |
@@ -243,6 +243,25 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 
 5. **A shared command answers the same shape in both tools.** What only one messenger knows goes
    under `providerMetadata`, never as a top-level field one tool has and the other lacks.
+6. **`server status` answers one shape in both tools** (NEED-494 B). Not running is a result,
+   `running: false`, exit 0.
+
+   | Field | Meaning |
+   |---|---|
+   | `profile` | the profile asked about |
+   | `running` | a server answers for it |
+   | `pid` | its process |
+   | `startedAt` | when it started |
+   | `connected` | logged in, with updates arriving |
+   | `connectedAt` | since when, where the tool knows it |
+   | `by` | who started it: `unit` (systemd or launchd), `server` (`server start`), `hand` (`serve` typed in a terminal), `command` (max: a command that needed it) |
+   | `version`, `cliVersion` | what the server runs, and what this tool is — they differ after an update, and a note on stderr says `server restart` |
+   | `log` | where its log is |
+   | `unit` | `{ name, path, installed, loaded, active, detail }` |
+   | `stale` | `{ pid, startedAt }` — a lock or socket file was left by a server that is gone |
+
+   Starting and stopping in the background is `server start` and `server stop` only; `serve` is
+   the foreground command a unit or a person runs (rules 4 and 9).
 
 ## Permissions
 
