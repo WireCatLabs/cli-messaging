@@ -41,6 +41,9 @@ export interface AccountKey {
   account: Id
 }
 
+/** Whether a stored chat may hold a message deleted without naming its chat. */
+export type DeletionScope = (chat: Pick<Chat, "id" | "kind" | "providerMetadata">) => boolean
+
 /** How a message reached the store — `history`, `send`, `backfill`, `update`. Diagnostic. */
 export type IngestedVia = string
 
@@ -221,8 +224,11 @@ export interface MessageStore {
    * the message back, and reads and search stop returning it. Its text goes — from the row, the
    * search copy, the edit history and the transcript. Only the messenger returning it again, when
    * asked after the deletion, lifts the tombstone (`saveMessages`' `seenAt`).
+   *
+   * Without `chatId`, a message is tombstoned only when exactly one live message with its id is left
+   * in the chats `among` accepts. Without `among`, Telegram's rule decides.
    */
-  markDeleted(key: AccountKey, messageIds: Id[], options?: { chatId?: Id }): Promise<number>
+  markDeleted(key: AccountKey, messageIds: Id[], options?: { chatId?: Id; among?: DeletionScope }): Promise<number>
   /** Newest first. At least three characters: a trigram index answers a shorter query with nothing. */
   search(query: string, options: { limit: number; account?: AccountKey }): Promise<Page<StoredHit>>
   /** Newest first — by text, by who wrote it, or both. */
@@ -639,12 +645,12 @@ const storeOver = (context: StoreContext): MessageStore => {
       return accountKey === undefined ? undefined : reads.message(context, accountKey, messageId, chatId)
     },
 
-    markDeleted: async (key, messageIds, { chatId } = {}) => {
+    markDeleted: async (key, messageIds, { chatId, among } = {}) => {
       const accountKey = findAccountPk(key)
       if (accountKey === undefined || messageIds.length === 0) return 0
       let changed = 0
       inTransaction(() => {
-        changed = messageWrites.markDeleted(context, key, accountKey, messageIds, chatId)
+        changed = messageWrites.markDeleted(context, key, accountKey, messageIds, chatId, among)
       })
       return changed
     },

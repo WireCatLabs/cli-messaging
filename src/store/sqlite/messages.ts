@@ -1,12 +1,12 @@
-import type { Id, Message, Reactions } from "../../domain/models.js"
+import type { ChatKind, Id, Message, Reactions } from "../../domain/models.js"
 import { NORMALIZER_VERSION, normalize } from "../normalize.js"
-import type { AccountKey } from "../store.js"
+import type { AccountKey, DeletionScope } from "../store.js"
 import { findChatPk } from "./chats.js"
 import { and, eq, isNull, ne, notInArray, type Placeholder, sql } from "./drizzle/core.js"
 import { identityPk } from "./identities.js"
 import type { Orm, StoreContext } from "./open.js"
 import { attachments, chats, messageRevisions, messages, transcripts } from "./schema.js"
-import { json, toMs } from "./values.js"
+import { json, parsed, toMs } from "./values.js"
 
 const FIELDS = [
   "threadNativeId",
@@ -215,6 +215,7 @@ export const markDeleted = (
   accountKey: number,
   messageIds: Id[],
   chatId: Id | undefined,
+  among?: DeletionScope,
 ): number => {
   const { orm } = context
   const chatKey = chatId === undefined ? undefined : findChatPk(context, accountKey, chatId)
@@ -235,6 +236,19 @@ export const markDeleted = (
               .where(and(live, eq(messages.chatPk, chatKey)))
               .get()
       if (found) changed += tombstone(context, found.pk)
+      continue
+    }
+    if (among) {
+      const candidates = orm
+        .select({ pk: messages.pk, id: chats.nativeId, kind: chats.kind, providerMetadata: chats.providerMetadata })
+        .from(messages)
+        .innerJoin(chats, eq(chats.pk, messages.chatPk))
+        .where(live)
+        .all()
+        .filter(({ id, kind, providerMetadata }) =>
+          among({ id, kind: kind as ChatKind, providerMetadata: parsed(providerMetadata) }),
+        )
+      if (candidates.length === 1 && candidates[0]) changed += tombstone(context, candidates[0].pk)
       continue
     }
     // Telegram names a deletion without its chat only where ids count per account; a channel or

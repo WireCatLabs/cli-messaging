@@ -5,7 +5,7 @@ import { guardFor, type SendGuard } from "../../sends/guard.js"
 import { keyForCommand, levelFor } from "../../sends/permissions.js"
 import { OFFLINE, type Override, type ServiceDeps, type Services, servicesFor } from "../../services/index.js"
 import type { OpenRecognizer } from "../../speech/transcribe.js"
-import { type AccountKey, type MessageStore, openStore } from "../../store/store.js"
+import { type AccountKey, type DeletionScope, type MessageStore, openStore } from "../../store/store.js"
 import type { AppIdentity } from "../app.js"
 import { type BaseContext, baseContext, environmentOf } from "../context.js"
 import type { EventSink } from "../runs/events.js"
@@ -67,6 +67,11 @@ export interface Messenger {
   savedChatId?: (account: AccountKey) => Id
   /** The other person in a one-to-one chat, when the chat says who — a recipient list matches on it. */
   partnerOf?: (chat: Chat) => Id | undefined
+  /**
+   * Whether a stored chat may hold a message the messenger deleted without naming its chat. When
+   * unset, the store applies Telegram's rule.
+   */
+  deletedWithoutChat?: DeletionScope
   /** How `store fetch` reads this messenger's history, where Telegram's defaults do not fit it. */
   fetching?: Fetching
   /** Speech model ids, most suitable first, for `messages transcribe --local`; the first is the default. */
@@ -129,7 +134,7 @@ const settled = async (pending: Set<Promise<void>>, ms: number): Promise<boolean
  */
 export const connected = (
   connection: MessengerAdapter,
-  { app, provider }: Pick<Messenger, "app" | "provider">,
+  { app, provider, deletedWithoutChat }: Pick<Messenger, "app" | "provider" | "deletedWithoutChat">,
   { settings, env, renderer }: Pick<BaseContext, "settings" | "env" | "renderer">,
   events: EventSink,
 ): { adapter: MessengerAdapter; close: () => Promise<void> } => {
@@ -151,6 +156,7 @@ export const connected = (
             warn: renderer.warn,
             events,
             pending,
+            ...(deletedWithoutChat ? { deletedWithoutChat } : {}),
           }),
     close: async () => {
       await connection.close()

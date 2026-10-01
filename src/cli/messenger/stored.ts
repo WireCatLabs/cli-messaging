@@ -1,5 +1,5 @@
 import type { MessageEvent } from "../../domain/models.js"
-import type { AccountKey, MessageStore } from "../../store/store.js"
+import type { AccountKey, DeletionScope, MessageStore } from "../../store/store.js"
 import type { EventSink } from "../runs/events.js"
 import { capability, type MessengerAdapter, throughWrapper } from "./port.js"
 
@@ -11,6 +11,7 @@ export interface Saving {
   events: EventSink
   /** Saves still writing, for the closer to wait on: `watch` does not hold the next event for one. */
   pending?: Set<Promise<void>>
+  deletedWithoutChat?: DeletionScope
 }
 
 /**
@@ -23,7 +24,7 @@ export interface Saving {
  */
 export const stored = (
   messenger: MessengerAdapter,
-  { account, store, warn, events, pending }: Saving,
+  { account, store, warn, events, pending, deletedWithoutChat }: Saving,
 ): MessengerAdapter => {
   let warned = false
   const attempt = async (operation: string, write: (store: MessageStore) => Promise<unknown>): Promise<void> => {
@@ -98,7 +99,7 @@ export const stored = (
             messenger.watch?.(
               (event) => {
                 const seenAt = Date.now()
-                void save("messages.watch", (opened) => keep(opened, account, event, seenAt))
+                void save("messages.watch", (opened) => keep(opened, account, event, seenAt, deletedWithoutChat))
                 onEvent(event)
               },
               signal,
@@ -148,7 +149,13 @@ export const stored = (
 }
 
 /** Each change as the store keeps it: a message or an edit upserted, a deletion a tombstone, reactions replaced. */
-const keep = async (store: MessageStore, account: AccountKey, event: MessageEvent, seenAt: number): Promise<void> => {
+const keep = async (
+  store: MessageStore,
+  account: AccountKey,
+  event: MessageEvent,
+  seenAt: number,
+  among: DeletionScope | undefined,
+): Promise<void> => {
   switch (event.event) {
     case "message":
     case "edit": {
@@ -157,7 +164,11 @@ const keep = async (store: MessageStore, account: AccountKey, event: MessageEven
       return
     }
     case "delete":
-      await store.markDeleted(account, [event.messageId], event.chatId === null ? {} : { chatId: event.chatId })
+      await store.markDeleted(
+        account,
+        [event.messageId],
+        event.chatId === null ? (among ? { among } : {}) : { chatId: event.chatId },
+      )
       return
     case "reaction":
       await store.saveReactions(account, event.chatId, event.messageId, event.reactions)
