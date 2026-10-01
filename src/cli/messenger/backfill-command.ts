@@ -3,6 +3,7 @@ import { mkdirSync } from "node:fs"
 import { join } from "node:path"
 import { CliError } from "@leemour/cli-core"
 import { Command } from "commander"
+import { PAGE } from "../../services/archive.js"
 import { envName } from "../app.js"
 import { type BaseEnvironment, environmentOf } from "../context.js"
 import { isCliFailure } from "../failures.js"
@@ -24,7 +25,7 @@ import { stopOnSignal } from "./patience.js"
 
 /**
  * A chat's history into the store, newest to oldest, **resumable**: after every page the stretch it
- * covered is recorded, so a stop — Ctrl-C, `--timeout`, `--max`, `--since`, a long FloodWait — loses
+ * covered is recorded, so a stop — Ctrl-C, `--timeout`, `--max-pages`, `--since`, `--last`, a long FloodWait — loses
  * nothing, and the next run jumps over what is already held. Needs numeric message ids, which order
  * the chat.
  */
@@ -32,34 +33,39 @@ export const fetchCommand = (messenger: Messenger): Command =>
   new Command("fetch")
     .description("fetch a chat's history into the local store, newest first; run it again to continue")
     .argument("<chat>", messenger.chatArgument)
-    .option("--max <n>", "at most this many messages in this run", wholeNumber, 1000)
+    .option("--max-pages <n>", `at most this many pages of ${PAGE} in this run`, wholeNumber, 10)
     .option("--pause <duration>", "pause between pages, to stay under the provider's limits", "1s")
     .option("--since <time>", "stop once it reaches messages older than this: ISO 8601, or 2h / 1d ago")
+    .option("--last <n>", "stop once the newest n messages are held", wholeNumber)
     .option("--background", "run as a job that outlives this command; `store jobs show` follows it")
     .option(
       "--estimate",
       "only estimate how many messages, requests and minutes a full fetch would still take — from the store, no request",
     )
     .action(async function (this: Command, chat: string) {
-      const { max, pause, since, background, estimate } = this.opts<{
-        max: number
+      const { maxPages, pause, since, last, background, estimate } = this.opts<{
+        maxPages: number
         pause: string
         since?: string
+        last?: number
         background?: boolean
         estimate?: boolean
       }>()
+      if (since !== undefined && last !== undefined) {
+        throw new CliError("validation_error", "give --since or --last, not both: how far back the fetch goes")
+      }
       const pauseMs = parseDuration(pause, "--pause")
       const sinceMs = since === undefined ? undefined : momentOf(since)
       const context = messengerContext(this, messenger)
       if (estimate) {
-        if (since !== undefined) {
-          throw new CliError("validation_error", "--estimate prices a full fetch; --since does not narrow it")
+        if (since !== undefined || last !== undefined) {
+          throw new CliError("validation_error", "--estimate prices a full fetch; --since and --last do not narrow it")
         }
-        const answer = await context.withServices((services) => services.archive.estimate(chat, { max, pauseMs }))
+        const answer = await context.withServices((services) => services.archive.estimate(chat, { maxPages, pauseMs }))
         context.renderer.result(answer)
         if (answer.missing === null) {
           context.renderer.note(
-            `nothing held of this chat to measure by — \`${messenger.app.command} store fetch ${chat} --max 100\` gives the estimate something to go on`,
+            `nothing held of this chat to measure by — \`${messenger.app.command} store fetch ${chat} --max-pages 1\` gives the estimate something to go on`,
           )
         } else if (answer.missing > 0) context.renderer.note("an estimate: provider waits (FloodWait) come on top")
         return
@@ -67,8 +73,9 @@ export const fetchCommand = (messenger: Messenger): Command =>
       if (background) {
         startJob(this, context, messenger, {
           chat,
-          max,
+          maxPages,
           pause,
+          ...(last === undefined ? {} : { last }),
           ...(sinceMs === undefined ? {} : { since: new Date(sinceMs).toISOString() }),
         })
         return
@@ -79,9 +86,10 @@ export const fetchCommand = (messenger: Messenger): Command =>
       try {
         const result = await context.withServices((services) =>
           services.archive.fetch(chat, {
-            max,
+            maxPages,
             pauseMs,
             ...(sinceMs === undefined ? {} : { sinceMs }),
+            ...(last === undefined ? {} : { last }),
             note: context.renderer.note,
             stop: stop.signal,
             onPage: (progress) => {
@@ -158,7 +166,8 @@ const brief = (job: Job) => ({
   startedAt: job.startedAt,
   ...(job.finishedAt ? { finishedAt: job.finishedAt } : {}),
   fetched: Number(job.result?.fetched ?? job.progress?.fetched ?? 0),
-  max: job.max,
+  ...(job.maxPages === undefined ? {} : { maxPages: job.maxPages }),
+  ...(job.last === undefined ? {} : { last: job.last }),
   ...(job.result ? { complete: job.result.complete === true } : {}),
   ...(job.error ? { error: job.error } : {}),
 })
@@ -179,7 +188,13 @@ const startJob = (
   command: Command,
   context: MessengerContext,
   messenger: Messenger,
-  { chat, max, pause, since }: { chat: string; max: number; pause: string; since?: string },
+  {
+    chat,
+    maxPages,
+    pause,
+    since,
+    last,
+  }: { chat: string; maxPages: number; pause: string; since?: string; last?: number },
 ) => {
   const { app } = messenger
   const dir = jobsDir(app, context.env)
@@ -201,18 +216,28 @@ const startJob = (
     "store",
     "fetch",
     chat,
-    "--max",
-    String(max),
+    "--max-pages",
+    String(maxPages),
     "--pause",
     pause,
     ...(since === undefined ? [] : ["--since", since]),
+    ...(last === undefined ? [] : ["--last", String(last)]),
     "--json",
     ...(timeout ? ["--timeout", timeout] : []),
   ]
   // A shell's --timeout default would cut a job short that was asked to outlive the shell.
   const { [envName(app, "TIMEOUT")]: _timeout, ...inherited } = context.env
   const env = { ...inherited, [envName(app, "PROFILE")]: context.profile, [envName(app, "BACKFILL_JOB")]: id }
-  const job: Job = { id, chat, profile: context.profile, pid: 0, startedAt: now.toISOString(), max, log }
+  const job: Job = {
+    id,
+    chat,
+    profile: context.profile,
+    pid: 0,
+    startedAt: now.toISOString(),
+    maxPages,
+    ...(last === undefined ? {} : { last }),
+    log,
+  }
   saveJob(dir, job)
   const spawnJob = environmentOf<BaseEnvironment & { spawnJob?: SpawnJob }>(command).spawnJob ?? spawnDetached
   const pid = spawnJob(argv, env, log)

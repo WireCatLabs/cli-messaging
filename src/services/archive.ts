@@ -3,18 +3,21 @@ import { CliError } from "@leemour/cli-core"
 import { type Estimate, estimateBackfill } from "../cli/messenger/backfill-estimate.js"
 import { patiently } from "../cli/messenger/patience.js"
 import type { Id, Message } from "../domain/models.js"
-import type { ChatStats, Range } from "../store/store.js"
+import type { AccountKey, ChatStats, MessageStore, Range } from "../store/store.js"
 import type { ServiceDeps } from "./deps.js"
 import { storedChatId } from "./messages.js"
 
 /** The most messages a provider hands out per history request — Telegram's cap. */
-const PAGE = 100
+export const PAGE = 100
 
 export interface FetchOptions {
-  max: number
+  /** Requests in this run, of up to `PAGE` messages each. */
+  maxPages: number
   pauseMs: number
   /** Stop after the page that reaches a message older than this, epoch milliseconds. */
   sinceMs?: number
+  /** Stop once the store holds this many of the chat's newest messages. */
+  last?: number
   note: (message: string) => void
   stop: AbortSignal
   onPage: (progress: { fetched: number; chatId: string; oldest: number }) => void
@@ -27,6 +30,7 @@ export type Fetched = {
   complete: boolean
   ranges: Range[]
   reachedSince?: true
+  reachedLast?: true
   stopped?: true
 }
 
@@ -40,7 +44,7 @@ export interface ArchiveService {
   /** `since` is an ISO time: only what was sent then or later. */
   export(chat: string, options?: { since?: string }): Promise<{ title: string; messages: Message[] }>
   /** What a full fetch would still cost, from the store alone. */
-  estimate(chat: string, options: { max: number; pauseMs: number }): Promise<Estimate & { chat: Id }>
+  estimate(chat: string, options: { maxPages: number; pauseMs: number }): Promise<Estimate & { chat: Id }>
   /**
    * A chat's history into the store, newest to oldest, **resumable**: after every page the stretch
    * it covered is recorded, so a stop loses nothing and the next run jumps over what is held. Needs
@@ -76,7 +80,7 @@ export const archiveService = (deps: ServiceDeps): ArchiveService => {
       }
     },
 
-    estimate: async (chat, { max, pauseMs }) => {
+    estimate: async (chat, { maxPages, pauseMs }) => {
       const { store, account, chatId } = await found(chat)
       const newest = Number((await store.messages(account, chatId, { limit: 1 })).items[0]?.id)
       return {
@@ -86,13 +90,13 @@ export const archiveService = (deps: ServiceDeps): ArchiveService => {
           held: (await store.chatStats(account, chatId))[0]?.messages ?? 0,
           newest: Number.isSafeInteger(newest) ? newest : undefined,
           page: PAGE,
-          max,
+          maxPages,
           pauseMs,
         }),
       }
     },
 
-    fetch: async (chat, { max, pauseMs, sinceMs, note, stop, onPage }) => {
+    fetch: async (chat, { maxPages, pauseMs, sinceMs, last, note, stop, onPage }) => {
       const connection = await deps.connection()
       const self = connection.self()
       if (self === null) throw new CliError("authentication_error", "not logged in — nothing to fetch for")
@@ -102,10 +106,12 @@ export const archiveService = (deps: ServiceDeps): ArchiveService => {
       let chatId: Id | undefined
       let top: number | undefined
       let fetched = 0
+      let pages = 0
       let reachedStart = false
       let reachedSince = false
+      let reachedLast = false
 
-      while (fetched < max && !stop.aborted) {
+      while (pages < maxPages && !stop.aborted) {
         const page = await patiently(
           () => connection.history(chat, { limit: PAGE, ...(before ? { before } : {}) }),
           note,
@@ -126,6 +132,7 @@ export const archiveService = (deps: ServiceDeps): ArchiveService => {
         }
         const low = Math.min(...keys)
         top ??= Math.max(...keys)
+        pages += 1
         fetched += page.items.length
         // This run's pages are contiguous, so everything from `low` to its first message is held.
         const held = await store.markRange(account, chatId, low, top)
@@ -136,6 +143,14 @@ export const archiveService = (deps: ServiceDeps): ArchiveService => {
         }
         if (sinceMs !== undefined && page.items.some((message) => Date.parse(message.timestamp) < sinceMs)) {
           reachedSince = true
+          break
+        }
+        const oldestAt = page.items.reduce(
+          (at, message) => (message.timestamp < at ? message.timestamp : at),
+          first.timestamp,
+        )
+        if (last !== undefined && (await heldSince(store, account, chatId, held.from, low, oldestAt)) >= last) {
+          reachedLast = true
           break
         }
         before = String(held.from)
@@ -150,8 +165,29 @@ export const archiveService = (deps: ServiceDeps): ArchiveService => {
         complete: reachedStart && ranges.length === 1,
         ranges,
         ...(reachedSince ? { reachedSince: true as const } : {}),
+        ...(reachedLast ? { reachedLast: true as const } : {}),
         ...(stop.aborted ? { stopped: true as const } : {}),
       }
     },
   }
+}
+
+/**
+ * How many stored messages are as new as the held stretch's first one: the depth a fetch has
+ * reached. The page's own oldest time, unless the page joined an older stretch.
+ */
+const heldSince = async (
+  store: MessageStore,
+  account: AccountKey,
+  chatId: Id,
+  from: number,
+  low: number,
+  oldestAt: string,
+): Promise<number> => {
+  const at =
+    from === low
+      ? oldestAt
+      : ((await store.around(account, chatId, String(from), { before: 0, after: 0 }).catch(() => []))[0]?.timestamp ??
+        oldestAt)
+  return store.countMessages(account, chatId, { since: at })
 }

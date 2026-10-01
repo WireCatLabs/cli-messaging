@@ -136,8 +136,7 @@
     },
     "--last": {
       "value": "<n>",
-      "meaning": "the newest n messages",
-      "note": "clash with tg's `store fetch --max`"
+      "meaning": "stop once the newest n messages are held; not with --since"
     },
     "--last-name": {
       "value": "<name>",
@@ -158,12 +157,6 @@
     "--mark-read": {
       "meaning": "also mark the chat read up to the newest message shown; the other person sees it"
     },
-    "--max": {
-      "value": "<n>",
-      "meaning": "at most this many messages in this run",
-      "default": "1000",
-      "note": "clash: the same limit as `--last` and `--max-pages` in max's `store fetch` — one of the two spellings goes"
-    },
     "--max-actions": {
       "value": "<n>",
       "meaning": "at most this many actions in one run",
@@ -171,9 +164,8 @@
     },
     "--max-pages": {
       "value": "<n>",
-      "meaning": "at most this many pages in one run",
-      "default": "40",
-      "note": "clash with tg's `store fetch --max`"
+      "meaning": "at most this many pages of 100 messages in one run",
+      "default": "10"
     },
     "--md": {
       "meaning": "read **bold**, _italic_, ~~struck~~ and `code` in the text; \\ keeps a mark literal"
@@ -1174,18 +1166,8 @@
           "by": "T6"
         },
         "--estimate": "both",
-        "--last": {
-          "state": "planned",
-          "by": "P1"
-        },
-        "--max": {
-          "state": "planned",
-          "by": "P1"
-        },
-        "--max-pages": {
-          "state": "planned",
-          "by": "P1"
-        },
+        "--last": "both",
+        "--max-pages": "both",
         "--pause": "both",
         "--since": "both"
       }

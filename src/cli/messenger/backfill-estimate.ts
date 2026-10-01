@@ -7,7 +7,7 @@ export interface Estimate {
   /** Messages a full backfill would still fetch — `null` when nothing held gives a density to go on. */
   missing: number | null
   requests: number | null
-  /** Runs at this `--max` to finish. */
+  /** Runs at this `--max-pages` to finish. */
   runs: number | null
   seconds: number | null
 }
@@ -25,7 +25,7 @@ export const estimateBackfill = ({
   held,
   newest,
   page,
-  max,
+  maxPages,
   pauseMs,
 }: {
   ranges: Range[]
@@ -33,7 +33,7 @@ export const estimateBackfill = ({
   /** The newest message id the store holds of the chat, held stretch or not. */
   newest: number | undefined
   page: number
-  max: number
+  maxPages: number
   pauseMs: number
 }): Estimate => {
   const lowest = ranges[0]
@@ -52,7 +52,7 @@ export const estimateBackfill = ({
     ranges,
     missing,
     requests,
-    runs: Math.ceil(missing / max),
+    runs: Math.ceil(requests / maxPages),
     seconds: Math.round((requests * (pauseMs + REQUEST_MS)) / 1000),
   }
 }
