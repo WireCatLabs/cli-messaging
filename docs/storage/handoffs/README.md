@@ -28,6 +28,6 @@ migration runner, the benchmark loader, store version 6); versions 7–11 for ma
   silently move an entry into the section just released; look at where it landed.
 - **No new store migration** in any lane. If one turns out to be needed, take the number in
   [`../../plans/2026-09-29-parity-lanes.md`](../../plans/2026-09-29-parity-lanes.md) first (next free
-  is 12) and tell the other lanes.
+  is 13) and tell the other lanes.
 - **A file another lane owns** is changed by that lane: say what you need in its PR thread, or leave a
   note in max-cli's journal.
