@@ -1,10 +1,6 @@
 {
   "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
-  "vcs": {
-    "enabled": true,
-    "clientKind": "git",
-    "useIgnoreFile": true
-  },
+  "extends": ["@leemour/cli-core/biome"],
   "files": {
     "includes": [
       "**",
@@ -16,46 +12,9 @@
       "!src/store/sqlite/migrations.generated.ts"
     ]
   },
-  "formatter": {
-    "enabled": true,
-    "indentStyle": "space",
-    "indentWidth": 2,
-    "lineWidth": 120
-  },
-  "javascript": {
-    "formatter": {
-      "quoteStyle": "double",
-      "semicolons": "asNeeded",
-      "trailingCommas": "all",
-      "arrowParentheses": "always"
-    }
-  },
-  "linter": {
-    "enabled": true,
-    "rules": {
-      "preset": "recommended",
-      "style": {
-        "useConst": "error",
-        "noNonNullAssertion": "error"
-      },
-      "correctness": {
-        "noUnusedImports": "error",
-        "noUnusedVariables": "error"
-      },
-      "suspicious": {
-        "noExplicitAny": "error",
-        "noConsole": {
-          "level": "error",
-          "options": {
-            "allow": ["error"]
-          }
-        }
-      }
-    }
-  },
   "overrides": [
     {
-      "includes": ["scripts/**", "packages/sqlite/probe.mjs"],
+      "includes": ["packages/sqlite/probe.mjs"],
       "linter": {
         "rules": {
           "suspicious": {

@@ -91,8 +91,8 @@ process, bundled about 6 ms. So:
 
 - Import Drizzle only through `src/store/sqlite/drizzle/` — `core.ts` for the query builder and
   schema functions (add a name there when you need one), `node.ts` and `bun.ts` for the drivers.
-  Anywhere else, `biome.json` refuses `drizzle-orm` (`noRestrictedImports`, `biome.json:81-82`); the
-  folder itself and tests are exempt (`:125`). A direct import passes the tests and crashes tg and max
+  Anywhere else, `biome.json` refuses `drizzle-orm` (`noRestrictedImports`, `biome.json:40`); the
+  folder itself and tests are exempt (`:84`). A direct import passes the tests and crashes tg and max
   at runtime, where `drizzle-orm` is not installed.
 - The Node and Bun drivers are separate bundle entries and are loaded by dynamic `import()`: each
   imports its own runtime's SQLite at the top of its file, so loading one under the other runtime
