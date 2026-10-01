@@ -34,6 +34,10 @@ export interface SearchQuery {
   chat?: string
   /** A messenger the store holds, or `all` — the same as `in:` in the query. The account it runs as when unset. */
   source?: string
+  /** These accounts instead of the one it runs as, already checked by the caller; not with `source` or `in:`. */
+  accounts?: AccountKey[]
+  /** Any of these senders, already resolved by the caller; not with `from:`. */
+  senders?: { provider: Provider; id: Id }[]
   limit: number
   /** Newest first instead of best first. */
   newest?: boolean
@@ -89,6 +93,9 @@ export const DELETE_AT_ONCE = 10
 
 /** How long a search may spend building the word index first (phase 2 plan S3: about 200 ms). */
 export const SEARCH_FILL_MS = 200
+
+/** What a store search reads of the messenger: its saved-messages chat, when it has one. */
+type Saved = Partial<Pick<Messenger, "savedChatId">>
 
 /** Every write goes through the guard: asked before it goes, told after, on every outcome. */
 export interface MessagesService {
@@ -174,42 +181,7 @@ export const messagesService = (deps: ServiceDeps): MessagesService => {
     download: async (chat, message) =>
       capability(await deps.connection(), "download", "download attachments")(chat, message),
 
-    search: ({ text, pattern, chat, source, limit, newest = false, context = 0 }) =>
-      inStore(async (store, account): Promise<SearchFound> => {
-        // A large file builds its word index a slice per search as well as in `store migrate` (NEED-453 A).
-        const stop = Date.now() + SEARCH_FILL_MS
-        await store.fillSearchIndex({ until: () => Date.now() >= stop })
-        if (pattern && source !== undefined) {
-          throw new CliError("validation_error", "--regex reads the account it runs as; --source is for a word search")
-        }
-        const found = pattern
-          ? {
-              ...(await store.find({
-                pattern,
-                account,
-                limit,
-                ...(chat === undefined ? {} : { chatId: await storedChatId(deps.messenger, chat, store, account) }),
-              })),
-              corrections: [],
-              wordsReady: true,
-            }
-          : await search(
-              store,
-              ...(await scopeOf(deps.messenger, store, account, { text: text ?? "", chat, source })),
-              { limit, newest },
-            )
-        const items = await Promise.all(
-          found.items.map(async (hit) =>
-            context > 0
-              ? {
-                  ...hit,
-                  context: await store.around(accountOf(hit), hit.chatId, hit.id, { before: context, after: context }),
-                }
-              : hit,
-          ),
-        )
-        return { ...found, items, completeness: await completenessOf(store, found.items) }
-      }),
+    search: (query) => inStore((store, account) => searchStore(store, account, query, deps.messenger)),
 
     send: async ({ chat, text: typed, sendId, replyTo, silent, noPreview, markdown, at, attachments = [] }) => {
       const connection = await deps.connection()
@@ -329,6 +301,54 @@ export const messagesService = (deps: ServiceDeps): MessagesService => {
 }
 
 /**
+ * `messages search` over a store, from the account given — or from `query.accounts`, which a caller such
+ * as a bot's search passes after checking it may read them.
+ */
+export const searchStore = async (
+  store: MessageStore,
+  account: AccountKey,
+  { text, pattern, chat, source, accounts, senders, limit, newest = false, context = 0 }: SearchQuery,
+  messenger: Saved = {},
+): Promise<SearchFound> => {
+  // A large file builds its word index a slice per search as well as in `store migrate` (NEED-453 A).
+  const stop = Date.now() + SEARCH_FILL_MS
+  await store.fillSearchIndex({ until: () => Date.now() >= stop })
+  if (pattern && (source !== undefined || accounts !== undefined || senders !== undefined)) {
+    throw new CliError(
+      "validation_error",
+      "--regex reads the account it runs as — not with --source, other accounts or senders",
+    )
+  }
+  const found = pattern
+    ? {
+        ...(await store.find({
+          pattern,
+          account,
+          limit,
+          ...(chat === undefined ? {} : { chatId: await storedChatId(messenger, chat, store, account) }),
+        })),
+        corrections: [],
+        wordsReady: true,
+      }
+    : await search(
+        store,
+        ...(await scopeOf(messenger, store, account, { text: text ?? "", chat, source, accounts, senders })),
+        { limit, newest },
+      )
+  const items = await Promise.all(
+    found.items.map(async (hit) =>
+      context > 0
+        ? {
+            ...hit,
+            context: await store.around(accountOf(hit), hit.chatId, hit.id, { before: context, after: context }),
+          }
+        : hit,
+    ),
+  )
+  return { ...found, items, completeness: await completenessOf(store, found.items) }
+}
+
+/**
  * The chat a store read is about. Offline, a chat with nothing kept answers empty, as it always has;
  * in store mode the store is the only source, so an empty answer would pass for "nothing was said".
  */
@@ -351,7 +371,7 @@ export const readChatId = async (
 
 /** A chat as typed, found among the stored chats the way an adapter finds it among its own. */
 export const storedChatId = async (
-  messenger: Messenger,
+  messenger: Saved,
   reference: string,
   store: MessageStore,
   account: AccountKey,
@@ -420,7 +440,7 @@ const missing = (error: unknown) => {
 
 /** A chat as `--chat` names it, in whichever of the accounts holds it — one of them, or it is an error. */
 const chatAmong = async (
-  messenger: Messenger,
+  messenger: Saved,
   store: MessageStore,
   accounts: AccountKey[],
   reference: string,
@@ -500,10 +520,18 @@ const senderAmong = async (store: MessageStore, accounts: AccountKey[], referenc
  * `contacts search` uses, `from:me` as what the accounts sent — all inside the accounts chosen.
  */
 const scopeOf = async (
-  messenger: Messenger,
+  messenger: Saved,
   store: MessageStore,
   account: AccountKey,
-  { text, chat, source }: { text: string; chat: string | undefined; source: string | undefined },
+  {
+    text,
+    chat,
+    source,
+    accounts: given,
+    senders,
+  }: Pick<SearchQuery, "chat" | "source" | "accounts" | "senders"> & {
+    text: string
+  },
 ): Promise<[WordQuery, SearchScope]> => {
   const held = await store.accounts()
   const providers = [...new Set(held.map(({ provider }) => provider))]
@@ -516,13 +544,22 @@ const scopeOf = async (
     throw new CliError("validation_error", `--source and in: name different messengers: ${sourced} and ${parsed.in}`)
   }
   const wanted = parsed.in ?? sourced
+  if (given !== undefined && wanted !== undefined) {
+    throw new CliError("validation_error", "this search reads the accounts it was given — not with in: or --source")
+  }
+  if (given?.length === 0) throw new CliError("validation_error", "a search names at least one account")
+  if (senders !== undefined && parsed.from !== undefined) {
+    throw new CliError("validation_error", "--from and from: together — name the people once")
+  }
   const accounts =
-    wanted === undefined || held.length === 0
+    given ??
+    (wanted === undefined || held.length === 0
       ? [account]
-      : held.filter(({ provider }) => wanted === "all" || provider === wanted)
+      : held.filter(({ provider }) => wanted === "all" || provider === wanted))
   const named = parsed.chat ?? chat
   const scope: SearchScope = { accounts }
   if (named !== undefined) scope.chat = await chatAmong(messenger, store, accounts, named)
+  if (senders !== undefined) scope.senders = senders
   if (parsed.from?.toLowerCase() === "me") scope.outgoing = true
   else if (parsed.from !== undefined) scope.sender = await senderAmong(store, accounts, parsed.from)
   if (parsed.after !== undefined) scope.after = parsed.after

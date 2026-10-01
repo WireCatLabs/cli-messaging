@@ -30,6 +30,8 @@ export interface SearchScope {
   accounts: AccountKey[]
   chat?: { account: AccountKey; chatId: Id }
   sender?: { provider: Provider; id: Id }
+  /** Any of these senders — always a join, whatever their size. */
+  senders?: { provider: Provider; id: Id }[]
   /** `from:me`: what the account itself sent. */
   outgoing?: boolean
   /** Epoch ms, inclusive. */
@@ -59,6 +61,7 @@ interface Resolved {
   chatMessages?: number
   senderPk?: number
   senderMessages?: number
+  senderPks?: number[]
 }
 
 const quoted = (text: string) => `"${text.replaceAll('"', '""')}"`
@@ -86,6 +89,14 @@ const resolve = (context: StoreContext, scope: SearchScope): Resolved | null => 
     resolved.chatMessages = Number(
       database.prepare("SELECT message_count FROM chats WHERE pk = ?").get(chatPk)?.message_count,
     )
+  }
+  if (scope.senders) {
+    const lookup = database.prepare("SELECT pk FROM identities WHERE provider = ? AND native_id = ?")
+    resolved.senderPks = scope.senders.flatMap(({ provider, id }) => {
+      const pk = lookup.get(provider, id)?.pk
+      return pk === undefined ? [] : [Number(pk)]
+    })
+    if (resolved.senderPks.length === 0) return null
   }
   if (scope.sender) {
     const senderPk = database
@@ -115,6 +126,7 @@ const rowConditions = (resolved: Resolved, scope: SearchScope, joined: { chat: b
     where.push("m.sender_identity_pk = ?")
     params.push(resolved.senderPk as number)
   }
+  if (resolved.senderPks) where.push(`m.sender_identity_pk IN (${resolved.senderPks.join(", ")})`)
   if (scope.outgoing) where.push("m.outgoing = 1")
   if (scope.after !== undefined) {
     where.push("m.sent_at >= ?")
@@ -202,7 +214,9 @@ export const matchWords = (
       .all(match, ...params, limit + 1)
       .map((row) => ({ pk: Number(row.pk), score: Number(row.score) }))
 
-  if (newest || resolved.chatPk !== undefined || resolved.senderPk !== undefined) return page(context, full(), limit)
+  if (newest || resolved.chatPk !== undefined || resolved.senderPk !== undefined || resolved.senderPks) {
+    return page(context, full(), limit)
+  }
   const ranked = context.database
     .prepare("SELECT rowid AS pk, rank AS score FROM message_words WHERE message_words MATCH ? ORDER BY rank LIMIT ?")
     .all(match, RANKED_FIRST * (limit + 1))

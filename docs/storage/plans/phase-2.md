@@ -370,6 +370,15 @@ lane A lands for reads and search. One PR each, based on `main`.
    with items 6–7 if small.
 10. **max-cli's bot search** — `bot messages search` calls the service instead of `find({ text })`; then
    `text` leaves `find` (S12). A max-cli PR plus a cli-messaging one.
+   **Correction 2026-10-02 (design, part 1 built):** three PRs, each on `main`. (a) cli-messaging:
+   `searchStore(store, account, query)` is the service's search over a store, exported for a caller with
+   no `Messenger`; `SearchQuery.accounts` replaces the account it runs as with accounts the caller has
+   checked (a bot's own copy, or the others `readOtherBots` allows) and refuses `in:` and `source`
+   beside it, so a bot search never widens past them; `SearchQuery.senders` is any of several people
+   (repeatable `--from`), always a join, refused with `from:`. (b) max-cli, on a release with (a):
+   `bot messages search` calls `searchStore` — best first, `--newest` for the old order, the query
+   language. (c) The weekly break after (b) removes `text` from `find` and `MessageStore.search`
+   (S12), with `bench/search/store-search.ts` moved to `search()`.
 
 ## 6. Test plan
 
