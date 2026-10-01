@@ -33,6 +33,8 @@ export interface CheckInput {
   /** Service messages — someone joined, the title changed — which no rule judges. */
   service: ReadonlySet<Id>
   now: number
+  /** The messenger's own invite links, found beside the built-in Telegram and MAX ones. */
+  invites?: RegExp
 }
 
 const INVITE = /max\.ru\/join\/|(t|telegram)\.me\/(\+|joinchat\/)|tg:\/\/join/i
@@ -45,7 +47,8 @@ const STRENGTH: Record<GroupRules["links"], number> = { report: 0, delete: 1, re
  * What the rules say about what is new. Pure: nothing here talks to a messenger. One finding per
  * message — the rule with the strongest action — and one removal per person, whatever else they did.
  */
-export const judge = ({ rules, messages, joined, answerers, service, now }: CheckInput): Finding[] => {
+export const judge = ({ rules, messages, joined, answerers, service, now, invites }: CheckInput): Finding[] => {
+  const invite = invites ? new RegExp(`${INVITE.source}|${invites.source}`, "i") : INVITE
   const trusted = new Set(rules.trusted)
   const blocked = (id: Id | null, name: string | null) =>
     (id !== null && rules.blocked.includes(id)) ||
@@ -82,7 +85,7 @@ export const judge = ({ rules, messages, joined, answerers, service, now }: Chec
     const text = message.text
     const broken: [Finding["rule"], GroupRules["links"]][] = []
     if (blocked(id, message.senderName)) broken.push(["blocked", rules.blockedPeople])
-    if (INVITE.test(text)) broken.push(["invites", rules.invites])
+    if (invite.test(text)) broken.push(["invites", rules.invites])
     if (LINK.test(text) || message.attachments.some((attachment) => attachment.kind === "share")) {
       broken.push(["links", rules.links])
     }

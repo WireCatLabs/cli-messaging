@@ -59,6 +59,11 @@ export interface Messenger {
   groupSettings?: readonly (keyof GroupSettings)[]
   /** Whether the messenger says when an account was made — the moderation rule `newAccount`; yes when unset. */
   knowsAccountAge?: boolean
+  /**
+   * This messenger's invite links, which `chats moderate` judges under `invites`. Telegram's and MAX's
+   * are built in for now.
+   */
+  inviteLinks?: RegExp
   /** Whether people added can be shown the messages from before they came — `members add --history`; yes when unset. */
   addsWithHistory?: boolean
   /** The admin rights this messenger has, as `admins add --can` offers them; every one when unset. */
