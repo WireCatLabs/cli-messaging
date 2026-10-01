@@ -456,26 +456,8 @@
       "by": "P2"
     },
     "chats check": {
-      "state": "planned",
-      "by": "P2",
-      "options": {
-        "--allow-dangerous": {
-          "state": "planned",
-          "by": "P2"
-        },
-        "--dry-run": {
-          "state": "planned",
-          "by": "P2"
-        },
-        "--max-actions": {
-          "state": "planned",
-          "by": "P2"
-        },
-        "--since": {
-          "state": "planned",
-          "by": "P2"
-        }
-      }
+      "state": "max-only",
+      "reason": "named chats moderate by the standard (check changes nothing); max keeps the old name until T6 moves the command"
     },
     "chats create": {
       "state": "planned",
@@ -582,8 +564,8 @@
       "by": "P2",
       "options": {
         "--history": {
-          "state": "planned",
-          "by": "P2"
+          "state": "max-only",
+          "reason": "Telegram shows history to new members only in legacy groups, and P2 makes supergroups"
         }
       }
     },
@@ -607,6 +589,28 @@
     "chats members remove": {
       "state": "planned",
       "by": "P2"
+    },
+    "chats moderate": {
+      "state": "planned",
+      "by": "P2",
+      "options": {
+        "--allow-dangerous": {
+          "state": "planned",
+          "by": "P2"
+        },
+        "--dry-run": {
+          "state": "planned",
+          "by": "P2"
+        },
+        "--max-actions": {
+          "state": "planned",
+          "by": "P2"
+        },
+        "--since": {
+          "state": "planned",
+          "by": "P2"
+        }
+      }
     },
     "chats rules": {
       "state": "planned",
@@ -640,20 +644,20 @@
           "by": "P2"
         },
         "--members-see-link": {
-          "state": "planned",
-          "by": "P2"
+          "state": "max-only",
+          "reason": "Telegram shows a group's invite link to whoever may invite, not by a setting of its own"
         },
         "--only-admins-add": {
           "state": "planned",
           "by": "P2"
         },
         "--only-admins-call": {
-          "state": "planned",
-          "by": "P2"
+          "state": "max-only",
+          "reason": "Telegram has no setting for who may start a call"
         },
         "--only-owner-edits-info": {
-          "state": "planned",
-          "by": "P2"
+          "state": "max-only",
+          "reason": "Telegram lets admins with the right change the info, never only the owner; a different meaning gets a different name"
         },
         "--title": {
           "state": "planned",
