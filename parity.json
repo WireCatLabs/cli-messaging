@@ -917,14 +917,8 @@
         "--at": "both",
         "--file": "both",
         "--md": "both",
-        "--no-preview": {
-          "state": "planned",
-          "by": "T6"
-        },
-        "--photo": {
-          "state": "planned",
-          "by": "T6"
-        },
+        "--no-preview": "both",
+        "--photo": "both",
         "--reply-to": "both",
         "--send-id": "both",
         "--silent": "both",
