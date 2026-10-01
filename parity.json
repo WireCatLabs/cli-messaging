@@ -60,6 +60,11 @@
     },
     "--at": {
       "value": "<time>",
+      "meaning": "let the messenger send it later, even with this machine off: a local time like 2026-09-25T09:00, or 30m",
+      "note": "becomes `--at-time` — NEED-493"
+    },
+    "--at-time": {
+      "value": "<time>",
       "meaning": "let the messenger send it later, even with this machine off: a local time like 2026-09-25T09:00, or 30m"
     },
     "--background": {
@@ -970,7 +975,14 @@
       "options": {
         "--allow-any-file": "both",
         "--as-file": "both",
-        "--at": "both",
+        "--at": {
+          "state": "planned",
+          "by": "P0b"
+        },
+        "--at-time": {
+          "state": "planned",
+          "by": "P0b"
+        },
         "--file": "both",
         "--md": "both",
         "--no-preview": "both",
