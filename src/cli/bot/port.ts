@@ -2,6 +2,7 @@ import type { Command } from "commander"
 import type { Markup } from "../../domain/markdown.js"
 import type { Chat, Id, Message, Provider } from "../../domain/models.js"
 import type { Upload } from "../../sends/upload.js"
+import type { PersonFacts } from "../../store/index.js"
 import type { AppIdentity } from "../app.js"
 import type { MessagePins, MessengerCore } from "../messenger/port.js"
 import type { EventSink } from "../runs/events.js"
@@ -41,6 +42,12 @@ export interface BotHistory {
   message(chat: BotChatRef, messageId: Id): Promise<Message>
 }
 
+/** Who wrote what the adapter read, with what a `Message` has no field for. */
+export interface BotPeople {
+  /** The senders of the messages decoded since the last call — their handle and whether each is a bot — for the local copy. */
+  senders(): PersonFacts[]
+}
+
 /** What a bot shows in a chat while it works. */
 export const BOT_ACTIONS = ["typing", "photo", "video", "voice", "file"] as const
 export type BotAction = (typeof BOT_ACTIONS)[number]
@@ -61,7 +68,8 @@ export type BotAdapter = Pick<MessengerCore, "me" | "close"> &
   Partial<BotMessaging> &
   Partial<BotHistory> &
   Partial<MessagePins> &
-  Partial<BotChatTools>
+  Partial<BotChatTools> &
+  Partial<BotPeople>
 
 export interface BotConnectOptions {
   stop?: AbortSignal

@@ -140,7 +140,7 @@ const sendCommand = (bot: BotMessenger): Command =>
         seen(context, message)
         if (message.senderId) context.registry.rememberBot(message.senderId)
         const botId = message.senderId ?? (await botIdOf(context, adapter))
-        await context.copy.keep(botId, [message], "send", context.renderer.warn)
+        await context.copy.keep(botId, [message], "send", context.renderer.warn, adapter.senders?.())
         context.renderer.result({ operationId, message })
       })
     })
@@ -176,7 +176,7 @@ const listCommand = (bot: BotMessenger): Command =>
           return
         }
         const messages = await adapter.history(ref, { limit })
-        await context.copy.keep(botId, messages, "history", context.renderer.warn)
+        await context.copy.keep(botId, messages, "history", context.renderer.warn, adapter.senders?.())
         if (/^-?\d+$/.test(ref)) context.registry.observe([{ id: ref }])
         show(context, bot, messages)
       })
@@ -211,7 +211,7 @@ const showCommand = (bot: BotMessenger): Command =>
           return
         }
         const found = await adapter.message(ref, messageId)
-        await context.copy.keep(botId, [found], "history", context.renderer.warn)
+        await context.copy.keep(botId, [found], "history", context.renderer.warn, adapter.senders?.())
         show(context, bot, [found], true)
       })
     })
@@ -239,7 +239,13 @@ const editCommand = (bot: BotMessenger): Command =>
           { operationId, chatId: ref, kind: "edit", key: "bot.messages.edit", messageId, length: plain.length },
           () => edit(ref, messageId, plain, { ...(markup ? { markup } : {}), ...(options.html ? { html: true } : {}) }),
         )
-        await context.copy.keep(await botIdOf(context, adapter), [message], "send", context.renderer.warn)
+        await context.copy.keep(
+          await botIdOf(context, adapter),
+          [message],
+          "send",
+          context.renderer.warn,
+          adapter.senders?.(),
+        )
         context.renderer.result({ operationId, message })
       })
     })
