@@ -1,6 +1,8 @@
 # Handoff — lane A: the store's queries onto Drizzle, one module per aggregate
 
-Phase 1 items 7 and 8 of [`../plans/phase-1.md`](../plans/phase-1.md). **Nothing of it is built yet.**
+Phase 1 items 7 and 8 of [`../plans/phase-1.md`](../plans/phase-1.md). ~~**Nothing of it is built yet.**~~ **Correction 2026-10-01:** all six slices are merged (#194, #206, #208,
+#215, #232, #244) and released in 0.77.0; the layout is described in
+[ARCHITECTURE](../../dev/ARCHITECTURE.md#the-store).
 Lanes B and C run at the same time ([`README.md`](README.md)); this lane alone edits `src/store/store.ts`.
 
 ## 1. What this is

@@ -17,8 +17,8 @@ schema and generated migrations, store version 6 (normalized text, message count
 into `dist`. Versions 7–11 add what max-cli's personal data needs
 ([`plans/phase-1-max-tables.md`](plans/phase-1-max-tables.md), released in 0.57.0). Both CLIs pin a
 version with all of it. Items 9–11 are done (lanes B and C: the `store info|check|migrate|backup|restore`
-commands, in tg-cli; max gets them when its cache folds into the store). **Left:** items 7–8 — lane A,
-the Drizzle port, slices 1–3 of 6 merged (#194, #206, #208) — then phase 2, whose plan is approved ([`plans/phase-2.md`](plans/phase-2.md), 2026-10-01).
+commands, in tg-cli; max gets them when its cache folds into the store). Items 7–8 — lane A, the Drizzle port — are done: #194, #206, #208, #215, #232, #244, released in
+0.77.0. **Left:** phase 2, whose plan is approved ([`plans/phase-2.md`](plans/phase-2.md), 2026-10-01).
 Phase 3 is planned and approved ([`plans/phase-3.md`](plans/phase-3.md)).
 
 ## 2. Entry points

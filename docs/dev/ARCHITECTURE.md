@@ -43,6 +43,18 @@ mid-transaction, two calls on one store in `serve` or `mcp` cannot interleave in
 ([phase 1 plan, D3](../storage/plans/phase-1.md#3-decisions-made-here)). A large write therefore
 blocks the event loop while it runs — keep writes in bounded batches.
 
+**Where the queries live.** `src/store/store.ts` holds the `MessageStore` interface and `storeOver`, a
+facade that opens the transaction and delegates. The SQL is in `src/store/sqlite/`, one module per kind
+of record — `accounts`, `identities`, `chats`, `messages` (writes), `reads`, `search`, `ranges`,
+`sync` (state and fetch leases), `transcripts` — as plain functions taking a `StoreContext`: the
+connection as the `CacheDatabase` seam and as Drizzle (`orm`), and the clock. Queries are Drizzle's
+builder, called synchronously (`.get()`, `.all()`, `.run()`); FTS `MATCH`, `json_extract` and the
+`coalesce(excluded.…)` upserts stay `sql` fragments. Use `inTransaction`, never Drizzle's
+`transaction`. A statement that runs for every saved message is `.prepare()`d once per store
+(`identities.ts`, `messages.ts`): built per call, Drizzle cost about a quarter of the load rate
+([results](../../bench/search/results.md#the-real-store-after-the-message-writes-moved-to-drizzle)).
+`src/store/search-plan.test.ts` fails if search starts reading the text index once per message.
+
 Opening a store also fills `messages.normalized_text` for rows stored before version 6, when at most
 5,000 of them wait (`BACKFILL_ON_OPEN`, about 40 ms); a larger file keeps working and waits for the
 maintenance command that fills it in batches.

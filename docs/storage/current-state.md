@@ -33,7 +33,9 @@ has changed: for today's store read [ARCHITECTURE "The store"](../dev/ARCHITECTU
   counts (6), `chat_members` (7), `sync_state` (8), `fetch_leases` (9), contact recency (10) and
   transcripts (11).
 - SQLite-specific: `INSERT OR IGNORE` (`store.ts:223`), FTS5 `MATCH` (`:425`), `BEGIN IMMEDIATE`
-  (`:147`). Driver seam `src/store/driver.ts` (sync `exec`/`prepare`/`close`, `run` → `changes`),
+  (`:147`). **Correction 2026-10-01:** the queries moved to `src/store/sqlite/*.ts` (lane A, 0.77.0);
+  `INSERT OR IGNORE` is Drizzle's `onConflictDoNothing`, `MATCH` is in `search.ts`, and only
+  `BEGIN IMMEDIATE` is left in `store.ts`. Driver seam `src/store/driver.ts` (sync `exec`/`prepare`/`close`, `run` → `changes`),
   runtime picked between `node:sqlite` and `bun:sqlite` by dynamic import.
 - Openers inside the package: `connected()` lazily per connection, `withStore` per offline command — ~~`src/cli/context.ts:80`, `:133`~~ **Correction 2026-09-30:** `src/cli/messenger/context.ts` (`connected` 63, `withStore` 123), backfill (`backfill-command.ts:34`), completion only if
   the file exists (`complete-command.ts:55`), doctor with raw `openCache` (`doctor-command.ts:67`).
