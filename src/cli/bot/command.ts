@@ -25,7 +25,7 @@ const online = (context: BotContext, command: Command): BotContext => {
 const authCommand = (bot: BotMessenger, tokenVariable: string): Command => {
   const auth = new Command("auth").description("the bot token this profile uses")
 
-  annotate(auth.command("set"), { mutates: true })
+  annotate(auth.command("set"), { mutates: true, local: true })
     .description(
       `check a bot token with ${bot.name ?? "the messenger"}, then keep it — typed at a hidden prompt or piped on stdin`,
     )
@@ -68,7 +68,7 @@ const authCommand = (bot: BotMessenger, tokenVariable: string): Command => {
       })
     })
 
-  annotate(auth.command("remove"), { mutates: true })
+  annotate(auth.command("remove"), { mutates: true, local: true })
     .description("forget this profile's bot token")
     .action(async function (this: Command) {
       const context = botContext(this, bot)
@@ -129,7 +129,7 @@ const recipientsCommand = (bot: BotMessenger): Command => {
       const context = botContext(this, bot)
       await context.run(async () => renderList(context.renderer, context.format, context.recipients().read() ?? []))
     })
-  annotate(command.command("add <chat>"), { mutates: true })
+  annotate(command.command("add <chat>"), { mutates: true, local: true })
     .description("allow a chat: its id, `user:<id>`, or the title of a chat this bot has seen")
     .action(async function (this: Command, chat: string) {
       const context = botContext(this, bot)
@@ -140,13 +140,13 @@ const recipientsCommand = (bot: BotMessenger): Command => {
         renderList(context.renderer, context.format, context.recipients().read() ?? [])
       })
     })
-  annotate(command.command("remove <chat>"), { mutates: true })
+  annotate(command.command("remove <chat>"), { mutates: true, local: true })
     .description("take a chat off the list")
     .action(async function (this: Command, chat: string) {
       const context = botContext(this, bot)
       await context.run(async () => context.renderer.result({ removed: context.recipients().remove(chat) ?? null }))
     })
-  annotate(command.command("clear"), { mutates: true })
+  annotate(command.command("clear"), { mutates: true, local: true })
     .description("remove the list: the bot may write to any chat again")
     .action(async function (this: Command) {
       const context = botContext(this, bot)

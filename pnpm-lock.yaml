@@ -43,8 +43,8 @@ importers:
         specifier: ^2.3.14
         version: 2.5.14
       '@leemour/cli-core':
-        specifier: 0.13.0
-        version: 0.13.0(commander@15.0.0)(typescript@7.0.2)
+        specifier: 0.15.0
+        version: 0.15.0(commander@15.0.0)(typescript@7.0.2)
       '@modelcontextprotocol/client':
         specifier: 2.1.0
         version: 2.1.0
@@ -369,8 +369,8 @@ packages:
     resolution: {integrity: sha512-hloP58zRVCRSpgDxmqCWJNlizAlUgJFqG2ypq79DCvyv9tHjRYMDOcPFjzfl/A1/YxDvRCZz8wvZvmapQnKwFQ==}
     engines: {node: '>=12'}
 
-  '@leemour/cli-core@0.13.0':
-    resolution: {integrity: sha512-kKVV6OYalZ8bN7scl+z3uvHW7QvVWMRYH16T2r4vO8x0g9ZW1WWQaZwTIzpaPJdhxX2zTqX+3Y3/KEX3znLd/g==}
+  '@leemour/cli-core@0.15.0':
+    resolution: {integrity: sha512-rPNvr1NsKQBrGnvOz5q7qjXlDtF70UP8JFSsaThqnC+UpcORIsy1MFV0Xr6lby1MFSyK5UYsQFaAvScfZhEcNA==}
     engines: {node: '>=22'}
     hasBin: true
     peerDependencies:
@@ -1616,7 +1616,7 @@ snapshots:
     dependencies:
       jsbi: 4.3.2
 
-  '@leemour/cli-core@0.13.0(commander@15.0.0)(typescript@7.0.2)':
+  '@leemour/cli-core@0.15.0(commander@15.0.0)(typescript@7.0.2)':
     dependencies:
       cli-table3: 0.6.5
       env-paths: 4.0.0

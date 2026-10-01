@@ -74,6 +74,11 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Fixed
 
+- **Commands that change only this computer no longer say they change the messenger.** `config set`
+  and `unset`, `chats rules set` and `unset`, `recipients add`, `remove` and `clear`, and the bot's
+  `auth set`, `auth remove` and `recipients add`, `remove` and `clear` are marked `local` (cli-core
+  0.15.0), so the commands page gives them their own line. They are still writes: `commands --json`
+  shows `writes: yes`. `chats moderate` still says it changes the messenger.
 - **`bot messages send` and `edit` journal the text's length**, as the personal account's do — never the text.
 - **A write cut off by `--timeout` is an unknown outcome, not a timeout.** When the command's time ran
   out with a send, an edit or any other write still waiting for its answer, the error was `timeout`
