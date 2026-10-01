@@ -7,7 +7,19 @@
     "--after": {
       "value": "<id-or-time>",
       "meaning": "read what came after this message id, this ISO 8601 time, or 2h / 1d ago; not with --before",
-      "note": "`messages context --after <n>` is a count, not a position (e1)"
+      "note": "becomes `--after-id`, `--after-time` (`messages list`) and `--after-n` (`messages context`) — NEED-485"
+    },
+    "--after-id": {
+      "value": "<id>",
+      "meaning": "read what came after this message id; not with --after-time or the --before pair"
+    },
+    "--after-n": {
+      "value": "<n>",
+      "meaning": "how many messages after it"
+    },
+    "--after-time": {
+      "value": "<time>",
+      "meaning": "read what came after this ISO 8601 time, or 2h / 1d ago; not with --after-id or the --before pair"
     },
     "--all": {
       "meaning": "every row, no paging"
@@ -56,7 +68,19 @@
     "--before": {
       "value": "<id-or-time>",
       "meaning": "read what came before this message id, this ISO 8601 time, or 2h / 1d ago",
-      "note": "`messages context --before <n>` is a count, not a position (e1); tg's `messages list` takes `<id>` only (e7)"
+      "note": "becomes `--before-id`, `--before-time` (`messages list`) and `--before-n` (`messages context`) — NEED-485"
+    },
+    "--before-id": {
+      "value": "<id>",
+      "meaning": "read what came before this message id; not with --before-time"
+    },
+    "--before-n": {
+      "value": "<n>",
+      "meaning": "how many messages before it"
+    },
+    "--before-time": {
+      "value": "<time>",
+      "meaning": "read what came before this ISO 8601 time, or 2h / 1d ago; not with --before-id"
     },
     "--bot": {
       "meaning": "the bot section of the profile's settings, rather than the personal account's"
@@ -98,7 +122,7 @@
     "--event": {
       "value": "<names>",
       "meaning": "only these events, comma-separated, as the messenger names them",
-      "note": "differs by one letter from `watch --events`, a switch with an unrelated meaning (e12)"
+      "note": "becomes `--type` — e12"
     },
     "--events": {
       "meaning": "also print edits, deletions and reactions; every line then names its event",
@@ -147,7 +171,7 @@
     },
     "--limit": {
       "value": "<n>",
-      "meaning": "how many to show"
+      "meaning": "how many: rows to show, or messages one run fetches"
     },
     "--lines": {
       "value": "<n>",
@@ -168,7 +192,7 @@
     "--max-pages": {
       "value": "<n>",
       "meaning": "at most this many pages in one run; a page is one request, and each messenger sets the default",
-      "note": "a page is 100 messages in tg and 30 in max — the same number fetches a different amount (e3)"
+      "note": "replaced by `--limit` (messages per run) and `--page-size` — NEED-486"
     },
     "--md": {
       "meaning": "read **bold**, _italic_, ~~struck~~ and `code` in the text; \\ keeps a mark literal"
@@ -227,11 +251,20 @@
     "--output": {
       "meaning": "where to write: a directory for `messages download`, a file for `store export`",
       "default": ".",
-      "note": "`<dir>` in `messages download`, `<file>` in `store export` (e10)"
+      "note": "`messages download --output <dir>` becomes `--output-dir`; `--output` stays a file — e10"
+    },
+    "--output-dir": {
+      "value": "<dir>",
+      "meaning": "the folder to write into, created if missing",
+      "default": "."
     },
     "--page": {
       "value": "<n>",
       "meaning": "which page, starting at 1"
+    },
+    "--page-size": {
+      "value": "<n>",
+      "meaning": "how many items one request to the messenger asks for; the messenger's own if not given"
     },
     "--pause": {
       "value": "<duration>",
@@ -296,7 +329,11 @@
     "--since": {
       "value": "<id-or-time>",
       "meaning": "from this message id, an ISO 8601 time, or 2h / 1d ago; each command says its default",
-      "note": "max takes a message id too; the shared `chats events`, `store fetch`, `store export`, `inbox` and `review` take a time only — a Telegram id is a counter within one chat (e6)"
+      "note": "becomes `--since-time` everywhere — NEED-485"
+    },
+    "--since-time": {
+      "value": "<time>",
+      "meaning": "from this ISO 8601 time, or 2h / 1d ago; each command says its default"
     },
     "--stop": {
       "meaning": "stop this profile's server — the same as `server stop`"
@@ -318,6 +355,10 @@
     },
     "--transcribe": {
       "meaning": "hear voice messages not heard yet, on this machine; slow, the model must be downloaded"
+    },
+    "--type": {
+      "value": "<names>",
+      "meaning": "only events of these types, comma-separated, as the messenger names them"
     },
     "--unanswered": {
       "value": "[duration]",
@@ -460,8 +501,22 @@
     "chats events": {
       "state": "both",
       "options": {
-        "--event": "both",
-        "--since": "both"
+        "--event": {
+          "state": "planned",
+          "by": "P0b"
+        },
+        "--since": {
+          "state": "planned",
+          "by": "P0b"
+        },
+        "--since-time": {
+          "state": "planned",
+          "by": "P0b"
+        },
+        "--type": {
+          "state": "planned",
+          "by": "P0b"
+        }
       }
     },
     "chats folders": {
@@ -573,6 +628,10 @@
         "--since": {
           "state": "planned",
           "by": "P2"
+        },
+        "--since-time": {
+          "state": "planned",
+          "by": "P0b"
         }
       }
     },
@@ -734,7 +793,14 @@
         "--limit": "both",
         "--model": "both",
         "--new": "both",
-        "--since": "both",
+        "--since": {
+          "state": "planned",
+          "by": "P0b"
+        },
+        "--since-time": {
+          "state": "planned",
+          "by": "P0b"
+        },
         "--transcribe": "both"
       }
     },
@@ -786,8 +852,22 @@
     "messages context": {
       "state": "both",
       "options": {
-        "--after": "both",
-        "--before": "both"
+        "--after": {
+          "state": "planned",
+          "by": "P0b"
+        },
+        "--after-n": {
+          "state": "planned",
+          "by": "P0b"
+        },
+        "--before": {
+          "state": "planned",
+          "by": "P0b"
+        },
+        "--before-n": {
+          "state": "planned",
+          "by": "P0b"
+        }
       }
     },
     "messages delete": {
@@ -804,7 +884,14 @@
           "state": "planned",
           "by": "T6"
         },
-        "--output": "both",
+        "--output": {
+          "state": "planned",
+          "by": "P0b"
+        },
+        "--output-dir": {
+          "state": "planned",
+          "by": "P0b"
+        },
         "--pause": {
           "state": "planned",
           "by": "T6"
@@ -828,8 +915,30 @@
     "messages list": {
       "state": "both",
       "options": {
-        "--after": "both",
-        "--before": "both",
+        "--after": {
+          "state": "planned",
+          "by": "P0b"
+        },
+        "--after-id": {
+          "state": "planned",
+          "by": "P0b"
+        },
+        "--after-time": {
+          "state": "planned",
+          "by": "P0b"
+        },
+        "--before": {
+          "state": "planned",
+          "by": "P0b"
+        },
+        "--before-id": {
+          "state": "planned",
+          "by": "P0b"
+        },
+        "--before-time": {
+          "state": "planned",
+          "by": "P0b"
+        },
         "--limit": "both",
         "--mark-read": "both",
         "--model": "both",
@@ -961,7 +1070,14 @@
           "state": "planned",
           "by": "T6"
         },
-        "--since": "both",
+        "--since": {
+          "state": "planned",
+          "by": "P0b"
+        },
+        "--since-time": {
+          "state": "planned",
+          "by": "P0b"
+        },
         "--transcribe": "both",
         "--unanswered": "both"
       }
@@ -1093,7 +1209,14 @@
       "options": {
         "--format": "both",
         "--output": "both",
-        "--since": "both"
+        "--since": {
+          "state": "planned",
+          "by": "P0b"
+        },
+        "--since-time": {
+          "state": "planned",
+          "by": "P0b"
+        }
       }
     },
     "store fetch": {
@@ -1105,9 +1228,27 @@
         },
         "--estimate": "both",
         "--last": "both",
-        "--max-pages": "both",
+        "--limit": {
+          "state": "planned",
+          "by": "P0b"
+        },
+        "--max-pages": {
+          "state": "planned",
+          "by": "P0b"
+        },
+        "--page-size": {
+          "state": "planned",
+          "by": "P0b"
+        },
         "--pause": "both",
-        "--since": "both"
+        "--since": {
+          "state": "planned",
+          "by": "P0b"
+        },
+        "--since-time": {
+          "state": "planned",
+          "by": "P0b"
+        }
       }
     },
     "store info": {
