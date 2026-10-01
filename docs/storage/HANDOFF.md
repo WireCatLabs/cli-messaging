@@ -55,7 +55,7 @@ What bites **every** lane; each handoff adds its own.
   `inTransaction`, never Drizzle's `transaction`, and never `await` inside a transaction.
 - **A deleted message leaves no text behind** (NEED-393 A): tombstone, empty text, no normalized copy,
   revisions or transcript. Only the messenger returning it after the deletion (`seenAt`) brings it back.
-- **Migrations**: announce the number first (next free is **13**; 12 is phase 2's word index,
+- **Migrations**: announce the number first (~~next free is **13**~~ **correction 2026-10-01:** the next free number lives only in the lanes plan §4 — 13 and 14 are taken; 12 is phase 2's word index,
   [`../plans/2026-09-29-parity-lanes.md`](../plans/2026-09-29-parity-lanes.md)); additive only;
   `min_compatible` rises only with the owner's word, and then tg-cli and max-cli bump the same day —
   their tests run on a sandboxed store and will not notice.
