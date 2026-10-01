@@ -34,6 +34,7 @@ export const linkInputs = (
       sentAt: messages.sentAt,
       replyToId: messages.replyToNativeId,
       threadId: messages.threadNativeId,
+      mentions: messages.mentions,
     })
     .from(messages)
     .leftJoin(identities, eq(identities.pk, messages.senderIdentityPk))
@@ -56,6 +57,7 @@ export const linkInputs = (
       timestamp: toIso(row.sentAt) as string,
       ...(row.replyToId === null ? {} : { replyToId: row.replyToId }),
       ...(row.threadId === null ? {} : { threadId: row.threadId }),
+      ...(row.mentions === null ? {} : { mentions: JSON.parse(row.mentions) as Id[] }),
     })),
     next: rows.length === limit && last ? position(last.sentAt, last.pk) : null,
   }

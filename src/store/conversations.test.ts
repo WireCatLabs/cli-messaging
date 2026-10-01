@@ -100,6 +100,17 @@ describe("conversations in the store", () => {
     await store.close()
   })
 
+  it("keeps whom a message mentions by id, and hands it to the rules", async () => {
+    const { store } = await opened()
+    await store.saveMessages(OWNER, "-1", [{ ...message("5", "8", "Ana, see above"), mentions: ["7"] }], {
+      via: "history",
+    })
+
+    expect((await store.messages(OWNER, "-1", { limit: 1 })).items[0]?.mentions).toEqual(["7"])
+    expect((await everyInput(store, 10)).at(-1)?.mentions).toEqual(["7"])
+    await store.close()
+  })
+
   it("**a rebuild keeps the agent's links**, and marks one stale when its message changed after it", async () => {
     const { store, path } = await opened()
     await build(store)

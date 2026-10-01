@@ -21,6 +21,7 @@ const FIELDS = [
   "outgoing",
   "reactions",
   "providerMetadata",
+  "mentions",
   "normalizedText",
   "normalizerVersion",
 ] as const
@@ -98,6 +99,7 @@ const fieldsOf = (message: Message, sender: number | null): Fields => ({
   outgoing: message.outgoing === null ? null : Number(message.outgoing),
   reactions: json(message.reactions ?? undefined),
   providerMetadata: json(message.providerMetadata),
+  mentions: message.mentions?.length ? JSON.stringify(message.mentions) : null,
   normalizedText: normalize(message.text),
   normalizerVersion: NORMALIZER_VERSION,
 })

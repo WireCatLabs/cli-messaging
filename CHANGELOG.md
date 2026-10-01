@@ -24,6 +24,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   `conversationsCommand`. A profile that denies `messages` is refused them too.
 - **`store check` reports conversations**: per built chat, the rules version that built it, whether it
   is this build's, and how many of the agent's links went stale; a note names the chats to rebuild.
+- **`Message.mentions`**: the people a message mentions by id, where the messenger marks them; the store
+  keeps it and the mention rule follows it, so a mention by name with no `@handle` links too (rules v3).
 
 ## 0.88.0 — 01.10.2026
 
@@ -57,6 +59,7 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   `ChatRegistry` and `registryProfiles` (the chats a bot has seen, one 0600 file per bot),
   `botFiles` and `botsDirectory` (max-cli's paths, unchanged), and the types `BotMessenger` and
   `BotAdapter`. From `@leemour/cli-messaging/cli`.
+
 - **A bot's settings** (P8): the file gains `personal` and `bot` sections, each with `defaults` and
   `profiles`; the most specific entry wins — this profile's bot entry, the profile, every bot,
   everyone. `resolveSettings(flags, { kind: "bot" })` reads them; `Settings` gains `kind` and
