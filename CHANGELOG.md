@@ -6,8 +6,19 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- **`listed` and `renderList`** in `./cli`: a list with no pages in the envelope a paged one uses —
+  `page: 1`, `limit` the count, `hasMore: false`.
+
 ### Changed — may break callers
 
+- **Every list answers `{ items, page, limit, hasMore }` in `--json`.** `store status` and
+  `store jobs list` printed a bare array; `messages scheduled`, `messages context`,
+  `account sessions list` and `models audio list` printed only `items` (`directory` stays beside
+  them); `messages list` gains `page: 1`. `chats events` moves `events` to `items` and `more` to
+  `hasMore`, keeping `chatId` and `since`; `server logs` moves `lines` to `items`, keeping `profile`
+  and `unit`. `--jsonl` and the tables a person sees do not change.
 - **`messages send` and `messages edit` drop `--markdown`; `--md` stays.** The standard allows no
   alias. A script that types `--markdown` now fails with an unknown option.
 - **`messages send --file`, `--photo`, `--voice` show their value as `<file>`**, the argument name

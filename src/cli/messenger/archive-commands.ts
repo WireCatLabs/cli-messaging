@@ -4,6 +4,7 @@ import { CliError } from "@leemour/cli-core"
 import { Command } from "commander"
 import { toMarkdown } from "../../render/markdown.js"
 import { renderMessages } from "../../render/messages.js"
+import { renderList } from "../paging.js"
 import { fetchCommand, jobsCommand } from "./backfill-command.js"
 import { type Messenger, messengerContext } from "./context.js"
 import { momentOf } from "./inbox.js"
@@ -32,7 +33,7 @@ const statusCommand = (messenger: Messenger): Command =>
     .action(async function (this: Command, chat: string | undefined) {
       const context = messengerContext(this, messenger)
       const rows = await context.withServices((services) => services.archive.status(chat))
-      context.renderer.stream(rows)
+      renderList(context.renderer, context.format, rows)
       if (rows.length === 0) context.renderer.note("the store holds no messages for this profile yet")
     })
 

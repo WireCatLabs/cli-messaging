@@ -6,6 +6,7 @@ import { CliError, resolvePaths, writeSecurely } from "@leemour/cli-core"
 import { Command } from "commander"
 import type { AppIdentity } from "../app.js"
 import { type BaseEnvironment, environmentOf } from "../context.js"
+import { listed } from "../paging.js"
 import { type Messenger, messengerContext } from "./context.js"
 import { alive, carries } from "./processes.js"
 import { type Lock, lockPath, readLock } from "./serve-command.js"
@@ -511,7 +512,7 @@ export const serverCommand = (messenger: Messenger): Command => {
       if (context.format === "pretty") {
         if (text) context.streams.data(text.replace(/\n$/, ""))
       } else
-        context.renderer.result({ profile: unit.profile, unit: unit.name, lines: text.split("\n").filter(Boolean) })
+        context.renderer.result({ ...listed(text.split("\n").filter(Boolean)), profile: unit.profile, unit: unit.name })
     })
 
   command

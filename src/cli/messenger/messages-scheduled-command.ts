@@ -1,5 +1,6 @@
 import { Command } from "commander"
 import { renderMessages } from "../../render/messages.js"
+import { listed } from "../paging.js"
 import { type Messenger, messengerContext } from "./context.js"
 import { capability } from "./port.js"
 
@@ -32,5 +33,5 @@ export const scheduledCommand = (messenger: Messenger): Command =>
         return
       }
       if (context.format === "jsonl") context.renderer.stream(items)
-      else context.renderer.result({ items })
+      else context.renderer.result(listed(items))
     })

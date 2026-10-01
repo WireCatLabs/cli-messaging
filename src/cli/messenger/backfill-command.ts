@@ -7,6 +7,7 @@ import { FETCHING } from "../../services/archive.js"
 import { envName } from "../app.js"
 import { type BaseEnvironment, environmentOf } from "../context.js"
 import { isCliFailure } from "../failures.js"
+import { renderList } from "../paging.js"
 import { parseDuration } from "../settings.js"
 import {
   type Job,
@@ -134,7 +135,7 @@ export const jobsCommand = (messenger: Messenger): Command => {
     .action(function (this: Command) {
       const context = messengerContext(this, messenger)
       const jobs = listJobs(jobsDir(messenger.app, context.env)).filter((job) => job.profile === context.profile)
-      context.renderer.stream(jobs.map(brief))
+      renderList(context.renderer, context.format, jobs.map(brief))
       if (jobs.length === 0) context.renderer.note("no background fetch jobs for this profile")
     })
 
