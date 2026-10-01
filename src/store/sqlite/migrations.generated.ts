@@ -95,5 +95,20 @@ export const GENERATED: { name: string; statements: string[] }[] = [
       "-- 5,000 is BACKFILL_ON_OPEN and 1 is NORMALIZER_VERSION as of this version; a migration is frozen.\n-- A larger file is filled up to the watermark in batches, outside this transaction.\nINSERT INTO search_index_state (name, watermark, filled_through, terms_through, normalizer_version, built_at)\n  SELECT 'message_words', coalesce(max(pk), 0),\n    CASE WHEN count(*) <= 5000 THEN coalesce(max(pk), 0) ELSE 0 END,\n    0, 1,\n    CASE WHEN count(*) <= 5000 THEN CAST(unixepoch('subsec') * 1000 AS INTEGER) END\n  FROM messages;",
       "INSERT INTO message_words (rowid, normalized_text, scope)\n  SELECT pk, normalized_text, 'c' || chat_pk || coalesce(' s' || sender_identity_pk, '')\n  FROM messages\n  WHERE normalized_text <> '' AND (SELECT count(*) FROM messages) <= 5000;"
     ]
+  },
+  {
+    "name": "20261001170143_version-13-conversations",
+    "statements": [
+      "CREATE TABLE `conversation_messages` (\n\t`conversation_pk` integer NOT NULL,\n\t`message_pk` integer NOT NULL,\n\tCONSTRAINT `conversation_messages_pk` PRIMARY KEY(`conversation_pk`, `message_pk`),\n\tCONSTRAINT `fk_conversation_messages_conversation_pk_conversations_pk_fk` FOREIGN KEY (`conversation_pk`) REFERENCES `conversations`(`pk`) ON DELETE CASCADE,\n\tCONSTRAINT `fk_conversation_messages_message_pk_messages_pk_fk` FOREIGN KEY (`message_pk`) REFERENCES `messages`(`pk`) ON DELETE CASCADE\n);",
+      "CREATE TABLE `conversation_state` (\n\t`chat_pk` integer PRIMARY KEY,\n\t`enabled_at` integer NOT NULL,\n\t`built_at` integer,\n\t`algorithm_version` integer,\n\t`current_build` integer,\n\tCONSTRAINT `fk_conversation_state_chat_pk_chats_pk_fk` FOREIGN KEY (`chat_pk`) REFERENCES `chats`(`pk`) ON DELETE CASCADE\n);",
+      "CREATE TABLE `conversations` (\n\t`pk` integer PRIMARY KEY,\n\t`chat_pk` integer NOT NULL,\n\t`first_message_pk` integer NOT NULL,\n\t`build` integer NOT NULL,\n\t`first_at` integer NOT NULL,\n\t`last_at` integer NOT NULL,\n\t`message_count` integer NOT NULL,\n\t`built_at` integer NOT NULL,\n\t`algorithm_version` integer NOT NULL,\n\tCONSTRAINT `fk_conversations_chat_pk_chats_pk_fk` FOREIGN KEY (`chat_pk`) REFERENCES `chats`(`pk`) ON DELETE CASCADE,\n\tCONSTRAINT `fk_conversations_first_message_pk_messages_pk_fk` FOREIGN KEY (`first_message_pk`) REFERENCES `messages`(`pk`) ON DELETE CASCADE\n);",
+      "CREATE TABLE `message_links` (\n\t`chat_pk` integer NOT NULL,\n\t`message_pk` integer NOT NULL,\n\t`parent_pk` integer,\n\t`source` text NOT NULL,\n\t`kind` text NOT NULL,\n\t`confidence` real NOT NULL,\n\t`method` text NOT NULL,\n\t`version` text,\n\t`batch` text,\n\t`build` integer,\n\t`created_at` integer NOT NULL,\n\t`stale_at` integer,\n\tCONSTRAINT `fk_message_links_chat_pk_chats_pk_fk` FOREIGN KEY (`chat_pk`) REFERENCES `chats`(`pk`) ON DELETE CASCADE,\n\tCONSTRAINT `fk_message_links_message_pk_messages_pk_fk` FOREIGN KEY (`message_pk`) REFERENCES `messages`(`pk`) ON DELETE CASCADE,\n\tCONSTRAINT `fk_message_links_parent_pk_messages_pk_fk` FOREIGN KEY (`parent_pk`) REFERENCES `messages`(`pk`) ON DELETE CASCADE\n);",
+      "ALTER TABLE `messages` ADD `mentions` text;",
+      "CREATE INDEX `conversation_messages_by_message` ON `conversation_messages` (`message_pk`);",
+      "CREATE INDEX `conversations_by_chat` ON `conversations` (`chat_pk`,`build`,`first_at`);",
+      "CREATE UNIQUE INDEX `message_links_unique` ON `message_links` (`message_pk`,ifnull(\"parent_pk\", 0),`source`,`kind`,ifnull(\"build\", 0));",
+      "CREATE INDEX `message_links_by_parent` ON `message_links` (`parent_pk`);",
+      "CREATE INDEX `message_links_by_build` ON `message_links` (`chat_pk`,`build`);"
+    ]
   }
 ]

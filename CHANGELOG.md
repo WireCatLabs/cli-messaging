@@ -11,7 +11,12 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 - **A test can hand in the local speech recognizer**: `recognizer` in the environment `run()` and
   `provide` take, used by `messages list --transcribe` and `messages transcribe` in place of the
   downloaded model.
-
+- **Conversation tables in the store (store version 13)**: `message_links`, `conversations`,
+  `conversation_messages` and `conversation_state`, empty until phase 3's `conversations build` fills
+  them. Every foreign key cascades, so deleting messages or chats — by any build — takes their
+  conversation rows with them. Each rebuild of a chat is written under its own build number and made
+  current at once, so a big chat's rebuild never holds the write lock for long. `messages.mentions`
+  keeps whom a message mentions by id, where the messenger says so.
 - **A bot's settings** (P8): the file gains `personal` and `bot` sections, each with `defaults` and
   `profiles`; the most specific entry wins — this profile's bot entry, the profile, every bot,
   everyone. `resolveSettings(flags, { kind: "bot" })` reads them; `Settings` gains `kind` and

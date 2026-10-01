@@ -109,6 +109,21 @@ conversation_state
 
 All four are derived: dropping them never touches `messages` (requirements §29.3, §29.5).
 
+**Added 2026-10-01, at build (store version 13):** every foreign key of the four tables is `ON DELETE
+CASCADE`. A build that knows nothing of these tables purges an account by deleting its messages and
+chats; with the foreign keys enforced, that delete would otherwise fail once a link points at one of
+them. "Starts a conversation" (`parent_pk` `NULL`) has its own partial unique index, since a `UNIQUE`
+constraint treats `NULL`s as distinct.
+
+**Correction 2026-10-01 to C3 (owner, NEED-475 A):** a chat is not replaced in one transaction. At 1M
+messages that held the write lock for 14–16 s, and every other process waits 5 s
+([`bench/disentangle/`](../../../bench/disentangle/README.md)). Each rebuild gets a **build number**:
+its links and conversations are written in short transactions under that number, one short transaction
+makes it `conversation_state.current_build`, and the older builds are then deleted in batches. Readers
+see only the current build, so a failed build still leaves the previous one intact. `build` is on
+`conversations` and `message_links` (`NULL` for the agent's links); one unique index covers every link,
+with `ifnull` for the missing parent and build.
+
 **C3 · Rebuild the whole chat every time, in phase 3.** A rebuild deletes the chat's `provider` and
 `rule` links and its conversations, recomputes them from `messages`, and stamps the time the build
 **started**. No watermark and no dirty regions. Why: for the largest chat we hold (5,000 messages) this
@@ -183,7 +198,7 @@ Valencia Expats · 12 May 10:01–10:05 · 4 messages · Alice, Carol
    format, and runs the corpus's own `conversation-eval` scorers (Python, via `uv`). Also scores against
    our own replies: hide a random 20% of reply links in a local archive, rebuild, count how many the
    rules recover — numbers only, the archive never leaves the machine.
-7. ✅ 2026-10-01, rules only — 1.8 s and 285 MB for one chat of 1M ([`bench/disentangle/`](../../../bench/disentangle/README.md#scale-2026-10-01)); writing to the store waits for item 2 · **Measure**: build time and memory for 5k, 100k and 1M generated messages (`bench/search`'s
+7. **Measure**: build time and memory for 5k, 100k and 1M generated messages (`bench/search`'s
    generator); if 1M takes more than a minute, plan region rebuilds.
 8. **`db doctor`** reports per enabled chat: built with which version, stale agent links.
 

@@ -25,4 +25,5 @@ export {
   sqliteTable,
   text,
   unique,
+  uniqueIndex,
 } from "drizzle-orm/sqlite-core"
