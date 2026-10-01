@@ -115,8 +115,11 @@ export interface ChatReading {
 export interface MessageEditing {
   /** The new text of one of the owner's own messages; the answer is the message as it now stands. */
   edit(chatId: Id, messageId: Id, text: string): Promise<Message>
-  /** One message into another chat; the answer is the copy there. `silent` delivers it without a notification. */
-  forward(fromChatId: Id, messageId: Id, toChatId: Id, options: { silent?: boolean }): Promise<Message>
+  /**
+   * One message into another chat; the answer is the copy there. `silent` delivers it without a
+   * notification. A repeat with the same `sendId` must leave one copy, as a send does.
+   */
+  forward(fromChatId: Id, messageId: Id, toChatId: Id, options: { sendId: string; silent?: boolean }): Promise<Message>
   /** For the owner only, unless `forEveryone`; neither can be undone. */
   delete(chatId: Id, messageIds: Id[], options: { forEveryone: boolean }): Promise<void>
 }

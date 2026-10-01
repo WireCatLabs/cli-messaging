@@ -636,13 +636,18 @@ describe("sending over MCP", () => {
     })
     const { call, env } = await connect(telegram, { allowSend: true })
 
-    const { isError, body } = await call("chat_messages_forward", { chat: "7", message: "1", to: "Book club" })
+    const { isError, body } = await call("chat_messages_forward", {
+      chat: "7",
+      message: "1",
+      to: "Book club",
+      send_id: "9001",
+    })
 
     expect(isError).toBe(false)
-    expect(body.message).toMatchObject({ id: "51" })
-    expect(forwards).toEqual([["7", "1", "7", {}]])
+    expect(body).toMatchObject({ sendId: "9001", message: { id: "51" } })
+    expect(forwards).toEqual([["7", "1", "7", { sendId: "9001" }]])
     const entries = new SendJournal(sendsPathFor(app, "default", env)).entries()
-    expect(entries.at(-1)).toMatchObject({ kind: "forward", outcome: "sent", messageId: "51" })
+    expect(entries.at(-1)).toMatchObject({ kind: "forward", outcome: "sent", messageId: "51", sendId: "9001" })
   })
 
   it("pins and unpins through the guard, quietly unless asked", async () => {

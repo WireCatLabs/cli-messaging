@@ -6,6 +6,13 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- **`messages forward --send-id <id>`**, and `send_id` on the `messages_forward` tool: a forward whose
+  outcome was unknown is repeated with its send id, and the messenger keeps one copy. The answer now
+  carries `sendId`. `MessageEditing.forward` receives `sendId` in its options; an adapter passes it as
+  the messenger's own deduplication id (Telegram's `random_id`, MAX's `cid`).
+
 ## 0.72.0 — 01.10.2026
 
 ### Added
