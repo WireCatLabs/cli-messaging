@@ -129,7 +129,7 @@ describe("bot messages send", () => {
     expect(done.code).toBe(0)
     expect(done.answer).toMatchObject({ operationId: expect.any(String), message: { chatId: "-100", text: "Hello" } })
     expect(sent).toMatchObject([{ chat: "-100", text: "Hello" }])
-    expect(journal()).toMatchObject([{ chatId: "-100", kind: "message", outcome: "sent", messageId: "100" }])
+    expect(journal()).toMatchObject([{ chatId: "-100", kind: "message", outcome: "sent", messageId: "100", length: 5 }])
     expect(JSON.stringify(journal())).not.toContain("Hello")
     const kept = await call(["sales", "bot", "messages", "show", "Team", "100", "--offline", "--json"])
     expect(kept.answer).toMatchObject({ id: "100", text: "Hello" })

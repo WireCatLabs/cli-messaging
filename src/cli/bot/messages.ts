@@ -119,7 +119,14 @@ const sendCommand = (bot: BotMessenger): Command =>
         const operationId = newOperationId()
         const message = await guardedWrite(
           context.guard(),
-          { operationId, chatId: ref, kind: "message", key: "bot.messages.send", ...(replyTo ? { replyTo } : {}) },
+          {
+            operationId,
+            chatId: ref,
+            kind: "message",
+            key: "bot.messages.send",
+            length: plain.length,
+            ...(replyTo ? { replyTo } : {}),
+          },
           () =>
             send(ref, plain, {
               ...(replyTo ? { replyTo } : {}),
@@ -229,7 +236,7 @@ const editCommand = (bot: BotMessenger): Command =>
         const operationId = newOperationId()
         const message = await guardedWrite(
           context.guard(),
-          { operationId, chatId: ref, kind: "edit", key: "bot.messages.edit", messageId },
+          { operationId, chatId: ref, kind: "edit", key: "bot.messages.edit", messageId, length: plain.length },
           () => edit(ref, messageId, plain, { ...(markup ? { markup } : {}), ...(options.html ? { html: true } : {}) }),
         )
         await context.copy.keep(await botIdOf(context, adapter), [message], "send", context.renderer.warn)
