@@ -1,4 +1,4 @@
-// Loads the corpus through the real store — openStore and saveMessages over a version 5 file — so what
+// Loads the corpus through the real store — openStore and saveMessages over a current file — so what
 // phase 1 changes (the migration, the triggers, Drizzle) is measured on the schema users have, not on
 // sqlite.ts's own. Needs the package built: `pnpm build` at the repository root.
 //
@@ -62,7 +62,7 @@ const load = performance.now() - t0
 await store.close()
 
 out(
-  `| store (openStore + saveMessages, schema 5) | ${RUNTIME} | ${N.toLocaleString("en")} | batches of ${BATCH} per chat | ` +
+  `| store (openStore + saveMessages, schema 12) | ${RUNTIME} | ${N.toLocaleString("en")} | batches of ${BATCH} per chat | ` +
     `${Math.round(rows / (load / 1000)).toLocaleString("en")} rows/s (${(load / 1000).toFixed(2)} s) | FTS by triggers, inline | ` +
     `${mb(du(dir))} | ${maxRssMb()} MB |`,
 )

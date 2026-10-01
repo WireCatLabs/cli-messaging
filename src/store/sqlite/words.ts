@@ -10,11 +10,13 @@ import type { StoreContext } from "./open.js"
 import { hitsByPk } from "./search.js"
 
 /**
- * A chat or a sender with fewer messages than this is filtered inside the word index; a larger one by
- * a join (phase 2 plan S6). Measured: the token wins at 2k messages, the join at 500k; the benchmark of
- * item 8 sets the number between them.
+ * A chat or a sender with at most this many messages is filtered inside the word index; a larger one by
+ * a join (phase 2 plan S6). Measured on 1M (`bench/search/store-chain.ts`): the token is 3.5 times
+ * faster for "any word" in an 85k chat, and 5% slower in a 500k one.
  */
-export const SCOPE_TOKEN_LIMIT = 20_000
+export const SCOPE_TOKEN_LIMIT = 100_000
+/** The scope column out of bm25: otherwise a chat under the limit would rank its hits by the token too. */
+const UNSCOPED_RANK = "bm25(1.0, 0.0)"
 /** Ranked inside the index first, this many times the page, before the join drops other accounts' rows. */
 const RANKED_FIRST = 5
 
@@ -170,7 +172,7 @@ export const matchWords = (
   const resolved = resolve(context, scope)
   if (!resolved) return empty
 
-  const tokenChat = resolved.chatPk !== undefined && (resolved.chatMessages ?? 0) < SCOPE_TOKEN_LIMIT
+  const tokenChat = resolved.chatPk !== undefined && (resolved.chatMessages ?? 0) <= SCOPE_TOKEN_LIMIT
   const tokenSender = resolved.senderPk !== undefined && (resolved.senderMessages ?? 0) <= SCOPE_TOKEN_LIMIT
   const required =
     mode === "every" ? groups.map((group) => `(${group.join(" OR ")})`).join(" AND ") : groups.flat().join(" OR ")
@@ -193,7 +195,8 @@ export const matchWords = (
       .prepare(
         `SELECT m.pk AS pk, f.rank AS score
          FROM message_words f CROSS JOIN messages m CROSS JOIN chats c
-         WHERE message_words MATCH ? AND m.pk = f.rowid AND c.pk = m.chat_pk AND ${where}
+         WHERE message_words MATCH ? AND f.rank MATCH '${UNSCOPED_RANK}' AND m.pk = f.rowid AND c.pk = m.chat_pk
+           AND ${where}
          ORDER BY ${order} LIMIT ?`,
       )
       .all(match, ...params, limit + 1)
