@@ -68,7 +68,7 @@ export const DEFAULT_PERMISSIONS: Readonly<Record<PermissionKey, Level>> = {
 }
 
 /** The resources at the top of the command tree, which `readOnly` and `allow` turn read-only as a whole. */
-const RESOURCES = ["messages", "reactions", "polls", "topics", "chats", "contacts", "account"] as const
+export const RESOURCES = ["messages", "reactions", "polls", "topics", "chats", "contacts", "account"] as const
 
 const OLD_WORDS: Record<Permission, PermissionKey[]> = {
   send: ["messages.send", "polls.create"],

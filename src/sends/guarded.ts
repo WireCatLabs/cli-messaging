@@ -25,6 +25,7 @@ export const guardedWrite = async <T>(
   settled: (done: T) => Partial<Attempt> = () => ({}),
 ): Promise<T> => {
   try {
+    await guard.ask?.(attempt)
     guard.check(attempt)
   } catch (error) {
     guard.record({ ...attempt, outcome: "refused", errorCode: codeOf(error) })

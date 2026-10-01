@@ -1,4 +1,6 @@
-import { closeSync, openSync, readSync, writeSync } from "node:fs"
+import { openSync } from "node:fs"
+import { createInterface } from "node:readline"
+import { ReadStream } from "node:tty"
 import { CliError } from "@leemour/cli-core"
 import type { Command } from "commander"
 import type { Asker } from "../../sends/guard.js"
@@ -9,25 +11,28 @@ export const skipFlagFor = (key: string): "--allow-dangerous" | "--yes" =>
   key === "messages.delete" ? "--allow-dangerous" : "--yes"
 
 /**
- * Asks at the terminal, synchronously, because the guard's check is synchronous and runs inside the
- * write. Reads `/dev/tty` rather than stdin: stdin may be the text being sent.
+ * One line from the terminal itself, not stdin — stdin may be the text being sent. `null` when no
+ * person is there. Ctrl-C and a closed terminal cancel, as `readSecret` does.
  */
-const fromTerminal = (question: string): string | null => {
+const fromTerminal = async (question: string): Promise<string | null> => {
   if (!process.stdin.isTTY || !process.stderr.isTTY) return null
-  let fd: number
+  let input: ReadStream
   try {
-    fd = openSync("/dev/tty", "r+")
+    input = new ReadStream(openSync("/dev/tty", "r"))
   } catch {
     return null
   }
+  const reader = createInterface({ input, output: process.stderr, terminal: true })
   try {
-    writeSync(fd, question)
-    const bytes: number[] = []
-    const one = Buffer.alloc(1)
-    while (readSync(fd, one, 0, 1, null) === 1 && one[0] !== 0x0a) bytes.push(one[0] as number)
-    return Buffer.from(bytes).toString("utf8")
+    return await new Promise<string>((resolve, reject) => {
+      const cancel = () => reject(new CliError("cancelled", "cancelled — nothing was done"))
+      reader.once("SIGINT", cancel)
+      reader.once("close", cancel)
+      reader.question(question, resolve)
+    })
   } finally {
-    closeSync(fd)
+    reader.close()
+    input.destroy()
   }
 }
 
@@ -42,14 +47,26 @@ const what = (key: string, { chatId, count, personIds, forEveryone }: Parameters
     .filter(Boolean)
     .join(", ")
 
-/** For a command a person typed: the flag says yes, or the terminal asks, or nobody can — and it is refused. */
+/**
+ * For a command a person typed: the flag says yes, or the terminal asks, or nobody can — and it is
+ * refused. Never asks under `--json` or `--jsonl`: a program reads those, and a harness that gives
+ * an agent a terminal would otherwise wait for ever.
+ */
 export const terminalAsker =
   (command: Command): Asker =>
-  (key, request) => {
+  async (key, request) => {
     const flag = skipFlagFor(key)
-    const given = command.optsWithGlobals<{ yes?: boolean; allowDangerous?: boolean }>()
+    const given = command.optsWithGlobals<{
+      yes?: boolean
+      allowDangerous?: boolean
+      json?: boolean
+      jsonl?: boolean
+    }>()
     if (flag === "--yes" ? given.yes === true : given.allowDangerous === true) return
-    const answer = (environmentOf(command).answer ?? fromTerminal)(`${what(key, request)} — go ahead? [y/N] `)
+    const machine = given.json === true || given.jsonl === true
+    const answer = machine
+      ? null
+      : await (environmentOf(command).answer ?? fromTerminal)(`${what(key, request)} — go ahead? [y/N] `)
     if (answer === null) {
       throw new CliError(
         "confirmation_required",

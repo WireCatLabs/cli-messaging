@@ -35,10 +35,10 @@ export interface GuardRequest {
 }
 
 /**
- * Asked when a write's level is `ask`: returns when the owner said yes — a flag, or an answer at
- * the terminal — and throws `confirmation_required` otherwise.
+ * Asked when a write's level is `ask`: resolves when the owner said yes — a flag, or an answer at
+ * the terminal — and rejects with `confirmation_required` or `cancelled` otherwise.
  */
-export type Asker = (key: PermissionKey, request: GuardRequest) => void
+export type Asker = (key: PermissionKey, request: GuardRequest) => Promise<void>
 
 /** What `MaxClient.messages.send` asks before it sends, and tells after — on every outcome. */
 export interface SendGuard {
@@ -47,6 +47,11 @@ export interface SendGuard {
    * the journal under a lock, unless `reserve` is false — over a background server, the server holds it.
    */
   check(request: GuardRequest, options?: { reserve?: boolean }): void
+  /**
+   * The question a write at level `ask` needs, before `check`: `check` refuses such a write unless
+   * this request was answered yes, so a caller that skips it is refused rather than let through.
+   */
+  ask?(request: GuardRequest): Promise<void>
   record(entry: Omit<SendEntry, "at" | "profile">): void
 }
 
@@ -127,6 +132,7 @@ export const sendGuard = ({
   now = () => new Date(),
 }: SendGuardOptions): SendGuard => {
   let reservation: string | undefined
+  const answered = new WeakSet<GuardRequest>()
 
   const permitted = (request: GuardRequest) => {
     const { chatId, kind = "message", action, personIds } = request
@@ -162,7 +168,9 @@ export const sendGuard = ({
           { permission: key },
         )
       }
-      if (level === "ask") ask(key, request)
+      if (level === "ask" && !answered.has(request)) {
+        throw new CliError("confirmation_required", `${key} asks before it acts, and it was not asked`)
+      }
     }
 
     const allowed = recipients.read()
@@ -239,6 +247,14 @@ export const sendGuard = ({
   }
 
   return {
+    ask: async (request) => {
+      if (permissions === undefined) return
+      const key = request.key ?? keyForWrite(request.kind ?? "message", request.action)
+      if (levelFor(permissions, key).level !== "ask") return
+      await ask(key, request)
+      answered.add(request)
+    },
+
     check: (request, { reserve = true } = {}) => {
       permitted(request)
       const asked = { ...request, people: request.personIds?.length ?? request.count }
@@ -284,7 +300,7 @@ export const sendGuard = ({
   }
 }
 
-const refuseToAsk: Asker = (key) => {
+const refuseToAsk: Asker = async (key) => {
   throw new CliError(
     "confirmation_required",
     `${key} asks before it acts (its permission level is ask), and nobody is here to answer — ` +
@@ -328,6 +344,7 @@ export const sharedJournal = (guard: SendGuard, wire: { readonly journals: boole
         // The check comes before the connection, when `journals` cannot tell yet; the server
         // reserves under its own lock, and a command that falls back to its own socket goes unreserved.
         check: (request) => guard.check(request, { reserve: false }),
+        ...(guard.ask ? { ask: guard.ask } : {}),
         record: (entry) => {
           if (entry.outcome === "refused" || !wire.journals) guard.record(entry)
         },

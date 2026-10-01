@@ -8,6 +8,7 @@ import {
   PERMISSIONS,
   type Permission,
   type PermissionKey,
+  RESOURCES,
 } from "../sends/permissions.js"
 import { type AppIdentity, envName } from "./app.js"
 import { DEFAULT_PROFILE, usableProfileName } from "./profile.js"
@@ -32,7 +33,10 @@ const permissionList = v.array(
 const permissionLevels = v.record(
   v.pipe(
     v.string(),
-    v.regex(/^[a-z][a-z-]*(\.[a-z][a-z-]*)*$/, (issue) => `${issue.input} is not a command path, like messages.delete`),
+    v.regex(
+      new RegExp(`^(${RESOURCES.join("|")})(\\.[a-z][a-z-]*)*$`),
+      (issue) => `${issue.input} is not a command path — it starts with one of ${RESOURCES.join(", ")}`,
+    ),
   ),
   v.picklist(LEVELS, (issue) => `has to be one of ${LEVELS.join(", ")}, not ${issue.received}`),
   plain('has to be an object of command paths and levels, like {"messages.delete": "ask"}'),

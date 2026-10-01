@@ -316,6 +316,9 @@ describe("changing a setting", () => {
     expect(() => changeSetting(path(), { profile: "work", setting: "permissions.contacts", value: "maybe" })).toThrow(
       /deny, readonly, ask, allow/,
     )
+    expect(() => changeSetting(path(), { profile: "work", setting: "permissions.mesages", value: "deny" })).toThrow(
+      /starts with one of messages/,
+    )
 
     changeSetting(path(), { profile: "work", setting: "readOnly", value: "true" })
     const work = settings({ profile: "work" })
