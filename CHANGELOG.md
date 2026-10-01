@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.81.0 — 01.10.2026
+
 ### Added
 
 - **`chats create <title> [person...]`, `chats join <link>`, `chats leave <chat>`**, and the tools
