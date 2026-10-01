@@ -791,6 +791,55 @@ describe("sending over MCP", () => {
     expect(sent.map((one) => one.text)).toEqual(["one", "two"])
   })
 
+  it("**creates, joins and leaves a group** through the same service as the commands", async () => {
+    const group = {
+      id: "70",
+      title: "Plans",
+      kind: "group" as const,
+      unreadCount: 0,
+      lastMessageAt: null,
+      participantsCount: 2,
+      description: null,
+      link: null,
+      settings: {
+        allCanPin: null,
+        onlyAdminsAdd: null,
+        onlyAdminsCall: null,
+        onlyOwnerEditsInfo: null,
+        membersSeeLink: null,
+      },
+    }
+    const done: unknown[] = []
+    const telegram = scripted({
+      people: async (references) => references.map(() => "91"),
+      createGroup: async (title, people, options) => {
+        done.push(["create", title, people, options])
+        return group
+      },
+      join: async (link) => {
+        done.push(["join", link])
+        return group
+      },
+      leave: async (chatId) => {
+        done.push(["leave", chatId])
+        return { chatId }
+      },
+    })
+    const { call } = await connect(telegram, {})
+
+    const created = await call("chat_chats_create", { title: "Plans", people: ["Ivan"] })
+    await call("chat_chats_join", { link: "https://t.me/+abc" })
+    const left = await call("chat_chats_leave", { chat: "7" })
+
+    expect(created.body).toMatchObject({ operationId: expect.any(String), chat: { id: "70" } })
+    expect(left.body).toEqual({ operationId: expect.any(String), chatId: "7" })
+    expect(done).toEqual([
+      ["create", "Plans", ["91"], { channel: false }],
+      ["join", "https://t.me/+abc"],
+      ["leave", "7"],
+    ])
+  })
+
   it("reads a poll on a read-only profile, and votes by id where it may", async () => {
     const votes: unknown[] = []
     const poll = {
