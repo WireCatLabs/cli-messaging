@@ -3,6 +3,7 @@ import { Command } from "commander"
 import { phoneOf } from "../../services/index.js"
 import { readSecret } from "../../terminal/prompt.js"
 import { renderPage, window, withPaging } from "../paging.js"
+import { contactWriteCommands } from "./admin-contacts-command.js"
 import { type Messenger, messengerContext } from "./context.js"
 
 /** People this account has a one-to-one chat with, as the people service counts them. */
@@ -66,5 +67,6 @@ export const contactsCommand = (messenger: Messenger): Command => {
       context.renderer.success(`${summary.added} new, ${summary.changed} changed, ${summary.known} people known`)
     })
 
+  for (const command of contactWriteCommands(messenger)) contacts.addCommand(command)
   return contacts
 }

@@ -19,6 +19,7 @@ import type {
   MessageEvent,
   Page,
   PersonCard,
+  PhoneBookEntry,
   Poll,
   Topic,
   WindowedMessage,
@@ -231,6 +232,21 @@ export interface GroupAdmin {
   removeAdmin(chatId: Id, person: Id): Promise<void>
 }
 
+/** The owner's address book. A person by id: `GroupAdmin.people` finds them. */
+export interface ContactBook {
+  /** Under the name they show, until the owner gives one. */
+  addContact(personId: Id): Promise<Member>
+  /** The chat stays. */
+  removeContact(personId: Id): Promise<void>
+  /** They need not be a contact. */
+  block(personId: Id): Promise<void>
+  unblock(personId: Id): Promise<void>
+  /** A name only the owner sees. */
+  renameContact(personId: Id, firstName: string, lastName?: string): Promise<Member>
+  /** The people the messenger has under these numbers, added to the address book. */
+  importContacts(entries: PhoneBookEntry[]): Promise<Member[]>
+}
+
 /** The owner's chat folders, which only the owner sees. */
 export interface ChatFolders {
   /** In the order the messenger's app shows them. */
@@ -266,7 +282,8 @@ export interface MessengerAdapter
     Partial<GroupModeration>,
     Partial<AccountTools>,
     Partial<GroupAdmin>,
-    Partial<ChatFolders> {}
+    Partial<ChatFolders>,
+    Partial<ContactBook> {}
 
 type Method = (...args: never[]) => unknown
 

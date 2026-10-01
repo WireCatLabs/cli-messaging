@@ -74,7 +74,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 
 | Option | Value | Meaning | Default | Commands |
 |---|---|---|---|---|
-| `--add` | `<chat>` | put a chat into a folder; repeat it for more |  | `chats folders update` (planned) |
+| `--add` | `<chat>` | put a chat into a folder; repeat it for more |  | `chats folders update` |
 | `--after` | `<id-or-time>` | read what came after this message id, this ISO 8601 time, or 2h / 1d ago; not with --before. **`messages context --after <n>` is a count, not a position (e1)** |  | `messages context`, `messages list` |
 | `--all` |  | every row, no paging |  | `chats list`, `chats members list` (planned), `contacts list`, `inbox` (planned), `messages download` (planned), `review` (planned) |
 | `--all-can-pin` | `<on\|off>` | every member may pin messages |  | `chats update` |
@@ -93,7 +93,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--bot` |  | the bot section of the profile's settings, rather than the personal account's |  | `config set` (planned), `config show` (planned), `config unset` (planned) |
 | `--can` | `<rights>` | what they may do, comma-separated: read, members, admins, info, pin, link, post, edit, delete |  | `chats admins add` |
 | `--channel` |  | a private channel instead of a group; people join it by its link |  | `chats create` |
-| `--chat` | `<chat>` | a chat, by id or name; repeat it for more. **max's `messages search` takes `<id>` only, since searching never connects to resolve a name; rule 6 says `<chat>` (e8)** |  | `chats folders create` (planned), `messages search`, `review` |
+| `--chat` | `<chat>` | a chat, by id or name; repeat it for more. **max's `messages search` takes `<id>` only, since searching never connects to resolve a name; rule 6 says `<chat>` (e8)** |  | `chats folders create`, `messages search`, `review` |
 | `--check` |  | say whether a newer version exists, and install nothing |  | `upgrade` |
 | `--confirm-send` |  | show the owner every write the MCP server offers, in a form to approve |  | `mcp`, `mcp config` |
 | `--defaults` |  | change what every profile gets, rather than this profile |  | `config set`, `config unset` |
@@ -145,7 +145,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--quiet` |  | diagnostics off |  | every command |
 | `--record` |  | keep this run under `runs` — ids and timings, never message content |  | every command |
 | `--regex` |  | the words are one regular expression, case-insensitive, tested against every stored text |  | `messages search` (planned) |
-| `--remove` | `<chat>` | take a chat out of a folder; repeat it for more |  | `chats folders update` (planned) |
+| `--remove` | `<chat>` | take a chat out of a folder; repeat it for more |  | `chats folders update` |
 | `--reply-to` | `<message>` | answer this message id in the same chat |  | `messages send` |
 | `--retract` |  | take your vote back, where the poll allows it |  | `polls vote` |
 | `--revote` |  | people may change their vote |  | `polls create` |
@@ -158,7 +158,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--since` | `<id-or-time>` | from this message id, an ISO 8601 time, or 2h / 1d ago; each command says its default. **max takes a message id too; the shared `chats events`, `store fetch`, `store export`, `inbox` and `review` take a time only — a Telegram id is a counter within one chat (e6)** |  | `chats events`, `chats moderate` (planned), `inbox`, `review`, `store export`, `store fetch` |
 | `--stop` |  | stop this profile's server — the same as `server stop` |  | `serve` (planned) |
 | `--timeout` | `<duration>` | give up on the whole command after this — 30s, 2m, 500ms |  | every command |
-| `--title` | `<title>` | the new name — of a chat or a folder |  | `chats folders update` (planned), `chats update` |
+| `--title` | `<title>` | the new name — of a chat or a folder |  | `chats folders update`, `chats update` |
 | `--to` | `<chat>` | the chat to forward it to: an id, or part of a chat name |  | `messages forward` |
 | `--trace` |  | one line per request on stderr: ids and timings, never message content |  | every command |
 | `--transcribe` |  | hear voice messages not heard yet, on this machine; slow, the model must be downloaded |  | `inbox`, `messages list`, `review` |

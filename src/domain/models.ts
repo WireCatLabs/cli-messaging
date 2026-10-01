@@ -65,6 +65,12 @@ export const GROUP_SETTINGS = [
   "membersSeeLink",
 ] as const
 
+/** One line of `contacts import`: a phone number as digits, and the name to save it under. */
+export interface PhoneBookEntry {
+  phone: string
+  name: string
+}
+
 /** A chat folder. */
 export interface Folder {
   id: string

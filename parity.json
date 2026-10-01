@@ -465,43 +465,26 @@
       }
     },
     "chats folders": {
-      "state": "planned",
-      "by": "P2"
+      "state": "both"
     },
     "chats folders create": {
-      "state": "planned",
-      "by": "P2",
+      "state": "both",
       "options": {
-        "--chat": {
-          "state": "planned",
-          "by": "P2"
-        }
+        "--chat": "both"
       }
     },
     "chats folders delete": {
-      "state": "planned",
-      "by": "P2"
+      "state": "both"
     },
     "chats folders list": {
-      "state": "planned",
-      "by": "P2"
+      "state": "both"
     },
     "chats folders update": {
-      "state": "planned",
-      "by": "P2",
+      "state": "both",
       "options": {
-        "--add": {
-          "state": "planned",
-          "by": "P2"
-        },
-        "--remove": {
-          "state": "planned",
-          "by": "P2"
-        },
-        "--title": {
-          "state": "planned",
-          "by": "P2"
-        }
+        "--add": "both",
+        "--remove": "both",
+        "--title": "both"
       }
     },
     "chats inspect": {
