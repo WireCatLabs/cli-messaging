@@ -16,8 +16,8 @@ export interface Saving {
  * read** — the answer is already here, and it is what was asked for.
  *
  * `resolve` is not saved: a chat found by name has no unread count or last message, and writing it
- * would erase what `chats list` stored. Nor are `chat` and
- * `contact`, until the store keeps members.
+ * would erase what `chats list` stored. Nor are `chat` and `contact`: a card's member list is not
+ * known to be whole, and `saveMembers` replaces the list.
  */
 export const stored = (messenger: MessengerAdapter, { account, store, warn, events }: Saving): MessengerAdapter => {
   let warned = false

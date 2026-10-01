@@ -1,9 +1,11 @@
 import { CliError } from "@leemour/cli-core"
 import { capability } from "../cli/messenger/port.js"
-import type { Chat, ChatCard, ChatEvents, GroupMember, Id, LinkTarget, Page } from "../domain/models.js"
+import type { Chat, ChatCard, ChatEvents, GroupMember, Id, LinkTarget, Member, Page } from "../domain/models.js"
 import { guardedWrite, type Operated } from "../sends/guarded.js"
 import { newOperationId } from "../sends/send-id.js"
-import type { ServiceDeps } from "./deps.js"
+import type { AccountKey, MessageStore } from "../store/store.js"
+import { type ServiceDeps, storeIfOpen } from "./deps.js"
+import { storedChatId } from "./messages.js"
 
 /** How far back `events` looks without `since`, as in max-cli. */
 export const EVENTS_DAYS = 7
@@ -61,7 +63,20 @@ export const chatsService = (deps: ServiceDeps): ChatsService => ({
     return { items: found.slice(window.offset, end), hasMore: found.length > end, partial: scanned.hasMore }
   },
 
-  show: async (chat) => (await deps.connection()).chat(chat),
+  show: async (chat) => {
+    if (deps.offline) {
+      const store = await deps.store()
+      const account = await deps.account()
+      const id = await storedChatId(deps.messenger, chat, store, account)
+      const found = (await store.chats(account, {})).items.find((one) => one.id === id)
+      if (!found) throw new CliError("not_found", `no stored chat ${id}`)
+      return { ...found, members: await storedMembers(store, account, found.id) }
+    }
+    const card = await (await deps.connection()).chat(chat)
+    if (card.members !== null || card.kind === "channel") return card
+    const store = await storeIfOpen(deps)
+    return store ? { ...card, members: await storedMembers(store, await deps.account(), card.id) } : card
+  },
 
   members: async (chat, window) =>
     capability(await deps.connection(), "members", "list a group's members")(chat, window),
@@ -102,6 +117,12 @@ export const chatsService = (deps: ServiceDeps): ChatsService => ({
     return { operationId, chatId, until: until ?? null }
   },
 })
+
+/** `null` when no member list was ever saved: not knowing who is there is not nobody being there. */
+const storedMembers = async (store: MessageStore, account: AccountKey, chatId: Id): Promise<Member[] | null> => {
+  const members = (await store.members(account, chatId)).filter((one) => one.id !== account.account)
+  return members.length === 0 ? null : members
+}
 
 const matches = ({ search, kind, unread }: ChatFilter) => {
   const needle = search?.toLocaleLowerCase()

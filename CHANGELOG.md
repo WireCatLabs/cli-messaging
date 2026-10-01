@@ -11,6 +11,11 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 - **`store fetch --last <n>`**: stop once the newest n messages of the chat are held, counted in the
   store, so a later run with the same `--last` asks for nothing. Not with `--since`. `FetchOptions.last`;
   the answer carries `reachedLast: true` when it stopped there.
+- **`chats show` and `contacts show` answer with `--offline`**, from the store. `chats show` fills
+  `members` from the member list the store holds, online too when the messenger gave none; with no
+  list saved it stays `null`. `contacts show` fills the shared chats the same way.
+- **`contacts list` reads the store's contacts where it holds who is in each one-to-one chat** —
+  ordered by the newest conversation, or by name — and from the dialogs as before where it does not.
 
 ### Changed — may break callers
 
