@@ -2,8 +2,8 @@ import { mkdtempSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { afterEach, describe, expect, it } from "vitest"
-import type { Message } from "../../domain/models.js"
-import { type MessageStore, openStore } from "../../store/store.js"
+import type { Message, MessageEvent } from "../../domain/models.js"
+import { type DeletionScope, type MessageStore, openStore } from "../../store/store.js"
 import type { MessengerAdapter } from "./port.js"
 import { stored } from "./stored.js"
 
@@ -50,7 +50,7 @@ const setUp = async () => {
     events: () => {},
   })
   const found = async (text: string) => (await store.search(text, { limit: 10, account })).items.map((hit) => hit.id)
-  return { wrapped, found }
+  return { wrapped, found, store }
 }
 
 describe("what the writes leave in the store", () => {
@@ -112,5 +112,45 @@ describe("what a chat list leaves in the store", () => {
     expect(await listing({ items: ["7"], hasMore: false }, { offset: 20 })).toEqual(["7", "8"])
     expect(await listing({ items: ["7"], hasMore: true }, { limit: 1, offset: 0 })).toEqual(["7", "8"])
     expect(await listing({ items: [], hasMore: false }, { offset: 0 })).toEqual(["7", "8"])
+  })
+})
+
+describe("a deletion `watch` hears without its chat", () => {
+  const deleting = async (deletedWithoutChat?: DeletionScope) => {
+    const { store } = await setUp()
+    await store.saveMessages(account, "8", [message("1", "see you tuesday", "8")], { via: "history" })
+    const pending = new Set<Promise<void>>()
+    const adapter = {
+      self: () => "500",
+      watch: async (onEvent: (event: MessageEvent) => void) => {
+        onEvent({ event: "delete", chatId: null, chatTitle: null, messageId: "1" })
+      },
+    }
+    const wrapped = stored(adapter as unknown as MessengerAdapter, {
+      account,
+      store: async () => store,
+      warn: () => {},
+      events: () => {},
+      pending,
+      ...(deletedWithoutChat ? { deletedWithoutChat } : {}),
+    })
+    await wrapped.watch?.(() => {}, new AbortController().signal)
+    await Promise.all(pending)
+    return {
+      inGroup: await store.message(account, "1", { chatId: "7" }),
+      inDialog: await store.message(account, "1", { chatId: "8" }),
+    }
+  }
+
+  it("tombstones the one message in the chats the messenger's rule accepts", async () => {
+    const { inGroup, inDialog } = await deleting((chat) => chat.kind === "dialog")
+    expect(inGroup).toBeDefined()
+    expect(inDialog).toBeUndefined()
+  })
+
+  it("without the rule, leaves an id two chats share alone", async () => {
+    const { inGroup, inDialog } = await deleting()
+    expect(inGroup).toBeDefined()
+    expect(inDialog).toBeDefined()
   })
 })

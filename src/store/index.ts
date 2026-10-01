@@ -14,6 +14,7 @@ export {
 export {
   type AccountKey,
   type ChatStats,
+  type DeletionScope,
   type Delta,
   type IngestedVia,
   type MessageFilter,

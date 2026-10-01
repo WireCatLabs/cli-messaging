@@ -205,6 +205,29 @@ describe("the message store", () => {
     await store.close()
   })
 
+  it("lets the messenger's rule pick the chats a deletion that names no chat may hit, in place of Telegram's", async () => {
+    const store = await openStore({ path: fresh() })
+    const dialog: Chat = { ...chat, id: "555", kind: "dialog", providerMetadata: {} }
+    const other: Chat = { ...chat, id: "-4001", kind: "group", providerMetadata: { chatType: "group" } }
+    await store.saveChats(ME, [chat, dialog, other])
+    await store.saveMessages(ME, chat.id, [message(), message({ id: "43" })], { via: "history" })
+    await store.saveMessages(ME, dialog.id, [message({ chatId: dialog.id })], { via: "history" })
+    await store.saveMessages(ME, other.id, [message({ id: "43", chatId: other.id })], { via: "history" })
+    const seen: unknown[] = []
+    const among = (one: Pick<Chat, "id" | "kind" | "providerMetadata">) => {
+      seen.push(one)
+      return one.providerMetadata?.chatType !== undefined
+    }
+
+    expect(await store.markDeleted(ME, ["42", "43"], { among })).toBe(1)
+    expect(await store.message(ME, "42", { chatId: chat.id })).toBeUndefined()
+    expect(await store.message(ME, "42", { chatId: dialog.id })).toBeDefined()
+    expect(await store.message(ME, "43", { chatId: chat.id })).toBeDefined()
+    expect(await store.message(ME, "43", { chatId: other.id })).toBeDefined()
+    expect(seen).toContainEqual({ id: chat.id, kind: "group", providerMetadata: { chatType: "supergroup" } })
+    await store.close()
+  })
+
   it("leaves a chat known only by its id out of a deletion that names no chat", async () => {
     const store = await openStore({ path: fresh() })
     const dialog: Chat = { ...chat, id: "555", kind: "dialog", providerMetadata: {} }

@@ -6,6 +6,14 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- **`Messenger.deletedWithoutChat`**: which stored chats a deletion that names no chat may hit. `watch`
+  passes it to the store as `markDeleted(…, { among })`, the new option of the same rule: the store
+  tombstones a message only when exactly one live message with that id is left in the chats the rule
+  accepts. A messenger that leaves it unset keeps Telegram's built-in rule for now; a later breaking
+  release removes that rule, and then no rule means no tombstone without a chat.
+
 ## 0.97.0 — 01.10.2026
 
 Released early: max-cli 6c (T6 store group): its parity check needs the store rows planned (#333)
