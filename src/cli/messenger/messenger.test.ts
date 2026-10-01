@@ -187,6 +187,17 @@ describe("the shared read commands", () => {
     expect(foreign.code).toBe(2)
   })
 
+  it("refuse a --limit that is not a whole number, quoting what was typed", async () => {
+    const root = mkdtempSync(join(tmpdir(), "messenger-"))
+    const env = { CHAT_STATE_DIR: join(root, "state"), MESSAGING_STORE: join(root, "m.db") }
+
+    for (const typed of ["abc", "12abc", "0"]) {
+      const { code, stderr } = await call(["chats", "list", "--limit", typed, "--json"], async () => fake, env)
+      expect(code).toBe(2)
+      expect(stderr.join("\n")).toContain(`--limit takes a whole number from 1 upwards, not \\"${typed}\\"`)
+    }
+  })
+
   it("show a chat with who is in it, and say when the list is cut short", async () => {
     const root = mkdtempSync(join(tmpdir(), "messenger-"))
     const env = { CHAT_STATE_DIR: join(root, "state"), MESSAGING_STORE: join(root, "m.db") }

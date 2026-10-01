@@ -32,6 +32,12 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   requests per run, a held stretch to step over included. A background job records `maxPages` and
   `last` instead of `max`, and `store jobs` prints them; a job started before shows neither.
 
+### Fixed
+
+- **A `--limit` or `--page` that is not a whole number is refused as typed**: `--limit abc` said
+  `not NaN`, and `--limit 12abc` was quietly read as 12. Both are now `validation_error` quoting the
+  value. `positiveCount(flag)` in `cli/paging.ts` is the one parser for them.
+
 ## 0.75.0 — 01.10.2026
 
 ### Changed — may break callers

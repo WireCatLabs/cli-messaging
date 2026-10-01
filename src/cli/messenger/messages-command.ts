@@ -5,6 +5,7 @@ import { isLocator, parseLocator } from "../../domain/locator.js"
 import { sendTime } from "../../domain/send-time.js"
 import { renderMessages } from "../../render/messages.js"
 import { readUpload } from "../../sends/upload.js"
+import { positiveCount } from "../paging.js"
 import { afterOf, oneDirection } from "./after.js"
 import { type Messenger, messengerContext } from "./context.js"
 import { downloadSubcommand } from "./download-command.js"
@@ -25,7 +26,7 @@ export const messagesCommand = (messenger: Messenger): Command => {
     .command("list")
     .description("a chat's messages, oldest to newest")
     .argument("<chat>", messenger.chatArgument)
-    .option("--limit <n>", "how many", (value) => Number.parseInt(value, 10))
+    .option("--limit <n>", "how many", positiveCount("--limit"))
     .option("--before <id>", "only messages older than this message id")
     .option("--after <id-or-time>", "only messages newer than this message id, ISO 8601 time, or 2h / 1d ago")
     .option(...TRANSCRIBE_OPTION)
@@ -96,7 +97,7 @@ export const messagesCommand = (messenger: Messenger): Command => {
     .description("search the local store — what was read, fetched or kept by serve; never asks the messenger")
     .argument("<text...>", "every word must appear, as a word or the start of one: квартир finds квартира")
     .option("--chat <chat>", `only this chat: ${messenger.chatArgument}`)
-    .option("--limit <n>", "how many", (value) => Number.parseInt(value, 10))
+    .option("--limit <n>", "how many", positiveCount("--limit"))
     .option("--regex", "the words are one regular expression, case-insensitive, tested against every stored text")
     .action(async function (this: Command, words: string[]) {
       const context = messengerContext(this, messenger)
