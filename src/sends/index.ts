@@ -20,6 +20,7 @@ export {
 export {
   DEFAULT_PERMISSIONS,
   fromOldSettings,
+  keyForCommand,
   keyForWrite,
   LEVELS,
   type Level,

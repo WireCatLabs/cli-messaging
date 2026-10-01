@@ -19,18 +19,23 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Added
 
+- **`deny` stops reading too.** A command whose key is `deny` is refused (`permission_error`) before
+  it connects or opens the store — `messages list`, and everything else that shows messages:
+  `inbox`, `review`, `watch`, `serve`, `store fetch|export|search|status|jobs`. Housekeeping
+  (`config`, `doctor`, `runs`, `store info|check|migrate|backup|restore`, …) is never stopped.
+  `keyForCommand(path)` says which key a command path is checked against.
 - **Permissions: one level per command path.** A profile's `permissions` setting maps command paths
   to `deny`, `readonly`, `ask` or `allow` — `config set permissions.messages.delete allow` — and the
-  most specific key wins. By default everything is allowed except `messages.delete` and
-  `account.sessions.end`, which ask; a built-in default only ever tightens a broader key. `ask`
-  asks y/N at the terminal (never under `--json` or `--jsonl`); `--allow-dangerous` (deleting) or the new global `--yes` (every other
-  write) answers yes, and with nobody at a terminal the write is refused (`confirmation_required`).
-  A key starts with a resource (`messages`, `reactions`, `polls`, `topics`, `chats`, `contacts`,
-  `account`), so a misspelled one is refused. `readOnly` and `allow` keep working, read as levels. Exports `LEVELS`, `levelFor`,
-  `DEFAULT_PERMISSIONS`, `fromOldSettings`, `keyForWrite`; `sendGuard` takes `permissions` and
-  `ask`, and without them decides as before; `SendGuard.ask` is the question `guardedWrite` awaits
-  before `check`, and `check` refuses an `ask` write that was not asked. MCP is unchanged for now,
-  and `deny` does not stop reads yet.
+  most specific key the owner set wins. A key starts with a resource (`messages`, `reactions`,
+  `polls`, `topics`, `chats`, `contacts`, `account`), so a misspelled one is refused. By default
+  everything is allowed except `messages.delete` and `account.sessions.end`, which ask; a built-in
+  default only ever tightens a broader key. `ask` asks y/N at the terminal, never under `--json` or
+  `--jsonl`; `--allow-dangerous` (deleting) or the new global `--yes` (every other write) answers
+  yes, and with nobody at a terminal the write is refused (`confirmation_required`). `readOnly` and
+  `allow` keep working, read as levels. Exports `LEVELS`, `levelFor`, `DEFAULT_PERMISSIONS`,
+  `fromOldSettings`, `keyForWrite`; `sendGuard` takes `permissions` and `ask`, and without them
+  decides as before; `SendGuard.ask` is the question `guardedWrite` awaits before `check`, and
+  `check` refuses an `ask` write that was never asked. MCP is unchanged for now.
 
 ## 0.74.0 — 01.10.2026
 
