@@ -19,8 +19,17 @@ export interface ServiceDeps {
   guard: SendGuard
 }
 
+/** Online, the store only adds to an answer the messenger already gave, so a store that will not open loses nothing. */
+export const storeIfOpen = async (deps: ServiceDeps): Promise<MessageStore | undefined> => {
+  try {
+    return await deps.store()
+  } catch {
+    return undefined
+  }
+}
+
 export const OFFLINE =
-  "--offline answers only from what is kept locally: `chats list`, `messages list|show|context` and `contacts list`"
+  "--offline answers only from what is kept locally: `chats list|show`, `messages list|show|context` and `contacts list|show`"
 
 /** Over a connection that is already open — an MCP session holds one for minutes. */
 export const onlineDeps = (messenger: Messenger, adapter: MessengerAdapter, guard: SendGuard): ServiceDeps => ({

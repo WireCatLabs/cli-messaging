@@ -195,7 +195,12 @@ describe("the shared read commands", () => {
     expect(code).toBe(0)
     expect(JSON.parse(stdout[0] ?? "")).toMatchObject({ id: "7", members: [{ id: "9" }] })
     expect(stderr.join("\n")).toContain("only 1 of 4 members")
-    expect((await call(["chats", "show", "Book", "--offline"], async () => fake, env)).code).toBe(2)
+    const offline = await call(["chats", "show", "Book", "--offline"], async () => fake, env)
+    expect(JSON.parse(offline.stderr[0] ?? "").error).toMatchObject({ code: "not_found" })
+
+    await call(["chats", "list", "--json"], async () => fake, env)
+    const stored = await call(["chats", "show", "Book", "--offline", "--json"], async () => fake, env)
+    expect(JSON.parse(stored.stdout[0] ?? "")).toMatchObject({ id: "7", members: null })
   })
 
   it("list as contacts only the one-to-one chats, in the order and with the filter asked for", async () => {

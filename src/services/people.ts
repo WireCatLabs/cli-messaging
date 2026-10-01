@@ -1,8 +1,10 @@
 import { CliError } from "@leemour/cli-core"
 import { capability } from "../cli/messenger/port.js"
 import type { Chat, Contact, Member, Page, PersonCard } from "../domain/models.js"
+import { pickPerson } from "../resolve.js"
+import type { AccountKey, MessageStore } from "../store/store.js"
 import type { PageWindow } from "./chats.js"
-import type { ServiceDeps } from "./deps.js"
+import { type ServiceDeps, storeIfOpen } from "./deps.js"
 
 export interface ContactSync {
   added: number
@@ -12,7 +14,8 @@ export interface ContactSync {
 
 /**
  * A contact is somebody this account has a one-to-one chat with — a query over the chat list, never
- * a flag somebody maintains (max-cli `NEED-105`). So the list works offline from the stored chats.
+ * a flag somebody maintains (max-cli `NEED-105`). Where the store holds who is in each one-to-one
+ * chat, it answers; otherwise the dialogs themselves do, offline from the stored chats.
  */
 export interface PeopleService {
   list(options: { order: "recent" | "name"; search?: string } & PageWindow): Promise<Page<Contact>>
@@ -25,13 +28,29 @@ export interface PeopleService {
 
 export const peopleService = (deps: ServiceDeps): PeopleService => ({
   list: async (options) => {
-    const chats = deps.offline
-      ? (await (await deps.store()).chats(await deps.account(), {})).items
-      : (await (await deps.connection()).chats({ offset: 0 })).items
+    // Connected first: a messenger whose login brings its people writes them before the store is asked.
+    const connection = deps.offline ? undefined : await deps.connection()
+    const store = deps.offline ? await deps.store() : await storeIfOpen(deps)
+    const account = store && (await deps.account())
+    if (store && account && (await store.countContacts(account)) > 0) return storedContacts(store, account, options)
+    const chats = connection
+      ? (await connection.chats({ offset: 0 })).items
+      : (await (await deps.store()).chats(await deps.account(), {})).items
     return contactsIn(chats, options)
   },
 
-  show: async (person) => (await deps.connection()).contact(person),
+  show: async (person) => {
+    if (deps.offline) {
+      const store = await deps.store()
+      const account = await deps.account()
+      const found = pickPerson(person, await store.people(account.provider, { account: account.account }))
+      return { ...found, chats: await sharedChats(store, account, found.id) }
+    }
+    const card = await (await deps.connection()).contact(person)
+    if (card.chats.length > 0) return card
+    const store = await storeIfOpen(deps)
+    return store ? { ...card, chats: await sharedChats(store, await deps.account(), card.id) } : card
+  },
 
   lookup: async (phone) => capability(await deps.connection(), "lookup", "find a person by phone")(phone),
 
@@ -63,6 +82,30 @@ export const phoneOf = (typed: string): string => {
   }
   return digits
 }
+
+const storedContacts = async (
+  store: MessageStore,
+  account: AccountKey,
+  { order, search, limit, offset }: { order: "recent" | "name"; search?: string } & PageWindow,
+): Promise<Page<Contact>> => {
+  // Chats saved since the last refresh may have moved someone up; the order is worked out again here.
+  if (order === "recent") await store.refreshRecency(account)
+  const query = search?.trim() || undefined
+  return store.contacts(account, {
+    order,
+    ...(query === undefined ? {} : { query }),
+    limit: limit ?? (await store.countContacts(account, query === undefined ? {} : { query })),
+    offset,
+  })
+}
+
+const sharedChats = async (store: MessageStore, account: AccountKey, personId: string) =>
+  (await store.chatsWith(account, personId)).map(({ id, title, kind, lastMessageAt }) => ({
+    id,
+    title,
+    kind,
+    lastMessageAt,
+  }))
 
 const contactsIn = (
   chats: readonly Chat[],
