@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.72.0 — 01.10.2026
+
 ### Added
 
 - **`guardedVote`, `guardedClose`, `guardedCreatePoll`** from `./cli`: the guarded poll writes, for max-cli's MCP tools while they answer through the shared code.
