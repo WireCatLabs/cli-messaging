@@ -507,20 +507,20 @@
       "state": "both",
       "options": {
         "--event": {
-          "state": "planned",
-          "by": "P0b"
+          "state": "max-only",
+          "reason": "max's own copy keeps the old name until T6 moves the command onto the shared one"
         },
         "--since": {
-          "state": "planned",
-          "by": "P0b"
+          "state": "max-only",
+          "reason": "max's own copy keeps the old name until T6 moves the command onto the shared one"
         },
         "--since-time": {
           "state": "planned",
-          "by": "P0b"
+          "by": "T6"
         },
         "--type": {
           "state": "planned",
-          "by": "P0b"
+          "by": "T6"
         }
       }
     },
@@ -799,12 +799,12 @@
         "--model": "both",
         "--new": "both",
         "--since": {
-          "state": "planned",
-          "by": "P0b"
+          "state": "max-only",
+          "reason": "max's own copy keeps the old name until T6 moves the command onto the shared one"
         },
         "--since-time": {
           "state": "planned",
-          "by": "P0b"
+          "by": "T6"
         },
         "--transcribe": "both"
       }
@@ -858,20 +858,20 @@
       "state": "both",
       "options": {
         "--after": {
-          "state": "planned",
-          "by": "P0b"
+          "state": "max-only",
+          "reason": "max's own copy keeps the old name until T6 moves the command onto the shared one"
         },
         "--after-n": {
           "state": "planned",
-          "by": "P0b"
+          "by": "T6"
         },
         "--before": {
-          "state": "planned",
-          "by": "P0b"
+          "state": "max-only",
+          "reason": "max's own copy keeps the old name until T6 moves the command onto the shared one"
         },
         "--before-n": {
           "state": "planned",
-          "by": "P0b"
+          "by": "T6"
         }
       }
     },
@@ -890,12 +890,12 @@
           "by": "T6"
         },
         "--output": {
-          "state": "planned",
-          "by": "P0b"
+          "state": "max-only",
+          "reason": "max's own copy keeps the old name until T6 moves the command onto the shared one"
         },
         "--output-dir": {
           "state": "planned",
-          "by": "P0b"
+          "by": "T6"
         },
         "--pause": {
           "state": "planned",
@@ -921,24 +921,24 @@
       "state": "both",
       "options": {
         "--after": {
-          "state": "planned",
-          "by": "P0b"
+          "state": "max-only",
+          "reason": "max's own copy keeps the old name until T6 moves the command onto the shared one"
         },
         "--after-id": {
           "state": "planned",
-          "by": "P0b"
+          "by": "T6"
         },
         "--after-time": {
           "state": "planned",
-          "by": "P0b"
+          "by": "T6"
         },
         "--before": {
-          "state": "planned",
-          "by": "P0b"
+          "state": "max-only",
+          "reason": "max's own copy keeps the old name until T6 moves the command onto the shared one"
         },
         "--before-id": {
           "state": "planned",
-          "by": "P0b"
+          "by": "T6"
         },
         "--before-time": {
           "state": "planned",
@@ -1083,12 +1083,12 @@
           "by": "T6"
         },
         "--since": {
-          "state": "planned",
-          "by": "P0b"
+          "state": "max-only",
+          "reason": "max's own copy keeps the old name until T6 moves the command onto the shared one"
         },
         "--since-time": {
           "state": "planned",
-          "by": "P0b"
+          "by": "T6"
         },
         "--transcribe": "both",
         "--unanswered": "both"
@@ -1222,12 +1222,12 @@
         "--format": "both",
         "--output": "both",
         "--since": {
-          "state": "planned",
-          "by": "P0b"
+          "state": "max-only",
+          "reason": "max's own copy keeps the old name until T6 moves the command onto the shared one"
         },
         "--since-time": {
           "state": "planned",
-          "by": "P0b"
+          "by": "T6"
         }
       }
     },
@@ -1242,24 +1242,24 @@
         "--last": "both",
         "--limit": {
           "state": "planned",
-          "by": "P0b"
+          "by": "T6"
         },
         "--max-pages": {
-          "state": "planned",
-          "by": "P0b"
+          "state": "max-only",
+          "reason": "max's own copy keeps the old name until T6 moves the command onto the shared one"
         },
         "--page-size": {
           "state": "planned",
-          "by": "P0b"
+          "by": "T6"
         },
         "--pause": "both",
         "--since": {
-          "state": "planned",
-          "by": "P0b"
+          "state": "max-only",
+          "reason": "max's own copy keeps the old name until T6 moves the command onto the shared one"
         },
         "--since-time": {
           "state": "planned",
-          "by": "P0b"
+          "by": "T6"
         }
       }
     },
