@@ -122,7 +122,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--max-pages` | `<n>` | at most this many pages of 100 messages in one run | `10` | `store fetch` |
 | `--md` |  | read **bold**, _italic_, ~~struck~~ and `code` in the text; \ keeps a mark literal |  | `messages edit` (planned), `messages send` |
 | `--members-see-link` | `<on\|off>` | members may see the invite link |  | `chats update` (planned) |
-| `--model` | `<id>` | which downloaded speech model hears them; `models audio list` shows them |  | `inbox`, `messages list`, `messages transcribe` |
+| `--model` | `<id>` | which downloaded speech model hears them; `models audio list` shows them |  | `inbox`, `messages list`, `messages transcribe`, `review` (planned) |
 | `--multiple` |  | people may pick several answers |  | `polls create` |
 | `--new` |  | what arrived since the last check, each message once — for scheduled runs |  | `inbox` |
 | `--no-preview` |  | no preview card for a link in the text |  | `messages send` |
