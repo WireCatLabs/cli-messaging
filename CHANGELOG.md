@@ -6,6 +6,13 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Fixed
+
+- **`contacts list` names a dialog's person by `Messenger.partnerOf`** when it falls back to the dialogs (no
+  contacts stored yet). A messenger that sets `partnerOf` gets the person's id, not the chat's, and a dialog
+  whose person it cannot name is left out; without `partnerOf` a dialog's id stays the person's, as on
+  Telegram. On MAX the chat's id was listed as a person's.
+
 ## 0.100.0 — 02.10.2026
 
 Released early: max-cli 0.22.0 waits on the store fetch fix for messages at a page boundary
