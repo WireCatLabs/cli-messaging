@@ -6,6 +6,10 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.100.0 — 02.10.2026
+
+Released early: max-cli 0.22.0 waits on the store fetch fix for messages at a page boundary
+
 ### Added
 
 - **`conversations embed --chat <chat> [--model] [--workers <n>] [--threads <n>]`**, `conversations embed
