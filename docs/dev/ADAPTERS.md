@@ -33,7 +33,7 @@ Optional fields fit the shared commands to your messenger. Leave each one out un
 needs it. The ones a new messenger usually sets:
 
 - `name` — the messenger's name as its users write it.
-- `fetching` — how `store fetch` pages your history. Set `orderBy: "time"` when your message ids
+- `fetching` — how `store fetch` and `messages download --all` page your history. Set `orderBy: "time"` when your message ids
   are not whole numbers below 2^53.
 - `deletedWithoutChat` — set it only if your messenger reports a deletion without its chat.
 - `inviteLinks` — your invite links, for `chats moderate`.
@@ -62,8 +62,8 @@ and `AccountEditing`.
   the adapter's answers. Provider ids are often 64-bit, and a number loses digits.
 - Shared code does not read an id. It does not check for digits and does no arithmetic. Your ids
   can have any shape, for example `123@s.whatsapp.net`.
-- One exception: when `fetching.orderBy` is `"id"` (the default), `store fetch` keys what it holds
-  by the message id as a number. So either your message ids are whole numbers below 2^53, or you
+- One exception: when `fetching.orderBy` is `"id"` (the default), `store fetch` and
+  `messages download --all` key what they hold by the message id as a number. So either your message ids are whole numbers below 2^53, or you
   set `orderBy: "time"`. A contract case checks this.
 
 ## Send ids and an unknown outcome

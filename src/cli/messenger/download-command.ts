@@ -7,11 +7,14 @@ import { setTimeout as sleep } from "node:timers/promises"
 import { CliError } from "@leemour/cli-core"
 import type { Command } from "commander"
 import type { Id } from "../../domain/models.js"
+import { FETCHING, keyOf } from "../../services/archive.js"
+import { OFFLINE } from "../../services/deps.js"
+import type { MessagesService } from "../../services/messages.js"
 import { patiently } from "../../services/patience.js"
 import { parseDuration } from "../settings.js"
-import { type Messenger, type MessengerContext, messengerContext } from "./context.js"
+import { type Fetching, type Messenger, type MessengerContext, messengerContext } from "./context.js"
 import { stopOnSignal } from "./patience.js"
-import { capability, type MessengerAdapter, type RemoteFile } from "./port.js"
+import { capability, type RemoteFile } from "./port.js"
 
 export interface Saved {
   kind: string
@@ -38,7 +41,7 @@ export const downloadSubcommand = (messages: Command, messenger: Messenger): Com
         throw new CliError("validation_error", "--all saves the whole chat; leave out the message id")
       }
       if (all) {
-        await downloadChat(this, context, chat, output, parseDuration(pause, "--pause"))
+        await downloadChat(this, context, messenger, chat, output, parseDuration(pause, "--pause"))
         return
       }
       if (messageId === undefined) throw new CliError("validation_error", "name a message id, or use --all")
@@ -66,33 +69,51 @@ const NOT_FILES = new Set(["webpage", "share", "poll", "location", "contact"])
 interface Stretch {
   from: number
   to: number
+  /** The oldest message walked, which the next run pages back from: a time is not a message id. */
+  fromId?: Id
+  /** The newest message walked. By time, a stretch's first and last second may hold messages not walked. */
+  toId?: Id
+}
+
+type KeyedBy = "id" | "time"
+
+interface Progress {
+  by: KeyedBy
+  done: Stretch[]
 }
 
 /**
- * Stretches of message ids already walked, in a dot file beside the files — not in the store, which
- * this would need a migration for. Written after every message with a file, so a run cut short by
- * `--timeout` or Ctrl-C repeats at most the file it was in the middle of.
+ * Stretches of message keys already walked (`keyOf`), in a dot file beside the files — not in the
+ * store, which this would need a migration for. Written after every message with a file, so a run cut
+ * short by `--timeout` or Ctrl-C repeats at most the file it was in the middle of.
  */
 const progressFile = (output: string, chatId: Id) => join(output, `.download-${chatId.replace(/[^\w-]/g, "_")}.json`)
 
-const readProgress = (path: string): Stretch[] => {
+/** A file from before `by` was written is keyed by id. One keyed the other way is set aside, not misread. */
+const readProgress = (path: string, by: KeyedBy, note: (message: string) => void): Stretch[] => {
   if (!existsSync(path)) return []
-  const { done } = JSON.parse(readFileSync(path, "utf8")) as { done?: Stretch[] }
+  const { done, by: was = "id" } = JSON.parse(readFileSync(path, "utf8")) as Partial<Progress>
+  if (was !== by) {
+    note(`${path} counts messages by ${was}, this messenger by ${by} — starting from the newest again`)
+    return []
+  }
   return Array.isArray(done) ? done : []
 }
 
-const writeProgress = (path: string, chatId: Id, done: Stretch[]) => {
-  writeFileSync(`${path}.tmp`, `${JSON.stringify({ chat: chatId, done })}\n`, { mode: 0o600 })
+const writeProgress = (path: string, chatId: Id, progress: Progress) => {
+  writeFileSync(`${path}.tmp`, `${JSON.stringify({ chat: chatId, ...progress })}\n`, { mode: 0o600 })
   renameSync(`${path}.tmp`, path)
 }
 
 const downloadChat = async (
   command: Command,
   context: MessengerContext,
+  messenger: Messenger,
   chat: string,
   output: string,
   pauseMs: number,
 ) => {
+  if (context.settings.offline) throw new CliError("validation_error", OFFLINE)
   const items: Saved[] = []
   const onSaved = (one: Saved) => {
     if (context.format === "pretty") context.streams.data(`${one.path}\n`)
@@ -102,8 +123,15 @@ const downloadChat = async (
   const stop = stopOnSignal(command)
   try {
     mkdirSync(output, { recursive: true })
-    const result = await context.withMessenger((connection) =>
-      walkChat(connection, chat, { output, pauseMs, stop: stop.signal, note: context.renderer.note, onSaved }),
+    const result = await context.withServices((services) =>
+      walkChat(services.messages, chat, {
+        output,
+        pauseMs,
+        fetching: messenger.fetching ?? FETCHING,
+        stop: stop.signal,
+        note: context.renderer.note,
+        onSaved,
+      }),
     )
     if (context.format === "json") context.renderer.result({ items, ...result })
     else context.renderer.note(summary(result))
@@ -118,21 +146,30 @@ const summary = ({ saved, existing, complete }: { saved: number; existing: numbe
 interface ChatWalk {
   output: string
   pauseMs: number
+  fetching: Fetching
   stop: AbortSignal
   note: (message: string) => void
   onSaved: (one: Saved) => void
 }
 
 /**
- * Newest to oldest, page by page. A stretch an earlier run walked is jumped over, and joins this run's,
- * so the progress file stays a few stretches however often the download is cut and resumed.
+ * Newest to oldest, page by page, through the messages service — so a messenger whose history lives
+ * in the local store pages the store, and only the files come from the messenger. A stretch an earlier
+ * run walked is jumped over, and joins this run's, so the progress file stays a few stretches however
+ * often the download is cut and resumed.
+ *
+ * By time, messages share a second, so a stretch's first and last second may hold messages it does not:
+ * only its own two edge messages, or a time strictly between them, count as walked.
  */
 const walkChat = async (
-  connection: MessengerAdapter,
+  messages: Pick<MessagesService, "list" | "download">,
   chat: string,
-  { output, pauseMs, stop, note, onSaved }: ChatWalk,
+  { output, pauseMs, fetching, stop, note, onSaved }: ChatWalk,
 ) => {
-  const download = capability(connection, "download", "download attachments")
+  const by: KeyedBy = fetching.orderBy ?? "id"
+  const keyed = keyOf(fetching)
+  const inside = ({ from, to, fromId, toId }: Stretch, key: number, id: Id) =>
+    by === "time" ? (from < key && key < to) || id === fromId || id === toId : from <= key && key <= to
   let before: string | undefined
   let chatId: Id | undefined
   let path = ""
@@ -142,15 +179,14 @@ const walkChat = async (
   let existing = 0
   let complete = false
   const remember = () => {
-    if (chatId !== undefined) writeProgress(path, chatId, run ? [...done, run] : done)
+    if (chatId !== undefined) writeProgress(path, chatId, { by, done: run ? [...done, run] : done })
+  }
+  const walked = (key: number, id: Id) => {
+    run = { from: key, to: run?.to ?? key, fromId: id, toId: run?.toId ?? id }
   }
 
   pages: while (!stop.aborted) {
-    const page = await patiently(
-      () => connection.history(chat, { limit: PAGE, ...(before ? { before } : {}) }),
-      note,
-      stop,
-    )
+    const page = await patiently(() => messages.list(chat, { limit: PAGE, ...(before ? { before } : {}) }), note, stop)
     const first = page.items[0]
     if (!first) {
       complete = true
@@ -159,25 +195,35 @@ const walkChat = async (
     if (chatId === undefined) {
       chatId = first.chatId
       path = progressFile(output, chatId)
-      done = readProgress(path)
+      done = readProgress(path, by, note)
     }
-    const newestFirst = page.items.toReversed().map((message) => ({ message, key: Number(message.id) }))
-    // The stretches in the progress file compare ids as numbers; the order itself is the adapter's.
+    const newestFirst = page.items.toReversed().map((message) => ({ message, key: keyed(message) }))
     if (newestFirst.some(({ key }) => !Number.isSafeInteger(key))) {
-      throw new CliError("validation_error", "this messenger's message ids do not order a chat, so --all cannot resume")
+      throw new CliError(
+        "validation_error",
+        by === "id"
+          ? "this messenger's message ids are not whole numbers, so --all cannot resume"
+          : "a message here has no send time, so --all cannot resume",
+      )
     }
     for (const { message, key } of newestFirst) {
       if (stop.aborted) break pages
-      const walked = done.find(({ from, to }) => from <= key && key <= to)
-      if (walked) {
-        done = done.filter((one) => one !== walked)
-        run = { from: walked.from, to: Math.max(run?.to ?? walked.to, walked.to) }
+      const known = done.find((one) => inside(one, key, message.id))
+      if (known) {
+        done = done.filter((one) => one !== known)
+        const toId = run ? run.toId : known.toId
+        run = {
+          from: known.from,
+          to: Math.max(run?.to ?? known.to, known.to),
+          ...(known.fromId === undefined ? {} : { fromId: known.fromId }),
+          ...(toId === undefined ? {} : { toId }),
+        }
         remember()
-        before = String(walked.from)
+        before = known.fromId ?? String(known.from)
         continue pages
       }
       if (message.attachments.some(({ kind }) => !NOT_FILES.has(kind))) {
-        const { files } = await patiently(() => download(chat, message.id), note, stop)
+        const { files } = await patiently(() => messages.download(chat, message.id), note, stop)
         for (const [index, file] of files.entries()) {
           const one = await patiently(
             () => save(file, output, `${message.id}-${index + 1}`, { unique: true }),
@@ -188,9 +234,9 @@ const walkChat = async (
           else saved += 1
           onSaved(one)
         }
-        run = { from: key, to: run?.to ?? key }
+        walked(key, message.id)
         remember()
-      } else run = { from: key, to: run?.to ?? key }
+      } else walked(key, message.id)
     }
     remember()
     if (!page.hasMore) {

@@ -87,7 +87,11 @@ const call = async (
 }
 
 /** As MAX pages: ids past 2^53, and `before` a time that the page includes. */
-const timedChatOf = (count: number, asked: { before?: string; reactions?: false }[]): MessengerAdapter =>
+const timedChatOf = (
+  count: number,
+  asked: { before?: string; reactions?: false }[],
+  idOf = (index: number) => String(116762160362694500n + BigInt(index)),
+): MessengerAdapter =>
   ({
     self: () => "500",
     close: async () => {},
@@ -98,7 +102,7 @@ const timedChatOf = (count: number, asked: { before?: string; reactions?: false 
       })
       const all = Array.from({ length: count }, (_, index) => ({
         ...message(index + 1),
-        id: String(116762160362694500n + BigInt(index)),
+        id: idOf(index),
       }))
       const upTo = window.before === undefined ? all : all.filter((one) => one.timestamp <= String(window.before))
       const items = upTo.slice(-window.limit)
@@ -120,6 +124,19 @@ describe("store fetch", () => {
     expect(asked[1]?.before).toBe(message(5).timestamp)
     const estimate = await call(["store", "fetch", "7", "--estimate", "--json"], timedChatOf(7, []), env, { fetching })
     expect(estimate.code).toBe(2)
+  })
+
+  it("fetches by send time a chat whose ids are words", async () => {
+    const fetching: Fetching = { page: 3, pause: "1ms", maxPages: 10, orderBy: "time" }
+    const words = timedChatOf(7, [], (index) => `msg-${index}`)
+
+    const { code, answer } = await call(["store", "fetch", "7", "--json"], words, setup(), { fetching })
+
+    expect(code).toBe(0)
+    expect(answer).toMatchObject({
+      complete: true,
+      ranges: [{ from: Date.parse(message(1).timestamp), to: Date.parse(message(7).timestamp) }],
+    })
   })
 
   it("**stops at --limit keeping what it read, and the next run fetches only what is missing**", async () => {

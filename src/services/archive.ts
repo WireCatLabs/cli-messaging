@@ -26,6 +26,15 @@ export const PAGE = 100
 /** How `store fetch` reads a messenger's history, where it says nothing of its own. */
 export const FETCHING: Fetching = { page: PAGE, pause: "1s", maxPages: 10, orderBy: "id" }
 
+/**
+ * What a held stretch is keyed by, for `store fetch` and `download --all` alike: the message id, or its
+ * send time in milliseconds. Not a safe integer means the messenger's ids do not order a chat.
+ */
+export const keyOf =
+  (fetching: Fetching = FETCHING) =>
+  (message: Message): number =>
+    fetching.orderBy === "time" ? Date.parse(message.timestamp) : Number(message.id)
+
 export interface FetchOptions {
   /** Messages in this run. */
   limit: number
@@ -68,8 +77,8 @@ export interface ArchiveService {
   ): Promise<Estimate & { chat: Id }>
   /**
    * A chat's history into the store, newest to oldest, **resumable**: after every page the stretch
-   * it covered is recorded, so a stop loses nothing and the next run jumps over what is held. Needs
-   * numeric message ids, which order the chat.
+   * it covered is recorded, so a stop loses nothing and the next run jumps over what is held. Keyed
+   * by `keyOf`: whole-number ids, or send times where the messenger orders by time.
    */
   fetch(chat: string, options: FetchOptions): Promise<Fetched>
   /** The chats this account has left, with their messages; `clear` deletes them. From the store alone. */
@@ -133,7 +142,7 @@ export const archiveService = (deps: ServiceDeps): ArchiveService => {
       pushed(deps, "`store fetch`")
       const fetching = deps.messenger.fetching ?? FETCHING
       const byTime = fetching.orderBy === "time"
-      const keyOf = (message: Message) => (byTime ? Date.parse(message.timestamp) : Number(message.id))
+      const keyed = keyOf(fetching)
       const connection = await deps.connection()
       const self = connection.self()
       if (self === null) throw new CliError("authentication_error", "not logged in — nothing to fetch for")
@@ -164,7 +173,7 @@ export const archiveService = (deps: ServiceDeps): ArchiveService => {
           break
         }
         chatId ??= first.chatId
-        const keys = page.items.map(keyOf)
+        const keys = page.items.map(keyed)
         if (keys.some((key) => !Number.isSafeInteger(key))) {
           throw new CliError(
             "validation_error",

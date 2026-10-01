@@ -1354,6 +1354,108 @@ describe("messages download", () => {
       expect(asked).toEqual([])
     })
 
+    const byTime: Partial<Messenger> = { fetching: { page: 100, pause: "1ms", maxPages: 10, orderBy: "time" } }
+    const wordChatOf = (sent: [id: string, second: number][], asked: string[], failOn?: string): MessengerAdapter => {
+      const all = sent.map(([id, second]) => ({
+        ...message,
+        id,
+        timestamp: new Date(Date.parse(message.timestamp) + second * 1000).toISOString(),
+        attachments: [{ kind: "file" }],
+      }))
+      return {
+        ...chatOf([], {}, asked, failOn),
+        history: async (_chat, { before }) => {
+          const older =
+            before === undefined
+              ? all
+              : all.slice(
+                  0,
+                  all.findIndex((one) => one.id === before),
+                )
+          return { items: older.slice(-2), hasMore: older.length > 2 }
+        },
+      }
+    }
+
+    it("**pages a chat whose ids are words by send time**, resumes a cut run, and saves no file twice", async () => {
+      const { root, env } = setup()
+      const into = join(root, "out")
+      const sent: [string, number][] = [
+        ["msg-a", 1],
+        ["msg-b", 2],
+        ["msg-c", 2],
+        ["msg-d", 2],
+        ["msg-e", 3],
+        ["msg-f", 4],
+      ]
+      const first: string[] = []
+      const cut = await call(
+        ["messages", "download", "Book", "--all", "--pause", "1ms", "--output-dir", into],
+        async () => wordChatOf(sent, first, "msg-c"),
+        env,
+        {},
+        byTime,
+      )
+      const second: string[] = []
+      const again = await call(
+        ["messages", "download", "Book", "--all", "--pause", "1ms", "--output-dir", into, "--json"],
+        async () => wordChatOf([...sent, ["msg-g", 4]], second),
+        env,
+        {},
+        byTime,
+      )
+
+      expect(cut.code).not.toBe(0)
+      expect(first).toEqual(["msg-f", "msg-e", "msg-d"])
+      expect(second).toEqual(["msg-g", "msg-c", "msg-b", "msg-a"])
+      expect(JSON.parse(again.stdout[0] ?? "")).toMatchObject({ saved: 4, existing: 0, complete: true })
+      expect(readdirSync(into).filter((name) => !name.startsWith("."))).toHaveLength(7)
+      expect(JSON.parse(readFileSync(join(into, ".download-7.json"), "utf8"))).toMatchObject({ by: "time" })
+    })
+
+    it("**resumes from a progress file written before it said what it counts by**, as ids", async () => {
+      const { root, env } = setup()
+      const into = join(root, "out")
+      mkdirSync(into)
+      writeFileSync(join(into, ".download-7.json"), JSON.stringify({ chat: "7", done: [{ from: 3, to: 5 }] }))
+      const asked: string[] = []
+      const kinds = { 6: "file", 5: "file", 4: "file", 3: "file", 2: "file", 1: "file" }
+
+      const { code } = await call(
+        ["messages", "download", "Book", "--all", "--pause", "1ms", "--output-dir", into],
+        async () => chatOf([6, 5, 4, 3, 2, 1], kinds, asked),
+        env,
+      )
+
+      expect(code).toBe(0)
+      expect(asked).toEqual(["6", "2", "1"])
+      expect(JSON.parse(readFileSync(join(into, ".download-7.json"), "utf8"))).toMatchObject({
+        by: "id",
+        done: [{ from: 1, to: 6 }],
+      })
+    })
+
+    it("sets aside a progress file that counts by time where the messenger counts by id", async () => {
+      const { root, env } = setup()
+      const into = join(root, "out")
+      mkdirSync(into)
+      const at = Date.parse(message.timestamp)
+      writeFileSync(
+        join(into, ".download-7.json"),
+        JSON.stringify({ chat: "7", by: "time", done: [{ from: at, to: at + 5000, fromId: "1" }] }),
+      )
+      const asked: string[] = []
+
+      const { stderr } = await call(
+        ["messages", "download", "Book", "--all", "--pause", "1ms", "--output-dir", into],
+        async () => chatOf([2, 1], { 2: "file", 1: "file" }, asked),
+        env,
+      )
+
+      expect(asked).toEqual(["2", "1"])
+      expect(stderr.join("")).toContain("starting from the newest again")
+    })
+
     it("refuses a message id beside --all, and neither", async () => {
       const { env } = setup()
       const both = await call(["messages", "download", "Book", "1", "--all"], async () => withFiles, env)
