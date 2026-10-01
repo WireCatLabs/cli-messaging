@@ -27,4 +27,6 @@ export interface BotMessenger {
   tokenStore?: (command: Command, profile: string) => BotTokenStore
   /** The chats the bot has seen; the shared `ChatRegistry` when unset. */
   registry?: (command: Command, profile: string) => ChatRegistry
+  /** A secret typed at a hidden prompt or piped on stdin; the shared `readSecret` when unset. */
+  readSecret?: (command: Command, prompt: string) => Promise<string>
 }
