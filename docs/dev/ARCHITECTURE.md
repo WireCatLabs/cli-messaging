@@ -59,6 +59,15 @@ Opening a store also fills `messages.normalized_text` for rows stored before ver
 5,000 of them wait (`BACKFILL_ON_OPEN`, about 40 ms); a larger file keeps working and waits for the
 maintenance command that fills it in batches.
 
+**Two text indexes.** `messages_fts` (trigram over `text`) answers substring search. `message_words`
+(version 12) holds the words of `normalized_text` for ranked search — contentless with delete support,
+kept by triggers that fire only when the normalized text, the sender or the chat really changed, with
+a `scope` column of `c<chat_pk>` and `s<sender_identity_pk>` tokens. Ask its vocabulary through
+`message_words_vocab` with `col = 'normalized_text'`, and restrict a word query to that column, or the
+scope tokens come back as words. A file of at most `BACKFILL_ON_OPEN` messages is indexed by the
+migration; a larger one records in `search_index_state` the highest `pk` the batches must reach.
+Nothing searches it yet ([phase 2](../storage/plans/phase-2.md)).
+
 **Drizzle is bundled, not installed.** `drizzle-orm` is a development dependency. `pnpm build` runs
 `scripts/bundle-drizzle.ts`, which writes the Drizzle modules the store uses into
 `dist/store/sqlite/drizzle/`: loaded from `node_modules`, Drizzle costs Node about 200 ms per

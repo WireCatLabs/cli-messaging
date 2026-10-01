@@ -272,3 +272,17 @@ export const transcripts = sqliteTable(
   },
   (table) => [primaryKey({ columns: [table.chatPk, table.messageNativeId] })],
 )
+
+/**
+ * How far a derived search index is built, one row per index. `watermark` is the highest message
+ * `pk` when the index was created: rows above it are indexed by triggers, rows up to it by batches
+ * that have reached `filled_through`.
+ */
+export const searchIndexState = sqliteTable("search_index_state", {
+  name: text("name").primaryKey(),
+  watermark: integer("watermark").notNull(),
+  filledThrough: integer("filled_through").notNull(),
+  termsThrough: integer("terms_through").notNull(),
+  normalizerVersion: integer("normalizer_version").notNull(),
+  builtAt: integer("built_at"),
+})

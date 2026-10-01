@@ -6,6 +6,14 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- **Store version 12: a word index over the normalized text**, for the ranked search that comes
+  next. A file of up to 5,000 messages is indexed when it is opened; a larger one is indexed later
+  in batches. Older builds keep opening the file (`min_compatible` stays 6), and what they write is
+  indexed. Saving messages is about a quarter slower and the file about 15% larger (measured, 100,000
+  messages through the store).
+
 ## 0.82.0 — 01.10.2026
 
 ### Added

@@ -23,6 +23,8 @@ export const MANIFEST: ManifestEntry[] = [
   { name: "20260930024055_version-9-fetch-leases", version: 9, minCompatible: 6 },
   { name: "20260930024643_version-10-contacts", version: 10, minCompatible: 6 },
   { name: "20260930024933_version-11-transcripts", version: 11, minCompatible: 6 },
+  { name: "20261001110735_version-12-search-state", version: 12, minCompatible: 6 },
+  { name: "20261001110736_version-12-word-index", version: 12, minCompatible: 6 },
 ]
 
 export const generatedMigrations = (
