@@ -27,6 +27,12 @@ parse() {
   done
 }
 parse "$@"
+# The reason lands in CHANGELOG.md, which docs:check refuses an internal id in; caught here, before
+# the commit to main that 0.98.0 made and its release run then failed on.
+if printf '%s' "$blocked" | grep -Eq '\b(CLI|MAX|OPS|CORE|NEED|BUG|FIND|SEC|PERF|UX|IDEA|DEBT|RISK|ASK|TASK)-[0-9]+\b'; then
+  echo "--blocked: say who is blocked and why in plain words, not an internal id" >&2
+  exit 2
+fi
 
 git fetch -q origin
 [ "$(git branch --show-current)" = "main" ] || { echo "not on main" >&2; exit 1; }
