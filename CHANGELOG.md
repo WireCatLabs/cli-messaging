@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.76.0 — 01.10.2026
+
 ### Added
 
 - **`polls create --revote`**, and `revote` on the `polls_create` tool: people may change their vote.
