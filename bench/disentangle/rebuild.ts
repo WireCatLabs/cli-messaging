@@ -1,9 +1,11 @@
 // Phase 3 item 7, the store part: how long `replaceConversations` holds the write lock for one chat of
-// N messages — other processes wait at most 5 s (`busy_timeout`). Same invented chat as scale.ts.
+// N messages, and the longest another process waited for the write lock meanwhile (it gives up at 5 s).
+// Same invented chat as scale.ts.
 // Usage: pnpm build, then node --experimental-strip-types rebuild.ts <N> <scratch file>
 import { createReadStream, rmSync } from "node:fs"
 import { join } from "node:path"
 import { createInterface } from "node:readline"
+import { Worker } from "node:worker_threads"
 import type { LinkInput } from "../../src/conversations/link.ts"
 import { DATA_DIR, mulberry32 } from "../search/common.ts"
 
@@ -60,17 +62,44 @@ const rules = performance.now()
 const { links, conversations } = linkMessages(inputs, { handles: await store.senderHandles(ACCOUNT, "-1") })
 const rulesMs = performance.now() - rules
 
+// Another process's view: a small write every 10 ms, and the longest it waited for the lock.
+const WRITER = `
+const { parentPort, workerData } = require("node:worker_threads")
+const { DatabaseSync } = require("node:sqlite")
+const db = new DatabaseSync(workerData)
+db.exec("PRAGMA busy_timeout = 60000")
+let longest = 0
+let running = true
+parentPort.on("message", () => { running = false })
+const tick = () => {
+  if (!running) return parentPort.postMessage(longest)
+  const at = performance.now()
+  db.exec("BEGIN IMMEDIATE; COMMIT")
+  longest = Math.max(longest, performance.now() - at)
+  setTimeout(tick, 10)
+}
+tick()
+`
+
 const timeWrite = async () => {
+  const writer = new Worker(WRITER, { eval: true, workerData: file })
   const at = performance.now()
   await store.replaceConversations(ACCOUNT, "-1", { startedAt: Date.now(), algorithmVersion: RULES_VERSION, links, conversations })
-  return performance.now() - at
+  const took = performance.now() - at
+  const waited = await new Promise<number>((resolve) => {
+    writer.once("message", resolve)
+    writer.postMessage("stop")
+  })
+  await writer.terminate()
+  return { took, waited }
 }
 const first = await timeWrite()
 const again = await timeWrite()
 await store.close()
 const s = (ms: number) => `${(ms / 1000).toFixed(2)} s`
 console.log(
-  `| ${n.toLocaleString("en")} | ${s(readMs)} | ${s(rulesMs)} | ${s(first)} | ${s(again)} | ` +
+  `| ${n.toLocaleString("en")} | ${s(readMs)} | ${s(rulesMs)} | ${s(first.took)} / ${s(first.waited)} | ` +
+    `${s(again.took)} / ${s(again.waited)} | ` +
     `${links.length.toLocaleString("en")} | ${conversations.length.toLocaleString("en")} | ` +
     `${Math.round(process.resourceUsage().maxRSS / 1024)} MB |`,
 )

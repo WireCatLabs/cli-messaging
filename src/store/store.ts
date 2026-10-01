@@ -144,7 +144,10 @@ export interface MessageStore {
   ): Promise<{ items: LinkInput[]; next: string | null }>
   /** Who wrote in the chat, by lowercased username: what an `@mention` names. */
   senderHandles(key: AccountKey, chatId: Id): Promise<Map<string, Id>>
-  /** The chat's provider and rule links and its conversations, replaced whole in one transaction. */
+  /**
+   * The chat's provider and rule links and its conversations, rebuilt: written as a new build in short
+   * transactions and made current in one, so readers never see half of it and a failed build changes nothing.
+   */
   replaceConversations(key: AccountKey, chatId: Id, build: ConversationBuild): Promise<void>
   /** Newest first; `after` and `before` bound when a conversation started. */
   conversations(
@@ -452,7 +455,7 @@ const storeOver = (context: StoreContext): MessageStore => {
     replaceConversations: async (key, chatId, build) => {
       const chatKey = chatKeyOf(key, chatId)
       if (chatKey === undefined) throw new CliError("not_found", `chat ${chatId} is not in the local copy`)
-      inTransaction(() => conversationQueries.replaceConversations(context, chatKey, build))
+      await conversationQueries.replaceConversations(context, chatKey, build)
     },
 
     conversations: async (key, chatId, { limit, after, before }) => {

@@ -107,8 +107,8 @@ describe("conversations in the store", () => {
     const database = await openCache(path)
     database
       .prepare(
-        `INSERT INTO message_links (message_pk, parent_pk, source, kind, confidence, method, created_at)
-         SELECT m.pk, p.pk, 'agent', 'answer', 0.9, 'model', 0
+        `INSERT INTO message_links (chat_pk, message_pk, parent_pk, source, kind, confidence, method, created_at)
+         SELECT m.chat_pk, m.pk, p.pk, 'agent', 'answer', 0.9, 'model', 0
          FROM messages m JOIN messages p ON p.native_id = '2' WHERE m.native_id = '3'`,
       )
       .run()
@@ -133,11 +133,44 @@ describe("conversations in the store", () => {
         startedAt: 1,
         algorithmVersion: RULES_VERSION,
         links: [],
-        conversations: [["1", "2"], ["2"]],
+        conversations: [
+          ["3", "4"],
+          ["1", "2", "2"],
+        ],
       }),
     ).rejects.toThrow(/conversation_messages/)
 
     expect(await store.conversations(OWNER, "-1", { limit: 10 })).toEqual(before)
+    await store.close()
+  })
+
+  it("**keeps one build**: a rebuild, and one after a failed build, leave only the current build's rows", async () => {
+    const { store, path } = await opened()
+    await build(store)
+    const rows = async () => {
+      const database = await openCache(path)
+      try {
+        return ["message_links", "conversations", "conversation_messages"].map((table) =>
+          Number(database.prepare(`SELECT count(*) AS n FROM ${table}`).get()?.n),
+        )
+      } finally {
+        database.close()
+      }
+    }
+    const once = await rows()
+
+    await expect(
+      store.replaceConversations(OWNER, "-1", {
+        startedAt: 1,
+        algorithmVersion: RULES_VERSION,
+        links: [],
+        conversations: [["1", "2", "2"]],
+      }),
+    ).rejects.toThrow(/conversation_messages/)
+    await build(store)
+
+    expect(await rows()).toEqual(once)
+    expect((await store.conversationState(OWNER, "-1"))?.algorithmVersion).toBe(RULES_VERSION)
     await store.close()
   })
 
