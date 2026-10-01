@@ -4,7 +4,7 @@
 #
 #   bin/release           # publishes from GitHub Actions (.github/workflows/release.yml)
 #   bin/release --local   # publishes from this machine: NPM_TOKEN if exported, else the keyring
-#   bin/release --blocked "<consumer and reason>"   # within a day of the last release, see README
+#   bin/release --blocked "<consumer and reason>"   # within 2 hours of the last release, see README
 #
 # The npm token is never printed and never written to a file — not on success, not in an error.
 set -eu
@@ -27,6 +27,12 @@ parse() {
   done
 }
 parse "$@"
+# The reason lands in CHANGELOG.md, which docs:check refuses an internal id in; caught here, before
+# the commit to main that 0.98.0 made and its release run then failed on.
+if printf '%s' "$blocked" | grep -Eq '\b(CLI|MAX|OPS|CORE|NEED|BUG|FIND|SEC|PERF|UX|IDEA|DEBT|RISK|ASK|TASK)-[0-9]+\b'; then
+  echo "--blocked: say who is blocked and why in plain words, not an internal id" >&2
+  exit 2
+fi
 
 git fetch -q origin
 [ "$(git branch --show-current)" = "main" ] || { echo "not on main" >&2; exit 1; }
@@ -39,6 +45,7 @@ git merge -q --ff-only origin/main
 [ "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)" ] || { echo "main is ahead of origin/main — push first" >&2; exit 1; }
 
 # The rule in README alone did not hold: twelve releases followed the day it merged (2026-10-01).
+# One a day proved too few the same evening; two hours apart still batches what lands together.
 times=$(npm view "$package" time --json --prefer-online 2>/dev/null) || {
   echo "npm did not answer when $package was last published — not releasing" >&2
   exit 1
@@ -47,17 +54,17 @@ early=$(node -e 'const times = JSON.parse(process.argv[1])
   const [version, at] = Object.entries(times).filter(([key]) => key !== "created" && key !== "modified")
     .map(([key, value]) => [key, new Date(value)]).sort((a, b) => b[1] - a[1])[0] ?? []
   if (!at || Number.isNaN(at.getTime())) throw new Error("npm answered with no publish time")
-  const next = new Date(at.getTime() + 24 * 3600 * 1000)
+  const next = new Date(at.getTime() + 2 * 3600 * 1000)
   const utc = (date) => `${date.toISOString().slice(0, 16).replace("T", " ")} UTC`
   if (next > new Date()) console.log(`${version} was published ${utc(at)}; the next release may go at ${utc(next)}`)' \
   "$times") || { echo "npm's publish times did not parse — not releasing" >&2; exit 1; }
 if [ -n "$early" ] && [ -z "$blocked" ]; then
-  echo "at most one release a day: $early." >&2
-  echo "a consumer blocked today may go now: bin/release --blocked \"<consumer and reason>\" (README, Releasing)" >&2
+  echo "at most one release every 2 hours: $early." >&2
+  echo "a consumer blocked right now may go now: bin/release --blocked \"<consumer and reason>\" (README, Releasing)" >&2
   exit 1
 fi
 if [ -z "$early" ] && [ -n "$blocked" ]; then
-  echo "no release in the last 24 hours — --blocked is not needed, releasing as usual"
+  echo "no release in the last 2 hours — --blocked is not needed, releasing as usual"
   blocked=""
 fi
 
