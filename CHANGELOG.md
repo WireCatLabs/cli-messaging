@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.85.0 — 01.10.2026
+
 ### Added
 
 - **`Messenger.fetching`: how `store fetch` reads a messenger's history** — messages per request,
