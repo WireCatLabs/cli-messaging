@@ -8,6 +8,7 @@ export interface PeopleLookup {
   all(): Contact[]
 }
 
+/** Shaped like a Telegram or MAX id. Another messenger's ids may be any string, so a miss here is not "not an id". */
 export const isId = (reference: string): boolean => /^-?\d+$/.test(reference.trim())
 
 /**
@@ -36,11 +37,9 @@ export const pickChat = (reference: string, chats: Chat[]): Chat => {
  */
 export const pickPerson = (reference: string, people: PeopleLookup): Contact => {
   const trimmed = reference.trim()
-  if (isId(trimmed)) {
-    const known = people.get(trimmed)
-    if (!known) throw new CliError("not_found", `no person ${trimmed} in what this account has seen`)
-    return known
-  }
+  const known = people.get(trimmed)
+  if (known) return known
+  if (isId(trimmed)) throw new CliError("not_found", `no person ${trimmed} in what this account has seen`)
 
   const wanted = trimmed.replace(/^@/, "").toLowerCase()
   const everyone = people.all().toSorted((a, b) => (a.name ?? "").localeCompare(b.name ?? ""))

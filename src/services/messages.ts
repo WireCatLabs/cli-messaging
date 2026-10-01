@@ -276,6 +276,8 @@ export const storedChatId = async (
   }
   if (/^-?\d+$/.test(trimmed)) return trimmed
   const chats = (await store.chats(account, {})).items
+  const exact = chats.find((one) => one.id === trimmed)
+  if (exact) return exact.id
   if (trimmed.startsWith("@")) {
     const username = trimmed.slice(1).toLowerCase()
     const found = chats.find((one) => String(one.providerMetadata?.username ?? "").toLowerCase() === username)
