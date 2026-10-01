@@ -63,7 +63,8 @@
     "prepare": "lefthook install || true",
     "secrets:scan": "gitleaks git --no-banner --redact .",
     "prepublishOnly": "pnpm build",
-    "parity:seed": "node --experimental-strip-types scripts/parity-seed.ts"
+    "parity:seed": "node --experimental-strip-types scripts/parity-seed.ts",
+    "parity:render": "node --experimental-strip-types scripts/parity-render.ts"
   },
   "dependencies": {
     "@bomb.sh/tab": "0.0.22",
