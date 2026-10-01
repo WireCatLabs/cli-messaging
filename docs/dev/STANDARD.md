@@ -148,7 +148,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--remove` | `<chat>` | take a chat out of a folder; repeat it for more |  | `chats folders update` (planned) |
 | `--reply-to` | `<message>` | answer this message id in the same chat |  | `messages send` |
 | `--retract` |  | take your vote back, where the poll allows it |  | `polls vote` |
-| `--revote` |  | people may change their vote |  | `polls create` |
+| `--revote` |  | people may change their vote |  | `polls create` (planned) |
 | `--run` | `<id>` | the run the report is about; the newest failed one if not given |  | `doctor report create` |
 | `--search` | `<text>` | only chats whose name contains this; at least 3 characters |  | `chats list`, `contacts list` |
 | `--send-id` | `<id>` | reuse the id of an earlier send whose outcome is unknown; the messenger drops the duplicate. **max spells the value `<n>`** |  | `messages forward`, `messages send`, `polls create` |

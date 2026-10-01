@@ -12,9 +12,6 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   Without it they cannot, in every messenger — MAX's default, and now Telegram's too: a tg poll made
   without `--revote` stops allowing a changed vote. `NewPoll.revote`; an adapter treats it absent as
   `false`.
-
-### Added
-
 - **`store fetch --last <n>`**: stop once the newest n messages of the chat are held, counted in the
   store, so a later run with the same `--last` asks for nothing. Not with `--since`. `FetchOptions.last`;
   the answer carries `reachedLast: true` when it stopped there.
