@@ -95,6 +95,7 @@ const timedChatOf = (
   count: number,
   asked: { before?: string; reactions?: false }[],
   idOf = (index: number) => String(116762160362694500n + BigInt(index)),
+  timeOf = (index: number) => message(index + 1).timestamp,
 ): MessengerAdapter =>
   ({
     self: () => "500",
@@ -107,8 +108,9 @@ const timedChatOf = (
       const all = Array.from({ length: count }, (_, index) => ({
         ...message(index + 1),
         id: idOf(index),
+        timestamp: timeOf(index),
       }))
-      const upTo = window.before === undefined ? all : all.filter((one) => one.timestamp <= String(window.before))
+      const upTo = window.before === undefined ? all : all.filter((one) => one.timestamp < String(window.before))
       const items = upTo.slice(-window.limit)
       return { items, hasMore: items.length >= window.limit }
     },
@@ -125,9 +127,37 @@ describe("store fetch", () => {
     expect(code).toBe(0)
     expect(answer).toMatchObject({ complete: true })
     expect(asked.every((one) => one.reactions === false)).toBe(true)
-    expect(asked[1]?.before).toBe(message(5).timestamp)
+    expect(asked[1]?.before).toBe(new Date(Date.parse(message(5).timestamp) + 1).toISOString())
     const estimate = await call(["store", "fetch", "7", "--estimate", "--json"], timedChatOf(7, []), env, { fetching })
     expect(estimate.code).toBe(2)
+  })
+
+  it("**keeps both of two messages sent in one millisecond when a page ends between them**", async () => {
+    const fetching: Fetching = { page: 3, pause: "1ms", maxPages: 10, orderBy: "time" }
+    const sameMoment = (index: number) => message(index === 3 ? 5 : index + 1).timestamp
+
+    const { code, answer } = await call(
+      ["store", "fetch", "7", "--json"],
+      timedChatOf(7, [], undefined, sameMoment),
+      setup(),
+      { fetching },
+    )
+
+    expect(code).toBe(0)
+    expect(answer).toMatchObject({ fetched: 7, complete: true })
+  })
+
+  it("**steps past a millisecond that holds more than a page** instead of asking for it again", async () => {
+    const asked: { before?: string; reactions?: false }[] = []
+    const fetching: Fetching = { page: 3, pause: "1ms", maxPages: 10, orderBy: "time" }
+    const crowded = (index: number) => message(index < 5 ? 5 : index + 1).timestamp
+
+    const { code } = await call(["store", "fetch", "7", "--json"], timedChatOf(7, asked, undefined, crowded), setup(), {
+      fetching,
+    })
+
+    expect(code).toBe(0)
+    expect(asked.length).toBeLessThan(6)
   })
 
   it("fetches by send time a chat whose ids are words", async () => {
