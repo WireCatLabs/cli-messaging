@@ -1,6 +1,7 @@
 # A SQLite the store can work with, on every setup
 
-Plan, 2026-10-01. **Proposed, not approved.** The owner's brief (2026-10-01): «cli-messaging should ship
+Plan, 2026-10-01. **Approved by the owner 2026-10-01** (NEED-481 A, NEED-482 A, and "update Node" accepted
+where SQLite cannot be swapped). R1 and R2 are built (#268, not yet released). The owner's brief (2026-10-01): «cli-messaging should ship
 its own SQLite always since users can be on exotic setups, maybe make it a fallback — just ensure the
 user gets their sqlite working and version not older than x».
 
@@ -73,58 +74,109 @@ It replaces the raw `no such module: fts5` and `unrecognized option: "contentles
 it; R1 is the guard. The user pages (`docs/installation.md` in max-cli, the README in tg-cli) say
 "Node 22.16 or newer".
 
-**R3 · Bun on macOS always uses our SQLite.** A package `@leemour/cli-messaging-sqlite-darwin` holds one
-universal `libsqlite3.dylib` (arm64 and x86_64), built in our CI from the official amalgamation with
-Homebrew's flags, `-mmacosx-version-min=13.0` (Bun's own minimum, docs say: Bun
-`scripts/build/config.ts`). cli-messaging lists it under `optionalDependencies`; its `os: ["darwin"]`
-keeps it off other systems (docs say: Bun skips packages whose `os`/`cpu` do not match; npm and pnpm do
-the same, which is how esbuild ships its binaries — inferred). The Bun driver calls `setCustomSQLite` with it on macOS, every time — so the macOS version
-stops mattering. If the package is missing (an install that skipped optional packages), the system
-library is used and R1 refuses if it is not good enough.
+**R3 · One package of our own SQLite builds.** `@leemour/cli-messaging-sqlite` (a folder of this
+repository, published on its own) holds the newest SQLite, built in our CI from the official
+amalgamation, for every place one can be loaded:
 
-Why one universal library and not two packages: one file to build and publish; the
-cost is about twice the size of one architecture, a few MB (inferred).
+- `darwin/libsqlite3.dylib` — one universal file (arm64 and x86_64), `-mmacosx-version-min=13.0`
+  (Bun's own minimum, docs say: Bun `scripts/build/config.ts`);
+- `linux-x64-gnu`, `linux-arm64-gnu`, `linux-x64-musl`, `linux-arm64-musl` — `libsqlite3.so.0`, the gnu
+  ones built against an old glibc so they load on newer ones.
 
-**R4 · No library swap for distribution Node** (recommended; NEED below). Every distribution measured
-already passes R1. Swapping needs a re-exec at the very start of `tg`/`max`, because the store opens
-in the middle of a command — after a message may already have been sent, and a re-exec there could
-send it twice. It also leaks `LD_LIBRARY_PATH` into child processes, and our build must stay as new as
-every distribution's. R1 still gives those users a clear message.
+Each is compiled with Homebrew's flags plus what Node needs (FTS3/5, SESSION, PREUPDATE_HOOK,
+COLUMN_METADATA, RTREE, GEOPOLY, RBU, DBSTAT_VTAB, MATH_FUNCTIONS); without the last group Node exits
+at start-up on a missing symbol (measured). A small `index.js` returns the folder for the running
+platform, or nothing.
 
-**Where "always" stops.** Official Node 22.0–22.15 and 23.x cannot be given another SQLite inside the
-process. A WebAssembly SQLite could run there, but several processes share `messages.db` (tg, max,
-`mcp`, `serve`), and WebAssembly file systems have no shared-memory WAL or reliable locking across
-processes — that risks the owner's system of record. For those users the answer is R1's message:
-update Node.
+Why one package and not one per platform: every new package name needs a first publish by hand and a
+trusted publisher set on npmjs.com (docs say: npm trusted publishers are configured in the package's
+settings, so the package must exist). One package is one such step; the cost is a few MB of libraries
+for the other platforms in every install (inferred: about 1.5 MB each). It is versioned by SQLite, so
+cli-messaging's daily releases do not rebuild binaries. It is a plain dependency of cli-messaging at a
+version from npm — not `workspace:`, which `npm pack` would publish unresolved — and is listed in
+`minimumReleaseAgeExclude` in cli-messaging, tg-cli and max-cli. It is on npm before the cli-messaging
+change that depends on it merges.
+
+The owner publishes it once by hand as an empty `0.0.0` (no binaries), so the trusted publisher can be
+set on npmjs.com; every version with libraries is published from CI, with provenance — no compiled
+library ever leaves a laptop.
+
+**R4 · Bun on macOS always loads it.** The Bun driver calls `Database.setCustomSQLite` with the dylib
+once, before the first database opens — R1's `:memory:` check included, since Bun refuses a second,
+different path — so the macOS version stops mattering. If the file is
+missing, the system library is used and R1 decides.
+
+**R5 · Node that uses the system's SQLite is restarted on ours when the system's fails R1.**
+`ensureSqlite()`, from a small entry `@leemour/cli-messaging/sqlite-runtime` that imports nothing heavy,
+is the first thing `tg` and `max` run — before their program is imported (`await ensureSqlite()`, then
+`await import("../program.js")`; a static import would load every module first).
+
+1. A restarted process (marked by an environment variable) puts the user's `LD_LIBRARY_PATH` back into
+   `process.env` and removes the mark, so programs it starts neither inherit our library nor skip their
+   own check, and returns.
+2. On Linux, if `/proc/self/maps` shows no `libsqlite3` (official Node, SQLite built in), return —
+   no cost for most users.
+3. Run R1's check on `:memory:`. If it passes, return.
+4. Try our library first: a throwaway child, output captured, with our folder first in
+   `LD_LIBRARY_PATH`, runs R1's check and reports `sqlite_version()`. Only if that passes and the version
+   is ours does the restart happen — a library that does not load (a glibc older than ours, a Node that
+   needs a symbol ours lacks, a binary whose search path ignores `LD_LIBRARY_PATH`) would otherwise crash
+   the command before any of our code runs. (`ld-musl` in the maps picks the musl build.)
+5. Restart: `spawn(process.execPath, [...execArgv, ...argv], { stdio: "inherit" })` — not `spawnSync`,
+   which blocks the parent so it cannot pass signals on. The parent forwards SIGTERM, SIGHUP and
+   SIGQUIT to the child, ignores SIGINT (the terminal sends it to both), and exits with the child's code,
+   or re-raises the child's signal on itself. An MCP client or a `kill <pid>` stopping `tg mcp` stops the
+   child too.
+6. Otherwise return; R1 refuses when the store opens.
+
+It runs before anything is read, sent or written, so the restart cannot repeat an action — which is
+why it lives at the start of the command and not in `openStore`. Linux only: Homebrew's Node uses
+Homebrew's SQLite, which is current (docs say: Formula/s/sqlite.rb, 3.53.4). Its cost: on a
+distribution's Node 22, step 3 imports `node:sqlite`, so its experimental warning appears on every
+command there, `--help` included; NEED-59 left that warning alone, and Node 24 prints none.
+
+**Where "always" stops** (accepted by the owner). Official Node 22.0–22.15 and 23.x build SQLite into
+the binary; nothing can replace it in the process. A WebAssembly SQLite could run there, but several
+processes share `messages.db` (tg, max, `mcp`, `serve`), and WebAssembly file systems have no
+shared-memory WAL or reliable locking across processes — that risks the owner's system of record. For
+those users R1 says: update Node.
 
 ## 4. Work items
 
 One PR each, based on `main`.
 
-1. **R1 + R2** — the check in `openStore`, the messages, `engines` in cli-messaging; a test with a
-   driver that fails the check; a CI job on `node:22.15.0-slim` that asserts the message. Release.
-   Then `engines` and the user pages in tg-cli and max-cli with their next bump.
-2. **R3, the library** — a workflow that builds the universal dylib on a macOS runner, asserts with
-   `vtool -show-build` that its minimum macOS is 13.0 and that it has both architectures, and publishes
-   `@leemour/cli-messaging-sqlite-darwin` (by hand the first time, after the owner's yes).
-3. **R3, loading it** — the Bun driver calls `setCustomSQLite` on macOS; a permanent CI job on macOS
-   runners (14, 15, 26, and an Intel runner if GitHub still has one) asserts that Bun reports *our*
-   SQLite version, and runs the store's tests under Bun.
-4. **Upkeep** — `bin/release` checks that the dylib's SQLite is not older than the newest one the CI
-   matrix saw; a SQLite update is a new version of the library package.
+1. **R1 + R2** — done (#268): the check in `openStore`, `engines`, the CI job on Node 22.15.0.
+2. **The libraries** — `packages/sqlite/`: a workflow that builds the five libraries (macOS runner;
+   Linux x64 and arm64 runners, gnu in an old-glibc container, musl in Alpine), checks the dylib with
+   `vtool -show-build` (minimum macOS 13.0, both architectures) and each `.so` for Node's symbols, and
+   packs the package. Assertions: the dylib re-signed (`codesign -s -`) after any strip or `lipo` and
+   `codesign -v` passes, and an arm64 runner loads it from the packed `.tgz`; each gnu `.so`'s highest
+   `GLIBC_` symbol version (`objdump -T`) is the floor we document; each `.so` exports every `sqlite3_*`
+   symbol Node 22 and Node 26 import. `bin/publish-sqlite` publishes the empty `0.0.0` for the owner;
+   CI publishes the rest.
+3. **R4** — the Bun driver loads the dylib on macOS. A permanent CI job on macOS runners (14, 15, 26,
+   and Intel if GitHub has it) asserts Bun reports *our* SQLite and runs the smoke test.
+4. **R5** — `ensureSqlite()`; a CI job in Ubuntu 26.04 with the distribution's Node and an old
+   `libsqlite3` (3.42, put first on `LD_LIBRARY_PATH`) asserts the command restarts on ours, the store
+   opens, a child process sees the user's `LD_LIBRARY_PATH`, and `kill -TERM` on the parent ends the
+   child.
+5. **tg-cli and max-cli** — call `ensureSqlite()` first in `src/bin/tg.ts` and `src/bin/max.ts`;
+   `engines`; the installation pages ("Node 22.16 or newer"); `minimumReleaseAgeExclude`.
+6. **Upkeep** — a SQLite update is a new version of `@leemour/cli-messaging-sqlite`; its build refuses a
+   SQLite older than the newest one the CI matrix met.
 
 ## 5. Test plan
 
-- R1: a driver whose FTS5 statement fails → `openStore` throws the message, `migrate` never runs, the
-  file is not created or changed. Real check on `node:22.15.0-slim` and `node:22.16.0-slim` in CI.
-- R3: on each macOS runner, under Bun, `select sqlite_version()` equals the library's version; the S1
-  table and `integrity-check` work; `pnpm smoke:bun` passes. `vtool` shows `minos 13.0` for both
-  architectures — the only check of macOS 13 we can run without a Mac on 13.
-- Without the optional package (`--omit=optional`): Bun on macOS uses the system library and R1 decides.
+- R1: done (#268) — a driver whose FTS5 statement fails is refused before the file exists; the built
+  package on Node 22.15.0 in CI.
+- R3: the dylib has minimum macOS 13.0 for both architectures (`vtool`) — the only check of macOS 13 we
+  can run without a Mac on 13; each `.so` exports every `sqlite3_*` symbol Node's own build does.
+- R4: on each macOS runner, under Bun, `select sqlite_version()` equals our library's; the S1 table and
+  `integrity-check` work; `pnpm smoke:bun` passes. With the library removed, the system's is used.
+- R5: unit tests with the maps, the check and `spawnSync` injected — no restart when the check passes,
+  when SQLite is built in, or when already restarted; the exit code and signal are passed on. The
+  Ubuntu CI job of item 4 runs it for real.
 
 ## 6. Open questions
 
-1. **NEED-481**, as answered: our SQLite always where it can be swapped (Bun on macOS), the check
-   everywhere. This plan is that answer; approve or correct it.
-2. **R4** — distribution Node, swap the library by re-exec (**A**), or only R1's message (**B**,
-   recommended)?
+None; the owner's step is the first publish of `@leemour/cli-messaging-sqlite` (item 2).
