@@ -2,6 +2,7 @@ import { mkdtempSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { afterEach, describe, expect, it } from "vitest"
+import { botCopy } from "../cli/bot/copy.js"
 import type { Messenger } from "../cli/messenger/context.js"
 import type { MessengerAdapter } from "../cli/messenger/port.js"
 import type { Chat, Message } from "../domain/models.js"
@@ -172,6 +173,24 @@ describe("searchStore", () => {
       "msg:test-bot/1/7/11",
       "msg:test-bot/2/7/21",
     ])
+  })
+
+  it("**in:personal and in:bots split in:all** — a bot's account is one whose provider ends in -bot", async () => {
+    const store = await shared()
+    const found = async (scope: string) =>
+      locators(await searchStore(store, account, { text: `chapter ${scope}`, limit: 10 }))
+
+    expect(await found("in:personal")).toEqual(["msg:test/500/7/1", "msg:test/500/7/2", "msg:test/500/7/3"])
+    expect(await found("in:bots")).toEqual([
+      "msg:test-bot/1/7/11",
+      "msg:test-bot/1/7/110",
+      "msg:test-bot/2/7/21",
+      "msg:test-bot/2/7/210",
+    ])
+    expect(await found("in:all")).toHaveLength(7)
+    expect(() => botCopy("test")).toThrow(
+      "a bot's provider ends in -bot, so a search can tell it from a person's account — not \"test\"",
+    )
   })
 
   it("refuses to widen the accounts it is given, or to name the senders twice", async () => {

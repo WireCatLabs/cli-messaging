@@ -112,7 +112,7 @@ export const messagesTools = (messenger: Messenger): Record<string, AnyTool> => 
         'first; "a phrase", -word, a OR b, and from: chat: after: before: has: in: work as in the CLI. A typo is ' +
         "corrected (listed in corrections); with no match it falls back to any word, then to a piece of a " +
         "word — each hit says which in match, and score is its relevance, higher better. It searches the " +
-        "account it runs as; `source` (a messenger, or all) searches every account of it held on this machine, " +
+        "account it runs as; `source` (a messenger; personal, bots or all) searches every account of it held on this machine, " +
         "and each hit's locator names its messenger and account. Returns { items, limit, hasMore, corrections, completeness, wordsReady }.",
       input: v.object({
         text: v.pipe(v.string(), v.minLength(1), v.description("the query: words, phrases and filters")),
@@ -121,7 +121,7 @@ export const messagesTools = (messenger: Messenger): Record<string, AnyTool> => 
           v.pipe(
             v.string(),
             v.minLength(1),
-            v.description("a messenger held on this machine, or all — as in: in text"),
+            v.description("a messenger held on this machine; personal, bots or all — as in: in text"),
           ),
         ),
         newest: v.optional(v.pipe(v.boolean(), v.description("newest first instead of best first"))),

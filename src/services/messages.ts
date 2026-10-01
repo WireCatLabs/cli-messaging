@@ -5,7 +5,7 @@ import { parseLocator } from "../domain/locator.js"
 import { parseMarkdown } from "../domain/markdown.js"
 import type { Chat, Deletion, Id, Message, Page, Provider, WindowedMessage } from "../domain/models.js"
 import { isId, pickChat, pickPerson } from "../resolve.js"
-import { parseQuery, sourceOf } from "../search/query.js"
+import { inSource, parseQuery, sourceOf } from "../search/query.js"
 import { type Match, search } from "../search/search.js"
 import { codeOf, guardedWrite, type Operated } from "../sends/guarded.js"
 import { newOperationId, newSendId } from "../sends/send-id.js"
@@ -553,9 +553,7 @@ const scopeOf = async (
   }
   const accounts =
     given ??
-    (wanted === undefined || held.length === 0
-      ? [account]
-      : held.filter(({ provider }) => wanted === "all" || provider === wanted))
+    (wanted === undefined || held.length === 0 ? [account] : held.filter(({ provider }) => inSource(wanted, provider)))
   const named = parsed.chat ?? chat
   const scope: SearchScope = { accounts }
   if (named !== undefined) scope.chat = await chatAmong(messenger, store, accounts, named)

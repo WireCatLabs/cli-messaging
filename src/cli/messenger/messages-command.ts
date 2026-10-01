@@ -140,7 +140,7 @@ export const messagesCommand = (messenger: Messenger): Command => {
     .option("--chat <chat>", `only this chat — the same as chat: in the query; ${messenger.chatArgument}`)
     .option(
       "--source <messenger>",
-      "every account of this messenger held in the store, or all of them — the same as in: in the query",
+      "every account of this messenger held in the store; personal, bots or all — the same as in: in the query",
     )
     .option("--limit <n>", "how many", positiveCount("--limit"))
     .option("--newest", "newest first instead of best first")

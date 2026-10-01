@@ -60,7 +60,7 @@ describe("parseQuery", () => {
 
   it("**takes in: any messenger the store holds**, and only those", () => {
     expect(parseQuery("piso in:WhatsApp", { now: NOW, providers: ["whatsapp"] }).in).toBe("whatsapp")
-    expect(() => parseQuery("piso in:telegram", { now: NOW })).toThrow('in: takes all — not "telegram"')
+    expect(() => parseQuery("piso in:telegram", { now: NOW })).toThrow('in: takes personal, bots, all — not "telegram"')
   })
 
   it('reads a quoted "OR" and a lower-case or as words', () => {
@@ -76,7 +76,7 @@ describe("parseQuery", () => {
     ["from:alice from:bob", "from: is given twice"],
     ["after:yesterday", 'after: takes a day, 2026-01-31, or a count of days back, 7d — not "yesterday"'],
     ["before:2026-02-30", "before: takes a day"],
-    ["in:whatsapp", 'in: takes telegram, max, all — not "whatsapp"'],
+    ["in:whatsapp", 'in: takes telegram, max, personal, bots, all — not "whatsapp"'],
     ['chat:""', "chat: needs a value"],
   ])("refuses %s", (query, message) => {
     expect(() => parse(query)).toThrow(message)

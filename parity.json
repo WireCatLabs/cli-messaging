@@ -394,7 +394,7 @@
     },
     "--source": {
       "value": "<messenger>",
-      "meaning": "every account of this messenger held in the store, or all of them — the same as in: in the query"
+      "meaning": "every account of this messenger held in the store; personal, bots or all — the same as in: in the query"
     },
     "--text": {
       "value": "<text>",

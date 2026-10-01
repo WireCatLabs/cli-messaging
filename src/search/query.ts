@@ -3,7 +3,18 @@ import type { Provider } from "../domain/models.js"
 
 export type Term = { kind: "word"; text: string } | { kind: "phrase"; words: string[] }
 
-export type Source = Provider | "all"
+/** `personal` and `bots` split `all`: a bot's account is one whose provider ends in `-bot` (`isBotProvider`). */
+export type Source = Provider | "personal" | "bots" | "all"
+
+/** How the store tells a bot's copy from a personal account: `max-bot`, `telegram-bot`. */
+export const isBotProvider = (provider: Provider): boolean => provider.endsWith("-bot")
+
+/** Whether an account of `provider` is inside `source`. */
+export const inSource = (source: Source, provider: Provider): boolean =>
+  source === "all" ||
+  (source === "bots" && isBotProvider(provider)) ||
+  (source === "personal" && !isBotProvider(provider)) ||
+  source === provider
 
 /**
  * A parsed search (phase 2 plan §4). `required` is AND of groups, each group OR of terms — OR binds
@@ -89,9 +100,9 @@ const day = (name: string, value: string, now: number): number => {
   return at.getTime()
 }
 
-/** `in:` and `--source` take a messenger the store holds, or `all`. */
+/** `in:` and `--source` take a messenger the store holds, `personal`, `bots` or `all`. */
 export const sourceOf = (name: string, value: string, providers: readonly Provider[]): Source => {
-  const sources: Source[] = [...providers, "all"]
+  const sources: Source[] = [...providers, "personal", "bots", "all"]
   const source = value.toLowerCase()
   if (!sources.includes(source)) fail(`${name} takes ${sources.join(", ")} — not "${value}"`)
   return source

@@ -6,6 +6,13 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- **`in:personal` and `in:bots`** in `messages search` (and `--source`, MCP `source`): every personal
+  account held in the store, or every bot's copy; `in:all` is both, as before. A bot's account is one
+  whose provider ends in `-bot`, and the shared bot commands now refuse a `BotMessenger.provider` that
+  does not — the owner's call.
+
 ### Changed — may break callers
 
 - **The parity manifest marks `messages search --newest`, `--context` and `--source` as in all CLIs**:
