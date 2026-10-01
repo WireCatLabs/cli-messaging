@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.87.0 — 01.10.2026
+
 ### Added
 
 - **`account update`** — `--first-name`, `--last-name`, `--description`, `--photo <file>` — and
@@ -14,10 +16,6 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   first by default (`account.sessions.end: ask`; `--yes` answers), and it has no MCP tool at any
   level. A new port group, `AccountEditing` (`updateProfile`, `endOtherSessions`), `ProfileChange`,
   and `Services.account`.
-
-## 0.86.0 — 01.10.2026
-
-### Added
 
 - **`contacts add|remove|block|unblock <person>`, `contacts rename <person> <first-name> [last-name]`
   and `contacts import <file>`**, with the tools `contacts_add|remove|block|unblock|rename` (P2).
