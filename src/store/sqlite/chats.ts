@@ -17,6 +17,14 @@ import {
 } from "./schema.js"
 import { json, parsed, present, toIso, toMs } from "./values.js"
 
+/** The chat's own id, when the store key is a chat of this account. */
+export const chatOf = ({ orm }: StoreContext, accountKey: number, chatKey: number): Id | undefined =>
+  orm
+    .select({ id: chats.nativeId })
+    .from(chats)
+    .where(and(eq(chats.pk, chatKey), eq(chats.accountPk, accountKey)))
+    .get()?.id
+
 export const findChatPk = ({ orm }: StoreContext, accountKey: number, chatId: Id): number | undefined =>
   orm
     .select({ pk: chats.pk })

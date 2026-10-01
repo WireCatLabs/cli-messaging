@@ -82,7 +82,7 @@ it still appears in batches as context and as a candidate. A stale agent answer 
 the agent again — that is how "ask again" works (C4). `batches next` returns the earliest window whose
 core holds such messages; the core is those messages, up to `--size`, in order.
 
-**A3 · No batch table: a batch id names its window.** The id encodes chat, the core's first and last
+**A3 · No batch table: a batch id names its window.** **Correction 2026-10-01, at build:** the hash covers every live message from the first to the last one asked about, not only those — answering part of a batch would otherwise change it, and the next answer would be refused. The id encodes chat, the core's first and last
 message and a hash of the core's message ids: `b1.<chat key>.<first pk>.<last pk>.<hash>`. `links add`
 recomputes the core from the id and refuses the answer if the chat changed under it (a message deleted
 or added inside the core). Why: nothing to clean up, nothing to expire, and "resume" is just asking for
@@ -153,7 +153,7 @@ links under them change.
    output. No migration (A9).
 2. ✅ 2026-10-01 · **Agent answers into the choice** — `LinkInput`/`linkMessages` take the chat's fresh agent answers;
    `choose` in C1's order (A6); `RULES_VERSION` up so `store check` names chats to rebuild.
-3. **`conversations links add|clear`** — validation (A5), replace-per-message, the `conversations.links`
+3. ✅ 2026-10-01 · **`conversations links add|clear`** — validation (A5), replace-per-message, the `conversations.links`
    permission key (A10).
 4. **The skill** — `skills/link-conversations/SKILL.md`, `skill show <name>` (A8), one line in tg-cli's and
    max-cli's SKILL.md (a PR in each).

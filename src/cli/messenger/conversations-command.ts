@@ -1,11 +1,13 @@
 import { CliError } from "@leemour/cli-core"
 import { Command } from "commander"
 import { renderMessages } from "../../render/messages.js"
+import { levelFor } from "../../sends/permissions.js"
 import { BATCH_SIZE } from "../../services/conversations.js"
 import { momentOf } from "../../services/moment.js"
-import type { ConversationSummary } from "../../store/store.js"
+import type { AgentAnswer, ConversationSummary } from "../../store/store.js"
 import { positiveCount } from "../paging.js"
-import { type Messenger, messengerContext } from "./context.js"
+import { type Messenger, type MessengerContext, messengerContext } from "./context.js"
+import { readAll } from "./stdin.js"
 
 /**
  * `conversations`: the threads inside a group chat, found by rules over the stored messages — replies,
@@ -144,7 +146,82 @@ export const conversationsCommand = (messenger: Messenger): Command => {
     context.renderer.note(`${batch.remaining.messages} messages left after this batch`)
   })
 
+  const links = conversations
+    .command("links")
+    .description("your agent's answers: which earlier message each message of a batch answers")
+
+  links
+    .command("add")
+    .description(
+      'store your agent\'s answer to a batch, read as JSON from stdin: { "model", "answers": [{ "message", ' +
+        '"parent", "confidence" }] }; all or nothing',
+    )
+    .requiredOption("--batch <id>", "the batch id `conversations batches next` printed")
+    .action(async function (this: Command) {
+      const { batch } = this.opts<{ batch: string }>()
+      const context = messengerContext(this, messenger)
+      writable(context, messenger.app.command)
+      const answer = answerOf(await readAll(context.stdin))
+      const stored = await context.withServices((services) => services.conversations.addAnswers(batch, answer))
+      if (context.format === "pretty") {
+        context.streams.data(
+          `${stored.stored} answers stored — \`conversations build --chat ${stored.chat}\` uses them\n`,
+        )
+      } else context.renderer.result(stored)
+    })
+
+  links
+    .command("clear")
+    .description("drop your agent's answers for a chat, or only one model's; messages are never touched")
+    .requiredOption("--chat <chat>", messenger.chatArgument)
+    .option("--model <model>", "only the answers this model gave")
+    .action(async function (this: Command) {
+      const { chat, model } = this.opts<{ chat: string; model?: string }>()
+      const context = messengerContext(this, messenger)
+      writable(context, messenger.app.command)
+      const cleared = await context.withServices((services) => services.conversations.clearAnswers(chat, model))
+      if (context.format === "pretty") context.streams.data(`${cleared.cleared} answers dropped\n`)
+      else context.renderer.result(cleared)
+    })
+
   return conversations
+}
+
+/**
+ * `deny` already stopped the command (`messengerContext`); `readonly` stops this write too. There is no
+ * question to put to the owner here, so `ask` refuses rather than writing unasked.
+ */
+const writable = (context: MessengerContext, command: string) => {
+  const { settings } = context
+  const { level, key } = levelFor(settings.permissions, LINKS_KEY)
+  if (level === "allow") return
+  throw new CliError(
+    level === "ask" ? "confirmation_required" : "permission_error",
+    `profile ${settings.profile} does not let ${LINKS_KEY} write (permissions.${key} is ${level}, from the ` +
+      `${settings.permissionSources[key ?? ""] ?? "default"}); to allow it: ` +
+      `${command} ${settings.profile} config set permissions.${LINKS_KEY} allow`,
+    { permission: LINKS_KEY },
+  )
+}
+
+const LINKS_KEY = "conversations.links"
+
+/** The agent's JSON, shaped enough for the store to check the rest against the batch. */
+const answerOf = (text: string): AgentAnswer => {
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(text)
+  } catch {
+    throw new CliError("validation_error", "the answer on stdin is not JSON — see `conversations links add --help`")
+  }
+  const answer = parsed as Partial<AgentAnswer> | null
+  if (!answer || typeof answer !== "object" || !Array.isArray(answer.answers)) {
+    throw new CliError(
+      "validation_error",
+      'the answer needs "answers": a list of { "message", "parent", "confidence" }',
+    )
+  }
+  return answer as AgentAnswer
 }
 
 /** `messages links`: why a message sits where it does in its conversation. */

@@ -69,7 +69,17 @@ export const DEFAULT_PERMISSIONS: Readonly<Record<PermissionKey, Level>> = {
 }
 
 /** The resources at the top of the command tree, which `readOnly` and `allow` turn read-only as a whole. */
-export const RESOURCES = ["messages", "reactions", "polls", "topics", "chats", "contacts", "account", "bot"] as const
+export const RESOURCES = [
+  "messages",
+  "reactions",
+  "polls",
+  "topics",
+  "chats",
+  "contacts",
+  "account",
+  "bot",
+  "conversations",
+] as const
 
 const OLD_WORDS: Record<Permission, PermissionKey[]> = {
   send: ["messages.send", "polls.create"],
@@ -234,6 +244,8 @@ export const keyForCommand = (path: readonly string[]): PermissionKey | null | u
   }
   if (top === undefined || HOUSEKEEPING.has(top)) return null
   if (top === "store" && next !== undefined && STORE_MAINTENANCE.has(next)) return null
+  // The agent's answers write only to the local store: their own key, so read-only messages can still link (phase 4 A10).
+  if (top === "conversations" && next === "links") return "conversations.links"
   if (SHOW_MESSAGES.has(top)) return "messages"
   if ((RESOURCES as readonly string[]).includes(top)) return path.join(".")
   return undefined

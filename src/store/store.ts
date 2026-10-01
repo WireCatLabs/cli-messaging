@@ -164,6 +164,10 @@ export interface MessageStore {
   links(key: AccountKey, chatId: Id, messageId: Id): Promise<StoredLink[]>
   /** The user's agent's current answer per message: its parent, or `null` for "starts a conversation". */
   agentAnswers(key: AccountKey, chatId: Id): Promise<Map<Id, Id | null>>
+  /** Stores the agent's answer to a batch, checked whole first; answers how many were stored (A5). */
+  saveAnswers(key: AccountKey, batch: string, answer: AgentAnswer): Promise<{ chat: Id; stored: number }>
+  /** Drops the agent's answers for a chat, or one model's; answers how many. Messages are never touched. */
+  clearAnswers(key: AccountKey, chatId: Id, model?: string): Promise<number>
   /** How many messages still need the user's agent, and their characters (phase 4). */
   batchStatus(key: AccountKey, chatId: Id): Promise<{ messages: number; characters: number }>
   /** The earliest window holding a message the agent has not answered; `undefined` when none is left. */
@@ -296,6 +300,15 @@ export interface BatchMessage {
   answer: boolean
   /** For a message to answer: the current build's messenger and rule links, strongest first. */
   candidates?: { parent: Id | null; source: string; kind: string; confidence: number }[]
+}
+
+/** What the user's agent returns for a batch (phase 4 plan A5), as read from stdin. */
+export interface AgentAnswer {
+  /** The model that answered; stored as the link's method. */
+  model: string
+  /** The skill's version, when the skill sends it. */
+  skill?: string
+  answers: { message: Id; parent: Id | null; confidence: number }[]
 }
 
 /** A window of a chat for the agent: the messages to answer and the ones before them (A1). */
@@ -530,6 +543,31 @@ const storeOver = (context: StoreContext): MessageStore => {
     agentAnswers: async (key, chatId) => {
       const chatKey = chatKeyOf(key, chatId)
       return chatKey === undefined ? new Map() : conversationQueries.agentAnswers(context, chatKey)
+    },
+
+    saveAnswers: async (key, batch, answer) => {
+      const chatKey = batches.chatOfBatch(batch)
+      const accountKey = findAccountPk(key)
+      const chat =
+        chatKey === undefined || accountKey === undefined ? undefined : chatQueries.chatOf(context, accountKey, chatKey)
+      if (chatKey === undefined || chat === undefined) {
+        throw new CliError("validation_error", `the answer was not stored: ${batch} is not a batch of this account`)
+      }
+      let stored = 0
+      inTransaction(() => {
+        stored = batches.saveAnswers(context, batch, answer)
+      })
+      return { chat, stored }
+    },
+
+    clearAnswers: async (key, chatId, model) => {
+      const chatKey = chatKeyOf(key, chatId)
+      if (chatKey === undefined) return 0
+      let cleared = 0
+      inTransaction(() => {
+        cleared = batches.clearAnswers(context, chatKey, model)
+      })
+      return cleared
     },
 
     batchStatus: async (key, chatId) => {

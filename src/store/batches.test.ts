@@ -91,3 +91,85 @@ describe("batches for the user's agent", () => {
     await store.close()
   })
 })
+
+describe("the agent's answers", () => {
+  const agentRows = async (path: string) => {
+    const database = await openCache(path)
+    try {
+      return database
+        .prepare(
+          `SELECT m.native_id AS message, p.native_id AS parent, l.method, l.batch FROM message_links l
+           JOIN messages m ON m.pk = l.message_pk LEFT JOIN messages p ON p.pk = l.parent_pk
+           WHERE l.source = 'agent' ORDER BY m.sent_at`,
+        )
+        .all()
+        .map((row) => ({ ...row }))
+    } finally {
+      database.close()
+    }
+  }
+
+  it("**stores an answer** to a batch, replaces a message's earlier one, and stops asking about it", async () => {
+    const { store, path } = await chatOf(5)
+    const batch = (await store.nextBatch(OWNER, "-1", { size: 50 }))?.batch as string
+
+    expect(
+      await store.saveAnswers(OWNER, batch, {
+        model: "m1",
+        answers: [
+          { message: "2", parent: "1", confidence: 0.9 },
+          { message: "3", parent: null, confidence: 0.6 },
+        ],
+      }),
+    ).toEqual({ chat: "-1", stored: 2 })
+    await store.saveAnswers(OWNER, batch, { model: "m2", answers: [{ message: "2", parent: null, confidence: 0.5 }] })
+
+    expect(await agentRows(path)).toEqual([
+      { message: "2", parent: null, method: "m2", batch },
+      { message: "3", parent: null, method: "m1", batch },
+    ])
+    expect(ids((await store.nextBatch(OWNER, "-1", { size: 50 }))?.messages ?? [], true)).toEqual([1, 4, 5])
+    expect(await store.clearAnswers(OWNER, "-1", "m1")).toBe(1)
+    expect(await store.clearAnswers(OWNER, "-1")).toBe(1)
+    expect(await agentRows(path)).toEqual([])
+    await store.close()
+  })
+
+  it("**refuses the whole answer**, storing nothing, when any part of it is wrong", async () => {
+    const { store, path } = await chatOf(5, { 3: 2 })
+    const batch = (await store.nextBatch(OWNER, "-1", { size: 50 }))?.batch as string
+    const good = { message: "4", parent: "1", confidence: 0.8 }
+    const refuse = (answer: Parameters<typeof store.saveAnswers>[2], why: RegExp) =>
+      expect(store.saveAnswers(OWNER, batch, answer)).rejects.toThrow(why)
+
+    await refuse(
+      { model: "m", answers: [good, { message: "3", parent: "2", confidence: 1 }] },
+      /not one this batch asks/,
+    )
+    await refuse({ model: "m", answers: [good, { message: "5", parent: "99", confidence: 1 }] }, /not in this batch/)
+    await refuse({ model: "m", answers: [good, { message: "2", parent: "4", confidence: 1 }] }, /not earlier/)
+    await refuse({ model: "m", answers: [good, good] }, /answered twice/)
+    await refuse({ model: "m", answers: [{ ...good, confidence: 1.5 }] }, /between 0 and 1/)
+    await refuse({ model: " ", answers: [good] }, /name the model/)
+    await expect(store.saveAnswers(OWNER, "b1.x", { model: "m", answers: [] })).rejects.toThrow(/not a batch/)
+    expect(await agentRows(path)).toEqual([])
+    await store.close()
+  })
+
+  it("keeps a batch valid after part of it is answered, not after a message inside it is deleted", async () => {
+    const { store, path } = await chatOf(6)
+    const batch = (await store.nextBatch(OWNER, "-1", { size: 4 }))?.batch as string
+    await store.saveAnswers(OWNER, batch, { model: "m", answers: [{ message: "2", parent: "1", confidence: 1 }] })
+    await store.saveMessages(OWNER, "-1", [message(7)], { via: "history" })
+
+    expect(
+      await store.saveAnswers(OWNER, batch, { model: "m", answers: [{ message: "3", parent: "2", confidence: 1 }] }),
+    ).toMatchObject({ stored: 1 })
+    await store.markDeleted(OWNER, ["3"], { chatId: "-1" })
+    await expect(
+      store.saveAnswers(OWNER, batch, { model: "m", answers: [{ message: "4", parent: "2", confidence: 1 }] }),
+    ).rejects.toThrow(/changed under this batch/)
+    expect((await agentRows(path)).map(({ message }) => message)).toEqual(["2", "3"])
+    await store.close()
+  })
+})
