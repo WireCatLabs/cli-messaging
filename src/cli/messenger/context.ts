@@ -57,6 +57,8 @@ export interface Messenger {
   chatArgument: string
   /** The group settings this messenger has, as `chats update` offers them; every one when unset. */
   groupSettings?: readonly (keyof GroupSettings)[]
+  /** Whether the messenger says when an account was made — the moderation rule `newAccount`; yes when unset. */
+  knowsAccountAge?: boolean
   /** Whether people added can be shown the messages from before they came — `members add --history`; yes when unset. */
   addsWithHistory?: boolean
   /** The admin rights this messenger has, as `admins add --can` offers them; every one when unset. */
@@ -236,6 +238,8 @@ export const messengerContext = (command: Command, messenger: Messenger): Messen
           let store: Promise<MessageStore> | undefined
           const deps: ServiceDeps = {
             messenger,
+            profile,
+            env: base.env,
             offline: base.settings.offline,
             guard,
             connection: async () => {

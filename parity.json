@@ -425,13 +425,9 @@
       "state": "both"
     },
     "account sessions end": {
-      "state": "planned",
-      "by": "P2",
+      "state": "both",
       "options": {
-        "--others": {
-          "state": "planned",
-          "by": "P2"
-        },
+        "--others": "both",
         "--yes": {
           "state": "planned",
           "by": "P2"
@@ -448,25 +444,12 @@
       }
     },
     "account update": {
-      "state": "planned",
-      "by": "P2",
+      "state": "both",
       "options": {
-        "--description": {
-          "state": "planned",
-          "by": "P2"
-        },
-        "--first-name": {
-          "state": "planned",
-          "by": "P2"
-        },
-        "--last-name": {
-          "state": "planned",
-          "by": "P2"
-        },
-        "--photo": {
-          "state": "planned",
-          "by": "P2"
-        }
+        "--description": "both",
+        "--first-name": "both",
+        "--last-name": "both",
+        "--photo": "both"
       }
     },
     "bot": {
@@ -630,13 +613,9 @@
           "state": "planned",
           "by": "P2"
         },
-        "--since": {
-          "state": "planned",
-          "by": "P2"
-        },
         "--since-time": {
           "state": "planned",
-          "by": "P0b"
+          "by": "P2"
         }
       }
     },
@@ -730,16 +709,13 @@
       "state": "both"
     },
     "contacts add": {
-      "state": "planned",
-      "by": "P2"
+      "state": "both"
     },
     "contacts block": {
-      "state": "planned",
-      "by": "P2"
+      "state": "both"
     },
     "contacts import": {
-      "state": "planned",
-      "by": "P2"
+      "state": "both"
     },
     "contacts list": {
       "state": "both",
@@ -755,12 +731,10 @@
       "state": "both"
     },
     "contacts remove": {
-      "state": "planned",
-      "by": "P2"
+      "state": "both"
     },
     "contacts rename": {
-      "state": "planned",
-      "by": "P2"
+      "state": "both"
     },
     "contacts show": {
       "state": "both"
@@ -769,8 +743,7 @@
       "state": "both"
     },
     "contacts unblock": {
-      "state": "planned",
-      "by": "P2"
+      "state": "both"
     },
     "doctor": {
       "state": "both",

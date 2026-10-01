@@ -213,6 +213,7 @@ describe("the MCP server", () => {
       "chat_chats_link_show",
       "chat_chats_list",
       "chat_chats_members",
+      "chat_chats_rules_show",
       "chat_chats_show",
       "chat_contacts_list",
       "chat_contacts_lookup",
@@ -1031,6 +1032,21 @@ describe("sending over MCP", () => {
 
     expect(tools).not.toContain("chat_account_sessions_end")
     expect(changes).toEqual([{ firstName: "New", description: "hi" }])
+  })
+
+  it("**shows a group's rules and moderates it** over MCP, planning what asks", async () => {
+    const telegram = scripted({
+      historyAfter: async () => ({ items: [], hasMore: false }),
+      chatEvents: async () => ({ chatId: "7", since: "", events: [], more: false }),
+      admins: async () => null,
+    })
+    const { call } = await connect(telegram, {})
+
+    const rules = await call("chat_chats_rules_show", { chat: "7" })
+    const moderated = await call("chat_chats_moderate", { chat: "7", since_time: "2h", dry_run: true })
+
+    expect(rules.body).toMatchObject({ saved: false, rules: { consent: { delete: "ask" } } })
+    expect(moderated.body).toMatchObject({ rows: [] })
   })
 
   it("reads a poll on a read-only profile, and votes by id where it may", async () => {

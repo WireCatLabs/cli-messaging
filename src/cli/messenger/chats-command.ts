@@ -4,6 +4,7 @@ import { momentOf } from "../../services/moment.js"
 import { listed, renderPage, window, withPaging } from "../paging.js"
 import { groupCommands } from "./admin-commands.js"
 import { foldersCommand } from "./admin-folders-command.js"
+import { moderateCommand, rulesCommand } from "./admin-moderation-command.js"
 import { membersCommand } from "./chats-members-command.js"
 import { markReadCommand } from "./chats-read-command.js"
 import { type Messenger, messengerContext } from "./context.js"
@@ -100,6 +101,8 @@ export const chatsCommand = (messenger: Messenger): Command => {
   chats.addCommand(markReadCommand(messenger))
   for (const command of groupCommands(messenger)) chats.addCommand(command)
   chats.addCommand(foldersCommand(messenger))
+  chats.addCommand(rulesCommand(messenger))
+  chats.addCommand(moderateCommand(messenger))
 
   return chats
 }
