@@ -36,6 +36,19 @@ full-text search the migrations need (`assertStoreCapable`), and refuses with wh
 version number does not tell: official Node 22.0–22.15 has SQLite 3.46–3.49 without FTS5. CI runs the
 built package on Node 22.15.0 to see the refusal (`scripts/check-old-node.mjs`).
 
+Where the runtime's SQLite can be swapped, ours from `@leemour/cli-messaging-sqlite` (built in
+`packages/sqlite`, published by `.github/workflows/sqlite.yml`) takes its place
+([plan](../storage/plans/sqlite-runtime.md)):
+
+- **Bun on macOS** always loads ours (`bunDatabase`, `src/store/drivers/bun-sqlite.ts`), once, before
+  the first database: Bun uses the system's library there, which can be too old.
+- **A Linux distribution's Node** links the system's `libsqlite3`. `ensureSqlite`
+  (`src/sqlite-runtime.ts`, exported as `@leemour/cli-messaging/sqlite-runtime`) is the first thing
+  `tg` and `max` run: when the system's SQLite fails the check above, it starts the command again
+  with ours first on `LD_LIBRARY_PATH`, before anything is read or sent. CI runs it on Ubuntu's Node
+  with SQLite 3.42 (`scripts/check-sqlite-restart.mjs`).
+- Official Node and Bun on Linux and Windows build SQLite in; nothing is swapped.
+
 `openStore` (`src/store/store.ts`) is the **one file for every messenger and account** — tg's
 profiles and max-cli's bots write the same database, keyed by provider and account. Its path comes
 from `storePath` (`src/store/path.ts`), the only place that turns `MESSAGING_STORE` into a path;

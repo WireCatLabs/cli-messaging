@@ -34,6 +34,38 @@ jobs:
           node-version: 22.15.0
       - run: node scripts/check-old-node.mjs
 
+  sqlite-restart:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      # A distribution's Node on a SQLite too old for the store (3.42, built with Node's features so
+      # Node starts at all): the command must start again on ours, and a TERM to it must end both.
+      - run: |
+          docker run --rm -v "$PWD:/w" -w /w ubuntu:26.04 sh -ec '
+            apt-get update >/dev/null && apt-get install -y nodejs gcc curl unzip procps >/dev/null
+            curl -sSfL https://www.sqlite.org/2023/sqlite-amalgamation-3420000.zip -o /tmp/old.zip
+            unzip -q /tmp/old.zip -d /tmp && mkdir /old
+            gcc -O1 -fPIC -shared -Wl,-soname,libsqlite3.so.0 -DSQLITE_ENABLE_FTS5 -DSQLITE_ENABLE_FTS3 \
+              -DSQLITE_ENABLE_SESSION -DSQLITE_ENABLE_PREUPDATE_HOOK -DSQLITE_ENABLE_COLUMN_METADATA \
+              -DSQLITE_ENABLE_RTREE -DSQLITE_ENABLE_GEOPOLY -DSQLITE_ENABLE_RBU -DSQLITE_ENABLE_DBSTAT_VTAB \
+              -DSQLITE_ENABLE_MATH_FUNCTIONS /tmp/sqlite-amalgamation-3420000/sqlite3.c -o /old/libsqlite3.so.0 -lm
+            LD_LIBRARY_PATH=/old node scripts/check-sqlite-restart.mjs /old
+            LD_LIBRARY_PATH=/old node scripts/check-sqlite-restart.mjs /old wait >/tmp/out 2>&1 & parent=$!
+            for _ in $(seq 30); do grep -q "^restart:" /tmp/out && break; sleep 1; done
+            grep -q "^restart:" /tmp/out || { cat /tmp/out; echo "the restarted command never ran"; exit 1; }
+            # By name, not by command line: the command line of this shell names the script too.
+            [ "$(pgrep -x node | wc -l)" = 2 ] || { echo "expected the parent and the restarted command"; exit 1; }
+            kill -TERM $parent; sleep 2
+            if pgrep -x node; then echo "TERM to the parent left a process"; exit 1; fi
+            echo "TERM ended the parent and the restarted command"'
+
   version:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest

@@ -14,6 +14,9 @@ importers:
       '@leemour/cli-core':
         specifier: 0.11.0
         version: 0.11.0(commander@15.0.0)(typescript@7.0.2)
+      '@leemour/cli-messaging-sqlite':
+        specifier: 1.0.0
+        version: 1.0.0
       '@modelcontextprotocol/server':
         specifier: 2.1.0
         version: 2.1.0
@@ -393,6 +396,9 @@ packages:
     peerDependenciesMeta:
       commander:
         optional: true
+
+  '@leemour/cli-messaging-sqlite@1.0.0':
+    resolution: {integrity: sha512-NFJMG+/2BWIb3JdOMgyV8SFsB7Fuv3wLtUmMt08GZ4KTpgu0WuA7qQmQE6appEgJJuF/97vHj6+AuXw2z3HMHw==}
 
   '@leemour/cli-messaging@0.13.0':
     resolution: {integrity: sha512-qvJi0NVgE8XH2JUrVZwg6uk+NxQ6LPnYj7q01ddFCXC43sUksVGwoi5qdNFNIZqL5sbojpXEa7ZOpTEf3tz36Q==}
@@ -1648,6 +1654,8 @@ snapshots:
       commander: 15.0.0
     transitivePeerDependencies:
       - typescript
+
+  '@leemour/cli-messaging-sqlite@1.0.0': {}
 
   '@leemour/cli-messaging@0.13.0(commander@15.0.0)(typescript@7.0.2)':
     dependencies:
