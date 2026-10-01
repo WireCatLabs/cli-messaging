@@ -34,10 +34,9 @@ const out: string[] = ["# Parity of tg and max", "", "| State | Commands | Optio
 for (const state of ["both", "planned", "max-only", "tg-only"])
   out.push(`| ${state} | ${count(state, false)} | ${count(state, true)} |`)
 
-const planned = Map.groupBy(
-  lines.filter((line) => line.state === "planned"),
-  (line) => line.note,
-)
+const planned = new Map<string, Line[]>()
+for (const line of lines.filter((one) => one.state === "planned"))
+  planned.set(line.note, [...(planned.get(line.note) ?? []), line])
 out.push("", "## Planned, by who closes it", "")
 for (const [by, group] of [...planned].sort(([a], [b]) => a.localeCompare(b)))
   out.push(`- **${by}** (${group.length}): ${group.map((line) => `\`${line.what}\``).join(", ")}`)
