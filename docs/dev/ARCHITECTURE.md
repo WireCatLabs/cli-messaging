@@ -127,7 +127,7 @@ normalized text first, then the words, then the typo vocabulary (`search_terms`,
 by it yet ([phase 2](../storage/plans/phase-2.md)). The search's steps over it are in
 `src/store/sqlite/words.ts`: `matchWords` (every or any word, whole or as beginnings, bm25 then
 newest), `matchSubstring`, and `knownTerms` and `termCandidates` for typo correction. A chat or
-sender under `SCOPE_TOKEN_LIMIT` messages is filtered inside the index by its scope token, a larger
+sender of at most `SCOPE_TOKEN_LIMIT` (100,000) messages is filtered inside the index by its scope token, a larger
 one by a join; `src/store/search-plan.test.ts` fails if any step reads an index once per message.
 `search` (`src/search/search.ts`) runs them in the plan's order — every word topped up by beginnings,
 typo correction, any word unless the query chose with OR, substring — each only when the one before

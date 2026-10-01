@@ -134,21 +134,30 @@ describe("matchWords", () => {
     expect((await store.matchWords(every("valencia"), { accounts: [ME, OTHER] }, options)).hasMore).toBe(true)
   })
 
-  it("**gives the same rows for a chat as a token and as a join**", async () => {
+  it("**gives the same rows, in the same order and score, for a chat as a token and as a join**", async () => {
     const { store, path } = await opened()
-    await store.saveMessages(ME, "1", [message("1", "1", "valencia"), message("1", "2", "valencia madrid")], {
-      via: "history",
-    })
-    await store.saveMessages(ME, "2", [message("2", "3", "valencia")], { via: "history" })
+    await store.saveMessages(
+      ME,
+      "1",
+      [
+        message("1", "1", "valencia"),
+        message("1", "2", "valencia madrid sevilla bilbao", { senderId: "8" }),
+        message("1", "3", "valencia valencia madrid"),
+      ],
+      { via: "history" },
+    )
+    await store.saveMessages(ME, "2", [message("2", "4", "valencia")], { via: "history" })
     const inChat = { accounts: [ME], chat: { account: ME, chatId: "1" } }
-    const asToken = ids(await store.matchWords(every("valencia"), inChat, options))
+    const ranked = async () =>
+      (await store.matchWords(every("valencia"), inChat, options)).items.map(({ id, score }) => [id, score])
+    const asToken = await ranked()
 
     const database = await openCache(path)
     database.exec("UPDATE chats SET message_count = 1000000 WHERE native_id = '1'")
     database.close()
 
-    expect(asToken.sort()).toEqual(["1", "2"])
-    expect(ids(await store.matchWords(every("valencia"), inChat, options)).sort()).toEqual(asToken)
+    expect(asToken.map(([id]) => id).sort()).toEqual(["1", "2", "3"])
+    expect(await ranked()).toEqual(asToken)
   })
 
   it("filters by sender — **one learned on a later save too** — by time, by what was sent and what is attached", async () => {

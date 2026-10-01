@@ -1,6 +1,6 @@
 import { createWriteStream, mkdirSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
-import { DATA_DIR, FUZZY, mulberry32, normalize, tokens, type Meta } from "./common.ts"
+import { DATA_DIR, FUZZY, LOOKALIKES, mulberry32, normalize, tokens, type Meta } from "./common.ts"
 
 const N = Number(process.argv[2] ?? 100_000)
 const SEED = Number(process.argv[3] ?? 42)
@@ -21,7 +21,8 @@ const REAL = {
 
 const TYPOS = new Set(FUZZY.map((f) => normalize(f.query)))
 const TARGET_KEYS = ["valencia", "empadronamiento", "whatsapp", "tie", "gestor", "ptsarev", "счет"]
-const BANNED = new Set([...TYPOS, ...TARGET_KEYS])
+const LOOKALIKE_KEYS = LOOKALIKES.flatMap((l) => l.forms.map(normalize))
+const BANNED = new Set([...TYPOS, ...TARGET_KEYS, ...LOOKALIKE_KEYS])
 
 const SYL = {
   ru: {
@@ -119,6 +120,7 @@ const PLANTS: { p: number; forms: string[] }[] = [
   { p: 1 / 20000, forms: ["Ptsarev"] },
   { p: 1 / 3000, forms: ["счёт", "Счёт"] },
   { p: 1 / 6000, forms: ["счет"] },
+  ...LOOKALIKES.map(({ forms }) => ({ p: 1 / 10000, forms })),
 ]
 
 const END = Date.UTC(2026, 8, 1) / 1000
@@ -199,6 +201,15 @@ let smallChat = 1
 for (let c = 1; c < CHATS; c++) {
   if (Math.abs(chatCount[c] - N * 0.002) < Math.abs(chatCount[smallChat] - N * 0.002)) smallChat = c
 }
+const sizedChats = [10_000, 50_000, 100_000]
+  .map((target) => {
+    let chat = 1
+    for (let c = 1; c < CHATS; c++) {
+      if (Math.abs(chatCount[c] - target) < Math.abs(chatCount[chat] - target)) chat = c
+    }
+    return { target, chat, count: chatCount[chat] }
+  })
+  .filter(({ target, count }) => count > target / 2 && count < target * 2)
 const meta: Meta = {
   n: N,
   seed: SEED,
@@ -207,6 +218,7 @@ const meta: Meta = {
   smallChatCount: chatCount[smallChat],
   sender: 20,
   senderCount: senderCount[20],
+  sizedChats,
   minTs: START,
   maxTs: END,
   queries: {
@@ -228,6 +240,7 @@ console.log(
     bigChat: chatCount[0],
     smallChat: [smallChat, chatCount[smallChat]],
     sender20: senderCount[20],
+    sizedChats,
     sender0: senderCount[0],
   }),
 )

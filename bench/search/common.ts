@@ -117,6 +117,8 @@ export type Meta = {
   smallChatCount: number
   sender: number
   senderCount: number
+  /** The chats nearest 10k, 50k and 100k messages, where the corpus has them: where the scope token and the join cross. */
+  sizedChats?: { target: number; chat: number; count: number }[]
   minTs: number
   maxTs: number
   queries: { typical: string[][]; three: string[][]; common: string[][] }
@@ -136,6 +138,14 @@ export const FUZZY: { query: string; truthKey: string }[] = [
   { query: "empadronamento", truthKey: "empadronamiento" },
   { query: "Ptsharev", truthKey: "ptsarev" },
   { query: "whatsap", truthKey: "whatsapp" },
+]
+
+/** Real words one edit from a target, planted 1 in 10,000 each: a correction may pick them too (plan item 8). */
+export const LOOKALIKES: { forms: string[]; truthKey: string }[] = [
+  { forms: ["valence", "Valence"], truthKey: "valencia" },
+  { forms: ["empadronamientos"], truthKey: "empadronamiento" },
+  { forms: ["Ptsharov"], truthKey: "ptsarev" },
+  { forms: ["whatsup"], truthKey: "whatsapp" },
 ]
 
 export const EXACT: { label: string; query: string; truthKey: string }[] = [

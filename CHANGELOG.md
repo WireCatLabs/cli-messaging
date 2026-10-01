@@ -81,6 +81,13 @@ What to change in a consumer:
 
 ### Fixed
 
+- **A search in a chat ranks the same whatever the chat's size.** A chat of up to the limit below is
+  filtered inside the word index by a token, and that token counted in bm25, so the order of hits
+  depended on the chat's size. The scope column now weighs nothing in the rank.
+- **A chat or a sender of up to 100,000 messages is filtered inside the word index** (was under
+  20,000), set by the benchmark through the store (phase 2 item 8): faster for every chat measured up
+  to 85k messages. `bench/search/store-chain.ts` times the search's steps, typo correction's precision
+  with look-alike words, the token against the join, and the fill.
 - **`contractCases`**: the case for `resolve` with a chat id nobody has now also accepts a chat of kind
   `unknown` with that id and no title, besides `not_found`. max-cli takes an id without connecting, so a
   write its guard refuses never logs in first.

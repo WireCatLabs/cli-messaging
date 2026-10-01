@@ -1,6 +1,6 @@
 # Phase 2 — search by words: BM25, typo correction, a query language
 
-Plan, 2026-09-30. **Approved by the owner 2026-10-01. Items 1–7 and 9 are built — `messages search` and the MCP tool search by words, across accounts and messengers with `in:`/`--source`/`source`; items 8 and 10 are not.** Questions of §9 answered
+Plan, 2026-09-30. **Approved by the owner 2026-10-01. Items 1–9 are built (8: the benchmark through the store, 2026-10-02) — `messages search` and the MCP tool search by words, across accounts and messengers with `in:`/`--source`/`source`; item 10 is not.** Questions of §9 answered
 2026-10-01: 1–3 A, 4 B. It follows [`../decisions.md`](../decisions.md):
 SQLite FTS5 (NEED-374 A); every word first, any word when nothing is found, BM25 ranks, trigram typo
 correction over the vocabulary (NEED-375 A); the substring index stays as the last fallback (NEED-379 A);
@@ -201,6 +201,12 @@ messages newest first, the way `find` with `senders` does today.
 - **`chat:`**: a scope token when `chats.message_count` is under a threshold, the join above it. The
   threshold is set by item 8 between the measured 2k (token wins) and 500k (join wins); it is a constant
   in code.
+  **Correction 2026-10-02 (item 8, measured):** 100,000, inclusive for chats and senders alike. On 1M the
+  token wins on every chat up to 84.6k messages (3.5–25 times for "any word"); at 500k "any word" is
+  even and "every word" is faster as a join. No chat between 85k and 500k was measured
+  ([results](../../../bench/search/results.md#phase-2-item-8-the-search-chain-through-the-store)). The
+  token also counted in bm25, so a chat's ranking depended on its size; the query now ranks with
+  `bm25(1.0, 0.0)`.
 - **`from:`**: the same rule; the size comes from
   `SELECT count(*) FROM (SELECT 1 FROM messages WHERE sender_identity_pk = ? LIMIT <threshold + 1>)`,
   bounded by the threshold.
@@ -402,6 +408,16 @@ lane A lands for reads and search. One PR each, based on `main`.
 | typo correction alone | ≤ 20 ms | 15 at 1M (prototype, `results.md`) |
 | filling 1M | ≤ 20 s total, no batch over 500 ms | 14.4 s, 408 ms at 20k per batch |
 | storing messages (`bench/search/store.ts`, 1M) | ≥ 6,000 rows/s | ~6,100, inferred from §2 measurement 5 |
+
+**Correction 2026-10-02 (item 8, measured through the store at 1M, on a shared machine):** met — any
+word in a small chat or for one sender (4.9 / 6.6 ms), the whole chain when nothing is found (18.8 ms);
+about met — typo correction (9.4–22.8 ms); missed — every word without a chat or sender filter (up to
+124 ms; 283 ms with beginnings), any word over all chats (189–232 ms) and in the 500k chat (166–212 ms),
+filling 1M (53 s; a vocabulary batch takes 1.2 s), storing (3,883 rows/s). At 100k every row is inside
+its target. **Storing:** the ≥ 6,000 rows/s target was inferred, never measured through the store; it
+is withdrawn, and 3,900 rows/s (flat from 100k to 1M) is the baseline a change must not fall below. The
+other misses are reported, not tuned, in item 8 — numbers in
+[`results.md`](../../../bench/search/results.md#phase-2-item-8-the-search-chain-through-the-store).
 
 Fuzzy: 100% recall on the four typos of the benchmark (as measured); precision reported with the
 look-alike words item 8 adds, no gate until the owner sets one. A Drizzle-and-async overhead of under
