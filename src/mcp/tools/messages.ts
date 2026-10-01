@@ -1,10 +1,11 @@
 import * as v from "valibot"
-import { afterOf, oneDirection } from "../../cli/messenger/after.js"
+import { listStart } from "../../cli/messenger/after.js"
 import type { Messenger } from "../../cli/messenger/context.js"
 import { capability } from "../../cli/messenger/port.js"
+import { listed } from "../../cli/paging.js"
 import { onlineDeps, servicesFor, storedDeps } from "../../services/index.js"
 import { heard, hearForTool, modelWith } from "../../speech/hearing.js"
-import { type AnyTool, chatOf, limit, message, nameOf, READ, tool } from "../tool.js"
+import { type AnyTool, chatOf, limit, message, nameOf, READ, snakeOf, tool } from "../tool.js"
 
 export const messagesTools = (messenger: Messenger): Record<string, AnyTool> => {
   const chat = chatOf(messenger)
@@ -14,14 +15,19 @@ export const messagesTools = (messenger: Messenger): Record<string, AnyTool> => 
       title: "Read a chat",
       description:
         "Recent messages in a chat, oldest first. Does not mark anything read. For older messages pass " +
-        "`before` = the id of the first item; for newer ones, `after` = the id of the last item, or a time. " +
-        "A voice message carries `transcript` once heard; `transcribe` hears the rest. Returns { items, limit, hasMore }.",
+        "`before_id` = the id of the first item, or `before_time`; for newer ones, `after_id` = the id of the last " +
+        "item, or `after_time`. One of the four at most. A voice message carries `transcript` once heard; " +
+        "`transcribe` hears the rest. Returns { items, page, limit, hasMore }.",
       input: v.object({
         chat,
         limit,
-        before: v.optional(v.pipe(message, v.description("only messages older than this message id"))),
-        after: v.optional(
-          v.pipe(v.string(), v.description("only messages newer than this message id, ISO 8601 time, or 2h / 1d ago")),
+        before_id: v.optional(v.pipe(message, v.description("only messages older than this message id"))),
+        before_time: v.optional(
+          v.pipe(v.string(), v.description("only messages older than this ISO 8601 time, or 2h / 1d ago")),
+        ),
+        after_id: v.optional(v.pipe(message, v.description("only messages newer than this message id"))),
+        after_time: v.optional(
+          v.pipe(v.string(), v.description("only messages newer than this ISO 8601 time, or 2h / 1d ago")),
         ),
         transcribe: v.optional(
           v.pipe(v.boolean(), v.description("turn voice messages not heard yet into text; can take minutes")),
@@ -37,11 +43,18 @@ export const messagesTools = (messenger: Messenger): Record<string, AnyTool> => 
       annotations: READ,
       online: async (adapter, args, defaults) => {
         const size = args.limit ?? defaults.limit
-        oneDirection(args.before, args.after)
+        const start = listStart(
+          {
+            beforeId: args.before_id,
+            beforeTime: args.before_time,
+            afterId: args.after_id,
+            afterTime: args.after_time,
+          },
+          snakeOf,
+        )
         const found = await servicesFor(onlineDeps(messenger, adapter, defaults.guard)).messages.list(args.chat, {
           limit: size,
-          ...(args.before === undefined ? {} : { before: args.before }),
-          ...(args.after === undefined ? {} : { after: afterOf(args.after, "after") }),
+          ...start,
         })
         const hearing = await hearForTool(
           messenger,
@@ -53,6 +66,7 @@ export const messagesTools = (messenger: Messenger): Record<string, AnyTool> => 
         )
         return {
           items: heard(found.items, hearing),
+          page: 1,
           limit: size,
           hasMore: found.hasMore,
           ...(args.transcribe ? { unheard: hearing?.unheard ?? [] } : {}),
@@ -64,24 +78,21 @@ export const messagesTools = (messenger: Messenger): Record<string, AnyTool> => 
       title: "Show a message",
       description:
         "One message by id, and optionally the messages either side of it, oldest first. The one asked for " +
-        "carries anchor: true. Returns { items }.",
+        "carries anchor: true; `before_n` and `after_n` say how many either side. Returns { items, page, limit, hasMore }.",
       input: v.object({
         chat,
         message,
-        before: v.optional(v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(100))),
-        after: v.optional(v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(100))),
+        before_n: v.optional(v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(100))),
+        after_n: v.optional(v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(100))),
       }),
       annotations: READ,
-      online: async (adapter, args, defaults) => ({
-        items: await servicesFor(onlineDeps(messenger, adapter, defaults.guard)).messages.around(
-          args.chat,
-          args.message,
-          {
-            before: args.before ?? 0,
-            after: args.after ?? 0,
-          },
+      online: async (adapter, args, defaults) =>
+        listed(
+          await servicesFor(onlineDeps(messenger, adapter, defaults.guard)).messages.around(args.chat, args.message, {
+            before: args.before_n ?? 0,
+            after: args.after_n ?? 0,
+          }),
         ),
-      }),
     }),
 
     messages_scheduled: tool({

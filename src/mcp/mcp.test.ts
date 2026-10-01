@@ -245,7 +245,7 @@ describe("the MCP server", () => {
     expect(telegram.opened()).toBe(0)
   })
 
-  it("reads forward with after on chat_messages_list, and refuses it with before", async () => {
+  it("reads forward with after_id on chat_messages_list, and refuses it with before_id", async () => {
     const seen: unknown[] = []
     const { call } = await connect(
       scripted({
@@ -256,9 +256,9 @@ describe("the MCP server", () => {
       }),
     )
 
-    expect((await call("chat_messages_list", { chat: "7", after: "12" })).body).toMatchObject({ items: [] })
+    expect((await call("chat_messages_list", { chat: "7", after_id: "12" })).body).toMatchObject({ items: [] })
     expect(seen).toEqual([{ id: "12" }])
-    expect((await call("chat_messages_list", { chat: "7", after: "12", before: "20" })).isError).toBe(true)
+    expect((await call("chat_messages_list", { chat: "7", after_id: "12", before_id: "20" })).isError).toBe(true)
   })
 
   it("takes a message id that is not digits, and refuses one with a space or a control character", async () => {
@@ -276,11 +276,11 @@ describe("the MCP server", () => {
       }),
     )
 
-    expect((await call("chat_messages_list", { chat: "7", before: "urn:li:msg:4F2" })).isError).toBe(false)
-    expect((await call("chat_messages_list", { chat: "7", after: "wamid.HBgL" })).isError).toBe(false)
+    expect((await call("chat_messages_list", { chat: "7", before_id: "urn:li:msg:4F2" })).isError).toBe(false)
+    expect((await call("chat_messages_list", { chat: "7", after_id: "wamid.HBgL" })).isError).toBe(false)
     expect(seen).toEqual(["urn:li:msg:4F2", { id: "wamid.HBgL" }])
-    for (const before of ["4 2", "42\u0007", "", "9".repeat(257)]) {
-      const refused = await client.callTool({ name: "chat_messages_list", arguments: { chat: "7", before } })
+    for (const before_id of ["4 2", "42\u0007", "", "9".repeat(257)]) {
+      const refused = await client.callTool({ name: "chat_messages_list", arguments: { chat: "7", before_id } })
       expect(refused.isError).toBe(true)
     }
     expect(seen).toHaveLength(2)
@@ -335,6 +335,7 @@ describe("the MCP server", () => {
     })
     expect((await call("chat_messages_list", { chat: "Book club" })).body).toEqual({
       items: [message],
+      page: 1,
       limit: 20,
       hasMore: false,
     })
@@ -546,8 +547,8 @@ describe("the transcribe tool", () => {
       }),
     )
 
-    const heard = await call("chat_review", { since: "2000-01-01", all: true, transcribe: true })
-    const lonely = await call("chat_review", { since: "2000-01-01", model: "gigaam-v3" })
+    const heard = await call("chat_review", { since_time: "2000-01-01", all: true, transcribe: true })
+    const lonely = await call("chat_review", { since_time: "2000-01-01", model: "gigaam-v3" })
 
     expect(heard.body).toMatchObject({ chats: [{ messages: [{ transcript: "read me" }] }], unheard: [] })
     expect(lonely.isError).toBe(true)
@@ -600,7 +601,7 @@ describe("sending over MCP", () => {
     const { telegram, sent } = sending()
     const { call } = await connect(telegram, {})
 
-    await call("chat_messages_send", { chat: "7", text: "**hi**", silent: true, no_preview: true, markdown: true })
+    await call("chat_messages_send", { chat: "7", text: "**hi**", silent: true, no_preview: true, md: true })
 
     expect(sent[0]).toMatchObject({
       text: "hi",
@@ -621,7 +622,7 @@ describe("sending over MCP", () => {
     })
     const { call } = await connect(telegram, {})
 
-    const { body } = await call("chat_messages_send", { chat: "7", text: "later", at: "30m" })
+    const { body } = await call("chat_messages_send", { chat: "7", text: "later", at_time: "30m" })
     const queue = await call("chat_messages_scheduled", { chat: "7" })
 
     expect(body.scheduledFor).toBe(sent[0]?.at)
@@ -1117,9 +1118,9 @@ describe("sending over MCP", () => {
         form: () => ({ action: "accept", content: {} }),
       })
 
-      await call("chat_messages_send", { chat: "7", text: "later", at: "2h" })
+      await call("chat_messages_send", { chat: "7", text: "later", at_time: "2h" })
 
-      expect(forms[0]).toMatch(/at: "2h" — sends at \d{4}-\d{2}-\d{2}T/)
+      expect(forms[0]).toMatch(/at_time: "2h" — sends at \d{4}-\d{2}-\d{2}T/)
       expect(sent[0]?.at).toMatch(/^\d{4}-\d{2}-\d{2}T/)
     })
 

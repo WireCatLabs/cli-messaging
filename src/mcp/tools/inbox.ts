@@ -14,13 +14,13 @@ export const inboxTools = (messenger: Messenger): Record<string, AnyTool> => {
       title: "What is new",
       description:
         "Other people's messages waiting for the owner, grouped by chat, in one call: the unread ones, or with " +
-        `\`since\` everything after that point. Marks nothing read and moves no saved point — the owner's ` +
+        `\`since_time\` everything after that point. Marks nothing read and moves no saved point — the owner's ` +
         `\`${messenger.app.command} inbox --new\` is unaffected. Muted and archived chats are left out unless they ` +
         "mention the owner or reply to them, or `all` is set. Returns { mode, chats: [{ id, title, messages, more }], " +
         "skipped, partial, quiet }, where quiet counts the chats left out. A voice message carries `transcript` once " +
         "heard; `transcribe` hears the rest.",
       input: v.object({
-        since: v.optional(v.pipe(v.string(), v.description("an ISO 8601 time, or 2h / 1d ago"))),
+        since_time: v.optional(v.pipe(v.string(), v.description("an ISO 8601 time, or 2h / 1d ago"))),
         all: v.optional(v.pipe(v.boolean(), v.description("muted and archived chats too"))),
         limit: v.optional(
           v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(100), v.description("at most this many per chat")),
@@ -40,7 +40,7 @@ export const inboxTools = (messenger: Messenger): Record<string, AnyTool> => {
       online: async (adapter, args, defaults) => {
         const limit = args.limit ?? INBOX_LIMIT
         const inbox = await servicesFor(onlineDeps(messenger, adapter, defaults.guard)).inbox.read({
-          ...(args.since === undefined ? {} : { since: momentOf(args.since, "since") }),
+          ...(args.since_time === undefined ? {} : { since: momentOf(args.since_time, "since_time") }),
           limit,
           all: args.all === true,
         })

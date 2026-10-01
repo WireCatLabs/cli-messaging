@@ -11,11 +11,13 @@ export const reviewTools = (messenger: Messenger): Record<string, AnyTool> => ({
     title: "Review who owes what",
     description:
       "Every message, the owner's too (outgoing: true), in each chat that changed since a point — for sorting out " +
-      `what the owner owes and what others owe. Without \`since\`, the last ${REVIEW_DAYS} days. Muted and archived ` +
+      `what the owner owes and what others owe. Without \`since_time\`, the last ${REVIEW_DAYS} days. Muted and archived ` +
       "chats are left out unless they mention the owner, or `all` is set. Returns { since, until, complete, chats: " +
       "[{ id, title, messages, more }], skipped, partial, quiet }; when complete, the next review starts at until.",
     input: v.object({
-      since: v.optional(v.pipe(v.string(), v.description("where the last review ended: ISO 8601, or 2h / 1d ago"))),
+      since_time: v.optional(
+        v.pipe(v.string(), v.description("where the last review ended: ISO 8601, or 2h / 1d ago")),
+      ),
       chat: v.optional(chatOf(messenger)),
       unanswered: v.optional(
         v.pipe(
@@ -38,7 +40,7 @@ export const reviewTools = (messenger: Messenger): Record<string, AnyTool> => ({
     online: async (adapter, args, defaults) => {
       const model = modelWith(args.transcribe, args.model)
       const found = await servicesFor(onlineDeps(messenger, adapter, defaults.guard)).inbox.review({
-        since: args.since === undefined ? reviewStart() : momentOf(args.since, "since"),
+        since: args.since_time === undefined ? reviewStart() : momentOf(args.since_time, "since_time"),
         ...(args.chat === undefined ? {} : { chat: args.chat }),
         ...(args.all ? { all: true } : {}),
         ...(args.unanswered === undefined ? {} : { unansweredAfterHours: args.unanswered }),

@@ -48,8 +48,15 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Changed — may break callers
 
-- **`messages send --at` → `--at-time`**: every option that takes a time names it. No alias. The MCP
-  argument stays `at` until the MCP arguments follow the options.
+- **MCP arguments carry their option's name** (STANDARD, MCP rule 2), and agents must use the new
+  ones: `chat_messages_list` takes `before_id`, `before_time`, `after_id`, `after_time` — at most one —
+  instead of `before`, `after`; `chat_messages_context` takes `before_n`, `after_n`; `since` is
+  `since_time` in `chat_inbox`, `chat_review`, `chat_chats_events`, whose `event` is `type`;
+  `chat_messages_send` takes `md` and `at_time`. `chat_messages_list`, `chat_messages_context` and
+  `chat_chats_events` answer `{ items, page, limit, hasMore }`, as their commands do. `afterOf` and
+  `oneDirection` are gone; `listStart` takes the four starting points and how to spell them.
+- **`messages send --at` → `--at-time`**: every option that takes a time names it. No alias; the MCP
+  argument is `at_time` too.
 - **`server status` answers the shape both tools share** (STANDARD, Output rule 6):
   `since` → `startedAt`, `listening` → `connected`, `listeningSince` → `connectedAt`; new `cliVersion`,
   `log`, and `stale` for a lock a serve that is gone left behind. `server start` answers `startedAt`

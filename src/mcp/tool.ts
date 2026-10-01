@@ -205,3 +205,6 @@ export const failed = (error: unknown): CallToolResult => {
     isError: true,
   }
 }
+
+/** An option's name as an MCP argument: `beforeId` is `before_id`. */
+export const snakeOf = (key: string): string => key.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`)

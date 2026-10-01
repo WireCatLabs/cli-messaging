@@ -44,10 +44,10 @@ export const messageSendTools = (messenger: Messenger): Record<string, AnyTool> 
         send_id: v.optional(v.pipe(v.string(), v.minLength(1), v.description("from an earlier outcome_unknown"))),
         silent: v.optional(v.pipe(v.boolean(), v.description("deliver without a notification"))),
         no_preview: v.optional(v.pipe(v.boolean(), v.description("no preview card for a link in the text"))),
-        markdown: v.optional(
+        md: v.optional(
           v.pipe(v.boolean(), v.description("read **bold**, _italic_, ~~struck~~ and `code`; \\ keeps a mark literal")),
         ),
-        at: v.optional(
+        at_time: v.optional(
           v.pipe(
             v.string(),
             v.description("send it later: 2026-09-25T09:00 (the owner's local time), or 30m, 2h, 1d from now"),
@@ -58,7 +58,7 @@ export const messageSendTools = (messenger: Messenger): Record<string, AnyTool> 
       _meta: APPROVE,
       permission: "send",
       online: async (adapter, args, { guard, env }) => {
-        const at = args.at === undefined ? undefined : sendTime(args.at)
+        const at = args.at_time === undefined ? undefined : sendTime(args.at_time)
         // Never anyFile here: a path an agent was talked into is how a key would leave the machine.
         const read = { app: messenger.app, env }
         const attachments = await readAttachments(
@@ -82,7 +82,7 @@ export const messageSendTools = (messenger: Messenger): Record<string, AnyTool> 
           ...(args.reply_to === undefined ? {} : { replyTo: args.reply_to }),
           ...(args.silent === true ? { silent: true } : {}),
           ...(args.no_preview === true ? { noPreview: true } : {}),
-          ...(args.markdown === true ? { markdown: true } : {}),
+          ...(args.md === true ? { markdown: true } : {}),
           ...(at === undefined ? {} : { at }),
         })
         return {

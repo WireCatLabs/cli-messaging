@@ -5,7 +5,6 @@ import { isLocator, parseLocator } from "../../domain/locator.js"
 import { sendTime } from "../../domain/send-time.js"
 import { renderMessages } from "../../render/messages.js"
 import { readAttachments } from "../../sends/upload.js"
-import { momentOf } from "../../services/moment.js"
 import { modelWith } from "../../speech/hearing.js"
 import { listed, positiveCount } from "../paging.js"
 import { listStart } from "./after.js"
@@ -45,15 +44,7 @@ export const messagesCommand = (messenger: Messenger): Command => {
     .option("--mark-read", "also mark the chat read up to the newest message shown; the other person sees it")
     .action(async function (this: Command, chat: string) {
       const context = messengerContext(this, messenger)
-      const {
-        beforeId: before,
-        beforeTime,
-        afterId,
-        afterTime,
-        transcribe,
-        model,
-        markRead,
-      } = this.opts<{
+      const { beforeId, beforeTime, afterId, afterTime, transcribe, model, markRead } = this.opts<{
         beforeId?: string
         beforeTime?: string
         afterId?: string
@@ -62,7 +53,7 @@ export const messagesCommand = (messenger: Messenger): Command => {
         model?: string
         markRead?: boolean
       }>()
-      const after = listStart(before, afterId, afterTime, beforeTime)
+      const start = listStart({ beforeId, beforeTime, afterId, afterTime })
       const hearWith = modelWith(transcribe, model)
       if (markRead && context.settings.offline) {
         throw new CliError("validation_error", "--mark-read tells the messenger; not with --offline")
@@ -71,9 +62,7 @@ export const messagesCommand = (messenger: Messenger): Command => {
       const page = await context.withServices((services) =>
         services.messages.list(chat, {
           limit,
-          ...(before === undefined ? {} : { before }),
-          ...(beforeTime === undefined ? {} : { beforeTime: momentOf(beforeTime, "--before-time") }),
-          ...(after === undefined ? {} : { after }),
+          ...start,
         }),
       )
       const hearing = await hearForCommand(context, messenger, page.items, transcribe === true, hearWith)
@@ -84,7 +73,7 @@ export const messagesCommand = (messenger: Messenger): Command => {
           : undefined
       if (marked) context.renderer.note(`marked read up to ${marked.until}`)
       const next = (items: typeof page.items) =>
-        after === undefined
+        start.after === undefined
           ? `older messages: --before-id ${items[0]?.id}`
           : `newer messages: --after-id ${items.at(-1)?.id}`
       if (context.format === "pretty") {

@@ -64,7 +64,7 @@ export const confirmer = ({ now = () => Date.now() }: { now?: () => number } = {
     for (const [name, value] of Object.entries(args)) {
       if (CHAT_ARGUMENTS.includes(name) || name === "text") continue
       // A delay like "30m" is not a time; the owner agrees to the clock time it becomes.
-      const when = name === "at" && typeof value === "string" ? ` — sends at ${sendTime(value, now())}` : ""
+      const when = name === "at_time" && typeof value === "string" ? ` — sends at ${sendTime(value, now())}` : ""
       shown.push(`${name}: ${JSON.stringify(value)}${when}`)
     }
     if (typeof args.text === "string") shown.push("", args.text)
