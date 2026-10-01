@@ -1,7 +1,9 @@
 import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
+import { pathToFileURL } from "node:url"
 import { CliError, captureStreams } from "@leemour/cli-core"
+import { skillResource } from "@leemour/cli-core/skill"
 import { Client, type ElicitResult } from "@modelcontextprotocol/client"
 import { InMemoryTransport } from "@modelcontextprotocol/server"
 import { serveStdio } from "@modelcontextprotocol/server/stdio"
@@ -119,6 +121,7 @@ interface Harness {
   era?: "legacy" | "modern"
   /** The config file, for a profile's `permissions`, `allow` or `readOnly`. */
   config?: object
+  skill?: URL
 }
 
 const connect = async (telegram: Scripted = scripted(), options: Partial<ServerOptions> & Harness = {}) => {
@@ -130,7 +133,7 @@ const connect = async (telegram: Scripted = scripted(), options: Partial<ServerO
     CLI_COMMON_CACHE_DIR: join(root, "cache"),
     CHAT_CACHE_DIR: join(root, "chat-cache"),
   }
-  const { connect: connecting, form, era = "legacy", config, ...serverOptions } = options
+  const { connect: connecting, form, era = "legacy", config, skill, ...serverOptions } = options
   if (config) {
     mkdirSync(env.CHAT_CONFIG_DIR, { recursive: true })
     writeFileSync(join(env.CHAT_CONFIG_DIR, "config.json"), JSON.stringify(config))
@@ -142,6 +145,7 @@ const connect = async (telegram: Scripted = scripted(), options: Partial<ServerO
     resolveSettings: settingsFor(app).resolveSettings,
     connect: connecting ?? telegram.connect,
     chatArgument: "a chat",
+    ...(skill ? { skill } : {}),
   }
   const streams = captureStreams()
   let made: ReturnType<typeof createServer> | undefined
@@ -462,6 +466,7 @@ describe("the MCP server", () => {
       profile: "a-long-profile-name",
       writes: ["messages_send", "messages_delete", "chats_mark_read"],
       confirmSend: true,
+      skill: skillResource(app, new URL("file:///SKILL.md")).instruction,
     })
     expect(text.length).toBeLessThanOrEqual(2048)
   })
@@ -1216,6 +1221,28 @@ describe("MCP prompts and resources", () => {
     expect(body.chat).toMatchObject({ id: "7", title: "Book club" })
     expect(body.messages.map((one: { id: string }) => one.id)).toEqual(["1"])
     expect(telegram.opened()).toBe(1)
+  })
+})
+
+describe("the skill resource", () => {
+  it("serves the CLI's SKILL.md as chat://skill and names it in the instructions, without connecting", async () => {
+    const file = join(mkdtempSync(join(tmpdir(), "skill-")), "SKILL.md")
+    writeFileSync(file, "---\nname: chat-cli\n---\n\n# chat\n")
+    const telegram = scripted()
+    const { client } = await connect(telegram, { skill: pathToFileURL(file) })
+
+    const { resources } = await client.listResources()
+    expect(resources.map((one) => [one.uri, one.mimeType])).toEqual([["chat://skill", "text/markdown"]])
+    const { contents } = await client.readResource({ uri: "chat://skill" })
+    expect(contents[0] && "text" in contents[0] ? contents[0].text : "").toContain("# chat")
+    expect(client.getInstructions()).toContain("chat://skill")
+    expect(telegram.opened()).toBe(0)
+  })
+
+  it("is not offered when the CLI names no SKILL.md", async () => {
+    const { client } = await connect()
+
+    expect(client.getInstructions()).not.toContain("://skill")
   })
 })
 

@@ -1,8 +1,9 @@
-import { mkdtempSync, writeFileSync } from "node:fs"
+import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { pathToFileURL } from "node:url"
 import { captureStreams } from "@leemour/cli-core"
+import { Command } from "commander"
 import { describe, expect, it } from "vitest"
 import { run } from "./program.js"
 import { skillCommand } from "./skill-command.js"
@@ -33,5 +34,60 @@ describe("skill show", () => {
     const { stdout } = await show(["skill", "show", "--json"])
 
     expect(JSON.parse(stdout[0] ?? "")).toEqual({ name: "chat-cli", content: "---\nname: chat-cli\n---\n\n# chat" })
+  })
+})
+
+describe("the skill hint", () => {
+  const agent = (config?: object) => {
+    const root = mkdtempSync(join(tmpdir(), "hint-"))
+    const env = {
+      AI_AGENT: "claude-code",
+      HOME: join(root, "home"),
+      CHAT_STATE_DIR: join(root, "state"),
+      CHAT_CONFIG_DIR: join(root, "config"),
+    }
+    if (config) {
+      mkdirSync(env.CHAT_CONFIG_DIR, { recursive: true })
+      writeFileSync(join(env.CHAT_CONFIG_DIR, "config.json"), JSON.stringify(config))
+    }
+    const skill = join(root, "SKILL.md")
+    writeFileSync(skill, "---\nname: chat-cli\n---\n\n# chat\n")
+    const commands = () => [new Command("probe").action(() => {}), skillCommand(app, pathToFileURL(skill))]
+    const go = async (argv: string[]) => {
+      const streams = captureStreams()
+      const code = await run(argv, { app, commands }, { streams, tty: false, env })
+      return { code, ...streams }
+    }
+    return { env, go }
+  }
+
+  it("tells an agent with no copy installed, on stderr only, once a day", async () => {
+    const { go } = agent()
+
+    const first = await go(["probe", "--json"])
+    expect(first.code).toBe(0)
+    expect(first.stdout).toEqual([])
+    expect(first.stderr).toEqual(["agents: `chat skill install` installs this tool's guide"])
+    expect((await go(["probe"])).stderr).toEqual([])
+  })
+
+  it("says nothing once the skill is installed", async () => {
+    const { env, go } = agent()
+
+    expect((await go(["skill", "install", "--json"])).code).toBe(0)
+    expect(existsSync(join(env.HOME, ".claude", "skills", "chat-cli", "SKILL.md"))).toBe(true)
+    expect((await go(["probe"])).stderr).toEqual([])
+  })
+
+  it("says nothing when the configuration turns skillHint off", async () => {
+    const { go } = agent({ defaults: { skillHint: false } })
+
+    expect((await go(["probe"])).stderr).toEqual([])
+  })
+
+  it("says nothing under --quiet", async () => {
+    const { go } = agent()
+
+    expect((await go(["probe", "--quiet"])).stderr).toEqual([])
   })
 })

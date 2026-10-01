@@ -1,11 +1,14 @@
+import { join } from "node:path"
 import {
   CliError,
   exitCodeFor,
   GENERIC_FAILURE,
   processStreams,
+  resolvePaths,
   type Streams,
   visibleControls,
 } from "@leemour/cli-core"
+import { skillHint } from "@leemour/cli-core/skill"
 import { Command } from "commander"
 import type { AppIdentity } from "./app.js"
 import { type BaseEnvironment, provide } from "./context.js"
@@ -113,7 +116,10 @@ export const run = async (argv: string[], definition: ProgramDefinition, options
 
   try {
     await program.parseAsync(rest, { from: "user" })
-    return process.exitCode === undefined ? 0 : Number(process.exitCode)
+    const code = process.exitCode === undefined ? 0 : Number(process.exitCode)
+    const hint = code === 0 && !rest.includes("--quiet") ? hintFor(definition, rest, options) : undefined
+    if (hint) streams.diagnostic(hint)
+    return code
   } catch (error) {
     if (!isCommanderFailure(error) || error.exitCode !== 0) {
       const failure = isCommanderFailure(error) ? new CliError("validation_error", error.message) : error
@@ -137,6 +143,19 @@ export const run = async (argv: string[], definition: ProgramDefinition, options
     })
     return GENERIC_FAILURE
   }
+}
+
+/** The update notice's state file, so both daily lines share one file per CLI. */
+const hintFor = ({ app, configuration }: ProgramDefinition, argv: string[], options: RunOptions) => {
+  const env = options.env ?? process.env
+  let enabled: boolean
+  try {
+    enabled = (configuration ?? settingsFor(app)).resolveSettings({}, { env }).skillHint
+  } catch {
+    return undefined
+  }
+  const statePath = join(resolvePaths({ appName: app.appName, prefix: app.envPrefix, env }).state, "update-check.json")
+  return skillHint({ app, argv, env, statePath, enabled })
 }
 
 interface Failed {

@@ -147,6 +147,11 @@
       "value": "<name>",
       "meaning": "your first name"
     },
+    "--for": {
+      "value": "<agents>",
+      "meaning": "which agents a skill is installed for: claude, agents or all",
+      "default": "all"
+    },
     "--for-everyone": {
       "meaning": "delete for everyone in the chat, not only for you — they cannot get it back"
     },
@@ -1199,6 +1204,16 @@
     },
     "skill": {
       "state": "both"
+    },
+    "skill install": {
+      "state": "planned",
+      "by": "each CLI's cli-core 0.11.0 bump",
+      "options": {
+        "--for": {
+          "state": "planned",
+          "by": "each CLI's cli-core 0.11.0 bump"
+        }
+      }
     },
     "skill show": {
       "state": "both"
