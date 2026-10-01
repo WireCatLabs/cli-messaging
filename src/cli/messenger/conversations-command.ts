@@ -1,6 +1,7 @@
 import { CliError } from "@leemour/cli-core"
 import { Command } from "commander"
 import { renderMessages } from "../../render/messages.js"
+import { BATCH_SIZE } from "../../services/conversations.js"
 import { momentOf } from "../../services/moment.js"
 import type { ConversationSummary } from "../../store/store.js"
 import { positiveCount } from "../paging.js"
@@ -85,6 +86,63 @@ export const conversationsCommand = (messenger: Messenger): Command => {
       } else if (context.format === "jsonl") context.renderer.stream(messages)
       else context.renderer.result({ ...summary, messages })
     })
+
+  const batches = conversations
+    .command("batches")
+    .description("windows of a chat for your own AI agent to link: which earlier message each one answers")
+  const sizeOption = (command: Command) =>
+    command.option(
+      "--size <n>",
+      `messages to answer per batch, ${BATCH_SIZE.min}–${BATCH_SIZE.max}; ${BATCH_SIZE.default} by default`,
+      positiveCount("--size"),
+    )
+
+  sizeOption(
+    batches
+      .command("status")
+      .description("how many messages still wait for an answer, in how many batches, and how much text")
+      .requiredOption("--chat <chat>", messenger.chatArgument),
+  ).action(async function (this: Command) {
+    const { chat, size = BATCH_SIZE.default } = this.opts<{ chat: string; size?: number }>()
+    const context = messengerContext(this, messenger)
+    const status = await context.withServices((services) => services.conversations.batchStatus(chat, size))
+    if (context.format === "pretty") {
+      context.streams.data(
+        `${status.messages} messages to answer, about ${status.batches} batches, ` +
+          `${status.characters} characters (about ${status.tokensEstimate} tokens)\n`,
+      )
+    } else context.renderer.result(status)
+  })
+
+  sizeOption(
+    batches
+      .command("next")
+      .description("the next window to answer, with the messages before it; message text goes to stdout only")
+      .requiredOption("--chat <chat>", messenger.chatArgument),
+  ).action(async function (this: Command) {
+    const { chat, size = BATCH_SIZE.default } = this.opts<{ chat: string; size?: number }>()
+    const context = messengerContext(this, messenger)
+    const batch = await context.withServices((services) => services.conversations.nextBatch(chat, size))
+    if (!batch) {
+      if (context.format === "pretty") context.renderer.note("every message of this chat has an answer")
+      else context.renderer.result(null)
+      return
+    }
+    if (context.format !== "pretty") {
+      context.renderer.result(batch)
+      return
+    }
+    context.streams.data(
+      `${batch.batch}\n${batch.messages
+        .map(
+          (one) =>
+            `${one.answer ? "?" : " "} ${one.id}  ${one.at.slice(0, 16).replace("T", " ")}  ${one.sender.name ?? one.sender.id ?? ""}` +
+            `${one.replyTo ? `  ↳ ${one.replyTo}` : ""}\n    ${one.text.replaceAll("\n", "\n    ")}\n`,
+        )
+        .join("")}`,
+    )
+    context.renderer.note(`${batch.remaining.messages} messages left after this batch`)
+  })
 
   return conversations
 }

@@ -20,6 +20,7 @@ import { storeCapable } from "./open.js"
 import { storePath } from "./path.js"
 import * as accounts from "./sqlite/accounts.js"
 import { backfillNormalized, pendingNormalization } from "./sqlite/backfill.js"
+import * as batches from "./sqlite/batches.js"
 import * as chatQueries from "./sqlite/chats.js"
 import * as conversationQueries from "./sqlite/conversations.js"
 import * as identities from "./sqlite/identities.js"
@@ -161,6 +162,10 @@ export interface MessageStore {
   conversationOf(key: AccountKey, chatId: Id, messageId: Id): Promise<string | undefined>
   /** Every link a message has, the messenger's first. */
   links(key: AccountKey, chatId: Id, messageId: Id): Promise<StoredLink[]>
+  /** How many messages still need the user's agent, and their characters (phase 4). */
+  batchStatus(key: AccountKey, chatId: Id): Promise<{ messages: number; characters: number }>
+  /** The earliest window holding a message the agent has not answered; `undefined` when none is left. */
+  nextBatch(key: AccountKey, chatId: Id, options: { size: number }): Promise<LinkBatch | undefined>
   /** Whether the chat's conversations were built, and when; `undefined` when never. */
   conversationState(
     key: AccountKey,
@@ -273,6 +278,32 @@ export interface ConversationSummary {
   senders: number
   builtAt: string
   algorithmVersion: number
+}
+
+/** One message as the user's agent sees it in a batch (phase 4 plan A4). */
+export interface BatchMessage {
+  id: Id
+  at: string
+  sender: { id: Id | null; name: string | null }
+  text: string
+  /** The message it answers, by the messenger's own record. */
+  replyTo?: Id
+  thread?: Id
+  mentions?: Id[]
+  /** `true`: the agent is asked which earlier message this one answers. `false`: context only. */
+  answer: boolean
+  /** For a message to answer: the current build's messenger and rule links, strongest first. */
+  candidates?: { parent: Id | null; source: string; kind: string; confidence: number }[]
+}
+
+/** A window of a chat for the agent: the messages to answer and the ones before them (A1). */
+export interface LinkBatch {
+  /** Names the window, so an answer can be checked against it (A3). */
+  batch: string
+  chat: Id
+  messages: BatchMessage[]
+  /** Messages still needing the agent after this batch, and their characters. */
+  remaining: { messages: number; characters: number }
 }
 
 export interface StoredLink {
@@ -492,6 +523,27 @@ const storeOver = (context: StoreContext): MessageStore => {
     links: async (key, chatId, messageId) => {
       const chatKey = chatKeyOf(key, chatId)
       return chatKey === undefined ? [] : conversationQueries.linksOf(context, chatKey, messageId)
+    },
+
+    batchStatus: async (key, chatId) => {
+      const chatKey = chatKeyOf(key, chatId)
+      return chatKey === undefined ? { messages: 0, characters: 0 } : batches.batchStatus(context, chatKey)
+    },
+
+    nextBatch: async (key, chatId, { size }) => {
+      const chatKey = chatKeyOf(key, chatId)
+      if (chatKey === undefined) return undefined
+      const found = batches.nextBatch(context, chatKey, chatId, size)
+      if (!found) return undefined
+      const answered = found.messages.filter(({ answer }) => answer)
+      const left = batches.batchStatus(context, chatKey)
+      return {
+        ...found,
+        remaining: {
+          messages: left.messages - answered.length,
+          characters: left.characters - answered.reduce((sum, { text }) => sum + [...text].length, 0),
+        },
+      }
     },
 
     conversationState: async (key, chatId) => {

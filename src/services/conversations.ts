@@ -1,7 +1,7 @@
 import { CliError } from "@leemour/cli-core"
 import { type LinkInput, linkMessages, RULES_VERSION } from "../conversations/link.js"
 import type { Id, Message, Page } from "../domain/models.js"
-import type { ConversationSummary, StoredLink } from "../store/store.js"
+import type { ConversationSummary, LinkBatch, StoredLink } from "../store/store.js"
 import type { ServiceDeps } from "./deps.js"
 import { storedChatId } from "./messages.js"
 
@@ -41,7 +41,25 @@ export interface ConversationsService {
     target: { id: string } | { chat: string; message: Id },
   ): Promise<{ summary: ConversationSummary; messages: Message[] }>
   links(chat: string, message: Id): Promise<MessageLinks>
+  /** What is left for the user's agent to answer, to tell the user before it starts (phase 4 plan A7). */
+  batchStatus(chat: string, size: number): Promise<BatchStatus>
+  /** The next window for the agent; `undefined` when every message is answered (A1–A4). */
+  nextBatch(chat: string, size: number): Promise<LinkBatch | undefined>
 }
+
+export interface BatchStatus {
+  chat: Id
+  /** Messages with no messenger reply and no current agent answer. */
+  messages: number
+  characters: number
+  /** About how many `batches next` it takes; windows hold context, so it is an estimate. */
+  batches: number
+  /** Characters ÷ 4: a rough count of tokens, not a price. */
+  tokensEstimate: number
+}
+
+/** Messages to answer per batch, by default and at most: the agent's turn stays small (A1). */
+export const BATCH_SIZE = { default: 50, min: 10, max: 200 }
 
 export const conversationsService = (deps: ServiceDeps): ConversationsService => {
   const found = async (chat: string) => {
@@ -116,6 +134,23 @@ export const conversationsService = (deps: ServiceDeps): ConversationsService =>
       return conversation
     },
 
+    batchStatus: async (chat, size) => {
+      const { store, account, chatId } = await found(chat)
+      const { messages, characters } = await store.batchStatus(account, chatId)
+      return {
+        chat: chatId,
+        messages,
+        characters,
+        batches: Math.ceil(messages / sized(size)),
+        tokensEstimate: Math.round(characters / 4),
+      }
+    },
+
+    nextBatch: async (chat, size) => {
+      const { store, account, chatId } = await found(chat)
+      return store.nextBatch(account, chatId, { size: sized(size) })
+    },
+
     links: async (chat, message) => {
       const { store, account, chatId } = await found(chat)
       const chosenOf = (links: StoredLink[]) => links.find((link) => !link.stale)
@@ -130,4 +165,11 @@ export const conversationsService = (deps: ServiceDeps): ConversationsService =>
       return { chat: chatId, message, links: own.map((link) => ({ ...link, chosen: link === chosen })), chain }
     },
   }
+}
+
+const sized = (size: number) => {
+  if (!Number.isInteger(size) || size < BATCH_SIZE.min || size > BATCH_SIZE.max) {
+    throw new CliError("validation_error", `--size takes ${BATCH_SIZE.min} to ${BATCH_SIZE.max} messages`)
+  }
+  return size
 }

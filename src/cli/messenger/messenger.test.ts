@@ -1009,6 +1009,49 @@ describe("the shared read commands", () => {
     expect((await call(["conversations", "show", "Book"], never, env)).code).toBe(2)
   })
 
+  it("**hands the agent a batch**, keeps its text out of the run record, and refuses it to a profile denying messages", async () => {
+    const root = mkdtempSync(join(tmpdir(), "messenger-"))
+    const env = {
+      CHAT_STATE_DIR: join(root, "state"),
+      CHAT_CONFIG_DIR: join(root, "config"),
+      MESSAGING_STORE: join(root, "m.db"),
+    }
+    await call(["messages", "context", "Book", "2", "--json"], async () => fake, env)
+    const never = async (): Promise<MessengerAdapter> => {
+      throw new Error("batches come from the store alone")
+    }
+
+    const status = await call(["conversations", "batches", "status", "--chat", "7", "--json"], never, env)
+    expect(JSON.parse(status.stdout[0] ?? "")).toMatchObject({ chat: "7", messages: 3, batches: 1 })
+    const next = await call(
+      ["conversations", "batches", "next", "--chat", "7", "--size", "10", "--json", "--record"],
+      never,
+      env,
+    )
+    const batch = JSON.parse(next.stdout[0] ?? "")
+    expect(batch.messages.map((one: { id: string; answer: boolean }) => [one.id, one.answer])).toEqual([
+      ["1", true],
+      ["2", true],
+      ["3", true],
+    ])
+    expect(batch.remaining).toEqual({ messages: 0, characters: 0 })
+    const kept = (dir: string): string[] =>
+      readdirSync(dir, { withFileTypes: true }).flatMap((entry) =>
+        entry.isDirectory() ? kept(join(dir, entry.name)) : [readFileSync(join(dir, entry.name), "utf8")],
+      )
+    const records = kept(env.CHAT_STATE_DIR)
+    expect(records.join("\n")).toContain("conversations batches next")
+    expect(records.join("\n")).not.toContain("chapter three")
+    expect((await call(["conversations", "batches", "next", "--chat", "7", "--size", "5"], never, env)).code).toBe(2)
+
+    mkdirSync(env.CHAT_CONFIG_DIR, { recursive: true })
+    writeFileSync(
+      join(env.CHAT_CONFIG_DIR, "config.json"),
+      JSON.stringify({ profiles: { default: { permissions: { messages: "deny" } } } }),
+    )
+    expect((await call(["conversations", "batches", "next", "--chat", "7"], never, env)).code).toBe(5)
+  })
+
   it("**report and export what the store holds**, without connecting", async () => {
     const root = mkdtempSync(join(tmpdir(), "messenger-"))
     const env = { CHAT_STATE_DIR: join(root, "state"), MESSAGING_STORE: join(root, "m.db") }
