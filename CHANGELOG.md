@@ -6,6 +6,13 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Changed — may break callers
+
+- **The parity manifest checks the `bot` commands**, a row each, in place of one planned row. What max
+  and tg both have is in all CLIs. `bot api`, `bot comments`, `bot uploads`, `bot chats members
+  list|add` and `bot webhooks set --add` are max's alone, each with why. The rest is planned for tg
+  in P8. The standard's README order no longer says the bot section is max's only.
+
 ### Fixed
 
 - **`contractCases`**: the case for `resolve` with a chat id nobody has now also accepts a chat of kind

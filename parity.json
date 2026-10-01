@@ -20,6 +20,9 @@
     "--all": {
       "meaning": "every row, no paging"
     },
+    "--all-bots": {
+      "meaning": "also read every other bot's copy on this machine that readOtherBots allows"
+    },
     "--all-can-pin": {
       "value": "<on|off>",
       "meaning": "every member may pin messages"
@@ -80,8 +83,16 @@
       "value": "<time>",
       "meaning": "read what came before this ISO 8601 time, or 2h / 1d ago; not with --before-id"
     },
+    "--block": {
+      "value": "<value>",
+      "meaning": "Set to `true` if user should be blocked in chat."
+    },
     "--bot": {
       "meaning": "the bot section of the profile's settings, rather than the personal account's"
+    },
+    "--bots": {
+      "value": "<profiles>",
+      "meaning": "also read these bots' copies, comma separated — each allowed by readOtherBots"
     },
     "--can": {
       "value": "<rights>",
@@ -151,8 +162,15 @@
       "meaning": "jsonl, one message per line, or a markdown transcript",
       "note": "the shared `store export` takes `jsonl` or `markdown`, max's own takes `jsonl` or `md` (e4)"
     },
+    "--from": {
+      "value": "<value>",
+      "meaning": "Start time for requested messages - use after instead"
+    },
     "--history": {
       "meaning": "the people added also see the messages from before they came"
+    },
+    "--html": {
+      "meaning": "the text is HTML: <b>, <i>, <a href>, <code>"
     },
     "--idle": {
       "value": "<duration>",
@@ -196,6 +214,10 @@
     "--mark-read": {
       "meaning": "also mark the chat read up to the newest message shown; the other person sees it"
     },
+    "--marker": {
+      "value": "<value>",
+      "meaning": "Marker"
+    },
     "--max-actions": {
       "value": "<n>",
       "meaning": "at most this many actions in one run",
@@ -222,6 +244,9 @@
     "--newest": {
       "meaning": "newest first instead of best first"
     },
+    "--no-ban": {
+      "meaning": "remove without banning; by default a removed person cannot come back by the link"
+    },
     "--no-preview": {
       "meaning": "no preview card for a link in the text"
     },
@@ -230,6 +255,10 @@
     },
     "--no-serve": {
       "meaning": "do not start it; log in on this command's own connection unless one is running"
+    },
+    "--notification": {
+      "value": "<text>",
+      "meaning": "a note only the person who pressed sees"
     },
     "--notify": {
       "meaning": "tell the chat's members about the pin"
@@ -305,6 +334,9 @@
       "meaning": "keep this run under `runs` — ids and timings, never message content",
       "note": "max's own copy is worded differently until T6 moves the command onto the shared one (e13)"
     },
+    "--refresh": {
+      "meaning": "read the private chat with them from MAX first — one request"
+    },
     "--regex": {
       "meaning": "the words are one regular expression, case-insensitive, tested against every stored text"
     },
@@ -329,6 +361,9 @@
     "--search": {
       "value": "<text>",
       "meaning": "only chats whose name contains this; at least 3 characters"
+    },
+    "--secret-stdin": {
+      "meaning": "a secret MAX sends back in X-Max-Bot-Api-Secret — asked for, or read from a pipe"
     },
     "--send-id": {
       "value": "<id>",
@@ -356,6 +391,10 @@
       "value": "<n>",
       "meaning": "messages to answer per batch, 10–200; 50 by default"
     },
+    "--text": {
+      "value": "<text>",
+      "meaning": "the message's new text; - reads stdin"
+    },
     "--timeout": {
       "value": "<duration>",
       "meaning": "give up on the whole command after this — 30s, 2m, 500ms"
@@ -380,6 +419,10 @@
     "--type": {
       "value": "<names>",
       "meaning": "only events of these types, comma-separated, as the messenger names them"
+    },
+    "--types": {
+      "value": "<value>",
+      "meaning": "Comma separated list of update types your bot want to receive"
     },
     "--unanswered": {
       "value": "[duration]",
@@ -481,12 +524,498 @@
       }
     },
     "bot": {
-      "in": [],
+      "in": "all"
+    },
+    "bot api": {
+      "in": ["max"],
+      "reason": "MAX's own Bot API operations, generated from MAX's schema; a generated `bot api` for Telegram comes after P8"
+    },
+    "bot auth": {
+      "in": "all"
+    },
+    "bot auth remove": {
+      "in": "all"
+    },
+    "bot auth set": {
+      "in": "all"
+    },
+    "bot auth show": {
+      "in": "all"
+    },
+    "bot callbacks": {
+      "in": ["max"],
       "planned": {
-        "max": "P8",
+        "tg": "P8"
+      }
+    },
+    "bot callbacks answer": {
+      "in": ["max"],
+      "planned": {
         "tg": "P8"
       },
-      "subtree": true
+      "options": {
+        "--notification": {
+          "in": ["max"],
+          "planned": {
+            "tg": "P8"
+          }
+        },
+        "--text": {
+          "in": ["max"],
+          "planned": {
+            "tg": "P8"
+          }
+        }
+      }
+    },
+    "bot chats": {
+      "in": "all"
+    },
+    "bot chats action": {
+      "in": "all"
+    },
+    "bot chats admins": {
+      "in": "all"
+    },
+    "bot chats admins add": {
+      "in": "all",
+      "options": {
+        "--can": "all",
+        "--title": "all"
+      }
+    },
+    "bot chats admins list": {
+      "in": "all"
+    },
+    "bot chats admins remove": {
+      "in": "all"
+    },
+    "bot chats check": {
+      "in": ["max"],
+      "planned": {
+        "tg": "P8"
+      },
+      "options": {
+        "--allow-dangerous": {
+          "in": ["max"],
+          "planned": {
+            "tg": "P8"
+          }
+        },
+        "--dry-run": {
+          "in": ["max"],
+          "planned": {
+            "tg": "P8"
+          }
+        },
+        "--max-actions": {
+          "in": ["max"],
+          "planned": {
+            "tg": "P8"
+          }
+        },
+        "--no-ban": {
+          "in": ["max"],
+          "planned": {
+            "tg": "P8"
+          }
+        },
+        "--since": {
+          "in": ["max"],
+          "planned": {
+            "tg": "P8"
+          }
+        }
+      }
+    },
+    "bot chats leave": {
+      "in": "all"
+    },
+    "bot chats list": {
+      "in": "all"
+    },
+    "bot chats members": {
+      "in": "all"
+    },
+    "bot chats members add": {
+      "in": ["max"],
+      "reason": "a Telegram bot cannot add people to a chat"
+    },
+    "bot chats members list": {
+      "in": ["max"],
+      "options": {
+        "--limit": "all",
+        "--marker": "all"
+      },
+      "reason": "Telegram's Bot API cannot list a chat's members, only its admins and a count"
+    },
+    "bot chats members remove": {
+      "in": "all",
+      "options": {
+        "--block": "all"
+      }
+    },
+    "bot chats rules": {
+      "in": ["max"],
+      "planned": {
+        "tg": "P8"
+      }
+    },
+    "bot chats rules set": {
+      "in": ["max"],
+      "planned": {
+        "tg": "P8"
+      }
+    },
+    "bot chats rules show": {
+      "in": ["max"],
+      "planned": {
+        "tg": "P8"
+      }
+    },
+    "bot chats rules unset": {
+      "in": ["max"],
+      "planned": {
+        "tg": "P8"
+      }
+    },
+    "bot chats show": {
+      "in": "all"
+    },
+    "bot commands": {
+      "in": ["max"],
+      "planned": {
+        "tg": "P8"
+      }
+    },
+    "bot commands clear": {
+      "in": ["max"],
+      "planned": {
+        "tg": "P8"
+      }
+    },
+    "bot commands list": {
+      "in": ["max"],
+      "planned": {
+        "tg": "P8"
+      }
+    },
+    "bot commands set": {
+      "in": ["max"],
+      "planned": {
+        "tg": "P8"
+      }
+    },
+    "bot comments": {
+      "in": ["max"],
+      "reason": "a Telegram channel's comments are messages in a separate discussion group, reached by ids only an update gives"
+    },
+    "bot list": {
+      "in": "all",
+      "options": {
+        "--check": "all"
+      }
+    },
+    "bot mcp": {
+      "in": ["max"],
+      "planned": {
+        "tg": "P8"
+      },
+      "options": {
+        "--allow-delete": {
+          "in": ["max"],
+          "planned": {
+            "tg": "P8"
+          }
+        },
+        "--allow-moderate": {
+          "in": ["max"],
+          "planned": {
+            "tg": "P8"
+          }
+        },
+        "--allow-send": {
+          "in": ["max"],
+          "planned": {
+            "tg": "P8"
+          }
+        },
+        "--confirm-send": {
+          "in": ["max"],
+          "planned": {
+            "tg": "P8"
+          }
+        }
+      }
+    },
+    "bot mcp config": {
+      "in": ["max"],
+      "planned": {
+        "tg": "P8"
+      },
+      "options": {
+        "--allow-delete": {
+          "in": ["max"],
+          "planned": {
+            "tg": "P8"
+          }
+        },
+        "--allow-moderate": {
+          "in": ["max"],
+          "planned": {
+            "tg": "P8"
+          }
+        },
+        "--allow-send": {
+          "in": ["max"],
+          "planned": {
+            "tg": "P8"
+          }
+        },
+        "--confirm-send": {
+          "in": ["max"],
+          "planned": {
+            "tg": "P8"
+          }
+        }
+      }
+    },
+    "bot me": {
+      "in": ["max"],
+      "planned": {
+        "tg": "P8"
+      }
+    },
+    "bot messages": {
+      "in": "all"
+    },
+    "bot messages between": {
+      "in": ["max"],
+      "planned": {
+        "tg": "P8"
+      },
+      "options": {
+        "--all-bots": {
+          "in": ["max"],
+          "planned": {
+            "tg": "P8"
+          }
+        },
+        "--bots": {
+          "in": ["max"],
+          "planned": {
+            "tg": "P8"
+          }
+        },
+        "--limit": {
+          "in": ["max"],
+          "planned": {
+            "tg": "P8"
+          }
+        }
+      }
+    },
+    "bot messages delete": {
+      "in": "all",
+      "options": {
+        "--allow-dangerous": "all"
+      }
+    },
+    "bot messages edit": {
+      "in": "all",
+      "options": {
+        "--html": "all",
+        "--md": "all"
+      }
+    },
+    "bot messages list": {
+      "in": "all",
+      "options": {
+        "--limit": "all"
+      }
+    },
+    "bot messages pin": {
+      "in": "all",
+      "options": {
+        "--notify": "all"
+      }
+    },
+    "bot messages search": {
+      "in": ["max"],
+      "planned": {
+        "tg": "P8"
+      },
+      "options": {
+        "--all-bots": {
+          "in": ["max"],
+          "planned": {
+            "tg": "P8"
+          }
+        },
+        "--bots": {
+          "in": ["max"],
+          "planned": {
+            "tg": "P8"
+          }
+        },
+        "--from": {
+          "in": ["max"],
+          "planned": {
+            "tg": "P8"
+          }
+        },
+        "--limit": {
+          "in": ["max"],
+          "planned": {
+            "tg": "P8"
+          }
+        }
+      }
+    },
+    "bot messages send": {
+      "in": "all",
+      "options": {
+        "--allow-any-file": "all",
+        "--as-file": "all",
+        "--file": "all",
+        "--html": "all",
+        "--md": "all",
+        "--photo": "all",
+        "--reply-to": "all",
+        "--silent": "all",
+        "--voice": "all"
+      }
+    },
+    "bot messages show": {
+      "in": "all"
+    },
+    "bot messages unpin": {
+      "in": "all"
+    },
+    "bot people": {
+      "in": ["max"],
+      "planned": {
+        "tg": "P8"
+      }
+    },
+    "bot people show": {
+      "in": ["max"],
+      "planned": {
+        "tg": "P8"
+      },
+      "options": {
+        "--all-bots": {
+          "in": ["max"],
+          "planned": {
+            "tg": "P8"
+          }
+        },
+        "--bots": {
+          "in": ["max"],
+          "planned": {
+            "tg": "P8"
+          }
+        },
+        "--limit": {
+          "in": ["max"],
+          "planned": {
+            "tg": "P8"
+          }
+        },
+        "--refresh": {
+          "in": ["max"],
+          "planned": {
+            "tg": "P8"
+          }
+        }
+      }
+    },
+    "bot recipients": {
+      "in": "all"
+    },
+    "bot recipients add": {
+      "in": "all"
+    },
+    "bot recipients clear": {
+      "in": "all"
+    },
+    "bot recipients list": {
+      "in": "all"
+    },
+    "bot recipients remove": {
+      "in": "all"
+    },
+    "bot sends": {
+      "in": "all"
+    },
+    "bot sends list": {
+      "in": "all"
+    },
+    "bot updates": {
+      "in": ["max"],
+      "planned": {
+        "tg": "P8"
+      }
+    },
+    "bot updates watch": {
+      "in": ["max"],
+      "planned": {
+        "tg": "P8"
+      },
+      "options": {
+        "--types": {
+          "in": ["max"],
+          "planned": {
+            "tg": "P8"
+          }
+        }
+      }
+    },
+    "bot uploads": {
+      "in": ["max"],
+      "reason": "Telegram has no upload-only step: a file goes up with the message that carries it"
+    },
+    "bot webhooks": {
+      "in": ["max"],
+      "planned": {
+        "tg": "P8"
+      }
+    },
+    "bot webhooks delete": {
+      "in": ["max"],
+      "planned": {
+        "tg": "P8"
+      }
+    },
+    "bot webhooks list": {
+      "in": ["max"],
+      "planned": {
+        "tg": "P8"
+      }
+    },
+    "bot webhooks set": {
+      "in": ["max"],
+      "planned": {
+        "tg": "P8"
+      },
+      "options": {
+        "--add": {
+          "in": ["max"],
+          "reason": "a Telegram bot holds one webhook address"
+        },
+        "--secret-stdin": {
+          "in": ["max"],
+          "planned": {
+            "tg": "P8"
+          }
+        },
+        "--types": {
+          "in": ["max"],
+          "planned": {
+            "tg": "P8"
+          }
+        }
+      }
     },
     "cache": {
       "in": ["max"],

@@ -91,46 +91,51 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 
 | Option | Value | Meaning | Default | Commands |
 |---|---|---|---|---|
-| `--add` | `<chat>` | put a chat into a folder; repeat it for more |  | `chats folders update` |
+| `--add` | `<chat>` | put a chat into a folder; repeat it for more |  | `bot webhooks set` (max-only), `chats folders update` |
 | `--after-id` | `<id>` | read what came after this message id; not with --after-time or the --before pair |  | `messages list` |
 | `--after-n` | `<n>` | how many messages after it |  | `messages context` |
 | `--after-time` | `<time>` | read what came after this ISO 8601 time, or 2h / 1d ago; not with --after-id or the --before pair |  | `messages list` |
 | `--all` |  | every row, no paging |  | `chats list`, `chats members list` (planned), `contacts list`, `inbox` (planned), `messages download` (planned), `review` (planned) |
+| `--all-bots` |  | also read every other bot's copy on this machine that readOtherBots allows |  | `bot messages between` (planned), `bot messages search` (planned), `bot people show` (planned) |
 | `--all-can-pin` | `<on\|off>` | every member may pin messages |  | `chats update` |
-| `--allow-any-file` |  | send a --file even from a hidden folder, ~/.ssh or the tool's own folders |  | `messages send` |
-| `--allow-dangerous` |  | go ahead without the question an ask level puts before a deletion |  | `chats moderate` (planned), `mcp` (planned), `mcp config` (planned), `messages delete`, `store clear` |
-| `--allow-delete` |  | offer the tool that deletes messages for you only; it cannot be undone. **max's own `mcp` is worded differently until the permission levels (P7) replace these flags there (e13)** |  | `mcp`, `mcp config` |
+| `--allow-any-file` |  | send a --file even from a hidden folder, ~/.ssh or the tool's own folders |  | `bot messages send`, `messages send` |
+| `--allow-dangerous` |  | go ahead without the question an ask level puts before a deletion |  | `bot chats check` (planned), `bot messages delete`, `chats moderate` (planned), `mcp` (planned), `mcp config` (planned), `messages delete`, `store clear` |
+| `--allow-delete` |  | offer the tool that deletes messages for you only; it cannot be undone. **max's own `mcp` is worded differently until the permission levels (P7) replace these flags there (e13)** |  | `bot mcp` (planned), `bot mcp config` (planned), `mcp`, `mcp config` |
 | `--allow-mark-read` |  | offer the tool that marks a chat read; the other person sees it. **max's own `mcp` is worded differently until the permission levels (P7) replace these flags there (e13)** |  | `mcp`, `mcp config` |
-| `--allow-moderate` |  | offer the tool that applies a group's rules — delete others' messages, remove people. **max only, until permissions (P7) replace the MCP flags** |  | `mcp` (planned), `mcp config` (planned) |
-| `--allow-send` |  | offer the send tool; without it the server can only read. **max's own `mcp` is worded differently until the permission levels (P7) replace these flags there (e13)** |  | `mcp`, `mcp config` |
+| `--allow-moderate` |  | offer the tool that applies a group's rules — delete others' messages, remove people. **max only, until permissions (P7) replace the MCP flags** |  | `bot mcp` (planned), `bot mcp config` (planned), `mcp` (planned), `mcp config` (planned) |
+| `--allow-send` |  | offer the send tool; without it the server can only read. **max's own `mcp` is worded differently until the permission levels (P7) replace these flags there (e13)** |  | `bot mcp` (planned), `bot mcp config` (planned), `mcp`, `mcp config` |
 | `--anonymous` |  | nobody sees who voted for what |  | `polls create` |
 | `--app` | `<how>` | the first time only: how to get this profile's app from my.telegram.org | `browser` | `session start` (tg-only) |
-| `--as-file` |  | send every --file as a plain file to download, a video included |  | `messages send` |
+| `--as-file` |  | send every --file as a plain file to download, a video included |  | `bot messages send`, `messages send` |
 | `--at-time` | `<time>` | let the messenger send it later, even with this machine off: a local time like 2026-09-25T09:00, or 30m |  | `messages send` |
 | `--background` |  | run as a job that outlives this command; `store jobs show` follows it |  | `store fetch` |
 | `--batch` | `<id>` | the batch id `conversations batches next` printed |  | `conversations links add` (planned) |
 | `--before-id` | `<id>` | read what came before this message id; not with --before-time |  | `messages list` |
 | `--before-n` | `<n>` | how many messages before it |  | `messages context` |
 | `--before-time` | `<time>` | read what came before this ISO 8601 time, or 2h / 1d ago; not with --before-id |  | `messages list` |
+| `--block` | `<value>` | Set to `true` if user should be blocked in chat. |  | `bot chats members remove` |
 | `--bot` |  | the bot section of the profile's settings, rather than the personal account's |  | `config set` (planned), `config show` (planned), `config unset` (planned) |
-| `--can` | `<rights>` | what they may do, comma-separated: read, members, admins, info, pin, link, post, edit, delete. **lists the rights each messenger has — MAX has `read`, Telegram does not — so it differs on purpose (Help text rule 4)** |  | `chats admins add` |
+| `--bots` | `<profiles>` | also read these bots' copies, comma separated — each allowed by readOtherBots |  | `bot messages between` (planned), `bot messages search` (planned), `bot people show` (planned) |
+| `--can` | `<rights>` | what they may do, comma-separated: read, members, admins, info, pin, link, post, edit, delete. **lists the rights each messenger has — MAX has `read`, Telegram does not — so it differs on purpose (Help text rule 4)** |  | `bot chats admins add`, `chats admins add` |
 | `--channel` |  | a private channel instead of a group; people join it by its link |  | `chats create` |
 | `--chat` | `<chat>` | a chat, by id or name; repeat it for more. **max's `messages search` takes `<id>` only, since searching never connects to resolve a name; rule 6 says `<chat>` (e8)** |  | `chats folders create`, `conversations batches next`, `conversations batches status`, `conversations build`, `conversations links clear` (planned), `conversations list`, `messages search`, `review` |
-| `--check` |  | say whether a newer version exists, and install nothing |  | `upgrade` |
-| `--confirm-send` |  | show the owner every write the MCP server offers, in a form to approve. **max's own `mcp` is worded differently until the permission levels (P7) replace these flags there (e13)** |  | `mcp`, `mcp config` |
+| `--check` |  | say whether a newer version exists, and install nothing |  | `bot list`, `upgrade` |
+| `--confirm-send` |  | show the owner every write the MCP server offers, in a form to approve. **max's own `mcp` is worded differently until the permission levels (P7) replace these flags there (e13)** |  | `bot mcp` (planned), `bot mcp config` (planned), `mcp`, `mcp config` |
 | `--context` | `<n>` | messages before and after each hit |  | `messages search` (planned) |
 | `--defaults` |  | change what every profile gets, rather than this profile |  | `config set`, `config unset` |
 | `--description` | `<text>` | the new about text — of a chat or of your account |  | `account update`, `chats update` |
-| `--dry-run` |  | judge and plan; do nothing |  | `chats moderate` (planned) |
+| `--dry-run` |  | judge and plan; do nothing |  | `bot chats check` (planned), `chats moderate` (planned) |
 | `--estimate` |  | only say what the fetch would cost, from this machine's copy; nothing is sent. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | `store fetch` |
 | `--event` | `<names>` | only these events, comma-separated, as the messenger names them. **becomes `--type` — e12** |  | `chats events` (max-only) |
 | `--events` |  | also print edits, deletions and reactions; every line then names its event. **differs by one letter from `chats events --event`, a filter with an unrelated meaning (e12)** |  | `watch` |
-| `--file` | `<file>` | attach a file; images go as a photo, videos as a video. Repeat it for more |  | `messages send` |
+| `--file` | `<file>` | attach a file; images go as a photo, videos as a video. Repeat it for more |  | `bot messages send`, `messages send` |
 | `--first-name` | `<name>` | your first name |  | `account update` |
 | `--for` | `<agents>` | which agents a skill is installed for: claude, agents or all | `all` | `skill install` (planned) |
 | `--for-everyone` |  | delete for everyone in the chat, not only for you — they cannot get it back |  | `messages delete` |
 | `--format` | `<format>` | jsonl, one message per line, or a markdown transcript. **the shared `store export` takes `jsonl` or `markdown`, max's own takes `jsonl` or `md` (e4)** |  | `store export` |
+| `--from` | `<value>` | Start time for requested messages - use after instead |  | `bot messages search` (planned) |
 | `--history` |  | the people added also see the messages from before they came |  | `chats members add` (max-only) |
+| `--html` |  | the text is HTML: <b>, <i>, <a href>, <code> |  | `bot messages edit`, `bot messages send` |
 | `--idle` | `<duration>` | stop after this long with nobody using it — 15m, 1h |  | `serve` (max-only), `server restart` (max-only), `server start` (max-only) |
 | `--json` |  | machine-readable output: one JSON value on stdout, nothing else |  | every command |
 | `--jsonl` |  | machine-readable output: one JSON object per line, for streaming and jq |  | every command |
@@ -138,21 +143,24 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--last` | `<n>` | stop once the newest n messages are held; not with --since. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | `store fetch` |
 | `--last-name` | `<name>` | your last name |  | `account update` |
 | `--left` |  | only the chats this account has left |  | `store clear` |
-| `--limit` | `<n>` | how many: rows to show, or messages one run fetches. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | `chats list`, `chats members list` (planned), `contacts list`, `conversations list`, `inbox`, `messages list`, `messages search`, `runs list`, `sends list`, `store fetch` |
+| `--limit` | `<n>` | how many: rows to show, or messages one run fetches. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | `bot chats members list`, `bot messages between` (planned), `bot messages list`, `bot messages search` (planned), `bot people show` (planned), `chats list`, `chats members list` (planned), `contacts list`, `conversations list`, `inbox`, `messages list`, `messages search`, `runs list`, `sends list`, `store fetch` |
 | `--lines` | `<n>` | how many lines | `50` | `server logs` |
 | `--local` |  | use the model on this machine, never the messenger |  | `messages transcribe` (tg-only) |
 | `--mark-read` |  | also mark the chat read up to the newest message shown; the other person sees it |  | `messages list` |
-| `--max-actions` | `<n>` | at most this many actions in one run | `10` | `chats moderate` (planned) |
-| `--md` |  | read **bold**, _italic_, ~~struck~~ and `code` in the text; \ keeps a mark literal |  | `messages edit`, `messages send` |
+| `--marker` | `<value>` | Marker |  | `bot chats members list` |
+| `--max-actions` | `<n>` | at most this many actions in one run | `10` | `bot chats check` (planned), `chats moderate` (planned) |
+| `--md` |  | read **bold**, _italic_, ~~struck~~ and `code` in the text; \ keeps a mark literal |  | `bot messages edit`, `bot messages send`, `messages edit`, `messages send` |
 | `--members-see-link` | `<on\|off>` | members may see the invite link |  | `chats update` (max-only) |
 | `--model` | `<id>` | which downloaded speech model hears them; `models audio list` shows them. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | `conversations links clear` (planned), `inbox`, `messages list`, `messages transcribe`, `review` (planned) |
 | `--multiple` |  | people may pick several answers |  | `polls create` |
 | `--new` |  | what arrived since the last check, each message once — for scheduled runs |  | `inbox` |
 | `--newest` |  | newest first instead of best first |  | `messages search` (planned) |
+| `--no-ban` |  | remove without banning; by default a removed person cannot come back by the link |  | `bot chats check` (planned) |
 | `--no-preview` |  | no preview card for a link in the text |  | `messages send` |
 | `--no-record` |  | do not keep it, whatever the configuration says |  | every command |
 | `--no-serve` |  | do not start it; log in on this command's own connection unless one is running |  | every command (planned) |
-| `--notify` |  | tell the chat's members about the pin |  | `messages pin` |
+| `--notification` | `<text>` | a note only the person who pressed sees |  | `bot callbacks answer` (planned) |
+| `--notify` |  | tell the chat's members about the pin |  | `bot messages pin`, `messages pin` |
 | `--offline` |  | answer from what was recorded and never connect; fails if nothing was |  | every command |
 | `--online` |  | also log in once, read one chat and start the MCP server; sends nothing. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | `doctor` |
 | `--only-admins-add` | `<on\|off>` | only admins may add members |  | `chats update` |
@@ -166,36 +174,40 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--page-size` | `<n>` | how many items one request to the messenger asks for; the messenger's own if not given. **the default is each messenger's own page: 30 on MAX, 100 on Telegram** |  | `store fetch` |
 | `--pause` | `<duration>` | the least wait between pages, 5s or 500ms; each is up to twice that. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** | `5s` | `messages download` (planned), `store fetch` |
 | `--personal` |  | the personal account's section of the profile's settings |  | `config set` (planned), `config unset` (planned) |
-| `--photo` | `<file>` | an image file — a profile photo in `account update`, a photo to send in `messages send` |  | `account update`, `messages send` |
+| `--photo` | `<file>` | an image file — a profile photo in `account update`, a photo to send in `messages send` |  | `account update`, `bot messages send`, `messages send` |
 | `--qr-file` | `<png>` | write the QR code to this PNG instead of drawing it, for an agent to pass on |  | `session start` (tg-only) |
 | `--quiet` |  | diagnostics off. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | every command |
 | `--record` |  | keep this run under `runs` — ids and timings, never message content. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | every command |
+| `--refresh` |  | read the private chat with them from MAX first — one request |  | `bot people show` (planned) |
 | `--regex` |  | the words are one regular expression, case-insensitive, tested against every stored text |  | `messages search` (planned) |
 | `--remove` | `<chat>` | take a chat out of a folder; repeat it for more |  | `chats folders update` |
-| `--reply-to` | `<message>` | answer this message id in the same chat |  | `messages send` |
+| `--reply-to` | `<message>` | answer this message id in the same chat |  | `bot messages send`, `messages send` |
 | `--retract` |  | take your vote back, where the poll allows it |  | `polls vote` |
 | `--revote` |  | people may change their vote |  | `polls create` |
 | `--run` | `<id>` | the run the report is about; the newest failed one if not given |  | `doctor report create` |
 | `--search` | `<text>` | only chats whose name contains this; at least 3 characters |  | `chats list`, `contacts list` |
+| `--secret-stdin` |  | a secret MAX sends back in X-Max-Bot-Api-Secret — asked for, or read from a pipe |  | `bot webhooks set` (planned) |
 | `--send-id` | `<id>` | reuse the id of an earlier send whose outcome is unknown; the messenger drops the duplicate |  | `messages forward`, `messages send`, `polls create` |
 | `--serve` |  | start `serve` in the background if it is not running (the default) |  | every command (planned) |
 | `--show-phone` |  | print the whole phone number |  | `account show` |
-| `--silent` |  | deliver without a notification |  | `messages forward`, `messages send`, `polls create` |
-| `--since` | `<id-or-time>` | from this message id, an ISO 8601 time, or 2h / 1d ago; each command says its default. **becomes `--since-time` everywhere — NEED-485** |  | `chats events` (max-only), `inbox` (max-only), `review` (max-only) |
+| `--silent` |  | deliver without a notification |  | `bot messages send`, `messages forward`, `messages send`, `polls create` |
+| `--since` | `<id-or-time>` | from this message id, an ISO 8601 time, or 2h / 1d ago; each command says its default. **becomes `--since-time` everywhere — NEED-485** |  | `bot chats check` (planned), `chats events` (max-only), `inbox` (max-only), `review` (max-only) |
 | `--since-time` | `<time>` | from this ISO 8601 time, or 2h / 1d ago; each command says its default |  | `chats events` (planned), `chats moderate` (planned), `conversations list`, `inbox` (planned), `review` (planned), `store export`, `store fetch` |
 | `--size` | `<n>` | messages to answer per batch, 10–200; 50 by default |  | `conversations batches next`, `conversations batches status` |
+| `--text` | `<text>` | the message's new text; - reads stdin |  | `bot callbacks answer` (planned) |
 | `--timeout` | `<duration>` | give up on the whole command after this — 30s, 2m, 500ms |  | every command |
-| `--title` | `<title>` | the new name — of a chat or a folder |  | `chats folders update`, `chats update` |
+| `--title` | `<title>` | the new name — of a chat or a folder |  | `bot chats admins add`, `chats folders update`, `chats update` |
 | `--to` | `<chat>` | the chat to forward it to: an id, or part of a chat name. **the sentence says how to name a chat the messenger's way, so it differs on purpose (Help text rule 4)** |  | `messages forward` |
 | `--trace` |  | one line per request on stderr: ids and timings, never message content. **max logs one line per request, tg the connection's own lines: the same option, a different mechanism (Help text rule 4)** |  | every command |
 | `--transcribe` |  | hear voice messages not heard yet, on this machine; slow, the model must be downloaded. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | `inbox`, `messages list`, `review` |
 | `--type` | `<names>` | only events of these types, comma-separated, as the messenger names them |  | `chats events` (planned) |
+| `--types` | `<value>` | Comma separated list of update types your bot want to receive |  | `bot updates watch` (planned), `bot webhooks set` (planned) |
 | `--unanswered` | `[duration]` | only questions to you or a group's admins that nobody answered, asked at least this long ago — 4h, 1d. **max's own `review` still takes bare hours until T6 moves it (e2)** | `24h` | `review` |
 | `--unread` |  | only chats with unread messages |  | `chats list` |
 | `--until` | `<message>` | only up to this message id, inclusive; the newest by default |  | `chats mark-read` |
 | `--verbose` |  | more detail in what is shown: -v ids, -vv everything known | `0` | every command |
 | `--version` |  | print the version number |  | every command |
-| `--voice` | `<file>` | send an Ogg Opus file as a voice message, alone, with no text |  | `messages send` |
+| `--voice` | `<file>` | send an Ogg Opus file as a voice message, alone, with no text |  | `bot messages send`, `messages send` |
 | `--yes` |  | go ahead without the question an ask level puts before a write |  | every command (planned), `account sessions end` (planned), `mcp` (planned), `mcp config` (planned) |
 
 <!-- end of the option catalogue -->
@@ -375,10 +387,10 @@ many), `--allow-any-file` (which files).
    - max `bot.md` — tg has no bot side yet; its page comes with it (P8).
    max's reverse-engineered protocol is `docs/dev/protocol.md`, a developer page, not a user one.
 2. **The README is the full introduction, and max's is the model.** Users read it first, so it is
-   not cut down to a landing page. Both READMEs have these sections in this order: the bot (max
-   only, until tg has one), the personal account, how to use it, groups you run, how it works, what
-   it can do, why it is good, custom work, how it differs, contents, install, log in, use, for
-   scripts and agents, security, documentation, development, roadmap, licence, contributing.
+   not cut down to a landing page. Both READMEs have these sections in this order: the bot, the
+   personal account, how to use it, groups you run, how it works, what it can do, why it is good,
+   custom work, how it differs, contents, install, log in, use, for scripts and agents, security,
+   documentation, development, roadmap, licence, contributing.
 3. **A change to a command changes its page in both tools** in the same docs pull request.
 4. **A page names only options that exist or are planned.** Each CLI's CI runs
    `<cli> commands --json | cli-messaging-parity <cli> --pages README.md docs/*.md`: an option a user
