@@ -6,6 +6,10 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.97.0 — 01.10.2026
+
+Released early: max-cli 6c (T6 store group): its parity check needs the store rows planned (#333)
+
 ### Added
 
 - **The bot's messages and chats** (P8): `bot messages send|list|show|edit|delete|pin|unpin` and
