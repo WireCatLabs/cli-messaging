@@ -1,10 +1,11 @@
 import type { Id, Message, Reactions } from "../../domain/models.js"
 import { NORMALIZER_VERSION, normalize } from "../normalize.js"
 import type { AccountKey } from "../store.js"
-import { and, eq, isNull, type Placeholder, sql } from "./drizzle/core.js"
+import { findChatPk } from "./chats.js"
+import { and, eq, isNull, ne, notInArray, type Placeholder, sql } from "./drizzle/core.js"
 import { identityPk } from "./identities.js"
 import type { Orm, StoreContext } from "./open.js"
-import { attachments, messageRevisions, messages, transcripts } from "./schema.js"
+import { attachments, chats, messageRevisions, messages, transcripts } from "./schema.js"
 import { json, toMs } from "./values.js"
 
 const FIELDS = [
@@ -202,3 +203,55 @@ export const saveReactions = ({ orm }: StoreContext, chatKey: number, messageId:
     .where(and(eq(messages.chatPk, chatKey), eq(messages.nativeId, messageId)))
     .returning({ pk: messages.pk })
     .all().length > 0
+
+/** Telegram's chat types that number their messages themselves, not per account. */
+const OWN_NUMBERING = ["channel", "supergroup", "gigagroup", "monoforum"]
+
+export const markDeleted = (
+  context: StoreContext,
+  key: AccountKey,
+  accountKey: number,
+  messageIds: Id[],
+  chatId: Id | undefined,
+): number => {
+  const { orm } = context
+  const chatKey = chatId === undefined ? undefined : findChatPk(context, accountKey, chatId)
+  // A Telegram chat stored only by its id, from a message seen before the chat, has no kind yet —
+  // but a channel's or a supergroup's id is marked `-100…`, which says enough.
+  const stubs =
+    key.provider === "telegram" ? sql`NOT (${chats.kind} = 'unknown' AND ${chats.nativeId} LIKE '-100%')` : undefined
+  let changed = 0
+  for (const messageId of messageIds) {
+    const live = and(eq(messages.accountPk, accountKey), eq(messages.nativeId, messageId), isNull(messages.deletedAt))
+    if (chatId !== undefined) {
+      const found =
+        chatKey === undefined
+          ? undefined
+          : orm
+              .select({ pk: messages.pk })
+              .from(messages)
+              .where(and(live, eq(messages.chatPk, chatKey)))
+              .get()
+      if (found) changed += tombstone(context, found.pk)
+      continue
+    }
+    // Telegram names a deletion without its chat only where ids count per account; a channel or
+    // supergroup numbers its own, so the same id there is another message. Two candidates left
+    // means the id is ambiguous, and a missed tombstone is better than a wrong one.
+    const candidates = orm
+      .select({ pk: messages.pk })
+      .from(messages)
+      .innerJoin(chats, eq(chats.pk, messages.chatPk))
+      .where(
+        and(
+          live,
+          ne(chats.kind, "channel"),
+          stubs,
+          notInArray(sql`coalesce(json_extract(${chats.providerMetadata}, '$.chatType'), '')`, OWN_NUMBERING),
+        ),
+      )
+      .all()
+    if (candidates.length === 1 && candidates[0]) changed += tombstone(context, candidates[0].pk)
+  }
+  return changed
+}

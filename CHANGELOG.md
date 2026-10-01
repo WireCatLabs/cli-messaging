@@ -61,6 +61,13 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   decides as before; `SendGuard.ask` is the question `guardedWrite` awaits before `check`, and
   `check` refuses an `ask` write that was never asked. MCP is unchanged for now.
 
+### Fixed
+
+- **Saving messages compiled every SQL statement again on every call.** The store now queries through
+  Drizzle, one module per kind of record under `src/store/sqlite/`, and prepares the statements each
+  saved message runs once per open store: 9,131 rows/s at a million messages instead of 6,900, with a
+  sixth less peak memory. Search answers as before. `MessageStore` does not change.
+
 ## 0.74.0 — 01.10.2026
 
 ### Added

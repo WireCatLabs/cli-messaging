@@ -1,5 +1,22 @@
-export { and, desc, eq, gt, gte, inArray, isNull, lte, ne, or, type Placeholder, sql } from "drizzle-orm"
 export {
+  and,
+  asc,
+  desc,
+  eq,
+  gt,
+  gte,
+  inArray,
+  isNull,
+  lte,
+  ne,
+  notInArray,
+  or,
+  type Placeholder,
+  type SQL,
+  sql,
+} from "drizzle-orm"
+export {
+  alias,
   index,
   integer,
   primaryKey,
