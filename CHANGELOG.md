@@ -15,6 +15,39 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 - **`bot list --check`** says "ask the messenger who each bot is, with its token" in every CLI, so the
   option reads the same in max and tg.
 
+This is the weekly breaking release. tg-cli and max-cli move to it the same day.
+
+- **`chats`, `history`, `around` and `contact` leave `MessengerCore` for a new optional group,
+  `ServerReads`.** `MessengerAdapter` extends `Partial<ServerReads>`. A messenger with
+  `history: "store"` leaves the group out: the services answer those reads from the store. Every
+  shared caller reaches them through `capability()`, so a `"server"` messenger whose adapter lacks one
+  is refused with "this messenger cannot list chats" (or "read a chat's history", "read the messages
+  around one", "show a person"). `InboxReader` is now `Pick<ServerReads, "chats" | "history">` plus
+  `resolve` and `admins`. In `./testing`, `fakeAdapter` has the group, `OPTIONAL_METHODS` lists its
+  four methods, the cases that read through it are skipped together when any of the four is missing,
+  and `contractCases` takes `history` (default `"server"`): with `"server"`, one case fails unless the
+  adapter has all four.
+- **`Capabilities` is removed** from `.`. Nothing read it; the optional groups say what a messenger
+  can do, and `Messenger.history` says where its history is read from.
+- **A deletion that names no chat tombstones nothing unless the messenger gives a rule.** The
+  built-in rule — ids that count per account, no channel, no `-100…` chat known only by its id, no
+  Telegram chat type that numbers its own messages — is gone from `markDeleted`. A consumer that
+  relied on it sets `Messenger.deletedWithoutChat`, or passes `among` to `markDeleted`.
+- The built-in invite link patterns in `chats moderate` stay for now; `Messenger.inviteLinks` adds to
+  them.
+
+What to change in a consumer:
+
+- **tg-cli:** delete `TELEGRAM_CAPABILITIES` and its `Capabilities` import from `src/telegram/map.ts`
+  (the build fails on it). Set `deletedWithoutChat` on the `Messenger` with the `-100` and chat-type
+  rule (tg-cli #212), or a deletion that names no chat is no longer applied to the store. The adapter
+  already has the four reads.
+- **max-cli:** add `ServerReads` to the `MaxAdapter` type in `src/adapter/max-adapter.ts`
+  (`MessengerAdapter & ServerReads & MessageEditing & …`); `src/adapter/max-adapter.test.ts` calls
+  `adapter.history` and no longer type-checks without it. The adapter already has the four reads.
+- **Any adapter typed as `MessengerAdapter`** that calls one of the four directly: type it as
+  `MessengerAdapter & ServerReads`, or go through `capability()`.
+
 ### Fixed
 
 - **`contractCases`**: the case for `resolve` with a chat id nobody has now also accepts a chat of kind

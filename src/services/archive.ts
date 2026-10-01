@@ -1,6 +1,7 @@
 import { setTimeout as sleep } from "node:timers/promises"
 import { CliError } from "@leemour/cli-core"
 import type { Fetching } from "../cli/messenger/context.js"
+import { capability } from "../cli/messenger/port.js"
 import type { Id, Message } from "../domain/models.js"
 import { type AccountKey, type ChatStats, historyStartKey, type MessageStore, type Range } from "../store/store.js"
 import { type Estimate, estimateBackfill } from "./backfill-estimate.js"
@@ -144,6 +145,7 @@ export const archiveService = (deps: ServiceDeps): ArchiveService => {
       const byTime = fetching.orderBy === "time"
       const keyed = keyOf(fetching)
       const connection = await deps.connection()
+      const history = capability(connection, "history", "read a chat's history")
       const self = connection.self()
       if (self === null) throw new CliError("authentication_error", "not logged in — nothing to fetch for")
       const account = { provider: deps.messenger.provider, account: self }
@@ -159,7 +161,7 @@ export const archiveService = (deps: ServiceDeps): ArchiveService => {
       while (fetched < limit && !stop.aborted) {
         const page = await patiently(
           () =>
-            connection.history(chat, {
+            history(chat, {
               limit: Math.min(pageSize, limit - fetched),
               reactions: false,
               ...(before ? { before } : {}),

@@ -83,7 +83,7 @@ export interface Sent {
   sendId: string
 }
 
-/** What every messenger does: the shared read commands and `messages send` stand on these. */
+/** What every messenger does: `messages send` and the account and chat lookups stand on these. */
 export interface MessengerCore {
   /** The logged-in account's id, from what is stored locally — no request. `null` before a login. */
   self(): Id | null
@@ -93,23 +93,30 @@ export interface MessengerCore {
    */
   newSendId?(): string
   me(): Promise<Account>
+  resolve(chat: string): Promise<Chat>
+  /** One chat and who is in it; `members` is `null` where the messenger does not say — a channel, a hidden list. */
+  chat(chat: string): Promise<ChatCard>
+  /** An option the messenger has no way to honour is refused, never dropped. */
+  send(chatId: Id, text: string, options: SendOptions): Promise<Sent>
+  logout(): Promise<void>
+  close(): Promise<void>
+}
+
+/**
+ * Reads the messenger answers from its server. A messenger whose history is pushed to it
+ * (`Messenger.history: "store"`) leaves them out: the services answer those reads from the store.
+ */
+export interface ServerReads {
   chats(window: { limit?: number; offset: number }): Promise<Page<Chat>>
   /**
    * Oldest to newest. `before` is a message id, or whatever the messenger pages by, as typed.
    * `reactions: false` when they are not wanted — `store fetch` — where reading them costs a request.
    */
   history(chat: string, window: { limit: number; before?: string; reactions?: false }): Promise<Page<Message>>
-  resolve(chat: string): Promise<Chat>
-  /** One chat and who is in it; `members` is `null` where the messenger does not say — a channel, a hidden list. */
-  chat(chat: string): Promise<ChatCard>
   /** One person and the chats this account shares with them, newest first. A chat that is not a person is refused. */
   contact(person: string): Promise<PersonCard>
   /** One message and up to `before` and `after` either side, oldest first; the one asked for carries `anchor`. */
   around(chat: string, messageId: Id, window: { before: number; after: number }): Promise<WindowedMessage[]>
-  /** An option the messenger has no way to honour is refused, never dropped. */
-  send(chatId: Id, text: string, options: SendOptions): Promise<Sent>
-  logout(): Promise<void>
-  close(): Promise<void>
 }
 
 /** Reading beyond the core: forward from a point, back from a moment, a forum's topics, where a link leads. */
@@ -301,6 +308,7 @@ export interface ChatFolders {
  */
 export interface MessengerAdapter
   extends MessengerCore,
+    Partial<ServerReads>,
     Partial<ChatReading>,
     Partial<MessageEditing>,
     Partial<MessagePins>,

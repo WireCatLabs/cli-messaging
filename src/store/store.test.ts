@@ -186,26 +186,18 @@ describe("the message store", () => {
     await store.close()
   })
 
-  it("applies a deletion that names no chat only where ids count per account, and only when one message matches", async () => {
+  it("tombstones nothing for a deletion that names no chat when the messenger gives no rule", async () => {
     const store = await openStore({ path: fresh() })
     const dialog: Chat = { ...chat, id: "555", kind: "dialog", providerMetadata: {} }
-    const basicGroup: Chat = { ...chat, id: "-4001", kind: "group", providerMetadata: { chatType: "group" } }
-    await store.saveChats(ME, [chat, dialog, basicGroup])
-    await store.saveMessages(ME, chat.id, [message(), message({ id: "43" })], { via: "history" })
-    const inDialog = [message({ chatId: dialog.id }), message({ id: "44", chatId: dialog.id })]
-    await store.saveMessages(ME, dialog.id, inDialog, { via: "history" })
-    await store.saveMessages(ME, basicGroup.id, [message({ id: "44", chatId: basicGroup.id })], { via: "history" })
+    await store.saveChats(ME, [dialog])
+    await store.saveMessages(ME, dialog.id, [message({ chatId: dialog.id })], { via: "history" })
 
-    expect(await store.markDeleted(ME, ["42", "43", "44"])).toBe(1)
-    expect(await store.message(ME, "42", { chatId: dialog.id })).toBeUndefined()
-    expect(await store.message(ME, "42", { chatId: chat.id })).toBeDefined()
-    expect(await store.message(ME, "43", { chatId: chat.id })).toBeDefined()
-    expect(await store.message(ME, "44", { chatId: dialog.id })).toBeDefined()
-    expect(await store.message(ME, "44", { chatId: basicGroup.id })).toBeDefined()
+    expect(await store.markDeleted(ME, ["42"])).toBe(0)
+    expect(await store.message(ME, "42", { chatId: dialog.id })).toBeDefined()
     await store.close()
   })
 
-  it("lets the messenger's rule pick the chats a deletion that names no chat may hit, in place of Telegram's", async () => {
+  it("lets the messenger's rule pick the chats a deletion that names no chat may hit", async () => {
     const store = await openStore({ path: fresh() })
     const dialog: Chat = { ...chat, id: "555", kind: "dialog", providerMetadata: {} }
     const other: Chat = { ...chat, id: "-4001", kind: "group", providerMetadata: { chatType: "group" } }
@@ -225,19 +217,6 @@ describe("the message store", () => {
     expect(await store.message(ME, "43", { chatId: chat.id })).toBeDefined()
     expect(await store.message(ME, "43", { chatId: other.id })).toBeDefined()
     expect(seen).toContainEqual({ id: chat.id, kind: "group", providerMetadata: { chatType: "supergroup" } })
-    await store.close()
-  })
-
-  it("leaves a chat known only by its id out of a deletion that names no chat", async () => {
-    const store = await openStore({ path: fresh() })
-    const dialog: Chat = { ...chat, id: "555", kind: "dialog", providerMetadata: {} }
-    await store.saveChats(ME, [dialog])
-    await store.saveMessages(ME, dialog.id, [message({ chatId: dialog.id })], { via: "history" })
-    await store.saveMessages(ME, "-1009999", [message({ chatId: "-1009999" })], { via: "update" })
-
-    expect(await store.markDeleted(ME, ["42"])).toBe(1)
-    expect(await store.message(ME, "42", { chatId: dialog.id })).toBeUndefined()
-    expect(await store.message(ME, "42", { chatId: "-1009999" })).toBeDefined()
     await store.close()
   })
 
@@ -364,7 +343,7 @@ describe("finding people and what they wrote", () => {
     const store = await seeded()
     const page = await store.find({ provider: "max-bot", senders: ["7"], text: "again", limit: 10 })
     expect(page.items.map(({ id }) => id)).toEqual(["d"])
-    await store.markDeleted(OTHER_BOT, ["d"])
+    await store.markDeleted(OTHER_BOT, ["d"], { chatId: "30" })
     expect((await store.find({ provider: "max-bot", senders: ["7"], text: "again", limit: 10 })).items).toEqual([])
     await store.close()
   })

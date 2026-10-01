@@ -1,5 +1,5 @@
 import { CliError } from "@leemour/cli-core"
-import type { MessengerAdapter } from "../cli/messenger/port.js"
+import { capability, type MessengerAdapter, type ServerReads } from "../cli/messenger/port.js"
 import type { Chat, Id, Inbox, InboxChat, Message, Review, ReviewChat } from "../domain/models.js"
 import type { AccountKey, MessageStore } from "../store/store.js"
 import type { ServiceDeps } from "./deps.js"
@@ -31,7 +31,7 @@ export const heard = (chats: Chat[], all: boolean) =>
     : { heard: chats.filter((chat) => !isQuiet(chat)), quiet: chats.filter(isQuiet).length }
 
 /** What `inbox` and `review` read: the messenger's own answers, or the local store's in store mode. */
-export type InboxReader = Pick<MessengerAdapter, "chats" | "history" | "resolve" | "admins">
+export type InboxReader = Pick<ServerReads, "chats" | "history"> & Pick<MessengerAdapter, "resolve" | "admins">
 
 /**
  * The stored chats and messages, read as the messenger would answer. Saving a message does not move
@@ -266,8 +266,16 @@ export interface InboxService {
 }
 
 export const inboxService = (deps: ServiceDeps): InboxService => {
-  const reader = async (): Promise<InboxReader> =>
-    deps.reads === "store" ? storeReader(deps, await deps.store(), await deps.account()) : deps.connection()
+  const reader = async (): Promise<InboxReader> => {
+    if (deps.reads === "store") return storeReader(deps, await deps.store(), await deps.account())
+    const connection = await deps.connection()
+    return {
+      chats: capability(connection, "chats", "list chats"),
+      history: capability(connection, "history", "read a chat's history"),
+      resolve: (reference) => connection.resolve(reference),
+      ...(connection.admins ? { admins: capability(connection, "admins", "list a chat's admins") } : {}),
+    }
+  }
 
   return {
     read: async ({ since, limit, all = false }) => {

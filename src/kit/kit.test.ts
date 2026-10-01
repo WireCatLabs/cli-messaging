@@ -1,7 +1,16 @@
 import { describe, expect, it } from "vitest"
 import type { MessengerAdapter } from "../cli/messenger/port.js"
 import type { Chat } from "../domain/models.js"
-import { type ContractCase, contractCases, contractSeed, digitIds, fakeAdapter, type Seed, wordIds } from "./index.js"
+import {
+  type ContractCase,
+  contractCases,
+  contractSeed,
+  digitIds,
+  type FakeAdapter,
+  fakeAdapter,
+  type Seed,
+  wordIds,
+} from "./index.js"
 
 const runAll = (cases: ContractCase[]) => {
   for (const one of cases)
@@ -30,7 +39,7 @@ describe("the fake adapter keeps every promise of the port", () => {
 })
 
 describe("the contract cases catch an adapter that breaks a promise", () => {
-  const broken = (change: (fake: MessengerAdapter) => Partial<MessengerAdapter>) =>
+  const broken = (change: (fake: FakeAdapter) => Partial<MessengerAdapter>) =>
     contractCases({
       orderBy: "time",
       waitMs: 20,
@@ -150,6 +159,25 @@ describe("the contract cases catch an adapter that breaks a promise", () => {
     ).toEqual({
       skipped: "the adapter has no feed",
     })
+  })
+
+  it("skips every server read case, together, for an adapter without them, and fails it unless its history is in the store", async () => {
+    const without = () => ({ chats: undefined, history: undefined, around: undefined, contact: undefined })
+    const serverCases = broken(without)
+    expect(await serverCases.find((one) => one.name.startsWith("around answers"))?.run()).toEqual({
+      skipped: "the adapter has no server reads (chats, history, around, contact)",
+    })
+    await expect(
+      serverCases.find((one) => one.name.startsWith("a messenger whose history is on the server"))?.run(),
+    ).rejects.toThrow(/history: "store"/)
+
+    const storeCases = contractCases({
+      history: "store",
+      connect: (seed: Seed) => ({ ...fakeAdapter(seed), ...without() }),
+    })
+    expect(storeCases.some((one) => one.name.startsWith("a messenger whose history is on the server"))).toBe(false)
+    for (const name of ["send answers", "ids are strings", "a read of a chat that does not exist"])
+      expect(await storeCases.find((one) => one.name.startsWith(name))?.run()).toBeUndefined()
   })
 
   it("skips a case for an optional method the adapter lacks", async () => {

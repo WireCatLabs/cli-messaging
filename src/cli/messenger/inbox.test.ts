@@ -10,7 +10,7 @@ import { run } from "../program.js"
 import { settingsFor } from "../settings.js"
 import type { Messenger } from "./context.js"
 import { inboxCommand } from "./inbox.js"
-import type { MessengerAdapter } from "./port.js"
+import type { MessengerAdapter, ServerReads } from "./port.js"
 
 const app = {
   command: "chat",
@@ -49,7 +49,7 @@ const messageAt = (chatId: string, id: string, minute: number, outgoing = false)
 /** A messenger whose chats and histories are given; `history` answers each chat's newest `limit`. */
 const messengerWith = (chats: Chat[], histories: Record<string, Message[]>) => {
   const read: string[] = []
-  const adapter: MessengerAdapter = {
+  const adapter: MessengerAdapter & ServerReads = {
     self: () => "500",
     me: async () => ({ id: "500", name: "Owner", username: null }),
     chats: async ({ limit, offset }) => ({

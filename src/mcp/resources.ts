@@ -1,5 +1,6 @@
 import { type McpServer, ResourceTemplate } from "@modelcontextprotocol/server"
 import type { Messenger } from "../cli/messenger/context.js"
+import { capability } from "../cli/messenger/port.js"
 import type { SendGuard } from "../sends/guard.js"
 import { servicesFor, storedDeps } from "../services/index.js"
 import type { AccountKey, MessageStore } from "../store/store.js"
@@ -77,7 +78,7 @@ export const registerResources = (
             )
           : await session.use("mcp resource chat", async (adapter) => ({
               chat: await adapter.chat(String(id)),
-              messages: (await adapter.history(String(id), { limit })).items,
+              messages: (await capability(adapter, "history", "read a chat's history")(String(id), { limit })).items,
             }))
       return { contents: [{ uri: uri.href, mimeType: "application/json", text: JSON.stringify(body) }] }
     },

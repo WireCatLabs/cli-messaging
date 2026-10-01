@@ -37,6 +37,7 @@ export const observed = (messenger: MessengerAdapter, events: EventSink): Messen
   }
 
   const mint = messenger.newSendId
+  const { chats, history, contact, around } = messenger
   // A method not listed here is timed under its own name, with no ids until a line here names them.
   return throughWrapper(
     messenger,
@@ -44,23 +45,31 @@ export const observed = (messenger: MessengerAdapter, events: EventSink): Messen
       self: () => messenger.self(),
       ...(mint ? { newSendId: () => mint.call(messenger) } : {}),
       me: () => timed("account.me", {}, () => messenger.me()),
-      chats: (window) =>
-        timed(
-          "chats.list",
-          {},
-          () => messenger.chats(window),
-          (page) => ({ counts: { chats: page.items.length } }),
-        ),
-      history: (reference, options) =>
-        timed(
-          "messages.list",
-          {},
-          () => messenger.history(reference, options),
-          (page) => ({
-            ...(page.items[0] ? { ids: { chat: page.items[0].chatId } } : {}),
-            counts: { messages: page.items.length },
-          }),
-        ),
+      ...(chats
+        ? {
+            chats: (window) =>
+              timed(
+                "chats.list",
+                {},
+                () => chats.call(messenger, window),
+                (page) => ({ counts: { chats: page.items.length } }),
+              ),
+          }
+        : {}),
+      ...(history
+        ? {
+            history: (reference, options) =>
+              timed(
+                "messages.list",
+                {},
+                () => history.call(messenger, reference, options),
+                (page) => ({
+                  ...(page.items[0] ? { ids: { chat: page.items[0].chatId } } : {}),
+                  counts: { messages: page.items.length },
+                }),
+              ),
+          }
+        : {}),
       resolve: (reference) =>
         timed(
           "chats.resolve",
@@ -75,23 +84,31 @@ export const observed = (messenger: MessengerAdapter, events: EventSink): Messen
           () => messenger.chat(reference),
           (card) => ({ ids: { chat: card.id }, ...(card.members ? { counts: { members: card.members.length } } : {}) }),
         ),
-      contact: (reference) =>
-        timed(
-          "contacts.show",
-          {},
-          () => messenger.contact(reference),
-          (card) => ({ ids: { person: card.id }, counts: { chats: card.chats.length } }),
-        ),
-      around: (reference, messageId, window) =>
-        timed(
-          "messages.around",
-          { ids: { message: messageId } },
-          () => messenger.around(reference, messageId, window),
-          (items) => ({
-            ...(items[0] ? { ids: { chat: items[0].chatId, message: messageId } } : {}),
-            counts: { messages: items.length },
-          }),
-        ),
+      ...(contact
+        ? {
+            contact: (reference) =>
+              timed(
+                "contacts.show",
+                {},
+                () => contact.call(messenger, reference),
+                (card) => ({ ids: { person: card.id }, counts: { chats: card.chats.length } }),
+              ),
+          }
+        : {}),
+      ...(around
+        ? {
+            around: (reference, messageId, window) =>
+              timed(
+                "messages.around",
+                { ids: { message: messageId } },
+                () => around.call(messenger, reference, messageId, window),
+                (items) => ({
+                  ...(items[0] ? { ids: { chat: items[0].chatId, message: messageId } } : {}),
+                  counts: { messages: items.length },
+                }),
+              ),
+          }
+        : {}),
       send: (chatId, text, options) =>
         timed(
           "messages.send",

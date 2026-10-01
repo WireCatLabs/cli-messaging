@@ -61,7 +61,9 @@ export const peopleService = (deps: ServiceDeps): PeopleService => {
     list: async (options) => {
       // The chats first: a messenger whose login brings its people writes them before the store is asked.
       const stored = fromStore(deps)
-      const chats = stored ? undefined : (await (await deps.connection()).chats({ offset: 0 })).items
+      const chats = stored
+        ? undefined
+        : (await capability(await deps.connection(), "chats", "list chats")({ offset: 0 })).items
       const held = stored ? { store: await deps.store(), account: await deps.account() } : await storeIfOpen(deps)
       if (held && (await held.store.countContacts(held.account)) > 0)
         return storedContacts(held.store, held.account, options)
@@ -75,7 +77,7 @@ export const peopleService = (deps: ServiceDeps): PeopleService => {
         const found = pickPerson(person, await store.people(account.provider, { account: account.account }))
         return { ...found, chats: await sharedChats(store, account, found.id) }
       }
-      const card = await (await deps.connection()).contact(person)
+      const card = await capability(await deps.connection(), "contact", "show a person")(person)
       if (card.chats.length > 0) return card
       const held = await storeIfOpen(deps)
       return held ? { ...card, chats: await sharedChats(held.store, held.account, card.id) } : card

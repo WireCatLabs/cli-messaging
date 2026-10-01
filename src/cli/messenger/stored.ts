@@ -43,12 +43,12 @@ export const stored = (
     return saving.finally(() => pending?.delete(saving))
   }
 
+  const { chats, history, around } = messenger
   // A method not listed here saves nothing and passes through; a lane that should save adds its line.
   return throughWrapper(messenger, {
     self: () => messenger.self(),
     resolve: (reference) => messenger.resolve(reference),
     chat: (reference) => messenger.chat(reference),
-    contact: (reference) => messenger.contact(reference),
     logout: () => messenger.logout(),
     close: () => messenger.close(),
     me: async () => {
@@ -56,43 +56,55 @@ export const stored = (
       await save("account.me", (opened) => opened.saveAccount(account, { name: me.name }))
       return me
     },
-    chats: async (window) => {
-      const page = await messenger.chats(window)
-      // Only a page that names every chat says the others were left; an empty one is a hiccup.
-      const complete = window.offset === 0 && !page.hasMore && page.items.length > 0
-      await save("chats.list", async (opened) => {
-        await opened.saveChats(account, page.items)
-        if (complete)
-          await opened.markChatsLeft(
-            account,
-            page.items.map((chat) => chat.id),
-          )
-      })
-      return page
-    },
-    history: async (reference, options) => {
-      const seenAt = Date.now()
-      const page = await messenger.history(reference, options)
-      const chatId = page.items[0]?.chatId
-      if (chatId !== undefined) {
-        await save("messages.list", (opened) =>
-          opened.saveMessages(account, chatId, page.items, { via: "history", seenAt }),
-        )
-      }
-      return page
-    },
-    around: async (reference, messageId, window) => {
-      const seenAt = Date.now()
-      const items = await messenger.around(reference, messageId, window)
-      const chatId = items[0]?.chatId
-      if (chatId !== undefined) {
-        const plain = items.map(({ anchor, ...message }) => message)
-        await save("messages.around", (opened) =>
-          opened.saveMessages(account, chatId, plain, { via: "context", seenAt }),
-        )
-      }
-      return items
-    },
+    ...(chats
+      ? {
+          chats: async (window) => {
+            const page = await chats.call(messenger, window)
+            // Only a page that names every chat says the others were left; an empty one is a hiccup.
+            const complete = window.offset === 0 && !page.hasMore && page.items.length > 0
+            await save("chats.list", async (opened) => {
+              await opened.saveChats(account, page.items)
+              if (complete)
+                await opened.markChatsLeft(
+                  account,
+                  page.items.map((chat) => chat.id),
+                )
+            })
+            return page
+          },
+        }
+      : {}),
+    ...(history
+      ? {
+          history: async (reference, options) => {
+            const seenAt = Date.now()
+            const page = await history.call(messenger, reference, options)
+            const chatId = page.items[0]?.chatId
+            if (chatId !== undefined) {
+              await save("messages.list", (opened) =>
+                opened.saveMessages(account, chatId, page.items, { via: "history", seenAt }),
+              )
+            }
+            return page
+          },
+        }
+      : {}),
+    ...(around
+      ? {
+          around: async (reference, messageId, window) => {
+            const seenAt = Date.now()
+            const items = await around.call(messenger, reference, messageId, window)
+            const chatId = items[0]?.chatId
+            if (chatId !== undefined) {
+              const plain = items.map(({ anchor, ...message }) => message)
+              await save("messages.around", (opened) =>
+                opened.saveMessages(account, chatId, plain, { via: "context", seenAt }),
+              )
+            }
+            return items
+          },
+        }
+      : {}),
     ...(messenger.watch
       ? {
           watch: (onEvent, signal, onReady) =>

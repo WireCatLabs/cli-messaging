@@ -156,7 +156,7 @@ export const messagesService = (deps: ServiceDeps): MessagesService => {
           store.messages(account, await readChatId(deps, chat, store, account), window),
         )
       }
-      return (await deps.connection()).history(chat, window)
+      return capability(await deps.connection(), "history", "read a chat's history")(chat, window)
     },
 
     around: async (chat, message, window) => {
@@ -165,7 +165,7 @@ export const messagesService = (deps: ServiceDeps): MessagesService => {
           store.around(account, await readChatId(deps, chat, store, account), message, window),
         )
       }
-      return (await deps.connection()).around(chat, message, window)
+      return capability(await deps.connection(), "around", "read the messages around one")(chat, message, window)
     },
 
     download: async (chat, message) =>

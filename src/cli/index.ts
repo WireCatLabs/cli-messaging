@@ -87,6 +87,7 @@ export type {
   ScheduledMessages,
   SendOptions,
   Sent,
+  ServerReads,
   Transcript,
 } from "./messenger/port.js"
 export { reactionsCommand } from "./messenger/reactions-command.js"

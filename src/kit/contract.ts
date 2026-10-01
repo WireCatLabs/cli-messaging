@@ -1,8 +1,7 @@
 import assert from "node:assert/strict"
 import type { ErrorCode } from "@leemour/cli-core"
 import { isCliFailure } from "../cli/failures.js"
-import type { HistoryBatch } from "../cli/messenger/port.js"
-import { capability, type MessengerAdapter } from "../cli/messenger/port.js"
+import { capability, type HistoryBatch, type MessengerAdapter, type ServerReads } from "../cli/messenger/port.js"
 import type { Chat, Id, Message } from "../domain/models.js"
 import { newSendId } from "../sends/send-id.js"
 import { BUSY_PAGE, contractSeed, type IdMaker, type Seed, wordIds } from "./seed.js"
@@ -24,10 +23,22 @@ export interface ContractOptions {
   orderBy?: "id" | "time"
   /** How long `watch` may take to say it listens, and to end once aborted. */
   waitMs?: number
+  /** As the messenger's `history`: a `"server"` messenger's adapter must have every `ServerReads` method. */
+  history?: "server" | "store"
 }
+
+const SERVER_READS = ["chats", "history", "around", "contact"] as const satisfies readonly (keyof ServerReads)[]
+
+type Reading = MessengerAdapter & ServerReads
+
+const serverReads = (adapter: MessengerAdapter): Reading | undefined =>
+  SERVER_READS.every((method) => typeof adapter[method] === "function") ? (adapter as Reading) : undefined
+
+const NO_SERVER_READS = { skipped: "the adapter has no server reads (chats, history, around, contact)" }
 
 /** Every method of the optional groups, which `capability` hands over or refuses. */
 export const OPTIONAL_METHODS = [
+  ...SERVER_READS,
   "historyAfter",
   "historyBefore",
   "topics",
@@ -129,6 +140,7 @@ export const contractCases = ({
   ids = wordIds,
   orderBy = "id",
   waitMs = 2_000,
+  history = "server",
 }: ContractOptions): ContractCase[] => {
   const seedOf = (loggedIn = true) => contractSeed({ ids, loggedIn })
   const busyOf = (seed: Seed) => seed.messages.filter((message) => message.chatId === seed.busy)
@@ -155,8 +167,26 @@ export const contractCases = ({
   ): ContractCase[] => list.map(([name, body, needs]) => ({ name, run: using(body), ...(needs ? { needs } : {}) }))
   const lacking = (adapter: MessengerAdapter, method: keyof MessengerAdapter) =>
     typeof adapter[method] === "function" ? undefined : { skipped: `the adapter has no ${method}` }
+  const reading =
+    (body: (adapter: Reading, seed: Seed) => Promise<undefined | { skipped: string }>) =>
+    async (adapter: MessengerAdapter, seed: Seed) => {
+      const server = serverReads(adapter)
+      return server ? body(server, seed) : NO_SERVER_READS
+    }
 
   return [
+    ...(history === "server"
+      ? [
+          {
+            name: "a messenger whose history is on the server has every server read",
+            run: using(async (adapter) => {
+              const missing = SERVER_READS.filter((method) => typeof adapter[method] !== "function")
+              assert.deepEqual(missing, [], 'add them, or declare `history: "store"` on the Messenger')
+              return undefined
+            }),
+          },
+        ]
+      : []),
     ...cases([
       [
         "self() names the logged-in account, and me() agrees",
@@ -167,7 +197,7 @@ export const contractCases = ({
       ],
       [
         "chats pages by limit and offset and lists every chat once",
-        async (adapter, seed) => {
+        reading(async (adapter, seed) => {
           const first = await adapter.chats({ limit: 2, offset: 0 })
           const rest = await adapter.chats({ limit: 10, offset: 2 })
           assert.equal(first.items.length, 2)
@@ -175,19 +205,19 @@ export const contractCases = ({
           assert.equal(rest.hasMore, false)
           const listed = [...first.items, ...rest.items].map((chat) => chat.id)
           assert.deepEqual(listed.toSorted(), seed.chats.map((chat) => chat.id).toSorted())
-        },
+        }),
       ],
       [
         "history answers the newest page, oldest first",
-        async (adapter, seed) => {
+        reading(async (adapter, seed) => {
           const page = await adapter.history(seed.busy, { limit: BUSY_PAGE })
           assert.deepEqual(idsOf(page.items), idsOf(busyOf(seed).slice(-BUSY_PAGE)))
           assert.equal(page.hasMore, true)
-        },
+        }),
       ],
       [
         "history pages back to hasMore: false and answers every message once",
-        async (adapter, seed) => {
+        reading(async (adapter, seed) => {
           const pages: Message[][] = []
           let before: string | undefined
           for (let round = 0; round < 10; round += 1) {
@@ -198,11 +228,11 @@ export const contractCases = ({
             before = orderBy === "id" ? oldest.id : oldest.timestamp
           }
           assert.deepEqual(idsOf(pages.flat()), idsOf(busyOf(seed)))
-        },
+        }),
       ],
       [
         "around answers a window oldest first, with one anchor on the message asked for",
-        async (adapter, seed) => {
+        reading(async (adapter, seed) => {
           const busy = busyOf(seed)
           const middle = busy[5] as Message
           const window = await adapter.around(seed.busy, middle.id, { before: 2, after: 2 })
@@ -213,13 +243,13 @@ export const contractCases = ({
           )
           const edge = await adapter.around(seed.busy, (busy[0] as Message).id, { before: 2, after: 1 })
           assert.deepEqual(idsOf(edge), idsOf(busy.slice(0, 2)))
-        },
+        }),
       ],
       [
         "around refuses a message the chat does not have with not_found",
-        async (adapter, seed) => {
+        reading(async (adapter, seed) => {
           await refuses(adapter.around(seed.busy, unknownMessage, { before: 1, after: 1 }), "not_found")
-        },
+        }),
       ],
       [
         "resolve finds a chat by its id and by a title only it has",
@@ -257,8 +287,9 @@ export const contractCases = ({
       [
         "a read of a chat that does not exist fails with a code from the closed list, not a library error",
         async (adapter) => {
-          await refuses(adapter.history(unknownChat, { limit: 1 }))
           await refuses(adapter.chat(unknownChat))
+          const server = serverReads(adapter)
+          if (server) await refuses(server.history(unknownChat, { limit: 1 }))
         },
       ],
       [
@@ -271,12 +302,12 @@ export const contractCases = ({
       ],
       [
         "contact answers a person with the chats shared with them, and refuses a group",
-        async (adapter, seed) => {
+        reading(async (adapter, seed) => {
           const card = await adapter.contact(seed.person)
           assert.equal(card.id, seed.person)
           assert.ok(card.chats.some((chat) => chat.id === seed.dialog))
           await refuses(adapter.contact(seed.busy))
-        },
+        }),
       ],
       [
         "send answers the message sent and the send id it was given",
@@ -286,7 +317,9 @@ export const contractCases = ({
           assert.equal(sent.sendId, sendId)
           assert.equal(sent.message.chatId, seed.dialog)
           assert.equal(sent.message.text, "see you there")
-          const newest = await adapter.history(seed.dialog, { limit: 1 })
+          const server = serverReads(adapter)
+          if (!server) return
+          const newest = await server.history(seed.dialog, { limit: 1 })
           assert.deepEqual(idsOf(newest.items), [sent.message.id])
         },
         "the fake keeps what was sent, so history answers it",
@@ -294,14 +327,19 @@ export const contractCases = ({
       [
         "ids are strings in everything the reads answer",
         async (adapter, seed) => {
+          const server = serverReads(adapter)
           const answers = [
             await adapter.me(),
-            await adapter.chats({ offset: 0 }),
-            await adapter.history(seed.busy, { limit: 20 }),
-            await adapter.around(seed.busy, (busyOf(seed)[1] as Message).id, { before: 1, after: 1 }),
             await adapter.resolve(seed.dialog),
             await adapter.chat(seed.busy),
-            await adapter.contact(seed.person),
+            ...(server
+              ? [
+                  await server.chats({ offset: 0 }),
+                  await server.history(seed.busy, { limit: 20 }),
+                  await server.around(seed.busy, (busyOf(seed)[1] as Message).id, { before: 1, after: 1 }),
+                  await server.contact(seed.person),
+                ]
+              : []),
           ]
           const notStrings = everyId(answers).filter((id) => typeof id !== "string")
           assert.deepEqual(notStrings, [])
@@ -309,7 +347,7 @@ export const contractCases = ({
       ],
       [
         "reads change nothing: chats and history answer the same after every read",
-        async (adapter, seed) => {
+        reading(async (adapter, seed) => {
           const look = async () => ({
             chats: await adapter.chats({ offset: 0 }),
             busy: await adapter.history(seed.busy, { limit: 20 }),
@@ -325,7 +363,7 @@ export const contractCases = ({
           await adapter.historyAfter?.(seed.dialog, { limit: 5, after: { time } })
           await adapter.historyBefore?.(seed.dialog, { limit: 5, time: Date.now() })
           assert.deepEqual(await look(), before)
-        },
+        }),
       ],
       [
         "capability() hands over each optional method the adapter has and refuses each it lacks",
@@ -429,26 +467,30 @@ export const contractCases = ({
     {
       name: "a repeated send id leaves one message",
       needs: "the fake drops a repeat of a send id, as the messenger's server does",
-      run: using(async (adapter, seed) => {
-        const sendId = adapter.newSendId?.() ?? newSendId()
-        const first = await adapter.send(seed.dialog, "only once", { sendId })
-        const again = await adapter.send(seed.dialog, "only once", { sendId })
-        assert.equal(again.message.id, first.message.id)
-        const after = await adapter.history(seed.dialog, { limit: 20 })
-        assert.equal(after.items.filter((message) => message.text === "only once").length, 1)
-      }),
+      run: using(
+        reading(async (adapter, seed) => {
+          const sendId = adapter.newSendId?.() ?? newSendId()
+          const first = await adapter.send(seed.dialog, "only once", { sendId })
+          const again = await adapter.send(seed.dialog, "only once", { sendId })
+          assert.equal(again.message.id, first.message.id)
+          const after = await adapter.history(seed.dialog, { limit: 20 })
+          assert.equal(after.items.filter((message) => message.text === "only once").length, 1)
+        }),
+      ),
     },
     ...(orderBy === "id"
       ? [
           {
             name: "a messenger whose store pages by id answers whole-number ids within 2^53",
-            run: using(async (adapter, seed) => {
-              const page = await adapter.history(seed.busy, { limit: 20 })
-              const unsafe = page.items
-                .map((message): Id => message.id)
-                .filter((id) => !/^-?\d+$/.test(id) || !Number.isSafeInteger(Number(id)))
-              assert.deepEqual(unsafe, [], "page by time (`fetching.orderBy`) or give whole-number ids")
-            }),
+            run: using(
+              reading(async (adapter, seed) => {
+                const page = await adapter.history(seed.busy, { limit: 20 })
+                const unsafe = page.items
+                  .map((message): Id => message.id)
+                  .filter((id) => !/^-?\d+$/.test(id) || !Number.isSafeInteger(Number(id)))
+                assert.deepEqual(unsafe, [], "page by time (`fetching.orderBy`) or give whole-number ids")
+              }),
+            ),
           },
         ]
       : []),

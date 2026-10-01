@@ -230,7 +230,8 @@ export interface MessageStore {
    * asked after the deletion, lifts the tombstone (`saveMessages`' `seenAt`).
    *
    * Without `chatId`, a message is tombstoned only when exactly one live message with its id is left
-   * in the chats `among` accepts. Without `among`, Telegram's rule decides.
+   * in the chats `among` accepts. Without `among`, nothing is: only the messenger knows which of its
+   * chats a deletion without one may belong to (`Messenger.deletedWithoutChat`).
    */
   markDeleted(key: AccountKey, messageIds: Id[], options?: { chatId?: Id; among?: DeletionScope }): Promise<number>
   /** Newest first. At least three characters: a trigram index answers a shorter query with nothing. */
@@ -674,7 +675,7 @@ const storeOver = (context: StoreContext): MessageStore => {
       if (accountKey === undefined || messageIds.length === 0) return 0
       let changed = 0
       inTransaction(() => {
-        changed = messageWrites.markDeleted(context, key, accountKey, messageIds, chatId, among)
+        changed = messageWrites.markDeleted(context, accountKey, messageIds, chatId, among)
       })
       return changed
     },

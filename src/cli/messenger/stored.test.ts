@@ -100,7 +100,7 @@ describe("what a chat list leaves in the store", () => {
       warn: () => {},
       events: () => {},
     })
-    await wrapped.chats(window)
+    await wrapped.chats?.(window)
     return (await store.chats(account, {})).items.map((one) => one.id).sort()
   }
 
