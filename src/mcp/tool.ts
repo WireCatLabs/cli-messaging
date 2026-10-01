@@ -12,7 +12,7 @@ import type { Messenger } from "../cli/messenger/context.js"
 import type { MessengerAdapter } from "../cli/messenger/port.js"
 import type { Settings } from "../cli/settings.js"
 import type { SendGuard } from "../sends/guard.js"
-import type { Permission } from "../sends/permissions.js"
+import { keyForCommand, type Permission, type PermissionKey } from "../sends/permissions.js"
 import type { AccountKey, MessageStore } from "../store/store.js"
 import type { confirmer } from "./confirm.js"
 import type { MessengerSession } from "./session.js"
@@ -55,6 +55,8 @@ interface Tool<S extends Input> {
   _meta?: Record<string, unknown>
   /** A write, and what the profile's `allow` must name for it to be offered. */
   permission?: Permission
+  /** The command path its level is read from, where the tool's name does not spell it: `chats.mark-read`. */
+  key?: PermissionKey
   /** Over the session's connection. */
   online?: (adapter: MessengerAdapter, args: v.InferOutput<S>, defaults: Defaults) => Promise<object>
   /** From the local store alone; never connects. */
@@ -107,15 +109,21 @@ export interface Registration {
     options: { name: string },
   ) => Promise<T>
   defaults: Defaults
-  /** With `--confirm-send`: the owner sees every write in a form from the server first. */
+  /** The form the owner answers before a write whose level is `ask`, or every write with `--confirm-send`. */
   confirmed?: ReturnType<typeof confirmer> | undefined
+  /** Whether this tool's call goes through the form; without it, none does. */
+  confirms?: (name: string, definition: AnyTool) => boolean
 }
+
+/** The key a tool's level is read from: its own, or its name read as a command path. */
+export const toolKey = (name: string, definition: Pick<AnyTool, "key">): PermissionKey | null | undefined =>
+  definition.key ?? keyForCommand(name.split("_"))
 
 /** Registers each tool as `<cli>_<name>`; a read tool's description ends with the warning about data. */
 export const registerTools = (
   server: McpServer,
   tools: Record<string, AnyTool>,
-  { command, session, withStore, defaults, confirmed }: Registration,
+  { command, session, withStore, defaults, confirmed, confirms = () => true }: Registration,
 ): void => {
   for (const [key, definition] of Object.entries(tools)) {
     const name = `${command}_${key}`
@@ -138,7 +146,7 @@ export const registerTools = (
             : await session.use(run, (adapter) => {
                 const act = (given: Record<string, unknown>) =>
                   (online as NonNullable<typeof online>)(adapter, given, defaults)
-                return confirmed && permission
+                return confirmed && permission && confirms(key, definition)
                   ? confirmed(
                       { name, title: definition.title },
                       (reference) => adapter.resolve(reference),

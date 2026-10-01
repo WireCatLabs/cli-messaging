@@ -13,6 +13,7 @@ export const chatsReadTools = (messenger: Messenger): Record<string, AnyTool> =>
     annotations: WRITE,
     _meta: APPROVE,
     permission: "read",
+    key: "chats.mark-read",
     online: (adapter, args, { guard }) =>
       servicesFor(onlineDeps(messenger, adapter, guard)).chats.markRead({
         chat: args.chat,

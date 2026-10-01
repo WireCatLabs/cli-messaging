@@ -4,21 +4,25 @@ import { toStandardJsonSchema } from "@valibot/to-json-schema"
 import type { Command } from "commander"
 import * as v from "valibot"
 import { recalledAccount } from "../cli/messenger/accounts.js"
+import { skipFlagFor } from "../cli/messenger/ask.js"
 import { connected, type Messenger, type MessengerContext } from "../cli/messenger/context.js"
 import { guardFor } from "../sends/guard.js"
+import { levelFor } from "../sends/permissions.js"
 import { confirmer } from "./confirm.js"
 import { instructions } from "./instructions.js"
 import { registerPrompts } from "./prompts.js"
 import { registerResources } from "./resources.js"
 import { MessengerSession, type SessionOptions } from "./session.js"
-import { answered, failed, READ, registerTools } from "./tool.js"
+import { type AnyTool, answered, failed, READ, registerTools, toolKey } from "./tool.js"
 import { deleteTools, markReadTools, readTools, sendTools } from "./tools.js"
 
 export interface ServerOptions extends SessionOptions {
-  allowSend: boolean
+  /** Every write through the form, whatever its level. */
   confirmSend?: boolean
-  allowMarkRead?: boolean
-  allowDelete?: boolean
+  /** No form for a write at level `ask` — the owner's yes, given when the server was started. */
+  yes?: boolean
+  /** The same for a deletion. */
+  allowDangerous?: boolean
 }
 
 /**
@@ -30,26 +34,36 @@ export const createServer = (
   command: Command,
   context: MessengerContext,
   messenger: Messenger,
-  { allowSend, confirmSend = false, allowMarkRead = false, allowDelete = false, ...sessionOptions }: ServerOptions,
+  { confirmSend = false, yes = false, allowDangerous = false, ...sessionOptions }: ServerOptions,
 ) => {
   const { app, provider } = messenger
   const name = messenger.name ?? app.command
   const { settings } = context
-  const permitted = settings.allow
-  // `allow` hides what the guard would refuse anyway, so an agent is not offered a tool that cannot work.
-  const writes = Object.fromEntries(
+  const levelOf = (key: string | null | undefined) => (key ? levelFor(settings.permissions, key).level : "allow")
+  // A tool the level would refuse is not offered: an agent is not handed a tool that cannot work.
+  const offered = Object.fromEntries(
     Object.entries({
-      ...(allowSend ? sendTools(messenger) : {}),
-      ...(allowMarkRead ? markReadTools(messenger) : {}),
-      ...(allowDelete ? deleteTools(messenger) : {}),
-    }).filter(([, one]) => !permitted || (one.permission !== undefined && permitted.includes(one.permission))),
+      ...readTools(messenger),
+      ...sendTools(messenger),
+      ...markReadTools(messenger),
+      ...deleteTools(messenger),
+    }).filter(([key, one]) => {
+      const level = levelOf(toolKey(key, one))
+      return level !== "deny" && (one.permission === undefined || level !== "readonly")
+    }),
   )
-  // Nothing can be typed at a terminal here, and a write tool is offered only behind its own
-  // `--allow-*` flag, which already says yes — until the tools follow the levels too (P7, step 3).
+  const writes = Object.fromEntries(Object.entries(offered).filter(([, one]) => one.permission !== undefined))
+  const confirms = (key: string, one: AnyTool) => {
+    if (confirmSend) return true
+    const toolPath = toolKey(key, one)
+    if (levelOf(toolPath) !== "ask") return false
+    return !(skipFlagFor(toolPath ?? "") === "--allow-dangerous" ? allowDangerous : yes)
+  }
+  const confirmed = confirmer()
+  // The form is the question here; the guard behind it has nothing left to ask.
   const guard = messenger.guard
     ? context.guard
     : guardFor(app, settings, context.renderer.warn, context.env, async () => {})
-  const confirmed = confirmSend ? confirmer() : undefined
   const session = new MessengerSession(
     async (events) => connected(await messenger.connect(command, context, { events }), messenger, context, events),
     (run, body) => context.run(body, { name: run }),
@@ -64,33 +78,29 @@ export const createServer = (
           command: app.command,
           name,
           profile: settings.profile,
-          allowSend,
+          writes: Object.keys(writes),
           confirmSend,
-          allowMarkRead,
-          allowDelete,
-          permitted,
         }),
       },
     )
-    registerTools(
-      server,
-      { ...readTools(messenger), ...writes },
-      {
-        command: app.command,
-        session,
-        withStore: context.withStore,
-        defaults: { limit: settings.limit, guard, settings, env: context.env },
-        confirmed,
-      },
-    )
-    registerPrompts(server, { command: app.command, name })
-    registerResources(server, session, {
+    registerTools(server, offered, {
       command: app.command,
-      name,
-      limit: settings.limit,
-      recorded: () => recalledAccount(app, provider, settings.profile, context.env) !== undefined,
+      session,
       withStore: context.withStore,
+      defaults: { limit: settings.limit, guard, settings, env: context.env },
+      confirmed,
+      confirms,
     })
+    // The prompts and resources show messages, so a profile that may not read them gets neither.
+    if (levelOf("messages") !== "deny") registerPrompts(server, { command: app.command, name })
+    if (levelOf("messages") !== "deny")
+      registerResources(server, session, {
+        command: app.command,
+        name,
+        limit: settings.limit,
+        recorded: () => recalledAccount(app, provider, settings.profile, context.env) !== undefined,
+        withStore: context.withStore,
+      })
     server.registerTool(
       `${app.command}_status`,
       {
@@ -108,7 +118,7 @@ export const createServer = (
             account: recalledAccount(app, provider, settings.profile, context.env)?.account ?? null,
             writes: Object.keys(writes).map((key) => `${app.command}_${key}`),
             confirmSend,
-            allow: permitted ?? "all",
+            permissions: settings.permissions,
             ...(messenger.diagnose ? { [messenger.provider]: await messenger.diagnose(command, context) } : {}),
           })
         } catch (error) {

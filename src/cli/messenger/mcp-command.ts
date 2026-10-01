@@ -12,27 +12,33 @@ export interface McpEnvironment extends BaseEnvironment {
 }
 
 export interface McpFlags {
-  allowSend?: boolean
   confirmSend?: boolean
+  allowDangerous?: boolean
+  yes?: boolean
+  allowSend?: boolean
   allowMarkRead?: boolean
   allowDelete?: boolean
 }
 
+/** They decided which tools were offered; the profile's permissions do now. Kept so a configured agent still starts. */
+const RETIRED = ["allowSend", "allowMarkRead", "allowDelete"] as const
+
 const withFlags = (command: Command): Command =>
   command
-    .option("--allow-send", "offer the send tool; without it the server can only read")
-    .option("--confirm-send", "show the owner every send in a form from the server first")
-    .option("--allow-mark-read", "offer the tool that marks a chat read; the other side sees it")
-    .option("--allow-delete", "offer the tool that deletes the owner's own copy of messages; never for everyone")
+    .option("--confirm-send", "show the owner every write in a form from the server first")
+    .option("--allow-dangerous", "no form before a deletion whose permission level is ask")
+    .option("--allow-send", "no longer used — the profile's permissions decide; kept so an old setup still starts")
+    .option("--allow-mark-read", "no longer used — the profile's permissions decide")
+    .option("--allow-delete", "no longer used — the profile's permissions decide")
 
-const checked = (flags: McpFlags): McpFlags => {
-  if (flags.confirmSend && !flags.allowSend && !flags.allowMarkRead && !flags.allowDelete) {
-    throw new CliError(
-      "validation_error",
-      "`--confirm-send` confirms writes, and without `--allow-send`, `--allow-mark-read` or `--allow-delete` there are none",
-    )
-  }
-  return flags
+const retiredNote = (app: AppIdentity, flags: McpFlags): string | undefined => {
+  const given = RETIRED.filter((flag) => flags[flag] === true)
+  if (given.length === 0) return undefined
+  const names = given.map((flag) => `--${flag.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)}`)
+  return (
+    `${names.join(", ")} no longer decide${given.length === 1 ? "s" : ""} anything: the profile's permissions do — ` +
+    `\`${app.command} config show permissions\``
+  )
 }
 
 export const mcpCommand = (messenger: Messenger): Command => {
@@ -42,14 +48,16 @@ export const mcpCommand = (messenger: Messenger): Command => {
       `serve this profile to an agent over MCP, on stdin and stdout — \`claude mcp add ${app.command} -- ${app.command} mcp\``,
     ),
   ).action(async function (this: Command) {
-    const { allowSend, confirmSend, allowMarkRead, allowDelete } = checked(this.opts<McpFlags>())
+    const flags = this.optsWithGlobals<McpFlags>()
+    const context = messengerContext(this, messenger)
+    const note = retiredNote(app, flags)
+    if (note) context.renderer.warn(note)
     // Loaded here, not at the top: every other command would otherwise pay for the SDK.
     const { serveOverStdio } = await import("../../mcp/server.js")
-    await serveOverStdio(this, messengerContext(this, messenger), messenger, {
-      allowSend: allowSend === true,
-      confirmSend: confirmSend === true,
-      allowMarkRead: allowMarkRead === true,
-      allowDelete: allowDelete === true,
+    await serveOverStdio(this, context, messenger, {
+      confirmSend: flags.confirmSend === true,
+      yes: flags.yes === true,
+      allowDangerous: flags.allowDangerous === true,
     })
   })
 
@@ -59,7 +67,7 @@ export const mcpCommand = (messenger: Messenger): Command => {
         "print the mcpServers entry for Claude Desktop, Cursor and others, with full paths; writes nothing",
       ),
     ).action(async function (this: Command) {
-      const flags = checked(this.optsWithGlobals<McpFlags>())
+      const flags = this.optsWithGlobals<McpFlags>()
       const { renderer, settings, format, streams, env } = messengerContext(this, messenger)
       const given = environmentOf<McpEnvironment>(this).mcp ?? {}
       const entry = serverEntry(app, {
@@ -73,6 +81,8 @@ export const mcpCommand = (messenger: Messenger): Command => {
       if (format === "pretty") streams.data(JSON.stringify(entry.config, null, 2))
       else renderer.result(entry.config)
       if (entry.warning) renderer.note(entry.warning)
+      const note = retiredNote(app, flags)
+      if (note) renderer.warn(note)
     }),
   )
   return command
@@ -118,10 +128,9 @@ export const serverEntry = (
       scriptPath,
       ...(profile === "default" ? [] : [profile]),
       "mcp",
-      ...(flags.allowSend ? ["--allow-send"] : []),
       ...(flags.confirmSend ? ["--confirm-send"] : []),
-      ...(flags.allowMarkRead ? ["--allow-mark-read"] : []),
-      ...(flags.allowDelete ? ["--allow-delete"] : []),
+      ...(flags.allowDangerous ? ["--allow-dangerous"] : []),
+      ...(flags.yes ? ["--yes"] : []),
     ],
     ...(Object.keys(directories).length > 0 ? { env: directories } : {}),
   }

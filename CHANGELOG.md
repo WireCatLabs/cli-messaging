@@ -6,6 +6,18 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Changed — may break callers
+
+- **MCP offers tools by the profile's permissions, not by flags.** With the defaults, every write
+  tool is offered and acts without a form; `messages_delete` (level `ask`) shows the owner a form
+  first, which `mcp --allow-dangerous` skips, as the global `--yes` does for any other write at
+  `ask`. `deny` hides a tool, `readonly` hides the writing ones, and with `messages: deny` the
+  prompts and resources are not offered either. `--confirm-send` still puts every write through
+  the form. `--allow-send`, `--allow-mark-read` and `--allow-delete` decide nothing: they are
+  accepted with a warning so a configured agent still starts. `createServer` takes `confirmSend`,
+  `yes` and `allowDangerous`; `instructions` takes the offered `writes`; `<cli>_status` answers
+  `permissions` instead of `allow`.
+
 ## 0.76.0 — 01.10.2026
 
 ### Added
