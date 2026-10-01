@@ -151,7 +151,11 @@ with no model the query uses is named on stderr, not searched silently. One-shot
 ~1–1.5 s, then the scan (§3).
 
 **E8 · Store version 14, additive.** The two tables of E2. `min_compatible` stays 6. Taken in the lanes
-plan first.
+plan first. **Addition 2026-10-02 (owner, NEED-521 A):** the same migration rebuilds `messages_fts` so the
+substring index ignores accents, and the substring query is normalized to match
+([ruling](../decisions.md#ruled)). It touches phase 2's substring step in `src/store/`, which this
+plan otherwise leaves alone; on a large store the rebuild is
+probably too slow for one step, and likely needs batches like version 12's word index (not measured).
 
 **E9 · Hybrid ranking is the last item.** When phase 2's service exists, `conversations search` also runs
 the word search in the same scope, maps its hits to their conversations, and merges the two lists by
