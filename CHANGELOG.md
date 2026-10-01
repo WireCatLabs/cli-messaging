@@ -6,6 +6,12 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- **`cli-messaging-parity <cli> --pages <file...>`** checks user pages against the command tree on
+  stdin: every `<cli> <command> --option` a page names must exist on that command, or be in the
+  manifest for it and not only for the other tool. `pageProblems` in `./parity` is the same check.
+
 ## 0.84.0 — 01.10.2026
 
 ### Added
