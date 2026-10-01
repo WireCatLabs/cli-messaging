@@ -9,6 +9,7 @@ import { type BaseContext, baseContext, environmentOf } from "../context.js"
 import type { EventSink } from "../runs/events.js"
 import type { GlobalFlags, ResolveOptions, Settings } from "../settings.js"
 import { recalledAccount, rememberAccount } from "./accounts.js"
+import { terminalAsker } from "./ask.js"
 import { observed } from "./observed.js"
 import type { MessengerAdapter } from "./port.js"
 import { stored } from "./stored.js"
@@ -113,7 +114,7 @@ export const messengerContext = (command: Command, messenger: Messenger): Messen
   const { profile } = base.settings
   const guard =
     messenger.guard?.(command, base.settings, base.renderer.warn) ??
-    guardFor(app, base.settings, base.renderer.warn, base.env)
+    guardFor(app, base.settings, base.renderer.warn, base.env, terminalAsker(command))
 
   return {
     ...base,

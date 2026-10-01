@@ -18,6 +18,8 @@ export interface BaseEnvironment {
   signal?: AbortSignal
   /** Where a command reads text it was not given as an argument. */
   stdin?: NodeJS.ReadableStream & { isTTY?: boolean }
+  /** The owner's answer to a question, or `null` with nobody at a terminal; tests hand one in. */
+  answer?: (question: string) => string | null
   /** Set by `run()`; a command's run is recorded only when it is known whose run it is. */
   app?: AppIdentity
 }

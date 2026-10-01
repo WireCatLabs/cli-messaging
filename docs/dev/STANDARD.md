@@ -169,7 +169,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--verbose` |  | more detail in what is shown: -v ids, -vv everything known | `0` | every command |
 | `--version` |  | print the version number |  | every command |
 | `--voice` | `<file>` | send an Ogg Opus file as a voice message, alone, with no text. **max spells the value `<path>`; rule 6 says `<file>`** |  | `messages send` (planned) |
-| `--yes` |  | go ahead without the question an ask level puts before a write |  | `account sessions end` (planned), `mcp` (planned), `mcp config` (planned) |
+| `--yes` |  | go ahead without the question an ask level puts before a write |  | every command (planned), `account sessions end` (planned), `mcp` (planned), `mcp config` (planned) |
 
 <!-- end of the option catalogue -->
 

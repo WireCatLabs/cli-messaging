@@ -56,6 +56,7 @@ export const createProgram = ({ app, commands }: ProgramDefinition, { out, err }
     .option("--trace", "the connection's own log lines on stderr — never message content")
     .option("--timeout <duration>", "give up on the whole command after this — 30s, 2m, 500ms")
     .option("--offline", "answer from what was recorded and never connect; fails if nothing was")
+    .option("--yes", "go ahead without the question an ask level puts before a write")
     .option("--record", "keep this run — ids and timings, never message content")
     .option("--no-record", "do not keep it, whatever the configuration says")
     .showHelpAfterError()

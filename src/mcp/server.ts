@@ -5,6 +5,7 @@ import type { Command } from "commander"
 import * as v from "valibot"
 import { recalledAccount } from "../cli/messenger/accounts.js"
 import { connected, type Messenger, type MessengerContext } from "../cli/messenger/context.js"
+import { guardFor } from "../sends/guard.js"
 import { confirmer } from "./confirm.js"
 import { instructions } from "./instructions.js"
 import { registerPrompts } from "./prompts.js"
@@ -43,6 +44,9 @@ export const createServer = (
       ...(allowDelete ? deleteTools(messenger) : {}),
     }).filter(([, one]) => !permitted || (one.permission !== undefined && permitted.includes(one.permission))),
   )
+  // Nothing can be typed at a terminal here, and a write tool is offered only behind its own
+  // `--allow-*` flag, which already says yes — until the tools follow the levels too (P7, step 3).
+  const guard = messenger.guard ? context.guard : guardFor(app, settings, context.renderer.warn, context.env, () => {})
   const confirmed = confirmSend ? confirmer() : undefined
   const session = new MessengerSession(
     async (events) => connected(await messenger.connect(command, context, { events }), messenger, context, events),
@@ -73,7 +77,7 @@ export const createServer = (
         command: app.command,
         session,
         withStore: context.withStore,
-        defaults: { limit: settings.limit, guard: context.guard, settings, env: context.env },
+        defaults: { limit: settings.limit, guard, settings, env: context.env },
         confirmed,
       },
     )

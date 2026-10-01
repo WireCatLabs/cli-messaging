@@ -1,12 +1,11 @@
-import { CliError } from "@leemour/cli-core"
 import { annotate } from "@leemour/cli-core/commands"
 import { Command } from "commander"
 import { DELETE_AT_ONCE } from "../../services/index.js"
 import { type Messenger, messengerContext } from "./context.js"
 
 /**
- * ⚠ **`--allow-dangerous` is required** and nothing asks instead: a deletion cannot be undone, and a
- * prompt is one Enter away from it. For everyone only with `--for-everyone` (max-cli `NEED-238`, `NEED-239`).
+ * The guard asks first at the default level, `ask`; `--allow-dangerous` is the yes. For everyone only
+ * with `--for-everyone` (max-cli `NEED-239`).
  */
 export const deleteCommand = (messenger: Messenger): Command =>
   annotate(new Command("delete"), { mutates: true })
@@ -14,19 +13,10 @@ export const deleteCommand = (messenger: Messenger): Command =>
     .argument("<chat>", messenger.chatArgument)
     .argument("<messages...>", `the message ids, at most ${DELETE_AT_ONCE}`)
     .option("--for-everyone", "delete for everyone in the chat, not only for you — they cannot get it back")
-    .option("--allow-dangerous", "yes, delete — it cannot be undone")
+    .option("--allow-dangerous", "go ahead without the question an ask level puts before a deletion")
     .action(async function (this: Command, chat: string, messages: string[]) {
       const context = messengerContext(this, messenger)
-      const { forEveryone, allowDangerous } = this.opts<{ forEveryone?: boolean; allowDangerous?: boolean }>()
-      const everyone = forEveryone === true
-      if (allowDangerous !== true) {
-        throw new CliError(
-          "confirmation_required",
-          `this deletes ${messages.length === 1 ? "a message" : `${messages.length} messages`} ` +
-            `${everyone ? "for everyone in the chat" : "for you"}, and it cannot be undone — ` +
-            "add --allow-dangerous to go ahead",
-        )
-      }
+      const everyone = this.opts<{ forEveryone?: boolean }>().forEveryone === true
       context.renderer.result(
         await context.withServices((services) =>
           services.messages.delete({
