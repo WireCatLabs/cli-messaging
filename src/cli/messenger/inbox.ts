@@ -7,7 +7,15 @@ import { renderMessages } from "../../render/messages.js"
 import type { AppIdentity } from "../app.js"
 import { positiveCount } from "../paging.js"
 import { type Messenger, messengerContext } from "./context.js"
-import { heardItems, hearForCommand, hearingFields, spokenItems, TRANSCRIBE_OPTION } from "./hearing-command.js"
+import {
+  heardItems,
+  hearForCommand,
+  hearingFields,
+  MODEL_OPTION,
+  modelWith,
+  spokenItems,
+  TRANSCRIBE_OPTION,
+} from "./hearing-command.js"
 import type { MessengerAdapter } from "./port.js"
 
 /**
@@ -164,18 +172,22 @@ export const inboxCommand = (messenger: Messenger): Command =>
     .option("--limit <n>", "at most this many per chat, the newest", positiveCount("--limit"))
     .option("--all", "muted and archived chats too — left out unless they mention you or reply to you")
     .option(...TRANSCRIBE_OPTION)
+    .option(...MODEL_OPTION)
     .action(async function (this: Command) {
       const {
         new: fresh,
         since,
         all,
         transcribe,
+        model,
       } = this.opts<{
         new?: boolean
         since?: string
         all?: boolean
         transcribe?: boolean
+        model?: string
       }>()
+      const hearWith = modelWith(transcribe, model)
       const context = messengerContext(this, messenger)
       const { app } = messenger
       const { settings, renderer, format, streams, env } = context
@@ -214,7 +226,7 @@ export const inboxCommand = (messenger: Messenger): Command =>
       const read: MessageHit[] = inbox.chats.flatMap((chat) =>
         chat.messages.map((message) => ({ ...message, chatTitle: chat.title })),
       )
-      const hearing = await hearForCommand(context, messenger, read, transcribe === true)
+      const hearing = await hearForCommand(context, messenger, read, transcribe === true, hearWith)
       const messages = heardItems(read, hearing)
       if (format === "jsonl") renderer.stream(messages)
       else if (format !== "pretty") {

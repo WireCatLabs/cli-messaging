@@ -1,5 +1,6 @@
 import * as v from "valibot"
 import type { Messenger } from "../../cli/messenger/context.js"
+import { modelWith } from "../../cli/messenger/hearing-command.js"
 import { momentOf } from "../../cli/messenger/inbox.js"
 import { onlineDeps, servicesFor } from "../../services/index.js"
 import { heard, hearForTool } from "../../speech/hearing.js"
@@ -28,6 +29,13 @@ export const inboxTools = (messenger: Messenger): Record<string, AnyTool> => {
         transcribe: v.optional(
           v.pipe(v.boolean(), v.description("turn voice messages not heard yet into text; can take minutes")),
         ),
+        model: v.optional(
+          v.pipe(
+            v.string(),
+            v.minLength(1),
+            v.description("which downloaded speech model hears them, with transcribe"),
+          ),
+        ),
       }),
       annotations: READ,
       online: async (adapter, args, defaults) => {
@@ -38,7 +46,14 @@ export const inboxTools = (messenger: Messenger): Record<string, AnyTool> => {
           all: args.all === true,
         })
         const messages = inbox.chats.flatMap((chat) => chat.messages)
-        const hearing = await hearForTool(messenger, adapter, messages, args.transcribe === true, defaults)
+        const hearing = await hearForTool(
+          messenger,
+          adapter,
+          messages,
+          args.transcribe === true,
+          defaults,
+          modelWith(args.transcribe, args.model),
+        )
         return {
           ...inbox,
           chats: inbox.chats.map((chat) => ({ ...chat, messages: heard(chat.messages, hearing) })),

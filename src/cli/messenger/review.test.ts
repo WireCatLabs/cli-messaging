@@ -225,4 +225,13 @@ describe("review, the command", () => {
     expect(answer.chats[0].messages.map((one: Message) => one.id)).toEqual(["10"])
     expect(answer.unanswered).toEqual({ olderThanHours: 12 })
   })
+
+  it("--transcribe says which voice messages stay unheard; --model alone is refused", async () => {
+    const heard = await review(["--since", "2d", "--all", "--transcribe"])
+    const lonely = await review(["--since", "2d", "--model", "gigaam-v3"])
+
+    expect(heard.code).toBe(0)
+    expect(heard.answer.unheard).toEqual([])
+    expect(lonely.code).toBe(2)
+  })
 })

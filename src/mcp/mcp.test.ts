@@ -510,6 +510,21 @@ describe("the transcribe tool", () => {
     expect(body).toMatchObject({ chats: [{ messages: [{ transcript: "read me" }] }], unheard: [] })
   })
 
+  it("hears a review's voice messages with `transcribe`, and refuses `model` alone", async () => {
+    const { call } = await connect(
+      scripted({
+        history: async () => ({ items: [{ ...message, attachments: [{ kind: "voice" }] }], hasMore: false }),
+        transcribe: async () => ({ text: "read me", pending: false }),
+      }),
+    )
+
+    const heard = await call("chat_review", { since: "2000-01-01", all: true, transcribe: true })
+    const lonely = await call("chat_review", { since: "2000-01-01", model: "gigaam-v3" })
+
+    expect(heard.body).toMatchObject({ chats: [{ messages: [{ transcript: "read me" }] }], unheard: [] })
+    expect(lonely.isError).toBe(true)
+  })
+
   it("**names the download command, never downloads**, when the messenger cannot transcribe and no model is here", async () => {
     const { isError, body } = await (await connect()).call("chat_messages_transcribe", { chat: "7", message: "5" })
 

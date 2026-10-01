@@ -9,7 +9,15 @@ import { positiveCount } from "../paging.js"
 import { afterOf, oneDirection } from "./after.js"
 import { type Messenger, messengerContext } from "./context.js"
 import { downloadSubcommand } from "./download-command.js"
-import { heardItems, hearForCommand, hearingFields, spokenItems, TRANSCRIBE_OPTION } from "./hearing-command.js"
+import {
+  heardItems,
+  hearForCommand,
+  hearingFields,
+  MODEL_OPTION,
+  modelWith,
+  spokenItems,
+  TRANSCRIBE_OPTION,
+} from "./hearing-command.js"
 import { deleteCommand } from "./messages-delete-command.js"
 import { editCommand } from "./messages-edit-command.js"
 import { forwardCommand } from "./messages-forward-command.js"
@@ -30,10 +38,22 @@ export const messagesCommand = (messenger: Messenger): Command => {
     .option("--before <id>", "only messages older than this message id")
     .option("--after <id-or-time>", "only messages newer than this message id, ISO 8601 time, or 2h / 1d ago")
     .option(...TRANSCRIBE_OPTION)
+    .option(...MODEL_OPTION)
+    .option("--mark-read", "also mark the chat read up to the newest message shown; the other person sees it")
     .action(async function (this: Command, chat: string) {
       const context = messengerContext(this, messenger)
-      const { before, after, transcribe } = this.opts<{ before?: string; after?: string; transcribe?: boolean }>()
+      const { before, after, transcribe, model, markRead } = this.opts<{
+        before?: string
+        after?: string
+        transcribe?: boolean
+        model?: string
+        markRead?: boolean
+      }>()
       oneDirection(before, after)
+      const hearWith = modelWith(transcribe, model)
+      if (markRead && context.settings.offline) {
+        throw new CliError("validation_error", "--mark-read tells the messenger; not with --offline")
+      }
       const { limit } = context.settings
       const page = await context.withServices((services) =>
         services.messages.list(chat, {
@@ -42,7 +62,13 @@ export const messagesCommand = (messenger: Messenger): Command => {
           ...(after === undefined ? {} : { after: afterOf(after) }),
         }),
       )
-      const hearing = await hearForCommand(context, messenger, page.items, transcribe === true)
+      const hearing = await hearForCommand(context, messenger, page.items, transcribe === true, hearWith)
+      const newest = page.items.at(-1)
+      const marked =
+        markRead && newest
+          ? await context.withServices((services) => services.chats.markRead({ chat, until: newest.id }))
+          : undefined
+      if (marked) context.renderer.note(`marked read up to ${marked.until}`)
       const next = (items: typeof page.items) =>
         after === undefined ? `older messages: --before ${items[0]?.id}` : `newer messages: --after ${items.at(-1)?.id}`
       if (context.format === "pretty") {
@@ -70,6 +96,7 @@ export const messagesCommand = (messenger: Messenger): Command => {
         limit,
         hasMore: page.hasMore,
         ...hearingFields(hearing, transcribe === true),
+        ...(marked ? { markedRead: { operationId: marked.operationId, until: marked.until } } : {}),
       })
     })
 

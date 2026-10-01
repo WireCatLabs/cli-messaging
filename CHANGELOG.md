@@ -8,6 +8,14 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Added
 
+- **`messages list --mark-read`** marks the chat read up to the newest message shown — the other
+  person sees it — and answers `markedRead: { operationId, until }`; refused with `--offline`.
+  Nothing else in `messages list` marks anything read. The `messages_list` tool stays read-only:
+  `chats_mark_read` does that behind its own permission.
+- **`--model <id>` beside `--transcribe`** on `messages list` and `inbox`, and `model` on their tools:
+  which downloaded speech model hears the voice messages. Alone it is refused rather than ignored.
+- **`review --transcribe`** and `--model`, and `transcribe` and `model` on the `review` tool: voice
+  messages in a review come with their text, and `unheard` lists the rest.
 - **`messages send --voice <file>`**: an Ogg Opus file (`.ogg`, `.oga`, `.opus`) as a voice message,
   alone — no text, no file, no photo beside it. **`--as-file`** sends the `--file` as a file to
   download even where the messenger would play it, a video included. The `messages_send` tool takes

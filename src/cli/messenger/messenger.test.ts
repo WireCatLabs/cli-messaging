@@ -622,6 +622,33 @@ describe("the shared read commands", () => {
     ])
   })
 
+  it("**messages list marks the chat read only with --mark-read**, up to the newest message shown", async () => {
+    const root = mkdtempSync(join(tmpdir(), "messenger-"))
+    const env = { CHAT_STATE_DIR: join(root, "state"), CHAT_CONFIG_DIR: join(root, "config") }
+    const marks: unknown[] = []
+    const reading: MessengerAdapter = {
+      ...fake,
+      markRead: async (chatId, until) => {
+        marks.push([chatId, until])
+      },
+    }
+
+    await call(["messages", "list", "Book", "--json"], async () => reading, env)
+    await call(["messages", "list", "Book", "--transcribe", "--json"], async () => reading, env)
+    expect(marks).toEqual([])
+
+    const marked = await call(["messages", "list", "Book", "--mark-read", "--json"], async () => reading, env)
+    const offline = await call(["messages", "list", "Book", "--mark-read", "--offline"], async () => reading, env)
+    const lonelyModel = await call(["messages", "list", "Book", "--model", "gigaam-v3"], async () => reading, env)
+
+    const newest = JSON.parse(marked.stdout[0] ?? "").items.at(-1).id
+    expect(JSON.parse(marked.stdout[0] ?? "").markedRead).toEqual({ operationId: expect.any(String), until: newest })
+    expect(marks).toEqual([["7", newest]])
+    expect(offline.code).toBe(2)
+    expect(lonelyModel.code).toBe(2)
+    expect(lonelyModel.stderr.join("\n")).toContain("add --transcribe")
+  })
+
   it("**mark a chat read, to its newest message or --until one**, journaled as a read", async () => {
     const root = mkdtempSync(join(tmpdir(), "messenger-"))
     const env = { CHAT_STATE_DIR: join(root, "state"), CHAT_CONFIG_DIR: join(root, "config") }
