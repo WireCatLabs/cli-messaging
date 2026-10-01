@@ -13,7 +13,7 @@ export interface RenderOptions {
    * not under Bun, which styles a pipe too (measured 2026-09-22).
    */
   color?: boolean
-  /** A colour per sender, `вы` keeping cyan to itself. */
+  /** A colour per sender, your own messages keeping cyan to themselves. */
   senderColors?: boolean
   locale?: string
   timeZone?: string
@@ -60,9 +60,9 @@ export const renderMessage = (message: Message | MessageHit | WindowedMessage, o
   const lines = [`${paint("dim", time(message.timestamp))}  ${senderOf(message, options)}${chat}${mark}`]
   const body = (text: string) => wrapAnsi(visibleControls(text), room, { hard: true }).split("\n")
 
-  if (message.replyTo) lines.push(paint("dim", preview("↳", message.replyTo, room)))
+  if (message.replyTo) lines.push(paint("dim", preview("↳", message.replyTo, room, options)))
   if (message.forwardedFrom) {
-    lines.push(paint("dim", `↪ ${nameOf(message.forwardedFrom)}`))
+    lines.push(paint("dim", `↪ ${nameOf(message.forwardedFrom, options)}`))
     if (message.forwardedFrom.text) lines.push(...body(message.forwardedFrom.text))
     lines.push(...attachmentLines(message.forwardedFrom.attachments, paint, options))
   }
@@ -107,23 +107,29 @@ const painter =
 
 const senderOf = (message: Message, options: RenderOptions): string => {
   const paint = painter(options)
-  if (message.outgoing === true) return paint(["bold", "cyan"], "вы")
-  const name = nameOf(message)
+  if (message.outgoing === true) return paint(["bold", "cyan"], you(options))
+  const name = nameOf(message, options)
   if (!options.senderColors) return paint("bold", name)
   const colour = SENDER_COLOURS[hash(message.senderId ?? name) % SENDER_COLOURS.length] ?? "green"
   return paint(["bold", colour], name)
 }
 
-const nameOf = ({ senderName, senderId, outgoing }: Pick<Message, "senderName" | "senderId" | "outgoing">): string =>
-  outgoing === true ? "вы" : singleLine(senderName ?? senderId ?? "unknown")
+const nameOf = (
+  { senderName, senderId, outgoing }: Pick<Message, "senderName" | "senderId" | "outgoing">,
+  options: RenderOptions,
+): string => (outgoing === true ? you(options) : singleLine(senderName ?? senderId ?? "unknown"))
+
+const DEFAULT_LOCALE = "ru-RU"
+
+const you = ({ locale = DEFAULT_LOCALE }: RenderOptions): string => (locale.startsWith("ru") ? "вы" : "you")
 
 const hash = (value: string): number => [...value].reduce((sum, char) => (sum * 31 + char.charCodeAt(0)) >>> 0, 7)
 
 /** One line: it is a pointer to the other message, not a second copy of it. */
-const preview = (mark: string, quoted: QuotedMessage, room: number): string => {
+const preview = (mark: string, quoted: QuotedMessage, room: number, options: RenderOptions): string => {
   const text =
     singleLine(quoted.text.split("\n")[0] ?? "") || (quoted.attachments[0] ? `📎 ${quoted.attachments[0].kind}` : "")
-  const line = text ? `${mark} ${nameOf(quoted)}: ${text}` : `${mark} message ${quoted.id}`
+  const line = text ? `${mark} ${nameOf(quoted, options)}: ${text}` : `${mark} message ${quoted.id}`
   if (stringWidth(line) <= room) return line
   return `${wrapAnsi(line, room - 1, { hard: true }).split("\n")[0]}…`
 }
@@ -181,7 +187,7 @@ const timeFormatter = ({ timeZone }: RenderOptions) => {
 }
 
 /** `3 января 2026` — the `г.` Intl adds for Russian is dropped; the line is a heading, not a date field. */
-const dayFormatter = ({ locale = "ru-RU", timeZone }: RenderOptions) => {
+const dayFormatter = ({ locale = DEFAULT_LOCALE, timeZone }: RenderOptions) => {
   const format = new Intl.DateTimeFormat(locale, {
     day: "numeric",
     month: "long",

@@ -37,6 +37,9 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 - **A `--limit` or `--page` that is not a whole number is refused as typed**: `--limit abc` said
   `not NaN`, and `--limit 12abc` was quietly read as 12. Both are now `validation_error` quoting the
   value. `positiveCount(flag)` in `cli/paging.ts` is the one parser for them.
+- **The transcript speaks the app's language.** `AppIdentity.locale` (for example `en-GB`) sets the
+  day headings and the word for your own messages in every command that prints a conversation;
+  tg printed `вы` and `3 января 2026`. Unset, it stays `ru-RU`, so max-cli does not change.
 
 ## 0.75.0 — 01.10.2026
 

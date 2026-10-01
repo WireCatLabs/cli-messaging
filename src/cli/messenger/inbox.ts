@@ -234,6 +234,7 @@ export const inboxCommand = (messenger: Messenger): Command =>
             senderColors: settings.senderColors,
             profile: context.profile,
             provider: messenger.provider,
+            locale: messenger.app.locale,
           }),
         )
       }

@@ -54,6 +54,7 @@ export const messagesCommand = (messenger: Messenger): Command => {
             senderColors: context.settings.senderColors,
             profile: context.profile,
             provider: messenger.provider,
+            locale: messenger.app.locale,
           }),
         )
         if (page.hasMore) context.renderer.note(next(page.items))
@@ -86,6 +87,7 @@ export const messagesCommand = (messenger: Messenger): Command => {
           senderColors: context.settings.senderColors,
           profile: context.profile,
           provider: messenger.provider,
+          locale: messenger.app.locale,
         }),
       )
     } else if (context.format === "jsonl") context.renderer.stream(found)
@@ -122,6 +124,7 @@ export const messagesCommand = (messenger: Messenger): Command => {
                   senderColors: context.settings.senderColors,
                   profile: context.profile,
                   provider: messenger.provider,
+                  locale: messenger.app.locale,
                 })}`,
             )
             .join("\n"),

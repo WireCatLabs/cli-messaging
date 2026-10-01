@@ -10,6 +10,8 @@ export interface AppIdentity {
   version: string
   /** Where a problem report goes — a new-issue page. `doctor report create` names it. */
   issues?: string
+  /** The language of the transcript a person reads: its day headings and the word for "you". `ru-RU` when unset. */
+  locale?: string
 }
 
 export const envName = (app: AppIdentity, name: string): string => `${app.envPrefix}_${name}`

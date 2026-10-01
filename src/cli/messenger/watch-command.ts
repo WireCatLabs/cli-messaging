@@ -30,6 +30,7 @@ export const watchCommand = (messenger: Messenger): Command =>
           senderColors: context.settings.senderColors,
           profile: context.profile,
           provider: messenger.provider,
+          locale: messenger.app.locale,
         })}`
 
       // Without --events the stream is bare messages, as it always was: a reader of it never meets
