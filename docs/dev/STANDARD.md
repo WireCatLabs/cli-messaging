@@ -92,14 +92,13 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | Option | Value | Meaning | Default | Commands |
 |---|---|---|---|---|
 | `--add` | `<chat>` | put a chat into a folder; repeat it for more |  | `chats folders update` |
-| `--after` | `<id-or-time>` | read what came after this message id, this ISO 8601 time, or 2h / 1d ago; not with --before. **becomes `--after-id`, `--after-time` (`messages list`) and `--after-n` (`messages context`) — NEED-485** |  | `messages context` (planned), `messages list` (planned) |
-| `--after-id` | `<id>` | read what came after this message id; not with --after-time or the --before pair |  | `messages list` (planned) |
-| `--after-n` | `<n>` | how many messages after it |  | `messages context` (planned) |
-| `--after-time` | `<time>` | read what came after this ISO 8601 time, or 2h / 1d ago; not with --after-id or the --before pair |  | `messages list` (planned) |
+| `--after-id` | `<id>` | read what came after this message id; not with --after-time or the --before pair |  | `messages list` |
+| `--after-n` | `<n>` | how many messages after it |  | `messages context` |
+| `--after-time` | `<time>` | read what came after this ISO 8601 time, or 2h / 1d ago; not with --after-id or the --before pair |  | `messages list` |
 | `--all` |  | every row, no paging |  | `chats list`, `chats members list` (planned), `contacts list`, `inbox` (planned), `messages download` (planned), `review` (planned) |
 | `--all-can-pin` | `<on\|off>` | every member may pin messages |  | `chats update` |
 | `--allow-any-file` |  | send a --file even from a hidden folder, ~/.ssh or the tool's own folders |  | `messages send` |
-| `--allow-dangerous` |  | go ahead without the question an ask level puts before a deletion |  | `chats moderate` (planned), `mcp` (planned), `mcp config` (planned), `messages delete`, `store clear` (tg-only) |
+| `--allow-dangerous` |  | go ahead without the question an ask level puts before a deletion |  | `chats moderate` (planned), `mcp` (planned), `mcp config` (planned), `messages delete`, `store clear` (planned) |
 | `--allow-delete` |  | offer the tool that deletes messages for you only; it cannot be undone. **max's own `mcp` is worded differently until the permission levels (P7) replace these flags there (e13)** |  | `mcp`, `mcp config` |
 | `--allow-mark-read` |  | offer the tool that marks a chat read; the other person sees it. **max's own `mcp` is worded differently until the permission levels (P7) replace these flags there (e13)** |  | `mcp`, `mcp config` |
 | `--allow-moderate` |  | offer the tool that applies a group's rules — delete others' messages, remove people. **max only, until permissions (P7) replace the MCP flags** |  | `mcp` (planned), `mcp config` (planned) |
@@ -107,13 +106,11 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--anonymous` |  | nobody sees who voted for what |  | `polls create` |
 | `--app` | `<how>` | the first time only: how to get this profile's app from my.telegram.org | `browser` | `session start` (tg-only) |
 | `--as-file` |  | send every --file as a plain file to download, a video included |  | `messages send` |
-| `--at` | `<time>` | let the messenger send it later, even with this machine off: a local time like 2026-09-25T09:00, or 30m. **becomes `--at-time` — NEED-493** |  | `messages send` (planned) |
-| `--at-time` | `<time>` | let the messenger send it later, even with this machine off: a local time like 2026-09-25T09:00, or 30m |  | `messages send` (planned) |
+| `--at-time` | `<time>` | let the messenger send it later, even with this machine off: a local time like 2026-09-25T09:00, or 30m |  | `messages send` |
 | `--background` |  | run as a job that outlives this command; `store jobs show` follows it |  | `store fetch` (planned) |
-| `--before` | `<id-or-time>` | read what came before this message id, this ISO 8601 time, or 2h / 1d ago. **becomes `--before-id`, `--before-time` (`messages list`) and `--before-n` (`messages context`) — NEED-485** |  | `messages context` (planned), `messages list` (planned) |
-| `--before-id` | `<id>` | read what came before this message id; not with --before-time |  | `messages list` (planned) |
-| `--before-n` | `<n>` | how many messages before it |  | `messages context` (planned) |
-| `--before-time` | `<time>` | read what came before this ISO 8601 time, or 2h / 1d ago; not with --before-id |  | `messages list` (planned) |
+| `--before-id` | `<id>` | read what came before this message id; not with --before-time |  | `messages list` |
+| `--before-n` | `<n>` | how many messages before it |  | `messages context` |
+| `--before-time` | `<time>` | read what came before this ISO 8601 time, or 2h / 1d ago; not with --before-id |  | `messages list` |
 | `--bot` |  | the bot section of the profile's settings, rather than the personal account's |  | `config set` (planned), `config show` (planned), `config unset` (planned) |
 | `--can` | `<rights>` | what they may do, comma-separated: read, members, admins, info, pin, link, post, edit, delete. **lists the rights each messenger has — MAX has `read`, Telegram does not — so it differs on purpose (Help text rule 4)** |  | `chats admins add` |
 | `--channel` |  | a private channel instead of a group; people join it by its link |  | `chats create` |
@@ -138,13 +135,13 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--kind` | `<kind>` | only chats of this kind: dialog, group, channel or saved |  | `chats list` |
 | `--last` | `<n>` | stop once the newest n messages are held; not with --since. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | `store fetch` |
 | `--last-name` | `<name>` | your last name |  | `account update` |
-| `--left` |  | only the chats this account has left |  | `store clear` (tg-only) |
+| `--left` |  | only the chats this account has left |  | `store clear` (planned) |
 | `--limit` | `<n>` | how many: rows to show, or messages one run fetches. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | `chats list`, `chats members list` (planned), `contacts list`, `inbox`, `messages list`, `messages search`, `runs list`, `sends list`, `store fetch` (planned) |
 | `--lines` | `<n>` | how many lines | `50` | `server logs` |
 | `--local` |  | use the model on this machine, never the messenger |  | `messages transcribe` (tg-only) |
 | `--mark-read` |  | also mark the chat read up to the newest message shown; the other person sees it |  | `messages list` |
 | `--max-actions` | `<n>` | at most this many actions in one run | `10` | `chats moderate` (planned) |
-| `--max-pages` | `<n>` | at most this many pages in one run; a page is one request, and each messenger sets the default. **replaced by `--limit` (messages per run) and `--page-size` — NEED-486** |  | `store fetch` (max-only) |
+| `--max-pages` | `<n>` | at most this many pages in one run; a page is one request, and each messenger sets the default. **replaced by `--limit` (messages per run) and `--page-size` — NEED-486** |  | `store fetch` (planned) |
 | `--md` |  | read **bold**, _italic_, ~~struck~~ and `code` in the text; \ keeps a mark literal |  | `messages edit`, `messages send` |
 | `--members-see-link` | `<on\|off>` | members may see the invite link |  | `chats update` (max-only) |
 | `--model` | `<id>` | which downloaded speech model hears them; `models audio list` shows them. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | `inbox`, `messages list`, `messages transcribe`, `review` (planned) |
@@ -182,7 +179,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--serve` |  | start `serve` in the background if it is not running (the default) |  | every command (planned) |
 | `--show-phone` |  | print the whole phone number |  | `account show` |
 | `--silent` |  | deliver without a notification |  | `messages forward`, `messages send`, `polls create` |
-| `--since` | `<id-or-time>` | from this message id, an ISO 8601 time, or 2h / 1d ago; each command says its default. **becomes `--since-time` everywhere — NEED-485** |  | `chats events` (max-only), `inbox` (max-only), `review` (max-only), `store export` (max-only), `store fetch` (max-only) |
+| `--since` | `<id-or-time>` | from this message id, an ISO 8601 time, or 2h / 1d ago; each command says its default. **becomes `--since-time` everywhere — NEED-485** |  | `chats events` (max-only), `inbox` (max-only), `review` (max-only), `store export` (planned), `store fetch` (planned) |
 | `--since-time` | `<time>` | from this ISO 8601 time, or 2h / 1d ago; each command says its default |  | `chats events` (planned), `chats moderate` (planned), `inbox` (planned), `review` (planned), `store export` (planned), `store fetch` (planned) |
 | `--timeout` | `<duration>` | give up on the whole command after this — 30s, 2m, 500ms |  | every command |
 | `--title` | `<title>` | the new name — of a chat or a folder |  | `chats folders update`, `chats update` |

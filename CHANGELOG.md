@@ -32,6 +32,16 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   command, starts it again on that SQLite when a Linux distribution's Node brings one the store
   cannot use. On every other setup nothing changes.
 
+### Changed — may break callers
+
+- **The parity manifest marks `messages send --at-time`, `messages list --before-id|--before-time|--after-id|
+  --after-time` and `messages context --before-n|--after-n` as in both tools,** and drops the old `--at`,
+  `--before` and `--after` rows: max's main has moved (max-cli #294, #282). A max older than that fails
+  this manifest's parity check.
+- **`store fetch --since|--max-pages` and `store export --since` are planned for max**, not max-only, so
+  max can move onto the shared `store` group (max-cli T6, 6c); they go once max's main has moved.
+  `store clear` is planned for max too: it comes with the store maintenance commands.
+
 ### Fixed
 
 - **`bot recipients`' help names `clear`**, the command that removes the list; it said `off`, which
