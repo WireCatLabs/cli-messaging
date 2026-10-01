@@ -78,6 +78,8 @@ export interface Messenger {
    * background server journals what it forwards, so a command over it records only its refusals.
    */
   guard?: (command: Command, settings: Settings, warn: (message: string) => void) => SendGuard
+  /** The CLI's SKILL.md, which the MCP server also serves as `<command>://skill`. */
+  skill?: URL
   /** What only this messenger can say about itself for `doctor`, read from disk — never a secret. */
   diagnose?: (command: Command, context: BaseContext) => Promise<Record<string, unknown>>
 }

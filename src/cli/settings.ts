@@ -89,6 +89,7 @@ const BOT_ONLY_ENTRIES = {
 /** One program, one version: whether to look for a newer one is not a per-profile matter. */
 const SHARED_DEFAULTS_ONLY = {
   updateCheck: v.optional(flag),
+  skillHint: v.optional(flag),
 }
 
 /**
@@ -184,6 +185,8 @@ export interface Settings {
   /** A bot only: which other bots' local copy it may read when a command asks. Always `false` for the account. */
   readOtherBots: boolean | readonly string[]
   updateCheck: boolean
+  /** Whether an agent is told, once a day, that `<cli> skill install` would give it this tool's guide. */
+  skillHint: boolean
   configPath: string
   configFound: boolean
   /** Profiles the configuration file names, whether or not anyone has logged in to them. */
@@ -352,6 +355,7 @@ export const settingsFor = (app: AppIdentity, extension: SettingsExtension = {})
         ]),
     ])
     const updateCheck = first([["config defaults", shared.updateCheck as boolean | undefined]], true)
+    const skillHint = first([["config defaults", shared.skillHint as boolean | undefined]], true)
     const timeout = first<string | undefined>(
       [
         ["flag", flags.timeout],
@@ -389,6 +393,7 @@ export const settingsFor = (app: AppIdentity, extension: SettingsExtension = {})
       kind,
       readOtherBots: readOtherBots.value,
       updateCheck: updateCheck.value,
+      skillHint: skillHint.value,
       configPath,
       configFound: existsSync(configPath),
       configuredProfiles: namedProfiles(config),
@@ -406,6 +411,7 @@ export const settingsFor = (app: AppIdentity, extension: SettingsExtension = {})
         sendsPerHour: sendsPerHour.from,
         readOtherBots: readOtherBots.from,
         updateCheck: updateCheck.from,
+        skillHint: skillHint.from,
       },
       configured,
       shared,

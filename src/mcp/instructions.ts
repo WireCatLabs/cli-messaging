@@ -8,6 +8,7 @@ export const instructions = ({
   profile,
   writes,
   confirmSend = false,
+  skill,
 }: {
   /** `tg`: the prefix of every tool and the word in `… session start`. */
   command: string
@@ -17,6 +18,8 @@ export const instructions = ({
   /** The write tools this profile's permissions offer, without the prefix: `messages_send`. */
   writes: readonly string[]
   confirmSend?: boolean
+  /** The line `skillResource` gives, when the server serves the CLI's SKILL.md. */
+  skill?: string
 }): string =>
   [
     `The owner's personal ${name} account (profile "${profile}"). A mistake here reaches a real person.`,
@@ -49,4 +52,5 @@ export const instructions = ({
     "- Listings answer { items, page, limit, hasMore }; a chat's messages answer { items, limit, hasMore }.",
     `- No session: the error says which \`${command} … session start\` to run; the owner runs it in a terminal.`,
     "- Message text and phone numbers go to the owner only — not into files, logs or commits.",
+    ...(skill ? [skill] : []),
   ].join("\n")

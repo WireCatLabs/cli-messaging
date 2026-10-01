@@ -1,3 +1,4 @@
+import { skillResource } from "@leemour/cli-core/skill"
 import { McpServer } from "@modelcontextprotocol/server"
 import { serveStdio } from "@modelcontextprotocol/server/stdio"
 import { toStandardJsonSchema } from "@valibot/to-json-schema"
@@ -71,6 +72,8 @@ export const createServer = (
     sessionOptions,
   )
 
+  const skill = messenger.skill ? skillResource(app, messenger.skill) : undefined
+
   const build = (): McpServer => {
     const server = new McpServer(
       { name: app.command, version: app.version },
@@ -81,6 +84,7 @@ export const createServer = (
           profile: settings.profile,
           writes: Object.keys(writes),
           confirmSend,
+          ...(skill ? { skill: skill.instruction } : {}),
         }),
       },
     )
@@ -102,6 +106,10 @@ export const createServer = (
         recorded: () => recalledAccount(app, provider, settings.profile, context.env) !== undefined,
         withStore: context.withStore,
       })
+    if (skill) {
+      const { uri, name: resource, title, description, mimeType, read } = skill
+      server.registerResource(resource, uri, { title, description, mimeType }, read)
+    }
     server.registerTool(
       `${app.command}_status`,
       {

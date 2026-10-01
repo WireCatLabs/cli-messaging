@@ -129,6 +129,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--events` |  | also print edits, deletions and reactions; every line then names its event. **differs by one letter from `chats events --event`, a filter with an unrelated meaning (e12)** |  | `watch` |
 | `--file` | `<file>` | attach a file; images go as a photo, videos as a video. Repeat it for more |  | `messages send` |
 | `--first-name` | `<name>` | your first name |  | `account update` |
+| `--for` | `<agents>` | which agents a skill is installed for: claude, agents or all | `all` | `skill install` (planned) |
 | `--for-everyone` |  | delete for everyone in the chat, not only for you — they cannot get it back |  | `messages delete` |
 | `--format` | `<format>` | jsonl, one message per line, or a markdown transcript. **the shared `store export` takes `jsonl` or `markdown`, max's own takes `jsonl` or `md` (e4)** |  | `store export` |
 | `--history` |  | the people added also see the messages from before they came |  | `chats members add` (max-only) |

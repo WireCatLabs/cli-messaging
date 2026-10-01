@@ -20,5 +20,8 @@ for (const prefix of ["APP", "CHAT", "TG", "MAX"]) {
   process.env[`${prefix}_CACHE_DIR`] = join(sandbox, prefix, "cache")
 }
 process.env.TMPDIR = sandbox
+// Set in an agent's own shell, where it would make every run print the skill hint and read the real ~/.claude.
+delete process.env.AI_AGENT
+delete process.env.CLAUDECODE
 
 afterAll(() => rmSync(sandbox, { recursive: true, force: true }))

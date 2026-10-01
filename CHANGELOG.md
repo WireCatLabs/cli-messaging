@@ -6,7 +6,23 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- **`skill install [--for claude|agents|all]`** beside `skill show`, from cli-core's `skillCommand`:
+  it writes SKILL.md, stamped with the CLI's version, to `~/.claude/skills/<appName>/` and
+  `~/.agents/skills/<appName>/`. It refuses a SKILL.md whose frontmatter `name` is not the app name.
+  `skillCommand(app, skillUrl)` keeps its signature.
+- **A daily hint for agents.** `run()` prints one line on stderr when `AI_AGENT` or `CLAUDECODE` is set
+  and no copy of the skill is installed, or an older one: `` `<cli> skill install` installs this
+  tool's guide``. It shares the update notice's state file, never prints on stdout, after a failure
+  or under `--quiet`, and the setting `skillHint: false` in the configuration's `defaults` turns it off.
+- **`Messenger.skill`**: the CLI's SKILL.md. When set, the MCP server serves it as the resource
+  `<command>://skill` and names it in its instructions.
+
 ### Changed — may break callers
+
+- **Depends on `@leemour/cli-core` 0.11.0.** A CLI that uses this package moves to cli-core 0.11.0 in
+  the same change, or pins one copy with a pnpm override.
 
 - **`BotMessenger.connect(command, token, { stop, events })`** (P8): the bot client gets the run's
   events, so `bot auth show --trace` prints each request and the run record counts it. The third
@@ -334,7 +350,6 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   Each rebuild of a chat is written under its own build number and made current at once, so a big
   chat's rebuild never holds the write lock for long.
   `messages.mentions` keeps whom a message mentions by id, where the messenger says so.
-
 
 ## 0.80.0 — 01.10.2026
 
@@ -845,7 +860,6 @@ they now fail as unknown commands or options.
 
 - **`config show` says `transcribeWith` is `auto` when unset**, not `null`.
 
-
 ## 0.46.0 — 30.09.2026
 
 ### Added
@@ -894,7 +908,6 @@ they now fail as unknown commands or options.
   `--allow-any-file`, the MCP tool never does. The journal records each attachment's kind and size,
   never its name. An adapter receives them as `SendOptions.attachments` (`Upload`: kind, name, bytes);
   `readUpload` is exported from `./sends`.
-
 
 ## 0.42.0 — 29.09.2026
 
@@ -993,7 +1006,6 @@ they now fail as unknown commands or options.
   loads every agent in `~/Library/LaunchAgents` at login, so the file is written disabled; `server start`
   enables it and `server stop` disables it again.
 - **`serve`'s log no longer says "Ctrl-C to stop"** — it says which profile it listens for.
-
 
 ## 0.39.0 — 29.09.2026
 
