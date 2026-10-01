@@ -72,8 +72,10 @@ racing is safe: `bin/release` refuses a version already on npm, and the second r
 and retries. To try an unreleased cli-messaging in tg first: `bin/try-messaging` in the lane's tg
 worktree, never a committed `file:` path.
 
-**Store migrations are announced here before they are written.** The next free number is **13**
-(12 is phase 2's word index — [`../storage/plans/phase-2.md`](../storage/plans/phase-2.md) item 1,
+**Store migrations are announced here before they are written.** The next free number is **14**
+(13 is phase 3's conversation tables — [`../storage/plans/phase-3.md`](../storage/plans/phase-3.md) item 1,
+announced 2026-10-01, **merged only after 12 is on `main`**: the runner skips every version at or below the
+file's, so a file already at 13 would never get 12 (`src/store/migrations.ts:314`); 12 is phase 2's word index — [`../storage/plans/phase-2.md`](../storage/plans/phase-2.md) item 1,
 announced 2026-10-01; 7–11 are the tables max-cli's personal data needs — chat members, sync state, fetch leases, contact
 recency, transcripts — [`../storage/plans/phase-1-max-tables.md`](../storage/plans/phase-1-max-tables.md),
 announced 2026-09-30; 6 is the storage work's phase 1 — Drizzle and the forced upgrade, released in
