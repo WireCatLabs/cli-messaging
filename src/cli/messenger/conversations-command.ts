@@ -184,6 +184,81 @@ export const conversationsCommand = (messenger: Messenger): Command => {
       else context.renderer.result(cleared)
     })
 
+  const embed = new Command("embed")
+    .description(
+      "compute a vector for each chunk of a chat's conversations, on this machine, for search by meaning; " +
+        "resumes where it stopped",
+    )
+    .requiredOption("--chat <chat>", messenger.chatArgument)
+    .option("--model <model>", "a model id from `models text list` (default: e5-small)")
+    .option(
+      "--workers <n>",
+      "sessions in parallel, each with its own copy of the model (~0.7 GB each)",
+      positiveCount("--workers"),
+    )
+    .option("--threads <n>", "threads in all (default: min(8, cores))", positiveCount("--threads"))
+    .action(async function (this: Command) {
+      const { chat, model, workers, threads } = this.opts<{
+        chat: string
+        model?: string
+        workers?: number
+        threads?: number
+      }>()
+      const context = messengerContext(this, messenger)
+      writable(context, messenger.app.command, EMBED_KEY)
+      const done = await context.withServices(async (services) => {
+        const status = await services.embeddings.status(chat, model)
+        context.renderer.note(
+          `${status.left} of ${status.chunks} chunks to embed with ${status.model}, ${minutes(status.estimateSeconds)} on one session`,
+        )
+        return services.embeddings.embed(chat, {
+          ...(model ? { model } : {}),
+          ...(workers ? { workers } : {}),
+          ...(threads ? { threads } : {}),
+          progress: (embedded, left) => context.renderer.note(`${embedded} embedded, ${left} left`),
+        })
+      })
+      if (context.format === "pretty") {
+        context.streams.data(
+          `${done.embedded} chunks embedded with ${done.model}${done.skipped ? `, ${done.skipped} changed since the build — run \`conversations build\` again` : ""}\n`,
+        )
+      } else context.renderer.result(done)
+    })
+
+  embed
+    .command("status")
+    .description(
+      "how many chunks of a chat have a vector of the model, how many are left, and about how long they take",
+    )
+    .requiredOption("--chat <chat>", messenger.chatArgument)
+    .option("--model <model>", "a model id from `models text list` (default: e5-small)")
+    .action(async function (this: Command) {
+      const { chat, model } = this.opts<{ chat: string; model?: string }>()
+      const context = messengerContext(this, messenger)
+      const status = await context.withServices((services) => services.embeddings.status(chat, model))
+      if (context.format === "pretty") {
+        context.streams.data(
+          `${status.embedded} of ${status.chunks} chunks embedded with ${status.model}; ${status.left} left, ${minutes(status.estimateSeconds)}\n`,
+        )
+      } else context.renderer.result(status)
+    })
+
+  embed
+    .command("clear")
+    .description("drop a chat's vectors, or only one model's; messages and conversations are never touched")
+    .requiredOption("--chat <chat>", messenger.chatArgument)
+    .option("--model <model>", "only this model's vectors")
+    .action(async function (this: Command) {
+      const { chat, model } = this.opts<{ chat: string; model?: string }>()
+      const context = messengerContext(this, messenger)
+      writable(context, messenger.app.command, EMBED_KEY)
+      const cleared = await context.withServices((services) => services.embeddings.clear(chat, model))
+      if (context.format === "pretty") context.streams.data(`${cleared.cleared} vectors dropped\n`)
+      else context.renderer.result(cleared)
+    })
+
+  conversations.addCommand(embed)
+
   return conversations
 }
 
@@ -191,20 +266,23 @@ export const conversationsCommand = (messenger: Messenger): Command => {
  * `deny` already stopped the command (`messengerContext`); `readonly` stops this write too. There is no
  * question to put to the owner here, so `ask` refuses rather than writing unasked.
  */
-const writable = (context: MessengerContext, command: string) => {
+const writable = (context: MessengerContext, command: string, permission = LINKS_KEY) => {
   const { settings } = context
-  const { level, key } = levelFor(settings.permissions, LINKS_KEY)
+  const { level, key } = levelFor(settings.permissions, permission)
   if (level === "allow") return
   throw new CliError(
     level === "ask" ? "confirmation_required" : "permission_error",
-    `profile ${settings.profile} does not let ${LINKS_KEY} write (permissions.${key} is ${level}, from the ` +
+    `profile ${settings.profile} does not let ${permission} write (permissions.${key} is ${level}, from the ` +
       `${settings.permissionSources[key ?? ""] ?? "default"}); to allow it: ` +
-      `${command} ${settings.profile} config set permissions.${LINKS_KEY} allow`,
-    { permission: LINKS_KEY },
+      `${command} ${settings.profile} config set permissions.${permission} allow`,
+    { permission },
   )
 }
 
 const LINKS_KEY = "conversations.links"
+const EMBED_KEY = "conversations.embed"
+
+const minutes = (seconds: number) => (seconds < 90 ? `about ${seconds} s` : `about ${Math.round(seconds / 60)} min`)
 
 /** The agent's JSON, shaped enough for the store to check the rest against the batch. */
 const answerOf = (text: string): AgentAnswer => {

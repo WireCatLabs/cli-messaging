@@ -23,6 +23,13 @@ export interface Chunk {
 
 const lineOf = ({ sender, text }: ChunkLine) => (sender ? `${sender}: ${text}` : text)
 
+/** A chunk's text from its messages, as the build cut it: what is hashed and what the model reads. */
+export const chunkTextOf = (lines: ChunkLine[]): string =>
+  lines
+    .filter(({ text }) => text.trim())
+    .map(lineOf)
+    .join("\n")
+
 export const chunkHash = (text: string): string => createHash("sha256").update(text).digest("hex")
 
 /**
@@ -32,26 +39,23 @@ export const chunkHash = (text: string): string => createHash("sha256").update(t
  */
 export const cutChunks = (members: ChunkLine[], limit = CHUNK_CHARS): Chunk[] => {
   const chunks: Chunk[] = []
-  let lines: string[] = []
-  let first: Id | undefined
-  let last: Id | undefined
+  let open: ChunkLine[] = []
   let size = 0
   const close = () => {
-    if (first === undefined || last === undefined) return
-    const text = lines.join("\n")
-    chunks.push({ firstId: first, lastId: last, text, hash: chunkHash(text) })
-    lines = []
-    first = undefined
+    const first = open[0]
+    const last = open.at(-1)
+    if (!first || !last) return
+    const text = chunkTextOf(open)
+    chunks.push({ firstId: first.id, lastId: last.id, text, hash: chunkHash(text) })
+    open = []
     size = 0
   }
   for (const member of members) {
     if (!member.text.trim()) continue
-    const line = lineOf(member)
-    if (first !== undefined && size + 1 + line.length > limit) close()
-    lines.push(line)
-    size += (lines.length > 1 ? 1 : 0) + line.length
-    first ??= member.id
-    last = member.id
+    const length = lineOf(member).length
+    if (open.length > 0 && size + 1 + length > limit) close()
+    size += (open.length > 0 ? 1 : 0) + length
+    open.push(member)
   }
   close()
   return chunks

@@ -17,6 +17,8 @@ export interface TextModel {
   dims: number
   /** What the model was trained on; a longer text is cut. */
   maxTokens: number
+  /** About how many ~300-token chunks a second one session embeds on 8 threads, for the estimate. */
+  chunksPerSecond: number
   /** How the model's output becomes one vector. */
   pooling: "mean" | "sentence_embedding"
   /** Prepended to a search and to a stored chunk: the model was trained with them. */
@@ -41,6 +43,7 @@ export const TEXT_MODELS: TextModel[] = [
     licence: "MIT",
     dims: 384,
     maxTokens: 512,
+    chunksPerSecond: 15,
     pooling: "mean",
     prefix: { query: "query: ", passage: "passage: " },
     onnx: "onnx/model_quantized.onnx",
@@ -73,6 +76,7 @@ export const TEXT_MODELS: TextModel[] = [
     terms: "https://ai.google.dev/gemma/terms",
     dims: 768,
     maxTokens: 2048,
+    chunksPerSecond: 2,
     pooling: "sentence_embedding",
     prefix: { query: "task: search result | query: ", passage: "title: none | text: " },
     onnx: "onnx/model_q4.onnx",
