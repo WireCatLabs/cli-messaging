@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.96.0 — 01.10.2026
+
 ### Added
 
 - **`<cli> skill show link-conversations`** prints the shared skill that walks the user's own agent
