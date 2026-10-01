@@ -746,6 +746,30 @@ describe("the shared read commands", () => {
     expect(readonly.stderr.join("\n")).toContain("permissions.messages is readonly")
   })
 
+  it("**refuses a denied read before connecting**, and leaves the rest readable", async () => {
+    const root = mkdtempSync(join(tmpdir(), "messenger-"))
+    const env = { CHAT_STATE_DIR: join(root, "state"), CHAT_CONFIG_DIR: join(root, "config") }
+    mkdirSync(env.CHAT_CONFIG_DIR, { recursive: true })
+    writeFileSync(
+      join(env.CHAT_CONFIG_DIR, "config.json"),
+      JSON.stringify({ profiles: { default: { permissions: { messages: "deny" } } } }),
+    )
+    let connected = 0
+    const counting = async () => {
+      connected += 1
+      return fake
+    }
+
+    const listed = await call(["messages", "list", "Book"], counting, env)
+    const exported = await call(["store", "export", "Book"], counting, env)
+    const chats = await call(["chats", "list", "--json"], counting, env)
+
+    expect([listed.code, exported.code]).toEqual([5, 5])
+    expect(listed.stderr.join("\n")).toContain("permissions.messages is deny")
+    expect(chats.code).toBe(0)
+    expect(connected).toBe(1)
+  })
+
   it("**show a poll with its answer ids, vote by id and take it back**, close it as an edit, create one as a message", async () => {
     const root = mkdtempSync(join(tmpdir(), "messenger-"))
     const env = { CHAT_STATE_DIR: join(root, "state"), CHAT_CONFIG_DIR: join(root, "config") }

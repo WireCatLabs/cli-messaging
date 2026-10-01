@@ -178,3 +178,38 @@ export const keyForWrite = (kind: SendKind, action?: string): PermissionKey => {
   }
   return KIND_KEYS[kind]
 }
+
+/** Commands that look after the tool and its files and never show a message: no level stops them. */
+const HOUSEKEEPING = new Set([
+  "config",
+  "session",
+  "doctor",
+  "commands",
+  "complete",
+  "upgrade",
+  "skill",
+  "models",
+  "server",
+  "runs",
+  "sends",
+  "recipients",
+  "mcp",
+])
+
+const STORE_MAINTENANCE = new Set(["info", "check", "migrate", "backup", "restore"])
+
+/** Commands outside `messages` that print what people wrote, so `deny messages` reaches them too. */
+const SHOW_MESSAGES = new Set(["inbox", "review", "watch", "serve", "store"])
+
+/**
+ * The key a command path is checked against: `null` for housekeeping, which no level stops, and
+ * `undefined` for a path this package does not know — a CLI's own command, which its CLI maps.
+ */
+export const keyForCommand = (path: readonly string[]): PermissionKey | null | undefined => {
+  const [top, next] = path
+  if (top === undefined || HOUSEKEEPING.has(top)) return null
+  if (top === "store" && next !== undefined && STORE_MAINTENANCE.has(next)) return null
+  if (SHOW_MESSAGES.has(top)) return "messages"
+  if ((RESOURCES as readonly string[]).includes(top)) return path.join(".")
+  return undefined
+}

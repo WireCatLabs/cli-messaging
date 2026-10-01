@@ -2,6 +2,7 @@ import { CliError } from "@leemour/cli-core"
 import type { Command } from "commander"
 import type { Chat, Id, Provider } from "../../domain/models.js"
 import { guardFor, type SendGuard } from "../../sends/guard.js"
+import { keyForCommand, levelFor } from "../../sends/permissions.js"
 import { OFFLINE, type Override, type ServiceDeps, type Services, servicesFor } from "../../services/index.js"
 import { type AccountKey, type MessageStore, openStore } from "../../store/store.js"
 import type { AppIdentity } from "../app.js"
@@ -108,10 +109,32 @@ export const connected = (
   }
 }
 
+/** The words of a command below the program, `["messages", "list"]` — the profile word is not one of them. */
+const pathOf = (command: Command): string[] => {
+  const words: string[] = []
+  for (let at: Command | null = command; at?.parent; at = at.parent) words.unshift(at.name())
+  return words
+}
+
+/** `deny` stops a read too, before anything connects: what the profile may not see is never fetched. */
+const refuseDenied = (command: Command, settings: Settings) => {
+  const key = keyForCommand(pathOf(command))
+  if (!key) return
+  const { level, key: named } = levelFor(settings.permissions, key)
+  if (level !== "deny") return
+  throw new CliError(
+    "permission_error",
+    `profile ${settings.profile} denies ${key} (permissions.${named} is deny, from the ` +
+      `${settings.permissionSources[named ?? ""] ?? "default"})`,
+    { permission: key },
+  )
+}
+
 export const messengerContext = (command: Command, messenger: Messenger): MessengerContext => {
   const { app, provider } = messenger
   const base = baseContext(command, messenger.resolveSettings)
   const { profile } = base.settings
+  refuseDenied(command, base.settings)
   const guard =
     messenger.guard?.(command, base.settings, base.renderer.warn) ??
     guardFor(app, base.settings, base.renderer.warn, base.env, terminalAsker(command))
