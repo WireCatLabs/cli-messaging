@@ -19,7 +19,7 @@
       "meaning": "send a --file even from a hidden folder, ~/.ssh or the tool's own folders"
     },
     "--allow-dangerous": {
-      "meaning": "do what a rule at consent level flag asks: delete messages, remove people"
+      "meaning": "go ahead without the question an ask level puts before a deletion"
     },
     "--allow-delete": {
       "meaning": "offer the tool that deletes messages for you only; it cannot be undone"
@@ -28,7 +28,8 @@
       "meaning": "offer the tool that marks a chat read; the other person sees it"
     },
     "--allow-moderate": {
-      "meaning": "offer the tool that applies a group's rules — delete others' messages, remove people"
+      "meaning": "offer the tool that applies a group's rules — delete others' messages, remove people",
+      "note": "max only, until permissions (P7) replace the MCP flags"
     },
     "--allow-send": {
       "meaning": "offer the send tool; without it the server can only read"
@@ -349,7 +350,7 @@
       "note": "max spells the value `<path>`; rule 6 says `<file>`"
     },
     "--yes": {
-      "meaning": "yes, do it — for an action that cannot be undone"
+      "meaning": "go ahead without the question an ask level puts before a write"
     }
   },
   "globalOptions": {
@@ -792,27 +793,43 @@
     "mcp": {
       "state": "both",
       "options": {
+        "--allow-dangerous": {
+          "state": "planned",
+          "by": "P7"
+        },
         "--allow-delete": "both",
         "--allow-mark-read": "both",
         "--allow-moderate": {
           "state": "planned",
-          "by": "P2"
+          "by": "P7"
         },
         "--allow-send": "both",
-        "--confirm-send": "both"
+        "--confirm-send": "both",
+        "--yes": {
+          "state": "planned",
+          "by": "P7"
+        }
       }
     },
     "mcp config": {
       "state": "both",
       "options": {
+        "--allow-dangerous": {
+          "state": "planned",
+          "by": "P7"
+        },
         "--allow-delete": "both",
         "--allow-mark-read": "both",
         "--allow-moderate": {
           "state": "planned",
-          "by": "P2"
+          "by": "P7"
         },
         "--allow-send": "both",
-        "--confirm-send": "both"
+        "--confirm-send": "both",
+        "--yes": {
+          "state": "planned",
+          "by": "P7"
+        }
       }
     },
     "messages": {

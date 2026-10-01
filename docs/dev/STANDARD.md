@@ -77,10 +77,10 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--all` |  | every row, no paging |  | `chats list`, `chats members list` (planned), `contacts list`, `inbox` (planned), `messages download` (planned), `review` (planned) |
 | `--all-can-pin` | `<on\|off>` | every member may pin messages |  | `chats update` (planned) |
 | `--allow-any-file` |  | send a --file even from a hidden folder, ~/.ssh or the tool's own folders |  | `messages send` |
-| `--allow-dangerous` |  | do what a rule at consent level flag asks: delete messages, remove people |  | `chats check` (planned), `messages delete` |
+| `--allow-dangerous` |  | go ahead without the question an ask level puts before a deletion |  | `chats check` (planned), `mcp` (planned), `mcp config` (planned), `messages delete` |
 | `--allow-delete` |  | offer the tool that deletes messages for you only; it cannot be undone |  | `mcp`, `mcp config` |
 | `--allow-mark-read` |  | offer the tool that marks a chat read; the other person sees it |  | `mcp`, `mcp config` |
-| `--allow-moderate` |  | offer the tool that applies a group's rules — delete others' messages, remove people |  | `mcp` (planned), `mcp config` (planned) |
+| `--allow-moderate` |  | offer the tool that applies a group's rules — delete others' messages, remove people. **max only, until permissions (P7) replace the MCP flags** |  | `mcp` (planned), `mcp config` (planned) |
 | `--allow-send` |  | offer the send tool; without it the server can only read |  | `mcp`, `mcp config` |
 | `--anonymous` |  | nobody sees who voted for what |  | `polls create` |
 | `--app` | `<how>` | the first time only: how to get this profile's app from my.telegram.org | `browser` | `session start` (tg-only) |
@@ -167,7 +167,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--verbose` |  | more detail in what is shown: -v ids, -vv everything known | `0` | every command |
 | `--version` |  | print the version number |  | every command |
 | `--voice` | `<file>` | send an Ogg Opus file as a voice message, alone, with no text. **max spells the value `<path>`; rule 6 says `<file>`** |  | `messages send` (planned) |
-| `--yes` |  | yes, do it — for an action that cannot be undone |  | `account sessions end` (planned) |
+| `--yes` |  | go ahead without the question an ask level puts before a write |  | `account sessions end` (planned), `mcp` (planned), `mcp config` (planned) |
 
 <!-- end of the option catalogue -->
 
@@ -208,6 +208,52 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 5. **A shared command answers the same shape in both tools.** What only one messenger knows goes
    under `providerMetadata`, never as a top-level field one tool has and the other lacks.
 
+## Permissions
+
+What a profile may do is one setting, `permissions`: a JSON object whose keys are command paths and
+whose values are levels. It holds for a command the owner types and for an agent over MCP alike.
+
+```json
+{ "permissions": { "messages": "allow", "messages.delete": "ask", "contacts": "readonly" } }
+```
+
+1. **Four levels.**
+   - `deny` — nothing, not even reading: the command answers `permission_error` (5) before it
+     connects, and an agent is not offered its tool.
+   - `readonly` — reads work, writes answer `permission_error`. On a key that only writes
+     (`messages.delete`) it is `deny`.
+   - `ask` — in a terminal, a y/N question that shows what will change, default no. A flag skips
+     it: `--allow-dangerous` for a deletion, `--yes` for every other write. With no terminal and
+     no flag the command answers `confirmation_required` (7). Over MCP, a form the owner answers.
+   - `allow` — goes ahead and never asks.
+2. **A key is a command path**: `messages`, `messages.delete`, `chats.members.remove`,
+   `account.sessions.end`. **The most specific key wins**; there is no wildcard. Every command
+   maps to exactly one key, checked by a test over `commands --json`:
+   - a command that shows messages from outside `messages` counts as `messages` — `inbox`,
+     `review`, `watch`, `serve`, `store fetch|export|search`, the MCP resources and prompts;
+   - housekeeping is never gated — `config`, `session`, `doctor`, `commands`, `complete`,
+     `upgrade`, `skill`, `models`, `server`, `runs`, `sends`, `recipients`, `mcp`, and `store`'s
+     own maintenance.
+3. **The defaults allow almost everything**, so the tool works without questions. Only what cannot
+   be undone asks:
+
+   ```json
+   { "messages.delete": "ask", "account.sessions.end": "ask" }
+   ```
+
+   A default is never tightened without the owner's word.
+4. **Limits no level lifts**: an agent never deletes for everyone and never ends other sessions.
+5. **A group's moderation rules use the same four levels** for each kind of action (delete,
+   remove, accept, decline), `readonly` meaning "report it, do nothing". A rule's level can only be
+   as loose as the profile's level for `chats.moderate`.
+6. **The settings it replaces** — `readOnly`, `allow`, max's `mcpTools`, and the moderation words
+   `forbid`, `flag`, `confirm` — are translated once by `config migrate`, then refused with a
+   message naming the new key. The MCP flags it replaces refuse for one release, naming the
+   setting, then go.
+
+What it does not decide stays separate: the recipient list (which chats), `sendsPerHour` (how
+many), `--allow-any-file` (which files).
+
 ## MCP
 
 1. **A tool is named `<tool>_<resource>_<verb>`** after its command: `max_store_export`,
@@ -216,8 +262,10 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
    `send_id`, `--since` is `since`.
 3. **Every tool that only reads says `readOnlyHint: true`**; every tool that writes says what it
    destroys with `destructiveHint`.
-4. **One permission flag per risk**, off by default: `--allow-send`, `--allow-mark-read`,
-   `--allow-delete`, `--allow-moderate`. A tool that needs one is not offered without it.
+4. **A tool is offered by its command's [permission](#permissions)**, never by a flag of its own:
+   `deny` hides it, `readonly` hides the writing ones, `ask` shows the owner a form before it acts
+   unless `mcp` was started with the command's skip flag, `allow` acts. The `--allow-send`,
+   `--allow-mark-read`, `--allow-delete` and `--confirm-send` flags go.
 5. **A tool and its command run the same service method**, so they answer the same result and the
    same error for the same input.
 
