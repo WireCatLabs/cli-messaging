@@ -1,0 +1,118 @@
+{
+ "passages": [
+  "Билеты на поезд до Казани я взял на пятницу, отправление в 7 утра.",
+  "Our flight to Lisbon got cancelled, we'll rebook for Monday.",
+  "Я забыл паспорт дома, придётся вернуться перед аэропортом.",
+  "The hotel in Porto has free parking but no breakfast.",
+  "У ребёнка температура 38, вызвали врача на дом.",
+  "My dentist appointment moved to Thursday at 3 pm.",
+  "Купила витамин D, аптека на углу закрывается в девять.",
+  "I twisted my ankle while running, it's swollen.",
+  "Перевёл тебе 5000 рублей за концерт, проверь.",
+  "The landlord raised the rent by 10 percent starting next month.",
+  "Не забудь оплатить интернет до 25-го, иначе отключат.",
+  "I split the dinner bill, you owe me 23 euros.",
+  "Созвон с заказчиком перенесли на среду, они не успели посмотреть макеты.",
+  "The deploy failed because the database migration timed out.",
+  "Мне предложили новую работу в Валенсии, думаю соглашаться.",
+  "Can you review my pull request before lunch?",
+  "Кот опять разбил вазу на кухне.",
+  "The washing machine is leaking water again, I called a plumber.",
+  "Соседи сверху делают ремонт с восьми утра, сверлят без остановки.",
+  "We adopted a puppy from the shelter, her name is Luna.",
+  "Испекла пирог с яблоками по бабушкиному рецепту.",
+  "Let's order sushi tonight, I don't feel like cooking.",
+  "В магазине закончилось молоко, купи по дороге домой.",
+  "The new Georgian restaurant downtown has amazing khachapuri.",
+  "День рождения Маши в субботу, нужно купить подарок.",
+  "The concert starts at 8, doors open at 7.",
+  "Свадьба Димы и Оли будет в июле на море.",
+  "Movie night at my place on Friday, bring snacks.",
+  "Машину эвакуировали, потому что я встал под знаком.",
+  "The car needs new winter tyres before November.",
+  "Заправился, бензин опять подорожал.",
+  "I got a speeding ticket on the highway.",
+  "Завтра обещают ливень, возьми зонт.",
+  "It's so hot today, 40 degrees in Valencia.",
+  "Снег выпал за ночь, дороги не чистят.",
+  "The storm knocked out the power in our neighborhood.",
+  "Телефон упал в воду и больше не включается.",
+  "My laptop battery drains in two hours now.",
+  "Забыл пароль от почты, не могу восстановить доступ.",
+  "The wifi router keeps disconnecting every few minutes."
+ ],
+ "queries": [
+  [
+   "рейс в Португалию отменили",
+   1
+  ],
+  [
+   "kid has a fever, the doctor is coming",
+   4
+  ],
+  [
+   "сколько я должен за ужин",
+   11
+  ],
+  [
+   "deadline to pay for home internet",
+   10
+  ],
+  [
+   "выкатка упала, миграция базы зависла",
+   13
+  ],
+  [
+   "the cat broke something",
+   16
+  ],
+  [
+   "neighbours are drilling in the morning",
+   18
+  ],
+  [
+   "нужно поменять резину на зимнюю",
+   29
+  ],
+  [
+   "смартфон утонул и не работает",
+   36
+  ],
+  [
+   "rent is going up next month",
+   9
+  ]
+ ],
+ "filler": [
+  "ок",
+  "ага, понял",
+  "lol",
+  "see you tomorrow",
+  "спасибо!",
+  "haha yes",
+  "я перезвоню позже",
+  "sounds good to me",
+  "а ты где сейчас?",
+  "just woke up",
+  "не, я пас",
+  "what time works for you?",
+  "скинь фотку",
+  "ну такое",
+  "I'm on my way",
+  "давай завтра обсудим",
+  "no worries",
+  "кстати, ты видел новости?",
+  "brb",
+  "спокойной ночи",
+  "ладно, договорились",
+  "thanks, will check",
+  "хм, странно",
+  "sure, why not",
+  "позвони как освободишься",
+  "on the bus now",
+  "👍 ок",
+  "да, я тоже так думаю",
+  "good morning!",
+  "потом расскажу"
+ ]
+}

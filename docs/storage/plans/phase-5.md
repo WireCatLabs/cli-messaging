@@ -31,13 +31,15 @@ Nothing leaves the machine. No API key, no network except the one-time model dow
 - **Phase 2's search service** ([`phase-2.md`](phase-2.md) item 6) for the hybrid ranking only (item 6
   below). Everything before item 6 works without it. Phase 2's files (`src/store/sqlite/search*`,
   `words.ts`, `src/search/`) are not edited here.
-- **Store version 14**, taken in [the lanes plan](../../plans/2026-09-29-parity-lanes.md) by a PR of its
-  own before item 2 (E8).
+- **The next free store version — 14 today** — taken in [the lanes plan](../../plans/2026-09-29-parity-lanes.md)
+  by a PR of its own before item 2, after this plan is approved (E8).
 
 ## 3. What we know
 
 Measured 2026-10-01/02 on the laptop the speech models were measured on (Ryzen AI 9 HX 470, 12 cores),
-Node 24.19 and Bun 1.3.14, in a scratch folder, with synthetic data only.
+Node 24.19 and Bun 1.3.14, with synthetic data only. Full numbers, errors, scripts and raw results:
+[`../research/2026-10-02-embeddings.md`](../research/2026-10-02-embeddings.md) and
+[`../research/2026-10-02-vectors.md`](../research/2026-10-02-vectors.md).
 
 **Running a model.** **Verified:** `@huggingface/transformers` 4.3 always loads native code — its Node
 build imports `onnxruntime-node` (288 MB of binaries for six platforms) and `sharp` at the top; its WASM
@@ -61,7 +63,8 @@ on 4 threads; "top-1" is 10 Russian and English queries against 40 passages, as 
 
 MiniLM was trained on 128 tokens, which its score on chunks shows. The Gemma terms are not an open licence:
 use restrictions passed on to every recipient, a copy of the terms with the model, and Google's right to
-restrict use ([terms](https://ai.google.dev/gemma/terms)). Each number is one run, ±20%.
+restrict use ([terms](https://ai.google.dev/gemma/terms)). Each number is one run, ±20%, and ten queries
+cannot tell 5 from 7: the top-1 column rules out MiniLM and little else.
 
 **Storing and scanning vectors.** **Verified:** sqlite-vec 0.1.9 (pre-v1, "expect breaking changes") loads
 on official Node 22 and 24 (`allowExtension`) and Bun on Linux; on musl only built by us. A plain table of
@@ -79,8 +82,9 @@ same speed. macOS and arm64 were not measured.
 
 **What a chat costs (inferred).** Phase 3's scale run made 36,612 conversations of 100,000 synthetic messages
 ([`bench/disentangle/README.md`](../../../bench/disentangle/README.md)), most of one or two messages. At
-~10 chunks a second that chat embeds in about an hour; at Gemma's ~1.5, about seven. A 5,000-message group
-takes minutes with either.
+~10 chunks a second that chat embeds in at most about an hour; at Gemma's ~1.5, at most about seven. Both
+are upper bounds: the speed was measured on 300-token chunks, and most of those conversations are one or
+two short messages. A 5,000-message group takes minutes with either.
 
 ## 4. Decisions made here
 
@@ -111,18 +115,27 @@ top `--limit`; `serve` and `mcp` keep what they read in memory between queries. 
 Node and Bun on Linux load from outside our SQLite. int8 storage and sqlite-vec stay open for when a real
 archive passes ~100k chunks.
 
-**E4 · The runtime is downloaded with the model, not installed with the package.** `onnxruntime-web`'s
-three runtime files (about 15 MB) go into `~/.cache/cli-common/models/` beside the model, pinned by sha256
-like every model file (`src/speech/install.ts:67`); `@huggingface/tokenizers` (0.4 MB) is a plain
-dependency. Installing `onnxruntime-web` as a dependency would add 145 MB to every tg and max install
-whether anyone embeds or not — what the owner asked to avoid. **Inferred:** loading the runtime from that
-folder through `import()` of a file URL and `ort.env.wasm.wasmPaths`; item 1 proves it on both runtimes,
-and if it fails the fallback is a dependency, said in the PR.
+**E4 · Where the runtime comes from** (**NEED-519**). `onnxruntime-web` as a dependency adds 145 MB to every
+tg and max install, used or not, of which a run opens about 15 MB — what the owner asked to avoid
+(NEED-412). Downloading those 15 MB into `~/.cache/cli-common/models/` with the model would avoid it, but
+they are JavaScript, not data: the process that holds the owner's session would `import()` code from a
+folder any program of the user can write to, and an installed model is checked today by **size only**
+(`isInstalled`, `src/speech/install.ts:52`), not by its sha256. Three ways:
+
+- **A** a small package of our own, `@leemour/cli-messaging-onnx`, holding only the three runtime files
+  (~15 MB, as `sherpa-onnx`), published like `@leemour/cli-messaging-sqlite` (`packages/sqlite`); nothing
+  is imported from the cache, only the model weights (data) come from there;
+- **B** download the runtime with the model and check its sha256 on every load before `import()` (~15 MB
+  hashed, tens of ms); simplest, but code still comes from a writable folder;
+- **C** `onnxruntime-web` as a plain dependency: 145 MB in every install.
+
+`@huggingface/tokenizers` (0.4 MB, pure JS) is a plain dependency in all three.
 
 **E5 · Models: a short list, like speech.** `src/embeddings/models.ts` lists them, most suitable first, each
 with its input prefixes (Gemma's `task: search result | query: `, e5's `query: ` and `passage: `), its
 token limit and its files. The default is **NEED-517**. Threads: `min(4, cores / 2)`, set explicitly,
-since Bun otherwise takes 1.
+since Bun otherwise takes 1. Granite's model card is read for a prefix before it is listed; the
+measurement used none.
 
 **E6 · Opt-in per chat, run by the user.** `conversations embed --chat <chat> [--model <id>]` embeds only
 a chat whose conversations are built, prints how many chunks are left and the estimate first (on stderr),
@@ -154,12 +167,14 @@ mode stdout is one JSON value; progress and the estimate go to stderr.
 ## 5. Work items
 
 1. **Run a model from the shared folder** — `src/embeddings/`: the model list (E5), download into the shared
-   folder with sha256 (reusing `install`), the runtime loaded from there (E4), tokenizer, one function
+   folder with sha256 (reusing `install`), the runtime as NEED-519 decides (E4), tokenizer, one function
    `embed(texts) → Float32Array[]`. Proved on Node and Bun in CI with a tiny test model; `models text
    list|download`.
 2. **Version 14 and the chunks** — the migration (E8), `conversation_chunks` written by
    `replaceConversations`, the chunk cutter (E1) as a pure function with tests.
-3. **`conversations embed`** — the batches and resume (E6), the status, `--clear`, `store check` counting
+3. **`conversations embed`** — the `conversations.embed` key in `keyForCommand` (`src/sends/permissions.ts`,
+   beside phase 4's `conversations.links`; without it the path is checked as `messages`), the batches and
+   resume (E6), the status, `--clear`, `store check` counting
    vectors no chunk points at.
 4. **`conversations search`** — the scan (E3, E7), output and `--json`, MCP `conversations_search`, the
    in-memory copy in `serve` and `mcp`.
@@ -167,7 +182,7 @@ mode stdout is one JSON value; progress and the estimate go to stderr.
    are keyed by hash), `docs/commands.md`, one line in the shared skills; tg-cli and max-cli bump.
 6. **Hybrid** (E9), after phase 2 item 6 — RRF over the two lists; the IRC bench's queries cannot score it,
    so a small hand-written query set over a synthetic chat.
-7. **Measure** — `bench/embeddings/`: embed time and search time on the `bench/search` corpus at 100k
+7. **Measure** — `bench/embeddings/` (today the research scripts of §3): embed time and search time on the `bench/search` corpus at 100k
    messages through the real commands, Node and Bun, recorded in its README.
 
 ## 6. Test plan
@@ -187,17 +202,29 @@ mode stdout is one JSON value; progress and the estimate go to stderr.
 ## 7. Questions for the owner
 
 1. **NEED-517 · Which model does `conversations embed` use by default?**
-   - Now: no model is chosen. Granite 97M is open (Apache-2.0), 123 MB and ~10 chunks a second, but found
-     the right passage in 5 of 10 chat-sized chunks. EmbeddingGemma 4-bit found 10 of 10, is 217 MB, runs
-     ~1.5 chunks a second (a 100,000-message chat: ~7 hours against ~1), and comes under Google's Gemma
-     terms, which pass use restrictions on to users and let Google restrict use.
-   - Options: **A** Granite by default, Gemma in the list for whoever accepts its terms · **B** Gemma by
-     default · **C** Granite only.
-   - Recommended: **A** — an open model by default, the better one a `--model` away, and the list is what
-     the owner asked for.
+   - Now: no model is chosen. All three candidates run on this machine, under Node and Bun:
+     Granite 97M (Apache-2.0, 123 MB, ~10 chunks a second), e5-small (MIT, 135 MB, ~10 a second) and
+     EmbeddingGemma 4-bit (217 MB, ~1.5 a second, Google's Gemma terms: use restrictions passed on to
+     users, Google may restrict use). On chat-sized chunks they found the right passage 5, 7 and 10 times
+     of 10 — ten queries, so Granite against e5 is a tie and Gemma's lead is the only clear one. A
+     100,000-message chat takes at most about an hour with Granite or e5, at most about seven with Gemma.
+   - Options: **A** e5-small by default, Gemma in the list for whoever accepts its terms · **B** Granite by
+     default, Gemma in the list · **C** Gemma by default.
+   - I'd pick: **A** — open, fast, and the better of the two open models on chunks; Gemma a `--model` away.
+     e5's ONNX copy (Xenova) states no licence of its own; the model it converts is MIT.
+   - If you don't answer: the plan builds with A, and the default is one line in `src/embeddings/models.ts`.
 2. **NEED-518 · Keep vectors in a plain table instead of sqlite-vec?**
    - Now: NEED-374 A ruled "SQLite FTS5, sqlite-vec when phase 5 comes". Measured: a plain table scanned in
      JS is as fast as sqlite-vec up to 1M vectors, works on every runtime the store runs on, and needs no
-     extension; sqlite-vec is pre-v1 and needs our own build on musl.
+     extension; sqlite-vec is pre-v1 and needs our own build on Alpine Linux.
    - Options: **A** plain table now, sqlite-vec only if a real archive outgrows it · **B** sqlite-vec now.
-   - Recommended: **A**.
+   - I'd pick: **A** — same speed, no extension to ship per platform.
+   - If you don't answer: item 2 waits; the table's shape depends on it.
+3. **NEED-519 · Where does the model runtime come from?** (E4)
+   - Now: the runtime that runs the models is 145 MB as an npm dependency, of which 15 MB is used. Putting
+     those 15 MB in the shared models folder means running code from a folder any program can change.
+   - Options: **A** our own small package with the 15 MB · **B** downloaded with the model, its sha256
+     checked before every load · **C** the 145 MB dependency.
+   - I'd pick: **A** — the install stays small and no code is loaded from the cache; one more package to
+     publish, as `packages/sqlite` already is.
+   - If you don't answer: item 1 waits; it is the first thing built.
