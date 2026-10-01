@@ -122,7 +122,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--chat` | `<chat>` | a chat, by id or name; repeat it for more. **max's `messages search` takes `<id>` only, since searching never connects to resolve a name; rule 6 says `<chat>` (e8)** |  | `chats folders create`, `conversations batches next`, `conversations batches status`, `conversations build`, `conversations links clear` (planned), `conversations list`, `messages search`, `review` |
 | `--check` |  | say whether a newer version exists, and install nothing. **`bot list --check` names the messenger until both CLIs take the release after 0.98.0, where it says "the messenger"; then this note goes** |  | `bot list`, `upgrade` |
 | `--confirm-send` |  | show the owner every write the MCP server offers, in a form to approve. **max's own `mcp` is worded differently until the permission levels (P7) replace these flags there (e13)** |  | `bot mcp` (planned), `bot mcp config` (planned), `mcp`, `mcp config` |
-| `--context` | `<n>` | messages before and after each hit |  | `messages search` (planned) |
+| `--context` | `<n>` | messages before and after each hit |  | `messages search` |
 | `--defaults` |  | change what every profile gets, rather than this profile |  | `config set`, `config unset` |
 | `--description` | `<text>` | the new about text — of a chat or of your account |  | `account update`, `chats update` |
 | `--dry-run` |  | judge and plan; do nothing |  | `bot chats check` (planned), `chats moderate` (planned) |
@@ -155,7 +155,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--model` | `<id>` | which downloaded speech model hears them; `models audio list` shows them. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | `conversations links clear` (planned), `inbox`, `messages list`, `messages transcribe`, `review` (planned) |
 | `--multiple` |  | people may pick several answers |  | `polls create` |
 | `--new` |  | what arrived since the last check, each message once — for scheduled runs |  | `inbox` |
-| `--newest` |  | newest first instead of best first |  | `bot messages search` (planned), `messages search` (planned) |
+| `--newest` |  | newest first instead of best first |  | `bot messages search` (planned), `messages search` |
 | `--no-ban` |  | remove without banning; by default a removed person cannot come back by the link |  | `bot chats check` (planned) |
 | `--no-preview` |  | no preview card for a link in the text |  | `messages send` |
 | `--no-record` |  | do not keep it, whatever the configuration says |  | every command |
@@ -195,7 +195,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--since` | `<id-or-time>` | from this message id, an ISO 8601 time, or 2h / 1d ago; each command says its default. **becomes `--since-time` everywhere — NEED-485** |  | `bot chats check` (planned), `chats events` (max-only), `inbox` (max-only), `review` (max-only) |
 | `--since-time` | `<time>` | from this ISO 8601 time, or 2h / 1d ago; each command says its default |  | `chats events` (planned), `chats moderate` (planned), `conversations list`, `inbox` (planned), `review` (planned), `store export`, `store fetch` |
 | `--size` | `<n>` | messages to answer per batch, 10–200; 50 by default |  | `conversations batches next`, `conversations batches status` |
-| `--source` | `<messenger>` | every account of this messenger held in the store, or all of them — the same as in: in the query |  | `messages search` (planned) |
+| `--source` | `<messenger>` | every account of this messenger held in the store, or all of them — the same as in: in the query |  | `messages search` |
 | `--text` | `<text>` | the message's new text; - reads stdin |  | `bot callbacks answer` (planned) |
 | `--timeout` | `<duration>` | give up on the whole command after this — 30s, 2m, 500ms |  | every command |
 | `--title` | `<title>` | the new name — of a chat or a folder |  | `bot chats admins add`, `chats folders update`, `chats update` |

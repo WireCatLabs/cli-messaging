@@ -1676,21 +1676,9 @@
       "in": "all",
       "options": {
         "--chat": "all",
-        "--context": {
-          "in": [],
-          "planned": {
-            "max": "each CLI's cli-messaging bump with phase 2",
-            "tg": "each CLI's cli-messaging bump with phase 2"
-          }
-        },
+        "--context": "all",
         "--limit": "all",
-        "--newest": {
-          "in": [],
-          "planned": {
-            "max": "each CLI's cli-messaging bump with phase 2",
-            "tg": "each CLI's cli-messaging bump with phase 2"
-          }
-        },
+        "--newest": "all",
         "--regex": {
           "in": [],
           "planned": {
@@ -1698,13 +1686,7 @@
             "tg": "T6"
           }
         },
-        "--source": {
-          "in": [],
-          "planned": {
-            "max": "each CLI's cli-messaging bump with phase 2",
-            "tg": "each CLI's cli-messaging bump with phase 2"
-          }
-        }
+        "--source": "all"
       }
     },
     "messages send": {
