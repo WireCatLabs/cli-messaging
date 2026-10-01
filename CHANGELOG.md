@@ -50,6 +50,10 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 - **`messages send --at` → `--at-time`**: every option that takes a time names it. No alias. The MCP
   argument stays `at` until the MCP arguments follow the options.
+- **`server status` answers the shape both tools share** (STANDARD, Output rule 6):
+  `since` → `startedAt`, `listening` → `connected`, `listeningSince` → `connectedAt`; new `cliVersion`,
+  `log`, and `stale` for a lock a serve that is gone left behind. `server start` answers `startedAt`
+  and `connectedAt` the same way.
 
 ## 0.87.0 — 01.10.2026
 

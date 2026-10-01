@@ -127,7 +127,7 @@ describe("server without a unit", () => {
 
     expect((await call(["status", "--json"], env, system)).answer).toMatchObject({
       running: true,
-      listening: true,
+      connected: true,
       by: "server",
       unit: { installed: false },
     })
@@ -157,7 +157,7 @@ describe("server without a unit", () => {
     expect(stderr).toContain("not listening yet")
     expect((await call(["status", "--json"], env, machine("linux").system)).answer).toMatchObject({
       running: true,
-      listening: false,
+      connected: false,
     })
   })
 
@@ -180,6 +180,20 @@ describe("server without a unit", () => {
     expect((await call(["logs", "-n", "1", "--json"], env, machine("linux").system)).answer).toMatchObject({
       items: ["no app credentials for profile default"],
     })
+  })
+
+  it("**status names a lock a dead serve left behind**", async () => {
+    const { env } = setup()
+    hold(env, { pid: 2 ** 22 + 12345, startedAt: "2026-09-29T10:00:00.000Z" })
+
+    const json = await call(["status", "--json"], env, machine("linux").system)
+    expect(json.answer).toMatchObject({
+      running: false,
+      cliVersion: "1.0.0",
+      stale: { pid: 2 ** 22 + 12345, startedAt: "2026-09-29T10:00:00.000Z" },
+    })
+    expect(json.answer).toHaveProperty("log", expect.stringMatching(/serve\/default\.log$/))
+    expect((await call(["status"], env, machine("linux").system, true)).text).toContain("is gone and left its lock")
   })
 
   it("**says when the running serve is older than this CLI**, as max-cli's server status does", async () => {

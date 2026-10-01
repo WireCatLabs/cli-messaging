@@ -95,7 +95,7 @@ export const serverCommand = (messenger: Messenger): Command => {
     const { context, system, platform, unit, each, lock, say } = prepared
     const held = lock()
     if (held) {
-      say({ profile: unit.profile, started: false, running: true, pid: held.pid, since: held.startedAt }, [
+      say({ profile: unit.profile, started: false, running: true, pid: held.pid, startedAt: held.startedAt }, [
         `Already serving profile ${unit.profile} since ${clock(held.startedAt)} (PID ${held.pid}).`,
       ])
       return
@@ -119,7 +119,7 @@ export const serverCommand = (messenger: Messenger): Command => {
     for (let look = 0; look < LOOKS; look++) {
       const now = lock()
       if (now?.listeningAt) {
-        say({ profile: unit.profile, started: true, by, pid: now.pid, listeningSince: now.listeningAt }, [
+        say({ profile: unit.profile, started: true, by, pid: now.pid, connectedAt: now.listeningAt }, [
           `Started: serving profile ${unit.profile} (PID ${now.pid}), listening since ${clock(now.listeningAt)}, ${how(by, unit)}.`,
           `Its log: ${app.command} server logs`,
         ])
@@ -196,12 +196,13 @@ export const serverCommand = (messenger: Messenger): Command => {
       const state = isInstalled ? await platform.state(unit) : { loaded: false, active: false }
       const held = lock()
       const by = held ? await byOf(prepared, held) : null
+      const left = held ? undefined : readLock(lockPath(app, unit.profile, context.env))
       // max-cli's server status says the same: an update leaves a running serve on the old code.
-      const stale =
+      const outdated =
         held?.version && held.version !== app.version
           ? `It runs ${app.command} ${held.version}, and ${app.command} is now ${app.version} — \`${app.command} server restart\`.`
           : undefined
-      if (stale && context.format !== "pretty") context.renderer.note(stale)
+      if (outdated && context.format !== "pretty") context.renderer.note(outdated)
       const unitLine = isInstalled
         ? `Unit: ${tilde(unit.path, context.env)} — ${state.detail ?? (state.active ? "active" : "inactive")}.`
         : `No unit installed — \`${app.command} server install\` adds one, for starting under systemd or launchd.`
@@ -212,13 +213,16 @@ export const serverCommand = (messenger: Messenger): Command => {
           ...(held
             ? {
                 pid: held.pid,
-                since: held.startedAt,
-                listening: held.listeningAt !== undefined,
-                ...(held.listeningAt ? { listeningSince: held.listeningAt } : {}),
+                startedAt: held.startedAt,
+                connected: held.listeningAt !== undefined,
+                ...(held.listeningAt ? { connectedAt: held.listeningAt } : {}),
                 by,
               }
             : {}),
           ...(held?.version ? { version: held.version } : {}),
+          cliVersion: app.version,
+          log: isInstalled && unit.path.endsWith(".service") ? `journalctl --user -u ${unit.name}` : unit.logPath,
+          ...(left ? { stale: { pid: left.pid, startedAt: left.startedAt } } : {}),
           unit: { name: unit.name, path: unit.path, installed: isInstalled, ...state },
         },
         [
@@ -227,8 +231,13 @@ export const serverCommand = (messenger: Messenger): Command => {
               ? `Serving profile ${unit.profile} since ${clock(held.startedAt)} (PID ${held.pid}), listening since ${clock(held.listeningAt)}, ${how(by ?? "hand", unit)}.`
               : `Starting profile ${unit.profile} since ${clock(held.startedAt)} (PID ${held.pid}) — not listening yet, ${how(by ?? "hand", unit)}.`
             : `Not serving profile ${unit.profile}.${isInstalled && state.detail?.startsWith("failed") ? ` The unit failed — \`${app.command} server logs\`.` : ""}`,
+          ...(left
+            ? [
+                `A serve that started ${clock(left.startedAt)} (PID ${left.pid}) is gone and left its lock — the next start takes it over.`,
+              ]
+            : []),
           unitLine,
-          ...(stale ? [stale] : []),
+          ...(outdated ? [outdated] : []),
         ],
       )
     })
