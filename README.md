@@ -80,7 +80,7 @@ the same day.
 | Export | Stable |
 |---|---|
 | `.` | the domain types (`Chat`, `Message`, `Contact`, `Page`, …), the message locator |
-| `./cli` | `Messenger`, `MessengerAdapter` and its method groups, `createProgram`, `run`, `messengerContext`, the command factories' names and arguments |
+| `./cli` | `Messenger`, `MessengerAdapter` and its method groups (`MessengerCore` required; `ServerReads` and the rest optional), `createProgram`, `run`, `messengerContext`, the command factories' names and arguments |
 | `./store` | `openStore`, `MessageStore`, `storePath`, and the file format: `minCompatible` rises only in a breaking release |
 | `./sends` | `sendGuard`, `SendJournal`, the journal's line format |
 | `./services` | `servicesFor`, `Override` and the service names |

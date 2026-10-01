@@ -19,6 +19,7 @@ import type {
   ReadState,
   ScheduledMessages,
   Sent,
+  ServerReads,
 } from "../cli/messenger/port.js"
 import type {
   Account,
@@ -41,6 +42,7 @@ import { contractSeed, type Seed } from "./seed.js"
 
 /** Every group of the port, over memory. */
 export type FakeAdapter = MessengerCore &
+  ServerReads &
   ChatReading &
   MessageEditing &
   MessagePins &

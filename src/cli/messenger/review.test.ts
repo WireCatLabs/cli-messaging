@@ -8,7 +8,7 @@ import { reviewIn, unanswered } from "../../services/inbox.js"
 import { run } from "../program.js"
 import { settingsFor } from "../settings.js"
 import type { Messenger } from "./context.js"
-import type { MessengerAdapter } from "./port.js"
+import type { MessengerAdapter, ServerReads } from "./port.js"
 import { reviewCommand } from "./review.js"
 
 const app = {
@@ -50,7 +50,7 @@ const said = (id: string, minute: number, text = "hola", extra: Partial<Message>
 /** `history` pages backwards by id, as Telegram's does: the newest `limit` older than `before`. */
 const messengerWith = (chats: Chat[], histories: Record<string, Message[]>, admins?: string[] | null) => {
   const pages: string[] = []
-  const adapter: MessengerAdapter = {
+  const adapter: MessengerAdapter & ServerReads = {
     self: () => "500",
     me: async () => ({ id: "500", name: "Owner", username: null }),
     chats: async () => ({ items: chats, hasMore: false }),

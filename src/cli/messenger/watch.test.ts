@@ -125,7 +125,7 @@ describe("watch", () => {
       { event: "message", message: hit("1") },
       { event: "message", message: hit("2") },
       { event: "edit", message: { ...hit("1"), text: "message 1, corrected", editedAt: "2026-09-27T11:00:00.000Z" } },
-      { event: "delete", chatId: null, chatTitle: null, messageId: "2" },
+      { event: "delete", chatId: "7", chatTitle: null, messageId: "2" },
       { event: "reaction", chatId: "7", chatTitle: "Book club", messageId: "1", reactions },
     ]
 

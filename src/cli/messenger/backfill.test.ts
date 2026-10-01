@@ -10,7 +10,7 @@ import { settingsFor } from "../settings.js"
 import { storeCommand } from "./archive-commands.js"
 import type { SpawnJob } from "./backfill-jobs.js"
 import type { Fetching, Messenger } from "./context.js"
-import type { MessengerAdapter } from "./port.js"
+import type { MessengerAdapter, ServerReads } from "./port.js"
 
 const app = { command: "chat", appName: "chat-cli", envPrefix: "CHAT", description: "A test", version: "1.0.0" }
 
@@ -30,7 +30,11 @@ const message = (id: number): Message => ({
 })
 
 /** A chat whose messages are 1..newest; `wait` makes the first request refuse with a FloodWait. */
-const chatOf = (state: { newest: number; asked: (string | undefined)[]; wait?: number }): MessengerAdapter =>
+const chatOf = (state: {
+  newest: number
+  asked: (string | undefined)[]
+  wait?: number
+}): MessengerAdapter & ServerReads =>
   ({
     self: () => "500",
     close: async () => {},
@@ -46,7 +50,7 @@ const chatOf = (state: { newest: number; asked: (string | undefined)[]; wait?: n
       const items = upper < 1 ? [] : Array.from({ length: upper - low + 1 }, (_, index) => message(low + index))
       return { items, hasMore: low > 1 }
     },
-  }) as unknown as MessengerAdapter
+  }) as unknown as MessengerAdapter & ServerReads
 
 const setup = () => {
   const root = mkdtempSync(join(tmpdir(), "backfill-"))

@@ -79,12 +79,12 @@ export const chatsService = (deps: ServiceDeps): ChatsService => ({
     if (!filtering) {
       const page = fromStore(deps)
         ? await (await deps.store()).chats(await deps.account(), window)
-        : await (await deps.connection()).chats(window)
+        : await capability(await deps.connection(), "chats", "list chats")(window)
       return { ...page, partial: false }
     }
     const scanned = fromStore(deps)
       ? await (await deps.store()).chats(await deps.account(), { offset: 0 })
-      : await (await deps.connection()).chats({ limit: CHAT_SCAN, offset: 0 })
+      : await capability(await deps.connection(), "chats", "list chats")({ limit: CHAT_SCAN, offset: 0 })
     const found = scanned.items.filter(matches(filter))
     const end = window.limit === undefined ? found.length : window.offset + window.limit
     return { items: found.slice(window.offset, end), hasMore: found.length > end, partial: scanned.hasMore }

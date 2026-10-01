@@ -10,9 +10,10 @@ contract. This page is the order to read them in, and the rules that are not in 
 ## What to build first
 
 1. A `Messenger` with the required fields (below), and a `connect` that returns your adapter.
-2. The adapter's **required core**, `MessengerCore`. With it you get `account`, `chats`, `contacts`,
+2. The adapter's **required core**, `MessengerCore`, and — unless your history is pushed to you
+   (below) — the `ServerReads` group. With both you get `account`, `chats`, `contacts`,
    `messages list`, `show`, `context`, `send`, `inbox`, `store fetch` and the MCP read tools.
-3. The contract cases, passing. Do this before any optional group.
+3. The contract cases, passing. Do this before any other optional group.
 4. Then the optional groups your messenger has, one at a time.
 
 ## The `Messenger`
@@ -35,7 +36,9 @@ needs it. The ones a new messenger usually sets:
 - `name` — the messenger's name as its users write it.
 - `fetching` — how `store fetch` and `messages download --all` page your history. Set `orderBy: "time"` when your message ids
   are not whole numbers below 2^53.
-- `deletedWithoutChat` — set it only if your messenger reports a deletion without its chat.
+- `history` — `"store"` when your messenger pushes its history instead of answering for it (below).
+- `deletedWithoutChat` — set it only if your messenger reports a deletion without its chat. Without
+  it, such a deletion tombstones nothing.
 - `inviteLinks` — your invite links, for `chats moderate`.
 - `groupSettings`, `adminRights`, `addsWithHistory`, `knowsAccountAge` — what your group commands
   can offer.
@@ -43,7 +46,8 @@ needs it. The ones a new messenger usually sets:
 
 ## Required core and optional groups
 
-`MessengerCore` is required. Every other group is optional: `ChatReading`, `MessageEditing`,
+`MessengerCore` is required: `self`, `me`, `resolve`, `chat`, `send`, `logout` and `close`. Every
+other group is optional: `ServerReads`, `ChatReading`, `MessageEditing`,
 `MessagePins`, `MessageReactions`, `ReadState`, `MessagePolls`, `LiveUpdates`, `PushedHistory`,
 `MessageMedia`, `ScheduledMessages`, `GroupModeration`, `AccountTools`, `GroupAdmin`, `ChatFolders`, `ContactBook`
 and `AccountEditing`.
@@ -51,6 +55,9 @@ and `AccountEditing`.
 - A command reaches an optional method through `capability()`. When your adapter does not have
   the method, the command fails with `validation_error` and "this messenger cannot …". It does not
   crash.
+- `ServerReads` — `chats`, `history`, `around` and `contact` — is optional only for a messenger with
+  `history: "store"`. With the default `"server"`, the shared reads call it, and an adapter without
+  it gets "this messenger cannot list chats" on every read.
 - Prefer a whole group to part of one. Write `implements MessageEditing` on the class, so the
   compiler holds you to all of it.
 - An option your messenger cannot do is **refused with `validation_error`**. It is never dropped.
@@ -118,7 +125,8 @@ Some messengers push history to the client instead of answering a request for it
 `Messenger.history` to `"store"`. The default is `"server"`. The changelog says when it ships.
 
 - With `"store"`, the shared services answer `chats`, `history`, `around` and `contact` from the
-  local store. They do not call the adapter. Writes still connect.
+  local store. They do not call the adapter, so leave the `ServerReads` group out. Writes still
+  connect.
 - Give the adapter the `PushedHistory` group. `feed(onBatch, signal)` hands over what the messenger
   pushes, as `HistoryBatch` objects: `{ chats?, people?, messages? }`, any of them, for any chats. It
   ends when `signal` aborts.
@@ -129,7 +137,6 @@ Some messengers push history to the client instead of answering a request for it
 - A batch the store cannot take is a warning on stderr. It does not stop `serve`. A `feed` that
   rejects stops `serve` and `watch` with its error.
 - New messages still come through `watch`, not through `feed`.
-- Until the field is released, your adapter must implement those four reads.
 
 ## Running the contract cases
 
@@ -138,7 +145,7 @@ release ([README, "How often, and what may break"](../../README.md#how-often-and
 
 - `contractSeed({ ids })` — a fixed set of chats, people and messages: a busy group with ten
   messages, a one-to-one chat, and two groups with the same title.
-- `contractCases({ connect, ids, orderBy })` — the cases. `connect` gets the seed and returns a
+- `contractCases({ connect, ids, orderBy, history })` — the cases. `connect` gets the seed and returns a
   fresh adapter over **your own fake client**, filled from that seed. Each case calls it once and
   closes the adapter after.
 - `fakeAdapter(seed)` — an adapter in memory that passes every case. Use it in command tests, or
@@ -168,7 +175,10 @@ describe("the adapter keeps the port's promises", () => {
   `IdMaker`; it gets the kind, a number, and the message's time.
 - `orderBy` — the same value as your `fetching.orderBy`. With `"time"`, the cases page `history` by
   the oldest message's ISO time, not by its id.
+- `history` — the same value as your `Messenger.history`. With `"server"`, the default, one case
+  fails unless the adapter has every `ServerReads` method.
 - A case for an optional method returns `{ skipped }` when your adapter does not have the method.
+  The `ServerReads` cases go together: they are skipped when any of the four is missing.
 - A case with `needs` asks more of your fake than holding the seed. For example, "a repeated send id
   leaves one message" needs a fake that drops a repeat, as the real server does.
 - No case talks to a live service.

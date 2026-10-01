@@ -58,6 +58,19 @@ describe("the chats service", () => {
     expect(found).toEqual({ items: [chats[0]], hasMore: true, partial: true })
   })
 
+  it("refuses a read the messenger's server cannot answer when its adapter has no server reads", async () => {
+    const adapter = { self: () => "500" }
+    const deps = onlineDeps(messenger, adapter as unknown as MessengerAdapter, guard)
+
+    await expect(chatsService(deps).list({}, { offset: 0 })).rejects.toMatchObject({
+      code: "validation_error",
+      message: "this messenger cannot list chats",
+    })
+    await expect(peopleService(deps).show("Olga")).rejects.toMatchObject({
+      message: "this messenger cannot show a person",
+    })
+  })
+
   it("filters every stored chat offline", async () => {
     const service = chatsService(storedDeps(messenger, await keptStore(), account, guard))
 
