@@ -77,7 +77,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--add` | `<chat>` | put a chat into a folder; repeat it for more |  | `chats folders update` (planned) |
 | `--after` | `<id-or-time>` | read what came after this message id, this ISO 8601 time, or 2h / 1d ago; not with --before |  | `messages context`, `messages list` |
 | `--all` |  | every row, no paging |  | `chats list`, `chats members list` (planned), `contacts list`, `inbox` (planned), `messages download` (planned), `review` (planned) |
-| `--all-can-pin` | `<on\|off>` | every member may pin messages |  | `chats update` (planned) |
+| `--all-can-pin` | `<on\|off>` | every member may pin messages |  | `chats update` |
 | `--allow-any-file` |  | send a --file even from a hidden folder, ~/.ssh or the tool's own folders |  | `messages send` |
 | `--allow-dangerous` |  | go ahead without the question an ask level puts before a deletion |  | `chats moderate` (planned), `mcp` (planned), `mcp config` (planned), `messages delete` |
 | `--allow-delete` |  | offer the tool that deletes messages for you only; it cannot be undone |  | `mcp`, `mcp config` |
@@ -97,7 +97,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--check` |  | say whether a newer version exists, and install nothing |  | `upgrade` |
 | `--confirm-send` |  | show the owner every write the MCP server offers, in a form to approve |  | `mcp`, `mcp config` |
 | `--defaults` |  | change what every profile gets, rather than this profile |  | `config set`, `config unset` |
-| `--description` | `<text>` | the new about text — of a chat or of your account |  | `account update` (planned), `chats update` (planned) |
+| `--description` | `<text>` | the new about text — of a chat or of your account |  | `account update` (planned), `chats update` |
 | `--detach` |  | run in the background instead — the same as `server start` |  | `serve` (planned) |
 | `--dry-run` |  | judge and plan; do nothing |  | `chats moderate` (planned) |
 | `--estimate` |  | only say what the fetch would cost, from this machine's copy; nothing is sent |  | `store fetch` |
@@ -131,7 +131,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--notify` |  | tell the chat's members about the pin |  | `messages pin` |
 | `--offline` |  | answer from what was recorded and never connect; fails if nothing was |  | every command |
 | `--online` |  | also log in once, read one chat and start the MCP server; sends nothing |  | `doctor` |
-| `--only-admins-add` | `<on\|off>` | only admins may add members |  | `chats update` (planned) |
+| `--only-admins-add` | `<on\|off>` | only admins may add members |  | `chats update` |
 | `--only-admins-call` | `<on\|off>` | only admins may start a call |  | `chats update` (max-only) |
 | `--only-owner-edits-info` | `<on\|off>` | only the owner may change the name and photo |  | `chats update` (max-only) |
 | `--order` | `<recent\|name>` | newest conversation first, or alphabetical |  | `contacts list` |
@@ -158,7 +158,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--since` | `<id-or-time>` | from this message id, an ISO 8601 time, or 2h / 1d ago; each command says its default. **the shared `chats events`, `store fetch`, `store export`, `inbox` and `review` take `<time>` only, never a message id: a Telegram id is a counter within one chat** |  | `chats events`, `chats moderate` (planned), `inbox`, `review`, `store export`, `store fetch` |
 | `--stop` |  | stop this profile's server — the same as `server stop` |  | `serve` (planned) |
 | `--timeout` | `<duration>` | give up on the whole command after this — 30s, 2m, 500ms |  | every command |
-| `--title` | `<title>` | the new name — of a chat or a folder |  | `chats folders update` (planned), `chats update` (planned) |
+| `--title` | `<title>` | the new name — of a chat or a folder |  | `chats folders update` (planned), `chats update` |
 | `--to` | `<chat>` | the chat to forward it to: an id, or part of a chat name |  | `messages forward` |
 | `--trace` |  | one line per request on stderr: ids and timings, never message content |  | every command |
 | `--transcribe` |  | hear voice messages not heard yet, on this machine; slow, the model must be downloaded |  | `inbox`, `messages list`, `review` |

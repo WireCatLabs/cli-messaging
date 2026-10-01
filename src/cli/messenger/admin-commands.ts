@@ -1,7 +1,7 @@
 import { CliError } from "@leemour/cli-core"
 import { annotate } from "@leemour/cli-core/commands"
 import { Command } from "commander"
-import { GROUP_SETTINGS, type GroupSettings } from "../../domain/models.js"
+import { ADMIN_RIGHTS, type AdminRight, GROUP_SETTINGS, type GroupSettings } from "../../domain/models.js"
 import { type Messenger, messengerContext } from "./context.js"
 
 const SETTING_FLAGS: Record<keyof GroupSettings, [flag: string, help: string]> = {
@@ -74,6 +74,53 @@ const linkCommand = (messenger: Messenger): Command => {
   return link
 }
 
+const adminsCommand = (messenger: Messenger): Command => {
+  const offered = messenger.adminRights ?? ADMIN_RIGHTS
+  const admins = new Command("admins").description("give or take back a member's admin rights")
+  admins.addCommand(
+    annotate(new Command("add"), { mutates: true })
+      .description("make a member an admin with these rights")
+      .argument("<chat>", messenger.chatArgument)
+      .argument("<person>", "an id, or part of a name")
+      .requiredOption("--can <rights>", `what they may do, comma-separated: ${offered.join(", ")}`)
+      .action(async function (this: Command, chat: string, person: string) {
+        const context = messengerContext(this, messenger)
+        const rights = rightsOf(offered, this.opts<{ can: string }>().can)
+        context.renderer.result(await context.withServices((services) => services.admin.addAdmin(chat, person, rights)))
+      }),
+  )
+  admins.addCommand(
+    annotate(new Command("remove"), { mutates: true })
+      .description("take an admin's rights back; they stay a member")
+      .argument("<chat>", messenger.chatArgument)
+      .argument("<person>", "an id, or part of a name")
+      .action(async function (this: Command, chat: string, person: string) {
+        const context = messengerContext(this, messenger)
+        context.renderer.result(await context.withServices((services) => services.admin.removeAdmin(chat, person)))
+      }),
+  )
+  return admins
+}
+
+export const rightsOf = (offered: readonly AdminRight[], typed: string): AdminRight[] => {
+  const rights = [
+    ...new Set(
+      typed
+        .split(",")
+        .map((one) => one.trim())
+        .filter(Boolean),
+    ),
+  ]
+  const unknown = rights.filter((one) => !(offered as readonly string[]).includes(one))
+  if (rights.length === 0 || unknown.length > 0) {
+    throw new CliError(
+      "validation_error",
+      `--can takes rights from: ${offered.join(", ")}${unknown.length > 0 ? ` — not ${unknown.join(", ")}` : ""}`,
+    )
+  }
+  return rights as AdminRight[]
+}
+
 /** `chats create`, `join`, `leave`, `update` and `link`: the help text is max-cli's, the one both tools say (standard, help rule 2). */
 export const groupCommands = (messenger: Messenger): Command[] => [
   annotate(new Command("create"), { mutates: true })
@@ -107,4 +154,5 @@ export const groupCommands = (messenger: Messenger): Command[] => [
 
   updateCommand(messenger),
   linkCommand(messenger),
+  adminsCommand(messenger),
 ]

@@ -218,4 +218,81 @@ describe("chats create, join and leave", () => {
       { kind: "chat", action: "link.reset", chatId: "7", outcome: "sent" },
     ])
   })
+
+  it("**adds and removes people through the guard**, naming who could not be added", async () => {
+    const env = sandbox()
+    const done: unknown[] = []
+    const adapter: MessengerAdapter = {
+      ...base,
+      people: async (references) => references.map((_, index) => String(91 + index)),
+      addMembers: async (chatId, people, options) => {
+        done.push(["add", chatId, people, options])
+        return { notAdded: ["92"] }
+      },
+      removeMembers: async (chatId, people) => {
+        done.push(["remove", chatId, people])
+      },
+    }
+
+    const added = await call(
+      ["chats", "members", "add", "Book club", "Ivan", "Olga", "--history", "--json"],
+      adapter,
+      env,
+    )
+    const removed = await call(["chats", "members", "remove", "Book club", "Ivan", "--json"], adapter, env)
+    const noHistory = await call(["chats", "members", "add", "Book club", "Ivan", "--history"], adapter, env, {
+      addsWithHistory: false,
+    })
+
+    expect(JSON.parse(added.stdout[0] ?? "")).toEqual({
+      operationId: expect.any(String),
+      chatId: "7",
+      added: ["91"],
+      notAdded: ["92"],
+    })
+    expect(JSON.parse(removed.stdout[0] ?? "")).toMatchObject({ chatId: "7", removed: ["91"] })
+    expect(noHistory.stderr.join("\n")).toContain("unknown option '--history'")
+    expect(done).toEqual([
+      ["add", "7", ["91", "92"], { history: true }],
+      ["remove", "7", ["91"]],
+    ])
+    expect(new SendJournal(sendsPathFor(app, "default", env)).entries()).toMatchObject([
+      { action: "members.add", people: 2 },
+      { action: "members.remove", people: 1 },
+    ])
+  })
+
+  it("**makes an admin with the rights the messenger has**, and takes them back", async () => {
+    const env = sandbox()
+    const done: unknown[] = []
+    const adapter: MessengerAdapter = {
+      ...base,
+      people: async () => ["91"],
+      addAdmin: async (chatId, person, rights) => {
+        done.push(["add", chatId, person, rights])
+      },
+      removeAdmin: async (chatId, person) => {
+        done.push(["remove", chatId, person])
+      },
+    }
+    const telegram = { adminRights: ["members", "pin"] as const }
+
+    const made = await call(
+      ["chats", "admins", "add", "Book club", "Ivan", "--can", "pin, members", "--json"],
+      adapter,
+      env,
+      telegram,
+    )
+    const unknown = await call(["chats", "admins", "add", "Book club", "Ivan", "--can", "read"], adapter, env, telegram)
+    const taken = await call(["chats", "admins", "remove", "Book club", "Ivan", "--json"], adapter, env)
+
+    expect(JSON.parse(made.stdout[0] ?? "")).toMatchObject({ chatId: "7", personId: "91", rights: ["pin", "members"] })
+    expect(unknown.code).toBe(2)
+    expect(unknown.stderr.join("\n")).toContain("not read")
+    expect(taken.code).toBe(0)
+    expect(done).toEqual([
+      ["add", "7", "91", ["pin", "members"]],
+      ["remove", "7", "91"],
+    ])
+  })
 })

@@ -8,6 +8,17 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Added
 
+- **`chats members add <chat> <person...>`** (`--history` where the messenger has it),
+  **`chats members remove`**, **`chats admins add <chat> <person> --can <rights>`** and
+  **`chats admins remove`**, with the tools `chats_members_add|remove`, `chats_admins_add|remove`
+  (P2). The people are resolved to ids first; adding counts each person toward the hourly limit and
+  refuses one the recipient list does not name. `members add` answers `added` and `notAdded`.
+  `GroupAdmin` gains `addMembers`, `removeMembers`, `addAdmin`, `removeAdmin`; `ADMIN_RIGHTS` and
+  `AdminRight` in the domain; `Messenger.addsWithHistory` and `Messenger.adminRights` say what a
+  messenger offers.
+- The manifest says `chats update` (title, description, `--all-can-pin`, `--only-admins-add`) and
+  `chats link show|reset` are in both tools.
+
 - **Store version 12: a word index over the normalized text**, for the ranked search that comes
   next. A file of up to 5,000 messages is indexed when it is opened; a larger one is indexed later
   in batches. Older builds keep opening the file (`min_compatible` stays 6), and what they write is

@@ -1,6 +1,6 @@
 import { CliError } from "@leemour/cli-core"
 import { capability } from "../cli/messenger/port.js"
-import type { GroupCard, GroupChange, Id } from "../domain/models.js"
+import type { AdminRight, GroupCard, GroupChange, Id } from "../domain/models.js"
 import { guardedWrite, type Operated } from "../sends/guarded.js"
 import { newOperationId } from "../sends/send-id.js"
 import type { ServiceDeps } from "./deps.js"
@@ -21,6 +21,18 @@ export interface AdminService {
   /** The invite link, or `not_found` when the owner may not see it. */
   link(chat: string): Promise<{ chatId: Id; title: string | null; link: string }>
   resetLink(chat: string): Promise<Operated<{ chat: GroupCard }>>
+  addMembers(
+    chat: string,
+    people: string[],
+    options: { history?: boolean },
+  ): Promise<Operated<{ chatId: Id; added: Id[]; notAdded: Id[] }>>
+  removeMembers(chat: string, people: string[]): Promise<Operated<{ chatId: Id; removed: Id[] }>>
+  addAdmin(
+    chat: string,
+    person: string,
+    rights: AdminRight[],
+  ): Promise<Operated<{ chatId: Id; personId: Id; rights: AdminRight[] }>>
+  removeAdmin(chat: string, person: string): Promise<Operated<{ chatId: Id; personId: Id }>>
 }
 
 export const adminService = (deps: ServiceDeps): AdminService => {
@@ -106,6 +118,59 @@ export const adminService = (deps: ServiceDeps): AdminService => {
         reset(chatId),
       )
       return { operationId, chat: card }
+    },
+
+    addMembers: async (chat, people, options) => {
+      const connection = await online("chats members add")
+      const add = capability(connection, "addMembers", "add people to a group")
+      const personIds = await capability(connection, "people", "find people")(people)
+      const { id: chatId } = await connection.resolve(chat)
+      const operationId = newOperationId()
+      const { notAdded } = await guardedWrite(
+        deps.guard,
+        { operationId, chatId, kind: "chat", action: "members.add", personIds, people: personIds.length },
+        () => add(chatId, personIds, options),
+      )
+      return { operationId, chatId, added: personIds.filter((id) => !notAdded.includes(id)), notAdded }
+    },
+
+    removeMembers: async (chat, people) => {
+      const connection = await online("chats members remove")
+      const remove = capability(connection, "removeMembers", "remove people from a group")
+      const personIds = await capability(connection, "people", "find people")(people)
+      const { id: chatId } = await connection.resolve(chat)
+      const operationId = newOperationId()
+      await guardedWrite(
+        deps.guard,
+        { operationId, chatId, kind: "chat", action: "members.remove", people: personIds.length },
+        () => remove(chatId, personIds),
+      )
+      return { operationId, chatId, removed: personIds }
+    },
+
+    addAdmin: async (chat, person, rights) => {
+      if (rights.length === 0) throw new CliError("validation_error", "an admin needs at least one right")
+      const connection = await online("chats admins add")
+      const add = capability(connection, "addAdmin", "make someone an admin")
+      const [personId] = await capability(connection, "people", "find people")([person])
+      const { id: chatId } = await connection.resolve(chat)
+      const operationId = newOperationId()
+      await guardedWrite(deps.guard, { operationId, chatId, kind: "chat", action: "admins.add" }, () =>
+        add(chatId, personId as Id, rights),
+      )
+      return { operationId, chatId, personId: personId as Id, rights }
+    },
+
+    removeAdmin: async (chat, person) => {
+      const connection = await online("chats admins remove")
+      const remove = capability(connection, "removeAdmin", "take admin rights back")
+      const [personId] = await capability(connection, "people", "find people")([person])
+      const { id: chatId } = await connection.resolve(chat)
+      const operationId = newOperationId()
+      await guardedWrite(deps.guard, { operationId, chatId, kind: "chat", action: "admins.remove" }, () =>
+        remove(chatId, personId as Id),
+      )
+      return { operationId, chatId, personId: personId as Id }
     },
   }
 }

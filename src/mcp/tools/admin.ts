@@ -1,7 +1,7 @@
 import * as v from "valibot"
 import type { Messenger } from "../../cli/messenger/context.js"
 import type { MessengerAdapter } from "../../cli/messenger/port.js"
-import { GROUP_SETTINGS } from "../../domain/models.js"
+import { ADMIN_RIGHTS, GROUP_SETTINGS } from "../../domain/models.js"
 import type { SendGuard } from "../../sends/guard.js"
 import { onlineDeps, servicesFor } from "../../services/index.js"
 import { type AnyTool, APPROVE, chatOf, READ, tool, WRITE } from "../tool.js"
@@ -93,6 +93,60 @@ export const adminTools = (messenger: Messenger): Record<string, AnyTool> => {
       _meta: APPROVE,
       permission: "groups",
       online: (adapter, args, { guard }) => admin(adapter, guard).resetLink(args.chat),
+    }),
+    chats_members_add: tool({
+      title: "Add people to a group",
+      description:
+        "Add people to a group; each is told. Only the people the owner named, to the group the owner named.",
+      input: v.object({
+        chat: chatOf(messenger),
+        people: v.pipe(v.array(v.pipe(v.string(), v.minLength(1))), v.minLength(1)),
+        history: v.optional(
+          v.pipe(
+            v.boolean(),
+            v.description("they also see the messages from before; refused where the messenger cannot"),
+          ),
+        ),
+      }),
+      annotations: WRITE,
+      _meta: APPROVE,
+      permission: "groups",
+      online: (adapter, args, { guard }) =>
+        admin(adapter, guard).addMembers(args.chat, args.people, args.history === true ? { history: true } : {}),
+    }),
+    chats_members_remove: tool({
+      title: "Remove people from a group",
+      description: "Remove people from a group; their messages stay. Only the people the owner named.",
+      input: v.object({
+        chat: chatOf(messenger),
+        people: v.pipe(v.array(v.pipe(v.string(), v.minLength(1))), v.minLength(1)),
+      }),
+      annotations: WRITE,
+      _meta: APPROVE,
+      permission: "groups",
+      online: (adapter, args, { guard }) => admin(adapter, guard).removeMembers(args.chat, args.people),
+    }),
+    chats_admins_add: tool({
+      title: "Make someone an admin",
+      description: "Make a member of a group an admin with these rights. Only when the owner asked, with these rights.",
+      input: v.object({
+        chat: chatOf(messenger),
+        person: v.pipe(v.string(), v.minLength(1)),
+        rights: v.pipe(v.array(v.picklist(messenger.adminRights ?? ADMIN_RIGHTS)), v.minLength(1)),
+      }),
+      annotations: WRITE,
+      _meta: APPROVE,
+      permission: "groups",
+      online: (adapter, args, { guard }) => admin(adapter, guard).addAdmin(args.chat, args.person, args.rights),
+    }),
+    chats_admins_remove: tool({
+      title: "Take admin rights back",
+      description: "Take a group admin's rights back; they stay a member. Only when the owner asked.",
+      input: v.object({ chat: chatOf(messenger), person: v.pipe(v.string(), v.minLength(1)) }),
+      annotations: WRITE,
+      _meta: APPROVE,
+      permission: "groups",
+      online: (adapter, args, { guard }) => admin(adapter, guard).removeAdmin(args.chat, args.person),
     }),
   }
 }

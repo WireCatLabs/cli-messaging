@@ -65,6 +65,11 @@ export const GROUP_SETTINGS = [
   "membersSeeLink",
 ] as const
 
+/** What an admin may do, in max-cli's words; a messenger maps them onto its own. */
+export const ADMIN_RIGHTS = ["read", "members", "admins", "info", "pin", "link", "post", "edit", "delete"] as const
+
+export type AdminRight = (typeof ADMIN_RIGHTS)[number]
+
 /** A group or channel as the commands that change one answer it. */
 export interface GroupCard extends Chat {
   description: string | null

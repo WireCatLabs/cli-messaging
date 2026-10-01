@@ -3,6 +3,7 @@ import type { Markup } from "../../domain/markdown.js"
 import type {
   Account,
   AccountSession,
+  AdminRight,
   Chat,
   ChatCard,
   ChatEvents,
@@ -215,6 +216,14 @@ export interface GroupAdmin {
   updateGroup(chatId: Id, change: GroupChange): Promise<GroupCard>
   /** A new invite link; the old one stops working. */
   resetInviteLink(chatId: Id): Promise<GroupCard>
+  /** They are told. `notAdded`: who could not be, by their privacy or the group's limits — the rest are in. */
+  addMembers(chatId: Id, people: Id[], options: { history?: boolean }): Promise<{ notAdded: Id[] }>
+  /** Their messages stay. */
+  removeMembers(chatId: Id, people: Id[]): Promise<void>
+  /** A right this messenger lacks is refused, never dropped. */
+  addAdmin(chatId: Id, person: Id, rights: AdminRight[]): Promise<void>
+  /** They stay a member. */
+  removeAdmin(chatId: Id, person: Id): Promise<void>
 }
 
 /**

@@ -522,16 +522,13 @@
       "state": "both"
     },
     "chats link": {
-      "state": "planned",
-      "by": "P2"
+      "state": "both"
     },
     "chats link reset": {
-      "state": "planned",
-      "by": "P2"
+      "state": "both"
     },
     "chats link show": {
-      "state": "planned",
-      "by": "P2"
+      "state": "both"
     },
     "chats list": {
       "state": "both",
@@ -626,25 +623,15 @@
       "state": "both"
     },
     "chats update": {
-      "state": "planned",
-      "by": "P2",
+      "state": "both",
       "options": {
-        "--all-can-pin": {
-          "state": "planned",
-          "by": "P2"
-        },
-        "--description": {
-          "state": "planned",
-          "by": "P2"
-        },
+        "--all-can-pin": "both",
+        "--description": "both",
         "--members-see-link": {
           "state": "max-only",
           "reason": "Telegram shows a group's invite link to whoever may invite, not by a setting of its own"
         },
-        "--only-admins-add": {
-          "state": "planned",
-          "by": "P2"
-        },
+        "--only-admins-add": "both",
         "--only-admins-call": {
           "state": "max-only",
           "reason": "Telegram has no setting for who may start a call"
@@ -653,10 +640,7 @@
           "state": "max-only",
           "reason": "Telegram lets admins with the right change the info, never only the owner; a different meaning gets a different name"
         },
-        "--title": {
-          "state": "planned",
-          "by": "P2"
-        }
+        "--title": "both"
       }
     },
     "commands": {
