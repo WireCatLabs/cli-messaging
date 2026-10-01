@@ -1,4 +1,4 @@
-import { desc, index, integer, primaryKey, real, sql, sqliteTable, text, unique } from "./drizzle/core.js"
+import { desc, index, integer, primaryKey, real, sql, sqliteTable, text, unique, uniqueIndex } from "./drizzle/core.js"
 
 /**
  * The store's base tables — what `drizzle-kit generate` diffs against.
@@ -134,6 +134,8 @@ export const messages = sqliteTable(
     ingestedVia: text("ingested_via").notNull(),
     normalizedText: text("normalized_text"),
     normalizerVersion: integer("normalizer_version"),
+    /** JSON: the people the text mentions by id, where the messenger says so; `@handle`s are read from the text. */
+    mentions: text("mentions"),
   },
   (table) => [
     unique().on(table.chatPk, table.nativeId),
@@ -285,4 +287,101 @@ export const searchIndexState = sqliteTable("search_index_state", {
   termsThrough: integer("terms_through").notNull(),
   normalizerVersion: integer("normalizer_version").notNull(),
   builtAt: integer("built_at"),
+})
+
+/*
+ * Phase 3's conversations. All four are derived — rebuilt from `messages`, never the only copy of
+ * anything — so every foreign key cascades: a build that knows nothing of them can still delete the
+ * messages and chats they point at.
+ */
+
+/** Each candidate for "the earlier message this one answers", and where it came from. */
+export const messageLinks = sqliteTable(
+  "message_links",
+  {
+    /** The message's chat, kept here so a rebuild finds and drops an old build without reading `messages`. */
+    chatPk: integer("chat_pk")
+      .notNull()
+      .references(() => chats.pk, { onDelete: "cascade" }),
+    messagePk: integer("message_pk")
+      .notNull()
+      .references(() => messages.pk, { onDelete: "cascade" }),
+    /** `NULL`: the source says this message starts a conversation. */
+    parentPk: integer("parent_pk").references(() => messages.pk, { onDelete: "cascade" }),
+    source: text("source").notNull(),
+    kind: text("kind").notNull(),
+    confidence: real("confidence").notNull(),
+    /** The rule's name, or the agent's model. */
+    method: text("method").notNull(),
+    version: text("version"),
+    /** Which agent batch wrote it (phase 4). */
+    batch: text("batch"),
+    /** The rebuild that wrote a provider or rule link; `NULL` for an agent's, which outlive rebuilds. */
+    build: integer("build"),
+    createdAt: integer("created_at").notNull(),
+    /** An end of the link changed after it was written; never chosen until asked again. */
+    staleAt: integer("stale_at"),
+  },
+  (table) => [
+    // NULLs are distinct to a UNIQUE constraint: "starts a conversation" and agent links would repeat.
+    uniqueIndex("message_links_unique").on(
+      table.messagePk,
+      sql`ifnull(${table.parentPk}, 0)`,
+      table.source,
+      table.kind,
+      sql`ifnull(${table.build}, 0)`,
+    ),
+    index("message_links_by_parent").on(table.parentPk),
+    index("message_links_by_build").on(table.chatPk, table.build),
+  ],
+)
+
+export const conversations = sqliteTable(
+  "conversations",
+  {
+    pk: integer("pk").primaryKey(),
+    chatPk: integer("chat_pk")
+      .notNull()
+      .references(() => chats.pk, { onDelete: "cascade" }),
+    firstMessagePk: integer("first_message_pk")
+      .notNull()
+      .references(() => messages.pk, { onDelete: "cascade" }),
+    /** Written in batches under a new number, then made current at once: readers never see half a build. */
+    build: integer("build").notNull(),
+    firstAt: integer("first_at").notNull(),
+    lastAt: integer("last_at").notNull(),
+    messageCount: integer("message_count").notNull(),
+    builtAt: integer("built_at").notNull(),
+    algorithmVersion: integer("algorithm_version").notNull(),
+  },
+  (table) => [index("conversations_by_chat").on(table.chatPk, table.build, table.firstAt)],
+)
+
+export const conversationMessages = sqliteTable(
+  "conversation_messages",
+  {
+    conversationPk: integer("conversation_pk")
+      .notNull()
+      .references(() => conversations.pk, { onDelete: "cascade" }),
+    messagePk: integer("message_pk")
+      .notNull()
+      .references(() => messages.pk, { onDelete: "cascade" }),
+  },
+  // A message is in one conversation of each build; the current build and the one being written overlap.
+  (table) => [
+    primaryKey({ columns: [table.conversationPk, table.messagePk] }),
+    index("conversation_messages_by_message").on(table.messagePk),
+  ],
+)
+
+/** Which chats the user enabled, and how fresh their conversations are. */
+export const conversationState = sqliteTable("conversation_state", {
+  chatPk: integer("chat_pk")
+    .primaryKey()
+    .references(() => chats.pk, { onDelete: "cascade" }),
+  enabledAt: integer("enabled_at").notNull(),
+  builtAt: integer("built_at"),
+  algorithmVersion: integer("algorithm_version"),
+  /** The build readers see; a higher one is being written, or failed. */
+  currentBuild: integer("current_build"),
 })
