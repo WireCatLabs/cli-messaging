@@ -155,7 +155,7 @@ links under them change.
    `choose` in C1's order (A6); `RULES_VERSION` up so `store check` names chats to rebuild.
 3. ✅ 2026-10-01 · **`conversations links add|clear`** — validation (A5), replace-per-message, the `conversations.links`
    permission key (A10).
-4. **The skill** — `skills/link-conversations/SKILL.md`, `skill show <name>` (A8), one line in tg-cli's and
+4. ✅ 2026-10-01 in cli-messaging (`skills/link-conversations/SKILL.md`, `skill show <name>` from cli-core 0.13.0); the line in tg-cli's and max-cli's SKILL.md follows their bump · **The skill** — `skills/link-conversations/SKILL.md`, `skill show <name>` (A8), one line in tg-cli's and
    max-cli's SKILL.md (a PR in each).
 5. ✅ 2026-10-01, the scripted half, as a test (`src/conversations/agent-loop.test.ts`, an invented chat with known parents rather than the IRC gold links: same proof, no download, runs in CI); the real-agent run on the IRC dev split is still to do by hand · **Scoring the loop** — `bench/disentangle/` runs the loop with a scripted "agent" that answers from the
    IRC gold links, to prove batches + answers + build reproduce the gold conversations exactly; and, by
