@@ -24,6 +24,13 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   `commands --json` and an error from one copy was not an `instanceof` the other's class. What to
   change: depend on `@leemour/cli-core` yourself, at 0.13.0 or 0.14.x (tg-cli is on 0.14.0; max-cli,
   on 0.12.0, moves up), and drop the pnpm `overrides` entry for it once on this version.
+- **The parity manifest marks `messages send --at-time`, `messages list --before-id|--before-time|--after-id|
+  --after-time` and `messages context --before-n|--after-n` as in both tools,** and drops the old `--at`,
+  `--before` and `--after` rows: max's main has moved (max-cli #294, #282). A max older than that fails
+  this manifest's parity check.
+- **`store fetch --since|--max-pages` and `store export --since` are planned for max**, not max-only, so
+  max can move onto the shared `store` group (max-cli T6, 6c); they go once max's main has moved.
+  `store clear` is planned for max too: it comes with the store maintenance commands.
 
 ## 0.96.0 — 01.10.2026
 
@@ -50,16 +57,6 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   the message store. `ensureSqlite()` (`@leemour/cli-messaging/sqlite-runtime`), run first by a
   command, starts it again on that SQLite when a Linux distribution's Node brings one the store
   cannot use. On every other setup nothing changes.
-
-### Changed — may break callers
-
-- **The parity manifest marks `messages send --at-time`, `messages list --before-id|--before-time|--after-id|
-  --after-time` and `messages context --before-n|--after-n` as in both tools,** and drops the old `--at`,
-  `--before` and `--after` rows: max's main has moved (max-cli #294, #282). A max older than that fails
-  this manifest's parity check.
-- **`store fetch --since|--max-pages` and `store export --since` are planned for max**, not max-only, so
-  max can move onto the shared `store` group (max-cli T6, 6c); they go once max's main has moved.
-  `store clear` is planned for max too: it comes with the store maintenance commands.
 
 ### Fixed
 
@@ -97,7 +94,6 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 - **`BotMessenger.connect(command, token, { stop, events })`** (P8): the bot client gets the run's
   events, so `bot auth show --trace` prints each request and the run record counts it. The third
   argument was `stop` alone; no CLI implements it yet.
-
 
 ### Fixed
 
