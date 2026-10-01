@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.78.0 — 01.10.2026
+
 ### Added
 
 - **`messages list --mark-read`** marks the chat read up to the newest message shown — the other
