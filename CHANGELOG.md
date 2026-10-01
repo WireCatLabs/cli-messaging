@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.80.0 — 01.10.2026
+
 ## 0.79.0 — 01.10.2026
 
 ### Fixed
