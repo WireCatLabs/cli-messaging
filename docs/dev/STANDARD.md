@@ -369,16 +369,16 @@ many), `--allow-any-file` (which files).
 1. **Each user page of max has a tg page on the same question**, at the same depth: installing,
    using, configuring, security, troubleshooting, diagnostics, groups. max's pages are Russian,
    tg's English.
-   Pages one tool has alone, and why:
+   Both follow the docs site's page set (leemour/cli-docs `docs/STRUCTURE.md`): `index.md` is the
+   site's short start page, `archive.md` the local store, `roadmap.md` what is coming. Pages one tool
+   has alone, and why:
    - max `bot.md` — tg has no bot side yet; its page comes with it (P8).
-   - max `protocol.md` — the MAX operations this project reverse-engineered, generated from its
-     spec. Telegram documents its own protocol and mtcute implements it, so tg has nothing to add.
-   - max `ROADMAP.md` — tg keeps its roadmap as a README section.
-   - tg `store.md` — the shared message store; max gets its page when its commands move onto the
-     shared store (T6).
-2. **Both READMEs have the same sections in the same order**: what it does, why it is good, how it
-   differs from the alternatives, logging in, using it, for scripts and agents (skill, MCP, JSON),
-   security, documentation, development, roadmap, licence, contributing.
+   max's reverse-engineered protocol is `docs/dev/protocol.md`, a developer page, not a user one.
+2. **The README is the full introduction, and max's is the model.** Users read it first, so it is
+   not cut down to a landing page. Both READMEs have these sections in this order: the bot (max
+   only, until tg has one), the personal account, how to use it, groups you run, how it works, what
+   it can do, why it is good, custom work, how it differs, contents, install, log in, use, for
+   scripts and agents, security, documentation, development, roadmap, licence, contributing.
 3. **A change to a command changes its page in both tools** in the same docs pull request.
 4. **A page names only options that exist or are planned.** Each CLI's CI runs
    `<cli> commands --json | cli-messaging-parity <cli> --pages README.md docs/*.md`: an option a user
