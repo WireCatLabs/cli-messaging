@@ -1,7 +1,19 @@
 import type { AccountKey } from "../store.js"
-import { and, eq, sql } from "./drizzle/core.js"
+import { and, eq, inArray, sql } from "./drizzle/core.js"
 import type { StoreContext } from "./open.js"
-import { accounts } from "./schema.js"
+import {
+  accountIdentities,
+  accounts,
+  attachments,
+  chatMembers,
+  chats,
+  fetchLeases,
+  messageRevisions,
+  messages,
+  syncRanges,
+  syncState,
+  transcripts,
+} from "./schema.js"
 
 /** An account's row, made on first sight; a name only replaces what was known when there is one. */
 export const accountPk = ({ orm, now }: StoreContext, { provider, account }: AccountKey, name: string | null = null) =>
@@ -23,3 +35,20 @@ export const findAccountPk = ({ orm }: StoreContext, { provider, account }: Acco
     .from(accounts)
     .where(and(eq(accounts.provider, provider), eq(accounts.nativeId, account)))
     .get()?.pk
+
+/** Everything the account holds, children before parents: the foreign keys are enforced. */
+export const purgeAccount = ({ orm }: StoreContext, accountKey: number): void => {
+  const chatsOf = orm.select({ pk: chats.pk }).from(chats).where(eq(chats.accountPk, accountKey))
+  const messagesOf = orm.select({ pk: messages.pk }).from(messages).where(eq(messages.accountPk, accountKey))
+  orm.delete(transcripts).where(inArray(transcripts.chatPk, chatsOf)).run()
+  orm.delete(fetchLeases).where(inArray(fetchLeases.chatPk, chatsOf)).run()
+  orm.delete(chatMembers).where(inArray(chatMembers.chatPk, chatsOf)).run()
+  orm.delete(syncRanges).where(inArray(syncRanges.chatPk, chatsOf)).run()
+  orm.delete(messageRevisions).where(inArray(messageRevisions.messagePk, messagesOf)).run()
+  orm.delete(attachments).where(inArray(attachments.messagePk, messagesOf)).run()
+  orm.delete(messages).where(eq(messages.accountPk, accountKey)).run()
+  orm.delete(chats).where(eq(chats.accountPk, accountKey)).run()
+  orm.delete(syncState).where(eq(syncState.accountPk, accountKey)).run()
+  orm.delete(accountIdentities).where(eq(accountIdentities.accountPk, accountKey)).run()
+  orm.delete(accounts).where(eq(accounts.pk, accountKey)).run()
+}
