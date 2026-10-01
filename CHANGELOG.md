@@ -4,6 +4,16 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 [semver](https://semver.org/); before `1.0.0` a minor version may break callers, and says how under
 "Changed — may break callers". `pnpm docs:check` checks the shape of this file.
 
+## Unreleased
+
+### Added
+
+- **`conversations batches status|next --chat <chat> [--size <n>]`** (storage phase 4): a chat in
+  windows for the user's own AI agent to link — the messages it is asked about, which have no messenger
+  reply and no current answer, and the 50 before them as context, with the rules' candidate links.
+  `status` says how many messages, batches and characters are left, to tell the user before starting.
+  Message text goes to stdout only, never into a run record. The CLI calls no model.
+
 ## 0.92.0 — 01.10.2026
 
 ### Added
