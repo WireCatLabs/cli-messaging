@@ -57,8 +57,8 @@ export interface SendGuard {
 
 export interface SendGuardOptions {
   profile: string
-  /** The program's word, for the hints that say what to type: `tg`, `max`. */
-  command?: string
+  /** The program's word, for the hints that say what to type: the calling app's `command`. */
+  command: string
   readOnly: boolean
   /** Named in the refusal, so the owner can find what decided it. */
   readOnlyFrom: string
@@ -116,7 +116,7 @@ const timeOf = (entry: Pick<SendEntry, "at" | "scheduledFor">): number => Date.p
  */
 export const sendGuard = ({
   profile,
-  command = "tg",
+  command,
   readOnly,
   readOnlyFrom,
   allow,

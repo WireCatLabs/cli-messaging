@@ -16,11 +16,12 @@ describe("the send guard", () => {
   const guardAt = (profile: string, time: string, sendsPerHour: number) =>
     sendGuard({
       profile,
+      command: app.command,
       readOnly: false,
       readOnlyFrom: "default",
       sendsPerHour,
       journal: new SendJournal(sendsPathFor(profile)),
-      recipients: new RecipientList(recipientsPathFor(profile)),
+      recipients: new RecipientList(recipientsPathFor(profile), app.command),
       warn: () => {},
       now: () => new Date(time),
     })
@@ -45,11 +46,12 @@ describe("two senders at once", () => {
   const guard = (profile: string, sendsPerHour: number, time = "2026-09-24T09:00:00Z") =>
     sendGuard({
       profile,
+      command: app.command,
       readOnly: false,
       readOnlyFrom: "default",
       sendsPerHour,
       journal: new SendJournal(sendsPathFor(profile)),
-      recipients: new RecipientList(recipientsPathFor(profile)),
+      recipients: new RecipientList(recipientsPathFor(profile), app.command),
       warn: () => {},
       now: () => new Date(time),
     })
@@ -105,11 +107,12 @@ describe("a reaction", () => {
   const guardFor = (profile: string, options: { readOnly?: boolean; sendsPerHour?: number } = {}) =>
     sendGuard({
       profile,
+      command: app.command,
       readOnly: options.readOnly ?? false,
       readOnlyFrom: "config file",
       sendsPerHour: options.sendsPerHour ?? 1,
       journal: new SendJournal(sendsPathFor(profile)),
-      recipients: new RecipientList(recipientsPathFor(profile)),
+      recipients: new RecipientList(recipientsPathFor(profile), app.command),
       warn: () => {},
     })
 
@@ -118,7 +121,7 @@ describe("a reaction", () => {
       "cannot send, react, change chats or change the account",
     )
 
-    new RecipientList(recipientsPathFor("g-react-list")).add({
+    new RecipientList(recipientsPathFor("g-react-list"), app.command).add({
       id: "111",
       title: null,
       addedAt: "2026-09-24T00:00:00Z",
@@ -148,11 +151,12 @@ describe("a retry of a send whose outcome was unknown", () => {
   const guard = (profile: string) =>
     sendGuard({
       profile,
+      command: app.command,
       readOnly: false,
       readOnlyFrom: "default",
       sendsPerHour: 1,
       journal: new SendJournal(sendsPathFor(profile)),
-      recipients: new RecipientList(recipientsPathFor(profile)),
+      recipients: new RecipientList(recipientsPathFor(profile), app.command),
       warn: () => {},
     })
 
@@ -178,7 +182,7 @@ describe("an allow-list refusal", () => {
       ...(allowFix ? { allowFix } : {}),
       sendsPerHour: 10,
       journal: new SendJournal(sendsPathFor("g-allow")),
-      recipients: new RecipientList(recipientsPathFor("g-allow")),
+      recipients: new RecipientList(recipientsPathFor("g-allow"), app.command),
       warn: () => {},
     })
 
