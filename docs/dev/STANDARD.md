@@ -177,6 +177,14 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 1. **Every list answers one envelope** in `--json`: `{ items, page, limit, hasMore }` —
    `renderPage` in [`src/cli/paging.ts`](../../src/cli/paging.ts) prints it. `--jsonl` streams the
    items one per line. A list never answers a bare array.
+   - A list with no pages (`store status`, `server logs`) answers `page: 1`, `limit` the count and
+     `hasMore: false` — `listed` in the same file.
+   - A list paged by a message rather than a page number (`messages list`, `chats events`) answers
+     `page: 1`; `hasMore` says whether there is more on the far side of the last item.
+   - Fields about the whole list go beside the four, never instead of them (`models audio list`'s
+     `directory`).
+   - `inbox` and `review` are not lists: they answer one view grouped by chat, `{ chats: [{ …,
+     messages }] }`, in both tools.
 2. **A write answers what it did**: `{ operationId, … }`, the ids it touched after it. The same
    id is in the send journal.
 3. **A one-thing view answers the object itself** (`account show`, `store info`).
