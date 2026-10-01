@@ -14,6 +14,7 @@ import {
 import { dirname, resolve } from "node:path"
 import { CliError } from "@leemour/cli-core"
 import { Command } from "commander"
+import { holdersOf } from "../../background/processes.js"
 import type { CacheDatabase } from "../../store/driver.js"
 import { MIGRATIONS, migrate } from "../../store/migrations.js"
 import { openCache } from "../../store/open.js"
@@ -21,7 +22,6 @@ import { storePath } from "../../store/path.js"
 import { backfillNormalized, pendingNormalization } from "../../store/sqlite/backfill.js"
 import { environmentOf, outputFor } from "../context.js"
 import type { Messenger } from "./context.js"
-import { holdersOf } from "./processes.js"
 import { servingProfiles } from "./serve-command.js"
 
 const SPEAKS = MIGRATIONS.at(-1)?.version ?? 0

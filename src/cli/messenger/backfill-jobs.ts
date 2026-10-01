@@ -2,8 +2,8 @@ import { spawn } from "node:child_process"
 import { closeSync, existsSync, mkdirSync, openSync, readdirSync, readFileSync, realpathSync } from "node:fs"
 import { join } from "node:path"
 import { resolvePaths, writeSecurely } from "@leemour/cli-core"
+import { carries } from "../../background/processes.js"
 import type { AppIdentity } from "../app.js"
-import { carries } from "./processes.js"
 
 export interface Job {
   id: string

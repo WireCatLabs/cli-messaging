@@ -40,6 +40,10 @@
       "types": "./dist/services/index.d.ts",
       "default": "./dist/services/index.js"
     },
+    "./background": {
+      "types": "./dist/background/index.d.ts",
+      "default": "./dist/background/index.js"
+    },
     "./parity": {
       "types": "./dist/parity/index.d.ts",
       "default": "./dist/parity/index.js"

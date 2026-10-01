@@ -76,6 +76,7 @@ the same day.
 | `./store` | `openStore`, `MessageStore`, `storePath`, and the file format: `minCompatible` rises only in a breaking release |
 | `./sends` | `sendGuard`, `SendJournal`, the journal's line format |
 | `./services` | `servicesFor`, `Override` and the service names |
+| `./background` | `lockPath`, `readLock`, `holdLock`, `releaseLock`, `servingProfiles`, `alive`, `carries`, `holdersOf`, `ServerSystem`, `thisMachine`, `platformFor` and the systemd and launchd units |
 
 Everything else may change in any release, and still goes under "Changed — may break callers" when
 it does. tg-cli and max-cli take new versions through Dependabot pull requests.
