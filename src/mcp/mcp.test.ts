@@ -14,7 +14,11 @@ import type { MessengerAdapter, SendOptions } from "../cli/messenger/port.js"
 import { createProgram } from "../cli/program.js"
 import { settingsFor } from "../cli/settings.js"
 import type { Chat, Message } from "../domain/models.js"
+import type { SendGuard } from "../sends/guard.js"
 import { SendJournal, sendsPathFor } from "../sends/journal.js"
+import { conversationsService } from "../services/conversations.js"
+import { storedDeps } from "../services/deps.js"
+import { openStore } from "../store/store.js"
 import { instructions } from "./instructions.js"
 import { createServer, type ServerOptions } from "./server.js"
 
@@ -218,6 +222,8 @@ describe("the MCP server", () => {
       "chat_contacts_list",
       "chat_contacts_lookup",
       "chat_contacts_show",
+      "chat_conversations_list",
+      "chat_conversations_show",
       "chat_inbox",
       "chat_messages_context",
       "chat_messages_list",
@@ -375,6 +381,29 @@ describe("the MCP server", () => {
 
     expect(body.items.map((hit: { id: string }) => hit.id)).toEqual(["1"])
     expect(telegram.opened()).toBe(1)
+  })
+
+  it("lists and shows a built chat's conversations from the store, and names the build command before that", async () => {
+    const telegram = scripted()
+    const { call, env } = await connect(telegram)
+    await call("chat_messages_list", { chat: "7" })
+
+    const before = await call("chat_conversations_list", { chat: "7" })
+    expect(before.isError).toBe(true)
+    expect(JSON.stringify(before.body)).toContain("conversations build --chat 7")
+
+    const store = await openStore({ path: env.MESSAGING_STORE })
+    const account = { provider: "chat", account: "500" }
+    await conversationsService(storedDeps({ provider: "chat" } as Messenger, store, account, {} as SendGuard)).build(
+      "7",
+    )
+    await store.close()
+
+    const { body } = await call("chat_conversations_list", { chat: "7" })
+    expect(body.items).toMatchObject([{ firstMessageId: "1", messageCount: 1 }])
+    const shown = await call("chat_conversations_show", { id: body.items[0].id })
+    expect(shown.body.messages.map((one: { id: string }) => one.id)).toEqual(["1"])
+    expect((await call("chat_conversations_show", { chat: "7" })).isError).toBe(true)
   })
 
   it("connects again once the connection has been idle, or is older than the age limit", async () => {

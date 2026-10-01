@@ -161,6 +161,11 @@ sync (requirements §22). `conversation_state` says which chats are enabled and 
 
 **C7 · Commands** (owner, NEED-421 A):
 
+**Correction 2026-10-01, at build:** no `--rebuild` — every build replaces the chat's last one (C3), so
+the flag had nothing to switch. `list` takes `--since-time` and `--limit`, options that already mean that
+everywhere, not `--after`/`--before`. `show` takes a conversation id, or `<chat> <message>`. The MCP tools
+are `conversations_list` and `conversations_show`, after their commands, as every tool here.
+
 - `conversations build --chat <chat> [--rebuild]` — the rules, then the grouping; prints counts.
 - `conversations list --chat <chat> [--after] [--before]` — one line each: first message, size, people, span.
 - `conversations show <conversation | message>` — the transcript, oldest first; a message's own

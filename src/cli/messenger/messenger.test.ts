@@ -17,6 +17,7 @@ import { chatsCommand } from "./chats-command.js"
 import { completeCommand } from "./complete-command.js"
 import { contactsCommand } from "./contacts-command.js"
 import type { Messenger } from "./context.js"
+import { conversationsCommand } from "./conversations-command.js"
 import { safeName } from "./download-command.js"
 import { recipientsCommand, sendsCommand } from "./guard-commands.js"
 import { type McpEnvironment, mcpCommand } from "./mcp-command.js"
@@ -134,6 +135,7 @@ const call = async (
         commandsCommand(app),
         completeCommand(messenger, settingsFor(app)),
         storeCommand(messenger),
+        conversationsCommand(messenger),
         mcpCommand(messenger),
         modelsCommand(messenger),
         topicsCommand(messenger),
@@ -981,6 +983,30 @@ describe("the shared read commands", () => {
     const broken = await call(["messages", "search", "--regex", "(", "--json"], never, env)
     expect(broken.code).toBe(2)
     expect(broken.stderr.join("\n")).toContain("not a regular expression")
+  })
+
+  it("**builds a chat's conversations** and explains a message's place in one, without connecting", async () => {
+    const root = mkdtempSync(join(tmpdir(), "messenger-"))
+    const env = { CHAT_STATE_DIR: join(root, "state"), MESSAGING_STORE: join(root, "m.db") }
+    await call(["messages", "context", "Book", "2", "--json"], async () => fake, env)
+    const never = async (): Promise<MessengerAdapter> => {
+      throw new Error("conversations come from the store alone")
+    }
+
+    expect((await call(["conversations", "list", "--chat", "7"], never, env)).stderr.join("\n")).toContain(
+      "conversations build --chat 7",
+    )
+    const built = await call(["conversations", "build", "--chat", "7", "--json"], never, env)
+    expect(JSON.parse(built.stdout[0] ?? "")).toMatchObject({ chat: "7", messages: 3, conversations: 1 })
+    const listed = JSON.parse(
+      (await call(["conversations", "list", "--chat", "7", "--json"], never, env)).stdout[0] ?? "",
+    )
+    expect(listed.items).toMatchObject([{ firstMessageId: "1", messageCount: 3, senders: 1 }])
+    const shown = await call(["conversations", "show", listed.items[0].id, "--jsonl"], never, env)
+    expect(shown.stdout.map((line) => JSON.parse(line).id)).toEqual(["1", "2", "3"])
+    const links = JSON.parse((await call(["messages", "links", "7", "3", "--json"], never, env)).stdout[0] ?? "")
+    expect(links).toMatchObject({ links: [{ parentId: "2", kind: "same_sender", chosen: true }], chain: ["2", "1"] })
+    expect((await call(["conversations", "show", "Book"], never, env)).code).toBe(2)
   })
 
   it("**report and export what the store holds**, without connecting", async () => {

@@ -16,6 +16,12 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   transactions and makes it current in one (the agent's links stay, marked stale when their message
   changed after them), and `conversations`, `conversation`, `conversationOf`, `links` and
   `conversationState` read them back.
+- **`conversations build --chat <chat>`**, **`conversations list --chat <chat> [--since-time]`** and
+  **`conversations show <id>`** (or `show <chat> <message>`): the conversations inside a group chat,
+  found in the stored messages by replies, mentions and who wrote next; nothing is built until asked.
+  **`messages links <chat> <message>`** says why a message is where it is. MCP: `conversations_list`,
+  `conversations_show`. The commands are shared; tg and max get them when they mount
+  `conversationsCommand`. A profile that denies `messages` is refused them too.
 
 ## 0.88.0 — 01.10.2026
 
@@ -241,6 +247,7 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   Each rebuild of a chat is written under its own build number and made current at once, so a big
   chat's rebuild never holds the write lock for long.
   `messages.mentions` keeps whom a message mentions by id, where the messenger says so.
+
 
 ## 0.80.0 — 01.10.2026
 

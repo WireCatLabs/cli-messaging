@@ -32,6 +32,7 @@ export {
   type MessengerContext,
   messengerContext,
 } from "./messenger/context.js"
+export { conversationsCommand } from "./messenger/conversations-command.js"
 export { doctorCommand } from "./messenger/doctor-command.js"
 export { recipientsCommand, sendsCommand } from "./messenger/guard-commands.js"
 export { inboxCommand } from "./messenger/inbox.js"

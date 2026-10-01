@@ -6,6 +6,7 @@ import { chatsTools } from "./tools/chats.js"
 import { chatsReadTools } from "./tools/chats-read.js"
 import { contactsTools } from "./tools/contacts.js"
 import { contactWriteTools } from "./tools/contacts-write.js"
+import { conversationsTools } from "./tools/conversations.js"
 import { folderTools } from "./tools/folders.js"
 import { inboxTools } from "./tools/inbox.js"
 import { messagesTools } from "./tools/messages.js"
@@ -32,6 +33,7 @@ export const readTools = (messenger: Messenger): Record<string, AnyTool> => ({
   ...chatsTools(messenger),
   ...contactsTools(messenger),
   ...messagesTools(messenger),
+  ...conversationsTools(messenger),
   ...pollReadTools(messenger),
   ...messagesPhotoTools(messenger),
   ...messagesTranscribeTools(messenger),
