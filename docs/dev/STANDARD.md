@@ -53,9 +53,10 @@ guessable from the others.
    name, in every command of both tools. **A length of time is a `<duration>`** (`500ms`,
    `30s`, `2m`, `4h`, `1d`) — a number and a unit, never a bare number — parsed as `--timeout`
    is; `--since-time` takes a duration or a time.
-   - **The kind of value is in the name** of an option that marks a place in a history or a count
-     around it: `-id` a message id, `-time` an ISO 8601 time or a duration ago, `-n` a count —
-     `--before-id`, `--after-time`, `--since-time`, `--before-n`. Two kinds, two options, never one
+   - **The kind of value is in the name** of every option that takes a time, and of one that marks
+     a place in a history or a count around it: `-id` a message id, `-time` an ISO 8601 time or a
+     duration from now or ago, `-n` a count — `--before-id`, `--after-time`, `--since-time`,
+     `--at-time`, `--before-n`. Two kinds, two options, never one
      option that guesses which it was given.
    - **How much, in a list or a fetch:** `--limit <n>` how many items, `--page <n>` which page,
      `--page-size <n>` how many one request to the messenger asks for. A count of pages is never an
@@ -106,7 +107,8 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--anonymous` |  | nobody sees who voted for what |  | `polls create` |
 | `--app` | `<how>` | the first time only: how to get this profile's app from my.telegram.org | `browser` | `session start` (tg-only) |
 | `--as-file` |  | send every --file as a plain file to download, a video included |  | `messages send` |
-| `--at` | `<time>` | let the messenger send it later, even with this machine off: a local time like 2026-09-25T09:00, or 30m |  | `messages send` |
+| `--at` | `<time>` | let the messenger send it later, even with this machine off: a local time like 2026-09-25T09:00, or 30m. **becomes `--at-time` — NEED-493** |  | `messages send` (planned) |
+| `--at-time` | `<time>` | let the messenger send it later, even with this machine off: a local time like 2026-09-25T09:00, or 30m |  | `messages send` (planned) |
 | `--background` |  | run as a job that outlives this command; `store jobs show` follows it |  | `store fetch` (planned) |
 | `--before` | `<id-or-time>` | read what came before this message id, this ISO 8601 time, or 2h / 1d ago. **becomes `--before-id`, `--before-time` (`messages list`) and `--before-n` (`messages context`) — NEED-485** |  | `messages context` (planned), `messages list` (planned) |
 | `--before-id` | `<id>` | read what came before this message id; not with --before-time |  | `messages list` (planned) |
