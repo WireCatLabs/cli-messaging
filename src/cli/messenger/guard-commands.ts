@@ -3,6 +3,7 @@ import { annotate } from "@leemour/cli-core/commands"
 import { Command } from "commander"
 import { SendJournal, sendsPathFor } from "../../sends/journal.js"
 import { RecipientList, recipientsPathFor } from "../../sends/recipients.js"
+import { renderPage } from "../paging.js"
 import { type Messenger, messengerContext } from "./context.js"
 
 /**
@@ -19,9 +20,10 @@ export const recipientsCommand = (messenger: Messenger): Command => {
     .command("list")
     .description("the chats on the list; empty and off until the first add")
     .action(async function (this: Command) {
-      const { settings, renderer, env } = messengerContext(this, messenger)
+      const context = messengerContext(this, messenger)
+      const { settings, renderer, env } = context
       const chats = listFor(settings.profile, env).read()
-      renderer.stream(chats ?? [])
+      renderPage({ ...context, settings: { ...settings, all: true } }, { items: chats ?? [], hasMore: false })
       if (!chats) renderer.note("the recipient list is off — this profile may send to any chat")
       else if (chats.length === 0) renderer.note("the recipient list is on and empty — this profile may send nowhere")
     })
@@ -69,9 +71,10 @@ export const sendsCommand = (messenger: Messenger): Command =>
       .description("attempts to send, newest first: sent, refused, failed, or not known")
       .option("--limit <n>", "how many to show", (value) => Number.parseInt(value, 10))
       .action(async function (this: Command) {
-        const { settings, renderer, env } = messengerContext(this, messenger)
+        const context = messengerContext(this, messenger)
+        const { settings, renderer, env } = context
         const entries = new SendJournal(sendsPathFor(messenger.app, settings.profile, env)).entries().reverse()
-        renderer.stream(entries.slice(0, settings.limit))
+        renderPage(context, { items: entries.slice(0, settings.limit), hasMore: entries.length > settings.limit })
         if (entries.length === 0) renderer.note(`profile ${settings.profile} has not tried to send anything`)
       }),
   )

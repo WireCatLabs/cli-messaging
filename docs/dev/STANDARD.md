@@ -177,8 +177,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 
 1. **Every list answers one envelope** in `--json`: `{ items, page, limit, hasMore }` —
    `renderPage` in [`src/cli/paging.ts`](../../src/cli/paging.ts) prints it. `--jsonl` streams the
-   items one per line. A list never answers a bare array; `runs list`, `sends list` and
-   `recipients list` still do, and move to the envelope.
+   items one per line. A list never answers a bare array.
 2. **A write answers what it did**: `{ operationId, … }`, the ids it touched after it. The same
    id is in the send journal.
 3. **A one-thing view answers the object itself** (`account show`, `store info`).

@@ -41,7 +41,7 @@ export const renderPage = <T>(
     format,
     settings,
     streams,
-  }: { renderer: Renderer; format: RenderFormat; settings: Settings; streams: Streams },
+  }: { renderer: Renderer; format: RenderFormat; settings: Pick<Settings, "page" | "limit" | "all">; streams: Streams },
   { items, hasMore }: Page<T>,
   view?: (items: T[]) => string,
   /** What to type for the rest, when the listing is not paged by `--page`. */

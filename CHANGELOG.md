@@ -6,6 +6,13 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Changed — may break callers
+
+- **`runs list`, `sends list` and `recipients list` answer the list envelope** in `--json`,
+  `{ items, page, limit, hasMore }`, as every other list does; they printed a bare array. A script
+  that read `.[]` reads `.items[]`. `--jsonl` is unchanged: one item per line. `sends list` and
+  `runs list` say `hasMore: true` when `--limit` cut the list short.
+
 ## 0.74.0 — 01.10.2026
 
 ### Added

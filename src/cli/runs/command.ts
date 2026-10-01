@@ -2,6 +2,7 @@ import { CliError } from "@leemour/cli-core"
 import { Command } from "commander"
 import type { AppIdentity } from "../app.js"
 import { environmentOf, outputFor } from "../context.js"
+import { renderPage } from "../paging.js"
 import { findRun, listRuns, readEvents, runsDirFor } from "./run.js"
 
 /** Reading the log is not itself worth recording, so **nothing here starts a run**. */
@@ -20,9 +21,13 @@ export const runsCommand = (app: AppIdentity): Command => {
     .option("--limit <n>", "how many to show", (value) => Number.parseInt(value, 10), 20)
     .action(function (this: Command) {
       const { limit } = this.opts<{ limit: number }>()
-      const { renderer } = outputFor(this)
+      const output = outputFor(this)
+      const { renderer } = output
       const runs = listRuns(dir(this))
-      renderer.result(runs.slice(0, limit))
+      renderPage(
+        { ...output, settings: { page: 1, limit, all: false } },
+        { items: runs.slice(0, limit), hasMore: runs.length > limit },
+      )
       if (runs.length === 0) renderer.note("nothing recorded — a run is kept with `--record`, or when it fails")
     })
 
