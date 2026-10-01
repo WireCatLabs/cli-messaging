@@ -44,8 +44,8 @@ needs it. The ones a new messenger usually sets:
 ## Required core and optional groups
 
 `MessengerCore` is required. Every other group is optional: `ChatReading`, `MessageEditing`,
-`MessagePins`, `MessageReactions`, `ReadState`, `MessagePolls`, `LiveUpdates`, `MessageMedia`,
-`ScheduledMessages`, `GroupModeration`, `AccountTools`, `GroupAdmin`, `ChatFolders`, `ContactBook`
+`MessagePins`, `MessageReactions`, `ReadState`, `MessagePolls`, `LiveUpdates`, `PushedHistory`,
+`MessageMedia`, `ScheduledMessages`, `GroupModeration`, `AccountTools`, `GroupAdmin`, `ChatFolders`, `ContactBook`
 and `AccountEditing`.
 
 - A command reaches an optional method through `capability()`. When your adapter does not have
@@ -111,18 +111,24 @@ WhatsApp over Baileys probably works like this; it has not been observed yet. Fo
 
 This is the adapter's work. The shared package does not enforce it.
 
-## History from the store (coming)
+## History from the store
 
-Some messengers push history to the client instead of answering a request for it. A new
-`Messenger.history` field is coming for them, with two values: `"server"` (the default) and
-`"store"`.
+Some messengers push history to the client instead of answering a request for it. For them, set
+`Messenger.history` to `"store"`. The default is `"server"`. The changelog says when it ships.
 
 - With `"store"`, the shared services answer `chats`, `history`, `around` and `contact` from the
-  local store. They do not call the adapter.
-- `serve` keeps the store filled from what the messenger pushes.
-- Until the field is released, your adapter must implement those four methods.
-
-The changelog says when it ships.
+  local store. They do not call the adapter. Writes still connect.
+- Give the adapter the `PushedHistory` group. `feed(onBatch, signal)` hands over what the messenger
+  pushes, as `HistoryBatch` objects: `{ chats?, people?, messages? }`, any of them, for any chats. It
+  ends when `signal` aborts.
+- `serve` and `watch` run `feed` beside `watch`, on the same connection, and save each batch to the
+  store. Chats are saved first, then people, then messages. Batches are saved in the order they come.
+- A push names some chats, never all of them, so a chat left out of a batch is not marked as left.
+  A pushed message does not lift a deletion the store already holds: the push may be older than it.
+- A batch the store cannot take is a warning on stderr. It does not stop `serve`. A `feed` that
+  rejects stops `serve` and `watch` with its error.
+- New messages still come through `watch`, not through `feed`.
+- Until the field is released, your adapter must implement those four reads.
 
 ## Running the contract cases
 
@@ -135,7 +141,10 @@ release ([README, "How often, and what may break"](../../README.md#how-often-and
   fresh adapter over **your own fake client**, filled from that seed. Each case calls it once and
   closes the adapter after.
 - `fakeAdapter(seed)` — an adapter in memory that passes every case. Use it in command tests, or
-  read it as an example.
+  read it as an example. `fakeAdapter(seed, { feed: true })` also has `feed`: it pushes the seed's
+  chats and people in one batch, then each chat's messages in a batch of their own.
+- The `feed` case runs only when the adapter has `feed`. It checks that a batch arrives, that it
+  holds only the seed's chats and messages with ids as strings, and that `feed` ends on abort.
 
 Each case checks with `node:assert/strict`, so the kit does not depend on a test runner. Under
 vitest:

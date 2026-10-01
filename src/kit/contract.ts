@@ -1,6 +1,7 @@
 import assert from "node:assert/strict"
 import type { ErrorCode } from "@leemour/cli-core"
 import { isCliFailure } from "../cli/failures.js"
+import type { HistoryBatch } from "../cli/messenger/port.js"
 import { capability, type MessengerAdapter } from "../cli/messenger/port.js"
 import type { Id, Message } from "../domain/models.js"
 import { newSendId } from "../sends/send-id.js"
@@ -43,6 +44,7 @@ export const OPTIONAL_METHODS = [
   "closePoll",
   "createPoll",
   "watch",
+  "feed",
   "download",
   "transcribe",
   "scheduled",
@@ -369,6 +371,39 @@ export const contractCases = ({
           await within(Promise.resolve(watching), "watch did not end when the signal aborted", waitMs)
         },
         "`connect` opens a connection that listens, as `{ listen: true }` does",
+      ],
+      [
+        "feed pushes only the seed's chats and messages, with ids as strings, and ends when the signal aborts",
+        async (adapter, seed) => {
+          const skipped = lacking(adapter, "feed")
+          if (skipped) return skipped
+          const controller = new AbortController()
+          const batches: HistoryBatch[] = []
+          let pushed = () => {}
+          const first = new Promise<void>((resolve) => {
+            pushed = resolve
+          })
+          const feeding = adapter.feed?.((batch) => {
+            batches.push(batch)
+            pushed()
+          }, controller.signal)
+          await within(first, "feed pushed nothing", waitMs)
+          controller.abort()
+          await within(Promise.resolve(feeding), "feed did not end when the signal aborted", waitMs)
+          const chats = new Set(seed.chats.map((chat) => chat.id))
+          const messages = new Set(seed.messages.map((message) => `${message.chatId}/${message.id}`))
+          for (const batch of batches) {
+            for (const chat of batch.chats ?? []) assert.ok(chats.has(chat.id), `chat ${chat.id} is not in the seed`)
+            for (const message of batch.messages ?? [])
+              assert.ok(messages.has(`${message.chatId}/${message.id}`), `message ${message.id} is not in the seed`)
+          }
+          assert.deepEqual(
+            everyId(batches).filter((id) => typeof id !== "string"),
+            [],
+            "every id is a string",
+          )
+        },
+        "the fake pushes the seed's history once connected, as `fakeAdapter(seed, { feed: true })` does",
       ],
     ]),
     {

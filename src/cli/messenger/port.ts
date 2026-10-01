@@ -175,6 +175,19 @@ export interface LiveUpdates {
   watch(onEvent: (event: MessageEvent) => void, signal: AbortSignal, onReady?: () => void): Promise<void>
 }
 
+/** What a messenger pushed in one go: any of chats, the people in them, and past messages of any chats. */
+export interface HistoryBatch {
+  chats?: Chat[]
+  people?: Member[]
+  messages?: Message[]
+}
+
+/** For a messenger that pushes its history to the client instead of answering for it (`Messenger.history: "store"`). */
+export interface PushedHistory {
+  /** Chats, people and past messages as the messenger pushes them, until `signal` aborts. */
+  feed(onBatch: (batch: HistoryBatch) => void, signal: AbortSignal): Promise<void>
+}
+
 /** A message's files and its speech, fetched from the messenger. */
 export interface MessageMedia {
   /** The files attached to one message, fetched fresh from the messenger: a stored reference may have expired. */
@@ -295,6 +308,7 @@ export interface MessengerAdapter
     Partial<ReadState>,
     Partial<MessagePolls>,
     Partial<LiveUpdates>,
+    Partial<PushedHistory>,
     Partial<MessageMedia>,
     Partial<ScheduledMessages>,
     Partial<GroupModeration>,
