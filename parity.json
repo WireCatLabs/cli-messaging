@@ -193,11 +193,6 @@
       "meaning": "at most this many actions in one run",
       "default": "10"
     },
-    "--max-pages": {
-      "value": "<n>",
-      "meaning": "at most this many pages in one run; a page is one request, and each messenger sets the default",
-      "note": "replaced by `--limit` (messages per run) and `--page-size` — NEED-486"
-    },
     "--md": {
       "meaning": "read **bold**, _italic_, ~~struck~~ and `code` in the text; \\ keeps a mark literal"
     },
@@ -271,7 +266,8 @@
     },
     "--page-size": {
       "value": "<n>",
-      "meaning": "how many items one request to the messenger asks for; the messenger's own if not given"
+      "meaning": "how many items one request to the messenger asks for; the messenger's own if not given",
+      "note": "the default is each messenger's own page: 30 on MAX, 100 on Telegram"
     },
     "--pause": {
       "value": "<duration>",
@@ -1264,40 +1260,16 @@
       "in": "all"
     },
     "store backup": {
-      "in": [],
-      "planned": {
-        "max": "T6",
-        "tg": "T6"
-      }
+      "in": "all"
     },
     "store check": {
-      "in": [],
-      "planned": {
-        "max": "T6",
-        "tg": "T6"
-      }
+      "in": "all"
     },
     "store clear": {
-      "in": [],
-      "planned": {
-        "max": "T6",
-        "tg": "T6"
-      },
+      "in": "all",
       "options": {
-        "--allow-dangerous": {
-          "in": [],
-          "planned": {
-            "max": "T6",
-            "tg": "T6"
-          }
-        },
-        "--left": {
-          "in": [],
-          "planned": {
-            "max": "T6",
-            "tg": "T6"
-          }
-        }
+        "--allow-dangerous": "all",
+        "--left": "all"
       }
     },
     "store export": {
@@ -1305,134 +1277,50 @@
       "options": {
         "--format": "all",
         "--output": "all",
-        "--since": {
-          "in": [],
-          "planned": {
-            "max": "T6",
-            "tg": "T6"
-          }
-        },
-        "--since-time": {
-          "in": [],
-          "planned": {
-            "max": "T6",
-            "tg": "T6"
-          }
-        }
+        "--since-time": "all"
       }
     },
     "store fetch": {
       "in": "all",
       "options": {
-        "--background": {
-          "in": [],
-          "planned": {
-            "max": "T6",
-            "tg": "T6"
-          }
-        },
+        "--background": "all",
         "--estimate": "all",
         "--last": "all",
-        "--limit": {
-          "in": [],
-          "planned": {
-            "max": "T6",
-            "tg": "T6"
-          }
-        },
-        "--max-pages": {
-          "in": [],
-          "planned": {
-            "max": "T6",
-            "tg": "T6"
-          }
-        },
-        "--page-size": {
-          "in": [],
-          "planned": {
-            "max": "T6",
-            "tg": "T6"
-          }
-        },
+        "--limit": "all",
+        "--page-size": "all",
         "--pause": "all",
-        "--since": {
-          "in": [],
-          "planned": {
-            "max": "T6",
-            "tg": "T6"
-          }
-        },
-        "--since-time": {
-          "in": [],
-          "planned": {
-            "max": "T6",
-            "tg": "T6"
-          }
-        }
+        "--since-time": "all"
       }
     },
     "store info": {
-      "in": [],
-      "planned": {
-        "max": "T6",
-        "tg": "T6"
-      }
+      "in": "all"
     },
     "store jobs": {
-      "in": [],
-      "planned": {
-        "max": "T6",
-        "tg": "T6"
-      }
+      "in": "all"
     },
     "store jobs cancel": {
-      "in": [],
-      "planned": {
-        "max": "T6",
-        "tg": "T6"
-      }
+      "in": "all"
     },
     "store jobs list": {
-      "in": [],
-      "planned": {
-        "max": "T6",
-        "tg": "T6"
-      }
+      "in": "all"
     },
     "store jobs show": {
-      "in": [],
-      "planned": {
-        "max": "T6",
-        "tg": "T6"
-      }
+      "in": "all"
     },
     "store migrate": {
-      "in": [],
-      "planned": {
-        "max": "T6",
-        "tg": "T6"
-      }
+      "in": "all"
     },
     "store reindex": {
-      "in": [],
+      "in": ["max"],
       "planned": {
-        "max": "T6",
-        "tg": "T6"
+        "tg": "tg: cli-messaging 0.97.0 bump"
       }
     },
     "store restore": {
-      "in": [],
-      "planned": {
-        "max": "T6",
-        "tg": "T6"
-      }
+      "in": "all"
     },
     "store status": {
-      "in": [],
-      "planned": {
-        "max": "T6",
-        "tg": "T6"
-      }
+      "in": "all"
     },
     "topics": {
       "in": ["tg"],
