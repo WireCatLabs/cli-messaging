@@ -92,10 +92,9 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | Option | Value | Meaning | Default | Commands |
 |---|---|---|---|---|
 | `--add` | `<chat>` | put a chat into a folder; repeat it for more |  | `chats folders update` |
-| `--after` | `<id-or-time>` | read what came after this message id, this ISO 8601 time, or 2h / 1d ago; not with --before. **becomes `--after-id`, `--after-time` (`messages list`) and `--after-n` (`messages context`) — NEED-485** |  | `messages context` (planned), `messages list` (planned) |
-| `--after-id` | `<id>` | read what came after this message id; not with --after-time or the --before pair |  | `messages list` (planned) |
-| `--after-n` | `<n>` | how many messages after it |  | `messages context` (planned) |
-| `--after-time` | `<time>` | read what came after this ISO 8601 time, or 2h / 1d ago; not with --after-id or the --before pair |  | `messages list` (planned) |
+| `--after-id` | `<id>` | read what came after this message id; not with --after-time or the --before pair |  | `messages list` |
+| `--after-n` | `<n>` | how many messages after it |  | `messages context` |
+| `--after-time` | `<time>` | read what came after this ISO 8601 time, or 2h / 1d ago; not with --after-id or the --before pair |  | `messages list` |
 | `--all` |  | every row, no paging |  | `chats list`, `chats members list` (planned), `contacts list`, `inbox` (planned), `messages download` (planned), `review` (planned) |
 | `--all-can-pin` | `<on\|off>` | every member may pin messages |  | `chats update` |
 | `--allow-any-file` |  | send a --file even from a hidden folder, ~/.ssh or the tool's own folders |  | `messages send` |
@@ -107,13 +106,11 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--anonymous` |  | nobody sees who voted for what |  | `polls create` |
 | `--app` | `<how>` | the first time only: how to get this profile's app from my.telegram.org | `browser` | `session start` (tg-only) |
 | `--as-file` |  | send every --file as a plain file to download, a video included |  | `messages send` |
-| `--at` | `<time>` | let the messenger send it later, even with this machine off: a local time like 2026-09-25T09:00, or 30m. **becomes `--at-time` — NEED-493** |  | `messages send` (planned) |
-| `--at-time` | `<time>` | let the messenger send it later, even with this machine off: a local time like 2026-09-25T09:00, or 30m |  | `messages send` (planned) |
+| `--at-time` | `<time>` | let the messenger send it later, even with this machine off: a local time like 2026-09-25T09:00, or 30m |  | `messages send` |
 | `--background` |  | run as a job that outlives this command; `store jobs show` follows it |  | `store fetch` (planned) |
-| `--before` | `<id-or-time>` | read what came before this message id, this ISO 8601 time, or 2h / 1d ago. **becomes `--before-id`, `--before-time` (`messages list`) and `--before-n` (`messages context`) — NEED-485** |  | `messages context` (planned), `messages list` (planned) |
-| `--before-id` | `<id>` | read what came before this message id; not with --before-time |  | `messages list` (planned) |
-| `--before-n` | `<n>` | how many messages before it |  | `messages context` (planned) |
-| `--before-time` | `<time>` | read what came before this ISO 8601 time, or 2h / 1d ago; not with --before-id |  | `messages list` (planned) |
+| `--before-id` | `<id>` | read what came before this message id; not with --before-time |  | `messages list` |
+| `--before-n` | `<n>` | how many messages before it |  | `messages context` |
+| `--before-time` | `<time>` | read what came before this ISO 8601 time, or 2h / 1d ago; not with --before-id |  | `messages list` |
 | `--bot` |  | the bot section of the profile's settings, rather than the personal account's |  | `config set` (planned), `config show` (planned), `config unset` (planned) |
 | `--can` | `<rights>` | what they may do, comma-separated: read, members, admins, info, pin, link, post, edit, delete. **lists the rights each messenger has — MAX has `read`, Telegram does not — so it differs on purpose (Help text rule 4)** |  | `chats admins add` |
 | `--channel` |  | a private channel instead of a group; people join it by its link |  | `chats create` |
