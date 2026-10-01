@@ -72,7 +72,7 @@ export const fillSearchIndex = (
   const filled: SearchIndexFill = { normalized: 0, indexed: 0, terms: 0 }
   const before = searchIndexState(database)
   // Every search asks; when all is built it must not take the write lock.
-  if (!before || (before.ready && before.termsThrough > 0)) return filled
+  if (!before || (before.ready && before.termsThrough >= newestMessage(database))) return filled
   if (before.pendingNormalization > 0) {
     filled.normalized = backfillNormalized(database, {
       batch,
@@ -104,7 +104,58 @@ export const fillSearchIndex = (
     database.prepare("UPDATE search_index_state SET built_at = ? WHERE name = ?").run(now(), INDEX)
   }
   if (state?.ready && state.termsThrough === 0) filled.terms = buildTerms(database, { batch, until, onBatch })
+  if (state?.ready) filled.terms += refreshTerms(database, { batch, until, onBatch })
   return filled
+}
+
+const newestMessage = (database: CacheDatabase) =>
+  Number(database.prepare("SELECT coalesce(max(pk), 0) AS pk FROM messages").get()?.pk)
+
+const termWriters = (database: CacheDatabase) => {
+  const term = database.prepare("INSERT OR IGNORE INTO search_terms (term, length) VALUES (?, ?)")
+  const trigram = database.prepare(
+    "INSERT OR IGNORE INTO search_term_trigrams (trigram, length, term) VALUES (?, ?, ?)",
+  )
+  return (word: string) => {
+    term.run(word, word.length)
+    if (!/^\d+$/.test(word)) for (const piece of trigrams(word)) trigram.run(piece, word.length, word)
+  }
+}
+
+/**
+ * Adds the words of messages stored after the vocabulary was built, split as the index splits the
+ * normalized text — accents and case are already gone from it. A word only a deleted message had may
+ * be added; the lookup drops it, since the index no longer knows it.
+ */
+const refreshTerms = (
+  database: CacheDatabase,
+  { batch, until, onBatch }: { batch: number; until: () => boolean; onBatch?: (step: string, done: number) => void },
+): number => {
+  const newest = newestMessage(database)
+  const texts = database.prepare(
+    "SELECT normalized_text AS text FROM messages WHERE pk > ? AND pk <= ? AND normalized_text <> ''",
+  )
+  const advance = database.prepare("UPDATE search_index_state SET terms_through = ? WHERE name = ?")
+  const write = termWriters(database)
+  let added = 0
+  for (;;) {
+    const through = Number(searchIndexState(database)?.termsThrough)
+    if (through >= newest || until()) return added
+    const to = Math.min(through + batch, newest)
+    inBatch(database, () => {
+      const words = new Set(
+        texts.all(through, to).flatMap((row) =>
+          String(row.text)
+            .split(/[^\p{L}\p{N}]+/u)
+            .filter(Boolean),
+        ),
+      )
+      for (const word of words) write(word)
+      advance.run(to, INDEX)
+      added += words.size
+    })
+    onBatch?.("terms", added)
+  }
 }
 
 /**
@@ -120,10 +171,7 @@ const buildTerms = (
   const next = database.prepare(
     `SELECT term FROM message_words_vocab WHERE col = 'normalized_text' AND term > ? ORDER BY term LIMIT ?`,
   )
-  const term = database.prepare("INSERT OR IGNORE INTO search_terms (term, length) VALUES (?, ?)")
-  const trigram = database.prepare(
-    "INSERT OR IGNORE INTO search_term_trigrams (trigram, length, term) VALUES (?, ?, ?)",
-  )
+  const write = termWriters(database)
   let after = String(database.prepare("SELECT coalesce(max(term), '') AS term FROM search_terms").get()?.term)
   let written = 0
   for (;;) {
@@ -131,10 +179,7 @@ const buildTerms = (
     const terms = next.all(after, batch).map((row) => String(row.term))
     if (terms.length === 0) break
     inBatch(database, () => {
-      for (const word of terms) {
-        term.run(word, word.length)
-        if (!/^\d+$/.test(word)) for (const piece of trigrams(word)) trigram.run(piece, word.length, word)
-      }
+      for (const word of terms) write(word)
     })
     written += terms.length
     after = terms.at(-1) ?? after

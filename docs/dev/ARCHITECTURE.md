@@ -97,7 +97,8 @@ scope tokens come back as words. A file of at most `BACKFILL_ON_OPEN` messages i
 migration; a larger one records in `search_index_state` the highest `pk` the batches must reach.
 `fillSearchIndex` (`src/store/sqlite/search-index.ts`) gets it there in batches of 5,000 — the
 normalized text first, then the words, then the typo vocabulary (`search_terms`,
-`search_term_trigrams`) — from `store migrate`, `store reindex`, and up to 200 ms before each
+`search_term_trigrams`), then the words of messages stored since — from `store migrate`,
+`store reindex`, and up to 200 ms before each
 `messages search`. When everything is built it returns without taking the write lock. Nothing ranks
 by it yet ([phase 2](../storage/plans/phase-2.md)). The search's steps over it are in
 `src/store/sqlite/words.ts`: `matchWords` (every or any word, whole or as beginnings, bm25 then
