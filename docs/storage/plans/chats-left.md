@@ -44,13 +44,19 @@ the store is a system of record.
 5. **Reads skip marked chats:** `chats`, `countChats` and `chatsWith`. Messages of a left chat stay
    readable by its id (`messages list <id> --offline` reads messages, not the chat list).
 
-## 4. Not in this plan
+## 4. `store clear --left` (ruled 2026-10-01, NEED-496 B)
 
-- **Deleting left chats from the store.** max has `max cache clear --left` for its own cache. A
-  shared `store clear --left` would be a new command in both CLIs, and deleting from the system of
-  record is the owner's call. It is asked separately.
-- **Messages of a chat whose row is gone** (after a max cache upgrade). These are max-cache only;
-  they are not in this store.
+A shared command: `<cli> store clear --left --allow-dangerous` deletes this account's marked chats
+with their messages, members, sync state and leases, in one transaction, and answers
+`{ cleared, chats, messages }`. Without `--left` it refuses and says what it can clear: emptying the
+whole archive is not offered. Without `--allow-dangerous` it refuses and says how many chats and
+messages it would delete. tg takes it with version 14; max takes it with the other store
+maintenance commands at the fold-in ([`../decisions.md`](../decisions.md)), and until then has
+`max cache clear --left` for its profile cache. Its row goes into `parity.json` as tg-only until
+then.
+
+Not here: messages of a chat whose row is gone after a max cache upgrade are max-cache only; they
+are not in this store.
 
 ## 5. Work
 
@@ -58,7 +64,9 @@ the store is a system of record.
    This PR does it.
 2. After #255 merges: the migration through the Drizzle schema (`pnpm db:generate`), plus the store
    methods and reads. One PR, with a release.
-3. tg-cli and max-cli take the release. Nothing else changes in them.
+3. `store clear --left`: the store method `clearLeft`, the command in the shared `store` group, its
+   MCP decision (none: a local archive deletion is not an agent's tool), `parity.json`, docs. One PR.
+4. tg-cli and max-cli take the release. Nothing else changes in them; tg's docs list the new command.
 
 ## 6. Tests
 
@@ -66,5 +74,7 @@ the store is a system of record.
   skip a marked chat; its messages stay readable; the mark is per account.
 - **`stored.ts`:** a complete page marks; a page with an offset or `hasMore` does not.
 - **Migration:** a version-13 file with chats opens at 14 with every `left_at` null.
+- **`store clear --left`:** refuses without `--left` and without `--allow-dangerous`, deletes only
+  the marked chats of this account and everything under them, answers the counts.
 - **Live, with the owner's yes:** `max chats list --offline` and `tg chats list --offline` no longer
   show a chat the account left.
