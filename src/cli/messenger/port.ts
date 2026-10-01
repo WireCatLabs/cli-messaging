@@ -6,6 +6,7 @@ import type {
   Chat,
   ChatCard,
   ChatEvents,
+  GroupCard,
   GroupMember,
   Id,
   LinkTarget,
@@ -197,6 +198,18 @@ export interface AccountTools {
   addressBook(): Promise<Member[]>
 }
 
+/** Making, joining and leaving groups. Everything here is seen by other people. */
+export interface GroupAdmin {
+  /** The person ids these references name — an id, a handle, a name — in the order given; one that is not a person is refused. */
+  people(references: string[]): Promise<Id[]>
+  /** A group, or a channel with `channel`, with these people in it; they are told they were added. */
+  createGroup(title: string, people: Id[], options: { channel: boolean }): Promise<GroupCard>
+  /** By an invite or public link; the others in it see that the owner joined. */
+  join(link: string): Promise<GroupCard>
+  /** The others see that the owner left. */
+  leave(chat: string): Promise<{ chatId: Id }>
+}
+
 /**
  * What a messenger does for the shared commands. Each CLI implements it over its own library, and
  * nothing of that library's shape crosses it. A chat is passed as typed — a title, an id, a handle —
@@ -220,7 +233,8 @@ export interface MessengerAdapter
     Partial<MessageMedia>,
     Partial<ScheduledMessages>,
     Partial<GroupModeration>,
-    Partial<AccountTools> {}
+    Partial<AccountTools>,
+    Partial<GroupAdmin> {}
 
 type Method = (...args: never[]) => unknown
 

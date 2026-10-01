@@ -41,6 +41,23 @@ export interface Chat {
   providerMetadata?: ProviderMetadata
 }
 
+/** A group's switches; `null` where the messenger does not say, or has no such switch. */
+export interface GroupSettings {
+  allCanPin: boolean | null
+  onlyAdminsAdd: boolean | null
+  onlyAdminsCall: boolean | null
+  onlyOwnerEditsInfo: boolean | null
+  membersSeeLink: boolean | null
+}
+
+/** A group or channel as the commands that change one answer it. */
+export interface GroupCard extends Chat {
+  description: string | null
+  /** The invite link; only a member who may see it gets one. */
+  link: string | null
+  settings: GroupSettings
+}
+
 export interface Attachment {
   /** Lower-cased: `photo`, `video`, `file`, `voice`, `sticker`, `share`… */
   kind: string
