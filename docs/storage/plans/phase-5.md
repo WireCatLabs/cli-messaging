@@ -226,7 +226,7 @@ the default). Facts: [`../research/2026-10-02-embedding-apis.md`](../research/20
    vectors no chunk points at.
 4. **The external provider** (E11, E12) — `openai` with `--base-url`, the key commands, the consent
    step and `--max-tokens`, `--concurrency`, retries; tested against a stand-in server, never a real key.
-5. **`conversations search`** — the scan (E3, E7), output and `--json`, MCP `conversations_search`, the
+5. 🟡 2026-10-02: the command, the scan and MCP `conversations_search` are built; not yet: keeping the vectors in memory in `serve` and `mcp`, and naming on stderr a chat embedded only with another model · **`conversations search`** — the scan (E3, E7), output and `--json`, MCP `conversations_search`, the
    in-memory copy in `serve` and `mcp`.
 6. **Docs, changelog, parity rows, skill line** — ARCHITECTURE's store section (the two tables, why vectors
    are keyed by hash), `docs/commands.md`, one line in the shared skills; tg-cli and max-cli bump.

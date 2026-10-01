@@ -84,3 +84,85 @@ export const clearVectors = ({ orm }: StoreContext, chatKey: number, model: stri
           JOIN conversations c ON c.pk = k.conversation_pk WHERE c.chat_pk <> ${chatKey})
       RETURNING 1 AS n`,
   ).length
+
+export interface NearestChunk {
+  conversationPk: number
+  firstMessagePk: number
+  lastMessagePk: number
+  score: number
+}
+
+/** Rows read per step of a search, so a chat of any size is scanned in bounded memory. */
+const SCAN_PAGE = 5_000
+
+const dot = (query: Float32Array, blob: Uint8Array): number => {
+  const vector = new Float32Array(blob.buffer.slice(blob.byteOffset, blob.byteOffset + blob.byteLength))
+  let sum = 0
+  for (let index = 0; index < query.length; index++) sum += (query[index] as number) * (vector[index] as number)
+  return sum
+}
+
+/**
+ * The conversations of the current builds in scope nearest to `query`, best first: each scored by its
+ * best chunk. Vectors are unit length, so the dot product is the cosine (phase 5 E3).
+ */
+export const nearestChunks = (
+  { orm }: StoreContext,
+  accountPk: number,
+  {
+    chatKey,
+    model,
+    since,
+    limit,
+    query,
+  }: { chatKey?: number; model: string; since?: number; limit: number; query: Float32Array },
+): NearestChunk[] => {
+  const best = new Map<number, NearestChunk>()
+  let after = { conversation: 0, ordinal: -1 }
+  for (;;) {
+    const rows = orm.all<{ conversation: number; ordinal: number; first: number; last: number; vector: Uint8Array }>(
+      sql`SELECT k.conversation_pk AS conversation, k.ordinal, k.first_message_pk AS first, k.last_message_pk AS last,
+          v.vector FROM conversation_chunks k
+        JOIN conversations c ON c.pk = k.conversation_pk
+        JOIN conversation_state s ON s.chat_pk = c.chat_pk AND s.current_build = c.build
+        JOIN chats ch ON ch.pk = c.chat_pk
+        JOIN chunk_vectors v ON v.model = ${model} AND v.content_hash = k.content_hash
+        WHERE ch.account_pk = ${accountPk}
+          ${chatKey === undefined ? sql`` : sql`AND c.chat_pk = ${chatKey}`}
+          ${since === undefined ? sql`` : sql`AND c.last_at >= ${since}`}
+          AND (k.conversation_pk, k.ordinal) > (${after.conversation}, ${after.ordinal})
+        ORDER BY k.conversation_pk, k.ordinal LIMIT ${SCAN_PAGE}`,
+    )
+    for (const row of rows) {
+      const score = dot(query, row.vector)
+      const held = best.get(row.conversation)
+      if (!held || score > held.score) {
+        best.set(row.conversation, {
+          conversationPk: row.conversation,
+          firstMessagePk: row.first,
+          lastMessagePk: row.last,
+          score,
+        })
+      }
+    }
+    const last = rows.at(-1)
+    if (!last || rows.length < SCAN_PAGE) break
+    after = { conversation: last.conversation, ordinal: last.ordinal }
+  }
+  return [...best.values()].sort((a, b) => b.score - a.score).slice(0, limit)
+}
+
+/** The messenger's ids of these messages, by pk. */
+export const messageIds = ({ orm }: StoreContext, pks: number[]): Map<number, string> =>
+  new Map(
+    pks.length === 0
+      ? []
+      : orm
+          .all<{ pk: number; id: string }>(
+            sql`SELECT pk, native_id AS id FROM messages WHERE pk IN (${sql.join(
+              pks.map((pk) => sql`${pk}`),
+              sql`, `,
+            )})`,
+          )
+          .map(({ pk, id }) => [pk, id]),
+  )

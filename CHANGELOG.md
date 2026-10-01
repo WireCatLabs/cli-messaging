@@ -8,6 +8,11 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Added
 
+- **`conversations search "<query>" [--chat] [--model] [--since-time] [--limit]`** and MCP
+  `conversations_search` (storage phase 5): the conversations nearest in meaning to a query, best first,
+  in one chat or every chat embedded with the model — each with the chunk that matched and a score.
+  The query is embedded on this machine; the chunks are scanned 5,000 at a time, so memory stays bounded
+  at any size. A one-shot search loads the model each time (about a second). It reads as `messages`.
 - **`conversations embed --chat <chat> [--model] [--workers <n>] [--threads <n>]`**, `conversations embed
   status` and `conversations embed clear` (storage phase 5): a vector for each chunk of the chat's
   current build, computed on this machine with a model from `models text`, a batch at a time; stopping

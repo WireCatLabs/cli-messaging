@@ -3,6 +3,7 @@ import { chunkHash, chunkTextOf } from "../conversations/chunks.js"
 import type { Id } from "../domain/models.js"
 import { isTextModelInstalled, textModelsDirectory } from "../embeddings/embed.js"
 import { DEFAULT_TEXT_MODEL, type TextModel, textModel } from "../embeddings/models.js"
+import type { ConversationHit } from "../store/store.js"
 import type { ServiceDeps } from "./deps.js"
 import { storedChatId } from "./messages.js"
 
@@ -34,6 +35,11 @@ export interface EmbeddingsService {
   ): Promise<Embedded>
   /** Drops the chat's vectors, or one model's; messages and conversations are never touched. */
   clear(chat: string, model?: string): Promise<{ chat: Id; cleared: number }>
+  /** The conversations nearest in meaning to `query`, in one chat or every one of the account (E7). */
+  search(
+    query: string,
+    options: { chat?: string; model?: string; since?: string; limit: number },
+  ): Promise<{ model: string; hits: ConversationHit[] }>
 }
 
 /** A vector's model: the provider, the model and its size — vectors of two of them never mix. */
@@ -117,6 +123,36 @@ export const embeddingsService = (deps: ServiceDeps): EmbeddingsService => {
         await embedder.close()
       }
       return { chat: chatId, model: model.id, embedded, skipped }
+    },
+
+    search: async (query, { chat, model: id = DEFAULT_TEXT_MODEL, since, limit }) => {
+      const store = await deps.store()
+      const account = await deps.account()
+      const model = textModel(id)
+      const command = deps.messenger.app.command
+      const chatId = chat === undefined ? undefined : await storedChatId(deps.messenger, chat, store, account)
+      const directory = textModelsDirectory(deps.env)
+      if (!isTextModelInstalled(model, directory)) {
+        throw new CliError(
+          "not_found",
+          `${model.id} is not downloaded — \`${command} models text download ${model.id}\``,
+        )
+      }
+      const { openEmbedder } = await import("../embeddings/embed.js")
+      const embedder = await openEmbedder(model, directory)
+      try {
+        const [vector] = await embedder.embed([query], "query")
+        const hits = await store.nearestConversations(account, {
+          ...(chatId === undefined ? {} : { chatId }),
+          ...(since === undefined ? {} : { since }),
+          model: vectorModelKey(model),
+          limit,
+          query: vector as Float32Array,
+        })
+        return { model: model.id, hits }
+      } finally {
+        await embedder.close()
+      }
     },
 
     clear: async (chat, id) => {
