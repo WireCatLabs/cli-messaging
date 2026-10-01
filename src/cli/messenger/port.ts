@@ -112,10 +112,12 @@ export interface MessengerCore {
   close(): Promise<void>
 }
 
-/** Reading beyond the core: forward from a point, a forum's topics, where a link leads. */
+/** Reading beyond the core: forward from a point, back from a moment, a forum's topics, where a link leads. */
 export interface ChatReading {
   /** The oldest `limit` newer than a message or a moment, oldest first; `hasMore` when newer ones remain. */
   historyAfter(chat: string, window: { limit: number; after: After }): Promise<Page<Message>>
+  /** The newest `limit` sent before a moment, epoch milliseconds, oldest first; `hasMore` when older ones remain. */
+  historyBefore(chat: string, window: { limit: number; time: number }): Promise<Page<Message>>
   /** A forum group's topics, newest activity first; `search` matches their titles. */
   topics(chat: string, window: { search?: string; limit?: number; offset: number }): Promise<Page<Topic>>
   /** What an invite or public link leads to. Reading it joins nothing. */

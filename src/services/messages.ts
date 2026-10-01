@@ -13,6 +13,8 @@ import type { ServiceDeps } from "./deps.js"
 export interface ListWindow {
   limit: number
   before?: string
+  /** Read back from this moment, epoch milliseconds. */
+  beforeTime?: number
   /** Read forward from this message or moment, parsed by the caller in its own words (`afterOf`). */
   after?: After
 }
@@ -111,7 +113,13 @@ export const messagesService = (deps: ServiceDeps): MessagesService => {
   }
 
   return {
-    list: async (chat, { limit, before, after }) => {
+    list: async (chat, { limit, before, beforeTime, after }) => {
+      if (beforeTime !== undefined) {
+        if (deps.offline)
+          throw new CliError("validation_error", "reading back from a time asks the messenger; not with --offline")
+        const connection = await deps.connection()
+        return capability(connection, "historyBefore", "read back from a time")(chat, { limit, time: beforeTime })
+      }
       if (after !== undefined) {
         if (deps.offline)
           throw new CliError("validation_error", "reading forward asks the messenger; the store pages only backwards")
