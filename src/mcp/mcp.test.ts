@@ -404,6 +404,11 @@ describe("the MCP server", () => {
     const { body } = await call("chat_messages_search", { text: "chapter" })
 
     expect(body.items.map((hit: { id: string }) => hit.id)).toEqual(["1"])
+    expect(body).toMatchObject({ corrections: [], completeness: [{ chatId: "7" }], wordsReady: true })
+    expect(body.items[0]).toMatchObject({ match: "words" })
+    const typo = await call("chat_messages_search", { text: "chaptre", context: 1 })
+    expect(typo.body).toMatchObject({ corrections: [{ from: "chaptre", to: ["chapter"] }] })
+    expect(typo.body.items[0].context).toEqual(expect.any(Array))
     expect(telegram.opened()).toBe(1)
   })
 

@@ -103,6 +103,10 @@
       "meaning": "show the owner every write the MCP server offers, in a form to approve",
       "note": "max's own `mcp` is worded differently until the permission levels (P7) replace these flags there (e13)"
     },
+    "--context": {
+      "value": "<n>",
+      "meaning": "messages before and after each hit"
+    },
     "--defaults": {
       "meaning": "change what every profile gets, rather than this profile"
     },
@@ -214,6 +218,9 @@
     },
     "--new": {
       "meaning": "what arrived since the last check, each message once — for scheduled runs"
+    },
+    "--newest": {
+      "meaning": "newest first instead of best first"
     },
     "--no-preview": {
       "meaning": "no preview card for a link in the text"
@@ -1080,7 +1087,21 @@
       "in": "all",
       "options": {
         "--chat": "all",
+        "--context": {
+          "in": [],
+          "planned": {
+            "max": "each CLI's cli-messaging bump with phase 2",
+            "tg": "each CLI's cli-messaging bump with phase 2"
+          }
+        },
         "--limit": "all",
+        "--newest": {
+          "in": [],
+          "planned": {
+            "max": "each CLI's cli-messaging bump with phase 2",
+            "tg": "each CLI's cli-messaging bump with phase 2"
+          }
+        },
         "--regex": {
           "in": [],
           "planned": {

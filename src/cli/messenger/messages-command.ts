@@ -131,44 +131,77 @@ export const messagesCommand = (messenger: Messenger): Command => {
   messages
     .command("search")
     .description("search the local store — what was read, fetched or kept by serve; never asks the messenger")
-    .argument("<text...>", "every word must appear, as a word or the start of one: квартир finds квартира")
-    .option("--chat <chat>", `only this chat: ${messenger.chatArgument}`)
+    .argument(
+      "<query...>",
+      'every word must appear, best match first; "a phrase", -word, a OR b, and the filters from: chat: ' +
+        "after: before: has: — a typo is corrected, and a word that matches nothing falls back to any word, " +
+        "then to a piece of a word",
+    )
+    .option("--chat <chat>", `only this chat — the same as chat: in the query; ${messenger.chatArgument}`)
     .option("--limit <n>", "how many", positiveCount("--limit"))
+    .option("--newest", "newest first instead of best first")
+    .option("--context <n>", "messages before and after each hit; 2 in the terminal, 0 otherwise", wholeCount)
     .option("--regex", "the words are one regular expression, case-insensitive, tested against every stored text")
     .action(async function (this: Command, words: string[]) {
       const context = messengerContext(this, messenger)
-      const { chat, regex } = this.opts<{ chat?: string; regex?: boolean }>()
+      const {
+        chat,
+        regex,
+        newest,
+        context: around,
+      } = this.opts<{
+        chat?: string
+        regex?: boolean
+        newest?: boolean
+        context?: number
+      }>()
       const { limit } = context.settings
       const pattern = regex ? patternOf(words.join(" ")) : undefined
-      const page = await context.withServices((services) =>
+      const found = await context.withServices((services) =>
         services.messages.search({
           ...(pattern ? { pattern } : { text: words.join(" ") }),
           limit,
+          newest: newest === true,
+          context: around ?? (context.format === "pretty" ? 2 : 0),
           ...(chat === undefined ? {} : { chat }),
         }),
       )
+      const { command } = messenger.app
+      for (const { from, to } of found.corrections) context.renderer.note(`${from} → ${to.join(", ")}`)
+      if (!found.wordsReady) {
+        context.renderer.note(
+          `the word index is still being built, so this searched pieces of words — \`${command} store migrate\` finishes it`,
+        )
+      }
+      const incomplete = found.completeness.filter((chat) => chat.state !== "complete").length
+      if (incomplete > 0) {
+        context.renderer.note(
+          `${incomplete} of the chats found are not held in full — \`${command} store fetch <chat>\` fetches one`,
+        )
+      }
       if (context.format === "pretty") {
+        const options = {
+          color: context.color,
+          verbosity: context.settings.detail,
+          senderColors: context.settings.senderColors,
+          profile: context.profile,
+          provider: messenger.provider,
+          locale: messenger.app.locale,
+        }
         context.streams.data(
-          page.items
+          found.items
             .map(
               (hit) =>
-                `${hit.chatTitle ?? hit.chatId}  ${hit.locator}\n${renderMessages([hit], {
-                  color: context.color,
-                  verbosity: context.settings.detail,
-                  senderColors: context.settings.senderColors,
-                  profile: context.profile,
-                  provider: messenger.provider,
-                  locale: messenger.app.locale,
-                })}`,
+                `${hit.chatTitle ?? hit.chatId}  ${hit.locator}\n${renderMessages(hit.context ?? [hit], options)}`,
             )
-            .join("\n"),
+            .join("\n\n"),
         )
-        if (page.items.length === 0)
+        if (found.items.length === 0)
           context.renderer.note("nothing found — only what is in the local store is searched")
         return
       }
-      if (context.format === "jsonl") context.renderer.stream(page.items)
-      else context.renderer.result({ items: page.items, limit, hasMore: page.hasMore })
+      if (context.format === "jsonl") context.renderer.stream(found.items)
+      else context.renderer.result({ ...found, limit })
     })
 
   messages.addCommand(sendCommand(messenger))
@@ -326,4 +359,11 @@ const patternOf = (source: string): RegExp => {
   } catch (error) {
     throw new CliError("validation_error", `not a regular expression: ${(error as Error).message}`)
   }
+}
+
+const wholeCount = (value: string): number => {
+  if (!/^\d+$/.test(value.trim())) {
+    throw new CliError("validation_error", `--context takes a whole number from 0 upwards, not "${value}"`)
+  }
+  return Number(value)
 }

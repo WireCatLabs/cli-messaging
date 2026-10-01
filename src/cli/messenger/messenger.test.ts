@@ -985,6 +985,49 @@ describe("the shared read commands", () => {
     expect(broken.stderr.join("\n")).toContain("not a regular expression")
   })
 
+  it("**searches with the query language**: corrections, filters, completeness and context, said where they belong", async () => {
+    const root = mkdtempSync(join(tmpdir(), "messenger-"))
+    const env = { CHAT_STATE_DIR: join(root, "state"), MESSAGING_STORE: join(root, "m.db") }
+    await call(["messages", "context", "Book", "2", "--json"], async () => fake, env)
+    const never = async (): Promise<MessengerAdapter> => {
+      throw new Error("search must never connect")
+    }
+    const json = async (...argv: string[]) => {
+      const done = await call(["messages", "search", ...argv, "--json"], never, env)
+      const error = done.stderr
+        .filter((line) => line.startsWith("{"))
+        .map((line) => JSON.parse(line).error?.message)
+        .find(Boolean)
+      return { ...done, answer: JSON.parse(done.stdout[0] ?? "null"), error }
+    }
+
+    const typo = await json("chaptr", "three")
+    expect(typo.answer).toMatchObject({
+      corrections: [{ from: "chaptr", to: ["chapter"] }],
+      completeness: [{ chatId: "7", state: "unknown" }],
+      wordsReady: true,
+      limit: 20,
+    })
+    expect(typo.answer.items[0]).toMatchObject({ match: "corrected", score: expect.any(Number) })
+    expect(typo.stderr.join("\n")).toContain("chaptr → chapter")
+    expect(typo.stderr.join("\n")).toContain("1 of the chats found are not held in full — `chat store fetch <chat>`")
+
+    expect((await json("from:Olga", "chapter")).answer.items).toHaveLength(3)
+    expect((await json("from:me", "chapter")).answer.items).toEqual([])
+    expect((await json("from:Nadie", "chapter")).error).toBe('from:Nadie — nobody matches "Nadie"')
+    expect((await json("has:photo")).error).toBe("has:photo — the store holds no photo; it holds attachment, link")
+    expect((await json("in:all", "chapter")).error).toContain("in: is not searched yet")
+    const both = await json("chat:Elsewhere", "chapter", "--chat", "Book")
+    expect(both.code).toBe(2)
+    expect(both.error).toBe('--chat and chat: name different chats: "Book" and "Elsewhere"')
+
+    const pretty = await call(["messages", "search", "chapter", "--limit", "1", "--context", "1"], never, env, {
+      tty: true,
+    })
+    expect(pretty.stdout.join("\n").match(/chapter three/g)).toHaveLength(2)
+    expect((await json("chapter", "--context", "1", "--limit", "1")).answer.items[0].context).toHaveLength(2)
+  })
+
   it("**builds a chat's conversations** and explains a message's place in one, without connecting", async () => {
     const root = mkdtempSync(join(tmpdir(), "messenger-"))
     const env = { CHAT_STATE_DIR: join(root, "state"), MESSAGING_STORE: join(root, "m.db") }

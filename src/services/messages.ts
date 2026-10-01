@@ -3,11 +3,13 @@ import type { Messenger } from "../cli/messenger/context.js"
 import { type After, capability, type Download, type Sent } from "../cli/messenger/port.js"
 import { parseMarkdown } from "../domain/markdown.js"
 import type { Deletion, Id, Message, Page, WindowedMessage } from "../domain/models.js"
-import { pickChat } from "../resolve.js"
+import { pickChat, pickPerson } from "../resolve.js"
+import { parseQuery } from "../search/query.js"
+import { type Match, search } from "../search/search.js"
 import { codeOf, guardedWrite, type Operated } from "../sends/guarded.js"
 import { newOperationId, newSendId } from "../sends/send-id.js"
 import type { Upload } from "../sends/upload.js"
-import type { AccountKey, MessageStore, StoredHit } from "../store/store.js"
+import type { AccountKey, ChatCompleteness, MessageStore, SearchScope, StoredHit, WordQuery } from "../store/store.js"
 import { fromStore, nothingStored, PUSHED, type ServiceDeps } from "./deps.js"
 
 export interface ListWindow {
@@ -25,10 +27,25 @@ export interface AroundWindow {
 }
 
 export interface SearchQuery {
+  /** The query language of the phase 2 plan, §4: words, "phrases", -word, OR, and filters. */
   text?: string
   pattern?: RegExp
   chat?: string
   limit: number
+  /** Newest first instead of best first. */
+  newest?: boolean
+  /** Messages before and after each hit, from the store. */
+  context?: number
+}
+
+export type FoundMessage = StoredHit & { match?: Match; score?: number | null; context?: WindowedMessage[] }
+
+export interface SearchFound extends Page<FoundMessage> {
+  corrections: { from: string; to: string[] }[]
+  /** Per chat of the page: how much of its history the store holds. */
+  completeness: ChatCompleteness[]
+  /** `false` while the word index is being built: the answer came from the substring index. */
+  wordsReady: boolean
 }
 
 export interface SendRequest {
@@ -77,7 +94,7 @@ export interface MessagesService {
   /** The files of one message. Always from the messenger, whatever its history is read from. */
   download(chat: string, message: Id): Promise<Download>
   /** From the local store only; never asks the messenger. */
-  search(query: SearchQuery): Promise<Page<StoredHit>>
+  search(query: SearchQuery): Promise<SearchFound>
   /** A reply is a send with `replyTo`. */
   send(request: SendRequest): Promise<Operated<Sent>>
   /** With `markdown`, the marks are taken out as a send takes them. */
@@ -154,17 +171,35 @@ export const messagesService = (deps: ServiceDeps): MessagesService => {
     download: async (chat, message) =>
       capability(await deps.connection(), "download", "download attachments")(chat, message),
 
-    search: ({ text, pattern, chat, limit }) =>
-      inStore(async (store, account) => {
+    search: ({ text, pattern, chat, limit, newest = false, context = 0 }) =>
+      inStore(async (store, account): Promise<SearchFound> => {
         // A large file builds its word index a slice per search as well as in `store migrate` (NEED-453 A).
         const stop = Date.now() + SEARCH_FILL_MS
         await store.fillSearchIndex({ until: () => Date.now() >= stop })
-        return store.find({
-          ...(pattern ? { pattern } : { text: text ?? "" }),
-          account,
-          limit,
-          ...(chat === undefined ? {} : { chatId: await storedChatId(deps.messenger, chat, store, account) }),
-        })
+        const found = pattern
+          ? {
+              ...(await store.find({
+                pattern,
+                account,
+                limit,
+                ...(chat === undefined ? {} : { chatId: await storedChatId(deps.messenger, chat, store, account) }),
+              })),
+              corrections: [],
+              wordsReady: true,
+            }
+          : await search(store, ...(await scopeOf(deps.messenger, store, account, text ?? "", chat)), { limit, newest })
+        const chats = [...new Set(found.items.map((hit) => hit.chatId))]
+        const items = await Promise.all(
+          found.items.map(async (hit) =>
+            context > 0
+              ? {
+                  ...hit,
+                  context: await store.around(account, hit.chatId, hit.id, { before: context, after: context }),
+                }
+              : hit,
+          ),
+        )
+        return { ...found, items, completeness: await store.chatCompleteness(account, chats) }
       }),
 
     send: async ({ chat, text: typed, sendId, replyTo, silent, noPreview, markdown, at, attachments = [] }) => {
@@ -327,4 +362,53 @@ export const storedChatId = async (
     return found.id
   }
   return pickChat(trimmed, chats).id
+}
+
+/**
+ * The parsed query and the scope it names, resolved in this account: `chat:` as `--chat` is, `from:`
+ * through the names `contacts search` uses, `from:me` as what the account sent.
+ */
+const scopeOf = async (
+  messenger: Messenger,
+  store: MessageStore,
+  account: AccountKey,
+  text: string,
+  chat: string | undefined,
+): Promise<[WordQuery, SearchScope]> => {
+  const parsed = parseQuery(text)
+  if (chat !== undefined && parsed.chat !== undefined && parsed.chat !== chat) {
+    throw new CliError("validation_error", `--chat and chat: name different chats: "${chat}" and "${parsed.chat}"`)
+  }
+  if (parsed.in !== undefined) {
+    throw new CliError("validation_error", "in: is not searched yet — a search covers the account it runs as")
+  }
+  const named = parsed.chat ?? chat
+  const scope: SearchScope = { accounts: [account] }
+  if (named !== undefined) scope.chat = { account, chatId: await storedChatId(messenger, named, store, account) }
+  if (parsed.from?.toLowerCase() === "me") scope.outgoing = true
+  else if (parsed.from !== undefined) {
+    try {
+      const person = pickPerson(parsed.from, await store.people(account.provider, { account: account.account }))
+      scope.sender = { provider: account.provider, id: person.id }
+    } catch (error) {
+      if (error instanceof CliError && error.code === "not_found") {
+        throw new CliError("not_found", `from:${parsed.from} — ${error.message}`)
+      }
+      throw error
+    }
+  }
+  if (parsed.after !== undefined) scope.after = parsed.after
+  if (parsed.before !== undefined) scope.before = parsed.before
+  if (parsed.has.length > 0) {
+    const held = await store.attachmentKinds()
+    const unknown = parsed.has.find((kind) => !["attachment", "link", ...held].includes(kind))
+    if (unknown !== undefined) {
+      throw new CliError(
+        "validation_error",
+        `has:${unknown} — the store holds no ${unknown}; it holds ${["attachment", "link", ...held].join(", ")}`,
+      )
+    }
+    scope.has = parsed.has
+  }
+  return [{ required: parsed.required, excluded: parsed.excluded }, scope]
 }

@@ -1,6 +1,6 @@
 # Phase 2 — search by words: BM25, typo correction, a query language
 
-Plan, 2026-09-30. **Approved by the owner 2026-10-01. Items 1–5 are built (the migration, filling and upkeep, the store's search steps, the query parser, typo correction), and item 6 without context and name resolution, which come with item 7; the rest is not.** Questions of §9 answered
+Plan, 2026-09-30. **Approved by the owner 2026-10-01. Items 1–7 are built — `messages search` and the MCP tool search by words — except `in:`/`--source`, which is item 9; items 8–10 are not.** Questions of §9 answered
 2026-10-01: 1–3 A, 4 B. It follows [`../decisions.md`](../decisions.md):
 SQLite FTS5 (NEED-374 A); every word first, any word when nothing is found, BM25 ranks, trigram typo
 correction over the vocabulary (NEED-375 A); the substring index stays as the last fallback (NEED-379 A);
