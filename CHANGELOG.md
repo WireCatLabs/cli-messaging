@@ -51,6 +51,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   each batch to the store — chats without marking the others as left, messages as history. A batch
   the store cannot take is a warning; a `feed` that fails stops the command. `fakeAdapter(seed,
   { feed: true })` pushes the seed, and `contractCases` has a case for `feed`, skipped without it.
+- **`MessagesService.download(chat, message)`**: one message's files, from the messenger whatever its
+  history is read from. `messages download --all` uses it.
 - **`Capabilities` is deprecated**: nothing reads it. A later breaking release removes it.
 - **`Messenger.deletedWithoutChat`**: which stored chats a deletion that names no chat may hit. `watch`
   passes it to the store as `markDeleted(…, { among })`, the new option of the same rule: the store
@@ -92,6 +94,16 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   `auth set`, `auth remove` and `recipients add`, `remove` and `clear` are marked `local` (cli-core
   0.15.0), so the commands page gives them their own line. They are still writes: `commands --json`
   shows `writes: yes`. `chats moderate` still says it changes the messenger.
+- **`messages download --all` works where message ids are not whole numbers.** It refused them, because
+  its resume file compared ids as numbers — so it refused MAX, whose ids pass 2^53, and any messenger
+  with ids made of letters. Where the messenger sets `fetching.orderBy: "time"`, it now keys by send
+  time, as `store fetch` does, and pages back from an ISO time, as the adapter contract says. Messages
+  that share a moment with a page's oldest message or a stretch's end are not skipped and not
+  downloaded twice. The resume file gains `"by": "id" | "time"` and, by time, the ids walked at each
+  stretch's two ends; a file without `by` is read as by id, so tg's files
+  still resume, and one keyed the other way is set aside with a note. `--all` pages through the
+  messages service, so with `Messenger.history: "store"` it pages the local store and only the files
+  come from the messenger.
 - **`bot messages send` and `edit` journal the text's length**, as the personal account's do — never the text.
 - **A write cut off by `--timeout` is an unknown outcome, not a timeout.** When the command's time ran
   out with a send, an edit or any other write still waiting for its answer, the error was `timeout`

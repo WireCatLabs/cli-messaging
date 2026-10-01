@@ -1,6 +1,6 @@
 import { CliError } from "@leemour/cli-core"
 import type { Messenger } from "../cli/messenger/context.js"
-import { type After, capability, type Sent } from "../cli/messenger/port.js"
+import { type After, capability, type Download, type Sent } from "../cli/messenger/port.js"
 import { parseMarkdown } from "../domain/markdown.js"
 import type { Deletion, Id, Message, Page, WindowedMessage } from "../domain/models.js"
 import { pickChat } from "../resolve.js"
@@ -74,6 +74,8 @@ export const SEARCH_FILL_MS = 200
 export interface MessagesService {
   list(chat: string, window: ListWindow): Promise<Page<Message>>
   around(chat: string, message: string, window: AroundWindow): Promise<WindowedMessage[]>
+  /** The files of one message. Always from the messenger, whatever its history is read from. */
+  download(chat: string, message: Id): Promise<Download>
   /** From the local store only; never asks the messenger. */
   search(query: SearchQuery): Promise<Page<StoredHit>>
   /** A reply is a send with `replyTo`. */
@@ -148,6 +150,9 @@ export const messagesService = (deps: ServiceDeps): MessagesService => {
       }
       return (await deps.connection()).around(chat, message, window)
     },
+
+    download: async (chat, message) =>
+      capability(await deps.connection(), "download", "download attachments")(chat, message),
 
     search: ({ text, pattern, chat, limit }) =>
       inStore(async (store, account) => {
