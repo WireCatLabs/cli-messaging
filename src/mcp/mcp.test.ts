@@ -885,6 +885,40 @@ describe("sending over MCP", () => {
     ])
   })
 
+  it("**adds and removes members and admins** over MCP", async () => {
+    const done: unknown[] = []
+    const telegram = scripted({
+      people: async (references) => references.map(() => "91"),
+      addMembers: async (chatId, people, options) => {
+        done.push(["add", chatId, people, options])
+        return { notAdded: [] }
+      },
+      removeMembers: async (chatId, people) => {
+        done.push(["remove", chatId, people])
+      },
+      addAdmin: async (chatId, person, rights) => {
+        done.push(["admin", chatId, person, rights])
+      },
+      removeAdmin: async (chatId, person) => {
+        done.push(["unadmin", chatId, person])
+      },
+    })
+    const { call } = await connect(telegram, {})
+
+    const added = await call("chat_chats_members_add", { chat: "7", people: ["Ivan"], history: true })
+    await call("chat_chats_members_remove", { chat: "7", people: ["Ivan"] })
+    await call("chat_chats_admins_add", { chat: "7", person: "Ivan", rights: ["pin"] })
+    await call("chat_chats_admins_remove", { chat: "7", person: "Ivan" })
+
+    expect(added.body).toMatchObject({ chatId: "7", added: ["91"], notAdded: [] })
+    expect(done).toEqual([
+      ["add", "7", ["91"], { history: true }],
+      ["remove", "7", ["91"]],
+      ["admin", "7", "91", ["pin"]],
+      ["unadmin", "7", "91"],
+    ])
+  })
+
   it("reads a poll on a read-only profile, and votes by id where it may", async () => {
     const votes: unknown[] = []
     const poll = {
