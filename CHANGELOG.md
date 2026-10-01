@@ -14,6 +14,13 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   `status` says how many messages, batches and characters are left, to tell the user before starting.
   Message text goes to stdout only, never into a run record. The CLI calls no model.
 
+### Fixed
+
+- **A development checkout's `server start` no longer drives the installed tool's unit.** The unit
+  was named by profile alone, so a checkout with its own `*_STATE_DIR` or `MESSAGING_STORE` found
+  the real `tg-serve-default.service` and started it. A unit written with location variables now
+  carries a short hash of them in its name; one written without (the installed tool) keeps its name.
+
 ## 0.92.0 — 01.10.2026
 
 ### Added

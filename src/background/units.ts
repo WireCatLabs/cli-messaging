@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto"
 import { existsSync, mkdirSync, readFileSync } from "node:fs"
 import { dirname, join } from "node:path"
 import { CliError } from "@leemour/cli-core"
@@ -36,6 +37,16 @@ export const locationVariables = (app: AppIdentity, env: NodeJS.ProcessEnv): Rec
   return Object.fromEntries(names.flatMap((name) => (env[name] === undefined ? [] : [[name, env[name]]])))
 }
 
+/**
+ * A unit written with location variables runs another installation — a development checkout — so
+ * its name says which: under the bare name, `server start` there drove the owner's real unit.
+ */
+export const unitScope = (app: AppIdentity, profile: string, env: NodeJS.ProcessEnv, separator = "-") => {
+  const where = Object.entries(locationVariables(app, env)).sort(([a], [b]) => a.localeCompare(b))
+  if (where.length === 0) return profile
+  return `${profile}${separator}${createHash("sha256").update(JSON.stringify(where)).digest("hex").slice(0, 8)}`
+}
+
 export interface Platform {
   unit: (base: Omit<Unit, "name" | "path">) => Unit
   text: (unit: Unit, app: AppIdentity) => string
@@ -69,7 +80,7 @@ export const systemd = (app: AppIdentity, system: ServerSystem, env: NodeJS.Proc
   }
   return {
     unit: (base) => {
-      const name = `${app.command}-serve-${base.profile}.service`
+      const name = `${app.command}-serve-${unitScope(app, base.profile, base.environment)}.service`
       return { ...base, name, path: join(folder, name) }
     },
     text: (unit) =>
@@ -137,7 +148,7 @@ export const launchd = (app: AppIdentity, system: ServerSystem, env: NodeJS.Proc
   const domain = `gui/${system.uid}`
   return {
     unit: (base) => {
-      const name = `${app.appName}.serve.${base.profile}`
+      const name = `${app.appName}.serve.${unitScope(app, base.profile, base.environment, ".")}`
       return { ...base, name, path: join(folder, `${name}.plist`) }
     },
     text: (unit) =>
