@@ -48,7 +48,7 @@ export interface WordOptions {
   newest?: boolean
 }
 
-/** A hit with its bm25 score — lower is better; `null` from the substring step, which has none. */
+/** A hit with its relevance — bm25 turned round so higher is better; `null` from steps that do not rank. */
 export type ScoredHit = StoredHit & { score: number | null }
 
 interface Resolved {
@@ -143,7 +143,10 @@ const page = (context: StoreContext, rows: { pk: number; score: number | null }[
     kept.map((row) => row.pk),
   )
   return {
-    items: hits.map((hit, index) => ({ ...hit, score: scores.get((kept[index] as { pk: number }).pk) ?? null })),
+    items: hits.map((hit, index) => {
+      const score = scores.get((kept[index] as { pk: number }).pk) ?? null
+      return { ...hit, score: score === null ? null : -score }
+    }),
     hasMore: rows.length > limit,
   }
 }

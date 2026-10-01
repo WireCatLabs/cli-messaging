@@ -108,11 +108,17 @@ export const messagesTools = (messenger: Messenger): Record<string, AnyTool> => 
       title: "Search messages",
       description:
         `Find messages in what this machine has kept — it never asks ${name}, so an empty answer means ` +
-        '"not in what was kept", not "never said". Every word must appear, as a word or the start of one. ' +
-        "Returns { items, limit, hasMore }.",
+        '"not in what was kept", not "never said" (see completeness). Every word must appear, best match ' +
+        'first; "a phrase", -word, a OR b, and from: chat: after: before: has: work as in the CLI. A typo is ' +
+        "corrected (listed in corrections); with no match it falls back to any word, then to a piece of a " +
+        "word — each hit says which in match, and score is its relevance, higher better. Returns { items, limit, hasMore, corrections, completeness, wordsReady }.",
       input: v.object({
-        text: v.pipe(v.string(), v.minLength(1), v.description("the words to look for")),
+        text: v.pipe(v.string(), v.minLength(1), v.description("the query: words, phrases and filters")),
         chat: v.optional(chat),
+        newest: v.optional(v.pipe(v.boolean(), v.description("newest first instead of best first"))),
+        context: v.optional(
+          v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(20), v.description("messages around each hit")),
+        ),
         limit,
       }),
       annotations: { ...READ, openWorldHint: false },
@@ -121,9 +127,11 @@ export const messagesTools = (messenger: Messenger): Record<string, AnyTool> => 
         const found = await servicesFor(storedDeps(messenger, store, account, defaults.guard)).messages.search({
           text: args.text,
           limit: size,
+          newest: args.newest === true,
+          context: args.context ?? 0,
           ...(args.chat === undefined ? {} : { chat: args.chat }),
         })
-        return { items: found.items, limit: size, hasMore: found.hasMore }
+        return { ...found, limit: size }
       },
     }),
   }

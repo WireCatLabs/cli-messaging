@@ -244,6 +244,8 @@ export interface MessageStore {
   matchWords(query: WordQuery, scope: SearchScope, options: WordOptions): Promise<Page<ScoredHit>>
   /** The substring index, newest first (step 5); pieces under three letters are dropped. */
   matchSubstring(query: WordQuery, scope: SearchScope, options: { limit: number }): Promise<Page<ScoredHit>>
+  /** The kinds of attachment held, for `has:` to name the ones it can find. */
+  attachmentKinds(): Promise<string[]>
   /** Messages matching the scope alone, newest first: a search with filters and no word. */
   matchFilters(scope: SearchScope, options: { limit: number }): Promise<Page<ScoredHit>>
   /** Per chat: whether its history is held up to date, without gaps, back to its start. */
@@ -707,6 +709,12 @@ const storeOver = (context: StoreContext): MessageStore => {
     matchWords: async (query, scope, options) => words.matchWords(context, query, scope, options),
 
     matchSubstring: async (query, scope, options) => words.matchSubstring(context, query, scope, options),
+
+    attachmentKinds: async () =>
+      database
+        .prepare("SELECT DISTINCT kind FROM attachments ORDER BY kind")
+        .all()
+        .map((row) => String(row.kind)),
 
     matchFilters: async (scope, options) => words.matchFilters(context, scope, options),
 
