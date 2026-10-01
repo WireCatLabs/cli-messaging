@@ -6,6 +6,14 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- **The shared `bot` group** (P8): `botCommand(bot)` builds `bot auth set|show|remove`, `bot list
+  [--check]`, `bot chats list`, `bot recipients list|add|remove|clear` and `bot sends list` over a
+  `BotMessenger`; a CLI adds the commands that are still its own with `addCommand`. `botContext` hands
+  a command the bot's settings, token, seen chats, recipient list and journal. `BotMessenger` gains
+  `readSecret`, a seam for the token prompt.
+
 ### Changed — may break callers
 
 - **`chats folders list` answers `{ items, page, limit, hasMore }`** in `--json`, and so does the tool
