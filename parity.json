@@ -1017,6 +1017,10 @@
           "by": "T6"
         },
         "--chat": "both",
+        "--model": {
+          "state": "planned",
+          "by": "T6"
+        },
         "--since": "both",
         "--transcribe": "both",
         "--unanswered": "both"
