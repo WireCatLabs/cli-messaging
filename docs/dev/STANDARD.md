@@ -122,7 +122,6 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--confirm-send` |  | show the owner every write the MCP server offers, in a form to approve. **max's own `mcp` is worded differently until the permission levels (P7) replace these flags there (e13)** |  | `mcp`, `mcp config` |
 | `--defaults` |  | change what every profile gets, rather than this profile |  | `config set`, `config unset` |
 | `--description` | `<text>` | the new about text — of a chat or of your account |  | `account update`, `chats update` |
-| `--detach` |  | run in the background — leaves max in P6 for `server start`; one action, one command (ASK-113) |  | `serve` (planned) |
 | `--dry-run` |  | judge and plan; do nothing |  | `chats moderate` (planned) |
 | `--estimate` |  | only say what the fetch would cost, from this machine's copy; nothing is sent. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | `store fetch` |
 | `--event` | `<names>` | only these events, comma-separated, as the messenger names them. **becomes `--type` — e12** |  | `chats events` (max-only) |
@@ -141,7 +140,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--last-name` | `<name>` | your last name |  | `account update` |
 | `--left` |  | only the chats this account has left |  | `store clear` (planned) |
 | `--limit` | `<n>` | how many: rows to show, or messages one run fetches. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | `chats list`, `chats members list` (planned), `contacts list`, `inbox`, `messages list`, `messages search`, `runs list`, `sends list`, `store fetch` (planned) |
-| `--lines` | `<n>` | how many lines | `50` | `server logs` (planned) |
+| `--lines` | `<n>` | how many lines | `50` | `server logs` |
 | `--local` |  | use the model on this machine, never the messenger |  | `messages transcribe` (tg-only) |
 | `--mark-read` |  | also mark the chat read up to the newest message shown; the other person sees it |  | `messages list` |
 | `--max-actions` | `<n>` | at most this many actions in one run | `10` | `chats moderate` (planned) |
@@ -185,7 +184,6 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--silent` |  | deliver without a notification |  | `messages forward`, `messages send`, `polls create` |
 | `--since` | `<id-or-time>` | from this message id, an ISO 8601 time, or 2h / 1d ago; each command says its default. **becomes `--since-time` everywhere — NEED-485** |  | `chats events` (max-only), `inbox` (max-only), `review` (max-only), `store export` (max-only), `store fetch` (max-only) |
 | `--since-time` | `<time>` | from this ISO 8601 time, or 2h / 1d ago; each command says its default |  | `chats events` (planned), `chats moderate` (planned), `inbox` (planned), `review` (planned), `store export` (planned), `store fetch` (planned) |
-| `--stop` |  | stop this profile's server — leaves max in P6 for `server stop`; one action, one command (ASK-113) |  | `serve` (planned) |
 | `--timeout` | `<duration>` | give up on the whole command after this — 30s, 2m, 500ms |  | every command |
 | `--title` | `<title>` | the new name — of a chat or a folder |  | `chats folders update`, `chats update` |
 | `--to` | `<chat>` | the chat to forward it to: an id, or part of a chat name. **the sentence says how to name a chat the messenger's way, so it differs on purpose (Help text rule 4)** |  | `messages forward` |

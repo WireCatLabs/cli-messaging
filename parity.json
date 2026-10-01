@@ -120,9 +120,6 @@
       "value": "<text>",
       "meaning": "the new about text — of a chat or of your account"
     },
-    "--detach": {
-      "meaning": "run in the background — leaves max in P6 for `server start`; one action, one command (ASK-113)"
-    },
     "--dry-run": {
       "meaning": "judge and plan; do nothing"
     },
@@ -361,9 +358,6 @@
     "--since-time": {
       "value": "<time>",
       "meaning": "from this ISO 8601 time, or 2h / 1d ago; each command says its default"
-    },
-    "--stop": {
-      "meaning": "stop this profile's server — leaves max in P6 for `server stop`; one action, one command (ASK-113)"
     },
     "--timeout": {
       "value": "<duration>",
@@ -1124,17 +1118,9 @@
     "serve": {
       "state": "both",
       "options": {
-        "--detach": {
-          "state": "planned",
-          "by": "P6"
-        },
         "--idle": {
           "state": "max-only",
           "reason": "max's server stops when no command has used it for this long; tg's serve has no commands connected to it (NEED-495 A)"
-        },
-        "--stop": {
-          "state": "planned",
-          "by": "P6"
         }
       }
     },
@@ -1142,17 +1128,12 @@
       "state": "both"
     },
     "server install": {
-      "state": "planned",
-      "by": "P6"
+      "state": "both"
     },
     "server logs": {
-      "state": "planned",
-      "by": "P6",
+      "state": "both",
       "options": {
-        "--lines": {
-          "state": "planned",
-          "by": "P6"
-        }
+        "--lines": "both"
       }
     },
     "server restart": {
@@ -1180,8 +1161,7 @@
       "state": "both"
     },
     "server uninstall": {
-      "state": "planned",
-      "by": "P6"
+      "state": "both"
     },
     "session": {
       "state": "both"
