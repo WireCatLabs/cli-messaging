@@ -1,6 +1,7 @@
 # Phase 1 — Drizzle, an async store, the §4–§5 schema, maintenance commands
 
-Plan, 2026-09-29. **Approved by the owner 2026-09-30** (NEED-382 A). Nothing here is built yet. It follows [`../decisions.md`](../decisions.md):
+Plan, 2026-09-29. **Approved by the owner 2026-09-30** (NEED-382 A). ~~Nothing here is built yet.~~
+**Correction 2026-10-01:** every item is built — 7 and 8 last, released in 0.77.0 ([`../HANDOFF.md`](../HANDOFF.md)). It follows [`../decisions.md`](../decisions.md):
 SQLite FTS5 behind an async store interface, Drizzle, no daemon that owns the database, background
 workers later. Requirements §30 phase 1 without the PGlite parts: Drizzle integration, async store,
 schema per §4–§5, migrations, migration of existing data, repository layer, backup and doctor.
@@ -286,6 +287,8 @@ Releases go through `bin/release` after items 2, 6 and 8, plus whenever tg-cli a
 7. **Repository layer in Drizzle, writes.** `saveAccount`, `saveChats`, `saveMessages`,
    `savePeople`, `saveReactions`, `markDeleted` and `markRange` are ported, module by module.
    Upserts that use `coalesce` stay `sql` fragments.
+   **Correction 2026-10-01:** items 7 and 8 are built (lane A, released in 0.77.0). Measured, the
+   port made saving faster, not slower: the hand-written store compiled each statement per call.
 8. **Repository layer in Drizzle, reads and search.** `chats`, `messages`, `around`, `message`,
    `find`/`search`, `people`, `chatStats` and `ranges` are ported. `MATCH` stays in `sql`. Add the
    `EXPLAIN QUERY PLAN` test (§6) and the store-against-raw timing (§6). Remove the stale doc comment
