@@ -29,9 +29,17 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   and never connect, and writes still connect. A chat with nothing stored answers `not_found` with
   "nothing stored for this chat yet — keep `<cli> serve` running"; an empty profile says to run
   `<cli> serve` or `<cli> watch` once; a read warns on stderr when no `serve` holds the profile, with
-  the time of the newest stored message. `store fetch`, `--estimate`, `inbox`, `review`,
-  `--after-*` and `--before-time` refuse in this mode for now. The MCP chat resource reads the store
-  too. `ServiceDeps.reads` carries the mode. Unset, nothing changes.
+  the time of the newest stored message. `store fetch`, `--estimate`, `--after-*` and
+  `--before-time` refuse in this mode for now. The MCP chat resource reads the store too.
+  `ServiceDeps.reads` carries the mode. Unset, nothing changes.
+- **`inbox` and `review` in store mode** (`Messenger.history: "store"`): unread from the stored chats'
+  counts, `--new`, `--since-time` and `review` from the stored messages by time — a chat counts as
+  changed by its newest stored message. The same `--json` as online; the store knows no admins, so
+  `review --unanswered` counts only the owner as answering. They never connect. `unreadIn`, `newIn`
+  and `reviewIn` take an `InboxReader`, the four adapter methods they use.
+- **MCP tools read the store in store mode**: `chats_list|show`, `messages_list|context`,
+  `contacts_list|show`, `inbox` and `review` answer from it as their commands do, and never connect;
+  writes and `transcribe` still go through the session's connection.
 - **`PushedHistory`**, a new optional group on `MessengerAdapter`, for a messenger with
   `history: "store"`: `feed(onBatch, signal)` hands over chats, people and past messages as the
   messenger pushes them, as `HistoryBatch` objects. `serve` and `watch` run it beside `watch` and save

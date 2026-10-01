@@ -11,9 +11,11 @@ import { Command } from "commander"
 import { afterEach, describe, expect, it } from "vitest"
 import { provide } from "../cli/context.js"
 import { type Messenger, messengerContext } from "../cli/messenger/context.js"
+import { inboxCommand } from "../cli/messenger/inbox.js"
 import { serverEntry } from "../cli/messenger/mcp-command.js"
 import type { MessengerAdapter, SendOptions } from "../cli/messenger/port.js"
-import { createProgram } from "../cli/program.js"
+import { reviewCommand } from "../cli/messenger/review.js"
+import { createProgram, run } from "../cli/program.js"
 import { settingsFor } from "../cli/settings.js"
 import type { Chat, Message } from "../domain/models.js"
 import type { SendGuard } from "../sends/guard.js"
@@ -123,10 +125,12 @@ interface Harness {
   config?: object
   skill?: URL
   history?: Messenger["history"]
+  /** Another server's files, to read what it stored. */
+  root?: string
 }
 
 const connect = async (telegram: Scripted = scripted(), options: Partial<ServerOptions> & Harness = {}) => {
-  const root = mkdtempSync(join(tmpdir(), "mcp-"))
+  const root = options.root ?? mkdtempSync(join(tmpdir(), "mcp-"))
   const env = {
     CHAT_STATE_DIR: join(root, "state"),
     CHAT_CONFIG_DIR: join(root, "config"),
@@ -134,7 +138,7 @@ const connect = async (telegram: Scripted = scripted(), options: Partial<ServerO
     CLI_COMMON_CACHE_DIR: join(root, "cache"),
     CHAT_CACHE_DIR: join(root, "chat-cache"),
   }
-  const { connect: connecting, form, era = "legacy", config, skill, history, ...serverOptions } = options
+  const { connect: connecting, form, era = "legacy", config, skill, history, root: _root, ...serverOptions } = options
   if (config) {
     mkdirSync(env.CHAT_CONFIG_DIR, { recursive: true })
     writeFileSync(join(env.CHAT_CONFIG_DIR, "config.json"), JSON.stringify(config))
@@ -195,6 +199,20 @@ const connect = async (telegram: Scripted = scripted(), options: Partial<ServerO
     return { isError: result.isError === true, body: JSON.parse(first?.text ?? "null") }
   }
   return { client, call, session, streams, forms, env }
+}
+
+/** A store filled the way `serve` fills it: a server-mode session saves what it read. */
+const filledRoot = async () => {
+  const root = mkdtempSync(join(tmpdir(), "mcp-"))
+  const { call } = await connect(
+    scripted({ chats: async () => ({ items: [{ ...chat, unreadCount: 1 }], hasMore: false }) }),
+    {
+      root,
+    },
+  )
+  await call("chat_chats_list")
+  await call("chat_messages_list", { chat: "7" })
+  return root
 }
 
 /** A messenger that records what it was asked to send. */
@@ -1233,9 +1251,8 @@ describe("MCP prompts and resources", () => {
         return { items: [message], hasMore: false }
       },
     })
-    const { client, call } = await connect(telegram, { history: "store" })
-    await call("chat_chats_list")
-    await call("chat_messages_list", { chat: "7" })
+    const root = await filledRoot()
+    const { client } = await connect(telegram, { history: "store", root })
     const before = asked
 
     const { contents } = await client.readResource({ uri: "chat://chat/7" })
@@ -1247,6 +1264,80 @@ describe("MCP prompts and resources", () => {
     expect(body.messages.map((one: { id: string }) => one.id)).toEqual(["1"])
     expect(asked).toBe(before)
     await expect(unknown).rejects.toThrow("nothing stored for this chat yet")
+  })
+})
+
+describe("MCP tools for a messenger whose history is kept in the store", () => {
+  it("**answer from the store and never connect**", async () => {
+    const telegram = scripted()
+    const { call } = await connect(telegram, { history: "store", root: await filledRoot() })
+
+    const chats = await call("chat_chats_list")
+    const shown = await call("chat_chats_show", { chat: "7" })
+    const messages = await call("chat_messages_list", { chat: "7" })
+    const around = await call("chat_messages_context", { chat: "7", message: "1" })
+    const contacts = await call("chat_contacts_list")
+    const inbox = await call("chat_inbox")
+    const review = await call("chat_review", { since_time: "2026-09-27T00:00:00.000Z" })
+    const nothing = await call("chat_messages_list", { chat: "99" })
+
+    expect(chats.body.items.map((one: Chat) => one.id)).toEqual(["7"])
+    expect(shown.body).toMatchObject({ id: "7", title: "Book club" })
+    expect(messages.body.items.map((one: Message) => one.id)).toEqual(["1"])
+    expect(around.body.items).toEqual([expect.objectContaining({ id: "1", anchor: true })])
+    expect(contacts.isError).toBe(false)
+    expect(inbox.body.chats.map((one: { id: string }) => one.id)).toEqual(["7"])
+    expect(review.body.chats[0].messages.map((one: Message) => one.id)).toEqual(["1"])
+    expect(nothing.body.error).toMatchObject({ code: "not_found" })
+    expect(nothing.body.error.message).toContain("nothing stored for this chat yet")
+    expect(telegram.opened()).toBe(0)
+  })
+
+  it("**answer `inbox` and `review` as the commands' --json does**", async () => {
+    const root = await filledRoot()
+    const telegram = scripted()
+    const { call, env } = await connect(telegram, { history: "store", root })
+    const messenger: Messenger = {
+      app,
+      provider: "chat",
+      resolveSettings: settingsFor(app).resolveSettings,
+      connect: telegram.connect,
+      chatArgument: "a chat",
+      history: "store",
+    }
+    const command = async (argv: string[]) => {
+      const streams = captureStreams()
+      const code = await run(
+        argv,
+        { app, commands: () => [inboxCommand(messenger), reviewCommand(messenger)] },
+        { streams, tty: false, env },
+      )
+      expect(code, argv.join(" ")).toBe(0)
+      return JSON.parse(streams.stdout.join(""))
+    }
+
+    const since = "2026-09-27T00:00:00.000Z"
+    expect((await call("chat_inbox")).body).toEqual(await command(["inbox", "--json"]))
+    expect((await call("chat_inbox", { since_time: since })).body).toEqual(
+      await command(["inbox", "--since-time", since, "--json"]),
+    )
+    expect((await call("chat_review", { since_time: since })).body).toEqual(
+      await command(["review", "--since-time", since, "--json"]),
+    )
+    expect(telegram.opened()).toBe(0)
+  })
+
+  it("**still connect to write**, through the guard", async () => {
+    const { telegram, sent } = sending()
+    const { call, env } = await connect(telegram, { history: "store", root: await filledRoot() })
+
+    const { isError, body } = await call("chat_messages_send", { chat: "Book club", text: "see you" })
+
+    expect(isError).toBe(false)
+    expect(telegram.opened()).toBe(1)
+    expect(sent).toEqual([{ chatId: "7", text: "see you", sendId: body.sendId }])
+    const [entry] = new SendJournal(sendsPathFor(app, "default", env)).entries()
+    expect(entry).toMatchObject({ outcome: "sent", chatId: "7" })
   })
 })
 

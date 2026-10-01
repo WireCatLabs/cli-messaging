@@ -1,4 +1,5 @@
 export { guardedClose, guardedCreatePoll, guardedVote } from "../sends/polls.js"
+export type { InboxReader } from "../services/inbox.js"
 export { INBOX_CHATS, newIn, REVIEW_CHATS, reviewIn, unanswered, unreadIn } from "../services/inbox.js"
 export { momentOf } from "../services/moment.js"
 export { maskedAccount } from "../services/people.js"

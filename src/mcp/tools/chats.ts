@@ -27,9 +27,9 @@ export const chatsTools = (messenger: Messenger): Record<string, AnyTool> => {
         page,
       }),
       annotations: READ,
-      online: async (adapter, { search, kind, unread, ...rest }, defaults) => {
+      served: async (services, { search, kind, unread, ...rest }, defaults) => {
         const { size, number, window } = paging(rest, defaults)
-        const found = await chats(adapter, defaults.guard).list(checkedFilter({ search, kind, unread }), window)
+        const found = await services.chats.list(checkedFilter({ search, kind, unread }), window)
         return { ...envelope(found, number, size), ...(found.partial ? { partial: true } : {}) }
       },
     }),
@@ -85,7 +85,7 @@ export const chatsTools = (messenger: Messenger): Record<string, AnyTool> => {
       description: "One chat: its kind, unread count, last message time and who is in it.",
       input: v.object({ chat }),
       annotations: READ,
-      online: (adapter, args, { guard }) => chats(adapter, guard).show(args.chat),
+      served: (services, args) => services.chats.show(args.chat),
     }),
   }
 }

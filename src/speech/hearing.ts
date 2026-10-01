@@ -129,7 +129,7 @@ export const spoken = <T extends Message & { transcript?: string }>({ transcript
 /** For an MCP tool: the same hearing, over the session's own connection. */
 export const hearForTool = async (
   messenger: Messenger,
-  adapter: MessengerAdapter,
+  connect: <T>(work: (adapter: MessengerAdapter) => Promise<T>) => Promise<T>,
   messages: readonly Message[],
   transcribe: boolean,
   { settings, env }: { settings: Pick<Settings, "configured" | "shared" | "profile">; env: NodeJS.ProcessEnv },
@@ -145,7 +145,7 @@ export const hearForTool = async (
       transcribe
         ? {
             choice: choose(messenger, settings, model === undefined ? {} : { model }, env),
-            connect: (work) => work(adapter),
+            connect,
           }
         : undefined,
     )

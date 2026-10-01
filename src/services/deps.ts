@@ -91,3 +91,14 @@ export const storedDeps = (
     throw new CliError("validation_error", OFFLINE)
   },
 })
+
+/**
+ * The store-backed reads of a messenger whose history is kept there, for an MCP read: not
+ * `--offline`, so `inbox` and `review` answer too. Nothing here connects.
+ */
+export const storeModeDeps = (
+  messenger: Messenger,
+  store: MessageStore,
+  account: AccountKey,
+  guard: SendGuard,
+): ServiceDeps => ({ ...storedDeps(messenger, store, account, guard), offline: false, reads: "store" })

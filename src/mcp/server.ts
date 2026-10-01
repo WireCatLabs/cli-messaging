@@ -90,6 +90,7 @@ export const createServer = (
     )
     registerTools(server, offered, {
       command: app.command,
+      messenger,
       session,
       withStore: context.withStore,
       defaults: { limit: settings.limit, guard, settings, env: context.env },

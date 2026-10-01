@@ -11,7 +11,8 @@ import { settingsFor } from "../cli/settings.js"
 import type { Message } from "../domain/models.js"
 import { messagesTools } from "../mcp/tools/messages.js"
 import type { SendGuard } from "../sends/guard.js"
-import type { Override } from "./index.js"
+import { onlineDeps } from "./deps.js"
+import { type Override, servicesFor } from "./index.js"
 
 const app = { command: "chat", appName: "chat-cli", envPrefix: "CHAT", description: "A test", version: "1.0.0" }
 
@@ -69,10 +70,12 @@ describe("a messenger's override", () => {
         env,
       },
     )
-    const tool = await messagesTools(messenger).messages_list?.online?.(
-      adapter,
+    const guard = {} as SendGuard
+    const tool = await messagesTools(messenger).messages_list?.served?.(
+      servicesFor(onlineDeps(messenger, adapter, guard)),
       { chat: "7" },
-      { limit: 20, guard: {} as SendGuard, settings: { configured: {}, shared: {}, profile: "default" }, env },
+      { limit: 20, guard, settings: { configured: {}, shared: {}, profile: "default" }, env },
+      (work) => work(adapter),
     )
 
     expect(code).toBe(0)
