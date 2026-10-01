@@ -852,3 +852,21 @@ Faster, not slower: the hand-written store compiled every statement on every cal
 prepares the lookup, insert, update and attachment upsert once per store. Built per call instead,
 Drizzle cost about a quarter of the load rate (measured on the identity queries alone, slice 2).
 The schema 5 numbers above are not comparable: versions 6–11 added columns and triggers since.
+
+## Search through the real store, after the reads moved to Drizzle
+
+Lane A slice 6, `store-search.ts` on the 1M store file above (schema 11, trigram index), Node 24,
+2026-10-01. Each query runs through `openStore().search` and as the same SQL raw through `node:sqlite`,
+taking turns at going first; 40 samples a class, warm cache.
+
+| query | store p50 ms | store p95 ms | raw SQL p50 ms | raw SQL p95 ms |
+|---|---|---|---|---|
+| 2 words ~1% df — all | 2.96 | 6.32 | 2.70 | 5.60 |
+| 2 words 5–15% df — all | 14.4 | 37.7 | 14.1 | 36.9 |
+| 3 words — all | 3.32 | 7.75 | 3.45 | 7.60 |
+
+Drizzle, the row mapping and the async interface add 0.3 ms or less at p50 and under 1 ms at p95 here;
+an earlier run of the same script was noisier at p95 (up to 4 ms on the common words, and the other way
+on the rare ones). The store before lane A, hand-written SQL, run the same way: 2.61 / 5.43, 15.3 / 37.6,
+3.41 / 7.67 ms (p50 / p95). `sqlite.ts` at 1M answers in 0.5 / 1.6, 11–14 / 25–28 and 1.6 / 3–4.4 ms,
+on its own schema (unicode61 index, BM25), so the gap to it is the index, not the store.

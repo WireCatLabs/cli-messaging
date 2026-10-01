@@ -1,9 +1,6 @@
 import { mkdirSync, writeFileSync } from "node:fs"
 import { dirname } from "node:path"
-import { CliError } from "@leemour/cli-core"
-import { formatLocator } from "../domain/locator.js"
 import type {
-  Attachment,
   Chat,
   Contact,
   Id,
@@ -16,7 +13,6 @@ import type {
   WindowedMessage,
 } from "../domain/models.js"
 import type { PeopleLookup } from "../resolve.js"
-import type { SqlValue } from "./driver.js"
 import { migrate } from "./migrations.js"
 import { storePath } from "./path.js"
 import * as accounts from "./sqlite/accounts.js"
@@ -26,9 +22,10 @@ import * as identities from "./sqlite/identities.js"
 import * as messageWrites from "./sqlite/messages.js"
 import { openSqlite, type StoreContext } from "./sqlite/open.js"
 import * as ranges from "./sqlite/ranges.js"
+import * as reads from "./sqlite/reads.js"
+import * as search from "./sqlite/search.js"
 import * as sync from "./sqlite/sync.js"
 import * as transcripts from "./sqlite/transcripts.js"
-import { parsed, present, toIso, toMs } from "./sqlite/values.js"
 
 /** Which account of which messenger a call is about. */
 export interface AccountKey {
@@ -245,14 +242,8 @@ export const openStore = async ({ path, env, now = Date.now }: StoreOptions = {}
   return storeOver({ database, orm, now })
 }
 
-/** Telegram's chat types that number their messages themselves, not per account. */
-const OWN_NUMBERING = "('channel', 'supergroup', 'gigagroup', 'monoforum')"
-
 const storeOver = (context: StoreContext): MessageStore => {
   const { database } = context
-  const one = (sql: string, ...parameters: SqlValue[]) => database.prepare(sql).get(...parameters)
-  const all = (sql: string, ...parameters: SqlValue[]) => database.prepare(sql).all(...parameters)
-
   const inTransaction = (body: () => void): void => {
     database.exec("BEGIN IMMEDIATE")
     try {
@@ -268,6 +259,10 @@ const storeOver = (context: StoreContext): MessageStore => {
   const findAccountPk = (key: AccountKey) => accounts.findAccountPk(context, key)
 
   const findChatPk = (accountKey: number, chatId: Id) => chatQueries.findChatPk(context, accountKey, chatId)
+  const chatKeyOf = (key: AccountKey, chatId: Id) => {
+    const accountKey = findAccountPk(key)
+    return accountKey === undefined ? undefined : findChatPk(accountKey, chatId)
+  }
   const chatPkFor = (accountKey: number, chatId: Id) => chatQueries.chatPkFor(context, accountKey, chatId)
 
   const identityPk = (
@@ -287,153 +282,11 @@ const storeOver = (context: StoreContext): MessageStore => {
     seenAt?: number,
   ) => messageWrites.upsertMessage(context, key, accountKey, chatKey, message, via, seenAt)
 
-  const attachmentsOf = (rows: Record<string, unknown>[]): Map<number, Attachment[]> => {
-    const byMessage = new Map<number, Attachment[]>()
-    if (rows.length === 0) return byMessage
-    const keys = rows.map((row) => Number(row.pk))
-    for (const row of all(
-      `SELECT * FROM attachments WHERE message_pk IN (${keys.map(() => "?").join(", ")})
-       ORDER BY message_pk, position`,
-      ...keys,
-    )) {
-      const list = byMessage.get(Number(row.message_pk)) ?? []
-      list.push(toAttachment(row))
-      byMessage.set(Number(row.message_pk), list)
-    }
-    return byMessage
-  }
-
-  const toMessages = (rows: Record<string, unknown>[]): Message[] => {
-    const attachments = attachmentsOf(rows)
-    return rows.map((row) => toMessage(row, attachments.get(Number(row.pk)) ?? []))
-  }
-
-  const find = ({
-    provider,
-    account,
-    accounts,
-    senders,
-    together = false,
-    text,
-    pattern,
-    chatId,
-    limit,
-    perChat = false,
-  }: MessageFilter): Page<StoredHit> => {
-    const trimmed = pattern ? undefined : text?.trim()
-    if (trimmed !== undefined && [...trimmed].length < 3) {
-      throw new CliError("validation_error", "search needs at least three characters")
-    }
-    if (pattern && perChat) throw new CliError("validation_error", "a pattern search is not per chat")
-    if (!trimmed && !pattern && !senders?.length) {
-      throw new CliError("validation_error", "say what to find: some text, or who wrote it")
-    }
-    const conditions = ["m.deleted_at IS NULL"]
-    const parameters: SqlValue[] = []
-    if (trimmed) {
-      conditions.push("m.pk IN (SELECT rowid FROM messages_fts WHERE messages_fts MATCH ?)")
-      parameters.push(wordsOf(trimmed))
-    }
-    const scopeProvider = account?.provider ?? provider
-    if (accounts && scopeProvider === undefined) {
-      throw new CliError("validation_error", "a read across accounts names their provider")
-    }
-    if (scopeProvider !== undefined) {
-      conditions.push("a.provider = ?")
-      parameters.push(scopeProvider)
-    }
-    if (account) {
-      conditions.push("a.native_id = ?")
-      parameters.push(account.account)
-    }
-    if (accounts) {
-      conditions.push(`a.native_id IN (${accounts.map(() => "?").join(", ") || "NULL"})`)
-      parameters.push(...accounts)
-    }
-    if (chatId !== undefined) {
-      conditions.push("c.native_id = ?")
-      parameters.push(chatId)
-    }
-    if (senders?.length) {
-      const ids = [...new Set(senders)]
-      const marks = ids.map(() => "?").join(", ")
-      conditions.push(`i.provider = a.provider AND i.native_id IN (${marks})`)
-      parameters.push(...ids)
-      if (together) {
-        conditions.push(`m.chat_pk IN (
-          SELECT m2.chat_pk FROM messages m2 JOIN identities i2 ON i2.pk = m2.sender_identity_pk
-          WHERE m2.deleted_at IS NULL AND ${scopeProvider === undefined ? "i2.provider = i.provider" : "i2.provider = ?"}
-            AND i2.native_id IN (${marks})
-          GROUP BY m2.chat_pk HAVING count(DISTINCT i2.native_id) = ?)`)
-        parameters.push(...(scopeProvider === undefined ? [] : [scopeProvider]), ...ids, ids.length)
-      }
-    }
-    const matching = `SELECT ${MESSAGE_COLUMNS}, c.title AS chat_title, a.provider AS provider,
-         a.native_id AS account_native_id
-         ${perChat ? ", row_number() OVER (PARTITION BY m.chat_pk ORDER BY m.sent_at DESC, m.pk DESC) AS chat_rank" : ""}
-       FROM messages m ${MESSAGE_JOINS} JOIN accounts a ON a.pk = m.account_pk
-       WHERE ${conditions.join(" AND ")}`
-    const rows = pattern
-      ? scan(matching, parameters, pattern, limit + 1)
-      : perChat
-        ? all(
-            `SELECT * FROM (${matching}) WHERE chat_rank <= ? ORDER BY sent_at DESC, pk DESC`,
-            ...parameters,
-            limit + 1,
-          )
-        : all(`${matching} ORDER BY m.sent_at DESC, m.pk DESC LIMIT ?`, ...parameters, limit + 1)
-    const page = perChat ? rows.filter((row) => Number(row.chat_rank) <= limit) : rows.slice(0, limit)
-    const messages = toMessages(page)
-    return {
-      items: page.map((row, index) => {
-        const message = messages[index] as Message
-        return {
-          ...message,
-          chatTitle: (row.chat_title as string | null) ?? null,
-          locator: formatLocator({
-            provider: String(row.provider),
-            account: String(row.account_native_id),
-            chat: message.chatId,
-            message: message.id,
-          }),
-        }
-      }),
-      hasMore: rows.length > page.length,
-    }
-  }
-
-  /** Newest first, a chunk at a time, until `wanted` rows match or the rows run out. */
-  const scan = (matching: string, parameters: SqlValue[], pattern: RegExp, wanted: number) => {
-    const found: Record<string, unknown>[] = []
-    let after: [number, number] | undefined
-    while (found.length < wanted) {
-      const chunk = all(
-        `${matching} ${after ? "AND (m.sent_at, m.pk) < (?, ?)" : ""} ORDER BY m.sent_at DESC, m.pk DESC LIMIT 500`,
-        ...parameters,
-        ...(after ?? []),
-      )
-      for (const row of chunk) {
-        pattern.lastIndex = 0
-        if (pattern.test(String(row.text ?? ""))) found.push(row)
-        if (found.length === wanted) break
-      }
-      const last = chunk.at(-1)
-      if (chunk.length < 500 || !last) break
-      after = [Number(last.sent_at), Number(last.pk)]
-    }
-    return found
-  }
-
   const writeMembers = (key: AccountKey, accountKey: number, chatId: Id, memberIds: Id[]) =>
     chatQueries.writeMembers(context, key, accountKey, chatId, memberIds)
 
   const writeState = (accountKey: number, name: string, value: string) =>
     sync.writeState(context, accountKey, name, value)
-
-  const tombstone = (pk: number) => messageWrites.tombstone(context, pk)
-
-  const MESSAGE_COLUMNS = `m.*, c.native_id AS chat_native_id, i.native_id AS sender_native_id`
-  const MESSAGE_JOINS = `JOIN chats c ON c.pk = m.chat_pk LEFT JOIN identities i ON i.pk = m.sender_identity_pk`
 
   return {
     saveAccount: async (key, { name }) => {
@@ -530,149 +383,33 @@ const storeOver = (context: StoreContext): MessageStore => {
     },
 
     countMessages: async (key, chatId, { since } = {}) => {
-      const accountKey = findAccountPk(key)
-      const chatKey = accountKey === undefined ? undefined : findChatPk(accountKey, chatId)
-      if (chatKey === undefined) return 0
-      return Number(
-        one(
-          `SELECT count(*) AS n FROM messages WHERE chat_pk = ? AND deleted_at IS NULL AND sent_at >= ?`,
-          chatKey,
-          since === undefined ? Number.MIN_SAFE_INTEGER : (toMs(since) as number),
-        )?.n,
-      )
+      const chatKey = chatKeyOf(key, chatId)
+      return chatKey === undefined ? 0 : reads.countMessages(context, chatKey, since)
     },
 
-    messagesWindow: async (key, chatId, { at, before, after }) => {
-      const accountKey = findAccountPk(key)
-      const chatKey = accountKey === undefined ? undefined : findChatPk(accountKey, chatId)
-      if (chatKey === undefined) return []
-      const moment = toMs(at) as number
-      const earlier = all(
-        `SELECT ${MESSAGE_COLUMNS} FROM messages m ${MESSAGE_JOINS}
-         WHERE m.chat_pk = ? AND m.deleted_at IS NULL AND m.sent_at <= ?
-         ORDER BY m.sent_at DESC, m.pk DESC LIMIT ?`,
-        chatKey,
-        moment,
-        before,
-      )
-      const later = all(
-        `SELECT ${MESSAGE_COLUMNS} FROM messages m ${MESSAGE_JOINS}
-         WHERE m.chat_pk = ? AND m.deleted_at IS NULL AND m.sent_at > ?
-         ORDER BY m.sent_at, m.pk LIMIT ?`,
-        chatKey,
-        moment,
-        after,
-      )
-      return toMessages([...earlier.reverse(), ...later])
+    messagesWindow: async (key, chatId, window) => {
+      const chatKey = chatKeyOf(key, chatId)
+      return chatKey === undefined ? [] : reads.messagesWindow(context, chatKey, window)
     },
 
-    messages: async (key, chatId, { limit, before, since }) => {
-      const accountKey = findAccountPk(key)
-      const chatKey = accountKey === undefined ? undefined : findChatPk(accountKey, chatId)
-      if (chatKey === undefined) return { items: [], hasMore: false }
-      const anchor =
-        before === undefined
-          ? undefined
-          : one("SELECT sent_at, pk FROM messages WHERE chat_pk = ? AND native_id = ?", chatKey, before)
-      if (before !== undefined && !anchor) {
-        throw new CliError("not_found", `message ${before} is not in the local copy of this chat`)
-      }
-      const rows = all(
-        `SELECT ${MESSAGE_COLUMNS} FROM messages m ${MESSAGE_JOINS}
-         WHERE m.chat_pk = ? AND m.deleted_at IS NULL ${anchor ? "AND (m.sent_at, m.pk) < (?, ?)" : ""}
-           ${since === undefined ? "" : "AND m.sent_at >= ?"}
-         ORDER BY m.sent_at DESC, m.pk DESC LIMIT ?`,
-        chatKey,
-        ...(anchor ? [anchor.sent_at as number, anchor.pk as number] : []),
-        ...(since === undefined ? [] : [toMs(since) as number]),
-        limit + 1,
-      )
-      return { items: toMessages(rows.slice(0, limit)).reverse(), hasMore: rows.length > limit }
+    messages: async (key, chatId, window) => {
+      const chatKey = chatKeyOf(key, chatId)
+      return chatKey === undefined ? { items: [], hasMore: false } : reads.messagePage(context, chatKey, window)
     },
 
-    around: async (key, chatId, messageId, { before, after }) => {
-      const accountKey = findAccountPk(key)
-      const chatKey = accountKey === undefined ? undefined : findChatPk(accountKey, chatId)
-      const anchor =
-        chatKey === undefined
-          ? undefined
-          : one(
-              `SELECT ${MESSAGE_COLUMNS} FROM messages m ${MESSAGE_JOINS}
-               WHERE m.chat_pk = ? AND m.native_id = ? AND m.deleted_at IS NULL`,
-              chatKey,
-              messageId,
-            )
-      if (chatKey === undefined || !anchor) {
-        throw new CliError("not_found", `message ${messageId} is not in the local copy of this chat`)
-      }
-      const side = (direction: "<" | ">", count: number) =>
-        count === 0
-          ? []
-          : all(
-              `SELECT ${MESSAGE_COLUMNS} FROM messages m ${MESSAGE_JOINS}
-               WHERE m.chat_pk = ? AND m.deleted_at IS NULL AND (m.sent_at, m.pk) ${direction} (?, ?)
-               ORDER BY m.sent_at ${direction === "<" ? "DESC" : "ASC"}, m.pk ${direction === "<" ? "DESC" : "ASC"}
-               LIMIT ?`,
-              chatKey,
-              anchor.sent_at as number,
-              anchor.pk as number,
-              count,
-            )
-      const rows = [...side("<", before).reverse(), anchor, ...side(">", after)]
-      return toMessages(rows).map((message, index) => (rows[index] === anchor ? { ...message, anchor: true } : message))
-    },
+    around: async (key, chatId, messageId, window) => reads.around(context, chatKeyOf(key, chatId), messageId, window),
 
     message: async (key, messageId, { chatId } = {}) => {
       const accountKey = findAccountPk(key)
-      if (accountKey === undefined) return undefined
-      const rows = all(
-        `SELECT ${MESSAGE_COLUMNS} FROM messages m ${MESSAGE_JOINS}
-         WHERE m.account_pk = ? AND m.native_id = ? AND m.deleted_at IS NULL ${chatId === undefined ? "" : "AND c.native_id = ?"}
-         LIMIT 2`,
-        accountKey,
-        messageId,
-        ...(chatId === undefined ? [] : [chatId]),
-      )
-      if (rows.length > 1) {
-        throw new CliError("validation_error", `message ${messageId} is in more than one chat — name the chat`)
-      }
-      return toMessages(rows)[0]
+      return accountKey === undefined ? undefined : reads.message(context, accountKey, messageId, chatId)
     },
 
     markDeleted: async (key, messageIds, { chatId } = {}) => {
       const accountKey = findAccountPk(key)
       if (accountKey === undefined || messageIds.length === 0) return 0
-      // A Telegram chat stored only by its id, from a message seen before the chat, has no kind yet —
-      // but a channel's or a supergroup's id is marked `-100…`, which says enough.
-      const stubs = key.provider === "telegram" ? "AND NOT (c.kind = 'unknown' AND c.native_id LIKE '-100%')" : ""
       let changed = 0
       inTransaction(() => {
-        for (const messageId of messageIds) {
-          if (chatId !== undefined) {
-            const found = one(
-              `SELECT pk FROM messages WHERE account_pk = ? AND native_id = ? AND deleted_at IS NULL
-               AND chat_pk = (SELECT pk FROM chats WHERE account_pk = ? AND native_id = ?)`,
-              accountKey,
-              messageId,
-              accountKey,
-              chatId,
-            )
-            if (found) changed += tombstone(Number(found.pk))
-            continue
-          }
-          // Telegram names a deletion without its chat only where ids count per account; a channel or
-          // supergroup numbers its own, so the same id there is another message. Two candidates left
-          // means the id is ambiguous, and a missed tombstone is better than a wrong one.
-          const candidates = all(
-            `SELECT m.pk FROM messages m JOIN chats c ON c.pk = m.chat_pk
-             WHERE m.account_pk = ? AND m.native_id = ? AND m.deleted_at IS NULL AND c.kind <> 'channel' ${stubs}
-               AND coalesce(json_extract(c.provider_metadata, '$.chatType'), '') NOT IN ${OWN_NUMBERING}`,
-            accountKey,
-            messageId,
-          )
-          if (candidates.length !== 1) continue
-          changed += tombstone(Number(candidates[0]?.pk))
-        }
+        changed = messageWrites.markDeleted(context, key, accountKey, messageIds, chatId)
       })
       return changed
     },
@@ -683,9 +420,10 @@ const storeOver = (context: StoreContext): MessageStore => {
       inTransaction(() => accounts.purgeAccount(context, accountKey))
     },
 
-    search: async (query, { limit, account }) => find({ text: query, limit, ...(account ? { account } : {}) }),
+    search: async (query, { limit, account }) =>
+      search.find(context, { text: query, limit, ...(account ? { account } : {}) }),
 
-    find: async (filter) => find(filter),
+    find: async (filter) => search.find(context, filter),
 
     contacts: async (key, options) => {
       const accountKey = findAccountPk(key)
@@ -727,23 +465,7 @@ const storeOver = (context: StoreContext): MessageStore => {
 
     chatStats: async (key, chatId) => {
       const accountKey = findAccountPk(key)
-      if (accountKey === undefined) return []
-      return all(
-        `SELECT c.native_id, c.title, count(m.pk) AS messages, min(m.sent_at) AS oldest, max(m.sent_at) AS newest,
-                max(m.ingested_at) AS stored
-         FROM chats c JOIN messages m ON m.chat_pk = c.pk AND m.deleted_at IS NULL
-         WHERE c.account_pk = ? ${chatId === undefined ? "" : "AND c.native_id = ?"}
-         GROUP BY c.pk ORDER BY newest DESC`,
-        accountKey,
-        ...(chatId === undefined ? [] : [chatId]),
-      ).map((row) => ({
-        chatId: String(row.native_id),
-        title: (row.title as string | null) ?? null,
-        messages: Number(row.messages),
-        oldestAt: toIso(row.oldest),
-        newestAt: toIso(row.newest),
-        lastStoredAt: toIso(row.stored),
-      }))
+      return accountKey === undefined ? [] : reads.chatStats(context, accountKey, chatId)
     },
 
     ranges: async (key, chatId) => {
@@ -754,53 +476,4 @@ const storeOver = (context: StoreContext): MessageStore => {
 
     close: async () => database.close(),
   }
-}
-
-const toAttachment = (row: Record<string, unknown>): Attachment =>
-  ({
-    kind: String(row.kind),
-    ...present({
-      url: row.url,
-      width: row.width,
-      height: row.height,
-      title: row.title,
-      name: row.name,
-      size: row.size,
-      mime: row.mime,
-      duration: row.duration,
-      providerRef: parsed(row.provider_ref),
-    }),
-  }) as Attachment
-
-const toMessage = (row: Record<string, unknown>, attachments: Attachment[]): Message => {
-  const senderChat = row.sender_chat_native_id as string | null
-  return {
-    id: String(row.native_id),
-    chatId: String(row.chat_native_id),
-    senderId: senderChat ?? (row.sender_native_id as string | null) ?? null,
-    senderName: (row.sender_name as string | null) ?? null,
-    ...(senderChat ? { senderIsChat: true } : {}),
-    timestamp: toIso(row.sent_at) as string,
-    editedAt: toIso(row.edited_at),
-    text: String(row.text),
-    outgoing: row.outgoing === null ? null : row.outgoing === 1,
-    attachments,
-    replyTo: parsed(row.reply_to) ?? null,
-    ...present({ replyToId: row.reply_to_native_id }),
-    forwardedFrom: parsed(row.forward) ?? null,
-    ...present({ threadId: row.thread_native_id }),
-    reactions: parsed(row.reactions) ?? null,
-    ...present({ providerMetadata: parsed(row.provider_metadata) }),
-  } as Message
-}
-
-/**
- * Every word as the beginning of a word, all of them required: `квартир` finds квартира and
- * квартиру, which an index of whole words would not. Punctuation separates words, as the index does.
- */
-/** Every word of three characters or more, found anywhere inside the text; a trigram index cannot match a shorter one. */
-const wordsOf = (text: string): string => {
-  const words = (text.match(/[\p{L}\p{N}]+/gu) ?? []).filter((word) => [...word].length >= 3)
-  if (words.length === 0) throw new CliError("validation_error", "search needs a word of three letters or more")
-  return words.map((word) => `"${word}"`).join(" ")
 }
