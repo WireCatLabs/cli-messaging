@@ -857,19 +857,13 @@
     "messages edit": {
       "state": "both",
       "options": {
-        "--md": {
-          "state": "planned",
-          "by": "T6"
-        }
+        "--md": "both"
       }
     },
     "messages forward": {
       "state": "both",
       "options": {
-        "--send-id": {
-          "state": "planned",
-          "by": "T6"
-        },
+        "--send-id": "both",
         "--silent": "both",
         "--to": "both"
       }
@@ -909,10 +903,7 @@
       "state": "both",
       "options": {
         "--allow-any-file": "both",
-        "--as-file": {
-          "state": "planned",
-          "by": "T6"
-        },
+        "--as-file": "both",
         "--at": "both",
         "--file": "both",
         "--md": "both",
@@ -921,10 +912,7 @@
         "--reply-to": "both",
         "--send-id": "both",
         "--silent": "both",
-        "--voice": {
-          "state": "planned",
-          "by": "T6"
-        }
+        "--voice": "both"
       }
     },
     "messages show": {
@@ -966,10 +954,7 @@
       "options": {
         "--anonymous": "both",
         "--multiple": "both",
-        "--revote": {
-          "state": "planned",
-          "by": "T6"
-        },
+        "--revote": "both",
         "--send-id": "both",
         "--silent": "both"
       }

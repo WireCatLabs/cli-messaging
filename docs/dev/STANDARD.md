@@ -86,7 +86,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--allow-send` |  | offer the send tool; without it the server can only read |  | `mcp`, `mcp config` |
 | `--anonymous` |  | nobody sees who voted for what |  | `polls create` |
 | `--app` | `<how>` | the first time only: how to get this profile's app from my.telegram.org | `browser` | `session start` (tg-only) |
-| `--as-file` |  | send every --file as a plain file to download, a video included |  | `messages send` (planned) |
+| `--as-file` |  | send every --file as a plain file to download, a video included |  | `messages send` |
 | `--at` | `<time>` | let the messenger send it later, even with this machine off: a local time like 2026-09-25T09:00, or 30m |  | `messages send` |
 | `--background` |  | run as a job that outlives this command; `store jobs show` follows it |  | `store fetch` (planned) |
 | `--before` | `<id-or-time>` | read what came before this message id, this ISO 8601 time, or 2h / 1d ago. **tg's `messages list` spells the value `<id>`** |  | `messages context`, `messages list` |
@@ -120,7 +120,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--mark-read` |  | also mark the chat read up to the newest message shown; the other person sees it |  | `messages list` |
 | `--max-actions` | `<n>` | at most this many actions in one run | `10` | `chats moderate` (planned) |
 | `--max-pages` | `<n>` | at most this many pages of 100 messages in one run | `10` | `store fetch` |
-| `--md` |  | read **bold**, _italic_, ~~struck~~ and `code` in the text; \ keeps a mark literal |  | `messages edit` (planned), `messages send` |
+| `--md` |  | read **bold**, _italic_, ~~struck~~ and `code` in the text; \ keeps a mark literal |  | `messages edit`, `messages send` |
 | `--members-see-link` | `<on\|off>` | members may see the invite link |  | `chats update` (max-only) |
 | `--model` | `<id>` | which downloaded speech model hears them; `models audio list` shows them |  | `inbox`, `messages list`, `messages transcribe`, `review` (planned) |
 | `--multiple` |  | people may pick several answers |  | `polls create` |
@@ -148,10 +148,10 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--remove` | `<chat>` | take a chat out of a folder; repeat it for more |  | `chats folders update` (planned) |
 | `--reply-to` | `<message>` | answer this message id in the same chat |  | `messages send` |
 | `--retract` |  | take your vote back, where the poll allows it |  | `polls vote` |
-| `--revote` |  | people may change their vote |  | `polls create` (planned) |
+| `--revote` |  | people may change their vote |  | `polls create` |
 | `--run` | `<id>` | the run the report is about; the newest failed one if not given |  | `doctor report create` |
 | `--search` | `<text>` | only chats whose name contains this; at least 3 characters |  | `chats list`, `contacts list` |
-| `--send-id` | `<id>` | reuse the id of an earlier send whose outcome is unknown; the messenger drops the duplicate. **max spells the value `<n>`** |  | `messages forward` (planned), `messages send`, `polls create` |
+| `--send-id` | `<id>` | reuse the id of an earlier send whose outcome is unknown; the messenger drops the duplicate. **max spells the value `<n>`** |  | `messages forward`, `messages send`, `polls create` |
 | `--serve` |  | start `serve` in the background if it is not running (the default) |  | every command (planned) |
 | `--show-phone` |  | print the whole phone number |  | `account show` |
 | `--silent` |  | deliver without a notification |  | `messages forward`, `messages send`, `polls create` |
@@ -167,7 +167,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--until` | `<message>` | only up to this message id, inclusive; the newest by default |  | `chats mark-read` |
 | `--verbose` |  | more detail in what is shown: -v ids, -vv everything known | `0` | every command |
 | `--version` |  | print the version number |  | every command |
-| `--voice` | `<file>` | send an Ogg Opus file as a voice message, alone, with no text. **max spells the value `<path>`; rule 6 says `<file>`** |  | `messages send` (planned) |
+| `--voice` | `<file>` | send an Ogg Opus file as a voice message, alone, with no text. **max spells the value `<path>`; rule 6 says `<file>`** |  | `messages send` |
 | `--yes` |  | go ahead without the question an ask level puts before a write |  | every command (planned), `account sessions end` (planned), `mcp` (planned), `mcp config` (planned) |
 
 <!-- end of the option catalogue -->
