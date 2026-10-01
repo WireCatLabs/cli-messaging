@@ -16,6 +16,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   free memory. A chunk whose messages changed since the build is skipped and counted. Keyed
   `conversations.embed`, so a profile read-only on messages can still embed. `store check` reports
   vectors per model and those no chunk points at any more; its "nothing is enriched yet" note is gone.
+- **The parity manifest plans `bot messages search --newest`** for max (phase 2 item 10b: the bot's
+  search by words, best first) and for tg (P8).
 - **Chunks of conversations in the store (store version 14)**, for search by meaning (storage phase 5):
   `conversations build` cuts each conversation into chunks of at most 1,200 characters at message
   boundaries and stores, per chunk, its first and last message and the sha256 of its text — never the
