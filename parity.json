@@ -971,16 +971,12 @@
           "state": "planned",
           "by": "P1"
         },
-        "--send-id": {
-          "state": "planned",
-          "by": "T6"
-        },
+        "--send-id": "both",
         "--silent": "both"
       }
     },
     "polls show": {
-      "state": "planned",
-      "by": "T6"
+      "state": "both"
     },
     "polls vote": {
       "state": "both",
