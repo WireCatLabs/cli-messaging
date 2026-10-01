@@ -145,8 +145,12 @@ export const contractCases = ({
       }
     }
   const cases = (
-    list: [name: string, body: (adapter: MessengerAdapter, seed: Seed) => Promise<undefined | { skipped: string }>][],
-  ) => list.map(([name, body]) => ({ name, run: using(body) }))
+    list: [
+      name: string,
+      body: (adapter: MessengerAdapter, seed: Seed) => Promise<undefined | { skipped: string }>,
+      needs?: string,
+    ][],
+  ): ContractCase[] => list.map(([name, body, needs]) => ({ name, run: using(body), ...(needs ? { needs } : {}) }))
   const lacking = (adapter: MessengerAdapter, method: keyof MessengerAdapter) =>
     typeof adapter[method] === "function" ? undefined : { skipped: `the adapter has no ${method}` }
 
@@ -270,6 +274,7 @@ export const contractCases = ({
           const newest = await adapter.history(seed.dialog, { limit: 1 })
           assert.deepEqual(idsOf(newest.items), [sent.message.id])
         },
+        "the fake keeps what was sent, so history answers it",
       ],
       [
         "ids are strings in everything the reads answer",
@@ -363,6 +368,7 @@ export const contractCases = ({
           controller.abort()
           await within(Promise.resolve(watching), "watch did not end when the signal aborted", waitMs)
         },
+        "`connect` opens a connection that listens, as `{ listen: true }` does",
       ],
     ]),
     {
