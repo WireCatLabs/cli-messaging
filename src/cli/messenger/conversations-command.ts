@@ -230,7 +230,7 @@ export const conversationsCommand = (messenger: Messenger): Command => {
       "compute a vector for each chunk of a chat's conversations, on this machine, for search by meaning; " +
         "resumes where it stopped",
     )
-    .requiredOption("--chat <chat>", messenger.chatArgument)
+    .option("--chat <chat>", messenger.chatArgument)
     .option("--model <model>", "a model id from `models text list` (default: e5-small)")
     .option(
       "--workers <n>",
@@ -240,11 +240,12 @@ export const conversationsCommand = (messenger: Messenger): Command => {
     .option("--threads <n>", "threads in all (default: min(8, cores))", positiveCount("--threads"))
     .action(async function (this: Command) {
       const { chat, model, workers, threads } = this.opts<{
-        chat: string
+        chat?: string
         model?: string
         workers?: number
         threads?: number
       }>()
+      if (!chat) throw new CliError("validation_error", "--chat is required: the chat whose conversations to embed")
       const context = messengerContext(this, messenger)
       writable(context, messenger.app.command, EMBED_KEY)
       const done = await context.withServices(async (services) => {
@@ -271,10 +272,10 @@ export const conversationsCommand = (messenger: Messenger): Command => {
     .description(
       "how many chunks of a chat have a vector of the model, how many are left, and about how long they take",
     )
-    .requiredOption("--chat <chat>", messenger.chatArgument)
+    .option("--chat <chat>", messenger.chatArgument)
     .option("--model <model>", "a model id from `models text list` (default: e5-small)")
     .action(async function (this: Command) {
-      const { chat, model } = this.opts<{ chat: string; model?: string }>()
+      const { chat, model } = embedOptions(this)
       const context = messengerContext(this, messenger)
       const status = await context.withServices((services) => services.embeddings.status(chat, model))
       if (context.format === "pretty") {
@@ -287,10 +288,10 @@ export const conversationsCommand = (messenger: Messenger): Command => {
   embed
     .command("clear")
     .description("drop a chat's vectors, or only one model's; messages and conversations are never touched")
-    .requiredOption("--chat <chat>", messenger.chatArgument)
+    .option("--chat <chat>", messenger.chatArgument)
     .option("--model <model>", "only this model's vectors")
     .action(async function (this: Command) {
-      const { chat, model } = this.opts<{ chat: string; model?: string }>()
+      const { chat, model } = embedOptions(this)
       const context = messengerContext(this, messenger)
       writable(context, messenger.app.command, EMBED_KEY)
       const cleared = await context.withServices((services) => services.embeddings.clear(chat, model))
@@ -322,6 +323,16 @@ const writable = (context: MessengerContext, command: string, permission = LINKS
 
 const LINKS_KEY = "conversations.links"
 const EMBED_KEY = "conversations.embed"
+
+/**
+ * `--chat` and `--model` of `embed status|clear`. The `embed` group declares the same options, and
+ * commander hands their values to it, not to the subcommand — so they are read with the group's.
+ */
+const embedOptions = (command: Command): { chat: string; model?: string } => {
+  const { chat, model } = command.optsWithGlobals<{ chat?: string; model?: string }>()
+  if (!chat) throw new CliError("validation_error", "--chat is required: the chat whose vectors to read or drop")
+  return { chat, ...(model ? { model } : {}) }
+}
 
 const minutes = (seconds: number) => (seconds < 90 ? `about ${seconds} s` : `about ${Math.round(seconds / 60)} min`)
 
