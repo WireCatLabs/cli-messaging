@@ -6,6 +6,10 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.109.0 — 02.10.2026
+
+Released early: max-cli waits on the shared bot store fetch command
+
 ### Added
 
 - **`bot store fetch <chat>`**: a chat's history into the bot's local copy, newest first, resumable —
