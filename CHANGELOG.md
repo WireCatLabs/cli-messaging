@@ -6,6 +6,10 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.111.0 — 02.10.2026
+
+Released early: tg-cli waits on history connection options for bot store fetch; both CLIs wait on working bot permission hints
+
 ### Added
 
 - **Bot fetch can open a history-only reader**, passing an optional starting link, the pause and
