@@ -6,6 +6,10 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.106.0 — 02.10.2026
+
+Released early: max-cli and tg-cli wait on the shared bot chats moderate command to drop their own copies
+
 ### Added
 
 - **`bot chats moderate` and `bot chats rules show|set|unset`, shared**: the bot's twins of the personal
