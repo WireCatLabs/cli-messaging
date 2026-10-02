@@ -6,6 +6,10 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.103.0 — 02.10.2026
+
+Released early: max-cli 0.22.0 waits: its parity check fails on the new conversations embed and search options until the checker fix ships
+
 ## 0.102.0 — 02.10.2026
 
 Released early: tg-cli cannot move past 0.99.0: its archive tests hang in store fetch on 0.100.0 and 0.101.0
