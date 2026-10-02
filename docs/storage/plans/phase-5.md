@@ -168,6 +168,13 @@ probably too slow for one step, and likely needs batches like version 12's word 
 the word search in the same scope, maps its hits to their conversations, and merges the two lists by
 reciprocal rank fusion (requirements §21; k = 60, the usual constant, until the item 6 set says otherwise). Until then the command ranks by meaning only and says
 so in its help. `messages search` itself is not changed here.
+**Built 2026-10-02:** the word search is phase 2's `searchStore` over the query's plain words joined by
+OR, so a sentence ranks what shares any word and nothing in it reads as a filter. Only whole words and
+word beginnings count — phase 2 falls back to corrected spellings and pieces of words, which would pass
+a near-miss off as a match. 50 conversations by meaning and those of 200 messages by words are merged with
+k = 60, which the item's set — a meaning-only and a word-only query over a synthetic chat —
+gave no reason to change. `score` stays the cosine and is `null` for a conversation only words found;
+`by` says which list found it. A built chat that is not embedded is now found by words.
 
 **E10 · Permissions and machine mode.** `conversations embed` writes only to the local store — the key
 `conversations.embed`, so a profile read-only on messages can still embed, as phase 4's
@@ -234,7 +241,7 @@ the default). Facts: [`../research/2026-10-02-embedding-apis.md`](../research/20
    in-memory copy in `serve` and `mcp`.
 6. ✅ 2026-10-02: released in 0.101.0–0.103.0; tg on 0.103.0 with docs, skill line and tests (tg-cli #217); max on 0.103.0; the parity rows present, except `models text` for max, which still mounts its own `models` group (max-cli CLI-60) · **Docs, changelog, parity rows, skill line** — ARCHITECTURE's store section (the two tables, why vectors
    are keyed by hash), `docs/commands.md`, one line in the shared skills; tg-cli and max-cli bump.
-7. **Hybrid** (E9), after phase 2 item 6 — RRF over the two lists; the IRC bench's queries cannot score it,
+7. ✅ 2026-10-02 · **Hybrid** (E9), after phase 2 item 6 — RRF over the two lists; the IRC bench's queries cannot score it,
    so a small hand-written query set over a synthetic chat.
 8. **Measure** — `bench/embeddings/` (today the research scripts of §3): embed time and search time on the `bench/search` corpus at 100k
    messages through the real commands, Node and Bun, recorded in its README.

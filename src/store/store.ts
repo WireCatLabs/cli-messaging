@@ -171,6 +171,11 @@ export interface MessageStore {
   conversation(key: AccountKey, id: string): Promise<{ summary: ConversationSummary; messages: Message[] } | undefined>
   /** Which conversation a message is in, once the chat is built. */
   conversationOf(key: AccountKey, chatId: Id, messageId: Id): Promise<string | undefined>
+  /** The conversation of the current build each message is in, in the same order; `undefined` where none. */
+  conversationsOfMessages(
+    key: AccountKey,
+    refs: { chatId: Id; messageId: Id }[],
+  ): Promise<(ConversationSummary | undefined)[]>
   /** Every link a message has, the messenger's first. */
   links(key: AccountKey, chatId: Id, messageId: Id): Promise<StoredLink[]>
   /** The user's agent's current answer per message: its parent, or `null` for "starts a conversation". */
@@ -605,6 +610,22 @@ const storeOver = (context: StoreContext): MessageStore => {
     conversationOf: async (key, chatId, messageId) => {
       const chatKey = chatKeyOf(key, chatId)
       return chatKey === undefined ? undefined : conversationQueries.conversationOf(context, chatKey, messageId)
+    },
+
+    conversationsOfMessages: async (key, refs) => {
+      const accountPk = findAccountPk(key)
+      if (accountPk === undefined) return refs.map(() => undefined)
+      const pks = refs.map(({ chatId, messageId }) => {
+        const chatKey = findChatPk(accountPk, chatId)
+        const id = chatKey === undefined ? undefined : conversationQueries.conversationOf(context, chatKey, messageId)
+        return id === undefined ? undefined : Number(id)
+      })
+      const found = conversationQueries.summariesOf(
+        context,
+        accountPk,
+        pks.filter((pk) => pk !== undefined),
+      )
+      return pks.map((pk) => (pk === undefined ? undefined : found.get(pk)))
     },
 
     links: async (key, chatId, messageId) => {

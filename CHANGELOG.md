@@ -23,6 +23,11 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 - **The parity manifest marks `conversations embed` (with `embed status` and `embed clear`) and
   `conversations search` as in all CLIs**, with every option checked: max-cli and tg-cli are both on
   0.103.0. `models text` is in tg only: max still mounts its own `models` group, which has `audio` only.
+- **`conversations search` and MCP `conversations_search` rank by meaning and by words together**: the
+  query's words are also looked up in the word index, and the two lists are merged by reciprocal rank
+  fusion. A conversation found by words alone has `score: null` (the score stays the meaning's cosine),
+  and every item says `by`: `meaning`, `words` or both. A built chat that was never embedded is now found
+  by its words.
 
 ## 0.103.0 — 02.10.2026
 

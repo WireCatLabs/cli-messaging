@@ -23,7 +23,7 @@ const tiny: TextModel = {
   pooling: "mean",
   prefix: { query: "", passage: "" },
   onnx: "onnx/model.onnx",
-  files: [{ name: "onnx/model.onnx", url: "", sha256: "", bytes: 284 }],
+  files: [{ name: "onnx/model.onnx", url: "", sha256: "", bytes: 318 }],
 }
 
 vi.mock("../embeddings/models.js", async (original) => {
@@ -52,17 +52,15 @@ const message = (id: string, text: string, replyToId?: string): Message => ({
   reactions: null,
 })
 
-const setUp = async ({ build = true } = {}) => {
+const setUp = async ({
+  build = true,
+  messages = [message("1", "cat dog"), message("2", "dog", "1"), message("40", "fish"), message("80", "cat")],
+} = {}) => {
   const store = await openStore({ path: join(mkdtempSync(join(tmpdir(), "embed-")), "m.db") })
   await store.saveChats(account, [
     { id: "9", title: "Group", kind: "group", unreadCount: 0, lastMessageAt: null, participantsCount: null },
   ])
-  await store.saveMessages(
-    account,
-    "9",
-    [message("1", "cat dog"), message("2", "dog", "1"), message("40", "fish"), message("80", "cat")],
-    { via: "history" },
-  )
+  await store.saveMessages(account, "9", messages, { via: "history" })
   const deps = storedDeps({ provider: "test", app: { command: "chat" } } as Messenger, store, account, {} as SendGuard)
   if (build) await conversationsService(deps).build("9")
   return { store, embeddings: embeddingsService(deps) }
@@ -119,15 +117,48 @@ describe("embeddings", () => {
     await store.close()
   })
 
-  it("names a chat embedded only with another model, which the search could not see", async () => {
+  it("names a chat embedded only with another model, which the search finds by words alone", async () => {
     const { store, embeddings } = await setUp()
     await embeddings.embed("9", { model: "tiny", threads: 1 })
 
     expect(await embeddings.search("fish", { model: "tiny-2", limit: 3 })).toMatchObject({
-      hits: [],
+      hits: [{ summary: { firstMessageId: "40" }, score: null, by: ["words"] }],
       embeddedOnlyElsewhere: ["9"],
     })
     expect((await embeddings.search("fish", { model: "tiny", limit: 3 })).embeddedOnlyElsewhere).toEqual([])
+    await store.close()
+  })
+
+  it("**merges meaning and words**: a word only one message holds, and a meaning no message spells, each land first", async () => {
+    const { store, embeddings } = await setUp({
+      messages: [message("1", "cat cat"), message("40", "dog zebra"), message("80", "dog"), message("120", "fish")],
+    })
+    await embeddings.embed("9", { model: "tiny", threads: 1 })
+
+    const [byMeaning] = (await embeddings.search("kitten", { model: "tiny", limit: 4 })).hits
+    expect(byMeaning).toMatchObject({ summary: { firstMessageId: "1" }, by: ["meaning"] })
+    expect(byMeaning?.score).toBeCloseTo(1)
+
+    const [byWords] = (await embeddings.search("zebra", { model: "tiny", limit: 4 })).hits
+    expect(byWords).toMatchObject({
+      summary: { firstMessageId: "40" },
+      chunk: { firstMessageId: "40", lastMessageId: "40" },
+      by: ["meaning", "words"],
+    })
+    await store.close()
+  })
+
+  it("leaves out what the word search finds only by correcting the query, keeps a word's longer forms", async () => {
+    const { store, embeddings } = await setUp({ messages: [message("1", "kitchen")] })
+    expect((await embeddings.search("kitten", { model: "tiny", limit: 4 })).hits).toEqual([])
+
+    await store.saveMessages(account, "9", [message("40", "kittens")], { via: "history" })
+    await conversationsService(
+      storedDeps({ provider: "test", app: { command: "chat" } } as Messenger, store, account, {} as SendGuard),
+    ).build("9")
+    expect((await embeddings.search("kitten", { model: "tiny", limit: 4 })).hits).toMatchObject([
+      { summary: { firstMessageId: "40" }, by: ["words"] },
+    ])
     await store.close()
   })
 

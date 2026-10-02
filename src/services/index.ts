@@ -23,7 +23,7 @@ export type { BatchStatus, Built, ConversationsService, MessageLinks } from "./c
 export { BATCH_SIZE, conversationsService } from "./conversations.js"
 export type { ServiceDeps } from "./deps.js"
 export { OFFLINE, onlineDeps, storedDeps } from "./deps.js"
-export type { Embedded, EmbeddingsService, EmbedStatus } from "./embeddings.js"
+export type { Embedded, EmbeddingsService, EmbedStatus, FoundConversation } from "./embeddings.js"
 export { embeddingsService } from "./embeddings.js"
 export type { FolderEdit, FoldersService } from "./folders.js"
 export { foldersService } from "./folders.js"
