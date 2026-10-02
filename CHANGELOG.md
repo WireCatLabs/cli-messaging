@@ -6,6 +6,11 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Changed — may break callers
+
+- **The parity manifest marks `bot mcp` and `bot mcp config` as in all CLIs**, every option checked:
+  max-cli and tg-cli both mount the shared server on 0.104.0.
+
 ## 0.104.0 — 02.10.2026
 
 ### Added

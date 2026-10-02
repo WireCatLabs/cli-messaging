@@ -100,11 +100,11 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--all-bots` |  | also read every other bot's copy on this machine that readOtherBots allows |  | `bot messages between` (planned), `bot messages search` (planned), `bot people show` (planned) |
 | `--all-can-pin` | `<on\|off>` | every member may pin messages |  | `chats update` |
 | `--allow-any-file` |  | send a --file even from a hidden folder, ~/.ssh or the tool's own folders |  | `bot messages send`, `messages send` |
-| `--allow-dangerous` |  | go ahead without the question an ask level puts before a deletion |  | `bot chats check` (planned), `bot mcp` (planned), `bot mcp config` (planned), `bot messages delete`, `chats moderate` (planned), `mcp` (planned), `mcp config` (planned), `messages delete`, `store clear` |
-| `--allow-delete` |  | offer the tool that deletes messages for you only; it cannot be undone. **max's own `mcp` is worded differently until the permission levels (P7) replace these flags there (e13)** |  | `bot mcp` (planned), `bot mcp config` (planned), `mcp`, `mcp config` |
+| `--allow-dangerous` |  | go ahead without the question an ask level puts before a deletion |  | `bot chats check` (planned), `bot mcp`, `bot mcp config`, `bot messages delete`, `chats moderate` (planned), `mcp` (planned), `mcp config` (planned), `messages delete`, `store clear` |
+| `--allow-delete` |  | offer the tool that deletes messages for you only; it cannot be undone. **max's own `mcp` is worded differently until the permission levels (P7) replace these flags there (e13)** |  | `bot mcp`, `bot mcp config`, `mcp`, `mcp config` |
 | `--allow-mark-read` |  | offer the tool that marks a chat read; the other person sees it. **max's own `mcp` is worded differently until the permission levels (P7) replace these flags there (e13)** |  | `mcp`, `mcp config` |
-| `--allow-moderate` |  | offer the tool that applies a group's rules — delete others' messages, remove people. **max only, until permissions (P7) replace the MCP flags** |  | `bot mcp` (planned), `bot mcp config` (planned), `mcp` (planned), `mcp config` (planned) |
-| `--allow-send` |  | offer the send tool; without it the server can only read. **max's own `mcp` is worded differently until the permission levels (P7) replace these flags there (e13)** |  | `bot mcp` (planned), `bot mcp config` (planned), `mcp`, `mcp config` |
+| `--allow-moderate` |  | offer the tool that applies a group's rules — delete others' messages, remove people. **max only, until permissions (P7) replace the MCP flags** |  | `bot mcp`, `bot mcp config`, `mcp` (planned), `mcp config` (planned) |
+| `--allow-send` |  | offer the send tool; without it the server can only read. **max's own `mcp` is worded differently until the permission levels (P7) replace these flags there (e13)** |  | `bot mcp`, `bot mcp config`, `mcp`, `mcp config` |
 | `--anonymous` |  | nobody sees who voted for what |  | `polls create` |
 | `--app` | `<how>` | the first time only: how to get this profile's app from my.telegram.org | `browser` | `session start` (tg-only) |
 | `--as-file` |  | send every --file as a plain file to download, a video included |  | `bot messages send`, `messages send` |
@@ -123,7 +123,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--chat` | `<chat>` | a chat, by id or name; repeat it for more. **max's `messages search` takes `<id>` only, since searching never connects to resolve a name; rule 6 says `<chat>` (e8)** |  | `chats folders create`, `conversations batches next`, `conversations batches status`, `conversations build`, `conversations embed`, `conversations embed clear`, `conversations embed status`, `conversations links clear` (planned), `conversations list`, `conversations search`, `messages search`, `review` |
 | `--check` |  | say whether a newer version exists, and install nothing |  | `bot list`, `upgrade` |
 | `--concurrency` | `<n>` | remote: requests at once (default: 4) |  | `conversations embed` |
-| `--confirm-send` |  | show the owner every write the MCP server offers, in a form to approve. **max's own `mcp` is worded differently until the permission levels (P7) replace these flags there (e13)** |  | `bot mcp` (planned), `bot mcp config` (planned), `mcp`, `mcp config` |
+| `--confirm-send` |  | show the owner every write the MCP server offers, in a form to approve. **max's own `mcp` is worded differently until the permission levels (P7) replace these flags there (e13)** |  | `bot mcp`, `bot mcp config`, `mcp`, `mcp config` |
 | `--context` | `<n>` | messages before and after each hit |  | `messages search` |
 | `--defaults` |  | change what every profile gets, rather than this profile |  | `config set`, `config unset` |
 | `--description` | `<text>` | the new about text — of a chat or of your account |  | `account update`, `chats update` |
