@@ -6,6 +6,11 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Changed — may break callers
+
+- **The parity manifest stops checking max-cli's own `bot chats check`**: max-cli replaces it with the
+  shared `bot chats moderate`; the row goes once max-cli has moved.
+
 ## 0.106.0 — 02.10.2026
 
 Released early: max-cli and tg-cli wait on the shared bot chats moderate command to drop their own copies
