@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.112.0 — 03.10.2026
+
 ### Added
 
 - **Stored chat evidence through CLI and MCP:** the shared `messages evidence <chat>` and
