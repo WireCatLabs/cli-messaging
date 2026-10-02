@@ -129,6 +129,7 @@ export {
   type ServerSystem,
   serverCommand,
 } from "./messenger/server-command.js"
+export { type Saving, stored } from "./messenger/stored.js"
 export { topicsCommand } from "./messenger/topics-command.js"
 export { watchCommand } from "./messenger/watch-command.js"
 export { listed, renderList, renderPage, window, withPaging } from "./paging.js"
