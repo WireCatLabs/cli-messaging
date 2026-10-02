@@ -6,6 +6,13 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- **`prepareEvidencePacket` from `./services`** builds a versioned evidence packet from an already
+  authorised message page for chat briefs, news or person context. It preserves order, includes
+  source locators and content fingerprints, bounds the message count and serialized content bytes,
+  and reports omitted messages and upstream paging without claiming complete history.
+
 ## 0.111.0 — 02.10.2026
 
 Released early: tg-cli waits on history connection options for bot store fetch; both CLIs wait on working bot permission hints
