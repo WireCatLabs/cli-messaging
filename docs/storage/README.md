@@ -10,7 +10,7 @@ millions of messages. Start with [`HANDOFF.md`](HANDOFF.md).
 | [`decisions.md`](decisions.md) | what is ruled, what is open, what is recommended |
 | [`current-state.md`](current-state.md) | the two stores today, who opens them, the servers that exist. **Correction 2026-09-30:** a snapshot of 0.27.0; today's store is in [ARCHITECTURE](../dev/ARCHITECTURE.md#the-store) |
 | [`daemon.md`](daemon.md) | whether a daemon is needed, and which kind — trade-offs |
-| [`search-indexes.md`](search-indexes.md) | how each search index works, with measured scenarios |
+| [`search-indexes.md`](search-indexes.md) | how search works: the word indexes with measured scenarios, and search by meaning — chunks, vectors, the scan, the merge with words, the MCP server's model, measured at 100k |
 | [`plans/phase-1.md`](plans/phase-1.md) | phase 1: Drizzle, the async store, the §4–§5 schema, `db` commands — approved 2026-09-30 |
 | [`plans/phase-3.md`](plans/phase-3.md) | phase 3: conversations inside a group chat — links with their source, one parent per message, scoring on the IRC corpus — approved 2026-09-30 |
 | [`plans/phase-5.md`](plans/phase-5.md) | phase 5: search by meaning — chunks of conversations, local embeddings, a plain vector table — draft 2026-10-02 |
