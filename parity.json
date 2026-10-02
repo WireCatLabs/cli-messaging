@@ -728,81 +728,23 @@
       }
     },
     "bot mcp": {
-      "in": ["max"],
-      "planned": {
-        "tg": "P8"
-      },
+      "in": "all",
       "options": {
-        "--allow-dangerous": {
-          "in": [],
-          "planned": {
-            "max": "P8",
-            "tg": "P8"
-          }
-        },
-        "--allow-delete": {
-          "in": ["max"],
-          "planned": {
-            "tg": "P8"
-          }
-        },
-        "--allow-moderate": {
-          "in": ["max"],
-          "planned": {
-            "tg": "P8"
-          }
-        },
-        "--allow-send": {
-          "in": ["max"],
-          "planned": {
-            "tg": "P8"
-          }
-        },
-        "--confirm-send": {
-          "in": ["max"],
-          "planned": {
-            "tg": "P8"
-          }
-        }
+        "--allow-dangerous": "all",
+        "--allow-delete": "all",
+        "--allow-moderate": "all",
+        "--allow-send": "all",
+        "--confirm-send": "all"
       }
     },
     "bot mcp config": {
-      "in": ["max"],
-      "planned": {
-        "tg": "P8"
-      },
+      "in": "all",
       "options": {
-        "--allow-dangerous": {
-          "in": [],
-          "planned": {
-            "max": "P8",
-            "tg": "P8"
-          }
-        },
-        "--allow-delete": {
-          "in": ["max"],
-          "planned": {
-            "tg": "P8"
-          }
-        },
-        "--allow-moderate": {
-          "in": ["max"],
-          "planned": {
-            "tg": "P8"
-          }
-        },
-        "--allow-send": {
-          "in": ["max"],
-          "planned": {
-            "tg": "P8"
-          }
-        },
-        "--confirm-send": {
-          "in": ["max"],
-          "planned": {
-            "tg": "P8"
-          }
-        }
+        "--allow-dangerous": "all",
+        "--allow-delete": "all",
+        "--allow-moderate": "all",
+        "--allow-send": "all",
+        "--confirm-send": "all"
       }
     },
     "bot me": {
