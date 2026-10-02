@@ -675,6 +675,50 @@
         "--block": "all"
       }
     },
+    "bot chats moderate": {
+      "in": [],
+      "planned": {
+        "max": "P8",
+        "tg": "P8"
+      },
+      "options": {
+        "--allow-dangerous": {
+          "in": [],
+          "planned": {
+            "max": "P8",
+            "tg": "P8"
+          }
+        },
+        "--dry-run": {
+          "in": [],
+          "planned": {
+            "max": "P8",
+            "tg": "P8"
+          }
+        },
+        "--max-actions": {
+          "in": [],
+          "planned": {
+            "max": "P8",
+            "tg": "P8"
+          }
+        },
+        "--no-ban": {
+          "in": [],
+          "planned": {
+            "max": "P8",
+            "tg": "P8"
+          }
+        },
+        "--since-time": {
+          "in": [],
+          "planned": {
+            "max": "P8",
+            "tg": "P8"
+          }
+        }
+      }
+    },
     "bot chats rules": {
       "in": ["max"],
       "planned": {

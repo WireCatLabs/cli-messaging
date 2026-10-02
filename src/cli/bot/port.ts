@@ -1,6 +1,6 @@
 import type { Command } from "commander"
 import type { Markup } from "../../domain/markdown.js"
-import type { AdminRight, Chat, Id, Member, Message, MessageEvent, Provider } from "../../domain/models.js"
+import type { AdminRight, Chat, GroupMember, Id, Member, Message, MessageEvent, Provider } from "../../domain/models.js"
 import type { RunBotCommand } from "../../mcp/bot/server.js"
 import type { BotTool } from "../../mcp/bot/tools.js"
 import type { Upload } from "../../sends/upload.js"
@@ -42,6 +42,8 @@ export interface BotHistory {
   /** The newest `limit`, oldest first. */
   history(chat: BotChatRef, window: { limit: number }): Promise<Message[]>
   message(chat: BotChatRef, messageId: Id): Promise<Message>
+  /** Everything sent at `since` (ms) or later, oldest first, up to `limit`; `more` when there was more. */
+  historySince(chat: BotChatRef, since: number, limit: number): Promise<{ messages: Message[]; more: boolean }>
 }
 
 /** Who wrote what the adapter read, with what a `Message` has no field for. */
@@ -201,6 +203,8 @@ export interface BotMessenger {
    * holds the cursor, so the batch comes again — keep what it writes safe to write twice.
    */
   keepUpdates?: (command: Command, profile: string, events: readonly BotEvent[]) => void
+  /** Who joined a chat at `since` (ms) or later, from what `keepUpdates` kept; `undefined` when nothing was ever kept. */
+  joinsSince?: (command: Command, profile: string, chatId: Id, since: number) => GroupMember[] | undefined
   /** Called with `kind: "bot"`. */
   resolveSettings: (flags: GlobalFlags, options?: ResolveOptions) => Settings
   /**

@@ -15,6 +15,7 @@ import { BotTokenStore } from "../../cli/bot/token.js"
 import { createProgram, run } from "../../cli/program.js"
 import { settingsFor } from "../../cli/settings.js"
 import type { Message } from "../../domain/models.js"
+import { ModerationRules, moderationPathFor } from "../../moderation/rules.js"
 import { type BotServerOptions, createBotServer, type RunBotCommand } from "./server.js"
 import type { BotTool } from "./tools.js"
 
@@ -51,6 +52,11 @@ const adapter: BotAdapter = {
   delete: async (chat, ids) => {
     calls.push(`delete ${chat} ${ids.join(",")}`)
   },
+  historySince: async () => ({
+    messages: [{ ...message("-100", "2", "join https://max.ru/join/other"), senderId: "42", outgoing: false }],
+    more: false,
+  }),
+  admins: async () => [],
 }
 
 const ECHO: BotTool = {
@@ -173,6 +179,7 @@ const WRITES = [
   "chat_bot_callbacks_answer",
   "chat_bot_messages_delete",
   "chat_bot_chats_members_remove",
+  "chat_bot_chats_moderate",
 ]
 
 describe("bot mcp tools by permission level", () => {
@@ -288,6 +295,45 @@ describe("a tool of the CLI's own and the form", () => {
     configure({ bot: { profiles: { sales: { permissions: { "bot.chats.admins": "ask" } } } } })
     expect(await asked({})).toBe(true)
     expect(await asked({ yes: true })).toBe(false)
+  })
+})
+
+describe("chat_bot_chats_moderate", () => {
+  const deleting = (consent: "ask" | "allow") => {
+    const rules = new ModerationRules(moderationPathFor(app, "sales", env))
+    rules.set("-100", null, "invites", "delete")
+    rules.set("-100", null, "consent.delete", consent)
+  }
+
+  it("**shows the actions the rules put at ask in one form, and does exactly those**", async () => {
+    deleting("ask")
+    const { client, forms } = await connect({}, { form: () => ({ action: "accept", content: {} }) })
+
+    const done = await call(client, "chat_bot_chats_moderate", { chat: "Team" })
+
+    expect(forms).toHaveLength(1)
+    expect(forms[0]).toContain("delete message 2")
+    expect(done.body).toMatchObject({ chatId: "-100", rows: [{ action: "delete", outcome: "done" }] })
+    expect(calls).toEqual(["delete -100 2"])
+  })
+
+  it("deletes nothing when the owner declines", async () => {
+    deleting("ask")
+    const { client } = await connect({}, { form: () => ({ action: "decline" }) })
+
+    expect((await call(client, "chat_bot_chats_moderate", { chat: "-100" })).isError).toBe(true)
+    expect(calls).toEqual([])
+  })
+
+  it("acts at level allow with no form — and with one under --confirm-send", async () => {
+    deleting("allow")
+    expect((await call((await connect()).client, "chat_bot_chats_moderate", { chat: "-100" })).body).toMatchObject({
+      rows: [{ outcome: "done" }],
+    })
+
+    const confirming = await connect({ confirmSend: true }, { form: () => ({ action: "accept", content: {} }) })
+    await call(confirming.client, "chat_bot_chats_moderate", { chat: "-100", since_time: "2026-01-01T00:00:00Z" })
+    expect(confirming.forms).toHaveLength(1)
   })
 })
 

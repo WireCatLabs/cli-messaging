@@ -9,6 +9,7 @@ import { botAdminsCommand, botMembersCommand } from "./admins.js"
 import { botContext, online } from "./context.js"
 import { botMcpCommand } from "./mcp.js"
 import { botCan, botIdOf, botMessagesCommand } from "./messages.js"
+import { botModerateCommand, botRulesCommand } from "./moderation.js"
 import { BOT_ACTIONS, type BotAction, type BotMessenger } from "./port.js"
 import { registryProfiles } from "./registry.js"
 import { botCallbacksCommand, botMenuCommand, botWebhooksCommand } from "./setup.js"
@@ -224,6 +225,8 @@ const chatsCommand = (bot: BotMessenger): Command => {
     })
   command.addCommand(botAdminsCommand(bot))
   command.addCommand(botMembersCommand(bot))
+  command.addCommand(botRulesCommand(bot))
+  command.addCommand(botModerateCommand(bot))
   return command
 }
 
