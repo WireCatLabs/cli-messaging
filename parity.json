@@ -1,6 +1,9 @@
 {
   "clis": ["max", "tg"],
   "options": {
+    "--accept-terms": {
+      "meaning": "accept the model's licence terms, for a model that has its own"
+    },
     "--add": {
       "value": "<chat>",
       "meaning": "put a chat into a folder; repeat it for more"
@@ -1653,11 +1656,25 @@
       "in": "all"
     },
     "models text": {
-      "in": ["tg"],
-      "planned": {
-        "max": "CLI-60: max's own models group moves onto the shared one"
-      },
-      "subtree": true
+      "in": "all"
+    },
+    "models text download": {
+      "in": "all",
+      "options": {
+        "--accept-terms": "all"
+      }
+    },
+    "models text key": {
+      "in": "all"
+    },
+    "models text key remove": {
+      "in": "all"
+    },
+    "models text key set": {
+      "in": "all"
+    },
+    "models text list": {
+      "in": "all"
     },
     "polls": {
       "in": "all"
