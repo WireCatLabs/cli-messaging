@@ -29,6 +29,12 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   and every item says `by`: `meaning`, `words` or both. A built chat that was never embedded is now found
   by its words.
 
+### Fixed
+
+- **`conversations search` is faster on a large store**: at 100k messages a search in a running MCP
+  server went from 1.4 s to 0.35 s, and a one-shot search from 2.7 s to 1.4 s. The vector scan
+  no longer sorts every vector of the model for each 5,000-row step.
+
 ## 0.103.0 — 02.10.2026
 
 Released early: max-cli 0.22.0 waits: its parity check fails on the new conversations embed and search options until the checker fix ships

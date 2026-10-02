@@ -55,7 +55,7 @@ One Node one-shot of the English sentence read 16,659 s: the laptop slept during
 
 What this says:
 
-- **The vector scan is the cost, and its paging is why.** A warm search, timed in parts: the query's
+- **The vector scan is the cost, and its paging is why** (fixed — see below). A warm search, timed in parts: the query's
   vector 6 ms, the word search 25 ms, the scan 1.4 s. The scan reads 5,000 rows a step, ordered by
   conversation, and SQLite answers each step by reading every vector of the model and sorting them in a
   temporary B-tree: 9 steps cost 1.3 s, while the same rows in one statement come back in 166 ms. The
@@ -66,3 +66,16 @@ What this says:
 - **Bun with one worker peaks at 3.2 GB**, Node at 1.2 GB, for the same run.
 - A one-shot search pays ~1 s for loading the model on top of the scan; the MCP server keeps the model
   open, and pays the scan alone.
+
+## After the scan fix, 2026-10-02
+
+The scan's `CROSS JOIN` keeps the chunks first, so each page walks their key instead of re-reading and
+sorting every vector. Same store, same machine, the 9-word Russian sentence:
+
+| | before | after |
+|---|---|---|
+| the scan's statements, all pages | 1.3 s | 130–156 ms |
+| warm, median of ten (Node) | 1.43 s | 0.35 s |
+| warm, median of ten (Bun) | 1.60 s | 0.31 s |
+| one-shot `встреча` (Node, three runs) | 2.67–2.75 s | 1.33–1.42 s |
+
