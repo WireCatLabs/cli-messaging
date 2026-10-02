@@ -67,6 +67,20 @@ describe("local completion", () => {
     expect(await call(["home", "messages", "list", ""])).toBe("101\tDialog\n:4")
   })
 
+  it("takes the consumer's account over a stale shared pointer without creating state", async () => {
+    const { env, call } = setup()
+    rememberAccount(app, "home", "600", env)
+    const store = await openStore({ env })
+    try {
+      await store.savePeople({ provider: "chat", account: "500" }, [{ id: "7", name: "Friend" }])
+      await store.savePeople({ provider: "chat", account: "600" }, [{ id: "8", name: "Stale account" }])
+    } finally {
+      await store.close()
+    }
+    expect(await call(["home", "contacts", "show", ""], { account: () => "500" })).toBe("7\tFriend\n:4")
+    expect(await call(["home", "contacts", "show", ""], { account: () => undefined })).toBe(":4")
+  })
+
   it("takes custom sources before opening a personal store and keeps profile completion", async () => {
     const { env, call } = setup()
     rememberAccount(app, "home", "500", env)

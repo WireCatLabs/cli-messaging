@@ -6,6 +6,13 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- `completeCommand` accepts `options.account` to read a consumer's existing local account
+  binding. When supplied it is authoritative, so a stale shared profile pointer cannot offer
+  another account's suggestions. It does not connect or create state. This unblocks max-cli
+  completion for profiles used only through its legacy MCP server.
+
 ## 0.116.0 — 03.10.2026
 
 Released early: max-cli shared completion and doctor need local completion sources and the store summary export
