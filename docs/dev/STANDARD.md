@@ -185,7 +185,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--qr-file` | `<png>` | write the QR code to this PNG instead of drawing it, for an agent to pass on |  | `session start` (tg-only) |
 | `--quiet` |  | diagnostics off. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | every command |
 | `--record` |  | keep this run under `runs` — ids and timings, never message content. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | every command |
-| `--refresh` |  | read the private chat with them from MAX first — one request |  | `bot contacts show` |
+| `--refresh` |  | read the private chat with them from MAX first — one request |  | `bot contacts show` (planned) |
 | `--regex` |  | the words are one regular expression, case-insensitive, tested against every stored text |  | `messages search` (planned) |
 | `--remove` | `<chat>` | take a chat out of a folder; repeat it for more |  | `chats folders update` |
 | `--reply-to` | `<message>` | answer this message id in the same chat |  | `bot messages send`, `messages send` |

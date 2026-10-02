@@ -166,7 +166,7 @@ export const botContactsCommand = (bot: BotMessenger): Command => {
   acrossOptions(command.command("show"))
     .argument("<who>", "an id, @username or part of a name")
     .option("--limit <n>", "how many messages from the private chat", positiveCount("--limit"))
-    .option("--refresh", `read the private chat with them from ${bot.name ?? "the messenger"} first — one request`)
+    .option("--refresh", "read the private chat with them again from the messenger first — one request")
     .description(
       "one person: the chats they wrote in (with their last message there) and the latest messages of their " +
         "private chat with the bot",

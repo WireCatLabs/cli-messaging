@@ -687,7 +687,13 @@
         "--all-bots": "all",
         "--bots": "all",
         "--limit": "all",
-        "--refresh": "all"
+        "--refresh": {
+          "in": [],
+          "planned": {
+            "max": "P8",
+            "tg": "P8"
+          }
+        }
       }
     },
     "bot list": {
