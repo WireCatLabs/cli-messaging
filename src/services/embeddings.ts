@@ -4,9 +4,9 @@ import type { Id } from "../domain/models.js"
 import { type Embedder, isTextModelInstalled, textModelsDirectory } from "../embeddings/embed.js"
 import { DEFAULT_TEXT_MODEL, type TextModel, textModel } from "../embeddings/models.js"
 import { type RemoteModel, remoteKey } from "../embeddings/remote.js"
-import type { ConversationHit } from "../store/store.js"
+import type { ConversationHit, ConversationSummary } from "../store/store.js"
 import type { ServiceDeps } from "./deps.js"
-import { storedChatId } from "./messages.js"
+import { searchStore, storedChatId } from "./messages.js"
 
 /** A local model by id (the default when nothing is given), or a remote one with the user's key (E11). */
 export type ModelChoice = string | { remote: RemoteModel; apiKey?: string; concurrency?: number }
@@ -52,7 +52,17 @@ export interface EmbeddingsService {
   search(
     query: string,
     options: { chat?: string; model?: ModelChoice; since?: string; limit: number },
-  ): Promise<{ model: string; hits: ConversationHit[]; embeddedOnlyElsewhere: Id[] }>
+  ): Promise<{ model: string; hits: FoundConversation[]; embeddedOnlyElsewhere: Id[] }>
+}
+
+/** A conversation found by meaning, by words, or both (E9). */
+export interface FoundConversation {
+  summary: ConversationSummary
+  /** The chunk nearest in meaning; the best message found by words when only words found it. */
+  chunk: { firstMessageId: Id; lastMessageId: Id }
+  /** The best chunk's cosine, −1 to 1; `null` when only words found it. */
+  score: number | null
+  by: ("meaning" | "words")[]
 }
 
 /** A vector's model: the provider, the model and its size — vectors of two of them never mix. */
@@ -62,6 +72,12 @@ export const vectorModelKey = (model: TextModel): string => `local:${model.id}:$
 const PER_SESSION = 8
 /** Texts per remote request; `concurrency` of them run at once. */
 const PER_REQUEST = 256
+/** How deep each list is read before the two are merged. */
+const CANDIDATES = 50
+/** Messages the word search reads: one long thread can hold many of them. */
+const WORD_HITS = 200
+/** Reciprocal rank fusion's usual constant (phase 5 E9). */
+const RRF_K = 60
 /** e5's tokenizer reads ~3.7 characters a token in Russian; 3 keeps the bound above the real count. */
 const CHARS_PER_TOKEN_AT_LEAST = 3
 
@@ -102,6 +118,38 @@ export const embeddingsService = (deps: ServiceDeps): EmbeddingsService => {
         return openPool(model, directory, { workers, ...(threads ? { threads } : {}) })
       },
     }
+  }
+
+  /**
+   * The conversations holding messages that share a word with the query, best message first. Every word
+   * is one side of an OR, so a sentence ranks what shares any of it, and nothing in it is read as a filter.
+   * Only whole words and their beginnings count: a corrected spelling or a piece of a word would pass a
+   * near-miss off as a match, which is what the meaning half is for.
+   */
+  const byWords = async (query: string, chatId: Id | undefined, since: string | undefined) => {
+    const words = [...new Set(query.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? [])]
+    if (words.length === 0) return []
+    const store = await deps.store()
+    const account = await deps.account()
+    const { items: found } = await searchStore(
+      store,
+      account,
+      { text: words.join(" OR "), ...(chatId === undefined ? {} : { chat: chatId }), limit: WORD_HITS },
+      deps.messenger,
+    )
+    const items = found.filter(({ match }) => match === "words" || match === "beginnings")
+    const summaries = await store.conversationsOfMessages(
+      account,
+      items.map(({ chatId, id }) => ({ chatId, messageId: id })),
+    )
+    const seen = new Set<string>()
+    return items.flatMap(({ id }, index) => {
+      const summary = summaries[index]
+      if (!summary || seen.has(summary.id) || (since !== undefined && Date.parse(summary.lastAt) < Date.parse(since)))
+        return []
+      seen.add(summary.id)
+      return [{ summary, chunk: { firstMessageId: id, lastMessageId: id } }]
+    })
   }
 
   const found = async (chat: string) => {
@@ -183,23 +231,25 @@ export const embeddingsService = (deps: ServiceDeps): EmbeddingsService => {
       const account = await deps.account()
       const target = resolve(choice)
       const chatId = chat === undefined ? undefined : await storedChatId(deps.messenger, chat, store, account)
+      const scope = chatId === undefined ? {} : { chatId }
       const warm = typeof choice !== "object" ? deps.embedders : undefined
       const embedder = warm ? await warm.get(target.key, () => target.open()) : await target.open()
+      let meaning: ConversationHit[]
       try {
         const [vector] = await embedder.embed([query], "query")
-        const scope = chatId === undefined ? {} : { chatId }
-        const hits = await store.nearestConversations(account, {
+        meaning = await store.nearestConversations(account, {
           ...scope,
           ...(since === undefined ? {} : { since }),
           model: target.key,
-          limit,
+          limit: Math.max(limit, CANDIDATES),
           query: vector as Float32Array,
         })
-        const elsewhere = await store.embeddedOnlyElsewhere(account, { ...scope, model: target.key })
-        return { model: target.id, hits, embeddedOnlyElsewhere: elsewhere }
       } finally {
         if (!warm) await embedder.close()
       }
+      const words = await byWords(query, chatId, since)
+      const elsewhere = await store.embeddedOnlyElsewhere(account, { ...scope, model: target.key })
+      return { model: target.id, hits: fused(meaning, words).slice(0, limit), embeddedOnlyElsewhere: elsewhere }
     },
 
     clear: async (chat, choice) => {
@@ -210,4 +260,26 @@ export const embeddingsService = (deps: ServiceDeps): EmbeddingsService => {
       return { chat: chatId, cleared }
     },
   }
+}
+
+/** Reciprocal rank fusion of the two lists: each conversation scores 1 / (k + rank) in every list it is in. */
+const fused = (
+  meaning: ConversationHit[],
+  words: Pick<ConversationHit, "summary" | "chunk">[],
+): FoundConversation[] => {
+  const merged = new Map<string, FoundConversation & { fused: number }>()
+  meaning.forEach(({ summary, chunk, score }, index) => {
+    merged.set(summary.id, { summary, chunk, score, by: ["meaning"], fused: 1 / (RRF_K + index + 1) })
+  })
+  words.forEach(({ summary, chunk }, index) => {
+    const share = 1 / (RRF_K + index + 1)
+    const held = merged.get(summary.id)
+    if (held) {
+      held.fused += share
+      held.by.push("words")
+    } else merged.set(summary.id, { summary, chunk, score: null, by: ["words"], fused: share })
+  })
+  return [...merged.values()]
+    .sort((a, b) => b.fused - a.fused || (b.score ?? -2) - (a.score ?? -2))
+    .map(({ fused: _, ...hit }) => hit)
 }

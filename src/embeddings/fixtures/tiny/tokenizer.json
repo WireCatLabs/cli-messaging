@@ -9,7 +9,7 @@
   "decoder": null,
   "model": {
     "type": "WordLevel",
-    "vocab": { "[UNK]": 0, "cat": 1, "dog": 2, "fish": 3, "query:": 4, "[SEP]": 5 },
+    "vocab": { "[UNK]": 0, "cat": 1, "dog": 2, "fish": 3, "query:": 4, "[SEP]": 5, "kitten": 6, "zebra": 7 },
     "unk_token": "[UNK]"
   }
 }

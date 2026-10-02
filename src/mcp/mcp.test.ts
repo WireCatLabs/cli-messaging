@@ -63,7 +63,7 @@ vi.mock("../embeddings/models.js", async (original) => {
             pooling: "mean",
             prefix: { query: "", passage: "" },
             onnx: "onnx/model.onnx",
-            files: [{ name: "onnx/model.onnx", url: "", sha256: "", bytes: 284 }],
+            files: [{ name: "onnx/model.onnx", url: "", sha256: "", bytes: 318 }],
           }
         : real.textModel(id),
   }

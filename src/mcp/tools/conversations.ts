@@ -38,13 +38,14 @@ export const conversationsTools = (messenger: Messenger): Record<string, AnyTool
     }),
 
     conversations_search: tool({
-      title: "Search conversations by meaning",
+      title: "Search conversations by meaning and words",
       description:
-        "The conversations nearest in meaning to `query`, best first, in one chat or every chat embedded with " +
-        `\`${command} conversations embed --chat <chat>\`; runs a model on this machine. Returns { model, items, ` +
-        "limit, embeddedOnlyElsewhere }; each item has the conversation's summary, the chunk that matched and a " +
-        "score — its id goes to conversations_show. embeddedOnlyElsewhere names chats embedded only with another " +
-        "model, which were not searched.",
+        "The conversations nearest to `query`, best first, in one chat or every chat: by meaning in the chats " +
+        `embedded with \`${command} conversations embed --chat <chat>\` (a model on this machine), and by the ` +
+        "words they share, the two lists merged. Returns { model, items, limit, embeddedOnlyElsewhere }; each " +
+        "item has the conversation's summary, the chunk that matched, `by` (meaning, words or both) and a " +
+        "`score`, the meaning's cosine, null when only words found it — its id goes to conversations_show. " +
+        "embeddedOnlyElsewhere names chats embedded only with another model, not searched by meaning.",
       input: v.object({
         query: v.pipe(v.string(), v.minLength(1), v.description("what to look for, in your own words")),
         chat: v.optional(chat),

@@ -96,8 +96,8 @@ export const conversationsCommand = (messenger: Messenger): Command => {
 
   withModelOptions(conversations.command("search"))
     .description(
-      "the conversations nearest in meaning to a query, in one chat or every embedded one — " +
-        "after `conversations embed`; runs on this machine",
+      "the conversations nearest to a query in meaning and in words, best first, in one chat or every one — " +
+        "meaning after `conversations embed`; runs on this machine",
     )
     .argument("<query>", "what to look for, in your own words, in any language the model reads")
     .option("--chat <chat>", `only this chat: ${messenger.chatArgument}`)
@@ -122,13 +122,14 @@ export const conversationsCommand = (messenger: Messenger): Command => {
           found.hits
             .map(
               ({ summary, chunk, score }) =>
-                `${score.toFixed(3)}  ${line(summary)}  (messages ${chunk.firstMessageId}–${chunk.lastMessageId})\n`,
+                `${score === null ? "  —  " : score.toFixed(3)}  ${line(summary)}  (messages ${chunk.firstMessageId}–${chunk.lastMessageId})\n`,
             )
             .join(""),
         )
         if (found.hits.length === 0) {
           context.renderer.note(
-            `nothing embedded with ${found.model} matches — \`conversations embed --chat <chat>\` first`,
+            `nothing matches in words, nor in meaning among the chats embedded with ${found.model} — ` +
+              "`conversations embed --chat <chat>` for meaning",
           )
         }
       } else if (context.format === "jsonl") context.renderer.stream(found.hits)
@@ -138,7 +139,7 @@ export const conversationsCommand = (messenger: Messenger): Command => {
       }
       if (found.embeddedOnlyElsewhere.length > 0) {
         context.renderer.note(
-          `not searched, embedded only with another model: chat ${found.embeddedOnlyElsewhere.join(", ")} — ` +
+          `not searched by meaning, embedded only with another model: chat ${found.embeddedOnlyElsewhere.join(", ")} — ` +
             "give that model with --model, or `conversations embed` them with this one",
         )
       }
