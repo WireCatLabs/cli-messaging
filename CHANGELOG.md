@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.101.0 — 02.10.2026
+
 ### Added
 
 - **`in:personal` and `in:bots`** in `messages search` (and `--source`, MCP `source`): every personal
