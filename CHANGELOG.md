@@ -4,7 +4,14 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 [semver](https://semver.org/); before `1.0.0` a minor version may break callers, and says how under
 "Changed — may break callers". `pnpm docs:check` checks the shape of this file.
 
-## Unreleased
+## 0.113.0 — 03.10.2026
+
+### Added
+
+- **`mcp setup codex|claude-code` and `mcp doctor`** register a messenger's local MCP server in
+  the chosen client and check its handshake and tool list. Setup refuses an existing client entry;
+  doctor reads no messages and does not verify the messenger login. Each consuming CLI needs the
+  new `@leemour/cli-core/mcp` export.
 
 ## 0.112.0 — 03.10.2026
 

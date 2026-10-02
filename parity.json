@@ -52,6 +52,9 @@
       "meaning": "offer the send tool; without it the server can only read",
       "note": "max's own `mcp` is worded differently until the permission levels (P7) replace these flags there (e13)"
     },
+    "--allow-writes": {
+      "meaning": "acknowledge that the profile offers writing tools when installing local MCP"
+    },
     "--anonymous": {
       "meaning": "nobody sees who voted for what"
     },
@@ -1437,6 +1440,29 @@
             "tg": "P7"
           }
         }
+      }
+    },
+    "mcp doctor": {
+      "in": "all",
+      "options": {
+        "--allow-dangerous": { "in": ["tg"], "reason": "tg profiles use a separate dangerous-write override" },
+        "--allow-delete": "all",
+        "--allow-mark-read": "all",
+        "--allow-moderate": { "in": ["max"], "reason": "max MCP offers a moderation flag" },
+        "--allow-send": "all",
+        "--confirm-send": "all"
+      }
+    },
+    "mcp setup": {
+      "in": "all",
+      "options": {
+        "--allow-dangerous": { "in": ["tg"], "reason": "tg profiles use a separate dangerous-write override" },
+        "--allow-delete": "all",
+        "--allow-mark-read": "all",
+        "--allow-moderate": { "in": ["max"], "reason": "max MCP offers a moderation flag" },
+        "--allow-send": "all",
+        "--allow-writes": "all",
+        "--confirm-send": "all"
       }
     },
     "messages": {

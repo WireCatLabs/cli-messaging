@@ -1,5 +1,6 @@
 import { realpathSync } from "node:fs"
 import { CliError } from "@leemour/cli-core"
+import { annotate } from "@leemour/cli-core/commands"
 import { installerOf } from "@leemour/cli-core/update"
 import { Command } from "commander"
 import { type AppIdentity, envName } from "../app.js"
@@ -84,6 +85,72 @@ export const mcpCommand = (messenger: Messenger): Command => {
       const note = retiredNote(app, flags)
       if (note) renderer.warn(note)
     }),
+  )
+  command.addCommand(
+    withFlags(
+      annotate(new Command("setup"), { mutates: true, local: true })
+        .description("add this profile's local MCP server to Codex or Claude Code")
+        .argument("<client>", "codex or claude-code")
+        .option("--allow-writes", "acknowledge that this profile offers writing tools"),
+    ).action(async function (this: Command, client: string) {
+      if (client !== "codex" && client !== "claude-code")
+        throw new CliError("validation_error", "choose codex or claude-code")
+      const { renderer, settings, env } = messengerContext(this, messenger)
+      const given = environmentOf<McpEnvironment>(this).mcp ?? {}
+      const configuration = serverEntry(app, {
+        profile: settings.profile,
+        flags: this.optsWithGlobals<McpFlags>(),
+        execPath: given.execPath ?? process.execPath,
+        scriptPath: given.scriptPath ?? realpathSync(process.argv[1] ?? ""),
+        env,
+      })
+      const [name, entry] = Object.entries(configuration.config.mcpServers)[0] ?? []
+      if (!name || !entry) throw new CliError("validation_error", "the MCP entry is empty")
+      const { installStdioEntry, probeStdio } = await import("@leemour/cli-core/mcp")
+      try {
+        const server = entry as Parameters<typeof probeStdio>[0]
+        const { potentialWrites } = await probeStdio(server)
+        if (potentialWrites.length > 0 && this.opts<{ allowWrites?: boolean }>().allowWrites !== true)
+          throw new Error(
+            `this profile offers ${potentialWrites.length} tools that may write; review its permissions, then pass --allow-writes to install it`,
+          )
+        renderer.result({
+          ...installStdioEntry(client, name, server),
+          potentialWrites: potentialWrites.length,
+        })
+      } catch (error) {
+        throw new CliError("validation_error", error instanceof Error ? error.message : "MCP setup failed")
+      }
+    }),
+  )
+  command.addCommand(
+    withFlags(new Command("doctor").description("check this profile's local MCP handshake and tool list")).action(
+      async function (this: Command) {
+        const { renderer, settings, env } = messengerContext(this, messenger)
+        const given = environmentOf<McpEnvironment>(this).mcp ?? {}
+        const configuration = serverEntry(app, {
+          profile: settings.profile,
+          flags: this.optsWithGlobals<McpFlags>(),
+          execPath: given.execPath ?? process.execPath,
+          scriptPath: given.scriptPath ?? realpathSync(process.argv[1] ?? ""),
+          env,
+        })
+        const entry = Object.values(configuration.config.mcpServers)[0]
+        if (!entry) throw new CliError("validation_error", "the MCP entry is empty")
+        const { probeStdio } = await import("@leemour/cli-core/mcp")
+        try {
+          const { tools, potentialWrites } = await probeStdio(entry as Parameters<typeof probeStdio>[0])
+          renderer.result({
+            healthy: true,
+            profile: settings.profile,
+            tools: tools.length,
+            potentialWrites: potentialWrites.length,
+          })
+        } catch (error) {
+          throw new CliError("validation_error", error instanceof Error ? error.message : "MCP doctor failed")
+        }
+      },
+    ),
   )
   return command
 }
