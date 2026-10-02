@@ -815,6 +815,57 @@
     "bot sends list": {
       "in": "all"
     },
+    "bot store": {
+      "in": [],
+      "planned": {
+        "max": "P8",
+        "tg": "P8"
+      }
+    },
+    "bot store fetch": {
+      "in": [],
+      "planned": {
+        "max": "P8",
+        "tg": "P8"
+      },
+      "options": {
+        "--last": {
+          "in": [],
+          "planned": {
+            "max": "P8",
+            "tg": "P8"
+          }
+        },
+        "--limit": {
+          "in": [],
+          "planned": {
+            "max": "P8",
+            "tg": "P8"
+          }
+        },
+        "--page-size": {
+          "in": [],
+          "planned": {
+            "max": "P8",
+            "tg": "P8"
+          }
+        },
+        "--pause": {
+          "in": [],
+          "planned": {
+            "max": "P8",
+            "tg": "P8"
+          }
+        },
+        "--since-time": {
+          "in": [],
+          "planned": {
+            "max": "P8",
+            "tg": "P8"
+          }
+        }
+      }
+    },
     "bot uploads": {
       "in": ["max"],
       "reason": "Telegram has no upload-only step: a file goes up with the message that carries it"

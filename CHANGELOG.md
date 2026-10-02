@@ -6,6 +6,15 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- **`bot store fetch <chat>`**: a chat's history into the bot's local copy, newest first, resumable —
+  the personal `store fetch` for a bot, with `--limit`, `--page-size`, `--pause`, `--since-time` and
+  `--last`. Mounted for a messenger that sets `BotMessenger.fetching` and pages back through
+  `BotAdapter.historyBefore`.
+- **`fetchInto`** (`src/services/archive.ts`): the fetch loop over any history and store; the personal
+  service runs on it unchanged.
+
 ### Changed — may break callers
 
 - **The parity manifest marks `bot contacts show` and `bot messages search|between` as in all CLIs**,

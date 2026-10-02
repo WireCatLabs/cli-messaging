@@ -145,10 +145,10 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--json` |  | machine-readable output: one JSON value on stdout, nothing else |  | every command |
 | `--jsonl` |  | machine-readable output: one JSON object per line, for streaming and jq |  | every command |
 | `--kind` | `<kind>` | only chats of this kind: dialog, group, channel or saved |  | `chats list` |
-| `--last` | `<n>` | stop once the newest n messages are held; not with --since. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | `store fetch` |
+| `--last` | `<n>` | stop once the newest n messages are held; not with --since. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | `bot store fetch` (planned), `store fetch` |
 | `--last-name` | `<name>` | your last name |  | `account update` |
 | `--left` |  | only the chats this account has left |  | `store clear` |
-| `--limit` | `<n>` | how many: rows to show, or messages one run fetches. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | `bot chats members list` (max-only), `bot contacts show`, `bot messages between`, `bot messages list`, `bot messages search`, `chats list`, `chats members list` (planned), `contacts list`, `conversations list`, `conversations search`, `inbox`, `messages list`, `messages search`, `runs list`, `sends list`, `store fetch` |
+| `--limit` | `<n>` | how many: rows to show, or messages one run fetches. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | `bot chats members list` (max-only), `bot contacts show`, `bot messages between`, `bot messages list`, `bot messages search`, `bot store fetch` (planned), `chats list`, `chats members list` (planned), `contacts list`, `conversations list`, `conversations search`, `inbox`, `messages list`, `messages search`, `runs list`, `sends list`, `store fetch` |
 | `--lines` | `<n>` | how many lines | `50` | `server logs` |
 | `--local` |  | use the model on this machine, never the messenger |  | `messages transcribe` (tg-only) |
 | `--mark-read` |  | also mark the chat read up to the newest message shown; the other person sees it |  | `messages list` |
@@ -177,8 +177,8 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--output` |  | where to write: a directory for `messages download`, a file for `store export`. **`messages download --output <dir>` becomes `--output-dir`; `--output` stays a file — e10** | `.` | `doctor report create`, `messages download` (max-only), `store export` |
 | `--output-dir` | `<dir>` | the folder to write into, created if missing | `.` | `messages download` (planned) |
 | `--page` | `<n>` | which page, starting at 1 |  | `chats list`, `chats members list` (planned), `contacts list` |
-| `--page-size` | `<n>` | how many items one request to the messenger asks for; the messenger's own if not given. **the default is each messenger's own page: 30 on MAX, 100 on Telegram** |  | `store fetch` |
-| `--pause` | `<duration>` | the least wait between pages, 5s or 500ms; each is up to twice that. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** | `5s` | `messages download` (planned), `store fetch` |
+| `--page-size` | `<n>` | how many items one request to the messenger asks for; the messenger's own if not given. **the default is each messenger's own page: 30 on MAX, 100 on Telegram** |  | `bot store fetch` (planned), `store fetch` |
+| `--pause` | `<duration>` | the least wait between pages, 5s or 500ms; each is up to twice that. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** | `5s` | `bot store fetch` (planned), `messages download` (planned), `store fetch` |
 | `--personal` |  | the personal account's section of the profile's settings |  | `config set` (planned), `config unset` (planned) |
 | `--photo` | `<file>` | an image file — a profile photo in `account update`, a photo to send in `messages send` |  | `account update`, `bot messages send`, `messages send` |
 | `--provider` | `<provider>` | embed through a service with your key instead of on this machine: openai |  | `conversations embed`, `conversations embed clear`, `conversations embed status`, `conversations search` |
@@ -199,7 +199,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--show-phone` |  | print the whole phone number |  | `account show` |
 | `--silent` |  | deliver without a notification |  | `bot messages send`, `messages forward`, `messages send`, `polls create` |
 | `--since` | `<id-or-time>` | from this message id, an ISO 8601 time, or 2h / 1d ago; each command says its default. **becomes `--since-time` everywhere — NEED-485** |  | `chats events` (max-only), `inbox` (max-only), `review` (max-only) |
-| `--since-time` | `<time>` | from this ISO 8601 time, or 2h / 1d ago; each command says its default |  | `bot chats moderate`, `chats events` (planned), `chats moderate` (planned), `conversations list`, `conversations search`, `inbox` (planned), `review` (planned), `store export`, `store fetch` |
+| `--since-time` | `<time>` | from this ISO 8601 time, or 2h / 1d ago; each command says its default |  | `bot chats moderate`, `bot store fetch` (planned), `chats events` (planned), `chats moderate` (planned), `conversations list`, `conversations search`, `inbox` (planned), `review` (planned), `store export`, `store fetch` |
 | `--size` | `<n>` | messages to answer per batch, 10–200; 50 by default |  | `conversations batches next`, `conversations batches status` |
 | `--source` | `<messenger>` | every account of this messenger held in the store; personal, bots or all — the same as in: in the query |  | `messages search` |
 | `--text` | `<text>` | the message's new text; - reads stdin |  | `bot callbacks answer` |
