@@ -24,7 +24,7 @@ export { botAdminsCommand, botMembersCommand } from "./bot/admins.js"
 export { botCommand } from "./bot/command.js"
 export { type BotContext, botContext, botWords } from "./bot/context.js"
 export { type BotCopy, botCopy } from "./bot/copy.js"
-export { botMcpCommand } from "./bot/mcp.js"
+export { botMcpCommand, commandLookup } from "./bot/mcp.js"
 export { botCan, botIdOf, botMessagesCommand } from "./bot/messages.js"
 export {
   BOT_ACTIONS,
