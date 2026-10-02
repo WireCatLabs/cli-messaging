@@ -132,7 +132,16 @@ export const conversationsCommand = (messenger: Messenger): Command => {
           )
         }
       } else if (context.format === "jsonl") context.renderer.stream(found.hits)
-      else context.renderer.result({ model: found.model, items: found.hits, limit })
+      else {
+        const { model, hits, embeddedOnlyElsewhere } = found
+        context.renderer.result({ model, items: hits, limit, embeddedOnlyElsewhere })
+      }
+      if (found.embeddedOnlyElsewhere.length > 0) {
+        context.renderer.note(
+          `not searched, embedded only with another model: chat ${found.embeddedOnlyElsewhere.join(", ")} — ` +
+            "give that model with --model, or `conversations embed` them with this one",
+        )
+      }
     })
 
   const batches = conversations

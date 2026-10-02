@@ -11,6 +11,7 @@ import { isCliFailure } from "../cli/failures.js"
 import type { Messenger } from "../cli/messenger/context.js"
 import type { MessengerAdapter } from "../cli/messenger/port.js"
 import type { Settings } from "../cli/settings.js"
+import type { WarmEmbedders } from "../embeddings/embed.js"
 import type { SendGuard } from "../sends/guard.js"
 import { keyForCommand, type Permission, type PermissionKey } from "../sends/permissions.js"
 import { onlineDeps, storeModeDeps } from "../services/deps.js"
@@ -57,6 +58,8 @@ export interface Defaults {
   /** The profile's own entries, for a tool reading a setting of its own — `transcribeWith`. */
   settings: Pick<Settings, "configured" | "shared" | "profile">
   env: NodeJS.ProcessEnv
+  /** The server's open models, kept between `conversations_search` calls. */
+  embedders?: WarmEmbedders
 }
 
 interface Tool<S extends Input> {

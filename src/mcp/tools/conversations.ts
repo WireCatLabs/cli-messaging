@@ -42,8 +42,9 @@ export const conversationsTools = (messenger: Messenger): Record<string, AnyTool
       description:
         "The conversations nearest in meaning to `query`, best first, in one chat or every chat embedded with " +
         `\`${command} conversations embed --chat <chat>\`; runs a model on this machine. Returns { model, items, ` +
-        "limit }; each item has the conversation's summary, the chunk that matched and a score — its id goes " +
-        "to conversations_show.",
+        "limit, embeddedOnlyElsewhere }; each item has the conversation's summary, the chunk that matched and a " +
+        "score — its id goes to conversations_show. embeddedOnlyElsewhere names chats embedded only with another " +
+        "model, which were not searched.",
       input: v.object({
         query: v.pipe(v.string(), v.minLength(1), v.description("what to look for, in your own words")),
         chat: v.optional(chat),
@@ -55,15 +56,18 @@ export const conversationsTools = (messenger: Messenger): Record<string, AnyTool
       annotations: { ...READ, openWorldHint: false },
       stored: async (store, account, args, defaults) => {
         const size = args.limit ?? defaults.limit
-        const found = await servicesFor(storedDeps(messenger, store, account, defaults.guard)).embeddings.search(
-          args.query,
-          {
-            limit: size,
-            ...(args.chat === undefined ? {} : { chat: args.chat }),
-            ...(args.since === undefined ? {} : { since: new Date(momentOf(args.since, "since")).toISOString() }),
-          },
-        )
-        return { model: found.model, items: found.hits, limit: size }
+        const deps = { ...storedDeps(messenger, store, account, defaults.guard), embedders: defaults.embedders }
+        const found = await servicesFor(deps).embeddings.search(args.query, {
+          limit: size,
+          ...(args.chat === undefined ? {} : { chat: args.chat }),
+          ...(args.since === undefined ? {} : { since: new Date(momentOf(args.since, "since")).toISOString() }),
+        })
+        return {
+          model: found.model,
+          items: found.hits,
+          limit: size,
+          embeddedOnlyElsewhere: found.embeddedOnlyElsewhere,
+        }
       },
     }),
 

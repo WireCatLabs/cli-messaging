@@ -24,6 +24,49 @@ export interface Embedder {
   close(): Promise<void>
 }
 
+/**
+ * Models a long-running process keeps open between searches — the MCP server, where loading one costs
+ * ~1 s a call. Whoever makes it closes it; a one-shot command never makes one.
+ */
+export interface WarmEmbedders {
+  get(key: string, open: () => Promise<Embedder>): Promise<Embedder>
+  close(): Promise<void>
+}
+
+export const warmEmbedders = (): WarmEmbedders => {
+  const held = new Map<string, Promise<Embedder>>()
+  return {
+    get: (key, open) => {
+      const known = held.get(key)
+      if (known) return known
+      const opening = open().then(serial)
+      held.set(key, opening)
+      // A model not downloaded yet must not stay refused once it is.
+      opening.catch(() => held.delete(key))
+      return opening
+    },
+    close: async () => {
+      const all = [...held.values()]
+      held.clear()
+      await Promise.allSettled(all.map(async (one) => (await one).close()))
+    },
+  }
+}
+
+/** Two MCP calls may arrive at once; a session is not documented to take overlapping runs. */
+const serial = (embedder: Embedder): Embedder => {
+  let last: Promise<unknown> = Promise.resolve()
+  return {
+    model: embedder.model,
+    embed: (texts, kind) => {
+      const next = last.then(() => embedder.embed(texts, kind))
+      last = next.catch(() => {})
+      return next
+    },
+    close: () => embedder.close(),
+  }
+}
+
 /** A text longer than the model's limit keeps its beginning and the closing special token. */
 export const truncated = (ids: number[], max: number): number[] =>
   ids.length <= max ? ids : [...ids.slice(0, max - 1), ids.at(-1) as number]

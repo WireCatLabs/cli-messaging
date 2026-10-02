@@ -6,6 +6,7 @@ import * as v from "valibot"
 import { recalledAccount } from "../cli/messenger/accounts.js"
 import { skipFlagFor } from "../cli/messenger/ask.js"
 import { connected, type Messenger, type MessengerContext } from "../cli/messenger/context.js"
+import { warmEmbedders } from "../embeddings/embed.js"
 import { guardFor } from "../sends/guard.js"
 import { levelFor } from "../sends/permissions.js"
 import { confirmer } from "./confirm.js"
@@ -72,6 +73,7 @@ export const createServer = (
     sessionOptions,
   )
 
+  const embedders = warmEmbedders()
   const skill = messenger.skill ? skillResource(app, messenger.skill) : undefined
 
   const build = (): McpServer => {
@@ -93,7 +95,7 @@ export const createServer = (
       messenger,
       session,
       withStore: context.withStore,
-      defaults: { limit: settings.limit, guard, settings, env: context.env },
+      defaults: { limit: settings.limit, guard, settings, env: context.env, embedders },
       confirmed,
       confirms,
     })
@@ -140,7 +142,7 @@ export const createServer = (
     )
     return server
   }
-  return { session, build }
+  return { session, embedders, build }
 }
 
 /**
@@ -154,7 +156,7 @@ export const serveOverStdio = async (
   messenger: Messenger,
   options: ServerOptions,
 ): Promise<void> => {
-  const { session, build } = createServer(command, context, messenger, options)
+  const { session, embedders, build } = createServer(command, context, messenger, options)
   const handle = serveStdio(build, { onerror: (error) => context.renderer.note(`mcp: ${error.message}`) })
 
   await new Promise<void>((resolve) => {
@@ -164,6 +166,10 @@ export const serveOverStdio = async (
     process.once("SIGTERM", resolve)
   })
 
-  await handle.close()
-  await session.close()
+  try {
+    await handle.close()
+    await session.close()
+  } finally {
+    await embedders.close()
+  }
 }

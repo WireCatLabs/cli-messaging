@@ -52,7 +52,7 @@ export interface EmbeddingsService {
   search(
     query: string,
     options: { chat?: string; model?: ModelChoice; since?: string; limit: number },
-  ): Promise<{ model: string; hits: ConversationHit[] }>
+  ): Promise<{ model: string; hits: ConversationHit[]; embeddedOnlyElsewhere: Id[] }>
 }
 
 /** A vector's model: the provider, the model and its size — vectors of two of them never mix. */
@@ -183,19 +183,22 @@ export const embeddingsService = (deps: ServiceDeps): EmbeddingsService => {
       const account = await deps.account()
       const target = resolve(choice)
       const chatId = chat === undefined ? undefined : await storedChatId(deps.messenger, chat, store, account)
-      const embedder = await target.open()
+      const warm = typeof choice !== "object" ? deps.embedders : undefined
+      const embedder = warm ? await warm.get(target.key, () => target.open()) : await target.open()
       try {
         const [vector] = await embedder.embed([query], "query")
+        const scope = chatId === undefined ? {} : { chatId }
         const hits = await store.nearestConversations(account, {
-          ...(chatId === undefined ? {} : { chatId }),
+          ...scope,
           ...(since === undefined ? {} : { since }),
           model: target.key,
           limit,
           query: vector as Float32Array,
         })
-        return { model: target.id, hits }
+        const elsewhere = await store.embeddedOnlyElsewhere(account, { ...scope, model: target.key })
+        return { model: target.id, hits, embeddedOnlyElsewhere: elsewhere }
       } finally {
-        await embedder.close()
+        if (!warm) await embedder.close()
       }
     },
 

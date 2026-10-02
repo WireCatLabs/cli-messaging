@@ -200,6 +200,8 @@ export interface MessageStore {
     key: AccountKey,
     options: { chatId?: Id; model: string; since?: string; limit: number; query: Float32Array },
   ): Promise<ConversationHit[]>
+  /** Chats in scope embedded with another model and not with `model`, which a search with it cannot see. */
+  embeddedOnlyElsewhere(key: AccountKey, options: { chatId?: Id; model: string }): Promise<Id[]>
   /** Whether the chat's conversations were built, and when; `undefined` when never. */
   conversationState(
     key: AccountKey,
@@ -714,6 +716,14 @@ const storeOver = (context: StoreContext): MessageStore => {
           ? [{ summary, chunk: { firstMessageId: first, lastMessageId: last }, score }]
           : []
       })
+    },
+
+    embeddedOnlyElsewhere: async (key, { chatId, model }) => {
+      const accountPk = findAccountPk(key)
+      if (accountPk === undefined) return []
+      const chatKey = chatId === undefined ? undefined : chatKeyOf(key, chatId)
+      if (chatId !== undefined && chatKey === undefined) return []
+      return vectors.embeddedOnlyElsewhere(context, accountPk, { ...(chatKey === undefined ? {} : { chatKey }), model })
     },
 
     conversationState: async (key, chatId) => {
