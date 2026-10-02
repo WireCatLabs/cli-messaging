@@ -6,6 +6,10 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.115.0 — 03.10.2026
+
+Released early: max-cli MCP migration needs the public stored adapter wrapper to keep shared archive writes
+
 ### Added
 
 - **`stored` and `Saving` in the CLI export** let a consumer retaining its own MCP tool names wrap its adapter with the same archive writes and failure handling as shared commands. The caller owns the store handle and closes it after the call.
