@@ -1,0 +1,123 @@
+import { realpathSync } from "node:fs"
+import { CliError } from "@leemour/cli-core"
+import { Command } from "commander"
+import { environmentOf } from "../context.js"
+import { type McpEnvironment, serverEntry } from "../messenger/mcp-command.js"
+import { botContext } from "./context.js"
+import type { BotMessenger } from "./port.js"
+
+interface Flags {
+  confirmSend?: boolean
+  allowDangerous?: boolean
+  yes?: boolean
+  allowSend?: boolean
+  allowDelete?: boolean
+  allowModerate?: boolean
+}
+
+/** They decided which tools were offered; the profile's permissions do now. Kept so a configured agent still starts. */
+const RETIRED = ["allowSend", "allowDelete", "allowModerate"] as const
+
+const withFlags = (command: Command): Command =>
+  command
+    .option("--confirm-send", "show the owner every write in a form from the server first")
+    .option("--allow-dangerous", "no form before a deletion whose permission level is ask")
+    .option("--allow-send", "no longer used — the profile's permissions decide; kept so an old setup still starts")
+    .option("--allow-delete", "no longer used — the profile's permissions decide")
+    .option("--allow-moderate", "no longer used — the profile's permissions decide")
+
+const retiredNote = (command: string, flags: Flags): string | undefined => {
+  const given = RETIRED.filter((flag) => flags[flag] === true)
+  if (given.length === 0) return undefined
+  const names = given.map((flag) => `--${flag.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)}`)
+  return (
+    `${names.join(", ")} no longer decide${given.length === 1 ? "s" : ""} anything: the profile's permissions do — ` +
+    `\`${command} config show permissions\``
+  )
+}
+
+export const commandLookup = (group: Command) => (words: readonly string[]) => {
+  const found = words.reduce<Command | undefined>((at, word) => at?.commands.find((one) => one.name() === word), group)
+  if (!found) return undefined
+  return {
+    accepts: (flag: string) => {
+      for (let at: Command | null = found; at; at = at.parent)
+        if (at.options.some((one) => one.long === flag)) return true
+      return false
+    },
+  }
+}
+
+/** `bot mcp`, mounted only for a messenger that hands in its `run` on `BotMessenger.mcp`. */
+export const botMcpCommand = (bot: BotMessenger): Command => {
+  const { app } = bot
+  const command = withFlags(
+    new Command("mcp").description(
+      `serve this bot to an agent over MCP, on stdin and stdout — \`claude mcp add sales-bot -- ${app.command} sales bot mcp\``,
+    ),
+  ).action(async function (this: Command) {
+    const flags = this.optsWithGlobals<Flags>()
+    const context = botContext(this, bot)
+    if (!context.tokens.read()) {
+      throw new CliError(
+        "authentication_error",
+        `no bot token for profile "${context.profile}" — run \`${context.words} auth set\``,
+      )
+    }
+    const note = retiredNote(app.command, flags)
+    if (note) context.renderer.warn(note)
+    const mcp = bot.mcp
+    if (!mcp || !this.parent) throw new Error("bot mcp is mounted only with BotMessenger.mcp")
+    // Loaded here: every other command would otherwise pay for the SDK.
+    const [{ serveBotOverStdio }, run] = await Promise.all([import("../../mcp/bot/server.js"), mcp.program()])
+    await serveBotOverStdio(
+      {
+        bot,
+        commandAt: commandLookup(this.parent),
+        settings: context.settings,
+        env: context.env,
+        run,
+        ...(mcp.tools ? { tools: mcp.tools } : {}),
+        ...(mcp.skill ? { skill: mcp.skill } : {}),
+        confirmSend: flags.confirmSend === true,
+        yes: flags.yes === true,
+        allowDangerous: flags.allowDangerous === true,
+      },
+      context.streams.diagnostic,
+    )
+  })
+
+  command.addCommand(
+    withFlags(
+      new Command("config").description(
+        "print the mcpServers entry for Claude Desktop, Cursor and others, with full paths; writes nothing",
+      ),
+    ).action(function (this: Command) {
+      const flags = this.optsWithGlobals<Flags>()
+      const { renderer, settings, format, streams, env } = botContext(this, bot)
+      const given = environmentOf<McpEnvironment>(this).mcp ?? {}
+      const entry = serverEntry(app, {
+        profile: settings.profile,
+        flags: {
+          ...(flags.confirmSend ? { confirmSend: true } : {}),
+          ...(flags.allowDangerous ? { allowDangerous: true } : {}),
+          ...(flags.yes ? { yes: true } : {}),
+        },
+        execPath: given.execPath ?? process.execPath,
+        scriptPath: given.scriptPath ?? realpathSync(process.argv[1] ?? ""),
+        env,
+      })
+      const [name, server] = Object.entries(entry.config.mcpServers)[0] as [string, { args: string[] }]
+      const args = server.args.flatMap((arg) => (arg === "mcp" ? ["bot", "mcp"] : [arg]))
+      const config = {
+        mcpServers: { [name.replace(new RegExp(`^${app.command}`), `${app.command}-bot`)]: { ...server, args } },
+      }
+      if (format === "pretty") streams.data(JSON.stringify(config, null, 2))
+      else renderer.result(config)
+      if (entry.warning) renderer.note(entry.warning)
+      const note = retiredNote(app.command, flags)
+      if (note) renderer.warn(note)
+    }),
+  )
+  return command
+}

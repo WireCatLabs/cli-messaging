@@ -7,6 +7,7 @@ import { envName } from "../app.js"
 import { renderList } from "../paging.js"
 import { botAdminsCommand, botMembersCommand } from "./admins.js"
 import { botContext, online } from "./context.js"
+import { botMcpCommand } from "./mcp.js"
 import { botCan, botIdOf, botMessagesCommand } from "./messages.js"
 import { BOT_ACTIONS, type BotAction, type BotMessenger } from "./port.js"
 import { registryProfiles } from "./registry.js"
@@ -232,7 +233,7 @@ const chatsCommand = (bot: BotMessenger): Command => {
  */
 export const botCommand = (bot: BotMessenger): Command => {
   const tokenVariable = envName(bot.app, "BOT_TOKEN")
-  return new Command("bot")
+  const command = new Command("bot")
     .description(
       `a ${bot.name ?? "messenger"} bot, through the official Bot API and a bot token — not your personal account`,
     )
@@ -246,4 +247,5 @@ export const botCommand = (bot: BotMessenger): Command => {
     .addCommand(botCallbacksCommand(bot))
     .addCommand(botMenuCommand(bot))
     .addCommand(botWebhooksCommand(bot))
+  return bot.mcp ? command.addCommand(botMcpCommand(bot)) : command
 }

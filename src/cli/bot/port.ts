@@ -1,6 +1,8 @@
 import type { Command } from "commander"
 import type { Markup } from "../../domain/markdown.js"
 import type { AdminRight, Chat, Id, Member, Message, MessageEvent, Provider } from "../../domain/models.js"
+import type { RunBotCommand } from "../../mcp/bot/server.js"
+import type { BotTool } from "../../mcp/bot/tools.js"
 import type { Upload } from "../../sends/upload.js"
 import type { PersonFacts } from "../../store/index.js"
 import type { AppIdentity } from "../app.js"
@@ -212,4 +214,15 @@ export interface BotMessenger {
   registry?: (command: Command, profile: string) => ChatRegistry
   /** A secret typed at a hidden prompt or piped on stdin; the shared `readSecret` when unset. */
   readSecret?: (command: Command, prompt: string) => Promise<string>
+  /** `bot mcp`, mounted only when this is set. */
+  mcp?: BotMcp
+}
+
+export interface BotMcp {
+  /** The CLI's own `run`, loaded when the server starts: this package cannot import the CLI's program. */
+  program: () => Promise<RunBotCommand>
+  /** The CLI's own tools, for the commands that are still its own. */
+  tools?: readonly BotTool[]
+  /** The CLI's SKILL.md, served as `<command>://skill`. */
+  skill?: URL
 }
