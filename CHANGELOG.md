@@ -6,6 +6,10 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.107.0 — 02.10.2026
+
+Released early: max-cli cannot drop its own bot chats check until the manifest stops checking it
+
 ### Changed — may break callers
 
 - **The parity manifest stops checking max-cli's own `bot chats check`**: max-cli replaces it with the
