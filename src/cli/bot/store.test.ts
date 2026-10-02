@@ -7,7 +7,7 @@ import type { Message } from "../../domain/models.js"
 import { run } from "../program.js"
 import { settingsFor } from "../settings.js"
 import { botCommand } from "./command.js"
-import type { BotAdapter, BotMessenger } from "./port.js"
+import type { BotAdapter, BotConnectOptions, BotMessenger } from "./port.js"
 import { BotTokenStore } from "./token.js"
 
 const app = { command: "chat", appName: "chat-cli", envPrefix: "CHAT", description: "A test", version: "1.0.0" }
@@ -103,5 +103,25 @@ describe("bot store fetch", () => {
   it("is not there for a messenger whose bot cannot page back", async () => {
     const { fetching: _fetching, ...without } = bot
     expect(botCommand(without).commands.map((one) => one.name())).not.toContain("store")
+  })
+
+  it("passes --from and the pause to the history-only connection, with its stop signal", async () => {
+    let connecting: BotConnectOptions | undefined
+    const messenger: BotMessenger = {
+      ...bot,
+      fetching: { page: 100, maxPages: 10, pause: "1ms", orderBy: "time", from: "a message link" },
+      connect: async (_command, _token, options) => {
+        connecting = options
+        return adapter
+      },
+    }
+    const fetched = await call(
+      ["store", "fetch", "-100", "--from", "https://example.org/10", "--limit", "1", "--json"],
+      messenger,
+    )
+    expect(fetched.code).toBe(0)
+    expect(connecting?.history).toEqual({ from: "https://example.org/10", pauseMs: 1 })
+    expect(connecting?.stop).toBeInstanceOf(AbortSignal)
+    expect((await call(["store", "fetch", "-100", "--from", "https://example.org/10"])).code).toBe(1)
   })
 })

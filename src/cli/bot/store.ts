@@ -21,7 +21,7 @@ const wholeNumber = (value: string): number => {
  */
 export const botStoreCommand = (bot: BotMessenger, fetching: NonNullable<BotMessenger["fetching"]>): Command => {
   const command = new Command("store").description("the bot's local copy on this machine")
-  command
+  const fetch = command
     .command("fetch")
     .description("fetch a chat's history into the bot's local copy, newest first; run it again to continue")
     .argument("<chat>", "a chat id, or the title of a chat this bot has seen")
@@ -34,25 +34,32 @@ export const botStoreCommand = (bot: BotMessenger, fetching: NonNullable<BotMess
     .option("--pause <duration>", "pause between pages, to stay under the messenger's limits", fetching.pause)
     .option("--since-time <time>", "stop once it reaches messages older than this: ISO 8601, or 2h / 1d ago")
     .option("--last <n>", "stop once the newest n messages are held", wholeNumber)
-    .action(async function (this: Command, chat: string) {
-      const options = this.opts<{
-        limit?: number
-        pageSize?: number
-        pause: string
-        sinceTime?: string
-        last?: number
-      }>()
-      if (options.sinceTime !== undefined && options.last !== undefined) {
-        throw new CliError("validation_error", "give --since-time or --last, not both: how far back the fetch goes")
-      }
-      const pauseMs = parseDuration(options.pause, "--pause")
-      const sinceMs = options.sinceTime === undefined ? undefined : momentOf(options.sinceTime, "--since-time")
-      const context = online(botContext(this, bot), this)
-      const ref = context.chatRef(chat)
-      const stop = stopOnSignal(this)
-      try {
-        await context.run(async (events) => {
-          const adapter = await context.authenticated({ events })
+  if (fetching.from) fetch.option("--from <link>", fetching.from)
+  fetch.action(async function (this: Command, chat: string) {
+    const options = this.opts<{
+      limit?: number
+      pageSize?: number
+      pause: string
+      sinceTime?: string
+      last?: number
+      from?: string
+    }>()
+    if (options.sinceTime !== undefined && options.last !== undefined) {
+      throw new CliError("validation_error", "give --since-time or --last, not both: how far back the fetch goes")
+    }
+    const pauseMs = parseDuration(options.pause, "--pause")
+    const sinceMs = options.sinceTime === undefined ? undefined : momentOf(options.sinceTime, "--since-time")
+    const context = online(botContext(this, bot), this)
+    const ref = context.chatRef(chat)
+    const stop = stopOnSignal(this)
+    try {
+      await context.run(async (events) => {
+        const adapter = await context.authenticated({
+          events,
+          stop: stop.signal,
+          history: { pauseMs, ...(options.from === undefined ? {} : { from: options.from }) },
+        })
+        try {
           const page = botCan(adapter, "historyBefore", bot, "read a chat back")
           const botId = await botIdOf(context, adapter)
           const account = context.copy.accountOf(botId)
@@ -79,10 +86,13 @@ export const botStoreCommand = (bot: BotMessenger, fetching: NonNullable<BotMess
             }),
           )
           context.renderer.result(result)
-        })
-      } finally {
-        stop.release()
-      }
-    })
+        } finally {
+          await adapter.close()
+        }
+      })
+    } finally {
+      stop.release()
+    }
+  })
   return command
 }

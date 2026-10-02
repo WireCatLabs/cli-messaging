@@ -73,6 +73,7 @@ export interface SendGuardOptions {
    */
   permissions?: Readonly<Record<PermissionKey, Level>>
   permissionSources?: Readonly<Record<PermissionKey, string>>
+  permissionFix?: (request: GuardRequest, key: PermissionKey) => string
   ask?: Asker
   sendsPerHour: number
   journal: SendJournal
@@ -125,6 +126,7 @@ export const sendGuard = ({
   allowFix,
   permissions,
   permissionSources = {},
+  permissionFix,
   ask = refuseToAsk,
   sendsPerHour,
   journal,
@@ -161,10 +163,11 @@ export const sendGuard = ({
       const key = request.key ?? keyForWrite(kind, action)
       const { level, key: named } = levelFor(permissions, key)
       if (level === "deny" || level === "readonly") {
+        const fix = permissionFix?.(request, key) ?? `${command} ${profile} config set permissions.${key} allow`
         throw new CliError(
           "permission_error",
           `profile ${profile} does not let ${key} write (permissions.${named} is ${level}, from the ` +
-            `${permissionSources[named ?? ""] ?? "default"}); to allow it: ${command} ${profile} config set permissions.${key} allow`,
+            `${permissionSources[named ?? ""] ?? "default"}); to allow it: ${fix}`,
           { permission: key },
         )
       }
