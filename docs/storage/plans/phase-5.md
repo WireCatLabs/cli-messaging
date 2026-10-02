@@ -243,7 +243,7 @@ the default). Facts: [`../research/2026-10-02-embedding-apis.md`](../research/20
    are keyed by hash), `docs/commands.md`, one line in the shared skills; tg-cli and max-cli bump.
 7. ✅ 2026-10-02 · **Hybrid** (E9), after phase 2 item 6 — RRF over the two lists; the IRC bench's queries cannot score it,
    so a small hand-written query set over a synthetic chat.
-8. **Measure** — `bench/embeddings/` (today the research scripts of §3): embed time and search time on the `bench/search` corpus at 100k
+8. ✅ 2026-10-02 ([results](../../../bench/embeddings/README.md): embed ~22 min at 100k messages; search 1.4–1.7 s warm, the scan's paging is the cost) · **Measure** — `bench/embeddings/` (today the research scripts of §3): embed time and search time on the `bench/search` corpus at 100k
    messages through the real commands, Node and Bun, recorded in its README.
 
 ## 6. Test plan
