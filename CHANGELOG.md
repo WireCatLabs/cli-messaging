@@ -6,8 +6,17 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Fixed
+
+- **`bot mcp`'s warning for `--allow-send`, `--allow-delete` and `--allow-moderate` names no command
+  that a CLI lacks**: it pointed at `config show permissions`, which max-cli does not have.
+- **A CLI's own bot MCP tool is told when the owner must see the call first** (`confirmFirst` on the
+  kit), under `--confirm-send` or level `ask`; until now only the shared tools put a form first.
+
 ### Changed — may break callers
 
+- **The parity manifest marks the global `--yes` as in all CLIs**: max-cli has it since its bot MCP
+  moved to 0.104.0.
 - **The parity manifest marks `bot mcp` and `bot mcp config` as in all CLIs**, every option checked:
   max-cli and tg-cli both mount the shared server on 0.104.0.
 

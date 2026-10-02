@@ -71,6 +71,14 @@ const LEAVE: BotTool = {
       seen: await kit.invoke(["chats", "list"], { options: ["--offline"] }),
     })),
 }
+const PROMOTE: BotTool = {
+  words: ["chats", "admins", "add"],
+  writes: "bot.chats.admins.add",
+  title: "Says whether it must ask first",
+  description: "A tool that is more than one command.",
+  input: v.object({}),
+  handle: async (_args, kit) => ({ confirmFirst: kit.confirmFirst }),
+}
 const ABSENT: BotTool = { words: ["comments", "list"], title: "None", description: "Not mounted.", input: v.object({}) }
 
 const bot: BotMessenger = {
@@ -81,7 +89,7 @@ const bot: BotMessenger = {
   connect: async () => adapter,
   tokenStore: (_command, profile) =>
     new BotTokenStore({ app, profile, env: {}, configDir: join(root, "config"), keyring }),
-  mcp: { program: async () => runBot, tools: [ECHO, LEAVE, ABSENT] },
+  mcp: { program: async () => runBot, tools: [ECHO, LEAVE, PROMOTE, ABSENT] },
 }
 
 const definition = { app, commands: () => [botCommand(bot)] }
@@ -171,7 +179,7 @@ describe("bot mcp tools by permission level", () => {
   it("**offers every read and write the default levels allow**, and no tool whose command is not mounted", async () => {
     const { offered } = await connect()
 
-    expect(offered.sort()).toEqual([...READS, ...WRITES, "chat_bot_chats_leave"].sort())
+    expect(offered.sort()).toEqual([...READS, ...WRITES, "chat_bot_chats_leave", "chat_bot_chats_admins_add"].sort())
   })
 
   it.each([
@@ -270,6 +278,19 @@ describe("a tool of the CLI's own with its own form", () => {
   })
 })
 
+describe("a tool of the CLI's own and the form", () => {
+  it("**is told to ask first under --confirm-send or level ask**, and not otherwise", async () => {
+    const asked = async (options: Partial<BotServerOptions>) =>
+      (await call((await connect(options)).client, "chat_bot_chats_admins_add")).body.confirmFirst
+
+    expect(await asked({})).toBe(false)
+    expect(await asked({ confirmSend: true })).toBe(true)
+    configure({ bot: { profiles: { sales: { permissions: { "bot.chats.admins": "ask" } } } } })
+    expect(await asked({})).toBe(true)
+    expect(await asked({ yes: true })).toBe(false)
+  })
+})
+
 describe("bot mcp config", () => {
   it("**prints the entry for `bot mcp`**, and says the old flags decide nothing", async () => {
     const streams = captureStreams()
@@ -291,7 +312,9 @@ describe("bot mcp config", () => {
         },
       },
     })
-    expect(streams.stderr.join("\n")).toContain("--allow-send no longer decides anything")
+    expect(streams.stderr.join("\n")).toContain(
+      "--allow-send no longer decides anything: the bot profile's permissions do",
+    )
   })
 
   it("is not mounted for a messenger that hands in no run", () => {

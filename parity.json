@@ -510,13 +510,7 @@
     "--trace": "all",
     "--verbose": "all",
     "--version": "all",
-    "--yes": {
-      "in": [],
-      "planned": {
-        "max": "P7",
-        "tg": "P7"
-      }
-    }
+    "--yes": "all"
   },
   "commands": {
     "account": {

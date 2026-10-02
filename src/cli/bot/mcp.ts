@@ -26,13 +26,13 @@ const withFlags = (command: Command): Command =>
     .option("--allow-delete", "no longer used — the profile's permissions decide")
     .option("--allow-moderate", "no longer used — the profile's permissions decide")
 
-const retiredNote = (command: string, flags: Flags): string | undefined => {
+const retiredNote = (flags: Flags): string | undefined => {
   const given = RETIRED.filter((flag) => flags[flag] === true)
   if (given.length === 0) return undefined
   const names = given.map((flag) => `--${flag.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)}`)
   return (
-    `${names.join(", ")} no longer decide${given.length === 1 ? "s" : ""} anything: the profile's permissions do — ` +
-    `\`${command} config show permissions\``
+    `${names.join(", ")} no longer decide${given.length === 1 ? "s" : ""} anything: the bot profile's permissions do, ` +
+    "and the server's status tool lists the writes they allow"
   )
 }
 
@@ -64,7 +64,7 @@ export const botMcpCommand = (bot: BotMessenger): Command => {
         `no bot token for profile "${context.profile}" — run \`${context.words} auth set\``,
       )
     }
-    const note = retiredNote(app.command, flags)
+    const note = retiredNote(flags)
     if (note) context.renderer.warn(note)
     const mcp = bot.mcp
     if (!mcp || !this.parent) throw new Error("bot mcp is mounted only with BotMessenger.mcp")
@@ -115,7 +115,7 @@ export const botMcpCommand = (bot: BotMessenger): Command => {
       if (format === "pretty") streams.data(JSON.stringify(config, null, 2))
       else renderer.result(config)
       if (entry.warning) renderer.note(entry.warning)
-      const note = retiredNote(app.command, flags)
+      const note = retiredNote(flags)
       if (note) renderer.warn(note)
     }),
   )
