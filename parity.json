@@ -678,6 +678,50 @@
       "in": ["max"],
       "reason": "a Telegram channel's comments are messages in a separate discussion group, reached by ids only an update gives"
     },
+    "bot contacts": {
+      "in": [],
+      "planned": {
+        "max": "P8",
+        "tg": "P8"
+      }
+    },
+    "bot contacts show": {
+      "in": [],
+      "planned": {
+        "max": "P8",
+        "tg": "P8"
+      },
+      "options": {
+        "--all-bots": {
+          "in": [],
+          "planned": {
+            "max": "P8",
+            "tg": "P8"
+          }
+        },
+        "--bots": {
+          "in": [],
+          "planned": {
+            "max": "P8",
+            "tg": "P8"
+          }
+        },
+        "--limit": {
+          "in": [],
+          "planned": {
+            "max": "P8",
+            "tg": "P8"
+          }
+        },
+        "--refresh": {
+          "in": [],
+          "planned": {
+            "max": "P8",
+            "tg": "P8"
+          }
+        }
+      }
+    },
     "bot list": {
       "in": "all",
       "options": {

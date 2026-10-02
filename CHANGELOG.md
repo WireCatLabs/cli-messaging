@@ -6,6 +6,15 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- **`bot contacts show`, `bot messages search` and `bot messages between`, shared** (max-cli's
+  `bot people show` and its copy reads): one person, a word search, and what several people wrote,
+  all from the local copy; `--all-bots` and `--bots` reach the copies `readOtherBots` allows. MCP tools
+  `<cli>_bot_contacts_show`, `_messages_search`, `_messages_between`. `BotMessenger.chatKindOf` says
+  which stored chat is a dialog; without it a positive id is one. `--refresh` is refused by a bot that
+  cannot read a chat back.
+
 ### Fixed
 
 - **MCP `<cli>_bot_chats_moderate` does what the accepted form showed when the profile puts

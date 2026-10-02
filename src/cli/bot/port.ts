@@ -1,10 +1,20 @@
 import type { Command } from "commander"
 import type { Markup } from "../../domain/markdown.js"
-import type { AdminRight, Chat, GroupMember, Id, Member, Message, MessageEvent, Provider } from "../../domain/models.js"
+import type {
+  AdminRight,
+  Chat,
+  ChatKind,
+  GroupMember,
+  Id,
+  Member,
+  Message,
+  MessageEvent,
+  Provider,
+} from "../../domain/models.js"
 import type { RunBotCommand } from "../../mcp/bot/server.js"
 import type { BotTool } from "../../mcp/bot/tools.js"
 import type { Upload } from "../../sends/upload.js"
-import type { PersonFacts } from "../../store/index.js"
+import type { PersonFacts, StoredHit } from "../../store/index.js"
 import type { AppIdentity } from "../app.js"
 import type { MessagePins, MessengerCore } from "../messenger/port.js"
 import type { EventSink } from "../runs/events.js"
@@ -218,6 +228,8 @@ export interface BotMessenger {
   registry?: (command: Command, profile: string) => ChatRegistry
   /** A secret typed at a hidden prompt or piped on stdin; the shared `readSecret` when unset. */
   readSecret?: (command: Command, prompt: string) => Promise<string>
+  /** What kind of chat a stored message came from; without it a positive id is a dialog, a negative one a group. */
+  chatKindOf?: (hit: StoredHit) => ChatKind
   /** `bot mcp`, mounted only when this is set. */
   mcp?: BotMcp
 }

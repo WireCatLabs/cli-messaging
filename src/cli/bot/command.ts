@@ -10,6 +10,7 @@ import { botContext, online } from "./context.js"
 import { botMcpCommand } from "./mcp.js"
 import { botCan, botIdOf, botMessagesCommand } from "./messages.js"
 import { botModerateCommand, botRulesCommand } from "./moderation.js"
+import { addBotCopyReads, botContactsCommand } from "./people.js"
 import { BOT_ACTIONS, type BotAction, type BotMessenger } from "./port.js"
 import { registryProfiles } from "./registry.js"
 import { botCallbacksCommand, botMenuCommand, botWebhooksCommand } from "./setup.js"
@@ -234,6 +235,11 @@ const chatsCommand = (bot: BotMessenger): Command => {
  * The `bot` group: a bot account through the messenger's official Bot API and a bot token. A CLI adds
  * the commands that are still its own with `addCommand`, on this group or on its `chats`.
  */
+const withCopyReads = (messages: Command, bot: BotMessenger): Command => {
+  addBotCopyReads(messages, bot)
+  return messages
+}
+
 export const botCommand = (bot: BotMessenger): Command => {
   const tokenVariable = envName(bot.app, "BOT_TOKEN")
   const command = new Command("bot")
@@ -243,12 +249,13 @@ export const botCommand = (bot: BotMessenger): Command => {
     .addCommand(authCommand(bot, tokenVariable))
     .addCommand(listCommand(bot, tokenVariable))
     .addCommand(chatsCommand(bot))
-    .addCommand(botMessagesCommand(bot))
+    .addCommand(withCopyReads(botMessagesCommand(bot), bot))
     .addCommand(recipientsCommand(bot))
     .addCommand(sendsCommand(bot))
     .addCommand(botWatchCommand(bot))
     .addCommand(botCallbacksCommand(bot))
     .addCommand(botMenuCommand(bot))
     .addCommand(botWebhooksCommand(bot))
+    .addCommand(botContactsCommand(bot))
   return bot.mcp ? command.addCommand(botMcpCommand(bot)) : command
 }

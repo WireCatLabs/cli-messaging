@@ -71,7 +71,7 @@ export const limit = v.optional(
 )
 export const format = v.optional(v.pipe(v.picklist(["markdown", "html"]), v.description("how the text is marked up")))
 export const offline = v.optional(v.pipe(v.boolean(), v.description("answer from the copy on this machine only")))
-export const person = v.pipe(v.string(), v.minLength(1), v.description("a person's id"))
+export const person = v.pipe(v.string(), v.minLength(1), v.description("an id, @username or part of a name"))
 export const message = v.pipe(
   v.string(),
   v.maxLength(256),
@@ -187,6 +187,37 @@ export const BOT_TOOLS: readonly BotTool[] = [
       options: flag("offline", args.offline),
       positionals: [String(args.chat), String(args.message)],
     }),
+  },
+  {
+    words: ["messages", "search"],
+    across: true,
+    title: "Search the bot's messages",
+    description:
+      "Search the messages this machine has kept for the bot, best match first; from narrows to what one person wrote.",
+    input: v.object({ text: v.optional(v.pipe(v.string(), v.minLength(1))), from: v.optional(person), limit }),
+    invocation: (args) => ({
+      options: [...option("from", args.from), ...option("limit", args.limit)],
+      positionals: args.text === undefined ? [] : [String(args.text)],
+    }),
+  },
+  {
+    words: ["messages", "between"],
+    across: true,
+    title: "Messages between people",
+    description: "What these people wrote in the chats this bot shares with them, from the copy on this machine.",
+    input: v.object({ people: v.pipe(v.array(person), v.minLength(2)), limit }),
+    invocation: (args) => ({
+      options: option("limit", args.limit),
+      positionals: (args.people as string[]).map(String),
+    }),
+  },
+  {
+    words: ["contacts", "show"],
+    across: true,
+    title: "One person",
+    description: "A person this bot has seen write: who they are, where, and the private chat with them.",
+    input: v.object({ who: person, limit }),
+    invocation: (args) => ({ options: option("limit", args.limit), positionals: [String(args.who)] }),
   },
   {
     words: ["chats", "admins", "list"],
