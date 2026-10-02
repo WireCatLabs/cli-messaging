@@ -3,7 +3,6 @@ import * as v from "valibot"
 import { BOT_ACTIONS } from "../../cli/bot/port.js"
 import type { PermissionKey } from "../../sends/permissions.js"
 import type { ResolveChat } from "../confirm.js"
-import { message } from "../tool.js"
 
 /** One run of a bot command: options as single `--name=value` tokens, then `--` and the positionals. */
 export interface Invocation {
@@ -67,7 +66,13 @@ export const limit = v.optional(
 export const format = v.optional(v.pipe(v.picklist(["markdown", "html"]), v.description("how the text is marked up")))
 export const offline = v.optional(v.pipe(v.boolean(), v.description("answer from the copy on this machine only")))
 export const person = v.pipe(v.string(), v.minLength(1), v.description("a person's id"))
-export { message }
+export const message = v.pipe(
+  v.string(),
+  v.maxLength(256),
+  // biome-ignore lint/suspicious/noControlCharactersInRegex: refusing them is the point
+  v.regex(/^(?!-)[^\s\x00-\x1F\x7F-\x9F]+$/, "a message id has no spaces or control characters, and no - first"),
+  v.description("message id"),
+)
 
 /** `all_bots` and `bots`, added to an `across` tool only when this bot may read others. */
 export const withAcross = (tool: BotTool): BotTool => ({

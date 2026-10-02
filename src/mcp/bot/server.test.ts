@@ -238,6 +238,15 @@ describe("bot mcp writes", () => {
     expect(confirming.forms).toHaveLength(1)
   })
 
+  it("refuses a message id that would read as a flag, before running anything", async () => {
+    const { client } = await connect()
+
+    const refused = await call(client, "chat_bot_messages_send", { chat: "-100", text: "x", reply_to: "--silent" })
+
+    expect(refused.isError).toBe(true)
+    expect(calls).toEqual([])
+  })
+
   it("**a write at level ask answers the command's own question after the form**, with --yes", async () => {
     configure({ bot: { profiles: { sales: { permissions: { "bot.messages.send": "ask" } } } } })
     const { client, forms } = await connect({}, { form: () => ({ action: "accept", content: {} }) })
