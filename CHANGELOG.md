@@ -6,6 +6,10 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.108.0 — 02.10.2026
+
+Released early: max-cli and tg-cli wait on the shared bot contacts show and the fix for moderation after a form
+
 ### Added
 
 - **`bot contacts show`, `bot messages search` and `bot messages between`, shared** (max-cli's
