@@ -317,6 +317,18 @@ describe("chat_bot_chats_moderate", () => {
     expect(calls).toEqual(["delete -100 2"])
   })
 
+  it("**at level ask for the command itself, does what the accepted form showed**", async () => {
+    deleting("allow")
+    configure({ bot: { profiles: { sales: { permissions: { "bot.chats.moderate": "ask" } } } } })
+    const { client, forms } = await connect({}, { form: () => ({ action: "accept", content: {} }) })
+
+    const done = await call(client, "chat_bot_chats_moderate", { chat: "-100" })
+
+    expect(forms).toHaveLength(1)
+    expect(done.body).toMatchObject({ rows: [{ action: "delete", outcome: "done" }] })
+    expect(calls).toEqual(["delete -100 2"])
+  })
+
   it("deletes nothing when the owner declines", async () => {
     deleting("ask")
     const { client } = await connect({}, { form: () => ({ action: "decline" }) })

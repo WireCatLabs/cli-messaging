@@ -30,6 +30,8 @@ export interface BotToolKit {
   resolveChat: ResolveChat
   /** The owner must see this call in a form before anything is written: `--confirm-send`, or level `ask`. */
   confirmFirst: boolean
+  /** The flag that answers the command's own question at level `ask` (`--yes`), for the run the owner agreed to. */
+  answerFlags: string[]
 }
 
 export interface BotTool {
@@ -121,13 +123,16 @@ const moderate: BotTool = {
     since_time: v.optional(v.pipe(time, v.description("judge what came after this time; the saved point stays"))),
     dry_run: v.optional(v.pipe(v.boolean(), v.description("judge and plan; do nothing"))),
   }),
-  handle: async (args, { invoke, confirmed, resolveChat, confirmFirst }, ctx) => {
+  handle: async (args, { invoke, confirmed, resolveChat, confirmFirst, answerFlags }, ctx) => {
     const words = ["chats", "moderate"]
     const positionals = [String(args.chat)]
     const run = async (dry: boolean, answer?: (question: string) => string | null) =>
       (await invoke(
         words,
-        { options: [...option("since-time", args.since_time), ...flag("dry-run", dry)], positionals },
+        {
+          options: [...option("since-time", args.since_time), ...(dry ? ["--dry-run"] : answerFlags)],
+          positionals,
+        },
         answer,
       )) as { chatId: string; rows: CheckRow[] }
     if (args.dry_run === true) return run(true)

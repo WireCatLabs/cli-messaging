@@ -6,6 +6,12 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Fixed
+
+- **MCP `<cli>_bot_chats_moderate` does what the accepted form showed when the profile puts
+  `bot.chats.moderate` at `ask`**: the actions were refused, since the run after the form was not
+  given `--yes`. A CLI's own tool gets that flag as `answerFlags` on the kit.
+
 ### Changed — may break callers
 
 - **The parity manifest marks `bot chats moderate` and `bot chats rules` as in all CLIs**, every option
