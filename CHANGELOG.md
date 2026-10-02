@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.110.0 — 02.10.2026
+
 ### Fixed
 
 - **The MCP server lets go of the search model on Bun too**: the model it keeps between searches now runs in a
