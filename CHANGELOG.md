@@ -6,6 +6,10 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.102.0 — 02.10.2026
+
+Released early: tg-cli cannot move past 0.99.0: its archive tests hang in store fetch on 0.100.0 and 0.101.0
+
 ### Fixed
 
 - **`store fetch` ends when the messenger keeps giving back the same page.** Since 0.100.0 a message
