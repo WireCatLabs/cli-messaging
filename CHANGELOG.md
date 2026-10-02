@@ -8,6 +8,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## 0.112.0 — 03.10.2026
 
+Released early: tg-cli is waiting for the stored evidence command and MCP tool; owner requested immediate publication
+
 ### Added
 
 - **Stored chat evidence through CLI and MCP:** the shared `messages evidence <chat>` and
