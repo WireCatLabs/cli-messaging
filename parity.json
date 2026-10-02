@@ -1492,6 +1492,29 @@
         "--md": "all"
       }
     },
+    "messages evidence": {
+      "in": [],
+      "planned": {
+        "max": "evidence",
+        "tg": "evidence"
+      },
+      "options": {
+        "--before-id": {
+          "in": [],
+          "planned": {
+            "max": "evidence",
+            "tg": "evidence"
+          }
+        },
+        "--limit": {
+          "in": [],
+          "planned": {
+            "max": "evidence",
+            "tg": "evidence"
+          }
+        }
+      }
+    },
     "messages forward": {
       "in": "all",
       "options": {
