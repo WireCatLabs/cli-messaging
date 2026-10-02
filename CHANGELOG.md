@@ -6,6 +6,13 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Fixed
+
+- **The parity manifest lists the options of `conversations embed` and `conversations search`**, planned
+  for tg and max like the commands, and names `--provider`, `--base-url`, `--dims`, `--concurrency` and
+  `--max-tokens` in its catalogue. Without the rows a CLI that mounts the commands failed its parity check
+  on 0.101.0 and 0.102.0 ("not in the manifest").
+
 ## 0.102.0 — 02.10.2026
 
 Released early: tg-cli cannot move past 0.99.0: its archive tests hang in store fetch on 0.100.0 and 0.101.0

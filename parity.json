@@ -67,6 +67,10 @@
     "--background": {
       "meaning": "run as a job that outlives this command; `store jobs show` follows it"
     },
+    "--base-url": {
+      "value": "<url>",
+      "meaning": "embed through a server with OpenAI's /v1/embeddings: Gemini, Jina, or Ollama and LM Studio on this machine"
+    },
     "--batch": {
       "value": "<id>",
       "meaning": "the batch id `conversations batches next` printed"
@@ -111,6 +115,10 @@
       "meaning": "say whether a newer version exists, and install nothing",
       "note": "`bot list --check` names the messenger until both CLIs take the release after 0.98.0, where it says \"the messenger\"; then this note goes"
     },
+    "--concurrency": {
+      "value": "<n>",
+      "meaning": "remote embedding: requests at once"
+    },
     "--confirm-send": {
       "meaning": "show the owner every write the MCP server offers, in a form to approve",
       "note": "max's own `mcp` is worded differently until the permission levels (P7) replace these flags there (e13)"
@@ -125,6 +133,10 @@
     "--description": {
       "value": "<text>",
       "meaning": "the new about text — of a chat or of your account"
+    },
+    "--dims": {
+      "value": "<n>",
+      "meaning": "remote embedding: the vector size — needed with --base-url; shortens an OpenAI model's"
     },
     "--dry-run": {
       "meaning": "judge and plan; do nothing"
@@ -224,6 +236,10 @@
       "meaning": "at most this many actions in one run",
       "default": "10"
     },
+    "--max-tokens": {
+      "value": "<n>",
+      "meaning": "remote embedding: stop before a run that could send more tokens than this"
+    },
     "--md": {
       "meaning": "read **bold**, _italic_, ~~struck~~ and `code` in the text; \\ keeps a mark literal"
     },
@@ -322,6 +338,10 @@
     "--photo": {
       "value": "<file>",
       "meaning": "an image file — a profile photo in `account update`, a photo to send in `messages send`"
+    },
+    "--provider": {
+      "value": "<provider>",
+      "meaning": "embed through a service with your key instead of on this machine: openai"
     },
     "--qr-file": {
       "value": "<png>",
@@ -1433,6 +1453,13 @@
       },
       "subtree": true,
       "options": {
+        "--base-url": {
+          "in": [],
+          "planned": {
+            "max": "storage phase 5: the cli-messaging bump after it ships",
+            "tg": "storage phase 5: the cli-messaging bump after it ships"
+          }
+        },
         "--chat": {
           "in": [],
           "planned": {
@@ -1440,7 +1467,35 @@
             "tg": "storage phase 5: the cli-messaging bump after it ships"
           }
         },
+        "--concurrency": {
+          "in": [],
+          "planned": {
+            "max": "storage phase 5: the cli-messaging bump after it ships",
+            "tg": "storage phase 5: the cli-messaging bump after it ships"
+          }
+        },
+        "--dims": {
+          "in": [],
+          "planned": {
+            "max": "storage phase 5: the cli-messaging bump after it ships",
+            "tg": "storage phase 5: the cli-messaging bump after it ships"
+          }
+        },
+        "--max-tokens": {
+          "in": [],
+          "planned": {
+            "max": "storage phase 5: the cli-messaging bump after it ships",
+            "tg": "storage phase 5: the cli-messaging bump after it ships"
+          }
+        },
         "--model": {
+          "in": [],
+          "planned": {
+            "max": "storage phase 5: the cli-messaging bump after it ships",
+            "tg": "storage phase 5: the cli-messaging bump after it ships"
+          }
+        },
+        "--provider": {
           "in": [],
           "planned": {
             "max": "storage phase 5: the cli-messaging bump after it ships",
@@ -1517,7 +1572,58 @@
         "max": "storage phase 5: the cli-messaging bump after it ships",
         "tg": "storage phase 5: the cli-messaging bump after it ships"
       },
-      "subtree": true
+      "subtree": true,
+      "options": {
+        "--base-url": {
+          "in": [],
+          "planned": {
+            "max": "storage phase 5: the cli-messaging bump after it ships",
+            "tg": "storage phase 5: the cli-messaging bump after it ships"
+          }
+        },
+        "--chat": {
+          "in": [],
+          "planned": {
+            "max": "storage phase 5: the cli-messaging bump after it ships",
+            "tg": "storage phase 5: the cli-messaging bump after it ships"
+          }
+        },
+        "--dims": {
+          "in": [],
+          "planned": {
+            "max": "storage phase 5: the cli-messaging bump after it ships",
+            "tg": "storage phase 5: the cli-messaging bump after it ships"
+          }
+        },
+        "--limit": {
+          "in": [],
+          "planned": {
+            "max": "storage phase 5: the cli-messaging bump after it ships",
+            "tg": "storage phase 5: the cli-messaging bump after it ships"
+          }
+        },
+        "--model": {
+          "in": [],
+          "planned": {
+            "max": "storage phase 5: the cli-messaging bump after it ships",
+            "tg": "storage phase 5: the cli-messaging bump after it ships"
+          }
+        },
+        "--provider": {
+          "in": [],
+          "planned": {
+            "max": "storage phase 5: the cli-messaging bump after it ships",
+            "tg": "storage phase 5: the cli-messaging bump after it ships"
+          }
+        },
+        "--since-time": {
+          "in": [],
+          "planned": {
+            "max": "storage phase 5: the cli-messaging bump after it ships",
+            "tg": "storage phase 5: the cli-messaging bump after it ships"
+          }
+        }
+      }
     },
     "conversations show": {
       "in": "all"
