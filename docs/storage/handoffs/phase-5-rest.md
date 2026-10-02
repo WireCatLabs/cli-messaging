@@ -1,5 +1,8 @@
 # Handoff — finish phase 5: search by meaning in serve and MCP, the parity rows, hybrid ranking, the measurement (2026-10-02)
 
+**Done 2026-10-02:** all five items (#405, #406, #407, and the measurement). Left: the scan's paging (see
+[the measurement](../../../bench/embeddings/README.md)) and max's `models text` row.
+
 The trail, optional, grep by id: max-cli `docs_ai/journal/2026-10-02-storage-phase-5-plan.md`.
 
 ## 1. What this is
