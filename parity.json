@@ -489,6 +489,16 @@
     },
     "--yes": {
       "meaning": "go ahead without the question an ask level puts before a write"
+    },
+    "--language": {
+      "value": "<lucene|legacy>",
+      "meaning": "the query language: strict Lucene or legacy discovery",
+      "default": "lucene"
+    },
+    "--timezone": {
+      "value": "<zone>",
+      "meaning": "the IANA timezone for calendar date boundaries",
+      "default": "system IANA timezone"
     }
   },
   "globalOptions": {
@@ -1654,7 +1664,21 @@
             "tg": "T6"
           }
         },
-        "--source": "all"
+        "--source": "all",
+        "--language": {
+          "in": [],
+          "planned": {
+            "max": "search A1",
+            "tg": "search A1"
+          }
+        },
+        "--timezone": {
+          "in": [],
+          "planned": {
+            "max": "search A1",
+            "tg": "search A1"
+          }
+        }
       }
     },
     "messages send": {

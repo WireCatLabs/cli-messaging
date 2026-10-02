@@ -220,6 +220,8 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--voice` | `<file>` | send an Ogg Opus file as a voice message, alone, with no text |  | `bot messages send`, `messages send` |
 | `--workers` | `<n>` | sessions in parallel, each with its own copy of the model |  | `conversations embed` |
 | `--yes` |  | go ahead without the question an ask level puts before a write |  | every command, `account sessions end` (planned), `mcp` (planned), `mcp config` (planned) |
+| `--language` | `<lucene\|legacy>` | the query language: strict Lucene or legacy discovery | `lucene` | `messages search` (planned) |
+| `--timezone` | `<zone>` | the IANA timezone for calendar date boundaries | `system IANA timezone` | `messages search` (planned) |
 
 <!-- end of the option catalogue -->
 

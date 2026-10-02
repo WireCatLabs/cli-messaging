@@ -426,6 +426,8 @@ actually checks are added; the full list grows in Phase 4 when MAX fills it too.
 
 ## 8. Phases — small, independently shippable pull requests
 
+- **Search A1** · 🚧 `feat/search-lucene-a1` · Lucene 9.12.3 query profile, strict shared search, bounded patterns, legacy migration and executable documentation. Owner: search/archive A; approved implementation plan 2026-10-03.
+
 **Phase 0 — spike.** Goal: prove the transport and measure the unknowns. cli-messaging starts here
 with only the copies that carry no risk, so the spike already imports them and nothing is copied
 twice. The store and the guard wait for Phase 1.
