@@ -15,6 +15,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Changed — may break callers
 
+- **The parity manifest marks `models text` as in all CLIs**, with `list`, `download --accept-terms` and
+  `key set|remove`: max-cli now mounts the shared `text` group in its `models` group.
 - **The parity manifest marks the global `--yes` as in all CLIs**: max-cli has it since its bot MCP
   moved to 0.104.0.
 - **The parity manifest marks `bot mcp` and `bot mcp config` as in all CLIs**, every option checked:
