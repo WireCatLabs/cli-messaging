@@ -10,15 +10,18 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 Released early: max-cli 0.22.0 waits: its parity check fails on the new conversations embed and search options until the checker fix ships
 
+### Fixed
+
+- **The parity check leaves the options of a command still planned for a CLI unchecked**, as it leaves
+  the command: a CLI that mounts a planned group early — `conversations embed` and `conversations search`
+  with their new options — passes until the rows say it has them.
+
 ## 0.102.0 — 02.10.2026
 
 Released early: tg-cli cannot move past 0.99.0: its archive tests hang in store fetch on 0.100.0 and 0.101.0
 
 ### Fixed
 
-- **The parity check leaves the options of a command still planned for a CLI unchecked**, as it leaves
-  the command: a CLI that mounts a planned group early — `conversations embed` and `conversations search`
-  with their new options — passes until the rows say it has them.
 - **`store fetch` ends when the messenger keeps giving back the same page.** Since 0.100.0 a message
   read twice no longer counts towards `--limit`, so a messenger that ignored the page boundary and kept
   answering with messages already read made the run go on for ever. A page with nothing new now ends it
