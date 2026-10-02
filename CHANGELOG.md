@@ -6,6 +6,12 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Changed — may break callers
+
+- **The parity manifest marks `bot watch`, `bot callbacks`, `bot commands` and `bot webhooks` as in all
+  CLIs**, and drops `bot updates watch`: max-cli and tg-cli both run the shared ones. The note on
+  `--check` goes; `bot list --check` reads the same in both.
+
 ## 0.103.0 — 02.10.2026
 
 Released early: max-cli 0.22.0 waits: its parity check fails on the new conversations embed and search options until the checker fix ships
