@@ -892,7 +892,8 @@
       "planned": {
         "max": "T6"
       },
-      "reason": "max drops its per-profile cache in favor of the shared store"
+      "reason": "max drops its per-profile cache in favor of the shared store",
+      "subtree": true
     },
     "chats": {
       "in": "all"
@@ -1449,26 +1450,46 @@
       }
     },
     "mcp doctor": {
-      "in": "all",
+      "in": [],
       "options": {
-        "--allow-dangerous": { "in": ["tg"], "reason": "tg profiles use a separate dangerous-write override" },
+        "--allow-dangerous": {
+          "in": ["tg"],
+          "reason": "tg profiles use a separate dangerous-write override"
+        },
         "--allow-delete": "all",
         "--allow-mark-read": "all",
-        "--allow-moderate": { "in": ["max"], "reason": "max MCP offers a moderation flag" },
+        "--allow-moderate": {
+          "in": ["max"],
+          "reason": "max MCP offers a moderation flag"
+        },
         "--allow-send": "all",
         "--confirm-send": "all"
+      },
+      "planned": {
+        "max": "P7",
+        "tg": "P7"
       }
     },
     "mcp setup": {
-      "in": "all",
+      "in": [],
       "options": {
-        "--allow-dangerous": { "in": ["tg"], "reason": "tg profiles use a separate dangerous-write override" },
+        "--allow-dangerous": {
+          "in": ["tg"],
+          "reason": "tg profiles use a separate dangerous-write override"
+        },
         "--allow-delete": "all",
         "--allow-mark-read": "all",
-        "--allow-moderate": { "in": ["max"], "reason": "max MCP offers a moderation flag" },
+        "--allow-moderate": {
+          "in": ["max"],
+          "reason": "max MCP offers a moderation flag"
+        },
         "--allow-send": "all",
         "--allow-writes": "all",
         "--confirm-send": "all"
+      },
+      "planned": {
+        "max": "P7",
+        "tg": "P7"
       }
     },
     "messages": {
