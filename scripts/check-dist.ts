@@ -46,6 +46,12 @@ await messages.close()
 if (read.items[0]?.text !== message.text) throw new Error("openStore from dist did not give the saved message back")
 console.log(`dist: Drizzle bundled and working under ${"Bun" in globalThis ? "Bun" : "Node"}`)
 
+const { prepareEvidencePacket } = await import(join(root, "services/index.js"))
+const evidence = prepareEvidencePacket({ kind: "chats", source: { ...key, chat: message.chatId }, page: read })
+if (evidence.items[0]?.text !== message.text || evidence.items[0]?.locator !== "msg:telegram/1/-1002/3")
+  throw new Error("./services from dist did not package the stored message with its source")
+console.log("dist: ./services prepares an evidence packet from stored messages")
+
 const { contractCases, fakeAdapter } = await import(join(root, "kit/index.js"))
 for (const one of contractCases({ connect: fakeAdapter, orderBy: "time" })) await one.run()
 console.log("dist: ./testing exports the fake adapter, and it passes the contract cases")

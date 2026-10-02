@@ -32,6 +32,34 @@ A **message locator** names one message across every provider and account:
 `msg:telegram/<account>/<chat>/<message>`. A message id alone does not — Telegram numbers messages
 per chat in channels and per account in private chats.
 
+## Evidence packets for agents
+
+`prepareEvidencePacket` from `@leemour/cli-messaging/services` packages a message page that the
+caller has already read and authorised. It works with any messenger's domain messages:
+
+```ts
+import { prepareEvidencePacket } from "@leemour/cli-messaging/services"
+
+const packet = prepareEvidencePacket({
+  kind: "chats", // or "news" or "person"
+  source: { provider, account, chat: chatId },
+  page,
+  limits: { messages: 100, bytes: 64 * 1024 },
+})
+```
+
+The packet preserves page order and keeps whole messages until either limit is reached. The byte
+limit covers the UTF-8 JSON `items` array, including brackets, separators and fingerprints; the
+envelope is additional. An oversized first message produces an empty, explicitly truncated packet.
+`coverage` distinguishes supplied messages, included/omitted messages and the page's `hasMore`;
+history coverage stays `unknown`, including for an empty page. Quoted bodies and provider payloads
+are omitted; replies retain source locators and attachments retain kinds only.
+
+Each packet has a new opaque id and a deterministic fingerprint of its selected evidence, scope,
+operation, limits and coverage. A message fingerprint covers the fields that the agent sees.
+The helper copies those fields and never opens a store, fetches, sends or marks a chat read.
+It is a library building block; it does not add CLI or MCP commands.
+
 ## Where it came from
 
 The files were copied from max-cli at `3ca8874`, from the part its lint rule `CLI-30` already kept
