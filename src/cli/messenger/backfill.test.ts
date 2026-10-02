@@ -147,6 +147,26 @@ describe("store fetch", () => {
     expect(answer).toMatchObject({ fetched: 7, complete: true })
   })
 
+  it("**ends when the messenger keeps giving back the same page**, by id or by time, rather than run for ever", async () => {
+    for (const orderBy of ["id", "time"] as const) {
+      const asked: unknown[] = []
+      const fetching: Fetching = { page: 3, pause: "1ms", maxPages: 10, orderBy }
+      const sameEveryTime = {
+        ...timedChatOf(7, [], undefined),
+        history: async (_chat: string, window: unknown) => {
+          asked.push(window)
+          return { items: [message(1), message(2), message(3)], hasMore: true }
+        },
+      }
+
+      const { code, answer } = await call(["store", "fetch", "7", "--json"], sameEveryTime, setup(), { fetching })
+
+      expect(code).toBe(0)
+      expect(answer).toMatchObject({ fetched: 3 })
+      expect(asked.length).toBeLessThanOrEqual(orderBy === "id" ? 2 : 3)
+    }
+  })
+
   it("**steps past a millisecond that holds more than a page** instead of asking for it again", async () => {
     const asked: { before?: string; reactions?: false }[] = []
     const fetching: Fetching = { page: 3, pause: "1ms", maxPages: 10, orderBy: "time" }

@@ -156,6 +156,7 @@ export const archiveService = (deps: ServiceDeps): ArchiveService => {
       let fetched = 0
       // By time a page reaches back into the moment the last one ended at, so its ids repeat.
       const seen = new Set<Id>()
+      let idle = 0
       let reachedStart = false
       let reachedSince = false
       let reachedLast = false
@@ -192,6 +193,10 @@ export const archiveService = (deps: ServiceDeps): ArchiveService => {
         // This run's pages are contiguous, so everything from `low` to its first message is held.
         const held = await store.markRange(account, chatId, low, top)
         onPage({ fetched, chatId, oldest: held.from })
+        // Nothing new: by id the messenger ignored `before`; by time a second such page did after the step past.
+        // Repeats do not count towards the limit, so without this the run would never end.
+        idle = fresh === 0 ? idle + 1 : 0
+        if (idle > (byTime ? 1 : 0)) break
         if (!page.hasMore) {
           reachedStart = true
           break

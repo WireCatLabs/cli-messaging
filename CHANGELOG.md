@@ -6,6 +6,13 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Fixed
+
+- **`store fetch` ends when the messenger keeps giving back the same page.** Since 0.100.0 a message
+  read twice no longer counts towards `--limit`, so a messenger that ignored the page boundary and kept
+  answering with messages already read made the run go on for ever. A page with nothing new now ends it
+  — at once when paging by id, after the step past a crowded millisecond when paging by time.
+
 ## 0.101.0 — 02.10.2026
 
 ### Added
