@@ -98,7 +98,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--after-n` | `<n>` | how many messages after it |  | `messages context` |
 | `--after-time` | `<time>` | read what came after this ISO 8601 time, or 2h / 1d ago; not with --after-id or the --before pair |  | `messages list` |
 | `--all` |  | every row, no paging |  | `chats list`, `chats members list` (planned), `contacts list`, `inbox` (planned), `messages download` (planned), `review` (planned) |
-| `--all-bots` |  | also read every other bot's copy on this machine that readOtherBots allows |  | `bot messages between` (planned), `bot messages search` (planned), `bot people show` (planned) |
+| `--all-bots` |  | also read every other bot's copy on this machine that readOtherBots allows |  | `bot contacts show` (planned), `bot messages between` (planned), `bot messages search` (planned), `bot people show` (planned) |
 | `--all-can-pin` | `<on\|off>` | every member may pin messages |  | `chats update` |
 | `--allow-any-file` |  | send a --file even from a hidden folder, ~/.ssh or the tool's own folders |  | `bot messages send`, `messages send` |
 | `--allow-dangerous` |  | go ahead without the question an ask level puts before a deletion |  | `bot chats moderate`, `bot mcp`, `bot mcp config`, `bot messages delete`, `chats moderate` (planned), `mcp` (planned), `mcp config` (planned), `messages delete`, `store clear` |
@@ -118,7 +118,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--before-time` | `<time>` | read what came before this ISO 8601 time, or 2h / 1d ago; not with --before-id |  | `messages list` |
 | `--block` | `<value>` | Set to `true` if user should be blocked in chat. |  | `bot chats members remove` |
 | `--bot` |  | the bot section of the profile's settings, rather than the personal account's |  | `config set` (planned), `config show` (planned), `config unset` (planned) |
-| `--bots` | `<profiles>` | also read these bots' copies, comma separated — each allowed by readOtherBots |  | `bot messages between` (planned), `bot messages search` (planned), `bot people show` (planned) |
+| `--bots` | `<profiles>` | also read these bots' copies, comma separated — each allowed by readOtherBots |  | `bot contacts show` (planned), `bot messages between` (planned), `bot messages search` (planned), `bot people show` (planned) |
 | `--can` | `<rights>` | what they may do, comma-separated: read, members, admins, info, pin, link, post, edit, delete. **lists the rights each messenger has — MAX has `read`, Telegram does not — so it differs on purpose (Help text rule 4)** |  | `bot chats admins add`, `chats admins add` |
 | `--channel` |  | a private channel instead of a group; people join it by its link |  | `chats create` |
 | `--chat` | `<chat>` | a chat, by id or name; repeat it for more. **max's `messages search` takes `<id>` only, since searching never connects to resolve a name; rule 6 says `<chat>` (e8)** |  | `chats folders create`, `conversations batches next`, `conversations batches status`, `conversations build`, `conversations embed`, `conversations embed clear`, `conversations embed status`, `conversations links clear` (planned), `conversations list`, `conversations search`, `messages search`, `review` |
@@ -148,7 +148,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--last` | `<n>` | stop once the newest n messages are held; not with --since. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | `store fetch` |
 | `--last-name` | `<name>` | your last name |  | `account update` |
 | `--left` |  | only the chats this account has left |  | `store clear` |
-| `--limit` | `<n>` | how many: rows to show, or messages one run fetches. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | `bot chats members list` (max-only), `bot messages between` (planned), `bot messages list`, `bot messages search` (planned), `bot people show` (planned), `chats list`, `chats members list` (planned), `contacts list`, `conversations list`, `conversations search`, `inbox`, `messages list`, `messages search`, `runs list`, `sends list`, `store fetch` |
+| `--limit` | `<n>` | how many: rows to show, or messages one run fetches. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | `bot chats members list` (max-only), `bot contacts show` (planned), `bot messages between` (planned), `bot messages list`, `bot messages search` (planned), `bot people show` (planned), `chats list`, `chats members list` (planned), `contacts list`, `conversations list`, `conversations search`, `inbox`, `messages list`, `messages search`, `runs list`, `sends list`, `store fetch` |
 | `--lines` | `<n>` | how many lines | `50` | `server logs` |
 | `--local` |  | use the model on this machine, never the messenger |  | `messages transcribe` (tg-only) |
 | `--mark-read` |  | also mark the chat read up to the newest message shown; the other person sees it |  | `messages list` |
@@ -185,7 +185,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--qr-file` | `<png>` | write the QR code to this PNG instead of drawing it, for an agent to pass on |  | `session start` (tg-only) |
 | `--quiet` |  | diagnostics off. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | every command |
 | `--record` |  | keep this run under `runs` — ids and timings, never message content. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | every command |
-| `--refresh` |  | read the private chat with them from MAX first — one request |  | `bot people show` (planned) |
+| `--refresh` |  | read the private chat with them from MAX first — one request |  | `bot contacts show` (planned), `bot people show` (planned) |
 | `--regex` |  | the words are one regular expression, case-insensitive, tested against every stored text |  | `messages search` (planned) |
 | `--remove` | `<chat>` | take a chat out of a folder; repeat it for more |  | `chats folders update` |
 | `--reply-to` | `<message>` | answer this message id in the same chat |  | `bot messages send`, `messages send` |

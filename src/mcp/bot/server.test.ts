@@ -169,6 +169,9 @@ const READS = [
   "chat_bot_commands_list",
   "chat_bot_sends_list",
   "chat_bot_recipients_list",
+  "chat_bot_messages_search",
+  "chat_bot_messages_between",
+  "chat_bot_contacts_show",
 ]
 const WRITES = [
   "chat_bot_messages_send",
