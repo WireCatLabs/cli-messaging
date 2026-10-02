@@ -204,6 +204,11 @@
       "value": "<kind>",
       "meaning": "only chats of this kind: dialog, group, channel or saved"
     },
+    "--language": {
+      "value": "<lucene|legacy>",
+      "meaning": "the query language: strict Lucene or legacy discovery",
+      "default": "lucene"
+    },
     "--last": {
       "value": "<n>",
       "meaning": "stop once the newest n messages are held; not with --since",
@@ -433,6 +438,11 @@
     "--timeout": {
       "value": "<duration>",
       "meaning": "give up on the whole command after this — 30s, 2m, 500ms"
+    },
+    "--timezone": {
+      "value": "<zone>",
+      "meaning": "the IANA timezone for calendar date boundaries",
+      "default": "system IANA timezone"
     },
     "--title": {
       "value": "<title>",
@@ -1645,6 +1655,13 @@
       "options": {
         "--chat": "all",
         "--context": "all",
+        "--language": {
+          "in": [],
+          "planned": {
+            "max": "search A1",
+            "tg": "search A1"
+          }
+        },
         "--limit": "all",
         "--newest": "all",
         "--regex": {
@@ -1654,7 +1671,14 @@
             "tg": "T6"
           }
         },
-        "--source": "all"
+        "--source": "all",
+        "--timezone": {
+          "in": [],
+          "planned": {
+            "max": "search A1",
+            "tg": "search A1"
+          }
+        }
       }
     },
     "messages send": {
