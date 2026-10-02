@@ -4,6 +4,13 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 [semver](https://semver.org/); before `1.0.0` a minor version may break callers, and says how under
 "Changed — may break callers". `pnpm docs:check` checks the shape of this file.
 
+## Unreleased
+
+### Fixed
+
+- A review with voice messages that have no transcript reports `complete: false` and lists `unheard`, including when transcription was not requested. Transcription failures also appear as `transcribeProblem` in JSON, so a caller can distinguish them from a fully read conversation.
+- The parity manifest permits max-cli to remove its old inbox/review `--since` options and `cache` command while moving onto the shared commands and store. This unblocks the consumer migration without requiring a simultaneous release.
+
 ## 0.113.0 — 03.10.2026
 
 Released early: tg-cli and max-cli cannot install local MCP setup until cli-messaging 0.113.0 is published
@@ -14,11 +21,6 @@ Released early: tg-cli and max-cli cannot install local MCP setup until cli-mess
   the chosen client and check its handshake and tool list. Setup refuses an existing client entry;
   doctor reads no messages and does not verify the messenger login. Each consuming CLI needs the
   new `@leemour/cli-core/mcp` export.
-
-### Fixed
-
-- A review with voice messages that have no transcript reports `complete: false` and lists `unheard`, including when transcription was not requested. Transcription failures also appear as `transcribeProblem` in JSON, so a caller can distinguish them from a fully read conversation.
-- The parity manifest permits max-cli to remove its old inbox/review `--since` options and `cache` command while moving onto the shared commands and store. This unblocks the consumer migration without requiring a simultaneous release.
 
 ## 0.112.0 — 03.10.2026
 
