@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## 0.113.0 — 03.10.2026
 
+Released early: tg-cli and max-cli cannot install local MCP setup until cli-messaging 0.113.0 is published
+
 ### Added
 
 - **`mcp setup codex|claude-code` and `mcp doctor`** register a messenger's local MCP server in
