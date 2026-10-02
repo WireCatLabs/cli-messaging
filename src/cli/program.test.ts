@@ -1,8 +1,12 @@
-import { captureStreams } from "@leemour/cli-core"
+import { mkdtempSync, readdirSync } from "node:fs"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
+import { CliError, captureStreams } from "@leemour/cli-core"
 import { Command } from "commander"
-import { describe, expect, it } from "vitest"
-import { baseContext } from "./context.js"
-import { run } from "./program.js"
+import { describe, expect, it, vi } from "vitest"
+import { baseContext, environmentOf } from "./context.js"
+import { createProgram, type ProgramDefinition, run } from "./program.js"
+import { startRecording } from "./runs/recording.js"
 import { settingsFor } from "./settings.js"
 
 const app = { command: "app", appName: "app-cli", envPrefix: "APP", description: "A test CLI", version: "1.2.3" }
@@ -25,7 +29,7 @@ const definition = (action: (command: Command) => Promise<void>) => ({
 
 const call = async (argv: string[], action: (command: Command) => Promise<void> = async () => {}) => {
   const streams = captureStreams()
-  const code = await run(argv, definition(action), { streams, tty: false, env: {} })
+  const code = await run(argv, definition(action), { streams, tty: false, env: process.env })
   return { code, stdout: streams.stdout, stderr: streams.stderr }
 }
 
@@ -90,5 +94,177 @@ describe("running a messenger CLI", () => {
     expect(closed).toBe(true)
     expect(code).toBe(9)
     expect(JSON.parse(stderr[0] ?? "").error.code).toBe("timeout")
+  })
+})
+
+describe("consumer lifecycle in the shared shell", () => {
+  const execute = async (argv: string[], overrides: Partial<ProgramDefinition>) => {
+    const streams = captureStreams()
+    const code = await run(
+      argv,
+      { ...definition(async () => {}), ...overrides },
+      {
+        streams,
+        tty: false,
+        env: process.env,
+      },
+    )
+    return { code, stdout: streams.stdout, stderr: streams.stderr }
+  }
+
+  it("configures local root options and preserves injected help for added commands", () => {
+    const output: string[] = []
+    const program = createProgram(
+      {
+        ...definition(async () => {}),
+        configure: (root) => {
+          root.option("--serve", "start the connection server")
+          root.addCommand(new Command("local").description("a local command"))
+        },
+      },
+      { out: (line) => output.push(line) },
+    )
+    program.commands.find((command) => command.name() === "local")?.outputHelp()
+    expect(output.join("\n")).toContain("a local command")
+    expect(program.options.some((option) => option.long === "--serve")).toBe(true)
+  })
+
+  it("prepares legacy context with the shared streams before a profile's action", async () => {
+    const contexts = new WeakMap<Command, unknown>()
+    let root: Command | undefined
+    const result = await execute(["work", "chats", "list", "--serve"], {
+      configure: (program) => {
+        program.option("--serve", "start the connection server")
+      },
+      prepare: async (program, environment) => {
+        await Promise.resolve()
+        root = program
+        contexts.set(program, environment)
+      },
+      commands: () => [
+        new Command("chats").addCommand(
+          new Command("list").action(function (this: Command) {
+            if (!root) throw new Error("context was not prepared")
+            expect(contexts.get(root)).toBe(environmentOf(this))
+            expect(this.optsWithGlobals()).toMatchObject({ profile: "work", serve: true })
+            environmentOf(this).streams?.data('{"ok":true}')
+          }),
+        ),
+      ],
+    })
+    expect(result).toMatchObject({ code: 0, stdout: ['{"ok":true}'], stderr: [] })
+  })
+
+  it.each(["--help", "--version"])("does not settle a failure for %s", async (flag) => {
+    const onFailure = vi.fn()
+    const result = await execute([flag], { onFailure })
+    expect(result.code).toBe(0)
+    expect(result.stdout.length).toBeGreaterThan(0)
+    expect(onFailure).not.toHaveBeenCalled()
+  })
+
+  it("reports a preparation failure without executing the command", async () => {
+    const action = vi.fn()
+    const onFailure = vi.fn()
+    const error = new CliError("permission_error", "synthetic refusal")
+    const result = await execute(["chats", "list", "--no-record"], {
+      ...definition(action),
+      prepare: () => {
+        throw error
+      },
+      onFailure,
+    })
+    expect(result.stdout).toEqual([])
+    expect(JSON.parse(result.stderr[0] ?? "").error.code).toBe("permission_error")
+    expect(action).not.toHaveBeenCalled()
+    expect(onFailure).toHaveBeenCalledWith(error, expect.any(Command))
+  })
+
+  it("awaits consumer settlement and does not create a second fallback run", async () => {
+    const state = mkdtempSync(join(tmpdir(), "shell-settlement-"))
+    const env = { ...process.env, APP_STATE_DIR: state }
+    const streams = captureStreams()
+    const error = new CliError("validation_error", "synthetic command failure")
+    let finished = false
+    const code = await run(
+      ["chats", "list"],
+      {
+        ...definition(async () => {
+          throw error
+        }),
+        onFailure: async (failure) => {
+          await startRecording({
+            app,
+            command: "chats list",
+            profile: "default",
+            record: true,
+            keepFailed: true,
+            trace: false,
+            format: "json",
+            streams,
+            env,
+          }).fail(failure)
+          finished = true
+        },
+      },
+      { streams, env, tty: false },
+    )
+    expect(code).toBe(2)
+    expect(finished).toBe(true)
+    expect(readdirSync(join(state, "runs"))).toHaveLength(1)
+    expect(streams.stdout).toEqual([])
+    expect(JSON.parse(streams.stderr[0] ?? "").error.code).toBe("validation_error")
+  })
+
+  it("preserves the original failure when settlement throws, without exposing handler text", async () => {
+    const result = await execute(["chats", "list", "--no-record"], {
+      ...definition(async () => {
+        throw new CliError("not_found", "synthetic missing item")
+      }),
+      onFailure: async () => {
+        throw new Error("synthetic private handler content")
+      },
+    })
+    expect(result.code).toBe(6)
+    expect(result.stdout).toEqual([])
+    expect(result.stderr[0]).toBe("could not finish the command's failure handler")
+    expect(JSON.parse(result.stderr[1] ?? "").error.code).toBe("not_found")
+    expect(result.stderr.join("\n")).not.toContain("private handler content")
+  })
+
+  it("settles a missing-command failure without preparing resources", async () => {
+    const prepare = vi.fn()
+    const onFailure = vi.fn()
+    const result = await execute(["work"], { prepare, onFailure })
+    expect(result.code).toBe(2)
+    expect(result.stdout).toEqual([])
+    expect(prepare).not.toHaveBeenCalled()
+    expect(onFailure).toHaveBeenCalledOnce()
+  })
+})
+
+describe.each(["max", "tg"])("shared shell contract for %s", (name) => {
+  it("uses identical machine output and failure codes with a provider definition", async () => {
+    const streams = captureStreams()
+    const provider: ProgramDefinition = {
+      app: { ...app, command: name },
+      commands: () => [
+        new Command("messages").addCommand(
+          new Command("list").action(function (this: Command) {
+            const environment = environmentOf(this)
+            if (this.optsWithGlobals().offline) throw new CliError("not_found", "nothing recorded")
+            environment.streams?.data('{"items":[],"hasMore":false}')
+          }),
+        ),
+      ],
+    }
+    const options = { streams, tty: false, env: process.env }
+    expect(await run(["messages", "list", "--json", "--no-record"], provider, options)).toBe(0)
+    expect(streams.stdout).toEqual(['{"items":[],"hasMore":false}'])
+    expect(streams.stderr).toEqual([])
+    streams.stdout.length = 0
+    expect(await run(["messages", "list", "--offline", "--no-record"], provider, options)).toBe(6)
+    expect(streams.stdout).toEqual([])
+    expect(JSON.parse(streams.stderr[0] ?? "")).toEqual({ error: { code: "not_found", message: "nothing recorded" } })
   })
 })

@@ -221,6 +221,11 @@ the first word, resolves settings (flag → environment → file → default, `s
 records runs (`src/cli/runs/`) and closes what a command holds when `--timeout` ends it
 (`src/cli/deadline.ts`).
 
+Optional `ProgramDefinition.configure`, `prepare` and `onFailure` let a consumer add root options,
+provide legacy command context and settle its own recording before the shared fallback.
+Help/version exits skip failure settlement. The [lifecycle contract](../plans/2026-10-03-shell-lifecycle.md)
+describes the order and failure behavior.
+
 A CLI describes its messenger once — a `Messenger` (`src/cli/messenger/context.ts`) with a
 `connect` that returns a `MessengerAdapter` (`src/cli/messenger/port.ts`) — and gets the shared
 commands, one file per resource in `src/cli/messenger/`. Two wrappers sit between a command and the

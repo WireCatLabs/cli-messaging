@@ -23,6 +23,9 @@ export interface ProgramDefinition {
   commands: () => Command[]
   /** The CLI's own settings, for keeping a failure that happened before its command could; plain ones without. */
   configuration?: Configuration
+  configure?: (program: Command) => void
+  prepare?: (program: Command, environment: RunOptions) => void | Promise<void>
+  onFailure?: (error: unknown, program: Command) => void | Promise<void>
 }
 
 export interface ProgramOptions {
@@ -35,7 +38,10 @@ export interface ProgramOptions {
  * The command tree, built fresh on each call. Commander is global state by default —
  * `exitOverride` and the write hooks turn it into a value a test can drive.
  */
-export const createProgram = ({ app, commands }: ProgramDefinition, { out, err }: ProgramOptions = {}): Command => {
+export const createProgram = (
+  { app, commands, configure }: ProgramDefinition,
+  { out, err }: ProgramOptions = {},
+): Command => {
   const program = new Command()
 
   program
@@ -65,6 +71,7 @@ export const createProgram = ({ app, commands }: ProgramDefinition, { out, err }
     .showHelpAfterError()
 
   for (const command of commands()) program.addCommand(command)
+  configure?.(program)
 
   // Depth-first: Commander does not pass `configureOutput` down to a command added with
   // `addCommand`, so `tg messages --help` would write to the real terminal.
@@ -94,7 +101,8 @@ export const run = async (argv: string[], definition: ProgramDefinition, options
     out: (text) => streams.data(text.replace(/\n$/, "")),
     err: (text) => streams.diagnostic(text.replace(/\n$/, "")),
   })
-  provide(program, { ...options, streams, app: definition.app })
+  const environment = { ...options, streams, app: definition.app }
+  provide(program, environment)
   // Depth-first: a subcommand left with the default behaviour kills the process from inside a test.
   forEachCommand(program, (child) => child.exitOverride())
 
@@ -110,11 +118,13 @@ export const run = async (argv: string[], definition: ProgramDefinition, options
       `"${profile}" is not a command, so it was read as a profile name — and no command followed it. ` +
       `Run \`${command} --help\` for the commands, or \`${command} ${profile} account show\` if "${profile}" is your profile.`
     report(streams, options, { code: "validation_error", message })
-    await keepFailure(new CliError("validation_error", message), { definition, program, rest, profile, options })
+    const failure = new CliError("validation_error", message)
+    await settleFailure(failure, { definition, program, rest, profile, options })
     return exitCodeFor("validation_error")
   }
 
   try {
+    await definition.prepare?.(program, environment)
     await program.parseAsync(rest, { from: "user" })
     const code = process.exitCode === undefined ? 0 : Number(process.exitCode)
     const hint = code === 0 && !rest.includes("--quiet") ? hintFor(definition, rest, options) : undefined
@@ -123,7 +133,7 @@ export const run = async (argv: string[], definition: ProgramDefinition, options
   } catch (error) {
     if (!isCommanderFailure(error) || error.exitCode !== 0) {
       const failure = isCommanderFailure(error) ? new CliError("validation_error", error.message) : error
-      await keepFailure(failure, { definition, program, rest, profile, options })
+      await settleFailure(failure, { definition, program, rest, profile, options })
     }
     if (isCommanderFailure(error)) {
       if (profile !== undefined && error.code === "commander.unknownCommand") {
@@ -164,6 +174,16 @@ interface Failed {
   rest: string[]
   profile: string | undefined
   options: RunOptions
+}
+
+const settleFailure = async (failure: unknown, state: Failed): Promise<void> => {
+  try {
+    await state.definition.onFailure?.(failure, state.program)
+  } catch {
+    const streams = state.options.streams ?? processStreams
+    streams.diagnostic("could not finish the command's failure handler")
+  }
+  await keepFailure(failure, state)
 }
 
 /**
