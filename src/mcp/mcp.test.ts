@@ -306,6 +306,7 @@ describe("the MCP server", () => {
       "chat_conversations_show",
       "chat_inbox",
       "chat_messages_context",
+      "chat_messages_evidence",
       "chat_messages_list",
       "chat_messages_photo",
       "chat_messages_scheduled",
@@ -470,6 +471,45 @@ describe("the MCP server", () => {
     expect(unheld.isError).toBe(true)
     expect(JSON.stringify(unheld.body)).toContain('--source takes chat, personal, bots, all — not \\"nowhere\\"')
     expect(telegram.opened()).toBe(1)
+  })
+
+  it("prepares stored evidence with a cursor and typed failures without connecting", async () => {
+    const root = await filledRoot()
+    const telegram = scripted()
+    const { call, client, env } = await connect(telegram, { root, config: levels({ messages: "readonly" }) })
+    const store = await openStore({ path: env.MESSAGING_STORE })
+    try {
+      await store.saveMessages({ provider: "chat", account: "500" }, "7", [{ ...message, id: "2" }], { via: "test" })
+    } finally {
+      await store.close()
+    }
+    const evidence = (await client.listTools()).tools.find((one) => one.name === "chat_messages_evidence")
+    expect(evidence?.annotations).toMatchObject({ readOnlyHint: true, destructiveHint: false, openWorldHint: false })
+    const first = await call("chat_messages_evidence", { chat: "Book", limit: 1 })
+    expect(first.isError).toBe(false)
+    expect(first.body).toMatchObject({
+      kind: "chats",
+      source: { provider: "chat", account: "500", chat: "7" },
+      nextBeforeId: "2",
+      items: [{ locator: "msg:chat/500/7/2" }],
+      coverage: { hasMore: true, history: "unknown" },
+    })
+    const next = await call("chat_messages_evidence", { chat: "7", before_id: first.body.nextBeforeId })
+    expect(next.body).toMatchObject({ nextBeforeId: null, items: [{ locator: "msg:chat/500/7/1" }] })
+    const invalid = await call("chat_messages_evidence", { chat: "7", before_id: "missing" })
+    expect(invalid.isError).toBe(true)
+    expect(invalid.body.error.code).toBe("not_found")
+    expect(
+      (await client.callTool({ name: "chat_messages_evidence", arguments: { chat: "7", limit: 101 } })).isError,
+    ).toBe(true)
+    expect(telegram.opened()).toBe(0)
+  })
+
+  it("removes the evidence tool when the messages permission is denied", async () => {
+    const telegram = scripted()
+    const { client } = await connect(telegram, { config: levels({ messages: "deny" }) })
+    expect((await client.listTools()).tools.map(({ name }) => name)).not.toContain("chat_messages_evidence")
+    expect(telegram.opened()).toBe(0)
   })
 
   it("lists and shows a built chat's conversations from the store, and names the build command before that", async () => {

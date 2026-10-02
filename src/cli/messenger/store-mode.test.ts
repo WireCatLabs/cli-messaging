@@ -1,4 +1,4 @@
-import { mkdtempSync } from "node:fs"
+import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { captureStreams } from "@leemour/cli-core"
@@ -76,7 +76,13 @@ const sandbox = () => {
   }
 }
 
-const call = async (argv: string[], env: NodeJS.ProcessEnv, connect: Messenger["connect"], history?: "store") => {
+const call = async (
+  argv: string[],
+  env: NodeJS.ProcessEnv,
+  connect: Messenger["connect"],
+  history?: "store",
+  tty = false,
+) => {
   const messenger: Messenger = {
     app,
     provider: "chat",
@@ -99,7 +105,7 @@ const call = async (argv: string[], env: NodeJS.ProcessEnv, connect: Messenger["
         reviewCommand(messenger),
       ],
     },
-    { streams, tty: false, env },
+    { streams, tty, env },
   )
   return { code, stdout: streams.stdout.join(""), stderr: streams.stderr.join("\n") }
 }
@@ -115,6 +121,76 @@ const filled = async () => {
   }
   return env
 }
+
+describe("stored evidence command", () => {
+  it.each(["--json", "--jsonl"])("returns a complete packet in %s and pages without connecting", async (format) => {
+    const env = await filled()
+    const connection = pushing()
+    const first = await call(["messages", "evidence", "Book", "--limit", "2", format], env, connection.connect)
+    expect(first.code).toBe(0)
+    expect(first.stderr).toBe("")
+    const packet = JSON.parse(first.stdout)
+    expect(packet).toMatchObject({
+      kind: "chats",
+      source: { provider: "chat", account: "500", chat: "7" },
+      nextBeforeId: "2",
+      coverage: { provided: 2, included: 2, hasMore: true, history: "unknown" },
+    })
+    expect(packet.items.map((item: { locator: string }) => item.locator)).toEqual([
+      "msg:chat/500/7/3",
+      "msg:chat/500/7/2",
+    ])
+    const next = await call(["messages", "evidence", "7", "--before-id", "2", format], env, connection.connect)
+    expect(JSON.parse(next.stdout)).toMatchObject({ nextBeforeId: null, items: [{ locator: "msg:chat/500/7/1" }] })
+    expect(connection.connects).toEqual([])
+  })
+
+  it("shows human evidence with coverage and continuation notes", async () => {
+    const env = await filled()
+    const connection = pushing()
+    const result = await call(["messages", "evidence", "7", "--limit", "1"], env, connection.connect, undefined, true)
+    expect(result.code).toBe(0)
+    expect(result.stdout).toContain("msg:chat/500/7/3")
+    expect(result.stderr).toContain("history coverage unknown")
+    expect(result.stderr).toContain("--before-id 3")
+    expect(connection.connects).toEqual([])
+  })
+
+  it("returns typed errors for missing account, bad limits and missing anchors without connecting", async () => {
+    const connection = pushing()
+    const empty = await call(["messages", "evidence", "7", "--json"], sandbox(), connection.connect)
+    expect(empty.code).not.toBe(0)
+    expect(empty.stdout).toBe("")
+    expect(JSON.parse(empty.stderr).error.code).toBe("not_found")
+    const env = await filled()
+    for (const flags of [
+      ["--limit", "101"],
+      ["--before-id", "missing"],
+    ]) {
+      const result = await call(["messages", "evidence", "7", "--json", ...flags], env, connection.connect)
+      expect(result.code).not.toBe(0)
+      expect(result.stdout).toBe("")
+      expect(JSON.parse(result.stderr).error.code).toBe(flags[0] === "--limit" ? "validation_error" : "not_found")
+    }
+    expect(connection.connects).toEqual([])
+  })
+
+  it("inherits a denied messages permission before opening the store", async () => {
+    const env = sandbox()
+    mkdirSync(env.CHAT_CONFIG_DIR, { recursive: true })
+    writeFileSync(
+      join(env.CHAT_CONFIG_DIR, "config.json"),
+      JSON.stringify({ profiles: { default: { permissions: { messages: "deny" } } } }),
+    )
+    const connection = pushing()
+    const result = await call(["messages", "evidence", "7", "--json"], env, connection.connect)
+    expect(result.code).not.toBe(0)
+    expect(result.stdout).toBe("")
+    expect(result.stderr).toContain("deny")
+    expect(existsSync(env.MESSAGING_STORE)).toBe(false)
+    expect(connection.connects).toEqual([])
+  })
+})
 
 const pushing = () => {
   const connects: number[] = []

@@ -42,6 +42,10 @@ const message = {
 }
 await messages.saveMessages(key, "-1002", [message], { via: "check" })
 const read = await messages.messages(key, "-1002", { limit: 5 })
+const { readEvidencePacket } = await import(join(root, "services/index.js"))
+const storedEvidence = await readEvidencePacket(messages, key, { chat: "-1002", limit: 5 })
+if (storedEvidence.items[0]?.locator !== "msg:telegram/1/-1002/3" || storedEvidence.nextBeforeId !== null)
+  throw new Error("./services from dist did not read a stored evidence packet")
 await messages.close()
 if (read.items[0]?.text !== message.text) throw new Error("openStore from dist did not give the saved message back")
 console.log(`dist: Drizzle bundled and working under ${"Bun" in globalThis ? "Bun" : "Node"}`)
