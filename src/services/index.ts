@@ -27,6 +27,8 @@ export type { Embedded, EmbeddingsService, EmbedStatus, FoundConversation } from
 export { embeddingsService } from "./embeddings.js"
 export type { EvidenceKind, EvidenceMessage, EvidencePacket, EvidencePacketInput, EvidenceSource } from "./evidence.js"
 export { prepareEvidencePacket } from "./evidence.js"
+export type { EvidenceReadQuery, StoredEvidencePacket } from "./evidence-read.js"
+export { readEvidencePacket } from "./evidence-read.js"
 export type { FolderEdit, FoldersService } from "./folders.js"
 export { foldersService } from "./folders.js"
 export type { InboxService } from "./inbox.js"

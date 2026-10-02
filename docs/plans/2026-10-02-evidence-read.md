@@ -1,8 +1,9 @@
 # Stored message evidence contract
 
 The next step after `prepareEvidencePacket`: a local read use case shared by command and MCP.
-This contract precedes implementation. Both consumer commands remain planned until a shared
-release is adopted; it does not describe an installed tg or max command yet.
+This contract was merged before implementation. The shared command factory, MCP tool and read
+service implement it. Both consumer commands remain planned until a shared release is adopted;
+it does not describe an installed tg or max command yet.
 
 ## Command and options
 

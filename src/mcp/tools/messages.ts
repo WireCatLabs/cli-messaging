@@ -3,7 +3,7 @@ import { listStart } from "../../cli/messenger/after.js"
 import type { Messenger } from "../../cli/messenger/context.js"
 import { capability } from "../../cli/messenger/port.js"
 import { listed } from "../../cli/paging.js"
-import { servicesFor, storedDeps } from "../../services/index.js"
+import { readEvidencePacket, servicesFor, storedDeps } from "../../services/index.js"
 import { heard, hearForTool, modelWith } from "../../speech/hearing.js"
 import { type AnyTool, chatOf, limit, message, nameOf, READ, snakeOf, tool } from "../tool.js"
 
@@ -11,6 +11,33 @@ export const messagesTools = (messenger: Messenger): Record<string, AnyTool> => 
   const chat = chatOf(messenger)
   const name = nameOf(messenger)
   return {
+    messages_evidence: tool({
+      title: "Prepare stored chat evidence",
+      description:
+        "A chat evidence packet from the current profile's local archive, newest first. Never connects or marks " +
+        "read. Whole messages fill at most 64 KiB of JSON items; the packet envelope is additional. Returns " +
+        "source locators, fingerprints, coverage (history unknown) and nextBeforeId. Pass a non-null cursor as " +
+        "before_id for older messages. An oversized first message returns an empty, byte-truncated packet " +
+        "with no cursor; handle that obstruction explicitly. Prepares evidence, not a generated summary.",
+      input: v.object({
+        chat,
+        limit,
+        before_id: v.optional(v.pipe(message, v.description("only messages older than this message id"))),
+      }),
+      annotations: { ...READ, openWorldHint: false },
+      stored: (store, account, args, defaults) =>
+        readEvidencePacket(
+          store,
+          account,
+          {
+            chat: args.chat,
+            limit: args.limit ?? defaults.limit,
+            ...(args.before_id === undefined ? {} : { before: args.before_id }),
+          },
+          messenger,
+        ),
+    }),
+
     messages_list: tool({
       title: "Read a chat",
       description:

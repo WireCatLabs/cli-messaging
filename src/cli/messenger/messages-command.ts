@@ -21,6 +21,7 @@ import {
 } from "./hearing-command.js"
 import { deleteCommand } from "./messages-delete-command.js"
 import { editCommand } from "./messages-edit-command.js"
+import { evidenceCommand } from "./messages-evidence-command.js"
 import { forwardCommand } from "./messages-forward-command.js"
 import { pinCommand, unpinCommand } from "./messages-pin-command.js"
 import { scheduledCommand } from "./messages-scheduled-command.js"
@@ -30,6 +31,7 @@ import { transcribeSubcommand } from "./transcribe-command.js"
 /** `messages`: reading, and sending through the guard. A CLI may add its own subcommands. */
 export const messagesCommand = (messenger: Messenger): Command => {
   const messages = new Command("messages").description("read and send messages")
+  messages.addCommand(evidenceCommand(messenger))
 
   messages
     .command("list")

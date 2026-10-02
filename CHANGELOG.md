@@ -8,6 +8,11 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Added
 
+- **Stored chat evidence through CLI and MCP:** the shared `messages evidence <chat>` and
+  `<cli>_messages_evidence` read only the profile's local archive, returning newest-first packets
+  with source locators, coverage and an older-page cursor. The packet keeps whole messages within
+  64 KiB of JSON items; `--limit` accepts 1–100. Both use the exported `readEvidencePacket` service,
+  without connecting or marking read. Consumers gain these entry points when adopting the release.
 - **`prepareEvidencePacket` from `./services`** builds a versioned evidence packet from an already
   authorised message page for chat briefs, news or person context. It preserves order, includes
   source locators and content fingerprints, bounds the message count and serialized content bytes,
