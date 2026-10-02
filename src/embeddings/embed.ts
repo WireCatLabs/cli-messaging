@@ -26,31 +26,18 @@ export interface Embedder {
 
 /**
  * Models a long-running process keeps open between searches — the MCP server, where loading one costs
- * ~1 s a call. On Node one no search has used for `idleMs` is closed, and the next search loads it again:
- * e5-small holds ~1 GB for as long as an agent's session lasts. Whoever makes it closes it; a one-shot
+ * ~1 s a call. One no search has used for `idleMs` is closed, and the next search loads it again: e5-small
+ * holds ~1 GB, for as long as an agent's session lasts otherwise. Whoever makes it closes it; a one-shot
  * command never makes one.
  */
 export interface WarmEmbedders {
-  /** Open each model in a worker thread of its own: only ending the thread gives its memory back. */
-  readonly isolated: boolean
   get(key: string, open: () => Promise<Embedder>): Promise<Embedder>
   close(): Promise<void>
 }
 
 export const WARM_IDLE_MS = 10 * 60_000
 
-/**
- * Measured 2026-10-02, three load-and-close cycles: on Node a model in a worker leaves ~0.2 GB once closed,
- * every time, while one in this thread leaves ~0.8 GB; on Bun either way grows ~0.2–0.55 GB a cycle, so
- * there the model is kept rather than reloaded.
- */
-const unloads = process.versions.bun === undefined
-
-export const warmEmbedders = ({
-  idleMs = unloads ? WARM_IDLE_MS : undefined,
-}: {
-  idleMs?: number | undefined
-} = {}): WarmEmbedders => {
+export const warmEmbedders = ({ idleMs = WARM_IDLE_MS }: { idleMs?: number } = {}): WarmEmbedders => {
   const held = new Map<string, Promise<Embedder>>()
   const timers = new Map<string, ReturnType<typeof setTimeout>>()
   const running = new Map<string, number>()
@@ -62,7 +49,6 @@ export const warmEmbedders = ({
     return one
   }
   const rearm = (key: string) => {
-    if (idleMs === undefined) return
     clearTimeout(timers.get(key))
     const timer = setTimeout(() => {
       // A search still running rearms the clock when it ends.
@@ -76,7 +62,6 @@ export const warmEmbedders = ({
     timers.set(key, timer)
   }
   return {
-    isolated: idleMs !== undefined,
     get: (key, open) => {
       let opening = held.get(key)
       if (!opening) {

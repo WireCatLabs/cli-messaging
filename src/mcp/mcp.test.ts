@@ -45,12 +45,13 @@ vi.mock("../embeddings/embed.js", async (original) => {
     },
   }
 })
-// The worker file cannot load under vitest: the server's model runs in this thread here, counted as above.
-vi.mock("../embeddings/workers.js", async () => {
+// The child process runs from dist, which the tests do not build: the server's model runs in this thread here,
+// counted as above.
+vi.mock("../embeddings/process.js", async () => {
   const { openEmbedder } = await import("../embeddings/embed.js")
   return {
-    openWorkers: (
-      ...[model, directory, { threads }]: Parameters<typeof import("../embeddings/workers.js").openWorkers>
+    openProcess: (
+      ...[model, directory, { threads }]: Parameters<typeof import("../embeddings/process.js").openProcess>
     ) => openEmbedder(model, directory, { threads }),
   }
 })
