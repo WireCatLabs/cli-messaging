@@ -17,6 +17,7 @@ import type { Messenger } from "./context.js"
 const SHELLS = ["zsh", "bash", "fish", "powershell"]
 
 export interface CompletionOptions {
+  account?: (profile: string, env: NodeJS.ProcessEnv) => string | undefined
   sources?: (profile: string, words: string[], env: NodeJS.ProcessEnv) => CompletionSources | undefined
 }
 
@@ -61,8 +62,7 @@ export const completeCommand = (
       const lock = env[envName(app, "PROFILE_LOCK")]
       const wanted = profile ?? lock ?? env[envName(app, "PROFILE")] ?? DEFAULT_PROFILE
       const custom = readable(wanted, lock) ? options.sources?.(wanted, rest, env) : undefined
-      const account =
-        !custom && readable(wanted, lock) ? recalledAccount(app, messenger.provider, wanted, env) : undefined
+      const account = !custom && readable(wanted, lock) ? accountOf(messenger, wanted, env, options) : undefined
       const store = account && existsSync(storePath(env)) ? await openStore({ env }).catch(() => undefined) : undefined
       try {
         // Read up front: `suggest` asks its sources synchronously, and the store answers asynchronously.
@@ -91,6 +91,12 @@ export const completeCommand = (
         await store?.close()
       }
     })
+
+const accountOf = (messenger: Messenger, profile: string, env: NodeJS.ProcessEnv, options: CompletionOptions) => {
+  if (!options.account) return recalledAccount(messenger.app, messenger.provider, profile, env)
+  const id = options.account(profile, env)
+  return id === undefined ? undefined : { provider: messenger.provider, account: id }
+}
 
 /** A half-typed or odd first word, or another profile than a locked one, gets no names rather than an error. */
 const readable = (profile: string, lock: string | undefined): boolean => {
