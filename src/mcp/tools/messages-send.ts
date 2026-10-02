@@ -41,6 +41,9 @@ export const messageSendTools = (messenger: Messenger): Record<string, AnyTool> 
           v.pipe(v.string(), v.minLength(1), v.description("an Ogg Opus file to send as a voice message, alone")),
         ),
         reply_to: v.optional(v.pipe(message, v.description("the message this answers, in the same chat"))),
+        topic: v.optional(
+          v.pipe(v.string(), v.minLength(1), v.description("the forum topic id; unsupported without topics")),
+        ),
         send_id: v.optional(v.pipe(v.string(), v.minLength(1), v.description("from an earlier outcome_unknown"))),
         silent: v.optional(v.pipe(v.boolean(), v.description("deliver without a notification"))),
         no_preview: v.optional(v.pipe(v.boolean(), v.description("no preview card for a link in the text"))),
@@ -79,6 +82,7 @@ export const messageSendTools = (messenger: Messenger): Record<string, AnyTool> 
           text: args.text ?? "",
           ...(attachments.length === 0 ? {} : { attachments }),
           ...(args.send_id === undefined ? {} : { sendId: args.send_id }),
+          ...(args.topic === undefined ? {} : { threadId: args.topic }),
           ...(args.reply_to === undefined ? {} : { replyTo: args.reply_to }),
           ...(args.silent === true ? { silent: true } : {}),
           ...(args.no_preview === true ? { noPreview: true } : {}),

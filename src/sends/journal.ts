@@ -66,6 +66,7 @@ export interface SendEntry {
   operationId?: string
   /** The message a reply answers. */
   replyTo?: Id
+  threadId?: Id
   length?: number
   /** What was attached, by kind and size — never a file name. */
   attachments?: { kind: "photo" | "file" | "video" | "voice"; bytes: number }[]

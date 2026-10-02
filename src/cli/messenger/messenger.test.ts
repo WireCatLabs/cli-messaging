@@ -147,6 +147,65 @@ const call = async (
   return { code, stdout: streams.stdout, stderr: streams.stderr }
 }
 
+describe("explicit topic addressing", () => {
+  it("passes message and poll topics through the CLI and journal", async () => {
+    const root = mkdtempSync(join(tmpdir(), "topic-cli-"))
+    const env = {
+      CHAT_STATE_DIR: join(root, "state"),
+      CHAT_CONFIG_DIR: join(root, "config"),
+      MESSAGING_STORE: join(root, "m.db"),
+    }
+    const validateThread = vi.fn(async (_chat: string, _thread: string, _options: { replyTo?: string }) => {})
+    const send = vi.fn(async (_chat: string, _text: string, options: SendOptions) => ({
+      message,
+      sendId: options.sendId,
+    }))
+    const createPoll = vi.fn(async (_chatId: string, _poll: unknown, options: { sendId: string }) => ({
+      message,
+      sendId: options.sendId,
+    }))
+    const connection = { ...fake, validateThread, send, createPoll }
+    const sent = await call(
+      ["messages", "send", "Book", "hello", "--topic", "12", "--reply-to", "14", "--send-id", "42", "--json"],
+      async () => connection,
+      env,
+    )
+    const poll = await call(
+      ["polls", "create", "Book", "Friday?", "yes", "no", "--topic", "12", "--send-id", "43", "--json"],
+      async () => connection,
+      env,
+    )
+    expect(sent.code).toBe(0)
+    expect(poll.code).toBe(0)
+    expect(sent.stdout).toHaveLength(1)
+    expect(JSON.parse(sent.stdout[0] ?? "")).toMatchObject({ sendId: "42" })
+    expect(validateThread.mock.calls).toEqual([
+      ["7", "12", { replyTo: "14" }],
+      ["7", "12", {}],
+    ])
+    expect(send).toHaveBeenCalledWith(
+      "7",
+      "hello",
+      expect.objectContaining({ threadId: "12", replyTo: "14", sendId: "42" }),
+    )
+    expect(createPoll).toHaveBeenCalledWith("7", expect.anything(), { threadId: "12", sendId: "43" })
+    expect(new SendJournal(sendsPathFor(app, "default", env)).entries().map(({ threadId }) => threadId)).toEqual([
+      "12",
+      "12",
+    ])
+    expect((await call(["messages", "send", "Book", "hi", "--topic", " "], async () => connection, env)).code).not.toBe(
+      0,
+    )
+    expect(
+      (await call(["polls", "create", "Book", "Friday?", "yes", "no", "--topic", " "], async () => connection, env))
+        .code,
+    ).not.toBe(0)
+    const unsupported = await call(["messages", "send", "Book", "hi", "--topic", "12"], async () => fake, env)
+    expect(unsupported.stderr.join("")).toContain("cannot send to a forum topic")
+    expect(send).toHaveBeenCalledTimes(1)
+  })
+})
+
 describe("the shared read commands", () => {
   it("**answer offline exactly what the messenger answered**, without connecting", async () => {
     const root = mkdtempSync(join(tmpdir(), "messenger-"))

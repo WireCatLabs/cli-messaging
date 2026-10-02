@@ -56,6 +56,9 @@ export const pollWriteTools = (messenger: Messenger): Record<string, AnyTool> =>
         multiple: v.optional(v.boolean()),
         anonymous: v.optional(v.boolean()),
         revote: v.optional(v.pipe(v.boolean(), v.description("people may change their vote; without it they cannot"))),
+        topic: v.optional(
+          v.pipe(v.string(), v.minLength(1), v.description("the forum topic id; unsupported without topics")),
+        ),
         send_id: v.optional(v.pipe(v.string(), v.minLength(1), v.description("from an earlier outcome_unknown"))),
       }),
       annotations: WRITE,
@@ -73,6 +76,7 @@ export const pollWriteTools = (messenger: Messenger): Record<string, AnyTool> =>
           },
           silent: false,
           ...(args.send_id === undefined ? {} : { sendId: args.send_id }),
+          ...(args.topic === undefined ? {} : { threadId: args.topic }),
         })
         return { sendId: sent.sendId, operationId: sent.operationId, message: sent.message }
       },

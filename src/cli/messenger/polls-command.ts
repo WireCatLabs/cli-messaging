@@ -4,6 +4,7 @@ import { Command } from "commander"
 import { guardedClose, guardedCreatePoll, guardedVote } from "../../sends/polls.js"
 import { type Messenger, messengerContext } from "./context.js"
 import { capability } from "./port.js"
+import { threadIdOf } from "./thread.js"
 
 /**
  * `polls show|vote|close|create`. An answer is named by its id, as `polls show` prints it — never by
@@ -74,6 +75,7 @@ export const pollsCommand = (messenger: Messenger): Command => {
     .argument("<chat>", messenger.chatArgument)
     .argument("<question>", "the question")
     .argument("<answers...>", "two answers or more")
+    .option("--topic <id>", "send to this forum topic; unsupported by messengers without topics")
     .option("--multiple", "people may pick several answers")
     .option("--anonymous", "nobody sees who voted for what")
     .option("--revote", "people may change their vote")
@@ -81,16 +83,19 @@ export const pollsCommand = (messenger: Messenger): Command => {
     .option("--send-id <id>", "repeat a create whose outcome was unknown, without risking a second poll")
     .action(async function (this: Command, chat: string, question: string, answers: string[]) {
       const context = messengerContext(this, messenger)
-      const { multiple, anonymous, revote, silent, sendId } = this.opts<{
+      const { multiple, anonymous, revote, silent, sendId, topic } = this.opts<{
+        topic?: string
         multiple?: boolean
         anonymous?: boolean
         revote?: boolean
         silent?: boolean
         sendId?: string
       }>()
+      const threadId = threadIdOf(topic)
       const sent = await context.withMessenger((connection) =>
         guardedCreatePoll(context.guard, connection, {
           chat,
+          ...(threadId === undefined ? {} : { threadId }),
           poll: {
             question,
             answers,

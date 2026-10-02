@@ -1,6 +1,7 @@
 import { CliError, singleLine } from "@leemour/cli-core"
 import type { Messenger } from "../cli/messenger/context.js"
 import { type After, capability, type Download, type Sent } from "../cli/messenger/port.js"
+import { threadIdOf } from "../cli/messenger/thread.js"
 import { parseLocator } from "../domain/locator.js"
 import { parseMarkdown } from "../domain/markdown.js"
 import type { Chat, Deletion, Id, Message, Page, Provider, WindowedMessage } from "../domain/models.js"
@@ -61,6 +62,7 @@ export interface SendRequest {
   text: string
   sendId?: string
   replyTo?: string
+  threadId?: string
   silent?: boolean
   noPreview?: boolean
   markdown?: boolean
@@ -183,7 +185,18 @@ export const messagesService = (deps: ServiceDeps): MessagesService => {
 
     search: (query) => inStore((store, account) => searchStore(store, account, query, deps.messenger)),
 
-    send: async ({ chat, text: typed, sendId, replyTo, silent, noPreview, markdown, at, attachments = [] }) => {
+    send: async ({
+      chat,
+      text: typed,
+      sendId,
+      replyTo,
+      threadId: typedThread,
+      silent,
+      noPreview,
+      markdown,
+      at,
+      attachments = [],
+    }) => {
       const connection = await deps.connection()
       if (at !== undefined && sendId !== undefined) {
         throw new CliError(
@@ -195,6 +208,9 @@ export const messagesService = (deps: ServiceDeps): MessagesService => {
       if (text.trim() === "" && attachments.length === 0) {
         throw new CliError("validation_error", "nothing to send — the marks leave no text")
       }
+      const threadId = threadIdOf(typedThread)
+      const validate =
+        threadId === undefined ? undefined : capability(connection, "validateThread", "send to a forum topic")
       const { id: chatId } = await connection.resolve(chat)
       const id = sendId ?? connection.newSendId?.() ?? newSendId()
       const attempt = {
@@ -204,6 +220,7 @@ export const messagesService = (deps: ServiceDeps): MessagesService => {
         operationId: id,
         length: text.length,
         ...(replyTo === undefined ? {} : { replyTo }),
+        ...(threadId === undefined ? {} : { threadId }),
         ...(at === undefined ? {} : { scheduledFor: at }),
         ...(attachments.length === 0
           ? {}
@@ -217,6 +234,7 @@ export const messagesService = (deps: ServiceDeps): MessagesService => {
             connection.send(chatId, text, {
               sendId: id,
               ...(replyTo === undefined ? {} : { replyTo }),
+              ...(threadId === undefined ? {} : { threadId }),
               ...(silent ? { silent } : {}),
               ...(noPreview ? { noPreview } : {}),
               ...(markup.length > 0 ? { markup } : {}),
@@ -224,6 +242,9 @@ export const messagesService = (deps: ServiceDeps): MessagesService => {
               ...(attachments.length === 0 ? {} : { attachments }),
             }),
           (sent) => ({ messageId: sent.message.id }),
+          validate === undefined || threadId === undefined
+            ? undefined
+            : () => validate(chatId, threadId, { ...(replyTo === undefined ? {} : { replyTo }) }),
         )
         return { ...done, operationId: id }
       } catch (error) {

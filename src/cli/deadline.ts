@@ -37,8 +37,9 @@ export const withDeadline = async <T>(
   const writes = new Set<WriteInFlight>()
   const expired = new Promise<never>((_, reject) => {
     timer = setTimeout(() => {
-      const cut = [...writes]
-      for (const write of cut) write.cut()
+      const pending = [...writes]
+      const cut = pending.filter((write) => !write.preparing)
+      for (const write of pending) write.cut()
       timedOut =
         cut.length > 0
           ? new CliError(
