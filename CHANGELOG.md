@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.105.0 — 02.10.2026
+
 ### Fixed
 
 - **`bot mcp`'s warning for `--allow-send`, `--allow-delete` and `--allow-moderate` names no command
