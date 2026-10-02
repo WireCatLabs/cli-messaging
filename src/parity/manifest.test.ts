@@ -109,8 +109,11 @@ describe("parityProblems", () => {
     expect(parityProblems(rows, "max", max)).toEqual([])
   })
 
-  it("passes a planned CLI that has the command already", () => {
-    const max = program(command("store", [], [command("store fetch", ["--all"]), command("store jobs")]))
+  it("passes a planned CLI that has the command already, whatever options it has", () => {
+    const max = program(
+      command("store", [], [command("store fetch", ["--all"]), command("store jobs", ["--follow"])]),
+      command("bot", ["--quiet"]),
+    )
 
     expect(parityProblems(rows, "max", max)).toEqual([])
   })
