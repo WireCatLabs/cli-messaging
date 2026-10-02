@@ -6,6 +6,13 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- `ProgramDefinition` accepts optional `configure`, `prepare` and `onFailure` hooks. Consumers
+  can add root options, inject legacy command context and settle their own failed run while
+  sharing parsing and error reporting. Help/version skip failure settlement; a failed handler
+  preserves the original command error. Existing definitions need no changes.
+
 ## 0.117.0 — 03.10.2026
 
 Released early: max-cli completion needs the existing local account binding for MCP-only profiles
