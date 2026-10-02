@@ -28,7 +28,7 @@ export const botContext = (command: Command, bot: BotMessenger) => {
   const recipients = () => new RecipientList(files.recipients, words)
   const journal = () => new SendJournal(files.journal)
   const connect = async (token: string, options: BotConnectOptions = {}): Promise<BotAdapter> => {
-    const adapter = await bot.connect(command, token, options)
+    const adapter = await bot.connect(command, token, { ...options, track: base.track })
     base.track(adapter)
     return adapter
   }
@@ -55,6 +55,9 @@ export const botContext = (command: Command, bot: BotMessenger) => {
         readOnlyFrom: settings.sources.readOnly ?? "default",
         permissions: settings.permissions,
         permissionSources: settings.permissionSources,
+        permissionFix: (request, key) =>
+          bot.permissionFix?.(settings, request) ??
+          `${bot.app.command} ${asFirstWord(profile)}config set --bot permissions.${key} allow`,
         ask: terminalAsker(command),
         sendsPerHour: settings.sendsPerHour,
         journal: journal(),

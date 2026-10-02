@@ -172,6 +172,7 @@ describe("bot messages send", () => {
 
     expect(refused.code).toBe(5)
     expect(refused.stderr).toContain("bot.messages.send")
+    expect(refused.stderr).toContain("chat sales config set --bot permissions.bot.messages.send allow")
     expect(sent).toEqual([])
   })
 })

@@ -6,6 +6,19 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- **Bot fetch can open a history-only reader**, passing an optional starting link, the pause and
+  the stop signal. A messenger can expose `--from` through `fetching.from`; other bot commands
+  stay on their normal transport. Connections can be tracked before login so a timeout closes them.
+
+### Fixed
+
+- **`bot store fetch` closes its adapter on success and failure.** This matters for a bot history
+  reader that holds a socket: the command must print its result and exit.
+- **A bot permission refusal names a working `config set --bot` command.** A caller can provide its
+  own fix through `BotMessenger.permissionFix`; the personal guard's default hint is unchanged.
+
 ### Changed — may break callers
 
 - **The parity manifest checks `bot store fetch` in max-cli** (#329); tg-cli's is planned, since a Telegram

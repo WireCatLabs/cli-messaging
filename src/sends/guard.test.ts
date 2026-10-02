@@ -190,6 +190,30 @@ describe("an allow-list refusal", () => {
   })
 })
 
+describe("a permission-level refusal", () => {
+  it("uses the caller's fix with the write request, and keeps the personal hint by default", () => {
+    const options = {
+      profile: "sales",
+      command: "tg",
+      readOnly: false,
+      readOnlyFrom: "default",
+      permissions: { "bot.messages.edit": "readonly" as const },
+      sendsPerHour: 10,
+      journal: new SendJournal(sendsPathFor("g-level-fix")),
+      recipients: new RecipientList(recipientsPathFor("g-level-fix"), app.command),
+      warn: () => {},
+    }
+    const request = { chatId: "1", kind: "edit" as const, key: "bot.messages.edit" }
+    expect(() => sendGuard(options).check(request)).toThrow("tg sales config set permissions.bot.messages.edit allow")
+    const guard = sendGuard({
+      ...options,
+      permissionFix: (one, key) =>
+        `tg sales config set --bot permissions.${key} ${one.kind === "edit" ? "allow" : "deny"}`,
+    })
+    expect(() => guard.check(request)).toThrow("tg sales config set --bot permissions.bot.messages.edit allow")
+  })
+})
+
 describe("the journal written by max-cli before it was shared", () => {
   it("reads its numeric cid as the send id", () => {
     const journal = new SendJournal(sendsPathFor("g-cid"))

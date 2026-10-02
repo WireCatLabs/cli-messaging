@@ -13,6 +13,7 @@ import type {
 } from "../../domain/models.js"
 import type { RunBotCommand } from "../../mcp/bot/server.js"
 import type { BotTool } from "../../mcp/bot/tools.js"
+import type { GuardRequest } from "../../sends/guard.js"
 import type { Upload } from "../../sends/upload.js"
 import type { PersonFacts, StoredHit } from "../../store/index.js"
 import type { AppIdentity } from "../app.js"
@@ -201,6 +202,10 @@ export type BotAdapter = Pick<MessengerCore, "me" | "close"> &
 export interface BotConnectOptions {
   stop?: AbortSignal
   events?: EventSink
+  /** Only `bot store fetch` asks for a history reader; other commands stay on the Bot API. */
+  history?: { from?: string; pauseMs: number }
+  /** Register a connection before its login can block, so the command deadline can close it. */
+  track?: (client: Pick<BotAdapter, "close">) => void
 }
 
 /** What one messenger CLI hands the shared bot commands. */
@@ -237,7 +242,8 @@ export interface BotMessenger {
   /** What kind of chat a stored message came from; without it a positive id is a dialog, a negative one a group. */
   chatKindOf?: (hit: StoredHit) => ChatKind
   /** How its history pages, for `bot store fetch`, which is mounted only when this is set. */
-  fetching?: Fetching
+  fetching?: Fetching & { from?: string }
+  permissionFix?: (settings: Settings, request: GuardRequest) => string
   /** `bot mcp`, mounted only when this is set. */
   mcp?: BotMcp
 }
