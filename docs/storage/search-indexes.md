@@ -1,9 +1,38 @@
-# How search finds a message — the indexes and what each one is for
+# How search works — the indexes, search by meaning, and what each one is for
 
 Written for the owner on 2026-09-30, who asked how the indexes work and when one finds what another
 does not. The rulings behind it are in [`decisions.md`](decisions.md): SQLite FTS5, BM25 over words,
-typo correction through the vocabulary, and the substring index kept as a fallback (NEED-379 A). These
-indexes arrive in phase 2; phase 1 does not change search.
+typo correction through the vocabulary, and the substring index kept as a fallback (NEED-379 A).
+**Addition 2026-10-02:** search by meaning (phase 5, [plan](plans/phase-5.md)) is described from
+[Search by meaning](#search-by-meaning) on; the word search below is built and released (phase 2).
+
+## Two searches
+
+| | `messages search` | `conversations search` |
+|---|---|---|
+| finds | messages | conversations inside a group chat |
+| by | words: every word, typos corrected, then pieces of words | meaning, and the words it shares, merged |
+| needs | nothing — the indexes fill themselves | `conversations build`, then `conversations embed` |
+| runs | SQLite alone, 1–25 ms at 1M messages | a model on this machine (or the user's API key), then a scan |
+| MCP tool | `<cli>_messages_search` | `<cli>_conversations_search` |
+
+`messages search` answers "where did someone say X". `conversations search` answers "where did we talk
+about X" when nobody used the same words: a question in your own words finds the conversation that
+answers it, in the language it was held in.
+
+```text
+messages search "gestor valencia"
+  words index (BM25) ─▶ nothing? correct typos ─▶ nothing? any word ─▶ nothing? substring
+                                                                     ▼
+                                                            messages, best first
+
+conversations search "кто искал квартиру"
+  the model turns the query into a vector ─▶ scan the chunks' vectors ─▶ conversations by meaning ─┐
+  the query's words, joined by OR ─▶ messages search (whole words only) ─▶ their conversations ───┤
+                                                                     reciprocal rank fusion ◀──────┘
+                                                                     ▼
+                                                            conversations, best first
+```
 
 ## The five kinds of index
 
@@ -106,7 +135,7 @@ So: **words with BM25** rank best, bring no noise and handle short words; **the 
 typos neither index finds alone; **substring** finds fragments — parts of numbers, links, names, the
 middle of words — and brings noise.
 
-## The order a search runs in — proposed; the phase 2 plan settles it
+## The order a search runs in — ~~proposed; the phase 2 plan settles it~~ **built (correction 2026-10-02)**
 
 1. Word index, every word required, ranked by BM25.
 2. Nothing found → correct unknown words through the vocabulary, search again.
@@ -114,3 +143,138 @@ middle of words — and brings noise.
 4. Still nothing → the substring index.
 
 Filters (chat, sender, source, date) apply at every step, in the database.
+
+**Correction 2026-10-02** — as built in `src/search/search.ts`: step 1 also takes word beginnings
+(«квартир» finds квартиру), each step runs only when the one before found nothing, and until the word
+index is fully built a search uses the substring index alone. The index fills itself in batches —
+from `store migrate`, `store reindex`, and up to 200 ms before each `messages search`. `in:` and
+`--source` widen the search to other accounts the store holds (`in:personal`, `in:bots`, `in:all`).
+Every hit says which step found it (`match`: `words`, `beginnings`, `corrected`, `anyWord`,
+`substring`), and `corrections` lists the words that were replaced.
+
+## Search by meaning
+
+Phase 5. Four steps, each a command the owner runs, and nothing leaves the machine unless asked.
+
+### 1 · Conversations, then chunks
+
+`conversations build --chat <chat>` groups a group chat's messages into conversations — by replies,
+mentions and who wrote next ([phase 3](plans/phase-3.md)). The same build cuts each conversation into
+**chunks**: consecutive messages, cut only between messages, at most 1,200 characters each (about 300
+tokens; `CHUNK_CHARS`, `src/conversations/chunks.ts`). A chunk's text is `sender: text` per line. The
+text is never stored — only the chunk's first and last message and the sha256 of its text
+(`conversation_chunks`).
+
+Why chunks and not whole conversations: e5-small reads at most 512 tokens (EmbeddingGemma 2,048), and
+one long conversation covers many subjects. Why not single messages: «ок» or «да, давай» mean nothing alone.
+
+### 2 · Vectors
+
+`conversations embed --chat <chat>` gives every chunk of the current build a **vector** — 384 numbers
+for e5-small — that places texts of similar meaning near each other. Vectors live in `chunk_vectors`,
+keyed by **model and text hash**, not by chat or conversation:
+
+- a rebuild writes new conversation rows, but a chunk whose text did not change has the same hash and
+  finds its vector again — nothing is embedded twice;
+- the same text in two chats has one vector;
+- two models never mix — e5-small, EmbeddingGemma and an API model each keep their own.
+
+The run resumes where it stopped, and `embed status` says how many chunks are left and how long they
+should take. A chunk whose messages changed after the build waits for the next build.
+
+**The models** (`models text list`, downloaded once into a folder every messenger CLI shares):
+
+| model | vector | size | languages | speed here |
+|---|---|---|---|---|
+| **e5-small** (default) | 384 | ~135 MB | ~100, Russian and English among them | ~31 chunks/s |
+| EmbeddingGemma | 768 | ~220 MB | 100+, better on chat | about 7× slower |
+| an API: OpenAI `text-embedding-3-small`, or any server with OpenAI's `/v1/embeddings` (`--base-url`) | the model's | — | the model's | the API's |
+
+They run in our own WebAssembly build of ONNX Runtime (`@leemour/cli-messaging-onnx`) — no native
+code, the same on Node and Bun. An API model needs the user's key (`models text key set`), says
+how many chunks, tokens and dollars at most before chat text leaves the machine, and waits for a yes.
+
+e5-small is weak across languages: an English chat did not answer the same question asked in Russian.
+EmbeddingGemma does better.
+
+### 3 · The scan
+
+`conversations search "<query>"` turns the query into a vector with the same model, then reads every
+vector of the chats in scope and keeps each conversation's best chunk by **cosine** — how close two
+vectors point, from −1 to 1; vectors are stored at length one, so it is a plain dot product. No
+vector index: SQLite reads 5,000 rows at a time in the chunks' key order, and JavaScript does the
+arithmetic (`nearestChunks`, `src/store/sqlite/vectors.ts`). At the sizes measured a plain table was as
+fast as sqlite-vec, which would need a native extension per platform
+([research](research/2026-10-02-vectors.md)).
+
+A chat embedded only with another model cannot be searched by meaning with this one: the search names
+it on stderr and in `embeddedOnlyElsewhere`, instead of leaving it out silently.
+
+### 4 · Meaning and words, merged
+
+Meaning misses a rare exact word — a name, a reference number, «empadronamiento» — and words miss a
+paraphrase. So the same command also runs `messages search` over the query's plain words, joined by
+`OR` (nothing in the query is read as a filter), keeps only whole-word and word-beginning hits — a
+corrected spelling or a piece of a word would pass a near miss off as a match — and maps each message
+to its conversation. The two lists merge by **reciprocal rank fusion**: a conversation scores
+1 / (60 + its rank) in each list it is in, and the sum orders the result. 50 conversations by meaning
+and the conversations of 200 messages by words take part.
+
+Each result says how it was found:
+
+```json
+{ "summary": { "id": "656", "firstMessageId": "1640", "messageCount": 7, "…": "…" },
+  "chunk": { "firstMessageId": "1640", "lastMessageId": "1707" },
+  "score": 0.835,
+  "by": ["meaning", "words"] }
+```
+
+`score` is the meaning's cosine, `null` when only words found the conversation. A built chat that was
+never embedded is still found by its words.
+
+### In the MCP server
+
+A one-shot command loads the model (~1 s), searches and exits. The MCP server keeps the model between
+calls (`warmEmbedders`, `src/embeddings/embed.ts`), so a search after the first pays only the scan.
+On Node the kept model runs in a worker thread of its own and is closed after 10 minutes without a
+search; the next search loads it again. On Bun it stays loaded:
+
+| measured 2026-10-02, three load-and-close cycles | memory left after each close |
+|---|---|
+| Node, the model in a worker thread | ~0.2 GB each time, from ~1 GB loaded |
+| Node, the model in the same thread | ~0.8 GB — closing the session alone frees ~0.1 GB |
+| Bun, either way | grows 0.2–0.55 GB a cycle, so it is never unloaded |
+
+Vectors are not kept in memory: `embed` and `build` run in other processes, and a copy in the server
+would go stale.
+
+### Measured at 100k messages
+
+One group chat of 100,000 synthetic messages in three languages, 42,417 chunks, a 24-thread laptop
+([bench/embeddings](../../bench/embeddings/README.md)):
+
+| step | time |
+|---|---|
+| `conversations build` | 3.3 s |
+| `conversations embed`, e5-small | ~22 min, Node or Bun; 3 workers gain 1.04–1.1× |
+| `conversations search`, one-shot | ~1.4 s (model load ~1 s, then the scan) |
+| `conversations search` in the MCP server | ~0.35 s |
+| of which the word search | ~25 ms |
+
+Before the scan read the chunks in their key order, SQLite sorted every vector for each 5,000-row page,
+and the MCP search took 1.4 s.
+
+### Where it lives
+
+| what | where |
+|---|---|
+| cutting chunks, their text and hash | `src/conversations/chunks.ts` |
+| the model list | `src/embeddings/models.ts` |
+| running a model: in this thread, in workers, kept warm | `src/embeddings/embed.ts`, `pool.ts`, `workers.ts` |
+| download, with sha256, into the shared folder | `src/cli/messenger/models-command.ts`, through `src/speech/install.ts` |
+| an API model | `src/embeddings/remote.ts` |
+| embed, status, clear, search, the merge | `src/services/embeddings.ts` |
+| the vector tables and the scan | `src/store/sqlite/vectors.ts` |
+| the commands | `src/cli/messenger/conversations-command.ts` |
+| the MCP tool | `src/mcp/tools/conversations.ts` |
+

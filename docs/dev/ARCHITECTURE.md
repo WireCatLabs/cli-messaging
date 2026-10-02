@@ -104,7 +104,8 @@ with them. `chunk_vectors` is keyed by model and that hash, with no chat: a rebu
 conversation rows, and a vector tied to them would be thrown away each time, while a chunk whose text
 did not change keeps its hash and finds its vector again. `conversations embed` reads a chunk's messages
 again (`chunksToEmbed`, `src/store/sqlite/vectors.ts`), rebuilds its text with `chunkTextOf` and embeds it
-only when the hash still matches; a chunk whose messages changed since the build waits for the next one.
+only when the hash still matches; a chunk whose messages changed since the build waits for the next one. How
+the search over them works, end to end and measured: [search-indexes.md](../storage/search-indexes.md#search-by-meaning).
 
 **Where the queries live.** `src/store/store.ts` holds the `MessageStore` interface and `storeOver`, a
 facade that opens the transaction and delegates. The SQL is in `src/store/sqlite/`, one module per kind
@@ -133,8 +134,8 @@ migration; a larger one records in `search_index_state` the highest `pk` the bat
 normalized text first, then the words, then the typo vocabulary (`search_terms`,
 `search_term_trigrams`), then the words of messages stored since — from `store migrate`,
 `store reindex`, and up to 200 ms before each
-`messages search`. When everything is built it returns without taking the write lock. Nothing ranks
-by it yet ([phase 2](../storage/plans/phase-2.md)). The search's steps over it are in
+`messages search`. When everything is built it returns without taking the write lock. ~~Nothing ranks
+by it yet~~ **Correction 2026-10-02:** `messages search` ranks by it ([phase 2](../storage/plans/phase-2.md)). The search's steps over it are in
 `src/store/sqlite/words.ts`: `matchWords` (every or any word, whole or as beginnings, bm25 then
 newest), `matchSubstring`, and `knownTerms` and `termCandidates` for typo correction. A chat or
 sender of at most `SCOPE_TOKEN_LIMIT` (100,000) messages is filtered inside the index by its scope token, a larger
