@@ -605,38 +605,44 @@
       "in": "all"
     },
     "bot chats check": {
-      "in": ["max"],
+      "in": [],
       "planned": {
+        "max": "P8",
         "tg": "P8"
       },
       "options": {
         "--allow-dangerous": {
-          "in": ["max"],
+          "in": [],
           "planned": {
+            "max": "P8",
             "tg": "P8"
           }
         },
         "--dry-run": {
-          "in": ["max"],
+          "in": [],
           "planned": {
+            "max": "P8",
             "tg": "P8"
           }
         },
         "--max-actions": {
-          "in": ["max"],
+          "in": [],
           "planned": {
+            "max": "P8",
             "tg": "P8"
           }
         },
         "--no-ban": {
-          "in": ["max"],
+          "in": [],
           "planned": {
+            "max": "P8",
             "tg": "P8"
           }
         },
         "--since": {
-          "in": ["max"],
+          "in": [],
           "planned": {
+            "max": "P8",
             "tg": "P8"
           }
         }
