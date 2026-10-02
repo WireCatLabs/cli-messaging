@@ -15,6 +15,11 @@ Released early: tg-cli and max-cli cannot install local MCP setup until cli-mess
   doctor reads no messages and does not verify the messenger login. Each consuming CLI needs the
   new `@leemour/cli-core/mcp` export.
 
+### Fixed
+
+- A review with voice messages that have no transcript reports `complete: false` and lists `unheard`, including when transcription was not requested. Transcription failures also appear as `transcribeProblem` in JSON, so a caller can distinguish them from a fully read conversation.
+- The parity manifest permits max-cli to remove its old inbox/review `--since` options and `cache` command while moving onto the shared commands and store. This unblocks the consumer migration without requiring a simultaneous release.
+
 ## 0.112.0 — 03.10.2026
 
 Released early: tg-cli is waiting for the stored evidence command and MCP tool; owner requested immediate publication

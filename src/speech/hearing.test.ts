@@ -64,7 +64,10 @@ describe("hearing voice messages in a list", () => {
 
     const hearing = await hearVoices(messenger, [voice("1"), voice("2")], kept)
 
-    expect(hearing).toEqual({ transcripts: new Map([["7/1", "kept before"]]), unheard: [] })
+    expect(hearing).toEqual({
+      transcripts: new Map([["7/1", "kept before"]]),
+      unheard: [{ chatId: "7", messageId: "2" }],
+    })
   })
 
   it("**hears the rest with --transcribe and keeps only finished text**; pending and refused ones are unheard", async () => {

@@ -83,7 +83,7 @@ export const hearVoices = async (
     if (text === undefined) missing.push(voice)
     else transcripts.set(keyOf(voice), text)
   }
-  if (!transcribe || missing.length === 0) return { transcripts, unheard: [] }
+  if (!transcribe || missing.length === 0) return { transcripts, unheard: missing }
 
   const { choice, connect, budgetMs = HEARING_BUDGET_MS } = transcribe
   const deadline = Date.now() + budgetMs

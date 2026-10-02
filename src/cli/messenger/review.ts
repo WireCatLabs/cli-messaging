@@ -68,12 +68,13 @@ export const reviewCommand = (messenger: Messenger): Command =>
       const transcribe = options.transcribe === true
       const hearing = await hearForCommand(context, messenger, read, transcribe, hearWith)
       const messages = heardItems(read, hearing)
+      found.complete &&= (hearing?.unheard.length ?? 0) === 0
       if (format === "jsonl") renderer.stream(messages)
       else if (format !== "pretty") {
         renderer.result({
           ...found,
           chats: found.chats.map((chat) => ({ ...chat, messages: heardItems(chat.messages, hearing) })),
-          ...hearingFields(hearing, transcribe),
+          ...hearingFields(hearing, true),
         })
       } else if (messages.length > 0) {
         streams.data(

@@ -227,6 +227,24 @@ describe("review, the command", () => {
     expect(answer.unanswered).toEqual({ olderThanHours: 12 })
   })
 
+  it("reports a review with unheard voice messages as incomplete, even without --transcribe", async () => {
+    const message = scripted.adapter.history
+    scripted.adapter.history = async (...args) => {
+      const page = await message(...args)
+      return { ...page, items: page.items.map((one) => ({ ...one, attachments: [{ kind: "voice" as const }] })) }
+    }
+    try {
+      const result = await review(["--since-time", "2d", "--all"])
+      expect(result.code).toBe(0)
+      expect(result.answer.chats[0].messages[0].attachments).toHaveLength(1)
+      expect(result.answer.complete).toBe(false)
+      expect(result.answer.unheard).toHaveLength(2)
+      expect(result.stderr).toContain("incomplete")
+    } finally {
+      scripted.adapter.history = message
+    }
+  })
+
   it("--transcribe says which voice messages stay unheard; --model alone is refused", async () => {
     const heard = await review(["--since-time", "2d", "--all", "--transcribe"])
     const lonely = await review(["--since-time", "2d", "--model", "gigaam-v3"])
