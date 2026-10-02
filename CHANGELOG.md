@@ -6,6 +6,10 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- **`stored` and `Saving` in the CLI export** let a consumer retaining its own MCP tool names wrap its adapter with the same archive writes and failure handling as shared commands. The caller owns the store handle and closes it after the call.
+
 ### Fixed
 
 - Keep `mcp setup` and `mcp doctor` planned in the parity manifest until the consuming CLIs adopt them.
