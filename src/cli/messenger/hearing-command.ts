@@ -61,4 +61,9 @@ export const spokenItems = <T extends Message>(messages: readonly T[], hearing: 
 
 /** What the envelope adds when `--transcribe` was asked for. */
 export const hearingFields = (hearing: Hearing | undefined, transcribe: boolean) =>
-  transcribe ? { unheard: hearing?.unheard ?? [] } : {}
+  transcribe
+    ? {
+        unheard: hearing?.unheard ?? [],
+        ...(hearing?.problem === undefined ? {} : { transcribeProblem: hearing.problem }),
+      }
+    : {}

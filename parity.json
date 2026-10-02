@@ -888,8 +888,12 @@
       }
     },
     "cache": {
-      "in": ["max"],
-      "reason": "max's local cache, removed when the store replaces it (T6 group 6); tg never had one"
+      "in": [],
+      "planned": {
+        "max": "T6"
+      },
+      "reason": "max drops its per-profile cache in favor of the shared store",
+      "subtree": true
     },
     "chats": {
       "in": "all"
@@ -1369,8 +1373,11 @@
         "--model": "all",
         "--new": "all",
         "--since": {
-          "in": ["max"],
-          "reason": "max's own copy keeps the old name until T6 moves the command onto the shared one"
+          "in": [],
+          "planned": {
+            "max": "T6"
+          },
+          "reason": "old option removed as max mounts the shared command"
         },
         "--since-time": {
           "in": [],
@@ -1443,26 +1450,46 @@
       }
     },
     "mcp doctor": {
-      "in": "all",
+      "in": [],
       "options": {
-        "--allow-dangerous": { "in": ["tg"], "reason": "tg profiles use a separate dangerous-write override" },
+        "--allow-dangerous": {
+          "in": ["tg"],
+          "reason": "tg profiles use a separate dangerous-write override"
+        },
         "--allow-delete": "all",
         "--allow-mark-read": "all",
-        "--allow-moderate": { "in": ["max"], "reason": "max MCP offers a moderation flag" },
+        "--allow-moderate": {
+          "in": ["max"],
+          "reason": "max MCP offers a moderation flag"
+        },
         "--allow-send": "all",
         "--confirm-send": "all"
+      },
+      "planned": {
+        "max": "P7",
+        "tg": "P7"
       }
     },
     "mcp setup": {
-      "in": "all",
+      "in": [],
       "options": {
-        "--allow-dangerous": { "in": ["tg"], "reason": "tg profiles use a separate dangerous-write override" },
+        "--allow-dangerous": {
+          "in": ["tg"],
+          "reason": "tg profiles use a separate dangerous-write override"
+        },
         "--allow-delete": "all",
         "--allow-mark-read": "all",
-        "--allow-moderate": { "in": ["max"], "reason": "max MCP offers a moderation flag" },
+        "--allow-moderate": {
+          "in": ["max"],
+          "reason": "max MCP offers a moderation flag"
+        },
         "--allow-send": "all",
         "--allow-writes": "all",
         "--confirm-send": "all"
+      },
+      "planned": {
+        "max": "P7",
+        "tg": "P7"
       }
     },
     "messages": {
@@ -1724,8 +1751,11 @@
           }
         },
         "--since": {
-          "in": ["max"],
-          "reason": "max's own copy keeps the old name until T6 moves the command onto the shared one"
+          "in": [],
+          "planned": {
+            "max": "T6"
+          },
+          "reason": "old option removed as max mounts the shared command"
         },
         "--since-time": {
           "in": [],

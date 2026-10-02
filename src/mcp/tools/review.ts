@@ -55,8 +55,10 @@ export const reviewTools = (messenger: Messenger): Record<string, AnyTool> => ({
       )
       return {
         ...found,
+        complete: found.complete && (hearing?.unheard.length ?? 0) === 0,
         chats: found.chats.map((chat) => ({ ...chat, messages: heard(chat.messages, hearing) })),
-        ...(transcribe ? { unheard: hearing?.unheard ?? [] } : {}),
+        unheard: hearing?.unheard ?? [],
+        ...(hearing?.problem === undefined ? {} : { transcribeProblem: hearing.problem }),
       }
     },
   }),
