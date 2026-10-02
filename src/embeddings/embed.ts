@@ -26,44 +26,101 @@ export interface Embedder {
 
 /**
  * Models a long-running process keeps open between searches — the MCP server, where loading one costs
- * ~1 s a call. Whoever makes it closes it; a one-shot command never makes one.
+ * ~1 s a call. On Node one no search has used for `idleMs` is closed, and the next search loads it again:
+ * e5-small holds ~1 GB for as long as an agent's session lasts. Whoever makes it closes it; a one-shot
+ * command never makes one.
  */
 export interface WarmEmbedders {
+  /** Open each model in a worker thread of its own: only ending the thread gives its memory back. */
+  readonly isolated: boolean
   get(key: string, open: () => Promise<Embedder>): Promise<Embedder>
   close(): Promise<void>
 }
 
-export const warmEmbedders = (): WarmEmbedders => {
+export const WARM_IDLE_MS = 10 * 60_000
+
+/**
+ * Measured 2026-10-02, three load-and-close cycles: on Node a model in a worker leaves ~0.2 GB once closed,
+ * every time, while one in this thread leaves ~0.8 GB; on Bun either way grows ~0.2–0.55 GB a cycle, so
+ * there the model is kept rather than reloaded.
+ */
+const unloads = process.versions.bun === undefined
+
+export const warmEmbedders = ({
+  idleMs = unloads ? WARM_IDLE_MS : undefined,
+}: {
+  idleMs?: number | undefined
+} = {}): WarmEmbedders => {
   const held = new Map<string, Promise<Embedder>>()
+  const timers = new Map<string, ReturnType<typeof setTimeout>>()
+  const running = new Map<string, number>()
+  const drop = (key: string) => {
+    const one = held.get(key)
+    held.delete(key)
+    clearTimeout(timers.get(key))
+    timers.delete(key)
+    return one
+  }
+  const rearm = (key: string) => {
+    if (idleMs === undefined) return
+    clearTimeout(timers.get(key))
+    const timer = setTimeout(() => {
+      // A search still running rearms the clock when it ends.
+      if (running.get(key)) return
+      drop(key)
+        ?.then((one) => one.close())
+        .catch(() => {})
+    }, idleMs)
+    // The MCP server exits when its client goes; a timer must not hold it open.
+    timer.unref?.()
+    timers.set(key, timer)
+  }
   return {
+    isolated: idleMs !== undefined,
     get: (key, open) => {
-      const known = held.get(key)
-      if (known) return known
-      const opening = open().then(serial)
-      held.set(key, opening)
-      // A model not downloaded yet must not stay refused once it is.
-      opening.catch(() => held.delete(key))
+      let opening = held.get(key)
+      if (!opening) {
+        const started = open().then((one) =>
+          serial(one, {
+            starts: () => running.set(key, (running.get(key) ?? 0) + 1),
+            ends: () => {
+              running.set(key, (running.get(key) ?? 1) - 1)
+              rearm(key)
+            },
+          }),
+        )
+        held.set(key, started)
+        // A model not downloaded yet must not stay refused once it is.
+        started.catch(() => {
+          if (held.get(key) === started) drop(key)
+        })
+        opening = started
+      }
+      rearm(key)
       return opening
     },
     close: async () => {
-      const all = [...held.values()]
-      held.clear()
-      await Promise.allSettled(all.map(async (one) => (await one).close()))
+      const all = [...held.keys()].map(drop)
+      await Promise.allSettled(all.map(async (one) => (await one)?.close()))
     },
   }
 }
 
 /** Two MCP calls may arrive at once; a session is not documented to take overlapping runs. */
-const serial = (embedder: Embedder): Embedder => {
+const serial = (embedder: Embedder, { starts, ends }: { starts: () => void; ends: () => void }): Embedder => {
   let last: Promise<unknown> = Promise.resolve()
   return {
     model: embedder.model,
     embed: (texts, kind) => {
+      starts()
       const next = last.then(() => embedder.embed(texts, kind))
-      last = next.catch(() => {})
+      last = next.then(ends, ends)
       return next
     },
-    close: () => embedder.close(),
+    close: async () => {
+      await last
+      await embedder.close()
+    },
   }
 }
 

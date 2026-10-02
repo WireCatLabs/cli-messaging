@@ -116,7 +116,10 @@ write so a dot product is the cosine. A search reads the scope's vectors in one 
 top `--limit`; ~~`serve` and `mcp` keep what they read in memory between queries~~. **Correction
 2026-10-02:** `serve` never searches, so only `mcp` keeps anything, and it keeps the open model alone (the
 ~1 s of a one-shot search), not the vectors: `conversations embed` and `build` run in another process,
-which a vector copy in the server could not hear about without asking the store on every query anyway. sqlite-vec's ruled role
+which a vector copy in the server could not hear about without asking the store on every query anyway. **Addition
+2026-10-02:** on Node the kept model runs in a worker thread and is closed after 10 minutes without a
+search; closing a session in the same thread gave back only ~0.1 of ~1 GB, ending the thread ~0.8. On
+Bun it is never closed: both ways grew the process 0.2–0.55 GB a reload. sqlite-vec's ruled role
 (NEED-374 A) is not needed at the sizes measured, and it would add an extension per platform that official
 Node and Bun on Linux load from outside our SQLite. int8 storage and sqlite-vec stay open for when a real
 archive passes ~100k chunks.

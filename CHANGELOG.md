@@ -18,6 +18,10 @@ Released early: max-cli and tg-cli wait on the shared bot contacts show and the 
   `<cli>_bot_contacts_show`, `_messages_search`, `_messages_between`. `BotMessenger.chatKindOf` says
   which stored chat is a dialog; without it a positive id is one. `--refresh` is refused by a bot that
   cannot read a chat back.
+- **The MCP server lets go of the search model after 10 minutes without a search** (Node): the model
+  runs in a worker thread of its own, and ending it gives back ~0.8 of ~1 GB; the next search loads it
+  again, ~1 s. On Bun the model stays loaded: measured there, every unload and reload left the process
+  0.2–0.55 GB larger.
 
 ### Fixed
 
