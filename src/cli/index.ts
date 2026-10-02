@@ -1,3 +1,19 @@
+export { botInstructions } from "../mcp/bot/instructions.js"
+export { type BotServerOptions, botToolName, createBotServer, type RunBotCommand } from "../mcp/bot/server.js"
+export {
+  BOT_TOOLS,
+  type BotTool,
+  type BotToolKit,
+  chat as botChatArgument,
+  flag as botFlag,
+  format as botFormat,
+  type Invocation as BotInvocation,
+  limit as botLimit,
+  marks as botMarks,
+  option as botOption,
+  text as botText,
+  withAcross,
+} from "../mcp/bot/tools.js"
 export { guardedClose, guardedCreatePoll, guardedVote } from "../sends/polls.js"
 export type { InboxReader } from "../services/inbox.js"
 export { INBOX_CHATS, newIn, REVIEW_CHATS, reviewIn, unanswered, unreadIn } from "../services/inbox.js"
@@ -8,6 +24,7 @@ export { botAdminsCommand, botMembersCommand } from "./bot/admins.js"
 export { botCommand } from "./bot/command.js"
 export { type BotContext, botContext, botWords } from "./bot/context.js"
 export { type BotCopy, botCopy } from "./bot/copy.js"
+export { botMcpCommand, commandLookup } from "./bot/mcp.js"
 export { botCan, botIdOf, botMessagesCommand } from "./bot/messages.js"
 export {
   BOT_ACTIONS,
@@ -22,6 +39,7 @@ export {
   type BotConnectOptions,
   type BotEvent,
   type BotHistory,
+  type BotMcp,
   type BotMenu,
   type BotMenuEntry,
   type BotMessaging,

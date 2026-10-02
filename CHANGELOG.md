@@ -8,6 +8,9 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Added
 
+- **`bot mcp`, shared** (`botMcpCommand`, `createBotServer`): a bot's MCP server, mounted when the CLI hands in
+  its `run` on `BotMessenger.mcp`. Each tool runs the bot command in-process with `--json`; the CLI adds its own
+  tools for the commands that are still its own. `bot mcp config` prints the entry for it.
 - **`conversations search` names the chats it could not see**: a chat embedded only with another model is
   listed on stderr, and as `embeddedOnlyElsewhere` in `--json` and in MCP `conversations_search`, instead
   of being left out silently.
@@ -17,6 +20,11 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Changed — may break callers
 
+- **`bot mcp` offers tools by the profile's permission levels**, under `bot.`, as the personal `mcp` does:
+  `deny` hides a tool, `readonly` hides the writes, `ask` puts a form first unless the server was started with
+  `--yes` (or `--allow-dangerous` for a deletion). With no flags the server now offers every write the levels
+  allow; `bot: readonly` in the profile gives the old reads-only server. `--allow-send`, `--allow-delete` and
+  `--allow-moderate` are accepted with a warning and decide nothing.
 - **The parity manifest marks `bot watch`, `bot callbacks`, `bot commands` and `bot webhooks` as in all
   CLIs**, and drops `bot updates watch`: max-cli and tg-cli both run the shared ones. The note on
   `--check` goes; `bot list --check` reads the same in both.

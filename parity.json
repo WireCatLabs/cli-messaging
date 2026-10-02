@@ -733,6 +733,13 @@
         "tg": "P8"
       },
       "options": {
+        "--allow-dangerous": {
+          "in": [],
+          "planned": {
+            "max": "P8",
+            "tg": "P8"
+          }
+        },
         "--allow-delete": {
           "in": ["max"],
           "planned": {
@@ -765,6 +772,13 @@
         "tg": "P8"
       },
       "options": {
+        "--allow-dangerous": {
+          "in": [],
+          "planned": {
+            "max": "P8",
+            "tg": "P8"
+          }
+        },
         "--allow-delete": {
           "in": ["max"],
           "planned": {
