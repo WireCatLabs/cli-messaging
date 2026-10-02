@@ -679,40 +679,14 @@
       "reason": "a Telegram channel's comments are messages in a separate discussion group, reached by ids only an update gives"
     },
     "bot contacts": {
-      "in": [],
-      "planned": {
-        "max": "P8",
-        "tg": "P8"
-      }
+      "in": "all"
     },
     "bot contacts show": {
-      "in": [],
-      "planned": {
-        "max": "P8",
-        "tg": "P8"
-      },
+      "in": "all",
       "options": {
-        "--all-bots": {
-          "in": [],
-          "planned": {
-            "max": "P8",
-            "tg": "P8"
-          }
-        },
-        "--bots": {
-          "in": [],
-          "planned": {
-            "max": "P8",
-            "tg": "P8"
-          }
-        },
-        "--limit": {
-          "in": [],
-          "planned": {
-            "max": "P8",
-            "tg": "P8"
-          }
-        },
+        "--all-bots": "all",
+        "--bots": "all",
+        "--limit": "all",
         "--refresh": {
           "in": [],
           "planned": {
@@ -758,29 +732,11 @@
       "in": "all"
     },
     "bot messages between": {
-      "in": ["max"],
-      "planned": {
-        "tg": "P8"
-      },
+      "in": "all",
       "options": {
-        "--all-bots": {
-          "in": ["max"],
-          "planned": {
-            "tg": "P8"
-          }
-        },
-        "--bots": {
-          "in": ["max"],
-          "planned": {
-            "tg": "P8"
-          }
-        },
-        "--limit": {
-          "in": ["max"],
-          "planned": {
-            "tg": "P8"
-          }
-        }
+        "--all-bots": "all",
+        "--bots": "all",
+        "--limit": "all"
       }
     },
     "bot messages delete": {
@@ -809,42 +765,13 @@
       }
     },
     "bot messages search": {
-      "in": ["max"],
-      "planned": {
-        "tg": "P8"
-      },
+      "in": "all",
       "options": {
-        "--all-bots": {
-          "in": ["max"],
-          "planned": {
-            "tg": "P8"
-          }
-        },
-        "--bots": {
-          "in": ["max"],
-          "planned": {
-            "tg": "P8"
-          }
-        },
-        "--from": {
-          "in": ["max"],
-          "planned": {
-            "tg": "P8"
-          }
-        },
-        "--limit": {
-          "in": ["max"],
-          "planned": {
-            "tg": "P8"
-          }
-        },
-        "--newest": {
-          "in": [],
-          "planned": {
-            "max": "phase 2 item 10b",
-            "tg": "P8"
-          }
-        }
+        "--all-bots": "all",
+        "--bots": "all",
+        "--from": "all",
+        "--limit": "all",
+        "--newest": "all"
       }
     },
     "bot messages send": {
@@ -866,50 +793,6 @@
     },
     "bot messages unpin": {
       "in": "all"
-    },
-    "bot people": {
-      "in": [],
-      "planned": {
-        "max": "P8",
-        "tg": "P8"
-      }
-    },
-    "bot people show": {
-      "in": [],
-      "planned": {
-        "max": "P8",
-        "tg": "P8"
-      },
-      "options": {
-        "--all-bots": {
-          "in": [],
-          "planned": {
-            "max": "P8",
-            "tg": "P8"
-          }
-        },
-        "--bots": {
-          "in": [],
-          "planned": {
-            "max": "P8",
-            "tg": "P8"
-          }
-        },
-        "--limit": {
-          "in": [],
-          "planned": {
-            "max": "P8",
-            "tg": "P8"
-          }
-        },
-        "--refresh": {
-          "in": [],
-          "planned": {
-            "max": "P8",
-            "tg": "P8"
-          }
-        }
-      }
     },
     "bot recipients": {
       "in": "all"
