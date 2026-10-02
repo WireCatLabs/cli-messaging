@@ -1,4 +1,5 @@
 import { AsyncLocalStorage } from "node:async_hooks"
+import { CliError } from "@leemour/cli-core"
 import type { Id } from "../domain/models.js"
 import type { SendGuard } from "./guard.js"
 import type { SendEntry } from "./journal.js"
@@ -19,6 +20,7 @@ const current = new AsyncLocalStorage<string>()
 /** A write that has gone and not been answered: `cut` records it as an unknown outcome, once. */
 export interface WriteInFlight {
   operationId: string
+  preparing?: boolean
   cut: () => void
 }
 
@@ -42,6 +44,7 @@ export const guardedWrite = async <T>(
   attempt: Attempt,
   act: () => Promise<T>,
   settled: (done: T) => Partial<Attempt> = () => ({}),
+  prepare?: () => Promise<void>,
 ): Promise<T> => {
   try {
     await guard.ask?.(attempt)
@@ -56,13 +59,25 @@ export const guardedWrite = async <T>(
     recorded = true
     guard.record(entry)
   }
+  let cancelled = false
   const flight: WriteInFlight = {
     operationId: attempt.operationId,
-    cut: () => once({ ...attempt, outcome: "outcome_unknown", errorCode: "outcome_unknown" }),
+    preparing: prepare !== undefined,
+    cut: () => {
+      cancelled = true
+      once({
+        ...attempt,
+        outcome: flight.preparing ? "failed" : "outcome_unknown",
+        errorCode: flight.preparing ? "timeout" : "outcome_unknown",
+      })
+    },
   }
   const scope = writesInFlight.getStore()
   scope?.add(flight)
   try {
+    if (prepare !== undefined) await prepare()
+    if (cancelled) throw new CliError("timeout", "the command ended before sending; nothing was sent")
+    flight.preparing = false
     const done = await current.run(attempt.operationId, act)
     once({ ...attempt, ...settled(done), outcome: "sent" })
     return done

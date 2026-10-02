@@ -453,6 +453,11 @@
       "meaning": "the chat to forward it to: an id, or part of a chat name",
       "note": "the sentence says how to name a chat the messenger's way, so it differs on purpose (Help text rule 4)"
     },
+    "--topic": {
+      "value": "<id>",
+      "meaning": "send to this forum topic",
+      "note": "Telegram group forums only; MAX explicitly refuses this option before sending"
+    },
     "--trace": {
       "meaning": "one line per request on stderr: ids and timings, never message content",
       "note": "max logs one line per request, tg the connection's own lines: the same option, a different mechanism (Help text rule 4)"
@@ -1694,6 +1699,7 @@
         "--reply-to": "all",
         "--send-id": "all",
         "--silent": "all",
+        "--topic": "all",
         "--voice": "all"
       }
     },
@@ -1759,7 +1765,8 @@
         "--multiple": "all",
         "--revote": "all",
         "--send-id": "all",
-        "--silent": "all"
+        "--silent": "all",
+        "--topic": "all"
       }
     },
     "polls show": {

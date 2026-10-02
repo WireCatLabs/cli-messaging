@@ -786,6 +786,47 @@ describe("sending over MCP", () => {
     expect(JSON.stringify(entry)).not.toContain("see you")
   })
 
+  it("preserves topic addressing through MCP send and poll tools", async () => {
+    const validations: unknown[] = []
+    const sends: unknown[] = []
+    const telegram = scripted({
+      validateThread: async (...args) => {
+        validations.push(args)
+      },
+      send: async (chatId, text, options) => {
+        sends.push([chatId, text, options])
+        return { message, sendId: options.sendId }
+      },
+      createPoll: async (chatId, poll, options) => {
+        sends.push([chatId, poll, options])
+        return { message, sendId: options.sendId }
+      },
+    })
+    const { call } = await connect(telegram, {})
+    expect(
+      (await call("chat_messages_send", { chat: "7", text: "hi", topic: "12", reply_to: "14", send_id: "42" })).isError,
+    ).toBe(false)
+    expect(
+      (
+        await call("chat_polls_create", {
+          chat: "7",
+          text: "Friday?",
+          answers: ["yes", "no"],
+          topic: "12",
+          send_id: "43",
+        })
+      ).isError,
+    ).toBe(false)
+    expect(validations).toEqual([
+      ["7", "12", { replyTo: "14" }],
+      ["7", "12", {}],
+    ])
+    expect(sends).toMatchObject([
+      ["7", "hi", { threadId: "12", replyTo: "14", sendId: "42" }],
+      ["7", { question: "Friday?" }, { threadId: "12", sendId: "43" }],
+    ])
+  })
+
   it("repeats the send_id it was given, so the messenger can drop a duplicate", async () => {
     const { telegram, sent } = sending()
     const { call } = await connect(telegram, {})

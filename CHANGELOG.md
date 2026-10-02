@@ -6,6 +6,10 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- `messages send` and `polls create` accept `--topic` (MCP: `topic`) for a forum topic. Reply, media and scheduled sends preserve its address. Providers without topic support refuse the option before sending. Thread ids are recorded without message text.
+
 ## 0.118.0 — 03.10.2026
 
 Released early: max-cli shared runner migration needs ProgramDefinition lifecycle hooks

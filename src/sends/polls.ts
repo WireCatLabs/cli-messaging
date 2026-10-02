@@ -1,6 +1,7 @@
 import { CliError } from "@leemour/cli-core"
 import type { MessengerAdapter, NewPoll, Sent } from "../cli/messenger/port.js"
 import { capability } from "../cli/messenger/port.js"
+import { threadIdOf } from "../cli/messenger/thread.js"
 import type { Id, Poll } from "../domain/models.js"
 import type { SendGuard } from "./guard.js"
 import { guardedWrite, type Operated } from "./guarded.js"
@@ -44,17 +45,40 @@ export const guardedClose = async (
 export const guardedCreatePoll = async (
   guard: SendGuard,
   connection: MessengerAdapter,
-  { chat, poll, silent, sendId }: { chat: string; poll: NewPoll; silent: boolean; sendId?: string },
+  {
+    chat,
+    poll,
+    silent,
+    sendId,
+    threadId: typedThread,
+  }: { chat: string; poll: NewPoll; silent: boolean; sendId?: string; threadId?: Id },
 ): Promise<Operated<Sent>> => {
   if (poll.answers.length < 2) throw new CliError("validation_error", "a poll needs two answers or more")
+  const threadId = threadIdOf(typedThread)
+  const validate =
+    threadId === undefined ? undefined : capability(connection, "validateThread", "send to a forum topic")
   const create = capability(connection, "createPoll", "create a poll")
   const { id: chatId } = await connection.resolve(chat)
   const id = sendId ?? connection.newSendId?.() ?? newSendId()
   const sent = await guardedWrite(
     guard,
-    { chatId, kind: "message", sendId: id, operationId: id, length: poll.question.length, key: "polls.create" },
-    () => create(chatId, poll, { sendId: id, ...(silent ? { silent } : {}) }),
+    {
+      chatId,
+      kind: "message",
+      sendId: id,
+      operationId: id,
+      length: poll.question.length,
+      key: "polls.create",
+      ...(threadId === undefined ? {} : { threadId }),
+    },
+    () =>
+      create(chatId, poll, {
+        sendId: id,
+        ...(silent ? { silent } : {}),
+        ...(threadId === undefined ? {} : { threadId }),
+      }),
     (done) => ({ messageId: done.message.id }),
+    validate === undefined || threadId === undefined ? undefined : () => validate(chatId, threadId, {}),
   )
   return { ...sent, operationId: id }
 }

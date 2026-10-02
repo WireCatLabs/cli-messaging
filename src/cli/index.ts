@@ -117,6 +117,7 @@ export type {
   SendOptions,
   Sent,
   ServerReads,
+  ThreadAddressing,
   Transcript,
 } from "./messenger/port.js"
 export { reactionsCommand } from "./messenger/reactions-command.js"

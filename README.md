@@ -32,6 +32,12 @@ A **message locator** names one message across every provider and account:
 `msg:telegram/<account>/<chat>/<message>`. A message id alone does not — Telegram numbers messages
 per chat in channels and per account in private chats.
 
+Forum addressing is an optional adapter capability: `messages send --topic` and `polls create --topic`
+pass `threadId` through the shared service/guard. `validateThread` checks the topic and any reply
+before sending, after the permission gate. Telegram group forums support it; MAX refuses it.
+Journal records carry only the thread id. A retry keeps the same send id, chat and topic; scheduled
+sends must be checked in the queue instead of repeated.
+
 ## Evidence packets for agents
 
 `prepareEvidencePacket` from `@leemour/cli-messaging/services` packages a message page that the

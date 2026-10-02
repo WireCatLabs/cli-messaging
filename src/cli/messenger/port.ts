@@ -47,6 +47,7 @@ export interface SendOptions {
   sendId: string
   /** A message id in the same chat. */
   replyTo?: Id
+  threadId?: Id
   /** Delivered without a notification. */
   silent?: boolean
   /** No preview card for a link in the text. */
@@ -163,6 +164,10 @@ export interface ReadState {
   markRead(chatId: Id, until?: Id): Promise<void>
 }
 
+export interface ThreadAddressing {
+  validateThread(chatId: Id, threadId: Id, options: { replyTo?: Id }): Promise<void>
+}
+
 export interface MessagePolls {
   /** The poll one message carries; a message without one is `not_found`. */
   poll(chatId: Id, messageId: Id): Promise<Poll>
@@ -170,7 +175,7 @@ export interface MessagePolls {
   vote(chatId: Id, messageId: Id, answerIds: Id[]): Promise<Poll>
   /** Only the owner's own poll; it cannot be reopened. */
   closePoll(chatId: Id, messageId: Id): Promise<Poll>
-  createPoll(chatId: Id, poll: NewPoll, options: { sendId: string; silent?: boolean }): Promise<Sent>
+  createPoll(chatId: Id, poll: NewPoll, options: { sendId: string; silent?: boolean; threadId?: Id }): Promise<Sent>
 }
 
 export interface LiveUpdates {
@@ -315,6 +320,7 @@ export interface MessengerAdapter
     Partial<MessageReactions>,
     Partial<ReadState>,
     Partial<MessagePolls>,
+    Partial<ThreadAddressing>,
     Partial<LiveUpdates>,
     Partial<PushedHistory>,
     Partial<MessageMedia>,

@@ -1,7 +1,7 @@
 import { mkdtempSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { afterEach, describe, expect, it } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
 import { botCopy } from "../cli/bot/copy.js"
 import type { Messenger } from "../cli/messenger/context.js"
 import type { MessengerAdapter } from "../cli/messenger/port.js"
@@ -273,6 +273,72 @@ describe("the messages service's writes", () => {
       ["message", "refused"],
       ["delete", "refused"],
     ])
+  })
+
+  it.each([undefined, "2027-01-01T12:00:00.000Z"])(
+    "preserves thread addressing, formatting and attachments at %s",
+    async (at) => {
+      const validateThread = vi.fn(async () => {})
+      const send = vi.fn(writer.send)
+      const service = messagesService(onlineDeps(messenger, { ...writer, validateThread, send }, guarding(false)))
+      const attachments = [{ kind: "photo" as const, name: "synthetic.png", bytes: new Uint8Array([1]) }]
+      await service.send({
+        chat: "Book",
+        text: "**hello**",
+        markdown: true,
+        threadId: " 12 ",
+        replyTo: "14",
+        attachments,
+        ...(at === undefined ? { sendId: "42" } : { at }),
+      })
+      expect(validateThread).toHaveBeenCalledWith("7", "12", { replyTo: "14" })
+      expect(send).toHaveBeenCalledWith(
+        "7",
+        "hello",
+        expect.objectContaining({
+          threadId: "12",
+          replyTo: "14",
+          markup: [{ type: "bold", from: 0, length: 5 }],
+          attachments,
+          ...(at === undefined ? { sendId: "42" } : { at }),
+        }),
+      )
+      expect(journal[0]).toMatchObject({ threadId: "12", replyTo: "14", outcome: "sent" })
+      expect(JSON.stringify(journal)).not.toContain("hello")
+    },
+  )
+
+  it("refuses unsupported and empty threads without sending", async () => {
+    const service = messagesService(onlineDeps(messenger, writer, guarding(false)))
+    await expect(service.send({ chat: "Book", text: "hi", threadId: "12" })).rejects.toThrow(
+      "cannot send to a forum topic",
+    )
+    await expect(service.send({ chat: "Book", text: "hi", threadId: " " })).rejects.toThrow("--topic needs")
+    expect(writes).toEqual([])
+  })
+
+  it("checks permissions before reading the topic, and records preflight failure without sending", async () => {
+    const validateThread = vi.fn(async () => {
+      throw Object.assign(new Error("topic deleted"), { code: "not_found" })
+    })
+    const connection = { ...writer, validateThread }
+    await expect(
+      messagesService(onlineDeps(messenger, connection, guarding(true))).send({
+        chat: "Book",
+        text: "hi",
+        threadId: "12",
+      }),
+    ).rejects.toThrow(/allow-list/)
+    expect(validateThread).not.toHaveBeenCalled()
+    await expect(
+      messagesService(onlineDeps(messenger, connection, guarding(false))).send({
+        chat: "Book",
+        text: "hi",
+        threadId: "12",
+      }),
+    ).rejects.toThrow("topic deleted")
+    expect(writes).toEqual([])
+    expect(journal.map(({ outcome }) => outcome)).toEqual(["refused", "failed"])
   })
 
   it("never writes offline", async () => {
