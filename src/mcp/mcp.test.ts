@@ -45,6 +45,15 @@ vi.mock("../embeddings/embed.js", async (original) => {
     },
   }
 })
+// The worker file cannot load under vitest: the server's model runs in this thread here, counted as above.
+vi.mock("../embeddings/workers.js", async () => {
+  const { openEmbedder } = await import("../embeddings/embed.js")
+  return {
+    openWorkers: (
+      ...[model, directory, { threads }]: Parameters<typeof import("../embeddings/workers.js").openWorkers>
+    ) => openEmbedder(model, directory, { threads }),
+  }
+})
 // The default model is the test fixture: e5-small is not in CI.
 vi.mock("../embeddings/models.js", async (original) => {
   const real = await original<typeof import("../embeddings/models.js")>()

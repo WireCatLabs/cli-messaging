@@ -1,7 +1,7 @@
 import { CliError } from "@leemour/cli-core"
 import { CHUNK_CHARS, chunkHash, chunkTextOf } from "../conversations/chunks.js"
 import type { Id } from "../domain/models.js"
-import { type Embedder, isTextModelInstalled, textModelsDirectory } from "../embeddings/embed.js"
+import { defaultThreads, type Embedder, isTextModelInstalled, textModelsDirectory } from "../embeddings/embed.js"
 import { DEFAULT_TEXT_MODEL, type TextModel, textModel } from "../embeddings/models.js"
 import { type RemoteModel, remoteKey } from "../embeddings/remote.js"
 import type { ConversationHit, ConversationSummary } from "../store/store.js"
@@ -107,12 +107,24 @@ export const embeddingsService = (deps: ServiceDeps): EmbeddingsService => {
       speed: model.chunksPerSecond,
       price: undefined,
       perBatch: (workers: number) => PER_SESSION * Math.max(1, workers),
-      open: async ({ workers = 1, threads }: { workers?: number; threads?: number } = {}): Promise<Embedder> => {
+      open: async ({
+        workers = 1,
+        threads,
+        isolated = false,
+      }: {
+        workers?: number
+        threads?: number
+        isolated?: boolean
+      } = {}): Promise<Embedder> => {
         if (!isTextModelInstalled(model, directory)) {
           throw new CliError(
             "not_found",
             `${model.id} is not downloaded — \`${command} models text download ${model.id}\``,
           )
+        }
+        if (isolated) {
+          const { openWorkers } = await import("../embeddings/workers.js")
+          return openWorkers(model, directory, { workers: 1, threads: threads ?? defaultThreads() })
         }
         const { openPool } = await import("../embeddings/pool.js")
         return openPool(model, directory, { workers, ...(threads ? { threads } : {}) })
@@ -233,7 +245,9 @@ export const embeddingsService = (deps: ServiceDeps): EmbeddingsService => {
       const chatId = chat === undefined ? undefined : await storedChatId(deps.messenger, chat, store, account)
       const scope = chatId === undefined ? {} : { chatId }
       const warm = typeof choice !== "object" ? deps.embedders : undefined
-      const embedder = warm ? await warm.get(target.key, () => target.open()) : await target.open()
+      const embedder = warm
+        ? await warm.get(target.key, () => target.open({ isolated: warm.isolated }))
+        : await target.open()
       let meaning: ConversationHit[]
       try {
         const [vector] = await embedder.embed([query], "query")

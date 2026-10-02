@@ -1,6 +1,6 @@
 import { fileURLToPath } from "node:url"
-import { describe, expect, it } from "vitest"
-import { meanOf, openEmbedder, truncated, unit } from "./embed.js"
+import { afterEach, describe, expect, it, vi } from "vitest"
+import { type Embedder, meanOf, openEmbedder, truncated, unit, warmEmbedders } from "./embed.js"
 import type { TextModel } from "./models.js"
 import { openPool } from "./pool.js"
 
@@ -65,5 +65,52 @@ describe("openPool", () => {
     } finally {
       await pool.close()
     }
+  })
+})
+
+describe("warmEmbedders", () => {
+  afterEach(() => vi.useRealTimers())
+
+  const standIn = () => {
+    const counts = { opened: 0, closed: 0 }
+    let finish = () => {}
+    const open = async (): Promise<Embedder> => {
+      counts.opened += 1
+      return {
+        model: {} as TextModel,
+        embed: (texts) =>
+          new Promise((resolve) => {
+            finish = () => resolve(texts.map(() => new Float32Array(1)))
+          }),
+        close: async () => {
+          counts.closed += 1
+        },
+      }
+    }
+    return { counts, open, finish: () => finish() }
+  }
+
+  it("**closes a model no search used for the idle time**, waits for one still running, and opens it again", async () => {
+    vi.useFakeTimers()
+    const { counts, open, finish } = standIn()
+    const warm = warmEmbedders({ idleMs: 1_000 })
+
+    const running = (await warm.get("m", open)).embed(["a"], "query")
+    await vi.advanceTimersByTimeAsync(1_500)
+    expect(counts.closed).toBe(0)
+    finish()
+    await running
+
+    await vi.advanceTimersByTimeAsync(900)
+    expect(await warm.get("m", open)).toBeDefined()
+    await vi.advanceTimersByTimeAsync(900)
+    expect(counts).toEqual({ opened: 1, closed: 0 })
+
+    await vi.advanceTimersByTimeAsync(200)
+    expect(counts).toEqual({ opened: 1, closed: 1 })
+    await warm.get("m", open)
+    expect(counts.opened).toBe(2)
+    await warm.close()
+    expect(counts.closed).toBe(2)
   })
 })
