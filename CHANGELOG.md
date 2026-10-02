@@ -6,6 +6,10 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.118.0 — 03.10.2026
+
+Released early: max-cli shared runner migration needs ProgramDefinition lifecycle hooks
+
 ### Added
 
 - `ProgramDefinition` accepts optional `configure`, `prepare` and `onFailure` hooks. Consumers
