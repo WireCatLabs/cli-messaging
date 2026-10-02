@@ -101,7 +101,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--all-bots` |  | also read every other bot's copy on this machine that readOtherBots allows |  | `bot messages between` (planned), `bot messages search` (planned), `bot people show` (planned) |
 | `--all-can-pin` | `<on\|off>` | every member may pin messages |  | `chats update` |
 | `--allow-any-file` |  | send a --file even from a hidden folder, ~/.ssh or the tool's own folders |  | `bot messages send`, `messages send` |
-| `--allow-dangerous` |  | go ahead without the question an ask level puts before a deletion |  | `bot chats check` (planned), `bot chats moderate` (planned), `bot mcp`, `bot mcp config`, `bot messages delete`, `chats moderate` (planned), `mcp` (planned), `mcp config` (planned), `messages delete`, `store clear` |
+| `--allow-dangerous` |  | go ahead without the question an ask level puts before a deletion |  | `bot chats moderate`, `bot mcp`, `bot mcp config`, `bot messages delete`, `chats moderate` (planned), `mcp` (planned), `mcp config` (planned), `messages delete`, `store clear` |
 | `--allow-delete` |  | offer the tool that deletes messages for you only; it cannot be undone. **max's own `mcp` is worded differently until the permission levels (P7) replace these flags there (e13)** |  | `bot mcp`, `bot mcp config`, `mcp`, `mcp config` |
 | `--allow-mark-read` |  | offer the tool that marks a chat read; the other person sees it. **max's own `mcp` is worded differently until the permission levels (P7) replace these flags there (e13)** |  | `mcp`, `mcp config` |
 | `--allow-moderate` |  | offer the tool that applies a group's rules — delete others' messages, remove people. **max only, until permissions (P7) replace the MCP flags** |  | `bot mcp`, `bot mcp config`, `mcp` (planned), `mcp config` (planned) |
@@ -129,7 +129,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--defaults` |  | change what every profile gets, rather than this profile |  | `config set`, `config unset` |
 | `--description` | `<text>` | the new about text — of a chat or of your account |  | `account update`, `chats update` |
 | `--dims` | `<n>` | remote: the vector size — needed with --base-url; shortens an OpenAI model's |  | `conversations embed`, `conversations embed clear`, `conversations embed status`, `conversations search` |
-| `--dry-run` |  | judge and plan; do nothing |  | `bot chats check` (planned), `bot chats moderate` (planned), `chats moderate` (planned) |
+| `--dry-run` |  | judge and plan; do nothing |  | `bot chats moderate`, `chats moderate` (planned) |
 | `--estimate` |  | only say what the fetch would cost, from this machine's copy; nothing is sent. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | `store fetch` |
 | `--event` | `<names>` | only these events, comma-separated, as the messenger names them. **becomes `--type` — e12** |  | `chats events` (max-only) |
 | `--events` |  | also print edits, deletions and reactions; every line then names its event. **differs by one letter from `chats events --event`, a filter with an unrelated meaning (e12)** |  | `bot watch`, `watch` |
@@ -153,7 +153,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--local` |  | use the model on this machine, never the messenger |  | `messages transcribe` (tg-only) |
 | `--mark-read` |  | also mark the chat read up to the newest message shown; the other person sees it |  | `messages list` |
 | `--marker` | `<value>` | Marker |  | `bot chats members list` (max-only) |
-| `--max-actions` | `<n>` | at most this many actions in one run | `10` | `bot chats check` (planned), `bot chats moderate` (planned), `chats moderate` (planned) |
+| `--max-actions` | `<n>` | at most this many actions in one run | `10` | `bot chats moderate`, `chats moderate` (planned) |
 | `--max-tokens` | `<n>` | remote: stop before a run that could send more tokens than this |  | `conversations embed` |
 | `--md` |  | read **bold**, _italic_, ~~struck~~ and `code` in the text; \ keeps a mark literal |  | `bot messages edit`, `bot messages send`, `messages edit`, `messages send` |
 | `--members-see-link` | `<on\|off>` | members may see the invite link |  | `chats update` (max-only) |
@@ -161,7 +161,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--multiple` |  | people may pick several answers |  | `polls create` |
 | `--new` |  | what arrived since the last check, each message once — for scheduled runs |  | `inbox` |
 | `--newest` |  | newest first instead of best first |  | `bot messages search` (planned), `messages search` |
-| `--no-ban` |  | remove without banning; by default a removed person cannot come back by the link |  | `bot chats check` (planned), `bot chats moderate` (planned) |
+| `--no-ban` |  | remove without banning; by default a removed person cannot come back by the link |  | `bot chats moderate` |
 | `--no-preview` |  | no preview card for a link in the text |  | `messages send` |
 | `--no-record` |  | do not keep it, whatever the configuration says |  | every command |
 | `--no-serve` |  | do not start it; log in on this command's own connection unless one is running |  | every command (planned) |
@@ -198,8 +198,8 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--serve` |  | start `serve` in the background if it is not running (the default) |  | every command (planned) |
 | `--show-phone` |  | print the whole phone number |  | `account show` |
 | `--silent` |  | deliver without a notification |  | `bot messages send`, `messages forward`, `messages send`, `polls create` |
-| `--since` | `<id-or-time>` | from this message id, an ISO 8601 time, or 2h / 1d ago; each command says its default. **becomes `--since-time` everywhere — NEED-485** |  | `bot chats check` (planned), `chats events` (max-only), `inbox` (max-only), `review` (max-only) |
-| `--since-time` | `<time>` | from this ISO 8601 time, or 2h / 1d ago; each command says its default |  | `bot chats moderate` (planned), `chats events` (planned), `chats moderate` (planned), `conversations list`, `conversations search`, `inbox` (planned), `review` (planned), `store export`, `store fetch` |
+| `--since` | `<id-or-time>` | from this message id, an ISO 8601 time, or 2h / 1d ago; each command says its default. **becomes `--since-time` everywhere — NEED-485** |  | `chats events` (max-only), `inbox` (max-only), `review` (max-only) |
+| `--since-time` | `<time>` | from this ISO 8601 time, or 2h / 1d ago; each command says its default |  | `bot chats moderate`, `chats events` (planned), `chats moderate` (planned), `conversations list`, `conversations search`, `inbox` (planned), `review` (planned), `store export`, `store fetch` |
 | `--size` | `<n>` | messages to answer per batch, 10–200; 50 by default |  | `conversations batches next`, `conversations batches status` |
 | `--source` | `<messenger>` | every account of this messenger held in the store; personal, bots or all — the same as in: in the query |  | `messages search` |
 | `--text` | `<text>` | the message's new text; - reads stdin |  | `bot callbacks answer` |

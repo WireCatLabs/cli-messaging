@@ -604,50 +604,6 @@
     "bot chats admins remove": {
       "in": "all"
     },
-    "bot chats check": {
-      "in": [],
-      "planned": {
-        "max": "P8",
-        "tg": "P8"
-      },
-      "options": {
-        "--allow-dangerous": {
-          "in": [],
-          "planned": {
-            "max": "P8",
-            "tg": "P8"
-          }
-        },
-        "--dry-run": {
-          "in": [],
-          "planned": {
-            "max": "P8",
-            "tg": "P8"
-          }
-        },
-        "--max-actions": {
-          "in": [],
-          "planned": {
-            "max": "P8",
-            "tg": "P8"
-          }
-        },
-        "--no-ban": {
-          "in": [],
-          "planned": {
-            "max": "P8",
-            "tg": "P8"
-          }
-        },
-        "--since": {
-          "in": [],
-          "planned": {
-            "max": "P8",
-            "tg": "P8"
-          }
-        }
-      }
-    },
     "bot chats leave": {
       "in": "all"
     },
@@ -682,72 +638,26 @@
       }
     },
     "bot chats moderate": {
-      "in": [],
-      "planned": {
-        "max": "P8",
-        "tg": "P8"
-      },
+      "in": "all",
       "options": {
-        "--allow-dangerous": {
-          "in": [],
-          "planned": {
-            "max": "P8",
-            "tg": "P8"
-          }
-        },
-        "--dry-run": {
-          "in": [],
-          "planned": {
-            "max": "P8",
-            "tg": "P8"
-          }
-        },
-        "--max-actions": {
-          "in": [],
-          "planned": {
-            "max": "P8",
-            "tg": "P8"
-          }
-        },
-        "--no-ban": {
-          "in": [],
-          "planned": {
-            "max": "P8",
-            "tg": "P8"
-          }
-        },
-        "--since-time": {
-          "in": [],
-          "planned": {
-            "max": "P8",
-            "tg": "P8"
-          }
-        }
+        "--allow-dangerous": "all",
+        "--dry-run": "all",
+        "--max-actions": "all",
+        "--no-ban": "all",
+        "--since-time": "all"
       }
     },
     "bot chats rules": {
-      "in": ["max"],
-      "planned": {
-        "tg": "P8"
-      }
+      "in": "all"
     },
     "bot chats rules set": {
-      "in": ["max"],
-      "planned": {
-        "tg": "P8"
-      }
+      "in": "all"
     },
     "bot chats rules show": {
-      "in": ["max"],
-      "planned": {
-        "tg": "P8"
-      }
+      "in": "all"
     },
     "bot chats rules unset": {
-      "in": ["max"],
-      "planned": {
-        "tg": "P8"
-      }
+      "in": "all"
     },
     "bot chats show": {
       "in": "all"
