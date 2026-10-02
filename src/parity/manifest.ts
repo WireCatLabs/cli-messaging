@@ -177,7 +177,8 @@ export const parityProblems = (manifest: Manifest, cli: Cli, program: CommandsJs
     const row = manifest.commands[path]
     const command = found.get(path)
     problems.push(...compare(cli, path, row, command !== undefined))
-    if (row && command && expected(row, cli) !== false && !solo(row))
+    // A command still planned for this CLI may come with any options: they are checked once it is.
+    if (row && command && expected(row, cli) === true && !solo(row))
       problems.push(...compareOptions(cli, path, row.options ?? {}, command.options))
   }
   return problems

@@ -12,6 +12,9 @@ Released early: tg-cli cannot move past 0.99.0: its archive tests hang in store 
 
 ### Fixed
 
+- **The parity check leaves the options of a command still planned for a CLI unchecked**, as it leaves
+  the command: a CLI that mounts a planned group early — `conversations embed` and `conversations search`
+  with their new options — passes until the rows say it has them.
 - **`store fetch` ends when the messenger keeps giving back the same page.** Since 0.100.0 a message
   read twice no longer counts towards `--limit`, so a messenger that ignored the page boundary and kept
   answering with messages already read made the run go on for ever. A page with nothing new now ends it
