@@ -20,6 +20,9 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 - **The parity manifest marks `bot watch`, `bot callbacks`, `bot commands` and `bot webhooks` as in all
   CLIs**, and drops `bot updates watch`: max-cli and tg-cli both run the shared ones. The note on
   `--check` goes; `bot list --check` reads the same in both.
+- **The parity manifest marks `conversations embed` (with `embed status` and `embed clear`) and
+  `conversations search` as in all CLIs**, with every option checked: max-cli and tg-cli are both on
+  0.103.0. `models text` is in tg only: max still mounts its own `models` group, which has `audio` only.
 
 ## 0.103.0 — 02.10.2026
 

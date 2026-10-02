@@ -232,7 +232,7 @@ the default). Facts: [`../research/2026-10-02-embedding-apis.md`](../research/20
    step and `--max-tokens`, `--concurrency`, retries; tested against a stand-in server, never a real key.
 5. ✅ 2026-10-02: the command, the scan and MCP `conversations_search`; the MCP server keeps the model open between calls, and a chat embedded only with another model is named (stderr, `embeddedOnlyElsewhere`) — no vector copy in memory, see the correction in E3 · **`conversations search`** — the scan (E3, E7), output and `--json`, MCP `conversations_search`, the
    in-memory copy in `serve` and `mcp`.
-6. 🟡 2026-10-02: released in 0.101.0–0.103.0; tg on 0.103.0 with docs, skill line and tests (tg-cli #217); max-cli's bump and turning the parity rows from planned to present are left · **Docs, changelog, parity rows, skill line** — ARCHITECTURE's store section (the two tables, why vectors
+6. ✅ 2026-10-02: released in 0.101.0–0.103.0; tg on 0.103.0 with docs, skill line and tests (tg-cli #217); max on 0.103.0; the parity rows present, except `models text` for max, which still mounts its own `models` group (max-cli CLI-60) · **Docs, changelog, parity rows, skill line** — ARCHITECTURE's store section (the two tables, why vectors
    are keyed by hash), `docs/commands.md`, one line in the shared skills; tg-cli and max-cli bump.
 7. **Hybrid** (E9), after phase 2 item 6 — RRF over the two lists; the IRC bench's queries cannot score it,
    so a small hand-written query set over a synthetic chat.
