@@ -73,7 +73,7 @@ export { accountFileFor, rememberAccount } from "./messenger/accounts.js"
 export { storeCommand } from "./messenger/archive-commands.js"
 export { chatsCommand } from "./messenger/chats-command.js"
 export { markReadCommand } from "./messenger/chats-read-command.js"
-export { completeCommand } from "./messenger/complete-command.js"
+export { type CompletionOptions, completeCommand } from "./messenger/complete-command.js"
 export { contactsCommand } from "./messenger/contacts-command.js"
 export {
   type ConnectOptions,
@@ -129,6 +129,7 @@ export {
   type ServerSystem,
   serverCommand,
 } from "./messenger/server-command.js"
+export { storeSummary } from "./messenger/store-maintenance-command.js"
 export { type Saving, stored } from "./messenger/stored.js"
 export { topicsCommand } from "./messenger/topics-command.js"
 export { watchCommand } from "./messenger/watch-command.js"
