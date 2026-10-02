@@ -6,6 +6,12 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Changed — may break callers
+
+- **The parity manifest marks `bot contacts show` and `bot messages search|between` as in all CLIs**,
+  every option checked, and drops max-cli's old `bot people show`: max-cli (#328) and tg-cli (#220) run
+  the shared ones.
+
 ## 0.108.0 — 02.10.2026
 
 Released early: max-cli and tg-cli wait on the shared bot contacts show and the fix for moderation after a form
