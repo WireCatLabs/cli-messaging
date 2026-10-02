@@ -12,14 +12,6 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   account held in the store, or every bot's copy; `in:all` is both, as before. A bot's account is one
   whose provider ends in `-bot`, and the shared bot commands now refuse a `BotMessenger.provider` that
   does not — the owner's call.
-
-### Changed — may break callers
-
-- **The parity manifest marks `messages search --newest`, `--context` and `--source` as in all CLIs**:
-  tg-cli and max-cli are both on 0.99.0, which has them.
-
-### Added
-
 - **An external embedding model with your own key** (storage phase 5): `conversations embed`, `embed
   status`, `embed clear` and `conversations search` take `--provider openai` (`text-embedding-3-small` by
   default, `--dims` to shorten) or `--base-url <url>` with `--model` and `--dims` for any server with
@@ -30,6 +22,11 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   a 429 waits for `Retry-After`. Errors name the HTTP status and the provider's code, never the text or
   the key. `models text key set|remove <provider>` keeps the key in the keyring (or
   `<PREFIX>_OPENAI_API_KEY`, then `OPENAI_API_KEY`), read from a hidden prompt or stdin.
+
+### Changed — may break callers
+
+- **The parity manifest marks `messages search --newest`, `--context` and `--source` as in all CLIs**:
+  tg-cli and max-cli are both on 0.99.0, which has them.
 
 ### Fixed
 
