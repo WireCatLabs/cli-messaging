@@ -6,6 +6,10 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.114.0 — 03.10.2026
+
+Released early: max-cli needs shared inbox/review migration and correct unheard voice completeness
+
 ### Fixed
 
 - A review with voice messages that have no transcript reports `complete: false` and lists `unheard`, including when transcription was not requested. Transcription failures also appear as `transcribeProblem` in JSON, so a caller can distinguish them from a fully read conversation.
