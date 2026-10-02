@@ -868,38 +868,44 @@
       "in": "all"
     },
     "bot people": {
-      "in": ["max"],
+      "in": [],
       "planned": {
+        "max": "P8",
         "tg": "P8"
       }
     },
     "bot people show": {
-      "in": ["max"],
+      "in": [],
       "planned": {
+        "max": "P8",
         "tg": "P8"
       },
       "options": {
         "--all-bots": {
-          "in": ["max"],
+          "in": [],
           "planned": {
+            "max": "P8",
             "tg": "P8"
           }
         },
         "--bots": {
-          "in": ["max"],
+          "in": [],
           "planned": {
+            "max": "P8",
             "tg": "P8"
           }
         },
         "--limit": {
-          "in": ["max"],
+          "in": [],
           "planned": {
+            "max": "P8",
             "tg": "P8"
           }
         },
         "--refresh": {
-          "in": ["max"],
+          "in": [],
           "planned": {
+            "max": "P8",
             "tg": "P8"
           }
         }

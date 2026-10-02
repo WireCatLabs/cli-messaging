@@ -23,6 +23,9 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Changed — may break callers
 
+- **The parity manifest stops checking max-cli's own `bot people show`**: max-cli replaces it with the
+  shared `bot contacts show`; the row goes once max-cli has moved.
+
 - **The parity manifest marks `bot chats moderate` and `bot chats rules` as in all CLIs**, every option
   checked, and drops max-cli's old `bot chats check`: max-cli (#327) and tg-cli (#219) both run the
   shared ones.
