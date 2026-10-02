@@ -687,13 +687,7 @@
         "--all-bots": "all",
         "--bots": "all",
         "--limit": "all",
-        "--refresh": {
-          "in": [],
-          "planned": {
-            "max": "P8",
-            "tg": "P8"
-          }
-        }
+        "--refresh": "all"
       }
     },
     "bot list": {
@@ -816,51 +810,44 @@
       "in": "all"
     },
     "bot store": {
-      "in": [],
+      "in": ["max"],
       "planned": {
-        "max": "P8",
         "tg": "P8"
       }
     },
     "bot store fetch": {
-      "in": [],
+      "in": ["max"],
       "planned": {
-        "max": "P8",
         "tg": "P8"
       },
       "options": {
         "--last": {
-          "in": [],
+          "in": ["max"],
           "planned": {
-            "max": "P8",
             "tg": "P8"
           }
         },
         "--limit": {
-          "in": [],
+          "in": ["max"],
           "planned": {
-            "max": "P8",
             "tg": "P8"
           }
         },
         "--page-size": {
-          "in": [],
+          "in": ["max"],
           "planned": {
-            "max": "P8",
             "tg": "P8"
           }
         },
         "--pause": {
-          "in": [],
+          "in": ["max"],
           "planned": {
-            "max": "P8",
             "tg": "P8"
           }
         },
         "--since-time": {
-          "in": [],
+          "in": ["max"],
           "planned": {
-            "max": "P8",
             "tg": "P8"
           }
         }

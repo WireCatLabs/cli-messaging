@@ -6,6 +6,11 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Changed — may break callers
+
+- **The parity manifest checks `bot store fetch` in max-cli** (#329); tg-cli's is planned, since a Telegram
+  bot has no history call yet. `bot contacts show --refresh` is checked in both again.
+
 ## 0.110.0 — 02.10.2026
 
 ### Fixed
