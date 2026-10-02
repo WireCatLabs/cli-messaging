@@ -14,6 +14,7 @@ import { addBotCopyReads, botContactsCommand } from "./people.js"
 import { BOT_ACTIONS, type BotAction, type BotMessenger } from "./port.js"
 import { registryProfiles } from "./registry.js"
 import { botCallbacksCommand, botMenuCommand, botWebhooksCommand } from "./setup.js"
+import { botStoreCommand } from "./store.js"
 import { BotTokenStore } from "./token.js"
 import { botWatchCommand } from "./watch.js"
 
@@ -257,5 +258,6 @@ export const botCommand = (bot: BotMessenger): Command => {
     .addCommand(botMenuCommand(bot))
     .addCommand(botWebhooksCommand(bot))
     .addCommand(botContactsCommand(bot))
+  if (bot.fetching) command.addCommand(botStoreCommand(bot, bot.fetching))
   return bot.mcp ? command.addCommand(botMcpCommand(bot)) : command
 }

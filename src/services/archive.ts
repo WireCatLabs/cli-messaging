@@ -139,105 +139,137 @@ export const archiveService = (deps: ServiceDeps): ArchiveService => {
       }
     },
 
-    fetch: async (chat, { limit, pageSize, pauseMs, sinceMs, last, note, stop, onPage }) => {
+    fetch: async (chat, options) => {
       pushed(deps, "`store fetch`")
-      const fetching = deps.messenger.fetching ?? FETCHING
-      const byTime = fetching.orderBy === "time"
-      const keyed = keyOf(fetching)
       const connection = await deps.connection()
       const history = capability(connection, "history", "read a chat's history")
       const self = connection.self()
       if (self === null) throw new CliError("authentication_error", "not logged in — nothing to fetch for")
-      const account = { provider: deps.messenger.provider, account: self }
-      const store = await deps.store()
-      let before: string | undefined
-      let chatId: Id | undefined
-      let top: number | undefined
-      let fetched = 0
-      // By time a page reaches back into the moment the last one ended at, so its ids repeat.
-      const seen = new Set<Id>()
-      let idle = 0
-      let reachedStart = false
-      let reachedSince = false
-      let reachedLast = false
-
-      while (fetched < limit && !stop.aborted) {
-        const page = await patiently(
-          () =>
-            history(chat, {
-              limit: Math.min(pageSize, limit - fetched),
-              reactions: false,
-              ...(before ? { before } : {}),
-            }),
-          note,
-          stop,
-        )
-        const first = page.items[0]
-        if (!first) {
-          reachedStart = true
-          break
-        }
-        chatId ??= first.chatId
-        const keys = page.items.map(keyed)
-        if (keys.some((key) => !Number.isSafeInteger(key))) {
-          throw new CliError(
-            "validation_error",
-            "this messenger's message ids do not order a chat, so it cannot fetch its history",
-          )
-        }
-        const low = Math.min(...keys)
-        top ??= Math.max(...keys)
-        const fresh = page.items.filter((message) => !seen.has(message.id)).length
-        for (const message of page.items) seen.add(message.id)
-        fetched += fresh
-        // This run's pages are contiguous, so everything from `low` to its first message is held.
-        const held = await store.markRange(account, chatId, low, top)
-        onPage({ fetched, chatId, oldest: held.from })
-        // Nothing new: by id the messenger ignored `before`; by time a second such page did after the step past.
-        // Repeats do not count towards the limit, so without this the run would never end.
-        idle = fresh === 0 ? idle + 1 : 0
-        if (idle > (byTime ? 1 : 0)) break
-        if (!page.hasMore) {
-          reachedStart = true
-          break
-        }
-        if (sinceMs !== undefined && page.items.some((message) => Date.parse(message.timestamp) < sinceMs)) {
-          reachedSince = true
-          break
-        }
-        const oldestAt = page.items.reduce(
-          (at, message) => (message.timestamp < at ? message.timestamp : at),
-          first.timestamp,
-        )
-        const fromAt =
-          held.from === low ? oldestAt : await timeOfKey(store, account, chatId, held.from, byTime, oldestAt)
-        if (last !== undefined && (await store.countMessages(account, chatId, { since: fromAt })) >= last) {
-          reachedLast = true
-          break
-        }
-        // Two messages can share a millisecond, and the page may have ended between them: ask up to and including
-        // it. A page with nothing new means that moment holds a whole page, so step past it rather than loop.
-        before = byTime ? new Date(held.from + (fresh > 0 ? 1 : 0)).toISOString() : String(held.from)
-        note(`${fetched} messages so far, back to ${held.from}`)
-        const wait = fetching.jitter ? pauseMs * (1 + Math.random()) : pauseMs
-        await sleep(wait, undefined, { signal: stop }).catch(() => {})
-      }
-
-      const ranges = chatId === undefined ? [] : await store.ranges(account, chatId)
-      // What a search says about completeness: a stretch held from the chat's very first message.
-      if (reachedStart && chatId !== undefined && ranges[0]) {
-        await store.setSyncState(account, historyStartKey(chatId), String(ranges[0].from))
-      }
-      return {
-        chat: chatId ?? null,
-        fetched,
-        complete: reachedStart && ranges.length === 1,
-        ranges,
-        ...(reachedSince ? { reachedSince: true as const } : {}),
-        ...(reachedLast ? { reachedLast: true as const } : {}),
-        ...(stop.aborted ? { stopped: true as const } : {}),
-      }
+      return fetchInto({
+        history: (window) => history(chat, { ...window, reactions: false }),
+        store: await deps.store(),
+        account: { provider: deps.messenger.provider, account: self },
+        fetching: deps.messenger.fetching ?? FETCHING,
+        ...options,
+      })
     },
+  }
+}
+
+/** One page of a chat's history, newest first, older than `before` when it is given. */
+export type HistoryPage = (window: {
+  limit: number
+  before?: string
+}) => Promise<{ items: Message[]; hasMore: boolean }>
+
+export interface FetchInto extends FetchOptions {
+  history: HistoryPage
+  store: MessageStore
+  account: AccountKey
+  fetching: Fetching
+}
+
+/** The fetch loop, over any history and store: the personal account's service and a bot's command share it. */
+export const fetchInto = async ({
+  history,
+  store,
+  account,
+  fetching,
+  limit,
+  pageSize,
+  pauseMs,
+  sinceMs,
+  last,
+  note,
+  stop,
+  onPage,
+}: FetchInto): Promise<Fetched> => {
+  const byTime = fetching.orderBy === "time"
+  const keyed = keyOf(fetching)
+  let before: string | undefined
+  let chatId: Id | undefined
+  let top: number | undefined
+  let fetched = 0
+  // By time a page reaches back into the moment the last one ended at, so its ids repeat.
+  const seen = new Set<Id>()
+  let idle = 0
+  let reachedStart = false
+  let reachedSince = false
+  let reachedLast = false
+
+  while (fetched < limit && !stop.aborted) {
+    const page = await patiently(
+      () =>
+        history({
+          limit: Math.min(pageSize, limit - fetched),
+          ...(before ? { before } : {}),
+        }),
+      note,
+      stop,
+    )
+    const first = page.items[0]
+    if (!first) {
+      reachedStart = true
+      break
+    }
+    chatId ??= first.chatId
+    const keys = page.items.map(keyed)
+    if (keys.some((key) => !Number.isSafeInteger(key))) {
+      throw new CliError(
+        "validation_error",
+        "this messenger's message ids do not order a chat, so it cannot fetch its history",
+      )
+    }
+    const low = Math.min(...keys)
+    top ??= Math.max(...keys)
+    const fresh = page.items.filter((message) => !seen.has(message.id)).length
+    for (const message of page.items) seen.add(message.id)
+    fetched += fresh
+    // This run's pages are contiguous, so everything from `low` to its first message is held.
+    const held = await store.markRange(account, chatId, low, top)
+    onPage({ fetched, chatId, oldest: held.from })
+    // Nothing new: by id the messenger ignored `before`; by time a second such page did after the step past.
+    // Repeats do not count towards the limit, so without this the run would never end.
+    idle = fresh === 0 ? idle + 1 : 0
+    if (idle > (byTime ? 1 : 0)) break
+    if (!page.hasMore) {
+      reachedStart = true
+      break
+    }
+    if (sinceMs !== undefined && page.items.some((message) => Date.parse(message.timestamp) < sinceMs)) {
+      reachedSince = true
+      break
+    }
+    const oldestAt = page.items.reduce(
+      (at, message) => (message.timestamp < at ? message.timestamp : at),
+      first.timestamp,
+    )
+    const fromAt = held.from === low ? oldestAt : await timeOfKey(store, account, chatId, held.from, byTime, oldestAt)
+    if (last !== undefined && (await store.countMessages(account, chatId, { since: fromAt })) >= last) {
+      reachedLast = true
+      break
+    }
+    // Two messages can share a millisecond, and the page may have ended between them: ask up to and including
+    // it. A page with nothing new means that moment holds a whole page, so step past it rather than loop.
+    before = byTime ? new Date(held.from + (fresh > 0 ? 1 : 0)).toISOString() : String(held.from)
+    note(`${fetched} messages so far, back to ${held.from}`)
+    const wait = fetching.jitter ? pauseMs * (1 + Math.random()) : pauseMs
+    await sleep(wait, undefined, { signal: stop }).catch(() => {})
+  }
+
+  const ranges = chatId === undefined ? [] : await store.ranges(account, chatId)
+  // What a search says about completeness: a stretch held from the chat's very first message.
+  if (reachedStart && chatId !== undefined && ranges[0]) {
+    await store.setSyncState(account, historyStartKey(chatId), String(ranges[0].from))
+  }
+  return {
+    chat: chatId ?? null,
+    fetched,
+    complete: reachedStart && ranges.length === 1,
+    ranges,
+    ...(reachedSince ? { reachedSince: true as const } : {}),
+    ...(reachedLast ? { reachedLast: true as const } : {}),
+    ...(stop.aborted ? { stopped: true as const } : {}),
   }
 }
 

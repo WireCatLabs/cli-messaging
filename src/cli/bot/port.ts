@@ -16,6 +16,7 @@ import type { BotTool } from "../../mcp/bot/tools.js"
 import type { Upload } from "../../sends/upload.js"
 import type { PersonFacts, StoredHit } from "../../store/index.js"
 import type { AppIdentity } from "../app.js"
+import type { Fetching } from "../messenger/context.js"
 import type { MessagePins, MessengerCore } from "../messenger/port.js"
 import type { EventSink } from "../runs/events.js"
 import type { GlobalFlags, ResolveOptions, Settings } from "../settings.js"
@@ -54,6 +55,11 @@ export interface BotHistory {
   message(chat: BotChatRef, messageId: Id): Promise<Message>
   /** Everything sent at `since` (ms) or later, oldest first, up to `limit`; `more` when there was more. */
   historySince(chat: BotChatRef, since: number, limit: number): Promise<{ messages: Message[]; more: boolean }>
+  /** One page back from `before` (or from now), newest first: what `bot store fetch` walks. */
+  historyBefore(
+    chat: BotChatRef,
+    window: { limit: number; before?: string },
+  ): Promise<{ items: Message[]; hasMore: boolean }>
 }
 
 /** Who wrote what the adapter read, with what a `Message` has no field for. */
@@ -230,6 +236,8 @@ export interface BotMessenger {
   readSecret?: (command: Command, prompt: string) => Promise<string>
   /** What kind of chat a stored message came from; without it a positive id is a dialog, a negative one a group. */
   chatKindOf?: (hit: StoredHit) => ChatKind
+  /** How its history pages, for `bot store fetch`, which is mounted only when this is set. */
+  fetching?: Fetching
   /** `bot mcp`, mounted only when this is set. */
   mcp?: BotMcp
 }

@@ -1,0 +1,107 @@
+import { mkdtempSync } from "node:fs"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
+import { captureStreams, memoryKeyring } from "@leemour/cli-core"
+import { beforeEach, describe, expect, it } from "vitest"
+import type { Message } from "../../domain/models.js"
+import { run } from "../program.js"
+import { settingsFor } from "../settings.js"
+import { botCommand } from "./command.js"
+import type { BotAdapter, BotMessenger } from "./port.js"
+import { BotTokenStore } from "./token.js"
+
+const app = { command: "chat", appName: "chat-cli", envPrefix: "CHAT", description: "A test", version: "1.0.0" }
+const config = settingsFor(app)
+const START = Date.parse("2026-09-01T00:00:00Z")
+
+const message = (n: number): Message => ({
+  id: `m${n}`,
+  chatId: "-100",
+  senderId: "42",
+  senderName: "Ann",
+  timestamp: new Date(START + n * 60_000).toISOString(),
+  editedAt: null,
+  text: `message ${n}`,
+  outgoing: false,
+  attachments: [],
+  replyTo: null,
+  forwardedFrom: null,
+  reactions: null,
+})
+const CHAT = Array.from({ length: 250 }, (_, n) => message(n))
+
+let root: string
+let env: NodeJS.ProcessEnv
+let keyring: ReturnType<typeof memoryKeyring>
+
+/** Newest first, back from `before` — as MAX's getMessages pages by time. */
+const adapter: BotAdapter = {
+  me: async () => ({ id: "900", name: "Helper", username: "helper_bot" }),
+  close: async () => {},
+  historyBefore: async (_chat, { limit, before }) => {
+    const older = CHAT.filter((one) => before === undefined || one.timestamp <= before).reverse()
+    return { items: older.slice(0, limit), hasMore: older.length > limit }
+  },
+}
+
+const bot: BotMessenger = {
+  app,
+  provider: "chat-bot",
+  name: "Chat",
+  resolveSettings: config.resolveSettings,
+  connect: async () => adapter,
+  tokenStore: (_command, profile) =>
+    new BotTokenStore({ app, profile, env: {}, configDir: join(root, "config"), keyring }),
+  fetching: { page: 100, pause: "1ms", maxPages: 10, orderBy: "time" },
+}
+
+const call = async (argv: string[], messenger = bot) => {
+  const streams = captureStreams()
+  const code = await run(
+    ["sales", "bot", ...argv],
+    { app, commands: () => [botCommand(messenger)] },
+    { streams, tty: false, env },
+  )
+  const out = streams.stdout.join("\n")
+  return { code, answer: out ? JSON.parse(out) : undefined, stderr: streams.stderr.join("\n") }
+}
+
+beforeEach(() => {
+  root = mkdtempSync(join(tmpdir(), "bot-fetch-"))
+  env = { CHAT_CONFIG_DIR: join(root, "config"), CHAT_STATE_DIR: join(root, "state") }
+  keyring = memoryKeyring()
+  new BotTokenStore({ app, profile: "sales", env: {}, configDir: join(root, "config"), keyring }).write("t")
+})
+
+describe("bot store fetch", () => {
+  it("**fetches newest first, stops at --limit, and the next run carries on to the start**", async () => {
+    const first = await call(["store", "fetch", "-100", "--limit", "150", "--page-size", "100", "--json"])
+    expect(first.answer).toMatchObject({ chat: "-100", complete: false })
+    // By time each page repeats the message the last one ended at; a repeat does not count.
+    expect(first.answer.fetched).toBeGreaterThanOrEqual(149)
+
+    const second = await call(["store", "fetch", "-100", "--json"])
+    expect(second.answer).toMatchObject({ complete: true })
+
+    const kept = await call(["messages", "list", "-100", "--limit", "300", "--offline", "--json"])
+    expect(kept.answer.items).toHaveLength(250)
+  })
+
+  it("stops at --last and at --since-time, and refuses both together", async () => {
+    expect(
+      (await call(["store", "fetch", "-100", "--last", "50", "--page-size", "20", "--json"])).answer,
+    ).toMatchObject({
+      reachedLast: true,
+    })
+    const since = new Date(START + 200 * 60_000).toISOString()
+    expect((await call(["store", "fetch", "-100", "--since-time", since, "--json"])).answer).toMatchObject({
+      reachedSince: true,
+    })
+    expect((await call(["store", "fetch", "-100", "--last", "5", "--since-time", since])).code).toBe(2)
+  })
+
+  it("is not there for a messenger whose bot cannot page back", async () => {
+    const { fetching: _fetching, ...without } = bot
+    expect(botCommand(without).commands.map((one) => one.name())).not.toContain("store")
+  })
+})
