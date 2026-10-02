@@ -28,7 +28,10 @@ const tiny: TextModel = {
 
 vi.mock("../embeddings/models.js", async (original) => {
   const real = await original<typeof import("../embeddings/models.js")>()
-  return { ...real, textModel: (id: string) => (id === "tiny" ? tiny : real.textModel(id)) }
+  return {
+    ...real,
+    textModel: (id: string) => (id === "tiny" ? tiny : id === "tiny-2" ? { ...tiny, id } : real.textModel(id)),
+  }
 })
 
 const account = { provider: "test", account: "1" }
@@ -68,10 +71,12 @@ const setUp = async ({ build = true } = {}) => {
 beforeEach(() => {
   const cache = mkdtempSync(join(tmpdir(), "models-"))
   mkdirSync(join(cache, "models", "text"), { recursive: true })
-  symlinkSync(
-    fileURLToPath(new URL("../embeddings/fixtures/tiny", import.meta.url)),
-    join(cache, "models", "text", "tiny"),
-  )
+  for (const id of ["tiny", "tiny-2"]) {
+    symlinkSync(
+      fileURLToPath(new URL("../embeddings/fixtures/tiny", import.meta.url)),
+      join(cache, "models", "text", id),
+    )
+  }
   vi.stubEnv("CLI_COMMON_CACHE_DIR", cache)
 })
 afterEach(() => vi.unstubAllEnvs())
@@ -111,6 +116,18 @@ describe("embeddings", () => {
         ({ summary }) => summary.firstMessageId,
       ),
     ).toEqual(["80"])
+    await store.close()
+  })
+
+  it("names a chat embedded only with another model, which the search could not see", async () => {
+    const { store, embeddings } = await setUp()
+    await embeddings.embed("9", { model: "tiny", threads: 1 })
+
+    expect(await embeddings.search("fish", { model: "tiny-2", limit: 3 })).toMatchObject({
+      hits: [],
+      embeddedOnlyElsewhere: ["9"],
+    })
+    expect((await embeddings.search("fish", { model: "tiny", limit: 3 })).embeddedOnlyElsewhere).toEqual([])
     await store.close()
   })
 

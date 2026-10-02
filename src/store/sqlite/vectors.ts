@@ -152,6 +152,33 @@ export const nearestChunks = (
   return [...best.values()].sort((a, b) => b.score - a.score).slice(0, limit)
 }
 
+const hasVectorOf = (models: ReturnType<typeof sql>) => sql`EXISTS (SELECT 1 FROM conversation_chunks k
+    JOIN conversations c ON c.pk = k.conversation_pk
+    JOIN conversation_state s ON s.chat_pk = c.chat_pk AND s.current_build = c.build
+    JOIN chunk_vectors v ON v.model ${models} AND v.content_hash = k.content_hash
+    WHERE c.chat_pk = ch.pk)`
+
+/** Chats in scope whose current build has vectors of another model and none of `model`: a search with it skips them. */
+export const embeddedOnlyElsewhere = (
+  { orm }: StoreContext,
+  accountPk: number,
+  { chatKey, model }: { chatKey?: number; model: string },
+): string[] => {
+  const others = orm
+    .all<{ model: string }>(sql`SELECT DISTINCT model FROM chunk_vectors WHERE model <> ${model}`)
+    .map((row) => sql`${row.model}`)
+  if (others.length === 0) return []
+  return orm
+    .all<{ id: string }>(
+      sql`SELECT ch.native_id AS id FROM chats ch
+        WHERE ch.account_pk = ${accountPk} ${chatKey === undefined ? sql`` : sql`AND ch.pk = ${chatKey}`}
+          AND ${hasVectorOf(sql`IN (${sql.join(others, sql`, `)})`)}
+          AND NOT ${hasVectorOf(sql`= ${model}`)}
+        ORDER BY ch.native_id`,
+    )
+    .map(({ id }) => id)
+}
+
 /** The messenger's ids of these messages, by pk. */
 export const messageIds = ({ orm }: StoreContext, pks: number[]): Map<number, string> =>
   new Map(

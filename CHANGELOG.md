@@ -6,6 +6,15 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- **`conversations search` names the chats it could not see**: a chat embedded only with another model is
+  listed on stderr, and as `embeddedOnlyElsewhere` in `--json` and in MCP `conversations_search`, instead
+  of being left out silently.
+- **MCP `conversations_search` loads the model once per server**, not once per call (~1 s each with
+  e5-small), and releases it when the server stops. Vectors are still read from the store on every call,
+  so a chat embedded while the server runs is found at once.
+
 ### Changed — may break callers
 
 - **The parity manifest marks `bot watch`, `bot callbacks`, `bot commands` and `bot webhooks` as in all

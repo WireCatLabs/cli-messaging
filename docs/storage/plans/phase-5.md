@@ -113,7 +113,10 @@ several models side by side, rebuildable, droppable without touching `messages`.
 
 **E3 · Vectors in a plain table, scanned in JS** — no extension (**NEED-518 A**, 2026-10-02). Float32, normalised at
 write so a dot product is the cosine. A search reads the scope's vectors in one statement and keeps the
-top `--limit`; `serve` and `mcp` keep what they read in memory between queries. sqlite-vec's ruled role
+top `--limit`; ~~`serve` and `mcp` keep what they read in memory between queries~~. **Correction
+2026-10-02:** `serve` never searches, so only `mcp` keeps anything, and it keeps the open model alone (the
+~1 s of a one-shot search), not the vectors: `conversations embed` and `build` run in another process,
+which a vector copy in the server could not hear about without asking the store on every query anyway. sqlite-vec's ruled role
 (NEED-374 A) is not needed at the sizes measured, and it would add an extension per platform that official
 Node and Bun on Linux load from outside our SQLite. int8 storage and sqlite-vec stay open for when a real
 archive passes ~100k chunks.
@@ -227,7 +230,7 @@ the default). Facts: [`../research/2026-10-02-embedding-apis.md`](../research/20
    vectors no chunk points at.
 4. ✅ 2026-10-02 · **The external provider** (E11, E12) — `openai` with `--base-url`, the key commands, the consent
    step and `--max-tokens`, `--concurrency`, retries; tested against a stand-in server, never a real key.
-5. 🟡 2026-10-02: the command, the scan and MCP `conversations_search` are built; not yet: keeping the vectors in memory in `serve` and `mcp`, and naming on stderr a chat embedded only with another model · **`conversations search`** — the scan (E3, E7), output and `--json`, MCP `conversations_search`, the
+5. ✅ 2026-10-02: the command, the scan and MCP `conversations_search`; the MCP server keeps the model open between calls, and a chat embedded only with another model is named (stderr, `embeddedOnlyElsewhere`) — no vector copy in memory, see the correction in E3 · **`conversations search`** — the scan (E3, E7), output and `--json`, MCP `conversations_search`, the
    in-memory copy in `serve` and `mcp`.
 6. 🟡 2026-10-02: released in 0.101.0–0.103.0; tg on 0.103.0 with docs, skill line and tests (tg-cli #217); max-cli's bump and turning the parity rows from planned to present are left · **Docs, changelog, parity rows, skill line** — ARCHITECTURE's store section (the two tables, why vectors
    are keyed by hash), `docs/commands.md`, one line in the shared skills; tg-cli and max-cli bump.

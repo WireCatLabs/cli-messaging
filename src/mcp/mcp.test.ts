@@ -1,14 +1,14 @@
-import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs"
+import { mkdirSync, mkdtempSync, symlinkSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { pathToFileURL } from "node:url"
+import { fileURLToPath, pathToFileURL } from "node:url"
 import { CliError, captureStreams } from "@leemour/cli-core"
 import { skillResource } from "@leemour/cli-core/skill"
 import { Client, type ElicitResult } from "@modelcontextprotocol/client"
 import { InMemoryTransport } from "@modelcontextprotocol/server"
 import { serveStdio } from "@modelcontextprotocol/server/stdio"
 import { Command } from "commander"
-import { afterEach, describe, expect, it } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
 import { provide } from "../cli/context.js"
 import { type Messenger, messengerContext } from "../cli/messenger/context.js"
 import { inboxCommand } from "../cli/messenger/inbox.js"
@@ -22,9 +22,52 @@ import type { SendGuard } from "../sends/guard.js"
 import { SendJournal, sendsPathFor } from "../sends/journal.js"
 import { conversationsService } from "../services/conversations.js"
 import { storedDeps } from "../services/deps.js"
+import { embeddingsService } from "../services/embeddings.js"
 import { openStore } from "../store/store.js"
 import { instructions } from "./instructions.js"
 import { createServer, type ServerOptions } from "./server.js"
+
+const models = vi.hoisted(() => ({ opened: 0, closed: 0 }))
+vi.mock("../embeddings/embed.js", async (original) => {
+  const real = await original<typeof import("../embeddings/embed.js")>()
+  return {
+    ...real,
+    openEmbedder: async (...args: Parameters<typeof real.openEmbedder>) => {
+      models.opened += 1
+      const embedder = await real.openEmbedder(...args)
+      return {
+        ...embedder,
+        close: async () => {
+          models.closed += 1
+          await embedder.close()
+        },
+      }
+    },
+  }
+})
+// The default model is the test fixture: e5-small is not in CI.
+vi.mock("../embeddings/models.js", async (original) => {
+  const real = await original<typeof import("../embeddings/models.js")>()
+  return {
+    ...real,
+    textModel: (id: string) =>
+      id === real.DEFAULT_TEXT_MODEL
+        ? {
+            id: "tiny",
+            title: "a five-word model",
+            languages: "test",
+            licence: "none",
+            dims: 4,
+            maxTokens: 64,
+            chunksPerSecond: 1,
+            pooling: "mean",
+            prefix: { query: "", passage: "" },
+            onnx: "onnx/model.onnx",
+            files: [{ name: "onnx/model.onnx", url: "", sha256: "", bytes: 284 }],
+          }
+        : real.textModel(id),
+  }
+})
 
 const app = {
   command: "chat",
@@ -187,18 +230,20 @@ const connect = async (telegram: Scripted = scripted(), options: Partial<ServerO
     })
   }
   await client.connect(clientSide)
+  const { embedders } = made as ReturnType<typeof createServer>
   closers.push(async () => {
     await client.close()
     await server?.close()
     await served?.close()
     await session.close()
+    await embedders.close()
   })
   const call = async (name: string, args: Record<string, unknown> = {}) => {
     const result = await client.callTool({ name, arguments: args })
     const [first] = result.content as { type: string; text: string }[]
     return { isError: result.isError === true, body: JSON.parse(first?.text ?? "null") }
   }
-  return { client, call, session, streams, forms, env }
+  return { client, call, session, embedders, streams, forms, env }
 }
 
 /** A store filled the way `serve` fills it: a server-mode session saves what it read. */
@@ -438,6 +483,45 @@ describe("the MCP server", () => {
     const shown = await call("chat_conversations_show", { id: body.items[0].id })
     expect(shown.body.messages.map((one: { id: string }) => one.id)).toEqual(["1"])
     expect((await call("chat_conversations_show", { chat: "7" })).isError).toBe(true)
+  })
+
+  it("loads the model once for every conversations_search, and lets it go when the server closes", async () => {
+    const { call, env, embedders } = await connect(
+      scripted({
+        history: async () => ({ items: [{ ...message, senderName: null, text: "cat dog" }], hasMore: false }),
+      }),
+    )
+    await call("chat_messages_list", { chat: "7" })
+    mkdirSync(join(env.CLI_COMMON_CACHE_DIR, "models", "text"), { recursive: true })
+    symlinkSync(
+      fileURLToPath(new URL("../embeddings/fixtures/tiny", import.meta.url)),
+      join(env.CLI_COMMON_CACHE_DIR, "models", "text", "tiny"),
+    )
+    vi.stubEnv("CLI_COMMON_CACHE_DIR", env.CLI_COMMON_CACHE_DIR)
+    const store = await openStore({ path: env.MESSAGING_STORE })
+    const deps = storedDeps(
+      { provider: "chat", app } as Messenger,
+      store,
+      { provider: "chat", account: "500" },
+      {} as SendGuard,
+    )
+    await conversationsService(deps).build("7")
+    await embeddingsService(deps).embed("7", { threads: 1 })
+    await store.close()
+    models.opened = 0
+    models.closed = 0
+
+    const [first, second] = await Promise.all([
+      call("chat_conversations_search", { query: "cat" }),
+      call("chat_conversations_search", { query: "dog", chat: "7" }),
+    ])
+    const third = await call("chat_conversations_search", { query: "cat dog" })
+
+    expect([first, second, third].map(({ body }) => body.items.length)).toEqual([1, 1, 1])
+    expect(models).toEqual({ opened: 1, closed: 0 })
+    await embedders.close()
+    expect(models.closed).toBe(1)
+    vi.unstubAllEnvs()
   })
 
   it("connects again once the connection has been idle, or is older than the age limit", async () => {

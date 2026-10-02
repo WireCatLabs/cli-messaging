@@ -1,6 +1,7 @@
 import { CliError } from "@leemour/cli-core"
 import type { Messenger } from "../cli/messenger/context.js"
 import type { MessengerAdapter } from "../cli/messenger/port.js"
+import type { WarmEmbedders } from "../embeddings/embed.js"
 import type { SendGuard } from "../sends/guard.js"
 import type { AccountKey, MessageStore } from "../store/store.js"
 
@@ -22,6 +23,8 @@ export interface ServiceDeps {
   /** For the profile's own files — a group's moderation rules. `default` and `process.env` when unset. */
   profile?: string
   env?: NodeJS.ProcessEnv
+  /** A long-running process's open models, so a search does not load one each time. */
+  embedders?: WarmEmbedders
 }
 
 /**
