@@ -12,7 +12,7 @@ how to check.
 | D | the phase 2 search plan — **done, approved 2026-10-01** (#216); items 1–7 built (#261, #332, #334, #338, #351, #357, #362) | `docs/storage/plans/phase-2.md` (new) | [`lane-d-phase-2-plan.md`](lane-d-phase-2-plan.md) |
 | Phase 2 rest | three threads: tg and max on the next release (SQLite plan item 5), search across accounts (item 9), the benchmark and max's bot search (items 8, 10) | thread A: tg-cli and max-cli; B: `src/services/messages.ts` search, `src/search/query.ts`; C: `bench/search/`, `SCOPE_TOKEN_LIMIT` | [`phase-2-rest.md`](phase-2-rest.md) |
 | Phase 4 finish | ship phase 4 to tg (release, tg-cli #205), item 6's documents, item 5's run with a real agent — **done 2026-10-01** (#353, #358; tg-cli #205, #209) | `docs/dev/ARCHITECTURE.md` (the store section's phase 4 facts), `docs/storage/plans/phase-4.md`, `bench/disentangle/` | [`phase-4-finish.md`](phase-4-finish.md) |
-| Phase 5 rest | keep search warm in `serve`/`mcp`, the other-model note, parity rows after max bumps, hybrid ranking after phase 2, the measurement | `src/services/embeddings.ts`, `src/embeddings/`, `src/store/sqlite/vectors.ts`, `docs/storage/plans/phase-5.md` | [`phase-5-rest.md`](phase-5-rest.md) |
+| Phase 5 next | `--workers` worth its memory, the `embed status` estimate, the plan's stale header | `src/embeddings/pool.ts`, `src/embeddings/models.ts`, `bench/embeddings/`, `docs/storage/plans/phase-5.md` | [`phase-5-next.md`](phase-5-next.md) (supersedes [`phase-5-rest.md`](phase-5-rest.md), done) |
 
 **Done before the split:** items 1–6 (normalizer, async store, Drizzle schema and baseline, the
 migration runner, the benchmark loader, store version 6); versions 7–11 for max-cli

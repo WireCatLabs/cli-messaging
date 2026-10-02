@@ -1,5 +1,7 @@
 # Handoff — finish phase 5: search by meaning in serve and MCP, the parity rows, hybrid ranking, the measurement (2026-10-02)
 
+**Superseded 2026-10-03** by [`phase-5-next.md`](phase-5-next.md).
+
 **Done 2026-10-02:** all five items (#405, #406, #407, and the measurement). Left: the scan's paging (see
 [the measurement](../../../bench/embeddings/README.md)) and max's `models text` row.
 
