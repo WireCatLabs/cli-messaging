@@ -6,6 +6,10 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.116.0 — 03.10.2026
+
+Released early: max-cli shared completion and doctor need local completion sources and the store summary export
+
 ### Added
 
 - `completeCommand` accepts optional local completion sources so a consumer can keep a bot's
