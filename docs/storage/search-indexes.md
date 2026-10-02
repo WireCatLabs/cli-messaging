@@ -236,14 +236,20 @@ never embedded is still found by its words.
 
 A one-shot command loads the model (~1 s), searches and exits. The MCP server keeps the model between
 calls (`warmEmbedders`, `src/embeddings/embed.ts`), so a search after the first pays only the scan.
-On Node the kept model runs in a worker thread of its own and is closed after 10 minutes without a
-search; the next search loads it again. On Bun it stays loaded:
+~~On Node the kept model runs in a worker thread of its own and is closed after 10 minutes without a
+search; the next search loads it again. On Bun it stays loaded.~~ **Correction 2026-10-02:** the kept
+model runs in a child process of its own, on Node and Bun alike, and the process ends after 10 minutes
+without a search; the next search starts it again (~1 s). The server itself stays near its starting size.
 
 | measured 2026-10-02, three load-and-close cycles | memory left after each close |
 |---|---|
+| the model in a child process (what runs) | none — the server stays at 52–64 MB, Node and Bun |
 | Node, the model in a worker thread | ~0.2 GB each time, from ~1 GB loaded |
 | Node, the model in the same thread | ~0.8 GB — closing the session alone frees ~0.1 GB |
-| Bun, either way | grows 0.2–0.55 GB a cycle, so it is never unloaded |
+| Bun, a worker thread or the same thread | grows 0.2–0.55 GB a cycle |
+
+A request travels as one line of JSON each way (`src/embeddings/process.ts`, `child.ts`); a warm query
+takes 7–14 ms of it. A child whose server is killed sees its input close and exits.
 
 Vectors are not kept in memory: `embed` and `build` run in other processes, and a copy in the server
 would go stale.
@@ -270,7 +276,7 @@ and the MCP search took 1.4 s.
 |---|---|
 | cutting chunks, their text and hash | `src/conversations/chunks.ts` |
 | the model list | `src/embeddings/models.ts` |
-| running a model: in this thread, in workers, kept warm | `src/embeddings/embed.ts`, `pool.ts`, `workers.ts` |
+| running a model: in this thread, in workers, kept warm in a child process | `src/embeddings/embed.ts`, `pool.ts`, `workers.ts`, `process.ts`, `child.ts` |
 | download, with sha256, into the shared folder | `src/cli/messenger/models-command.ts`, through `src/speech/install.ts` |
 | an API model | `src/embeddings/remote.ts` |
 | embed, status, clear, search, the merge | `src/services/embeddings.ts` |

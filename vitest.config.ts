@@ -18,6 +18,9 @@ export default defineConfig({
         // Run only with real worker threads, from dist; `pnpm check:dist` drives two of them under Node and Bun.
         "src/embeddings/worker.ts",
         "src/embeddings/workers.ts",
+        // A child process run from dist; `pnpm check:dist` drives it under Node and Bun.
+        "src/embeddings/child.ts",
+        "src/embeddings/process.ts",
         // stdin, argv and an exit code around parityProblems, which the parity tests cover.
         "src/parity/bin.ts",
       ],

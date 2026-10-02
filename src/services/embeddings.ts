@@ -110,11 +110,12 @@ export const embeddingsService = (deps: ServiceDeps): EmbeddingsService => {
       open: async ({
         workers = 1,
         threads,
-        isolated = false,
+        apart = false,
       }: {
         workers?: number
         threads?: number
-        isolated?: boolean
+        /** In a process of its own, which gives all of its memory back when closed: the MCP server's. */
+        apart?: boolean
       } = {}): Promise<Embedder> => {
         if (!isTextModelInstalled(model, directory)) {
           throw new CliError(
@@ -122,9 +123,9 @@ export const embeddingsService = (deps: ServiceDeps): EmbeddingsService => {
             `${model.id} is not downloaded — \`${command} models text download ${model.id}\``,
           )
         }
-        if (isolated) {
-          const { openWorkers } = await import("../embeddings/workers.js")
-          return openWorkers(model, directory, { workers: 1, threads: threads ?? defaultThreads() })
+        if (apart) {
+          const { openProcess } = await import("../embeddings/process.js")
+          return openProcess(model, directory, { threads: threads ?? defaultThreads() })
         }
         const { openPool } = await import("../embeddings/pool.js")
         return openPool(model, directory, { workers, ...(threads ? { threads } : {}) })
@@ -245,9 +246,7 @@ export const embeddingsService = (deps: ServiceDeps): EmbeddingsService => {
       const chatId = chat === undefined ? undefined : await storedChatId(deps.messenger, chat, store, account)
       const scope = chatId === undefined ? {} : { chatId }
       const warm = typeof choice !== "object" ? deps.embedders : undefined
-      const embedder = warm
-        ? await warm.get(target.key, () => target.open({ isolated: warm.isolated }))
-        : await target.open()
+      const embedder = warm ? await warm.get(target.key, () => target.open({ apart: true })) : await target.open()
       let meaning: ConversationHit[]
       try {
         const [vector] = await embedder.embed([query], "query")

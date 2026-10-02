@@ -70,3 +70,18 @@ if (
   throw new Error("two embedding workers did not give the tiny model's vectors back in order")
 }
 console.log("dist: two embedding workers load the model and keep the order")
+
+// The MCP server's model runs in a child process started from dist/embeddings/child.js.
+const { openProcess } = await import(join(root, "embeddings/process.js"))
+const apart = await openProcess(tiny, join(root, "../src/embeddings/fixtures"), { threads: 1 })
+const [fish] = await apart.embed(["fish"], "query")
+await apart.close()
+if (Array.from(fish as Float32Array).join(" ") !== "0 0 1 0") {
+  throw new Error("the embedding process did not give the tiny model's vector back")
+}
+const late = await apart.embed(["fish"], "query").then(
+  () => "answered",
+  (error: Error) => error.message,
+)
+if (!late.startsWith("the embedding process stopped")) throw new Error(`a closed embedding process ${late}`)
+console.log("dist: the embedding process answers, and refuses once closed")

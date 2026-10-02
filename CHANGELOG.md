@@ -6,6 +6,13 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Fixed
+
+- **The MCP server lets go of the search model on Bun too**: the model it keeps between searches now runs in a
+  child process of its own, on Node and Bun, which ends after 10 minutes without a search. The server stays
+  near its starting size, 52–64 MB, across reloads; before, Bun held ~1 GB for the server's life and Node
+  ~0.2 GB after each unload. A first search after a pause starts the model again, ~1 s.
+
 ## 0.109.0 — 02.10.2026
 
 Released early: max-cli waits on the shared bot store fetch command
