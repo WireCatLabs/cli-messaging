@@ -121,9 +121,11 @@ export const nearestChunks = (
   let after = { conversation: 0, ordinal: -1 }
   for (;;) {
     const rows = orm.all<{ conversation: number; ordinal: number; first: number; last: number; vector: Uint8Array }>(
+      // CROSS JOIN keeps the chunks first, so each page walks their key; led by the vectors, SQLite re-read and
+      // sorted every one of them per page — 1.3 s against 140 ms at 42k chunks (bench/embeddings/README.md).
       sql`SELECT k.conversation_pk AS conversation, k.ordinal, k.first_message_pk AS first, k.last_message_pk AS last,
           v.vector FROM conversation_chunks k
-        JOIN conversations c ON c.pk = k.conversation_pk
+        CROSS JOIN conversations c ON c.pk = k.conversation_pk
         JOIN conversation_state s ON s.chat_pk = c.chat_pk AND s.current_build = c.build
         JOIN chats ch ON ch.pk = c.chat_pk
         JOIN chunk_vectors v ON v.model = ${model} AND v.content_hash = k.content_hash
