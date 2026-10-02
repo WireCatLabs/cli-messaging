@@ -6,6 +6,13 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Fixed
+
+- Keep `mcp setup` and `mcp doctor` planned in the parity manifest until the consuming CLIs adopt them.
+
+- The parity manifest now marks `bot store fetch` and its shared options present in both CLIs.
+  Telegram alone takes `--from <link>` to start from a known message number.
+
 ## 0.114.0 — 03.10.2026
 
 Released early: max-cli needs shared inbox/review migration and correct unheard voice completeness

@@ -181,8 +181,8 @@
       "note": "the shared `store export` takes `jsonl` or `markdown`, max's own takes `jsonl` or `md` (e4)"
     },
     "--from": {
-      "value": "<value>",
-      "meaning": "Start time for requested messages - use after instead"
+      "value": "<who|link>",
+      "meaning": "sender to match in bot messages search; starting message link in tg bot store fetch"
     },
     "--history": {
       "meaning": "the people added also see the messages from before they came"
@@ -813,47 +813,20 @@
       "in": "all"
     },
     "bot store": {
-      "in": ["max"],
-      "planned": {
-        "tg": "P8"
-      }
+      "in": "all"
     },
     "bot store fetch": {
-      "in": ["max"],
-      "planned": {
-        "tg": "P8"
-      },
+      "in": "all",
       "options": {
-        "--last": {
-          "in": ["max"],
-          "planned": {
-            "tg": "P8"
-          }
+        "--from": {
+          "in": ["tg"],
+          "reason": "Telegram bots read message numbers and need a starting link when none is known; MAX pages chat history directly"
         },
-        "--limit": {
-          "in": ["max"],
-          "planned": {
-            "tg": "P8"
-          }
-        },
-        "--page-size": {
-          "in": ["max"],
-          "planned": {
-            "tg": "P8"
-          }
-        },
-        "--pause": {
-          "in": ["max"],
-          "planned": {
-            "tg": "P8"
-          }
-        },
-        "--since-time": {
-          "in": ["max"],
-          "planned": {
-            "tg": "P8"
-          }
-        }
+        "--last": "all",
+        "--limit": "all",
+        "--page-size": "all",
+        "--pause": "all",
+        "--since-time": "all"
       }
     },
     "bot uploads": {
@@ -1451,45 +1424,111 @@
     },
     "mcp doctor": {
       "in": [],
+      "planned": {
+        "max": "local MCP setup",
+        "tg": "local MCP setup"
+      },
       "options": {
         "--allow-dangerous": {
-          "in": ["tg"],
+          "in": [],
+          "planned": {
+            "tg": "local MCP setup"
+          },
           "reason": "tg profiles use a separate dangerous-write override"
         },
-        "--allow-delete": "all",
-        "--allow-mark-read": "all",
+        "--allow-delete": {
+          "in": [],
+          "planned": {
+            "max": "local MCP setup",
+            "tg": "local MCP setup"
+          }
+        },
+        "--allow-mark-read": {
+          "in": [],
+          "planned": {
+            "max": "local MCP setup",
+            "tg": "local MCP setup"
+          }
+        },
         "--allow-moderate": {
-          "in": ["max"],
+          "in": [],
+          "planned": {
+            "max": "local MCP setup"
+          },
           "reason": "max MCP offers a moderation flag"
         },
-        "--allow-send": "all",
-        "--confirm-send": "all"
-      },
-      "planned": {
-        "max": "P7",
-        "tg": "P7"
+        "--allow-send": {
+          "in": [],
+          "planned": {
+            "max": "local MCP setup",
+            "tg": "local MCP setup"
+          }
+        },
+        "--confirm-send": {
+          "in": [],
+          "planned": {
+            "max": "local MCP setup",
+            "tg": "local MCP setup"
+          }
+        }
       }
     },
     "mcp setup": {
       "in": [],
+      "planned": {
+        "max": "local MCP setup",
+        "tg": "local MCP setup"
+      },
       "options": {
         "--allow-dangerous": {
-          "in": ["tg"],
+          "in": [],
+          "planned": {
+            "tg": "local MCP setup"
+          },
           "reason": "tg profiles use a separate dangerous-write override"
         },
-        "--allow-delete": "all",
-        "--allow-mark-read": "all",
+        "--allow-delete": {
+          "in": [],
+          "planned": {
+            "max": "local MCP setup",
+            "tg": "local MCP setup"
+          }
+        },
+        "--allow-mark-read": {
+          "in": [],
+          "planned": {
+            "max": "local MCP setup",
+            "tg": "local MCP setup"
+          }
+        },
         "--allow-moderate": {
-          "in": ["max"],
+          "in": [],
+          "planned": {
+            "max": "local MCP setup"
+          },
           "reason": "max MCP offers a moderation flag"
         },
-        "--allow-send": "all",
-        "--allow-writes": "all",
-        "--confirm-send": "all"
-      },
-      "planned": {
-        "max": "P7",
-        "tg": "P7"
+        "--allow-send": {
+          "in": [],
+          "planned": {
+            "max": "local MCP setup",
+            "tg": "local MCP setup"
+          }
+        },
+        "--allow-writes": {
+          "in": [],
+          "planned": {
+            "max": "local MCP setup",
+            "tg": "local MCP setup"
+          }
+        },
+        "--confirm-send": {
+          "in": [],
+          "planned": {
+            "max": "local MCP setup",
+            "tg": "local MCP setup"
+          }
+        }
       }
     },
     "messages": {
