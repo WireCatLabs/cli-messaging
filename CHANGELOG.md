@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.104.0 — 02.10.2026
+
 ### Added
 
 - **`bot mcp`, shared** (`botMcpCommand`, `createBotServer`): a bot's MCP server, mounted when the CLI hands in
