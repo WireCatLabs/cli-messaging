@@ -59,6 +59,18 @@ const ECHO: BotTool = {
   description: "Replaces the shared one.",
   input: v.object({}),
 }
+const LEAVE: BotTool = {
+  words: ["chats", "leave"],
+  writes: "bot.chats.leave",
+  title: "Leave, after a form of its own",
+  description: "A tool that is more than one command.",
+  input: v.object({ chat: v.string() }),
+  handle: (args, kit, ctx) =>
+    kit.confirmed({ name: "leave", title: "Leave" }, kit.resolveChat, args, ctx, async (resolved) => ({
+      left: resolved.chat,
+      seen: await kit.invoke(["chats", "list"], { options: ["--offline"] }),
+    })),
+}
 const ABSENT: BotTool = { words: ["comments", "list"], title: "None", description: "Not mounted.", input: v.object({}) }
 
 const bot: BotMessenger = {
@@ -69,7 +81,7 @@ const bot: BotMessenger = {
   connect: async () => adapter,
   tokenStore: (_command, profile) =>
     new BotTokenStore({ app, profile, env: {}, configDir: join(root, "config"), keyring }),
-  mcp: { program: async () => runBot, tools: [ECHO, ABSENT] },
+  mcp: { program: async () => runBot, tools: [ECHO, LEAVE, ABSENT] },
 }
 
 const definition = { app, commands: () => [botCommand(bot)] }
@@ -159,7 +171,7 @@ describe("bot mcp tools by permission level", () => {
   it("**offers every read and write the default levels allow**, and no tool whose command is not mounted", async () => {
     const { offered } = await connect()
 
-    expect(offered.sort()).toEqual([...READS, ...WRITES].sort())
+    expect(offered.sort()).toEqual([...READS, ...WRITES, "chat_bot_chats_leave"].sort())
   })
 
   it.each([
@@ -235,6 +247,17 @@ describe("bot mcp writes", () => {
     expect(sent.isError).toBe(false)
     expect(forms).toHaveLength(1)
     expect(calls).toEqual(["send -100 Hi"])
+  })
+})
+
+describe("a tool of the CLI's own with its own form", () => {
+  it("**hands the form request to the client, then answers with what it did**", async () => {
+    const { client, forms } = await connect({}, { form: () => ({ action: "accept", content: {} }) })
+
+    const done = await call(client, "chat_bot_chats_leave", { chat: "Team" })
+
+    expect(forms[0]).toContain('chat: "Team" (-100)')
+    expect(done.body).toMatchObject({ left: "-100", seen: { items: [{ id: "-100", title: "Team" }] } })
   })
 })
 

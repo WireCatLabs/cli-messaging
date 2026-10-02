@@ -187,7 +187,10 @@ export const createBotServer = (options: BotServerOptions) => {
             const checked = v.safeParse(tool.input, raw)
             if (!checked.success) throw invalid(checked.issues)
             const args = checked.output as Record<string, unknown>
-            if (tool.handle) return answered(body(await tool.handle(args, kit, ctx)))
+            if (tool.handle) {
+              const handled = await tool.handle(args, kit, ctx)
+              return isInputRequiredResult(handled) ? handled : answered(body(handled))
+            }
             const act = async (given: Record<string, unknown>) => {
               const { options: own = [], positionals = [] } = tool.invocation?.(given) ?? {}
               return { result: await invoke(tool.words, { options: [...own, ...answerFlag(tool)], positionals }) }
