@@ -1356,46 +1356,37 @@
       }
     },
     "conversations embed": {
-      "in": [],
-      "planned": {
-        "max": "storage phase 5: the cli-messaging bump after it ships",
-        "tg": "storage phase 5: the cli-messaging bump after it ships"
-      },
-      "subtree": true,
+      "in": "all",
       "options": {
         "--base-url": "all",
-        "--chat": {
-          "in": [],
-          "planned": {
-            "max": "storage phase 5: the cli-messaging bump after it ships",
-            "tg": "storage phase 5: the cli-messaging bump after it ships"
-          }
-        },
+        "--chat": "all",
         "--concurrency": "all",
         "--dims": "all",
         "--max-tokens": "all",
-        "--model": {
-          "in": [],
-          "planned": {
-            "max": "storage phase 5: the cli-messaging bump after it ships",
-            "tg": "storage phase 5: the cli-messaging bump after it ships"
-          }
-        },
+        "--model": "all",
         "--provider": "all",
-        "--threads": {
-          "in": [],
-          "planned": {
-            "max": "storage phase 5: the cli-messaging bump after it ships",
-            "tg": "storage phase 5: the cli-messaging bump after it ships"
-          }
-        },
-        "--workers": {
-          "in": [],
-          "planned": {
-            "max": "storage phase 5: the cli-messaging bump after it ships",
-            "tg": "storage phase 5: the cli-messaging bump after it ships"
-          }
-        }
+        "--threads": "all",
+        "--workers": "all"
+      }
+    },
+    "conversations embed clear": {
+      "in": "all",
+      "options": {
+        "--base-url": "all",
+        "--chat": "all",
+        "--dims": "all",
+        "--model": "all",
+        "--provider": "all"
+      }
+    },
+    "conversations embed status": {
+      "in": "all",
+      "options": {
+        "--base-url": "all",
+        "--chat": "all",
+        "--dims": "all",
+        "--model": "all",
+        "--provider": "all"
       }
     },
     "conversations links": {
@@ -1447,12 +1438,7 @@
       }
     },
     "conversations search": {
-      "in": [],
-      "planned": {
-        "max": "storage phase 5: the cli-messaging bump after it ships",
-        "tg": "storage phase 5: the cli-messaging bump after it ships"
-      },
-      "subtree": true,
+      "in": "all",
       "options": {
         "--base-url": "all",
         "--chat": "all",
@@ -1717,10 +1703,9 @@
       "in": "all"
     },
     "models text": {
-      "in": [],
+      "in": ["tg"],
       "planned": {
-        "max": "storage phase 5: the cli-messaging bump after it ships",
-        "tg": "storage phase 5: the cli-messaging bump after it ships"
+        "max": "CLI-60: max's own models group moves onto the shared one"
       },
       "subtree": true
     },
