@@ -6,6 +6,18 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- `completeCommand` accepts optional local completion sources so a consumer can keep a bot's
+  registry separate from a personal account. Its configuration needs only `configuredProfiles`.
+  `storeSummary` is exported from `./cli` for consumers that retain their own doctor command.
+
+### Fixed
+
+- Contact completion uses account-scoped stored people and `partnerOf` for dialog fallbacks.
+  A dialog id is no longer offered as a person's id when the provider distinguishes the two.
+  These exports unblock max-cli's shared completion and doctor migration.
+
 ## 0.115.0 — 03.10.2026
 
 Released early: max-cli MCP migration needs the public stored adapter wrapper to keep shared archive writes
