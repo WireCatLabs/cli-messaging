@@ -6,6 +6,17 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- **`bot chats moderate` and `bot chats rules show|set|unset`, shared**: the bot's twins of the personal
+  `chats moderate|rules`. A bot judges what its messenger gives back (`BotAdapter.historySince`), or else
+  what its local copy kept, and the joins its messenger kept (`BotMessenger.joinsSince`). Rules live in
+  the file the personal profile of the same name uses; the saved point beside the bot's state
+  (`botFiles(...).checks`), where max-cli keeps them. Removal bans unless `--no-ban`. MCP:
+  `<cli>_bot_chats_moderate`, one form for the actions the rules put at `ask`.
+- **`moderateWith`** (`src/moderation/run.ts`): the moderation engine, taking what to gather and how to
+  act instead of `ServiceDeps`, so a bot uses it without the services. The personal service runs on it.
+
 ## 0.105.0 — 02.10.2026
 
 ### Fixed

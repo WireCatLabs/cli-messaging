@@ -133,6 +133,8 @@ export interface ActOptions {
   confirm?: (finding: Finding) => Promise<boolean | undefined>
   /** The program's word, for the command a row says to type by hand: `tg`, `max`. */
   command: string
+  /** In place of the personal commands a row names: a bot's own. */
+  commandFor?: (chatId: Id, finding: Finding) => string
 }
 
 /**
@@ -142,6 +144,7 @@ export interface ActOptions {
  */
 export const act = async (moderator: Moderator, findings: Finding[], options: ActOptions): Promise<CheckRow[]> => {
   const { chatId, rules, allowDangerous, dryRun, maxActions, confirm, command } = options
+  const typed = options.commandFor ?? ((chat: Id, finding: Finding) => commandFor(command, chat, finding))
   const rows: CheckRow[] = []
   let acted = 0
   let stopped: string | undefined
@@ -157,7 +160,7 @@ export const act = async (moderator: Moderator, findings: Finding[], options: Ac
       ...finding,
       outcome,
       ...(reason ? { reason } : {}),
-      ...(outcome === "done" || outcome === "reported" ? {} : { command: commandFor(command, chatId, finding) }),
+      ...(outcome === "done" || outcome === "reported" ? {} : { command: typed(chatId, finding) }),
     })
 
     if (level === "deny") {

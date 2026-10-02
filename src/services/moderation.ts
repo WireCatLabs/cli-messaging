@@ -1,18 +1,9 @@
 import { CliError } from "@leemour/cli-core"
 import { capability, type MessengerAdapter } from "../cli/messenger/port.js"
 import type { Id } from "../domain/models.js"
-import {
-  act,
-  type CheckRow,
-  type Finding,
-  gather,
-  judge,
-  MAX_ACTIONS,
-  type Moderator,
-  nextPoint,
-  someUndone,
-} from "../moderation/check.js"
+import { type CheckRow, type Finding, gather, MAX_ACTIONS, type Moderator } from "../moderation/check.js"
 import { defaultRules, type GroupRules, ModerationRules, moderationPathFor } from "../moderation/rules.js"
+import { moderateWith } from "../moderation/run.js"
 import { guardedWrite } from "../sends/guarded.js"
 import { newOperationId } from "../sends/send-id.js"
 import type { ServiceDeps } from "./deps.js"
@@ -42,9 +33,6 @@ export interface ModerationService {
   unset(chat: string, key: string): Promise<ShownRules>
   moderate(chat: string, options: ModerateOptions): Promise<{ chatId: Id; rows: CheckRow[]; notes: string[] }>
 }
-
-/** A group never checked before is looked at this far back. */
-const FIRST_LOOK_MS = 24 * 3_600_000
 
 export const moderationService = (deps: ServiceDeps): ModerationService => {
   const file = () =>
@@ -93,40 +81,22 @@ export const moderationService = (deps: ServiceDeps): ModerationService => {
       const connection = await deps.connection()
       const { id: chatId, title } = await connection.resolve(chat)
       const rules = file()
-      const saved = rules.read(chatId)
-      const groupRules = saved ?? defaultRules(title)
-      const point = rules.checkedUntil(chatId)
-      const from = since ?? (point === undefined ? Date.now() - FIRST_LOOK_MS : Date.parse(point))
-      const found = await gather(connection, chatId, from)
       const { inviteLinks } = deps.messenger
-      const findings = judge({
-        ...found,
-        rules: groupRules,
-        now: Date.now(),
-        ...(inviteLinks ? { invites: inviteLinks } : {}),
-      })
-      const rows = await act(moderatorOf(connection, deps), findings, {
+      return moderateWith({
         chatId,
-        rules: groupRules,
-        allowDangerous,
-        dryRun,
-        maxActions,
+        title,
+        rules,
+        point: { read: (id) => rules.checkedUntil(id), write: (id, at) => rules.markChecked(id, at) },
+        gather: (from) => gather(connection, chatId, from),
+        moderator: moderatorOf(connection, deps),
         command: deps.messenger.app.command,
+        ...(inviteLinks ? { invites: inviteLinks } : {}),
+        ...(since === undefined ? {} : { since }),
+        dryRun,
+        allowDangerous,
+        maxActions,
         ...(confirm ? { confirm } : {}),
       })
-
-      const notes = [
-        ...(saved ? [] : [`${title ?? chatId} has no rules yet — the defaults only report`]),
-        ...found.notes,
-      ]
-      const next = nextPoint(rows, found)
-      if (since === undefined && !dryRun && next !== null) rules.markChecked(chatId, next)
-      if (next !== found.until && someUndone(rows)) {
-        notes.push("some actions are not done — the next check starts at the first of them")
-      } else if (found.more) {
-        notes.push("more history than one check reads — the next check goes on from here")
-      }
-      return { chatId, rows, notes }
     },
   }
 }

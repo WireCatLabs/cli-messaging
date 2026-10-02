@@ -75,6 +75,7 @@ describe("a bot's files", () => {
       journal: join(bots, "sends", "sales.jsonl"),
       updates: join(bots, "updates", "sales.json"),
       presses: join(bots, "presses", "sales.json"),
+      checks: join(bots, "checks", "sales.json"),
     })
   })
 
