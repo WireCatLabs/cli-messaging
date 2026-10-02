@@ -1,12 +1,14 @@
 import { mkdirSync, mkdtempSync, truncateSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { dirname, join } from "node:path"
+import { Readable } from "node:stream"
 import { captureStreams } from "@leemour/cli-core"
 import { describe, expect, it, vi } from "vitest"
 import { placedText, textModelsDirectory } from "../../embeddings/embed.js"
 import { textModel } from "../../embeddings/models.js"
 import { modelPath, modelsDirectory, vadPath } from "../../speech/install.js"
 import { speechModel, VAD } from "../../speech/models.js"
+import { embeddingKeys } from "../embedding-keys.js"
 import { run } from "../program.js"
 import { settingsFor } from "../settings.js"
 import type { Messenger } from "./context.js"
@@ -38,7 +40,7 @@ const app = {
   version: "1.0.0",
 }
 
-const call = async (argv: string[], speechModels?: string[], tty = false) => {
+const call = async (argv: string[], speechModels?: string[], tty = false, stdin?: string) => {
   const root = mkdtempSync(join(tmpdir(), "models-"))
   const env = {
     CHAT_STATE_DIR: join(root, "state"),
@@ -64,7 +66,16 @@ const call = async (argv: string[], speechModels?: string[], tty = false) => {
   }
   const go = async () => {
     const streams = captureStreams()
-    const code = await run(argv, { app, commands: () => [modelsCommand(messenger)] }, { streams, tty, env })
+    const code = await run(
+      argv,
+      { app, commands: () => [modelsCommand(messenger)] },
+      {
+        streams,
+        tty,
+        env,
+        ...(stdin === undefined ? {} : { stdin: Object.assign(Readable.from([stdin]), { isTTY: false }) }),
+      },
+    )
     return { code, stdout: streams.stdout, stderr: streams.stderr }
   }
   return { go, place, env }
@@ -135,5 +146,16 @@ describe("models text", () => {
     expect(code).not.toBe(0)
     expect(stderr.join("")).toContain("--accept-terms")
     expect(stderr.join("")).toContain("https://ai.google.dev/gemma/terms")
+  })
+})
+
+describe("models text key", () => {
+  it("**stores a piped key where only the user reads it**, never echoing it", async () => {
+    const set = await call(["models", "text", "key", "set", "openai", "--json"], undefined, false, "sk-test\n")
+    const { code, stdout, stderr } = await set.go()
+    expect(code).toBe(0)
+    expect(JSON.parse(stdout[0] ?? "")).toMatchObject({ provider: "openai" })
+    expect([...stdout, ...stderr].join("\n")).not.toContain("sk-test")
+    expect(embeddingKeys(app, set.env).read("openai")?.key).toBe("sk-test")
   })
 })
