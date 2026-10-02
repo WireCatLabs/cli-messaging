@@ -67,6 +67,10 @@
     "--background": {
       "meaning": "run as a job that outlives this command; `store jobs show` follows it"
     },
+    "--base-url": {
+      "value": "<url>",
+      "meaning": "a server with OpenAI's /v1/embeddings: Gemini, Jina, or Ollama and LM Studio on this machine"
+    },
     "--batch": {
       "value": "<id>",
       "meaning": "the batch id `conversations batches next` printed"
@@ -108,8 +112,11 @@
       "note": "max's `messages search` takes `<id>` only, since searching never connects to resolve a name; rule 6 says `<chat>` (e8)"
     },
     "--check": {
-      "meaning": "say whether a newer version exists, and install nothing",
-      "note": "`bot list --check` names the messenger until both CLIs take the release after 0.98.0, where it says \"the messenger\"; then this note goes"
+      "meaning": "say whether a newer version exists, and install nothing"
+    },
+    "--concurrency": {
+      "value": "<n>",
+      "meaning": "remote: requests at once (default: 4)"
     },
     "--confirm-send": {
       "meaning": "show the owner every write the MCP server offers, in a form to approve",
@@ -125,6 +132,10 @@
     "--description": {
       "value": "<text>",
       "meaning": "the new about text — of a chat or of your account"
+    },
+    "--dims": {
+      "value": "<n>",
+      "meaning": "remote: the vector size — needed with --base-url; shortens an OpenAI model's"
     },
     "--dry-run": {
       "meaning": "judge and plan; do nothing"
@@ -224,6 +235,10 @@
       "meaning": "at most this many actions in one run",
       "default": "10"
     },
+    "--max-tokens": {
+      "value": "<n>",
+      "meaning": "remote: stop before a run that could send more tokens than this"
+    },
     "--md": {
       "meaning": "read **bold**, _italic_, ~~struck~~ and `code` in the text; \\ keeps a mark literal"
     },
@@ -322,6 +337,10 @@
     "--photo": {
       "value": "<file>",
       "meaning": "an image file — a profile photo in `account update`, a photo to send in `messages send`"
+    },
+    "--provider": {
+      "value": "<provider>",
+      "meaning": "embed through a service with your key instead of on this machine: openai"
     },
     "--qr-file": {
       "value": "<png>",
@@ -557,29 +576,13 @@
       "in": "all"
     },
     "bot callbacks": {
-      "in": ["max"],
-      "planned": {
-        "tg": "P8"
-      }
+      "in": "all"
     },
     "bot callbacks answer": {
-      "in": ["max"],
-      "planned": {
-        "tg": "P8"
-      },
+      "in": "all",
       "options": {
-        "--notification": {
-          "in": ["max"],
-          "planned": {
-            "tg": "P8"
-          }
-        },
-        "--text": {
-          "in": ["max"],
-          "planned": {
-            "tg": "P8"
-          }
-        }
+        "--notification": "all",
+        "--text": "all"
       }
     },
     "bot chats": {
@@ -703,28 +706,16 @@
       "in": "all"
     },
     "bot commands": {
-      "in": ["max"],
-      "planned": {
-        "tg": "P8"
-      }
+      "in": "all"
     },
     "bot commands clear": {
-      "in": ["max"],
-      "planned": {
-        "tg": "P8"
-      }
+      "in": "all"
     },
     "bot commands list": {
-      "in": ["max"],
-      "planned": {
-        "tg": "P8"
-      }
+      "in": "all"
     },
     "bot commands set": {
-      "in": ["max"],
-      "planned": {
-        "tg": "P8"
-      }
+      "in": "all"
     },
     "bot comments": {
       "in": ["max"],
@@ -978,96 +969,35 @@
     "bot sends list": {
       "in": "all"
     },
-    "bot updates": {
-      "in": [],
-      "planned": {
-        "max": "P8 B4: becomes bot watch",
-        "tg": "P8"
-      }
-    },
-    "bot updates watch": {
-      "in": [],
-      "planned": {
-        "max": "P8 B4: becomes bot watch",
-        "tg": "P8"
-      },
-      "options": {
-        "--types": {
-          "in": [],
-          "planned": {
-            "max": "P8 B4: becomes bot watch",
-            "tg": "P8"
-          }
-        }
-      }
-    },
     "bot uploads": {
       "in": ["max"],
       "reason": "Telegram has no upload-only step: a file goes up with the message that carries it"
     },
     "bot watch": {
-      "in": [],
-      "planned": {
-        "max": "P8 B4: max's bot watch comes with its move to the shared one",
-        "tg": "P8"
-      },
+      "in": "all",
       "options": {
-        "--events": {
-          "in": [],
-          "planned": {
-            "max": "P8 B4: max's bot watch comes with its move to the shared one",
-            "tg": "P8"
-          }
-        },
-        "--types": {
-          "in": [],
-          "planned": {
-            "max": "P8 B4: max's bot watch comes with its move to the shared one",
-            "tg": "P8"
-          }
-        }
+        "--events": "all",
+        "--types": "all"
       }
     },
     "bot webhooks": {
-      "in": ["max"],
-      "planned": {
-        "tg": "P8"
-      }
+      "in": "all"
     },
     "bot webhooks delete": {
-      "in": ["max"],
-      "planned": {
-        "tg": "P8"
-      }
+      "in": "all"
     },
     "bot webhooks list": {
-      "in": ["max"],
-      "planned": {
-        "tg": "P8"
-      }
+      "in": "all"
     },
     "bot webhooks set": {
-      "in": ["max"],
-      "planned": {
-        "tg": "P8"
-      },
+      "in": "all",
       "options": {
         "--add": {
           "in": ["max"],
           "reason": "a Telegram bot holds one webhook address"
         },
-        "--secret-stdin": {
-          "in": ["max"],
-          "planned": {
-            "tg": "P8"
-          }
-        },
-        "--types": {
-          "in": ["max"],
-          "planned": {
-            "tg": "P8"
-          }
-        }
+        "--secret-stdin": "all",
+        "--types": "all"
       }
     },
     "cache": {
@@ -1433,6 +1363,7 @@
       },
       "subtree": true,
       "options": {
+        "--base-url": "all",
         "--chat": {
           "in": [],
           "planned": {
@@ -1440,6 +1371,9 @@
             "tg": "storage phase 5: the cli-messaging bump after it ships"
           }
         },
+        "--concurrency": "all",
+        "--dims": "all",
+        "--max-tokens": "all",
         "--model": {
           "in": [],
           "planned": {
@@ -1447,6 +1381,7 @@
             "tg": "storage phase 5: the cli-messaging bump after it ships"
           }
         },
+        "--provider": "all",
         "--threads": {
           "in": [],
           "planned": {
@@ -1517,7 +1452,16 @@
         "max": "storage phase 5: the cli-messaging bump after it ships",
         "tg": "storage phase 5: the cli-messaging bump after it ships"
       },
-      "subtree": true
+      "subtree": true,
+      "options": {
+        "--base-url": "all",
+        "--chat": "all",
+        "--dims": "all",
+        "--limit": "all",
+        "--model": "all",
+        "--provider": "all",
+        "--since-time": "all"
+      }
     },
     "conversations show": {
       "in": "all"
