@@ -26,6 +26,8 @@ export interface BotToolKit {
     act: (resolved: Record<string, unknown>) => Promise<object>,
   ) => Promise<object | InputRequiredResult>
   resolveChat: ResolveChat
+  /** The owner must see this call in a form before anything is written: `--confirm-send`, or level `ask`. */
+  confirmFirst: boolean
 }
 
 export interface BotTool {

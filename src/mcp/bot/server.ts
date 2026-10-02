@@ -135,7 +135,7 @@ export const createBotServer = (options: BotServerOptions) => {
     return { id: found.id, title: found.title ?? null }
   }
   const confirmed = confirmer()
-  const kit: BotToolKit = { invoke, confirmed, resolveChat }
+  const kit: Omit<BotToolKit, "confirmFirst"> = { invoke, confirmed, resolveChat }
   const skill = options.skill ? skillResource(bot.app, options.skill) : undefined
 
   /** The flag that answers the command's own question for a write at level `ask`, when the command takes it. */
@@ -188,7 +188,7 @@ export const createBotServer = (options: BotServerOptions) => {
             if (!checked.success) throw invalid(checked.issues)
             const args = checked.output as Record<string, unknown>
             if (tool.handle) {
-              const handled = await tool.handle(args, kit, ctx)
+              const handled = await tool.handle(args, { ...kit, confirmFirst: formFirst(tool) }, ctx)
               return isInputRequiredResult(handled) ? handled : answered(body(handled))
             }
             const act = async (given: Record<string, unknown>) => {
