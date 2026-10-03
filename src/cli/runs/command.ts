@@ -27,6 +27,8 @@ export const runsCommand = (app: AppIdentity): Command => {
       renderPage(
         { ...output, settings: { page: 1, limit, all: false } },
         { items: runs.slice(0, limit), hasMore: runs.length > limit },
+        undefined,
+        () => "more recorded runs — increase `--limit` to show them",
       )
       if (runs.length === 0) renderer.note("nothing recorded — a run is kept with `--record`, or when it fails")
     })
