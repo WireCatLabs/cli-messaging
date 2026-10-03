@@ -39,6 +39,11 @@ const manifest: Manifest = {
 const problems = (page: string) => pageProblems(page, "tg", manifest, program)
 
 describe("options a user page names", () => {
+  it("accepts implicit help on command groups, nested commands and profiles, while rejecting typos", () => {
+    expect(
+      problems("tg store --help\ntg store fetch --help\ntg work server status --help\ntg server status --helps"),
+    ).toEqual(["tg server status --helps"])
+  })
   it("refuses an option the command no longer has", () => {
     expect(problems("```sh\ntg store fetch Chat --max 5000\n```")).toEqual(["tg store fetch --max"])
   })

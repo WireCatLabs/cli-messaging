@@ -15,6 +15,10 @@ Released early: tg-cli onboarding documentation needs the checker to accept comm
 - The parity manifest no longer permits max's retired `cache` command subtree. Max now uses the
   shared store; `store clear --left` handles departed chats and a whole-store wipe is not offered.
 
+- Documentation parity checks accept Commander's implicit `--help` for commands and profiles.
+  User pages can point to a command's help without inventing a manifest option; other unknown
+  flags are still refused.
+
 ## 0.120.0 — 03.10.2026
 
 Released early: tg-cli guided setup needs cancellable credential prompts and the setup command manifest
