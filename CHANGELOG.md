@@ -6,6 +6,10 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.140.0 — 04.10.2026
+
+Released early: tg-cli and max-cli releases need scoped command discovery and the parallel local-read lock fix.
+
 ### Added
 
 - `commands [path...]` inspects one command or group without loading the whole command tree.
