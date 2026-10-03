@@ -6,6 +6,10 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.135.0 — 03.10.2026
+
+Released early: max-cli shared bulk download adoption needs descriptor paging to preserve its 30-message and 5-second fetch policy
+
 ### Added
 
 - `config migrate [--dry-run]` replaces legacy `readOnly`, `allow` and supported `mcpTools` entries
