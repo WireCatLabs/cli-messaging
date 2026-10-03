@@ -14,6 +14,12 @@ export {
   text as botText,
   withAcross,
 } from "../mcp/bot/tools.js"
+export {
+  answerMessagesSearch,
+  MESSAGES_SEARCH_DESCRIPTION,
+  type MessagesSearchArgs,
+  messagesSearchInput,
+} from "../mcp/tools/search.js"
 export { guardedClose, guardedCreatePoll, guardedVote } from "../sends/polls.js"
 export type { InboxReader } from "../services/inbox.js"
 export { INBOX_CHATS, newIn, REVIEW_CHATS, reviewIn, unanswered, unreadIn } from "../services/inbox.js"
