@@ -6,6 +6,10 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.134.0 — 03.10.2026
+
+Released early: tg-cli generated Bot API and max-cli shared native API adoption need the generated command assembler, RPC input helpers and keyring-only credential storage exports
+
 ### Added
 
 - Shared generated native Bot API commands, JSON body/field validation, lossless integer handling
