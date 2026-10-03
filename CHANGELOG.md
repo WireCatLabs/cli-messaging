@@ -8,7 +8,7 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Fixed
 
-- Search language, timezone and regex options are marked present in both CLIs after their shared 0.127.0 adoption.
+- Search language, timezone and regex options are marked present in both CLIs after their shared 0.127.0 adoption; the obsolete claim that MAX search accepts only chat ids is removed.
 
 ## 0.128.0 — 03.10.2026
 
