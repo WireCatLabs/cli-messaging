@@ -219,6 +219,8 @@ export interface BotMessenger {
   adminRights?: readonly AdminRight[]
   /** Whether `bot webhooks set --add` keeps the other addresses; a messenger with one address has no `--add`. */
   manyWebhooks?: boolean
+  /** Mount shared bot me; consumers with an existing response migrate explicitly. */
+  identity?: boolean
   /**
    * Called by `bot watch` with each batch, after the copy took it and before it is printed. A throw
    * holds the cursor, so the batch comes again — keep what it writes safe to write twice.

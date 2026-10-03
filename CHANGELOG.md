@@ -6,6 +6,11 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- An opt-in shared `bot me` reads the bot profile's identity and offers the matching MCP tool.
+  It refuses offline reads and closes its connection on every exit path; existing consumer commands migrate explicitly.
+
 ## 0.124.0 — 03.10.2026
 
 Released early: max-cli release needs the corrected embedding status estimate and worker guidance

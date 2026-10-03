@@ -91,6 +91,7 @@ const bot: BotMessenger = {
   app,
   provider: "chat-bot",
   name: "Chat",
+  identity: true,
   resolveSettings: config.resolveSettings,
   connect: async () => adapter,
   tokenStore: (_command, profile) =>
@@ -161,6 +162,7 @@ const call = async (client: Client, name: string, args: Record<string, unknown> 
 }
 
 const READS = [
+  "chat_bot_me",
   "chat_bot_chats_list",
   "chat_bot_chats_show",
   "chat_bot_messages_list",
@@ -382,4 +384,13 @@ describe("bot mcp config", () => {
     const { mcp: _mcp, ...without } = bot
     expect(botCommand(without).commands.map((one) => one.name())).not.toContain("mcp")
   })
+})
+
+it("reads bot identity through MCP under read-only permissions without a write", async () => {
+  configure({ bot: { profiles: { sales: { permissions: { bot: "readonly" } } } } })
+  const { client } = await connect()
+  const result = await call(client, "chat_bot_me")
+  expect(result.isError).toBe(false)
+  expect(result.body).toEqual({ id: "42", name: "Sales", username: "sales_bot" })
+  expect(calls).toEqual([])
 })

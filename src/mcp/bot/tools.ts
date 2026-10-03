@@ -156,6 +156,12 @@ const moderate: BotTool = {
 /** The shared bot commands an agent may run. The token, recipients, webhooks and menu stay the owner's. */
 export const BOT_TOOLS: readonly BotTool[] = [
   {
+    words: ["me"],
+    title: "Which bot this is",
+    description: "The bot this profile's token belongs to: id, name and username.",
+    input: v.object({}),
+  },
+  {
     words: ["chats", "list"],
     title: "Chats this bot has seen",
     description: "Chats this bot has seen on this machine — a bot gets no list of its chats, so this is not complete.",
