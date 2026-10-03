@@ -586,3 +586,5 @@ is published on npm like this package, once backfill and search exist; `tg updat
   registered for the app, overridable per user.~~ **Correction 2026-09-26:** the owner chose B, each
   user registers their own, and Telegram's rules back it (§5). The earlier recommendation weighed a
   lower entry barrier over one shared id carrying every user's behaviour.
+
+**Markdown — B1b.** 🚧 `feat/messenger-markdown`: shared send/edit call a formatter owned by each CLI; Telegram and MAX grammars/mapping, personal and bot paths. Additive formatting port, no schema change.

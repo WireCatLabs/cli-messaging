@@ -2,8 +2,8 @@ import { CliError, singleLine } from "@leemour/cli-core"
 import type { Messenger } from "../cli/messenger/context.js"
 import { type After, capability, type Download, type Sent } from "../cli/messenger/port.js"
 import { threadIdOf } from "../cli/messenger/thread.js"
+import { validateFormattedText } from "../domain/formatting.js"
 import { parseLocator } from "../domain/locator.js"
-import { parseMarkdown } from "../domain/markdown.js"
 import type { Chat, Deletion, Id, Message, Page, Provider, WindowedMessage } from "../domain/models.js"
 import { isId, pickChat, pickPerson } from "../resolve.js"
 import { inSource, parseQuery, sourceOf } from "../search/query.js"
@@ -211,7 +211,9 @@ export const messagesService = (deps: ServiceDeps): MessagesService => {
           "a scheduled send is never repeated: it would be scheduled twice — look in `messages scheduled` instead",
         )
       }
-      const { text, markup } = markdown ? parseMarkdown(typed) : { text: typed, markup: [] }
+      const { text, spans } = markdown
+        ? validateFormattedText(await capability(connection, "formatMarkdown", "format Markdown")(typed))
+        : { text: typed, spans: [] }
       if (text.trim() === "" && attachments.length === 0) {
         throw new CliError("validation_error", "nothing to send — the marks leave no text")
       }
@@ -244,7 +246,7 @@ export const messagesService = (deps: ServiceDeps): MessagesService => {
               ...(threadId === undefined ? {} : { threadId }),
               ...(silent ? { silent } : {}),
               ...(noPreview ? { noPreview } : {}),
-              ...(markup.length > 0 ? { markup } : {}),
+              ...(spans.length > 0 ? { formatting: spans } : {}),
               ...(at === undefined ? {} : { at }),
               ...(attachments.length === 0 ? {} : { attachments }),
             }),
@@ -270,14 +272,16 @@ export const messagesService = (deps: ServiceDeps): MessagesService => {
     edit: async ({ chat, message, text: typed, markdown }) => {
       const connection = await deps.connection()
       const edit = capability(connection, "edit", "edit a message")
-      const { text, markup } = markdown ? parseMarkdown(typed) : { text: typed, markup: [] }
+      const { text, spans } = markdown
+        ? validateFormattedText(await capability(connection, "formatMarkdown", "format Markdown")(typed))
+        : { text: typed, spans: [] }
       if (text.trim() === "") throw new CliError("validation_error", "no new text — the marks leave nothing")
       const { id: chatId } = await connection.resolve(chat)
       const operationId = newOperationId()
       const edited = await guardedWrite(
         guard,
         { operationId, chatId, kind: "edit", messageId: message, length: text.length },
-        () => edit(chatId, message, text, markup.length > 0 ? { markup } : {}),
+        () => edit(chatId, message, text, spans.length > 0 ? { formatting: spans } : {}),
       )
       return { operationId, message: edited }
     },

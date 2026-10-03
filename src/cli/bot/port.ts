@@ -1,4 +1,5 @@
 import type { Command } from "commander"
+import type { MarkdownFormatting, TextSpan } from "../../domain/formatting.js"
 import type { Markup } from "../../domain/markdown.js"
 import type {
   AdminRight,
@@ -37,6 +38,7 @@ export interface BotSendOptions {
   silent?: boolean
   /** Spans of `text`, from `--md`. */
   markup?: Markup[]
+  formatting?: TextSpan[]
   /** `text` is the messenger's HTML. */
   html?: boolean
   attachments?: Upload[]
@@ -45,7 +47,12 @@ export interface BotSendOptions {
 /** Sending, changing and deleting the bot's messages. */
 export interface BotMessaging {
   send(chat: BotChatRef, text: string, options: BotSendOptions): Promise<Message>
-  edit(chat: BotChatRef, messageId: Id, text: string, options: { markup?: Markup[]; html?: boolean }): Promise<Message>
+  edit(
+    chat: BotChatRef,
+    messageId: Id,
+    text: string,
+    options: { markup?: Markup[]; formatting?: TextSpan[]; html?: boolean },
+  ): Promise<Message>
   delete(chat: BotChatRef, messageIds: Id[]): Promise<void>
 }
 
@@ -187,6 +194,7 @@ export interface BotUpdates {
  * `chats` from this type: neither Bot API lists a bot's chats.
  */
 export type BotAdapter = Pick<MessengerCore, "me" | "close"> &
+  Partial<MarkdownFormatting> &
   Partial<BotMessaging> &
   Partial<BotHistory> &
   Partial<MessagePins> &

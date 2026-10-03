@@ -4,6 +4,7 @@ import { join } from "node:path"
 import { Readable } from "node:stream"
 import { captureStreams, memoryKeyring } from "@leemour/cli-core"
 import { beforeEach, describe, expect, it } from "vitest"
+import { parseMarkdown } from "../../domain/markdown.js"
 import type { Message } from "../../domain/models.js"
 import { SendJournal } from "../../sends/journal.js"
 import { run } from "../program.js"
@@ -42,6 +43,10 @@ const message = (chatId: string, id: string, text: string): Message => ({
 
 /** A bot over an in-memory chat; `history: false` is a messenger whose Bot API reads nothing back (Telegram). */
 const adapterFor = ({ history = true, edit = true } = {}): BotAdapter => ({
+  formatMarkdown: async (text: string) => {
+    const parsed = parseMarkdown(text)
+    return { text: parsed.text, spans: parsed.markup }
+  },
   me: async () => ({ id: botId, name: "Sales", username: "sales_bot" }),
   close: async () => {},
   send: async (chat, text, options) => {
@@ -151,7 +156,7 @@ describe("bot messages send", () => {
 
   it("reads the text from stdin, marks it up with --md, and refuses --md with --html", async () => {
     await call(["sales", "bot", "messages", "send", "user:7", "--md", "--json"], "**big**")
-    expect(sent).toMatchObject([{ chat: "user:7", text: "big", options: { markup: [expect.any(Object)] } }])
+    expect(sent).toMatchObject([{ chat: "user:7", text: "big", options: { formatting: [expect.any(Object)] } }])
 
     expect((await call(["sales", "bot", "messages", "send", "-100", "x", "--md", "--html"])).code).toBe(2)
   })

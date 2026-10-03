@@ -250,7 +250,7 @@
       "meaning": "remote: stop before a run that could send more tokens than this"
     },
     "--md": {
-      "meaning": "read **bold**, _italic_, ~~struck~~ and `code` in the text; \\ keeps a mark literal"
+      "meaning": "read this messenger's Markdown; see its formatting guide for supported syntax"
     },
     "--members-see-link": {
       "value": "<on|off>",

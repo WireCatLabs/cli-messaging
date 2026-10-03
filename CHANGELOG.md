@@ -6,6 +6,10 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Changed — may break callers
+
+- Personal and bot `--md` send/edit delegate conversion to each adapter's optional `formatMarkdown`. Adapters without it refuse Markdown; plain text is unchanged. Additive `FormattedText`/`TextSpan` and `formatting` options carry rich formatting while legacy Markup/parser/markup exports remain compatible. Telegram and MAX can now use different syntax.
+
 ### Fixed
 
 - The parity manifest records MAX’s shared moderation command and its options as present, and
