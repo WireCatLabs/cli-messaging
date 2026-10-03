@@ -333,11 +333,12 @@ export const save = async (
   fallbackName: string,
   { unique = false }: { unique?: boolean } = {},
 ): Promise<Saved> => {
-  const extension = EXTENSIONS[file.mime ?? ""] ?? BY_KIND[file.kind]
   const own = safeName(file.name)
-  const name = own ?? (extension ? `${fallbackName}.${extension}` : fallbackName)
-  const names = unique && own ? [name, `${fallbackName}-${own}`] : [name]
-  const partial = join(directory, `.${name}.${process.pid}.part`)
+  const fileName = () => {
+    const extension = EXTENSIONS[file.mime ?? ""] ?? BY_KIND[file.kind]
+    return own ?? (extension ? `${fallbackName}.${extension}` : fallbackName)
+  }
+  const partial = join(directory, `.${fileName()}.${process.pid}.part`)
   let bytes = 0
   const counting = new Transform({
     transform(chunk: Uint8Array, _encoding, done) {
@@ -347,6 +348,9 @@ export const save = async (
   })
   try {
     await pipeline(Readable.from(file.bytes()), counting, createWriteStream(partial, { flags: "wx", mode: 0o600 }))
+    // Lazy HTTP downloads learn MIME while reading bytes.
+    const name = fileName()
+    const names = unique && own ? [name, `${fallbackName}-${own}`] : [name]
     for (const candidate of names) {
       const path = resolve(join(directory, candidate))
       const taken = await link(partial, path).then(
