@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.123.0 — 03.10.2026
+
 ### Fixed
 
 - A truncated `runs list` now suggests increasing `--limit`, instead of the unsupported
