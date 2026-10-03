@@ -156,6 +156,7 @@ export { type Saving, stored } from "./messenger/stored.js"
 export { topicsCommand } from "./messenger/topics-command.js"
 export { watchCommand } from "./messenger/watch-command.js"
 export { listed, renderList, renderPage, window, withPaging } from "./paging.js"
+export { migratePermissionConfig, type PermissionMigration } from "./permission-migration.js"
 export {
   asFirstWord,
   commandWords,
