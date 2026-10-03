@@ -119,3 +119,5 @@ that is solid but small (NEED-21, 2026-09-29).
 
 Open: whether agents' shell commands run in the sandbox, which needs a root change on the owner's
 machine (NEED-22, tg-cli `docs/dev/agents.md`).
+
+MAX P7 follow-up: `fix/p7-unpin-parity` owns the legacy pin/unpin permission translation and shared unpin guard correction; no database migration.

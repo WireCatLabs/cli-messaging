@@ -6,6 +6,12 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Fixed
+
+- Legacy `allow: ["pin"]` retains permission to unpin during configuration migration. Shared
+  unpin writes now check `messages.unpin`, so an explicit per-command override applies to the
+  operation as well as its CLI read gate. MAX permission migration depends on this correction.
+
 ## 0.137.0 — 03.10.2026
 
 ### Fixed

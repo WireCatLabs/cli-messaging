@@ -87,7 +87,7 @@ const OLD_WORDS: Record<Permission, PermissionKey[]> = {
   forward: ["messages.forward"],
   reaction: ["reactions", "polls.vote"],
   edit: ["messages.edit", "polls.close"],
-  pin: ["messages.pin"],
+  pin: ["messages.pin", "messages.unpin"],
   read: ["chats.mark-read"],
   delete: ["messages.delete"],
   groups: [

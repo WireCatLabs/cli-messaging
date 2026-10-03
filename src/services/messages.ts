@@ -147,8 +147,10 @@ export const messagesService = (deps: ServiceDeps): MessagesService => {
       : capability(connection, "unpin", "unpin a message")
     const { id: chatId } = await connection.resolve(chat)
     const operationId = newOperationId()
-    await guardedWrite(guard, { operationId, chatId, kind: "pin", messageId: message, notify }, () =>
-      act(chatId, message, { notify }),
+    await guardedWrite(
+      guard,
+      { operationId, chatId, kind: "pin", key: pinned ? "messages.pin" : "messages.unpin", messageId: message, notify },
+      () => act(chatId, message, { notify }),
     )
     return { operationId, chatId, messageId: message, pinned }
   }
