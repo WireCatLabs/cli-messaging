@@ -1,4 +1,4 @@
-import { mkdtempSync } from "node:fs"
+import { existsSync, mkdtempSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { memoryKeyring } from "@leemour/cli-core"
@@ -62,6 +62,37 @@ describe("a bot's token", () => {
 
     expect([...keyring.entries.keys()]).toEqual(["tg-cli:bot:sales"])
     expect(new BotTokenStore({ app: TG, profile: "support", env, configDir, keyring }).read()).toBeUndefined()
+  })
+  it("stores returned credentials only in the keyring and never falls back or exposes a keyring error", () => {
+    const keyring = memoryKeyring()
+    const store = new BotTokenStore({
+      app: TG,
+      profile: "managed",
+      env: { TG_BOT_TOKEN: "override" },
+      configDir,
+      keyring,
+    })
+    store.writeKeyring("returned")
+    expect(store.readKeyring()).toBe("returned")
+    expect(store.read()?.token).toBe("override")
+    const broken = new BotTokenStore({
+      app: TG,
+      profile: "managed",
+      env,
+      configDir,
+      keyring: {
+        get: () => {
+          throw new Error("private-value")
+        },
+        set: () => {
+          throw new Error("private-value")
+        },
+        delete: () => false,
+      },
+    })
+    expect(() => broken.readKeyring()).toThrow("the OS keyring is unavailable")
+    expect(() => broken.writeKeyring("returned")).toThrow("could not be stored in the OS keyring")
+    expect(existsSync(join(configDir, "credentials.json"))).toBe(false)
   })
 })
 

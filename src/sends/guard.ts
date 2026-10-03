@@ -73,6 +73,7 @@ export interface SendGuardOptions {
    */
   permissions?: Readonly<Record<PermissionKey, Level>>
   permissionSources?: Readonly<Record<PermissionKey, string>>
+  permissionDefaults?: Readonly<Record<PermissionKey, Level>>
   permissionFix?: (request: GuardRequest, key: PermissionKey) => string
   ask?: Asker
   sendsPerHour: number
@@ -126,6 +127,7 @@ export const sendGuard = ({
   allowFix,
   permissions,
   permissionSources = {},
+  permissionDefaults,
   permissionFix,
   ask = refuseToAsk,
   sendsPerHour,
@@ -161,7 +163,7 @@ export const sendGuard = ({
       }
     } else {
       const key = request.key ?? keyForWrite(kind, action)
-      const { level, key: named } = levelFor(permissions, key)
+      const { level, key: named } = levelFor(permissions, key, permissionDefaults)
       if (level === "deny" || level === "readonly") {
         const fix = permissionFix?.(request, key) ?? `${command} ${profile} config set permissions.${key} allow`
         throw new CliError(
@@ -253,7 +255,7 @@ export const sendGuard = ({
     ask: async (request) => {
       if (permissions === undefined) return
       const key = request.key ?? keyForWrite(request.kind ?? "message", request.action)
-      if (levelFor(permissions, key).level !== "ask") return
+      if (levelFor(permissions, key, permissionDefaults).level !== "ask") return
       await ask(key, request)
       answered.add(request)
     },

@@ -195,6 +195,7 @@ export interface BotUpdates {
  */
 export type BotAdapter = Pick<MessengerCore, "me" | "close"> &
   Partial<MarkdownFormatting> &
+  Partial<BotNativeApi> &
   Partial<BotMessaging> &
   Partial<BotHistory> &
   Partial<MessagePins> &
@@ -206,6 +207,18 @@ export type BotAdapter = Pick<MessengerCore, "me" | "close"> &
   Partial<BotWebhooks> &
   Partial<BotUpdates> &
   Partial<BotPeople>
+
+export interface BotNativeApi {
+  api(
+    method: string,
+    input: {
+      body?: string
+      files: readonly { field: string; name: string; bytes: Uint8Array }[]
+      secrets: readonly string[]
+    },
+    options: { reads: boolean; timeoutMs?: number },
+  ): Promise<unknown>
+}
 
 export interface BotConnectOptions {
   stop?: AbortSignal

@@ -93,6 +93,7 @@
     "@leemour/cli-messaging-sqlite": "1.0.0",
     "@modelcontextprotocol/server": "2.1.0",
     "@valibot/to-json-schema": "1.8.0",
+    "lossless-json": "4.3.0",
     "ogg-opus-decoder": "1.7.5",
     "qrcode-generator": "2.0.4",
     "sherpa-onnx": "1.13.8",
@@ -102,7 +103,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2.3.14",
-    "@leemour/cli-core": "0.16.0",
+    "@leemour/cli-core": "0.17.0",
     "@modelcontextprotocol/client": "2.1.0",
     "@types/node": "^22.20.4",
     "@types/pngjs": "6.0.5",
@@ -124,7 +125,7 @@
     "access": "public"
   },
   "peerDependencies": {
-    "@leemour/cli-core": ">=0.16.0 <0.17.0",
+    "@leemour/cli-core": ">=0.16.0 <0.18.0",
     "commander": ">=15"
   },
   "bin": {
