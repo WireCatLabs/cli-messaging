@@ -6,6 +6,11 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Fixed
+
+- A truncated `runs list` now suggests increasing `--limit`, instead of the unsupported
+  `--page` option. The JSON envelope still reports `hasMore`; listing records creates no new run.
+
 ## 0.122.0 — 03.10.2026
 
 Released early: max-cli shared runner adoption needs its existing settings resolver and correct failure scope
