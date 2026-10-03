@@ -10,6 +10,10 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 - Detailed parity audit evidence and synthetic consumer checks via `--deep --output <new-directory>`; the existing surface audit is preserved.
 
+### Fixed
+
+- Detailed audit test homes use short temporary paths, so a launcher with a nested TMPDIR does not make MAX Unix-socket fixtures fail solely because the path exceeds the system limit.
+
 ## 0.133.0 — 03.10.2026
 
 Released early: max-cli audio-model migration needs the public speech catalogue and installer export
