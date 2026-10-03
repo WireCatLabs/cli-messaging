@@ -8,8 +8,18 @@ import { CliError } from "@leemour/cli-core"
 import { describe, expect, it, vi } from "vitest"
 import type { Messenger } from "../cli/messenger/context.js"
 import type { MessengerAdapter } from "../cli/messenger/port.js"
-import { install, isInstalled, modelPath, vadPath } from "./install.js"
-import { DEFAULT_ORDER, orderedModels, type SpeechModel, speechModel, VAD } from "./models.js"
+import {
+  DEFAULT_ORDER,
+  install,
+  isInstalled,
+  modelPath,
+  modelsDirectory,
+  orderedModels,
+  type SpeechModel,
+  speechModel,
+  VAD,
+  vadPath,
+} from "./index.js"
 import { decodeOgg, detector, SAMPLE_RATE, toModelRate } from "./recognize.js"
 import { type Choice, choose, hearLocally, hearOnline } from "./transcribe.js"
 
@@ -242,4 +252,10 @@ describe("hearing a voice message", () => {
       hearOnline(messenger, adapter(refusing), "7", "5", choice({ directory: directoryWithVad() })),
     ).rejects.toThrow(/chat models audio download parakeet-v3/)
   })
+})
+
+it("the public speech directory respects an explicit common cache without creating it", () => {
+  const cache = join(mkdtempSync(join(tmpdir(), "speech-export-")), "absent")
+  expect(modelsDirectory({ CLI_COMMON_CACHE_DIR: cache })).toBe(join(cache, "models", "audio"))
+  expect(isInstalled(speechModel("gigaam-v3"), modelsDirectory({ CLI_COMMON_CACHE_DIR: cache }))).toBe(false)
 })

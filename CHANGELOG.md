@@ -6,6 +6,12 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- `./speech` exports the existing pinned speech-model catalogue, types, ordering, shared model
+  directories, installed-file checks and verified installer. Consumers can reuse downloaded files
+  and remove their copied paths/installers without loading the recognizer at import time.
+
 ## 0.132.0 — 03.10.2026
 
 Released early: Telegram and MAX formatter adoption requires the shared formatMarkdown capability and neutral text spans

@@ -19,6 +19,7 @@ under `src/`. What only one provider has travels in `providerMetadata`. The boun
 | `.` | `src/domain/`, `src/render/`, `src/resolve.ts`, `src/terminal/` | the domain model (`models.ts`, types only), message locators, message rendering, name resolution that refuses rather than guesses, the secret prompt, the terminal QR code |
 | `./store` | `src/store/` | the SQLite seam and the shared message store |
 | `./sends` | `src/sends/` | the send guard: read-only, the allow-list, the recipient list, the hourly limit, the journal (never the text), the send id |
+| `./speech` | `src/speech/` | the pinned catalogue, shared model directories and verified installer, without loading the recognizer |
 | `./services` | `src/services/` | the use cases, once each, that commands and MCP tools call — see [Services](#services) |
 | `./background` | `src/background/` | what any background process needs and no messenger: the lock per app and profile, whether a PID is alive and ours, the machine seam tests replace, systemd and launchd units — `serve` and `server` are built on it, each CLI's server stays its own (NEED-492 C) |
 | `./cli` | `src/cli/`, `src/mcp/` | the command skeleton, the shared commands and the MCP server |
