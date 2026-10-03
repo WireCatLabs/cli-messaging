@@ -58,3 +58,11 @@ it("maps legacy groups to forum configuration and creation", () => {
   expect(result["topics.enable"]).toBe("ask")
   expect(result["topics.create"]).toBe("allow")
 })
+
+it("preserves old pin permission for unpin and keeps an explicit unpin override", () => {
+  const personal = fromOldSettings(false, ["pin"])
+  const bot = fromOldSettings(false, ["pin"], { bot: true })
+  expect(levelFor(personal, "messages.unpin").level).toBe("allow")
+  expect(levelFor(bot, "bot.messages.unpin").level).toBe("allow")
+  expect(levelFor({ ...personal, "messages.unpin": "deny" }, "messages.unpin").level).toBe("deny")
+})
