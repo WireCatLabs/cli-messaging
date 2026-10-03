@@ -299,7 +299,7 @@ describe("the runner's configuration seam", () => {
           ),
         ],
       }
-      const code = await run(["--quiet", resource, "show"], provider, { env, streams, tty: false })
+      const code = await run(["--timeout", "1s", "--quiet", resource, "show"], provider, { env, streams, tty: false })
       expect(code).toBe(2)
       expect(scopes).toEqual([resource === "bot" ? "bot" : "personal"])
       const runs = listRuns(join(state, "runs"))

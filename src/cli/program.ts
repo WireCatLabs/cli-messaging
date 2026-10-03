@@ -207,7 +207,7 @@ const keepFailure = async (
 ): Promise<void> => {
   if (wasSettled(failure)) return
   const env = options.env ?? process.env
-  const path = commandPath(program, rest)
+  const path = commandPath(program, program.args.length > 0 ? program.args : rest)
   const { resolveSettings } = definition.configuration ?? settingsFor(definition.app)
   let settings: ReturnType<typeof resolveSettings> | undefined
   try {
