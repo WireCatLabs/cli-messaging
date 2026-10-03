@@ -38,16 +38,23 @@ const record = (value: unknown): value is Record<string, unknown> =>
 const canonical = (value: unknown, prose: boolean, key = ""): unknown => {
   if (Array.isArray(value)) {
     const items = value.map((one) => canonical(one, prose))
-    return ["required", "enum", "choices"].includes(key)
+    return !prose && ["required", "enum", "choices"].includes(key)
       ? items.sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)))
       : items
   }
   if (!record(value)) return value
+  const namedMap = ["properties", "patternProperties", "$defs", "definitions", "dependentSchemas"].includes(key)
   return Object.fromEntries(
     Object.keys(value)
       .sort()
-      .filter((name) => prose || !["description", "title"].includes(name))
-      .map((name) => [name, canonical(value[name], prose, name)]),
+      .filter((name) => prose || namedMap || !["description", "title"].includes(name))
+      .map((name) => {
+        const literal = prose || ["default", "const", "enum", "examples", "annotations"].includes(name)
+        const next = canonical(value[name], literal, name)
+        if (!prose && name === "enum" && Array.isArray(next))
+          next.sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)))
+        return [name, next]
+      }),
   )
 }
 

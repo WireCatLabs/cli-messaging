@@ -6,6 +6,10 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Fixed
+
+- Detailed schema comparison preserves actual fields named `title`/`description` and literal default/const values, while ignoring documentation annotations; field bounds/types and defaults cannot disappear as prose.
+
 ## 0.134.0 — 03.10.2026
 
 Released early: tg-cli generated Bot API and max-cli shared native API adoption need the generated command assembler, RPC input helpers and keyring-only credential storage exports
