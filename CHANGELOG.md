@@ -6,6 +6,10 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.125.0 — 03.10.2026
+
+Released early: tg-cli needs the shared bot identity command and MCP tool
+
 ### Added
 
 - An opt-in shared `bot me` reads the bot profile's identity and offers the matching MCP tool.
