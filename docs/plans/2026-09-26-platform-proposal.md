@@ -477,12 +477,13 @@ large groups, search the whole history locally.
 | 2.4 | tokenizer measurement (§6), then `tg messages search` on the `SearchProvider`. Measured on 4,517 real messages of one large group (19 of 20 queries Russian): trigram 2.4 MB vs `unicode61 remove_diacritics 2` 1.2 MB; whole-word hits 2,600 vs 2,222; for a word stem, trigram 3,743 vs unicode61 as a prefix query 3,348 (38 without the prefix); both under 0.1 ms. Chosen: unicode61 with every word a prefix, for message text (migration 3, rebuilds only the derived index); names stay trigram. Ranking quality not measured — it needs a person to judge. `messages search` answers from the store only; the `SearchProvider` interface waits for a second implementation. **Done 2026-09-27** |
 | 2.5 | `tg sync status`, `tg export`. Both read the store only: `sync status` per chat — messages, oldest, newest, last stored, stretches held; `export <chat>` oldest first (`--jsonl` one per line, `--json` one value). Whether a backfill reached a chat's first message is not recorded, so not claimed. **Done 2026-09-27 — Phase 2 complete** |
 
-**Forum control — B2a.** 🚧 `feat/forum-control`: explicit enable with opt-in basic-group upgrade, topic creation, shared guarded CLI/MCP and Telegram mapping. No schema migration.
+**Forum control — B2a.** Implemented: shared CLI/MCP and staged service #451 (0.126.0), Telegram adapter adoption tg-cli #236. Explicit enable requires opt-in basic-group upgrade; topic creation identities cannot be retried after a sent or unknown result. No schema migration.
 
 **Telegram topic addressing — B1a.** Implemented: shared contract #442 (0.119.0), Telegram
 adapter and CLI adoption tg-cli #228, explicit MAX rejection and adoption max-cli #338/#339.
 CLI/MCP addressing, preflight, journal metadata and offline tests are shipped in main. Positive
-live topic checks await a forum-capable test group; enabling forums is a separate follow-up.
+live text/media/reply/poll/scheduled topic checks passed after owner-requested forum setup.
+Results were read back by the owner; cross-account verification remains unavailable.
 
 **Phase 3 — agent-safe runtime.** Skeleton, part 4: MCP (a second front end over the same
 operations, as in max-cli §17) with its session, tools and send confirmation; the skill; capability

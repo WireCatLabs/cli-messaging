@@ -2062,20 +2062,14 @@
       "reason": "MAX has no forum topics"
     },
     "topics create": {
-      "in": [],
-      "planned": {
-        "tg": "adopt the shared forum control commands and Telegram adapter"
-      },
+      "in": ["tg"],
       "reason": "MAX has no forum topics",
       "options": {
         "--send-id": "all"
       }
     },
     "topics enable": {
-      "in": [],
-      "planned": {
-        "tg": "adopt the shared forum control commands and Telegram adapter"
-      },
+      "in": ["tg"],
       "reason": "MAX has no forum topics",
       "options": {
         "--upgrade": "all"
