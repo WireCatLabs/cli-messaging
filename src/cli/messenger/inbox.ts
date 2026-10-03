@@ -82,13 +82,18 @@ export const inboxCommand = (messenger: Messenger): Command =>
               ? Date.now() - FIRST_LOOK_MS
               : Date.parse(saved)
             : undefined
-      const inbox = await context.withServices((services) =>
-        services.inbox.read({
+      const { inbox, read, hearing } = await context.withServices(async (services, connect) => {
+        const inbox = await services.inbox.read({
           ...(from === undefined ? {} : { since: from }),
           limit: settings.limit,
           all: all === true,
-        }),
-      )
+        })
+        const read: MessageHit[] = inbox.chats.flatMap((chat) =>
+          chat.messages.map((message) => ({ ...message, chatTitle: chat.title })),
+        )
+        const hearing = await hearForCommand(context, messenger, read, transcribe === true, hearWith, connect)
+        return { inbox, read, hearing }
+      })
 
       for (const chat of inbox.chats) {
         if (chat.more) {
@@ -105,10 +110,6 @@ export const inboxCommand = (messenger: Messenger): Command =>
       if (inbox.partial)
         renderer.note(`only the ${CHAT_WINDOW} newest chats were looked at; an older one may have more`)
 
-      const read: MessageHit[] = inbox.chats.flatMap((chat) =>
-        chat.messages.map((message) => ({ ...message, chatTitle: chat.title })),
-      )
-      const hearing = await hearForCommand(context, messenger, read, transcribe === true, hearWith)
       const messages = heardItems(read, hearing)
       if (format === "jsonl") renderer.stream(messages)
       else if (format !== "pretty") {

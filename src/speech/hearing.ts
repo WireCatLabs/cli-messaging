@@ -150,7 +150,7 @@ export const hearForTool = async (
         : undefined,
     )
   } finally {
-    kept.close()
+    await kept.close()
   }
 }
 

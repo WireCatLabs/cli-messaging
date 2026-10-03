@@ -1,7 +1,7 @@
 import type { Message } from "../../domain/models.js"
 import { type Hearing, hearVoices, isVoice, openKept, spoken, withTranscript } from "../../speech/hearing.js"
 import { choose } from "../../speech/transcribe.js"
-import type { Messenger, MessengerContext } from "./context.js"
+import type { Messenger, MessengerContext, ReadConnection } from "./context.js"
 
 export const TRANSCRIBE_OPTION = [
   "--transcribe",
@@ -14,8 +14,8 @@ export const MODEL_OPTION = [
 ] as const
 
 /**
- * Kept transcripts on every read; new ones with `--transcribe`, over a connection of their own once
- * the messages are read. `undefined` when there is no voice message, and then no file is opened.
+ * Kept transcripts on every read; new ones with `--transcribe`, using the read's connection when
+ * supplied. It is released before local recognition. `undefined` when there is no voice message, and then no file is opened.
  */
 export const hearForCommand = async (
   context: MessengerContext,
@@ -23,6 +23,7 @@ export const hearForCommand = async (
   messages: readonly Message[],
   transcribe: boolean,
   model?: string,
+  connect?: ReadConnection,
 ): Promise<Hearing | undefined> => {
   if (!messages.some(isVoice)) return undefined
   const offline = context.settings.offline
@@ -39,7 +40,7 @@ export const hearForCommand = async (
               ...choose(messenger, context.settings, model === undefined ? {} : { model }, context.env),
               ...(context.recognizer ? { open: context.recognizer } : {}),
             },
-            connect: (work) => context.withMessenger(work),
+            connect: connect ?? ((work) => context.withMessenger(work)),
           }
         : undefined,
     )

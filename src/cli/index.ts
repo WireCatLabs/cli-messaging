@@ -100,6 +100,7 @@ export {
   type Messenger,
   type MessengerContext,
   messengerContext,
+  type ReadConnection,
 } from "./messenger/context.js"
 export { conversationsCommand } from "./messenger/conversations-command.js"
 export { doctorCommand } from "./messenger/doctor-command.js"

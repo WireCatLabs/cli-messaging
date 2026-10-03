@@ -8,9 +8,17 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Fixed
 
+- CLI message lists, inboxes and reviews with transcription reuse their read connection to fetch
+  voice recordings, closing it before local recognition instead of opening a second connection.
+  Explicit mark-read finishes before hearing on that connection; plain reads still mark nothing read.
+- Unanswered reviews now consider retained and newly heard voice transcripts before filtering,
+  on both CLI and MCP paths. Unheard voices keep a review incomplete, and original message text
+  remains unchanged. Admin IDs are read before hearing releases the connection.
+
 - Legacy `allow: ["pin"]` retains permission to unpin during configuration migration. Shared
   unpin writes now check `messages.unpin`, so an explicit per-command override applies to the
   operation as well as its CLI read gate. MAX permission migration depends on this correction.
+
 
 ## 0.137.0 — 03.10.2026
 

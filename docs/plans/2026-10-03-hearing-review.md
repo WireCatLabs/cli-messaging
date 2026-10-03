@@ -1,6 +1,6 @@
 # Reuse a read connection for hearing and review voice questions before filtering
 
-Status, 2026-10-03: proposed for owner review; no implementation. Read at cli-messaging
+Status, 2026-10-03: implementation approved by the owner ("implement"); listed new live scope approved (MAX private NEED-542). Read at cli-messaging
 `ca66eb2`, MAX `04c70e4`. Read-only synthetic probes reproduced both defects: compiled CLI transcription opens two
 provider connections, while unanswered review drops a voice question before retained/fresh hearing.
 Permanent failing regressions are the first implementation step. MAX task CLI-63 and the audio handoff's FIND-509.
@@ -25,7 +25,8 @@ voice questions, with the existing age, reply, owner/admin and snapshot rules.
    once after audio fetch, before local recognition; final cleanup still runs on errors. No automatic
    reconnection after a release. Services that only use the store remain lazy and offline stays offline.
 2. Let CLI hearing accept that connector optionally, preserving the existing fallback for independent
-   callers. Keep message list/show/context and inbox/review hearing inside the service scope. For an
+   callers. Keep message list and inbox/review hearing inside the service scope. Source correction: show/context
+   currently have no hearing flags; leave their behavior unchanged. For an
    explicit mark-read, finish it on the same connection before fetching/recognizing; without the flag,
    never mark read. Do not change MCP session connection ownership.
 3. Add an optional review enrichment hook. Read all candidate messages and load required admin IDs
@@ -60,3 +61,7 @@ Owner approval of this plan is required by MAX's working rules. New Markdown liv
 in MAX's private companion plan; synthetic tests do not need model downloads or real stores.
 Merge/release and delegated signature authorization already exists in the session. No new product
 choice is proposed. No P7 migration, real-model download, store migration or production bot writes.
+
+Correction: rebased on shared main 4eaeaee after other sessions published 0.134–0.136.
+The planned lifecycle and enrichment code is unchanged by that rebase. MAX audio/Markdown
+was released as 0.25.0 by another session; this task adopts the fixes in the next MAX release.

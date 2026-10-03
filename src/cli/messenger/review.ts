@@ -3,7 +3,7 @@ import type { MessageHit, Review } from "../../domain/models.js"
 import { renderMessages } from "../../render/messages.js"
 import { CHAT_WINDOW, REVIEW_DAYS, reviewStart, UNANSWERED_HOURS } from "../../services/inbox.js"
 import { momentOf } from "../../services/moment.js"
-import { modelWith } from "../../speech/hearing.js"
+import { type Hearing, modelWith } from "../../speech/hearing.js"
 import { parseDuration } from "../settings.js"
 import { type Messenger, messengerContext } from "./context.js"
 import {
@@ -53,20 +53,29 @@ export const reviewCommand = (messenger: Messenger): Command =>
       const { settings, renderer, format, streams } = context
       const since = options.sinceTime === undefined ? reviewStart() : momentOf(options.sinceTime, "--since-time")
       const hours = options.unanswered === undefined ? undefined : unansweredHours(options.unanswered)
-      const found = await context.withServices((services) =>
+      let hearing: Hearing | undefined
+      const transcribe = options.transcribe === true
+      const found = await context.withServices((services, connect) =>
         services.inbox.review({
           since,
           ...(options.chat === undefined ? {} : { chat: options.chat }),
           ...(options.all ? { all: true } : {}),
           ...(hours === undefined ? {} : { unansweredAfterHours: hours }),
+          enrich: async (raw) => {
+            const read = raw.chats.flatMap((chat) => chat.messages)
+            hearing = await hearForCommand(context, messenger, read, transcribe, hearWith, connect)
+            return {
+              ...raw,
+              complete: raw.complete && (hearing?.unheard.length ?? 0) === 0,
+              chats: raw.chats.map((chat) => ({ ...chat, messages: heardItems(chat.messages, hearing) })),
+            }
+          },
         }),
       )
 
       const read: MessageHit[] = found.chats.flatMap((chat) =>
         chat.messages.map((message) => ({ ...message, chatTitle: chat.title })),
       )
-      const transcribe = options.transcribe === true
-      const hearing = await hearForCommand(context, messenger, read, transcribe, hearWith)
       const messages = heardItems(read, hearing)
       found.complete &&= (hearing?.unheard.length ?? 0) === 0
       if (format === "jsonl") renderer.stream(messages)
