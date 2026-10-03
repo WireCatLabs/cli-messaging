@@ -290,3 +290,12 @@ Saving what a read answered and timing each call stay decorators on the adapter 
   personal account still keeps its own cache; moving it here is the proposal's Phase 4.
 
 Both pin an exact version; a change here reaches them through a release and a bump in each.
+
+
+## Package upgrades
+
+`upgradePackage` (`src/services/package-upgrade.ts`) owns the explicit upgrade decision and invokes
+installer/latest/install and optional host lifecycle ports. `upgradeCommand` renders its outcome;
+consumers bind their existing update environment and server restart policy. No installer runs on
+check/no-op paths, and a failed install or callback never retries. The [upgrade plan](../plans/2026-10-03-shared-upgrade.md)
+describes the common result and consumer adoption.

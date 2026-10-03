@@ -194,3 +194,5 @@ export {
   settingsFor,
 } from "./settings.js"
 export { skillCommand } from "./skill-command.js"
+
+export { type UpgradeContext, upgradeCommand } from "./upgrade-command.js"
