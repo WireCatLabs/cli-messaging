@@ -893,11 +893,6 @@
     "chats admins remove": {
       "in": "all"
     },
-    "chats check": {
-      "in": [],
-      "planned": { "max": "T6 retirement: chats moderate replaces this legacy name" },
-      "reason": "temporarily accepts the old MAX name while the shared moderation consumer is merging"
-    },
     "chats create": {
       "in": "all",
       "options": {
@@ -1018,37 +1013,32 @@
       "in": "all"
     },
     "chats moderate": {
-      "in": [],
+      "in": ["max"],
       "planned": {
-        "max": "P2",
         "tg": "P2"
       },
       "options": {
         "--allow-dangerous": {
-          "in": [],
+          "in": ["max"],
           "planned": {
-            "max": "P2",
             "tg": "P2"
           }
         },
         "--dry-run": {
-          "in": [],
+          "in": ["max"],
           "planned": {
-            "max": "P2",
             "tg": "P2"
           }
         },
         "--max-actions": {
-          "in": [],
+          "in": ["max"],
           "planned": {
-            "max": "P2",
             "tg": "P2"
           }
         },
         "--since-time": {
-          "in": [],
+          "in": ["max"],
           "planned": {
-            "max": "P2",
             "tg": "P2"
           }
         }
