@@ -1666,30 +1666,12 @@
       "options": {
         "--chat": "all",
         "--context": "all",
-        "--language": {
-          "in": [],
-          "planned": {
-            "max": "search A1",
-            "tg": "search A1"
-          }
-        },
+        "--language": "all",
         "--limit": "all",
         "--newest": "all",
-        "--regex": {
-          "in": [],
-          "planned": {
-            "max": "T6",
-            "tg": "T6"
-          }
-        },
+        "--regex": "all",
         "--source": "all",
-        "--timezone": {
-          "in": [],
-          "planned": {
-            "max": "search A1",
-            "tg": "search A1"
-          }
-        }
+        "--timezone": "all"
       }
     },
     "messages send": {

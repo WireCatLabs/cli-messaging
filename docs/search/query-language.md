@@ -5,6 +5,9 @@ Lucene profile v1 доступен через shared services, CLI и MCP; по�
 StandardSyntaxParser и PrecedenceQueryParser, default AND, default field `text`.
 Это ограниченный профиль языка, а не полный Lucene search engine.
 
+Этот профиль — для `messages search` и `messages_search` MCP. `bot messages search`
+сохраняет legacy discovery; строгий поиск общего архива выбирает bot accounts через `in:bots`.
+
 Поиск читает только локальную БД, без сети и отметок о прочтении. Пустой ответ означает
 «не найдено в выбранном архиве». Проверяйте `coverage`, `completeness` и готовность индекса.
 Если word index не готов, выполните `store migrate`: строгий поиск не переходит на substring.
