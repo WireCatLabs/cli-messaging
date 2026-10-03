@@ -6,6 +6,10 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.127.0 — 03.10.2026
+
+Released early: max-cli and tg-cli search integration need the shared Lucene query profile
+
 ### Added
 
 - A versioned Lucene 9.12.3 query profile for local message search, shared by CLI and MCP:
