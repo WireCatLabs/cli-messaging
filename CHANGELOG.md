@@ -8,6 +8,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Fixed
 
+- Detailed evidence bundles summarize assertion names/statuses and counts instead of duplicating Vitest's raw coverage maps; the full per-repository JSON reports remain separate for review.
+
 - Detailed schema comparison preserves actual fields named `title`/`description` and literal default/const values, while ignoring documentation annotations; field bounds/types and defaults cannot disappear as prose.
 
 ## 0.134.0 — 03.10.2026

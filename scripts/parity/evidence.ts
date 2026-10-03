@@ -288,3 +288,13 @@ export const mountingEvidence = (root: string, groups: string[], sources: Source
     }
   })
 }
+
+export const testSummary = (results: TestResults): TestResults => ({
+  numPassedTests: results.numPassedTests,
+  numFailedTests: results.numFailedTests,
+  numPendingTests: results.numPendingTests,
+  testResults: results.testResults.map((suite) => ({
+    name: suite.name,
+    assertionResults: suite.assertionResults.map((test) => ({ fullName: test.fullName, status: test.status })),
+  })),
+})
