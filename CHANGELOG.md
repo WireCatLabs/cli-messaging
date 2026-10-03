@@ -8,6 +8,10 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Added
 
+- The MCP message-search schema and response bridge are exported for consumers retaining their own
+  server lifecycle. They forward language/timezone/AST/scopes and preserve search metadata, so a
+  consumer need not copy query validation or discard archive coverage. Shared tools use the same bridge.
+
 - Shared `upgradeCommand` and `upgradePackage` centralize version checks, package-manager execution
   and optional host server restarts. Check/manual/no-new-version paths never install; failed installs
   and host callbacks never trigger a retry. Consumers bind their existing environment and retain
