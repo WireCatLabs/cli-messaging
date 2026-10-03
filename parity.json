@@ -1589,8 +1589,7 @@
       }
     },
     "messages link": {
-      "in": [],
-      "planned": { "max": "B1c feat/messages-link", "tg": "B1c feat/messages-link" }
+      "in": "all"
     },
     "messages links": {
       "in": "all"

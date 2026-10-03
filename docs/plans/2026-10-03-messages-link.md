@@ -1,6 +1,6 @@
 # Message permalink and locator (B1c)
 
-Approved 2026-10-03; owner instruction: implement. Claim: `feat/messages-link`.
+Approved and implemented 2026-10-03; owner instruction: implement. Shared #483/0.139.0, TG #252 and MAX #381 merged with green CI. Consumer binary release and live checks remain separate.
 
 Personal command: `messages link <chat> <message>` or `messages link <msg:locator>`. A shared read service and MCP `messages_link` return `{ locator, url, access, reason }`. `access` is public/restricted/unknown/unavailable; URL may be null. Access describes the link audience, never proof that another account can read it. Read errors remain errors. Singular link differs from plural links (conversation graph).
 
