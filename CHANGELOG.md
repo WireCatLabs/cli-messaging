@@ -8,6 +8,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Fixed
 
+- MAX group reads now use the canonical event flags and member paging options. Retire the temporary legacy event-option rows after max-cli adopted shared reads; its new event and member options are recorded as present.
+
 - Search language, timezone and regex options are marked present in both CLIs after their shared 0.127.0 adoption; the obsolete claim that MAX search accepts only chat ids is removed.
 
 ## 0.128.0 — 03.10.2026
