@@ -6,6 +6,10 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.130.0 — 03.10.2026
+
+Released early: max-cli moderation migration needs parity to permit retirement of chats check before it can merge
+
 ### Fixed
 
 - The parity manifest accepts retirement of MAX’s legacy `chats check` during its move to the
