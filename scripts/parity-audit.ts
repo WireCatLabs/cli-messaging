@@ -11,13 +11,15 @@
  * Nothing contacts Telegram or MAX: each MCP server starts in an empty temporary home, with no
  * profile, and is asked only for its list of tools.
  */
-import { execFileSync, spawn } from "node:child_process"
+import { execFileSync } from "node:child_process"
 import { existsSync, mkdtempSync, readdirSync, readFileSync } from "node:fs"
 import { tmpdir } from "node:os"
-import { join } from "node:path"
+import { join, resolve } from "node:path"
 import { parseArgs } from "node:util"
 import { allowFlags, type CliSide, renderAudit } from "../dist/parity/audit.js"
 import type { CommandRow, CommandsJson, Entry, Manifest } from "../dist/parity/manifest.js"
+import { runDeepAudit } from "./parity/deep-audit.ts"
+import { mcpSchemas, sandboxEnvironment, temporaryHome } from "./parity/evidence.ts"
 
 const root = join(import.meta.dirname, "..")
 const manifest: Manifest = JSON.parse(readFileSync(join(root, "parity.json"), "utf8"))
@@ -25,8 +27,15 @@ const { values } = parseArgs({
   options: {
     ...Object.fromEntries(manifest.clis.map((cli) => [cli, { type: "string" as const }])),
     fresh: { type: "boolean" as const },
+    deep: { type: "boolean" as const },
+    output: { type: "string" as const },
+    "skip-checks": { type: "boolean" as const },
   },
 })
+if (values.output && existsSync(resolve(values.output))) throw new Error("choose a new output directory")
+if (values.deep && !values.output) throw new Error("--deep requires --output <new-directory>")
+if (!values.deep && (values.output || values["skip-checks"])) throw new Error("--output/--skip-checks require --deep")
+
 const dirOf = (cli: string) => (values as Record<string, string | boolean | undefined>)[cli]
 const given = manifest.clis.filter((cli) => typeof dirOf(cli) === "string")
 
@@ -80,64 +89,48 @@ out.push("", "## Option clashes still open", "")
 for (const [name, option] of Object.entries(manifest.options))
   if (option.note) out.push(`- \`${name}\` — ${option.note}`)
 
+const retainedPaths: string[] = []
+const auditHome = () => {
+  const path = temporaryHome()
+  retainedPaths.push(path)
+  return path
+}
+
 const git = (dir: string, ...args: string[]) => execFileSync("git", ["-C", dir, ...args], { encoding: "utf8" }).trim()
 
 const fresh = (): Record<string, string> => {
   const dir = mkdtempSync(join(tmpdir(), "parity-audit-"))
+  retainedPaths.push(dir)
   for (const cli of manifest.clis) {
     const into = join(dir, cli)
     console.error(`cloning and building ${cli}-cli into ${into}`)
-    execFileSync("git", ["clone", "-q", "--depth", "1", `https://github.com/leemour/${cli}-cli.git`, into])
-    execFileSync("pnpm", ["install", "--frozen-lockfile", "--prefer-offline"], { cwd: into, stdio: "ignore" })
-    execFileSync("pnpm", ["build"], { cwd: into, stdio: "ignore" })
+    execFileSync("git", [
+      "clone",
+      "-q",
+      "--branch",
+      "main",
+      "--depth",
+      "1",
+      `https://github.com/leemour/${cli}-cli.git`,
+      into,
+    ])
+    const env = sandboxEnvironment(auditHome())
+    execFileSync("pnpm", ["install", "--frozen-lockfile", "--prefer-offline"], { cwd: into, stdio: "ignore", env })
+    execFileSync("pnpm", ["build"], { cwd: into, stdio: "ignore", env })
   }
   return Object.fromEntries(manifest.clis.map((cli) => [cli, join(dir, cli)]))
 }
 
-const mcpTools = (bin: string, flags: string[]): Promise<string[]> => {
-  const home = mkdtempSync(join(tmpdir(), "parity-home-"))
-  const env = {
-    PATH: process.env.PATH,
-    HOME: home,
-    XDG_CONFIG_HOME: join(home, "config"),
-    XDG_STATE_HOME: join(home, "state"),
-    XDG_CACHE_HOME: join(home, "cache"),
-    XDG_DATA_HOME: join(home, "data"),
-    TMPDIR: home,
-  }
-  const child = spawn("node", [bin, "mcp", ...flags], { stdio: ["pipe", "pipe", "ignore"], env })
-  const send = (message: object) => child.stdin.write(`${JSON.stringify(message)}\n`)
-  return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => {
-      child.kill()
-      reject(new Error(`${bin} mcp gave no list of tools in 30 s`))
-    }, 30_000)
-    let buffer = ""
-    child.stdout.on("data", (chunk) => {
-      buffer += chunk
-      for (const line of buffer.split("\n")) {
-        if (!line.includes('"id":2')) continue
-        clearTimeout(timer)
-        child.kill()
-        resolve((JSON.parse(line).result.tools as { name: string }[]).map((tool) => tool.name).sort())
-      }
-    })
-    send({
-      jsonrpc: "2.0",
-      id: 1,
-      method: "initialize",
-      params: { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "parity-audit", version: "0" } },
-    })
-    send({ jsonrpc: "2.0", method: "notifications/initialized" })
-    send({ jsonrpc: "2.0", id: 2, method: "tools/list" })
-  })
-}
+const mcpTools = async (bin: string, flags: string[]): Promise<string[]> =>
+  (await mcpSchemas(bin, ["mcp", ...flags], sandboxEnvironment(auditHome()))).map((tool) => tool.name).sort()
 
 const markdown = (dir: string) => (existsSync(dir) ? readdirSync(dir).filter((name) => name.endsWith(".md")) : [])
 
 const side = async (cli: string, dir: string): Promise<CliSide> => {
   const bin = join(dir, "dist/bin", `${cli}.js`)
-  const program: CommandsJson = JSON.parse(execFileSync("node", [bin, "commands", "--json"], { encoding: "utf8" }))
+  const program: CommandsJson = JSON.parse(
+    execFileSync("node", [bin, "commands", "--json"], { encoding: "utf8", env: sandboxEnvironment(auditHome()) }),
+  )
   const pkg = JSON.parse(readFileSync(join(dir, "package.json"), "utf8"))
   const scripts: Record<string, string> = pkg.scripts ?? {}
   const pins = Object.fromEntries(
@@ -190,4 +183,16 @@ if (dirs) {
   console.error(`usage: pnpm parity:audit [--fresh | ${manifest.clis.map((cli) => `--${cli} <dir>`).join(" ")}]`)
   process.exit(2)
 }
-console.log(out.join("\n"))
+if (values.deep) {
+  if (!dirs) throw new Error("--deep requires --fresh or both --max and --tg checkouts")
+  const ok = await runDeepAudit({
+    root,
+    dirs,
+    manifest,
+    output: String(values.output),
+    skipChecks: values["skip-checks"],
+    retainedPaths,
+    surface: out.join("\n"),
+  })
+  if (!ok) process.exitCode = 1
+} else console.log(out.join("\n"))

@@ -57,7 +57,7 @@ describe("the parity audit", () => {
     })
   })
 
-  it("passes every --allow- option of mcp, so the server offers every tool", () => {
+  it("passes every --allow- option of mcp without treating it as configured exposure", () => {
     const flags = ["--allow-send", "--confirm-send", "--allow-delete"]
     expect(allowFlags({ cli: "max", globalOptions: [], commands: [mcp(flags)] })).toEqual([
       "--allow-send",

@@ -84,7 +84,7 @@ export const readmeSections = (readme = "") => [...readme.matchAll(/^## (.+)$/gm
 
 export const toolNames = (side: CliSide, cli: string) => side.tools.map((name) => name.replace(`${cli}_`, ""))
 
-/** The `--allow-*` options of a CLI's `mcp` command: passing them all makes its server offer every tool. */
+/** The `--allow-*` options of `mcp`; opt-in configuration may expose additional tools. */
 export const allowFlags = (program: CommandsJson): string[] => {
   const mcp = program.commands.find((command: CommandInfo) => command.path.join(" ") === "mcp")
   return (mcp?.options ?? []).map((option) => longName(option.flags)).filter((name) => name.startsWith("--allow-"))

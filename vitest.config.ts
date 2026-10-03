@@ -2,7 +2,7 @@ import { defineConfig } from "vitest/config"
 
 export default defineConfig({
   test: {
-    include: ["src/**/*.test.ts"],
+    include: ["src/**/*.test.ts", "scripts/parity/**/*.test.ts"],
     setupFiles: ["src/testing/sandbox.ts"],
     globals: false,
     coverage: {

@@ -6,6 +6,10 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- Detailed parity audit evidence and synthetic consumer checks via `--deep --output <new-directory>`; the existing surface audit is preserved.
+
 ## 0.133.0 — 03.10.2026
 
 Released early: max-cli audio-model migration needs the public speech catalogue and installer export
