@@ -1,10 +1,19 @@
 import { existsSync, readdirSync } from "node:fs"
 import { join } from "node:path"
-import { CliError, pathsAreOverridden, resolvePaths } from "@leemour/cli-core"
+import {
+  CliError,
+  configFilePath,
+  loadConfigFile,
+  pathsAreOverridden,
+  resolvePaths,
+  saveConfigFile,
+} from "@leemour/cli-core"
 import { annotate } from "@leemour/cli-core/commands"
 import { Command } from "commander"
+import * as v from "valibot"
 import { type AppIdentity, envName } from "./app.js"
 import { baseContext } from "./context.js"
+import { hasPermissionConfig, migratePermissionConfig } from "./permission-migration.js"
 import { type Configuration, fromFile, type Settings } from "./settings.js"
 
 /**
@@ -13,6 +22,30 @@ import { type Configuration, fromFile, type Settings } from "./settings.js"
  */
 export const configCommand = (app: AppIdentity, config: Configuration): Command => {
   const command = new Command("config").description("the settings in force, and where each one came from")
+
+  command.addCommand(
+    annotate(new Command("migrate"), { mutates: true, local: true })
+      .description("replace legacy access settings with permissions, preserving this file's effective levels")
+      .option("--dry-run", "show the migration without writing the file")
+      .action(function () {
+        const { renderer, env } = baseContext(this, config.resolveSettings)
+        const dryRun = this.opts<{ dryRun?: boolean }>().dryRun === true
+        if (!dryRun && env[envName(app, "PROFILE_LOCK")])
+          throw new CliError("permission_error", "config migrate changes every profile — run outside the profile lock")
+        const path = configFilePath(resolvePaths({ appName: app.appName, prefix: app.envPrefix, env }).config)
+        const migrated = migratePermissionConfig(loadConfigFile(path, config.schema, () => ({ profiles: {} })))
+        if (migrated.changed) {
+          const checked = v.safeParse(config.schema, migrated.config)
+          if (!checked.success)
+            throw new CliError(
+              "configuration_error",
+              "the migrated configuration is not valid — the file was not changed",
+            )
+          if (!dryRun) saveConfigFile(path, checked.output)
+        }
+        renderer.result({ configFile: path, changed: migrated.changed, dryRun, changes: migrated.changes })
+      }),
+  )
 
   command
     .command("show")
@@ -74,6 +107,15 @@ export const configCommand = (app: AppIdentity, config: Configuration): Command 
         throw new CliError(
           "permission_error",
           `this process is locked to profile ${settings.profile} (${lock}) — --defaults changes every profile`,
+        )
+      }
+      if (
+        ["readOnly", "allow", "mcpTools"].includes(setting) &&
+        hasPermissionConfig(loadConfigFile(settings.configPath, config.schema, () => ({ profiles: {} })))
+      ) {
+        throw new CliError(
+          "validation_error",
+          `${setting} is a legacy setting — use permissions instead; config migrate --dry-run previews the translation`,
         )
       }
       const saved = config.changeSetting(settings.configPath, {

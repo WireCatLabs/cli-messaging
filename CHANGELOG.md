@@ -6,6 +6,16 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- `config migrate [--dry-run]` replaces legacy `readOnly`, `allow` and supported `mcpTools` entries
+  with permissions while preserving effective personal/bot access across all configuration layers.
+  Preview and no-op leave the file untouched; profile locks refuse whole-file writes. Legacy
+  CLI setting edits refuse once the file contains permissions. Existing
+  canonical choices and unrelated settings stay. `migratePermissionConfig` is exported from `./cli`
+  for consumers with their own configuration commands. Consumers retaining native guards must
+  adopt permission-aware enforcement before exposing migration.
+
 ### Fixed
 
 - Detailed evidence bundles summarize assertion names/statuses and counts instead of duplicating Vitest's raw coverage maps; the full per-repository JSON reports remain separate for review.
