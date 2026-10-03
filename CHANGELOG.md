@@ -6,6 +6,10 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.124.0 — 03.10.2026
+
+Released early: max-cli release needs the corrected embedding status estimate and worker guidance
+
 ### Fixed
 
 - `conversations embed status` uses the measured e5-small speed of 31 chunks/s instead of 15,
