@@ -6,9 +6,14 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Fixed
+
+- Search language, timezone and regex options are marked present in both CLIs after their shared 0.127.0 adoption.
+
 ## 0.128.0 — 03.10.2026
 
 Released early: max-cli shared group reads need accurate truncation guidance and compatible event flags
+
 
 ## 0.127.0 — 03.10.2026
 
