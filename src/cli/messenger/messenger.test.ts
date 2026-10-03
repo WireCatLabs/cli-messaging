@@ -1016,9 +1016,10 @@ describe("the shared read commands", () => {
 
     const listed = await call(["messages", "list", "Book"], counting, env)
     const exported = await call(["store", "export", "Book"], counting, env)
+    const linked = await call(["messages", "link", "7", "1"], counting, env)
     const chats = await call(["chats", "list", "--json"], counting, env)
 
-    expect([listed.code, exported.code]).toEqual([5, 5])
+    expect([listed.code, exported.code, linked.code]).toEqual([5, 5, 5])
     expect(listed.stderr.join("\n")).toContain("permissions.messages is deny")
     expect(chats.code).toBe(0)
     expect(connected).toBe(1)
