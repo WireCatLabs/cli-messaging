@@ -92,7 +92,9 @@ export const chatsCommand = (messenger: Messenger): Command => {
       context.renderer.result(card)
       const { members, participantsCount } = card
       if (members && participantsCount !== null && members.length < participantsCount) {
-        context.renderer.note(`only ${members.length} of ${participantsCount} members could be read`)
+        context.renderer.note(
+          `${members.length} listed members; the chat reports ${participantsCount} participants. The list may omit your account or be partial.`,
+        )
       }
     })
 

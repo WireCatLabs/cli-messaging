@@ -331,14 +331,15 @@ describe("the shared read commands", () => {
     }
   })
 
-  it("show a chat with who is in it, and say when the list is cut short", async () => {
+  it("show a chat with who is in it, and explain differing member counts", async () => {
     const root = mkdtempSync(join(tmpdir(), "messenger-"))
     const env = { CHAT_STATE_DIR: join(root, "state"), MESSAGING_STORE: join(root, "m.db") }
     const { code, stdout, stderr } = await call(["chats", "show", "Book", "--json"], async () => fake, env)
 
     expect(code).toBe(0)
     expect(JSON.parse(stdout[0] ?? "")).toMatchObject({ id: "7", members: [{ id: "9" }] })
-    expect(stderr.join("\n")).toContain("only 1 of 4 members")
+    expect(stderr.join("\n")).toContain("1 listed members; the chat reports 4 participants")
+    expect(stderr.join("\n")).toContain("may omit your account or be partial")
     const offline = await call(["chats", "show", "Book", "--offline"], async () => fake, env)
     expect(JSON.parse(offline.stderr[0] ?? "").error).toMatchObject({ code: "not_found" })
 
@@ -346,6 +347,35 @@ describe("the shared read commands", () => {
     const stored = await call(["chats", "show", "Book", "--offline", "--json"], async () => fake, env)
     expect(JSON.parse(stored.stdout[0] ?? "")).toMatchObject({ id: "7", members: null })
   })
+
+  it.each([
+    [2, 3, true],
+    [1, 4, true],
+    [2, 2, false],
+    [2, null, false],
+    [0, 3, true],
+  ])(
+    "explain %s listed members and %s reported participants without inventing membership",
+    async (count, total, note) => {
+      const root = mkdtempSync(join(tmpdir(), "messenger-"))
+      const env = { CHAT_STATE_DIR: join(root, "state"), MESSAGING_STORE: join(root, "m.db") }
+      const members = Array.from({ length: count }, (_, index) => ({
+        id: String(9 + index),
+        name: "Member",
+        username: null,
+      }))
+      const adapter: MessengerAdapter = {
+        ...fake,
+        chat: async () => ({ ...chat, participantsCount: total, members }),
+      }
+      const { code, stdout, stderr } = await call(["chats", "show", "Book", "--json"], async () => adapter, env)
+
+      expect(code).toBe(0)
+      expect(JSON.parse(stdout[0] ?? "")).toMatchObject({ participantsCount: total, members })
+      expect(stderr.join("\n").includes("may omit your account or be partial")).toBe(note)
+      if (note) expect(stderr.join("\n")).toContain(`${count} listed members; the chat reports ${total} participants`)
+    },
+  )
 
   it("list as contacts only the one-to-one chats, in the order and with the filter asked for", async () => {
     const root = mkdtempSync(join(tmpdir(), "messenger-"))
