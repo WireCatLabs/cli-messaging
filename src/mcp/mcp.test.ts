@@ -314,6 +314,7 @@ describe("the MCP server", () => {
       "chat_inbox",
       "chat_messages_context",
       "chat_messages_evidence",
+      "chat_messages_link",
       "chat_messages_list",
       "chat_messages_photo",
       "chat_messages_scheduled",
@@ -435,6 +436,27 @@ describe("the MCP server", () => {
     })
     expect((await call("chat_status")).body.account).toBe("500")
     expect(telegram.opened()).toBe(1)
+  })
+
+  it("returns message links through the same read-only service and refuses account mismatch", async () => {
+    const permalink = vi.fn(async () => ({
+      url: "https://provider.example/1",
+      access: "restricted" as const,
+      reason: null,
+    }))
+    const { call, client } = await connect(scripted({ permalink }))
+    const offered = (await client.listTools()).tools.find((one) => one.name === "chat_messages_link")
+    expect(offered?.annotations?.readOnlyHint).toBe(true)
+    expect((await call("chat_messages_link", { chat: "7", message: "1" })).body).toEqual({
+      locator: "msg:chat/500/7/1",
+      url: "https://provider.example/1",
+      access: "restricted",
+      reason: null,
+    })
+    expect((await call("chat_messages_link", { chat: "msg:chat/500/7/1" })).body.locator).toBe("msg:chat/500/7/1")
+    const mismatch = await client.callTool({ name: "chat_messages_link", arguments: { chat: "msg:chat/other/7/1" } })
+    expect(mismatch.isError).toBe(true)
+    expect(permalink).toHaveBeenCalledTimes(2)
   })
 
   it("lists contacts as the one-to-one chats, and shows one person", async () => {

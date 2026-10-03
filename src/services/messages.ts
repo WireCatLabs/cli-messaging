@@ -3,7 +3,8 @@ import type { Messenger } from "../cli/messenger/context.js"
 import { type After, capability, type Download, type Sent } from "../cli/messenger/port.js"
 import { threadIdOf } from "../cli/messenger/thread.js"
 import { validateFormattedText } from "../domain/formatting.js"
-import { parseLocator } from "../domain/locator.js"
+import { formatLocator, parseLocator } from "../domain/locator.js"
+import { type MessageLink, messageLinkTarget, validatePermalink } from "../domain/message-link.js"
 import type { Chat, Deletion, Id, Message, Page, Provider, WindowedMessage } from "../domain/models.js"
 import { isId, pickChat, pickPerson } from "../resolve.js"
 import { inSource, parseQuery, sourceOf } from "../search/query.js"
@@ -110,6 +111,7 @@ type Saved = Partial<Pick<Messenger, "savedChatId">>
 export interface MessagesService {
   list(chat: string, window: ListWindow): Promise<Page<Message>>
   around(chat: string, message: string, window: AroundWindow): Promise<WindowedMessage[]>
+  link(chat: string, message?: string): Promise<MessageLink>
   /** The files of one message. Always from the messenger, whatever its history is read from. */
   download(chat: string, message: Id): Promise<Download>
   /** From the local store only; never asks the messenger. */
@@ -187,6 +189,46 @@ export const messagesService = (deps: ServiceDeps): MessagesService => {
         )
       }
       return capability(await deps.connection(), "around", "read the messages around one")(chat, message, window)
+    },
+
+    link: async (reference, message) => {
+      const target = messageLinkTarget(reference, message, deps.messenger.provider)
+      const account = await deps.account()
+      if (
+        account.provider !== deps.messenger.provider ||
+        (target.account !== undefined && target.account !== account.account)
+      )
+        throw new CliError("validation_error", "that locator belongs to another account; select its profile first")
+      if (fromStore(deps)) {
+        const store = await deps.store()
+        const chat = await readChatId(deps, target.chat, store, account)
+        const found = await store.around(account, chat, target.message, { before: 0, after: 0 })
+        if (!found.some((item) => item.id === target.message && item.chatId === chat))
+          throw new CliError("not_found", "no such message in this account's stored chat")
+        return {
+          locator: formatLocator({ ...account, chat, message: target.message }),
+          url: null,
+          access: "unavailable",
+          reason: deps.offline ? "offline" : "unsupported_provider",
+        }
+      }
+      const connection = await deps.connection()
+      if (connection.self() !== account.account)
+        throw new CliError(
+          "authentication_error",
+          "the connected account differs from the recorded profile; refresh the session before linking",
+        )
+      const { id: chat } = await connection.resolve(target.chat)
+      const locator = formatLocator({ ...account, chat, message: target.message })
+      if (connection.permalink)
+        return { locator, ...validatePermalink(await connection.permalink(chat, target.message)) }
+      const found = await capability(connection, "around", "read a message")(chat, target.message, {
+        before: 0,
+        after: 0,
+      })
+      if (!found.some((item) => item.id === target.message && item.chatId === chat))
+        throw new CliError("not_found", "no such message in this chat")
+      return { locator, url: null, access: "unavailable", reason: "unsupported_provider" }
     },
 
     download: async (chat, message) =>

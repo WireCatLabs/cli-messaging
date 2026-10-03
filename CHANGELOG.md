@@ -6,6 +6,13 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- Personal `messages link` and read-only MCP return an account-scoped locator plus an optional
+  provider permalink, audience and fallback reason. The optional adapter capability keeps existing
+  adapters compatible. Offline uses only the active account’s stored target; cross-account locators
+  are refused. Link output contains no message body, and a URL grants no chat membership.
+
 ## 0.138.0 — 03.10.2026
 
 Released early: MAX permission cutover needs legacy pin/unpin preservation and enforcement of explicit unpin overrides

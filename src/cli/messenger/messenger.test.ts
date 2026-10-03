@@ -2487,3 +2487,42 @@ describe("every list in --json", () => {
     }
   })
 })
+
+describe("message link command", () => {
+  it("prints one account-scoped result in JSON and JSONL, and closes on a provider error", async () => {
+    const root = mkdtempSync(join(tmpdir(), "link-cli-"))
+    const env = {
+      CHAT_STATE_DIR: join(root, "state"),
+      CHAT_CONFIG_DIR: join(root, "config"),
+      MESSAGING_STORE: join(root, "m.db"),
+    }
+    rememberAccount(app, "default", "500", env)
+    const close = vi.fn(async () => {})
+    const permalink = vi.fn(async () => ({
+      url: "https://provider.example/1",
+      access: "restricted" as const,
+      reason: null,
+    }))
+    const connect = vi.fn(async () => ({ ...fake, permalink, close }))
+    for (const flag of ["--json", "--jsonl"]) {
+      const result = await call(["messages", "link", "msg:chat/500/7/1", flag], connect, env)
+      expect(result.code).toBe(0)
+      expect(result.stdout.join("").trim().split("\n")).toHaveLength(1)
+      expect(JSON.parse(result.stdout.join(""))).toEqual({
+        locator: "msg:chat/500/7/1",
+        url: "https://provider.example/1",
+        access: "restricted",
+        reason: null,
+      })
+      expect(result.stderr.join("")).toBe("")
+    }
+    const mismatch = await call(["messages", "link", "msg:chat/other/7/1", "--json"], connect, env)
+    expect(mismatch.code).not.toBe(0)
+    expect(connect).toHaveBeenCalledTimes(2)
+    permalink.mockRejectedValueOnce(new CliError("permission_error", "synthetic denied"))
+    const denied = await call(["messages", "link", "7", "1", "--json"], connect, env)
+    expect(denied.code).not.toBe(0)
+    expect(denied.stdout).toEqual([])
+    expect(close).toHaveBeenCalledTimes(3)
+  })
+})
