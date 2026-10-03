@@ -138,3 +138,14 @@ it("preserves schema properties named title/description and literal defaults whi
     "inputSchema.properties.title.minLength",
   ])
 })
+
+it("does not treat property-map names as default/enum data when stripping documentation", () => {
+  for (const name of ["title", "description", "default", "const", "enum"]) {
+    const left = { type: "object", properties: { [name]: { type: "string", description: "left docs" } } }
+    const right = { type: "object", properties: { [name]: { type: "string", description: "right docs" } } }
+    expect(
+      compareTools({ cli: "a", tools: [tool("a_read", left)] }, { cli: "b", tools: [tool("b_read", right)] })[0]
+        ?.contracts,
+    ).toEqual([])
+  }
+})

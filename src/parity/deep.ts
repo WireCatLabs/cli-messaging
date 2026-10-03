@@ -49,7 +49,7 @@ const canonical = (value: unknown, prose: boolean, key = ""): unknown => {
       .sort()
       .filter((name) => prose || namedMap || !["description", "title"].includes(name))
       .map((name) => {
-        const literal = prose || ["default", "const", "enum", "examples", "annotations"].includes(name)
+        const literal = prose || (!namedMap && ["default", "const", "enum", "examples", "annotations"].includes(name))
         const next = canonical(value[name], literal, name)
         if (!prose && name === "enum" && Array.isArray(next))
           next.sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)))
