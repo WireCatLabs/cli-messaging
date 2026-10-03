@@ -406,7 +406,7 @@
     },
     "--send-id": {
       "value": "<id>",
-      "meaning": "reuse the id of an earlier send whose outcome is unknown; the messenger drops the duplicate"
+      "meaning": "identify a send or creation attempt; message/poll retries reuse it, while an unknown topic creation must never be repeated"
     },
     "--serve": {
       "meaning": "start `serve` in the background if it is not running (the default)"
@@ -2059,23 +2059,23 @@
       "reason": "MAX has no forum topics"
     },
     "topics create": {
-      "in": [],
-      "planned": {
-        "tg": "adopt the shared forum control commands and Telegram adapter"
-      },
+      "in": ["tg"],
       "reason": "MAX has no forum topics",
       "options": {
-        "--send-id": "all"
+        "--send-id": {
+          "in": ["tg"],
+          "reason": "MAX has no forum topics"
+        }
       }
     },
     "topics enable": {
-      "in": [],
-      "planned": {
-        "tg": "adopt the shared forum control commands and Telegram adapter"
-      },
+      "in": ["tg"],
       "reason": "MAX has no forum topics",
       "options": {
-        "--upgrade": "all"
+        "--upgrade": {
+          "in": ["tg"],
+          "reason": "MAX has no forum topics"
+        }
       }
     },
     "upgrade": {
