@@ -894,8 +894,9 @@
       "in": "all"
     },
     "chats check": {
-      "in": ["max"],
-      "reason": "named chats moderate by the standard (check changes nothing); max keeps the old name until T6 moves the command"
+      "in": [],
+      "planned": { "max": "T6 retirement: chats moderate replaces this legacy name" },
+      "reason": "temporarily accepts the old MAX name while the shared moderation consumer is merging"
     },
     "chats create": {
       "in": "all",
