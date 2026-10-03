@@ -1707,13 +1707,7 @@
         "--reply-to": "all",
         "--send-id": "all",
         "--silent": "all",
-        "--topic": {
-          "in": [],
-          "planned": {
-            "max": "adopt the shared topic option; the MAX adapter explicitly refuses forum addressing",
-            "tg": "adopt the shared topic option with Telegram adapter validation and mapping"
-          }
-        },
+        "--topic": "all",
         "--voice": "all"
       }
     },
@@ -1780,13 +1774,7 @@
         "--revote": "all",
         "--send-id": "all",
         "--silent": "all",
-        "--topic": {
-          "in": [],
-          "planned": {
-            "max": "adopt the shared topic option; the MAX adapter explicitly refuses forum addressing",
-            "tg": "adopt the shared topic option with Telegram adapter validation and mapping"
-          }
-        }
+        "--topic": "all"
       }
     },
     "polls show": {
