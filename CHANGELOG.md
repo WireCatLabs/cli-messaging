@@ -6,6 +6,10 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.131.0 — 03.10.2026
+
+Released early: max-cli moderation migration needs join events bounded to the current history batch before merging
+
 ### Fixed
 
 - Moderation defers join events beyond its capped message batch until the next run. A separate
