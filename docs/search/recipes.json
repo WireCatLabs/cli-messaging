@@ -1,0 +1,80 @@
+{
+  "chats": [
+    { "id": "7", "title": "Work fixture", "kind": "group" },
+    { "id": "8", "title": "Saved fixture", "kind": "saved" },
+    { "id": "9", "title": "Private fixture", "kind": "dialog" }
+  ],
+  "messages": [
+    {
+      "id": "101",
+      "chatId": "7",
+      "text": "invoice paid alpha",
+      "timestamp": "2026-01-20T10:00:00.000Z",
+      "senderId": "10",
+      "senderName": "Alice Synthetic"
+    },
+    {
+      "id": "102",
+      "chatId": "7",
+      "text": "invoice draft beta",
+      "timestamp": "2026-01-21T10:00:00.000Z",
+      "senderId": "10",
+      "senderName": "Alice Synthetic"
+    },
+    {
+      "id": "103",
+      "chatId": "9",
+      "text": "passport example",
+      "timestamp": "2026-01-22T10:00:00.000Z",
+      "senderId": "10",
+      "senderName": "Alice Synthetic"
+    },
+    {
+      "id": "104",
+      "chatId": "8",
+      "text": "secret: EXAMPLE_ONLY",
+      "timestamp": "2026-01-23T10:00:00.000Z",
+      "senderId": "10",
+      "senderName": "Alice Synthetic"
+    },
+    {
+      "id": "105",
+      "chatId": "7",
+      "text": "",
+      "timestamp": "2026-01-24T10:00:00.000Z",
+      "senderId": "10",
+      "senderName": "Alice Synthetic",
+      "attachments": [{ "kind": "file", "name": "invoice.pdf" }]
+    },
+    {
+      "id": "106",
+      "chatId": "7",
+      "text": "alpha invoice paid",
+      "timestamp": "2026-01-25T10:00:00.000Z",
+      "senderId": "11",
+      "senderName": "Bob Synthetic"
+    }
+  ],
+  "recipes": [
+    { "title": "Точное слово", "query": "invoice", "ids": ["101", "102", "106"] },
+    { "title": "Фраза", "query": "\"invoice paid\"", "ids": ["101", "106"] },
+    {
+      "title": "Группа авторов",
+      "query": "from:(\"Alice Synthetic\" OR \"Bob Synthetic\") AND invoice",
+      "ids": ["101", "102", "106"]
+    },
+    { "title": "Чат по имени", "query": "chat:\"Work fixture\" AND invoice", "ids": ["101", "102", "106"] },
+    { "title": "Диапазон дат", "query": "invoice date:[2026-01-20 TO 2026-01-22}", "ids": ["101", "102"] },
+    { "title": "Личная переписка", "query": "passport kind:private", "ids": ["103"] },
+    { "title": "Кандидат secret в Избранном", "query": "preset:secret kind:saved", "ids": ["104"] },
+    { "title": "Regex по терму", "query": "text:/pass(port)?/ kind:private", "ids": ["103"] },
+    { "title": "Regex по полному тексту", "query": "body:/.*invoice.*/", "ids": ["101", "102", "106"] },
+    { "title": "Сообщение только с файлом", "query": "has:file", "ids": ["105"] }
+  ],
+  "negative": [
+    { "query": "foo:bar", "code": "validation_error", "reason": "unknown_field" },
+    { "query": "filename:*.pdf", "code": "validation_error", "reason": "unsupported_field" },
+    { "query": "invoice~1", "code": "validation_error", "reason": "unsupported_operator" },
+    { "query": "kind:person", "code": "validation_error", "reason": "unknown_value" }
+  ]
+}

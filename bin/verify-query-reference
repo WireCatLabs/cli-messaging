@@ -1,0 +1,32 @@
+#!/usr/bin/env sh
+set -eu
+QUERY_REF_ROOT=$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)
+QUERY_REF_MODE=${1:-check}
+[ "$QUERY_REF_MODE" = check ] || [ "$QUERY_REF_MODE" = --write ] || { echo 'usage: bin/verify-query-reference [--write]' >&2; exit 2; }
+if [ -n "${SEARCH_REFERENCE_JAVA_DIR:-}" ]; then
+  QUERY_JAVA_BIN="$SEARCH_REFERENCE_JAVA_DIR/bin"
+else
+  command -v javac >/dev/null || { echo 'Java 21 JDK is required only for reference verification; set SEARCH_REFERENCE_JAVA_DIR.' >&2; exit 2; }
+  QUERY_JAVA_BIN=$(dirname -- "$(command -v javac)")
+fi
+QUERY_REF_TMP=$(mktemp -d "${TMPDIR:-/tmp}/query-reference.XXXXXX")
+trap 'rm -rf -- "$QUERY_REF_TMP"' EXIT HUP INT TERM
+for QUERY_ARTIFACT in lucene-core lucene-queryparser lucene-analysis-common lucene-queries lucene-sandbox; do
+  curl -fLsS "https://repo.maven.apache.org/maven2/org/apache/lucene/$QUERY_ARTIFACT/9.12.3/$QUERY_ARTIFACT-9.12.3.jar" -o "$QUERY_REF_TMP/$QUERY_ARTIFACT.jar"
+done
+(cd "$QUERY_REF_TMP" && sha256sum --check "$QUERY_REF_ROOT/scripts/search-reference/jars.sha256")
+"$QUERY_JAVA_BIN/javac" -cp "$QUERY_REF_TMP/*" -d "$QUERY_REF_TMP" "$QUERY_REF_ROOT/scripts/search-reference/SearchReference.java" "$QUERY_REF_ROOT/scripts/search-reference/RegexReference.java"
+"$QUERY_JAVA_BIN/java" -cp "$QUERY_REF_TMP/*:$QUERY_REF_TMP" SearchReference "$QUERY_REF_ROOT/scripts/search-reference/queries.txt" > "$QUERY_REF_TMP/reference.json"
+"$QUERY_JAVA_BIN/java" -cp "$QUERY_REF_TMP/*:$QUERY_REF_TMP" RegexReference "$QUERY_REF_ROOT/scripts/search-reference/patterns.txt" > "$QUERY_REF_TMP/regex-reference.json"
+node --input-type=module - "$QUERY_REF_ROOT" "$QUERY_REF_TMP" "$QUERY_REF_MODE" <<'JS'
+import {readFileSync,writeFileSync} from "node:fs"
+import {join} from "node:path"
+const [root,temp,mode]=process.argv.slice(2)
+for(const file of ["reference.json","regex-reference.json"]) {
+  const actual=JSON.parse(readFileSync(join(temp,file),"utf8"))
+  const target=join(root,"src/search/lucene",file)
+  if(mode==="--write")writeFileSync(target,JSON.stringify(actual,null,2)+"\n")
+  else if(JSON.stringify(actual)!==JSON.stringify(JSON.parse(readFileSync(target,"utf8")))) throw new Error(`reference drift in ${file}`)
+}
+console.log("Lucene 9.12.3 reference fixtures verified")
+JS

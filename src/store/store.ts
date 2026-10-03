@@ -15,6 +15,7 @@ import type {
   WindowedMessage,
 } from "../domain/models.js"
 import type { PeopleLookup } from "../resolve.js"
+import type { QueryExecution } from "../search/lucene/resolved.js"
 import { migrate } from "./migrations.js"
 import { storeCapable } from "./open.js"
 import { storePath } from "./path.js"
@@ -26,6 +27,8 @@ import type { ChatCompleteness } from "./sqlite/completeness.js"
 import * as completeness from "./sqlite/completeness.js"
 import * as conversationQueries from "./sqlite/conversations.js"
 import * as identities from "./sqlite/identities.js"
+import { findRegex } from "./sqlite/legacy-regex.js"
+import * as lucene from "./sqlite/lucene.js"
 import * as messageWrites from "./sqlite/messages.js"
 import { openSqlite, type StoreContext } from "./sqlite/open.js"
 import * as ranges from "./sqlite/ranges.js"
@@ -85,6 +88,7 @@ export interface MessageFilter {
    * it reads the chat (or the account) until `limit` match. Not with `text` or `perChat`.
    */
   pattern?: RegExp
+  signal?: AbortSignal
   /** Only this chat of the account; needs `account`. */
   chatId?: Id
   /** With `perChat`, the newest `limit` of each chat rather than of all of them together. */
@@ -268,6 +272,7 @@ export interface MessageStore {
    * The word index, ranked by bm25, ties newest first (phase 2 plan S4 steps 1, 2 and 4). Chats marked
    * not searchable are left out unless the scope names the chat.
    */
+  matchQuery?(execution: QueryExecution): Promise<Page<ScoredHit>>
   matchWords(query: WordQuery, scope: SearchScope, options: WordOptions): Promise<Page<ScoredHit>>
   /** The substring index, newest first (step 5); pieces under three letters are dropped. */
   matchSubstring(query: WordQuery, scope: SearchScope, options: { limit: number }): Promise<Page<ScoredHit>>
@@ -821,7 +826,9 @@ const storeOver = (context: StoreContext): MessageStore => {
     search: async (query, { limit, account }) =>
       search.find(context, { text: query, limit, ...(account ? { account } : {}) }),
 
-    find: async (filter) => search.find(context, filter),
+    find: async (filter) => (filter.pattern ? findRegex(context, filter) : search.find(context, filter)),
+
+    matchQuery: async (execution) => lucene.matchQuery(context, execution),
 
     matchWords: async (query, scope, options) => words.matchWords(context, query, scope, options),
 

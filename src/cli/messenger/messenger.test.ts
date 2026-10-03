@@ -8,11 +8,12 @@ import { describe, expect, it, vi } from "vitest"
 import type { Chat, Member, Message, WindowedMessage } from "../../domain/models.js"
 import { SendJournal, sendsPathFor } from "../../sends/journal.js"
 import { openStore } from "../../store/store.js"
+import { searchRecipes, seedSearchRecipes } from "../../testing/search-recipes.js"
 import { commandsCommand } from "../commands-command.js"
 import { type RunOptions, run } from "../program.js"
 import { settingsFor } from "../settings.js"
 import { accountCommand } from "./account-command.js"
-import { accountFileFor } from "./accounts.js"
+import { accountFileFor, rememberAccount } from "./accounts.js"
 import { storeCommand } from "./archive-commands.js"
 import { chatsCommand } from "./chats-command.js"
 import { completeCommand } from "./complete-command.js"
@@ -1106,12 +1107,12 @@ describe("the shared read commands", () => {
       throw new Error("search must never connect")
     }
 
-    const found = await call(["messages", "search", "chapt", "--json"], never, env)
+    const found = await call(["messages", "search", "chapter", "--json"], never, env)
     const hits = JSON.parse(found.stdout[0] ?? "").items
     expect(found.code).toBe(0)
     expect(hits.map((hit: { id: string }) => hit.id)).toEqual(["3", "2", "1"])
     expect(hits[0].locator).toBe("msg:chat/500/7/3")
-    const elsewhere = await call(["messages", "search", "chapt", "--chat", "999", "--json"], never, env)
+    const elsewhere = await call(["messages", "search", "chapter", "--chat", "999", "--json"], never, env)
     expect(JSON.parse(elsewhere.stdout[0] ?? "").items).toEqual([])
     const pattern = await call(["messages", "search", "--regex", "ch.pt", "--limit", "1", "--json"], never, env)
     expect(JSON.parse(pattern.stdout[0] ?? "")).toMatchObject({ items: [{ id: "3" }], hasMore: true })
@@ -1120,7 +1121,7 @@ describe("the shared read commands", () => {
     expect(broken.stderr.join("\n")).toContain("not a regular expression")
   })
 
-  it("**searches with the query language**: corrections, filters, completeness and context, said where they belong", async () => {
+  it("**searches with explicit legacy language**: corrections, filters, completeness and context, said where they belong", async () => {
     const root = mkdtempSync(join(tmpdir(), "messenger-"))
     const env = { CHAT_STATE_DIR: join(root, "state"), MESSAGING_STORE: join(root, "m.db") }
     await call(["messages", "context", "Book", "2", "--json"], async () => fake, env)
@@ -1128,7 +1129,7 @@ describe("the shared read commands", () => {
       throw new Error("search must never connect")
     }
     const json = async (...argv: string[]) => {
-      const done = await call(["messages", "search", ...argv, "--json"], never, env)
+      const done = await call(["messages", "search", "--language", "legacy", ...argv, "--json"], never, env)
       const error = done.stderr
         .filter((line) => line.startsWith("{"))
         .map((line) => JSON.parse(line).error?.message)
@@ -1145,7 +1146,7 @@ describe("the shared read commands", () => {
     })
     expect(typo.answer.items[0]).toMatchObject({ match: "corrected", score: expect.any(Number) })
     expect(typo.stderr.join("\n")).toContain("chaptr → chapter")
-    expect(typo.stderr.join("\n")).toContain("1 of the chats found are not held in full — `chat store fetch <chat>`")
+    expect(typo.stderr.join("\n")).toContain("1 of the chats searched are not held in full — `chat store fetch <chat>`")
 
     expect((await json("from:Olga", "chapter")).answer.items).toHaveLength(3)
     expect((await json("from:me", "chapter")).answer.items).toEqual([])
@@ -1220,7 +1221,7 @@ describe("the shared read commands", () => {
         .filter((line) => line.startsWith("{"))
         .map((line) => String(JSON.parse(line).error?.message))
         .join("\n")
-    expect(await failed("chapter", "in:chat", "--source", "other")).toContain(
+    expect(await failed("chapter", "in:chat", "--source", "other", "--language", "legacy")).toContain(
       "--source and in: name different messengers: other and chat",
     )
     expect(await failed("chapter", "--source", "nowhere")).toContain(
@@ -1231,6 +1232,81 @@ describe("the shared read commands", () => {
     expect(await failed("chapter", "--chat", "7", "in:all")).toContain('"7" matches 2 chats in different accounts')
     expect(await locators("chapter", "--chat", "Reading", "in:all")).toEqual(["msg:other/600/7/40"])
   })
+
+  it.each(["max", "telegram"])(
+    "executes every documented Lucene recipe through the real CLI (%s)",
+    async (provider) => {
+      const root = mkdtempSync(join(tmpdir(), "search-recipes-"))
+      const env = {
+        CHAT_STATE_DIR: join(root, "state"),
+        CHAT_CONFIG_DIR: join(root, "config"),
+        MESSAGING_STORE: join(root, "m.db"),
+      }
+      rememberAccount(app, "default", "500", env)
+      const store = await openStore({ path: env.MESSAGING_STORE })
+      await seedSearchRecipes(store, { provider, account: "500" })
+      await store.close()
+      const never = async (): Promise<MessengerAdapter> => {
+        throw new Error("search must never connect")
+      }
+      for (const recipe of searchRecipes.recipes) {
+        const result = await call(
+          ["messages", "search", recipe.query, "--language", "lucene", "--timezone", "UTC", "--json"],
+          never,
+          env,
+          {},
+          { provider },
+        )
+        expect(result.code, recipe.title).toBe(0)
+        const answer = JSON.parse(result.stdout[0] ?? "null")
+        expect(answer.items.map((item: { id: string }) => item.id).sort(), recipe.title).toEqual(recipe.ids)
+        expect(answer).toMatchObject({
+          page: 1,
+          limit: 20,
+          hasMore: false,
+          corrections: [],
+          query: { language: "lucene-v1", timezone: "UTC" },
+          coverage: { coveredChats: recipe.query.startsWith("chat:") ? 1 : 3 },
+        })
+        expect(result.stdout).toHaveLength(1)
+      }
+      for (const recipe of searchRecipes.negative) {
+        const result = await call(["messages", "search", recipe.query, "--json"], never, env, {}, { provider })
+        expect(result.code).toBe(2)
+        expect(result.stdout).toEqual([])
+        expect(result.stderr.join("\n")).toContain(recipe.reason)
+        expect(result.stderr.join("\n")).toContain(recipe.code)
+      }
+      const cancelled = new AbortController()
+      cancelled.abort()
+      const aborted = await call(
+        ["messages", "search", "invoice", "--json"],
+        never,
+        env,
+        { signal: cancelled.signal },
+        { provider },
+      )
+      expect(aborted.code).toBe(2)
+      expect(aborted.stdout).toEqual([])
+      const deadline = await call(
+        ["messages", "search", "--regex", "invoice", "--timeout", "1ms", "--json"],
+        never,
+        env,
+        {},
+        { provider },
+      )
+      expect(deadline.code).toBe(9)
+      expect(deadline.stdout).toEqual([])
+      for (const flags of [
+        ["--language", "imaginary"],
+        ["--language", "lucene", "--regex"],
+        ["--timezone", "Imaginary/Zone"],
+      ]) {
+        const result = await call(["messages", "search", "invoice", ...flags, "--json"], never, env, {}, { provider })
+        expect(result.code).toBe(2)
+      }
+    },
+  )
 
   it("**builds a chat's conversations** and explains a message's place in one, without connecting", async () => {
     const root = mkdtempSync(join(tmpdir(), "messenger-"))
@@ -2292,7 +2368,7 @@ describe("the guard, account and mcp config commands", () => {
     expect(listed.stdout.map((line) => JSON.parse(line).id)).toEqual(["1", "2", "3"])
     expect(listed.stderr.join("\n")).toContain("--before-id 1")
 
-    const found = await call(["messages", "search", "chapt", "--jsonl"], online, env)
+    const found = await call(["messages", "search", "chapter", "--jsonl"], online, env)
     expect(found.stdout.map((line) => JSON.parse(line).id)).toEqual(["3", "2", "1"])
   })
 })

@@ -53,6 +53,7 @@ export type Connect = <T>(work: (adapter: MessengerAdapter) => Promise<T>) => Pr
 
 /** What a tool may need beyond its arguments. */
 export interface Defaults {
+  signal?: AbortSignal
   limit: number
   guard: SendGuard
   /** The profile's own entries, for a tool reading a setting of its own — `transcribeWith`. */
@@ -165,7 +166,12 @@ export const registerTools = (
         try {
           const { online, stored, served, permission } = definition
           const result = stored
-            ? await withStore((store, account) => stored(store, account, args, defaults), { name: run })
+            ? await withStore(
+                (store, account) => stored(store, account, args, { ...defaults, signal: ctx.mcpReq.signal }),
+                {
+                  name: run,
+                },
+              )
             : served && messenger.history === "store"
               ? await withStore(
                   (store, account) =>

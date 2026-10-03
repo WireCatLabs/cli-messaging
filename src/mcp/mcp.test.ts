@@ -18,12 +18,14 @@ import { reviewCommand } from "../cli/messenger/review.js"
 import { createProgram, run } from "../cli/program.js"
 import { settingsFor } from "../cli/settings.js"
 import type { Chat, Message } from "../domain/models.js"
+import { parseLucene } from "../search/lucene/parser.js"
 import type { SendGuard } from "../sends/guard.js"
 import { SendJournal, sendsPathFor } from "../sends/journal.js"
 import { conversationsService } from "../services/conversations.js"
 import { storedDeps } from "../services/deps.js"
 import { embeddingsService } from "../services/embeddings.js"
 import { openStore } from "../store/store.js"
+import { searchRecipes, seedSearchRecipes } from "../testing/search-recipes.js"
 import { instructions } from "./instructions.js"
 import { createServer, type ServerOptions } from "./server.js"
 
@@ -453,6 +455,31 @@ describe("the MCP server", () => {
     expect(telegram.opened()).toBe(1)
   })
 
+  it("executes documented recipes with identical ids through MCP text and structured AST", async () => {
+    const telegram = scripted()
+    const { call, env } = await connect(telegram)
+    await call("chat_chats_list")
+    const store = await openStore({ path: env.MESSAGING_STORE })
+    await seedSearchRecipes(store, { provider: "chat", account: "500" })
+    await store.close()
+    const opened = telegram.opened()
+    for (const recipe of searchRecipes.recipes) {
+      const textual = await call("chat_messages_search", { text: recipe.query, language: "lucene", timezone: "UTC" })
+      const structured = await call("chat_messages_search", { ast: parseLucene(recipe.query), timezone: "UTC" })
+      expect(textual.isError, recipe.title).toBe(false)
+      expect(structured.body).toEqual(textual.body)
+      expect(textual.body.items.map((item: { id: string }) => item.id).sort()).toEqual(recipe.ids)
+      expect(textual.body).toMatchObject({
+        page: 1,
+        query: { language: "lucene-v1", timezone: "UTC" },
+        coverage: { coveredChats: recipe.query.startsWith("chat:") ? 1 : 3 },
+      })
+    }
+    expect(telegram.opened()).toBe(opened)
+    expect((await call("chat_messages_search", {})).isError).toBe(true)
+    expect((await call("chat_messages_search", { text: "invoice", ast: parseLucene("invoice") })).isError).toBe(true)
+  })
+
   it("searches what an earlier read kept, without connecting for it", async () => {
     const telegram = scripted()
     const { call } = await connect(telegram)
@@ -462,8 +489,8 @@ describe("the MCP server", () => {
 
     expect(body.items.map((hit: { id: string }) => hit.id)).toEqual(["1"])
     expect(body).toMatchObject({ corrections: [], completeness: [{ chatId: "7" }], wordsReady: true })
-    expect(body.items[0]).toMatchObject({ match: "words" })
-    const typo = await call("chat_messages_search", { text: "chaptre", context: 1 })
+    expect(body).toMatchObject({ query: { language: "lucene-v1" }, page: 1 })
+    const typo = await call("chat_messages_search", { text: "chaptre", context: 1, language: "legacy" })
     expect(typo.body).toMatchObject({ corrections: [{ from: "chaptre", to: ["chapter"] }] })
     expect(typo.body.items[0].context).toEqual(expect.any(Array))
     expect((await call("chat_messages_search", { text: "chapter", source: "all" })).body.items).toHaveLength(1)

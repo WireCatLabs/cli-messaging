@@ -13,6 +13,7 @@ import { newOperationId, newSendId } from "../sends/send-id.js"
 import type { Upload } from "../sends/upload.js"
 import type { AccountKey, ChatCompleteness, MessageStore, SearchScope, StoredHit, WordQuery } from "../store/store.js"
 import { fromStore, nothingStored, PUSHED, type ServiceDeps } from "./deps.js"
+import { type QueryMetadata, type SearchCoverage, searchLucene } from "./messages-search.js"
 
 export interface ListWindow {
   limit: number
@@ -31,6 +32,10 @@ export interface AroundWindow {
 export interface SearchQuery {
   /** The query language of the phase 2 plan, §4: words, "phrases", -word, OR, and filters. */
   text?: string
+  language?: "lucene" | "legacy"
+  timezone?: string
+  ast?: unknown
+  signal?: AbortSignal
   pattern?: RegExp
   chat?: string
   /** A messenger the store holds, or `all` — the same as `in:` in the query. The account it runs as when unset. */
@@ -49,6 +54,8 @@ export interface SearchQuery {
 export type FoundMessage = StoredHit & { match?: Match; score?: number | null; context?: WindowedMessage[] }
 
 export interface SearchFound extends Page<FoundMessage> {
+  query?: QueryMetadata
+  coverage?: SearchCoverage
   corrections: { from: string; to: string[] }[]
   /** Per chat of the page: how much of its history the store holds. */
   completeness: (ChatCompleteness & AccountKey)[]
@@ -328,12 +335,23 @@ export const messagesService = (deps: ServiceDeps): MessagesService => {
 export const searchStore = async (
   store: MessageStore,
   account: AccountKey,
-  { text, pattern, chat, source, accounts, senders, limit, newest = false, context = 0 }: SearchQuery,
+  request: SearchQuery,
   messenger: Saved = {},
 ): Promise<SearchFound> => {
+  const { text, pattern, chat, source, accounts, senders, limit, newest = false, context = 0 } = request
+  if (request.signal?.aborted)
+    throw new CliError("validation_error", "search was aborted", { reason: "query_aborted", complete: false })
+  if (request.language !== undefined && !["lucene", "legacy"].includes(request.language))
+    throw new CliError("validation_error", "--language takes lucene or legacy")
+  if (pattern && (request.language === "lucene" || request.ast !== undefined || request.timezone !== undefined))
+    throw new CliError("validation_error", "--regex is legacy JavaScript mode; not with Lucene, AST or timezone")
+  if (request.language === "legacy" && (request.ast !== undefined || request.timezone !== undefined))
+    throw new CliError("validation_error", "AST and timezone require the Lucene language")
   // A large file builds its word index a slice per search as well as in `store migrate` (NEED-453 A).
   const stop = Date.now() + SEARCH_FILL_MS
   await store.fillSearchIndex({ until: () => Date.now() >= stop })
+  if (!pattern && (request.language === "lucene" || request.ast !== undefined))
+    return searchLucene(store, account, request, messenger)
   if (pattern && (source !== undefined || accounts !== undefined || senders !== undefined)) {
     throw new CliError(
       "validation_error",
@@ -344,6 +362,7 @@ export const searchStore = async (
     ? {
         ...(await store.find({
           pattern,
+          signal: request.signal,
           account,
           limit,
           ...(chat === undefined ? {} : { chatId: await storedChatId(messenger, chat, store, account) }),
@@ -460,7 +479,7 @@ const missing = (error: unknown) => {
 }
 
 /** A chat as `--chat` names it, in whichever of the accounts holds it — one of them, or it is an error. */
-const chatAmong = async (
+export const chatAmong = async (
   messenger: Saved,
   store: MessageStore,
   accounts: AccountKey[],
@@ -494,7 +513,7 @@ const chatAmong = async (
 }
 
 /** A sender, through the names each messenger's accounts have seen; `from:` names one person. */
-const senderAmong = async (store: MessageStore, accounts: AccountKey[], reference: string) => {
+export const senderAmong = async (store: MessageStore, accounts: AccountKey[], reference: string) => {
   const providers = [...new Set(accounts.map(({ provider }) => provider))]
   const [only] = accounts
   try {

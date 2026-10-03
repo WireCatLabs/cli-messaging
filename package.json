@@ -18,7 +18,8 @@
     "parity.json",
     "skills",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "THIRD_PARTY_NOTICES"
   ],
   "exports": {
     ".": {
@@ -67,7 +68,7 @@
     "lint:fix": "biome check --write .",
     "db:generate": "drizzle-kit generate",
     "db:bundle": "node scripts/bundle-migrations.ts",
-    "docs:check": "node --experimental-strip-types scripts/docs-check.ts",
+    "docs:check": "pnpm build && node --experimental-strip-types scripts/docs-check.ts && node scripts/search-docs.ts --check",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
@@ -78,7 +79,8 @@
     "prepublishOnly": "pnpm build",
     "parity:seed": "tsc --build && node --experimental-strip-types scripts/parity-seed.ts",
     "parity:render": "node --experimental-strip-types scripts/parity-render.ts",
-    "parity:audit": "tsc --build && node --experimental-strip-types scripts/parity-audit.ts"
+    "parity:audit": "tsc --build && node --experimental-strip-types scripts/parity-audit.ts",
+    "search:docs": "pnpm build && node scripts/search-docs.ts"
   },
   "dependencies": {
     "@bomb.sh/tab": "0.0.22",

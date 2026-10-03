@@ -1,41 +1,142 @@
 # Lucene query profile v1 — техническая спецификация
 
-**Планируется; реализация A1 в feat/search-lucene-a1.** Публичные options и output contract
-одобрены владельцем 2026-10-03. Русский язык canonical guide/spec — явное требование этой работы;
-прочие shared documents остаются английскими.
+Implementation A1; runtime TypeScript/SQLite, Java только для development conformance.
+Canonical guide/spec по явному требованию владельца — на русском; остальные shared documents
+сохраняют английский. [Пользовательская справка](query-language.md) — поддержка/limits/recipes.
 
-## Baseline и provenance
+## Normative baseline
 
-[StandardSyntaxParser 9.12.3](https://github.com/apache/lucene/blob/releases/lucene/9.12.3/lucene/queryparser/src/java/org/apache/lucene/queryparser/flexible/standard/parser/StandardSyntaxParser.jj)
-и официальный PrecedenceQueryParser, defaultOperator AND, default field text.
-Parser выбирается по differential conformance corpus; при отсутствии подходящей библиотеки
-переносится upstream grammar с Apache-2.0 license/notices. Java — только development harness.
-SQL backend и normalization v1 остаются; full Lucene compatibility не заявляется.
+Apache Lucene tag `releases/lucene/9.12.3`, commit
+`f965e930673c1f5cb478dc6a8907f5fc4ef7b539`. StandardSyntaxParser.jj и официальный
+BooleanModifiersQueryNodeProcessor из PrecedenceQueryParser, `defaultOperator=AND`, default field `text`.
 
-## Контракт
+Grammar/config отличаются от classic QueryParser. Query = DisjQuery*, DisjQuery = ConjQuery OR*,
+ConjQuery = ModClause AND*. Adjacency применяется отдельно, не как conventional AND precedence.
+Boolean clauses сохраняют MUST/SHOULD/MUST_NOT; optional nodes при наличии required не обязательны.
+Pure-negative query даёт пустое множество, не SQL complement universe.
 
-Versioned syntax/typed AST; clause occurrences required/optional/prohibited; spans UTF-16 [start,end).
-One field registry: types/operators/resolver/index/normalization/enums/version/support stage.
-Authority scope задаётся отдельно. Typed date endpoints — UTC milliseconds; ids — strings.
-Structured/text queries используют один validator. Legacy parsing не определяется содержимым query.
+Upstream source/Apache license/NOTICE находятся в `scripts/search-reference/`;
+[THIRD_PARTY_NOTICES](../../THIRD_PARTY_NOTICES) входят в npm artifact вместе с портом.
+[Официальная grammar](https://github.com/apache/lucene/blob/f965e930673c1f5cb478dc6a8907f5fc4ef7b539/lucene/queryparser/src/java/org/apache/lucene/queryparser/flexible/standard/parser/StandardSyntaxParser.jj),
+[Boolean processor](https://github.com/apache/lucene/blob/f965e930673c1f5cb478dc6a8907f5fc4ef7b539/lucene/queryparser/src/java/org/apache/lucene/queryparser/flexible/precedence/processors/BooleanModifiersQueryNodeProcessor.java),
+[RegExp grammar](https://github.com/apache/lucene/blob/f965e930673c1f5cb478dc6a8907f5fc4ef7b539/lucene/core/src/java/org/apache/lucene/util/automaton/RegExp.java).
 
-## Исполнение
+## Parser decision
 
-Bound SQL/FTS, Boolean operations до LIMIT, strict matching и стабильный tie-breaker.
-Незавершённый word index не включает substring fallback.
-text использует documented tokenizer и normalization v1, body — исходный case-sensitive keyword.
-Lucene regex — bounded automaton; legacy JS regex — isolated deadline-limited execution.
+Runtime checks 2026-10-03, пять counterexamples на каждой candidate library.
+Это rejection corpus, не утверждение о полном покрытии сторонних parsers.
+[Outputs](../../scripts/search-reference/parser-candidates.json) содержат версии и synthetic ASTs.
 
-Предложенные budgets: 8 KiB query, 32 depth, 256 nodes, 1024 pattern code points,
-10k automaton states/term expansions, 50k candidates, 8 MiB bodies, 2s execution deadline.
-Reference tests и 100k/1M benchmarks уточняют их до выпуска.
+| Candidate | License / maintenance evidence | Проверенный разрыв с baseline |
+|---|---|---|
+| lucene-query-parser 1.2.0 | Apache-2.0; repo last push 2018-12-06 | `alpha OR beta gamma` → alpha OR (beta implicit gamma); escaped quote отвергается |
+| @hyperdx/lucene 3.1.1 | MIT; repo last push 2023-06-17 | Та же несовместимая adjacency grouping |
+| liqe 3.8.7 | BSD-3-Clause; repo last push 2026-06-11 | Explicit AND/OR left-associative; +modifier и mixed date range отвергаются |
+| lucene-kit 1.3.0 | MIT; repo last push 2026-09-01 | `alpha OR beta gamma` — один literal term; +alpha тоже literal |
+
+Решение: прямой TypeScript port pinned grammar и clause processor; без runtime parser dependency
+и без re-association стороннего DSL. Production parser распознаёт профиль и явно отклоняет unsupported
+suffix/functions. Не заявляется полная Lucene compatibility для всех analyzers/constructs.
+
+## Configuration и versioned request
+
+`QueryAst = {version:1,language:"lucene-v1",root}`; spans — UTF-16 offsets `[start,end)`.
+Predicate nodes: field/operator/value/range endpoints/inclusivity/span. Boolean nodes:
+clauses с `must|should|mustNot` и root spans. Raw AST reconstruct/validation отвергает malformed,
+unknown fields, illegal combinations, версии и budgets; caller resolution/SQL/authority не доверяются.
+
+CLI и MCP явно выбирают language=lucene по умолчанию; exported `MessagesService.search` и
+`searchStore` без language сохраняют legacy-v1 semantics для старых SDK consumers. Новые callers
+выбирают language явно либо передают versioned AST. Parser не выбирается по содержимому строки.
+Explicit legacy mode остаётся до отдельно согласованного breaking window, не снимается этим release.
+
+`FIELD_VERSION=1`, `PRESET_VERSION=1`; registry включает field type/operators/enums/normalization,
+example/index/aliases/support. AST text/structured validation одна. Из registry генерируются
+operator/field tables, budgets, presets и recipes; `docs:check` проверяет drift.
+`SavedQuery` — versioned interface; persistence/migration repository остаётся A2.
+`migrateLegacyQuery` — pure preview с explicit grouping/UTC instants и discovery warnings.
+
+## Field mappings
+
+text — существующий SQLite FTS5 `unicode61 remove_diacritics 2` над normalized_text v1.
+NFKD/mark stripping/NFC/lowercase/control-whitespace folding не меняются. Literal с несколькими
+анализированными tokens сопоставляется как последовательность; несколько query terms — Boolean.
+Phrase proximity, boost и fuzzy profile operators отвергаются; discovery никогда не добавляет hits.
+body — исходный case-sensitive keyword. Его empty quoted literal/empty regex выбирают empty body;
+empty text literal не совпадает с индексированным token.
+
+Regex анализирует normalized term либо полный raw body. Pattern syntax целиком не нормализуется.
+Wildcard literals text нормализуются; regex literal case должен соответствовать lowercase vocabulary.
+Доказанный prefix лишь сокращает dictionary enumeration; OR/nullable prefix не должен терять terms.
+
+Date endpoints собственные typed mappings над стандартной grammar: calendar day в IANA zone,
+exact timestamp с offset, mixed inclusive/exclusive/open bounds. DST вычисляется через календарь,
+не через duration +24h. Неизвестные/невозможные dates/zones отвергаются. Relative date math отсутствует.
+IDs string; names разрешаются по локальным accounts. topic требует одного обязательного chat.
+kind сохраняет dialog mapping; peerKind metadata различает bot/service без догадок по имени.
+filename/mime/size/tag распознаются, но пока возвращают unsupported_field.
+
+## SQL compiler и порядок
+
+Bound SQL/FTS; node field whitelist никогда не становится SQL identifier из запроса.
+Boolean occurrence conditions вычисляются до LIMIT. Prohibited nullable predicates используют
+NOT coalesce. Account allow-list находится вне AST; negative in не расширяет universe.
+Positive in/--source явно выбирают доступные локальные accounts; caller-provided allow-list не расширяется.
+
+Обязательный text candidate, существующий в каждой Boolean ветке, стартует через FTS CROSS JOIN
+и `bm25(1.0,0.0)`; scope tokens не влияют на score. Full Boolean predicate остаётся final guard.
+Ветви без обязательного text используют newest order; --newest всегда сортирует по времени.
+Tie-breaker: sentAt DESC, provider/account/chat ASC, message DESC; qualified locators предотвращают collisions.
+Explicit chat-only scan стартует с chat/time index. Index not ready — явная ошибка, не substring fallback.
+
+Postfilter candidate selection — SQL superset без unsafe отрицания bounded predicates; full AST
+проверяется на candidates. Row/byte caps проверяются до body loading; bounded batches позволяют abort.
+Relevance и pagination не меняют matched set. Охват описывает выбранные accounts/chats даже при нуле.
+lastSyncedAt null и inventoryComplete false не выдают локальный watermark за свежую profile inventory.
+
+## Regex safety и compatibility
+
+Lucene RegExp subset port + Thompson NFA без backtracking. State/work budgets ограничивают один
+match и суммарную работу. Union/groups/classes/quantifiers/#/@ и ASCII predefined classes
+подтверждены reference corpus именно 9.12.3. Intersection/complement/named automata/numeric intervals
+и negative predefined class внутри negated class пока unsupported. JS lookaround/backreferences/flags
+не предлагаются как Lucene; flag-like suffix даёт отдельную ошибку.
+
+JS legacy mode — `iu` по полному body, отдельный worker с error/exit listeners и terminate в finally.
+Source flags/stateful pattern сохраняются для existing programmatic callers; row/byte/time caps новые.
+Тексты передаются только in-memory worker data; diagnostics/error paths не содержат pattern/body.
+Переданные AbortSignals и command deadline закрывают worker, timers и store; SQL statement сам по себе
+не interruptible, но query checks/yields разделяют bounded SQLite batches.
+
+Presets — versioned candidate detectors, с bounded expressions/work и false-positive examples.
+Никакого external LLM, секретной второй таблицы или implicit network refresh.
 
 ## Проверки
 
-Reference fixtures: explicit/implicit Boolean, modifiers/pure negatives, repeated/grouped fields,
-escaping/Unicode, mixed ranges, unsupported operators, regex term/body semantics.
-Synthetic CLI/MCP/service ids должны совпадать для двух providers; account isolation, DST,
-strict zero hits, empty-query coverage, worker teardown и error paths обязательны.
-Generated registry docs и executable recipes проверяются на drift.
+Checked-in query и regex fixtures с development Java harness: baseline config и synthetic 16-message
+corpus. Analyzer reference: Whitespace для text, Keyword для body/from/kind; typed dates/normalization
+и SQLite semantics проверяются отдельно. Это не заявляет эквивалентность Lucene StandardAnalyzer.
 
-[Пользовательская справка](query-language.md)
+Проверки: parser acceptance, Boolean ids на двух providers, term/body regex, empty/media-only,
+quoted/escaped/repeated/grouped fields, unsupported syntax, SQL parameterization, bounds/abort,
+DST/calendar, account isolation, explicit legacy corpus и migration. Real CLI/MCP recipes используют
+один [fixture](recipes.json); expected ids и negative error codes/reasons проверяются.
+
+`pnpm search:docs` генерирует reference sections. `bin/verify-query-reference` воспроизводит upstream
+fixtures при Java 21/JDK в PATH или SEARCH_REFERENCE_JAVA_DIR; обычные tests Java не требуют.
+Shared gates: lint/typecheck/test:coverage/docs:check/build/check:dist/smoke:bun. Consumer gates:
+их suites, generate/parity/pages/wording/test-matrix. Все fixtures/stores synthetic и sandboxed.
+
+Benchmarks 100k/1M: [Lucene results](../../bench/search/lucene-results.md) и existing
+[legacy chain results](../../bench/search/results.md). Result records содержат executor hash,
+first/repeated timings, RSS и EXPLAIN. First request не означает сброс OS cache.
+RES-12 legacy path не изменён; размер word-index build измеряется existing fill benchmark.
+Live scenarios — отдельное read-only подтверждение известных test chats; не выполнялись без разрешения.
+
+## Интерфейс для Telegram remote work
+
+B использует exported QueryAst/QueryNode/registry/version и тот же validator. Этот release не
+добавляет remote search transport. Local store поддерживает declared A1 operators; remote backend
+должен объявить supported fields/operators или отказать до fetch. Bounded local postfilter обязан
+сообщать fetched coverage и partial/inaccessible history, не обещать server regex/full archive.
+Domain ids/peer metadata остаются provider-neutral; provider library не пересекает adapter seam.

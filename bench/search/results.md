@@ -1077,3 +1077,143 @@ Check: the copied token form 3.29 ms p50 against `store.matchWords` 4.24 ms on t
 | 42,605 messages | 14.5 / 98.7 | 1.47 / 0.95 | 5.61 / 17.6 |
 | 84,596 messages | 50.4 / 131 | 1.99 / 0.62 | 8.83 / 16.4 |
 | 500,418 messages | 133 / 165 | 12.2 / 1.48 | 31.8 / 24.2 |
+| store (openStore + saveMessages, schema 12) | node v24.19.0 | 100,000 | batches of 1000 per chat | 4,729 rows/s (21.14 s) | FTS by triggers, inline | 145 MB | 339 MB |
+| store (openStore + saveMessages, schema 12) | node v24.19.0 | 1,000,000 | batches of 1000 per chat | 6,171 rows/s (162.05 s) | FTS by triggers, inline | 1401 MB | 1253 MB |
+
+**store search chain node v24.19.0 100,000** — through `openStore`, limit 20, 40 rounds
+
+| query | p50 ms | p95 ms | target p95 |
+|---|---|---|---|
+| every word, 2 words ~1% df — all | 0.75 | 7.87 | ≤ 45 |
+| every word + beginnings, 2 words ~1% df — all | 1.31 | 13.3 | ≤ 60 |
+| every word, 2 words ~1% df — big chat (50%) | 0.43 | 2.00 | ≤ 45 |
+| every word + beginnings, 2 words ~1% df — big chat (50%) | 1.04 | 4.44 | ≤ 60 |
+| every word, 2 words ~1% df — small chat (199 msgs) | 0.19 | 0.35 | ≤ 45 |
+| every word + beginnings, 2 words ~1% df — small chat (199 msgs) | 0.40 | 0.75 | ≤ 60 |
+| every word, 2 words ~1% df — date: last 30 days | 0.33 | 6.16 | ≤ 45 |
+| every word + beginnings, 2 words ~1% df — date: last 30 days | 0.83 | 17.2 | ≤ 60 |
+| every word, 2 words ~1% df — sender (390 msgs) | 0.22 | 0.44 | ≤ 45 |
+| every word + beginnings, 2 words ~1% df — sender (390 msgs) | 0.36 | 0.65 | ≤ 60 |
+| every word, 2 words ~1% df — big chat + last 90 days | 0.39 | 1.67 | ≤ 45 |
+| every word + beginnings, 2 words ~1% df — big chat + last 90 days | 0.78 | 4.05 | ≤ 60 |
+| every word, 2 words 5–15% df — all | 9.01 | 11.2 | ≤ 45 |
+| every word + beginnings, 2 words 5–15% df — all | 17.7 | 20.8 | ≤ 60 |
+| every word, 2 words 5–15% df — big chat (50%) | 2.56 | 3.96 | ≤ 45 |
+| every word + beginnings, 2 words 5–15% df — big chat (50%) | 5.17 | 7.98 | ≤ 60 |
+| every word, 2 words 5–15% df — small chat (199 msgs) | 0.26 | 0.75 | ≤ 45 |
+| every word + beginnings, 2 words 5–15% df — small chat (199 msgs) | 0.77 | 1.31 | ≤ 60 |
+| every word, 2 words 5–15% df — date: last 30 days | 10.1 | 14.3 | ≤ 45 |
+| every word + beginnings, 2 words 5–15% df — date: last 30 days | 22.5 | 30.1 | ≤ 60 |
+| every word, 2 words 5–15% df — sender (390 msgs) | 0.86 | 1.08 | ≤ 45 |
+| every word + beginnings, 2 words 5–15% df — sender (390 msgs) | 1.98 | 2.76 | ≤ 60 |
+| every word, 2 words 5–15% df — big chat + last 90 days | 2.29 | 3.78 | ≤ 45 |
+| every word + beginnings, 2 words 5–15% df — big chat + last 90 days | 5.26 | 7.44 | ≤ 60 |
+| every word, 3 words — all | 0.31 | 1.14 | ≤ 45 |
+| every word + beginnings, 3 words — all | 1.41 | 5.23 | ≤ 60 |
+| every word, 3 words — big chat (50%) | 1.08 | 4.29 | ≤ 45 |
+| every word + beginnings, 3 words — big chat (50%) | 1.52 | 6.17 | ≤ 60 |
+| every word, 3 words — small chat (199 msgs) | 0.30 | 0.56 | ≤ 45 |
+| every word + beginnings, 3 words — small chat (199 msgs) | 0.76 | 1.35 | ≤ 60 |
+| every word, 3 words — date: last 30 days | 0.26 | 0.74 | ≤ 45 |
+| every word + beginnings, 3 words — date: last 30 days | 0.64 | 1.59 | ≤ 60 |
+| every word, 3 words — sender (390 msgs) | 0.27 | 0.33 | ≤ 45 |
+| every word + beginnings, 3 words — sender (390 msgs) | 0.70 | 0.83 | ≤ 60 |
+| every word, 3 words — big chat + last 90 days | 0.43 | 0.61 | ≤ 45 |
+| every word + beginnings, 3 words — big chat + last 90 days | 1.43 | 2.19 | ≤ 60 |
+| any word, small chat (199 msgs), 2 words 5–15% df | 2.08 | 2.50 | ≤ 15 |
+| any word, one sender (max, sender 20), 2 words 5–15% df | 2.57 | 3.18 | ≤ 15 |
+| any word, all chats, 2 words 5–15% df | 31.1 | 46.6 | ≤ 130 |
+| any word, the 50% chat, 2 words 5–15% df | 25.4 | 44.1 | ≤ 160 |
+| the whole chain, every word finds nothing — all chats | 16.3 | 23.4 | ≤ 200 |
+| typo correction alone (the four typos) | 8.00 | 15.6 | ≤ 20 |
+
+Worst p95: every word 14.3 ms (≤ 45), every word + beginnings 30.1 ms (≤ 60).
+
+**typo correction node v24.19.0 100,000** — the search's answer to each typo, look-alike words planted
+
+| typo | answered by | corrected to | hits | recall | precision |
+|---|---|---|---|---|---|
+| Valenca | corrected | valencia, valence | 103 | 100% | 94% |
+| empadronamento | corrected | empadronamiento | 19 | 100% | 68% |
+| Ptsharev | corrected | ptsharov, ptsarev | 13 | 100% | 8% |
+| whatsap | beginnings |  | 93 | 100% | 100% |
+
+Check: the copied token form 1.22 ms p50 against `store.matchWords` 2.06 ms on the small chat, one query; both forms return the same rows.
+
+**scope token against the join node v24.19.0 100,000** — a named chat, raw SQL, p95 ms (SCOPE_TOKEN_LIMIT is 100,000)
+
+| chat | any word, common: token / join | every word, ~1%: token / join | every word, common: token / join |
+|---|---|---|---|
+| 199 messages | 1.55 / 22.3 | 0.18 / 0.22 | 1.06 / 3.52 |
+| 8,449 messages | 8.66 / 25.1 | 0.84 / 0.39 | 3.18 / 4.67 |
+| 50,051 messages | 27.7 / 27.1 | 1.19 / 0.20 | 3.02 / 2.34 |
+
+**store search chain node v24.19.0 1,000,000** — through `openStore`, limit 20, 40 rounds
+
+| query | p50 ms | p95 ms | target p95 |
+|---|---|---|---|
+| every word, 2 words ~1% df — all | 83.1 | 147 | ≤ 45 |
+| every word + beginnings, 2 words ~1% df — all | 107 | 278 | ≤ 60 |
+| every word, 2 words ~1% df — big chat (50%) | 0.93 | 1.93 | ≤ 45 |
+| every word + beginnings, 2 words ~1% df — big chat (50%) | 2.30 | 4.57 | ≤ 60 |
+| every word, 2 words ~1% df — small chat (1999 msgs) | 0.34 | 0.90 | ≤ 45 |
+| every word + beginnings, 2 words ~1% df — small chat (1999 msgs) | 0.92 | 1.92 | ≤ 60 |
+| every word, 2 words ~1% df — date: last 30 days | 50.3 | 61.8 | ≤ 45 |
+| every word + beginnings, 2 words ~1% df — date: last 30 days | 118 | 167 | ≤ 60 |
+| every word, 2 words ~1% df — sender (3715 msgs) | 0.81 | 2.46 | ≤ 45 |
+| every word + beginnings, 2 words ~1% df — sender (3715 msgs) | 1.68 | 5.01 | ≤ 60 |
+| every word, 2 words ~1% df — big chat + last 90 days | 0.88 | 2.75 | ≤ 45 |
+| every word + beginnings, 2 words ~1% df — big chat + last 90 days | 1.85 | 5.66 | ≤ 60 |
+| every word, 2 words 5–15% df — all | 81.1 | 124 | ≤ 45 |
+| every word + beginnings, 2 words 5–15% df — all | 314 | 451 | ≤ 60 |
+| every word, 2 words 5–15% df — big chat (50%) | 23.4 | 58.9 | ≤ 45 |
+| every word + beginnings, 2 words 5–15% df — big chat (50%) | 38.1 | 127 | ≤ 60 |
+| every word, 2 words 5–15% df — small chat (1999 msgs) | 3.59 | 5.03 | ≤ 45 |
+| every word + beginnings, 2 words 5–15% df — small chat (1999 msgs) | 21.5 | 36.4 | ≤ 60 |
+| every word, 2 words 5–15% df — date: last 30 days | 147 | 245 | ≤ 45 |
+| every word + beginnings, 2 words 5–15% df — date: last 30 days | 163 | 216 | ≤ 60 |
+| every word, 2 words 5–15% df — sender (3715 msgs) | 4.30 | 5.32 | ≤ 45 |
+| every word + beginnings, 2 words 5–15% df — sender (3715 msgs) | 12.4 | 16.2 | ≤ 60 |
+| every word, 2 words 5–15% df — big chat + last 90 days | 7.76 | 15.2 | ≤ 45 |
+| every word + beginnings, 2 words 5–15% df — big chat + last 90 days | 20.7 | 36.6 | ≤ 60 |
+| every word, 3 words — all | 3.26 | 49.7 | ≤ 45 |
+| every word + beginnings, 3 words — all | 8.36 | 105 | ≤ 60 |
+| every word, 3 words — big chat (50%) | 0.97 | 2.90 | ≤ 45 |
+| every word + beginnings, 3 words — big chat (50%) | 4.73 | 9.05 | ≤ 60 |
+| every word, 3 words — small chat (1999 msgs) | 0.43 | 0.54 | ≤ 45 |
+| every word + beginnings, 3 words — small chat (1999 msgs) | 2.63 | 3.85 | ≤ 60 |
+| every word, 3 words — date: last 30 days | 3.07 | 50.7 | ≤ 45 |
+| every word + beginnings, 3 words — date: last 30 days | 7.91 | 104 | ≤ 60 |
+| every word, 3 words — sender (3715 msgs) | 0.87 | 1.00 | ≤ 45 |
+| every word + beginnings, 3 words — sender (3715 msgs) | 3.07 | 4.12 | ≤ 60 |
+| every word, 3 words — big chat + last 90 days | 0.82 | 2.51 | ≤ 45 |
+| every word + beginnings, 3 words — big chat + last 90 days | 3.21 | 8.55 | ≤ 60 |
+| any word, small chat (1999 msgs), 2 words 5–15% df | 3.70 | 4.64 | ≤ 15 |
+| any word, one sender (max, sender 20), 2 words 5–15% df | 5.11 | 6.19 | ≤ 15 |
+| any word, all chats, 2 words 5–15% df | 158 | 182 | ≤ 130 |
+| any word, the 50% chat, 2 words 5–15% df | 99.6 | 137 | ≤ 160 |
+| the whole chain, every word finds nothing — all chats | 6.10 | 6.87 | ≤ 200 |
+| typo correction alone (the four typos) | 4.12 | 8.77 | ≤ 20 |
+
+Worst p95: every word 245 ms (≤ 45), every word + beginnings 451 ms (≤ 60).
+
+**typo correction node v24.19.0 1,000,000** — the search's answer to each typo, look-alike words planted
+
+| typo | answered by | corrected to | hits | recall | precision |
+|---|---|---|---|---|---|
+| Valenca | corrected | valencia, valence | 1090 | 100% | 91% |
+| empadronamento | corrected | empadronamiento | 217 | 100% | 53% |
+| Ptsharev | corrected | ptsharov, ptsarev | 147 | 100% | 32% |
+| whatsap | beginnings |  | 1228 | 100% | 100% |
+
+Check: the copied token form 3.15 ms p50 against `store.matchWords` 3.62 ms on the small chat, one query; both forms return the same rows.
+
+**scope token against the join node v24.19.0 1,000,000** — a named chat, raw SQL, p95 ms (SCOPE_TOKEN_LIMIT is 100,000)
+
+| chat | any word, common: token / join | every word, ~1%: token / join | every word, common: token / join |
+|---|---|---|---|
+| 1,999 messages | 7.22 / 94.3 | 0.38 / 0.63 | 3.84 / 14.6 |
+| 9,400 messages | 7.83 / 110 | 0.52 / 0.50 | 5.52 / 16.8 |
+| 42,605 messages | 13.4 / 97.6 | 1.60 / 1.21 | 5.29 / 15.2 |
+| 84,596 messages | 27.8 / 105 | 1.85 / 0.52 | 9.11 / 23.4 |
+| 500,418 messages | 124 / 134 | 11.4 / 1.29 | 30.2 / 25.9 |
