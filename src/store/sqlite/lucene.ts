@@ -270,7 +270,7 @@ export const matchQuery = async (context: StoreContext, execution: QueryExecutio
       "AND",
     )
   const relevance = rankMatch ? "f.rank" : "NULL"
-  const order = `${rankMatch && !execution.newest ? "f.rank," : ""}m.sent_at DESC, ac.provider, ac.native_id, c.native_id, m.native_id`
+  const order = `${rankMatch && !execution.newest ? "f.rank," : ""}m.sent_at DESC, ac.provider, ac.native_id, c.native_id, m.native_id DESC`
   const leaves = [...fragments.values()]
   const exact = leaves.filter(({ test }) => test === undefined)
   const projection = exact.map(({ fragment }, index) => `coalesce(${fragment.sql},0) AS q${index}`).join(",")

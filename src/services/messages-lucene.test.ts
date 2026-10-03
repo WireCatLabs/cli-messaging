@@ -165,6 +165,19 @@ describe.each(["max", "telegram"])("strict store profile (%s)", (provider) => {
       "query_conflict",
     )
   })
+  it("orders equal timestamps by qualified message ids before applying the page limit", async () => {
+    const store = await open()
+    await store.saveChats(account, [chat("1")])
+    await store.saveMessages(
+      account,
+      "1",
+      ["71", "72", "73"].map((id) => message(id, "1", "alpha", { timestamp: "2026-01-01T10:00:00Z" })),
+      { via: "history" },
+    )
+    const page = await run(store, account, "alpha", { limit: 2, newest: true })
+    expect(page.items.map(({ id }) => id)).toEqual(["73", "72"])
+    expect(page.hasMore).toBe(true)
+  })
   it("reports coverage even for empty hits and refuses invalid versions/modes", async () => {
     const store = await open()
     await seed(store, account)
