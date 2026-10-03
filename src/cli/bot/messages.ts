@@ -1,7 +1,7 @@
 import { CliError } from "@leemour/cli-core"
 import { annotate } from "@leemour/cli-core/commands"
 import { Command } from "commander"
-import { parseMarkdown } from "../../domain/markdown.js"
+import { validateFormattedText } from "../../domain/formatting.js"
 import type { Message } from "../../domain/models.js"
 import { renderMessages } from "../../render/messages.js"
 import { guardedWrite } from "../../sends/guarded.js"
@@ -75,7 +75,7 @@ const sendCommand = (bot: BotMessenger): Command =>
     .argument("[text]", "the message")
     .option("--reply-to <message>", "answer this message, by its id in the same chat")
     .option("--silent", "deliver without a notification")
-    .option("--md", "read **bold**, _italic_, ~~struck~~ and `code` in the text; \\ keeps a mark literal")
+    .option("--md", "read this messenger's Markdown; see its formatting guide for supported syntax")
     .option("--html", "the text is HTML: <b>, <i>, <a href>, <code>")
     .option("--file <file>", "attach a file; the text becomes its caption")
     .option("--photo <file>", "attach a .jpg, .png or .webp as a photo; the text becomes its caption")
@@ -111,11 +111,15 @@ const sendCommand = (bot: BotMessenger): Command =>
       if (body.trim() === "" && attachments.length === 0) {
         throw new CliError("validation_error", "nothing to send — give the text or pipe it in")
       }
-      const { text: plain, markup } = options.md ? parseMarkdown(body) : { text: body, markup: undefined }
       const replyTo = options.replyTo?.trim()
       await context.run(async (events) => {
         const adapter = await context.authenticated({ events })
         const send = botCan(adapter, "send", bot, "send messages")
+        const { text: plain, spans } = options.md
+          ? validateFormattedText(await botCan(adapter, "formatMarkdown", bot, "format Markdown")(body))
+          : { text: body, spans: [] }
+        if (plain.trim() === "" && !attachments.length)
+          throw new CliError("validation_error", "nothing to send after formatting")
         const operationId = newOperationId()
         const message = await guardedWrite(
           context.guard(),
@@ -131,7 +135,7 @@ const sendCommand = (bot: BotMessenger): Command =>
             send(ref, plain, {
               ...(replyTo ? { replyTo } : {}),
               ...(options.silent ? { silent: true } : {}),
-              ...(markup ? { markup } : {}),
+              ...(spans.length > 0 ? { formatting: spans } : {}),
               ...(options.html ? { html: true } : {}),
               ...(attachments.length > 0 ? { attachments } : {}),
             }),
@@ -222,22 +226,29 @@ const editCommand = (bot: BotMessenger): Command =>
     .argument("<chat>", "a chat id, user:<id> for a person, or the title of a chat this bot has seen")
     .argument("<message>", "message id")
     .argument("<text>", "the new text")
-    .option("--md", "read **bold**, _italic_, ~~struck~~ and `code` in the text; \\ keeps a mark literal")
+    .option("--md", "read this messenger's Markdown; see its formatting guide for supported syntax")
     .option("--html", "the text is HTML: <b>, <i>, <a href>, <code>")
     .action(async function (this: Command, chat: string, messageId: string, text: string) {
       const context = botContext(this, bot)
       const options = this.opts<{ md?: boolean; html?: boolean }>()
       marks(options.md, options.html)
       const ref = context.chatRef(chat)
-      const { text: plain, markup } = options.md ? parseMarkdown(text) : { text, markup: undefined }
       await context.run(async (events) => {
         const adapter = await context.authenticated({ events })
         const edit = botCan(adapter, "edit", bot, "edit messages")
+        const { text: plain, spans } = options.md
+          ? validateFormattedText(await botCan(adapter, "formatMarkdown", bot, "format Markdown")(text))
+          : { text, spans: [] }
+        if (plain.trim() === "") throw new CliError("validation_error", "no new text after formatting")
         const operationId = newOperationId()
         const message = await guardedWrite(
           context.guard(),
           { operationId, chatId: ref, kind: "edit", key: "bot.messages.edit", messageId, length: plain.length },
-          () => edit(ref, messageId, plain, { ...(markup ? { markup } : {}), ...(options.html ? { html: true } : {}) }),
+          () =>
+            edit(ref, messageId, plain, {
+              ...(spans.length > 0 ? { formatting: spans } : {}),
+              ...(options.html ? { html: true } : {}),
+            }),
         )
         await context.copy.keep(
           await botIdOf(context, adapter),

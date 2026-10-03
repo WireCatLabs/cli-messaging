@@ -17,6 +17,7 @@ import type { MessengerAdapter, SendOptions } from "../cli/messenger/port.js"
 import { reviewCommand } from "../cli/messenger/review.js"
 import { createProgram, run } from "../cli/program.js"
 import { settingsFor } from "../cli/settings.js"
+import { parseMarkdown } from "../domain/markdown.js"
 import type { Chat, Message } from "../domain/models.js"
 import { parseLucene } from "../search/lucene/parser.js"
 import type { SendGuard } from "../sends/guard.js"
@@ -131,6 +132,10 @@ const scripted = (overrides: Partial<MessengerAdapter> = {}): Scripted => {
     return value
   }
   const adapter: MessengerAdapter = {
+    formatMarkdown: async (text: string) => {
+      const parsed = parseMarkdown(text)
+      return { text: parsed.text, spans: parsed.markup }
+    },
     self: () => "500",
     me: async () => ({ id: "500", name: "Owner", username: null }),
     chats: () => once({ items: [chat], hasMore: true }),
@@ -913,7 +918,7 @@ describe("sending over MCP", () => {
       text: "hi",
       silent: true,
       noPreview: true,
-      markup: [{ type: "bold", from: 0, length: 2 }],
+      formatting: [{ type: "bold", from: 0, length: 2 }],
     })
   })
 

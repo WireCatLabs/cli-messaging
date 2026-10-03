@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 import { botCopy } from "../cli/bot/copy.js"
 import type { Messenger } from "../cli/messenger/context.js"
 import type { MessengerAdapter } from "../cli/messenger/port.js"
+import { parseMarkdown } from "../domain/markdown.js"
 import type { Chat, Message } from "../domain/models.js"
 import type { GuardRequest, SendGuard } from "../sends/guard.js"
 import type { SendEntry } from "../sends/journal.js"
@@ -223,6 +224,10 @@ describe("the messages service's writes", () => {
     }) as unknown as SendGuard
   const writes: string[] = []
   const writer = {
+    formatMarkdown: async (text: string) => {
+      const parsed = parseMarkdown(text)
+      return { text: parsed.text, spans: parsed.markup }
+    },
     ...adapter,
     resolve: async (reference: string) => ({ ...chat, id: reference === "Book" ? "7" : reference }),
     send: async (chatId: string, text: string, options: { sendId: string }) => {
@@ -237,6 +242,51 @@ describe("the messages service's writes", () => {
   afterEach(() => {
     journal.length = 0
     writes.length = 0
+  })
+
+  it.each(["bold", "underline"] as const)("delegates the same source to a provider producing %s", async (type) => {
+    const formatMarkdown = vi.fn(async (source: string) => {
+      expect(source).toBe("__same__")
+      return { text: "same", spans: [{ type, from: 0, length: 4 }] }
+    })
+    const send = vi.fn(writer.send)
+    const provider = { ...writer, formatMarkdown, send }
+    await messagesService(onlineDeps(messenger, provider, guarding(false))).send({
+      chat: "Book",
+      text: "__same__",
+      markdown: true,
+    })
+    expect(send).toHaveBeenCalledWith(
+      "7",
+      "same",
+      expect.objectContaining({ formatting: [{ type, from: 0, length: 4 }] }),
+    )
+    expect(formatMarkdown).toHaveBeenCalledOnce()
+  })
+
+  it("refuses Markdown without a provider formatter while plain text still works", async () => {
+    const provider = { ...writer, formatMarkdown: undefined }
+    const service = messagesService(onlineDeps(messenger, provider, guarding(false)))
+    await expect(service.send({ chat: "Book", text: "__source__", markdown: true })).rejects.toThrow("format Markdown")
+    expect(writes).toEqual([])
+    await service.send({ chat: "Book", text: "__source__" })
+    expect(writes).toEqual(["send 7 __source__"])
+  })
+
+  it("refuses invalid formatting before sending an attachment", async () => {
+    const provider = {
+      ...writer,
+      formatMarkdown: async () => ({ text: "x", spans: [{ type: "bold" as const, from: 0, length: 8 }] }),
+    }
+    await expect(
+      messagesService(onlineDeps(messenger, provider, guarding(false))).send({
+        chat: "Book",
+        text: "source",
+        markdown: true,
+        attachments: [{ kind: "file", name: "synthetic.txt", bytes: new Uint8Array([1]) }],
+      }),
+    ).rejects.toThrow("spans")
+    expect(writes).toEqual([])
   })
 
   it("sends to the resolved chat, without the markdown marks, and records it", async () => {
@@ -298,7 +348,7 @@ describe("the messages service's writes", () => {
         expect.objectContaining({
           threadId: "12",
           replyTo: "14",
-          markup: [{ type: "bold", from: 0, length: 5 }],
+          formatting: [{ type: "bold", from: 0, length: 5 }],
           attachments,
           ...(at === undefined ? { sendId: "42" } : { at }),
         }),

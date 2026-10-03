@@ -5,6 +5,7 @@ import { Readable } from "node:stream"
 import { CliError, captureStreams } from "@leemour/cli-core"
 import type { CommandInfo } from "@leemour/cli-core/commands"
 import { describe, expect, it, vi } from "vitest"
+import { parseMarkdown } from "../../domain/markdown.js"
 import type { Chat, Member, Message, WindowedMessage } from "../../domain/models.js"
 import { SendJournal, sendsPathFor } from "../../sends/journal.js"
 import { openStore } from "../../store/store.js"
@@ -80,6 +81,10 @@ const people: Chat[] = [
 ]
 
 const fake: MessengerAdapter = {
+  formatMarkdown: async (text: string) => {
+    const parsed = parseMarkdown(text)
+    return { text: parsed.text, spans: parsed.markup }
+  },
   self: () => "500",
   me: async () => ({ id: "500", name: "Owner", username: null }),
   chats: async () => ({ items: [chat, ...people], hasMore: false }),
@@ -423,10 +428,10 @@ describe("the shared read commands", () => {
     expect((await call(["messages", "send", "Book", "**as typed**"], async () => recording, env)).code).toBe(0)
 
     expect(texts).toEqual(["secret plan", "**as typed**"])
-    expect(sent[0]).toMatchObject({ silent: true, noPreview: true, markup: [{ type: "bold", from: 0, length: 6 }] })
+    expect(sent[0]).toMatchObject({ silent: true, noPreview: true, formatting: [{ type: "bold", from: 0, length: 6 }] })
     expect(sent[1]).not.toHaveProperty("silent")
     expect(sent[1]).not.toHaveProperty("noPreview")
-    expect(sent[1]).not.toHaveProperty("markup")
+    expect(sent[1]).not.toHaveProperty("formatting")
     const journal = JSON.stringify(new SendJournal(sendsPathFor(app, "default", env)).entries())
     expect(journal).not.toContain("secret")
     expect(journal).not.toContain("bold")
@@ -618,7 +623,7 @@ describe("the shared read commands", () => {
     expect(marked.code).toBe(0)
     expect(plain.code).toBe(0)
     expect(edits).toEqual([
-      ["new plan", { markup: [{ type: "bold", from: 0, length: 3 }] }],
+      ["new plan", { formatting: [{ type: "bold", from: 0, length: 3 }] }],
       ["**new** plan", {}],
     ])
   })

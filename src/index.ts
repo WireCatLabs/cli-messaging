@@ -1,3 +1,9 @@
+export {
+  type FormattedText,
+  type MarkdownFormatting,
+  type TextSpan,
+  validateFormattedText,
+} from "./domain/formatting.js"
 export { formatLocator, isLocator, type MessageLocator, parseLocator } from "./domain/locator.js"
 export { type Markup, parseMarkdown } from "./domain/markdown.js"
 export type * from "./domain/models.js"

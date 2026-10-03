@@ -16,8 +16,8 @@ const MARKERS: [string, Markup["type"]][] = [
 const WORD = /[\p{L}\p{N}]/u
 
 /**
- * Markdown's inline marks, one level deep: the text inside a mark is kept as typed. The same
- * dialect as max-cli's `--md`, so one message formats alike in every messenger.
+ * Legacy compatibility parser, one level deep: the text inside a mark is kept as typed. The same
+ * legacy dialect. Commands use each adapter's formatMarkdown capability.
  *
  * ⚠ `_` and `*` open and close only at a word's edge, so `file_name_here` and `2*3*4` stay as they
  * are — the case where turning Markdown on would otherwise change a message nobody meant to format.

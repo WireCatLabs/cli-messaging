@@ -10,7 +10,7 @@ export const editCommand = (messenger: Messenger): Command =>
     .argument("<chat>", messenger.chatArgument)
     .argument("<message>", "the id of your own message")
     .argument("[text]", "the new text; without it, read from stdin")
-    .option("--md", "read **bold**, _italic_, ~~struck~~ and `code` in the text; \\ keeps a mark literal")
+    .option("--md", "read this messenger's Markdown; see its formatting guide for supported syntax")
     .action(async function (this: Command, chat: string, message: string, text: string | undefined) {
       const context = messengerContext(this, messenger)
       const { md: markdown } = this.opts<{ md?: boolean }>()

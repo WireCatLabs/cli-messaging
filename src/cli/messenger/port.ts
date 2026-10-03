@@ -1,4 +1,5 @@
 import { CliError } from "@leemour/cli-core"
+import type { MarkdownFormatting, TextSpan } from "../../domain/formatting.js"
 import type { Markup } from "../../domain/markdown.js"
 import type {
   Account,
@@ -53,6 +54,7 @@ export interface SendOptions {
   /** No preview card for a link in the text. */
   noPreview?: boolean
   markup?: Markup[]
+  formatting?: TextSpan[]
   /** ISO time: the messenger holds it and sends it then, under a new id. */
   at?: string
   /** Sent in one message, `text` as the caption. More than one is an album. */
@@ -138,7 +140,12 @@ export interface MessageEditing {
    * The new text of one of the owner's own messages; the answer is the message as it now stands.
    * `markup` spans `text` as `SendOptions.markup` does.
    */
-  edit(chatId: Id, messageId: Id, text: string, options: { markup?: Markup[] }): Promise<Message>
+  edit(
+    chatId: Id,
+    messageId: Id,
+    text: string,
+    options: { markup?: Markup[]; formatting?: TextSpan[] },
+  ): Promise<Message>
   /**
    * One message into another chat; the answer is the copy there. `silent` delivers it without a
    * notification. A repeat with the same `sendId` must leave one copy, as a send does.
@@ -329,6 +336,7 @@ export interface ChatFolders {
  */
 export interface MessengerAdapter
   extends MessengerCore,
+    Partial<MarkdownFormatting>,
     Partial<ServerReads>,
     Partial<ChatReading>,
     Partial<MessageEditing>,

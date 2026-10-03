@@ -151,3 +151,8 @@ with staged guards, original/result chat ids and unknown-outcome handling. Adapt
 forum capabilities; sending and creating a topic never implicitly convert a group. Enabling defaults
 to confirmation; topic creation preserves a caller's send id. Local history remains under its
 original peer id after migration.
+
+Markdown conversion belongs to each messenger adapter through optional `formatMarkdown`.
+Shared personal and bot send/edit use its neutral `FormattedText`/`TextSpan` result; they do not
+choose a dialect. New adapters must implement the capability to support `--md`. The legacy
+`parseMarkdown` export and `markup` port argument remain available for existing callers.
