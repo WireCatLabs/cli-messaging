@@ -12,6 +12,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## 0.118.0 — 03.10.2026
 
+Released early: tg-cli forum topic addressing requires the shared thread validation contract
+
 Released early: max-cli shared runner migration needs ProgramDefinition lifecycle hooks
 
 ### Added
