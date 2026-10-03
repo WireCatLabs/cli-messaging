@@ -33,7 +33,11 @@ export const downloadSubcommand = (messages: Command, messenger: Messenger): Com
     .argument("[message]", "the message id; left out with --all")
     .option("--output-dir <dir>", "where to save them; created if missing", ".")
     .option("--all", "every file of the chat, newest first; run it again to continue where it stopped")
-    .option("--pause <duration>", "with --all, a pause between pages, to stay under the provider's limits", "1s")
+    .option(
+      "--pause <duration>",
+      "with --all, a pause between pages, to stay under the provider's limits",
+      messenger.fetching?.pause ?? FETCHING.pause,
+    )
     .action(async function (this: Command, chat: string, messageId: string | undefined) {
       const context = messengerContext(this, messenger)
       const { outputDir: output, all, pause } = this.opts<{ outputDir: string; all?: boolean; pause: string }>()
@@ -212,7 +216,11 @@ const walkChat = async (
   }
 
   pages: while (!stop.aborted) {
-    const page = await patiently(() => messages.list(chat, { limit: PAGE, ...(before ? { before } : {}) }), note, stop)
+    const page = await patiently(
+      () => messages.list(chat, { limit: fromStore ? PAGE : fetching.page, ...(before ? { before } : {}) }),
+      note,
+      stop,
+    )
     const first = page.items[0]
     if (!first) {
       complete = true
