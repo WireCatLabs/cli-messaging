@@ -1756,6 +1756,38 @@ describe("messages download", () => {
       expect(asked).toEqual([])
     })
 
+    it("uses the descriptor's page size and pause default for remote download", async () => {
+      const { root, env } = setup()
+      const limits: number[] = []
+      const fetching = { page: 30, pause: "5s", maxPages: 10, orderBy: "time" as const }
+      const descriptor: Messenger = {
+        app,
+        provider: "chat",
+        chatArgument: "a chat",
+        resolveSettings: settingsFor(app).resolveSettings,
+        connect: async () => fake,
+        fetching,
+      }
+      const download = messagesCommand(descriptor).commands.find((one) => one.name() === "download")
+      expect(download?.options.find((one) => one.long === "--pause")?.defaultValue).toBe("5s")
+      const result = await call(
+        ["messages", "download", "Book", "--all", "--output-dir", join(root, "out"), "--json"],
+        async () => ({
+          ...fake,
+          history: async (_chat, { limit }) => {
+            limits.push(limit)
+            return { items: [], hasMore: false }
+          },
+        }),
+        env,
+        {},
+        { fetching },
+      )
+      expect(result.code).toBe(0)
+      expect(limits).toEqual([30])
+      expect(JSON.parse(result.stdout[0] ?? "")).toMatchObject({ saved: 0, complete: true })
+    })
+
     const byTime: Partial<Messenger> = { fetching: { page: 100, pause: "1ms", maxPages: 10, orderBy: "time" } }
     const wordChatOf = (sent: [id: string, second: number][], asked: string[], failOn?: string): MessengerAdapter => {
       const all = sent.map(([id, second]) => ({

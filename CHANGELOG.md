@@ -8,6 +8,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Fixed
 
+- `messages download --all` uses the messenger descriptor's remote page size and default pause, matching its archive fetching policy. Store-only walks retain 100-row local pages. MAX adoption can now preserve its 30-message/5-second policy; Telegram defaults stay unchanged.
+
 - Detailed evidence bundles summarize assertion names/statuses and counts instead of duplicating Vitest's raw coverage maps; the full per-repository JSON reports remain separate for review.
 
 - Detailed schema comparison preserves actual fields named `title`/`description` and literal default/const values, while ignoring documentation annotations; field bounds/types and defaults cannot disappear as prose.
