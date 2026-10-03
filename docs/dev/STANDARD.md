@@ -386,6 +386,14 @@ many), `--allow-any-file` (which files).
 
 ## Help text
 
+`<cli> commands messages search --json` describes one command; `<cli> commands messages --json`
+includes the group's descendants. Give one command path per call; inspect different groups in
+separate calls. Scoped discovery keeps `globalOptions` and `exitCodes`, adds
+the canonical `scope` path, and lists options from non-root ancestors in `inheritedOptions`
+as `{ path, options }` entries. Aliases resolve to canonical command names. Unknown or hidden
+paths return `validation_error` (exit 2), with the valid commands at that level. The full tree
+remains available through `<cli> commands --json`, with no scoped fields.
+
 1. **A description says what the command does, as the user sees it**, in one line, lower case, no
    full stop, no internal term — no wire field, no port, no adapter.
 2. **A shared command has the same sentence in both tools.** It is one command; the shared factory

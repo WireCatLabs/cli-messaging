@@ -6,6 +6,17 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- `commands [path...]` inspects one command or group without loading the whole command tree.
+  It retains global options and exit codes, includes inherited options and resolves aliases.
+  Inspect different command groups in separate calls; the full-tree output remains unchanged.
+
+### Fixed
+
+- Store connections set the SQLite busy timeout before journal initialization, waiting for
+  brief contention instead of immediately failing with `database is locked` during parallel reads.
+
 ## 0.139.0 — 03.10.2026
 
 Released early: max-cli hearing and unanswered-review fixes need the new read connection and enrichment APIs

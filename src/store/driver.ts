@@ -38,7 +38,7 @@ export type OpenDatabase = (path: string) => CacheDatabase
  * `foreign_keys` is off by default in SQLite, which surprises everyone once.
  */
 export const PRAGMAS = `
-  PRAGMA journal_mode = WAL;
   PRAGMA busy_timeout = 5000;
+  PRAGMA journal_mode = WAL;
   PRAGMA foreign_keys = ON;
 `
