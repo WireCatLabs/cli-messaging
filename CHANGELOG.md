@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.137.0 — 03.10.2026
+
 ### Fixed
 
 - `chats show` reports listed members and the chat's participant total without claiming that a
