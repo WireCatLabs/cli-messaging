@@ -6,6 +6,13 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- Shared `upgradeCommand` and `upgradePackage` centralize version checks, package-manager execution
+  and optional host server restarts. Check/manual/no-new-version paths never install; failed installs
+  and host callbacks never trigger a retry. Consumers bind their existing environment and retain
+  their server policy. The common JSON result always includes `restarted`, empty when none restarted.
+
 ### Fixed
 
 - Search language, timezone and regex options are marked present in both CLIs after their shared 0.127.0 adoption; the obsolete claim that MAX search accepts only chat ids is removed.

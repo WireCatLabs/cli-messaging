@@ -99,3 +99,11 @@ export { parseLucene } from "../search/lucene/parser.js"
 export { FIELD_VERSION, QUERY_FIELDS, QUERY_OPERATORS, validateAst } from "../search/lucene/registry.js"
 export { type Predicate, QUERY_LIMITS, QUERY_VERSION, type QueryAst, type QueryNode } from "../search/lucene/types.js"
 export type { QueryMetadata, SearchCoverage } from "./messages-search.js"
+
+export {
+  type PackageUpgradeOutcome,
+  type PackageUpgradePorts,
+  type PackageUpgradeResult,
+  type ServerRestarts,
+  upgradePackage,
+} from "./package-upgrade.js"
