@@ -7,6 +7,7 @@ import { describe, expect, it, vi } from "vitest"
 import { baseContext, environmentOf } from "./context.js"
 import { createProgram, type ProgramDefinition, run } from "./program.js"
 import { startRecording } from "./runs/recording.js"
+import { listRuns } from "./runs/run.js"
 import { settingsFor } from "./settings.js"
 
 const app = { command: "app", appName: "app-cli", envPrefix: "APP", description: "A test CLI", version: "1.2.3" }
@@ -267,4 +268,53 @@ describe.each(["max", "tg"])("shared shell contract for %s", (name) => {
     expect(streams.stdout).toEqual([])
     expect(JSON.parse(streams.stderr[0] ?? "")).toEqual({ error: { code: "not_found", message: "nothing recorded" } })
   })
+})
+
+describe("the runner's configuration seam", () => {
+  it.each(["bot", "chats"])(
+    "keeps early %s failures with the matching scope and configured profile",
+    async (resource) => {
+      const state = mkdtempSync(join(tmpdir(), "shell-scope-"))
+      const env = { ...process.env, APP_STATE_DIR: state }
+      const streams = captureStreams()
+      const scopes: unknown[] = []
+      const provider: ProgramDefinition = {
+        app,
+        configuration: {
+          resolveSettings: (_flags, options) => {
+            scopes.push(options?.kind)
+            return {
+              profile: "configured",
+              keepFailedRuns: options?.kind === "bot",
+              keepRunsForDays: 7,
+              skillHint: false,
+            }
+          },
+        },
+        commands: () => [
+          new Command(resource).addCommand(
+            new Command("show").action(() => {
+              throw new CliError("validation_error", "synthetic early failure")
+            }),
+          ),
+        ],
+      }
+      const code = await run(["--quiet", resource, "show"], provider, { env, streams, tty: false })
+      expect(code).toBe(2)
+      expect(scopes).toEqual([resource === "bot" ? "bot" : "personal"])
+      const runs = listRuns(join(state, "runs"))
+      expect(runs).toHaveLength(resource === "bot" ? 1 : 0)
+      if (resource === "bot")
+        expect(runs[0]).toMatchObject({ profile: "configured", command: "bot show", errorCode: "validation_error" })
+      expect(streams.stdout).toEqual([])
+      expect(JSON.parse(streams.stderr[0] ?? "").error.code).toBe("validation_error")
+    },
+  )
+})
+
+it("does not blame a profile when a known resource has an unknown subcommand", async () => {
+  const result = await call(["work", "chats", "missing"])
+  expect(result.code).toBe(1)
+  expect(result.stderr.join("\n")).toContain("unknown command 'missing'")
+  expect(result.stderr.join("\n")).not.toContain("read as a profile name")
 })

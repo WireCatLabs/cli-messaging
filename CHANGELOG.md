@@ -6,6 +6,17 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- The shared runner accepts a settings resolver exposing only the four fields it reads, so
+  consumers can use their existing configuration without implementing an unrelated facade.
+
+### Fixed
+
+- An unknown subcommand below a known resource no longer blames the leading profile name.
+- Fallback recording for early bot command failures reads the bot settings instead of the
+  personal account settings. Profile and failed-run retention choices now apply to the correct scope.
+
 ## 0.121.0 — 03.10.2026
 
 Released early: tg-cli onboarding documentation needs the checker to accept command help

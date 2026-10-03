@@ -36,3 +36,12 @@ and release; tests here use only synthetic commands in the repository sandbox.
    no duplicate recording, help/version, handler failure and both consumers' basic machine contract.
 3. Run lint, typecheck, coverage, docs checks and build; publish the shared exports through the normal
    release workflow before a consumer adopts them. Recheck current max-cli ownership before adoption.
+
+## Consumer settings follow-up
+
+Claim: `feat/shell-settings-seam`. The shell accepts a resolver returning only `profile`,
+`keepFailedRuns`, `keepRunsForDays` and `skillHint`; it does not require unrelated configuration
+editing/schema methods. Existing complete configuration objects still satisfy that contract.
+Fallback failure recording resolves the bot scope for `bot` commands and personal scope otherwise,
+including a leading flag such as `--quiet`. Tests use different retention settings in the two
+scopes to prove the configured profile and recording choice survive consumer adoption.

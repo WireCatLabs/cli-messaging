@@ -15,14 +15,19 @@ import { type BaseEnvironment, provide } from "./context.js"
 import { isCliFailure, isCommanderFailure } from "./failures.js"
 import { commandWords, liftProfile } from "./profile.js"
 import { recorded, wasSettled } from "./runs/recording.js"
-import { type Configuration, settingsFor } from "./settings.js"
+import { type GlobalFlags, type ResolveOptions, type Settings, settingsFor } from "./settings.js"
 
 export interface ProgramDefinition {
   app: AppIdentity
   /** One resource per command, one action per subcommand. Built fresh for every program. */
   commands: () => Command[]
   /** The CLI's own settings, for keeping a failure that happened before its command could; plain ones without. */
-  configuration?: Configuration
+  configuration?: {
+    resolveSettings: (
+      flags?: GlobalFlags,
+      options?: ResolveOptions,
+    ) => Pick<Settings, "profile" | "keepFailedRuns" | "keepRunsForDays" | "skillHint">
+  }
   configure?: (program: Command) => void
   prepare?: (program: Command, environment: RunOptions) => void | Promise<void>
   onFailure?: (error: unknown, program: Command) => void | Promise<void>
@@ -136,7 +141,12 @@ export const run = async (argv: string[], definition: ProgramDefinition, options
       await settleFailure(failure, { definition, program, rest, profile, options })
     }
     if (isCommanderFailure(error)) {
-      if (profile !== undefined && error.code === "commander.unknownCommand") {
+      if (
+        profile !== undefined &&
+        error.code === "commander.unknownCommand" &&
+        rest[0] !== undefined &&
+        !commandWords(program).has(rest[0])
+      ) {
         streams.diagnostic(
           `"${profile}" is not a command, so it was read as a profile name — which left "${rest[0]}" to be one.`,
         )
@@ -197,17 +207,21 @@ const keepFailure = async (
 ): Promise<void> => {
   if (wasSettled(failure)) return
   const env = options.env ?? process.env
+  const path = commandPath(program, rest)
   const { resolveSettings } = definition.configuration ?? settingsFor(definition.app)
   let settings: ReturnType<typeof resolveSettings> | undefined
   try {
-    settings = resolveSettings({ ...program.opts(), ...(profile === undefined ? {} : { profile }) }, { env })
+    settings = resolveSettings(
+      { ...program.opts(), ...(profile === undefined ? {} : { profile }) },
+      { env, kind: path.split(" ")[0] === "bot" ? "bot" : "personal" },
+    )
   } catch {
     // A configuration that will not load is a failure worth keeping too; the flags are all there is to go on.
   }
   await recorded(
     {
       app: definition.app,
-      command: commandPath(program, rest) || definition.app.command,
+      command: path || definition.app.command,
       profile: settings?.profile ?? profile ?? "default",
       record: false,
       keepFailed: settings?.keepFailedRuns ?? !rest.includes("--no-record"),
