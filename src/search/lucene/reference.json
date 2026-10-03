@@ -1,0 +1,412 @@
+[
+  {
+    "query": "alpha",
+    "parsed": true,
+    "luceneQuery": "text:alpha",
+    "syntax": "<field start='0' end='5' field='text' text='alpha'/>",
+    "ids": [1, 3, 5, 7, 9, 11, 13, 15]
+  },
+  {
+    "query": "alpha beta",
+    "parsed": true,
+    "luceneQuery": "+text:alpha +text:beta",
+    "syntax": "<boolean operation='default'>\n<field start='0' end='5' field='text' text='alpha'/>\n<field start='6' end='10' field='text' text='beta'/>\n</boolean>",
+    "ids": [3, 7, 11, 15]
+  },
+  {
+    "query": "alpha OR beta gamma",
+    "parsed": true,
+    "luceneQuery": "+(text:alpha text:beta) +text:gamma",
+    "syntax": "<boolean operation='default'>\n<boolean operation='or'>\n<field start='0' end='5' field='text' text='alpha'/>\n<field start='9' end='13' field='text' text='beta'/>\n</boolean>\n<field start='14' end='19' field='text' text='gamma'/>\n</boolean>",
+    "ids": [5, 6, 7, 13, 14, 15]
+  },
+  {
+    "query": "alpha OR beta AND gamma",
+    "parsed": true,
+    "luceneQuery": "text:alpha (+text:beta +text:gamma)",
+    "syntax": "<boolean operation='or'>\n<field start='0' end='5' field='text' text='alpha'/>\n<boolean operation='and'>\n<field start='9' end='13' field='text' text='beta'/>\n<field start='18' end='23' field='text' text='gamma'/>\n</boolean>\n</boolean>",
+    "ids": [1, 3, 5, 6, 7, 9, 11, 13, 14, 15]
+  },
+  {
+    "query": "alpha AND beta OR gamma",
+    "parsed": true,
+    "luceneQuery": "(+text:alpha +text:beta) text:gamma",
+    "syntax": "<boolean operation='or'>\n<boolean operation='and'>\n<field start='0' end='5' field='text' text='alpha'/>\n<field start='10' end='14' field='text' text='beta'/>\n</boolean>\n<field start='18' end='23' field='text' text='gamma'/>\n</boolean>",
+    "ids": [3, 4, 5, 6, 7, 11, 12, 13, 14, 15]
+  },
+  {
+    "query": "(alpha OR beta) gamma",
+    "parsed": true,
+    "luceneQuery": "+(text:alpha text:beta) +text:gamma",
+    "syntax": "<boolean operation='default'>\n<group>\n<boolean operation='or'>\n<field start='1' end='6' field='text' text='alpha'/>\n<field start='10' end='14' field='text' text='beta'/>\n</boolean>\n</group>\n<field start='16' end='21' field='text' text='gamma'/>\n</boolean>",
+    "ids": [5, 6, 7, 13, 14, 15]
+  },
+  {
+    "query": "alpha OR beta gamma OR delta",
+    "parsed": true,
+    "luceneQuery": "+(text:alpha text:beta) +(text:gamma text:delta)",
+    "syntax": "<boolean operation='default'>\n<boolean operation='or'>\n<field start='0' end='5' field='text' text='alpha'/>\n<field start='9' end='13' field='text' text='beta'/>\n</boolean>\n<boolean operation='or'>\n<field start='14' end='19' field='text' text='gamma'/>\n<field start='23' end='28' field='text' text='delta'/>\n</boolean>\n</boolean>",
+    "ids": [5, 6, 7, 9, 10, 11, 13, 14, 15]
+  },
+  {
+    "query": "+alpha OR beta",
+    "parsed": true,
+    "luceneQuery": "+text:alpha text:beta",
+    "syntax": "<boolean operation='or'>\n<modifier operation='MOD_REQ'>\n<field start='1' end='6' field='text' text='alpha'/>\n</modifier>\n<field start='10' end='14' field='text' text='beta'/>\n</boolean>",
+    "ids": [1, 3, 5, 7, 9, 11, 13, 15]
+  },
+  {
+    "query": "alpha OR -beta",
+    "parsed": true,
+    "luceneQuery": "text:alpha -text:beta",
+    "syntax": "<boolean operation='or'>\n<field start='0' end='5' field='text' text='alpha'/>\n<modifier operation='MOD_NOT'>\n<field start='10' end='14' field='text' text='beta'/>\n</modifier>\n</boolean>",
+    "ids": [1, 5, 9, 13]
+  },
+  {
+    "query": "NOT alpha",
+    "parsed": true,
+    "luceneQuery": "-text:alpha",
+    "syntax": "<boolean operation='default'>\n<modifier operation='MOD_NOT'>\n<field start='4' end='9' field='text' text='alpha'/>\n</modifier>\n</boolean>",
+    "ids": []
+  },
+  {
+    "query": "-alpha",
+    "parsed": true,
+    "luceneQuery": "-text:alpha",
+    "syntax": "<boolean operation='default'>\n<modifier operation='MOD_NOT'>\n<field start='1' end='6' field='text' text='alpha'/>\n</modifier>\n</boolean>",
+    "ids": []
+  },
+  {
+    "query": "(NOT alpha)",
+    "parsed": true,
+    "luceneQuery": "-text:alpha",
+    "syntax": "<group>\n<boolean operation='default'>\n<modifier operation='MOD_NOT'>\n<field start='5' end='10' field='text' text='alpha'/>\n</modifier>\n</boolean>\n</group>",
+    "ids": []
+  },
+  {
+    "query": "alpha NOT beta",
+    "parsed": true,
+    "luceneQuery": "+text:alpha -text:beta",
+    "syntax": "<boolean operation='default'>\n<field start='0' end='5' field='text' text='alpha'/>\n<modifier operation='MOD_NOT'>\n<field start='10' end='14' field='text' text='beta'/>\n</modifier>\n</boolean>",
+    "ids": [1, 5, 9, 13]
+  },
+  {
+    "query": "alpha -beta",
+    "parsed": true,
+    "luceneQuery": "+text:alpha -text:beta",
+    "syntax": "<boolean operation='default'>\n<field start='0' end='5' field='text' text='alpha'/>\n<modifier operation='MOD_NOT'>\n<field start='7' end='11' field='text' text='beta'/>\n</modifier>\n</boolean>",
+    "ids": [1, 5, 9, 13]
+  },
+  {
+    "query": "+alpha",
+    "parsed": true,
+    "luceneQuery": "text:alpha",
+    "syntax": "<modifier operation='MOD_REQ'>\n<field start='1' end='6' field='text' text='alpha'/>\n</modifier>",
+    "ids": [1, 3, 5, 7, 9, 11, 13, 15]
+  },
+  {
+    "query": "alpha && beta",
+    "parsed": true,
+    "luceneQuery": "+text:alpha +text:beta",
+    "syntax": "<boolean operation='and'>\n<field start='0' end='5' field='text' text='alpha'/>\n<field start='9' end='13' field='text' text='beta'/>\n</boolean>",
+    "ids": [3, 7, 11, 15]
+  },
+  {
+    "query": "alpha || beta",
+    "parsed": true,
+    "luceneQuery": "text:alpha text:beta",
+    "syntax": "<boolean operation='or'>\n<field start='0' end='5' field='text' text='alpha'/>\n<field start='9' end='13' field='text' text='beta'/>\n</boolean>",
+    "ids": [1, 2, 3, 5, 6, 7, 9, 10, 11, 13, 14, 15]
+  },
+  {
+    "query": "alpha !beta",
+    "parsed": true,
+    "luceneQuery": "+text:alpha -text:beta",
+    "syntax": "<boolean operation='default'>\n<field start='0' end='5' field='text' text='alpha'/>\n<modifier operation='MOD_NOT'>\n<field start='7' end='11' field='text' text='beta'/>\n</modifier>\n</boolean>",
+    "ids": [1, 5, 9, 13]
+  },
+  {
+    "query": "alpha and beta",
+    "parsed": true,
+    "luceneQuery": "+text:alpha +text:and +text:beta",
+    "syntax": "<boolean operation='default'>\n<field start='0' end='5' field='text' text='alpha'/>\n<field start='6' end='9' field='text' text='and'/>\n<field start='10' end='14' field='text' text='beta'/>\n</boolean>",
+    "ids": []
+  },
+  {
+    "query": "from:(alice OR bob)",
+    "parsed": true,
+    "luceneQuery": "from:alice from:bob",
+    "syntax": "<group>\n<boolean operation='or'>\n<field start='6' end='11' field='from' text='alice'/>\n<field start='15' end='18' field='from' text='bob'/>\n</boolean>\n</group>",
+    "ids": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+  },
+  {
+    "query": "kind:group AND alpha",
+    "parsed": true,
+    "luceneQuery": "+kind:group +text:alpha",
+    "syntax": "<boolean operation='and'>\n<field start='5' end='10' field='kind' text='group'/>\n<field start='15' end='20' field='text' text='alpha'/>\n</boolean>",
+    "ids": []
+  },
+  {
+    "query": "kind:private OR gamma",
+    "parsed": true,
+    "luceneQuery": "kind:private text:gamma",
+    "syntax": "<boolean operation='or'>\n<field start='5' end='12' field='kind' text='private'/>\n<field start='16' end='21' field='text' text='gamma'/>\n</boolean>",
+    "ids": [1, 3, 4, 5, 6, 7, 9, 11, 12, 13, 14, 15]
+  },
+  {
+    "query": "\"alpha beta\"",
+    "parsed": true,
+    "luceneQuery": "text:\"alpha beta\"",
+    "syntax": "<quotedfield start='1' end='11' field='text' term='alpha beta'/>",
+    "ids": [3, 7, 11, 15]
+  },
+  {
+    "query": "text:alpha",
+    "parsed": true,
+    "luceneQuery": "text:alpha",
+    "syntax": "<field start='5' end='10' field='text' text='alpha'/>",
+    "ids": [1, 3, 5, 7, 9, 11, 13, 15]
+  },
+  {
+    "query": "body:\"alpha beta\"",
+    "parsed": true,
+    "luceneQuery": "body:alpha beta",
+    "syntax": "<quotedfield start='6' end='16' field='body' term='alpha beta'/>",
+    "ids": [3]
+  },
+  {
+    "query": "text:alph*",
+    "parsed": true,
+    "luceneQuery": "text:alph*",
+    "syntax": "<field start='5' end='10' field='text' text='alph*'/>",
+    "ids": [1, 3, 5, 7, 9, 11, 13, 15]
+  },
+  {
+    "query": "text:a?pha",
+    "parsed": true,
+    "luceneQuery": "text:a?pha",
+    "syntax": "<field start='5' end='10' field='text' text='a?pha'/>",
+    "ids": [1, 3, 5, 7, 9, 11, 13, 15]
+  },
+  {
+    "query": "text:/alph(a|b)/",
+    "parsed": true,
+    "luceneQuery": "text:/alph(a|b)/",
+    "syntax": "<regexp field='text' term='alph(a|b)'/>",
+    "ids": [1, 3, 5, 7, 9, 11, 13, 15]
+  },
+  {
+    "query": "body:/.*alpha.*/",
+    "parsed": true,
+    "luceneQuery": "body:/.*alpha.*/",
+    "syntax": "<regexp field='body' term='.*alpha.*'/>",
+    "ids": [1, 3, 5, 7, 9, 11, 13, 15]
+  },
+  {
+    "query": "text:/alpha/",
+    "parsed": true,
+    "luceneQuery": "text:/alpha/",
+    "syntax": "<regexp field='text' term='alpha'/>",
+    "ids": [1, 3, 5, 7, 9, 11, 13, 15]
+  },
+  {
+    "query": "text:/.*a/",
+    "parsed": true,
+    "luceneQuery": "text:/.*a/",
+    "syntax": "<regexp field='text' term='.*a'/>",
+    "ids": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+  },
+  {
+    "query": "alpha~1",
+    "parsed": true,
+    "luceneQuery": "text:alpha~1",
+    "syntax": "<fuzzy field='text' similarity='1.0' term='alpha'/>",
+    "ids": [1, 3, 5, 7, 9, 11, 13, 15]
+  },
+  {
+    "query": "\"alpha beta\"~2",
+    "parsed": true,
+    "luceneQuery": "text:\"alpha beta\"~2",
+    "syntax": "<slop value='2'>\n<quotedfield start='1' end='11' field='text' term='alpha beta'/>\n</slop>",
+    "ids": [3, 7, 11, 15]
+  },
+  {
+    "query": "alpha^2",
+    "parsed": true,
+    "luceneQuery": "(text:alpha)^2.0",
+    "syntax": "<boost value='2'>\n<field start='0' end='5' field='text' text='alpha'/>\n</boost>",
+    "ids": [1, 3, 5, 7, 9, 11, 13, 15]
+  },
+  {
+    "query": "(alpha OR beta)@2",
+    "parsed": true,
+    "luceneQuery": "(text:alpha text:beta)~2",
+    "syntax": "org.apache.lucene.queryparser.flexible.standard.nodes.MinShouldMatchNode@4bbf6d0e",
+    "ids": [3, 7, 11, 15]
+  },
+  {
+    "query": "date:[2026-01-01 TO 2026-02-01}",
+    "parsed": true,
+    "luceneQuery": "date:[2026-01-01 TO 2026-02-01}",
+    "syntax": "<org.apache.lucene.queryparser.flexible.standard.nodes.TermRangeQueryNode lowerInclusive=true upperInclusive=false>\n\t<field start='20' end='30' field='date' text='2026-02-01'/>\n\t<field start='6' end='16' field='date' text='2026-01-01'/>\n</org.apache.lucene.queryparser.flexible.standard.nodes.TermRangeQueryNode>\n",
+    "ids": []
+  },
+  {
+    "query": "size:{1 TO 20]",
+    "parsed": true,
+    "luceneQuery": "size:{1 TO 20]",
+    "syntax": "<org.apache.lucene.queryparser.flexible.standard.nodes.TermRangeQueryNode lowerInclusive=false upperInclusive=true>\n\t<field start='11' end='13' field='size' text='20'/>\n\t<field start='6' end='7' field='size' text='1'/>\n</org.apache.lucene.queryparser.flexible.standard.nodes.TermRangeQueryNode>\n",
+    "ids": []
+  },
+  {
+    "query": "from=alice",
+    "parsed": true,
+    "luceneQuery": "from:alice",
+    "syntax": "<field start='5' end='10' field='from' text='alice'/>",
+    "ids": [0, 2, 4, 6, 8, 10, 12, 14]
+  },
+  {
+    "query": "date>=2026-01-01",
+    "parsed": true,
+    "luceneQuery": "date:[2026-01-01 TO *]",
+    "syntax": "<org.apache.lucene.queryparser.flexible.standard.nodes.TermRangeQueryNode lowerInclusive=true upperInclusive=true>\n\t<field start='6' end='16' field='date' text='*'/>\n\t<field start='6' end='16' field='date' text='2026-01-01'/>\n</org.apache.lucene.queryparser.flexible.standard.nodes.TermRangeQueryNode>\n",
+    "ids": []
+  },
+  {
+    "query": "kind:group kind:private",
+    "parsed": true,
+    "luceneQuery": "+kind:group +kind:private",
+    "syntax": "<boolean operation='default'>\n<field start='5' end='10' field='kind' text='group'/>\n<field start='16' end='23' field='kind' text='private'/>\n</boolean>",
+    "ids": []
+  },
+  {
+    "query": "from:\"A B\"",
+    "parsed": true,
+    "luceneQuery": "from:A B",
+    "syntax": "<quotedfield start='6' end='9' field='from' term='A B'/>",
+    "ids": []
+  },
+  {
+    "query": "-from:alice",
+    "parsed": true,
+    "luceneQuery": "-from:alice",
+    "syntax": "<boolean operation='default'>\n<modifier operation='MOD_NOT'>\n<field start='6' end='11' field='from' text='alice'/>\n</modifier>\n</boolean>",
+    "ids": []
+  },
+  {
+    "query": "emoji:😀",
+    "parsed": true,
+    "luceneQuery": "emoji:😀",
+    "syntax": "<field start='6' end='8' field='emoji' text='😀'/>",
+    "ids": []
+  },
+  {
+    "query": "text:O'Brien",
+    "parsed": true,
+    "luceneQuery": "text:O'Brien",
+    "syntax": "<field start='5' end='12' field='text' text='O'Brien'/>",
+    "ids": []
+  },
+  {
+    "query": "text:hello\\:world",
+    "parsed": true,
+    "luceneQuery": "text:hello:world",
+    "syntax": "<field start='5' end='17' field='text' text='hello:world'/>",
+    "ids": []
+  },
+  {
+    "query": "text:foo\\ bar",
+    "parsed": true,
+    "luceneQuery": "+text:foo +text:bar",
+    "syntax": "<field start='5' end='13' field='text' text='foo bar'/>",
+    "ids": []
+  },
+  {
+    "query": "text:\"a\\\"b\"",
+    "parsed": true,
+    "luceneQuery": "text:a\"b",
+    "syntax": "<quotedfield start='6' end='10' field='text' term='a\"b'/>",
+    "ids": []
+  },
+  {
+    "query": "text:/a\\/b/",
+    "parsed": true,
+    "luceneQuery": "text:/a\\/b/",
+    "syntax": "<regexp field='text' term='a\\/b'/>",
+    "ids": []
+  },
+  {
+    "query": "text:a\\*",
+    "parsed": true,
+    "luceneQuery": "text:a*",
+    "syntax": "<field start='5' end='8' field='text' text='a*'/>",
+    "ids": []
+  },
+  { "query": "alpha OR", "parsed": false, "error": "ParseException" },
+  { "query": "OR alpha", "parsed": false, "error": "ParseException" },
+  { "query": "alpha AND", "parsed": false, "error": "ParseException" },
+  { "query": "\"unclosed", "parsed": false, "error": "QueryNodeParseException" },
+  { "query": "(alpha", "parsed": false, "error": "ParseException" },
+  { "query": "alpha)", "parsed": false, "error": "ParseException" },
+  { "query": "alpha\\", "parsed": false, "error": "QueryNodeParseException" },
+  { "query": "alpha OR OR beta", "parsed": false, "error": "ParseException" },
+  { "query": "", "parsed": false, "error": "ParseException" },
+  { "query": "()", "parsed": false, "error": "ParseException" },
+  { "query": "text:", "parsed": false, "error": "ParseException" },
+  {
+    "query": "[TO TO TO]",
+    "parsed": true,
+    "luceneQuery": "text:[TO TO TO]",
+    "syntax": "<org.apache.lucene.queryparser.flexible.standard.nodes.TermRangeQueryNode lowerInclusive=true upperInclusive=true>\n\t<field start='7' end='9' field='text' text='TO'/>\n\t<field start='1' end='3' field='text' text='TO'/>\n</org.apache.lucene.queryparser.flexible.standard.nodes.TermRangeQueryNode>\n",
+    "ids": []
+  },
+  {
+    "query": "fn:ordered(alpha beta)",
+    "parsed": true,
+    "luceneQuery": "text:ORDERED(alpha,beta)",
+    "syntax": "text:fn:ordered(alpha beta)",
+    "ids": [3, 7, 11, 15]
+  },
+  {
+    "query": "alpha +beta OR gamma",
+    "parsed": true,
+    "luceneQuery": "+text:alpha +(+text:beta text:gamma)",
+    "syntax": "<boolean operation='default'>\n<field start='0' end='5' field='text' text='alpha'/>\n<boolean operation='or'>\n<modifier operation='MOD_REQ'>\n<field start='7' end='11' field='text' text='beta'/>\n</modifier>\n<field start='15' end='20' field='text' text='gamma'/>\n</boolean>\n</boolean>",
+    "ids": [3, 7, 11, 15]
+  },
+  {
+    "query": "alpha OR +beta gamma",
+    "parsed": true,
+    "luceneQuery": "+(text:alpha +text:beta) +text:gamma",
+    "syntax": "<boolean operation='default'>\n<boolean operation='or'>\n<field start='0' end='5' field='text' text='alpha'/>\n<modifier operation='MOD_REQ'>\n<field start='10' end='14' field='text' text='beta'/>\n</modifier>\n</boolean>\n<field start='15' end='20' field='text' text='gamma'/>\n</boolean>",
+    "ids": [6, 7, 14, 15]
+  },
+  {
+    "query": "alpha OR NOT beta",
+    "parsed": true,
+    "luceneQuery": "text:alpha -text:beta",
+    "syntax": "<boolean operation='or'>\n<field start='0' end='5' field='text' text='alpha'/>\n<modifier operation='MOD_NOT'>\n<field start='13' end='17' field='text' text='beta'/>\n</modifier>\n</boolean>",
+    "ids": [1, 5, 9, 13]
+  },
+  {
+    "query": "alpha OR (NOT beta)",
+    "parsed": true,
+    "luceneQuery": "text:alpha (-text:beta)",
+    "syntax": "<boolean operation='or'>\n<field start='0' end='5' field='text' text='alpha'/>\n<group>\n<boolean operation='default'>\n<modifier operation='MOD_NOT'>\n<field start='14' end='18' field='text' text='beta'/>\n</modifier>\n</boolean>\n</group>\n</boolean>",
+    "ids": [1, 3, 5, 7, 9, 11, 13, 15]
+  },
+  {
+    "query": "NOT (alpha OR beta)",
+    "parsed": true,
+    "luceneQuery": "-(text:alpha text:beta)",
+    "syntax": "<boolean operation='default'>\n<modifier operation='MOD_NOT'>\n<group>\n<boolean operation='or'>\n<field start='5' end='10' field='text' text='alpha'/>\n<field start='14' end='18' field='text' text='beta'/>\n</boolean>\n</group>\n</modifier>\n</boolean>",
+    "ids": []
+  },
+  {
+    "query": "alpha -(beta OR gamma)",
+    "parsed": true,
+    "luceneQuery": "+text:alpha -(text:beta text:gamma)",
+    "syntax": "<boolean operation='default'>\n<field start='0' end='5' field='text' text='alpha'/>\n<modifier operation='MOD_NOT'>\n<group>\n<boolean operation='or'>\n<field start='8' end='12' field='text' text='beta'/>\n<field start='16' end='21' field='text' text='gamma'/>\n</boolean>\n</group>\n</modifier>\n</boolean>",
+    "ids": [1, 9]
+  }
+]

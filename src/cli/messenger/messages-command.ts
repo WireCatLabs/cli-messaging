@@ -22,6 +22,7 @@ import { evidenceCommand } from "./messages-evidence-command.js"
 import { forwardCommand } from "./messages-forward-command.js"
 import { pinCommand, unpinCommand } from "./messages-pin-command.js"
 import { scheduledCommand } from "./messages-scheduled-command.js"
+import { messagesSearchCommand } from "./messages-search-command.js"
 import { sendCommand } from "./messages-send-command.js"
 import { transcribeSubcommand } from "./transcribe-command.js"
 
@@ -127,96 +128,7 @@ export const messagesCommand = (messenger: Messenger): Command => {
     else context.renderer.result(window.before === 0 && window.after === 0 ? found[0] : listed(found))
   }
 
-  messages
-    .command("search")
-    .description("search the local store — what was read, fetched or kept by serve; never asks the messenger")
-    .argument(
-      "<query...>",
-      'every word must appear, best match first; "a phrase", -word, a OR b, and the filters from: chat: ' +
-        "after: before: has: in: — a typo is corrected, and a word that matches nothing falls back to any word, " +
-        "then to a piece of a word",
-    )
-    .option("--chat <chat>", `only this chat — the same as chat: in the query; ${messenger.chatArgument}`)
-    .option(
-      "--source <messenger>",
-      "every account of this messenger held in the store; personal, bots or all — the same as in: in the query",
-    )
-    .option("--limit <n>", "how many", positiveCount("--limit"))
-    .option("--newest", "newest first instead of best first")
-    .option("--context <n>", "messages before and after each hit; 2 in the terminal, 0 otherwise", wholeCount)
-    .option("--regex", "the words are one regular expression, case-insensitive, tested against every stored text")
-    .action(async function (this: Command, words: string[]) {
-      const context = messengerContext(this, messenger)
-      const {
-        chat,
-        source,
-        regex,
-        newest,
-        context: around,
-      } = this.opts<{
-        chat?: string
-        source?: string
-        regex?: boolean
-        newest?: boolean
-        context?: number
-      }>()
-      const { limit } = context.settings
-      const pattern = regex ? patternOf(words.join(" ")) : undefined
-      const found = await context.withServices((services) =>
-        services.messages.search({
-          ...(pattern ? { pattern } : { text: words.join(" ") }),
-          limit,
-          newest: newest === true,
-          context: around ?? (context.format === "pretty" ? 2 : 0),
-          ...(chat === undefined ? {} : { chat }),
-          ...(source === undefined ? {} : { source }),
-        }),
-      )
-      const { command } = messenger.app
-      for (const { from, to } of found.corrections) context.renderer.note(`${from} → ${to.join(", ")}`)
-      if (!found.wordsReady) {
-        context.renderer.note(
-          `the word index is still being built, so this searched pieces of words — \`${command} store migrate\` finishes it`,
-        )
-      }
-      const incomplete = found.completeness.filter((chat) => chat.state !== "complete").length
-      if (incomplete > 0) {
-        context.renderer.note(
-          `${incomplete} of the chats found are not held in full — \`${command} store fetch <chat>\` fetches one`,
-        )
-      }
-      if (context.format === "pretty") {
-        const options = {
-          color: context.color,
-          verbosity: context.settings.detail,
-          senderColors: context.settings.senderColors,
-          profile: context.profile,
-          provider: messenger.provider,
-          locale: messenger.app.locale,
-        }
-        const hits = found.items.map((hit) => ({ hit, at: parseLocator(hit.locator) }))
-        const spans = new Set(hits.map(({ at }) => `${at.provider}/${at.account}`)).size > 1
-        context.streams.data(
-          hits
-            .map(({ hit, at }) => {
-              const title = hit.chatTitle ?? hit.chatId
-              return `${spans ? `${at.provider} · ${title}` : title}  ${hit.locator}\n${renderMessages(hit.context ?? [hit], options)}`
-            })
-            .join("\n\n"),
-        )
-        const elsewhere = [...new Set(hits.map(({ at }) => at.provider))].filter((one) => one !== messenger.provider)
-        if (elsewhere.length > 0) {
-          context.renderer.note(
-            `hits in ${elsewhere.join(", ")} open in that messenger's own CLI, by the locator: messages context msg:…`,
-          )
-        }
-        if (found.items.length === 0)
-          context.renderer.note("nothing found — only what is in the local store is searched")
-        return
-      }
-      if (context.format === "jsonl") context.renderer.stream(found.items)
-      else context.renderer.result({ ...found, limit })
-    })
+  messages.addCommand(messagesSearchCommand(messenger))
 
   messages.addCommand(sendCommand(messenger))
 
@@ -274,21 +186,6 @@ const targetOf = (messenger: Messenger, chat: string, message: string | undefine
   }
   if (message === undefined) throw new CliError("validation_error", "which message? give its id after the chat")
   return { chat, message: message.trim() }
-}
-
-const patternOf = (source: string): RegExp => {
-  try {
-    return new RegExp(source, "iu")
-  } catch (error) {
-    throw new CliError("validation_error", `not a regular expression: ${(error as Error).message}`)
-  }
-}
-
-const wholeCount = (value: string): number => {
-  if (!/^\d+$/.test(value.trim())) {
-    throw new CliError("validation_error", `--context takes a whole number from 0 upwards, not "${value}"`)
-  }
-  return Number(value)
 }
 
 export { sendCommand } from "./messages-send-command.js"

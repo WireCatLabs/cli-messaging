@@ -1,40 +1,319 @@
 # Поиск в локальном архиве
 
-**Планируется: Lucene profile v1.** До выпуска используйте текущий legacy search.
+Lucene profile v1 реализован в ветке A1; команды доступны после обновления обоих CLI
+на shared release с этой функцией. Синтаксис основан на Apache Lucene 9.12.3
+StandardSyntaxParser и PrecedenceQueryParser, default AND, default field `text`.
+Это ограниченный профиль языка, а не полный Lucene search engine.
 
-Поиск читает только локальную БД. Пустой результат не доказывает отсутствие сообщения
-в мессенджере. Проверяйте охват и полноту архива.
+Поиск читает только локальную БД, без сети и отметок о прочтении. Пустой ответ означает
+«не найдено в выбранном архиве». Проверяйте `coverage`, `completeness` и готовность индекса.
+Если word index не готов, выполните `store migrate`: строгий поиск не переходит на substring.
 
-## Язык и миграция
+## Быстрый старт
 
-Планируется `messages search --language lucene|legacy`, default lucene. Стандартная основа:
-Apache Lucene 9.12.3 StandardSyntaxParser и PrecedenceQueryParser, default AND, поле text.
-Legacy mode сохраняет прежние filters, typo correction и substring fallback.
-`--regex` остаётся отдельным legacy JavaScript regex с case-insensitive full-body matching.
-Сочетание `--regex --language lucene` будет ошибкой.
+Примеры ниже исполняются тестами через реальные shared CLI и MCP на
+[synthetic fixture](recipes.json). На своём архиве подставьте собственные имена чатов/авторов;
+показанные ids относятся только к fixture. Для машинного ответа добавьте `--json`.
 
-## Поля и операторы
+<!-- recipes: generated -->
 
-Слова, quoted phrases, Boolean AND/OR/NOT, группы полей и inclusive/exclusive ranges
-входят в первую версию. text — analyzed tokens, body — полный исходный текст.
-from/chat разрешают имена только в выбранных accounts; date использует timezone.
-kind различает peer kinds; in выбирает account provider, поэтому kind:bot и in:bots различаются.
-has, topic и проверенные preset predicates входят в A1; filename/mime/size/tag — следующий этап.
-Fuzzy, proximity, boost, interval functions и min-should-match пока явно отклоняются.
+### Точное слово
 
-## Даты и ограничения
+```sh
+tg messages search 'invoice' --timezone UTC
+```
 
-Планируется `--timezone <zone>`, default — system IANA timezone, сообщённый в JSON.
-ISO day означает календарный день. Inclusive верхняя day boundary включает весь день,
-exclusive — исключает его. В DST нельзя прибавлять 24 часа для вычисления следующего midnight.
-Regex работает с термами text либо целым keyword body; JS flags и lookaround не являются Lucene.
-Исполнение ограничивается query/depth/automaton/expansion/candidate/byte/time budgets.
+На synthetic fixture: ids 101, 102, 106. В MAX замените первый аргумент `tg` на `max`.
 
-## Машинный контракт
+### Фраза
 
-CLI и MCP вызывают один service с typed AST и registry version. Ranking не расширяет Boolean
-множество. Account permissions задаются отдельно от query. Неизвестные поля и неподдержанные
-операторы дают structured validation_error с позицией; exhaustion не выдаётся как полный ответ.
-Полнота охвата, готовность индекса и pagination сообщаются отдельно, в том числе при нуле hits.
+```sh
+tg messages search '"invoice paid"' --timezone UTC
+```
+
+На synthetic fixture: ids 101, 106. В MAX замените первый аргумент `tg` на `max`.
+
+### Группа авторов
+
+```sh
+tg messages search 'from:("Alice Synthetic" OR "Bob Synthetic") AND invoice' --timezone UTC
+```
+
+На synthetic fixture: ids 101, 102, 106. В MAX замените первый аргумент `tg` на `max`.
+
+### Чат по имени
+
+```sh
+tg messages search 'chat:"Work fixture" AND invoice' --timezone UTC
+```
+
+На synthetic fixture: ids 101, 102, 106. В MAX замените первый аргумент `tg` на `max`.
+
+### Диапазон дат
+
+```sh
+tg messages search 'invoice date:[2026-01-20 TO 2026-01-22}' --timezone UTC
+```
+
+На synthetic fixture: ids 101, 102. В MAX замените первый аргумент `tg` на `max`.
+
+### Личная переписка
+
+```sh
+tg messages search 'passport kind:private' --timezone UTC
+```
+
+На synthetic fixture: ids 103. В MAX замените первый аргумент `tg` на `max`.
+
+### Кандидат secret в Избранном
+
+```sh
+tg messages search 'preset:secret kind:saved' --timezone UTC
+```
+
+На synthetic fixture: ids 104. В MAX замените первый аргумент `tg` на `max`.
+
+### Regex по терму
+
+```sh
+tg messages search 'text:/pass(port)?/ kind:private' --timezone UTC
+```
+
+На synthetic fixture: ids 103. В MAX замените первый аргумент `tg` на `max`.
+
+### Regex по полному тексту
+
+```sh
+tg messages search 'body:/.*invoice.*/' --timezone UTC
+```
+
+На synthetic fixture: ids 101, 102, 106. В MAX замените первый аргумент `tg` на `max`.
+
+### Сообщение только с файлом
+
+```sh
+tg messages search 'has:file' --timezone UTC
+```
+
+На synthetic fixture: ids 105. В MAX замените первый аргумент `tg` на `max`.
+
+<!-- recipes: end -->
+
+## Операторы
+
+<!-- operators: generated -->
+
+| Оператор | Пример | Семантика / поддержка |
+|---|---|---|
+| term | `invoice` | Точное совпадение анализированного текста; без автоматического prefix |
+| phrase | `"invoice paid"` | Последовательность анализированных слов |
+| implicit AND | `invoice paid` | Оба clauses обязательны; adjacency группируется по upstream grammar |
+| AND / && | `alpha AND beta` | Оба условия обязательны |
+| OR / \|\| | `alpha OR beta` | Любой optional clause, если нет required clause |
+| NOT / ! / - | `alpha NOT beta` | Исключить beta; чистое отрицание не выбирает весь архив |
+| + | `+alpha OR beta` | alpha обязателен, beta optional |
+| group | `(alpha OR beta) gamma` | Скобки фиксируют grouping |
+| field group | `from:(alice OR bob)` | Поле наследуется внутри группы |
+| field equality | `kind=group` | Стандартный синоним записи kind:group |
+| range | `date:[2026-01-01 TO 2026-02-01}` | Inclusive [ ], exclusive { }, смешанные границы и * |
+| comparison | `date>=2026-01-01` | Стандартный typed open range |
+| wildcard | `text:invo*` | Полный term; * — любое число символов, ? — один |
+| regex | `text:/pass(port)?/` | Полный term; bounded subset Lucene RegExp |
+| fuzzy / proximity | `invoice~1` | unsupported_operator; используйте legacy discovery либо точные слова |
+| boost / minimum / intervals | `invoice^2` | unsupported_operator |
+
+<!-- operators: end -->
+
+Явный AND связывает сильнее OR. Однако `alpha OR beta gamma` согласно pinned grammar
+означает `(alpha OR beta) AND gamma`, а `alpha OR beta AND gamma` — `alpha OR (beta AND gamma)`.
+Нижний регистр `and/or/not` — обычный текст. Pure-negative query не даёт совпадений;
+для исключения укажите положительное условие, например `kind:group NOT preset:secret`.
+
+Ranking не меняет Boolean множество. Когда все ветви требуют text, используется BM25
+по обязательному word-index кандидату; иначе — стабильный newest order. `--newest`
+всегда сортирует по времени. Равные scores/time разрешаются account-qualified ids.
+
+## Поля
+
+Имена полей case-sensitive. Повтор поля — обычный Boolean AST. Неизвестное поле, значение
+enum или unsupported сочетание дают ошибку, а не пустой ответ. Unknown name автора/чата
+не разрешается через сеть. Числовой id может обозначать чат, история которого ещё не сохранена.
+
+<!-- fields: generated -->
+
+| Поле | Тип | Значения / нормализация | Пример | Поддержка |
+|---|---|---|---|---|
+| `text` | tokens | NFKD/marks/NFC/lowercase v1 | `invoice` | term, phrase, wildcard, regex |
+| `body` | keyword | raw, case-sensitive | `body:/.*invoice.*/` | term, phrase, wildcard, regex |
+| `from` | person | account-scoped resolution | `from:"Alice Synthetic"` | term, phrase |
+| `chat` | chat | account-scoped resolution | `chat:"Work fixture"` | term, phrase |
+| `date` | timestamp | ISO/calendar timezone | `date:[2026-01-01 TO 2026-02-01}` | term, phrase, range |
+| `kind` | enum | private, saved, bot, service, group, channel, unknown | `kind:private` | term, phrase |
+| `has` | enum | attachment, link, file, photo, image, video, audio, voice, sticker, contact, location, poll | `has:file` | term, phrase |
+| `topic` | id | string id, one chat required | `chat:7 AND topic:42` | term, phrase |
+| `in` | source | lowercase provider/account class | `in:bots` | term, phrase |
+| `preset` | enum | password, code, api-key, secret, card, bank, passport, phone, email, telegram-link, url, contact, location | `preset:secret` | term, phrase |
+| `filename` | keyword | planned | `filename:*.pdf` | Планируется; запрос даёт unsupported_field |
+| `mime` | keyword | planned | `mime:application/pdf` | Планируется; запрос даёт unsupported_field |
+| `size` | bytes | planned | `size:[1024 TO 4096]` | Планируется; запрос даёт unsupported_field |
+| `tag` | local-tag | planned | `tag:work` | Планируется; запрос даёт unsupported_field |
+
+<!-- fields: end -->
+
+`kind:private` сохраняет mapping старого `dialog`. Подтверждённый `providerMetadata.peerKind`
+различает bot/service; существующий `providerMetadata.isBot` также определяет bot. старые записи не переклассифицируются по имени. `kind:bot` — peer,
+`in:bots` — аккаунты Bot API. Unknown peers остаются в unfiltered search.
+`topic` требует одного обязательного `chat` или `--chat`, чтобы одинаковые thread ids не смешивались.
+`filename/mime/size/tag` распознаются, но пока не исполняются; ошибки отмечают следующий этап.
+
+Default scope — активный account. `in:` с положительным условием или `--source` явно выбирает
+accounts провайдера/класса, включая `all`. Отрицательный `in:` не расширяет scope.
+При заданном caller allow-list из `accounts` query не может его расширить;
+`--source` и положительный `in:` тогда отвергаются. `--source` остаётся provider scope,
+а не свежестью данных. Чат, запрещённый для общего поиска, читается лишь при обязательном
+явном chat scope. Left/unknown history не объявляется полной автоматически.
+
+## Regex: term и body
+
+`text:/alpha/` совпадает с термом alpha внутри текста, но не с alphabeta.
+`body:/alpha/` совпадает только с полным текстом alpha; для вхождения используйте
+`body:/.*alpha.*/`. `body` — исходный keyword, case-sensitive; `text` содержит
+normalized lowercase tokens. Regex syntax не подвергается целиком lowercase/normalization:
+literal pattern должен соответствовать indexed term. Wildcard text literals нормализуются.
+
+Поддержаны union `|`, concatenation, groups, `.`, classes/ranges/negation, `? * + {n} {n,m} {n,}`,
+quoted literals, `#` (пустой язык), `@` (любая строка), Unicode code points и ASCII predefined
+classes `\d \D \w \W \s \S`. Последние подтверждены **именно для Lucene 9.12.3** reference fixtures;
+это не обещание всего JavaScript RegExp. `^` и `$` — literal characters, не JS anchors.
+Intersection `&`, complement `~`, named automata и numeric intervals дают `unsupported_regex`;
+negative predefined class внутри negated class также пока unsupported.
+Lookaround, `(?:...)`, backreferences и `/i` suffix не являются поддержанными JS extensions.
+
+Pattern исполняется NFA без backtracking, с work/state limits. Для text regex/wildcard
+bounded vocabulary expansion использует безопасный literal prefix, если он доказан.
+Слишком широкий dictionary pattern может быть отвергнут даже при узком chat scope;
+укажите literal prefix либо используйте bounded `body` regex по одному чату.
+Широкий body/preset scan выше бюджета отвергается до чтения всех тел.
+
+## Escaping и Unicode
+
+Двойные кавычки создают phrase/quoted field value, backslash экранирует следующий символ;
+`\uXXXX` поддерживается в обычных terms/phrases. `text:hello\:world` не создаёт поле hello.
+В shell оборачивайте query в одинарные кавычки. Regex escapes имеют отдельную Lucene semantics.
+
+Текст нормализуется v1: NFKD → удалить marks → NFC → lowercase → control/whitespace folding.
+Это игнорирует accents и сливает, например, `año/ano`, `мой/мои`; оригинальный body сохраняется.
+Word index использует SQLite `unicode61 remove_diacritics 2`; пунктуация и emoji сами не образуют
+индексированных слов. Анализированный literal term с несколькими tokens сопоставляется как
+последовательность, а несколько отдельных query terms — как Boolean clauses.
+
+## Даты и часовой пояс
+
+`--timezone Europe/Madrid` или MCP `timezone` задаёт IANA zone; default — system IANA zone,
+который возвращается в `query.timezone`. Date-only — начало календарного дня в этой zone.
+Inclusive верхняя day boundary включает день целиком; exclusive его исключает.
+Exclusive нижняя day boundary начинает со следующего дня. DST day может иметь 23 или 25 часов.
+Дни, отсутствующие в zone, и неверные календарные даты отвергаются.
+
+Quoted timestamp должен содержать секунды и offset: `"2026-01-01T10:00:00+02:00"`.
+Для него inclusive/exclusive сравнивает точный UTC instant. `date:2026-01-01` означает весь день.
+`7d` не является Lucene date math; legacy `after:7d` остаётся в legacy mode.
+
+## Presets
+
+Detector сообщает **кандидата**, а не подтверждённую credential/действительный банковский документ.
+Не используйте результат для автоматического удаления или передачи внешнему сервису.
+Тела не копируются в отдельную secrets-таблицу и не попадают в diagnostics.
+
+<!-- presets: generated -->
+
+| Preset | Что считается кандидатом (version 1) |
+|---|---|
+| `password` | a password label followed by a value |
+| `code` | a verification-code label and 4–8 digits |
+| `api-key` | an API-key label and a value |
+| `secret` | a password, secret, token or API-key label and a value |
+| `card` | 13–19 digits with optional spaces or hyphens; no issuer verification |
+| `bank` | an IBAN-shaped value; no bank or checksum verification |
+| `passport` | a labelled passport value or Russian 4+6 digit shape |
+| `phone` | a plus-prefixed 8–15 digit international-phone shape |
+| `email` | an email-address shape |
+| `telegram-link` | a t.me or telegram.me URL |
+| `url` | an HTTP(S) URL |
+| `contact` | a contact attachment or email/phone candidate |
+| `location` | a location attachment or geo: URI |
+
+<!-- presets: end -->
+
+Правила locale-dependent; card/IBAN/passport shapes могут давать false positives.
+`money/date/address/question` пока не являются presets. Каждый supported preset versioned;
+`contact/location` также находят соответствующие attachments без текста.
+
+## Ограничения и ошибки
+
+<!-- limits: generated -->
+
+| Ограничение | Значение |
+|---|---|
+| `bytes` | 8192 |
+| `depth` | 32 |
+| `nodes` | 256 |
+| `pattern` | 1024 |
+| `states` | 10000 |
+| `expansions` | 10000 |
+| `candidates` | 50000 |
+| `bodyBytes` | 8388608 |
+| `milliseconds` | 2000 |
+| `work` | 10000000 |
+
+<!-- limits: end -->
+
+`query_limit` — reason внутри `validation_error`, с `budget` и `complete:false`;
+сузьте чат/дату/pattern. Timeout/abort освобождает worker и timer. Предел времени проверяется
+между синхронными SQLite calls и bounded batches; уже выполняющийся SQLite statement не прерывается.
+NFA work budget ограничивает один match; legacy JS worker принудительно завершается на deadline.
+Query page: 1–1000 results, context: прежняя CLI/MCP модель. SQL и FTS получают bound values.
+
+Syntax/field/operator errors несут UTF-16 span `[start,end)`, reason и guide/alternative;
+CLI печатает позицию с единицы. `index_not_ready` требует `store migrate`.
+`unsupported_field` отличается от `unknown_field`; incomplete archive — состояние охвата, не syntax error.
+
+## Миграция legacy
+
+`messages search --language legacy 'from:alice after:7d invoice -draft'` сохраняет старый parser
+и discovery chain. Standard default строгий: нулевой результат не заменяется похожими словами.
+`--regex` явно выбирает отдельный legacy JS `iu` full-body mode; `--regex --language lucene` — ошибка.
+Legacy regex теперь также имеет row/byte/time budgets; прежний бесконечный scan не сохраняется.
+
+| Legacy | Standard |
+|---|---|
+| `alpha OR beta gamma` | `(alpha OR beta) AND gamma` — тот же grouping, сделанный явным |
+| `after:2026-01-01` | `date:[2026-01-01 TO *]`, с выбранной zone |
+| `before:2026-02-01` | `date:[* TO 2026-02-01}` |
+| `after:7d` | Exact quoted timestamp range; preview фиксирует старый instant |
+| Prefix/discovery автоматически | `text:invo*` явно; typo — `--language legacy` |
+| `--regex 'invoice\\s+\\d+'` | Не alias term regex; keep legacy либо отдельно проверяйте body pattern |
+
+Shared `migrateLegacyQuery` — pure preview, без записи saved query и без новой команды.
+Он сохраняет legacy grouping/instants, закрывает ранее tolerated quote с предупреждением,
+но не обещает сохранить discovery results. SavedQuery model хранит language/version;
+репозиторий saved queries и миграция сохранённых записей — следующий этап.
+
+## Машинный контракт и охват
+
+CLI/MCP возвращают `{ items, page, limit, hasMore, corrections, completeness, wordsReady, query, coverage }`.
+Strict `corrections` пуст; version/fieldsVersion/presetVersion/timezone/order описывают execution.
+`coverage` сообщает accounts/chat/coveredChats, complete/partial/unknown, lastSyncedAt и inventoryComplete.
+LastSyncedAt сейчас null: нет доказанного profile refresh watermark. Полнота explicit chat выводится
+из существующих ranges/history-start markers; profile inventory остаётся unknown, даже при hits=0.
+Pagination `hasMore` не означает полноту сетевого архива.
+
+MCP принимает `text` или versioned `ast`, не оба; текст и structured input проходят один validator.
+AST: `{version:1,language:"lucene-v1",root:...}`; Boolean clauses имеют must/should/mustNot occurrences.
+Raw SQL, regexp flags или authority allow-list в AST не принимаются как executable instructions.
+Low-level `searchStore` и `MessagesService.search` без language сохраняют старую discovery semantics
+для существующих callers; CLI и MCP явно выбирают standard default. Для scripted stable contract указывайте language явно.
+Remote Telegram/MAX search не реализуется этим профилем: B получает AST/registry contract;
+remote unsupported operators требуют явного отказа или bounded local postfilter с видимым охватом.
 
 [Техническая спецификация](query-language-spec.md)

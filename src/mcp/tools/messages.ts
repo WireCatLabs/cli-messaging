@@ -1,3 +1,4 @@
+import { CliError } from "@leemour/cli-core"
 import * as v from "valibot"
 import { listStart } from "../../cli/messenger/after.js"
 import type { Messenger } from "../../cli/messenger/context.js"
@@ -134,15 +135,14 @@ export const messagesTools = (messenger: Messenger): Record<string, AnyTool> => 
     messages_search: tool({
       title: "Search messages",
       description:
-        `Find messages in what this machine has kept — it never asks ${name}, so an empty answer means ` +
-        '"not in what was kept", not "never said" (see completeness). Every word must appear, best match ' +
-        'first; "a phrase", -word, a OR b, and from: chat: after: before: has: in: work as in the CLI. A typo is ' +
-        "corrected (listed in corrections); with no match it falls back to any word, then to a piece of a " +
-        "word — each hit says which in match, and score is its relevance, higher better. It searches the " +
-        "account it runs as; `source` (a messenger; personal, bots or all) searches every account of it held on this machine, " +
-        "and each hit's locator names its messenger and account. Returns { items, limit, hasMore, corrections, completeness, wordsReady }.",
+        "Search only the local store using the Lucene 9.12.3 profile, default AND, with strict Boolean matching. Legacy discovery is explicit with language=legacy. Text or a versioned AST, account-scoped filters, calendar timezone, term/body regex and candidate presets use one service. Empty hits still report archive coverage. Guide: https://github.com/leemour/cli-messaging/blob/main/docs/search/query-language.md. Returns { items, page, limit, hasMore, corrections, completeness, wordsReady, query, coverage }.",
       input: v.object({
-        text: v.pipe(v.string(), v.minLength(1), v.description("the query: words, phrases and filters")),
+        text: v.optional(
+          v.pipe(v.string(), v.minLength(1), v.description("the query: Lucene text or explicit legacy syntax")),
+        ),
+        ast: v.optional(v.unknown()),
+        language: v.optional(v.picklist(["lucene", "legacy"])),
+        timezone: v.optional(v.string()),
         chat: v.optional(chat),
         source: v.optional(
           v.pipe(
@@ -159,16 +159,22 @@ export const messagesTools = (messenger: Messenger): Record<string, AnyTool> => 
       }),
       annotations: { ...READ, openWorldHint: false },
       stored: async (store, account, args, defaults) => {
+        if (args.text === undefined && args.ast === undefined)
+          throw new CliError("validation_error", "give search text or a versioned AST")
         const size = args.limit ?? defaults.limit
         const found = await servicesFor(storedDeps(messenger, store, account, defaults.guard)).messages.search({
-          text: args.text,
+          ...(args.text === undefined ? {} : { text: args.text }),
+          ...(args.ast === undefined ? {} : { ast: args.ast }),
+          language: args.language ?? "lucene",
+          signal: defaults.signal,
+          ...(args.timezone === undefined ? {} : { timezone: args.timezone }),
           limit: size,
           newest: args.newest === true,
           context: args.context ?? 0,
           ...(args.chat === undefined ? {} : { chat: args.chat }),
           ...(args.source === undefined ? {} : { source: args.source }),
         })
-        return { ...found, limit: size }
+        return { ...found, page: 1, limit: size }
       },
     }),
   }

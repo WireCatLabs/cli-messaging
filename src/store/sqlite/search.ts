@@ -4,10 +4,8 @@ import type { Message, Page } from "../../domain/models.js"
 import type { MessageFilter, StoredHit } from "../store.js"
 import { alias, and, desc, eq, inArray, isNull, lte, type SQL, sql } from "./drizzle/core.js"
 import type { StoreContext } from "./open.js"
-import { before, MESSAGE_FIELDS, type MessageRow, newestFirst, toMessages } from "./reads.js"
+import { MESSAGE_FIELDS, type MessageRow, newestFirst, toMessages } from "./reads.js"
 import { accounts, chats, identities, messages } from "./schema.js"
-
-const CHUNK = 500
 
 const HIT_FIELDS = {
   ...MESSAGE_FIELDS,
@@ -114,11 +112,10 @@ export const newestHits = (context: StoreContext, where: SQL | undefined, wanted
 export const find = (context: StoreContext, filter: MessageFilter): Page<StoredHit> => {
   const { limit, pattern, perChat = false } = filter
   const where = matching(context, filter)
-  const rows: HitRow[] = pattern
-    ? scan(context, where, pattern, limit + 1)
-    : perChat
-      ? perChatNewest(context, where, limit + 1)
-      : newestHits(context, where, limit + 1).all()
+  if (pattern) throw new CliError("validation_error", "regex search requires the asynchronous isolated executor")
+  const rows: HitRow[] = perChat
+    ? perChatNewest(context, where, limit + 1)
+    : newestHits(context, where, limit + 1).all()
   const page = perChat
     ? rows.filter((row) => (row as HitRow & { chatRank: number }).chatRank <= limit)
     : rows.slice(0, limit)
@@ -165,25 +162,4 @@ const perChatNewest = (context: StoreContext, where: SQL | undefined, wanted: nu
     .where(lte(ranked.chatRank, wanted))
     .orderBy(desc(ranked.sentAt), desc(ranked.pk))
     .all()
-}
-
-/** Newest first, a chunk at a time, until `wanted` rows match or the rows run out. */
-const scan = (context: StoreContext, where: SQL | undefined, pattern: RegExp, wanted: number): HitRow[] => {
-  const found: HitRow[] = []
-  let last: HitRow | undefined
-  while (found.length < wanted) {
-    const chunk = selectHits(context)
-      .where(and(where, last ? before(last.sentAt, last.pk) : undefined))
-      .orderBy(...newestFirst)
-      .limit(CHUNK)
-      .all()
-    for (const row of chunk) {
-      pattern.lastIndex = 0
-      if (pattern.test(row.text)) found.push(row)
-      if (found.length === wanted) break
-    }
-    last = chunk.at(-1)
-    if (chunk.length < CHUNK || !last) break
-  }
-  return found
 }

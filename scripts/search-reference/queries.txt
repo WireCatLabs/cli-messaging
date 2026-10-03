@@ -1,0 +1,68 @@
+alpha
+alpha beta
+alpha OR beta gamma
+alpha OR beta AND gamma
+alpha AND beta OR gamma
+(alpha OR beta) gamma
+alpha OR beta gamma OR delta
++alpha OR beta
+alpha OR -beta
+NOT alpha
+-alpha
+(NOT alpha)
+alpha NOT beta
+alpha -beta
++alpha
+alpha && beta
+alpha || beta
+alpha !beta
+alpha and beta
+from:(alice OR bob)
+kind:group AND alpha
+kind:private OR gamma
+"alpha beta"
+text:alpha
+body:"alpha beta"
+text:alph*
+text:a?pha
+text:/alph(a|b)/
+body:/.*alpha.*/
+text:/alpha/
+text:/.*a/
+alpha~1
+"alpha beta"~2
+alpha^2
+(alpha OR beta)@2
+date:[2026-01-01 TO 2026-02-01}
+size:{1 TO 20]
+from=alice
+date>=2026-01-01
+kind:group kind:private
+from:"A B"
+-from:alice
+emoji:😀
+text:O'Brien
+text:hello\:world
+text:foo\ bar
+text:"a\"b"
+text:/a\/b/
+text:a\*
+alpha OR
+OR alpha
+alpha AND
+"unclosed
+(alpha
+alpha)
+alpha\
+alpha OR OR beta
+
+()
+text:
+[TO TO TO]
+fn:ordered(alpha beta)
+alpha +beta OR gamma
+alpha OR +beta gamma
+alpha OR NOT beta
+alpha OR (NOT beta)
+NOT (alpha OR beta)
+alpha -(beta OR gamma)

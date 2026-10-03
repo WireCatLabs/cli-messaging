@@ -93,3 +93,9 @@ export const servicesFor = (deps: ServiceDeps): Services => {
   }
   return deps.messenger.services ? { ...base, ...deps.messenger.services(base, deps) } : base
 }
+
+export { migrateLegacyQuery, type QueryMigration, type SavedQuery } from "../search/lucene/migration.js"
+export { parseLucene } from "../search/lucene/parser.js"
+export { FIELD_VERSION, QUERY_FIELDS, QUERY_OPERATORS, validateAst } from "../search/lucene/registry.js"
+export { type Predicate, QUERY_LIMITS, QUERY_VERSION, type QueryAst, type QueryNode } from "../search/lucene/types.js"
+export type { QueryMetadata, SearchCoverage } from "./messages-search.js"

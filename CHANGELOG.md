@@ -6,6 +6,22 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- A versioned Lucene 9.12.3 query profile for local message search, shared by CLI and MCP:
+  Boolean and field groups, typed date ranges/timezones, peer kinds/topics, bounded term/body
+  regex and wildcard matching, candidate presets, structured AST input and coverage on empty results.
+- Canonical search guide/specification, generated reference tables and ten executable recipes;
+  development-only Lucene reference fixtures and an explicit legacy migration preview.
+
+### Changed — may break callers
+
+- CLI and MCP message search now use strict Lucene matching by default. Use `--language legacy`
+  (MCP `language: legacy`) for the old discovery parser, `after:`/`before:` and fuzzy fallbacks.
+  Existing low-level service calls without a language preserve legacy behavior.
+- JavaScript `--regex` retains its separate `iu` full-body semantics but now rejects overly broad
+  row/byte scans and runs in a worker with a deadline. It cannot be combined with Lucene mode.
+
 ### Fixed
 
 - The parity manifest now marks `bot me` present in both CLIs after Telegram adopted the shared identity command.
@@ -17,6 +33,7 @@ Released early: tg-cli forum setup needs the guarded enable and creation command
 ### Added
 
 - `topics enable --upgrade` explicitly upgrades a basic group and enables forum topics; staged errors retain the new chat id. `topics create` creates a named topic with an attempt id. Reusing a sent, unknown or reserved creation id is refused by the profile journal; an unknown creation must never be repeated. CLI and MCP use the same permissions, preflight and metadata-only journal; enabling defaults to confirmation. No implicit group upgrade occurs when sending or creating a topic.
+
 
 ## 0.125.0 — 03.10.2026
 
