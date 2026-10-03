@@ -118,3 +118,34 @@ it("keeps missing fields and readable JSON fence boundaries in audit evidence", 
   expect(valueDifferences({ optional: false }, {})).toEqual([{ path: "optional", left: false }])
   expect(inlineJson({ text: "`quoted`" })).toBe('``{"text":"`quoted`"}``')
 })
+
+it("preserves schema properties named title/description and literal defaults while ignoring annotations", () => {
+  const a = {
+    type: "object",
+    properties: { title: { type: "string", minLength: 1 }, description: { type: "string" } },
+    default: { description: "first", required: ["a", "b"] },
+  }
+  const b = {
+    ...a,
+    properties: { title: { type: "string", minLength: 2 }, description: { type: "number" } },
+    default: { description: "second", required: ["b", "a"] },
+  }
+  const result = compareTools({ cli: "a", tools: [tool("a_create", a)] }, { cli: "b", tools: [tool("b_create", b)] })
+  expect(result[0]?.contracts.map((one) => one.path)).toEqual([
+    "inputSchema.default.description",
+    "inputSchema.default.required",
+    "inputSchema.properties.description.type",
+    "inputSchema.properties.title.minLength",
+  ])
+})
+
+it("does not treat property-map names as default/enum data when stripping documentation", () => {
+  for (const name of ["title", "description", "default", "const", "enum"]) {
+    const left = { type: "object", properties: { [name]: { type: "string", description: "left docs" } } }
+    const right = { type: "object", properties: { [name]: { type: "string", description: "right docs" } } }
+    expect(
+      compareTools({ cli: "a", tools: [tool("a_read", left)] }, { cli: "b", tools: [tool("b_read", right)] })[0]
+        ?.contracts,
+    ).toEqual([])
+  }
+})
