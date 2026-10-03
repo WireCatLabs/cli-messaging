@@ -81,10 +81,11 @@ describe("isolated parity evidence capture", () => {
   })
 })
 
-it("keeps the isolated path short enough for the longest consumer Unix socket fixture", () => {
-  const home = temporaryHome()
-  if (process.platform !== "win32") {
+it.skipIf(process.platform === "win32")(
+  "keeps the isolated path short enough for the longest consumer Unix socket fixture",
+  () => {
+    const home = temporaryHome()
     const socket = join(home, "max-test-123456", "state/profiles/s-refused-error.limit.violate.sock")
     expect(Buffer.byteLength(socket)).toBeLessThanOrEqual(103)
-  }
-})
+  },
+)
