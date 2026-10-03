@@ -117,7 +117,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--after-n` | `<n>` | how many messages after it |  | `messages context` |
 | `--after-time` | `<time>` | read what came after this ISO 8601 time, or 2h / 1d ago; not with --after-id or the --before pair |  | `messages list` |
 | `--agent` | `<agent>` | install the skill for this agent; asks at a terminal, otherwise none |  | `setup` (planned) |
-| `--all` |  | every row, no paging |  | `chats list`, `chats members list` (planned), `contacts list`, `inbox` (planned), `messages download` (planned), `review` (planned) |
+| `--all` |  | every row, no paging |  | `chats list`, `chats members list` (planned), `contacts list`, `inbox` (planned), `messages download`, `review` (planned) |
 | `--all-bots` |  | also read every other bot's copy on this machine that readOtherBots allows |  | `bot contacts show`, `bot messages between`, `bot messages search` |
 | `--all-can-pin` | `<on\|off>` | every member may pin messages |  | `chats update` |
 | `--allow-any-file` |  | send a --file even from a hidden folder, ~/.ssh or the tool's own folders |  | `bot messages send`, `messages send` |
@@ -134,7 +134,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--background` |  | run as a job that outlives this command; `store jobs show` follows it |  | `store fetch` |
 | `--base-url` | `<url>` | a server with OpenAI's /v1/embeddings: Gemini, Jina, or Ollama and LM Studio on this machine |  | `conversations embed`, `conversations embed clear`, `conversations embed status`, `conversations search` |
 | `--batch` | `<id>` | the batch id `conversations batches next` printed |  | `conversations links add` (planned) |
-| `--before-id` | `<id>` | read what came before this message id; not with --before-time |  | `messages evidence` (planned), `messages list` |
+| `--before-id` | `<id>` | read what came before this message id; not with --before-time |  | `messages evidence`, `messages list` |
 | `--before-n` | `<n>` | how many messages before it |  | `messages context` |
 | `--before-time` | `<time>` | read what came before this ISO 8601 time, or 2h / 1d ago; not with --before-id |  | `messages list` |
 | `--block` | `<value>` | Set to `true` if user should be blocked in chat. |  | `bot chats members remove` |
@@ -169,7 +169,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--last` | `<n>` | stop once the newest n messages are held; not with --since. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | `bot store fetch`, `store fetch` |
 | `--last-name` | `<name>` | your last name |  | `account update` |
 | `--left` |  | only the chats this account has left |  | `store clear` |
-| `--limit` | `<n>` | how many: rows to show, or messages one run fetches. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | `bot chats members list` (max-only), `bot contacts show`, `bot messages between`, `bot messages list`, `bot messages search`, `bot store fetch`, `chats list`, `chats members list` (planned), `contacts list`, `conversations list`, `conversations search`, `inbox`, `messages evidence` (planned), `messages list`, `messages search`, `runs list`, `sends list`, `store fetch` |
+| `--limit` | `<n>` | how many: rows to show, or messages one run fetches. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | `bot chats members list` (max-only), `bot contacts show`, `bot messages between`, `bot messages list`, `bot messages search`, `bot store fetch`, `chats list`, `chats members list` (planned), `contacts list`, `conversations list`, `conversations search`, `inbox`, `messages evidence`, `messages list`, `messages search`, `runs list`, `sends list`, `store fetch` |
 | `--lines` | `<n>` | how many lines | `50` | `server logs` |
 | `--local` |  | use the model on this machine, never the messenger |  | `messages transcribe` (tg-only) |
 | `--mark-read` |  | also mark the chat read up to the newest message shown; the other person sees it |  | `messages list` |
@@ -196,11 +196,11 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--only-owner-edits-info` | `<on\|off>` | only the owner may change the name and photo |  | `chats update` (max-only) |
 | `--order` | `<recent\|name>` | newest conversation first, or alphabetical |  | `contacts list` |
 | `--others` |  | every session but this one. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | `account sessions end` |
-| `--output` |  | where to write: a directory for `messages download`, a file for `store export`. **`messages download --output <dir>` becomes `--output-dir`; `--output` stays a file — e10** | `.` | `doctor report create`, `messages download` (max-only), `store export` |
-| `--output-dir` | `<dir>` | the folder to write into, created if missing | `.` | `messages download` (planned) |
+| `--output` |  | where to write: a directory for `messages download`, a file for `store export`. **MAX `messages download --output <dir>` remains a compatibility alias for `--output-dir`; other commands use --output for a file — e10** | `.` | `doctor report create`, `messages download` (max-only), `store export` |
+| `--output-dir` | `<dir>` | the folder to write into, created if missing | `.` | `messages download` |
 | `--page` | `<n>` | which page, starting at 1 |  | `chats list`, `chats members list` (planned), `contacts list` |
 | `--page-size` | `<n>` | how many items one request to the messenger asks for; the messenger's own if not given. **the default is each messenger's own page: 30 on MAX, 100 on Telegram** |  | `bot store fetch`, `store fetch` |
-| `--pause` | `<duration>` | the least wait between pages, 5s or 500ms; each is up to twice that. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** | `5s` | `bot store fetch`, `messages download` (planned), `store fetch` |
+| `--pause` | `<duration>` | the least wait between pages, 5s or 500ms; each is up to twice that. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** | `5s` | `bot store fetch`, `messages download`, `store fetch` |
 | `--personal` |  | the personal account's section of the profile's settings |  | `config set` (planned), `config unset` (planned) |
 | `--photo` | `<file>` | an image file — a profile photo in `account update`, a photo to send in `messages send` |  | `account update`, `bot messages send`, `messages send` |
 | `--provider` | `<provider>` | embed through a service with your key instead of on this machine: openai |  | `conversations embed`, `conversations embed clear`, `conversations embed status`, `conversations search` |

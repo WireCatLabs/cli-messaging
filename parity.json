@@ -323,7 +323,7 @@
     "--output": {
       "meaning": "where to write: a directory for `messages download`, a file for `store export`",
       "default": ".",
-      "note": "`messages download --output <dir>` becomes `--output-dir`; `--output` stays a file — e10"
+      "note": "MAX `messages download --output <dir>` remains a compatibility alias for `--output-dir`; other commands use --output for a file — e10"
     },
     "--output-dir": {
       "value": "<dir>",
@@ -1553,29 +1553,17 @@
       "in": "all",
       "options": {
         "--all": {
-          "in": [],
-          "planned": {
-            "max": "T6",
-            "tg": "T6"
-          }
+          "in": "all"
         },
         "--output": {
           "in": ["max"],
-          "reason": "max's own copy keeps the old name until T6 moves the command onto the shared one"
+          "reason": "MAX retains --output as a compatibility alias for --output-dir after shared adoption"
         },
         "--output-dir": {
-          "in": [],
-          "planned": {
-            "max": "T6",
-            "tg": "T6"
-          }
+          "in": "all"
         },
         "--pause": {
-          "in": [],
-          "planned": {
-            "max": "T6",
-            "tg": "T6"
-          }
+          "in": "all"
         }
       }
     },
@@ -1586,26 +1574,10 @@
       }
     },
     "messages evidence": {
-      "in": [],
-      "planned": {
-        "max": "evidence",
-        "tg": "evidence"
-      },
+      "in": "all",
       "options": {
-        "--before-id": {
-          "in": [],
-          "planned": {
-            "max": "evidence",
-            "tg": "evidence"
-          }
-        },
-        "--limit": {
-          "in": [],
-          "planned": {
-            "max": "evidence",
-            "tg": "evidence"
-          }
-        }
+        "--before-id": "all",
+        "--limit": "all"
       }
     },
     "messages forward": {
