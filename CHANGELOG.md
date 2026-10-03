@@ -6,6 +6,10 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.122.0 — 03.10.2026
+
+Released early: max-cli shared runner adoption needs its existing settings resolver and correct failure scope
+
 ### Added
 
 - The shared runner accepts a settings resolver exposing only the four fields it reads, so
