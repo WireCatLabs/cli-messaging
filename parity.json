@@ -118,8 +118,7 @@
     },
     "--chat": {
       "value": "<chat>",
-      "meaning": "a chat, by id or name; repeat it for more",
-      "note": "max's `messages search` takes `<id>` only, since searching never connects to resolve a name; rule 6 says `<chat>` (e8)"
+      "meaning": "a chat, by id or name; repeat it for more"
     },
     "--check": {
       "meaning": "say whether a newer version exists, and install nothing"
