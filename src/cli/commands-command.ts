@@ -1,5 +1,5 @@
-import { EXIT_CODES, GENERIC_FAILURE } from "@leemour/cli-core"
-import { describeOptions, describeProgram, flatten } from "@leemour/cli-core/commands"
+import { CliError, EXIT_CODES, GENERIC_FAILURE } from "@leemour/cli-core"
+import { type CommandInfo, describeOptions, describeProgram, flatten } from "@leemour/cli-core/commands"
 import { Command } from "commander"
 import type { AppIdentity } from "./app.js"
 import { outputFor } from "./context.js"
@@ -17,11 +17,14 @@ export const CONTRACT = 0
  */
 export const commandsCommand = (app: AppIdentity): Command =>
   new Command("commands")
-    .description("every command, option and exit code as JSON — what an agent reads instead of --help")
-    .action(function (this: Command) {
+    .description("commands, options and exit codes as JSON — inspect one command path per call")
+    .argument("[path...]", "one command path, for example: messages search; inspect other groups in separate calls")
+    .action(function (this: Command, path: string[]) {
       const root = rootOf(this)
       const { renderer, format } = outputFor(this)
-      const commands = describeProgram(root)
+      const all = describeProgram(root)
+      const scoped = path.length > 0 ? scopeOf(root, all, path) : undefined
+      const commands = scoped ? [scoped.command] : all
 
       if (format === "pretty") {
         renderer.result(
@@ -41,7 +44,38 @@ export const commandsCommand = (app: AppIdentity): Command =>
         contract: CONTRACT,
         description: root.description(),
         globalOptions: describeOptions(root),
+        ...(scoped ? { scope: scoped.command.path, inheritedOptions: scoped.inheritedOptions } : {}),
         commands,
         exitCodes: { ok: 0, generic_failure: GENERIC_FAILURE, ...EXIT_CODES },
       })
     })
+
+const scopeOf = (root: Command, all: CommandInfo[], path: string[]) => {
+  let parent = root
+  let available: readonly CommandInfo[] = all
+  let selected: CommandInfo | undefined
+  const inheritedOptions: { path: readonly string[]; options: ReturnType<typeof describeOptions> }[] = []
+  for (const word of path) {
+    const child = parent.commands.find((command) => command.name() === word || command.aliases().includes(word))
+    const described = child && available.find(({ name }) => name === child.name())
+    if (!child || !described) {
+      const prefix = selected?.path ?? []
+      const choices = available.map(({ name }) => name)
+      throw new CliError(
+        "validation_error",
+        `unknown command path "${path.join(" ")}" — inspect \`${[root.name(), "commands", ...prefix, "--json"].join(" ")}\`; ` +
+          (choices.length ? `available here: ${choices.join(", ")}. ` : "this command has no subcommands. ") +
+          `Give one command path per call, not a list of groups: \`${root.name()} commands messages --json\` ` +
+          `and \`${root.name()} commands chats --json\` are separate calls`,
+        { path, at: word, available: choices },
+      )
+    }
+    if (selected && selected.options.length > 0) {
+      inheritedOptions.push({ path: selected.path, options: [...selected.options] })
+    }
+    selected = described
+    parent = child
+    available = described.commands
+  }
+  return { command: selected as CommandInfo, inheritedOptions }
+}

@@ -1,7 +1,7 @@
 # @leemour/cli-messaging
 
 The messenger-neutral half of a messaging command line tool, shared by
-[`tg-cli`](https://github.com/leemour/tg-cli) and, later, [`max-cli`](https://github.com/leemour/max-cli).
+[`tg-cli`](https://github.com/leemour/tg-cli) and [`max-cli`](https://github.com/leemour/max-cli).
 Built on [`@leemour/cli-core`](https://github.com/leemour/cli-core), a peer dependency: the CLI installs
 it itself, so the install holds one copy.
 
@@ -47,6 +47,15 @@ content. Link audience is `public`, `restricted` or `unknown`; a URL grants no m
 Without support, a validated target returns `url: null`, `access: unavailable`, and a reason.
 Offline validates this account's stored message and returns reason `offline`, without connecting.
 A locator for another messenger or account is refused. Singular `link` differs from graph `links`.
+
+## Command discovery
+
+To discover arguments without reading the whole command tree, run
+`<cli> commands messages evidence --json`. Replace the path with any command or group;
+`<cli> commands messages --json` includes its descendants. The response retains global options
+and exit codes, includes options inherited from ancestor groups, and resolves command aliases.
+Give one command path per call; inspect other groups in separate calls.
+`<cli> commands --json` still returns the full tree.
 
 ## Evidence packets for agents
 
