@@ -8,7 +8,10 @@ import type { MessengerAdapter } from "../cli/messenger/port.js"
 import { parseMarkdown } from "../domain/markdown.js"
 import type { Chat, Message } from "../domain/models.js"
 import type { GuardRequest, SendGuard } from "../sends/guard.js"
+import { sendGuard } from "../sends/guard.js"
 import type { SendEntry } from "../sends/journal.js"
+import { SendJournal } from "../sends/journal.js"
+import { RecipientList } from "../sends/recipients.js"
 import { type MessageStore, openStore } from "../store/store.js"
 import { onlineDeps, storedDeps } from "./deps.js"
 import { messagesService, searchStore } from "./messages.js"
@@ -397,4 +400,26 @@ describe("the messages service's writes", () => {
     await expect(service.delete({ chat: "7", messages: ["1"], forEveryone: false })).rejects.toThrow(/--offline/)
     expect(journal).toEqual([])
   })
+})
+
+it("checks an explicit unpin denial separately from allowed pinning", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "unpin-policy-"))
+  const guard = sendGuard({
+    profile: "p",
+    readOnly: false,
+    readOnlyFrom: "default",
+    permissions: { "messages.pin": "allow", "messages.unpin": "deny" },
+    sendsPerHour: 30,
+    journal: new SendJournal(join(dir, "sends.jsonl")),
+    recipients: new RecipientList(join(dir, "recipients.json"), "test"),
+    warn: () => {},
+  })
+  const pin = vi.fn(async () => {})
+  const unpin = vi.fn(async () => {})
+  const connection = { ...adapter, resolve: async () => chat, pin, unpin }
+  const service = messagesService(onlineDeps(messenger, connection, guard))
+  await service.pin({ chat: "7", message: "1", notify: false })
+  await expect(service.unpin({ chat: "7", message: "1" })).rejects.toMatchObject({ code: "permission_error" })
+  expect(pin).toHaveBeenCalledOnce()
+  expect(unpin).not.toHaveBeenCalled()
 })
