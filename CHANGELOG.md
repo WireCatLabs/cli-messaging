@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+- Correct the storage index guide: strict Lucene is the default; automatic typo and substring fallback belong to explicit legacy discovery.
+
 ## 0.140.0 — 04.10.2026
 
 Released early: tg-cli and max-cli releases need scoped command discovery and the parallel local-read lock fix.

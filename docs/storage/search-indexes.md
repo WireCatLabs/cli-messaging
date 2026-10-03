@@ -1,19 +1,15 @@
 # How search works — the indexes, search by meaning, and what each one is for
 
-Written for the owner on 2026-09-30, who asked how the indexes work and when one finds what another
-does not. The rulings behind it are in [`decisions.md`](decisions.md): SQLite FTS5, BM25 over words,
-typo correction through the vocabulary, and the substring index kept as a fallback (NEED-379 A).
-**Addition 2026-10-02:** search by meaning (phase 5, [plan](plans/phase-5.md)) is described from
-[Search by meaning](#search-by-meaning) on; the word search below is built and released (phase 2).
+**Current status, 2026-10-04:** strict Lucene message search and optional graph/embedding conversation search are implemented. **Correction:** the automatic typo/any-word/substring pipeline described in the index-design sections belongs to explicit `--language legacy`, not the current default. The [query-language guide](../search/query-language.md) and [technical specification](../search/query-language-spec.md) define strict syntax, validation, limits and coverage. The semantic-search sections describe the existing separate conversation path. No live account or archive was used for this correction; source inspected at `680d22e`.
 
 ## Two searches
 
 | | `messages search` | `conversations search` |
 |---|---|---|
 | finds | messages | conversations inside a group chat |
-| by | words: every word, typos corrected, then pieces of words | meaning, and the words it shares, merged |
-| needs | nothing — the indexes fill themselves | `conversations build`, then `conversations embed` |
-| runs | SQLite alone, 1–25 ms at 1M messages | a model on this machine (or the user's API key), then a scan |
+| by | strict Lucene words/phrases, Boolean fields and bounded patterns; legacy discovery only when selected | meaning, and the words it shares, merged |
+| needs | stored history and a ready word index for strict text predicates | `conversations build`, then `conversations embed` |
+| runs | SQLite plus bounded validation/pattern checks; no embedding model | a model on this machine (or the user's API key), then a scan |
 | MCP tool | `<cli>_messages_search` | `<cli>_conversations_search` |
 
 `messages search` answers "where did someone say X". `conversations search` answers "where did we talk
@@ -22,9 +18,10 @@ answers it, in the language it was held in.
 
 ```text
 messages search "gestor valencia"
-  words index (BM25) ─▶ nothing? correct typos ─▶ nothing? any word ─▶ nothing? substring
-                                                                     ▼
-                                                            messages, best first
+  parse/validate/scope ─▶ SQLite word/metadata predicates ─▶ strict matching messages
+
+messages search "gestor valencia" --language legacy
+  words ─▶ nothing? correct typos ─▶ nothing? any word ─▶ nothing? substring
 
 conversations search "кто искал квартиру"
   the model turns the query into a vector ─▶ scan the chunks' vectors ─▶ conversations by meaning ─┐
@@ -40,8 +37,7 @@ conversations search "кто искал квартиру"
    `--chat`, `--from`, `--after`, `--before` fast. Always there.
 2. **The word index, ranked by BM25** — FTS5 with the `unicode61` tokenizer over `normalized_text`,
    with a prefix index.
-3. **The vocabulary** — every distinct word of the word index, with its three-letter pieces; only for
-   typo correction.
+3. **The vocabulary** — FTS5 terms for bounded strict wildcard/regex expansion; legacy discovery additionally keeps term/trigram tables for typo candidates.
 4. **The substring index** — FTS5 with the `trigram` tokenizer over message text: any three letters
    anywhere. It exists today (migration 5).
 5. **Name indexes** — small trigram indexes over chat titles and over people's names and usernames.
@@ -62,8 +58,7 @@ ptsarev   → message 5      (calendly.com/ptsarev splits into calendly, com, pt
 ab45217   → message 2      (no separator: one word)
 ```
 
-A search for «gestor valencia» looks both lists up and keeps the messages in both. Word beginnings
-work too: «квартир» finds квартиру, квартиры.
+A search for «gestor valencia» looks both lists up and keeps the messages in both. Legacy discovery also tries word beginnings. Strict Lucene needs an explicit wildcard such as `квартир*` for that behavior; a bare term is not silently expanded.
 
 **BM25** orders what was found. For each message it adds up, per search word:
 
@@ -73,9 +68,9 @@ work too: «квартир» finds квартиру, квартиры.
 - **how short the message is** — a short message with the word ranks above a long one where it is
   lost.
 
-No AI; 1–25 ms at 1M messages ([benchmark](research/2026-09-29-search-benchmark.md)).
+No embedding model is needed for this index. [Historical index benchmarks](research/2026-09-29-search-benchmark.md) measure particular query/storage paths, not a universal end-to-end strict-search latency guarantee.
 
-## 3 · The vocabulary
+## 3 · The legacy typo vocabulary
 
 A table of every distinct word in the messages — 38 for the six messages below, 143,501 at 100k
 messages (measured). Each word also has its three-letter pieces, indexed, so a typo can be looked up
@@ -135,14 +130,14 @@ So: **words with BM25** rank best, bring no noise and handle short words; **the 
 typos neither index finds alone; **substring** finds fragments — parts of numbers, links, names, the
 middle of words — and brings noise.
 
-## The order a search runs in — ~~proposed; the phase 2 plan settles it~~ **built (correction 2026-10-02)**
+## Explicit legacy discovery order
 
 1. Word index, every word required, ranked by BM25.
 2. Nothing found → correct unknown words through the vocabulary, search again.
 3. Still nothing → any word instead of every word (NEED-375).
 4. Still nothing → the substring index.
 
-Filters (chat, sender, source, date) apply at every step, in the database.
+This sequence runs only in legacy discovery. Strict Lucene preserves the requested Boolean set, emits no automatic corrections, and errors when its word index is not ready or an execution budget is exceeded. Filters (chat, sender, source, date) apply at every legacy step in the database.
 
 **Correction 2026-10-02** — as built in `src/search/search.ts`: step 1 also takes word beginnings
 («квартир» finds квартиру), each step runs only when the one before found nothing, and until the word
@@ -214,11 +209,8 @@ it on stderr and in `embeddedOnlyElsewhere`, instead of leaving it out silently.
 
 Meaning misses a rare exact word — a name, a reference number, «empadronamiento» — and words miss a
 paraphrase. So the same command also runs `messages search` over the query's plain words, joined by
-`OR` (nothing in the query is read as a filter), keeps only whole-word and word-beginning hits — a
-corrected spelling or a piece of a word would pass a near miss off as a match — and maps each message
-to its conversation. The two lists merge by **reciprocal rank fusion**: a conversation scores
-1 / (60 + its rank) in each list it is in, and the sum orders the result. 50 conversations by meaning
-and the conversations of 200 messages by words take part.
+`OR` (nothing in the original question is read as a filter), and maps matching messages to their conversations. Under the current strict default these are whole-word matches; automatic prefix/typo/substring discovery is not added to the word branch. The two lists merge by **reciprocal rank fusion**: a conversation scores
+1 / (60 + its rank) in each list it is in, and the sum orders the result. At least 50 semantic candidates (or the requested limit when larger) and the conversations of up to 200 word-matched messages take part.
 
 Each result says how it was found:
 
@@ -230,7 +222,7 @@ Each result says how it was found:
 ```
 
 `score` is the meaning's cosine, `null` when only words found the conversation. A built chat that was
-never embedded is still found by its words.
+never embedded can still be found by its words, but the current command still opens the selected model to encode the query; the model must be installed/configured.
 
 ### In the MCP server
 
