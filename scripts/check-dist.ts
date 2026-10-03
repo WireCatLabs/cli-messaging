@@ -101,3 +101,15 @@ const late = await apart.embed(["fish"], "query").then(
 )
 if (!late.startsWith("the embedding process stopped")) throw new Error(`a closed embedding process ${late}`)
 console.log("dist: the embedding process answers, and refuses once closed")
+
+const speech = await import("@leemour/cli-messaging/speech")
+const speechCache = join(mkdtempSync(join(tmpdir(), "speech-export-dist-")), "common")
+const speechDirectory = speech.modelsDirectory({ CLI_COMMON_CACHE_DIR: speechCache })
+if (speechDirectory !== join(speechCache, "models", "audio"))
+  throw new Error("./speech ignores the common cache override")
+if (
+  speech.orderedModels(["gigaam-v3"])[0]?.id !== "gigaam-v3" ||
+  speech.isInstalled(speech.speechModel("gigaam-v3"), speechDirectory)
+)
+  throw new Error("./speech lost consumer model ordering or claims absent files are installed")
+console.log("dist: ./speech reuses the pinned catalogue and shared model directory")
