@@ -20,6 +20,10 @@
       "value": "<time>",
       "meaning": "read what came after this ISO 8601 time, or 2h / 1d ago; not with --after-id or the --before pair"
     },
+    "--agent": {
+      "value": "<agent>",
+      "meaning": "install the skill for this agent; asks at a terminal, otherwise none"
+    },
     "--all": {
       "meaning": "every row, no paging"
     },
@@ -256,6 +260,10 @@
     "--members-see-link": {
       "value": "<on|off>",
       "meaning": "members may see the invite link"
+    },
+    "--method": {
+      "value": "<method>",
+      "meaning": "how to log in when there is no session"
     },
     "--model": {
       "value": "<id>",
@@ -1938,6 +1946,43 @@
         "--qr-file": {
           "in": ["tg"],
           "reason": "ruled tg-only with the app registration it belongs to"
+        }
+      }
+    },
+    "setup": {
+      "in": [],
+      "planned": {
+        "tg": "guided first-run onboarding",
+        "max": "guided first-run onboarding"
+      },
+      "options": {
+        "--agent": {
+          "in": [],
+          "planned": {
+            "tg": "guided first-run onboarding",
+            "max": "guided first-run onboarding"
+          }
+        },
+        "--app": {
+          "in": [],
+          "planned": {
+            "tg": "guided first-run onboarding"
+          },
+          "reason": "Telegram requires an application from my.telegram.org; MAX has no application registration step"
+        },
+        "--method": {
+          "in": [],
+          "planned": {
+            "tg": "guided first-run onboarding",
+            "max": "guided first-run onboarding"
+          }
+        },
+        "--qr-file": {
+          "in": [],
+          "planned": {
+            "tg": "guided first-run onboarding"
+          },
+          "reason": "Telegram can expose its temporary QR login token as a PNG"
         }
       }
     },

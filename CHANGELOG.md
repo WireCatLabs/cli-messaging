@@ -6,6 +6,12 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- `readSecret` accepts an optional `AbortSignal`: an expired command can cancel a pending
+  terminal prompt or piped input without ending the caller's stream. The parity manifest plans
+  guided `setup` commands and their options for Telegram and MAX.
+
 ## 0.119.0 — 03.10.2026
 
 Released early: tg-cli forum topic addressing requires the shared thread validation contract

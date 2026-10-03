@@ -45,4 +45,43 @@ describe("readSecret", () => {
 
     await expect(answer).rejects.toMatchObject({ code: "cancelled" })
   })
+
+  it.each([true, false])("aborts pending input (terminal: %s) without ending the caller's stream", async (isTTY) => {
+    const input = Object.assign(new PassThrough(), { isTTY })
+    const controller = new AbortController()
+    const answer = readSecret("token: ", { input, output: collected().output, signal: controller.signal })
+    controller.abort()
+    await expect(answer).rejects.toMatchObject({ code: "cancelled" })
+    expect(input.destroyed).toBe(false)
+    if (!isTTY) expect(input.listenerCount("data")).toBe(0)
+    expect(input.listenerCount("end")).toBe(0)
+    const next = readSecret("code: ", { input, output: collected().output })
+    if (isTTY) input.write("next\n")
+    else input.end("next\n")
+    expect(await next).toBe("next")
+  })
+
+  it("refuses a signal already aborted without showing a prompt", async () => {
+    const controller = new AbortController()
+    controller.abort()
+    const { output, text } = collected()
+    await expect(readSecret("token: ", { input: terminal(), output, signal: controller.signal })).rejects.toMatchObject(
+      { code: "cancelled" },
+    )
+    expect(text()).toBe("")
+  })
+
+  it("collects a piped secret with cancellation enabled", async () => {
+    expect(
+      await readSecret("token: ", { input: Readable.from(["abc", "def\n"]), signal: new AbortController().signal }),
+    ).toBe("abcdef")
+  })
+
+  it("reports a piped stream failure and releases the abort listener", async () => {
+    const input = new PassThrough()
+    const answer = readSecret("token: ", { input, signal: new AbortController().signal })
+    input.destroy(new Error("synthetic input failure"))
+    await expect(answer).rejects.toThrow("synthetic input failure")
+    expect(input.listenerCount("data")).toBe(0)
+  })
 })
