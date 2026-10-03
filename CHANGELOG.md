@@ -6,6 +6,10 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.132.0 — 03.10.2026
+
+Released early: Telegram and MAX formatter adoption requires the shared formatMarkdown capability and neutral text spans
+
 ### Changed — may break callers
 
 - Personal and bot `--md` send/edit delegate conversion to each adapter's optional `formatMarkdown`. Adapters without it refuse Markdown; plain text is unchanged. Additive `FormattedText`/`TextSpan` and `formatting` options carry rich formatting while legacy Markup/parser/markup exports remain compatible. Telegram and MAX can now use different syntax.
