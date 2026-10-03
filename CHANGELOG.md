@@ -6,6 +6,11 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Fixed
+
+- `chats show` reports listed members and the chat's participant total without claiming that a
+  differing count proves incomplete loading: a list can omit the current account or be partial.
+
 ## 0.136.0 — 03.10.2026
 
 Released early: max-cli streamed download adoption needs response MIME filename fix; 0.135 mislabels unnamed WebP photos as JPEG
