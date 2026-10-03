@@ -2,7 +2,15 @@ import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { describe, expect, it } from "vitest"
-import { check, mcpSchemas, mountingEvidence, sandboxEnvironment, sourceEvidence, temporaryHome } from "./evidence.ts"
+import {
+  check,
+  mcpSchemas,
+  mountingEvidence,
+  sandboxEnvironment,
+  sourceEvidence,
+  temporaryHome,
+  testSummary,
+} from "./evidence.ts"
 
 const directory = () => mkdtempSync(join(tmpdir(), "parity-probe-test-"))
 const server = (root: string, response: string) => {
@@ -89,3 +97,26 @@ it.skipIf(process.platform === "win32")(
     expect(Buffer.byteLength(socket)).toBeLessThanOrEqual(103)
   },
 )
+
+it("keeps every assertion status/count without duplicating the raw coverage map in the bundle", () => {
+  const raw = {
+    numPassedTests: 1,
+    numFailedTests: 1,
+    numPendingTests: 1,
+    testResults: [
+      {
+        name: "file.test.ts",
+        assertionResults: [
+          { fullName: "passes", status: "passed" },
+          { fullName: "fails", status: "failed" },
+          { fullName: "skips", status: "skipped" },
+        ],
+      },
+    ],
+    coverageMap: { large: "raw report retained separately" },
+  }
+  const summary = testSummary(raw)
+  expect(summary.testResults[0]?.assertionResults.map((test) => test.status)).toEqual(["passed", "failed", "skipped"])
+  expect(summary).toMatchObject({ numPassedTests: 1, numFailedTests: 1, numPendingTests: 1 })
+  expect(summary).not.toHaveProperty("coverageMap")
+})

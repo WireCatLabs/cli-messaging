@@ -24,6 +24,7 @@ import {
   type TestEvidence,
   type TestResults,
   temporaryHome,
+  testSummary,
   writeJson,
 } from "./evidence.ts"
 import { renderReports } from "./report.ts"
@@ -217,7 +218,7 @@ const testEvidence = async (
   return {
     state: checks.every((one) => one.exit === 0 && !one.error) ? "ran" : "failed",
     checks,
-    ...(existsSync(jsonPath) ? { results: readJson<TestResults>(jsonPath) } : {}),
+    ...(existsSync(jsonPath) ? { results: testSummary(readJson<TestResults>(jsonPath)) } : {}),
     ...(ran && existsSync(coverage) ? { coverage: readJson<Coverage>(coverage) } : {}),
     matrix:
       checks.find((one) => one.name === "test:matrix")?.exit === 0 && existsSync(matrixPath)
