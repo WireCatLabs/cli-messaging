@@ -20,11 +20,13 @@ let env: NodeJS.ProcessEnv
 let keyring: ReturnType<typeof memoryKeyring>
 let typed: string
 let connected: string[]
+let closed: number
 
 const bot: BotMessenger = {
   app,
   provider: "chat-bot",
   name: "Chat",
+  identity: true,
   resolveSettings: config.resolveSettings,
   connect: async (_command, token, { events } = {}) => {
     connected.push(token)
@@ -34,7 +36,9 @@ const bot: BotMessenger = {
         if (token !== "good") throw new CliError("authentication_error", "the messenger did not accept this token")
         return SALES
       },
-      close: async () => {},
+      close: async () => {
+        closed++
+      },
     }
   },
   tokenStore: (_command, profile) =>
@@ -55,6 +59,7 @@ beforeEach(() => {
   keyring = memoryKeyring()
   typed = "good"
   connected = []
+  closed = 0
 })
 
 describe("bot auth", () => {
@@ -142,5 +147,28 @@ describe("bot chats list", () => {
     const done = await call(["sales", "bot", "chats", "list", "--offline", "--json"])
     expect(done.answer.items).toMatchObject([{ id: "-100", title: "Team" }])
     expect(connected).toEqual([])
+  })
+})
+
+describe("bot me", () => {
+  it("reads this profile's identity once, closes, and leaves sends unchanged", async () => {
+    new BotTokenStore({ app, profile: "sales", env: {}, configDir: join(root, "config"), keyring }).write("good")
+    const before = await call(["sales", "bot", "sends", "list", "--json"])
+    const result = await call(["sales", "bot", "me", "--trace", "--json"])
+    expect(result.code).toBe(0)
+    expect(result.answer).toEqual(SALES)
+    expect(result.stderr).toContain("me")
+    expect(connected).toEqual(["good"])
+    expect(closed).toBe(1)
+    expect((await call(["sales", "bot", "sends", "list", "--json"])).answer).toEqual(before.answer)
+  })
+
+  it("refuses missing tokens and offline reads before connecting, and closes an unsuccessful read", async () => {
+    expect((await call(["sales", "bot", "me", "--json"])).code).toBe(4)
+    expect((await call(["sales", "bot", "me", "--offline", "--json"])).code).toBe(2)
+    expect(connected).toEqual([])
+    new BotTokenStore({ app, profile: "sales", env: {}, configDir: join(root, "config"), keyring }).write("bad")
+    expect((await call(["sales", "bot", "me", "--json"])).code).toBe(4)
+    expect(closed).toBe(1)
   })
 })

@@ -76,6 +76,21 @@ const authCommand = (bot: BotMessenger, tokenVariable: string): Command => {
   return auth
 }
 
+const meCommand = (bot: BotMessenger): Command =>
+  new Command("me")
+    .description("the bot this profile's token belongs to: id, name and username")
+    .action(async function (this: Command) {
+      const context = online(botContext(this, bot), this)
+      await context.run(async (events) => {
+        const adapter = await context.authenticated({ events })
+        try {
+          context.renderer.result(await adapter.me())
+        } finally {
+          await adapter.close()
+        }
+      })
+    })
+
 const listCommand = (bot: BotMessenger, tokenVariable: string): Command =>
   new Command("list")
     .description(
@@ -258,6 +273,7 @@ export const botCommand = (bot: BotMessenger): Command => {
     .addCommand(botMenuCommand(bot))
     .addCommand(botWebhooksCommand(bot))
     .addCommand(botContactsCommand(bot))
+  if (bot.identity) command.addCommand(meCommand(bot))
   if (bot.fetching) command.addCommand(botStoreCommand(bot, bot.fetching))
   return bot.mcp ? command.addCommand(botMcpCommand(bot)) : command
 }
