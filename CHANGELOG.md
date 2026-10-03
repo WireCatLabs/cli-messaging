@@ -6,6 +6,12 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Fixed
+
+- Download fallback names use response MIME learned during lazy streaming, preserving WebP/PNG
+  extensions instead of assuming JPEG. Named files and atomic no-overwrite behavior stay unchanged.
+  This unblocks MAX shared-download adoption without pre-opening unused hearing attachments.
+
 ## 0.135.0 — 03.10.2026
 
 Released early: max-cli shared bulk download adoption needs descriptor paging to preserve its 30-message and 5-second fetch policy
