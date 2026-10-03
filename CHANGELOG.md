@@ -12,6 +12,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## 0.125.0 — 03.10.2026
 
+Released early: tg-cli forum setup needs the guarded enable and creation commands
+
 Released early: tg-cli needs the shared bot identity command and MCP tool
 
 ### Added
