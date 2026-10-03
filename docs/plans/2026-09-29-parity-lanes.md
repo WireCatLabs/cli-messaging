@@ -11,6 +11,8 @@ private `docs_ai/plans/2026-09-30-parity-plan.md`, handoffs in `docs_ai/plans/pa
 standard (`docs/dev/STANDARD.md`) and a parity manifest checked in both CLIs' CI; P1 options on the
 shared commands; P2 administration built shared here (replaces lane L6); P4 tg's documents; P5 tg's
 release checks. Every PR is reviewed against `docs/dev/REVIEW.md`, and a change starts with its docs.
+**B1c claim (2026-10-03):** 🚧 `feat/messages-link` — shared personal `messages link` read service/CLI/MCP, Telegram permalink capability and MAX locator fallback. No store migration.
+
 ## 1. Where things stand
 
 - **Done:** Phases 1–3 (reading, the store and search, MCP with `--allow-send`/`--confirm-send`,
