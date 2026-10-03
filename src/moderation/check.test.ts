@@ -1,7 +1,8 @@
 import { CliError } from "@leemour/cli-core"
 import { describe, expect, it } from "vitest"
-import type { GroupMember, Message } from "../domain/models.js"
-import { act, type Finding, judge, type Moderator } from "./check.js"
+import type { ChatEvent, GroupMember, Message } from "../domain/models.js"
+import { fakeAdapter } from "../kit/fake.js"
+import { act, CHECK_READS, type Finding, gather, judge, type Moderator } from "./check.js"
 import { defaultRules, type GroupRules } from "./rules.js"
 
 const NOW = Date.parse("2026-09-27T12:00:00Z")
@@ -247,5 +248,54 @@ describe("act", () => {
     const rows = await act(refused.fake, [deletion("1"), deletion("2")], options("allow"))
     expect(outcomes(rows)).toEqual(["refused", "skipped"])
     expect(refused.calls).toEqual([])
+  })
+})
+
+describe("gather", () => {
+  it("defers joins beyond the capped history batch until the next run", async () => {
+    const rows = Array.from({ length: CHECK_READS + 1 }, () => message("2", "hello"))
+    const boundary = rows[CHECK_READS - 1]?.timestamp ?? ""
+    const later = rows[CHECK_READS]?.timestamp ?? ""
+    const events: ChatEvent[] = [
+      { messageId: "within", timestamp: boundary, event: "join", by: { id: "3", name: null }, people: [] },
+      {
+        messageId: "later",
+        timestamp: later,
+        event: "add",
+        by: { id: "2", name: null },
+        people: [{ id: "4", name: null }],
+      },
+    ]
+    const adapter = {
+      ...fakeAdapter(),
+      admins: async () => [],
+      historyAfter: async (
+        _chat: string,
+        { after, limit }: { after: { id: string } | { time: number }; limit: number },
+      ) => {
+        const start =
+          "id" in after
+            ? rows.findIndex((row) => row.id === after.id) + 1
+            : rows.findIndex((row) => Date.parse(row.timestamp) > after.time)
+        const items = start < 0 ? [] : rows.slice(start, start + limit)
+        return { items, hasMore: start >= 0 && start + limit < rows.length }
+      },
+      chatEvents: async (_chat: string, { since }: { since: number }) => ({
+        chatId: "-1",
+        since: new Date(since).toISOString(),
+        events: events.filter((event) => Date.parse(event.timestamp) > since),
+        more: false,
+      }),
+      members: async () => ({ chatId: "-1", items: [person("3", 1), person("4", 1)], hasMore: false }),
+    }
+    const first = await gather(adapter, "-1", NOW - 86_400_000)
+    expect(first.more).toBe(true)
+    expect(first.until).toBe(boundary)
+    expect(first.joined.map((member) => member.id)).toEqual(["3"])
+    expect(first.service).toEqual(new Set(["within"]))
+    const second = await gather(adapter, "-1", Date.parse(first.until ?? ""))
+    expect(second.more).toBe(false)
+    expect(second.joined.map((member) => member.id)).toEqual(["4"])
+    expect(second.until).toBe(later)
   })
 })

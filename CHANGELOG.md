@@ -6,6 +6,12 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Fixed
+
+- Moderation defers join events beyond its capped message batch until the next run. A separate
+  event scan can read farther than history; it no longer removes later members before their batch
+  is judged, or judges their join twice across the saved checkpoint.
+
 ## 0.130.0 — 03.10.2026
 
 Released early: max-cli moderation migration needs parity to permit retirement of chats check before it can merge
