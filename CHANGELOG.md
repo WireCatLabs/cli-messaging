@@ -6,6 +6,10 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.126.0 — 03.10.2026
+
+Released early: tg-cli forum setup needs the guarded enable and creation commands
+
 ### Added
 
 - `topics enable --upgrade` explicitly upgrades a basic group and enables forum topics; staged errors retain the new chat id. `topics create` creates a named topic with an attempt id. Reusing a sent, unknown or reserved creation id is refused by the profile journal; an unknown creation must never be repeated. CLI and MCP use the same permissions, preflight and metadata-only journal; enabling defaults to confirmation. No implicit group upgrade occurs when sending or creating a topic.
