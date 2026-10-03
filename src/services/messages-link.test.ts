@@ -104,6 +104,22 @@ describe("message link service", () => {
     },
   )
 
+  it("keeps provider extras out of output and cannot replace the account locator", async () => {
+    const { service } = setup({
+      url: "https://provider.example/1",
+      access: "public",
+      reason: null,
+      locator: "msg:other/secret/7/1",
+      text: "synthetic private body",
+    } as MessagePermalink)
+    expect(await service.link("7", message.id)).toEqual({
+      locator: "msg:test/500/7/9007199254740993123",
+      url: "https://provider.example/1",
+      access: "public",
+      reason: null,
+    })
+  })
+
   it("validates the target before fallback when no capability exists", async () => {
     const { service, around } = setup()
     expect(await service.link("Synthetic", message.id)).toEqual({

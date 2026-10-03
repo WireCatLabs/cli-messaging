@@ -47,7 +47,7 @@ export const validatePermalink = (link: MessagePermalink): MessagePermalink => {
   if (link.url === null) {
     if (link.access !== "unavailable" || !["unsupported_chat", "unsupported_provider", "offline"].includes(link.reason))
       throw new CliError("validation_error", "the messenger returned invalid permalink metadata")
-    return link
+    return { url: link.url, access: link.access, reason: link.reason }
   }
   let url: URL
   try {
@@ -64,5 +64,5 @@ export const validatePermalink = (link: MessagePermalink): MessagePermalink => {
     !["public", "restricted", "unknown"].includes(link.access)
   )
     throw new CliError("validation_error", "the messenger returned an invalid permalink")
-  return link
+  return { url: link.url, access: link.access, reason: link.reason }
 }
