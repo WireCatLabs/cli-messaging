@@ -24,6 +24,9 @@ export type ChatAction =
   | "requests.accept"
   | "requests.decline"
   | "link.reset"
+  | "forum-upgrade"
+  | "forum-enable"
+  | "topic-create"
 
 /** What an `account` entry changed. Never the value it changed it to — no name, number or title. */
 export type AccountAction =
@@ -64,9 +67,11 @@ export interface SendEntry {
    * `sendId`. Absent on lines written before writes had one.
    */
   operationId?: string
+  parentOperationId?: string
   /** The message a reply answers. */
   replyTo?: Id
   threadId?: Id
+  resultChatId?: Id
   length?: number
   /** What was attached, by kind and size — never a file name. */
   attachments?: { kind: "photo" | "file" | "video" | "voice"; bytes: number }[]

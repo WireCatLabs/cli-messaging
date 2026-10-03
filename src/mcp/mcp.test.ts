@@ -786,6 +786,46 @@ describe("sending over MCP", () => {
     expect(JSON.stringify(entry)).not.toContain("see you")
   })
 
+  it("configures a forum and creates a topic through the same guarded service", async () => {
+    let enabled = false
+    const telegram = scripted({
+      forumState: async () => ({
+        chat,
+        forum: enabled,
+        needsUpgrade: false,
+        owner: true,
+        canCreate: true,
+        linkedDiscussion: false,
+      }),
+      enableForum: async () => {
+        enabled = true
+        return { chat, forum: true, needsUpgrade: false, owner: true, canCreate: true, linkedDiscussion: false }
+      },
+      createTopic: async () => ({
+        id: "12",
+        title: "synthetic",
+        closed: false,
+        pinned: false,
+        unreadCount: 0,
+        lastMessageAt: null,
+        createdAt: "2026-10-03T00:00:00Z",
+      }),
+    })
+    const { call, env } = await connect(telegram, {
+      config: levels({ "topics.enable": "allow", "topics.create": "allow" }),
+    })
+    expect((await call("chat_topics_enable", { chat: "7" })).isError).toBe(false)
+    const result = await call("chat_topics_create", { chat: "7", title: "synthetic", send_id: "42" })
+    expect(result.isError).toBe(false)
+    expect(result.body).toMatchObject({ sendId: "42", topic: { id: "12" } })
+    const entries = new SendJournal(sendsPathFor(app, "default", env)).entries()
+    expect(entries).toMatchObject([
+      { action: "forum-enable", outcome: "sent" },
+      { action: "topic-create", threadId: "12", sendId: "42", outcome: "sent" },
+    ])
+    expect(JSON.stringify(entries)).not.toContain("synthetic")
+  })
+
   it("preserves topic addressing through MCP send and poll tools", async () => {
     const validations: unknown[] = []
     const sends: unknown[] = []

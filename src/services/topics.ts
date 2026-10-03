@@ -1,0 +1,160 @@
+import { CliError, isCliError } from "@leemour/cli-core"
+import { capability, type ForumState } from "../cli/messenger/port.js"
+import type { Chat, Topic } from "../domain/models.js"
+import { guardedWrite, type Operated } from "../sends/guarded.js"
+import type { SendEntry } from "../sends/journal.js"
+import { newOperationId, newSendId } from "../sends/send-id.js"
+import type { ServiceDeps } from "./deps.js"
+
+export interface TopicsService {
+  enable(
+    chat: string,
+    options: { upgrade: boolean },
+  ): Promise<Operated<{ previousChatId: string; chat: Chat; upgraded: boolean; forum: true }>>
+  create(
+    chat: string,
+    title: string,
+    options: { sendId?: string },
+  ): Promise<Operated<{ chatId: string; topic: Topic; sendId: string }>>
+}
+
+export const topicsService = (deps: ServiceDeps): TopicsService => {
+  const online = async () => {
+    if (deps.offline)
+      throw new CliError("validation_error", "changing topics requires the messenger; not with --offline")
+    return deps.connection()
+  }
+  return {
+    enable: async (chat, { upgrade }) => {
+      const connection = await online()
+      const probe = capability(connection, "forumState", "configure forum topics")
+      const enable = capability(connection, "enableForum", "enable forum topics")
+      const previousChatId = (await connection.resolve(chat)).id
+      const operationId = newOperationId()
+      let prepared: ForumState | undefined
+      const attempt: Omit<SendEntry, "at" | "profile" | "outcome"> & { operationId: string; key: string } = {
+        operationId: `${operationId}:configure`,
+        parentOperationId: operationId,
+        chatId: previousChatId,
+        kind: "chat",
+        action: "forum-enable",
+        key: "topics.enable",
+      }
+      const validate = async (chatId: string) => {
+        const state = await probe(chatId)
+        if (!state.owner) throw new CliError("permission_error", "only the group owner can enable forum topics")
+        if (state.linkedDiscussion)
+          throw new CliError("validation_error", "a linked discussion group cannot enable forum topics")
+        if (state.needsUpgrade && !upgrade)
+          throw new CliError(
+            "validation_error",
+            "this basic group needs --upgrade to become a supergroup; its chat id will change",
+          )
+        return state
+      }
+      const first = await guardedWrite(
+        deps.guard,
+        attempt,
+        async () => {
+          if (!prepared) throw new CliError("invalid_response", "the forum preflight did not finish")
+          if (prepared.needsUpgrade)
+            return capability(connection, "upgradeForum", "upgrade a basic group")(prepared.chat.id)
+          return prepared.forum ? prepared : enable(prepared.chat.id)
+        },
+        (done) => ({ resultChatId: done.chat.id }),
+        async () => {
+          prepared = await validate(previousChatId)
+          if (prepared.chat.id !== previousChatId)
+            deps.guard.check({ ...attempt, chatId: prepared.chat.id }, { reserve: false })
+          attempt.chatId = prepared.chat.id
+          attempt.action = prepared.needsUpgrade ? "forum-upgrade" : "forum-enable"
+        },
+      )
+      let current = first
+      if (!current.forum && prepared?.needsUpgrade) {
+        try {
+          current = await guardedWrite(
+            deps.guard,
+            {
+              operationId: `${operationId}:enable`,
+              parentOperationId: operationId,
+              chatId: current.chat.id,
+              kind: "chat",
+              action: "forum-enable",
+              key: "topics.enable",
+            },
+            () => enable(first.chat.id),
+            (done) => ({ resultChatId: done.chat.id }),
+            async () => {
+              await validate(first.chat.id)
+            },
+          )
+        } catch (error) {
+          throw new CliError(
+            isCliError(error) ? error.code : "provider_error",
+            "the group was upgraded but enabling topics did not finish; check the new chat before repeating",
+            {
+              ...(isCliError(error) ? error.details : {}),
+              operationId,
+              previousChatId,
+              chatId: first.chat.id,
+              upgraded: first.chat.id !== previousChatId,
+              forum: null,
+              stage: "enable",
+            },
+          )
+        }
+      }
+      if (!current.forum)
+        throw new CliError("invalid_response", "Telegram did not confirm that topics were enabled", {
+          operationId,
+          chatId: current.chat.id,
+        })
+      return {
+        operationId,
+        previousChatId,
+        chat: current.chat,
+        upgraded: current.chat.id !== previousChatId,
+        forum: true,
+      }
+    },
+    create: async (chat, title, { sendId }) => {
+      if (title.trim() === "" || new TextEncoder().encode(title).byteLength > 128)
+        throw new CliError("validation_error", "a topic title needs 1–128 UTF-8 bytes")
+      const connection = await online()
+      const create = capability(connection, "createTopic", "create forum topics")
+      const probe = capability(connection, "forumState", "read forum settings")
+      const chatId = (await connection.resolve(chat)).id
+      const id = sendId ?? connection.newSendId?.() ?? newSendId()
+      let target = chatId
+      const topic = await guardedWrite(
+        deps.guard,
+        {
+          operationId: id,
+          sendId: id,
+          chatId,
+          kind: "chat",
+          action: "topic-create",
+          key: "topics.create",
+          length: title.length,
+        },
+        () => create(target, title, { sendId: id }),
+        (done) => ({ threadId: done.id, resultChatId: target }),
+        async () => {
+          const state = await probe(chatId)
+          if (!state.forum)
+            throw new CliError(
+              "validation_error",
+              "enable topics first with `topics enable`; creating a topic never upgrades a group",
+            )
+          if (!state.canCreate)
+            throw new CliError("permission_error", "creating a topic requires manage-topics permission")
+          target = state.chat.id
+          if (target !== chatId)
+            deps.guard.check({ chatId: target, kind: "chat", key: "topics.create" }, { reserve: false })
+        },
+      )
+      return { operationId: id, sendId: id, chatId: target, topic }
+    },
+  }
+}

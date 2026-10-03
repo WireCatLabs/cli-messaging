@@ -261,13 +261,33 @@ export const sendGuard = ({
     check: (request, { reserve = true } = {}) => {
       permitted(request)
       const asked = { ...request, people: request.personIds?.length ?? request.count }
-      if (!countsTowardLimit(asked)) return
+      const creatingTopic = request.kind === "chat" && request.action === "topic-create"
+      if (!countsTowardLimit(asked) && !creatingTopic) return
+      const checked = (entries: SendEntry[]) => {
+        if (!creatingTopic) return withinLimit(request, entries)
+        if (request.sendId === undefined) throw new CliError("validation_error", "a topic creation needs an attempt id")
+        if (
+          entries.some(
+            (entry) =>
+              entry.action === "topic-create" &&
+              entry.sendId === request.sendId &&
+              ["sent", "outcome_unknown", "reserved"].includes(entry.outcome),
+          )
+        ) {
+          throw new CliError(
+            "validation_error",
+            "this topic creation was already attempted; check topics list and do not repeat an unknown creation",
+            { sendId: request.sendId, retryable: false },
+          )
+        }
+        return true
+      }
       if (!reserve) {
-        withinLimit(request, journal.entries())
+        checked(journal.entries())
         return
       }
       journal.locked(() => {
-        if (!withinLimit(request, journal.entries())) return
+        if (!checked(journal.entries())) return
         const id = randomUUID()
         const { chatId, kind, action, sendId, operationId, scheduledFor, notify } = request
         journal.append({

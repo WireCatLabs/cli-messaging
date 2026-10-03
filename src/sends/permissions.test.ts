@@ -52,3 +52,9 @@ describe("a bot's permissions", () => {
     expect(levelFor({}, "bot.messages.delete").level).toBe("ask")
   })
 })
+
+it("maps legacy groups to forum configuration and creation", () => {
+  const result = fromOldSettings(false, ["groups"])
+  expect(result["topics.enable"]).toBe("ask")
+  expect(result["topics.create"]).toBe("allow")
+})

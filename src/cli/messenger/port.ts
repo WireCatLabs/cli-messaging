@@ -164,6 +164,22 @@ export interface ReadState {
   markRead(chatId: Id, until?: Id): Promise<void>
 }
 
+export interface ForumState {
+  chat: Chat
+  forum: boolean
+  needsUpgrade: boolean
+  owner: boolean
+  linkedDiscussion: boolean
+  canCreate: boolean
+}
+
+export interface ForumControl {
+  forumState(chatId: Id): Promise<ForumState>
+  upgradeForum(chatId: Id): Promise<ForumState>
+  enableForum(chatId: Id): Promise<ForumState>
+  createTopic(chatId: Id, title: string, options: { sendId: string }): Promise<Topic>
+}
+
 export interface ThreadAddressing {
   validateThread(chatId: Id, threadId: Id, options: { replyTo?: Id }): Promise<void>
 }
@@ -321,6 +337,7 @@ export interface MessengerAdapter
     Partial<ReadState>,
     Partial<MessagePolls>,
     Partial<ThreadAddressing>,
+    Partial<ForumControl>,
     Partial<LiveUpdates>,
     Partial<PushedHistory>,
     Partial<MessageMedia>,

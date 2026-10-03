@@ -1,4 +1,5 @@
 import { CliError } from "@leemour/cli-core"
+import { annotate } from "@leemour/cli-core/commands"
 import { Command } from "commander"
 import { renderPage, window, withPaging } from "../paging.js"
 import { type Messenger, messengerContext } from "./context.js"
@@ -37,5 +38,28 @@ export const topicsCommand = (messenger: Messenger): Command => {
     ).action(listed),
   )
 
+  annotate(topics.command("enable"), { mutates: true })
+    .description("enable forum topics; only the owner, with an explicit upgrade for a basic group")
+    .argument("<chat>", messenger.chatArgument)
+    .option("--upgrade", "upgrade a basic group to a supergroup first; its chat id changes")
+    .action(async function (this: Command, chat: string) {
+      const context = messengerContext(this, messenger)
+      context.renderer.result(
+        await context.withServices((services) =>
+          services.topics.enable(chat, { upgrade: this.opts<{ upgrade?: boolean }>().upgrade === true }),
+        ),
+      )
+    })
+  annotate(topics.command("create"), { mutates: true })
+    .description("create a named topic in an existing forum; never enable or upgrade a group implicitly")
+    .argument("<chat>", messenger.chatArgument)
+    .argument("<title>", "the topic title, at most 128 UTF-8 bytes")
+    .option("--send-id <id>", "identify this creation attempt; an already sent or unknown id is refused")
+    .action(async function (this: Command, chat: string, title: string) {
+      const context = messengerContext(this, messenger)
+      context.renderer.result(
+        await context.withServices((services) => services.topics.create(chat, title, this.opts<{ sendId?: string }>())),
+      )
+    })
   return topics
 }

@@ -56,6 +56,17 @@ describe("manifestProblems", () => {
     expect(problems).toEqual(['topics list: under "topics", which is tg-only and covers it'])
   })
 
+  it("allows explicit options under a provider-only resource", () => {
+    const declared = {
+      ...manifest({
+        topics: { in: ["tg"], reason: "MAX has none" },
+        "topics enable": { in: ["tg"], reason: "MAX has none", options: { "--all": "all" } },
+      }),
+      options: { "--all": { meaning: "synthetic option" } },
+    }
+    expect(manifestProblems(declared)).toEqual([])
+  })
+
   it("knows only the CLIs it lists, and a plan only for a CLI that lacks the command", () => {
     const problems = manifestProblems({
       ...manifest(

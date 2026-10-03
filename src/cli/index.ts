@@ -99,6 +99,8 @@ export type {
   After,
   ChatReading,
   Download,
+  ForumControl,
+  ForumState,
   GroupModeration,
   HistoryBatch,
   LiveUpdates,

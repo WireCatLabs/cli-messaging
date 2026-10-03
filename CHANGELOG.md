@@ -6,6 +6,10 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- `topics enable --upgrade` explicitly upgrades a basic group and enables forum topics; staged errors retain the new chat id. `topics create` creates a named topic with an attempt id. Reusing a sent, unknown or reserved creation id is refused by the profile journal; an unknown creation must never be repeated. CLI and MCP use the same permissions, preflight and metadata-only journal; enabling defaults to confirmation. No implicit group upgrade occurs when sending or creating a topic.
+
 ## 0.125.0 — 03.10.2026
 
 Released early: tg-cli needs the shared bot identity command and MCP tool
@@ -14,6 +18,7 @@ Released early: tg-cli needs the shared bot identity command and MCP tool
 
 - An opt-in shared `bot me` reads the bot profile's identity and offers the matching MCP tool.
   It refuses offline reads and closes its connection on every exit path; existing consumer commands migrate explicitly.
+
 
 ## 0.124.0 — 03.10.2026
 
@@ -32,6 +37,7 @@ Released early: max-cli release needs the corrected embedding status estimate an
 
 - A truncated `runs list` now suggests increasing `--limit`, instead of the unsupported
   `--page` option. The JSON envelope still reports `hasMore`; listing records creates no new run.
+
 
 ## 0.122.0 — 03.10.2026
 

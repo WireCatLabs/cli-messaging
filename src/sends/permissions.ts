@@ -66,6 +66,7 @@ export const DEFAULT_PERMISSIONS: Readonly<Record<PermissionKey, Level>> = {
   "messages.delete": "ask",
   "account.sessions.end": "ask",
   "bot.messages.delete": "ask",
+  "topics.enable": "ask",
 }
 
 /** The resources at the top of the command tree, which `readOnly` and `allow` turn read-only as a whole. */
@@ -99,6 +100,8 @@ const OLD_WORDS: Record<Permission, PermissionKey[]> = {
     "chats.link",
     "chats.requests",
     "chats.moderate",
+    "topics.enable",
+    "topics.create",
   ],
   contacts: ["contacts"],
   profile: ["account.update"],

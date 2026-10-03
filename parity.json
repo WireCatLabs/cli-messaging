@@ -495,6 +495,9 @@
       "value": "<message>",
       "meaning": "only up to this message id, inclusive; the newest by default"
     },
+    "--upgrade": {
+      "meaning": "explicitly upgrade a basic group to a supergroup before enabling topics; its chat id changes"
+    },
     "--verbose": {
       "meaning": "more detail in what is shown: -v ids, -vv everything known",
       "default": "0"
@@ -2057,6 +2060,26 @@
     "topics": {
       "in": ["tg"],
       "reason": "MAX has no forum topics"
+    },
+    "topics create": {
+      "in": [],
+      "planned": {
+        "tg": "adopt the shared forum control commands and Telegram adapter"
+      },
+      "reason": "MAX has no forum topics",
+      "options": {
+        "--send-id": "all"
+      }
+    },
+    "topics enable": {
+      "in": [],
+      "planned": {
+        "tg": "adopt the shared forum control commands and Telegram adapter"
+      },
+      "reason": "MAX has no forum topics",
+      "options": {
+        "--upgrade": "all"
+      }
     },
     "upgrade": {
       "in": "all",

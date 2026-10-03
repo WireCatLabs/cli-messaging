@@ -19,7 +19,7 @@ import { moderationTools } from "./tools/moderation.js"
 import { pollReadTools, pollWriteTools } from "./tools/polls.js"
 import { reactionTools } from "./tools/reactions.js"
 import { reviewTools } from "./tools/review.js"
-import { topicsTools } from "./tools/topics.js"
+import { topicsTools, topicWriteTools } from "./tools/topics.js"
 
 /**
  * The read tools, each answering what its command's `--json` prints. Named `<cli>_<command words>`,
@@ -48,6 +48,7 @@ export const deleteTools = (messenger: Messenger): Record<string, AnyTool> => me
 /** The writes others see, offered by the profile's permissions like every write. */
 export const sendTools = (messenger: Messenger): Record<string, AnyTool> => ({
   ...adminTools(messenger),
+  ...topicWriteTools(messenger),
   ...folderTools(messenger),
   ...contactWriteTools(messenger),
   ...moderationTools(messenger),

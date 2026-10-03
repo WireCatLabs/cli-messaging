@@ -235,3 +235,48 @@ describe("a send id", () => {
     }
   })
 })
+
+describe("topic creation identities", () => {
+  const forProfile = (profile: string) =>
+    sendGuard({
+      profile,
+      command: "app",
+      readOnly: false,
+      readOnlyFrom: "default",
+      sendsPerHour: 100,
+      journal: new SendJournal(sendsPathFor(profile)),
+      recipients: new RecipientList(recipientsPathFor(profile), app.command),
+      warn: () => {},
+    })
+  it.each(["sent", "outcome_unknown"] as const)(
+    "refuses an existing %s creation id without treating it as a message retry",
+    (outcome) => {
+      const profile = `topic-${outcome}`
+      const first = forProfile(profile)
+      const request = {
+        chatId: "7",
+        kind: "chat" as const,
+        action: "topic-create" as const,
+        sendId: "42",
+        operationId: "42",
+      }
+      first.check(request)
+      first.record({ ...request, outcome })
+      expect(() => forProfile(profile).check(request)).toThrow("already attempted")
+    },
+  )
+  it("reserves under the same lock and permits a known preflight failure to settle", () => {
+    const request = {
+      chatId: "7",
+      kind: "chat" as const,
+      action: "topic-create" as const,
+      sendId: "42",
+      operationId: "42",
+    }
+    const first = forProfile("topic-reservation")
+    first.check(request)
+    expect(() => forProfile("topic-reservation").check(request)).toThrow("already attempted")
+    first.record({ ...request, outcome: "failed", errorCode: "permission_error" })
+    expect(() => forProfile("topic-reservation").check(request, { reserve: false })).not.toThrow()
+  })
+})
