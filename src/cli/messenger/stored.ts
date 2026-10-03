@@ -46,6 +46,33 @@ export const stored = (
   const { chats, history, around } = messenger
   // A method not listed here saves nothing and passes through; a lane that should save adds its line.
   return throughWrapper(messenger, {
+    ...(messenger.forumState
+      ? {
+          forumState: async (chatId: string) => {
+            const state = await capability(messenger, "forumState", "read forum settings")(chatId)
+            await save("forum.read", (opened) => opened.saveChats(account, [state.chat]))
+            return state
+          },
+        }
+      : {}),
+    ...(messenger.upgradeForum
+      ? {
+          upgradeForum: async (chatId: string) => {
+            const state = await capability(messenger, "upgradeForum", "upgrade a group")(chatId)
+            await save("forum.upgrade", (opened) => opened.saveChats(account, [state.chat]))
+            return state
+          },
+        }
+      : {}),
+    ...(messenger.enableForum
+      ? {
+          enableForum: async (chatId: string) => {
+            const state = await capability(messenger, "enableForum", "enable forum topics")(chatId)
+            await save("forum.enable", (opened) => opened.saveChats(account, [state.chat]))
+            return state
+          },
+        }
+      : {}),
     self: () => messenger.self(),
     resolve: (reference) => messenger.resolve(reference),
     chat: (reference) => messenger.chat(reference),

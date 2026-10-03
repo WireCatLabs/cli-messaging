@@ -79,6 +79,12 @@ export const guardedWrite = async <T>(
     if (cancelled) throw new CliError("timeout", "the command ended before sending; nothing was sent")
     flight.preparing = false
     const done = await current.run(attempt.operationId, act)
+    if (cancelled)
+      throw new CliError(
+        "outcome_unknown",
+        "the command ended with a write in flight; check its result before continuing",
+        { operationId: attempt.operationId },
+      )
     once({ ...attempt, ...settled(done), outcome: "sent" })
     return done
   } catch (error) {

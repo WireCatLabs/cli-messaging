@@ -147,6 +147,71 @@ const call = async (
   return { code, stdout: streams.stdout, stderr: streams.stderr }
 }
 
+describe("forum setup commands", () => {
+  it("upgrades explicitly, enables on the new chat and creates a topic through guarded CLI", async () => {
+    const root = mkdtempSync(join(tmpdir(), "forum-cli-"))
+    const env = {
+      CHAT_STATE_DIR: join(root, "state"),
+      CHAT_CONFIG_DIR: join(root, "config"),
+      MESSAGING_STORE: join(root, "m.db"),
+    }
+    const state = (id = "7", forum = false, needsUpgrade = true) => ({
+      chat: { ...chat, id },
+      forum,
+      needsUpgrade,
+      owner: true,
+      linkedDiscussion: false,
+      canCreate: true,
+    })
+    const upgradeForum = vi.fn(async () => state("8", false, false))
+    const enableForum = vi.fn(async () => state("8", true, false))
+    const createTopic = vi.fn(async () => ({
+      id: "12",
+      title: "synthetic",
+      closed: false,
+      pinned: false,
+      unreadCount: 0,
+      lastMessageAt: null,
+      createdAt: "2026-10-03T00:00:00Z",
+    }))
+    let ready = false
+    const connection = {
+      ...fake,
+      resolve: async (reference: string) => ({ ...chat, id: reference === "Book" ? "7" : reference }),
+      forumState: async (id: string) => (id === "7" ? state() : state("8", ready, false)),
+      upgradeForum,
+      enableForum,
+      createTopic,
+    }
+    const missingFlag = await call(["topics", "enable", "Book", "--yes"], async () => connection, env)
+    expect(missingFlag.stderr.join("")).toContain("--upgrade")
+    const enabled = await call(
+      ["topics", "enable", "Book", "--upgrade", "--yes", "--json"],
+      async () => connection,
+      env,
+    )
+    expect(enabled.code).toBe(0)
+    expect(enabled.stdout).toHaveLength(1)
+    expect(JSON.parse(enabled.stdout[0] ?? "")).toMatchObject({
+      previousChatId: "7",
+      chat: { id: "8" },
+      upgraded: true,
+      forum: true,
+    })
+    expect(upgradeForum).toHaveBeenCalledTimes(1)
+    expect(enableForum).toHaveBeenCalledTimes(1)
+    ready = true
+    const made = await call(
+      ["topics", "create", "8", "synthetic", "--send-id", "42", "--json"],
+      async () => connection,
+      env,
+    )
+    expect(made.code).toBe(0)
+    expect(createTopic).toHaveBeenCalledWith("8", "synthetic", { sendId: "42" })
+    expect(JSON.parse(made.stdout[0] ?? "")).toMatchObject({ sendId: "42", topic: { id: "12" } })
+  })
+})
+
 describe("explicit topic addressing", () => {
   it("passes message and poll topics through the CLI and journal", async () => {
     const root = mkdtempSync(join(tmpdir(), "topic-cli-"))

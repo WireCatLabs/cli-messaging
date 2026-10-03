@@ -145,3 +145,9 @@ it does. tg-cli and max-cli take new versions through Dependabot pull requests.
 ## Licence
 
 MIT.
+
+Forum configuration uses the shared topics service: explicit enable/upgrade and named creation,
+with staged guards, original/result chat ids and unknown-outcome handling. Adapters opt into the
+forum capabilities; sending and creating a topic never implicitly convert a group. Enabling defaults
+to confirmation; topic creation preserves a caller's send id. Local history remains under its
+original peer id after migration.

@@ -127,7 +127,7 @@ export const manifestProblems = (manifest: Manifest): string[] => {
     const parent = path.split(" ").slice(0, -1).join(" ")
     if (parent && !manifest.commands[parent]) problems.push(`${path}: no row for its parent "${parent}"`)
     const cover = coveringRow(manifest, path)
-    if (cover) {
+    if (cover && (manifest.commands[cover]?.subtree || Object.keys(row.options ?? {}).length === 0)) {
       const above = manifest.commands[cover]
       const how = above?.subtree ? "planned" : above ? describe(above) : ""
       problems.push(`${path}: under "${cover}", which is ${how} and covers it`)
@@ -178,7 +178,12 @@ export const parityProblems = (manifest: Manifest, cli: Cli, program: CommandsJs
     const command = found.get(path)
     problems.push(...compare(cli, path, row, command !== undefined))
     // A command still planned for this CLI may come with any options: they are checked once it is.
-    if (row && command && expected(row, cli) === true && !solo(row))
+    if (
+      row &&
+      command &&
+      expected(row, cli) === true &&
+      (!solo(row) || (coveringRow(manifest, path) !== undefined && Object.keys(row.options ?? {}).length > 0))
+    )
       problems.push(...compareOptions(cli, path, row.options ?? {}, command.options))
   }
   return problems
