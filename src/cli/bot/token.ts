@@ -1,4 +1,5 @@
 import {
+  CliError,
   type CredentialSource,
   Credentials,
   type KeyringStore,
@@ -23,6 +24,7 @@ export class BotTokenStore {
   readonly profile: string
   readonly #account: string
   readonly #credentials: Credentials
+  readonly #keyringCredentials: Credentials
 
   constructor({ app, profile, env = process.env, keyring, configDir }: BotTokenStoreOptions) {
     const where = { appName: app.appName, prefix: app.envPrefix, env }
@@ -37,6 +39,14 @@ export class BotTokenStore {
       env,
       warn: (message) => process.stderr.write(`${message}\n`),
     })
+    this.#keyringCredentials = new Credentials({
+      configDir: configDir ?? resolvePaths(where).config,
+      service: app.appName,
+      isolated: pathsAreOverridden(where),
+      storage: "keyring",
+      ...(keyring ? { keyring } : {}),
+      env,
+    })
   }
 
   read(): { token: string; source: CredentialSource } | undefined {
@@ -46,6 +56,27 @@ export class BotTokenStore {
 
   write(token: string): CredentialSource {
     return this.#credentials.write(this.#account, token)
+  }
+
+  readKeyring(): string | undefined {
+    const stored = this.readStored()
+    return stored?.source === "keyring" ? stored.secret : undefined
+  }
+
+  readStored(): { secret: string; source: CredentialSource } | undefined {
+    try {
+      return this.#keyringCredentials.read(this.#account)
+    } catch {
+      throw new CliError("configuration_error", "the OS keyring is unavailable for the destination bot profile")
+    }
+  }
+
+  writeKeyring(token: string): void {
+    try {
+      this.#keyringCredentials.write(this.#account, token)
+    } catch {
+      throw new CliError("configuration_error", "the returned bot credential could not be stored in the OS keyring")
+    }
   }
 
   remove(): CredentialSource[] {

@@ -3,6 +3,7 @@ import type { Command } from "commander"
 import { pickChat } from "../../resolve.js"
 import { sendGuard } from "../../sends/guard.js"
 import { SendJournal } from "../../sends/journal.js"
+import type { Level, PermissionKey } from "../../sends/permissions.js"
 import { RecipientList } from "../../sends/recipients.js"
 import { readSecret } from "../../terminal/prompt.js"
 import { baseContext, environmentOf } from "../context.js"
@@ -47,7 +48,7 @@ export const botContext = (command: Command, bot: BotMessenger) => {
      * a fix is typed with — `max sales bot recipients add …` — and a bot has no hourly limit unless
      * its section sets one.
      */
-    guard: () =>
+    guard: (permissionDefaults?: Readonly<Record<PermissionKey, Level>>) =>
       sendGuard({
         profile: `${asFirstWord(profile)}bot`,
         command: bot.app.command,
@@ -55,6 +56,7 @@ export const botContext = (command: Command, bot: BotMessenger) => {
         readOnlyFrom: settings.sources.readOnly ?? "default",
         permissions: settings.permissions,
         permissionSources: settings.permissionSources,
+        ...(permissionDefaults ? { permissionDefaults } : {}),
         permissionFix: (request, key) =>
           bot.permissionFix?.(settings, request) ??
           `${bot.app.command} ${asFirstWord(profile)}config set --bot permissions.${key} allow`,

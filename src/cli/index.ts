@@ -27,6 +27,18 @@ export { momentOf } from "../services/moment.js"
 export { maskedAccount } from "../services/people.js"
 export { type AppIdentity, envName } from "./app.js"
 export { botAdminsCommand, botMembersCommand } from "./bot/admins.js"
+export { type ApiCommandInput, type ApiCommands, generatedApiCommand } from "./bot/api.js"
+export {
+  apiFlagOf,
+  apiJson,
+  apiOptionKey,
+  apiPlainJson,
+  checkApiBody,
+  checkApiParameter,
+  parseApiJson,
+  readApiBody,
+} from "./bot/api-input.js"
+export { prepareRpcApiBody, type RpcApiBody } from "./bot/api-rpc.js"
 export { botCommand } from "./bot/command.js"
 export { type BotContext, botContext, botWords } from "./bot/context.js"
 export { type BotCopy, botCopy } from "./bot/copy.js"
@@ -50,6 +62,7 @@ export {
   type BotMenuEntry,
   type BotMessaging,
   type BotMessenger,
+  type BotNativeApi,
   type BotNotice,
   type BotPeople,
   type BotPress,
@@ -200,5 +213,4 @@ export {
   settingsFor,
 } from "./settings.js"
 export { skillCommand } from "./skill-command.js"
-
 export { type UpgradeContext, upgradeCommand } from "./upgrade-command.js"

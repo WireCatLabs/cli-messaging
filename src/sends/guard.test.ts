@@ -25,6 +25,26 @@ describe("the send guard", () => {
       now: () => new Date(time),
     })
 
+  it("applies provider destructive defaults while honoring explicit leaf permission and broader denial", async () => {
+    const make = (permissions: Record<string, "allow" | "readonly">) =>
+      sendGuard({
+        profile: "api-defaults",
+        readOnly: false,
+        readOnlyFrom: "default",
+        permissions,
+        permissionDefaults: { "bot.api.rotate": "ask" },
+        sendsPerHour: Infinity,
+        journal: new SendJournal(sendsPathFor("api-defaults")),
+        recipients: new RecipientList(recipientsPathFor("api-defaults"), app.command),
+        warn: () => {},
+      })
+    const request = { chatId: null, key: "bot.api.rotate" }
+    expect(() => make({}).check(request)).toThrow(/asks before/)
+    await expect(make({}).ask?.(request)).rejects.toThrow()
+    expect(() => make({ "bot.api.rotate": "allow" }).check(request, { reserve: false })).not.toThrow()
+    expect(() => make({ bot: "readonly" }).check(request)).toThrow(/does not let/)
+  })
+
   it("forgets sends older than an hour, and names the moment the limit opens again", () => {
     const journal = new SendJournal(sendsPathFor("g-window"))
     for (const at of ["2026-09-24T08:00:00Z", "2026-09-24T09:10:00Z", "2026-09-24T09:20:00Z", "2026-09-24T09:30:00Z"]) {

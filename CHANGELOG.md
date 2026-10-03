@@ -8,6 +8,11 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Added
 
+- Shared generated native Bot API commands, JSON body/field validation, lossless integer handling
+  and schema-directed multipart planning for HTTP and RPC consumers. Generated credential-returning
+  methods require an explicit `--store-token` destination; bot token storage can require the OS
+  keyring without a plaintext fallback. Providers can supply destructive permission defaults.
+
 - Detailed parity audit evidence and synthetic consumer checks via `--deep --output <new-directory>`; the existing surface audit is preserved.
 
 ### Fixed
