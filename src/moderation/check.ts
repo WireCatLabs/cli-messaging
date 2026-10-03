@@ -263,7 +263,11 @@ export const gather = async (adapter: MessengerAdapter, chatId: Id, since: numbe
     more = page.hasMore && page.items.length > 0
   }
 
-  const events = adapter.chatEvents ? (await adapter.chatEvents(chatId, { since })).events : []
+  const scanned = adapter.chatEvents ? (await adapter.chatEvents(chatId, { since })).events : []
+  const until = messages.at(-1)?.timestamp ?? null
+  // Event scans may read farther than the capped message batch; those joins belong to the next run.
+  const events =
+    more && until !== null ? scanned.filter((event) => Date.parse(event.timestamp) <= Date.parse(until)) : scanned
   if (!adapter.chatEvents) notes.push("this messenger does not say who joined, so only messages are judged")
   const joinedIds = new Set(
     events
@@ -283,7 +287,7 @@ export const gather = async (adapter: MessengerAdapter, chatId: Id, since: numbe
     joined,
     answerers: new Set(admins ?? []),
     service: new Set(events.map((one) => one.messageId)),
-    until: messages.at(-1)?.timestamp ?? null,
+    until,
     more,
     notes,
   }
