@@ -6,6 +6,10 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.129.0 — 03.10.2026
+
+Released early: max-cli needs the common upgrade workflow and metadata-preserving MCP search bridge
+
 ### Added
 
 - The MCP message-search schema and response bridge are exported for consumers retaining their own
