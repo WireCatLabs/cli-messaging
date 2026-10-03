@@ -1,6 +1,6 @@
 # Phase 5 — search by meaning over a chat's conversations
 
-Plan, 2026-10-02. **Draft; the owner answered §7 on 2026-10-02 (NEED-517 A, NEED-518 A, NEED-519 A) and asked for an external API and parallel embedding, which §4 now plans (E11, E12); nothing is built.** It follows [`../decisions.md`](../decisions.md):
+Plan, 2026-10-02. **Correction 2026-10-03: built, released and measured; all [work items](#5-work-items) are complete. The owner answered §7 on 2026-10-02 (NEED-517 A, NEED-518 A, NEED-519 A); the external API and parallel embedding (E11, E12) shipped too.** It follows [`../decisions.md`](../decisions.md):
 embeddings are computed **locally**, by one small multilingual model or a short list, kept in the folder the
 speech models already share (NEED-412 A); they go on chunks of conversations, never on single messages,
 and are never used to link messages. Requirements §18, §19 and "Phase 5" ask for `conversation_documents`,
@@ -219,7 +219,11 @@ the default). Facts: [`../research/2026-10-02-embedding-apis.md`](../research/20
 - **Local, by default: one session on `min(8, cores)` threads**, set explicitly (Bun otherwise takes 1):
   ~1.45× the 4-thread speed for ~60 MB more. More threads gain nothing.
 - **`--workers <n>`** runs n sessions in `node:worker_threads`, each with its own copy of the model, the
-  threads split between them: 3 workers ~1.8×, 6 ~2.0× on this 12-core laptop, at ~0.6 GB a worker. The
+  threads split between them. **Correction 2026-10-03:** the [100k-message benchmark](../../../bench/embeddings/README.md#100k-messages-2026-10-02)
+  measured 3 workers at 1.04–1.1× one session on 8 threads, with ~2.6–2.7 GB peak RSS
+  against Node's 1.2 GB. The research's ~1.8× at 3 workers and ~2.0× at 6 used one session on
+  **4 threads** as the baseline and different worker allocations. Retain the current split (handoff
+  option B); extra workers have a substantial memory cost for a small measured gain. The
   command prints the memory it will take and refuses a count whose sessions would not fit in the free
   memory (`os.freemem()`), so it never pushes the machine into swap. The main thread tokenizes and writes;
   workers only run the model; one transaction per batch of results, as E6.

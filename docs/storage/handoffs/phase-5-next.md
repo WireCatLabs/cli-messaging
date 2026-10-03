@@ -1,5 +1,13 @@
 # Handoff — phase 5 follow-ups: embed speed, the status estimate, the plan's header (2026-10-03)
 
+**Correction 2026-10-03: all three follow-ups are complete in `fix/phase5-embedding-followups`.**
+The owner approved option B: retain the thread split and correct the claims. The estimate now uses
+31 chunks/s, and the phase-5 header records completion. Lint, typecheck, coverage (1,042 tests passed,
+2 skipped), docs check, build, Node/Bun dist checks and Bun smoke passed. On a synthetic 1,000-message
+chat, `embed status` returned 433 remaining chunks and 14 seconds (`ceil(433 / 31)`). The existing
+100k benchmark remains the evidence for the unchanged allocation; it was not rerun. Implementation plan:
+[`2026-10-03-phase5-followups.md`](../../plans/2026-10-03-phase5-followups.md).
+
 Supersedes [`phase-5-rest.md`](phase-5-rest.md), whose five items are done. The trail, optional, grep by
 id: max-cli `docs_ai/journal/2026-10-02-storage-phase-5-plan.md` and `2026-10-03-storage-phase-5-plan.md`.
 
@@ -8,9 +16,9 @@ id: max-cli `docs_ai/journal/2026-10-02-storage-phase-5-plan.md` and `2026-10-03
 `@leemour/cli-messaging` is the shared half of tg-cli and max-cli, with one SQLite store for every
 messenger ([storage README](../README.md)). Phase 5, search by meaning, is built, released and
 measured: [how it works](../search-indexes.md#search-by-meaning), [the plan](../plans/phase-5.md),
-[the numbers at 100k messages](../../../bench/embeddings/README.md). Three small things are left, all in
-`conversations embed`: workers that barely help, a time estimate twice too long, and a stale line in the
-plan.
+[the numbers at 100k messages](../../../bench/embeddings/README.md). **Correction 2026-10-03:**
+the three follow-ups are complete as recorded above. The orientation and work list below describe the
+pre-fix snapshot; they are retained as the task's history, not instructions for new work.
 
 ## 2. Orient in one call
 

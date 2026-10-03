@@ -43,7 +43,8 @@ export const TEXT_MODELS: TextModel[] = [
     licence: "MIT",
     dims: 384,
     maxTokens: 512,
-    chunksPerSecond: 15,
+    // 100k-message corpus, one 8-thread session on Ryzen AI 9 HX 470: 31–32 chunks/s.
+    chunksPerSecond: 31,
     pooling: "mean",
     prefix: { query: "query: ", passage: "passage: " },
     onnx: "onnx/model_quantized.onnx",

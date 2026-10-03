@@ -8,8 +8,10 @@ export const WORKER_BYTES = 700_000_000
 
 /**
  * One session in this thread, or `workers` sessions in worker threads with the threads split between
- * them: ~1.8× at 3 workers, ~2× at 6 on a 12-core laptop. Refuses a count whose copies would not fit in
- * the free memory, so a run never pushes the machine into swap.
+ * them. Correction 2026-10-03: the 100k-message benchmark measured 3 workers at 1.04–1.1× one
+ * session on 8 threads, with ~2.6–2.7 GB RSS against Node's 1.2 GB (bench/embeddings/README.md).
+ * The research's ~1.8× used 4 threads per worker against one session on 4, not this allocation.
+ * Refuses a count whose copies would not fit in free memory.
  */
 export const openPool = async (
   model: TextModel,

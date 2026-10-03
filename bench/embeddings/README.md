@@ -60,7 +60,10 @@ What this says:
   conversation, and SQLite answers each step by reading every vector of the model and sorting them in a
   temporary B-tree: 9 steps cost 1.3 s, while the same rows in one statement come back in 166 ms. The
   query length does not matter, and neither does the runtime.
-- **Workers barely help**: 1.1× with 3 on Node, 1.04× on Bun, against the ~1.8× of the research grid.
+- **Workers barely help**: 1.1× with 3 on Node, 1.04× on Bun. **Correction 2026-10-03:** the research
+  grid's ~1.8× compares 3 workers on 4 threads each against one session on **4 threads**, whereas this
+  benchmark compares the default allocation against one session on **8 threads**. These gains are not
+  directly comparable; option B retains the measured default allocation.
   One worker gets `min(8, cores)` = 8 threads; three get 2 each, 6 in all (`src/embeddings/pool.ts`), which
   probably explains it: the total threads do not grow. Not measured with more threads per worker.
 - **Bun with one worker peaks at 3.2 GB**, Node at 1.2 GB, for the same run.

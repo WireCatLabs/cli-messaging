@@ -6,6 +6,13 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Fixed
+
+- `conversations embed status` uses the measured e5-small speed of 31 chunks/s instead of 15,
+  bringing its estimate closer to the 100k-message run on a Ryzen AI 9 HX 470. Estimates still
+  depend on hardware and input length. Worker guidance now states the measured 1.04–1.1× gain
+  for three workers and its memory cost, instead of comparing against a slower research baseline.
+
 ## 0.123.0 — 03.10.2026
 
 ### Fixed
