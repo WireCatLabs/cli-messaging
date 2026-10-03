@@ -30,7 +30,8 @@ export const sandboxEnvironment = (home: string): NodeJS.ProcessEnv => ({
   NO_COLOR: "1",
 })
 
-export const temporaryHome = () => mkdtempSync(join(tmpdir(), "parity-deep-home-"))
+// Nested caller TMPDIR values can exceed the consumer's Unix socket path limit.
+export const temporaryHome = () => mkdtempSync(join(process.platform === "win32" ? tmpdir() : "/tmp", "pa-"))
 export const git = (root: string, ...args: string[]) =>
   execFileSync("git", ["-C", root, ...args], { encoding: "utf8" }).trim()
 export const readJson = <T>(path: string): T => JSON.parse(readFileSync(path, "utf8")) as T

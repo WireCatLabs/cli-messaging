@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { describe, expect, it } from "vitest"
-import { check, mcpSchemas, mountingEvidence, sandboxEnvironment, sourceEvidence } from "./evidence.ts"
+import { check, mcpSchemas, mountingEvidence, sandboxEnvironment, sourceEvidence, temporaryHome } from "./evidence.ts"
 
 const directory = () => mkdtempSync(join(tmpdir(), "parity-probe-test-"))
 const server = (root: string, response: string) => {
@@ -80,3 +80,12 @@ describe("isolated parity evidence capture", () => {
     expect(result[2]?.verdict).toContain("unresolved")
   })
 })
+
+it.skipIf(process.platform === "win32")(
+  "keeps the isolated path short enough for the longest consumer Unix socket fixture",
+  () => {
+    const home = temporaryHome()
+    const socket = join(home, "max-test-123456", "state/profiles/s-refused-error.limit.violate.sock")
+    expect(Buffer.byteLength(socket)).toBeLessThanOrEqual(103)
+  },
+)
