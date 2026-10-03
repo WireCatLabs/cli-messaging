@@ -12,6 +12,11 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 - Detailed schema comparison preserves actual fields named `title`/`description` and literal default/const values, while ignoring documentation annotations; field bounds/types and defaults cannot disappear as prose.
 
+- The parity manifest marks native `bot api` and its credential destination option as present in
+  both CLIs after Telegram's generated API and MAX's shared command migration merged.
+  Generated native operations use the standard's provider-schema exemption; the common group,
+  its flags and handwritten commands still require manifest rows.
+
 ## 0.134.0 — 03.10.2026
 
 Released early: tg-cli generated Bot API and max-cli shared native API adoption need the generated command assembler, RPC input helpers and keyring-only credential storage exports

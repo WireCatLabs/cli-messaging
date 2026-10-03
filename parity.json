@@ -585,13 +585,10 @@
       "in": "all"
     },
     "bot api": {
-      "in": ["max"],
-      "planned": { "tg": "generated Bot API" },
-      "subtree": true,
+      "in": "all",
       "options": {
         "--store-token": {
-          "in": [],
-          "planned": { "max": "generated Bot API", "tg": "generated Bot API" }
+          "in": "all"
         }
       }
     },

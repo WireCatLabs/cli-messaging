@@ -176,6 +176,16 @@ export const parityProblems = (manifest: Manifest, cli: Cli, program: CommandsJs
     if (coveringRow(manifest, path)) continue
     const row = manifest.commands[path]
     const command = found.get(path)
+    const nativeApi = manifest.commands["bot api"]
+    if (
+      !row &&
+      command?.origin === "generated" &&
+      command.operationId &&
+      path.startsWith("bot api ") &&
+      nativeApi &&
+      expected(nativeApi, cli) !== false
+    )
+      continue
     problems.push(...compare(cli, path, row, command !== undefined))
     // A command still planned for this CLI may come with any options: they are checked once it is.
     if (

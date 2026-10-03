@@ -98,6 +98,29 @@ describe("manifestProblems", () => {
 })
 
 describe("parityProblems", () => {
+  it("exempts provider-native generated operations while still checking the common API group", () => {
+    const rows = manifest({ bot: { in: "all" }, "bot api": { in: "all", options: { "--all": "all" } } })
+    const native: CommandInfo = {
+      ...command("bot api provider-operation", ["--native-field <value>"]),
+      origin: "generated",
+      operationId: "providerOperation",
+    }
+    const tree = (child: CommandInfo, flags = ["--all"]) =>
+      program(command("bot", [], [command("bot api", flags, [child])]))
+    expect(parityProblems(rows, "tg", tree(native))).toEqual([])
+    expect(parityProblems(rows, "tg", tree(native, []))).toEqual(["bot api --all: the manifest says all, tg lacks it"])
+    expect(parityProblems(rows, "tg", tree(command("bot api handwritten")))).toEqual([
+      "bot api handwritten: not in the manifest — add its row first",
+    ])
+    const noOperation: CommandInfo = { ...command("bot api unclassified"), origin: "generated" }
+    expect(parityProblems(rows, "tg", tree(noOperation))).toEqual([
+      "bot api unclassified: not in the manifest — add its row first",
+    ])
+    expect(parityProblems(rows, "tg", program({ ...native, path: ["messages", "provider-operation"] }))).toContain(
+      "messages provider-operation: not in the manifest — add its row first",
+    )
+  })
+
   const rows = manifest({
     store: { in: "all" },
     "store fetch": { in: "all", options: { "--all": "all", "--max": { in: [], planned: { max: "P1", tg: "P1" } } } },
