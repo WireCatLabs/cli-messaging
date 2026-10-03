@@ -6,6 +6,10 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.121.0 — 03.10.2026
+
+Released early: tg-cli onboarding documentation needs the checker to accept command help
+
 ### Fixed
 
 - The parity manifest no longer permits max's retired `cache` command subtree. Max now uses the
