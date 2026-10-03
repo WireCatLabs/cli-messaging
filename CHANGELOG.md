@@ -8,6 +8,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## 0.138.0 — 03.10.2026
 
+Released early: max-cli hearing and unanswered-review fixes need the new read connection and enrichment APIs
+
 Released early: MAX permission cutover needs legacy pin/unpin preservation and enforcement of explicit unpin overrides
 
 ### Fixed
