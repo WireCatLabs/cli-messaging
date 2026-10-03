@@ -6,6 +6,10 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.139.0 — 03.10.2026
+
+Released early: max-cli hearing and unanswered-review fixes need the new read connection and enrichment APIs
+
 ### Added
 
 - Personal `messages link` and read-only MCP return an account-scoped locator plus an optional
