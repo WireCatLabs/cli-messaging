@@ -1098,9 +1098,9 @@
       "in": "all"
     },
     "config migrate": {
-      "in": [],
-      "planned": { "max": "P7", "tg": "P7" },
-      "options": { "--dry-run": { "in": [], "planned": { "max": "P7", "tg": "P7" } } }
+      "in": ["tg"],
+      "planned": { "max": "P7" },
+      "options": { "--dry-run": { "in": ["tg"], "planned": { "max": "P7" } } }
     },
     "config set": {
       "in": "all",
