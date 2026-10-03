@@ -6,6 +6,10 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.138.0 — 03.10.2026
+
+Released early: MAX permission cutover needs legacy pin/unpin preservation and enforcement of explicit unpin overrides
+
 ### Fixed
 
 - Legacy `allow: ["pin"]` retains permission to unpin during configuration migration. Shared
