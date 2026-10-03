@@ -118,7 +118,8 @@
     },
     "--chat": {
       "value": "<chat>",
-      "meaning": "a chat, by id or name; repeat it for more"
+      "meaning": "a chat, by id or name; repeat it for more",
+      "note": "chat addressing follows each messenger's supported names, usernames and Saved Messages aliases, so it differs on purpose (Help text rule 4); both message searches resolve stored names without networking"
     },
     "--check": {
       "meaning": "say whether a newer version exists, and install nothing"
