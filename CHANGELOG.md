@@ -6,6 +6,10 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.128.0 — 03.10.2026
+
+Released early: max-cli shared group reads need accurate truncation guidance and compatible event flags
+
 ## 0.127.0 — 03.10.2026
 
 Released early: max-cli and tg-cli search integration need the shared Lucene query profile
