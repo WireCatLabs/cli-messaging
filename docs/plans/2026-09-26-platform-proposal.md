@@ -587,4 +587,4 @@ is published on npm like this package, once backfill and search exist; `tg updat
   user registers their own, and Telegram's rules back it (§5). The earlier recommendation weighed a
   lower entry barrier over one shared id carrying every user's behaviour.
 
-**Markdown — B1b.** 🚧 `feat/messenger-markdown`: shared send/edit call a formatter owned by each CLI; Telegram and MAX grammars/mapping, personal and bot paths. Additive formatting port, no schema change.
+**Markdown — B1b.** Shared provider-formatting capability shipped in #466 (0.132.0); Telegram adopted in tg-cli #242. MAX adapter/consumer adoption is in max-cli #361. Commands delegate to CLI-owned grammars for personal and bot send/edit; neutral formatting fields are additive, with no store schema change.
