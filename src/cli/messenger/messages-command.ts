@@ -60,18 +60,13 @@ export const messagesCommand = (messenger: Messenger): Command => {
         throw new CliError("validation_error", "--mark-read tells the messenger; not with --offline")
       }
       const { limit } = context.settings
-      const page = await context.withServices((services) =>
-        services.messages.list(chat, {
-          limit,
-          ...start,
-        }),
-      )
-      const hearing = await hearForCommand(context, messenger, page.items, transcribe === true, hearWith)
-      const newest = page.items.at(-1)
-      const marked =
-        markRead && newest
-          ? await context.withServices((services) => services.chats.markRead({ chat, until: newest.id }))
-          : undefined
+      const { page, hearing, marked } = await context.withServices(async (services, connect) => {
+        const page = await services.messages.list(chat, { limit, ...start })
+        const newest = page.items.at(-1)
+        const marked = markRead && newest ? await services.chats.markRead({ chat, until: newest.id }) : undefined
+        const hearing = await hearForCommand(context, messenger, page.items, transcribe === true, hearWith, connect)
+        return { page, hearing, marked }
+      })
       if (marked) context.renderer.note(`marked read up to ${marked.until}`)
       const next = (items: typeof page.items) =>
         start.after === undefined

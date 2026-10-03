@@ -253,7 +253,12 @@ messenger, `offline`, and a connection, a store and an account that are each ope
 so a read from the store never connects. `servicesFor(deps)` hands out `messages`, `chats`, `people`,
 `inbox` and `archive`. A command gets them from `withServices` on its context, which closes what was
 opened; an MCP tool builds them over the session's connection with `onlineDeps`, or over the store
-with `storedDeps`. Either way a command and its tool run the same method, and so answer the same
+with `storedDeps`. **Correction 2026-10-03:** the services callback can also borrow the held
+connection for hearing. It fetches recordings on that connection and releases it before local
+recognition; closing is awaited once, and store cleanup still runs if closing rejects. Review's
+optional `enrich` hook runs after admin lookups and before unanswered filtering, so transcript text
+can supply a voice question without changing the archived message text. MCP retains session-owned
+connections. Either way a command and its tool run the same method, and so answer the same
 error for the same input. Each caller still parses its own input, so an error names `--since` in a
 command and `since` in a tool.
 

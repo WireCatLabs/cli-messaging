@@ -2,7 +2,7 @@ import * as v from "valibot"
 import type { Messenger } from "../../cli/messenger/context.js"
 import { REVIEW_DAYS, reviewStart, UNANSWERED_HOURS } from "../../services/inbox.js"
 import { momentOf } from "../../services/moment.js"
-import { heard, hearForTool, modelWith } from "../../speech/hearing.js"
+import { type Hearing, heard, hearForTool, modelWith } from "../../speech/hearing.js"
 import { type AnyTool, chatOf, READ, tool } from "../tool.js"
 
 export const reviewTools = (messenger: Messenger): Record<string, AnyTool> => ({
@@ -38,21 +38,29 @@ export const reviewTools = (messenger: Messenger): Record<string, AnyTool> => ({
     annotations: READ,
     served: async (services, args, defaults, connect) => {
       const model = modelWith(args.transcribe, args.model)
+      let hearing: Hearing | undefined
+      const transcribe = args.transcribe === true
       const found = await services.inbox.review({
         since: args.since_time === undefined ? reviewStart() : momentOf(args.since_time, "since_time"),
         ...(args.chat === undefined ? {} : { chat: args.chat }),
         ...(args.all ? { all: true } : {}),
         ...(args.unanswered === undefined ? {} : { unansweredAfterHours: args.unanswered }),
+        enrich: async (raw) => {
+          hearing = await hearForTool(
+            messenger,
+            connect,
+            raw.chats.flatMap((chat) => chat.messages),
+            transcribe,
+            defaults,
+            model,
+          )
+          return {
+            ...raw,
+            complete: raw.complete && (hearing?.unheard.length ?? 0) === 0,
+            chats: raw.chats.map((chat) => ({ ...chat, messages: heard(chat.messages, hearing) })),
+          }
+        },
       })
-      const transcribe = args.transcribe === true
-      const hearing = await hearForTool(
-        messenger,
-        connect,
-        found.chats.flatMap((chat) => chat.messages),
-        transcribe,
-        defaults,
-        model,
-      )
       return {
         ...found,
         complete: found.complete && (hearing?.unheard.length ?? 0) === 0,

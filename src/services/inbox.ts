@@ -151,6 +151,8 @@ export interface ReviewOptions {
   /** Keep only questions nobody answered in this many hours. */
   unansweredAfterHours?: number
   now?: number
+  /** Apply retained or newly heard transcripts before unanswered filtering. */
+  enrich?: (review: Review) => Promise<Review>
 }
 
 /**
@@ -179,7 +181,7 @@ const window = async (adapter: InboxReader, chat: Id, since: number, cut: number
  */
 export const reviewIn = async (
   adapter: InboxReader,
-  { since, chat, all = false, unansweredAfterHours, now = Date.now() }: ReviewOptions,
+  { since, chat, all = false, unansweredAfterHours, now = Date.now(), enrich }: ReviewOptions,
 ): Promise<Review> => {
   const page = await adapter.chats({ limit: CHAT_WINDOW, offset: 0 })
   const changed = byRecency(
@@ -206,11 +208,18 @@ export const reviewIn = async (
     partial,
     quiet,
   }
-  if (unansweredAfterHours === undefined) return found
+  const answerers = new Map<Id, Id[] | undefined>()
+  if (unansweredAfterHours !== undefined) {
+    for (const one of chats) {
+      answerers.set(one.id, one.kind === "dialog" ? [] : ((await adapter.admins?.(one.id)) ?? undefined))
+    }
+  }
+  const reviewed = enrich ? await enrich(found) : found
+  if (unansweredAfterHours === undefined) return reviewed
 
   const open: ReviewChat[] = []
-  for (const one of chats) {
-    const admins = one.kind === "dialog" ? [] : ((await adapter.admins?.(one.id)) ?? undefined)
+  for (const one of reviewed.chats) {
+    const admins = answerers.get(one.id)
     const questions = unanswered(one.messages, {
       answerers: new Set(admins ?? []),
       before: now - unansweredAfterHours * 3_600_000,
@@ -219,7 +228,7 @@ export const reviewIn = async (
       open.push({ ...one, messages: questions, answeredBy: admins === undefined ? "owner" : "owner-and-admins" })
     }
   }
-  return { ...found, chats: open, unanswered: { olderThanHours: unansweredAfterHours } }
+  return { ...reviewed, chats: open, unanswered: { olderThanHours: unansweredAfterHours } }
 }
 
 /** A shared link's query string is not a question. */
@@ -250,7 +259,9 @@ export const unanswered = (
 
   return messages.filter((message, index) => {
     if (answers(message) || Date.parse(message.timestamp) >= before) return false
-    if (!message.text.replace(LINKS, "").includes("?") && !repliesToAnswerer(message)) return false
+    const transcript = "transcript" in message && typeof message.transcript === "string" ? message.transcript : ""
+    if (![message.text, transcript].join("\n").replace(LINKS, "").includes("?") && !repliesToAnswerer(message))
+      return false
     const later = messages.slice(index + 1)
     if (later.some((reply) => (reply.replyTo?.id ?? reply.replyToId) === message.id && answers(reply))) return false
     const next = later.find((other) => other.senderId !== message.senderId)

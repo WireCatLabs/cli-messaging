@@ -101,6 +101,8 @@ export interface Messenger {
   diagnose?: (command: Command, context: BaseContext) => Promise<Record<string, unknown>>
 }
 
+export type ReadConnection = <T>(work: (adapter: MessengerAdapter) => Promise<T>) => Promise<T>
+
 export interface MessengerContext extends BaseContext {
   profile: string
   stdin: NodeJS.ReadableStream & { isTTY?: boolean }
@@ -119,7 +121,10 @@ export interface MessengerContext extends BaseContext {
     options?: { name?: string },
   ) => Promise<T>
   /** The shared use cases, over a connection and a store each opened only if a service asks for it. */
-  withServices: <T>(work: (services: Services) => Promise<T>, options?: { name?: string }) => Promise<T>
+  withServices: <T>(
+    work: (services: Services, connect?: ReadConnection) => Promise<T>,
+    options?: { name?: string },
+  ) => Promise<T>
 }
 
 /** Long enough for a local write; a store that hangs must not keep the process alive. */
@@ -171,12 +176,18 @@ export const connected = (
             ...(deletedWithoutChat ? { deletedWithoutChat } : {}),
           }),
     close: async () => {
-      await connection.close()
-      if (!(await settled(pending, SAVES_WAIT_MS))) {
-        events({ event: "warning", code: "store_not_written", operation: "close" })
-        renderer.warn("not saved to the local store: the last messages were still being written at exit")
+      try {
+        await connection.close()
+      } finally {
+        try {
+          if (!(await settled(pending, SAVES_WAIT_MS))) {
+            events({ event: "warning", code: "store_not_written", operation: "close" })
+            renderer.warn("not saved to the local store: the last messages were still being written at exit")
+          }
+        } finally {
+          if (store) await (await store.catch(() => undefined))?.close()
+        }
       }
-      if (store) await (await store.catch(() => undefined))?.close()
     },
   }
 }
@@ -279,6 +290,8 @@ export const messengerContext = (command: Command, messenger: Messenger): Messen
         async (events) => {
           let held: ReturnType<typeof connected> | undefined
           let store: Promise<MessageStore> | undefined
+          let released: Promise<void> | undefined
+          const releaseConnection = () => (released ??= held?.close() ?? Promise.resolve())
           const deps: ServiceDeps = {
             messenger,
             profile,
@@ -288,6 +301,7 @@ export const messengerContext = (command: Command, messenger: Messenger): Messen
             guard,
             connection: async () => {
               if (base.settings.offline) throw new CliError("validation_error", OFFLINE)
+              if (released) throw new CliError("validation_error", "the read connection has already been released")
               if (!held) {
                 const connection = await messenger.connect(command, base, { events })
                 base.track(connection)
@@ -309,10 +323,19 @@ export const messengerContext = (command: Command, messenger: Messenger): Messen
             },
           }
           try {
-            return await work(servicesFor(deps))
+            return await work(servicesFor(deps), async (read) => {
+              try {
+                return await read(await deps.connection())
+              } finally {
+                await releaseConnection()
+              }
+            })
           } finally {
-            await held?.close()
-            if (store) await (await store.catch(() => undefined))?.close()
+            try {
+              await releaseConnection()
+            } finally {
+              if (store) await (await store.catch(() => undefined))?.close()
+            }
           }
         },
         name === undefined ? {} : { name },
