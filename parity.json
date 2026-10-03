@@ -429,6 +429,10 @@
       "value": "<messenger>",
       "meaning": "every account of this messenger held in the store; personal, bots or all — the same as in: in the query"
     },
+    "--store-token": {
+      "value": "<profile>",
+      "meaning": "keep a returned authentication token only in this bot profile's OS keyring; never print it"
+    },
     "--text": {
       "value": "<text>",
       "meaning": "the message's new text; - reads stdin"
@@ -582,7 +586,14 @@
     },
     "bot api": {
       "in": ["max"],
-      "reason": "MAX's own Bot API operations, generated from MAX's schema; a generated `bot api` for Telegram comes after P8"
+      "planned": { "tg": "generated Bot API" },
+      "subtree": true,
+      "options": {
+        "--store-token": {
+          "in": [],
+          "planned": { "max": "generated Bot API", "tg": "generated Bot API" }
+        }
+      }
     },
     "bot auth": {
       "in": "all"

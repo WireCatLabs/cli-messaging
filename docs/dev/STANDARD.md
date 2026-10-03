@@ -82,6 +82,25 @@ guessable from the others.
 
 `bot api` is exempt: its names mirror each messenger's official Bot API operations.
 
+Generated `bot api` commands use cli-core's generators and one command assembler in cli-messaging.
+Only the source-specification adapter, transport and provider capabilities stay in the consumer.
+Common inputs are `--body <json>` and `--body-file <path>`; `-` reads stdin. A native `timeout`
+parameter is `--poll-timeout`, so it cannot replace the command's `--timeout` deadline.
+Schema-declared file fields accept `@path`; ordinary strings never trigger a file read.
+
+This advanced interface returns the official operation's native result, preserving MAX's existing
+API contract. The normal bot commands use the shared domain output shapes. Both native interfaces
+still use the common machine error contract, the profile's guard and send journal; a write with an
+unknown outcome is never repeated automatically.
+
+`--store-token <profile>` names the destination for an operation returning an authentication token.
+It is required for those operations and rejected for other operations. The token is kept only in the
+OS keyring and never printed; the result names the destination profile, bot id and storage kind.
+A destination bound to a different bot is refused before a remote credential rotation. Secret
+request fields have no generated argument flags: supply their JSON on stdin or in an existing
+protected file. Tokens never enter diagnostics, traces or run records.
+
+
 ## Option catalogue
 
 Every option of both tools, once: its value, what it means, its default and the commands that take
@@ -205,6 +224,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--since-time` | `<time>` | from this ISO 8601 time, or 2h / 1d ago; each command says its default |  | `bot chats moderate`, `bot store fetch`, `chats events` (planned), `chats moderate` (planned), `conversations list`, `conversations search`, `inbox` (planned), `review` (planned), `store export`, `store fetch` |
 | `--size` | `<n>` | messages to answer per batch, 10–200; 50 by default |  | `conversations batches next`, `conversations batches status` |
 | `--source` | `<messenger>` | every account of this messenger held in the store; personal, bots or all — the same as in: in the query |  | `messages search` |
+| `--store-token` | `<profile>` | keep a returned authentication token only in this bot profile's OS keyring; never print it |  | `bot api` (planned) |
 | `--text` | `<text>` | the message's new text; - reads stdin |  | `bot callbacks answer` |
 | `--threads` | `<n>` | threads in all | `min(8, cores)` | `conversations embed` |
 | `--timeout` | `<duration>` | give up on the whole command after this — 30s, 2m, 500ms |  | every command |
