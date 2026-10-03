@@ -86,7 +86,7 @@ Positive in/--source явно выбирают доступные локальн
 Обязательный text candidate, существующий в каждой Boolean ветке, стартует через FTS CROSS JOIN
 и `bm25(1.0,0.0)`; scope tokens не влияют на score. Full Boolean predicate остаётся final guard.
 Ветви без обязательного text используют newest order; --newest всегда сортирует по времени.
-Tie-breaker sentAt/provider/account/chat/message; qualified locators предотвращают collisions.
+Tie-breaker: sentAt DESC, provider/account/chat ASC, message DESC; qualified locators предотвращают collisions.
 Explicit chat-only scan стартует с chat/time index. Index not ready — явная ошибка, не substring fallback.
 
 Postfilter candidate selection — SQL superset без unsafe отрицания bounded predicates; full AST

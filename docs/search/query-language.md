@@ -1,7 +1,7 @@
 # Поиск в локальном архиве
 
-Lucene profile v1 реализован в ветке A1; команды доступны после обновления обоих CLI
-на shared release с этой функцией. Синтаксис основан на Apache Lucene 9.12.3
+Lucene profile v1 доступен через shared services, CLI и MCP; потребителям нужна
+версия cli-messaging с этим профилем. Синтаксис основан на Apache Lucene 9.12.3
 StandardSyntaxParser и PrecedenceQueryParser, default AND, default field `text`.
 Это ограниченный профиль языка, а не полный Lucene search engine.
 
