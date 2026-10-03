@@ -883,14 +883,6 @@
         "--types": "all"
       }
     },
-    "cache": {
-      "in": [],
-      "planned": {
-        "max": "T6"
-      },
-      "reason": "max drops its per-profile cache in favor of the shared store",
-      "subtree": true
-    },
     "chats": {
       "in": "all"
     },
