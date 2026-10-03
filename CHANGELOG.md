@@ -6,6 +6,10 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Fixed
+
+- The parity manifest now marks `bot me` present in both CLIs after Telegram adopted the shared identity command.
+
 ## 0.126.0 — 03.10.2026
 
 Released early: tg-cli forum setup needs the guarded enable and creation commands

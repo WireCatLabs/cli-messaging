@@ -746,10 +746,7 @@
       }
     },
     "bot me": {
-      "in": ["max"],
-      "planned": {
-        "tg": "P8"
-      }
+      "in": "all"
     },
     "bot messages": {
       "in": "all"
