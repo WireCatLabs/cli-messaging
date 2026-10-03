@@ -6,6 +6,11 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Fixed
+
+- The parity manifest records MAX’s shared moderation command and its options as present, and
+  removes the retired `chats check` row after the consumer migration.
+
 ## 0.131.0 — 03.10.2026
 
 Released early: max-cli moderation migration needs join events bounded to the current history batch before merging
