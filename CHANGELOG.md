@@ -6,6 +6,10 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.133.0 — 03.10.2026
+
+Released early: max-cli audio-model migration needs the public speech catalogue and installer export
+
 ### Added
 
 - `./speech` exports the existing pinned speech-model catalogue, types, ordering, shared model
