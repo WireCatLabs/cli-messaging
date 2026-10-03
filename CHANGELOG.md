@@ -6,6 +6,10 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.120.0 — 03.10.2026
+
+Released early: tg-cli guided setup needs cancellable credential prompts and the setup command manifest
+
 ### Added
 
 - `readSecret` accepts an optional `AbortSignal`: an expired command can cancel a pending
