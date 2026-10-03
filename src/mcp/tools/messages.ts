@@ -99,6 +99,15 @@ export const messagesTools = (messenger: Messenger): Record<string, AnyTool> => 
       },
     }),
 
+    messages_link: tool({
+      title: "Get a message link",
+      description:
+        "An account-scoped locator and optional provider permalink, without message content. Returns { locator, url, access, reason }; access describes the link audience, not permission granted to its reader. Does not mark read. A locator can replace chat and message.",
+      input: v.object({ chat, message: v.optional(message) }),
+      annotations: READ,
+      served: async (services, args) => services.messages.link(args.chat, args.message),
+    }),
+
     messages_context: tool({
       title: "Show a message",
       description:

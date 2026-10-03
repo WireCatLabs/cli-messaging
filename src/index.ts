@@ -6,6 +6,7 @@ export {
 } from "./domain/formatting.js"
 export { formatLocator, isLocator, type MessageLocator, parseLocator } from "./domain/locator.js"
 export { type Markup, parseMarkdown } from "./domain/markdown.js"
+export type { MessageLink, MessagePermalink } from "./domain/message-link.js"
 export type * from "./domain/models.js"
 export type { CheckRow, Finding, Moderator } from "./moderation/check.js"
 export { act, judge } from "./moderation/check.js"

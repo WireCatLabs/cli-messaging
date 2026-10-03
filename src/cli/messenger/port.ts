@@ -1,6 +1,7 @@
 import { CliError } from "@leemour/cli-core"
 import type { MarkdownFormatting, TextSpan } from "../../domain/formatting.js"
 import type { Markup } from "../../domain/markdown.js"
+import type { MessagePermalink } from "../../domain/message-link.js"
 import type {
   Account,
   AccountSession,
@@ -231,6 +232,11 @@ export interface MessageMedia {
   transcribe(chat: string, messageId: Id): Promise<Transcript>
 }
 
+export interface MessagePermalinks {
+  /** Validates the exact target before returning its permalink or unsupported-chat result. */
+  permalink(chatId: Id, messageId: Id): Promise<MessagePermalink>
+}
+
 export interface ScheduledMessages {
   /** Messages waiting to be sent later in a chat, soonest first, each with `scheduledFor`. */
   scheduled(chat: string): Promise<Message[]>
@@ -350,6 +356,7 @@ export interface MessengerAdapter
     Partial<PushedHistory>,
     Partial<MessageMedia>,
     Partial<ScheduledMessages>,
+    Partial<MessagePermalinks>,
     Partial<GroupModeration>,
     Partial<AccountTools>,
     Partial<GroupAdmin>,

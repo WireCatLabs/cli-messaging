@@ -1016,9 +1016,10 @@ describe("the shared read commands", () => {
 
     const listed = await call(["messages", "list", "Book"], counting, env)
     const exported = await call(["store", "export", "Book"], counting, env)
+    const linked = await call(["messages", "link", "7", "1"], counting, env)
     const chats = await call(["chats", "list", "--json"], counting, env)
 
-    expect([listed.code, exported.code]).toEqual([5, 5])
+    expect([listed.code, exported.code, linked.code]).toEqual([5, 5, 5])
     expect(listed.stderr.join("\n")).toContain("permissions.messages is deny")
     expect(chats.code).toBe(0)
     expect(connected).toBe(1)
@@ -2485,5 +2486,44 @@ describe("every list in --json", () => {
         expect.arrayContaining(["items", "page", "limit", "hasMore"]),
       ])
     }
+  })
+})
+
+describe("message link command", () => {
+  it("prints one account-scoped result in JSON and JSONL, and closes on a provider error", async () => {
+    const root = mkdtempSync(join(tmpdir(), "link-cli-"))
+    const env = {
+      CHAT_STATE_DIR: join(root, "state"),
+      CHAT_CONFIG_DIR: join(root, "config"),
+      MESSAGING_STORE: join(root, "m.db"),
+    }
+    rememberAccount(app, "default", "500", env)
+    const close = vi.fn(async () => {})
+    const permalink = vi.fn(async () => ({
+      url: "https://provider.example/1",
+      access: "restricted" as const,
+      reason: null,
+    }))
+    const connect = vi.fn(async () => ({ ...fake, permalink, close }))
+    for (const flag of ["--json", "--jsonl"]) {
+      const result = await call(["messages", "link", "msg:chat/500/7/1", flag], connect, env)
+      expect(result.code).toBe(0)
+      expect(result.stdout.join("").trim().split("\n")).toHaveLength(1)
+      expect(JSON.parse(result.stdout.join(""))).toEqual({
+        locator: "msg:chat/500/7/1",
+        url: "https://provider.example/1",
+        access: "restricted",
+        reason: null,
+      })
+      expect(result.stderr.join("")).toBe("")
+    }
+    const mismatch = await call(["messages", "link", "msg:chat/other/7/1", "--json"], connect, env)
+    expect(mismatch.code).not.toBe(0)
+    expect(connect).toHaveBeenCalledTimes(2)
+    permalink.mockRejectedValueOnce(new CliError("permission_error", "synthetic denied"))
+    const denied = await call(["messages", "link", "7", "1", "--json"], connect, env)
+    expect(denied.code).not.toBe(0)
+    expect(denied.stdout).toEqual([])
+    expect(close).toHaveBeenCalledTimes(3)
   })
 })

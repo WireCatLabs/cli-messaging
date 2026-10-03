@@ -38,6 +38,16 @@ before sending, after the permission gate. Telegram group forums support it; MAX
 Journal records carry only the thread id. A retry keeps the same send id, chat and topic; scheduled
 sends must be checked in the queue instead of repeated.
 
+## Message permalinks
+
+The personal `messages link <chat> <message>` command also accepts a `msg:` locator.
+Its read-only MCP tool and CLI call the same service and return `{ locator, url, access, reason }`.
+Adapters can implement optional `permalink` to return HTTPS links; its result contains no message
+content. Link audience is `public`, `restricted` or `unknown`; a URL grants no membership.
+Without support, a validated target returns `url: null`, `access: unavailable`, and a reason.
+Offline validates this account's stored message and returns reason `offline`, without connecting.
+A locator for another messenger or account is refused. Singular `link` differs from graph `links`.
+
 ## Evidence packets for agents
 
 `prepareEvidencePacket` from `@leemour/cli-messaging/services` packages a message page that the
