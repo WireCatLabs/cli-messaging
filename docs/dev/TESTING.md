@@ -44,3 +44,7 @@ On 2026-09-29 the slowest test here took 57 ms. The waits that exist are reached
 - `--timeout` is a setting a test sets short.
 
 A new wait in the code gets a seam like these, never a longer timeout in the test.
+
+## Parity evidence
+
+[Detailed parity audit](PARITY-AUDIT.md) runs fresh isolated consumer checks and records every schema/source/coverage difference. `scripts/parity/evidence.test.ts` checks MCP framing, timeout/exit/errors and mixed mounting evidence; `src/parity/deep.test.ts` checks direct structural differences and exemptions.
