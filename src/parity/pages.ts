@@ -16,6 +16,8 @@ export const pageProblems = (page: string, cli: Cli, manifest: Manifest, program
   }
   program.commands.forEach(walk)
   const globals = new Set(program.globalOptions.flatMap((option) => optionsOf(option.flags)))
+  // Commander adds this automatically; command introspection lists only explicit options.
+  globals.add("--help")
 
   const problems: string[] = []
   const line = new RegExp(`\\b${cli} ((?:[a-z][a-z-]* ?)+)([^\\n\`#|]*)`, "g")
