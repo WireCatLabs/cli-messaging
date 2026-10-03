@@ -48,7 +48,7 @@ export const topicWriteTools = (messenger: Messenger): Record<string, AnyTool> =
   topics_create: tool({
     title: "Create a forum topic",
     description:
-      "Only when the owner requested this topic. The group must already have topics enabled. On outcome_unknown, check topics_list and repeat only with the same send_id.",
+      "Only when the owner requested this topic. The group must already have topics enabled. On outcome_unknown, check topics_list and do not repeat the creation, even with the same send_id.",
     input: v.object({
       chat: chatOf(messenger),
       title: v.pipe(v.string(), v.minLength(1)),

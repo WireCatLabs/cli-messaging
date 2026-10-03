@@ -54,7 +54,7 @@ export const topicsCommand = (messenger: Messenger): Command => {
     .description("create a named topic in an existing forum; never enable or upgrade a group implicitly")
     .argument("<chat>", messenger.chatArgument)
     .argument("<title>", "the topic title, at most 128 UTF-8 bytes")
-    .option("--send-id <id>", "repeat an unknown creation with the same id, without a second topic")
+    .option("--send-id <id>", "identify this creation attempt; an already sent or unknown id is refused")
     .action(async function (this: Command, chat: string, title: string) {
       const context = messengerContext(this, messenger)
       context.renderer.result(
