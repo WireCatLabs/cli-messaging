@@ -6,6 +6,11 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Fixed
+
+- The parity manifest no longer permits max's retired `cache` command subtree. Max now uses the
+  shared store; `store clear --left` handles departed chats and a whole-store wipe is not offered.
+
 ## 0.120.0 — 03.10.2026
 
 Released early: tg-cli guided setup needs cancellable credential prompts and the setup command manifest
