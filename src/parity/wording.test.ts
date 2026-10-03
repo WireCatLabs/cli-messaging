@@ -58,4 +58,20 @@ describe("one sentence per shared option", () => {
 
     expect(wordingProblems(three, [program("max", "wait"), program("tg", "wait"), program("wa", "pause")])).toEqual([])
   })
+  it("does not compare options of a planned command unavailable in one messenger", () => {
+    const planned = manifest()
+    planned.commands["store fetch"] = {
+      in: [],
+      planned: { tg: "adopt" },
+      reason: "MAX lacks this command",
+      options: { "--pause": "all" },
+    }
+    expect(wordingProblems(planned, [{ ...program("max", "wait"), commands: [] }, program("tg", "pause")])).toEqual([])
+  })
+
+  it("still reports a missing option when both messengers must have the command", () => {
+    expect(wordingProblems(manifest(), [{ ...program("max", "wait"), commands: [] }, program("tg", "pause")])).toEqual([
+      'store fetch --pause: max says "undefined", tg says "pause"',
+    ])
+  })
 })

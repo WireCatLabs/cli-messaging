@@ -70,8 +70,7 @@ export const chatsCommand = (messenger: Messenger): Command => {
           })),
         )
       }
-      if (found.more)
-        context.renderer.note("more history than one run reads; the newest are here — narrow --since-time")
+      if (found.more) context.renderer.note("more history than one run reads — adjust --since-time to read more")
     })
 
   chats

@@ -28,6 +28,10 @@ Released early: max-cli and tg-cli search integration need the shared Lucene que
 
 ### Fixed
 
+- The help wording audit now compares options only for messengers eligible for their command. Telegram-only forum controls no longer fail because MAX has no corresponding command; missing options on commands both support remain checked.
+
+- Truncated `chats events` reads now advise adjusting `--since-time` without claiming that the newest events were returned. Providers may return the oldest available events first, so the old warning misled max-cli's group-read migration about which part of history was missing. The parity manifest temporarily accepts MAX's legacy event flags while its consumer PR replaces them with the shared options.
+
 - The parity manifest now marks `bot me` present in both CLIs after Telegram adopted the shared identity command.
 
 ## 0.126.0 — 03.10.2026

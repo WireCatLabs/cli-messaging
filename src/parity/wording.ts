@@ -1,5 +1,5 @@
 import type { CommandInfo } from "@leemour/cli-core/commands"
-import { type CommandsJson, type Entry, longName, type Manifest } from "./manifest.js"
+import { type CommandsJson, type Entry, expected, longName, type Manifest } from "./manifest.js"
 
 const descriptions = (program: CommandsJson): Map<string, string> => {
   const found = new Map<string, string>()
@@ -34,7 +34,12 @@ export const wordingProblems = (manifest: Manifest, programs: readonly CommandsJ
   return rows.flatMap(([path, name, entry]) => {
     if (manifest.options[name]?.note) return []
     const where = `${path} ${name}`
-    const clis = sharedBy(manifest, entry).filter((cli) => said.has(cli))
+    const clis = sharedBy(manifest, entry).filter(
+      (cli) =>
+        said.has(cli) &&
+        (path === "(global)" ||
+          expected(manifest.commands[path] as NonNullable<Manifest["commands"][string]>, cli) !== false),
+    )
     if (clis.length < 2) return []
     const sentences = clis.map((cli) => said.get(cli)?.get(where))
     if (sentences.every((sentence) => sentence === sentences[0])) return []

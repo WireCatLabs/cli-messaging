@@ -589,3 +589,27 @@ describe("chats create, join and leave", () => {
     expect(await rule({ inviteLinks: /chat\.whatsapp\.com\// })).toEqual(["invites"])
   })
 })
+
+describe("truncated group event reads", () => {
+  it("preserves chronological rows and gives guidance without claiming which part of history was returned", async () => {
+    const events = [1, 2].map((id) => ({
+      messageId: String(id),
+      timestamp: new Date(id * 1000).toISOString(),
+      event: "add",
+      by: { id: "9", name: null },
+      people: [],
+    }))
+    const result = await call(
+      ["chats", "events", "7", "--json"],
+      {
+        ...base,
+        chatEvents: async () => ({ chatId: "7", since: new Date(0).toISOString(), events, more: true }),
+      },
+      sandbox(),
+    )
+    expect(result.code).toBe(0)
+    expect(JSON.parse(result.stdout.join(""))).toMatchObject({ items: events, hasMore: true })
+    expect(result.stderr.join("")).toContain("adjust --since-time")
+    expect(result.stderr.join("")).not.toContain("newest")
+  })
+})

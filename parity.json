@@ -912,12 +912,18 @@
       "in": "all",
       "options": {
         "--event": {
-          "in": ["max"],
-          "reason": "max's own copy keeps the old name until T6 moves the command onto the shared one"
+          "in": [],
+          "planned": {
+            "max": "T6 retires the legacy event flag after the shared-read consumer merge"
+          },
+          "reason": "the shared events command uses --type and --since-time; the legacy MAX copy is being retired"
         },
         "--since": {
-          "in": ["max"],
-          "reason": "max's own copy keeps the old name until T6 moves the command onto the shared one"
+          "in": [],
+          "planned": {
+            "max": "T6 retires the legacy event flag after the shared-read consumer merge"
+          },
+          "reason": "the shared events command uses --type and --since-time; the legacy MAX copy is being retired"
         },
         "--since-time": {
           "in": [],
