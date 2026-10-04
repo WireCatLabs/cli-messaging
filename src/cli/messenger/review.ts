@@ -1,7 +1,8 @@
 import { Command } from "commander"
 import type { MessageHit, Review } from "../../domain/models.js"
 import { renderMessages } from "../../render/messages.js"
-import { CHAT_WINDOW, REVIEW_DAYS, reviewStart, UNANSWERED_HOURS } from "../../services/inbox.js"
+import { CHAT_KINDS } from "../../services/chats.js"
+import { CHAT_WINDOW, kindsOf, REVIEW_DAYS, reviewStart, UNANSWERED_HOURS } from "../../services/inbox.js"
 import { momentOf } from "../../services/moment.js"
 import { type Hearing, modelWith } from "../../speech/hearing.js"
 import { parseDuration } from "../settings.js"
@@ -32,6 +33,7 @@ export const reviewCommand = (messenger: Messenger): Command =>
       `where the last review ended — ISO 8601, or 2h / 1d ago; ${REVIEW_DAYS} days ago if not given`,
     )
     .option("--chat <chat>", `only this chat: ${messenger.chatArgument}`)
+    .option("--kind <kinds>", `only chats of these kinds, comma-separated: ${CHAT_KINDS.join(", ")}`)
     .option(
       "--unanswered [duration]",
       `only questions to you or a group's admins that nobody answered, asked at least this long ago — 4h, 1d; ${UNANSWERED_HOURS}h if not given`,
@@ -43,6 +45,7 @@ export const reviewCommand = (messenger: Messenger): Command =>
       const options = this.opts<{
         sinceTime?: string
         chat?: string
+        kind?: string
         unanswered?: string | true
         all?: boolean
         transcribe?: boolean
@@ -53,12 +56,14 @@ export const reviewCommand = (messenger: Messenger): Command =>
       const { settings, renderer, format, streams } = context
       const since = options.sinceTime === undefined ? reviewStart() : momentOf(options.sinceTime, "--since-time")
       const hours = options.unanswered === undefined ? undefined : unansweredHours(options.unanswered)
+      const kinds = options.kind === undefined ? undefined : kindsOf(options.kind)
       let hearing: Hearing | undefined
       const transcribe = options.transcribe === true
       const found = await context.withServices((services, connect) =>
         services.inbox.review({
           since,
           ...(options.chat === undefined ? {} : { chat: options.chat }),
+          ...(kinds === undefined ? {} : { kinds }),
           ...(options.all ? { all: true } : {}),
           ...(hours === undefined ? {} : { unansweredAfterHours: hours }),
           enrich: async (raw) => {

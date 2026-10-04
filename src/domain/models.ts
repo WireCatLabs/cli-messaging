@@ -266,6 +266,8 @@ export interface Inbox {
   partial: boolean
   /** Muted or archived chats with something waiting, left out because nothing in them is for the owner. */
   quiet: number
+  /** `new` only: each chat read, and the time its next check starts from. */
+  checked?: Record<Id, string>
 }
 
 /** One chat's share of `review`: both sides, oldest first, from `since` to `until`. */
