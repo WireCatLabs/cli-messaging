@@ -19,6 +19,18 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   `graph.outdatedRules`), messages the build has not seen (`pending.new`, `pending.edited`, `pending.deleted`)
   and the chunks' vectors of the model (`vectors.current`, `vectors.stale`, `vectors.missing`). JSON is the list
   envelope with `model` beside it.
+- Catching up without a chat at a time: `conversations build` without `--chat` rebuilds every built
+  chat that changed since its build, then builds the group chats never built; `conversations embed` without
+  `--chat` embeds the chunks left in every built chat; `conversations search --refresh` does both for its scope
+  before it searches. `--max-chats <n>` (20) and `--max-chunks <n>` (2,000) bound one run, and the next run goes on
+  from there. Only the model on this machine: `--provider` and `--base-url` are refused there, a model is never
+  downloaded, and with none downloaded the build runs and nothing is embedded. JSON (and `refreshed` in search
+  JSON with `--refresh`): `{ model, modelAvailable, built, embedded, left }`, `left` naming each chat that still
+  needs `build` or `embed`. `conversations embed --chat` also takes `--max-chunks`.
+- MCP `conversations_refresh` (`chat`, `max_chats`, `max_chunks`, at most 500 chunks a call by default) runs the
+  same; it writes only to the local store and is offered by `permissions.conversations.embed`: hidden at
+  `readonly`, refused with `confirmation_required` at `ask`. Any MCP tool not marked read-only is now hidden at
+  `readonly`, not only the messenger writes.
 - `conversations search` JSON (and MCP `conversations_search`) adds `meaning` (`searched` or `unavailable`) and
   `readiness`: chat ids in `searchedByMeaning`, `wordsOnly`, `partial`, `stale` and `notBuilt`. Each item adds
   `stale`: `true` when the matched chunk's text changed after it was embedded; the hit is still returned.
@@ -31,6 +43,10 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   downloads a model or calls a remote one in its place. `ConversationHit` and `FoundConversation` have a new
   required `stale` field, and `MessageStore` a new `readiness` method; tg-cli and max-cli only call
   `MessageStore` and use neither hit type, so neither needs a change.
+- `conversations build` and `conversations embed` without `--chat` no longer fail with `validation_error` (exit 2):
+  they catch up every chat that needs it, as above. A script that relied on the refusal now does work.
+  `MessageStore` has a new `unbuiltGroups` method and `EmbeddingsService` a new `refresh` method; tg-cli and
+  max-cli implement neither, so neither needs a change.
 
 ### Fixed
 

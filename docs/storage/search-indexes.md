@@ -205,12 +205,24 @@ fast as sqlite-vec, which would need a native extension per platform
 A chat embedded only with another model cannot be searched by meaning with this one: the search names
 it on stderr and in `embeddedOnlyElsewhere`, instead of leaving it out silently.
 
-**Freshness.** Both indexes change only when the owner runs `conversations build` and `conversations embed`.
+**Freshness.** Both indexes change only when the owner runs `conversations build` and `conversations embed`
+— nothing runs on sync.
 `conversations status` (MCP `conversations_status`) shows, per built chat, the messages the build has not seen
 — new and deleted ones by the build's membership, edited ones by their revision's time — and the chunks whose
 vector is current, stale (a message in it changed after the build) or missing. A changed sender name leaves no
 trace there. The search answers the same in `readiness`: chat ids `searchedByMeaning`, `wordsOnly`, `partial`,
 `stale` and `notBuilt`, and a note on stderr with the command that fixes each.
+
+**Catching up** (NEED-551 A). Without `--chat`, `conversations build` rebuilds every built chat that changed
+since its build (or whose rules are older), the oldest build first, then builds the group chats never built,
+the newest message first; `conversations embed` embeds the chunks left in every built chat. Each run does at
+most `--max-chats` chats (20) and embeds at most `--max-chunks` chunks (2,000, about a minute with e5-small);
+the next run goes on from there, and `left` in the JSON names what is still to do. `conversations search
+--refresh` runs both, for its scope, before it searches; MCP `conversations_refresh` does the same, at most 500
+chunks a call so a client does not give up on it. Only the model on this machine embeds this way:
+`--provider` and `--base-url` are refused, a model is never downloaded, and with none downloaded the build
+still runs and nothing is embedded. Dialogs, channels and chats of unknown kind (a chat seen only through its
+messages, never listed) are built only when named with `--chat`.
 
 Before a meaning hit is returned, the search reads its chunk's messages again and hashes them as `embed` does.
 A chunk whose text changed is still returned, with `stale: true` (NEED-550 B); one holding a deleted message

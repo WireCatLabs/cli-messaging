@@ -634,6 +634,52 @@ describe("the MCP server", () => {
     vi.unstubAllEnvs()
   })
 
+  it("**brings conversations up to date** with conversations_refresh, on the warm model, writing only to the store", async () => {
+    const telegram = scripted({
+      history: async () => ({ items: [{ ...message, senderName: null, text: "cat dog" }], hasMore: false }),
+    })
+    const { client, call, env, embedders } = await connect(telegram)
+    await call("chat_chats_list")
+    await call("chat_messages_list", { chat: "7" })
+    mkdirSync(join(env.CLI_COMMON_CACHE_DIR, "models", "text"), { recursive: true })
+    symlinkSync(
+      fileURLToPath(new URL("../embeddings/fixtures/tiny", import.meta.url)),
+      join(env.CLI_COMMON_CACHE_DIR, "models", "text", "tiny"),
+    )
+    vi.stubEnv("CLI_COMMON_CACHE_DIR", env.CLI_COMMON_CACHE_DIR)
+    const opened = telegram.opened()
+    models.opened = 0
+
+    const refresh = (await client.listTools()).tools.find(({ name }) => name === "chat_conversations_refresh")
+    expect(refresh?.annotations).toMatchObject({ readOnlyHint: false, destructiveHint: false, openWorldHint: false })
+    expect((await call("chat_conversations_refresh", { max_chunks: 1 })).body).toMatchObject({
+      model: "tiny",
+      modelAvailable: true,
+      built: [{ chat: "7", messages: 1 }],
+      embedded: [{ chat: "7", embedded: 1 }],
+      left: [],
+    })
+    expect((await call("chat_conversations_search", { query: "cat" })).body).toMatchObject({
+      readiness: { searchedByMeaning: ["7"], partial: [], stale: [] },
+    })
+    expect([telegram.opened(), models.opened]).toEqual([opened, 1])
+    await embedders.close()
+    vi.unstubAllEnvs()
+  })
+
+  it("asks before conversations_refresh where conversations.embed asks, and hides it where it is read-only", async () => {
+    const asked = await connect(scripted(), { config: levels({ "conversations.embed": "ask" }) })
+    await asked.call("chat_chats_list")
+    const refused = await asked.call("chat_conversations_refresh")
+    expect([refused.isError, refused.body.error.code]).toEqual([true, "confirmation_required"])
+    expect(refused.body.error.message).toContain("config set permissions.conversations.embed allow")
+
+    const { client } = await connect(scripted(), { config: levels({ "conversations.embed": "readonly" }) })
+    const names = (await client.listTools()).tools.map(({ name }) => name)
+    expect(names).toContain("chat_conversations_search")
+    expect(names).not.toContain("chat_conversations_refresh")
+  })
+
   it("connects again once the connection has been idle, or is older than the age limit", async () => {
     const telegram = scripted()
     let now = 0

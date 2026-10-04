@@ -257,6 +257,18 @@ export const builtChats = ({ orm }: StoreContext, accountPk: number): { chatKey:
       WHERE ch.account_pk = ${accountPk} ORDER BY ch.native_id`,
   )
 
+/** Group chats of the account with stored messages and no build ever started, the newest message first. */
+export const unbuiltGroups = ({ orm }: StoreContext, accountPk: number): string[] =>
+  orm
+    .all<{ id: string }>(
+      sql`SELECT ch.native_id AS id FROM chats ch
+        WHERE ch.account_pk = ${accountPk} AND ch.kind = 'group'
+          AND NOT EXISTS (SELECT 1 FROM conversation_state s WHERE s.chat_pk = ch.pk)
+          AND EXISTS (SELECT 1 FROM messages m WHERE m.chat_pk = ch.pk AND m.deleted_at IS NULL)
+        ORDER BY (SELECT max(m.sent_at) FROM messages m WHERE m.chat_pk = ch.pk) DESC, ch.native_id`,
+    )
+    .map(({ id }) => id)
+
 /**
  * What the chat's current build has not seen, and its chunks for `model`. Membership is exact for new and
  * deleted messages; an edit is known only by its revision's time, so one in the build's first millisecond

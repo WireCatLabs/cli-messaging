@@ -6,6 +6,7 @@ import { defaultThreads, type Embedder, isTextModelInstalled, textModelsDirector
 import { DEFAULT_TEXT_MODEL, type TextModel, textModel } from "../embeddings/models.js"
 import { type RemoteModel, remoteKey } from "../embeddings/remote.js"
 import type { ConversationHit, ConversationSummary, StoredReadiness } from "../store/store.js"
+import { type Built, conversationsService } from "./conversations.js"
 import type { ServiceDeps } from "./deps.js"
 import { searchStore, storedChatId } from "./messages.js"
 
@@ -44,6 +45,8 @@ export interface EmbeddingsService {
       model?: ModelChoice
       workers?: number
       threads?: number
+      /** Stops after this many chunks; the next run resumes. */
+      maxChunks?: number
       progress?: (done: number, left: number) => void
     },
   ): Promise<Embedded>
@@ -59,7 +62,38 @@ export interface EmbeddingsService {
   ): Promise<FoundConversations>
   /** How fresh one chat's conversations and vectors are, or every built chat's. */
   readiness(options: { chat?: string; model?: ModelChoice }): Promise<{ model: string; chats: ChatReadiness[] }>
+  /**
+   * Builds and embeds, on this machine, the chats that changed or were never built — one chat, or every built
+   * chat and every group chat never built — within the bounds (NEED-551 A). Never downloads a model.
+   */
+  refresh(options: RefreshOptions): Promise<Refreshed>
 }
+
+export interface RefreshOptions {
+  chat?: string
+  /** A local model id; a remote model is only ever chosen per chat, with the owner's yes. */
+  model?: string
+  build?: boolean
+  embed?: boolean
+  maxChats?: number
+  maxChunks?: number
+  workers?: number
+  threads?: number
+  progress?: (note: string) => void
+}
+
+export interface Refreshed {
+  model: string
+  /** `false`: the model is not downloaded, so nothing was embedded. */
+  modelAvailable: boolean
+  built: Built[]
+  embedded: Embedded[]
+  /** Chats still needing a build or vectors after this run: over a bound, or the model is missing. */
+  left: { chat: Id; needs: "build" | "embed" }[]
+}
+
+/** How much one run without `--chat` does at most, by default. */
+export const REFRESH_BOUNDS = { maxChats: 20, maxChunks: 2_000 }
 
 export interface FoundConversations {
   model: string
@@ -127,6 +161,9 @@ const CHARS_PER_TOKEN_AT_LEAST = 3
 export const embeddingsService = (deps: ServiceDeps): EmbeddingsService => {
   const command = deps.messenger.app.command
 
+  const notDownloaded = (id: string) =>
+    new CliError("not_found", `${id} is not downloaded — \`${command} models text download ${id}\``)
+
   const resolve = (choice: ModelChoice = DEFAULT_TEXT_MODEL) => {
     if (typeof choice !== "string") {
       const { remote, apiKey, concurrency = 4 } = choice
@@ -162,12 +199,7 @@ export const embeddingsService = (deps: ServiceDeps): EmbeddingsService => {
         /** In a process of its own, which gives all of its memory back when closed: the MCP server's. */
         apart?: boolean
       } = {}): Promise<Embedder> => {
-        if (!isTextModelInstalled(model, directory)) {
-          throw new CliError(
-            "not_found",
-            `${model.id} is not downloaded — \`${command} models text download ${model.id}\``,
-          )
-        }
+        if (!isTextModelInstalled(model, directory)) throw notDownloaded(model.id)
         if (apart) {
           const { openProcess } = await import("../embeddings/process.js")
           return openProcess(model, directory, { threads: threads ?? defaultThreads() })
@@ -232,6 +264,74 @@ export const embeddingsService = (deps: ServiceDeps): EmbeddingsService => {
     return { store, account, chatId }
   }
 
+  type Target = ReturnType<typeof resolve>
+
+  /** The server's warm model when there is one, kept open after; otherwise opened here and closed. */
+  const withEmbedder = async <T>(
+    target: Target,
+    choice: ModelChoice | undefined,
+    { workers = 1, threads }: { workers?: number; threads?: number | undefined },
+    work: (embedder: Embedder) => Promise<T>,
+  ): Promise<T> => {
+    const warm = typeof choice !== "object" ? deps.embedders : undefined
+    const embedder = warm
+      ? await warm.get(target.key, () => target.open({ apart: true }))
+      : await target.open({ workers, ...(threads ? { threads } : {}) })
+    try {
+      return await work(embedder)
+    } finally {
+      if (!warm) await embedder.close()
+    }
+  }
+
+  const embedInto = async (
+    chatId: Id,
+    target: Target,
+    embedder: Embedder,
+    {
+      workers = 1,
+      maxChunks = Number.POSITIVE_INFINITY,
+      progress,
+    }: {
+      workers?: number | undefined
+      maxChunks?: number | undefined
+      progress?: ((done: number, left: number) => void) | undefined
+    },
+  ): Promise<Embedded> => {
+    const store = await deps.store()
+    const account = await deps.account()
+    let embedded = 0
+    let skipped = 0
+    let left = (await store.vectorStatus(account, chatId, target.key)).chunks
+    let after: string | undefined
+    while (embedded + skipped < maxChunks) {
+      const batch = await store.chunksToEmbed(account, chatId, target.key, {
+        limit: Math.min(target.perBatch(workers), maxChunks - embedded - skipped),
+        ...(after ? { after } : {}),
+      })
+      if (batch.length === 0) break
+      after = batch.at(-1)?.hash
+      const ready = batch.flatMap(({ hash, lines }) => {
+        const text = chunkTextOf(lines)
+        return chunkHash(text) === hash ? [{ hash, text }] : []
+      })
+      skipped += batch.length - ready.length
+      const vectors = await embedder.embed(
+        ready.map(({ text }) => text),
+        "passage",
+      )
+      await store.saveVectors(
+        target.key,
+        target.dims,
+        ready.map(({ hash }, index) => ({ hash, vector: vectors[index] as Float32Array })),
+      )
+      embedded += ready.length
+      left = Math.max(0, left - batch.length)
+      progress?.(embedded, left)
+    }
+    return { chat: chatId, model: target.id, embedded, skipped }
+  }
+
   return {
     status: async (chat, choice) => {
       const { store, account, chatId } = await found(chat)
@@ -253,44 +353,12 @@ export const embeddingsService = (deps: ServiceDeps): EmbeddingsService => {
       }
     },
 
-    embed: async (chat, { model: choice, workers = 1, threads, progress }) => {
-      const { store, account, chatId } = await found(chat)
+    embed: async (chat, { model: choice, workers = 1, threads, maxChunks, progress }) => {
+      const { chatId } = await found(chat)
       const target = resolve(choice)
-      const embedder = await target.open({ workers, ...(threads ? { threads } : {}) })
-      let embedded = 0
-      let skipped = 0
-      try {
-        let left = (await store.vectorStatus(account, chatId, target.key)).chunks
-        let after: string | undefined
-        for (;;) {
-          const batch = await store.chunksToEmbed(account, chatId, target.key, {
-            limit: target.perBatch(workers),
-            ...(after ? { after } : {}),
-          })
-          if (batch.length === 0) break
-          after = batch.at(-1)?.hash
-          const ready = batch.flatMap(({ hash, lines }) => {
-            const text = chunkTextOf(lines)
-            return chunkHash(text) === hash ? [{ hash, text }] : []
-          })
-          skipped += batch.length - ready.length
-          const vectors = await embedder.embed(
-            ready.map(({ text }) => text),
-            "passage",
-          )
-          await store.saveVectors(
-            target.key,
-            target.dims,
-            ready.map(({ hash }, index) => ({ hash, vector: vectors[index] as Float32Array })),
-          )
-          embedded += ready.length
-          left = Math.max(0, left - batch.length)
-          progress?.(embedded, left)
-        }
-      } finally {
-        await embedder.close()
-      }
-      return { chat: chatId, model: target.id, embedded, skipped }
+      return withEmbedder(target, choice, { workers, threads }, (embedder) =>
+        embedInto(chatId, target, embedder, { workers, maxChunks, progress }),
+      )
     },
 
     search: async (query, { chat, model: choice, since, limit }) => {
@@ -351,6 +419,84 @@ export const embeddingsService = (deps: ServiceDeps): EmbeddingsService => {
       return { model: target.id, chats: await readinessOf(chatId, target.key) }
     },
 
+    refresh: async ({
+      chat,
+      model: choice = DEFAULT_TEXT_MODEL,
+      build = true,
+      embed = true,
+      maxChats = REFRESH_BOUNDS.maxChats,
+      maxChunks = REFRESH_BOUNDS.maxChunks,
+      workers,
+      threads,
+      progress,
+    }) => {
+      const store = await deps.store()
+      const account = await deps.account()
+      const target = resolve(choice)
+      if (embed && !build && !target.installed) throw notDownloaded(target.id)
+      const chatId = chat === undefined ? undefined : await storedChatId(deps.messenger, chat, store, account)
+      const scan = async () => ({
+        chats: (await readinessOf(chatId, target.key)).sort(byOldestBuild),
+        unbuilt: chatId === undefined ? await store.unbuiltGroups(account) : [],
+      })
+
+      const built: Built[] = []
+      if (build) {
+        const { chats, unbuilt } = await scan()
+        const queue = [...chats.filter(needsBuild).map(({ chat }) => chat), ...unbuilt].slice(0, maxChats)
+        const conversations = conversationsService(deps)
+        for (const id of queue) {
+          try {
+            const one = await conversations.build(id)
+            built.push(one)
+            progress?.(`chat ${id}: ${one.messages} messages → ${one.conversations} conversations`)
+          } catch (error) {
+            // Every message of a once-built chat deleted: nothing to build, and it stays in `left`.
+            if (!(error instanceof CliError && error.code === "not_found")) throw error
+          }
+        }
+      }
+
+      const embedded: Embedded[] = []
+      if (embed && target.installed) {
+        const fresh = new Set(built.map(({ chat }) => chat))
+        const queue = (await scan()).chats
+          .filter(needsEmbed)
+          .sort((a, b) => Number(fresh.has(b.chat)) - Number(fresh.has(a.chat)))
+          .slice(0, maxChats)
+        if (queue.length > 0) {
+          await withEmbedder(target, choice, { workers, threads }, async (embedder) => {
+            let budget = maxChunks
+            for (const { chat } of queue) {
+              if (budget <= 0) break
+              const done = await embedInto(chat, target, embedder, { workers, maxChunks: budget })
+              budget -= done.embedded + done.skipped
+              embedded.push(done)
+              progress?.(`chat ${chat}: ${done.embedded} chunks embedded with ${target.id}`)
+            }
+          })
+        }
+      }
+
+      const after = await scan()
+      const rebuild = build ? [...after.chats.filter(needsBuild).map(({ chat }) => chat), ...after.unbuilt] : []
+      const pending = new Set(rebuild)
+      return {
+        model: target.id,
+        modelAvailable: target.installed,
+        built,
+        embedded,
+        left: [
+          ...rebuild.map((chat) => ({ chat, needs: "build" as const })),
+          ...(embed
+            ? after.chats
+                .filter((one) => needsEmbed(one) && !pending.has(one.chat))
+                .map(({ chat }) => ({ chat, needs: "embed" as const }))
+            : []),
+        ],
+      }
+    },
+
     clear: async (chat, choice) => {
       const store = await deps.store()
       const account = await deps.account()
@@ -382,6 +528,14 @@ const fused = (
     .sort((a, b) => b.fused - a.fused || (b.score ?? -2) - (a.score ?? -2))
     .map(({ fused: _, ...hit }) => hit)
 }
+
+const needsBuild = (one: ChatReadiness) => one.graph === null || isStale(one)
+
+const needsEmbed = (one: ChatReadiness) => one.graph !== null && one.vectors.missing > 0
+
+/** Never finished first, then the oldest build: the longest-waiting change goes first. */
+const byOldestBuild = (a: ChatReadiness, b: ChatReadiness) =>
+  (a.graph?.builtAt ?? "").localeCompare(b.graph?.builtAt ?? "")
 
 const isStale = ({ graph, pending, vectors }: ChatReadiness) =>
   Boolean(graph?.outdatedRules) || pending.new + pending.edited + pending.deleted > 0 || vectors.stale > 0
