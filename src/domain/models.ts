@@ -361,6 +361,12 @@ export interface SenderIdentity {
   default: boolean
 }
 
+/** What `topics edit` changes; a field left out stays. */
+export interface TopicChange {
+  title?: string
+  closed?: boolean
+}
+
 /** What a link leads to, read without joining. */
 export interface LinkTarget {
   kind: ChatKind

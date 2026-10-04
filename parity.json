@@ -185,6 +185,10 @@
     "--check": {
       "meaning": "say whether a newer version exists, and install nothing"
     },
+    "--closed": {
+      "value": "<on|off>",
+      "meaning": "on closes a forum topic to new messages, off reopens it"
+    },
     "--concurrency": {
       "value": "<n>",
       "meaning": "remote: requests at once (default: 4)"
@@ -772,7 +776,7 @@
     },
     "--title": {
       "value": "<title>",
-      "meaning": "the new name \u2014 of a chat or a folder"
+      "meaning": "the new name — of a chat, a folder or a forum topic"
     },
     "--to": {
       "value": "<chat>",
@@ -3271,6 +3275,15 @@
           "in": ["tg"],
           "reason": "MAX has no forum topics"
         }
+      }
+    },
+    "topics edit": {
+      "in": [],
+      "reason": "MAX has no forum topics",
+      "planned": { "tg": "G2 feat/topic-edit" },
+      "options": {
+        "--closed": { "in": [], "reason": "MAX has no forum topics", "planned": { "tg": "G2 feat/topic-edit" } },
+        "--title": { "in": [], "reason": "MAX has no forum topics", "planned": { "tg": "G2 feat/topic-edit" } }
       }
     },
     "topics enable": {

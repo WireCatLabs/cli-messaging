@@ -112,6 +112,7 @@ const OLD_WORDS: Record<Permission, PermissionKey[]> = {
     "chats.moderate",
     "topics.enable",
     "topics.create",
+    "topics.edit",
   ],
   contacts: ["contacts"],
   profile: ["account.update"],
@@ -277,6 +278,7 @@ const NAMED_WRITE_KEYS = [
   "tasks.add",
   "tasks.close",
   "topics.create",
+  "topics.edit",
   "topics.enable",
 ]
 

@@ -27,6 +27,9 @@ export type ChatAction =
   | "forum-upgrade"
   | "forum-enable"
   | "topic-create"
+  | "topic-edit"
+  | "topic-close"
+  | "topic-reopen"
 
 /** What an `account` entry changed. Never the value it changed it to — no name, number or title. */
 export type AccountAction =

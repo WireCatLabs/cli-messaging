@@ -61,5 +61,25 @@ export const topicsCommand = (messenger: Messenger): Command => {
         await context.withServices((services) => services.topics.create(chat, title, this.opts<{ sendId?: string }>())),
       )
     })
+  annotate(topics.command("edit"), { mutates: true })
+    .description("rename, close or reopen a forum topic")
+    .argument("<chat>", messenger.chatArgument)
+    .argument("<topic>", "the topic id, from `topics list`")
+    .option("--title <title>", "the new title, at most 128 UTF-8 bytes")
+    .option("--closed <on|off>", "on closes the topic to new messages, off reopens it")
+    .action(async function (this: Command, chat: string, topic: string) {
+      const context = messengerContext(this, messenger)
+      const { title, closed } = this.opts<{ title?: string; closed?: string }>()
+      if (closed !== undefined && closed !== "on" && closed !== "off")
+        throw new CliError("validation_error", `--closed takes on or off, not "${closed}"`)
+      context.renderer.result(
+        await context.withServices((services) =>
+          services.topics.edit(chat, topic, {
+            ...(title === undefined ? {} : { title }),
+            ...(closed === undefined ? {} : { closed: closed === "on" }),
+          }),
+        ),
+      )
+    })
   return topics
 }

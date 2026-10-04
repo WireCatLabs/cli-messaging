@@ -1,6 +1,6 @@
 import { CliError, isCliError } from "@leemour/cli-core"
 import { capability, type ForumState } from "../cli/messenger/port.js"
-import type { Chat, Topic } from "../domain/models.js"
+import type { Chat, Topic, TopicChange } from "../domain/models.js"
 import { guardedWrite, type Operated } from "../sends/guarded.js"
 import type { SendEntry } from "../sends/journal.js"
 import { newOperationId, newSendId } from "../sends/send-id.js"
@@ -16,6 +16,12 @@ export interface TopicsService {
     title: string,
     options: { sendId?: string },
   ): Promise<Operated<{ chatId: string; topic: Topic; sendId: string }>>
+  edit(chat: string, topic: string, change: TopicChange): Promise<Operated<{ chatId: string; topic: Topic }>>
+}
+
+const validTitle = (title: string): void => {
+  if (title.trim() === "" || new TextEncoder().encode(title).byteLength > 128)
+    throw new CliError("validation_error", "a topic title needs 1–128 UTF-8 bytes")
 }
 
 export const topicsService = (deps: ServiceDeps): TopicsService => {
@@ -119,8 +125,7 @@ export const topicsService = (deps: ServiceDeps): TopicsService => {
       }
     },
     create: async (chat, title, { sendId }) => {
-      if (title.trim() === "" || new TextEncoder().encode(title).byteLength > 128)
-        throw new CliError("validation_error", "a topic title needs 1–128 UTF-8 bytes")
+      validTitle(title)
       const connection = await online()
       const create = capability(connection, "createTopic", "create forum topics")
       const probe = capability(connection, "forumState", "read forum settings")
@@ -155,6 +160,29 @@ export const topicsService = (deps: ServiceDeps): TopicsService => {
         },
       )
       return { operationId: id, sendId: id, chatId: target, topic }
+    },
+    edit: async (chat, typedTopic, { title, closed }) => {
+      if (title === undefined && closed === undefined)
+        throw new CliError("validation_error", "nothing to change — give a new title, or close or reopen it")
+      if (title !== undefined) validTitle(title)
+      const topicId = typedTopic.trim()
+      if (topicId === "") throw new CliError("validation_error", "which topic? give its id from `topics list`")
+      const connection = await online()
+      const editTopic = capability(connection, "editTopic", "edit forum topics")
+      const chatId = (await connection.resolve(chat)).id
+      const operationId = newOperationId()
+      const action =
+        title !== undefined || closed === undefined ? "topic-edit" : closed ? "topic-close" : "topic-reopen"
+      const topic = await guardedWrite(
+        deps.guard,
+        { operationId, chatId, kind: "chat", action, key: "topics.edit", threadId: topicId },
+        () =>
+          editTopic(chatId, topicId, {
+            ...(title === undefined ? {} : { title }),
+            ...(closed === undefined ? {} : { closed }),
+          }),
+      )
+      return { operationId, chatId, topic }
     },
   }
 }

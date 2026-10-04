@@ -3488,3 +3488,38 @@ describe("sender identity commands", () => {
     expect(send).toHaveBeenCalledOnce()
   })
 })
+
+describe("topics edit", () => {
+  it("passes a title and on/off as closed, and refuses another word", async () => {
+    const root = mkdtempSync(join(tmpdir(), "topic-edit-cli-"))
+    const env = {
+      CHAT_STATE_DIR: join(root, "state"),
+      CHAT_CONFIG_DIR: join(root, "config"),
+      MESSAGING_STORE: join(root, "m.db"),
+    }
+    const topic = {
+      id: "12",
+      title: "t",
+      closed: true,
+      pinned: false,
+      unreadCount: 0,
+      lastMessageAt: null,
+      createdAt: null,
+    }
+    const editTopic = vi.fn(async () => topic)
+    const connect = vi.fn(async () => ({ ...fake, editTopic }))
+
+    const closed = await call(["topics", "edit", "7", "12", "--closed", "on", "--title", "t", "--json"], connect, env)
+    expect(closed.code).toBe(0)
+    expect(JSON.parse(closed.stdout.join(""))).toMatchObject({ chatId: "7", topic })
+    expect(editTopic).toHaveBeenCalledWith("7", "12", { title: "t", closed: true })
+
+    const reopened = await call(["topics", "edit", "7", "12", "--closed", "off", "--json"], connect, env)
+    expect(reopened.code).toBe(0)
+    expect(editTopic).toHaveBeenLastCalledWith("7", "12", { closed: false })
+
+    const wrong = await call(["topics", "edit", "7", "12", "--closed", "yes", "--json"], connect, env)
+    expect(wrong.code).not.toBe(0)
+    expect(editTopic).toHaveBeenCalledTimes(2)
+  })
+})
