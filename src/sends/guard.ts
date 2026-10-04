@@ -26,6 +26,7 @@ export interface GuardRequest {
   /** Messages a deletion names, or people a chat change adds. */
   count?: number
   sendId?: string
+  sendAs?: Id
   operationId?: string
   scheduledFor?: string
   notify?: boolean
@@ -229,7 +230,16 @@ export const sendGuard = ({
     const same = (a: SendEntry, b: { chatId: Id | null; sendId?: string }) =>
       a.sendId !== undefined && a.sendId === b.sendId && a.chatId === b.chatId
     const last = [...counted].reverse().find((entry) => same(entry, { chatId, sendId }))
-    if (sendId !== undefined && last && unsure(last)) return false
+    if (sendId !== undefined && last && unsure(last)) {
+      if (last.sendAs !== request.sendAs) {
+        throw new CliError(
+          "validation_error",
+          "this send id was tried under another identity; repeat it with the same --send-as, or it may post twice",
+          { sendId, retryable: false },
+        )
+      }
+      return false
+    }
     const recent = counted
       .filter((entry, index) => !(unsure(entry) && counted.slice(index + 1).some((later) => same(later, entry))))
       .map((entry) => ({ time: timeOf(entry), weight: weightOf(entry) }))

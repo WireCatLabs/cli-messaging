@@ -61,7 +61,7 @@ to bots only, and a personal account protects a whole chat instead.
 `chats send-as <chat>` lists who the account may post as in a chat: `{ id, title, kind, premiumRequired,
 default }`, `kind` being `self`, `channel` or `group`. The personal identity is always in the list, and
 `default` marks the chat's saved choice. Reading it changes nothing — the saved choice stays as it is.
-`messages send --send-as <id>` (and the send tool's `sendAs`) sends as one of them: the service lists them
+`messages send --send-as <id>` (and the send tool's `send_as`) sends as one of them: the service lists them
 in the same connection and refuses an id that is not there. An adapter without the optional
 `sendAsIdentities` refuses the option — it is never dropped, and never falls back to the personal identity.
 Text only for now: with an attachment it is refused. The journal records the identity, and a retry of an

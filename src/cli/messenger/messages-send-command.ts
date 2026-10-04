@@ -18,6 +18,7 @@ export const sendCommand = (messenger: Messenger): Command =>
     .argument("[text]", "the message")
     .option("--topic <id>", "send to this forum topic; unsupported by messengers without topics")
     .option("--reply-to <message>", "answer this message, by its id in the same chat")
+    .option("--send-as <id>", "post as one of the identities `chats send-as` lists; text only")
     .option("--send-id <id>", "repeat a send whose outcome was unknown, without risking a second copy")
     .option("--silent", "deliver without a notification")
     .option("--no-preview", "no preview card for a link in the text")
@@ -42,6 +43,7 @@ const sendText = async (command: Command, messenger: Messenger, chat: string, te
   const {
     topic,
     replyTo: typedReplyTo,
+    sendAs: typedSendAs,
     sendId,
     silent,
     preview,
@@ -57,6 +59,7 @@ const sendText = async (command: Command, messenger: Messenger, chat: string, te
   } = command.opts<{
     topic?: string
     replyTo?: string
+    sendAs?: string
     sendId?: string
     silent?: boolean
     preview?: boolean
@@ -74,6 +77,8 @@ const sendText = async (command: Command, messenger: Messenger, chat: string, te
   const scheduledFor = at === undefined ? undefined : sendTime(at)
   const replyTo = typedReplyTo?.trim()
   if (replyTo === "") throw new CliError("validation_error", "--reply-to needs the id of the message to answer")
+  const sendAs = typedSendAs?.trim()
+  if (sendAs === "") throw new CliError("validation_error", "--send-as needs an id from `chats send-as`")
   const read = { app: messenger.app, env: context.env, anyFile: allowAnyFile === true }
   const attachments = await readAttachments(
     {
@@ -96,6 +101,7 @@ const sendText = async (command: Command, messenger: Messenger, chat: string, te
       ...(sendId === undefined ? {} : { sendId }),
       ...(replyTo === undefined ? {} : { replyTo }),
       ...(threadId === undefined ? {} : { threadId }),
+      ...(sendAs === undefined ? {} : { sendAs }),
       ...(silent === true ? { silent } : {}),
       ...(preview === false ? { noPreview: true } : {}),
       ...(markdown === true ? { markdown } : {}),

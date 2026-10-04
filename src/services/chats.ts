@@ -14,6 +14,7 @@ import type {
   Member,
   Message,
   Page,
+  SenderIdentity,
 } from "../domain/models.js"
 import { timezoneOf } from "../search/lucene/dates.js"
 import { codeOf, guardedWrite, type Operated } from "../sends/guarded.js"
@@ -134,6 +135,7 @@ export interface ChatsService {
   memberHistory(chat: string, options: { since?: number }): Promise<{ chatId: Id; events: MemberEvent[] }>
   /** Starts or stops the daily fetch; history already kept stays. A local write. */
   track(chat: string, tracked: boolean): Promise<{ chatId: Id; tracked: boolean }>
+  sendAs(chat: string): Promise<SenderIdentity[]>
   /** Through the guard; never counts toward the hourly limit. */
   markRead(request: { chat: string; until?: string; threadId?: string }): Promise<Operated<MarkedRead>>
 }
@@ -267,6 +269,16 @@ export const chatsService = (deps: ServiceDeps): ChatsService => ({
     return completeness.state === "complete"
       ? counted
       : { ...counted, fetch: `${deps.messenger.app.command} store fetch ${chatId}` }
+  },
+
+  sendAs: async (chat) => {
+    if (deps.offline) {
+      throw new CliError("validation_error", "`chats send-as` asks the messenger; not with --offline")
+    }
+    const connection = await deps.connection()
+    const identities = capability(connection, "sendAsIdentities", "send as another identity")
+    const { id } = await connection.resolve(chat)
+    return identities(id)
   },
 
   audit: async (

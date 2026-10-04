@@ -358,6 +358,7 @@ describe("doctor report", () => {
       messageId: "2222222",
       replyTo: "3333333",
       threadId: "4444444",
+      sendAs: "-1009999999999",
       resultChatId: "-1005555555555",
       sendId: "6666666666666666",
       operationId: "6666666666666666",

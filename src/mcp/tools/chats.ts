@@ -183,6 +183,17 @@ export const chatsTools = (messenger: Messenger): Record<string, AnyTool> => {
       online: (adapter, args, { guard }) => chats(adapter, guard).inspect(args.link),
     }),
 
+    chats_send_as: tool({
+      title: "Who the owner may post as",
+      description:
+        "The identities the owner may post as in a chat: { id, title, kind, premiumRequired, default }. kind is " +
+        "self, channel or group; self is always there; default is the chat's saved choice. Reading changes nothing. " +
+        "Pass an id as messages_send send_as. Returns { items, page, limit, hasMore }.",
+      input: v.object({ chat }),
+      annotations: READ,
+      served: async (services, args) => listed(await services.chats.sendAs(args.chat)),
+    }),
+
     chats_show: tool({
       title: "Show a chat",
       description: "One chat: its kind, unread count, last message time and who is in it.",

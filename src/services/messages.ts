@@ -113,6 +113,8 @@ export interface SendRequest {
   origin?: string
   spoiler?: boolean
   captionAbove?: boolean
+  /** One of the ids `chats.sendAs` lists for this chat. */
+  sendAs?: Id
 }
 
 /** One message in a chat, as typed. */
@@ -377,9 +379,13 @@ export const messagesService = (deps: ServiceDeps): MessagesService => {
       origin,
       spoiler,
       captionAbove,
+      sendAs,
     }) => {
       const media = { ...(spoiler ? { spoiler } : {}), ...(captionAbove ? { captionAbove } : {}) }
       checkMediaOptions(deps.messenger, Object.keys(media) as MediaOption[], attachments.length)
+      if (sendAs !== undefined && attachments.length > 0) {
+        throw new CliError("validation_error", "--send-as sends text only for now; send the file without it")
+      }
       const connection = await deps.connection()
       if (at !== undefined && sendId !== undefined) {
         throw new CliError(
@@ -396,7 +402,15 @@ export const messagesService = (deps: ServiceDeps): MessagesService => {
       const threadId = threadIdOf(typedThread)
       const validate =
         threadId === undefined ? undefined : capability(connection, "validateThread", "send to a forum topic")
+      const identities =
+        sendAs === undefined ? undefined : capability(connection, "sendAsIdentities", "send as another identity")
       const { id: chatId } = await connection.resolve(chat)
+      if (identities && !(await identities(chatId)).some((one) => one.id === sendAs)) {
+        throw new CliError(
+          "validation_error",
+          `${sendAs} is not an identity this account may post as in this chat — see \`chats send-as\``,
+        )
+      }
       const id = sendId ?? connection.newSendId?.() ?? newSendId()
       const attempt = {
         chatId,
@@ -406,6 +420,7 @@ export const messagesService = (deps: ServiceDeps): MessagesService => {
         length: text.length,
         ...(replyTo === undefined ? {} : { replyTo }),
         ...(threadId === undefined ? {} : { threadId }),
+        ...(sendAs === undefined ? {} : { sendAs }),
         ...(at === undefined ? {} : { scheduledFor: at }),
         ...(key === undefined ? {} : { key }),
         ...(origin === undefined ? {} : { origin }),
@@ -428,6 +443,7 @@ export const messagesService = (deps: ServiceDeps): MessagesService => {
               ...(at === undefined ? {} : { at }),
               ...(attachments.length === 0 ? {} : { attachments }),
               ...media,
+              ...(sendAs === undefined ? {} : { sendAs }),
             }),
           (sent) => ({ messageId: sent.message.id }),
           validate === undefined || threadId === undefined

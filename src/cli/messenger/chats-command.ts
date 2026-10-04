@@ -101,6 +101,17 @@ export const chatsCommand = (messenger: Messenger): Command => {
       }
     })
 
+  chats
+    .command("send-as")
+    .description("who this account may post as in a chat; changes no saved choice")
+    .argument("<chat>", messenger.chatArgument)
+    .action(async function (this: Command, chat: string) {
+      const context = messengerContext(this, messenger)
+      const identities = await context.withServices((services) => services.chats.sendAs(chat))
+      if (context.format === "json") context.renderer.result(listed(identities))
+      else context.renderer.stream(identities)
+    })
+
   chats.addCommand(membersCommand(messenger))
   chats.addCommand(markReadCommand(messenger))
   chats.addCommand(trackingCommand(messenger))

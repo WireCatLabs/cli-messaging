@@ -25,6 +25,7 @@ import type {
   PhoneBookEntry,
   Poll,
   ProfileFacts,
+  SenderIdentity,
   Topic,
   WindowedMessage,
 } from "../../domain/models.js"
@@ -68,6 +69,8 @@ export interface SendOptions {
   spoiler?: boolean
   /** The caption shown above the attachment. Only where `Messenger.mediaOptions` has it. */
   captionAbove?: boolean
+  /** One of `sendAsIdentities`' ids, already checked against them. */
+  sendAs?: Id
 }
 
 /** A voice message as text. `pending`: the messenger was still working on it when it answered. */
@@ -253,6 +256,11 @@ export interface MessagePermalinks {
   permalink(chatId: Id, messageId: Id): Promise<MessagePermalink>
 }
 
+export interface SenderIdentities {
+  /** Who the account may post as in this chat, itself included. Reading changes no saved choice. */
+  sendAsIdentities(chatId: Id): Promise<SenderIdentity[]>
+}
+
 export interface ScheduledMessages {
   /** Messages waiting to be sent later in a chat, soonest first, each with `scheduledFor`. */
   scheduled(chat: string): Promise<Message[]>
@@ -424,6 +432,7 @@ export interface MessengerAdapter
     Partial<MessageMedia>,
     Partial<ScheduledMessages>,
     Partial<MessagePermalinks>,
+    Partial<SenderIdentities>,
     Partial<GroupModeration>,
     Partial<AccountTools>,
     Partial<ProfilePhotos>,
