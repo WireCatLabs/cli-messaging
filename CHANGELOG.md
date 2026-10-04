@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.145.0 — 04.10.2026
+
 ### Added
 
 - `mcp --http --public-url https://<name>.ts.net [--port 8765]`: the same MCP tools over Streamable HTTP on
