@@ -14,6 +14,8 @@ export {
   text as botText,
   withAcross,
 } from "../mcp/bot/tools.js"
+export { revokeAll } from "../mcp/http/oauth.js"
+export { type HttpOptions, MCP_PATH, serveOverHttp } from "../mcp/http/serve.js"
 export {
   answerMcpTool,
   failMcpTool,
@@ -27,6 +29,7 @@ export {
   registerPersonalMcpTools,
   warmEmbedders,
 } from "../mcp/personal.js"
+export { OVER_HTTP } from "../mcp/server.js"
 export {
   answerMessagesSearch,
   MESSAGES_SEARCH_DESCRIPTION,
@@ -119,7 +122,7 @@ export { conversationsCommand } from "./messenger/conversations-command.js"
 export { doctorCommand } from "./messenger/doctor-command.js"
 export { recipientsCommand, sendsCommand } from "./messenger/guard-commands.js"
 export { inboxCommand } from "./messenger/inbox.js"
-export { type McpEnvironment, mcpCommand, serverEntry } from "./messenger/mcp-command.js"
+export { httpTokenFile, type McpEnvironment, mcpCommand, serverEntry } from "./messenger/mcp-command.js"
 export { messagesCommand, sendCommand } from "./messenger/messages-command.js"
 export { deleteCommand } from "./messenger/messages-delete-command.js"
 export { editCommand } from "./messenger/messages-edit-command.js"
