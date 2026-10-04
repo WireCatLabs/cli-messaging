@@ -474,3 +474,30 @@ export const tags = sqliteTable(
     index("tags_by_tag").on(table.tag, table.taggableType, table.taggablePk),
   ],
 )
+
+/**
+ * Every run of `messages search` and `messages stats`, with the parameters as the caller gave them — never
+ * a message or a result. A row with a name is a saved search; an identical unnamed run counts on its row.
+ */
+export const searches = sqliteTable(
+  "searches",
+  {
+    pk: integer("pk").primaryKey(),
+    name: text("name").unique(),
+    /** `search` or `stats`. */
+    command: text("command").notNull(),
+    /** JSON, keys sorted, so the same run is the same text. */
+    params: text("params").notNull(),
+    /** `lucene-v1` or `legacy`. */
+    language: text("language").notNull(),
+    version: integer("version").notNull(),
+    fieldsVersion: integer("fields_version").notNull(),
+    createdAt: integer("created_at").notNull(),
+    lastRunAt: integer("last_run_at"),
+    runs: integer("runs").notNull().default(0),
+  },
+  (table) => [
+    uniqueIndex("searches_history").on(table.command, table.params).where(sql`name IS NULL`),
+    index("searches_by_last_run").on(desc(table.lastRunAt)),
+  ],
+)

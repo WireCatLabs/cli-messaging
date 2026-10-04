@@ -1,0 +1,94 @@
+import * as v from "valibot"
+import type { Messenger } from "../../cli/messenger/context.js"
+import { listed } from "../../cli/paging.js"
+import type { SendGuard } from "../../sends/guard.js"
+import { servicesFor, storedDeps } from "../../services/index.js"
+import type { AccountKey, MessageStore } from "../../store/store.js"
+import { type AnyTool, chatOf, limit, READ, refuseAskedLocalWrite, tool } from "../tool.js"
+
+const LOCAL = { readOnlyHint: false, openWorldHint: false }
+const ROW = "{ id, name, command, params, language, version, fieldsVersion, createdAt, lastRunAt, runs }"
+const reference = v.pipe(
+  v.string(),
+  v.minLength(1),
+  v.description("a saved search's name, or the id of any row of searches_history"),
+)
+
+export const searchesTools = (messenger: Messenger): Record<string, AnyTool> => {
+  const command = messenger.app.command
+  const services = (store: MessageStore, account: AccountKey, guard: SendGuard) =>
+    servicesFor(storedDeps(messenger, store, account, guard))
+  return {
+    searches_list: tool({
+      title: "List saved searches",
+      description: `The saved searches, by name; messages_search and messages_stats run one with \`saved\`. Returns { items: [${ROW}], page, limit, hasMore }.`,
+      input: v.object({}),
+      annotations: { ...READ, openWorldHint: false },
+      stored: async (store, account, _args, defaults) =>
+        listed(await services(store, account, defaults.guard).searches.list()),
+    }),
+
+    searches_history: tool({
+      title: "Search history",
+      description:
+        "The searches and counts that ran, newest first, saved ones included: the query and options as given, " +
+        `never the results. \`saved\` with an id runs one again. Returns { items: [${ROW}], page, limit, hasMore }.`,
+      input: v.object({ limit }),
+      annotations: { ...READ, openWorldHint: false },
+      stored: async (store, account, args, defaults) => {
+        const size = args.limit ?? defaults.limit
+        return { ...(await services(store, account, defaults.guard).searches.history(size)), page: 1, limit: size }
+      },
+    }),
+
+    searches_create: tool({
+      title: "Save a search",
+      description:
+        "Saves a search under a name without running it; the query is checked against today's fields. Takes " +
+        "messages_search's arguments, plus `by` for messages_stats. A taken name is refused unless `replace`. " +
+        `Writes only to the local store. Returns ${ROW}.`,
+      input: v.object({
+        name: v.pipe(v.string(), v.minLength(1), v.description("up to 64 letters a–z, digits and hyphens")),
+        text: v.optional(v.pipe(v.string(), v.minLength(1), v.description("the query: Lucene text or legacy syntax"))),
+        ast: v.optional(v.unknown()),
+        language: v.optional(v.picklist(["lucene", "legacy"])),
+        timezone: v.optional(v.string()),
+        chat: v.optional(chatOf(messenger)),
+        source: v.optional(v.pipe(v.string(), v.minLength(1), v.description("a messenger held on this machine"))),
+        newest: v.optional(v.boolean()),
+        context: v.optional(v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(20))),
+        limit,
+        by: v.optional(v.picklist(["chat", "sender", "day", "hour"])),
+        replace: v.optional(v.pipe(v.boolean(), v.description("overwrite a saved search of the same name"))),
+      }),
+      annotations: { ...LOCAL, destructiveHint: false, idempotentHint: false },
+      stored: async (store, account, { name, replace, ...params }, defaults) => {
+        refuseAskedLocalWrite(defaults, "searches.create", command)
+        return services(store, account, defaults.guard).searches.create(name, params, { replace: replace === true })
+      },
+    }),
+
+    searches_delete: tool({
+      title: "Delete a saved search",
+      description: `Deletes a saved search, or one run from the history. Writes only to the local store. Returns ${ROW}.`,
+      input: v.object({ name: reference }),
+      annotations: { ...LOCAL, destructiveHint: true, idempotentHint: false },
+      stored: async (store, account, args, defaults) => {
+        refuseAskedLocalWrite(defaults, "searches.delete", command)
+        return services(store, account, defaults.guard).searches.delete(args.name)
+      },
+    }),
+
+    searches_clear: tool({
+      title: "Clear search history",
+      description:
+        "Empties the search history; saved searches stay. Writes only to the local store. Returns { cleared }.",
+      input: v.object({}),
+      annotations: { ...LOCAL, destructiveHint: true, idempotentHint: true },
+      stored: async (store, account, _args, defaults) => {
+        refuseAskedLocalWrite(defaults, "searches.clear", command)
+        return services(store, account, defaults.guard).searches.clear()
+      },
+    }),
+  }
+}

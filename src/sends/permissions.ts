@@ -81,6 +81,7 @@ export const RESOURCES = [
   "bot",
   "conversations",
   "tags",
+  "searches",
 ] as const
 
 const OLD_WORDS: Record<Permission, PermissionKey[]> = {
@@ -255,6 +256,9 @@ const NAMED_WRITE_KEYS = [
   "polls.close",
   "polls.create",
   "polls.vote",
+  "searches.clear",
+  "searches.create",
+  "searches.delete",
   "tags.add",
   "tags.remove",
   "topics.create",

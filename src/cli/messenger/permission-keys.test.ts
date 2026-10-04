@@ -21,6 +21,7 @@ import { modelsCommand } from "./models-command.js"
 import { pollsCommand } from "./polls-command.js"
 import { reactionsCommand } from "./reactions-command.js"
 import { reviewCommand } from "./review.js"
+import { searchesCommand } from "./searches-command.js"
 import { serveCommand } from "./serve-command.js"
 import { serverCommand } from "./server-command.js"
 import { tagsCommand } from "./tags-command.js"
@@ -59,6 +60,7 @@ describe("the permission key of a command", () => {
       storeCommand(messenger),
       conversationsCommand(messenger),
       tagsCommand(messenger),
+      searchesCommand(messenger),
       recipientsCommand(messenger),
       sendsCommand(messenger),
       modelsCommand(messenger),
@@ -80,5 +82,6 @@ describe("the permission key of a command", () => {
     expect(keyForCommand(["store", "backup"])).toBeNull()
     expect(keyForCommand(["chats", "members", "list"])).toBe("chats.members.list")
     expect(keyForCommand(["tags", "add"])).toBe("tags.add")
+    expect(keyForCommand(["searches", "history"])).toBe("searches.history")
   })
 })

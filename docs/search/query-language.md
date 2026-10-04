@@ -305,6 +305,28 @@ tg messages stats 'from:me date>=30d' --by day --timezone Europe/Madrid
 
 Если чаты сохранены не целиком, числа — нижняя граница; stderr говорит, сколько таких чатов.
 
+## Сохранённые поиски и история
+
+Каждый успешный запуск `messages search` и `messages stats` (команда или MCP) записывается в локальное
+хранилище: запрос и параметры, как их дали, — никогда не сообщения и не результаты. Тот же запуск ещё раз
+увеличивает счётчик своей строки. Хранятся 1000 последних запусков; отказанный запрос и запуск с
+`--no-record` не записываются.
+
+```sh
+tg searches create invoices 'invoice from:"Alice Synthetic"' --limit 20 --newest
+tg messages search --saved invoices 'date>=7d'
+tg messages stats --saved invoices --by day
+tg searches history --limit 10
+tg messages search --saved 42
+```
+
+`searches create` сохраняет и ничего не запускает; занятое имя — только с `--replace`. `--saved`
+принимает имя или id строки из `searches history`; слова после него добавляются через AND, а
+параметры, набранные в этой команде, заменяют сохранённые. Сохранённый текст разбирается заново при
+каждом запуске: поле, которое с тех пор переименовали, даёт обычную ошибку с именем поиска, а `date>=7d`
+отсчитывается от момента запуска. `searches list` — сохранённые, `searches show`, `searches delete`,
+`searches clear` — очистить историю, сохранённые остаются.
+
 ## Presets
 
 Detector сообщает **кандидата**, а не подтверждённую credential/действительный банковский документ.

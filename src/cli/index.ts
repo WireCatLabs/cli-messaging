@@ -161,6 +161,7 @@ export type {
 export { reactionsCommand } from "./messenger/reactions-command.js"
 export { repliesCommand } from "./messenger/replies-command.js"
 export { reviewCommand } from "./messenger/review.js"
+export { searchesCommand } from "./messenger/searches-command.js"
 export { serveCommand, servingProfiles } from "./messenger/serve-command.js"
 export {
   type Running,

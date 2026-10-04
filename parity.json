@@ -112,7 +112,7 @@
     "--by": {
       "value": "<grouping>",
       "meaning": "what to count by",
-      "note": "each command names its own groupings — messages stats chat, sender, day or hour; chats stats day or week, as a series beside its totals — so it differs on purpose (Help text rule 4)"
+      "note": "each command names its own groupings — messages stats chat, sender, day or hour, and searches create the same for messages stats --saved; chats stats day or week, as a series beside its totals — so it differs on purpose (Help text rule 4)"
     },
     "--can": {
       "value": "<rights>",
@@ -421,6 +421,9 @@
       "value": "<chat>",
       "meaning": "take a chat out of a folder; repeat it for more"
     },
+    "--replace": {
+      "meaning": "overwrite a saved search of the same name"
+    },
     "--reply-to": {
       "value": "<message>",
       "meaning": "answer this message id in the same chat"
@@ -437,6 +440,10 @@
     "--run": {
       "value": "<id>",
       "meaning": "the run the report is about; the newest failed one if not given"
+    },
+    "--saved": {
+      "value": "<name|id>",
+      "meaning": "run a saved search, or an earlier run by its id; options typed with it replace its own, more words are AND-ed"
     },
     "--search": {
       "value": "<text>",
@@ -1866,6 +1873,10 @@
         "--limit": "all",
         "--newest": "all",
         "--regex": "all",
+        "--saved": {
+          "in": [],
+          "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" }
+        },
         "--source": "all",
         "--timezone": "all"
       }
@@ -1903,6 +1914,10 @@
           "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" }
         },
         "--limit": {
+          "in": [],
+          "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" }
+        },
+        "--saved": {
           "in": [],
           "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" }
         },
@@ -2080,6 +2095,82 @@
     },
     "runs show": {
       "in": "all"
+    },
+    "searches": {
+      "in": [],
+      "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" }
+    },
+    "searches clear": {
+      "in": [],
+      "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" }
+    },
+    "searches create": {
+      "in": [],
+      "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" },
+      "options": {
+        "--by": {
+          "in": [],
+          "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" }
+        },
+        "--chat": {
+          "in": [],
+          "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" }
+        },
+        "--context": {
+          "in": [],
+          "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" }
+        },
+        "--language": {
+          "in": [],
+          "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" }
+        },
+        "--limit": {
+          "in": [],
+          "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" }
+        },
+        "--newest": {
+          "in": [],
+          "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" }
+        },
+        "--regex": {
+          "in": [],
+          "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" }
+        },
+        "--replace": {
+          "in": [],
+          "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" }
+        },
+        "--source": {
+          "in": [],
+          "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" }
+        },
+        "--timezone": {
+          "in": [],
+          "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" }
+        }
+      }
+    },
+    "searches delete": {
+      "in": [],
+      "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" }
+    },
+    "searches history": {
+      "in": [],
+      "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" },
+      "options": {
+        "--limit": {
+          "in": [],
+          "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" }
+        }
+      }
+    },
+    "searches list": {
+      "in": [],
+      "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" }
+    },
+    "searches show": {
+      "in": [],
+      "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" }
     },
     "sends": {
       "in": "all"

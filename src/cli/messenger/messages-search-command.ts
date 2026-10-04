@@ -10,8 +10,8 @@ export const messagesSearchCommand = (messenger: Messenger): Command =>
   new Command("search")
     .description("search the local store — what was read, fetched or kept by serve; never asks the messenger")
     .argument(
-      "<query...>",
-      'strict Lucene query: words, "phrases", AND/OR/NOT, field groups and date ranges; --language legacy keeps discovery',
+      "[query...]",
+      'strict Lucene query: words, "phrases", AND/OR/NOT, field groups and date ranges; --language legacy keeps discovery; with --saved, more words AND-ed to it',
     )
     .option("--chat <chat>", `only this chat — the same as chat: in the query; ${messenger.chatArgument}`)
     .option(
@@ -28,6 +28,7 @@ export const messagesSearchCommand = (messenger: Messenger): Command =>
       "Search guide: https://github.com/leemour/cli-messaging/blob/main/docs/search/query-language.md",
     )
     .option("--regex", "the words are one regular expression, case-insensitive, tested against every stored text")
+    .option("--saved <name|id>", "run a saved search or an earlier run; options typed here replace its own")
     .action(async function (this: Command, words: string[]) {
       const context = messengerContext(this, messenger)
       const {
@@ -38,6 +39,8 @@ export const messagesSearchCommand = (messenger: Messenger): Command =>
         timezone,
         newest,
         context: around,
+        limit: typedLimit,
+        saved,
       } = this.opts<{
         chat?: string
         source?: string
@@ -46,26 +49,56 @@ export const messagesSearchCommand = (messenger: Messenger): Command =>
         timezone?: string
         newest?: boolean
         context?: number
+        limit?: number
+        saved?: string
       }>()
+      if (saved === undefined && words.length === 0)
+        throw new CliError("validation_error", "give a query, or --saved <name> to run a saved search")
+      if (saved !== undefined && regex)
+        throw new CliError("validation_error", "--regex is kept with the saved search; not with --saved")
       const controller = new AbortController()
       context.track({ close: async () => controller.abort() })
       const external = environmentOf(this).signal
       const signal = external ? AbortSignal.any([external, controller.signal]) : controller.signal
-      const { limit } = context.settings
-      const pattern = regex ? patternOf(words.join(" ")) : undefined
-      const found = await context.withServices((services) =>
-        services.messages.search({
-          ...(pattern ? { pattern } : { text: words.join(" ") }),
+      const typed = {
+        ...(chat === undefined ? {} : { chat }),
+        ...(source === undefined ? {} : { source }),
+        ...(language === undefined ? {} : { language }),
+        ...(timezone === undefined ? {} : { timezone }),
+        ...(newest ? { newest: true } : {}),
+        ...(around === undefined ? {} : { context: around }),
+        ...(typedLimit === undefined ? {} : { limit: typedLimit }),
+      }
+      let limit = context.settings.limit
+      const found = await context.withServices(async (services) => {
+        if (saved === undefined) {
+          const pattern = regex ? patternOf(words.join(" ")) : undefined
+          return services.messages.search({
+            ...typed,
+            ...(pattern ? { pattern } : { text: words.join(" ") }),
+            limit,
+            signal,
+            language: language ?? (pattern ? "legacy" : "lucene"),
+            newest: newest === true,
+            context: around ?? (context.format === "pretty" ? 2 : 0),
+          })
+        }
+        const { id, params, pattern } = await services.searches.resolve(saved, { ...typed, text: words.join(" ") })
+        limit = params.limit ?? limit
+        return services.messages.search({
+          ...(pattern ? { pattern } : params.text === undefined ? {} : { text: params.text }),
+          ...(params.ast === undefined ? {} : { ast: params.ast }),
+          ...(params.chat === undefined ? {} : { chat: params.chat }),
+          ...(params.source === undefined ? {} : { source: params.source }),
+          ...(params.timezone === undefined ? {} : { timezone: params.timezone }),
           limit,
           signal,
-          language: language ?? (pattern ? "legacy" : "lucene"),
-          ...(timezone === undefined ? {} : { timezone }),
-          newest: newest === true,
-          context: around ?? (context.format === "pretty" ? 2 : 0),
-          ...(chat === undefined ? {} : { chat }),
-          ...(source === undefined ? {} : { source }),
-        }),
-      )
+          language: params.language ?? (pattern ? "legacy" : "lucene"),
+          newest: params.newest === true,
+          context: params.context ?? (context.format === "pretty" ? 2 : 0),
+          saved: id,
+        })
+      })
       const { command } = messenger.app
       for (const { from, to } of found.corrections) context.renderer.note(`${from} → ${to.join(", ")}`)
       if (!found.wordsReady) {
@@ -122,14 +155,14 @@ const patternOf = (source: string): RegExp => {
   }
 }
 
-const wholeCount = (value: string): number => {
+export const wholeCount = (value: string): number => {
   if (!/^\d+$/.test(value.trim())) {
     throw new CliError("validation_error", `--context takes a whole number from 0 upwards, not "${value}"`)
   }
   return Number(value)
 }
 
-const languageOf = (value: string): "lucene" | "legacy" => {
+export const languageOf = (value: string): "lucene" | "legacy" => {
   if (value !== "lucene" && value !== "legacy")
     throw new CliError("validation_error", "--language takes lucene or legacy")
   return value

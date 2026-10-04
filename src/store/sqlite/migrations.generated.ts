@@ -151,5 +151,13 @@ export const GENERATED: { name: string; statements: string[] }[] = [
       "CREATE TRIGGER tags_message_ad AFTER DELETE ON messages BEGIN\n  DELETE FROM tags WHERE taggable_type = 'message' AND taggable_pk = old.pk;\nEND;",
       "CREATE TRIGGER tags_chat_ad AFTER DELETE ON chats BEGIN\n  DELETE FROM tags WHERE taggable_type = 'chat' AND taggable_pk = old.pk;\nEND;"
     ]
+  },
+  {
+    "name": "20261004202018_version-17-searches",
+    "statements": [
+      "CREATE TABLE `searches` (\n\t`pk` integer PRIMARY KEY,\n\t`name` text UNIQUE,\n\t`command` text NOT NULL,\n\t`params` text NOT NULL,\n\t`language` text NOT NULL,\n\t`version` integer NOT NULL,\n\t`fields_version` integer NOT NULL,\n\t`created_at` integer NOT NULL,\n\t`last_run_at` integer,\n\t`runs` integer DEFAULT 0 NOT NULL\n);",
+      "CREATE UNIQUE INDEX `searches_history` ON `searches` (`command`,`params`) WHERE name IS NULL;",
+      "CREATE INDEX `searches_by_last_run` ON `searches` (\"last_run_at\" desc);"
+    ]
   }
 ]
