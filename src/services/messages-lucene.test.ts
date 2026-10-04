@@ -310,6 +310,8 @@ describe.each(["max", "telegram"])("strict store profile (%s)", (provider) => {
     await store.markChatsLeft(account, ["1", "2"])
     const all = await run(store, account, "alpha")
     expect(all.coverage).toMatchObject({ lastSyncedAt: "2026-10-01T09:00:00.000Z", inventoryComplete: true })
+    const counted = await statsStore(store, account, { text: "alpha", by: "chat", limit: 10 })
+    expect(counted.coverage).toEqual(all.coverage)
     expect(all.completeness.map(({ fetchedAt }) => fetchedAt)).toEqual([
       "2026-10-01T09:00:00.000Z",
       "2026-10-02T09:00:00.000Z",
