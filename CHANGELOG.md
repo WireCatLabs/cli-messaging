@@ -31,6 +31,10 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   member. A store or a `Services` object written by hand — a test fake — adds them; `openStore` and `servicesFor`
   already do.
 
+### Fixed
+
+- The parity manifest lists `mcp --http`, `--port`, `--public-url` and `--revoke` in both tg and max, which now
+  have them.
 ## 0.147.0 — 04.10.2026
 
 Released early: max-cli and tg-cli need the reviewed search coverage and history-boundary fixes for their coordinated release

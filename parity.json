@@ -1621,34 +1621,10 @@
         },
         "--allow-send": "all",
         "--confirm-send": "all",
-        "--http": {
-          "in": [],
-          "planned": {
-            "max": "CLI-58",
-            "tg": "tg's next cli-messaging bump"
-          }
-        },
-        "--port": {
-          "in": [],
-          "planned": {
-            "max": "CLI-58",
-            "tg": "tg's next cli-messaging bump"
-          }
-        },
-        "--public-url": {
-          "in": [],
-          "planned": {
-            "max": "CLI-58",
-            "tg": "tg's next cli-messaging bump"
-          }
-        },
-        "--revoke": {
-          "in": [],
-          "planned": {
-            "max": "CLI-58",
-            "tg": "tg's next cli-messaging bump"
-          }
-        },
+        "--http": "all",
+        "--port": "all",
+        "--public-url": "all",
+        "--revoke": "all",
         "--yes": {
           "in": [],
           "planned": {
