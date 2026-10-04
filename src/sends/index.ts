@@ -2,8 +2,9 @@ export {
   type FloodDeadline,
   FloodMemory,
   type FloodState,
+  FROZEN_HOLD_MS,
   floodPathFor,
-  SEND_BLOCK_MS,
+  LIMITED_HOLD_MS,
   type SendBlock,
 } from "./flood.js"
 export {

@@ -28,8 +28,13 @@ export interface FloodState {
 
 /** A process that hits more distinct waits than this is misbehaving anyway; the soonest are dropped. */
 const MOST_DEADLINES = 50
-/** Neither a frozen account nor a spam limit reports its end on refusal; a day, then one request finds out. */
-export const SEND_BLOCK_MS = 24 * 60 * 60 * 1000
+/**
+ * How long a hold lasts when the messenger gave no end. A spam limit (`limited`) never says when it
+ * ends, so an hour: at most one refused write an hour, and each new refusal sets the hour again. A
+ * frozen account's refusal carries no date either; a day, until `doctor --online` reads the real one.
+ */
+export const LIMITED_HOLD_MS = 60 * 60 * 1000
+export const FROZEN_HOLD_MS = 24 * 60 * 60 * 1000
 
 /** `<state dir>/flood/<profile>.json`, beside `sends/`. */
 export const floodPathFor = (app: AppIdentity, profile: string, env: NodeJS.ProcessEnv = process.env): string =>
@@ -88,7 +93,8 @@ export class FloodMemory {
     const kept: SendBlock = {
       ...block,
       since: new Date(now).toISOString(),
-      until: block.until ?? new Date(now + SEND_BLOCK_MS).toISOString(),
+      until:
+        block.until ?? new Date(now + (block.state === "limited" ? LIMITED_HOLD_MS : FROZEN_HOLD_MS)).toISOString(),
     }
     this.#write({ ...this.read(), sendBlock: kept })
     return kept
@@ -98,6 +104,13 @@ export class FloodMemory {
   unblock(state: SendBlock["state"]): void {
     const { sendBlock, ...rest } = this.read()
     if (sendBlock?.state === state) this.#write(rest)
+  }
+
+  /** Forgets every wait and lifts the hold, and answers with what was still in force. */
+  clear(): FloodState {
+    const cleared = this.read()
+    this.#write({ deadlines: [] })
+    return cleared
   }
 
   #write(state: FloodState): void {

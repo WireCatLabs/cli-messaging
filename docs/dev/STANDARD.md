@@ -20,7 +20,7 @@ guessable from the others.
 1. **`<tool> [profile] <resource> <verb> [arguments]`.** The resource is a noun: **plural** for a
    collection (`chats`, `contacts`, `messages`, `polls`, `reactions`, `recipients`, `replies`, `sends`,
    `runs`, `topics`, `models`, `tags`, `searches`), **singular** for what a profile has exactly
-   one of (`session`, `account`, `config`, `server`, `store`, `skill`, `cache`). A group is never
+   one of (`session`, `account`, `config`, `server`, `store`, `skill`, `cache`, `flood`). A group is never
    named with a verb. `tags` and `searches` are the owner's own records in the local store, never
    sent; their writes have their own keys (`tags.add`), so a read-only profile hides them.
 2. **Top-level words** only for what spans every chat or is the tool itself: `inbox`, `review`,
@@ -73,7 +73,8 @@ guessable from the others.
 7. **One word per idea** in help, docs and errors. The **local store** is the message database
    both tools share; max's per-profile **cache** is a different thing until it is replaced, and
    keeps its name until then. `session` is this tool's login; `account sessions` are the other
-   devices.
+   devices. **`flood`** is what the messenger told this profile to hold off on — the waits it asked
+   for and a hold on writes — kept on this machine; `flood clear` is the owner's and has no MCP tool.
 8. **An MCP tool is named after its command** — see [MCP](#mcp).
 9. **No aliases.** A renamed command's old name stops working, and the release notes say so under
    "may break scripts".

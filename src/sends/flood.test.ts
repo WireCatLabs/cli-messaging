@@ -2,7 +2,7 @@ import { mkdtempSync, statSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { describe, expect, it } from "vitest"
-import { FloodMemory, floodPathFor, SEND_BLOCK_MS } from "./flood.js"
+import { FloodMemory, FROZEN_HOLD_MS, floodPathFor, LIMITED_HOLD_MS } from "./flood.js"
 
 const app = { command: "app", appName: "app-cli", envPrefix: "APP", description: "", version: "0" }
 const at = (iso: string) => () => Date.parse(iso)
@@ -55,10 +55,37 @@ describe("flood memory", () => {
     expect(memory.read()).toEqual({ deadlines: [] })
   })
 
-  it("**holds writes for a day when the end is unknown**; lifting a frozen hold leaves a spam limit alone", () => {
+  it("**holds a spam limit an hour and a frozen account a day** when the messenger gave no end", () => {
     const memory = memoryAt("2026-10-04T10:00:00Z")
+    const frozen = memory.block({ state: "frozen", hint: "frozen" })
+    expect(Date.parse(frozen.until) - Date.parse(frozen.since)).toBe(FROZEN_HOLD_MS)
     const block = memory.block({ state: "limited", hint: "spam" })
-    expect(Date.parse(block.until) - Date.parse(block.since)).toBe(SEND_BLOCK_MS)
+    expect(Date.parse(block.until) - Date.parse(block.since)).toBe(LIMITED_HOLD_MS)
+    expect(LIMITED_HOLD_MS).toBe(60 * 60 * 1000)
+  })
+
+  it("a new refusal sets the hour again", () => {
+    const path = join(mkdtempSync(join(tmpdir(), "flood-")), "p.json")
+    memoryAt("2026-10-04T10:00:00Z", path).block({ state: "limited", hint: "spam" })
+    const again = memoryAt("2026-10-04T10:50:00Z", path).block({ state: "limited", hint: "spam" })
+
+    expect(again.until).toBe("2026-10-04T11:50:00.000Z")
+    expect(memoryAt("2026-10-04T11:10:00Z", path).sendBlock()).toBeDefined()
+  })
+
+  it("clear forgets every wait and the hold, and says what was in force", () => {
+    const memory = memoryAt("2026-10-04T10:00:00Z")
+    memory.remember({ operation: "history", waitMs: 60_000 })
+    memory.block({ state: "limited", hint: "spam" })
+
+    expect(memory.clear()).toMatchObject({ deadlines: [{ operation: "history" }], sendBlock: { state: "limited" } })
+    expect(memory.read()).toEqual({ deadlines: [] })
+    expect(memory.clear()).toEqual({ deadlines: [] })
+  })
+
+  it("lifting a frozen hold leaves a spam limit alone", () => {
+    const memory = memoryAt("2026-10-04T10:00:00Z")
+    memory.block({ state: "limited", hint: "spam" })
 
     memory.unblock("frozen")
     expect(memory.sendBlock()).toMatchObject({ state: "limited" })

@@ -1574,6 +1574,14 @@
         "--run": "all"
       }
     },
+    "flood": {
+      "in": [],
+      "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" }
+    },
+    "flood clear": {
+      "in": [],
+      "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" }
+    },
     "inbox": {
       "in": "all",
       "options": {

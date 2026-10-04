@@ -329,7 +329,9 @@ describe("a profile whose writes are held", () => {
       code: "permission_error",
       details: { standing: { state: "limited" } },
     })
-    await expect(refused).rejects.toThrow(/do not retry: the owner checks the account with `app held doctor --online`$/)
+    await expect(refused).rejects.toThrow(
+      /do not retry: the owner checks the account with `app held doctor --online`, and lifts the hold with `app held flood clear` once it is over$/,
+    )
     expect(act).not.toHaveBeenCalled()
     expect(journal.entries().map((entry) => entry.outcome)).toEqual(["refused"])
 
