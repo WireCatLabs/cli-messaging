@@ -3,7 +3,14 @@ import { CliError } from "@leemour/cli-core"
 import type { Fetching } from "../cli/messenger/context.js"
 import { capability } from "../cli/messenger/port.js"
 import type { ChatKind, Id, Message } from "../domain/models.js"
-import { type AccountKey, type ChatStats, fetchedKey, historyStartKey, type MessageStore, type Range } from "../store/store.js"
+import {
+  type AccountKey,
+  type ChatStats,
+  fetchedKey,
+  historyStartKey,
+  type MessageStore,
+  type Range,
+} from "../store/store.js"
 import { type Estimate, estimateBackfill } from "./backfill-estimate.js"
 import type { ServiceDeps } from "./deps.js"
 
