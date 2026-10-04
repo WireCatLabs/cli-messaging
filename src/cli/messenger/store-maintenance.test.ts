@@ -8,6 +8,7 @@ import { holdersOf } from "../../background/processes.js"
 import { RULES_VERSION } from "../../conversations/link.js"
 import { MIGRATIONS, migrate } from "../../store/migrations.js"
 import { openCache } from "../../store/open.js"
+import { configCommand } from "../config-command.js"
 import { run } from "../program.js"
 import { settingsFor } from "../settings.js"
 import { storeCommand } from "./archive-commands.js"
@@ -54,7 +55,8 @@ const call = async (argv: string[], env: NodeJS.ProcessEnv) => {
     chatArgument: "a chat",
   }
   const streams = captureStreams()
-  const code = await run(argv, { app, commands: () => [storeCommand(messenger)] }, { streams, tty: false, env })
+  const commands = () => [storeCommand(messenger), configCommand(app, settingsFor(app))]
+  const code = await run(argv, { app, commands }, { streams, tty: false, env })
   return { code, stdout: streams.stdout, stderr: streams.stderr, answer: JSON.parse(streams.stdout[0] ?? "null") }
 }
 
@@ -188,6 +190,7 @@ describe("store migrate", () => {
       normalized: 2,
       indexed: 0,
       terms: 4,
+      stemmed: 2,
     })
     expect(stderr.join("\n")).toContain("2 of 2 normalized")
 
@@ -220,7 +223,7 @@ describe("the word index", () => {
 
     const { answer } = await call(["store", "reindex", "--json"], env)
 
-    expect(answer).toEqual({ path: env.MESSAGING_STORE, exists: true, normalized: 0, indexed: 2, terms: 4 })
+    expect(answer).toEqual({ path: env.MESSAGING_STORE, exists: true, normalized: 0, indexed: 2, terms: 4, stemmed: 2 })
     expect(await words(env, "hola")).toBe(1)
     const { answer: info } = await call(["store", "info", "--json"], env)
     expect(info.wordIndex).toMatchObject({ watermark: 2, filledThrough: 2, ready: true, pendingNormalization: 0 })
@@ -362,5 +365,53 @@ describe("store restore", () => {
     const { code, stderr } = await call(["store", "restore", file, "--json"], env)
     expect(code).not.toBe(0)
     expect(stderr.join("\n")).toContain("upgrade this tool")
+  })
+})
+
+describe("the stems", () => {
+  it("**`config set searchStemmers.*` is store-wide**: stems wait for `store reindex`, which rebuilds them", async () => {
+    const env = envFor()
+    ;(await seeded(env)).close()
+    await call(["store", "migrate", "--json"], env)
+
+    const set = await call(["config", "set", "searchStemmers.latin", "english", "--json"], env)
+    expect(set.answer).toEqual({
+      store: env.MESSAGING_STORE,
+      scope: "store",
+      setting: "searchStemmers.latin",
+      value: "english",
+    })
+    expect(set.stderr.join("\n")).toContain("store-wide")
+    expect((await call(["store", "info", "--json"], env)).answer.stemIndex).toMatchObject({
+      ready: false,
+      cause: "stemmer_changed",
+      wanted: "snowball-3.1.1 cyrillic=russian latin=english",
+    })
+
+    expect((await call(["store", "reindex", "--json"], env)).answer).toMatchObject({ stemmed: 2 })
+    expect((await call(["store", "info", "--json"], env)).answer.stemIndex).toMatchObject({
+      ready: true,
+      built: "snowball-3.1.1 cyrillic=russian latin=english",
+    })
+    const shown = (await call(["config", "show", "--json"], env)).answer.storeSettings
+    expect(shown).toContainEqual({ setting: "searchStemmers.latin", value: "english", from: "store", scope: "store" })
+  })
+
+  it("**refuses a stemmer of the other script**, naming the allowed ones", async () => {
+    const env = envFor()
+    const { code, stderr } = await call(["config", "set", "searchStemmers.cyrillic", "english", "--json"], env)
+    expect(code).not.toBe(0)
+    expect(stderr.join("\n")).toContain("russian, none")
+  })
+
+  it("**`store migrate` rebuilds stems built by other choices**", async () => {
+    const env = envFor()
+    ;(await seeded(env)).close()
+    await call(["store", "migrate", "--json"], env)
+    await call(["config", "set", "searchStemmers.cyrillic", "none", "--json"], env)
+
+    const { answer, stderr } = await call(["store", "migrate", "--json"], env)
+    expect(answer).toMatchObject({ stemmed: 2 })
+    expect(stderr.join("\n")).toContain("rebuilding them with snowball-3.1.1 cyrillic=none latin=spanish")
   })
 })

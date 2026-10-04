@@ -299,6 +299,20 @@ export const searchIndexState = sqliteTable("search_index_state", {
   termsThrough: integer("terms_through").notNull(),
   normalizerVersion: integer("normalizer_version").notNull(),
   builtAt: integer("built_at"),
+  /** The stemmer choices and Snowball version that built the stems row (`analyzerIdentity`); NULL until a fill claims it. */
+  analyzer: text("analyzer"),
+})
+
+/** Messages whose stems are stale. Triggers fill it, because SQL cannot stem; JS empties it. */
+export const messageStemsPending = sqliteTable("message_stems_pending", {
+  pk: integer("pk").primaryKey(),
+})
+
+/** Settings of the store file itself, shared by every profile, tg and MAX — unlike a profile's config file. */
+export const storeSettings = sqliteTable("store_settings", {
+  key: text("key").primaryKey(),
+  value: text("value").notNull(),
+  at: integer("at").notNull(),
 })
 
 /*

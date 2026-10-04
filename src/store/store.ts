@@ -16,6 +16,7 @@ import type {
 } from "../domain/models.js"
 import type { PeopleLookup } from "../resolve.js"
 import type { QueryExecution } from "../search/lucene/resolved.js"
+import type { Stemmers } from "../search/stem.js"
 import { migrate } from "./migrations.js"
 import { storeCapable } from "./open.js"
 import { storePath } from "./path.js"
@@ -37,6 +38,8 @@ import * as reads from "./sqlite/reads.js"
 import * as search from "./sqlite/search.js"
 import type { SearchIndexFill, SearchIndexState } from "./sqlite/search-index.js"
 import * as searchIndex from "./sqlite/search-index.js"
+import type { StemsFill, StemsState } from "./sqlite/stems.js"
+import * as stems from "./sqlite/stems.js"
 import * as sync from "./sqlite/sync.js"
 import * as transcripts from "./sqlite/transcripts.js"
 import { toMs } from "./sqlite/values.js"
@@ -314,6 +317,14 @@ export interface MessageStore {
    * the watermark, the typo vocabulary — until done or `until` says stop. Each batch is its own write.
    */
   fillSearchIndex(options?: { until?: () => boolean }): Promise<SearchIndexFill>
+  /** How far the stems are built, and by which stemmer choices; `undefined` on a file before they existed. */
+  stemsState(): Promise<StemsState | undefined>
+  /** Builds the stems towards "ready" in short batches until done or `until` says stop; never rebuilds. */
+  fillStems(options?: { until?: () => boolean }): Promise<StemsFill>
+  /** The stemmer choices saved in the store for every profile, tg and MAX; `undefined` while the defaults apply. */
+  stemmers(): Promise<Stemmers | undefined>
+  /** Saves them; stems built by other choices wait for `store reindex` or `store migrate`. */
+  saveStemmers(stemmers: Stemmers): Promise<void>
   savePeople(key: AccountKey, people: PersonFacts[]): Promise<void>
   /**
    * The people this account has a one-to-one chat with — as far as the saved member lists go —
@@ -474,6 +485,13 @@ export const openStore = async ({ path, env, now = Date.now }: StoreOptions = {}
     // A small file is filled on the spot; a larger one waits for `db migrate`, since nothing reads the copy yet.
     const pending = pendingNormalization(database)
     if (pending > 0 && pending <= BACKFILL_ON_OPEN) backfillNormalized(database)
+    const stemming = stems.stemsState(database)
+    if (
+      stemming?.cause === "building" &&
+      stemming.watermark - stemming.filledThrough + stemming.pending <= BACKFILL_ON_OPEN
+    ) {
+      stems.fillStems(database, { now })
+    }
   } catch (error) {
     database.close()
     throw error
@@ -483,10 +501,12 @@ export const openStore = async ({ path, env, now = Date.now }: StoreOptions = {}
 
 const storeOver = (context: StoreContext): MessageStore => {
   const { database } = context
+  const stemmerFor = stems.stemmerCache()
   const inTransaction = (body: () => void): void => {
     database.exec("BEGIN IMMEDIATE")
     try {
       body()
+      stems.drainStems(database, stemmerFor)
       database.exec("COMMIT")
     } catch (error) {
       database.exec("ROLLBACK")
@@ -949,6 +969,14 @@ const storeOver = (context: StoreContext): MessageStore => {
 
     fillSearchIndex: async ({ until } = {}) =>
       searchIndex.fillSearchIndex(database, { now: context.now, ...(until ? { until } : {}) }),
+
+    stemsState: async () => stems.stemsState(database),
+
+    fillStems: async ({ until } = {}) => stems.fillStems(database, { now: context.now, ...(until ? { until } : {}) }),
+
+    stemmers: async () => stems.savedStemmers(database),
+
+    saveStemmers: async (stemmers) => inTransaction(() => stems.saveStoreStemmers(database, stemmers, context.now())),
 
     contacts: async (key, options) => {
       const accountKey = findAccountPk(key)
