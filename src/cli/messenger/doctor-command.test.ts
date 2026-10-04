@@ -378,6 +378,7 @@ describe("doctor report", () => {
       attachments: [],
       scheduledFor: "2026-09-29T11:00:00.000Z",
       notify: false,
+      origin: "rule:away",
       errorCode: "none",
       ...raw,
     }

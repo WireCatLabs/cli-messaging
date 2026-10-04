@@ -4,8 +4,12 @@ import { join } from "node:path"
 import { captureStreams } from "@leemour/cli-core"
 import { describe, expect, it } from "vitest"
 import type { MessageEvent, MessageHit } from "../../domain/models.js"
+import { defaultRule } from "../../replies/rules.js"
+import { NOT_ALLOWED } from "../../replies/serve.js"
+import { SendJournal, sendsPathFor } from "../../sends/journal.js"
 import { run } from "../program.js"
 import { settingsFor } from "../settings.js"
+import { rememberAccount } from "./accounts.js"
 import type { ConnectOptions, Messenger } from "./context.js"
 import type { MessengerAdapter } from "./port.js"
 import { serveCommand } from "./serve-command.js"
@@ -108,5 +112,90 @@ describe("serve", () => {
     const stop = new AbortController()
     setTimeout(() => stop.abort(), 20)
     expect((await call(["serve", "--json"], env, [], stop.signal)).code).toBe(0)
+  })
+})
+
+describe("serve with reply rules", () => {
+  const rulesFor = (env: NodeJS.ProcessEnv, permissions?: object) => {
+    const config = env.CHAT_CONFIG_DIR ?? ""
+    mkdirSync(config, { recursive: true })
+    const rule = {
+      ...defaultRule("away"),
+      on: true,
+      reply: { template: "Back soon.", model: "fill-only", asReply: false },
+    }
+    writeFileSync(join(config, "default.replies.json"), JSON.stringify({ testers: [{ id: "77" }], rules: [rule] }))
+    if (permissions)
+      writeFileSync(join(config, "config.json"), JSON.stringify({ profiles: { default: { permissions } } }))
+  }
+
+  const serving = async (env: NodeJS.ProcessEnv) => {
+    rememberAccount(app, "default", "500", env)
+    const sent: { chatId: string; text: string }[] = []
+    const now = new Date(Date.now() + 1000).toISOString()
+    const connect = async () =>
+      ({
+        self: () => "500",
+        close: async () => {},
+        resolve: async (id: string) => ({ id, title: "Test", kind: "dialog" }),
+        send: async (chatId: string, text: string, options: { sendId: string }) => {
+          if (chatId !== "77") throw new Error("a rule wrote to someone who is not a test account")
+          sent.push({ chatId, text })
+          return { message: { ...hit, id: "99", chatId, text, outgoing: true }, sendId: options.sendId }
+        },
+        watch: async (onEvent: (event: MessageEvent) => void, stop: AbortSignal, onReady?: () => void) => {
+          onReady?.()
+          onEvent({ event: "message", message: { ...hit, id: "1", chatId: "9", senderId: "9", timestamp: now } })
+          onEvent({ event: "message", message: { ...hit, id: "2", chatId: "77", senderId: "77", timestamp: now } })
+          await new Promise((resolve) => stop.addEventListener("abort", resolve, { once: true }))
+        },
+      }) as unknown as MessengerAdapter
+    const messenger: Messenger = {
+      app,
+      provider: "chat",
+      resolveSettings: settingsFor(app).resolveSettings,
+      connect,
+      chatArgument: "a chat",
+    }
+    const stop = new AbortController()
+    setTimeout(() => stop.abort(), 100)
+    const streams = captureStreams()
+    await run(
+      ["serve", "--json"],
+      { app, commands: () => [serveCommand(messenger)] },
+      {
+        streams,
+        tty: false,
+        env,
+        signal: stop.signal,
+      },
+    )
+    return { sent, answer: JSON.parse(streams.stdout[0] ?? "{}") }
+  }
+
+  it("**answers only the test account, and the send journal names the rule**", async () => {
+    const { root, env } = setup()
+    const withConfig = { ...env, CHAT_CONFIG_DIR: join(root, "config") }
+    rulesFor(withConfig, { "replies.send": "allow" })
+
+    const { sent, answer } = await serving(withConfig)
+
+    expect(sent).toEqual([{ chatId: "77", text: "Back soon." }])
+    expect(answer.replies).toEqual({ sent: { away: 1 }, skipped: { "not a test account": 1 } })
+    const [entry] = new SendJournal(sendsPathFor(app, "default", withConfig))
+      .entries()
+      .filter((one) => one.outcome === "sent")
+    expect(entry).toMatchObject({ chatId: "77", origin: "rule:away" })
+  })
+
+  it("sends nothing while replies.send is not allow", async () => {
+    const { root, env } = setup()
+    const withConfig = { ...env, CHAT_CONFIG_DIR: join(root, "config") }
+    rulesFor(withConfig)
+
+    const { sent, answer } = await serving(withConfig)
+
+    expect(sent).toEqual([])
+    expect(answer.replies.skipped).toMatchObject({ [NOT_ALLOWED]: 1 })
   })
 })

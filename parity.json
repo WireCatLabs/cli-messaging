@@ -2039,6 +2039,18 @@
       "in": [],
       "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" }
     },
+    "replies pause": {
+      "in": [],
+      "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" }
+    },
+    "replies resume": {
+      "in": [],
+      "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" }
+    },
+    "replies status": {
+      "in": [],
+      "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" }
+    },
     "replies test": {
       "in": [],
       "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" },

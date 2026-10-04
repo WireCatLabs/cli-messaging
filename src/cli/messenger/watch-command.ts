@@ -4,6 +4,7 @@ import type { MessageEvent, MessageHit } from "../../domain/models.js"
 import { renderMessages } from "../../render/messages.js"
 import { environmentOf } from "../context.js"
 import { type Messenger, type MessengerContext, messengerContext } from "./context.js"
+import type { MessengerAdapter } from "./port.js"
 
 /**
  * New messages as they arrive, until Ctrl-C or `--timeout` — both a normal end, exit 0: listening
@@ -61,7 +62,15 @@ export const listenUntilStopped = async (
     pipe = false,
     catchUp = false,
     onReady = () => context.renderer.note("listening — Ctrl-C to stop"),
-  }: { stop: AbortController; pipe?: boolean; catchUp?: boolean; onReady?: () => void },
+    connected,
+  }: {
+    stop: AbortController
+    pipe?: boolean
+    catchUp?: boolean
+    onReady?: () => void
+    /** The open connection, for a listener that also writes — `serve`'s reply rules. */
+    connected?: (connection: MessengerAdapter) => void
+  },
 ): Promise<void> => {
   const given = environmentOf(command).signal
   const end = () => stop.abort()
@@ -83,6 +92,7 @@ export const listenUntilStopped = async (
         if (!connection.watch) {
           throw new CliError("validation_error", `${messenger.app.command} cannot listen for new messages`)
         }
+        connected?.(connection)
         // A feed that ends early is fine — the push is done; one that fails ends the listening too.
         const failing = (error: unknown) => {
           stop.abort()

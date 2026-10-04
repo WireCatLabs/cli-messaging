@@ -67,7 +67,10 @@ const setUp = async () => {
     reply: { template: "Thanks, {firstName} — later today.", model: "fill-only", asReply: true },
     limits: { perChat: "5/1d", perPerson: "1/1d" },
   }
-  writeFileSync(join(env.CHAT_CONFIG_DIR, "default.replies.json"), JSON.stringify({ rules: [rule] }))
+  writeFileSync(
+    join(env.CHAT_CONFIG_DIR, "default.replies.json"),
+    JSON.stringify({ testers: [{ id: "11" }], rules: [rule] }),
+  )
   return { env, root }
 }
 

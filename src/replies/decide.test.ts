@@ -45,7 +45,7 @@ const messageWith = (changes: Partial<Message> = {}): Message => ({
 const incomingWith = (changes: Omit<Partial<Incoming>, "message"> & { message?: Partial<Message> } = {}): Incoming => ({
   chat: { id: "c1", kind: "dialog" },
   owner: { id: "me", username: "owner" },
-  sender: { isBot: false, isContact: true },
+  sender: { isBot: false, isContact: true, isTester: true },
   since: WEDNESDAY_EVENING - 3_600_000,
   ...changes,
   message: messageWith(changes.message),
@@ -71,7 +71,8 @@ describe("decide", () => {
     ["your own message", { message: { outgoing: true } }],
     ["the account is not known", { message: { outgoing: null } }],
     ["sent as a chat, not by a person", { message: { senderIsChat: true } }],
-    ["sent by a bot", { sender: { isBot: true, isContact: false } }],
+    ["sent by a bot", { sender: { isBot: true, isContact: false, isTester: true } }],
+    ["not a test account", { sender: { isBot: false, isContact: true, isTester: false } }],
     ["a channel is never answered", { chat: { id: "c1", kind: "channel" as const } }],
     ["a saved is never answered", { chat: { id: "c1", kind: "saved" as const } }],
     ["an edited message", { message: { editedAt: new Date(WEDNESDAY_EVENING).toISOString() } }],
@@ -172,7 +173,9 @@ describe("decide", () => {
 
   it("contactsOnly leaves out a stranger", () => {
     const rule = ruleWith({ when: { from: { people: [], notPeople: [], contactsOnly: true } } })
-    expect(outcome(rule, incomingWith({ sender: { isBot: false, isContact: false } }))).toBe("not from a contact")
+    expect(outcome(rule, incomingWith({ sender: { isBot: false, isContact: false, isTester: true } }))).toBe(
+      "not from a contact",
+    )
   })
 
   it.each([
