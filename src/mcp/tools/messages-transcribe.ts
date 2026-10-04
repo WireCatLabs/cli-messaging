@@ -15,12 +15,23 @@ export const messagesTranscribeTools = (messenger: Messenger): Record<string, An
       chat: chatOf(messenger),
       message,
       local: v.optional(v.pipe(v.boolean(), v.description("use the model on this machine, never the messenger"))),
+      model: v.optional(v.pipe(v.string(), v.minLength(1), v.description("which downloaded speech model hears it"))),
     }),
     annotations: READ,
     online: async (adapter, args, defaults) => {
-      const choice = choose(messenger, defaults.settings, { local: args.local === true }, defaults.env)
+      const choice = choose(
+        messenger,
+        defaults.settings,
+        {
+          local: args.local === true,
+          ...(args.model === undefined ? {} : { model: args.model }),
+        },
+        defaults.env,
+      )
       const heard = await hearOnline(messenger, adapter, args.chat, args.message, choice)
-      return heard instanceof Uint8Array ? hearLocally(heard, args.message, choice) : heard
+      if (!(heard instanceof Uint8Array)) return heard
+      await defaults.release?.()
+      return hearLocally(heard, args.message, choice)
     },
   }),
 })

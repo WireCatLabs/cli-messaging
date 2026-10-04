@@ -32,13 +32,14 @@ export const conversationsTools = (messenger: Messenger): Record<string, AnyTool
       annotations: { ...READ, openWorldHint: false },
       stored: async (store, account, args, defaults) => {
         const size = args.limit ?? defaults.limit
-        const page = await servicesFor(storedDeps(messenger, store, account, defaults.guard)).conversations.list(
-          args.chat,
-          {
-            limit: size,
-            ...(args.since === undefined ? {} : { since: new Date(momentOf(args.since, "since")).toISOString() }),
-          },
-        )
+        const page = await servicesFor({
+          ...storedDeps(messenger, store, account, defaults.guard),
+          env: defaults.env,
+          profile: defaults.settings.profile,
+        }).conversations.list(args.chat, {
+          limit: size,
+          ...(args.since === undefined ? {} : { since: new Date(momentOf(args.since, "since")).toISOString() }),
+        })
         return { items: page.items, limit: size, hasMore: page.hasMore }
       },
     }),
@@ -67,7 +68,12 @@ export const conversationsTools = (messenger: Messenger): Record<string, AnyTool
       annotations: { ...READ, openWorldHint: false },
       stored: async (store, account, args, defaults) => {
         const size = args.limit ?? defaults.limit
-        const deps = { ...storedDeps(messenger, store, account, defaults.guard), embedders: defaults.embedders }
+        const deps = {
+          ...storedDeps(messenger, store, account, defaults.guard),
+          env: defaults.env,
+          profile: defaults.settings.profile,
+          embedders: defaults.embedders,
+        }
         const found = await servicesFor(deps).embeddings.search(args.query, {
           limit: size,
           ...(args.chat === undefined ? {} : { chat: args.chat }),
@@ -98,11 +104,11 @@ export const conversationsTools = (messenger: Messenger): Record<string, AnyTool
       annotations: { ...READ, openWorldHint: false },
       stored: async (store, account, args, defaults) => {
         const size = args.limit ?? defaults.limit
-        const found = await servicesFor(storedDeps(messenger, store, account, defaults.guard)).embeddings.related(
-          args.chat,
-          args.message,
-          { limit: size },
-        )
+        const found = await servicesFor({
+          ...storedDeps(messenger, store, account, defaults.guard),
+          env: defaults.env,
+          profile: defaults.settings.profile,
+        }).embeddings.related(args.chat, args.message, { limit: size })
         return { model: found.model, source: found.source, items: found.hits, limit: size, readiness: found.readiness }
       },
     }),
@@ -117,9 +123,11 @@ export const conversationsTools = (messenger: Messenger): Record<string, AnyTool
       input: v.object({ chat: v.optional(chat) }),
       annotations: { ...READ, openWorldHint: false },
       stored: async (store, account, args, defaults) => {
-        const found = await servicesFor(storedDeps(messenger, store, account, defaults.guard)).embeddings.readiness(
-          args.chat === undefined ? {} : { chat: args.chat },
-        )
+        const found = await servicesFor({
+          ...storedDeps(messenger, store, account, defaults.guard),
+          env: defaults.env,
+          profile: defaults.settings.profile,
+        }).embeddings.readiness(args.chat === undefined ? {} : { chat: args.chat })
         return { ...listed(found.chats), model: found.model }
       },
     }),
@@ -155,7 +163,12 @@ export const conversationsTools = (messenger: Messenger): Record<string, AnyTool
             { permission: "conversations.embed" },
           )
         }
-        const deps = { ...storedDeps(messenger, store, account, defaults.guard), embedders: defaults.embedders }
+        const deps = {
+          ...storedDeps(messenger, store, account, defaults.guard),
+          env: defaults.env,
+          profile: defaults.settings.profile,
+          embedders: defaults.embedders,
+        }
         return servicesFor(deps).embeddings.refresh({
           ...(args.chat === undefined ? {} : { chat: args.chat }),
           maxChats: args.max_chats ?? REFRESH_BOUNDS.maxChats,
@@ -176,7 +189,11 @@ export const conversationsTools = (messenger: Messenger): Record<string, AnyTool
       }),
       annotations: { ...READ, openWorldHint: false },
       stored: async (store, account, args, defaults) => {
-        const services = servicesFor(storedDeps(messenger, store, account, defaults.guard))
+        const services = servicesFor({
+          ...storedDeps(messenger, store, account, defaults.guard),
+          env: defaults.env,
+          profile: defaults.settings.profile,
+        })
         const target =
           args.id !== undefined
             ? { id: args.id }

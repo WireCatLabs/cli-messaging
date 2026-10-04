@@ -11,11 +11,11 @@ import { guardFor } from "../sends/guard.js"
 import { levelFor } from "../sends/permissions.js"
 import { confirmer } from "./confirm.js"
 import { instructions } from "./instructions.js"
+import { personalMcpTools } from "./personal.js"
 import { registerPrompts } from "./prompts.js"
 import { registerResources } from "./resources.js"
 import { MessengerSession, type SessionOptions } from "./session.js"
 import { type AnyTool, answered, failed, READ, registerTools, toolKey } from "./tool.js"
-import { deleteTools, markReadTools, readTools, sendTools } from "./tools.js"
 
 export interface ServerOptions extends SessionOptions {
   /** Every write through the form, whatever its level. */
@@ -45,12 +45,7 @@ export const createServer = (
   const levelOf = (key: string | null | undefined) => (key ? levelFor(settings.permissions, key).level : "allow")
   // A tool the level would refuse is not offered: an agent is not handed a tool that cannot work.
   const offered = Object.fromEntries(
-    Object.entries({
-      ...readTools(messenger),
-      ...sendTools(messenger),
-      ...markReadTools(messenger),
-      ...deleteTools(messenger),
-    }).filter(([key, one]) => {
+    Object.entries(personalMcpTools(messenger)).filter(([key, one]) => {
       const level = levelOf(toolKey(key, one))
       const writes = one.permission !== undefined || one.annotations.readOnlyHint !== true
       return level !== "deny" && !(writes && level === "readonly")
@@ -123,7 +118,7 @@ export const createServer = (
         description:
           "Which profile this server speaks for, which account it last logged in as here, and which writing tools " +
           "are on. Never connects, so it answers when the login is what is broken.",
-        inputSchema: toStandardJsonSchema(v.object({})),
+        inputSchema: toStandardJsonSchema(v.strictObject({})),
         annotations: { ...READ, idempotentHint: true },
       },
       async () => {

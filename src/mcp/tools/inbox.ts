@@ -56,6 +56,7 @@ export const inboxTools = (messenger: Messenger): Record<string, AnyTool> => {
           ...inbox,
           chats: inbox.chats.map((chat) => ({ ...chat, messages: heard(chat.messages, hearing) })),
           ...(args.transcribe ? { unheard: hearing?.unheard ?? [] } : {}),
+          ...(hearing?.problem === undefined ? {} : { transcribeProblem: hearing.problem }),
         }
       },
     }),

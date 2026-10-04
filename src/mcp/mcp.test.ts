@@ -5,7 +5,7 @@ import { fileURLToPath, pathToFileURL } from "node:url"
 import { CliError, captureStreams } from "@leemour/cli-core"
 import { skillResource } from "@leemour/cli-core/skill"
 import { Client, type ElicitResult } from "@modelcontextprotocol/client"
-import { InMemoryTransport } from "@modelcontextprotocol/server"
+import { InMemoryTransport, McpServer } from "@modelcontextprotocol/server"
 import { serveStdio } from "@modelcontextprotocol/server/stdio"
 import { Command } from "commander"
 import { afterEach, describe, expect, it, vi } from "vitest"
@@ -25,10 +25,133 @@ import { SendJournal, sendsPathFor } from "../sends/journal.js"
 import { conversationsService } from "../services/conversations.js"
 import { storedDeps } from "../services/deps.js"
 import { embeddingsService } from "../services/embeddings.js"
+import { servicesFor } from "../services/index.js"
 import { openStore } from "../store/store.js"
 import { searchRecipes, seedSearchRecipes } from "../testing/search-recipes.js"
 import { instructions } from "./instructions.js"
+import {
+  type PersonalMcpRegistration,
+  personalMcpToolKey,
+  personalMcpTools,
+  registerPersonalMcpTools,
+} from "./personal.js"
 import { createServer, type ServerOptions } from "./server.js"
+
+describe("public personal MCP mounting", () => {
+  it("encloses online, stored and host-service reads in the host's permission scope", async () => {
+    const root = mkdtempSync(join(tmpdir(), "mcp-host-"))
+    const env = { MESSAGING_STORE: join(root, "messages.db") }
+    const account = { provider: "fixture", account: "500" }
+    const opened = await openStore({ env })
+    await opened.saveChats(account, [chat])
+    await opened.saveMessages(account, "7", [message], { via: "fixture" })
+    await opened.close()
+    const backend = scripted({ sessions: async () => [] })
+    const messenger: Messenger = {
+      app,
+      provider: "fixture",
+      chatArgument: "chat id",
+      resolveSettings: settingsFor(app).resolveSettings,
+      connect: async () => backend.connect(),
+    }
+    const all = personalMcpTools(messenger)
+    const pick = (name: string) => {
+      const one = all[name]
+      if (!one) throw new Error(name)
+      return one
+    }
+    const server = new McpServer({ name: "host", version: "0" })
+    let allowed = false
+    let reads = 0
+    const keys: (string | null | undefined)[] = []
+    const withStore: PersonalMcpRegistration["withStore"] = async (work) => {
+      reads += 1
+      const store = await openStore({ env })
+      try {
+        return await work(store, account)
+      } finally {
+        await store.close()
+      }
+    }
+    registerPersonalMcpTools(
+      server,
+      {
+        account_sessions: pick("account_sessions"),
+        messages_search: pick("messages_search"),
+        messages_context: pick("messages_context"),
+        messages_send: pick("messages_send"),
+      },
+      {
+        command: "host",
+        messenger,
+        session: {
+          use: async (_name, work) => {
+            const adapter = await backend.connect()
+            try {
+              return await work(adapter, () => adapter.close())
+            } finally {
+              await adapter.close()
+            }
+          },
+        },
+        withStore,
+        withServices: (work, options) =>
+          withStore(
+            (store, account) =>
+              work(
+                servicesFor(storedDeps(messenger, store, account, { check: () => {}, record: () => {} })),
+                async () => {
+                  throw new Error("local read connected")
+                },
+              ),
+            options,
+          ),
+        defaults: {
+          limit: 20,
+          guard: { check: () => {}, record: () => {} },
+          env,
+          settings: { profile: "default", configured: {}, shared: {} },
+        },
+        around: async (name, definition, work) => {
+          keys.push(personalMcpToolKey(name, definition))
+          if (!allowed) throw new CliError("permission_error", "host denies this operation")
+          return work()
+        },
+      },
+    )
+    const [serverSide, clientSide] = InMemoryTransport.createLinkedPair()
+    await server.connect(serverSide)
+    const client = new Client({ name: "fixture", version: "0" })
+    await client.connect(clientSide)
+    try {
+      for (const [name, args] of [
+        ["account_sessions", {}],
+        ["messages_search", { text: "chapter" }],
+        ["messages_context", { chat: "7", message: "1" }],
+      ] as const) {
+        const result = await client.callTool({ name: `host_${name}`, arguments: args })
+        expect(result.isError).toBe(true)
+      }
+      expect(keys).toContain("account.sessions.list")
+      expect(reads).toBe(0)
+      expect(backend.opened()).toBe(0)
+      allowed = true
+      const context = await client.callTool({ name: "host_messages_context", arguments: { chat: "7", message: "1" } })
+      expect(context.isError).not.toBe(true)
+      expect(context.structuredContent).toMatchObject({ items: [{ id: "1", anchor: true }] })
+      expect(backend.opened()).toBe(0)
+      const invalid = await client.callTool({
+        name: "host_messages_send",
+        arguments: { chat: "7", text: "later", at: "2h" },
+      })
+      expect(invalid.isError).toBe(true)
+      expect(backend.opened()).toBe(0)
+    } finally {
+      await client.close()
+      await server.close()
+    }
+  })
+})
 
 const models = vi.hoisted(() => ({ opened: 0, closed: 0 }))
 vi.mock("../embeddings/embed.js", async (original) => {
@@ -1188,7 +1311,13 @@ describe("sending over MCP", () => {
     ).tools.map((one) => one.name)
 
     await formless.call("chat_messages_delete", { chat: "7", messages: ["3"] }).catch(() => undefined)
-    const { body } = await flagged.call("chat_messages_delete", { chat: "7", messages: ["1", "2"], for_everyone: true })
+    const refused = await flagged.client.callTool({
+      name: "chat_messages_delete",
+      arguments: { chat: "7", messages: ["1", "2"], for_everyone: true },
+    })
+    expect(refused.isError).toBe(true)
+    expect(deletions).toEqual([])
+    const { body } = await flagged.call("chat_messages_delete", { chat: "7", messages: ["1", "2"] })
 
     expect(readonly).not.toContain("chat_messages_delete")
     expect(body).toEqual({ operationId: expect.any(String), chatId: "7", deleted: ["1", "2"], forEveryone: false })

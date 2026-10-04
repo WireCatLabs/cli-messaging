@@ -15,6 +15,19 @@ export {
   withAcross,
 } from "../mcp/bot/tools.js"
 export {
+  answerMcpTool,
+  failMcpTool,
+  McpPicture,
+  type PersonalMcpDefaults,
+  type PersonalMcpRegistration,
+  type PersonalMcpTool,
+  personalMcpConfirmer,
+  personalMcpToolKey,
+  personalMcpTools,
+  registerPersonalMcpTools,
+  warmEmbedders,
+} from "../mcp/personal.js"
+export {
   answerMessagesSearch,
   MESSAGES_SEARCH_DESCRIPTION,
   type MessagesSearchArgs,

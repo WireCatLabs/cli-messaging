@@ -7,9 +7,7 @@ import { onlineDeps, servicesFor } from "../../services/index.js"
 import { type AnyTool, APPROVE, chatOf, message, nameOf, tool, WRITE } from "../tool.js"
 
 /**
- * Registered only with `--allow-send`, so a server started without it has no way to write at all —
- * not a refusal at call time, an absence from the list. Each goes through the same guard as its
- * command: read-only profile, `allow`, the recipient list, the hourly limit, the journal.
+ * The same guard as the command: profile permissions, recipients, hourly limits and the journal.
  */
 export const messageSendTools = (messenger: Messenger): Record<string, AnyTool> => {
   const chat = chatOf(messenger)

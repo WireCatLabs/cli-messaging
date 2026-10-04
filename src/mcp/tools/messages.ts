@@ -102,6 +102,7 @@ export const messagesTools = (messenger: Messenger): Record<string, AnyTool> => 
           limit: size,
           hasMore: found.hasMore,
           ...(args.transcribe ? { unheard: hearing?.unheard ?? [] } : {}),
+          ...(hearing?.problem === undefined ? {} : { transcribeProblem: hearing.problem }),
         }
       },
     }),

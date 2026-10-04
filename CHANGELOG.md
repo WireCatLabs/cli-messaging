@@ -6,6 +6,25 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- Public personal MCP catalogue and registration APIs in `./cli` let consumers retain their own
+  sessions, permission scopes and account-scoped services while mounting the canonical tools.
+- Photo previews accept an optional attachment `index`; direct transcription accepts `model`.
+
+### Fixed
+
+- Confirmed scheduled sends execute the absolute time shown in the approval form, even after a
+  delayed response. Personal MCP rejects unknown arguments before connecting or acting.
+- Session callbacks can release the connection before local transcription. Stored conversation
+  tools retain the selected profile and environment; held embedding models have a public disposer.
+- Session listings use the exact `account.sessions.list` permission key.
+
+### Changed — may break callers
+
+- Obsolete or unknown personal MCP arguments now fail validation instead of being ignored.
+  Clients must use the advertised schema, including `at_time` for scheduled sends.
+
 ## 0.143.0 — 04.10.2026
 
 Released early: tg-cli and max-cli cannot move to 0.142.0: its parity manifest lacks rows for its own new options

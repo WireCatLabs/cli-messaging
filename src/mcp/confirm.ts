@@ -34,7 +34,7 @@ type Arguments = Record<string, unknown>
  */
 export const confirmer = ({ now = () => Date.now() }: { now?: () => number } = {}) => {
   const key = randomBytes(32)
-  const issued = new Map<string, number>()
+  const issued = new Map<string, { expires: number; time?: { given: string; fixed: string } }>()
 
   const seal = (tool: string, args: Arguments, nonce: string, expires: number) =>
     createHmac("sha256", key)
@@ -51,10 +51,22 @@ export const confirmer = ({ now = () => Date.now() }: { now?: () => number } = {
     ctx: ServerContext,
     act: (resolved: Arguments) => Promise<object>,
   ): Promise<object | InputRequiredResult> => {
-    for (const [nonce, expires] of issued) if (expires < now()) issued.delete(nonce)
+    for (const [nonce, entry] of issued) if (entry.expires < now()) issued.delete(nonce)
+
+    const answer = inputResponse(ctx.mcpReq.inputResponses, "confirm")
+    const previousNonce = answer.kind === "missing" ? undefined : ctx.mcpReq.requestState<string>()?.split(".")[0]
+    const previousTime = previousNonce === undefined ? undefined : issued.get(previousNonce)?.time
+    const time =
+      typeof args.at_time === "string"
+        ? {
+            given: args.at_time,
+            fixed: previousTime?.given === args.at_time ? previousTime.fixed : sendTime(args.at_time, now()),
+          }
+        : undefined
 
     const shown: string[] = []
     const resolved: Arguments = { ...args }
+    if (time) resolved.at_time = time.fixed
     for (const name of CHAT_ARGUMENTS) {
       if (typeof args[name] !== "string") continue
       const chat = await resolveChat(args[name])
@@ -64,16 +76,15 @@ export const confirmer = ({ now = () => Date.now() }: { now?: () => number } = {
     for (const [name, value] of Object.entries(args)) {
       if (CHAT_ARGUMENTS.includes(name) || name === "text") continue
       // A delay like "30m" is not a time; the owner agrees to the clock time it becomes.
-      const when = name === "at_time" && typeof value === "string" ? ` — sends at ${sendTime(value, now())}` : ""
+      const when = name === "at_time" && time ? ` — sends at ${time.fixed}` : ""
       shown.push(`${name}: ${JSON.stringify(value)}${when}`)
     }
     if (typeof args.text === "string") shown.push("", args.text)
 
-    const answer = inputResponse(ctx.mcpReq.inputResponses, "confirm")
     if (answer.kind === "missing") {
       const nonce = randomBytes(16).toString("base64url")
       const expires = now() + VALID_MS
-      issued.set(nonce, expires)
+      issued.set(nonce, { expires, ...(time ? { time } : {}) })
       return inputRequired({
         inputRequests: {
           confirm: inputRequired.elicit({
@@ -93,7 +104,7 @@ export const confirmer = ({ now = () => Date.now() }: { now?: () => number } = {
     }
     const [nonce = "", expiresText = "", mac = ""] = (ctx.mcpReq.requestState<string>() ?? "").split(".")
     const expires = Number(expiresText)
-    if (!issued.has(nonce) || issued.get(nonce) !== expires || expires < now()) {
+    if (!issued.has(nonce) || issued.get(nonce)?.expires !== expires || expires < now()) {
       throw new CliError(
         "confirmation_required",
         "the confirmation has expired, was already used, or is not from this server — nothing was written",
