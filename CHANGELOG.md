@@ -58,17 +58,23 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   with `health` that could not check the standing reports `unknown`, never `active`.
 - `mcp doctor` shows the last 20 lines (at most 2 KB) of the server's stderr when it fails to start, with the home
   folder, long numbers and token-like strings hidden.
-- **Remembered waits.** When the messenger answers `rate_limited` with `retryAfterMs`, the wait is kept in
+- `server status` and `doctor` show the waits a messenger asked this profile to keep, and a hold on its writes, as
+  `flood: { deadlines, sendBlock }`. `FloodMemory` and `floodPathFor` are exported from `./sends`. The new
+  `AccountStanding` state `limited` is a write refused as spam, with no end the messenger reports.
+
+### Changed — may break callers
+
+- **A wait the messenger asked for is remembered.** A `rate_limited` answer with `retryAfterMs` is kept in
   `<state dir>/flood/<profile>.json` (0600) per adapter call, and per chat when the call named one by id. Until it
   passes, the same call fails at once with `rate_limited`, `retryAfterMs` and `details.remembered: true`, without
-  asking the messenger again. At most 50 are kept; expired ones are dropped. `FloodMemory` and `floodPathFor` are
-  exported from `./sends`.
-- **Writes held for a frozen or spam-limited account.** A refusal with `details.standing.state` `frozen` or the new
-  `limited` holds every write that counts toward `sendsPerHour` — reads, reactions and marking read still work — with
-  a `permission_error` that says until when and points to `doctor --online`. The hold lasts until the messenger's
-  `until`, else 24 hours. `doctor --online` sets it on a frozen standing and lifts a frozen hold on an active one;
-  it never lifts a spam limit.
-- `server status` and `doctor` show the remembered waits and the hold as `flood: { deadlines, sendBlock }`.
+  asking the messenger. A caller that retried at once after exit 8 now gets exit 8 again, sooner. At most 50 are
+  kept; expired ones are dropped. The consumer test this touches: "stops at a long wait with what it had read kept"
+  in `backfill.test.ts` now expects the next run refused until the wait passes.
+- **A frozen or spam-limited account's writes are held.** A refusal with `details.standing.state` `frozen` or
+  `limited` holds every write that counts toward `sendsPerHour` — reads, reactions and marking read still work —
+  with a `permission_error` (exit 5) that says until when and points the owner to `doctor --online`. The hold
+  lasts until the messenger's `until`, else 24 hours. `doctor --online` sets it on a frozen standing and lifts a
+  frozen hold on an active one; it never lifts a spam limit.
 
 ### Changed — may break callers
 

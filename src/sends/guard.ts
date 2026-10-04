@@ -274,7 +274,7 @@ export const sendGuard = ({
         throw new CliError(
           "permission_error",
           `profile ${profile} holds its writes until ${block.until}: ${block.hint} — reads still work; ` +
-            `\`${command} ${profile} doctor --online\` checks the account, and deleting ${flood?.path} lifts the hold sooner`,
+            `do not retry: the owner checks the account with \`${command} ${profile} doctor --online\``,
           { sendBlock: block, standing: { state: block.state, hint: block.hint } },
         )
       }
