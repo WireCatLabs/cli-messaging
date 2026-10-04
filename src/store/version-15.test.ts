@@ -181,6 +181,37 @@ describe("store version 15, the stems", () => {
     await store.close()
   })
 
+  it("**an empty store is ready unclaimed**, so the first `config set` needs no reindex", async () => {
+    const path = fresh()
+    const store = await openStore({ path })
+    expect(await store.stemsState()).toMatchObject({ ready: true, built: null })
+    await store.saveStemmers(ENGLISH)
+    expect(await store.stemsState()).toMatchObject({ ready: true, built: null })
+    await store.saveChats(ME, [chat])
+    await store.saveMessages(ME, CHAT, [message("1", "houses")], { via: "history" })
+    expect(await store.stemsState()).toMatchObject({ ready: true, built: analyzerIdentity(ENGLISH), pending: 0 })
+    await store.close()
+  })
+
+  it("**a setting only a newer tool knows** leaves the store usable and the stems not ready", async () => {
+    const path = await version14(1)
+    await (await openStore({ path })).close()
+    await withDatabase(path, (database) =>
+      database.exec(
+        `INSERT INTO store_settings (key, value, at) VALUES ('searchStemmers', '{"cyrillic":"russian","latin":"portuguese"}', 0)`,
+      ),
+    )
+
+    const store = await openStore({ path })
+    await store.saveChats(ME, [chat])
+    await store.saveMessages(ME, CHAT, [message("2", "casas")], { via: "history" })
+    expect(await store.stemmers()).toBeNull()
+    expect(await store.stemsState()).toMatchObject({ ready: false, cause: "stemmer_unknown", pending: 1 })
+    expect(await store.fillStems()).toEqual({ stemmed: 0, drained: 0 })
+    await store.close()
+    await withDatabase(path, (database) => expect(() => resetStems(database)).toThrow(/upgrade this tool/))
+  })
+
   it("**refuses to rebuild stems a newer Snowball built**, asking to upgrade this tool", async () => {
     const path = await version14(1)
     await (await openStore({ path })).close()

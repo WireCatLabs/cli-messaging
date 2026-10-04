@@ -40,7 +40,7 @@ export const changeStoreSetting = async (
 /** For `config show`: reads the file as it is — never creates, migrates or unseals it to say the defaults apply. */
 export const storeSettings = async (env: NodeJS.ProcessEnv) => {
   const path = storePath(env)
-  let saved: Stemmers | undefined
+  let saved: Stemmers | null | undefined
   let unreadable = false
   if (existsSync(path)) {
     try {
@@ -57,7 +57,8 @@ export const storeSettings = async (env: NodeJS.ProcessEnv) => {
   }
   return STORE_SETTINGS.map((setting) => {
     const script = SCRIPTS[setting] as keyof Stemmers
-    const from = unreadable ? "store unreadable" : saved ? "store" : "default"
-    return { setting, value: (saved ?? DEFAULT_STEMMERS)[script], from, scope: "store" }
+    if (unreadable) return { setting, value: null, from: "store unreadable", scope: "store" }
+    if (saved === null) return { setting, value: null, from: "store, unknown to this build", scope: "store" }
+    return { setting, value: (saved ?? DEFAULT_STEMMERS)[script], from: saved ? "store" : "default", scope: "store" }
   })
 }

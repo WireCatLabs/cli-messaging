@@ -28,8 +28,11 @@ export interface StemsState {
   wanted: string
   /** Every live message is stemmed by `wanted`: stemmed search may run. */
   ready: boolean
-  /** Why it is not ready: still filling, or built by other choices and waiting for `store reindex`. */
-  cause?: "building" | "stemmer_changed"
+  /**
+   * Why it is not ready: still filling, built by other choices and waiting for `store reindex`, or the
+   * store asks for choices only a newer tool knows.
+   */
+  cause?: "building" | "stemmer_changed" | "stemmer_unknown"
   builtAt: string | null
 }
 
@@ -38,14 +41,27 @@ export interface StemsFill {
   drained: number
 }
 
-/** The choices `config set searchStemmers.*` saved; `undefined` while the defaults apply. */
-export const savedStemmers = (database: CacheDatabase): Stemmers | undefined => {
+/**
+ * The choices `config set searchStemmers.*` saved; `undefined` while the defaults apply, `null` when a
+ * newer tool saved one this build does not know. Never throws: every open and write reads it.
+ */
+export const savedStemmers = (database: CacheDatabase): Stemmers | null | undefined => {
   const row = database.prepare("SELECT value FROM store_settings WHERE key = ?").get(SETTING)
-  return row ? parseStemmers(JSON.parse(String(row.value))) : undefined
+  if (!row) return undefined
+  try {
+    return parseStemmers(JSON.parse(String(row.value)))
+  } catch {
+    return null
+  }
 }
 
-/** The store-wide stemmer choices every fill, drain and readiness check uses. */
-export const storeStemmers = (database: CacheDatabase): Stemmers => savedStemmers(database) ?? DEFAULT_STEMMERS
+/** The store-wide choices every fill, drain and readiness check uses; `null` stems nothing. */
+const storeStemmers = (database: CacheDatabase): Stemmers | null => {
+  const saved = savedStemmers(database)
+  return saved === undefined ? DEFAULT_STEMMERS : saved
+}
+
+const UNKNOWN = "unknown to this build"
 
 export const saveStoreStemmers = (database: CacheDatabase, stemmers: Stemmers, now: number): void => {
   database
@@ -61,8 +77,11 @@ export const stemsState = (database: CacheDatabase): StemsState | undefined => {
   const filledThrough = Number(row.filled_through)
   const pending = Number(database.prepare("SELECT count(*) AS n FROM message_stems_pending").get()?.n)
   const built = row.analyzer === null ? null : String(row.analyzer)
-  const wanted = analyzerIdentity(storeStemmers(database))
-  const ready = built === wanted && filledThrough >= watermark && pending === 0
+  const stemmers = storeStemmers(database)
+  const wanted = stemmers ? analyzerIdentity(stemmers) : UNKNOWN
+  // An unclaimed row with nothing to stem is complete: claiming it now would make a first `config set` need a reindex.
+  const ready = stemmers !== null && (built === wanted || built === null) && filledThrough >= watermark && pending === 0
+  const cause = !stemmers ? "stemmer_unknown" : built !== null && built !== wanted ? "stemmer_changed" : "building"
   return {
     watermark,
     filledThrough,
@@ -70,7 +89,7 @@ export const stemsState = (database: CacheDatabase): StemsState | undefined => {
     built,
     wanted,
     ready,
-    ...(ready ? {} : { cause: built !== null && built !== wanted ? "stemmer_changed" : "building" }),
+    ...(ready ? {} : { cause }),
     builtAt: row.built_at === null ? null : new Date(Number(row.built_at)).toISOString(),
   }
 }
@@ -138,7 +157,9 @@ export const drainStems = (
 ): number => {
   const pks = nextQueued(database, limit)
   if (pks.length === 0) return 0
-  const stemmer = stemmerFor(storeStemmers(database))
+  const stemmers = storeStemmers(database)
+  if (!stemmers) return 0
+  const stemmer = stemmerFor(stemmers)
   return claim(database, stemmer.identity) ? stemWriter(database, stemmer).queued(pks) : 0
 }
 
@@ -168,8 +189,8 @@ export const fillStems = (
   const filled: StemsFill = { stemmed: 0, drained: 0 }
   const before = stemsState(database)
   // Every search asks; when all is built, or the row waits for a rebuild, it must not take the write lock.
-  if (!before || before.ready || before.cause === "stemmer_changed") return filled
   const stemmers = storeStemmers(database)
+  if (!before || before.ready || before.cause !== "building" || !stemmers) return filled
   const identity = analyzerIdentity(stemmers)
   const stemmer = createStemmer(stemmers)
   const writer = stemWriter(database, stemmer)
@@ -221,7 +242,14 @@ const newer = (a: number[], b: number[]): boolean => {
 export const resetStems = (database: CacheDatabase, { force = false }: { force?: boolean } = {}): boolean => {
   const state = stemsState(database)
   if (!state) return false
-  if (!force && state.cause !== "stemmer_changed") return false
+  if (!force && state.cause !== "stemmer_changed" && state.cause !== "stemmer_unknown") return false
+  if (state.cause === "stemmer_unknown") {
+    throw new CliError(
+      "validation_error",
+      "the store asks for stemmers this tool does not know — upgrade this tool, or choose again with config set searchStemmers.*",
+      { reason: "stemmer_unknown" },
+    )
+  }
   if (state.built !== null && newer(snowballOf(state.built), snowballOf(`snowball-${SNOWBALL_VERSION}`))) {
     throw new CliError(
       "validation_error",

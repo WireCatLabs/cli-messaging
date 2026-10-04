@@ -397,6 +397,13 @@ describe("the stems", () => {
     expect(shown).toContainEqual({ setting: "searchStemmers.latin", value: "english", from: "store", scope: "store" })
   })
 
+  it("**refuses to change the store-wide setting from a process locked to one profile**", async () => {
+    const env = { ...envFor(), CHAT_PROFILE_LOCK: "work" }
+    const { code, stderr } = await call(["config", "set", "searchStemmers.latin", "english", "--json"], env)
+    expect(code).not.toBe(0)
+    expect(stderr.join("\n")).toContain("changes every profile")
+  })
+
   it("**refuses a stemmer of the other script**, naming the allowed ones", async () => {
     const env = envFor()
     const { code, stderr } = await call(["config", "set", "searchStemmers.cyrillic", "english", "--json"], env)

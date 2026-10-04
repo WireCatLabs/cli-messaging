@@ -321,8 +321,11 @@ export interface MessageStore {
   stemsState(): Promise<StemsState | undefined>
   /** Builds the stems towards "ready" in short batches until done or `until` says stop; never rebuilds. */
   fillStems(options?: { until?: () => boolean }): Promise<StemsFill>
-  /** The stemmer choices saved in the store for every profile, tg and MAX; `undefined` while the defaults apply. */
-  stemmers(): Promise<Stemmers | undefined>
+  /**
+   * The stemmer choices saved in the store for every profile, tg and MAX; `undefined` while the defaults
+   * apply, `null` when a newer tool saved one this build does not know.
+   */
+  stemmers(): Promise<Stemmers | null | undefined>
   /** Saves them; stems built by other choices wait for `store reindex` or `store migrate`. */
   saveStemmers(stemmers: Stemmers): Promise<void>
   savePeople(key: AccountKey, people: PersonFacts[]): Promise<void>

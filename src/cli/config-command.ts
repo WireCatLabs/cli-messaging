@@ -110,6 +110,13 @@ export const configCommand = (
             "validation_error",
             `${setting} is store-wide — --defaults, --personal and --bot do not apply`,
           )
+        const lock = envName(app, "PROFILE_LOCK")
+        if (env[lock]) {
+          throw new CliError(
+            "permission_error",
+            `this process is locked to profile ${settings.profile} (${lock}) — ${setting} changes every profile, tg and MAX`,
+          )
+        }
         const { result, note } = await changeStoreSetting(
           app,
           env,
