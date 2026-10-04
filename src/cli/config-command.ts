@@ -123,7 +123,7 @@ export const configCommand = (
           `${setting} is a legacy setting — use permissions instead; config migrate --dry-run previews the translation`,
         )
       }
-      if (action === "set" && setting.startsWith("permissions.")) refuseUnknownKey(this, setting, permissionKey)
+      if (action === "set") refuseUnknownKey(this, setting, String(given), permissionKey)
       const saved = config.changeSetting(settings.configPath, {
         profile: defaults ? undefined : settings.profile,
         setting,
@@ -142,17 +142,42 @@ export const configCommand = (
   return command
 }
 
-/** A key no command or write is checked against would be saved and do nothing (BUG-137). */
-export const refuseUnknownKey = (command: Command, setting: string, permissionKey?: PermissionKeyOf): void => {
-  const key = setting.slice("permissions.".length)
+/**
+ * A key no command or write is checked against would be saved and do nothing (BUG-137) — whether it
+ * comes as `permissions.<key>` or inside a whole `permissions` object.
+ */
+export const refuseUnknownKey = (
+  command: Command,
+  setting: string,
+  value: string,
+  permissionKey?: PermissionKeyOf,
+): void => {
+  const keys = setting.startsWith("permissions.")
+    ? [setting.slice("permissions.".length)]
+    : setting === "permissions"
+      ? objectKeys(value)
+      : []
+  if (keys.length === 0) return
   const known = knownPermissionKeys(command, permissionKey)
-  if (known.has(key)) return
-  const beside = knownBeside(key, known)
-  throw new CliError(
-    "validation_error",
-    `permissions.${key} names no command` +
-      (beside.length > 0 ? ` — the known ones there are ${beside.join(", ")}` : ""),
-  )
+  for (const key of keys) {
+    if (known.has(key)) continue
+    const beside = knownBeside(key, known)
+    throw new CliError(
+      "validation_error",
+      `permissions.${key} names no command` +
+        (beside.length > 0 ? ` — the known ones there are ${beside.join(", ")}` : ""),
+    )
+  }
+}
+
+/** The keys of a `permissions` object given whole; anything else is left to the schema to refuse. */
+const objectKeys = (value: string): string[] => {
+  try {
+    const parsed: unknown = JSON.parse(value)
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? Object.keys(parsed) : []
+  } catch {
+    return []
+  }
 }
 
 const scopeOf = (kind: string | undefined, profile: string | undefined): string =>
