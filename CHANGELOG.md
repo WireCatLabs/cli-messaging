@@ -20,6 +20,9 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Added
 
+- `conversations status` without `--chat` (and MCP `conversations_status`) adds `unbuiltGroups`: how many group chats
+  were never built, which `conversations build` would build. The terminal says it in a note, so "all ready" no longer
+  hides that work.
 - Public personal MCP catalogue and registration APIs in `./cli` let consumers retain their own
   sessions, permission scopes and account-scoped services while mounting the canonical tools.
 - Photo previews accept an optional attachment `index`; direct transcription accepts `model`.

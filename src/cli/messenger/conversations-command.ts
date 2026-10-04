@@ -165,15 +165,27 @@ export const conversationsCommand = (messenger: Messenger): Command => {
     const options = this.opts<ModelOptions & { chat?: string }>()
     const context = messengerContext(this, messenger)
     const model = choiceOf(options, messenger, context, { needKey: false })
-    const { model: id, chats } = await context.withServices((services) =>
+    const {
+      model: id,
+      chats,
+      unbuiltGroups,
+    } = await context.withServices((services) =>
       services.embeddings.readiness({ ...(options.chat === undefined ? {} : { chat: options.chat }), model }),
     )
+    if (unbuiltGroups)
+      context.renderer.note(
+        `${unbuiltGroups} group chat${unbuiltGroups === 1 ? " was" : "s were"} never built — \`${messenger.app.command} conversations build\` builds them`,
+      )
     if (context.format !== "pretty") {
-      renderList(context.renderer, context.format, chats, { model: id })
+      renderList(context.renderer, context.format, chats, {
+        model: id,
+        ...(unbuiltGroups === undefined ? {} : { unbuiltGroups }),
+      })
       return
     }
     context.streams.data(chats.map((one) => `${readinessLine(one, id)}\n`).join(""))
-    if (chats.length === 0) context.renderer.note("no chat has conversations yet — `conversations build --chat <chat>`")
+    if (chats.length === 0 && !unbuiltGroups)
+      context.renderer.note("no chat has conversations yet — `conversations build --chat <chat>`")
   })
 
   boundOptions(withModelOptions(conversations.command("search")))

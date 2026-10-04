@@ -119,7 +119,8 @@ export const conversationsTools = (messenger: Messenger): Record<string, AnyTool
         "How fresh each built chat's conversations and vectors are, or one chat's: state (ready, stale, " +
         "partial, words-only, not-built), the build's time and rules, messages it has not seen (new, edited, " +
         "deleted) and chunks with a current, stale or missing vector of the default model. Returns " +
-        `{ items, page, limit, hasMore, model }. Fix with \`${command} conversations build\` and \`embed\`.`,
+        "{ items, page, limit, hasMore, model, unbuiltGroups? } — unbuiltGroups, without chat, counts group " +
+        `chats never built. Fix with \`${command} conversations build\` and \`embed\`.`,
       input: v.object({ chat: v.optional(chat) }),
       annotations: { ...READ, openWorldHint: false },
       stored: async (store, account, args, defaults) => {
@@ -128,7 +129,11 @@ export const conversationsTools = (messenger: Messenger): Record<string, AnyTool
           env: defaults.env,
           profile: defaults.settings.profile,
         }).embeddings.readiness(args.chat === undefined ? {} : { chat: args.chat })
-        return { ...listed(found.chats), model: found.model }
+        return {
+          ...listed(found.chats),
+          model: found.model,
+          ...(found.unbuiltGroups === undefined ? {} : { unbuiltGroups: found.unbuiltGroups }),
+        }
       },
     }),
 
