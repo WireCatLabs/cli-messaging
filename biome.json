@@ -9,7 +9,8 @@
       "!pnpm-lock.yaml",
       "!bench",
       "!drizzle",
-      "!src/store/sqlite/migrations.generated.ts"
+      "!src/store/sqlite/migrations.generated.ts",
+      "!src/search/snowball"
     ]
   },
   "overrides": [

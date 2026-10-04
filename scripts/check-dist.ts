@@ -56,6 +56,11 @@ await messages.close()
 if (read.items[0]?.text !== message.text) throw new Error("openStore from dist did not give the saved message back")
 console.log(`dist: Drizzle bundled and working under ${"Bun" in globalThis ? "Bun" : "Node"}`)
 
+const { createStemmer } = await import(join(root, "search/stem.js"))
+const stems = createStemmer().stemTokens("Квартиру canciones")
+if (stems.join(" ") !== "квартир cancion") throw new Error(`the vendored Snowball stemmers gave ${stems} from dist`)
+console.log("dist: the vendored Snowball stemmers load and stem")
+
 const { prepareEvidencePacket } = await import(join(root, "services/index.js"))
 const evidence = prepareEvidencePacket({ kind: "chats", source: { ...key, chat: message.chatId }, page: read })
 if (evidence.items[0]?.text !== message.text || evidence.items[0]?.locator !== "msg:telegram/1/-1002/3")
