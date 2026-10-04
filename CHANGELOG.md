@@ -14,6 +14,10 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   for the whole store (`russian` or `none`; `spanish`, `english` or `none`). `MessageStore` gains `stemsState`,
   `fillStems`, `stemmers` and `saveStemmers`.
 
+### Fixed
+
+- The parity manifest lists `mcp --http`, `--port`, `--public-url` and `--revoke` in both tg and max, which now
+  have them.
 ## 0.147.0 — 04.10.2026
 
 Released early: max-cli and tg-cli need the reviewed search coverage and history-boundary fixes for their coordinated release
