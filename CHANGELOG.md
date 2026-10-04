@@ -14,6 +14,16 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Changed — may break callers
 
+- `messages search` JSON (and MCP `<cli>_messages_search`) reports `coverage` and `wordsReady` from the store instead of
+  constants. `wordsReady` is `false` for a metadata-only query (`has:file`, `kind:`) while the word index is still
+  being built; before, it was always `true` there. `coverage.inventoryComplete` is `true` once every account in
+  scope has handed the store its whole chat list (`markChatsLeft` now records when), and its type widens from
+  `false` to `boolean`. `coverage.lastSyncedAt` is the oldest `store fetch` of the chats in scope, `null` when one
+  of them was never fetched; each `completeness` entry adds `fetchedAt`. An existing store answers `false` and
+  `null` until its next full chat list and `store fetch`. `ChatCompleteness` gains a required `fetchedAt`; neither
+  CLI builds one. max-cli's `src/mcp.test.ts` expects `coverage.inventoryComplete: false` after a login that hands
+  the store the whole chat list, so it will likely read `true` after the upgrade.
+
 - The `/catch-up` prompt takes `kind` and `mode` (`unread`, the default; `new`; or a time) in place of `since`;
   a time goes in `mode`. It marks read only when the owner asks, through `chats_mark_read` per chat shown, so the
   approval that tool carries still applies — `inbox` and `review` over MCP never mark read.

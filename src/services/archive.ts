@@ -3,7 +3,7 @@ import { CliError } from "@leemour/cli-core"
 import type { Fetching } from "../cli/messenger/context.js"
 import { capability } from "../cli/messenger/port.js"
 import type { ChatKind, Id, Message } from "../domain/models.js"
-import { type AccountKey, type ChatStats, historyStartKey, type MessageStore, type Range } from "../store/store.js"
+import { type AccountKey, type ChatStats, fetchedKey, historyStartKey, type MessageStore, type Range } from "../store/store.js"
 import { type Estimate, estimateBackfill } from "./backfill-estimate.js"
 import type { ServiceDeps } from "./deps.js"
 
@@ -264,6 +264,7 @@ export const fetchInto = async ({
     fetched += fresh
     // This run's pages are contiguous, so everything from `low` to its first message is held.
     const held = await store.markRange(account, chatId, low, top)
+    if (before === undefined) await store.setSyncState(account, fetchedKey(chatId), String(top))
     onPage({ fetched, chatId, oldest: held.from })
     // Nothing new: by id the messenger ignored `before`; by time a second such page did after the step past.
     // Repeats do not count towards the limit, so without this the run would never end.

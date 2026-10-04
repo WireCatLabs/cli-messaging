@@ -95,7 +95,9 @@ Explicit chat-only scan стартует с chat/time index. Index not ready —
 Postfilter candidate selection — SQL superset без unsafe отрицания bounded predicates; full AST
 проверяется на candidates. Row/byte caps проверяются до body loading; bounded batches позволяют abort.
 Relevance и pagination не меняют matched set. Охват описывает выбранные accounts/chats даже при нуле.
-lastSyncedAt null и inventoryComplete false не выдают локальный watermark за свежую profile inventory.
+lastSyncedAt — самый старый `fetched:<chat>` sync_state охвата (null, если чат охвата не скачивался);
+inventoryComplete — у каждого account охвата есть `chat_list_complete` (пишет `markChatsLeft`);
+wordsReady — `searchIndexState().ready` для любого запроса, не константа.
 
 ## Regex safety и compatibility
 
