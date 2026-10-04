@@ -208,8 +208,13 @@ export interface MessageStore {
   /** The conversations nearest in meaning to `query`, in one chat or every one of the account, best first. */
   nearestConversations(
     key: AccountKey,
-    options: { chatId?: Id; model: string; since?: string; limit: number; query: Float32Array },
+    options: { chatId?: Id; model: string; since?: string; limit: number; query: Float32Array; exclude?: string },
   ): Promise<ConversationHit[]>
+  /**
+   * A conversation of the current build: how many chunks it has, and the vectors of `model` of those whose
+   * messages did not change since — none when it is not the account's or not current.
+   */
+  conversationVectors(key: AccountKey, id: string, model: string): Promise<{ chunks: number; vectors: Float32Array[] }>
   /**
    * How fresh each built chat's conversations and `model`'s vectors are — one chat, or every chat whose
    * conversations were ever built. A chat never built answers `builtAt: null`.
@@ -739,7 +744,7 @@ const storeOver = (context: StoreContext): MessageStore => {
       return cleared
     },
 
-    nearestConversations: async (key, { chatId, model, since, limit, query }) => {
+    nearestConversations: async (key, { chatId, model, since, limit, query, exclude }) => {
       const accountPk = findAccountPk(key)
       if (accountPk === undefined) return []
       const chatKey = chatId === undefined ? undefined : chatKeyOf(key, chatId)
@@ -747,6 +752,7 @@ const storeOver = (context: StoreContext): MessageStore => {
       const nearest = vectors.nearestChunks(context, accountPk, {
         ...(chatKey === undefined ? {} : { chatKey }),
         ...(since === undefined ? {} : { since: Date.parse(since) }),
+        ...(exclude === undefined ? {} : { exclude: Number(exclude) }),
         model,
         limit,
         query,
@@ -776,6 +782,15 @@ const storeOver = (context: StoreContext): MessageStore => {
             ]
           : []
       })
+    },
+
+    conversationVectors: async (key, id, model) => {
+      const accountPk = findAccountPk(key)
+      const pk = Number(id)
+      if (accountPk === undefined || !conversationQueries.summariesOf(context, accountPk, [pk]).has(pk)) {
+        return { chunks: 0, vectors: [] }
+      }
+      return vectors.conversationVectors(context, pk, model)
     },
 
     readiness: async (key, { chatId, model }) => {

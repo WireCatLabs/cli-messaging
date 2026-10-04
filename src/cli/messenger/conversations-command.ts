@@ -8,6 +8,7 @@ import { BATCH_SIZE } from "../../services/conversations.js"
 import {
   type ChatReadiness,
   type EmbedStatus,
+  type FoundConversation,
   type FoundConversations,
   type ModelChoice,
   REFRESH_BOUNDS,
@@ -117,6 +118,43 @@ export const conversationsCommand = (messenger: Messenger): Command => {
 
   withModelOptions(
     conversations
+      .command("related")
+      .description(
+        "the conversations nearest in meaning to the one a message is in, in every built chat, best first — " +
+          "from the vectors `conversations embed` stored; runs no model",
+      )
+      .argument("<chat>", messenger.chatArgument)
+      .argument("<message>", "a message id in that chat")
+      .option("--limit <n>", "how many", positiveCount("--limit")),
+  ).action(async function (this: Command, chat: string, message: string) {
+    const options = this.opts<ModelOptions>()
+    const context = messengerContext(this, messenger)
+    const model = choiceOf(options, messenger, context, { needKey: false })
+    const { limit } = context.settings
+    const found = await context.withServices((services) => services.embeddings.related(chat, message, { model, limit }))
+    if (context.format === "pretty") {
+      context.streams.data(`like ${line(found.source)}\n\n${found.hits.map((hit) => `${hitLine(hit)}\n`).join("")}`)
+      if (found.hits.length === 0) context.renderer.note(`no other conversation has vectors of ${found.model}`)
+    } else if (context.format === "jsonl") context.renderer.stream(found.hits)
+    else {
+      const { model: id, source, hits, readiness } = found
+      context.renderer.result({ model: id, source, items: hits, limit, readiness })
+    }
+    const command = messenger.app.command
+    const unseen = found.readiness.wordsOnly
+    if (unseen.length > 0) {
+      context.renderer.note(
+        `not searched, no vector of ${found.model}: chat ${unseen.join(", ")} — \`${command} conversations embed --chat <chat>\``,
+      )
+    }
+    // `unavailable` keeps out the note about word matches: related searches no words.
+    for (const note of readinessNotes({ ...found, meaning: "unavailable", embeddedOnlyElsewhere: [] }, command)) {
+      context.renderer.note(note)
+    }
+  })
+
+  withModelOptions(
+    conversations
       .command("status")
       .description(
         "how fresh each built chat's conversations and vectors are: messages the build has not seen, chunks " +
@@ -183,14 +221,7 @@ export const conversationsCommand = (messenger: Messenger): Command => {
       })
       if (refreshed) for (const note of leftNotes(refreshed, messenger.app.command)) context.renderer.note(note)
       if (context.format === "pretty") {
-        context.streams.data(
-          found.hits
-            .map(
-              ({ summary, chunk, score, stale }) =>
-                `${score === null ? "  —  " : score.toFixed(3)}  ${line(summary)}  (messages ${chunk.firstMessageId}–${chunk.lastMessageId})${stale ? "  stale" : ""}\n`,
-            )
-            .join(""),
-        )
+        context.streams.data(found.hits.map((hit) => `${hitLine(hit)}\n`).join(""))
         if (found.hits.length === 0) {
           context.renderer.note(
             found.meaning === "unavailable"
@@ -665,6 +696,10 @@ const line = (one: ConversationSummary) =>
   `${one.id}  ${one.firstAt.slice(0, 16).replace("T", " ")}–${one.lastAt.slice(11, 16)}  ` +
   `${one.messageCount} messages · ${one.senders} people · from message ${one.firstMessageId}`
 
+const hitLine = ({ summary, chunk, score, stale }: FoundConversation) =>
+  `${score === null ? "  —  " : score.toFixed(3)}  ${line(summary)}  ` +
+  `(messages ${chunk.firstMessageId}–${chunk.lastMessageId})${stale ? "  stale" : ""}`
+
 const readinessLine = ({ chat, state, graph, pending, vectors }: ChatReadiness, model: string) =>
   graph === null
     ? `${chat}  ${state} — \`conversations build --chat ${chat}\``
@@ -674,7 +709,15 @@ const readinessLine = ({ chat, state, graph, pending, vectors }: ChatReadiness, 
       `${vectors.missing} missing of ${vectors.chunks} chunks`
 
 /** What the search could not see, and the command that fixes each. */
-const readinessNotes = ({ meaning, model, readiness, embeddedOnlyElsewhere }: FoundConversations, command: string) => {
+const readinessNotes = (
+  {
+    meaning,
+    model,
+    readiness,
+    embeddedOnlyElsewhere,
+  }: Pick<FoundConversations, "meaning" | "model" | "readiness" | "embeddedOnlyElsewhere">,
+  command: string,
+) => {
   const chats = (ids: string[]) => `chat ${ids.join(", ")}`
   const elsewhere = new Set(embeddedOnlyElsewhere)
   const neverEmbedded = readiness.wordsOnly.filter((id) => !elsewhere.has(id))

@@ -438,6 +438,50 @@ describe("catching up without --chat", () => {
   })
 })
 
+describe("related conversations", () => {
+  it("**finds the conversations like a message's own**, never that one, with no model downloaded", async () => {
+    const { store, embeddings } = await setUp()
+    await embeddings.embed("9", { model: "tiny", threads: 1 })
+    vi.stubEnv("CLI_COMMON_CACHE_DIR", mkdtempSync(join(tmpdir(), "no-models-")))
+
+    const found = await embeddings.related("9", "80", { model: "tiny", limit: 5 })
+    expect(found.source.firstMessageId).toBe("80")
+    expect(found.hits.map(({ summary }) => summary.firstMessageId)).toEqual(["1", "40"])
+    expect(found.hits[0]).toMatchObject({ by: ["meaning"], stale: false })
+    expect(found.hits[0]?.score).toBeGreaterThan(found.hits[1]?.score ?? 1)
+    expect(found.readiness).toMatchObject({ searchedByMeaning: ["9"], stale: [], notBuilt: [] })
+    expect((await embeddings.related("9", "2", { model: "tiny", limit: 1 })).hits).toHaveLength(1)
+    await store.close()
+  })
+
+  it("refuses with the command to run: never built, never embedded, its message changed since", async () => {
+    const unbuilt = await setUp({ build: false })
+    await expect(unbuilt.embeddings.related("9", "80", { model: "tiny", limit: 5 })).rejects.toThrow(
+      "conversations build --chat 9",
+    )
+    await unbuilt.store.close()
+
+    const { store, embeddings, conversations } = await setUp()
+    await expect(embeddings.related("9", "80", { model: "tiny", limit: 5 })).rejects.toThrow(
+      "conversations embed --chat 9",
+    )
+    await expect(embeddings.related("9", "999", { model: "tiny", limit: 5 })).rejects.toThrow(
+      "message 999 is in no conversation",
+    )
+    await embeddings.embed("9", { model: "tiny", threads: 1 })
+    await store.saveMessages(account, "9", [{ ...message("80", "zebra"), editedAt: "2026-10-05T00:00:00.000Z" }], {
+      via: "live",
+    })
+    await expect(embeddings.related("9", "80", { model: "tiny", limit: 5 })).rejects.toThrow(
+      "conversations build --chat 9",
+    )
+    await conversations.build("9")
+    await embeddings.embed("9", { model: "tiny", threads: 1 })
+    expect((await embeddings.related("9", "80", { model: "tiny", limit: 5 })).hits[0]?.score).toBeLessThan(0.5)
+    await store.close()
+  })
+})
+
 const withDatabase = async <T>(path: string, body: (run: (sql: string) => Record<string, unknown>[]) => T) => {
   const database = await openCache(path)
   try {

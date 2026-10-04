@@ -84,6 +84,29 @@ export const conversationsTools = (messenger: Messenger): Record<string, AnyTool
       },
     }),
 
+    conversations_related: tool({
+      title: "Find conversations like the one a message is in",
+      description:
+        "The conversations nearest in meaning to the one `message` is in, in every built chat, best first, never " +
+        "that one. Uses the vectors stored by " +
+        `\`${command} conversations embed\`: no model runs. Returns { model, source, items, limit, readiness }: ` +
+        "source is the message's conversation; each item has the conversation's summary, the chunk that matched, " +
+        "`score` (cosine) and `stale`, true when the chunk changed after it was embedded — its id goes to " +
+        "conversations_show. readiness lists chat ids as conversations_search does. Refused, naming the " +
+        "command, when the message's conversation has no vector that matches its messages now.",
+      input: v.object({ chat, message, limit }),
+      annotations: { ...READ, openWorldHint: false },
+      stored: async (store, account, args, defaults) => {
+        const size = args.limit ?? defaults.limit
+        const found = await servicesFor(storedDeps(messenger, store, account, defaults.guard)).embeddings.related(
+          args.chat,
+          args.message,
+          { limit: size },
+        )
+        return { model: found.model, source: found.source, items: found.hits, limit: size, readiness: found.readiness }
+      },
+    }),
+
     conversations_status: tool({
       title: "Check how fresh conversations are",
       description:

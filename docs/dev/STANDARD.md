@@ -26,6 +26,7 @@ guessable from the others.
    reason in its pull request.
 3. **Verbs come from this list, each with one meaning.** A verb not on it is added here first.
    - `list` many · `show` one · `search` find by text — the description says where it looks
+   - `related` what is nearest in meaning to one thing, without a query (`conversations related`)
    - `info` facts about a singular thing itself — where it is, its size, its version, its schema
      (`store info`) · `status` how a thing stands right now — a running process (`server status`)
      or what the store holds per chat (`store status`)
@@ -132,7 +133,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--as-file` |  | send every --file as a plain file to download, a video included |  | `bot messages send`, `messages send` |
 | `--at-time` | `<time>` | let the messenger send it later, even with this machine off: a local time like 2026-09-25T09:00, or 30m |  | `messages send` |
 | `--background` |  | run as a job that outlives this command; `store jobs show` follows it |  | `store fetch` |
-| `--base-url` | `<url>` | a server with OpenAI's /v1/embeddings: Gemini, Jina, or Ollama and LM Studio on this machine |  | `conversations embed`, `conversations embed clear`, `conversations embed status`, `conversations search`, `conversations status` (planned) |
+| `--base-url` | `<url>` | a server with OpenAI's /v1/embeddings: Gemini, Jina, or Ollama and LM Studio on this machine |  | `conversations embed`, `conversations embed clear`, `conversations embed status`, `conversations related` (planned), `conversations search`, `conversations status` (planned) |
 | `--batch` | `<id>` | the batch id `conversations batches next` printed |  | `conversations links add` (planned) |
 | `--before-id` | `<id>` | read what came before this message id; not with --before-time |  | `messages evidence`, `messages list` |
 | `--before-n` | `<n>` | how many messages before it |  | `messages context` |
@@ -150,7 +151,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--context` | `<n>` | messages before and after each hit |  | `messages search` |
 | `--defaults` |  | change what every profile gets, rather than this profile |  | `config set`, `config unset` |
 | `--description` | `<text>` | the new about text — of a chat or of your account |  | `account update`, `chats update` |
-| `--dims` | `<n>` | remote: the vector size — needed with --base-url; shortens an OpenAI model's |  | `conversations embed`, `conversations embed clear`, `conversations embed status`, `conversations search`, `conversations status` (planned) |
+| `--dims` | `<n>` | remote: the vector size — needed with --base-url; shortens an OpenAI model's |  | `conversations embed`, `conversations embed clear`, `conversations embed status`, `conversations related` (planned), `conversations search`, `conversations status` (planned) |
 | `--dry-run` |  | judge and plan; do nothing |  | `bot chats moderate`, `chats moderate` (planned), `config migrate` (planned) |
 | `--estimate` |  | only say what the fetch would cost, from this machine's copy; nothing is sent. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | `store fetch` |
 | `--events` |  | also print edits, deletions and reactions; every line then names its event. **watch updates use this flag independently of the group event --type filter** |  | `bot watch`, `watch` |
@@ -170,7 +171,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--last` | `<n>` | stop once the newest n messages are held; not with --since. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | `bot store fetch`, `store fetch` |
 | `--last-name` | `<name>` | your last name |  | `account update` |
 | `--left` |  | only the chats this account has left |  | `store clear` |
-| `--limit` | `<n>` | how many: rows to show, or messages one run fetches. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | `bot chats members list` (max-only), `bot contacts show`, `bot messages between`, `bot messages list`, `bot messages search`, `bot store fetch`, `chats list`, `chats members list` (planned), `contacts list`, `conversations list`, `conversations search`, `inbox`, `messages evidence`, `messages list`, `messages search`, `messages stats` (planned), `runs list`, `sends list`, `store fetch` |
+| `--limit` | `<n>` | how many: rows to show, or messages one run fetches. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | `bot chats members list` (max-only), `bot contacts show`, `bot messages between`, `bot messages list`, `bot messages search`, `bot store fetch`, `chats list`, `chats members list` (planned), `contacts list`, `conversations list`, `conversations related` (planned), `conversations search`, `inbox`, `messages evidence`, `messages list`, `messages search`, `messages stats` (planned), `runs list`, `sends list`, `store fetch` |
 | `--lines` | `<n>` | how many lines | `50` | `server logs` |
 | `--local` |  | use the model on this machine, never the messenger |  | `messages transcribe` (tg-only) |
 | `--mark-read` |  | also mark the chat read up to the newest message shown; the other person sees it |  | `messages list` |
@@ -182,7 +183,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--md` |  | read this messenger's Markdown; see its formatting guide for supported syntax |  | `bot messages edit`, `bot messages send`, `messages edit`, `messages send` |
 | `--members-see-link` | `<on\|off>` | members may see the invite link |  | `chats update` (max-only) |
 | `--method` | `<method>` | how to log in when there is no session |  | `setup` (planned) |
-| `--model` | `<id>` | which downloaded speech model hears them; `models audio list` shows them. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | `conversations embed`, `conversations embed clear`, `conversations embed status`, `conversations links clear` (planned), `conversations search`, `conversations status` (planned), `inbox`, `messages list`, `messages transcribe`, `review` (planned) |
+| `--model` | `<id>` | which downloaded speech model hears them; `models audio list` shows them. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | `conversations embed`, `conversations embed clear`, `conversations embed status`, `conversations links clear` (planned), `conversations related` (planned), `conversations search`, `conversations status` (planned), `inbox`, `messages list`, `messages transcribe`, `review` (planned) |
 | `--multiple` |  | people may pick several answers |  | `polls create` |
 | `--new` |  | what arrived since the last check, each message once — for scheduled runs |  | `inbox` |
 | `--newest` |  | newest first instead of best first |  | `bot messages search`, `messages search` |
@@ -206,7 +207,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--pause` | `<duration>` | the least wait between pages, 5s or 500ms; each is up to twice that. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** | `5s` | `bot store fetch`, `messages download`, `store fetch` |
 | `--personal` |  | the personal account's section of the profile's settings |  | `config set` (planned), `config unset` (planned) |
 | `--photo` | `<file>` | an image file — a profile photo in `account update`, a photo to send in `messages send` |  | `account update`, `bot messages send`, `messages send` |
-| `--provider` | `<provider>` | embed through a service with your key instead of on this machine: openai |  | `conversations embed`, `conversations embed clear`, `conversations embed status`, `conversations search`, `conversations status` (planned) |
+| `--provider` | `<provider>` | embed through a service with your key instead of on this machine: openai |  | `conversations embed`, `conversations embed clear`, `conversations embed status`, `conversations related` (planned), `conversations search`, `conversations status` (planned) |
 | `--qr-file` | `<png>` | write the QR code to this PNG instead of drawing it, for an agent to pass on |  | `session start` (tg-only), `setup` (planned) |
 | `--quiet` |  | diagnostics off. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | every command |
 | `--record` |  | keep this run under `runs` — ids and timings, never message content. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | every command |

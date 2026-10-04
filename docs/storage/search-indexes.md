@@ -251,6 +251,16 @@ never embedded can still be found by its words. When the local model is not down
 words alone, says `meaning: "unavailable"` and names `models text download` on stderr (NEED-552 A); it never
 downloads a model or calls a remote one in its place. A remote model that fails is still an error.
 
+### Related to a message
+
+`conversations related <chat> <message>` (MCP `conversations_related`) answers "what else was like this":
+the conversations nearest in meaning to the one the message is in, in every built chat, never that one. The
+query is the mean of that conversation's vectors, made unit length again — only the vectors of chunks whose
+messages did not change since the build, so an edit or a deletion is not searched as it was. No model runs:
+it works with none downloaded. It answers the same `readiness` as the search, and refuses with `conversations build` (the chat changed)
+or `conversations embed` (no vector) when the conversation has no usable vector. It has no `--chat` scope yet:
+the source is already `<chat>`, and a second chat option needs a name of its own.
+
 ### In the MCP server
 
 A one-shot command loads the model (~1 s), searches and exits. The MCP server keeps the model between

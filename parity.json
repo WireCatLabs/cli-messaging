@@ -1335,6 +1335,50 @@
         "--since-time": "all"
       }
     },
+    "conversations related": {
+      "in": [],
+      "planned": {
+        "max": "each CLI's next cli-messaging bump",
+        "tg": "each CLI's next cli-messaging bump"
+      },
+      "options": {
+        "--base-url": {
+          "in": [],
+          "planned": {
+            "max": "each CLI's next cli-messaging bump",
+            "tg": "each CLI's next cli-messaging bump"
+          }
+        },
+        "--dims": {
+          "in": [],
+          "planned": {
+            "max": "each CLI's next cli-messaging bump",
+            "tg": "each CLI's next cli-messaging bump"
+          }
+        },
+        "--limit": {
+          "in": [],
+          "planned": {
+            "max": "each CLI's next cli-messaging bump",
+            "tg": "each CLI's next cli-messaging bump"
+          }
+        },
+        "--model": {
+          "in": [],
+          "planned": {
+            "max": "each CLI's next cli-messaging bump",
+            "tg": "each CLI's next cli-messaging bump"
+          }
+        },
+        "--provider": {
+          "in": [],
+          "planned": {
+            "max": "each CLI's next cli-messaging bump",
+            "tg": "each CLI's next cli-messaging bump"
+          }
+        }
+      }
+    },
     "conversations search": {
       "in": "all",
       "options": {

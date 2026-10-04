@@ -16,6 +16,12 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   on the same folder and it adds only what changed since: new messages, edits (also to old messages) and
   deletions, as `{ id, chatId, deleted: true }` with no text. Several chats, `--kind` or `--all`. A change to
   reactions alone is not counted as a change.
+- `conversations related <chat> <message>` and the read-only MCP tool `conversations_related`: the conversations of
+  every built chat nearest in meaning to the one the message is in, best first, never that one. The query is the
+  mean of that conversation's stored vectors whose messages did not change since, so no model runs and none needs
+  to be downloaded. JSON: `{ model, source, items, limit, readiness }`, items and `readiness` shaped as in
+  `conversations search`. Refused with `not_found`, naming `conversations build` or `embed`, when the conversation
+  has no such vector.
 - `inbox --kind` and `review --kind` take chat kinds, comma-separated (`dialog,group,channel`), so direct chats,
   groups and channels can be caught up on apart or together.
 - `date:` takes relative dates: `date:today`, `date:yesterday` (calendar days in `--timezone`), `date:7d` (since 7 days
@@ -56,6 +62,9 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   they catch up every chat that needs it, as above. A script that relied on the refusal now does work.
   `MessageStore` has a new `unbuiltGroups` method and `EmbeddingsService` a new `refresh` method; tg-cli and
   max-cli implement neither, so neither needs a change.
+- `MessageStore` has a new `conversationVectors` method and `nearestConversations` an optional `exclude`;
+  `EmbeddingsService` has a new `related` method. tg-cli and max-cli implement none of them, so neither needs a
+  change.
 
 ### Fixed
 
