@@ -36,6 +36,15 @@ import { openSqlite, type StoreContext } from "./sqlite/open.js"
 import * as personLinks from "./sqlite/person-links.js"
 import * as ranges from "./sqlite/ranges.js"
 import * as reads from "./sqlite/reads.js"
+import type {
+  MemberCount,
+  MemberStay,
+  ProfileRevision,
+  RosterChange,
+  RosterRead,
+  TrackedChat,
+} from "./sqlite/roster.js"
+import * as roster from "./sqlite/roster.js"
 import * as search from "./sqlite/search.js"
 import type { SearchIndexFill, SearchIndexState } from "./sqlite/search-index.js"
 import * as searchIndex from "./sqlite/search-index.js"
@@ -169,6 +178,20 @@ export interface MessageStore {
   saveMembers(key: AccountKey, chatId: Id, memberIds: Id[]): Promise<void>
   /** Who is in a chat, by name, as the last list said; empty when no list was ever saved. */
   members(key: AccountKey, chatId: Id): Promise<Member[]>
+  /**
+   * One read of a group's member list: stays opened and kept, a stay closed only when the read was whole,
+   * profiles revised when they differ, today's count. The chat's present members become the list read whole.
+   */
+  saveRoster(key: AccountKey, chatId: Id, read: RosterRead): Promise<RosterChange>
+  /** Stays open at `since` (ISO) or begun after it, oldest first; every stay without it. */
+  memberStays(key: AccountKey, chatId: Id, options?: { since?: string }): Promise<MemberStay[]>
+  /** One row a day, oldest first; from `since` (`YYYY-MM-DD`) when given. */
+  memberCounts(key: AccountKey, chatId: Id, options?: { since?: string }): Promise<MemberCount[]>
+  /** Every profile the chat's members were seen with, oldest first. */
+  profileRevisions(key: AccountKey, chatId: Id, options?: { since?: string }): Promise<ProfileRevision[]>
+  /** Starts or stops `serve`'s daily fetch of the chat's members; history already kept stays. */
+  trackMembers(key: AccountKey, chatId: Id, tracked: boolean): Promise<void>
+  trackedChats(key: AccountKey): Promise<TrackedChat[]>
   /** The chats a person is in, newest first — as far as the saved member lists go. */
   chatsWith(key: AccountKey, memberId: Id): Promise<Chat[]>
   /** What a sync remembered under `name` for this account, and when; a caller encodes a number itself. */
@@ -631,6 +654,42 @@ const storeOver = (context: StoreContext): MessageStore => {
 
     saveMembers: async (key, chatId, memberIds) =>
       inTransaction(() => writeMembers(key, accountPk(key), chatId, memberIds)),
+
+    saveRoster: async (key, chatId, read) => {
+      let change: RosterChange = { joined: [], gone: [], changed: [] }
+      inTransaction(() => {
+        const accountKey = accountPk(key)
+        change = roster.saveRoster(context, accountKey, key.provider, chatPkFor(accountKey, chatId), read)
+      })
+      return change
+    },
+
+    memberStays: async (key, chatId, { since } = {}) => {
+      const chatKey = chatKeyOf(key, chatId)
+      return chatKey === undefined
+        ? []
+        : roster.memberStaysOf(context, chatKey, since === undefined ? undefined : Date.parse(since))
+    },
+
+    memberCounts: async (key, chatId, { since } = {}) => {
+      const chatKey = chatKeyOf(key, chatId)
+      return chatKey === undefined ? [] : roster.memberCountsOf(context, chatKey, since)
+    },
+
+    profileRevisions: async (key, chatId, { since } = {}) => {
+      const chatKey = chatKeyOf(key, chatId)
+      return chatKey === undefined
+        ? []
+        : roster.profileRevisionsOf(context, chatKey, since === undefined ? undefined : Date.parse(since))
+    },
+
+    trackMembers: async (key, chatId, tracked) =>
+      inTransaction(() => roster.setTracked(context, chatPkFor(accountPk(key), chatId), tracked)),
+
+    trackedChats: async (key) => {
+      const accountKey = findAccountPk(key)
+      return accountKey === undefined ? [] : roster.trackedChats(context, accountKey)
+    },
 
     members: async (key, chatId) => {
       const accountKey = findAccountPk(key)

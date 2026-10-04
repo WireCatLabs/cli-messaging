@@ -110,6 +110,8 @@ export const chats = sqliteTable(
     isSearchable: integer("is_searchable").notNull().default(1),
     /** Kept by triggers, so phase 2 can choose per query how a filter reaches the index. */
     messageCount: integer("message_count").notNull().default(0),
+    /** When the owner asked `serve` to fetch its member list daily; `NULL` when not tracked. */
+    membersTrackedAt: integer("members_tracked_at"),
   },
   (table) => [
     unique().on(table.accountPk, table.nativeId),
@@ -500,4 +502,67 @@ export const searches = sqliteTable(
     uniqueIndex("searches_history").on(table.command, table.params).where(sql`name IS NULL`),
     index("searches_by_last_run").on(desc(table.lastRunAt)),
   ],
+)
+
+/**
+ * One stay of a person in a group, from member lists read whole or in part. A return after leaving is a new
+ * row. `gone_at` is set only from a list read whole: a cut list says nothing about who is missing.
+ */
+export const memberStays = sqliteTable(
+  "member_stays",
+  {
+    pk: integer("pk").primaryKey(),
+    chatPk: integer("chat_pk")
+      .notNull()
+      .references(() => chats.pk),
+    identityPk: integer("identity_pk")
+      .notNull()
+      .references(() => identities.pk),
+    firstSeenAt: integer("first_seen_at").notNull(),
+    lastSeenAt: integer("last_seen_at").notNull(),
+    /** When the messenger says they joined; `NULL` where it does not. */
+    joinedAt: integer("joined_at"),
+    invitedByPk: integer("invited_by_pk").references(() => identities.pk),
+    role: text("role"),
+    goneAt: integer("gone_at"),
+  },
+  (table) => [
+    uniqueIndex("member_stays_open").on(table.chatPk, table.identityPk).where(sql`gone_at IS NULL`),
+    index("member_stays_by_identity").on(table.identityPk),
+  ],
+)
+
+/** A group's size once a day: the messenger's own count and how many members one read listed. */
+export const memberCounts = sqliteTable(
+  "member_counts",
+  {
+    chatPk: integer("chat_pk")
+      .notNull()
+      .references(() => chats.pk),
+    /** `YYYY-MM-DD`, UTC; a later read the same day replaces the row. */
+    day: text("day").notNull(),
+    participants: integer("participants"),
+    listed: integer("listed").notNull(),
+    complete: integer("complete").notNull(),
+    at: integer("at").notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.chatPk, table.day] })],
+)
+
+/** Each profile a person was seen with, a row when it differs from the one before; `identities` holds the latest. */
+export const identityRevisions = sqliteTable(
+  "identity_revisions",
+  {
+    pk: integer("pk").primaryKey(),
+    identityPk: integer("identity_pk")
+      .notNull()
+      .references(() => identities.pk),
+    name: text("name"),
+    username: text("username"),
+    description: text("description"),
+    /** JSON: the messenger's marks — bot, scam, fake, deleted, has a photo — where it gave them. */
+    marks: text("marks"),
+    capturedAt: integer("captured_at").notNull(),
+  },
+  (table) => [index("identity_revisions_by_identity").on(table.identityPk, table.capturedAt)],
 )

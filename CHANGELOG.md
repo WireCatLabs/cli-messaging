@@ -6,6 +6,15 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- Member history in the store (store version 18): `saveRoster` records one read of a group's member list — a stay
+  per person (first and last seen, when the messenger says they joined, who invited them, role, when they were
+  first missing), a member count per day, and each profile a member was seen with (name, username, the bot, scam,
+  fake, deleted and photo marks) when it changes. Someone is recorded as gone only from a list read whole. Read
+  with `memberStays`, `memberCounts` and `profileRevisions`; `trackMembers` and `trackedChats` keep the chats a
+  daily fetch will cover. Older builds keep opening the file: version 18 only adds tables and a nullable column.
+
 ## 0.148.0 — 04.10.2026
 
 ### Added
