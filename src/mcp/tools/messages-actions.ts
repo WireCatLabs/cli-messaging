@@ -45,6 +45,7 @@ export const messageActionTools = (messenger: Messenger): Record<string, AnyTool
         message,
         to: v.pipe(v.string(), v.minLength(1), v.description(`where it goes: ${messenger.chatArgument}`)),
         silent: v.optional(v.pipe(v.boolean(), v.description("deliver without a notification"))),
+        send_as: v.optional(v.pipe(v.string(), v.minLength(1), v.description("an id from chats_send_as to post as"))),
         send_id: v.optional(v.pipe(v.string(), v.minLength(1), v.description("from an earlier outcome_unknown"))),
       }),
       annotations: WRITE,
@@ -56,6 +57,7 @@ export const messageActionTools = (messenger: Messenger): Record<string, AnyTool
           to: args.to,
           silent: args.silent === true,
           ...(args.send_id === undefined ? {} : { sendId: args.send_id }),
+          ...(args.send_as === undefined ? {} : { sendAs: args.send_as }),
         }),
     }),
     messages_pin: tool({

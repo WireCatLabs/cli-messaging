@@ -12,6 +12,7 @@ import { inSource, parseQuery, sourceOf } from "../search/query.js"
 import { type Match, search } from "../search/search.js"
 import { codeOf, guardedWrite, type Operated } from "../sends/guarded.js"
 import type { PermissionKey } from "../sends/permissions.js"
+import { sendAsCheck } from "../sends/send-as.js"
 import { newOperationId, newSendId } from "../sends/send-id.js"
 import type { Upload } from "../sends/upload.js"
 import type {
@@ -182,7 +183,7 @@ export interface MessagesService {
   delete(request: { chat: string; messages: string[]; forEveryone: boolean }): Promise<Operated<Deletion>>
   /** Guarded against the chat it goes to: that is where somebody new reads it. */
   forward(
-    target: MessageTarget & { to: string; silent: boolean; sendId?: string },
+    target: MessageTarget & { to: string; silent: boolean; sendId?: string; sendAs?: Id },
   ): Promise<Operated<{ sendId: string; message: Message }>>
   /** Counts toward the hourly limit only when it notifies. */
   pin(target: MessageTarget & { notify: boolean }): Promise<Operated<Pinned>>
@@ -383,9 +384,6 @@ export const messagesService = (deps: ServiceDeps): MessagesService => {
     }) => {
       const media = { ...(spoiler ? { spoiler } : {}), ...(captionAbove ? { captionAbove } : {}) }
       checkMediaOptions(deps.messenger, Object.keys(media) as MediaOption[], attachments.length)
-      if (sendAs !== undefined && attachments.length > 0) {
-        throw new CliError("validation_error", "--send-as sends text only for now; send the file without it")
-      }
       const connection = await deps.connection()
       if (at !== undefined && sendId !== undefined) {
         throw new CliError(
@@ -402,15 +400,9 @@ export const messagesService = (deps: ServiceDeps): MessagesService => {
       const threadId = threadIdOf(typedThread)
       const validate =
         threadId === undefined ? undefined : capability(connection, "validateThread", "send to a forum topic")
-      const identities =
-        sendAs === undefined ? undefined : capability(connection, "sendAsIdentities", "send as another identity")
+      const checkSendAs = sendAsCheck(connection, sendAs)
       const { id: chatId } = await connection.resolve(chat)
-      if (identities && !(await identities(chatId)).some((one) => one.id === sendAs)) {
-        throw new CliError(
-          "validation_error",
-          `${sendAs} is not an identity this account may post as in this chat — see \`chats send-as\``,
-        )
-      }
+      await checkSendAs(chatId)
       const id = sendId ?? connection.newSendId?.() ?? newSendId()
       const attempt = {
         chatId,
@@ -495,16 +487,23 @@ export const messagesService = (deps: ServiceDeps): MessagesService => {
       return { operationId, chatId, deleted: messages, forEveryone }
     },
 
-    forward: async ({ chat, message, to, silent, sendId }) => {
+    forward: async ({ chat, message, to, silent, sendId, sendAs }) => {
       const connection = await deps.connection()
       const forward = capability(connection, "forward", "forward a message")
+      const checkSendAs = sendAsCheck(connection, sendAs)
       const { id: fromChatId } = await connection.resolve(chat)
       const { id: toChatId } = await connection.resolve(to)
+      await checkSendAs(toChatId)
       const id = sendId ?? connection.newSendId?.() ?? newSendId()
       const forwarded = await guardedWrite(
         guard,
-        { operationId: id, sendId: id, chatId: toChatId, kind: "forward" },
-        () => forward(fromChatId, message, toChatId, { sendId: id, ...(silent ? { silent } : {}) }),
+        { operationId: id, sendId: id, chatId: toChatId, kind: "forward", ...(sendAs === undefined ? {} : { sendAs }) },
+        () =>
+          forward(fromChatId, message, toChatId, {
+            sendId: id,
+            ...(silent ? { silent } : {}),
+            ...(sendAs === undefined ? {} : { sendAs }),
+          }),
         (done) => ({ messageId: done.id }),
       )
       return { operationId: id, sendId: id, message: forwarded }

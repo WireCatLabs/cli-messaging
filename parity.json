@@ -2248,6 +2248,10 @@
     "messages forward": {
       "in": "all",
       "options": {
+        "--send-as": {
+          "in": [],
+          "planned": { "max": "G1 feat/send-as-identities", "tg": "G1 feat/send-as-identities" }
+        },
         "--send-id": "all",
         "--silent": "all",
         "--to": "all"
@@ -2416,6 +2420,10 @@
         "--anonymous": "all",
         "--multiple": "all",
         "--revote": "all",
+        "--send-as": {
+          "in": [],
+          "planned": { "max": "G1 feat/send-as-identities", "tg": "G1 feat/send-as-identities" }
+        },
         "--send-id": "all",
         "--silent": "all",
         "--topic": "all"

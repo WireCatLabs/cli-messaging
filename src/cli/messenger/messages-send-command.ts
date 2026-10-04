@@ -2,6 +2,7 @@ import { CliError } from "@leemour/cli-core"
 import { annotate } from "@leemour/cli-core/commands"
 import { Command } from "commander"
 import { sendTime } from "../../domain/send-time.js"
+import { typedSendAs } from "../../sends/send-as.js"
 import { readAttachments } from "../../sends/upload.js"
 import { type Messenger, messengerContext } from "./context.js"
 import { readAll } from "./stdin.js"
@@ -18,7 +19,7 @@ export const sendCommand = (messenger: Messenger): Command =>
     .argument("[text]", "the message")
     .option("--topic <id>", "send to this forum topic; unsupported by messengers without topics")
     .option("--reply-to <message>", "answer this message, by its id in the same chat")
-    .option("--send-as <id>", "post as one of the identities `chats send-as` lists; text only")
+    .option("--send-as <id>", "post as one of the identities `chats send-as` lists")
     .option("--send-id <id>", "repeat a send whose outcome was unknown, without risking a second copy")
     .option("--silent", "deliver without a notification")
     .option("--no-preview", "no preview card for a link in the text")
@@ -43,7 +44,7 @@ const sendText = async (command: Command, messenger: Messenger, chat: string, te
   const {
     topic,
     replyTo: typedReplyTo,
-    sendAs: typedSendAs,
+    sendAs: givenSendAs,
     sendId,
     silent,
     preview,
@@ -77,8 +78,7 @@ const sendText = async (command: Command, messenger: Messenger, chat: string, te
   const scheduledFor = at === undefined ? undefined : sendTime(at)
   const replyTo = typedReplyTo?.trim()
   if (replyTo === "") throw new CliError("validation_error", "--reply-to needs the id of the message to answer")
-  const sendAs = typedSendAs?.trim()
-  if (sendAs === "") throw new CliError("validation_error", "--send-as needs an id from `chats send-as`")
+  const sendAs = typedSendAs(givenSendAs)
   const read = { app: messenger.app, env: context.env, anyFile: allowAnyFile === true }
   const attachments = await readAttachments(
     {

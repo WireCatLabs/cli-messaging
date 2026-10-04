@@ -4,6 +4,7 @@ import type { MessengerAdapter } from "../cli/messenger/port.js"
 import type { Chat, SenderIdentity } from "../domain/models.js"
 import type { GuardRequest, SendGuard } from "../sends/guard.js"
 import type { SendEntry } from "../sends/journal.js"
+import { guardedCreatePoll } from "../sends/polls.js"
 import { chatsService } from "./chats.js"
 import { onlineDeps } from "./deps.js"
 import { messagesService } from "./messages.js"
@@ -35,15 +36,22 @@ const setup = (options: { capable?: boolean } = {}) => {
     sendId: sent.sendId,
     message: { id: "4", chatId, text } as never,
   }))
+  const forward = vi.fn(async (_from: string, _message: string, toChatId: string) => ({ id: "9", chatId: toChatId }))
+  const createPoll = vi.fn(async (chatId: string, _poll: unknown, options: { sendId: string }) => ({
+    sendId: options.sendId,
+    message: { id: "5", chatId } as never,
+  }))
   const adapter = {
     self: () => "500",
     resolve,
     send,
+    forward,
+    createPoll,
     validateThread: async () => {},
     ...(options.capable === false ? {} : { sendAsIdentities }),
   } as unknown as MessengerAdapter
   const deps = onlineDeps(messenger, adapter, guard)
-  return { deps, journal, checked, sendAsIdentities, resolve, send }
+  return { deps, adapter, guard, journal, checked, sendAsIdentities, resolve, send, forward, createPoll }
 }
 
 describe("listing sender identities", () => {
@@ -93,18 +101,15 @@ describe("sending as an identity", () => {
     expect(send).not.toHaveBeenCalled()
   })
 
-  it("refuses an attachment before connecting", async () => {
-    const { deps } = setup()
-    const connection = vi.fn(deps.connection)
-    await expect(
-      messagesService({ ...deps, connection }).send({
-        chat: "x",
-        text: "caption",
-        sendAs: "-1002",
-        attachments: [{ kind: "file", name: "synthetic.txt", bytes: new Uint8Array([1]) }],
-      }),
-    ).rejects.toThrow("text only")
-    expect(connection).not.toHaveBeenCalled()
+  it("sends an attachment as the identity", async () => {
+    const { deps, send } = setup()
+    await messagesService(deps).send({
+      chat: "x",
+      text: "caption",
+      sendAs: "-1002",
+      attachments: [{ kind: "file", name: "synthetic.txt", bytes: new Uint8Array([1]) }],
+    })
+    expect(send).toHaveBeenCalledWith("-1007", "caption", expect.objectContaining({ sendAs: "-1002" }))
   })
 
   it("leaves a send without an identity untouched", async () => {
@@ -113,5 +118,40 @@ describe("sending as an identity", () => {
     expect(sendAsIdentities).not.toHaveBeenCalled()
     expect(send.mock.calls[0]?.[2]).not.toHaveProperty("sendAs")
     expect(journal[0]).not.toHaveProperty("sendAs")
+  })
+})
+
+describe("forwarding and polls as an identity", () => {
+  const poll = { question: "Friday?", answers: ["yes", "no"], multiple: false, anonymous: false }
+
+  it("checks the identity in the chat a forward lands in and passes it on", async () => {
+    const { deps, forward, sendAsIdentities, journal } = setup()
+    await messagesService(deps).forward({ chat: "from", message: "3", to: "to", silent: false, sendAs: "-1002" })
+    expect(sendAsIdentities).toHaveBeenCalledOnce()
+    expect(forward).toHaveBeenCalledWith("-1007", "3", "-1007", expect.objectContaining({ sendAs: "-1002" }))
+    expect(journal[0]).toMatchObject({ kind: "forward", sendAs: "-1002" })
+  })
+
+  it("creates a poll as the identity, and refuses one the chat does not offer", async () => {
+    const { adapter, guard, createPoll, journal } = setup()
+    await guardedCreatePoll(guard, adapter, { chat: "x", poll, silent: false, sendAs: "-1002" })
+    expect(createPoll).toHaveBeenCalledWith("-1007", poll, expect.objectContaining({ sendAs: "-1002" }))
+    expect(journal[0]).toMatchObject({ sendAs: "-1002" })
+    await expect(
+      guardedCreatePoll(guard, adapter, { chat: "x", poll, silent: false, sendAs: "-1099" }),
+    ).rejects.toThrow("not an identity")
+    expect(createPoll).toHaveBeenCalledOnce()
+  })
+
+  it("refuses a forward or a poll as an identity on a messenger without them", async () => {
+    const { deps, adapter, guard, forward, createPoll } = setup({ capable: false })
+    await expect(
+      messagesService(deps).forward({ chat: "from", message: "3", to: "to", silent: false, sendAs: "-1002" }),
+    ).rejects.toThrow("cannot send as another identity")
+    await expect(
+      guardedCreatePoll(guard, adapter, { chat: "x", poll, silent: false, sendAs: "-1002" }),
+    ).rejects.toThrow("cannot send as another identity")
+    expect(forward).not.toHaveBeenCalled()
+    expect(createPoll).not.toHaveBeenCalled()
   })
 })

@@ -2,6 +2,7 @@ import { CliError } from "@leemour/cli-core"
 import { annotate } from "@leemour/cli-core/commands"
 import { Command } from "commander"
 import { guardedClose, guardedCreatePoll, guardedVote } from "../../sends/polls.js"
+import { typedSendAs } from "../../sends/send-as.js"
 import { type Messenger, messengerContext } from "./context.js"
 import { capability } from "./port.js"
 import { threadIdOf } from "./thread.js"
@@ -80,10 +81,20 @@ export const pollsCommand = (messenger: Messenger): Command => {
     .option("--anonymous", "nobody sees who voted for what")
     .option("--revote", "people may change their vote")
     .option("--silent", "send without a notification")
+    .option("--send-as <id>", "post as one of the identities `chats send-as` lists")
     .option("--send-id <id>", "repeat a create whose outcome was unknown, without risking a second poll")
     .action(async function (this: Command, chat: string, question: string, answers: string[]) {
       const context = messengerContext(this, messenger)
-      const { multiple, anonymous, revote, silent, sendId, topic } = this.opts<{
+      const {
+        multiple,
+        anonymous,
+        revote,
+        silent,
+        sendId,
+        topic,
+        sendAs: given,
+      } = this.opts<{
+        sendAs?: string
         topic?: string
         multiple?: boolean
         anonymous?: boolean
@@ -92,6 +103,7 @@ export const pollsCommand = (messenger: Messenger): Command => {
         sendId?: string
       }>()
       const threadId = threadIdOf(topic)
+      const sendAs = typedSendAs(given)
       const sent = await context.withMessenger((connection) =>
         guardedCreatePoll(context.guard, connection, {
           chat,
@@ -105,6 +117,7 @@ export const pollsCommand = (messenger: Messenger): Command => {
           },
           silent: silent === true,
           ...(sendId === undefined ? {} : { sendId }),
+          ...(sendAs === undefined ? {} : { sendAs }),
         }),
       )
       context.renderer.result({ sendId: sent.sendId, operationId: sent.operationId, message: sent.message })

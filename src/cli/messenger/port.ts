@@ -168,7 +168,12 @@ export interface MessageEditing {
    * One message into another chat; the answer is the copy there. `silent` delivers it without a
    * notification. A repeat with the same `sendId` must leave one copy, as a send does.
    */
-  forward(fromChatId: Id, messageId: Id, toChatId: Id, options: { sendId: string; silent?: boolean }): Promise<Message>
+  forward(
+    fromChatId: Id,
+    messageId: Id,
+    toChatId: Id,
+    options: { sendId: string; silent?: boolean; sendAs?: Id },
+  ): Promise<Message>
   /** For the owner only, unless `forEveryone`; neither can be undone. */
   delete(chatId: Id, messageIds: Id[], options: { forEveryone: boolean }): Promise<void>
 }
@@ -218,7 +223,11 @@ export interface MessagePolls {
   vote(chatId: Id, messageId: Id, answerIds: Id[]): Promise<Poll>
   /** Only the owner's own poll; it cannot be reopened. */
   closePoll(chatId: Id, messageId: Id): Promise<Poll>
-  createPoll(chatId: Id, poll: NewPoll, options: { sendId: string; silent?: boolean; threadId?: Id }): Promise<Sent>
+  createPoll(
+    chatId: Id,
+    poll: NewPoll,
+    options: { sendId: string; silent?: boolean; threadId?: Id; sendAs?: Id },
+  ): Promise<Sent>
 }
 
 export interface LiveUpdates {

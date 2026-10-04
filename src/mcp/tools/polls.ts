@@ -57,6 +57,7 @@ export const pollWriteTools = (messenger: Messenger): Record<string, AnyTool> =>
         topic: v.optional(
           v.pipe(v.string(), v.minLength(1), v.description("the forum topic id; unsupported without topics")),
         ),
+        send_as: v.optional(v.pipe(v.string(), v.minLength(1), v.description("an id from chats_send_as to post as"))),
         send_id: v.optional(v.pipe(v.string(), v.minLength(1), v.description("from an earlier outcome_unknown"))),
       }),
       annotations: WRITE,
@@ -74,6 +75,7 @@ export const pollWriteTools = (messenger: Messenger): Record<string, AnyTool> =>
           silent: false,
           ...(args.send_id === undefined ? {} : { sendId: args.send_id }),
           ...(args.topic === undefined ? {} : { threadId: args.topic }),
+          ...(args.send_as === undefined ? {} : { sendAs: args.send_as }),
         })
         return { sendId: sent.sendId, operationId: sent.operationId, message: sent.message }
       },
