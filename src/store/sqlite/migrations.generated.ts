@@ -159,5 +159,17 @@ export const GENERATED: { name: string; statements: string[] }[] = [
       "CREATE UNIQUE INDEX `searches_history` ON `searches` (`command`,`params`) WHERE name IS NULL;",
       "CREATE INDEX `searches_by_last_run` ON `searches` (\"last_run_at\" desc);"
     ]
+  },
+  {
+    "name": "20261004215824_version-18-member-history",
+    "statements": [
+      "CREATE TABLE `identity_revisions` (\n\t`pk` integer PRIMARY KEY,\n\t`identity_pk` integer NOT NULL,\n\t`name` text,\n\t`username` text,\n\t`description` text,\n\t`marks` text,\n\t`captured_at` integer NOT NULL,\n\tCONSTRAINT `fk_identity_revisions_identity_pk_identities_pk_fk` FOREIGN KEY (`identity_pk`) REFERENCES `identities`(`pk`)\n);",
+      "CREATE TABLE `member_counts` (\n\t`chat_pk` integer NOT NULL,\n\t`day` text NOT NULL,\n\t`participants` integer,\n\t`listed` integer NOT NULL,\n\t`complete` integer NOT NULL,\n\t`at` integer NOT NULL,\n\tCONSTRAINT `member_counts_pk` PRIMARY KEY(`chat_pk`, `day`),\n\tCONSTRAINT `fk_member_counts_chat_pk_chats_pk_fk` FOREIGN KEY (`chat_pk`) REFERENCES `chats`(`pk`)\n);",
+      "CREATE TABLE `member_stays` (\n\t`pk` integer PRIMARY KEY,\n\t`chat_pk` integer NOT NULL,\n\t`identity_pk` integer NOT NULL,\n\t`first_seen_at` integer NOT NULL,\n\t`last_seen_at` integer NOT NULL,\n\t`joined_at` integer,\n\t`invited_by_pk` integer,\n\t`role` text,\n\t`gone_at` integer,\n\tCONSTRAINT `fk_member_stays_chat_pk_chats_pk_fk` FOREIGN KEY (`chat_pk`) REFERENCES `chats`(`pk`),\n\tCONSTRAINT `fk_member_stays_identity_pk_identities_pk_fk` FOREIGN KEY (`identity_pk`) REFERENCES `identities`(`pk`),\n\tCONSTRAINT `fk_member_stays_invited_by_pk_identities_pk_fk` FOREIGN KEY (`invited_by_pk`) REFERENCES `identities`(`pk`)\n);",
+      "ALTER TABLE `chats` ADD `members_tracked_at` integer;",
+      "CREATE INDEX `identity_revisions_by_identity` ON `identity_revisions` (`identity_pk`,`captured_at`);",
+      "CREATE UNIQUE INDEX `member_stays_open` ON `member_stays` (`chat_pk`,`identity_pk`) WHERE gone_at IS NULL;",
+      "CREATE INDEX `member_stays_by_identity` ON `member_stays` (`identity_pk`);"
+    ]
   }
 ]

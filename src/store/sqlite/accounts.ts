@@ -8,6 +8,8 @@ import {
   chatMembers,
   chats,
   fetchLeases,
+  memberCounts,
+  memberStays,
   messageRevisions,
   messages,
   syncRanges,
@@ -50,6 +52,8 @@ export const purgeAccount = ({ orm }: StoreContext, accountKey: number): void =>
   orm.delete(transcripts).where(inArray(transcripts.chatPk, chatsOf)).run()
   orm.delete(fetchLeases).where(inArray(fetchLeases.chatPk, chatsOf)).run()
   orm.delete(chatMembers).where(inArray(chatMembers.chatPk, chatsOf)).run()
+  orm.delete(memberStays).where(inArray(memberStays.chatPk, chatsOf)).run()
+  orm.delete(memberCounts).where(inArray(memberCounts.chatPk, chatsOf)).run()
   orm.delete(syncRanges).where(inArray(syncRanges.chatPk, chatsOf)).run()
   orm.delete(messageRevisions).where(inArray(messageRevisions.messagePk, messagesOf)).run()
   orm.delete(attachments).where(inArray(attachments.messagePk, messagesOf)).run()

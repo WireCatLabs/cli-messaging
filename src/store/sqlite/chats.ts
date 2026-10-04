@@ -10,6 +10,8 @@ import {
   chats,
   fetchLeases,
   identities,
+  memberCounts,
+  memberStays,
   messageRevisions,
   messages,
   syncRanges,
@@ -144,6 +146,8 @@ export const purgeChats = ({ orm }: StoreContext, pks: number[]): void => {
   orm.delete(transcripts).where(inArray(transcripts.chatPk, pks)).run()
   orm.delete(fetchLeases).where(inArray(fetchLeases.chatPk, pks)).run()
   orm.delete(chatMembers).where(inArray(chatMembers.chatPk, pks)).run()
+  orm.delete(memberStays).where(inArray(memberStays.chatPk, pks)).run()
+  orm.delete(memberCounts).where(inArray(memberCounts.chatPk, pks)).run()
   orm.delete(syncRanges).where(inArray(syncRanges.chatPk, pks)).run()
   orm.delete(messageRevisions).where(inArray(messageRevisions.messagePk, messagesOf)).run()
   orm.delete(attachments).where(inArray(attachments.messagePk, messagesOf)).run()
