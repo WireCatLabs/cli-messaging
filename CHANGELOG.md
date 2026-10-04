@@ -14,6 +14,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Fixed
 
+- Local MCP writes refuse `--confirm-send` without executing when their approval flow is unavailable.
+
 - Confirmed scheduled sends execute the absolute time shown in the approval form, even after a
   delayed response. Personal MCP rejects unknown arguments before connecting or acting.
 - Session callbacks can release the connection before local transcription. Stored conversation
