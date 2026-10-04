@@ -151,6 +151,9 @@
     "--dry-run": {
       "meaning": "judge and plan; do nothing"
     },
+    "--encrypt": {
+      "meaning": "compress and encrypt with a password, typed at a hidden prompt or piped on stdin; never kept"
+    },
     "--estimate": {
       "meaning": "only say what the fetch would cost, from this machine's copy; nothing is sent",
       "note": "max's own copy is worded differently until T6 moves the command onto the shared one (e13)"
@@ -287,6 +290,9 @@
     },
     "--no-ban": {
       "meaning": "remove without banning; by default a removed person cannot come back by the link"
+    },
+    "--no-mark-read": {
+      "meaning": "do not mark read, whatever the catchUpMarksRead setting says"
     },
     "--no-preview": {
       "meaning": "no preview card for a link in the text"
@@ -1485,9 +1491,30 @@
             "tg": "T6"
           }
         },
+        "--kind": {
+          "in": [],
+          "planned": {
+            "max": "each CLI's next cli-messaging bump",
+            "tg": "each CLI's next cli-messaging bump"
+          }
+        },
         "--limit": "all",
+        "--mark-read": {
+          "in": [],
+          "planned": {
+            "max": "each CLI's next cli-messaging bump",
+            "tg": "each CLI's next cli-messaging bump"
+          }
+        },
         "--model": "all",
         "--new": "all",
+        "--no-mark-read": {
+          "in": [],
+          "planned": {
+            "max": "each CLI's next cli-messaging bump",
+            "tg": "each CLI's next cli-messaging bump"
+          }
+        },
         "--since": {
           "in": [],
           "planned": {
@@ -1924,11 +1951,39 @@
           }
         },
         "--chat": "all",
+        "--kind": {
+          "in": [],
+          "planned": {
+            "max": "each CLI's next cli-messaging bump",
+            "tg": "each CLI's next cli-messaging bump"
+          }
+        },
+        "--mark-read": {
+          "in": [],
+          "planned": {
+            "max": "each CLI's next cli-messaging bump",
+            "tg": "each CLI's next cli-messaging bump"
+          }
+        },
         "--model": {
           "in": [],
           "planned": {
             "max": "T6",
             "tg": "T6"
+          }
+        },
+        "--new": {
+          "in": [],
+          "planned": {
+            "max": "each CLI's next cli-messaging bump",
+            "tg": "each CLI's next cli-messaging bump"
+          }
+        },
+        "--no-mark-read": {
+          "in": [],
+          "planned": {
+            "max": "each CLI's next cli-messaging bump",
+            "tg": "each CLI's next cli-messaging bump"
           }
         },
         "--since": {
@@ -2103,7 +2158,16 @@
       "in": "all"
     },
     "store backup": {
-      "in": "all"
+      "in": "all",
+      "options": {
+        "--encrypt": {
+          "in": [],
+          "planned": {
+            "max": "each CLI's next cli-messaging bump",
+            "tg": "each CLI's next cli-messaging bump"
+          }
+        }
+      }
     },
     "store check": {
       "in": "all"
@@ -2115,12 +2179,56 @@
         "--left": "all"
       }
     },
+    "store decrypt": {
+      "in": [],
+      "planned": {
+        "max": "each CLI's next cli-messaging bump",
+        "tg": "each CLI's next cli-messaging bump"
+      },
+      "options": {
+        "--output": {
+          "in": [],
+          "planned": {
+            "max": "each CLI's next cli-messaging bump",
+            "tg": "each CLI's next cli-messaging bump"
+          }
+        }
+      }
+    },
     "store export": {
       "in": "all",
       "options": {
+        "--all": {
+          "in": [],
+          "planned": {
+            "max": "each CLI's next cli-messaging bump",
+            "tg": "each CLI's next cli-messaging bump"
+          }
+        },
+        "--encrypt": {
+          "in": [],
+          "planned": {
+            "max": "each CLI's next cli-messaging bump",
+            "tg": "each CLI's next cli-messaging bump"
+          }
+        },
         "--format": "all",
+        "--kind": {
+          "in": [],
+          "planned": {
+            "max": "each CLI's next cli-messaging bump",
+            "tg": "each CLI's next cli-messaging bump"
+          }
+        },
         "--output": "all",
-        "--since-time": "all"
+        "--since-time": "all",
+        "--to": {
+          "in": [],
+          "planned": {
+            "max": "each CLI's next cli-messaging bump",
+            "tg": "each CLI's next cli-messaging bump"
+          }
+        }
       }
     },
     "store fetch": {
