@@ -1,6 +1,6 @@
 # Messenger feature gaps
 
-Status: proposed, 2026-10-04. Not claimed. Each slice below is its own docs PR, then code PR, per
+Status: proposed, 2026-10-04. Not claimed. Slices 1, 2 and mute are owned by other plans (see Ownership). Each slice below is its own docs PR, then code PR, per
 [REVIEW.md](../dev/REVIEW.md).
 
 ## Goal and evidence
@@ -23,6 +23,20 @@ Evidence, read at tg-cli `5168117`, max-cli `8888844`, cli-messaging `99c8793`, 
   messages, channels, contacts, users, photos); max sends 42 of about 152 opcodes known from
   community lists. The owner decided (2026-10-04) not to publish a percentage; the feature list
   and its gaps are the public statement.
+
+## Ownership: what other plans already cover
+
+Three of these gaps already have an owner. This plan does not duplicate them; it records the
+decisions taken here and points there.
+
+| Gap | Owner | Where |
+|---|---|---|
+| Server-side search | search lane | `--backend live\|archive\|both` on `messages search`, default `archive` — owner's answer 2026-10-04 (max-cli private `docs_ai/journal/2026-10-04-competitor-parity.md`, NEED-563) |
+| Drafts | Telegram actions, G4 (B3) | max-cli private `docs_ai/plans/2026-10-02-telegram-actions-agent.md` §3: local draft revisions, publish/pull |
+| Mute and notification settings, remote media search | Telegram actions, G3 (B4) | same plan, §3 and §4 G3 |
+
+Slices 1, 2 and the mute half of 4 below are therefore coordination notes, not work to start
+from this plan. Slices 3, 4 (archive), 5, 6, 7 and 8 have no other owner.
 
 ## Rules every slice follows
 
@@ -56,20 +70,21 @@ and `src/sends/guarded.ts`. tg: `src/telegram/adapter.ts` + `map.ts`, registered
 
 ## Slices, in order
 
-### 1. Server-side search — both, shared
+### 1. Server-side search — both, shared (owned by the search lane)
 
 Today an agent can search only what was fetched; a question about an unfetched month needs a
 fetch first.
 
-- Shape: an option on the shared `messages search` (for example `--remote`) or a sibling port
-  method in a new optional group. Results must say they came from the messenger, not the store.
+- Shape, decided 2026-10-04: `messages search --backend live|archive|both`, default `archive`.
+  `--source` keeps meaning which messenger or account. Results must say where each came from.
 - tg: mtcute `searchMessages` / `searchGlobal`. Easy.
 - max: opcode 73 `{query, count, chatId}` (max-api-docs `protocol/messaging.md:946`, a claim).
   Measure first. Leave 68 and 60 out: sources disagree on what they are.
 - Guard: read, `messages`.
-- Decision needed: the option name, and whether a remote search also stores what it returns.
+- Open: whether a `live` result is also written to the local store (recommended: yes, as
+  `messages list` already does).
 
-### 2. Drafts — both, shared (tg first)
+### 2. Drafts — both, shared (owned by Telegram actions G4, B3)
 
 The agent writes the reply into the chat's draft; the person reads it and presses send.
 
@@ -78,7 +93,9 @@ The agent writes the reply into the chat's draft; the person reads it and presse
   (`docs_ai/captures/2026-09-25-res-10.jsonl:278`), which looks like a user lookup, not a
   discard. Stays `planned` until a capture of the web client saving a draft.
 - Guard: a write the other person never sees, but still its own key (for example `drafts`).
-- Decision needed: the command name (`drafts set|list|clear` vs `messages send --draft`).
+- Decided 2026-10-04: the first user-facing shape is `messages send --draft` — it puts the text
+  into the chat's draft instead of sending. No new verb. G4's local revisions and publish/pull can
+  build on it; agree with G4 before any code so it is one design, not two.
 
 ### 3. Albums — tg only
 
@@ -90,7 +107,7 @@ The agent writes the reply into the chat's draft; the person reads it and presse
 - Guard: `messages.send`, normal send guard; each item counts toward the hourly limit (decide).
 - Medium. Remove the line from tg's roadmap and "Not in tg yet" when it ships.
 
-### 4. Archive and mute — `chats update --archived` / `--muted`
+### 4. Archive and mute — `chats update --archived` / `--muted` (mute owned by G3, B4)
 
 No new verb: the same pattern as `--all-can-pin`.
 
@@ -98,6 +115,8 @@ No new verb: the same pattern as `--all-can-pin`.
 - max: no known opcode for either. Mark the options unsupported there (or `planned` after a
   capture).
 - Guard: `chats.update`.
+- Mute belongs to G3's notification-settings slice; agree the option there. `--archived` can go
+  ahead alone.
 
 ### 5. Typing and location — both, shared
 
@@ -147,8 +166,12 @@ storage, and the chat is bound to one device) and calls (no voice or video stack
 
 ## Decisions for the owner
 
-1. Option name and storing behaviour for server-side search (slice 1).
-2. Command shape for drafts (slice 2).
-3. Whether album items count once or per item toward `sendsPerHour` (slice 3).
-4. A verb for pressing a button (slice 6).
-5. Whether clear chat is allowed at all (slice 8).
+Taken 2026-10-04: server search is `--backend live|archive|both` (slice 1); drafts start as
+`messages send --draft` (slice 2).
+
+Open:
+
+1. Whether a `live` search result is also stored locally (slice 1, search lane).
+2. Whether album items count once or per item toward `sendsPerHour` (slice 3).
+3. A verb for pressing a button (slice 6).
+4. Whether clear chat is allowed at all (slice 8).

@@ -427,7 +427,7 @@ actually checks are added; the full list grows in Phase 4 when MAX fills it too.
 ## 8. Phases — small, independently shippable pull requests
 
 - **Search A1** · **Done** · Lucene 9.12.3 query profile, strict shared search, bounded patterns, legacy migration and executable documentation: shared [#454](https://github.com/leemour/cli-messaging/pull/454), release 0.127.0; consumers [max #355](https://github.com/leemour/max-cli/pull/355) and [tg #238](https://github.com/leemour/tg-cli/pull/238). Media/tag repositories, analytics and archive repair remain subsequent work.
-- **Messenger feature gaps** · **Proposed** · server-side search, drafts, albums, archive and mute, typing and location, bot buttons, MAX cloud password and video notes: [2026-10-04-messenger-feature-gaps.md](2026-10-04-messenger-feature-gaps.md).
+- **Messenger feature gaps** · **Proposed** · albums, archiving, typing and location, bot buttons, MAX cloud password and video notes; points to the owners of server search, drafts and mute: [2026-10-04-messenger-feature-gaps.md](2026-10-04-messenger-feature-gaps.md).
 
 **Phase 0 — spike.** Goal: prove the transport and measure the unknowns. cli-messaging starts here
 with only the copies that carry no risk, so the spike already imports them and nothing is copied
