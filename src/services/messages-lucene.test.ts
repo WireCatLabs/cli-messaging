@@ -130,6 +130,39 @@ describe.each(["max", "telegram"])("strict store profile (%s)", (provider) => {
     await expect(run(store, account, "from:NoSuchPerson")).rejects.toThrow()
     await expect(run(store, account, 'chat:"NoSuchChat"')).rejects.toThrow()
   })
+  it("matches any attachment by file name, type and size without needing text", async () => {
+    const store = await open()
+    await store.saveChats(account, [chat("1")])
+    await store.saveMessages(
+      account,
+      "1",
+      [
+        message("1", "1", "", {
+          attachments: [
+            { kind: "photo", url: "https://example.org/a.jpg", mime: "image/jpeg", size: 300 * 1024 },
+            { kind: "file", name: "Budget 2026.XLSX", size: 3 * 1024 * 1024 },
+          ],
+        }),
+        message("2", "1", "scan attached", {
+          attachments: [{ kind: "file", name: "Скан договора.pdf", mime: "application/pdf", size: 1024 }],
+        }),
+        message("3", "1", "no files here"),
+      ],
+      { via: "history" },
+    )
+    expect(ids(await run(store, account, "filename:*.xlsx"))).toEqual([1])
+    expect(ids(await run(store, account, 'filename:"скан договора.pdf"'))).toEqual([2])
+    expect(ids(await run(store, account, "filename:/budget [0-9]+\\.xlsx/"))).toEqual([1])
+    expect(ids(await run(store, account, "filename:budget"))).toEqual([])
+    expect(ids(await run(store, account, "mime:image"))).toEqual([1])
+    expect(ids(await run(store, account, 'mime:"application/pdf" AND scan'))).toEqual([2])
+    expect(ids(await run(store, account, "size>=3MB"))).toEqual([1])
+    expect(ids(await run(store, account, "size:[1KB TO 300KB]"))).toEqual([1, 2])
+    expect(ids(await run(store, account, "size:{1KB TO 300KB}"))).toEqual([])
+    expect(ids(await run(store, account, "size:1024"))).toEqual([2])
+    expect(ids(await run(store, account, "has:file AND NOT filename:*.pdf"))).toEqual([1])
+    await expect(run(store, account, "size:big")).rejects.toThrow("invalid_size")
+  })
   it("uses typed date ranges and body/term regex with stable pagination", async () => {
     const store = await open()
     await seed(store, account)

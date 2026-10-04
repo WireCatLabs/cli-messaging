@@ -98,7 +98,39 @@ tg messages search 'body:/.*invoice.*/' --timezone UTC
 tg messages search 'has:file' --timezone UTC
 ```
 
+На synthetic fixture: ids 105, 108. В MAX замените первый аргумент `tg` на `max`.
+
+### Файл по имени
+
+```sh
+tg messages search 'filename:*.pdf' --timezone UTC
+```
+
+На synthetic fixture: ids 105, 108. В MAX замените первый аргумент `tg` на `max`.
+
+### Имя файла без учёта регистра и ё
+
+```sh
+tg messages search 'filename:отчет.pdf' --timezone UTC
+```
+
+На synthetic fixture: ids 108. В MAX замените первый аргумент `tg` на `max`.
+
+### Файл больше 1 МБ
+
+```sh
+tg messages search 'size>1MB' --timezone UTC
+```
+
 На synthetic fixture: ids 105. В MAX замените первый аргумент `tg` на `max`.
+
+### Ссылка на сайт
+
+```sh
+tg messages search 'has:link AND "example.org"' --timezone UTC
+```
+
+На synthetic fixture: ids 107. В MAX замените первый аргумент `tg` на `max`.
 
 <!-- recipes: end -->
 
@@ -156,9 +188,9 @@ enum или unsupported сочетание дают ошибку, а не пус
 | `topic` | id | string id, one chat required | `chat:7 AND topic:42` | term, phrase |
 | `in` | source | lowercase provider/account class | `in:bots` | term, phrase |
 | `preset` | enum | password, code, api-key, secret, card, bank, passport, phone, email, telegram-link, url, contact, location | `preset:secret` | term, phrase |
-| `filename` | keyword | planned | `filename:*.pdf` | Планируется; запрос даёт unsupported_field |
-| `mime` | keyword | planned | `mime:application/pdf` | Планируется; запрос даёт unsupported_field |
-| `size` | bytes | planned | `size:[1024 TO 4096]` | Планируется; запрос даёт unsupported_field |
+| `filename` | keyword | NFKD/marks/NFC/lowercase v1, whole name | `filename:*.pdf` | term, phrase, wildcard, regex |
+| `mime` | keyword | lowercase; a value without / matches the first part; only where the messenger reports a type | `mime:"application/pdf" OR mime:image` | term, phrase, wildcard |
+| `size` | bytes | bytes; KB/MB/GB are 1024-based | `size>10MB` | term, phrase, range |
 | `tag` | local-tag | planned | `tag:work` | Планируется; запрос даёт unsupported_field |
 
 <!-- fields: end -->
@@ -167,7 +199,13 @@ enum или unsupported сочетание дают ошибку, а не пус
 различает bot/service; существующий `providerMetadata.isBot` также определяет bot. старые записи не переклассифицируются по имени. `kind:bot` — peer,
 `in:bots` — аккаунты Bot API. Unknown peers остаются в unfiltered search.
 `topic` требует одного обязательного `chat` или `--chat`, чтобы одинаковые thread ids не смешивались.
-`filename/mime/size/tag` распознаются, но пока не исполняются; ошибки отмечают следующий этап.
+`filename`, `mime` и `size` ищут по файлам сообщения: подходит сообщение, у которого подходит хотя бы
+один файл, текст не нужен. `filename` сравнивает имя целиком без учёта регистра и ударений — часть
+имени ищут через `filename:*договор*`. `size` берёт байты или KB/MB/GB (по 1024): `size>10MB`,
+`size:[1KB TO 300KB]`. `mime` работает, только где мессенджер сообщает тип файла: Telegram сообщает,
+MAX — нет, там ищите по расширению (`filename:*.pdf`). `/` в запросе начинает regex, поэтому полный
+тип пишется в кавычках (`mime:"application/pdf"`), а `mime:image` находит любые картинки.
+Ссылку на сайт находит фраза: `has:link AND "github.com"`. `tag` пока даёт unsupported_field.
 
 Default scope — активный account. `in:` с положительным условием или `--source` явно выбирает
 accounts провайдера/класса, включая `all`. Отрицательный `in:` не расширяет scope.

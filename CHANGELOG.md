@@ -6,6 +6,9 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+- Strict search finds messages by their files: `filename:*.pdf`, `size>10MB`, `size:[1KB TO 300KB]` and
+  `mime:image` match when any attachment fits, with no text needed. File names compare whole, ignoring
+  case and accents. `mime` works only where the messenger reports a type (Telegram does, MAX does not).
 - Correct the storage index guide: strict Lucene is the default; automatic typo and substring fallback belong to explicit legacy discovery.
 
 ## 0.140.0 — 04.10.2026

@@ -74,7 +74,9 @@ exact timestamp с offset, mixed inclusive/exclusive/open bounds. DST вычис
 не через duration +24h. Неизвестные/невозможные dates/zones отвергаются. Relative date math отсутствует.
 IDs string; names разрешаются по локальным accounts. topic требует одного обязательного chat.
 kind сохраняет dialog mapping; peerKind metadata различает bot/service без догадок по имени.
-filename/mime/size/tag распознаются, но пока возвращают unsupported_field.
+filename/mime: postfilter по normalize(attachments.name|mime), SQL сужает до сообщений с таким полем;
+mime без / совпадает с первой частью типа. size: SQL по attachments.size, единицы 1024. Совпадение —
+хотя бы одно вложение. tag распознаётся, но возвращает unsupported_field.
 
 ## SQL compiler и порядок
 
