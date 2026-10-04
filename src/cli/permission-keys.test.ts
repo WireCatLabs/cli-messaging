@@ -1,0 +1,53 @@
+import { readdirSync, readFileSync } from "node:fs"
+import { join } from "node:path"
+import { Command } from "commander"
+import { describe, expect, it } from "vitest"
+import { WRITE_KEYS } from "../sends/permissions.js"
+import { knownBeside, knownPermissionKeys, unknownPermissionKeys } from "./permission-keys.js"
+
+const sources = (dir: string): string[] =>
+  readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+    const path = join(dir, entry.name)
+    if (entry.isDirectory()) return sources(path)
+    return path.endsWith(".ts") && !path.endsWith(".test.ts") ? [path] : []
+  })
+
+const program = () => {
+  const root = new Command("app")
+  const messages = root.command("messages")
+  messages.command("list")
+  messages.command("send")
+  root.command("doctor")
+  root.command("odd")
+  return root
+}
+
+describe("the permission keys a file may name", () => {
+  it("**lists every write key the code checks**, so a new write cannot be refused as unknown", () => {
+    const written = sources(join(import.meta.dirname, ".."))
+      .flatMap((path) => [...readFileSync(path, "utf8").matchAll(/\b(?:key|writes): "([a-z][a-z.-]*)"/g)])
+      .map((match) => match[1] as string)
+    expect(written.length).toBeGreaterThan(0)
+    expect(written.filter((key) => !WRITE_KEYS.includes(key))).toEqual([])
+  })
+
+  it("knows every command, its parents and the write keys, and nothing else", () => {
+    const known = knownPermissionKeys(program())
+    expect([...known]).toEqual(expect.arrayContaining(["messages", "messages.list", "messages.send", "polls.vote"]))
+    expect(known.has("doctor")).toBe(false)
+    expect(unknownPermissionKeys({ messages: "readonly", "messages.dlete": "allow" }, known)).toEqual([
+      "messages.dlete",
+    ])
+  })
+
+  it("takes a CLI's own key for a command `keyForCommand` does not know", () => {
+    const known = knownPermissionKeys(program(), (command) => (command.name() === "odd" ? "chats.odd" : undefined))
+    expect(known.has("chats.odd")).toBe(true)
+  })
+
+  it("names the known keys beside an unknown one", () => {
+    const beside = knownBeside("messages.dlete", knownPermissionKeys(program()))
+    expect(beside).toEqual(expect.arrayContaining(["messages.delete", "messages.list", "messages.send"]))
+    expect(beside.every((key) => key.startsWith("messages.") && key.split(".").length === 2)).toBe(true)
+  })
+})

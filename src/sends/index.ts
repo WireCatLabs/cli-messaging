@@ -30,6 +30,7 @@ export {
   type Permission,
   type PermissionKey,
   permissionFor,
+  WRITE_KEYS,
 } from "./permissions.js"
 export { type Recipient, RecipientList, recipientsPathFor } from "./recipients.js"
 export { newOperationId, newSendId } from "./send-id.js"

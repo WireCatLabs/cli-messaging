@@ -89,7 +89,7 @@ export { botFiles, botsDirectory, ChatRegistry, registryProfiles, type SeenChat 
 export { BotTokenStore, type BotTokenStoreOptions } from "./bot/token.js"
 export { PressLog, UpdatesCursor } from "./bot/updates.js"
 export { CONTRACT, commandsCommand } from "./commands-command.js"
-export { configCommand } from "./config-command.js"
+export { configCommand, refuseUnknownKey } from "./config-command.js"
 export {
   type BaseContext,
   type BaseEnvironment,
@@ -170,6 +170,12 @@ export { type Saving, stored } from "./messenger/stored.js"
 export { topicsCommand } from "./messenger/topics-command.js"
 export { watchCommand } from "./messenger/watch-command.js"
 export { listed, renderList, renderPage, window, withPaging } from "./paging.js"
+export {
+  knownBeside,
+  knownPermissionKeys,
+  type PermissionKeyOf,
+  unknownPermissionKeys,
+} from "./permission-keys.js"
 export { migratePermissionConfig, type PermissionMigration } from "./permission-migration.js"
 export {
   asFirstWord,

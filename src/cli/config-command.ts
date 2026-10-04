@@ -13,6 +13,7 @@ import { Command } from "commander"
 import * as v from "valibot"
 import { type AppIdentity, envName } from "./app.js"
 import { baseContext } from "./context.js"
+import { knownBeside, knownPermissionKeys, type PermissionKeyOf } from "./permission-keys.js"
 import { hasPermissionConfig, migratePermissionConfig } from "./permission-migration.js"
 import { type Configuration, fromFile, type Settings } from "./settings.js"
 
@@ -20,7 +21,11 @@ import { type Configuration, fromFile, type Settings } from "./settings.js"
  * The settings in force and where each came from, and changing them. Printed whole: no field the
  * configuration accepts can hold a secret — the schema has nowhere to put one.
  */
-export const configCommand = (app: AppIdentity, config: Configuration): Command => {
+export const configCommand = (
+  app: AppIdentity,
+  config: Configuration,
+  { permissionKey }: { permissionKey?: PermissionKeyOf } = {},
+): Command => {
   const command = new Command("config").description("the settings in force, and where each one came from")
 
   command.addCommand(
@@ -118,6 +123,7 @@ export const configCommand = (app: AppIdentity, config: Configuration): Command 
           `${setting} is a legacy setting — use permissions instead; config migrate --dry-run previews the translation`,
         )
       }
+      if (action === "set" && setting.startsWith("permissions.")) refuseUnknownKey(this, setting, permissionKey)
       const saved = config.changeSetting(settings.configPath, {
         profile: defaults ? undefined : settings.profile,
         setting,
@@ -134,6 +140,19 @@ export const configCommand = (app: AppIdentity, config: Configuration): Command 
   }
 
   return command
+}
+
+/** A key no command or write is checked against would be saved and do nothing (BUG-137). */
+export const refuseUnknownKey = (command: Command, setting: string, permissionKey?: PermissionKeyOf): void => {
+  const key = setting.slice("permissions.".length)
+  const known = knownPermissionKeys(command, permissionKey)
+  if (known.has(key)) return
+  const beside = knownBeside(key, known)
+  throw new CliError(
+    "validation_error",
+    `permissions.${key} names no command` +
+      (beside.length > 0 ? ` — the known ones there are ${beside.join(", ")}` : ""),
+  )
 }
 
 const scopeOf = (kind: string | undefined, profile: string | undefined): string =>
