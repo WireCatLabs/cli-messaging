@@ -23,6 +23,8 @@ under `src/`. What only one provider has travels in `providerMetadata`. The boun
 | `./services` | `src/services/` | the use cases, once each, that commands and MCP tools call — see [Services](#services) |
 | `./background` | `src/background/` | what any background process needs and no messenger: the lock per app and profile, whether a PID is alive and ours, the machine seam tests replace, systemd and launchd units — `serve` and `server` are built on it, each CLI's server stays its own (NEED-492 C) |
 | `./cli` | `src/cli/`, `src/mcp/` | the command skeleton, the shared commands and the MCP server |
+| `./sqlite-runtime` | `src/sqlite-runtime.ts` | **Correction 2026-10-04:** missing from this table until now. `ensureSqlite`, the first thing `tg` and `max` run: restarts the command with the bundled SQLite when the system's lacks FTS5 — see [The store](#the-store) |
+| `./parity` | `src/parity/` | **Correction 2026-10-04:** missing until now. the command manifest, page and wording checks behind `cli-messaging-parity`, which compares `tg` and `max` |
 | `./testing` | `src/kit/` | the adapter kit: a fake adapter, the contract cases and their seed — see [the adapter guide](ADAPTERS.md). `src/testing/` is this repository's own test setup and is not published |
 
 The README's table lists what each export offers; this page does not repeat it.
@@ -292,8 +294,14 @@ Saving what a read answered and timing each call stay decorators on the adapter 
 - **tg-cli** — the whole skeleton, the store, the guard and the MCP server; its adapter is under
   its own `src/telegram/`. To try an unreleased change: `bin/try-messaging` in a tg-cli checkout
   beside this one, never a committed `file:` path.
-- **max-cli** — for now its bot accounts: the store, the guard and parts of the skeleton. Its
-  personal account still keeps its own cache; moving it here is the proposal's Phase 4.
+- **max-cli** — ~~for now its bot accounts: the store, the guard and parts of the skeleton. Its
+  personal account still keeps its own cache; moving it here is the proposal's Phase 4.~~
+  **Correction 2026-10-04:** both its personal account and its bots. The personal account is a
+  `Messenger` (`src/messenger.ts`) whose `connect` returns `maxAdapter` (`src/adapter/max-adapter.ts`)
+  over max's own protocol client, and it uses the shared commands, services, store and guard; its
+  own cache is gone (max-cli #330–#344, last `56bd224`). max keeps its protocol, session,
+  `max serve`, the Bot API slice and its own MCP server (`MaxSession`, `src/mcp/server.ts`), whose
+  tools run the shared services through `withShared` (`src/mcp/shared.ts`).
 
 Both pin an exact version; a change here reaches them through a release and a bump in each.
 
