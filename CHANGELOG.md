@@ -6,6 +6,10 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.147.0 — 04.10.2026
+
+Released early: max-cli and tg-cli need the reviewed search coverage and history-boundary fixes for their coordinated release
+
 ### Added
 
 - `server status` says when a unit stopped on an exit its CLI marked as not worth a restart (`noRestartOn`): for a
