@@ -22,6 +22,7 @@ export interface CheckPoints {
 /**
  * Where `<command> --new` stopped, per chat and profile, beside the remembered account. `inbox` and
  * `review` keep a file each: sharing one, an `inbox` run would move `review` past what it never showed.
+ * The MCP tools keep their own too, so an agent's run never moves the owner's `--new`.
  */
 export const checkPoints = (
   app: AppIdentity,
@@ -30,7 +31,12 @@ export const checkPoints = (
     profile,
     env,
     firstLookMs,
-  }: { command: "inbox" | "review"; profile: string; env: NodeJS.ProcessEnv; firstLookMs: number },
+  }: {
+    command: "inbox" | "review" | "mcp-inbox" | "mcp-review"
+    profile: string
+    env: NodeJS.ProcessEnv
+    firstLookMs: number
+  },
 ): CheckPoints => {
   const file = join(
     resolvePaths({ appName: app.appName, prefix: app.envPrefix, env }).state,

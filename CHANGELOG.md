@@ -6,6 +6,18 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- MCP `inbox` and `review` take `kinds` (`["dialog", "group", "channel", "saved"]`) and `new`: what arrived since
+  the last call with `new`, each message once, from saved points the MCP tools keep apart from the owner's
+  `inbox --new` and `review --new`. `new` refuses `since_time`, and on `review` also `unanswered`.
+
+### Changed — may break callers
+
+- The `/catch-up` prompt takes `kind` and `mode` (`unread`, the default; `new`; or a time) in place of `since`;
+  a time goes in `mode`. It marks read only when the owner asks, through `chats_mark_read` per chat shown, so the
+  approval that tool carries still applies — `inbox` and `review` over MCP never mark read.
+
 ## 0.146.0 — 04.10.2026
 
 Released early: tg-cli: its parity check refuses the mcp --http flags of 0.145.0; max-cli needs the exported HTTP pieces
