@@ -88,6 +88,33 @@ export const purgeVectorsOf = ({ orm }: StoreContext, messagePk: number): void =
   )
 }
 
+/**
+ * A conversation's chunks of the current build, and the vectors of `model` that still say what its chunks say:
+ * a changed or deleted message leaves its chunk out, so the conversation is described as it is now.
+ */
+export const conversationVectors = (
+  context: StoreContext,
+  conversationPk: number,
+  model: string,
+): { chunks: number; vectors: Float32Array[] } => {
+  const rows = context.orm.all<{ first: number; last: number; hash: string; vector: Uint8Array | null }>(
+    sql`SELECT k.first_message_pk AS first, k.last_message_pk AS last, k.content_hash AS hash, v.vector
+      FROM conversation_chunks k
+      JOIN conversations c ON c.pk = k.conversation_pk
+      JOIN conversation_state s ON s.chat_pk = c.chat_pk AND s.current_build = c.build
+      LEFT JOIN chunk_vectors v ON v.model = ${model} AND v.content_hash = k.content_hash
+      WHERE k.conversation_pk = ${conversationPk} ORDER BY k.ordinal`,
+  )
+  const vectors = rows.flatMap(({ first, last, hash, vector }) =>
+    vector &&
+    chunkFreshness(context, { conversationPk, firstMessagePk: first, lastMessagePk: last, hash, score: 0 }) ===
+      "current"
+      ? [new Float32Array(vector.buffer.slice(vector.byteOffset, vector.byteOffset + vector.byteLength))]
+      : [],
+  )
+  return { chunks: rows.length, vectors }
+}
+
 /** A vector already there for the same model and text is kept: the same text gives the same vector. */
 export const saveVectors = (
   { orm, now }: StoreContext,
@@ -161,7 +188,8 @@ export const nearestChunks = (
     since,
     limit,
     query,
-  }: { chatKey?: number; model: string; since?: number; limit: number; query: Float32Array },
+    exclude,
+  }: { chatKey?: number; model: string; since?: number; limit: number; query: Float32Array; exclude?: number },
 ): NearestChunk[] => {
   const best = new Map<number, NearestChunk>()
   let after = { conversation: 0, ordinal: -1 }
@@ -185,6 +213,7 @@ export const nearestChunks = (
         WHERE ch.account_pk = ${accountPk}
           ${chatKey === undefined ? sql`` : sql`AND c.chat_pk = ${chatKey}`}
           ${since === undefined ? sql`` : sql`AND c.last_at >= ${since}`}
+          ${exclude === undefined ? sql`` : sql`AND c.pk <> ${exclude}`}
           AND (k.conversation_pk, k.ordinal) > (${after.conversation}, ${after.ordinal})
         ORDER BY k.conversation_pk, k.ordinal LIMIT ${SCAN_PAGE}`,
     )

@@ -309,6 +309,7 @@ describe("the MCP server", () => {
       "chat_contacts_lookup",
       "chat_contacts_show",
       "chat_conversations_list",
+      "chat_conversations_related",
       "chat_conversations_search",
       "chat_conversations_show",
       "chat_conversations_status",
@@ -629,6 +630,8 @@ describe("the MCP server", () => {
 
     expect([first, second, third].map(({ body }) => body.items.length)).toEqual([1, 1, 1])
     expect(third.body).toMatchObject({ meaning: "searched", readiness: { searchedByMeaning: ["7"], stale: [] } })
+    const related = await call("chat_conversations_related", { chat: "7", message: message.id })
+    expect(related.body).toMatchObject({ model: "tiny", source: { chatId: "7" }, items: [], readiness: { stale: [] } })
     expect(models).toEqual({ opened: 1, closed: 0 })
     await embedders.close()
     expect(models.closed).toBe(1)

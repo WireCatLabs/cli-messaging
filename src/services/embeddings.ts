@@ -60,6 +60,11 @@ export interface EmbeddingsService {
     query: string,
     options: { chat?: string; model?: ModelChoice; since?: string; limit: number },
   ): Promise<FoundConversations>
+  /**
+   * The conversations of every built chat nearest in meaning to the one `message` is in, best first, never that
+   * one: the mean of its current vectors is the query, so no model runs and none need be downloaded.
+   */
+  related(chat: string, message: Id, options: { model?: ModelChoice; limit: number }): Promise<RelatedConversations>
   /** How fresh one chat's conversations and vectors are, or every built chat's. */
   readiness(options: { chat?: string; model?: ModelChoice }): Promise<{ model: string; chats: ChatReadiness[] }>
   /**
@@ -103,6 +108,14 @@ export interface FoundConversations {
   readiness: SearchReadiness
   /** Kept for callers of 0.141.0 and before; `readiness.wordsOnly` says more. */
   embeddedOnlyElsewhere: Id[]
+}
+
+export interface RelatedConversations {
+  model: string
+  /** The conversation the message is in. */
+  source: ConversationSummary
+  hits: FoundConversation[]
+  readiness: SearchReadiness
 }
 
 /** Chat ids by how the search could see them; a chat can be in more than one list. */
@@ -163,6 +176,12 @@ export const embeddingsService = (deps: ServiceDeps): EmbeddingsService => {
 
   const notDownloaded = (id: string) =>
     new CliError("not_found", `${id} is not downloaded — \`${command} models text download ${id}\``)
+
+  const notBuiltError = (chatId: Id) =>
+    new CliError(
+      "not_found",
+      `chat ${chatId} has no conversations yet — \`${command} conversations build --chat ${chatId}\``,
+    )
 
   const resolve = (choice: ModelChoice = DEFAULT_TEXT_MODEL) => {
     if (typeof choice !== "string") {
@@ -255,12 +274,7 @@ export const embeddingsService = (deps: ServiceDeps): EmbeddingsService => {
     const store = await deps.store()
     const account = await deps.account()
     const chatId = await storedChatId(deps.messenger, chat, store, account)
-    if (!(await store.conversationState(account, chatId))?.builtAt) {
-      throw new CliError(
-        "not_found",
-        `chat ${chatId} has no conversations yet — \`${command} conversations build --chat ${chatId}\``,
-      )
-    }
+    if (!(await store.conversationState(account, chatId))?.builtAt) throw notBuiltError(chatId)
     return { store, account, chatId }
   }
 
@@ -385,29 +399,49 @@ export const embeddingsService = (deps: ServiceDeps): EmbeddingsService => {
           if (!warm) await embedder.close()
         }
       }
-      const chats = await readinessOf(chatId, target.key)
-      const built = new Set(chats.filter(({ state }) => state !== "not-built").map(({ chat }) => chat))
-      const ids = (keep: (one: ChatReadiness) => boolean) => chats.filter(keep).map(({ chat }) => chat)
-      const byMeaning = (one: ChatReadiness) =>
-        target.installed && built.has(one.chat) && one.state !== "words-only" && one.vectors.chunks > 0
       const elsewhere = await store.embeddedOnlyElsewhere(account, { ...scope, model: target.key })
       return {
         model: target.id,
         meaning: target.installed ? "searched" : "unavailable",
         hits: fused(meaning, words.hits).slice(0, limit),
-        readiness: {
-          searchedByMeaning: ids(byMeaning),
-          wordsOnly: ids((one) => built.has(one.chat) && !byMeaning(one)),
-          partial: ids((one) => byMeaning(one) && one.vectors.missing > 0),
-          stale: ids((one) => built.has(one.chat) && isStale(one)),
-          notBuilt: [
-            ...new Set([
-              ...ids((one) => one.state === "not-built"),
-              ...[...words.outside].filter((id) => !built.has(id)),
-            ]),
-          ].sort(),
-        },
+        readiness: searchReadiness(await readinessOf(chatId, target.key), target.installed, words.outside),
         embeddedOnlyElsewhere: elsewhere,
+      }
+    },
+
+    related: async (chat, message, { model: choice, limit }) => {
+      const store = await deps.store()
+      const account = await deps.account()
+      const target = resolve(choice)
+      const chatId = await storedChatId(deps.messenger, chat, store, account)
+      const [source] = await store.conversationsOfMessages(account, [{ chatId, messageId: message }])
+      if (!source) {
+        if (!(await store.conversationState(account, chatId))?.builtAt) throw notBuiltError(chatId)
+        throw new CliError("not_found", `message ${message} is in no conversation of chat ${chatId}`)
+      }
+      const { vectors } = await store.conversationVectors(account, source.id, target.key)
+      if (vectors.length === 0) {
+        const [own] = await readinessOf(chatId, target.key)
+        const step = own && isStale(own) ? "build" : "embed"
+        throw new CliError(
+          "not_found",
+          `conversation ${source.id} has no vector of ${target.id} that matches its messages now — ` +
+            `\`${command} conversations ${step} --chat ${chatId}\``,
+        )
+      }
+      const hits = await store.nearestConversations(account, {
+        model: target.key,
+        limit: Math.max(limit, CANDIDATES),
+        query: meanOf(vectors),
+        exclude: source.id,
+      })
+      return {
+        model: target.id,
+        source,
+        hits: hits
+          .slice(0, limit)
+          .map(({ summary, chunk, score, stale }) => ({ summary, chunk, score, by: ["meaning"], stale })),
+        readiness: searchReadiness(await readinessOf(undefined, target.key), true, new Set()),
       }
     },
 
@@ -536,6 +570,33 @@ const needsEmbed = (one: ChatReadiness) => one.graph !== null && one.vectors.mis
 /** Never finished first, then the oldest build: the longest-waiting change goes first. */
 const byOldestBuild = (a: ChatReadiness, b: ChatReadiness) =>
   (a.graph?.builtAt ?? "").localeCompare(b.graph?.builtAt ?? "")
+
+/** The chats in readiness by how a meaning search with these vectors could see them, and the word matches outside any. */
+const searchReadiness = (chats: ChatReadiness[], meaning: boolean, outside: Set<Id>): SearchReadiness => {
+  const built = new Set(chats.filter(({ state }) => state !== "not-built").map(({ chat }) => chat))
+  const ids = (keep: (one: ChatReadiness) => boolean) => chats.filter(keep).map(({ chat }) => chat)
+  const byMeaning = (one: ChatReadiness) =>
+    meaning && built.has(one.chat) && one.state !== "words-only" && one.vectors.chunks > 0
+  return {
+    searchedByMeaning: ids(byMeaning),
+    wordsOnly: ids((one) => built.has(one.chat) && !byMeaning(one)),
+    partial: ids((one) => byMeaning(one) && one.vectors.missing > 0),
+    stale: ids((one) => built.has(one.chat) && isStale(one)),
+    notBuilt: [
+      ...new Set([...ids((one) => one.state === "not-built"), ...[...outside].filter((id) => !built.has(id))]),
+    ].sort(),
+  }
+}
+
+/** Unit vectors' mean, made unit length again so the dot product stays a cosine. */
+const meanOf = (vectors: Float32Array[]): Float32Array => {
+  const mean = new Float32Array(vectors[0]?.length ?? 0)
+  for (const vector of vectors) {
+    for (let index = 0; index < mean.length; index++) mean[index] = (mean[index] as number) + (vector[index] as number)
+  }
+  const length = Math.hypot(...mean) || 1
+  return mean.map((value) => value / length)
+}
 
 const isStale = ({ graph, pending, vectors }: ChatReadiness) =>
   Boolean(graph?.outdatedRules) || pending.new + pending.edited + pending.deleted > 0 || vectors.stale > 0

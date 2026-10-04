@@ -1412,6 +1412,10 @@ describe("the shared read commands", () => {
       readiness: { wordsOnly: ["7"], searchedByMeaning: [] },
     })
     expect(words.stderr.join("\n")).toContain("models text download e5-small")
+
+    const related = await call(["conversations", "related", "7", "3", "--json"], never, env)
+    expect([related.code, related.stdout]).toEqual([6, []])
+    expect(related.stderr.join("\n")).toContain("conversations embed --chat 7")
   })
 
   it("**catches up every changed chat** with build, embed and search --refresh, on this machine only", async () => {
