@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
-import { join } from "node:path"
+import { dirname, join } from "node:path"
 import { Readable } from "node:stream"
 import { CliError, captureStreams } from "@leemour/cli-core"
 import type { CommandInfo } from "@leemour/cli-core/commands"
@@ -23,7 +23,7 @@ import type { Messenger } from "./context.js"
 import { conversationsCommand } from "./conversations-command.js"
 import { safeName } from "./download-command.js"
 import { recipientsCommand, sendsCommand } from "./guard-commands.js"
-import { type McpEnvironment, mcpCommand } from "./mcp-command.js"
+import { httpTokenFile, type McpEnvironment, mcpCommand } from "./mcp-command.js"
 import { messagesCommand } from "./messages-command.js"
 import { modelsCommand } from "./models-command.js"
 import { pollsCommand } from "./polls-command.js"
@@ -2403,6 +2403,38 @@ describe("the guard, account and mcp config commands", () => {
 
     expect(json(masked.stdout).phone).toBe("***1234")
     expect(json(whole.stdout).phone).toBe("+00 000 000-1234")
+  })
+
+  it("**refuses mcp --http without an https tunnel address**, before connecting", async () => {
+    const missing = await call(["mcp", "--http", "--json"], async () => fake, sandbox())
+    const plain = await call(
+      ["mcp", "--http", "--public-url", "http://name.example", "--json"],
+      async () => fake,
+      sandbox(),
+    )
+    const withPath = await call(
+      ["mcp", "--http", "--public-url", "https://name.ts.net/mcp", "--json"],
+      async () => fake,
+      sandbox(),
+    )
+
+    expect(json(missing.stderr).error).toMatchObject({ code: "configuration_error" })
+    expect(missing.stderr.join("\n")).toContain("--public-url https://")
+    expect(json(plain.stderr).error.message).toContain("must be https")
+    expect(json(withPath.stderr).error.message).toContain("without a path")
+  })
+
+  it("**mcp --revoke forgets every browser login** of the profile", async () => {
+    const env = sandbox()
+    const file = httpTokenFile(app, "default", env)
+    mkdirSync(dirname(file), { recursive: true })
+    writeFileSync(file, JSON.stringify({ clients: [], tokens: [] }))
+
+    const { code, stdout } = await call(["mcp", "--revoke", "--json"], async () => fake, env)
+
+    expect(code).toBe(0)
+    expect(json(stdout)).toEqual({ revoked: true, profile: "default" })
+    expect(existsSync(file)).toBe(false)
   })
 
   it("**print the mcp entry by full path**, and warn when node belongs to a version manager", async () => {

@@ -1,5 +1,6 @@
 import { realpathSync } from "node:fs"
-import { CliError } from "@leemour/cli-core"
+import { join } from "node:path"
+import { CliError, resolvePaths } from "@leemour/cli-core"
 import { annotate } from "@leemour/cli-core/commands"
 import { installerOf } from "@leemour/cli-core/update"
 import { Command } from "commander"
@@ -19,6 +20,44 @@ export interface McpFlags {
   allowSend?: boolean
   allowMarkRead?: boolean
   allowDelete?: boolean
+  http?: boolean
+  port?: string
+  publicUrl?: string
+  revoke?: boolean
+}
+
+const DEFAULT_PORT = 8765
+
+/** Where `mcp --http` keeps the hashes of the tokens it issued — per profile, in the state folder. */
+export const httpTokenFile = (app: AppIdentity, profile: string, env: NodeJS.ProcessEnv): string =>
+  join(resolvePaths({ appName: app.appName, prefix: app.envPrefix, env }).state, "mcp-http", `${profile}.json`)
+
+const publicUrlOf = (app: AppIdentity, given: string | undefined): URL => {
+  const example = `--public-url https://<name>.ts.net`
+  if (!given) throw new CliError("configuration_error", `--http needs the tunnel's address: ${example}`)
+  let url: URL
+  try {
+    url = new URL(given)
+  } catch {
+    throw new CliError("validation_error", `--public-url is not an address: ${example}`)
+  }
+  const local = url.protocol === "http:" && ["localhost", "127.0.0.1"].includes(url.hostname)
+  if (url.protocol !== "https:" && !local)
+    throw new CliError(
+      "validation_error",
+      `--public-url must be https — the browser apps reach ${app.command} through it`,
+    )
+  if (url.pathname !== "/" || url.search || url.hash)
+    throw new CliError("validation_error", `--public-url is the tunnel's address only, without a path: ${example}`)
+  return url
+}
+
+const portOf = (given: string | undefined): number => {
+  if (given === undefined) return DEFAULT_PORT
+  const port = Number(given)
+  if (!Number.isInteger(port) || port < 1 || port > 65535)
+    throw new CliError("validation_error", "--port takes 1–65535")
+  return port
 }
 
 /** They decided which tools were offered; the profile's permissions do now. Kept so a configured agent still starts. */
@@ -48,11 +87,37 @@ export const mcpCommand = (messenger: Messenger): Command => {
     new Command("mcp").description(
       `serve this profile to an agent over MCP, on stdin and stdout — \`claude mcp add ${app.command} -- ${app.command} mcp\``,
     ),
-  ).action(async function (this: Command) {
+  )
+    .option(
+      "--http",
+      "serve over HTTP on 127.0.0.1 for ChatGPT and Claude in the browser, behind your tunnel; every write asks first",
+    )
+    .option("--port <port>", `the local port for --http (default ${DEFAULT_PORT})`)
+    .option("--public-url <url>", "the tunnel's https address the browser apps use, e.g. https://<name>.ts.net")
+    .option("--revoke", "forget every login given to a browser app; each must log in again")
+  command.action(async function (this: Command) {
     const flags = this.optsWithGlobals<McpFlags>()
     const context = messengerContext(this, messenger)
     const note = retiredNote(app, flags)
     if (note) context.renderer.warn(note)
+    if (flags.revoke) {
+      const { revokeAll } = await import("../../mcp/http/oauth.js")
+      revokeAll(httpTokenFile(app, context.settings.profile, context.env))
+      context.renderer.result({ revoked: true, profile: context.settings.profile })
+      return
+    }
+    if (flags.http) {
+      const publicUrl = publicUrlOf(app, flags.publicUrl)
+      const { serveOverHttpUntilStopped } = await import("../../mcp/server.js")
+      await serveOverHttpUntilStopped(
+        this,
+        context,
+        messenger,
+        {},
+        { publicUrl, port: portOf(flags.port), tokenFile: httpTokenFile(app, context.settings.profile, context.env) },
+      )
+      return
+    }
     // Loaded here, not at the top: every other command would otherwise pay for the SDK.
     const { serveOverStdio } = await import("../../mcp/server.js")
     await serveOverStdio(this, context, messenger, {

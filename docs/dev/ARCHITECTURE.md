@@ -245,6 +245,13 @@ is [the adapter guide](ADAPTERS.md).
 The MCP server (`src/mcp/`) holds one connection for minutes and runs one call at a time; each tool
 lives in `src/mcp/tools/<resource>.ts` and answers what the command's `--json` prints.
 
+`mcp --http` (`src/mcp/http/`, CLI-58) serves the same factory over Streamable HTTP on 127.0.0.1 behind the
+owner's tunnel. `oauth.ts` is a one-owner OAuth server — a token needs the code printed in the terminal, and
+only token hashes reach the disk; `serve.ts` checks the Host, answers the login routes, requires a bearer
+token for `/mcp`, and sends 2025-era requests to per-session servers bound to their OAuth client, because a
+stateless server forgets the form capability a client declared in `initialize`. Every write goes through
+the form over HTTP (`OVER_HTTP`, NEED-593).
+
 ## Services
 
 Five layers, each calling only the ones below it: the **domain** (`src/domain/`), the **adapters**

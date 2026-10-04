@@ -27,7 +27,9 @@ import { storedDeps } from "../services/deps.js"
 import { embeddingsService } from "../services/embeddings.js"
 import { servicesFor } from "../services/index.js"
 import { openStore } from "../store/store.js"
+import { freePort, mcpHttpClient as httpClient } from "../testing/mcp-http-client.js"
 import { searchRecipes, seedSearchRecipes } from "../testing/search-recipes.js"
+import { serveOverHttp } from "./http/serve.js"
 import { instructions } from "./instructions.js"
 import {
   type PersonalMcpRegistration,
@@ -35,7 +37,7 @@ import {
   personalMcpTools,
   registerPersonalMcpTools,
 } from "./personal.js"
-import { createServer, type ServerOptions } from "./server.js"
+import { createServer, OVER_HTTP, type ServerOptions } from "./server.js"
 
 describe("public personal MCP mounting", () => {
   it("encloses online, stored and host-service reads in the host's permission scope", async () => {
@@ -310,6 +312,8 @@ interface Harness {
   history?: Messenger["history"]
   /** Another server's files, to read what it stored. */
   root?: string
+  /** Over `mcp --http` on 127.0.0.1, logged in through the owner login as a browser app would. */
+  http?: boolean
 }
 
 const connect = async (telegram: Scripted = scripted(), options: Partial<ServerOptions> & Harness = {}) => {
@@ -321,7 +325,17 @@ const connect = async (telegram: Scripted = scripted(), options: Partial<ServerO
     CLI_COMMON_CACHE_DIR: join(root, "cache"),
     CHAT_CACHE_DIR: join(root, "chat-cache"),
   }
-  const { connect: connecting, form, era = "legacy", config, skill, history, root: _root, ...serverOptions } = options
+  const {
+    connect: connecting,
+    form,
+    era = "legacy",
+    config,
+    skill,
+    history,
+    root: _root,
+    http,
+    ...serverOptions
+  } = options
   if (config) {
     mkdirSync(env.CHAT_CONFIG_DIR, { recursive: true })
     writeFileSync(join(env.CHAT_CONFIG_DIR, "config.json"), JSON.stringify(config))
@@ -342,13 +356,42 @@ const connect = async (telegram: Scripted = scripted(), options: Partial<ServerO
     app,
     commands: () => [
       new Command("probe").action(function (this: Command) {
-        made = createServer(this, messengerContext(this, messenger), messenger, { ...serverOptions })
+        made = createServer(this, messengerContext(this, messenger), messenger, {
+          ...serverOptions,
+          ...(http ? OVER_HTTP : {}),
+        })
       }),
     ],
   })
   provide(program, { streams, tty: false, env, app })
   await program.parseAsync(["probe"], { from: "user" })
   const { session, build } = made as ReturnType<typeof createServer>
+
+  if (http) {
+    const loginCodes: string[] = []
+    const port = await freePort()
+    const listening = await serveOverHttp(build, {
+      publicUrl: new URL(`http://127.0.0.1:${port}`),
+      port,
+      tokenFile: join(root, "state", "mcp-http.json"),
+      appName: "chat",
+      onCode: (code) => loginCodes.push(code),
+    })
+    const client = await httpClient(listening.url, () => loginCodes.at(-1) ?? "", { era, form })
+    const { embedders } = made as ReturnType<typeof createServer>
+    closers.push(async () => {
+      await client.client.close()
+      await listening.close()
+      await session.close()
+      await embedders.close()
+    })
+    const call = async (name: string, args: Record<string, unknown> = {}) => {
+      const result = await client.client.callTool({ name, arguments: args })
+      const [first] = result.content as { type: string; text: string }[]
+      return { isError: result.isError === true, body: JSON.parse(first?.text ?? "null") }
+    }
+    return { client: client.client, call, session, embedders, streams, forms: client.forms, env, tokens: client.tokens }
+  }
 
   const [serverSide, clientSide] = InMemoryTransport.createLinkedPair()
   // The modern era is chosen by `serveStdio`, as in `mcp`; a server connected directly only speaks the legacy one.
@@ -1665,6 +1708,45 @@ describe("sending over MCP", () => {
 
       expect(isError).toBe(true)
       expect(body.error.code).toBe("confirmation_required")
+      expect(sent).toEqual([])
+    })
+  })
+
+  describe.each(["legacy", "modern"] as const)("over mcp --http, on the %s protocol", (era) => {
+    it("logs in with the owner's terminal code, lists tools and reads, and never prints a token", async () => {
+      const { client, call, streams, tokens } = await connect(scripted(), { http: true, era })
+
+      expect((await client.listTools()).tools.map(({ name }) => name)).toContain("chat_chats_list")
+      expect((await call("chat_chats_list")).isError).toBe(false)
+      const printed = [...streams.stdout, ...streams.stderr].join("\n")
+      const issued = tokens?.()
+      expect(issued?.access_token).toBeTruthy()
+      expect(printed).not.toContain(issued?.access_token)
+      expect(printed).not.toContain(issued?.refresh_token)
+    })
+
+    it("asks through the form before a send even where the level is allow, and sends once accepted", async () => {
+      const { telegram, sent } = sending()
+      const { call, forms } = await connect(telegram, {
+        http: true,
+        era,
+        form: () => ({ action: "accept", content: {} }),
+      })
+
+      const { isError } = await call("chat_messages_send", { chat: "Book", text: "see you on Friday" })
+
+      expect(isError).toBe(false)
+      expect(forms[0]).toContain("see you on Friday")
+      expect(sent.map((one) => one.text)).toEqual(["see you on Friday"])
+    })
+
+    it("sends nothing when the owner declines the form", async () => {
+      const { telegram, sent } = sending()
+      const { call } = await connect(telegram, { http: true, era, form: () => ({ action: "decline" }) })
+
+      const { isError, body } = await call("chat_messages_send", { chat: "7", text: "no" })
+
+      expect([isError, body.error.code]).toEqual([true, "confirmation_required"])
       expect(sent).toEqual([])
     })
   })

@@ -1,3 +1,4 @@
+import { CliError } from "@leemour/cli-core"
 import { skillResource } from "@leemour/cli-core/skill"
 import { McpServer } from "@modelcontextprotocol/server"
 import { serveStdio } from "@modelcontextprotocol/server/stdio"
@@ -10,6 +11,7 @@ import { warmEmbedders } from "../embeddings/embed.js"
 import { guardFor } from "../sends/guard.js"
 import { levelFor } from "../sends/permissions.js"
 import { confirmer } from "./confirm.js"
+import type { HttpOptions } from "./http/serve.js"
 import { instructions } from "./instructions.js"
 import { personalMcpTools } from "./personal.js"
 import { registerPrompts } from "./prompts.js"
@@ -164,6 +166,56 @@ export const serveOverStdio = async (
 
   try {
     await handle.close()
+    await session.close()
+  } finally {
+    await embedders.close()
+  }
+}
+
+/**
+ * Over HTTP every write goes through the form whatever its level (NEED-593): an app's model talked into
+ * sending by a message it read still has to get the owner's yes. It does not stop someone holding a
+ * stolen token, whose own client answers the form — short-lived tokens, rotation and `--revoke` do.
+ */
+export const OVER_HTTP = { confirmSend: true, yes: false, allowDangerous: false } as const
+
+/** The same server over HTTP, until Ctrl-C (CLI-58). */
+export const serveOverHttpUntilStopped = async (
+  command: Invocation,
+  context: MessengerContext,
+  messenger: Messenger,
+  options: ServerOptions,
+  http: Omit<HttpOptions, "onCode" | "onError" | "appName">,
+): Promise<void> => {
+  const { session, embedders, build } = createServer(command, context, messenger, { ...options, ...OVER_HTTP })
+  const { serveOverHttp } = await import("./http/serve.js")
+  const appName = messenger.app.command
+  const listening = await serveOverHttp(build, {
+    ...http,
+    appName,
+    onCode: (code, expires) =>
+      context.renderer.note(
+        `login code for a new browser app: ${code} (until ${expires.toTimeString().slice(0, 5)}; a new one after each login)`,
+      ),
+    onError: (error) => context.renderer.note(`mcp: ${error.message}`),
+  }).catch(async (error: unknown) => {
+    await session.close()
+    await embedders.close()
+    if ((error as NodeJS.ErrnoException).code === "EADDRINUSE")
+      throw new CliError("configuration_error", `port ${http.port} is in use — pass another with --port`)
+    throw error
+  })
+  context.renderer.note(
+    `serving on ${listening.url.href} — point your tunnel at it; connectors use ${new URL("/mcp", http.publicUrl).href}`,
+  )
+
+  await new Promise<void>((resolve) => {
+    process.once("SIGINT", resolve)
+    process.once("SIGTERM", resolve)
+  })
+
+  try {
+    await listening.close()
     await session.close()
   } finally {
     await embedders.close()
