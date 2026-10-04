@@ -197,6 +197,9 @@
     "--html": {
       "meaning": "the text is HTML: <b>, <i>, <a href>, <code>"
     },
+    "--http": {
+      "meaning": "serve MCP over HTTP on 127.0.0.1 behind the owner's tunnel, with a one-owner login; every write asks first"
+    },
     "--idle": {
       "value": "<duration>",
       "meaning": "stop after this long with nobody using it — 15m, 1h"
@@ -373,9 +376,17 @@
       "value": "<file>",
       "meaning": "an image file — a profile photo in `account update`, a photo to send in `messages send`"
     },
+    "--port": {
+      "value": "<port>",
+      "meaning": "the local port for --http"
+    },
     "--provider": {
       "value": "<provider>",
       "meaning": "embed through a service with your key instead of on this machine: openai"
+    },
+    "--public-url": {
+      "value": "<url>",
+      "meaning": "the tunnel's https address the browser apps use"
     },
     "--qr-file": {
       "value": "<png>",
@@ -406,6 +417,9 @@
     },
     "--retract": {
       "meaning": "take your vote back, where the poll allows it"
+    },
+    "--revoke": {
+      "meaning": "forget every login given to a browser app over --http"
     },
     "--revote": {
       "meaning": "people may change their vote"
@@ -1556,6 +1570,30 @@
         },
         "--allow-send": "all",
         "--confirm-send": "all",
+        "--http": {
+          "in": ["tg"],
+          "planned": {
+            "max": "CLI-58"
+          }
+        },
+        "--port": {
+          "in": ["tg"],
+          "planned": {
+            "max": "CLI-58"
+          }
+        },
+        "--public-url": {
+          "in": ["tg"],
+          "planned": {
+            "max": "CLI-58"
+          }
+        },
+        "--revoke": {
+          "in": ["tg"],
+          "planned": {
+            "max": "CLI-58"
+          }
+        },
         "--yes": {
           "in": [],
           "planned": {
