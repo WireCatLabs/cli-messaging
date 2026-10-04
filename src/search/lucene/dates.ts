@@ -50,6 +50,20 @@ export const dayBoundary = (value: string, zone: string, next: boolean, span: Sp
     queryError("invalid_date", span, "this calendar day does not exist in the selected timezone")
   return lo
 }
+const AGO = /^(\d+)(m|h|d)$/u
+const AGO_MS: Record<string, number> = { m: 60_000, h: 3_600_000, d: 86_400_000 }
+const dayOf = (word: string, zone: string, now: number, span: Span): string => {
+  const today = new Intl.DateTimeFormat("en-CA", {
+    timeZone: zone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(now)
+  if (word === "today") return today
+  const date = calendar(today, span)
+  date.setUTCDate(date.getUTCDate() - 1)
+  return date.toISOString().slice(0, 10)
+}
 export interface DateRange {
   lower?: number
   upper?: number
@@ -62,15 +76,25 @@ export const dateEndpoint = (
   side: "lower" | "upper",
   inclusive: boolean,
   span: Span,
+  now = Date.now(),
 ): { time?: number; inclusive: boolean } => {
   if (value === "*") return { inclusive }
+  const word = value.toLowerCase()
+  if (word === "today" || word === "yesterday")
+    return dateEndpoint(dayOf(word, zone, now, span), zone, side, inclusive, span)
+  const [, amount, unit] = AGO.exec(word) ?? []
+  if (amount && unit) return { time: now - Number(amount) * (AGO_MS[unit] ?? 0), inclusive }
   if (/^\d{4}-\d{2}-\d{2}$/u.test(value))
     return {
       time: dayBoundary(value, zone, side === "lower" ? !inclusive : inclusive, span),
       inclusive: side === "lower",
     }
   if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?(?:Z|[+-]\d{2}:\d{2})$/u.test(value))
-    queryError("invalid_date", span, "quote an ISO timestamp with seconds and timezone offset")
+    queryError(
+      "invalid_date",
+      span,
+      "use an ISO date, today, yesterday, 30m/2h/7d ago, or a quoted timestamp with offset",
+    )
   calendar(value.slice(0, 10), span)
   const time = Date.parse(value)
   if (
@@ -89,9 +113,11 @@ export const dateRange = (
   upperInclusive: boolean,
   zone: string,
   span: Span,
+  now = Date.now(),
 ): DateRange => {
-  const lo = dateEndpoint(lower, zone, "lower", lowerInclusive, span)
-  const hi = dateEndpoint(upper, zone, "upper", upperInclusive, span)
+  const since = lower === upper && AGO.test(lower.toLowerCase())
+  const lo = dateEndpoint(lower, zone, "lower", lowerInclusive, span, now)
+  const hi = dateEndpoint(since ? "*" : upper, zone, "upper", upperInclusive, span, now)
   return {
     ...(lo.time === undefined ? {} : { lower: lo.time }),
     ...(hi.time === undefined ? {} : { upper: hi.time }),

@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+- `date:` takes relative dates: `date:today`, `date:yesterday` (calendar days in `--timezone`), `date:7d` (since 7 days
+  ago; also `30m`, `2h`), and the same in comparisons and ranges (`date>=7d`, `date:[30d TO 7d}`).
 - `filename:` and `mime:` alone no longer fail on an archive with more than 50,000 messages with files: names are
   matched before the main query, so the candidate row limit does not apply to them.
 - `has:link` also finds a message whose link exists only as a preview card (MAX `share`, Telegram `webpage`),

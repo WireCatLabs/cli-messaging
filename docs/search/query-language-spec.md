@@ -71,7 +71,7 @@ Wildcard literals text нормализуются; regex literal case долже
 
 Date endpoints собственные typed mappings над стандартной grammar: calendar day в IANA zone,
 exact timestamp с offset, mixed inclusive/exclusive/open bounds. DST вычисляется через календарь,
-не через duration +24h. Неизвестные/невозможные dates/zones отвергаются. Relative date math отсутствует.
+не через duration +24h. Неизвестные/невозможные dates/zones отвергаются. Relative: today/yesterday — календарный день в zone; Nm/Nh/Nd — момент now−N; term Nd = [now−N TO *].
 IDs string; names разрешаются по локальным accounts. topic требует одного обязательного chat.
 kind сохраняет dialog mapping; peerKind metadata различает bot/service без догадок по имени.
 filename/mime: до основного запроса страницами читаются имена/типы вложений в выбранных аккаунтах,

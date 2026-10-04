@@ -182,7 +182,7 @@ enum или unsupported сочетание дают ошибку, а не пус
 | `body` | keyword | raw, case-sensitive | `body:/.*invoice.*/` | term, phrase, wildcard, regex |
 | `from` | person | account-scoped resolution | `from:"Alice Synthetic"` | term, phrase |
 | `chat` | chat | account-scoped resolution | `chat:"Work fixture"` | term, phrase |
-| `date` | timestamp | ISO/calendar timezone | `date:[2026-01-01 TO 2026-02-01}` | term, phrase, range |
+| `date` | timestamp | ISO/calendar timezone; today, yesterday, 30m/2h/7d ago | `date:[2026-01-01 TO 2026-02-01}` | term, phrase, range |
 | `kind` | enum | private, saved, bot, service, group, channel, unknown | `kind:private` | term, phrase |
 | `has` | enum | attachment, link, file, photo, image, video, audio, voice, sticker, contact, location, poll | `has:file` | term, phrase |
 | `topic` | id | string id, one chat required | `chat:7 AND topic:42` | term, phrase |
@@ -205,7 +205,11 @@ enum или unsupported сочетание дают ошибку, а не пус
 `size:[1KB TO 300KB]`. `mime` работает, только где мессенджер сообщает тип файла: Telegram сообщает,
 MAX — нет, там ищите по расширению (`filename:*.pdf`). `/` в запросе начинает regex, поэтому полный
 тип пишется в кавычках (`mime:"application/pdf"`), а `mime:image` находит любые картинки.
-Ссылку на сайт находит фраза: `has:link AND "github.com"`. `tag` пока даёт unsupported_field.
+Ссылку на сайт находит фраза: `has:link AND "github.com"`; ссылка только карточкой предпросмотра
+тоже считается. `tag` пока даёт unsupported_field.
+`date` понимает и относительные даты: `date:today` и `date:yesterday` — календарный день в
+`--timezone`; `date:7d` — с момента 7 дней назад (также `30m`, `2h`); `date>=7d` и
+`date:[30d TO 7d}` — то же в сравнении и диапазоне. Отсчёт идёт от момента запроса.
 
 Default scope — активный account. `in:` с положительным условием или `--source` явно выбирает
 accounts провайдера/класса, включая `all`. Отрицательный `in:` не расширяет scope.

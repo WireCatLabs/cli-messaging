@@ -59,7 +59,7 @@ export const QUERY_FIELDS = [
     aliases: [],
     type: "timestamp",
     operators: [...terms, "range"],
-    normalization: "ISO/calendar timezone",
+    normalization: "ISO/calendar timezone; today, yesterday, 30m/2h/7d ago",
     support: "A1",
   },
   {
