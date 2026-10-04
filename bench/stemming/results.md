@@ -2,7 +2,7 @@
 
 Does a Snowball stem index (S) find Russian and Spanish word forms better than the trigram approaches?
 Ground truth: UD treebanks with human lemmas, one sentence = one message, relevant = holds a token with the
-same (lemma, UPOS). Run: `./run.sh` (downloads pinned data into `data/`, rewrites everything below the marker).
+same (lemma, UPOS). Run: `./run.sh` (downloads pinned data into `data/`, keeps the generated corpus in `data/corpus/` for the next run, rewrites everything below the marker).
 Every number is measured [run]; the generated sections below hold the details.
 
 ## Summary
