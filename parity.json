@@ -1491,30 +1491,12 @@
             "tg": "T6"
           }
         },
-        "--kind": {
-          "in": [],
-          "planned": {
-            "max": "each CLI's next cli-messaging bump",
-            "tg": "each CLI's next cli-messaging bump"
-          }
-        },
+        "--kind": "all",
         "--limit": "all",
-        "--mark-read": {
-          "in": [],
-          "planned": {
-            "max": "each CLI's next cli-messaging bump",
-            "tg": "each CLI's next cli-messaging bump"
-          }
-        },
+        "--mark-read": "all",
         "--model": "all",
         "--new": "all",
-        "--no-mark-read": {
-          "in": [],
-          "planned": {
-            "max": "each CLI's next cli-messaging bump",
-            "tg": "each CLI's next cli-messaging bump"
-          }
-        },
+        "--no-mark-read": "all",
         "--since": {
           "in": [],
           "planned": {
@@ -1951,20 +1933,8 @@
           }
         },
         "--chat": "all",
-        "--kind": {
-          "in": [],
-          "planned": {
-            "max": "each CLI's next cli-messaging bump",
-            "tg": "each CLI's next cli-messaging bump"
-          }
-        },
-        "--mark-read": {
-          "in": [],
-          "planned": {
-            "max": "each CLI's next cli-messaging bump",
-            "tg": "each CLI's next cli-messaging bump"
-          }
-        },
+        "--kind": "all",
+        "--mark-read": "all",
         "--model": {
           "in": [],
           "planned": {
@@ -1972,20 +1942,8 @@
             "tg": "T6"
           }
         },
-        "--new": {
-          "in": [],
-          "planned": {
-            "max": "each CLI's next cli-messaging bump",
-            "tg": "each CLI's next cli-messaging bump"
-          }
-        },
-        "--no-mark-read": {
-          "in": [],
-          "planned": {
-            "max": "each CLI's next cli-messaging bump",
-            "tg": "each CLI's next cli-messaging bump"
-          }
-        },
+        "--new": "all",
+        "--no-mark-read": "all",
         "--since": {
           "in": [],
           "planned": {
@@ -2160,13 +2118,7 @@
     "store backup": {
       "in": "all",
       "options": {
-        "--encrypt": {
-          "in": [],
-          "planned": {
-            "max": "each CLI's next cli-messaging bump",
-            "tg": "each CLI's next cli-messaging bump"
-          }
-        }
+        "--encrypt": "all"
       }
     },
     "store check": {
@@ -2180,55 +2132,21 @@
       }
     },
     "store decrypt": {
-      "in": [],
-      "planned": {
-        "max": "each CLI's next cli-messaging bump",
-        "tg": "each CLI's next cli-messaging bump"
-      },
+      "in": "all",
       "options": {
-        "--output": {
-          "in": [],
-          "planned": {
-            "max": "each CLI's next cli-messaging bump",
-            "tg": "each CLI's next cli-messaging bump"
-          }
-        }
+        "--output": "all"
       }
     },
     "store export": {
       "in": "all",
       "options": {
-        "--all": {
-          "in": [],
-          "planned": {
-            "max": "each CLI's next cli-messaging bump",
-            "tg": "each CLI's next cli-messaging bump"
-          }
-        },
-        "--encrypt": {
-          "in": [],
-          "planned": {
-            "max": "each CLI's next cli-messaging bump",
-            "tg": "each CLI's next cli-messaging bump"
-          }
-        },
+        "--all": "all",
+        "--encrypt": "all",
         "--format": "all",
-        "--kind": {
-          "in": [],
-          "planned": {
-            "max": "each CLI's next cli-messaging bump",
-            "tg": "each CLI's next cli-messaging bump"
-          }
-        },
+        "--kind": "all",
         "--output": "all",
         "--since-time": "all",
-        "--to": {
-          "in": [],
-          "planned": {
-            "max": "each CLI's next cli-messaging bump",
-            "tg": "each CLI's next cli-messaging bump"
-          }
-        }
+        "--to": "all"
       }
     },
     "store fetch": {
