@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.144.0 — 04.10.2026
+
 ### Added
 
 - Public personal MCP catalogue and registration APIs in `./cli` let consumers retain their own
