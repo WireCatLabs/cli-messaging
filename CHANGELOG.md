@@ -50,6 +50,9 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Changed — may break callers
 
+- The adapter contract case for `historyAfter` no longer requires `hasMore: false` on a page shorter than the
+  limit: Telegram drops deleted messages from a page, so a short page proves no end. It now reads past the newest
+  message and requires an empty page with `hasMore: false`. The case is renamed to say so.
 - `MessageStore` has new required methods — `addTags`, `removeTags`, `tags`, and `recordSearch`, `saveSearch`,
   `storedSearch`, `savedSearches`, `searchHistory`, `deleteSearch`, `clearSearchHistory` — and `Services` new
   `tags` and `searches` members. A store or a `Services` object written by hand — a test fake — adds them;

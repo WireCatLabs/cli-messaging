@@ -377,7 +377,7 @@ export const contractCases = ({
         },
       ],
       [
-        "historyAfter answers the oldest newer than a message or a moment, oldest first",
+        "historyAfter answers the oldest newer than a message or a moment, oldest first, and ends on an empty page",
         async (adapter, seed) => {
           const skipped = lacking(adapter, "historyAfter")
           if (skipped) return skipped
@@ -391,7 +391,11 @@ export const contractCases = ({
             after: { time: Date.parse(after.timestamp) },
           })
           assert.deepEqual(idsOf(byTime?.items ?? []), idsOf(busy.slice(3)))
-          assert.equal(byTime?.hasMore, false)
+          // A short page proves no end (Telegram drops deleted messages from one); only an empty one does.
+          const newest = busy.at(-1) as Message
+          const past = await adapter.historyAfter?.(seed.busy, { limit: 20, after: { id: newest.id } })
+          assert.deepEqual(past?.items, [])
+          assert.equal(past?.hasMore, false)
         },
       ],
       [
