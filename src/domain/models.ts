@@ -293,6 +293,8 @@ export interface Review {
   quiet: number
   /** `--unanswered`: only questions still open after this many hours are in `chats`. */
   unanswered?: { olderThanHours: number }
+  /** With saved points: each chat read whole, and the time its next check starts from. */
+  checked?: Record<Id, string>
 }
 
 /** One change to who is in a chat, or to the chat itself, read from a service message. */

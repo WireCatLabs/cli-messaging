@@ -11,6 +11,7 @@ import { settingsFor } from "../settings.js"
 import type { Messenger } from "./context.js"
 import { inboxCommand } from "./inbox.js"
 import type { MessengerAdapter, ServerReads } from "./port.js"
+import { reviewCommand } from "./review.js"
 
 const app = {
   command: "chat",
@@ -49,6 +50,7 @@ const messageAt = (chatId: string, id: string, minute: number, outgoing = false)
 /** A messenger whose chats and histories are given; `history` answers each chat's newest `limit`. */
 const messengerWith = (chats: Chat[], histories: Record<string, Message[]>) => {
   const read: string[] = []
+  const marks: [string, string | undefined][] = []
   const adapter: MessengerAdapter & ServerReads = {
     self: () => "500",
     me: async () => ({ id: "500", name: "Owner", username: null }),
@@ -60,7 +62,10 @@ const messengerWith = (chats: Chat[], histories: Record<string, Message[]>) => {
       read.push(chat)
       return { items: (histories[chat] ?? []).slice(-limit), hasMore: false }
     },
-    resolve: async () => chats[0] as Chat,
+    resolve: async (reference) => chats.find((chat) => chat.id === reference) ?? (chats[0] as Chat),
+    markRead: async (chatId, until) => {
+      marks.push([chatId, until])
+    },
     chat: async () => ({ ...(chats[0] as Chat), members: [] }),
     contact: async () => ({ id: "9", name: null, username: null, description: null, lastMessagedAt: null, chats: [] }),
     around: async () => [],
@@ -70,7 +75,7 @@ const messengerWith = (chats: Chat[], histories: Record<string, Message[]>) => {
     logout: async () => {},
     close: async () => {},
   }
-  return { adapter, read }
+  return { adapter, read, marks }
 }
 
 describe("the unread inbox", () => {
@@ -194,6 +199,31 @@ describe("a point per chat", () => {
   })
 })
 
+describe("a review's points", () => {
+  it("checks a chat read whole, and leaves one cut short where it was", async () => {
+    const busy = Array.from({ length: 400 }, (_, index) => ({
+      ...messageAt("busy", String(index), 0),
+      timestamp: new Date(Date.UTC(2026, 8, 28, 10, 30) + index * 1000).toISOString(),
+    }))
+    const { adapter } = messengerWith([{ ...chatAt("busy", 40) }, chatAt("calm", 5)], {
+      calm: [messageAt("calm", "1", 5)],
+    })
+    const paged = {
+      ...adapter,
+      history: async (chat: string, { limit, before }: { limit: number; before?: string }) => {
+        if (chat !== "busy") return adapter.history(chat, { limit })
+        const end = before === undefined ? busy.length : Number(before)
+        return { items: busy.slice(Math.max(0, end - limit), end), hasMore: end - limit > 0 }
+      },
+    }
+
+    const review = await reviewIn(paged, { since: Date.parse(at(2)), points: new Map() })
+
+    expect(review.chats.find((chat) => chat.id === "busy")?.more).toBe(true)
+    expect(Object.keys(review.checked ?? {})).toEqual(["calm"])
+  })
+})
+
 describe("--kind", () => {
   it("takes kinds comma-separated and refuses anything else", () => {
     expect(kindsOf("dialog, group")).toEqual(["dialog", "group"])
@@ -247,22 +277,34 @@ describe("inbox --new", () => {
           : scripted.adapter,
       chatArgument: "a chat",
     }
-    const inbox = async (argv: string[]) => {
+    const command = (name: "inbox" | "review") => async (argv: string[]) => {
       const streams = captureStreams()
       const code = await run(
-        ["inbox", ...argv, "--json"],
-        { app, commands: () => [inboxCommand(messenger)] },
+        [name, ...argv, "--json"],
+        { app, commands: () => [inboxCommand(messenger), reviewCommand(messenger)] },
         {
           streams,
           tty: false,
           env,
         },
       )
-      return { code, answer: streams.stdout[0] ? JSON.parse(streams.stdout[0]) : undefined }
+      return {
+        code,
+        answer: streams.stdout[0] ? JSON.parse(streams.stdout[0]) : undefined,
+        stderr: streams.stderr.join("\n"),
+      }
     }
+    const inbox = command("inbox")
+    const review = command("review")
     const pointFile = join(env.CHAT_STATE_DIR, "inbox", "default.json")
     return {
       inbox,
+      review,
+      marks: scripted.marks,
+      configure: (profile: unknown) => {
+        mkdirSync(env.CHAT_CONFIG_DIR, { recursive: true })
+        writeFileSync(join(env.CHAT_CONFIG_DIR, "config.json"), JSON.stringify({ profiles: { default: profile } }))
+      },
       fail: (on: boolean) => {
         failing = on
       },
@@ -362,5 +404,44 @@ describe("inbox --new", () => {
     const { answer } = await inbox(["--new"])
 
     expect(answer.chats.map((one: { id: string }) => one.id)).toEqual(["1"])
+  })
+
+  it("review --new keeps its own points: an inbox --new run does not move them", async () => {
+    const chats = [recentChat("g", 2)]
+    const { inbox, review } = setup({ g: [recentMessage("g", 2)] }, chats)
+
+    await inbox(["--new"])
+    const first = await review(["--new"])
+    const second = await review(["--new"])
+
+    expect(first.answer.chats.map((one: { id: string }) => one.id)).toEqual(["g"])
+    expect(second.answer.chats).toEqual([])
+  })
+
+  it("review --new refuses --since-time and --unanswered: it keeps its own point", async () => {
+    const { review } = setup({}, [])
+
+    expect((await review(["--new", "--since-time", "1d"])).code).toBe(2)
+    expect((await review(["--new", "--unanswered"])).code).toBe(2)
+  })
+
+  it("marks read only when asked — up to the newest message shown — or when the setting says so", async () => {
+    const chats = [recentChat("g", 2), recentChat("d", 1, "dialog")]
+    const { inbox, review, marks, configure } = setup({ g: [recentMessage("g", 2)], d: [recentMessage("d", 1)] }, chats)
+
+    await inbox(["--since-time", "1d"])
+    expect(marks).toEqual([])
+    const asked = await inbox(["--since-time", "1d", "--kind", "dialog", "--mark-read"])
+    expect(marks).toEqual([["d", "d-1"]])
+    expect(asked.answer.markedRead).toEqual([{ chatId: "d", until: "d-1" }])
+
+    configure({ catchUpMarksRead: true })
+    await review(["--since-time", "1d", "--kind", "group"])
+    await inbox(["--since-time", "1d", "--no-mark-read"])
+    expect(marks).toEqual([
+      ["d", "d-1"],
+      ["g", "g-1"],
+    ])
+    expect((await inbox(["--since-time", "1d", "--mark-read", "--offline"])).code).toBe(2)
   })
 })
