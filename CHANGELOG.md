@@ -8,6 +8,14 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Added
 
+- `mcp --http --public-url https://<name>.ts.net [--port 8765]`: the same MCP tools over Streamable HTTP on
+  127.0.0.1, for ChatGPT and Claude in the browser behind the owner's own tunnel, with no third-party proxy. Its own
+  OAuth login for exactly one owner: apps register themselves, but a token needs the one-time code printed in the
+  terminal (10 minutes, a new one after each login; five wrong codes lock the page until restart). PKCE `S256` only,
+  access tokens for 1 hour, refresh tokens for 30 days and rotated on use, only their hashes kept, in a `0600` file.
+  Every write asks through a form, whatever its permission level. `mcp --revoke` forgets every browser login.
+  2025-era clients get a session bound to the app that opened it, so their forms work. Runs until Ctrl-C.
+
 - `chats stats <chat> [--since-time] [--by day|week] [--timezone]` and read-only MCP `chats_stats`: a group's or
   channel's numbers for a period (7 days by default) — messages, people who wrote, replies, threads, reactions, the
   top posts, Telegram views and forwards where a post carries them, and questions asked and answered with the median
