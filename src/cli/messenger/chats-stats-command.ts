@@ -28,11 +28,10 @@ export const statsCommand = (messenger: Messenger): Command =>
         }),
       )
       if (!stats.complete) {
-        const fetch = `\`${messenger.app.command} store fetch ${stats.chatId}\``
         context.renderer.note(
           stats.completeness.state === "complete"
             ? "the messenger stopped reading joins and leaves before the period's start — those are lower bounds"
-            : `the store does not hold this chat whole, so these are lower bounds — ${fetch} fetches it`,
+            : `the store does not hold this chat whole, so these are lower bounds — \`${stats.fetch}\` fetches it`,
         )
       }
       if (!stats.members) context.renderer.note("joins and leaves were not asked of the messenger")

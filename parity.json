@@ -108,7 +108,11 @@
       "value": "<profiles>",
       "meaning": "also read these bots' copies, comma separated — each allowed by readOtherBots"
     },
-    "--by": { "value": "<chat|sender|day|hour>", "meaning": "what to count by" },
+    "--by": {
+      "value": "<grouping>",
+      "meaning": "what to count by",
+      "note": "each command names its own groupings — messages stats chat, sender, day or hour; chats stats day or week, as a series beside its totals — so it differs on purpose (Help text rule 4)"
+    },
     "--can": {
       "value": "<rights>",
       "meaning": "what they may do, comma-separated: read, members, admins, info, pin, link, post, edit, delete",

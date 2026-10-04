@@ -63,7 +63,7 @@ export const chatsTools = (messenger: Messenger): Record<string, AnyTool> => {
         "senders, replies, threads, reactions, views and forwards where the messenger gave them, topPosts, and " +
         "questions { asked, answered, medianMinutesToAnswer }. `by` adds a series row per day or week. Reads the local " +
         "store only, so joins and leaves are not in it — chats_events has them. complete is false when the store does " +
-        "not hold the chat whole: then every number is a lower bound.",
+        "not hold the chat whole: then every number is a lower bound, and fetch names the CLI command that fills it.",
       input: v.object({
         chat,
         since_time: v.optional(v.pipe(v.string(), v.description("an ISO 8601 time, or 2h / 1d ago"))),

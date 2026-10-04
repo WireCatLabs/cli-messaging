@@ -11,7 +11,7 @@ import { chatsService } from "./chats.js"
 import { type ServiceDeps, storedDeps } from "./deps.js"
 
 const account = { provider: "test", account: "500" }
-const messenger = { provider: "test", chatArgument: "a chat" } as Messenger
+const messenger = { provider: "test", chatArgument: "a chat", app: { command: "chat" } } as Messenger
 const guard = {} as SendGuard
 const SINCE = Date.parse("2026-09-01T00:00:00Z")
 
@@ -167,6 +167,7 @@ describe("chats stats", () => {
 
     expect(stats.complete).toBe(false)
     expect(stats.completeness.state).toBe("unknown")
+    expect(stats.fetch).toBe("chat store fetch 7")
   })
 
   it("says the counts are lower bounds when the messenger stopped reading joins early", async () => {
@@ -177,6 +178,7 @@ describe("chats stats", () => {
 
     expect(stats.complete).toBe(false)
     expect(stats.members?.more).toBe(true)
+    expect(stats).not.toHaveProperty("fetch")
   })
 
   it("leaves views out where no message carries them", async () => {

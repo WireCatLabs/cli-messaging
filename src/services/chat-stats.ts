@@ -43,6 +43,8 @@ export interface ChatStats {
   /** The store holds the chat whole and the messenger read every join and leave; otherwise lower bounds. */
   complete: boolean
   completeness: ChatCompleteness
+  /** The command that fetches what the store lacks; only when it does not hold the chat whole. */
+  fetch?: string
   messages: number
   senders: number
   replies: number

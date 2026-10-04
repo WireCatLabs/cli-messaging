@@ -163,10 +163,10 @@ export const chatsService = (deps: ServiceDeps): ChatsService => ({
     const from = since ?? Date.now() - EVENTS_DAYS * 86_400_000
     const until = Date.now()
     const messages = await storedSince(store, account, chatId, new Date(from).toISOString())
-    const connection = deps.offline ? undefined : await deps.connection().catch(() => undefined)
+    const connection = fromStore(deps) ? undefined : await deps.connection()
     const events = connection?.chatEvents ? await connection.chatEvents(chatId, { since: from }) : undefined
     const admins = (await connection?.admins?.(chatId)) ?? null
-    return chatStats(messages, {
+    const stats = chatStats(messages, {
       chatId,
       since: from,
       until,
@@ -176,6 +176,9 @@ export const chatsService = (deps: ServiceDeps): ChatsService => ({
       ...(by ? { by } : {}),
       timezone: timezoneOf(timezone),
     })
+    return completeness.state === "complete"
+      ? stats
+      : { ...stats, fetch: `${deps.messenger.app.command} store fetch ${chatId}` }
   },
 
   markRead: async ({ chat, until }) => {

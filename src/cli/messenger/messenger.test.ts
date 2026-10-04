@@ -1329,6 +1329,31 @@ describe("the shared read commands", () => {
       expect(chatStats.stdout).toHaveLength(1)
       expect(JSON.parse(chatStats.stdout[0] ?? "null")).toMatchObject({ chatId: "7", complete: false })
       expect(chatStats.stderr.join("\n")).toContain("joins and leaves were not asked of the messenger")
+      const asked: string[] = []
+      const joins = async () =>
+        ({
+          self: () => "500",
+          chatEvents: async (chatId: string) => {
+            asked.push("chatEvents")
+            return { chatId, since: "2000-01-01T00:00:00.000Z", more: false, events: [] }
+          },
+          admins: async () => null,
+          close: async () => {},
+        }) as unknown as MessengerAdapter
+      const online = await call(
+        ["chats", "stats", "7", "--since-time", "2000-01-01", "--json"],
+        joins,
+        env,
+        {},
+        { provider },
+      )
+      expect(online.code).toBe(0)
+      expect(online.stdout).toHaveLength(1)
+      expect(JSON.parse(online.stdout[0] ?? "null")).toMatchObject({
+        members: { joined: 0, left: 0 },
+        fetch: "chat store fetch 7",
+      })
+      expect(asked).toEqual(["chatEvents"])
       for (const recipe of searchRecipes.negative) {
         const result = await call(["messages", "search", recipe.query, "--json"], never, env, {}, { provider })
         expect(result.code).toBe(2)
