@@ -108,6 +108,7 @@
       "value": "<profiles>",
       "meaning": "also read these bots' copies, comma separated — each allowed by readOtherBots"
     },
+    "--by": { "value": "<chat|sender|day|hour>", "meaning": "what to count by" },
     "--can": {
       "value": "<rights>",
       "meaning": "what they may do, comma-separated: read, members, admins, info, pin, link, post, edit, delete",
@@ -1745,6 +1746,32 @@
     },
     "messages show": {
       "in": "all"
+    },
+    "messages stats": {
+      "in": [],
+      "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" },
+      "options": {
+        "--by": {
+          "in": [],
+          "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" }
+        },
+        "--chat": {
+          "in": [],
+          "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" }
+        },
+        "--limit": {
+          "in": [],
+          "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" }
+        },
+        "--source": {
+          "in": [],
+          "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" }
+        },
+        "--timezone": {
+          "in": [],
+          "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" }
+        }
+      }
     },
     "messages transcribe": {
       "in": "all",

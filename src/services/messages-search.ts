@@ -33,12 +33,18 @@ const positiveSources = (node: QueryNode): string[] =>
       ? [node.value.toLowerCase()]
       : []
     : node.clauses.filter(({ occur }) => occur !== "mustNot").flatMap(({ node }) => positiveSources(node))
-export const searchLucene = async (
+interface Prepared {
+  execution: QueryExecution
+  timezone: string
+  scopeAccounts: AccountKey[]
+  selectedChat?: { account: AccountKey; chatId: string }
+}
+const prepareLucene = async (
   store: MessageStore,
   account: AccountKey,
   request: SearchQuery,
-  messenger: Partial<Pick<Messenger, "savedChatId">> = {},
-): Promise<SearchFound> => {
+  messenger: Partial<Pick<Messenger, "savedChatId">>,
+): Promise<Prepared> => {
   if (!Number.isInteger(request.limit) || request.limit < 1 || request.limit > QUERY_PAGE_LIMIT)
     queryError("invalid_limit", { start: 0, end: 0 }, `use 1–${QUERY_PAGE_LIMIT} results`)
   if (
@@ -132,9 +138,6 @@ export const searchLucene = async (
     throw new CliError("validation_error", "the word index is not ready — run store migrate before strict search", {
       reason: "index_not_ready",
     })
-  const execute = store.matchQuery
-  if (!execute)
-    throw new CliError("validation_error", "this store does not support the Lucene profile — upgrade cli-messaging")
   const execution: QueryExecution = {
     root,
     accounts: scopeAccounts,
@@ -144,7 +147,12 @@ export const searchLucene = async (
     ...(request.signal ? { signal: request.signal } : {}),
     newest: request.newest,
   }
-  const found = scopeAccounts.length ? await execute(execution) : { items: [], hasMore: false }
+  return { execution, timezone, scopeAccounts, ...(selectedChat ? { selectedChat } : {}) }
+}
+const coverageOf = async (
+  store: MessageStore,
+  { scopeAccounts, selectedChat }: Prepared,
+): Promise<{ completeness: (ChatCompleteness & AccountKey)[]; coverage: SearchCoverage }> => {
   const completeness: (ChatCompleteness & AccountKey)[] = []
   for (const selected of scopeAccounts) {
     const chatIds = selectedChat
@@ -154,6 +162,44 @@ export const searchLucene = async (
       : (await store.chats(selected, {})).items.map(({ id }) => id)
     completeness.push(...(await store.chatCompleteness(selected, chatIds)).map((chat) => ({ ...chat, ...selected })))
   }
+  const state =
+    selectedChat && completeness.length > 0 && completeness.every(({ state }) => state === "complete")
+      ? "complete"
+      : completeness.some(({ state }) => state !== "unknown")
+        ? "partial"
+        : "unknown"
+  return {
+    completeness,
+    coverage: {
+      state,
+      lastSyncedAt: null,
+      inventoryComplete: false,
+      accounts: scopeAccounts,
+      ...(selectedChat ? { chat: selectedChat.chatId } : {}),
+      coveredChats: completeness.length,
+    },
+  }
+}
+const queryOf = (timezone: string, newest?: boolean): QueryMetadata => ({
+  language: "lucene-v1",
+  version: 1,
+  fieldsVersion: FIELD_VERSION,
+  presetVersion: PRESET_VERSION,
+  timezone,
+  order: newest ? "newest" : "relevance",
+})
+export const searchLucene = async (
+  store: MessageStore,
+  account: AccountKey,
+  request: SearchQuery,
+  messenger: Partial<Pick<Messenger, "savedChatId">> = {},
+): Promise<SearchFound> => {
+  const prepared = await prepareLucene(store, account, request, messenger)
+  const execute = store.matchQuery
+  if (!execute)
+    throw new CliError("validation_error", "this store does not support the Lucene profile — upgrade cli-messaging")
+  const found = prepared.scopeAccounts.length ? await execute(prepared.execution) : { items: [], hasMore: false }
+  const { completeness, coverage } = await coverageOf(store, prepared)
   const items = await Promise.all(
     found.items.map(async (hit) => {
       if (!request.context) return hit
@@ -167,37 +213,90 @@ export const searchLucene = async (
       }
     }),
   )
-  const state =
-    selectedChat && completeness.length > 0 && completeness.every(({ state }) => state === "complete")
-      ? "complete"
-      : completeness.some(({ state }) => state !== "unknown")
-        ? "partial"
-        : "unknown"
   return {
     ...found,
     items,
     corrections: [],
     wordsReady: true,
     completeness,
-    query: {
-      language: "lucene-v1",
-      version: 1,
-      fieldsVersion: FIELD_VERSION,
-      presetVersion: PRESET_VERSION,
-      timezone,
-      order: request.newest ? "newest" : "relevance",
-    },
-    coverage: {
-      state,
-      lastSyncedAt: null,
-      inventoryComplete: false,
-      accounts: scopeAccounts,
-      ...(selectedChat ? { chat: selectedChat.chatId } : {}),
-      coveredChats: completeness.length,
-    },
+    query: queryOf(prepared.timezone, request.newest),
+    coverage,
   }
 }
 const QUERY_PAGE_LIMIT = 1000
 const requiresChat = (node: QueryNode, chat: QueryNode): boolean =>
   node === chat ||
   (node.kind === "boolean" && node.clauses.some((clause) => clause.occur === "must" && requiresChat(clause.node, chat)))
+
+export type StatsGrouping = "chat" | "sender" | "day" | "hour"
+export interface StatsRow {
+  key: string
+  name: string | null
+  account?: AccountKey
+  count: number
+}
+export interface MessageStats {
+  by: StatsGrouping
+  items: StatsRow[]
+  total: number
+  hasMore: boolean
+  query: QueryMetadata
+  coverage: SearchCoverage
+  completeness: (ChatCompleteness & AccountKey)[]
+}
+const calendarKey = (zone: string, by: "day" | "hour") => {
+  const format = new Intl.DateTimeFormat("en-CA", {
+    timeZone: zone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    ...(by === "hour" ? { hour: "2-digit", hourCycle: "h23" } : {}),
+  } as Intl.DateTimeFormatOptions)
+  return (time: number) => {
+    const part = Object.fromEntries(format.formatToParts(time).map(({ type, value }) => [type, value]))
+    return `${part.year}-${part.month}-${part.day}${by === "hour" ? `T${part.hour}` : ""}`
+  }
+}
+/** Distinct matching messages counted by chat, sender, or calendar day/hour in the query's timezone. */
+export const statsLucene = async (
+  store: MessageStore,
+  account: AccountKey,
+  request: SearchQuery & { by: StatsGrouping },
+  messenger: Partial<Pick<Messenger, "savedChatId">> = {},
+): Promise<MessageStats> => {
+  const prepared = await prepareLucene(store, account, request, messenger)
+  const count = store.countQuery
+  if (!count)
+    throw new CliError("validation_error", "this store does not support the Lucene profile — upgrade cli-messaging")
+  const { by } = request
+  const calendar = by === "day" || by === "hour"
+  const groups = prepared.scopeAccounts.length ? await count(prepared.execution, calendar ? "time" : by) : []
+  let rows: StatsRow[]
+  if (calendar) {
+    const keyOf = calendarKey(prepared.timezone, by)
+    const totals = new Map<string, number>()
+    for (const { id, count } of groups) {
+      const key = keyOf(Number(id))
+      totals.set(key, (totals.get(key) ?? 0) + count)
+    }
+    rows = [...totals].sort(([a], [b]) => a.localeCompare(b)).map(([key, count]) => ({ key, name: null, count }))
+  } else
+    rows = groups
+      .map(({ provider, account, id, name, outgoing, count }) => ({
+        key: id ?? (outgoing ? "me" : "unknown"),
+        name,
+        ...(provider === undefined || account === undefined ? {} : { account: { provider, account } }),
+        count,
+      }))
+      .sort((a, b) => b.count - a.count || a.key.localeCompare(b.key))
+  const { completeness, coverage } = await coverageOf(store, prepared)
+  return {
+    by,
+    items: rows.slice(0, request.limit),
+    total: groups.reduce((sum, { count }) => sum + count, 0),
+    hasMore: rows.length > request.limit,
+    query: queryOf(prepared.timezone, request.newest),
+    coverage,
+    completeness,
+  }
+}

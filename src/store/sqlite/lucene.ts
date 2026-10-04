@@ -48,7 +48,41 @@ const wordMatch = (match: string): Fragment => ({
   exact: true,
   fts: match,
 })
-export const matchQuery = async (context: StoreContext, execution: QueryExecution): Promise<Page<ScoredHit>> => {
+export type QueryGrouping = "chat" | "sender" | "time"
+export interface QueryGroup {
+  provider?: string
+  account?: string
+  id: string | null
+  name: string | null
+  outgoing?: boolean
+  count: number
+}
+const GROUPS: Record<QueryGrouping, { key: string; select: string }> = {
+  chat: {
+    key: "m.chat_pk",
+    select: "ac.provider AS provider, ac.native_id AS account, c.native_id AS id, c.title AS name",
+  },
+  sender: {
+    key: "coalesce(m.sender_identity_pk, -m.account_pk)",
+    select:
+      "ac.provider AS provider, ac.native_id AS account, i.native_id AS id, i.name AS name, max(m.outgoing) AS outgoing",
+  },
+  // Quarter hours, so a calendar day or hour in any zone (+05:30, +05:45) is a whole number of buckets.
+  time: { key: "m.sent_at / 900000", select: "CAST(min(m.sent_at / 900000) * 900000 AS TEXT) AS id, NULL AS name" },
+}
+export const matchQuery = (context: StoreContext, execution: QueryExecution): Promise<Page<ScoredHit>> =>
+  runQuery(context, execution) as Promise<Page<ScoredHit>>
+/** Every match counted once, grouped; the work and candidate budgets of a search still apply. */
+export const countQuery = (
+  context: StoreContext,
+  execution: QueryExecution,
+  by: QueryGrouping,
+): Promise<QueryGroup[]> => runQuery(context, execution, by) as Promise<QueryGroup[]>
+const runQuery = async (
+  context: StoreContext,
+  execution: QueryExecution,
+  by?: QueryGrouping,
+): Promise<Page<ScoredHit> | QueryGroup[]> => {
   const { database } = context
   const started = context.now()
   const budget: MatchBudget = { work: 0 }
@@ -339,6 +373,20 @@ export const matchQuery = async (context: StoreContext, execution: QueryExecutio
       not.every(({ node }) => !evaluate(node, row, text, attachments))
     )
   }
+  const grouped = (sql: string, params: SqlValue[], source: string): QueryGroup[] => {
+    const group = GROUPS[by as QueryGrouping]
+    return database
+      .prepare(`SELECT ${group.select}, count(*) AS count ${source} WHERE ${sql} GROUP BY ${group.key}`)
+      .all(...params)
+      .map((row) => ({
+        ...(row.provider == null ? {} : { provider: String(row.provider), account: String(row.account) }),
+        id: row.id == null ? null : String(row.id),
+        name: row.name == null ? null : String(row.name),
+        ...(row.outgoing == null ? {} : { outgoing: Number(row.outgoing) === 1 }),
+        count: Number(row.count),
+      }))
+  }
+  if (by && leaves.every(({ test }) => !test)) return grouped(where.sql, where.params, from)
   if (leaves.every(({ test }) => !test)) {
     const rows = database
       .prepare(`SELECT m.pk AS pk, ${relevance} AS relevance ${from} WHERE ${where.sql} ORDER BY ${order} LIMIT ?`)
@@ -385,10 +433,11 @@ export const matchQuery = async (context: StoreContext, execution: QueryExecutio
       const attachments: unknown = JSON.parse(String(row.attachment_kinds))
       if (evaluate(execution.root, row, String(row.body), Array.isArray(attachments) ? attachments.map(String) : []))
         found.push(pk)
-      if (found.length > execution.limit) break
+      if (!by && found.length > execution.limit) break
     }
-    if (found.length > execution.limit) break
+    if (!by && found.length > execution.limit) break
   }
+  if (by) return grouped("m.pk IN (SELECT value FROM json_each(?))", [JSON.stringify(found)], joinedFrom)
   return {
     items: hitsByPk(context, found.slice(0, execution.limit)).map((hit, index) => ({
       ...hit,

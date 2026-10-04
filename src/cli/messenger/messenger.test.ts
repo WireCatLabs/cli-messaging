@@ -1306,6 +1306,18 @@ describe("the shared read commands", () => {
         })
         expect(result.stdout).toHaveLength(1)
       }
+      const stats = await call(["messages", "stats", "invoice", "--json"], never, env, {}, { provider })
+      expect(stats.code).toBe(0)
+      expect(stats.stdout).toHaveLength(1)
+      expect(JSON.parse(stats.stdout[0] ?? "null")).toMatchObject({
+        by: "chat",
+        total: 3,
+        items: [{ key: "7", name: "Work fixture", count: 3 }],
+        query: { language: "lucene-v1" },
+      })
+      const badGrouping = await call(["messages", "stats", "--by", "week", "--json"], never, env, {}, { provider })
+      expect(badGrouping.code).toBe(2)
+      expect(badGrouping.stdout).toEqual([])
       for (const recipe of searchRecipes.negative) {
         const result = await call(["messages", "search", recipe.query, "--json"], never, env, {}, { provider })
         expect(result.code).toBe(2)

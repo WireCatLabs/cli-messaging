@@ -8,6 +8,10 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Added
 
+- `messages stats [query] --by chat|sender|day|hour` and the read-only MCP tool `messages_stats` count what a strict
+  query matches in the local store, each message once: by chat or sender (most first), or by calendar day or hour in
+  `--timezone` (in order). No query counts every stored message. JSON: `{ by, items: [{ key, name, account?, count }],
+  total, hasMore, page, limit, query, coverage, completeness }`; counts are lower bounds where coverage is not complete.
 - `inbox --kind` and `review --kind` take chat kinds, comma-separated (`dialog,group,channel`), so direct chats,
   groups and channels can be caught up on apart or together.
 
