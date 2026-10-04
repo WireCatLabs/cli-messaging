@@ -118,7 +118,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--after-n` | `<n>` | how many messages after it |  | `messages context` |
 | `--after-time` | `<time>` | read what came after this ISO 8601 time, or 2h / 1d ago; not with --after-id or the --before pair |  | `messages list` |
 | `--agent` | `<agent>` | install the skill for this agent; asks at a terminal, otherwise none |  | `setup` (planned) |
-| `--all` |  | every row, no paging |  | `chats list`, `chats members list` (planned), `contacts list`, `inbox` (planned), `messages download`, `review` (planned), `store export` |
+| `--all` |  | every row, no paging |  | `chats list`, `chats members list` (planned), `contacts list`, `inbox` (planned), `messages download`, `review` (planned), `store export` (planned) |
 | `--all-bots` |  | also read every other bot's copy on this machine that readOtherBots allows |  | `bot contacts show`, `bot messages between`, `bot messages search` |
 | `--all-can-pin` | `<on\|off>` | every member may pin messages |  | `chats update` |
 | `--allow-any-file` |  | send a --file even from a hidden folder, ~/.ssh or the tool's own folders |  | `bot messages send`, `messages send` |
@@ -153,7 +153,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--description` | `<text>` | the new about text — of a chat or of your account |  | `account update`, `chats update` |
 | `--dims` | `<n>` | remote: the vector size — needed with --base-url; shortens an OpenAI model's |  | `conversations embed`, `conversations embed clear`, `conversations embed status`, `conversations related` (planned), `conversations search`, `conversations status` (planned) |
 | `--dry-run` |  | judge and plan; do nothing |  | `bot chats moderate`, `chats moderate` (planned), `config migrate` (planned) |
-| `--encrypt` |  | compress and encrypt with a password, typed at a hidden prompt or piped on stdin; never kept |  | `store backup`, `store export` |
+| `--encrypt` |  | compress and encrypt with a password, typed at a hidden prompt or piped on stdin; never kept |  | `store backup` (planned), `store export` (planned) |
 | `--estimate` |  | only say what the fetch would cost, from this machine's copy; nothing is sent. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | `store fetch` |
 | `--events` |  | also print edits, deletions and reactions; every line then names its event. **watch updates use this flag independently of the group event --type filter** |  | `bot watch`, `watch` |
 | `--file` | `<file>` | attach a file; images go as a photo, videos as a video. Repeat it for more |  | `bot messages send`, `messages send` |
@@ -167,7 +167,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--idle` | `<duration>` | stop after this long with nobody using it — 15m, 1h |  | `serve` (max-only), `server restart` (max-only), `server start` (max-only) |
 | `--json` |  | machine-readable output: one JSON value on stdout, nothing else |  | every command |
 | `--jsonl` |  | machine-readable output: one JSON object per line, for streaming and jq |  | every command |
-| `--kind` | `<kind>` | only chats of this kind: dialog, group, channel or saved |  | `chats list`, `inbox`, `review`, `store export` |
+| `--kind` | `<kind>` | only chats of this kind: dialog, group, channel or saved |  | `chats list`, `inbox` (planned), `review` (planned), `store export` (planned) |
 | `--language` | `<lucene\|legacy>` | the query language: strict Lucene or legacy discovery | `lucene` | `messages search` |
 | `--last` | `<n>` | stop once the newest n messages are held; not with --since. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | `bot store fetch`, `store fetch` |
 | `--last-name` | `<name>` | your last name |  | `account update` |
@@ -175,7 +175,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--limit` | `<n>` | how many: rows to show, or messages one run fetches. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | `bot chats members list` (max-only), `bot contacts show`, `bot messages between`, `bot messages list`, `bot messages search`, `bot store fetch`, `chats list`, `chats members list` (planned), `contacts list`, `conversations list`, `conversations related` (planned), `conversations search`, `inbox`, `messages evidence`, `messages list`, `messages search`, `messages stats` (planned), `runs list`, `sends list`, `store fetch` |
 | `--lines` | `<n>` | how many lines | `50` | `server logs` |
 | `--local` |  | use the model on this machine, never the messenger |  | `messages transcribe` (tg-only) |
-| `--mark-read` |  | also mark the chat read up to the newest message shown; the other person sees it |  | `inbox`, `messages list`, `review` |
+| `--mark-read` |  | also mark the chat read up to the newest message shown; the other person sees it |  | `inbox` (planned), `messages list`, `review` (planned) |
 | `--marker` | `<value>` | Marker |  | `bot chats members list` (max-only) |
 | `--max-actions` | `<n>` | at most this many actions in one run | `10` | `bot chats moderate`, `chats moderate` (planned) |
 | `--max-chats` | `<n>` | at most this many chats in one run | `20` | `conversations build` (planned), `conversations embed` (planned), `conversations search` (planned) |
@@ -186,10 +186,10 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--method` | `<method>` | how to log in when there is no session |  | `setup` (planned) |
 | `--model` | `<id>` | which downloaded speech model hears them; `models audio list` shows them. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | `conversations embed`, `conversations embed clear`, `conversations embed status`, `conversations links clear` (planned), `conversations related` (planned), `conversations search`, `conversations status` (planned), `inbox`, `messages list`, `messages transcribe`, `review` (planned) |
 | `--multiple` |  | people may pick several answers |  | `polls create` |
-| `--new` |  | what arrived since the last check, each message once — for scheduled runs |  | `inbox`, `review` |
+| `--new` |  | what arrived since the last check, each message once — for scheduled runs |  | `inbox`, `review` (planned) |
 | `--newest` |  | newest first instead of best first |  | `bot messages search`, `messages search` |
 | `--no-ban` |  | remove without banning; by default a removed person cannot come back by the link |  | `bot chats moderate` |
-| `--no-mark-read` |  | do not mark read, whatever the catchUpMarksRead setting says |  | `inbox`, `review` |
+| `--no-mark-read` |  | do not mark read, whatever the catchUpMarksRead setting says |  | `inbox` (planned), `review` (planned) |
 | `--no-preview` |  | no preview card for a link in the text |  | `messages send` |
 | `--no-record` |  | do not keep it, whatever the configuration says |  | every command |
 | `--no-serve` |  | do not start it; log in on this command's own connection unless one is running |  | every command (planned) |
@@ -202,7 +202,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--only-owner-edits-info` | `<on\|off>` | only the owner may change the name and photo |  | `chats update` (max-only) |
 | `--order` | `<recent\|name>` | newest conversation first, or alphabetical |  | `contacts list` |
 | `--others` |  | every session but this one. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | `account sessions end` |
-| `--output` |  | where to write: a directory for `messages download`, a file for `store export`. **MAX `messages download --output <dir>` remains a compatibility alias for `--output-dir`; other commands use --output for a file — e10** | `.` | `doctor report create`, `messages download` (max-only), `store decrypt`, `store export` |
+| `--output` |  | where to write: a directory for `messages download`, a file for `store export`. **MAX `messages download --output <dir>` remains a compatibility alias for `--output-dir`; other commands use --output for a file — e10** | `.` | `doctor report create`, `messages download` (max-only), `store decrypt` (planned), `store export` |
 | `--output-dir` | `<dir>` | the folder to write into, created if missing | `.` | `messages download` |
 | `--page` | `<n>` | which page, starting at 1 |  | `chats list`, `chats members list` (planned), `contacts list` |
 | `--page-size` | `<n>` | how many items one request to the messenger asks for; the messenger's own if not given. **the default is each messenger's own page: 30 on MAX, 100 on Telegram** |  | `bot store fetch`, `store fetch` |
@@ -236,7 +236,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--timeout` | `<duration>` | give up on the whole command after this — 30s, 2m, 500ms |  | every command |
 | `--timezone` | `<zone>` | the IANA timezone for calendar date boundaries | `system IANA timezone` | `messages search`, `messages stats` (planned) |
 | `--title` | `<title>` | the new name — of a chat or a folder |  | `bot chats admins add`, `chats folders update`, `chats update` |
-| `--to` | `<chat>` | the chat to forward it to: an id, or part of a chat name. **the sentence says how to name a chat the messenger's way, so it differs on purpose (Help text rule 4)** |  | `messages forward`, `store export` |
+| `--to` | `<chat>` | the chat to forward it to: an id, or part of a chat name. **the sentence says how to name a chat the messenger's way, so it differs on purpose (Help text rule 4)** |  | `messages forward`, `store export` (planned) |
 | `--topic` | `<id>` | send to this forum topic. **Telegram group forums only; MAX explicitly refuses this option before sending** |  | `messages send`, `polls create` |
 | `--trace` |  | one line per request on stderr: ids and timings, never message content. **max logs one line per request, tg the connection's own lines: the same option, a different mechanism (Help text rule 4)** |  | every command |
 | `--transcribe` |  | hear voice messages not heard yet, on this machine; slow, the model must be downloaded. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | `inbox`, `messages list`, `review` |
