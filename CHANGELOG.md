@@ -8,6 +8,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## 0.143.0 — 04.10.2026
 
+Released early: tg-cli and max-cli cannot move to 0.142.0: its parity manifest lacks rows for its own new options
+
 ### Fixed
 
 - The parity manifest lists the commands and options 0.142.0 added — `inbox`/`review --kind`, `--mark-read`,
