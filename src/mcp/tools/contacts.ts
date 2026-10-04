@@ -2,7 +2,9 @@ import * as v from "valibot"
 import type { Messenger } from "../../cli/messenger/context.js"
 import type { MessengerAdapter } from "../../cli/messenger/port.js"
 import type { SendGuard } from "../../sends/guard.js"
-import { onlineDeps, phoneOf, servicesFor } from "../../services/index.js"
+import { onlineDeps, phoneOf, servicesFor, storedDeps } from "../../services/index.js"
+import { momentOf } from "../../services/moment.js"
+import { CONTEXT_BYTES, CONTEXT_MESSAGES } from "../../services/person-context.js"
 import { type AnyTool, envelope, limit, page, paging, READ, tool } from "../tool.js"
 
 export const contactsTools = (messenger: Messenger): Record<string, AnyTool> => {
@@ -48,6 +50,29 @@ export const contactsTools = (messenger: Messenger): Record<string, AnyTool> => 
       }),
       annotations: READ,
       served: (services, args) => services.people.show(args.person),
+    }),
+
+    contacts_context: tool({
+      title: "What is known about a person",
+      description:
+        "Everything the local store holds about one person, in every messenger linked to them: person { uid, " +
+        "identities }, shared chats, last { fromThem, fromMe, fromThemAnywhere }, recent { direct, groups }, " +
+        "mentions — each message with a locator. complete is false when a shared chat is not stored whole; notRead " +
+        "names it and why. Reads the store only; marks nothing read. Never assumes two people with one name are one.",
+      input: v.object({
+        person: v.pipe(v.string(), v.minLength(1), v.description("person id, @username, or part of a name")),
+        limit: v.optional(
+          v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(100), v.description("at most this many per list")),
+        ),
+        since_time: v.optional(v.pipe(v.string(), v.description("an ISO 8601 time, or 2h / 1d ago"))),
+      }),
+      annotations: { ...READ, openWorldHint: false },
+      stored: (store, account, args, defaults) =>
+        servicesFor(storedDeps(messenger, store, account, defaults.guard)).people.context(args.person, {
+          messages: args.limit ?? CONTEXT_MESSAGES,
+          bytes: CONTEXT_BYTES,
+          ...(args.since_time === undefined ? {} : { since: momentOf(args.since_time, "since_time") }),
+        }),
     }),
   }
 }

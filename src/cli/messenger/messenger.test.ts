@@ -1408,6 +1408,70 @@ describe("the shared read commands", () => {
     },
   )
 
+  it("contacts context answers from the store alone, and link joins a MAX identity to it", async () => {
+    const root = mkdtempSync(join(tmpdir(), "person-context-"))
+    const env = {
+      CHAT_STATE_DIR: join(root, "state"),
+      CHAT_CONFIG_DIR: join(root, "config"),
+      MESSAGING_STORE: join(root, "m.db"),
+    }
+    rememberAccount(app, "default", "500", env)
+    const store = await openStore({ path: env.MESSAGING_STORE })
+    const tg = { provider: "telegram", account: "500" }
+    const max = { provider: "max", account: "900" }
+    const at = "2026-09-02T10:00:00.000Z"
+    const dialog = { kind: "dialog" as const, unreadCount: 0, lastMessageAt: at, participantsCount: null }
+    const said = (chatId: string, senderId: string) => ({
+      id: "1",
+      chatId,
+      senderId,
+      senderName: null,
+      timestamp: at,
+      editedAt: null,
+      text: "hello",
+      outgoing: false,
+      attachments: [],
+      replyTo: null,
+      forwardedFrom: null,
+      reactions: null,
+    })
+    await store.saveChats(tg, [{ ...dialog, id: "11", title: "Ana" }])
+    await store.saveMessages(tg, "11", [said("11", "11")], { via: "test" })
+    await store.saveMembers(tg, "11", ["11", "500"])
+    await store.saveChats(max, [{ ...dialog, id: "m1", title: "Ana" }])
+    await store.saveMessages(max, "m1", [said("m1", "m5")], { via: "test" })
+    await store.saveMembers(max, "m1", ["m5", "900"])
+    await store.close()
+    const never = async (): Promise<MessengerAdapter> => {
+      throw new Error("contacts context must never connect")
+    }
+
+    const linked = await call(
+      ["contacts", "link", "11", "max:m5", "--offline", "--json"],
+      never,
+      env,
+      {},
+      {
+        provider: "telegram",
+      },
+    )
+    expect(linked.code).toBe(0)
+    const found = await call(
+      ["contacts", "context", "11", "--offline", "--json"],
+      never,
+      env,
+      {},
+      {
+        provider: "telegram",
+      },
+    )
+    expect(found.code).toBe(0)
+    expect(found.stdout).toHaveLength(1)
+    const answer = JSON.parse(found.stdout[0] ?? "null")
+    expect(answer.person.identities.map((one: { provider: string }) => one.provider)).toEqual(["max", "telegram"])
+    expect(answer.recent.direct).toHaveLength(2)
+  })
+
   it("**builds a chat's conversations** and explains a message's place in one, without connecting", async () => {
     const root = mkdtempSync(join(tmpdir(), "messenger-"))
     const env = {

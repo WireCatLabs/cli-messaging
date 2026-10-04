@@ -1232,8 +1232,26 @@
     "contacts block": {
       "in": "all"
     },
+    "contacts context": {
+      "in": [],
+      "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" },
+      "options": {
+        "--limit": {
+          "in": [],
+          "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" }
+        },
+        "--since-time": {
+          "in": [],
+          "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" }
+        }
+      }
+    },
     "contacts import": {
       "in": "all"
+    },
+    "contacts link": {
+      "in": [],
+      "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" }
     },
     "contacts list": {
       "in": "all",
@@ -1262,6 +1280,10 @@
     },
     "contacts unblock": {
       "in": "all"
+    },
+    "contacts unlink": {
+      "in": [],
+      "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" }
     },
     "conversations": {
       "in": "all"

@@ -32,6 +32,7 @@ import type { QueryGroup, QueryGrouping } from "./sqlite/lucene.js"
 import * as lucene from "./sqlite/lucene.js"
 import * as messageWrites from "./sqlite/messages.js"
 import { openSqlite, type StoreContext } from "./sqlite/open.js"
+import * as personLinks from "./sqlite/person-links.js"
 import * as ranges from "./sqlite/ranges.js"
 import * as reads from "./sqlite/reads.js"
 import * as search from "./sqlite/search.js"
@@ -76,6 +77,36 @@ export interface PersonFacts {
  * `together` keeps only the chats where **every** sender has a message in this store — written
  * there, as far as this copy knows, which is not the same as being a member.
  */
+/** One identity in one messenger, by the messenger's own id. `provider` is any string: `email` is one. */
+export interface IdentityRef {
+  provider: Provider
+  id: Id
+}
+
+/** How a link was decided (`manual`, `same-email`) and who decided it (`owner`, a program's name). */
+export interface LinkOptions {
+  method: string
+  by: string
+}
+
+export interface LinkedIdentity extends IdentityRef {
+  name: string | null
+  username: string | null
+  isBot: boolean | null
+  /** The accounts in this store that have seen it. */
+  accounts: Id[]
+  method: string
+  linkedBy: string
+  linkedAt: string
+}
+
+/** A person across messengers: `uid` stays the same however their names change. */
+export interface PersonRecord {
+  uid: string
+  name: string | null
+  identities: LinkedIdentity[]
+}
+
 export interface MessageFilter {
   provider?: Provider
   account?: AccountKey
@@ -331,6 +362,12 @@ export interface MessageStore {
   accounts(): Promise<AccountKey[]>
   /** Everyone this provider's accounts have seen; with `account`, only who that account has seen. */
   people(provider: Provider, options?: { account?: Id; accounts?: Id[] }): Promise<PeopleLookup>
+  personOf(identity: IdentityRef): Promise<PersonRecord | undefined>
+  /** Records the decision in `identity_link_events`; `unlinkIdentity` undoes it. */
+  linkIdentities(person: IdentityRef, other: IdentityRef, options: LinkOptions): Promise<PersonRecord>
+  unlinkIdentity(identity: IdentityRef, options: LinkOptions): Promise<PersonRecord>
+  /** Messages of the account that name this person, newest first. */
+  mentioning(key: AccountKey, person: { id: Id; username: string | null }, limit: number): Promise<Page<StoredHit>>
   /** A message's reactions as they are now; answers whether the message is held at all. */
   saveReactions(key: AccountKey, chatId: Id, messageId: Id, reactions: Reactions): Promise<boolean>
   /**
@@ -554,6 +591,28 @@ const storeOver = (context: StoreContext): MessageStore => {
       const accountKey = findAccountPk(key)
       const chatKey = accountKey === undefined ? undefined : findChatPk(accountKey, chatId)
       return chatKey === undefined ? [] : chatQueries.members(context, chatKey)
+    },
+
+    personOf: async (identity) => personLinks.personOf(context, identity),
+    linkIdentities: async (person, other, options) => {
+      let linked: PersonRecord | undefined
+      inTransaction(() => {
+        linked = personLinks.linkIdentities(context, person, other, options)
+      })
+      return linked as PersonRecord
+    },
+    unlinkIdentity: async (identity, options) => {
+      let alone: PersonRecord | undefined
+      inTransaction(() => {
+        alone = personLinks.unlinkIdentity(context, identity, options)
+      })
+      return alone as PersonRecord
+    },
+    mentioning: async (key, person, limit) => {
+      const accountKey = findAccountPk(key)
+      return accountKey === undefined
+        ? { items: [], hasMore: false }
+        : personLinks.mentioning(context, accountKey, person, limit)
     },
 
     chatsWith: async (key, memberId) => {

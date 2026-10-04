@@ -29,6 +29,13 @@ Released early: max-cli and tg-cli need the reviewed search coverage and history
   left out. It removes nobody. Not with `--offline`: the store keeps no member lists.
 - `GroupMember` takes optional `joinedAt`, `invitedBy`, `isBot`, `deleted`, `flagged` (`scam` | `fake`) and
   `hasPhoto`, absent where a messenger does not say. Telegram's list carries all of them; tg maps them next.
+- `contacts context <person> [--limit] [--since-time]` and read-only MCP `contacts_context`: what the store holds
+  about one person in every messenger linked to them — shared chats, the last message each way, their recent
+  messages in the direct chat and in groups, where others mentioned them, each with a locator. Store only, marks
+  nothing read; `complete: false` and `notRead` name a shared chat not stored whole.
+- `contacts link <person> <messenger>:<person>` and `contacts unlink`: record that a Telegram and a MAX identity
+  are one person, or undo it, in `identity_links` with an event per change. `./store` exports the same as
+  `MessageStore.linkIdentities`, `unlinkIdentity` and `personOf`, for programs that join other sources.
 
 - `chats stats` and MCP `chats_stats` also sum `comments` — the comment count a channel post carries in its
   provider metadata, beside `views` and `forwards` — and show it on each top post. Absent where no post carries it.
