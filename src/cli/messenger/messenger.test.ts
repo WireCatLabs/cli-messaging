@@ -1781,7 +1781,7 @@ describe("the shared read commands", () => {
     expect(existsSync(join(root, "x"))).toBe(false)
   })
 
-  it("**export and back up encrypted** with a piped password, open them only with it, and never keep it", async () => {
+  const encryptedArchive = async () => {
     const root = mkdtempSync(join(tmpdir(), "messenger-"))
     const env = {
       CHAT_STATE_DIR: join(root, "state"),
@@ -1795,6 +1795,11 @@ describe("the shared read commands", () => {
     const password = (text: string) => ({ stdin: Object.assign(Readable.from([`${text}\n`]), { isTTY: false }) })
     const dir = join(root, "sealed")
 
+    return { root, env, never, password, dir }
+  }
+
+  it("exports encrypted, accepts only the password and never keeps it", async () => {
+    const { root, env, never, password, dir } = await encryptedArchive()
     const first = await call(
       ["store", "export", "7", "--to", dir, "--encrypt", "--json"],
       never,
@@ -1835,7 +1840,17 @@ describe("the shared read commands", () => {
     expect(noFile.code).toBe(2)
     const everyFile = readdirSync(root, { recursive: true, withFileTypes: true }).filter((entry) => entry.isFile())
     expect(everyFile.filter((entry) => readFileSync(join(entry.parentPath, entry.name)).includes("pw one"))).toEqual([])
+  })
 
+  it("checks the encrypted folder password on later exports", async () => {
+    const { env, never, password, dir } = await encryptedArchive()
+    const first = await call(
+      ["store", "export", "7", "--to", dir, "--encrypt", "--json"],
+      never,
+      env,
+      password("pw one"),
+    )
+    expect(first.code).toBe(0)
     const again = await call(
       ["store", "export", "7", "--to", dir, "--encrypt", "--json"],
       never,
@@ -1851,7 +1866,10 @@ describe("the shared read commands", () => {
     expect(again.code).toBe(2)
     expect(again.stderr.join("\n")).toContain("not the password this folder was sealed with")
     expect(same.code).toBe(0)
+  })
 
+  it("backs up encrypted and restores only with the password, leaving no temporary copy", async () => {
+    const { root, env, never, password } = await encryptedArchive()
     const away = join(root, "away")
     mkdirSync(away)
     const backup = join(away, "store.sealed")
