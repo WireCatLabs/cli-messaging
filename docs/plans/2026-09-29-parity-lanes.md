@@ -74,8 +74,8 @@ racing is safe: `bin/release` refuses a version already on npm, and the second r
 and retries. To try an unreleased cli-messaging in tg first: `bin/try-messaging` in the lane's tg
 worktree, never a committed `file:` path.
 
-**Store migrations are announced here before they are written.** The next free number is **15**
-(14 is phase 5's chunks and vectors — [`../storage/plans/phase-5.md`](../storage/plans/phase-5.md) E8, announced 2026-10-02; it was first taken for `chats.left_at` on 2026-10-01 and released the same day: version 6's
+**Store migrations are announced here before they are written.** The next free number is **16**
+(15 is Snowball stemming's stem index — `message_stems`, its pending queue, `search_index_state.analyzer` and `store_settings`, [`2026-10-04-stemmed-search.md`](2026-10-04-stemmed-search.md) S1, announced 2026-10-04; 14 is phase 5's chunks and vectors — [`../storage/plans/phase-5.md`](../storage/plans/phase-5.md) E8, announced 2026-10-02; it was first taken for `chats.left_at` on 2026-10-01 and released the same day: version 6's
 `membership_state` already holds `left`, [`../storage/plans/chats-left.md`](../storage/plans/chats-left.md); 13 is phase 3's conversation tables — [`../storage/plans/phase-3.md`](../storage/plans/phase-3.md) item 1,
 announced 2026-10-01, **merged only after 12 is on `main`**: the runner skips every version at or below the
 file's, so a file already at 13 would never get 12 (`src/store/migrations.ts:314`); 12 is phase 2's word index — [`../storage/plans/phase-2.md`](../storage/plans/phase-2.md) item 1,
