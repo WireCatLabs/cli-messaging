@@ -6,6 +6,10 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.146.0 — 04.10.2026
+
+Released early: tg-cli: its parity check refuses the mcp --http flags of 0.145.0; max-cli needs the exported HTTP pieces
+
 ### Added
 
 - `./cli` exports `serveOverHttp`, `OVER_HTTP`, `httpTokenFile`, `revokeAll` and `MCP_PATH`, so a CLI with its own MCP
