@@ -1781,6 +1781,94 @@ describe("the shared read commands", () => {
     expect(existsSync(join(root, "x"))).toBe(false)
   })
 
+  it("**export and back up encrypted** with a piped password, open them only with it, and never keep it", async () => {
+    const root = mkdtempSync(join(tmpdir(), "messenger-"))
+    const env = {
+      CHAT_STATE_DIR: join(root, "state"),
+      CHAT_CONFIG_DIR: join(root, "config"),
+      MESSAGING_STORE: join(root, "m.db"),
+    }
+    await call(["messages", "context", "Book", "2", "--json"], async () => fake, env)
+    const never = async (): Promise<MessengerAdapter> => {
+      throw new Error("the archive commands must never connect")
+    }
+    const password = (text: string) => ({ stdin: Object.assign(Readable.from([`${text}\n`]), { isTTY: false }) })
+    const dir = join(root, "sealed")
+
+    const first = await call(
+      ["store", "export", "7", "--to", dir, "--encrypt", "--json"],
+      never,
+      env,
+      password("pw one"),
+    )
+    const manifest = JSON.parse(readFileSync(join(dir, "manifest.json"), "utf8"))
+    const run = first.stdout[0] ? JSON.parse(first.stdout[0]).chats[0].file : ""
+    const plainInto = await call(["store", "export", "7", "--to", dir], never, env)
+    const wrong = await call(
+      ["store", "decrypt", join(dir, run), "--output", join(root, "x.jsonl")],
+      never,
+      env,
+      password("pw two"),
+    )
+    const opened = await call(
+      ["store", "decrypt", join(dir, run), "--output", join(root, "run.jsonl")],
+      never,
+      env,
+      password("pw one"),
+    )
+    const noFile = await call(["store", "export", "7", "--encrypt"], never, env, password("pw one"))
+
+    expect(first.code).toBe(0)
+    expect(manifest).toMatchObject({ encrypted: true, chats: { "7": { title: null, messages: 3 } } })
+    expect(run).toMatch(/^run-.*\.jsonl\.sealed$/)
+    expect(readFileSync(join(dir, run)).includes("Book")).toBe(false)
+    expect(plainInto.code).toBe(2)
+    expect(wrong.code).toBe(2)
+    expect(existsSync(join(root, "x.jsonl"))).toBe(false)
+    expect(opened.code).toBe(0)
+    expect(
+      readFileSync(join(root, "run.jsonl"), "utf8")
+        .trim()
+        .split("\n")
+        .map((line) => JSON.parse(line).id),
+    ).toEqual(["1", "2", "3"])
+    expect(noFile.code).toBe(2)
+    const everyFile = readdirSync(root, { recursive: true, withFileTypes: true }).filter((entry) => entry.isFile())
+    expect(everyFile.filter((entry) => readFileSync(join(entry.parentPath, entry.name)).includes("pw one"))).toEqual([])
+
+    const again = await call(
+      ["store", "export", "7", "--to", dir, "--encrypt", "--json"],
+      never,
+      env,
+      password("pw two"),
+    )
+    const same = await call(
+      ["store", "export", "7", "--to", dir, "--encrypt", "--json"],
+      never,
+      env,
+      password("pw one"),
+    )
+    expect(again.code).toBe(2)
+    expect(again.stderr.join("\n")).toContain("not the password this folder was sealed with")
+    expect(same.code).toBe(0)
+
+    const away = join(root, "away")
+    mkdirSync(away)
+    const backup = join(away, "store.sealed")
+    const backedUp = await call(["store", "backup", backup, "--encrypt", "--json"], never, env, password("pw one"))
+    const badRestore = await call(["store", "restore", backup], never, env, password("nope"))
+    const restored = await call(["store", "restore", backup, "--json"], never, env, password("pw one"))
+
+    expect(JSON.parse(backedUp.stdout[0] ?? "")).toMatchObject({ path: backup, encrypted: true, rows: { messages: 3 } })
+    expect(readdirSync(away)).toEqual(["store.sealed"])
+    expect(readFileSync(backup).subarray(0, 15).toString()).not.toBe("SQLite format 3")
+    expect(readdirSync(root).filter((name) => name.includes(".backup-"))).toEqual([])
+    expect(badRestore.code).toBe(2)
+    expect(restored.code).toBe(0)
+    expect(JSON.parse(restored.stdout[0] ?? "")).toMatchObject({ restoredFrom: backup })
+    expect(readdirSync(root).filter((name) => name.includes("unsealing"))).toEqual([])
+  })
+
   it("keep the account file where tg-cli 0.x kept it", () => {
     const tg = { command: "tg", appName: "tg-cli", envPrefix: "TG", description: "", version: "0" }
     expect(accountFileFor(tg, "work", { TG_STATE_DIR: "/state" })).toBe("/state/accounts/work.json")
