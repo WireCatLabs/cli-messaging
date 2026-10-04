@@ -6,6 +6,14 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- Store version 15: a stem index beside the word index, its queue, and a store-wide stemmer setting.
+  `store migrate` builds a stem index; queries unchanged. `store reindex` rebuilds it, `store info` and
+  `store check` report it (`stemIndex`), and `config set searchStemmers.cyrillic|latin` chooses the stemmers
+  for the whole store (`russian` or `none`; `spanish`, `english` or `none`). `MessageStore` gains `stemsState`,
+  `fillStems`, `stemmers` and `saveStemmers`.
+
 ## 0.147.0 — 04.10.2026
 
 Released early: max-cli and tg-cli need the reviewed search coverage and history-boundary fixes for their coordinated release

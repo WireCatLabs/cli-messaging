@@ -108,7 +108,7 @@ export interface Reacted {
 /** max-cli's: many at once is what a ban for automation looks like. */
 export const DELETE_AT_ONCE = 10
 
-/** How long a search may spend building the word index first (phase 2 plan S3: about 200 ms). */
+/** How long a search may spend building the word index, then the stems, first (phase 2 plan S3: about 200 ms). */
 export const SEARCH_FILL_MS = 200
 
 export const statsStore = async (
@@ -119,6 +119,7 @@ export const statsStore = async (
 ): Promise<MessageStats> => {
   const stop = Date.now() + SEARCH_FILL_MS
   await store.fillSearchIndex({ until: () => Date.now() >= stop })
+  await store.fillStems({ until: () => Date.now() >= stop })
   return statsLucene(store, account, request, messenger)
 }
 
@@ -420,6 +421,7 @@ export const searchStore = async (
   // A large file builds its word index a slice per search as well as in `store migrate` (NEED-453 A).
   const stop = Date.now() + SEARCH_FILL_MS
   await store.fillSearchIndex({ until: () => Date.now() >= stop })
+  await store.fillStems({ until: () => Date.now() >= stop })
   if (!pattern && (request.language === "lucene" || request.ast !== undefined))
     return searchLucene(store, account, request, messenger)
   if (pattern && (source !== undefined || accounts !== undefined || senders !== undefined)) {

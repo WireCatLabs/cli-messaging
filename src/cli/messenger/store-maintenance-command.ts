@@ -23,6 +23,7 @@ import { openCache } from "../../store/open.js"
 import { storePath } from "../../store/path.js"
 import { pendingNormalization } from "../../store/sqlite/backfill.js"
 import { fillSearchIndex, resetSearchIndex, searchIndexState } from "../../store/sqlite/search-index.js"
+import { fillStems, resetStems, stemsState } from "../../store/sqlite/stems.js"
 import { environmentOf, outputFor } from "../context.js"
 import type { Messenger } from "./context.js"
 import { ENCRYPT_OPTION, passwordOf } from "./password.js"
@@ -117,6 +118,7 @@ const infoCommand = (): Command =>
           rows: version > 0 ? Object.fromEntries(tables.map((table) => [table, count(database, table)])) : {},
           pendingNormalization: pendingIfKnown(database),
           wordIndex: searchIndexState(database) ?? null,
+          stemIndex: stemsState(database) ?? null,
         }
       })
       renderer.result(await read.catch((error) => ({ path, exists: true, opens: false, error: messageOf(error) })))
@@ -160,6 +162,16 @@ const checkCommand = (messenger: Messenger): Command =>
           `the word index reaches message ${words.filledThrough} of ${words.watermark} — \`${command} store migrate\` finishes it`,
         )
       }
+      const stems = answer.stemIndex
+      if (stems?.cause === "stemmer_changed") {
+        renderer.note(
+          `the stems were built by ${stems.built}, the store asks for ${stems.wanted} — \`${command} store reindex\``,
+        )
+      } else if (stems && !stems.ready) {
+        renderer.note(
+          `the stems reach message ${stems.filledThrough} of ${stems.watermark}, ${stems.pending} queued — \`${command} store migrate\` finishes them`,
+        )
+      }
       const ours = answer.chatsBehind.filter((chat) => chat.provider === messenger.provider).length
       if (ours > 0)
         renderer.note(`${ours} chats hold less than their newest message — \`${command} store fetch <chat>\``)
@@ -180,9 +192,11 @@ const inspect = (path: string) =>
       .map((row) => String(row.quick_check))
     const foreignKeys = database.prepare("PRAGMA foreign_key_check").all().length
     const wordIndex = searchIndexState(database)
+    const stems = stemsState(database)
     const searchIndexes = Object.fromEntries([
       ...(schema.version > 0 ? SEARCH_INDEXES.map((index) => [index, indexIntegrity(database, index)]) : []),
       ...(wordIndex ? [[WORD_INDEX, indexIntegrity(database, WORD_INDEX, 0)]] : []),
+      ...(stems ? [["message_stems", indexIntegrity(database, "message_stems", 0)]] : []),
     ])
     const size = bytesOf(path) + bytesOf(`${path}-wal`)
     const { bavail, bsize } = statfsSync(dirname(path))
@@ -209,6 +223,7 @@ const inspect = (path: string) =>
       disk: { free, needed: size },
       pendingNormalization: pendingIfKnown(database),
       wordIndex: wordIndex ?? null,
+      stemIndex: stems ?? null,
       chatsBehind: behind,
       conversations: conversationsBuilt(database),
       vectors: vectorsHeld(database),
@@ -301,7 +316,9 @@ const chatsBehind = (database: CacheDatabase) =>
 
 const migrateCommand = (messenger: Messenger): Command =>
   new Command("migrate")
-    .description("bring the store up to this build's schema, then normalize the messages stored before it")
+    .description(
+      "bring the store up to this build's schema, then normalize, index and stem the messages stored before it",
+    )
     .action(async function (this: Command) {
       const { renderer } = outputFor(this)
       const path = storePath(environmentOf(this).env ?? process.env)
@@ -314,7 +331,8 @@ const migrateCommand = (messenger: Messenger): Command =>
         const from = schemaOf(database).version
         migrate(database)
         const { normalized, indexed, terms } = buildWordIndex(database, (note) => renderer.note(note))
-        return { path, exists: true, from, to: schemaOf(database).version, normalized, indexed, terms }
+        const stemmed = buildStems(database, (note) => renderer.note(note))
+        return { path, exists: true, from, to: schemaOf(database).version, normalized, indexed, terms, ...stemmed }
       })
       renderer.result(answer)
     })
@@ -330,9 +348,25 @@ const buildWordIndex = (database: CacheDatabase, note: (text: string) => void) =
   })
 }
 
+/**
+ * Stems what is left, after rebuilding stems made by other stemmer choices than the store's setting —
+ * only here and in `store reindex`, never in a search's quick fill.
+ */
+const buildStems = (database: CacheDatabase, note: (text: string) => void, { force = false } = {}) => {
+  const before = stemsState(database)
+  if (!before) return { stemmed: 0 }
+  if (resetStems(database, { force }) && before.built !== null) {
+    note(`stems were built by ${before.built} — rebuilding them with ${before.wanted}`)
+  }
+  const state = stemsState(database)
+  if (state && state.filledThrough < state.watermark) note(`stemming up to message ${state.watermark}`)
+  const { stemmed, drained } = fillStems(database, { onBatch: (step, done) => note(`${done} ${step}`) })
+  return { stemmed: stemmed + drained }
+}
+
 const reindexCommand = (messenger: Messenger): Command =>
   new Command("reindex")
-    .description("rebuild the word index and its typo vocabulary from the stored messages; loses no message")
+    .description("rebuild the word index, its typo vocabulary and the stems from the stored messages; loses no message")
     .action(async function (this: Command) {
       const { renderer } = outputFor(this)
       const path = storePath(environmentOf(this).env ?? process.env)
@@ -348,7 +382,8 @@ const reindexCommand = (messenger: Messenger): Command =>
           )
         }
         resetSearchIndex(database)
-        return { path, exists: true, ...buildWordIndex(database, (note) => renderer.note(note)) }
+        const words = buildWordIndex(database, (note) => renderer.note(note))
+        return { path, exists: true, ...words, ...buildStems(database, (note) => renderer.note(note), { force: true }) }
       })
       renderer.result(answer)
     })

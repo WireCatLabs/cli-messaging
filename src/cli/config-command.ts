@@ -16,6 +16,7 @@ import { baseContext } from "./context.js"
 import { knownBeside, knownPermissionKeys, type PermissionKeyOf } from "./permission-keys.js"
 import { hasPermissionConfig, migratePermissionConfig } from "./permission-migration.js"
 import { type Configuration, fromFile, type Settings } from "./settings.js"
+import { changeStoreSetting, isStoreSetting, STORE_SETTINGS, storeSettings } from "./store-settings.js"
 
 /**
  * The settings in force and where each came from, and changing them. Printed whole: no field the
@@ -56,7 +57,7 @@ export const configCommand = (
     .command("show")
     .description("the profile, the profiles that exist, and each setting with where it came from")
     .option("--bot", "the settings a bot command on this profile gets, rather than the personal account's")
-    .action(function (this: Command) {
+    .action(async function (this: Command) {
       const bot = this.opts<{ bot?: boolean }>().bot === true
       const { settings, renderer, env } = baseContext(this, (flags, options) =>
         config.resolveSettings(flags, { ...options, ...(bot ? { kind: "bot" } : {}) }),
@@ -73,6 +74,7 @@ export const configCommand = (
         settings: [...config.allSettings, "commandTimeoutMs"]
           .filter((setting) => bot || setting !== "readOtherBots")
           .map((setting) => sourced(settings, setting)),
+        storeSettings: await storeSettings(env),
       })
 
       if (overridden) {
@@ -85,7 +87,7 @@ export const configCommand = (
 
   for (const action of ["set", "unset"] as const) {
     const sub = annotate(command.command(action), { mutates: true, local: true })
-      .argument("<setting>", `one of: ${config.allSettings.join(", ")}`)
+      .argument("<setting>", `one of: ${[...config.allSettings, ...STORE_SETTINGS].join(", ")}`)
       .option("--defaults", "change what every profile gets, rather than this profile")
       .option("--personal", "only for personal accounts — the personal section of the file")
       .option("--bot", "only for bots — the bot section of the file")
@@ -95,13 +97,36 @@ export const configCommand = (
         .description("save a setting to the configuration file")
     else sub.description("remove a setting from the configuration file")
 
-    sub.action(function (this: Command, setting: string, given: unknown) {
+    sub.action(async function (this: Command, setting: string, given: unknown) {
       const { settings, renderer, env } = baseContext(this, config.resolveSettings)
       const {
         defaults: everyone,
         personal,
         bot,
       } = this.opts<{ defaults?: boolean; personal?: boolean; bot?: boolean }>()
+      if (isStoreSetting(setting)) {
+        if (everyone || personal || bot)
+          throw new CliError(
+            "validation_error",
+            `${setting} is store-wide — --defaults, --personal and --bot do not apply`,
+          )
+        const lock = envName(app, "PROFILE_LOCK")
+        if (env[lock]) {
+          throw new CliError(
+            "permission_error",
+            `this process is locked to profile ${settings.profile} (${lock}) — ${setting} changes every profile, tg and MAX`,
+          )
+        }
+        const { result, note } = await changeStoreSetting(
+          app,
+          env,
+          setting,
+          action === "set" ? String(given) : undefined,
+        )
+        renderer.result(result)
+        renderer.note(note)
+        return
+      }
       const defaults = everyone === true
       if (personal && bot)
         throw new CliError("validation_error", "--personal and --bot name different sections; use one")

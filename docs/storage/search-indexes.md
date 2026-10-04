@@ -147,6 +147,13 @@ from `store migrate`, `store reindex`, and up to 200 ms before each `messages se
 Every hit says which step found it (`match`: `words`, `beginnings`, `corrected`, `anyWord`,
 `substring`), and `corrections` lists the words that were replaced.
 
+**Stems, 2026-10-04** — store version 15 also keeps the Snowball stems of every message
+(`message_stems`), built by `store migrate`, rebuilt by `store reindex`, and reported as `stemIndex` by
+`store info` and `store check`. No search reads them yet; stemmed `text:` search is the next step of the
+stemmed-search plan (#524). The stemmers are chosen for the whole store, not per profile:
+`config set searchStemmers.cyrillic russian|none` and `config set searchStemmers.latin spanish|english|none`.
+After a change, the stems wait for `store reindex`.
+
 ## Search by meaning
 
 Phase 5. Four steps, each a command the owner runs, and nothing leaves the machine unless asked.

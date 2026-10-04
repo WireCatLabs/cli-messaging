@@ -153,6 +153,22 @@ typo correction, any word unless the query chose with OR, substring — each onl
 found nothing, and by substring alone until the word index is ready. Its tests are the owner's
 scenarios (`docs/storage/search-indexes.md`).
 
+**Stems (version 15).** `message_stems` holds the Snowball stems of `messages.text` — stemmed before
+folding, by `createStemmer` (`src/search/stem.ts`) — in the same shape as `message_words`: contentless
+with delete, the same tokenizer, the same `scope` tokens. Queries do not read it yet (stemmed-search
+plan, #524). SQL cannot stem, so the triggers only queue the message in `message_stems_pending`, and JS
+writes the stems (`src/store/sqlite/stems.ts`): every store write empties up to 500 queued messages
+before its `COMMIT`, and `fillStems` stems the messages up to the watermark and then the queue — on
+open for a small file, in `store migrate`, `store reindex`, and inside the same 200 ms before a search.
+The `analyzer` column of the row records the Snowball version and stemmer choices that built it; the
+first fill claims an unbuilt row. The choices are store-wide (`store_settings`, written by
+`config set searchStemmers.cyrillic|latin`), since every profile, tg and MAX share one index. Ready
+means filled to the watermark, an empty queue, and the analyzer this binary would build — an older
+binary runs the triggers and never drains, so a flag alone would lie. Stems built by other choices are
+written by nobody and rebuilt only by `store migrate` or `store reindex`, never by a search, so two
+tools with different settings or Snowball versions cannot rebuild each other's index in turn; a row a
+newer Snowball built is refused with "upgrade this tool".
+
 **Drizzle is bundled, not installed.** `drizzle-orm` is a development dependency. `pnpm build` runs
 `scripts/bundle-drizzle.ts`, which writes the Drizzle modules the store uses into
 `dist/store/sqlite/drizzle/`: loaded from `node_modules`, Drizzle costs Node about 200 ms per

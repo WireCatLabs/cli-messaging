@@ -22,13 +22,16 @@ export interface SearchIndexFill {
   terms: number
 }
 
-/** `undefined` on a file before version 12, which has no word index. */
-export const searchIndexState = (database: CacheDatabase): SearchIndexState | undefined => {
+/** One index's row of `search_index_state`; `undefined` on a file before that index existed. */
+export const indexRow = (database: CacheDatabase, name: string) => {
   const exists = database.prepare("SELECT 1 FROM sqlite_master WHERE name = 'search_index_state'").get()
   if (!exists) return undefined
-  const row = database
-    .prepare("SELECT watermark, filled_through, terms_through, built_at FROM search_index_state WHERE name = ?")
-    .get(INDEX)
+  return database.prepare("SELECT * FROM search_index_state WHERE name = ?").get(name)
+}
+
+/** `undefined` on a file before version 12, which has no word index. */
+export const searchIndexState = (database: CacheDatabase): SearchIndexState | undefined => {
+  const row = indexRow(database, INDEX)
   if (!row) return undefined
   const watermark = Number(row.watermark)
   const filledThrough = Number(row.filled_through)
@@ -43,7 +46,7 @@ export const searchIndexState = (database: CacheDatabase): SearchIndexState | un
   }
 }
 
-const inBatch = <T>(database: CacheDatabase, body: () => T): T => {
+export const inBatch = <T>(database: CacheDatabase, body: () => T): T => {
   database.exec("BEGIN IMMEDIATE")
   try {
     const result = body()

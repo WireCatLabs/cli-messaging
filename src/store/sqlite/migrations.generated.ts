@@ -118,5 +118,23 @@ export const GENERATED: { name: string; statements: string[] }[] = [
       "CREATE TABLE `conversation_chunks` (\n\t`conversation_pk` integer NOT NULL,\n\t`ordinal` integer NOT NULL,\n\t`first_message_pk` integer NOT NULL,\n\t`last_message_pk` integer NOT NULL,\n\t`content_hash` text NOT NULL,\n\tCONSTRAINT `conversation_chunks_pk` PRIMARY KEY(`conversation_pk`, `ordinal`),\n\tCONSTRAINT `fk_conversation_chunks_conversation_pk_conversations_pk_fk` FOREIGN KEY (`conversation_pk`) REFERENCES `conversations`(`pk`) ON DELETE CASCADE,\n\tCONSTRAINT `fk_conversation_chunks_first_message_pk_messages_pk_fk` FOREIGN KEY (`first_message_pk`) REFERENCES `messages`(`pk`) ON DELETE CASCADE,\n\tCONSTRAINT `fk_conversation_chunks_last_message_pk_messages_pk_fk` FOREIGN KEY (`last_message_pk`) REFERENCES `messages`(`pk`) ON DELETE CASCADE\n);",
       "CREATE INDEX `conversation_chunks_by_hash` ON `conversation_chunks` (`content_hash`);"
     ]
+  },
+  {
+    "name": "20261004194933_version-15-stem-state",
+    "statements": [
+      "CREATE TABLE `message_stems_pending` (\n\t`pk` integer PRIMARY KEY\n);",
+      "CREATE TABLE `store_settings` (\n\t`key` text PRIMARY KEY,\n\t`value` text NOT NULL,\n\t`at` integer NOT NULL\n);",
+      "ALTER TABLE `search_index_state` ADD `analyzer` text;"
+    ]
+  },
+  {
+    "name": "20261004194950_version-15-stem-index",
+    "statements": [
+      "-- Snowball stems of `messages.text`, shaped like `message_words` so its `scope` filter and bm25 weights\n-- carry over. No prefix index: wildcards never read stems. SQL cannot stem — a UDF in a trigger would\n-- break every older writer — so the triggers only queue the message, and JS writes the stems.\nCREATE VIRTUAL TABLE message_stems USING fts5(\n  stems, scope,\n  content = '', contentless_delete = 1,\n  tokenize = 'unicode61 remove_diacritics 2');",
+      "CREATE TRIGGER message_stems_ai AFTER INSERT ON messages WHEN new.text <> '' BEGIN\n  INSERT OR IGNORE INTO message_stems_pending (pk) VALUES (new.pk);\nEND;",
+      "CREATE TRIGGER message_stems_au AFTER UPDATE OF text, sender_identity_pk, chat_pk ON messages\n  WHEN old.text IS NOT new.text\n    OR old.sender_identity_pk IS NOT new.sender_identity_pk\n    OR old.chat_pk IS NOT new.chat_pk BEGIN\n  INSERT OR IGNORE INTO message_stems_pending (pk) VALUES (new.pk);\nEND;",
+      "CREATE TRIGGER message_stems_ad AFTER DELETE ON messages BEGIN\n  DELETE FROM message_stems WHERE rowid = old.pk;\n  DELETE FROM message_stems_pending WHERE pk = old.pk;\nEND;",
+      "-- 1 is NORMALIZER_VERSION as of this version; a migration is frozen. Every file starts unbuilt\n-- (analyzer NULL): the first JS fill claims the row with its analyzer and fills up to the watermark.\nINSERT INTO search_index_state (name, watermark, filled_through, terms_through, normalizer_version, analyzer)\n  SELECT 'message_stems', coalesce(max(pk), 0), 0, 0, 1, NULL FROM messages;"
+    ]
   }
 ]
