@@ -30,6 +30,8 @@ export interface ConnectOptions {
 export interface Fetching {
   /** Messages per history request. */
   page: number
+  /** The most one history request returns, where the messenger is known to cap it; a larger `--page-size` is refused. */
+  maxPageSize?: number
   /** The least wait between requests, as `--pause` takes it. */
   pause: string
   /** Each wait drawn between `pause` and twice that, as a person scrolls rather than a clock. */

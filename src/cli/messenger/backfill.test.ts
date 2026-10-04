@@ -221,6 +221,41 @@ describe("store fetch", () => {
     expect(state.asked).toHaveLength(3)
   })
 
+  it("**refuses a --page-size above what the messenger returns**, and allows it where no cap is known", async () => {
+    const state = { newest: 250, asked: [] as (string | undefined)[] }
+
+    const refused = await call(["store", "fetch", "7", "--page-size", "200", "--json"], chatOf(state), setup())
+    const uncapped = await call(
+      ["store", "fetch", "7", "--page-size", "200", "--pause", "1ms", "--json"],
+      chatOf(state),
+      setup(),
+      { fetching: { page: 30, pause: "1ms", maxPages: 10 } },
+    )
+
+    expect(refused.code).toBe(2)
+    expect(refused.stderr).toMatch(/--page-size takes at most 100/)
+    expect(uncapped.answer).toMatchObject({ complete: true, ranges: [{ from: 1, to: 250 }] })
+  })
+
+  it("**a fetch after a wrong start mark reads below it**, and the chat stops reading as complete", async () => {
+    const env = setup()
+    const state = { newest: 250, asked: [] as (string | undefined)[] }
+    const cutShort = {
+      ...chatOf(state),
+      history: async (chat: string, window: { limit: number; before?: string }) => ({
+        ...(await chatOf(state).history(chat, window)),
+        hasMore: false,
+      }),
+    } as MessengerAdapter
+    const wrong = await call(["store", "fetch", "7", "--pause", "1ms", "--json"], cutShort, env)
+    expect(wrong.answer).toMatchObject({ complete: true, ranges: [{ from: 151, to: 250 }] })
+
+    state.asked = []
+    const again = await call(["store", "fetch", "7", "--limit", "200", "--pause", "1ms", "--json"], chatOf(state), env)
+    expect(state.asked).toEqual([undefined, "151"])
+    expect(again.answer).toMatchObject({ complete: false, ranges: [{ from: 51, to: 250 }] })
+  })
+
   it("**--last stops once the newest n messages are held**, and refuses --since-time beside it", async () => {
     const env = setup()
     const state = { newest: 250, asked: [] as (string | undefined)[] }

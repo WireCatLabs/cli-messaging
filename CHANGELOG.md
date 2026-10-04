@@ -14,6 +14,10 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Changed — may break callers
 
+- `store fetch --page-size` takes at most 100 with the shared Telegram fetching defaults; a larger size is
+  refused with `validation_error` (exit 2). A messenger that declares its own `fetching` without
+  `maxPageSize` — MAX — keeps any size.
+
 - `messages search` JSON (and MCP `<cli>_messages_search`) reports `coverage` and `wordsReady` from the store instead of
   constants. `wordsReady` is `false` for a metadata-only query (`has:file`, `kind:`) while the word index is still
   being built; before, it was always `true` there. `coverage.inventoryComplete` is `true` once every account in
@@ -27,6 +31,12 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 - The `/catch-up` prompt takes `kind` and `mode` (`unread`, the default; `new`; or a time) in place of `since`;
   a time goes in `mode`. It marks read only when the owner asks, through `chats_mark_read` per chat shown, so the
   approval that tool carries still applies — `inbox` and `review` over MCP never mark read.
+
+### Fixed
+
+- A chat no longer reads as complete when a later `store fetch` held messages older than the point an earlier
+  fetch took for its first one. Run `store fetch <chat>` again: once it finds older messages, the chat reads as
+  partial until a fetch reaches its real start.
 
 ## 0.146.0 — 04.10.2026
 

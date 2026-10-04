@@ -128,4 +128,15 @@ describe("completeness", () => {
     await store.markRange(ME, "1", 9, 10)
     expect((await store.chatCompleteness(ME, ["1"]))[0]).toMatchObject({ state: "partial", gaps: true })
   })
+
+  it("**stops counting a start mark once older messages are held**, so a wrong mark heals with the next fetch", async () => {
+    const chat = { id: "40", title: "Marked", kind: "group" as const, unreadCount: 0, lastMessageAt: null }
+    await store.saveChats(ME, [{ ...chat, participantsCount: null }])
+    await store.markRange(ME, "40", 4, 6)
+    await store.setSyncState(ME, historyStartKey("40"), "4")
+    expect((await store.chatCompleteness(ME, ["40"]))[0]).toMatchObject({ state: "complete", reachesStart: true })
+
+    await store.markRange(ME, "40", 2, 6)
+    expect((await store.chatCompleteness(ME, ["40"]))[0]).toMatchObject({ state: "partial", reachesStart: false })
+  })
 })
