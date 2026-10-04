@@ -209,6 +209,11 @@ export interface MessageStore {
     key: AccountKey,
     options: { chatId?: Id; model: string; since?: string; limit: number; query: Float32Array },
   ): Promise<ConversationHit[]>
+  /**
+   * How fresh each built chat's conversations and `model`'s vectors are — one chat, or every chat whose
+   * conversations were ever built. A chat never built answers `builtAt: null`.
+   */
+  readiness(key: AccountKey, options: { chatId?: Id; model: string }): Promise<StoredReadiness[]>
   /** Chats in scope embedded with another model and not with `model`, which a search with it cannot see. */
   embeddedOnlyElsewhere(key: AccountKey, options: { chatId?: Id; model: string }): Promise<Id[]>
   /** Whether the chat's conversations were built, and when; `undefined` when never. */
@@ -348,11 +353,25 @@ export interface ConversationBuild {
   chunks?: { firstId: Id; lastId: Id; hash: string }[][]
 }
 
-/** A conversation found by meaning: the chunk that matched best, and how near it is (−1 to 1). */
+/**
+ * A conversation found by meaning: the chunk that matched best, and how near it is (−1 to 1). `stale` when
+ * the chunk's messages no longer read as they did when it was embedded (NEED-550 B).
+ */
 export interface ConversationHit {
   summary: ConversationSummary
   chunk: { firstMessageId: Id; lastMessageId: Id }
   score: number
+  stale: boolean
+}
+
+export interface StoredReadiness {
+  chatId: Id
+  builtAt: string | null
+  algorithmVersion: number | null
+  /** Messages the current build has not seen. */
+  pending: { new: number; edited: number; deleted: number }
+  /** The current build's distinct chunk texts: `current` + `stale` + `missing`; `embedded` have any vector. */
+  vectors: { chunks: number; embedded: number; current: number; stale: number; missing: number }
 }
 
 export interface ConversationSummary {
@@ -734,13 +753,44 @@ const storeOver = (context: StoreContext): MessageStore => {
         context,
         nearest.flatMap(({ firstMessagePk, lastMessagePk }) => [firstMessagePk, lastMessagePk]),
       )
-      return nearest.flatMap(({ conversationPk, firstMessagePk, lastMessagePk, score }) => {
-        const summary = found.get(conversationPk)
-        const first = ids.get(firstMessagePk)
-        const last = ids.get(lastMessagePk)
-        return summary && first && last
-          ? [{ summary, chunk: { firstMessageId: first, lastMessageId: last }, score }]
+      return nearest.flatMap((chunk) => {
+        const summary = found.get(chunk.conversationPk)
+        const first = ids.get(chunk.firstMessagePk)
+        const last = ids.get(chunk.lastMessagePk)
+        const freshness = vectors.chunkFreshness(context, chunk)
+        return summary && first && last && freshness !== "deleted"
+          ? [
+              {
+                summary,
+                chunk: { firstMessageId: first, lastMessageId: last },
+                score: chunk.score,
+                stale: freshness === "stale",
+              },
+            ]
           : []
+      })
+    },
+
+    readiness: async (key, { chatId, model }) => {
+      const accountPk = findAccountPk(key)
+      if (accountPk === undefined) return []
+      const chats =
+        chatId === undefined
+          ? vectors.builtChats(context, accountPk)
+          : [{ chatKey: chatKeyOf(key, chatId), id: chatId }].flatMap(({ chatKey, id }) =>
+              chatKey === undefined ? [] : [{ chatKey, id }],
+            )
+      return chats.map(({ chatKey, id }) => {
+        const found = vectors.readiness(context, chatKey, model)
+        return found
+          ? { chatId: id, ...found, builtAt: new Date(found.builtAt).toISOString() }
+          : {
+              chatId: id,
+              builtAt: null,
+              algorithmVersion: null,
+              pending: { new: 0, edited: 0, deleted: 0 },
+              vectors: { chunks: 0, embedded: 0, current: 0, stale: 0, missing: 0 },
+            }
       })
     },
 

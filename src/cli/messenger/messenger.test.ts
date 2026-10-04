@@ -1346,7 +1346,11 @@ describe("the shared read commands", () => {
 
   it("**builds a chat's conversations** and explains a message's place in one, without connecting", async () => {
     const root = mkdtempSync(join(tmpdir(), "messenger-"))
-    const env = { CHAT_STATE_DIR: join(root, "state"), MESSAGING_STORE: join(root, "m.db") }
+    const env = {
+      CHAT_STATE_DIR: join(root, "state"),
+      MESSAGING_STORE: join(root, "m.db"),
+      CLI_COMMON_CACHE_DIR: join(root, "cache"),
+    }
     await call(["messages", "context", "Book", "2", "--json"], async () => fake, env)
     const never = async (): Promise<MessengerAdapter> => {
       throw new Error("conversations come from the store alone")
@@ -1377,6 +1381,25 @@ describe("the shared read commands", () => {
     )
     expect(JSON.parse(cleared.stdout[0] ?? "")).toMatchObject({ cleared: 0 })
     expect((await call(["conversations", "embed", "status"], never, env)).code).toBe(2)
+
+    const readiness = await call(["conversations", "status", "--json"], never, env)
+    expect(readiness.stderr).toEqual([])
+    expect(JSON.parse(readiness.stdout[0] ?? "")).toMatchObject({
+      items: [{ chat: "7", state: "words-only", graph: { outdatedRules: false }, vectors: { current: 0 } }],
+      page: 1,
+      hasMore: false,
+      model: "e5-small",
+    })
+    const pretty = await call(["conversations", "status", "--chat", "7"], never, env, { tty: true })
+    expect(pretty.stdout.join("")).toContain("7  words-only  built ")
+
+    const words = await call(["conversations", "search", "message", "--json"], never, env)
+    expect([words.code, words.stdout.length]).toEqual([0, 1])
+    expect(JSON.parse(words.stdout[0] ?? "")).toMatchObject({
+      meaning: "unavailable",
+      readiness: { wordsOnly: ["7"], searchedByMeaning: [] },
+    })
+    expect(words.stderr.join("\n")).toContain("models text download e5-small")
   })
 
   it("**hands the agent a batch**, keeps its text out of the run record, and refuses it to a profile denying messages", async () => {

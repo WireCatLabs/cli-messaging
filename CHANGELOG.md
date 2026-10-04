@@ -6,12 +6,39 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
 - `date:` takes relative dates: `date:today`, `date:yesterday` (calendar days in `--timezone`), `date:7d` (since 7 days
   ago; also `30m`, `2h`), and the same in comparisons and ranges (`date>=7d`, `date:[30d TO 7d}`).
+- `conversations status [--chat <chat>]` and the read-only MCP tool `conversations_status` say how fresh each
+  built chat's conversations and vectors are: `state` (`ready`, `stale`, `partial`, `words-only`,
+  `not-built`), the build's time and rules version (`graph.builtAt`, `graph.rulesVersion`,
+  `graph.outdatedRules`), messages the build has not seen (`pending.new`, `pending.edited`, `pending.deleted`)
+  and the chunks' vectors of the model (`vectors.current`, `vectors.stale`, `vectors.missing`). JSON is the list
+  envelope with `model` beside it.
+- `conversations search` JSON (and MCP `conversations_search`) adds `meaning` (`searched` or `unavailable`) and
+  `readiness`: chat ids in `searchedByMeaning`, `wordsOnly`, `partial`, `stale` and `notBuilt`. Each item adds
+  `stale`: `true` when the matched chunk's text changed after it was embedded; the hit is still returned.
+  `embeddedOnlyElsewhere` stays as it was.
+
+### Changed — may break callers
+
+- `conversations search` no longer fails with `not_found` (exit 6) when the local model is not downloaded: it
+  answers word matches with `meaning: "unavailable"` and names `models text download` on stderr. It never
+  downloads a model or calls a remote one in its place. `ConversationHit` and `FoundConversation` have a new
+  required `stale` field, and `MessageStore` a new `readiness` method; tg-cli and max-cli only call
+  `MessageStore` and use neither hit type, so neither needs a change.
+
+### Fixed
+
 - `filename:` and `mime:` alone no longer fail on an archive with more than 50,000 messages with files: names are
   matched before the main query, so the candidate row limit does not apply to them.
 - `has:link` also finds a message whose link exists only as a preview card (MAX `share`, Telegram `webpage`),
   not only a URL typed in the text. A photo's own URL still does not count.
+- Deleting a message drops the vectors of the chunks that held it, of every model, unless a current chunk with
+  no deleted message still uses the same text. A meaning hit on a chunk with a deleted message is never
+  returned, also for vectors kept from before this release.
+
 ## 0.141.0 — 04.10.2026
 
 ### Added

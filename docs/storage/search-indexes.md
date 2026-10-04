@@ -205,6 +205,18 @@ fast as sqlite-vec, which would need a native extension per platform
 A chat embedded only with another model cannot be searched by meaning with this one: the search names
 it on stderr and in `embeddedOnlyElsewhere`, instead of leaving it out silently.
 
+**Freshness.** Both indexes change only when the owner runs `conversations build` and `conversations embed`.
+`conversations status` (MCP `conversations_status`) shows, per built chat, the messages the build has not seen
+— new and deleted ones by the build's membership, edited ones by their revision's time — and the chunks whose
+vector is current, stale (a message in it changed after the build) or missing. A changed sender name leaves no
+trace there. The search answers the same in `readiness`: chat ids `searchedByMeaning`, `wordsOnly`, `partial`,
+`stale` and `notBuilt`, and a note on stderr with the command that fixes each.
+
+Before a meaning hit is returned, the search reads its chunk's messages again and hashes them as `embed` does.
+A chunk whose text changed is still returned, with `stale: true` (NEED-550 B); one holding a deleted message
+is dropped. Deleting a message also deletes the vectors of the chunks that held it, of every model, unless a
+current chunk with no deleted message still uses the same text (NEED-393: a deletion leaves no text behind).
+
 ### 4 · Meaning and words, merged
 
 Meaning misses a rare exact word — a name, a reference number, «empadronamiento» — and words miss a
@@ -218,11 +230,14 @@ Each result says how it was found:
 { "summary": { "id": "656", "firstMessageId": "1640", "messageCount": 7, "…": "…" },
   "chunk": { "firstMessageId": "1640", "lastMessageId": "1707" },
   "score": 0.835,
-  "by": ["meaning", "words"] }
+  "by": ["meaning", "words"],
+  "stale": false }
 ```
 
 `score` is the meaning's cosine, `null` when only words found the conversation. A built chat that was
-never embedded can still be found by its words, but the current command still opens the selected model to encode the query; the model must be installed/configured.
+never embedded can still be found by its words. When the local model is not downloaded, the search answers by
+words alone, says `meaning: "unavailable"` and names `models text download` on stderr (NEED-552 A); it never
+downloads a model or calls a remote one in its place. A remote model that fails is still an error.
 
 ### In the MCP server
 

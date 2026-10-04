@@ -311,6 +311,7 @@ describe("the MCP server", () => {
       "chat_conversations_list",
       "chat_conversations_search",
       "chat_conversations_show",
+      "chat_conversations_status",
       "chat_inbox",
       "chat_messages_context",
       "chat_messages_evidence",
@@ -587,6 +588,10 @@ describe("the MCP server", () => {
     const shown = await call("chat_conversations_show", { id: body.items[0].id })
     expect(shown.body.messages.map((one: { id: string }) => one.id)).toEqual(["1"])
     expect((await call("chat_conversations_show", { chat: "7" })).isError).toBe(true)
+    expect((await call("chat_conversations_status", {})).body).toMatchObject({
+      items: [{ chat: "7", state: "words-only", pending: { new: 0 } }],
+      hasMore: false,
+    })
   })
 
   it("loads the model once for every conversations_search, and lets it go when the server closes", async () => {
@@ -622,6 +627,7 @@ describe("the MCP server", () => {
     const third = await call("chat_conversations_search", { query: "cat dog" })
 
     expect([first, second, third].map(({ body }) => body.items.length)).toEqual([1, 1, 1])
+    expect(third.body).toMatchObject({ meaning: "searched", readiness: { searchedByMeaning: ["7"], stale: [] } })
     expect(models).toEqual({ opened: 1, closed: 0 })
     await embedders.close()
     expect(models.closed).toBe(1)

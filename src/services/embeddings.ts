@@ -1,10 +1,11 @@
 import { CliError } from "@leemour/cli-core"
 import { CHUNK_CHARS, chunkHash, chunkTextOf } from "../conversations/chunks.js"
+import { RULES_VERSION } from "../conversations/link.js"
 import type { Id } from "../domain/models.js"
 import { defaultThreads, type Embedder, isTextModelInstalled, textModelsDirectory } from "../embeddings/embed.js"
 import { DEFAULT_TEXT_MODEL, type TextModel, textModel } from "../embeddings/models.js"
 import { type RemoteModel, remoteKey } from "../embeddings/remote.js"
-import type { ConversationHit, ConversationSummary } from "../store/store.js"
+import type { ConversationHit, ConversationSummary, StoredReadiness } from "../store/store.js"
 import type { ServiceDeps } from "./deps.js"
 import { searchStore, storedChatId } from "./messages.js"
 
@@ -48,11 +49,51 @@ export interface EmbeddingsService {
   ): Promise<Embedded>
   /** Drops the chat's vectors, or one model's; messages and conversations are never touched. */
   clear(chat: string, model?: ModelChoice): Promise<{ chat: Id; cleared: number }>
-  /** The conversations nearest in meaning to `query`, in one chat or every one of the account (E7). */
+  /**
+   * The conversations nearest in meaning to `query`, in one chat or every one of the account (E7). With no
+   * local model downloaded it answers by words alone (NEED-552 A): never a download, never a remote model.
+   */
   search(
     query: string,
     options: { chat?: string; model?: ModelChoice; since?: string; limit: number },
-  ): Promise<{ model: string; hits: FoundConversation[]; embeddedOnlyElsewhere: Id[] }>
+  ): Promise<FoundConversations>
+  /** How fresh one chat's conversations and vectors are, or every built chat's. */
+  readiness(options: { chat?: string; model?: ModelChoice }): Promise<{ model: string; chats: ChatReadiness[] }>
+}
+
+export interface FoundConversations {
+  model: string
+  /** `unavailable`: the local model is not downloaded, and only words were searched. */
+  meaning: "searched" | "unavailable"
+  hits: FoundConversation[]
+  readiness: SearchReadiness
+  /** Kept for callers of 0.141.0 and before; `readiness.wordsOnly` says more. */
+  embeddedOnlyElsewhere: Id[]
+}
+
+/** Chat ids by how the search could see them; a chat can be in more than one list. */
+export interface SearchReadiness {
+  /** Built chats with vectors of the model. */
+  searchedByMeaning: Id[]
+  /** Built chats with no vector of the model, or every built chat when the model is unavailable. */
+  wordsOnly: Id[]
+  /** Searched by meaning, but some chunks have no vector yet: `conversations embed`. */
+  partial: Id[]
+  /** Messages or rules changed since the build: `conversations build`. */
+  stale: Id[]
+  /** Never built, so their matches cannot be shown: `conversations build`. */
+  notBuilt: Id[]
+}
+
+export type ReadinessState = "ready" | "stale" | "partial" | "words-only" | "not-built"
+
+export interface ChatReadiness {
+  chat: Id
+  state: ReadinessState
+  graph: { builtAt: string; rulesVersion: number | null; outdatedRules: boolean } | null
+  pending: { new: number; edited: number; deleted: number }
+  /** The current build's distinct chunk texts, by their vector of the model: `current` + `stale` + `missing`. */
+  vectors: { chunks: number; current: number; stale: number; missing: number }
 }
 
 /** A conversation found by meaning, by words, or both (E9). */
@@ -63,6 +104,8 @@ export interface FoundConversation {
   /** The best chunk's cosine, −1 to 1; `null` when only words found it. */
   score: number | null
   by: ("meaning" | "words")[]
+  /** The chunk's text changed after it was embedded: the score is for what it said then (NEED-550 B). */
+  stale: boolean
 }
 
 /** A vector's model: the provider, the model and its size — vectors of two of them never mix. */
@@ -93,6 +136,7 @@ export const embeddingsService = (deps: ServiceDeps): EmbeddingsService => {
         dims: remote.dims,
         speed: null,
         price: remote.price,
+        installed: true,
         perBatch: (_workers: number) => PER_REQUEST * concurrency,
         open: async (): Promise<Embedder> =>
           (await import("../embeddings/remote.js")).openRemote(remote, apiKey, { concurrency }),
@@ -106,6 +150,7 @@ export const embeddingsService = (deps: ServiceDeps): EmbeddingsService => {
       dims: model.dims,
       speed: model.chunksPerSecond,
       price: undefined,
+      installed: isTextModelInstalled(model, directory),
       perBatch: (workers: number) => PER_SESSION * Math.max(1, workers),
       open: async ({
         workers = 1,
@@ -141,7 +186,7 @@ export const embeddingsService = (deps: ServiceDeps): EmbeddingsService => {
    */
   const byWords = async (query: string, chatId: Id | undefined, since: string | undefined) => {
     const words = [...new Set(query.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? [])]
-    if (words.length === 0) return []
+    if (words.length === 0) return { hits: [], outside: new Set<Id>() }
     const store = await deps.store()
     const account = await deps.account()
     const { items: found } = await searchStore(
@@ -156,13 +201,22 @@ export const embeddingsService = (deps: ServiceDeps): EmbeddingsService => {
       items.map(({ chatId, id }) => ({ chatId, messageId: id })),
     )
     const seen = new Set<string>()
-    return items.flatMap(({ id }, index) => {
+    const outside = new Set<Id>()
+    const hits = items.flatMap(({ id, chatId }, index) => {
       const summary = summaries[index]
+      if (!summary) outside.add(chatId)
       if (!summary || seen.has(summary.id) || (since !== undefined && Date.parse(summary.lastAt) < Date.parse(since)))
         return []
       seen.add(summary.id)
       return [{ summary, chunk: { firstMessageId: id, lastMessageId: id } }]
     })
+    return { hits, outside }
+  }
+
+  const readinessOf = async (chatId: Id | undefined, key: string): Promise<ChatReadiness[]> => {
+    const store = await deps.store()
+    const account = await deps.account()
+    return (await store.readiness(account, { ...(chatId === undefined ? {} : { chatId }), model: key })).map(shaped)
   }
 
   const found = async (chat: string) => {
@@ -245,24 +299,56 @@ export const embeddingsService = (deps: ServiceDeps): EmbeddingsService => {
       const target = resolve(choice)
       const chatId = chat === undefined ? undefined : await storedChatId(deps.messenger, chat, store, account)
       const scope = chatId === undefined ? {} : { chatId }
-      const warm = typeof choice !== "object" ? deps.embedders : undefined
-      const embedder = warm ? await warm.get(target.key, () => target.open({ apart: true })) : await target.open()
-      let meaning: ConversationHit[]
-      try {
-        const [vector] = await embedder.embed([query], "query")
-        meaning = await store.nearestConversations(account, {
-          ...scope,
-          ...(since === undefined ? {} : { since }),
-          model: target.key,
-          limit: Math.max(limit, CANDIDATES),
-          query: vector as Float32Array,
-        })
-      } finally {
-        if (!warm) await embedder.close()
-      }
       const words = await byWords(query, chatId, since)
+      let meaning: ConversationHit[] = []
+      if (target.installed) {
+        const warm = typeof choice !== "object" ? deps.embedders : undefined
+        const embedder = warm ? await warm.get(target.key, () => target.open({ apart: true })) : await target.open()
+        try {
+          const [vector] = await embedder.embed([query], "query")
+          meaning = await store.nearestConversations(account, {
+            ...scope,
+            ...(since === undefined ? {} : { since }),
+            model: target.key,
+            limit: Math.max(limit, CANDIDATES),
+            query: vector as Float32Array,
+          })
+        } finally {
+          if (!warm) await embedder.close()
+        }
+      }
+      const chats = await readinessOf(chatId, target.key)
+      const built = new Set(chats.filter(({ state }) => state !== "not-built").map(({ chat }) => chat))
+      const ids = (keep: (one: ChatReadiness) => boolean) => chats.filter(keep).map(({ chat }) => chat)
+      const byMeaning = (one: ChatReadiness) =>
+        target.installed && built.has(one.chat) && one.state !== "words-only" && one.vectors.chunks > 0
       const elsewhere = await store.embeddedOnlyElsewhere(account, { ...scope, model: target.key })
-      return { model: target.id, hits: fused(meaning, words).slice(0, limit), embeddedOnlyElsewhere: elsewhere }
+      return {
+        model: target.id,
+        meaning: target.installed ? "searched" : "unavailable",
+        hits: fused(meaning, words.hits).slice(0, limit),
+        readiness: {
+          searchedByMeaning: ids(byMeaning),
+          wordsOnly: ids((one) => built.has(one.chat) && !byMeaning(one)),
+          partial: ids((one) => byMeaning(one) && one.vectors.missing > 0),
+          stale: ids((one) => built.has(one.chat) && isStale(one)),
+          notBuilt: [
+            ...new Set([
+              ...ids((one) => one.state === "not-built"),
+              ...[...words.outside].filter((id) => !built.has(id)),
+            ]),
+          ].sort(),
+        },
+        embeddedOnlyElsewhere: elsewhere,
+      }
+    },
+
+    readiness: async ({ chat, model: choice }) => {
+      const store = await deps.store()
+      const account = await deps.account()
+      const target = resolve(choice)
+      const chatId = chat === undefined ? undefined : await storedChatId(deps.messenger, chat, store, account)
+      return { model: target.id, chats: await readinessOf(chatId, target.key) }
     },
 
     clear: async (chat, choice) => {
@@ -281,8 +367,8 @@ const fused = (
   words: Pick<ConversationHit, "summary" | "chunk">[],
 ): FoundConversation[] => {
   const merged = new Map<string, FoundConversation & { fused: number }>()
-  meaning.forEach(({ summary, chunk, score }, index) => {
-    merged.set(summary.id, { summary, chunk, score, by: ["meaning"], fused: 1 / (RRF_K + index + 1) })
+  meaning.forEach(({ summary, chunk, score, stale }, index) => {
+    merged.set(summary.id, { summary, chunk, score, by: ["meaning"], stale, fused: 1 / (RRF_K + index + 1) })
   })
   words.forEach(({ summary, chunk }, index) => {
     const share = 1 / (RRF_K + index + 1)
@@ -290,9 +376,32 @@ const fused = (
     if (held) {
       held.fused += share
       held.by.push("words")
-    } else merged.set(summary.id, { summary, chunk, score: null, by: ["words"], fused: share })
+    } else merged.set(summary.id, { summary, chunk, score: null, by: ["words"], stale: false, fused: share })
   })
   return [...merged.values()]
     .sort((a, b) => b.fused - a.fused || (b.score ?? -2) - (a.score ?? -2))
     .map(({ fused: _, ...hit }) => hit)
+}
+
+const isStale = ({ graph, pending, vectors }: ChatReadiness) =>
+  Boolean(graph?.outdatedRules) || pending.new + pending.edited + pending.deleted > 0 || vectors.stale > 0
+
+const shaped = ({ chatId, builtAt, algorithmVersion, pending, vectors }: StoredReadiness): ChatReadiness => {
+  const { embedded, ...counts } = vectors
+  const graph =
+    builtAt === null
+      ? null
+      : { builtAt, rulesVersion: algorithmVersion, outdatedRules: algorithmVersion !== RULES_VERSION }
+  const one: ChatReadiness = { chat: chatId, state: "ready", graph, pending, vectors: counts }
+  const state: ReadinessState =
+    graph === null
+      ? "not-built"
+      : counts.chunks > 0 && embedded === 0
+        ? "words-only"
+        : isStale(one)
+          ? "stale"
+          : counts.missing > 0
+            ? "partial"
+            : "ready"
+  return { ...one, state }
 }
