@@ -668,6 +668,12 @@ Released early: max-cli and tg-cli need the reviewed search coverage and history
 - `chats stats` and MCP `chats_stats` also sum `comments` — the comment count a channel post carries in its
   provider metadata, beside `views` and `forwards` — and show it on each top post. Absent where no post carries it.
 
+- `chats send-as <chat>` and the read-only MCP tool `chats_send_as` list the identities the account may post
+  as in a chat, through the optional adapter group `SenderIdentities`. `messages send --send-as <id>` and the
+  send tool's `sendAs` send text as one of them; an id not in the list, a messenger without the capability and
+  an attachment are refused. The journal records `sendAs`, and a retry under the same send id with another
+  identity is refused.
+
 ### Changed — may break callers
 
 - `store fetch --page-size` takes at most 100 with the shared Telegram fetching defaults; a larger size is
