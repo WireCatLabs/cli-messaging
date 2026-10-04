@@ -3,6 +3,7 @@ import { CliError } from "@leemour/cli-core"
 import type { AppIdentity } from "../cli/app.js"
 import type { Settings } from "../cli/settings.js"
 import type { Id } from "../domain/models.js"
+import { FloodMemory, floodPathFor } from "./flood.js"
 import {
   type AccountAction,
   type ChatAction,
@@ -79,6 +80,8 @@ export interface SendGuardOptions {
   sendsPerHour: number
   journal: SendJournal
   recipients: RecipientList
+  /** Where a messenger's "this account may not write" is remembered; without it nothing is held. */
+  flood?: FloodMemory
   warn: (message: string) => void
   now?: () => Date
 }
@@ -132,6 +135,7 @@ export const sendGuard = ({
   ask = refuseToAsk,
   sendsPerHour,
   journal,
+  flood,
   warn,
   now = () => new Date(),
 }: SendGuardOptions): SendGuard => {
@@ -265,6 +269,15 @@ export const sendGuard = ({
       const asked = { ...request, people: request.personIds?.length ?? request.count }
       const creatingTopic = request.kind === "chat" && request.action === "topic-create"
       if (!countsTowardLimit(asked) && !creatingTopic) return
+      const block = flood?.sendBlock()
+      if (block) {
+        throw new CliError(
+          "permission_error",
+          `profile ${profile} holds its writes until ${block.until}: ${block.hint} — reads still work; ` +
+            `\`${command} ${profile} doctor --online\` checks the account, and deleting ${flood?.path} lifts the hold sooner`,
+          { sendBlock: block, standing: { state: block.state, hint: block.hint } },
+        )
+      }
       const checked = (entries: SendEntry[]) => {
         if (!creatingTopic) return withinLimit(request, entries)
         if (request.sendId === undefined) throw new CliError("validation_error", "a topic creation needs an attempt id")
@@ -356,6 +369,7 @@ export const guardFor = (
     sendsPerHour: settings.sendsPerHour,
     journal: new SendJournal(sendsPathFor(app, settings.profile, env)),
     recipients: new RecipientList(recipientsPathFor(app, settings.profile, env), app.command),
+    flood: new FloodMemory(floodPathFor(app, settings.profile, env)),
     warn,
   })
 

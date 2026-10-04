@@ -1,8 +1,10 @@
 import { existsSync, mkdirSync, mkdtempSync, utimesSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { dirname, join } from "node:path"
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
+import { FloodMemory } from "./flood.js"
 import { sendGuard } from "./guard.js"
+import { guardedWrite } from "./guarded.js"
 import { SendJournal, sendsPathFor as sendsPath } from "./journal.js"
 import { RecipientList, recipientsPathFor as recipientsPath } from "./recipients.js"
 import { newSendId } from "./send-id.js"
@@ -298,5 +300,37 @@ describe("topic creation identities", () => {
     expect(() => forProfile("topic-reservation").check(request)).toThrow("already attempted")
     first.record({ ...request, outcome: "failed", errorCode: "permission_error" })
     expect(() => forProfile("topic-reservation").check(request, { reserve: false })).not.toThrow()
+  })
+})
+
+describe("a profile whose writes are held", () => {
+  it("**refuses a message before it goes, journals the refusal, and still lets a reaction through**", async () => {
+    const profile = "held"
+    const flood = new FloodMemory(join(env.APP_STATE_DIR, "flood", `${profile}.json`))
+    flood.block({ state: "limited", hint: "Telegram limited this account's messages as spam" })
+    const journal = new SendJournal(sendsPathFor(profile))
+    const guard = sendGuard({
+      profile,
+      command: "app",
+      readOnly: false,
+      readOnlyFrom: "default",
+      sendsPerHour: 30,
+      journal,
+      recipients: new RecipientList(recipientsPathFor(profile), app.command),
+      flood,
+      warn: () => {},
+    })
+    const act = vi.fn(async () => ({}))
+
+    const refused = guardedWrite(guard, { chatId: "1", sendId: "9", operationId: "9" }, act)
+    await expect(refused).rejects.toMatchObject({
+      code: "permission_error",
+      details: { standing: { state: "limited" } },
+    })
+    await expect(refused).rejects.toThrow(/reads still work; `app held doctor --online` checks the account/)
+    expect(act).not.toHaveBeenCalled()
+    expect(journal.entries().map((entry) => entry.outcome)).toEqual(["refused"])
+
+    expect(() => guard.check({ chatId: "1", kind: "reaction" })).not.toThrow()
   })
 })

@@ -1,4 +1,12 @@
 export {
+  type FloodDeadline,
+  FloodMemory,
+  type FloodState,
+  floodPathFor,
+  SEND_BLOCK_MS,
+  type SendBlock,
+} from "./flood.js"
+export {
   type Asker,
   type GuardRequest,
   guardFor,

@@ -58,6 +58,17 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   with `health` that could not check the standing reports `unknown`, never `active`.
 - `mcp doctor` shows the last 20 lines (at most 2 KB) of the server's stderr when it fails to start, with the home
   folder, long numbers and token-like strings hidden.
+- **Remembered waits.** When the messenger answers `rate_limited` with `retryAfterMs`, the wait is kept in
+  `<state dir>/flood/<profile>.json` (0600) per adapter call, and per chat when the call named one by id. Until it
+  passes, the same call fails at once with `rate_limited`, `retryAfterMs` and `details.remembered: true`, without
+  asking the messenger again. At most 50 are kept; expired ones are dropped. `FloodMemory` and `floodPathFor` are
+  exported from `./sends`.
+- **Writes held for a frozen or spam-limited account.** A refusal with `details.standing.state` `frozen` or the new
+  `limited` holds every write that counts toward `sendsPerHour` — reads, reactions and marking read still work — with
+  a `permission_error` that says until when and points to `doctor --online`. The hold lasts until the messenger's
+  `until`, else 24 hours. `doctor --online` sets it on a frozen standing and lifts a frozen hold on an active one;
+  it never lifts a spam limit.
+- `server status` and `doctor` show the remembered waits and the hold as `flood: { deadlines, sendBlock }`.
 
 ### Changed — may break callers
 

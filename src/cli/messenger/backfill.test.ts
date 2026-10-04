@@ -1,5 +1,5 @@
 import { type ChildProcess, spawn } from "node:child_process"
-import { mkdtempSync } from "node:fs"
+import { mkdtempSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { CliError, captureStreams } from "@leemour/cli-core"
@@ -286,6 +286,12 @@ describe("store fetch", () => {
 
     const refused = await call(["store", "fetch", "7", "--pause", "1ms"], chatOf({ ...state, wait: 10 * 60_000 }), env)
     expect(refused.code).toBe(8)
+    const asked = state.asked.length
+    const remembered = await call(["store", "fetch", "7", "--pause", "1ms"], chatOf(state), env)
+    expect(remembered.code).toBe(8)
+    expect(state.asked).toHaveLength(asked)
+
+    rmSync(join(env.CHAT_STATE_DIR, "flood"), { recursive: true })
     const resumed = await call(["store", "fetch", "7", "--pause", "1ms", "--json"], chatOf(state), env)
     expect(resumed.answer).toMatchObject({ complete: true, ranges: [{ from: 1, to: 250 }] })
   })

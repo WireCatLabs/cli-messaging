@@ -6,6 +6,7 @@ import { setTimeout as sleep } from "node:timers/promises"
 import { captureStreams } from "@leemour/cli-core"
 import { describe, expect, it, onTestFinished } from "vitest"
 import { unitScope } from "../../background/units.js"
+import { FloodMemory } from "../../sends/flood.js"
 import { run } from "../program.js"
 import { settingsFor } from "../settings.js"
 import type { Messenger } from "./context.js"
@@ -223,6 +224,22 @@ describe("server without a unit", () => {
     await new Promise((resolve) => stale.on("exit", resolve))
     expect(servingProfiles(app, env)).toEqual([])
     expect(servingProfiles(app, { ...env, CHAT_STATE_DIR: join(env.CHAT_STATE_DIR, "nowhere") })).toEqual([])
+  })
+
+  it("**names what the messenger asked this profile to wait for, and a hold on its writes**", async () => {
+    const { env } = setup()
+    const flood = new FloodMemory(join(env.CHAT_STATE_DIR, "flood", "default.json"))
+    flood.remember({ operation: "history", chatId: "42", waitMs: 600_000, providerError: "FLOOD_WAIT" })
+    flood.block({ state: "limited", hint: "limited as spam" })
+
+    const json = await call(["status", "--json"], env, machine("linux").system)
+    expect(json.answer.flood).toMatchObject({
+      deadlines: [{ operation: "history", chatId: "42", providerError: "FLOOD_WAIT" }],
+      sendBlock: { state: "limited", hint: "limited as spam" },
+    })
+    const text = (await call(["status"], env, machine("linux").system, true)).text
+    expect(text).toContain("Writes are held until ")
+    expect(text).toMatch(/Asked to wait before history in chat 42 until /)
   })
 
   it("says it in sentences for a person", async () => {
