@@ -12,9 +12,12 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   query matches in the local store, each message once: by chat or sender (most first), or by calendar day or hour in
   `--timezone` (in order). No query counts every stored message. JSON: `{ by, items: [{ key, name, account?, count }],
   total, hasMore, page, limit, query, coverage, completeness }`; counts are lower bounds where coverage is not complete.
+- `store export --to <dir>` writes chats into a folder, a JSON-lines file per chat and a `manifest.json`; run again
+  on the same folder and it adds only what changed since: new messages, edits (also to old messages) and
+  deletions, as `{ id, chatId, deleted: true }` with no text. Several chats, `--kind` or `--all`. A change to
+  reactions alone is not counted as a change.
 - `inbox --kind` and `review --kind` take chat kinds, comma-separated (`dialog,group,channel`), so direct chats,
   groups and channels can be caught up on apart or together.
-
 - `date:` takes relative dates: `date:today`, `date:yesterday` (calendar days in `--timezone`), `date:7d` (since 7 days
   ago; also `30m`, `2h`), and the same in comparisons and ranges (`date>=7d`, `date:[30d TO 7d}`).
 - `conversations status [--chat <chat>]` and the read-only MCP tool `conversations_status` say how fresh each
@@ -42,6 +45,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Changed — may break callers
 
+- `MessageStore` has a new `changes(key, chatId, at)` method. tg-cli and max-cli do not implement `MessageStore`,
+  so neither needs a change.
 - `conversations search` no longer fails with `not_found` (exit 6) when the local model is not downloaded: it
   answers word matches with `meaning: "unavailable"` and names `models text download` on stderr. It never
   downloads a model or calls a remote one in its place. `ConversationHit` and `FoundConversation` have a new

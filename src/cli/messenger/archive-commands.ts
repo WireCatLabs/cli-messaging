@@ -4,10 +4,13 @@ import { CliError } from "@leemour/cli-core"
 import { Command } from "commander"
 import { toMarkdown } from "../../render/markdown.js"
 import { renderMessages } from "../../render/messages.js"
+import { CHAT_KINDS } from "../../services/chats.js"
+import { kindsOf } from "../../services/inbox.js"
 import { momentOf } from "../../services/moment.js"
 import { renderList } from "../paging.js"
 import { fetchCommand, jobsCommand } from "./backfill-command.js"
 import { type Messenger, messengerContext } from "./context.js"
+import { openFolder, saveManifest, writeChanges } from "./export-folder.js"
 import { storeMaintenanceCommands } from "./store-maintenance-command.js"
 
 /** `store`: the local store of messages — what it holds, filling it, reading it out, and looking after the file. */
@@ -74,25 +77,92 @@ const clearCommand = (messenger: Messenger): Command =>
 
 /**
  * One chat's stored messages, oldest first — `--jsonl` for a file or a pipe, one message per line,
- * `--format markdown` for a transcript a person reads.
+ * `--format markdown` for a transcript a person reads. With `--to`, any number of chats into a
+ * folder, and each later run into the same folder adds only what changed.
  */
 const exportCommand = (messenger: Messenger): Command =>
   new Command("export")
     .description("a chat's stored messages as JSON lines, oldest first; never asks the messenger")
-    .argument("<chat>", messenger.chatArgument)
+    .argument("[chats...]", `${messenger.chatArgument}; several with --to`)
     .option(
       "--format <format>",
       "jsonl (the default): one message per line; markdown: a transcript with a heading per day, replies and forwards quoted",
     )
     .option("--since-time <time>", "only from this ISO 8601 time, or 30m / 2h / 1d ago, on")
     .option("--output <file>", "write JSON lines, or the transcript, to this new file, readable only by you")
-    .action(async function (this: Command, chat: string) {
-      const { format, sinceTime: since, output } = this.opts<{ format?: string; sinceTime?: string; output?: string }>()
+    .option(
+      "--to <dir>",
+      "write into this folder, a file per chat and a manifest; run again on it for only what changed since",
+    )
+    .option("--kind <kinds>", `with --to: every stored chat of these kinds, comma-separated: ${CHAT_KINDS.join(", ")}`)
+    .option("--all", "with --to: every stored chat of this account")
+    .action(async function (this: Command, chats: string[]) {
+      const {
+        format,
+        sinceTime: since,
+        output,
+        to,
+        kind,
+        all,
+      } = this.opts<{
+        format?: string
+        sinceTime?: string
+        output?: string
+        to?: string
+        kind?: string
+        all?: boolean
+      }>()
       if (format !== undefined && format !== "markdown" && format !== "jsonl") {
         throw new CliError("validation_error", `--format is jsonl or markdown, not "${format}"`)
       }
-      const from = since === undefined ? undefined : new Date(momentOf(since, "--since-time")).toISOString()
       const context = messengerContext(this, messenger)
+      if (to !== undefined) {
+        if (format === "markdown" || since !== undefined || output !== undefined) {
+          throw new CliError(
+            "validation_error",
+            "--to writes JSON lines and keeps its own point — not with --format markdown, --since-time or --output",
+          )
+        }
+        if (chats.length === 0 && kind === undefined && all !== true) {
+          throw new CliError("validation_error", "--to needs chats, --kind or --all")
+        }
+        const kinds = kind === undefined ? undefined : kindsOf(kind)
+        const dir = resolve(to)
+        context.renderer.result(
+          await context.withServices(async (services) => {
+            const { account, chats: chosen } = await services.archive.exportable({
+              chats,
+              ...(kinds === undefined ? {} : { kinds }),
+            })
+            const manifest = openFolder(dir, account)
+            const written = []
+            for (const { id, title } of chosen) {
+              const before = manifest.chats[id]
+              const changes = await services.archive.changes(id, before?.mark)
+              const file =
+                before !== undefined && changes.messages.length === 0 && changes.deleted.length === 0
+                  ? null
+                  : writeChanges(dir, id, changes.mark, changes)
+              manifest.chats[id] = {
+                title,
+                mark: changes.mark,
+                files: [...(before?.files ?? []), ...(file === null ? [] : [file])],
+                messages: (before?.messages ?? 0) + changes.messages.length,
+                deleted: (before?.deleted ?? 0) + changes.deleted.length,
+              }
+              written.push({ id, title, file, messages: changes.messages.length, deleted: changes.deleted.length })
+            }
+            saveManifest(dir, manifest)
+            return { path: dir, chats: written }
+          }),
+        )
+        return
+      }
+      if (chats.length !== 1 || kind !== undefined || all === true) {
+        throw new CliError("validation_error", "one chat at a time without --to; --kind and --all need --to")
+      }
+      const chat = chats[0] as string
+      const from = since === undefined ? undefined : new Date(momentOf(since, "--since-time")).toISOString()
       const { title, messages } = await context.withServices((services) =>
         services.archive.export(chat, from === undefined ? {} : { since: from }),
       )

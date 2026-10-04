@@ -274,7 +274,8 @@ describe("inbox --new", () => {
     }
   }
 
-  const minutesAgo = (minutes: number) => new Date(Date.now() - minutes * 60_000).toISOString()
+  const startedAt = Date.now()
+  const minutesAgo = (minutes: number) => new Date(startedAt - minutes * 60_000).toISOString()
   const recentChat = (id: string, minutes: number, kind: Chat["kind"] = "group"): Chat => ({
     ...chatAt(id, 0),
     kind,
