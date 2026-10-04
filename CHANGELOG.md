@@ -14,7 +14,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   file holding one warn on stderr, once per key, and go on. The known keys are every command of the program
   (through `keyForCommand`, or the new optional `Messenger.permissionKey` for a CLI's own commands), every key in the
   new `WRITE_KEYS` export (`/sends`) and their parents. `configCommand` takes an optional third argument
-  `{ permissionKey }`; a CLI with its own `config set` calls the new `refuseUnknownKey`.
+  `{ permissionKey }`; a CLI with its own `config set` calls `refuseUnknownKey(command, setting, value, permissionKey)`,
+  which also checks every key of a whole `permissions` object.
 
 ## 0.144.0 — 04.10.2026
 

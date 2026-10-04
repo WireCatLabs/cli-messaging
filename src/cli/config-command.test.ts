@@ -71,6 +71,9 @@ describe("config", () => {
     expect(refused).toBe(2)
     expect(streams.stderr.join("\n")).toMatch(/permissions\.messages\.dlete names no command — .*messages\.delete/)
 
+    expect(
+      (await call(["config", "set", "permissions", '{"messages":"readonly","messages.dlete":"allow"}'], env)).code,
+    ).toBe(2)
     expect((await call(["config", "set", "permissions.messages.delete", "allow"], env)).code).toBe(0)
     expect((await call(["config", "unset", "permissions.messages.dlete"], env)).code).toBe(0)
   })
