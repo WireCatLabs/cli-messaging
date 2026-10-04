@@ -262,7 +262,7 @@ export interface Inbox {
   chats: InboxChat[]
   /** Past the per-run cap on history requests, so not read. */
   skipped: Pick<Chat, "id" | "title" | "lastMessageAt">[]
-  /** Only part of the chat list was looked at, and there may be more. */
+  /** The messenger could not list every chat, so one it left out may have more. */
   partial: boolean
   /** Muted or archived chats with something waiting, left out because nothing in them is for the owner. */
   quiet: number

@@ -11,8 +11,6 @@ import { readChatId } from "./messages.js"
  * one burst is already more than a person does, and the rest are named in `skipped`, not lost.
  */
 export const INBOX_CHATS = 20
-/** The newest dialogs looked at. Walking every dialog hit FLOOD_WAIT once (tg handoff §4.14). */
-export const CHAT_WINDOW = 100
 
 /** Owner's ruling in max-cli: without a boundary, a review looks at the last three days. */
 export const REVIEW_DAYS = 3
@@ -30,6 +28,15 @@ export const heard = (chats: Chat[], all: boolean) =>
   all
     ? { heard: chats, quiet: 0 }
     : { heard: chats.filter((chat) => !isQuiet(chat)), quiet: chats.filter(isQuiet).length }
+
+/**
+ * **Every chat, in one call without a limit.** Telegram sorts by the last message, so an unread or
+ * changed chat can sit anywhere below the newest hundred, and it has no server-side unread filter: a
+ * folder is filtered on the client over the same pages. tg already walks every dialog to resolve a
+ * typed title; MAX answers from the chats its login sent. `hasMore` is the messenger saying it could
+ * not list them all.
+ */
+const everyChat = (adapter: InboxReader) => adapter.chats({ offset: 0 })
 
 /** What `inbox` and `review` read: the messenger's own answers, or the local store's in store mode. */
 export type InboxReader = Pick<ServerReads, "chats" | "history"> & Pick<MessengerAdapter, "resolve" | "admins">
@@ -95,7 +102,7 @@ export const unreadIn = async (
   adapter: InboxReader,
   { limit, all = false, kinds }: { limit: number; all?: boolean; kinds?: readonly ChatKind[] },
 ): Promise<Inbox> => {
-  const page = await adapter.chats({ limit: CHAT_WINDOW, offset: 0 })
+  const page = await everyChat(adapter)
   const { heard: waiting, quiet } = heard(
     byRecency(ofKinds(page.items, kinds).filter((chat) => (chat.unreadCount ?? 0) > 0)),
     all,
@@ -135,7 +142,7 @@ export const newIn = async (
     kinds,
   }: { since: number; points?: ReadonlyMap<Id, number>; limit: number; all?: boolean; kinds?: readonly ChatKind[] },
 ): Promise<Inbox> => {
-  const page = await adapter.chats({ limit: CHAT_WINDOW, offset: 0 })
+  const page = await everyChat(adapter)
   const startOf = (chat: Id) => points?.get(chat) ?? since
   const changedAll = page.items.filter(
     (chat) => chat.lastMessageAt !== null && Date.parse(chat.lastMessageAt) > startOf(chat.id),
@@ -169,8 +176,7 @@ export const newIn = async (
     until: new Date(cut).toISOString(),
     chats,
     skipped,
-    // Every dialog in the window changed, so an older one past it may have too.
-    partial: page.hasMore && changedAll.length === page.items.length,
+    partial: page.hasMore,
     quiet,
     checked,
   }
@@ -225,7 +231,7 @@ export const reviewIn = async (
   adapter: InboxReader,
   { since, points, chat, kinds, all = false, unansweredAfterHours, now = Date.now(), enrich }: ReviewOptions,
 ): Promise<Review> => {
-  const page = await adapter.chats({ limit: CHAT_WINDOW, offset: 0 })
+  const page = await everyChat(adapter)
   const startOf = (id: Id) => points?.get(id) ?? since
   const changed = byRecency(
     page.items.filter((one) => one.lastMessageAt !== null && Date.parse(one.lastMessageAt) > startOf(one.id)),
@@ -246,7 +252,7 @@ export const reviewIn = async (
     if (messages.length > 0) chats.push({ id, title, kind, messages, more })
     if (!more) checked[id] = new Date(cut).toISOString()
   }
-  const partial = page.hasMore && changed.length === page.items.length
+  const partial = page.hasMore
   const earliest = changed.length > 0 ? Math.min(...changed.map((one) => startOf(one.id))) : since
   const found: Review = {
     since: new Date(points === undefined ? since : earliest).toISOString(),

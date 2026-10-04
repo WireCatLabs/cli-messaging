@@ -135,6 +135,57 @@ describe("the unread inbox", () => {
   })
 })
 
+describe("every chat, not only the newest", () => {
+  const since = Date.parse(at(0))
+  const asking = (chats: Chat[], histories: Record<string, Message[]>, hasMore = false) => {
+    const scripted = messengerWith(chats, histories)
+    const asked: unknown[] = []
+    const adapter: MessengerAdapter & ServerReads = {
+      ...scripted.adapter,
+      chats: async (window) => {
+        asked.push(window)
+        return { ...(await scripted.adapter.chats(window)), hasMore }
+      },
+    }
+    return { adapter, asked, read: scripted.read }
+  }
+
+  it("finds an unread chat far down a list sorted by the last message, in one call for every chat", async () => {
+    const quiet = Array.from({ length: 150 }, (_, index) => chatAt(`q${index}`, 59))
+    const { adapter, asked } = asking([...quiet, chatAt("far", 1, 1)], { far: [messageAt("far", "1", 1)] })
+
+    const inbox = await unreadIn(adapter, { limit: 20 })
+
+    expect(inbox.chats.map((chat) => chat.id)).toEqual(["far"])
+    expect(asked).toEqual([{ offset: 0 }])
+    expect(inbox.partial).toBe(false)
+  })
+
+  it("reads changed chats behind an old pinned one, and names the ones past the cap", async () => {
+    const pinned = chatAt("pinned", 0)
+    const changed = Array.from({ length: 120 }, (_, index) => chatAt(`c${index}`, 50))
+    const histories = Object.fromEntries(changed.map((chat) => [chat.id, [messageAt(chat.id, "1", 50)]]))
+    const { adapter } = asking([pinned, ...changed], histories)
+
+    const fresh = await newIn(adapter, { since, limit: 20 })
+    const review = await reviewIn(adapter, { since })
+
+    expect(fresh.chats.length + fresh.skipped.length).toBe(120)
+    expect(review.chats.length + review.skipped.length).toBe(120)
+    expect([fresh.partial, review.partial]).toEqual([false, false])
+  })
+
+  it("is partial only when the messenger says it could not list every chat", async () => {
+    const { adapter } = asking([chatAt("1", 5, 1)], { "1": [messageAt("1", "1", 5)] }, true)
+
+    const unread = await unreadIn(adapter, { limit: 20 })
+    const fresh = await newIn(adapter, { since, limit: 20 })
+    const review = await reviewIn(adapter, { since })
+
+    expect([unread.partial, fresh.partial, review.partial, review.complete]).toEqual([true, true, true, false])
+  })
+})
+
 describe("what is new since a moment", () => {
   it("cuts at the chat list's newest message, so a message arriving during the reads waits for the next run", async () => {
     const histories = {
@@ -351,6 +402,18 @@ describe("inbox --new", () => {
 
     expect(first.answer.chats).toHaveLength(INBOX_CHATS)
     expect(second.answer.chats.map((one: { id: string }) => one.id)).toEqual([`c${INBOX_CHATS}`, `c${INBOX_CHATS + 1}`])
+  })
+
+  it("says how many chats it skipped, and which", async () => {
+    const chats = Array.from({ length: INBOX_CHATS + 2 }, (_, index) => recentChat(`c${index}`, index + 1))
+    const histories = Object.fromEntries(chats.map((chat, index) => [chat.id, [recentMessage(chat.id, index + 1)]]))
+    const { inbox, review } = setup(histories, chats)
+
+    const fresh = await inbox(["--new"])
+    const reviewed = await review(["--since-time", "1d"])
+
+    expect(fresh.stderr).toContain(`skipped 2 chats — too many at once: Chat c${INBOX_CHATS}, Chat c${INBOX_CHATS + 1}`)
+    expect(reviewed.stderr).toContain("skipped 2 chats — too many at once")
   })
 
   it("a channels-only run leaves the groups for the next run", async () => {

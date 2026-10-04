@@ -4,7 +4,7 @@ import type { MessengerAdapter } from "../../cli/messenger/port.js"
 import { listed } from "../../cli/paging.js"
 import type { SendGuard } from "../../sends/guard.js"
 import { checkedFilter } from "../../services/chats.js"
-import { CHAT_SCAN, EVENTS_DAYS, onlineDeps, servicesFor, storedDeps } from "../../services/index.js"
+import { EVENTS_DAYS, onlineDeps, servicesFor, storedDeps } from "../../services/index.js"
 import { momentOf } from "../../services/moment.js"
 import { type AnyTool, chatOf, envelope, limit, page, paging, READ, tool } from "../tool.js"
 
@@ -17,8 +17,8 @@ export const chatsTools = (messenger: Messenger): Record<string, AnyTool> => {
       title: "List chats",
       description:
         "Chats the owner is in, most recent first. Use it to find a chat's id before reading or sending. " +
-        `With search, kind or unread, only the newest ${CHAT_SCAN} chats are searched, and partial says there were ` +
-        "older ones. Returns { items, page, limit, hasMore, partial? }.",
+        "With search, kind or unread, every chat is searched, and partial says the messenger could not list them " +
+        "all. Returns { items, page, limit, hasMore, partial? }.",
       input: v.object({
         search: v.optional(v.pipe(v.string(), v.minLength(3), v.description("only chats whose name contains this"))),
         kind: v.optional(v.picklist(["dialog", "group", "channel", "saved"])),

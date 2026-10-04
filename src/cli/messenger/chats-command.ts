@@ -1,5 +1,5 @@
 import { Command } from "commander"
-import { CHAT_KINDS, CHAT_SCAN, type ChatFilter, checkedFilter, EVENTS_DAYS } from "../../services/chats.js"
+import { CHAT_KINDS, type ChatFilter, checkedFilter, EVENTS_DAYS } from "../../services/chats.js"
 import { momentOf } from "../../services/moment.js"
 import { listed, renderPage, window, withPaging } from "../paging.js"
 import { groupCommands } from "./admin-commands.js"
@@ -24,7 +24,9 @@ export const chatsCommand = (messenger: Messenger): Command => {
         const wanted = window(context.settings)
         const page = await context.withServices((services) => services.chats.list(filter, wanted))
         if (page.partial) {
-          context.renderer.note(`only the ${CHAT_SCAN} newest chats were searched; an older one may match too`)
+          context.renderer.note(
+            "the messenger did not list every chat, and did not say how many it left out; one may match too",
+          )
         }
         renderPage(context, {
           ...page,
