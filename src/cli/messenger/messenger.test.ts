@@ -1354,6 +1354,22 @@ describe("the shared read commands", () => {
         fetch: "chat store fetch 7",
       })
       expect(asked).toEqual(["chatEvents"])
+      const roster = async () =>
+        ({
+          self: () => "500",
+          members: async () => {
+            asked.push("members")
+            return { chatId: "7", hasMore: false, items: [{ id: "40", name: "", username: null, isBot: true }] }
+          },
+          close: async () => {},
+        }) as unknown as MessengerAdapter
+      const audit = await call(["chats", "members", "audit", "7", "--json"], roster, env, {}, { provider })
+      expect(audit.code).toBe(0)
+      expect(audit.stdout).toHaveLength(1)
+      expect(JSON.parse(audit.stdout[0] ?? "null")).toMatchObject({
+        items: [{ id: "40", reasons: ["bot", "odd_name", "never_wrote"] }],
+      })
+      expect(asked).toEqual(["chatEvents", "members"])
       for (const recipe of searchRecipes.negative) {
         const result = await call(["messages", "search", recipe.query, "--json"], never, env, {}, { provider })
         expect(result.code).toBe(2)

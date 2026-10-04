@@ -470,6 +470,7 @@ describe("the MCP server", () => {
       "chat_chats_link_show",
       "chat_chats_list",
       "chat_chats_members",
+      "chat_chats_members_audit",
       "chat_chats_rules_show",
       "chat_chats_show",
       "chat_chats_stats",
@@ -550,6 +551,24 @@ describe("the MCP server", () => {
       expect(refused.isError).toBe(true)
     }
     expect(seen).toHaveLength(2)
+  })
+
+  it("audits a group's members with chat_chats_members_audit, a page at a time", async () => {
+    const pages: unknown[] = []
+    const { call } = await connect(
+      scripted({
+        members: async (_chat, window) => {
+          pages.push(window)
+          return { chatId: "7", hasMore: false, items: [{ id: "40", name: "", username: null, isBot: true }] }
+        },
+      }),
+    )
+
+    const { body } = await call("chat_chats_members_audit", { chat: "7", budget: 1 })
+
+    expect(body).toMatchObject({ chatId: "7", read: 1, more: false, items: [{ id: "40", score: 4 }] })
+    expect(body.unknown).toContain("never_wrote")
+    expect(pages).toEqual([{ limit: 200, offset: 0 }])
   })
 
   it("lists a forum's topics with chat_topics_list, passing search on", async () => {

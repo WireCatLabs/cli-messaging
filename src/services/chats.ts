@@ -18,6 +18,14 @@ import { newOperationId } from "../sends/send-id.js"
 import type { AccountKey, MessageStore } from "../store/store.js"
 import { type ChatStats, chatStats, type StatsPeriod } from "./chat-stats.js"
 import { fromStore, nothingStored, type ServiceDeps, storeIfOpen } from "./deps.js"
+import {
+  AUDIT_BUDGET,
+  AUDIT_MIN_SCORE,
+  AUDIT_PAGE,
+  AUDIT_PAUSE_MS,
+  auditMembers,
+  type MembersAudit,
+} from "./members-audit.js"
 import { storedChatId } from "./messages.js"
 
 /** How far back `events` looks without `since`, as in max-cli. */
@@ -80,6 +88,11 @@ export interface ChatsService {
    * come from the messenger, so they are absent offline; the rest never asks it.
    */
   stats(chat: string, options: { since?: number; by?: StatsPeriod; timezone?: string }): Promise<ChatStats>
+  /**
+   * Members that look like bots, each with its reasons. Reads the member list a page at a time, at most
+   * `budget` pages with a pause between them, and never asks about one person. Acts on nobody.
+   */
+  audit(chat: string, options: { budget?: number; minScore?: number; pauseMs?: number }): Promise<MembersAudit>
   /** Through the guard; never counts toward the hourly limit. */
   markRead(request: { chat: string; until?: string }): Promise<Operated<MarkedRead>>
 }
@@ -181,6 +194,47 @@ export const chatsService = (deps: ServiceDeps): ChatsService => ({
       : { ...stats, fetch: `${deps.messenger.app.command} store fetch ${chatId}` }
   },
 
+  audit: async (chat, { budget = AUDIT_BUDGET, minScore = AUDIT_MIN_SCORE, pauseMs = AUDIT_PAUSE_MS }) => {
+    if (fromStore(deps)) {
+      throw new CliError(
+        "validation_error",
+        "`chats members audit` reads the member list from the messenger; not offline",
+      )
+    }
+    const connection = await deps.connection()
+    const members = capability(connection, "members", "list a group's members")
+    const read: GroupMember[] = []
+    let chatId: Id | undefined
+    let more = true
+    for (let page = 0; page < budget && more; page++) {
+      if (page > 0) await new Promise((resolve) => setTimeout(resolve, pauseMs))
+      const found = await members(chatId ?? chat, { limit: AUDIT_PAGE, offset: read.length })
+      chatId = found.chatId
+      read.push(...found.items)
+      more = found.hasMore && found.items.length > 0
+    }
+    const id = chatId ?? chat
+    const held = await storeIfOpen(deps)
+    const stored = held ? await storedFacts(held.store, held.account, id) : undefined
+    const { items, unknown } = auditMembers(read, {
+      firstMessages: stored?.firstMessages,
+      self: connection.self(),
+      minScore,
+    })
+    return {
+      chatId: id,
+      read: read.length,
+      participantsCount: stored?.participantsCount ?? null,
+      more,
+      unknown,
+      ...(stored?.completeness ? { completeness: stored.completeness } : {}),
+      ...(stored?.completeness && stored.completeness.state !== "complete"
+        ? { fetch: `${deps.messenger.app.command} store fetch ${id}` }
+        : {}),
+      items,
+    }
+  },
+
   markRead: async ({ chat, until }) => {
     const connection = await deps.connection()
     const markRead = capability(connection, "markRead", "mark a chat read")
@@ -194,6 +248,26 @@ export const chatsService = (deps: ServiceDeps): ChatsService => ({
     return { operationId, chatId, until: until ?? null }
   },
 })
+
+/** Each sender's first stored message in the chat; `undefined` when the store holds none of it. */
+const storedFacts = async (store: MessageStore, account: AccountKey, chatId: Id) => {
+  const chat = (await store.chats(account, {})).items.find((one) => one.id === chatId)
+  const [completeness] = await store.chatCompleteness(account, [chatId])
+  const firstMessages = new Map<Id, Message>()
+  let before: Id | undefined
+  for (;;) {
+    const page = await store.messages(account, chatId, { limit: STATS_PAGE, ...(before ? { before } : {}) })
+    for (const message of [...page.items].reverse()) if (message.senderId) firstMessages.set(message.senderId, message)
+    const oldest = page.items[0]
+    if (!page.hasMore || !oldest) break
+    before = oldest.id
+  }
+  return {
+    participantsCount: chat?.participantsCount ?? null,
+    completeness,
+    firstMessages: firstMessages.size === 0 ? undefined : firstMessages,
+  }
+}
 
 /** Oldest first. */
 const storedSince = async (store: MessageStore, account: AccountKey, chatId: Id, since: string): Promise<Message[]> => {

@@ -108,6 +108,7 @@
       "value": "<profiles>",
       "meaning": "also read these bots' copies, comma separated — each allowed by readOtherBots"
     },
+    "--budget": { "value": "<pages>", "meaning": "at most this many pages of a list, with a pause between them" },
     "--by": {
       "value": "<grouping>",
       "meaning": "what to count by",
@@ -281,6 +282,7 @@
       "value": "<method>",
       "meaning": "how to log in when there is no session"
     },
+    "--min-score": { "value": "<n>", "meaning": "only rows scoring at least this" },
     "--model": {
       "value": "<id>",
       "meaning": "which downloaded speech model hears them; `models audio list` shows them",
@@ -1027,6 +1029,20 @@
         "--history": {
           "in": ["max"],
           "reason": "Telegram shows history to new members only in legacy groups, and P2 makes supergroups"
+        }
+      }
+    },
+    "chats members audit": {
+      "in": [],
+      "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" },
+      "options": {
+        "--budget": {
+          "in": [],
+          "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" }
+        },
+        "--min-score": {
+          "in": [],
+          "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" }
         }
       }
     },
