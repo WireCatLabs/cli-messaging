@@ -72,6 +72,9 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 - The parity manifest lists `mcp --http`, `--port`, `--public-url` and `--revoke` in both tg and max, which now
   have them.
+- Two `serve`s started in the same instant for one profile can no longer both run. The lock is now
+  taken in one step (`takeLock`, exported from `background`), not read and then written.
+
 ## 0.147.0 — 04.10.2026
 
 Released early: max-cli and tg-cli need the reviewed search coverage and history-boundary fixes for their coordinated release
