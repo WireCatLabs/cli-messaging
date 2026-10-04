@@ -8,6 +8,9 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Added
 
+- `inbox --kind` and `review --kind` take chat kinds, comma-separated (`dialog,group,channel`), so direct chats,
+  groups and channels can be caught up on apart or together.
+
 - `date:` takes relative dates: `date:today`, `date:yesterday` (calendar days in `--timezone`), `date:7d` (since 7 days
   ago; also `30m`, `2h`), and the same in comparisons and ranges (`date>=7d`, `date:[30d TO 7d}`).
 - `conversations status [--chat <chat>]` and the read-only MCP tool `conversations_status` say how fresh each
@@ -31,6 +34,9 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Fixed
 
+- `inbox --new` keeps a point per chat. A channels-only run no longer moves the point for groups, and chats past
+  the first 20 read in one run show on the next run instead of never. A points file written by an older version is
+  still read.
 - `filename:` and `mime:` alone no longer fail on an archive with more than 50,000 messages with files: names are
   matched before the main query, so the candidate row limit does not apply to them.
 - `has:link` also finds a message whose link exists only as a preview card (MAX `share`, Telegram `webpage`),

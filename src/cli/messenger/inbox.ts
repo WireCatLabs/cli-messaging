@@ -4,7 +4,8 @@ import { resolvePaths, writeSecurely } from "@leemour/cli-core"
 import { Command } from "commander"
 import type { MessageHit } from "../../domain/models.js"
 import { renderMessages } from "../../render/messages.js"
-import { CHAT_WINDOW } from "../../services/inbox.js"
+import { CHAT_KINDS } from "../../services/chats.js"
+import { CHAT_WINDOW, kindsOf } from "../../services/inbox.js"
 import { momentOf } from "../../services/moment.js"
 import { modelWith } from "../../speech/hearing.js"
 import type { AppIdentity } from "../app.js"
@@ -25,14 +26,30 @@ const FIRST_LOOK_MS = 24 * 60 * 60 * 1000
 const pointFileFor = (app: AppIdentity, profile: string, env: NodeJS.ProcessEnv): string =>
   join(resolvePaths({ appName: app.appName, prefix: app.envPrefix, env }).state, "inbox", `${profile}.json`)
 
-const savedPoint = (app: AppIdentity, profile: string, env: NodeJS.ProcessEnv): string | undefined => {
+interface Saved {
+  /** Where a chat with no point of its own starts: the first check, or the one point older versions kept. */
+  lastCheckAt?: string
+  chats?: Record<string, string>
+}
+
+const savedPoints = (app: AppIdentity, profile: string, env: NodeJS.ProcessEnv): Saved => {
   try {
-    const { lastCheckAt } = JSON.parse(readFileSync(pointFileFor(app, profile, env), "utf8")) as {
+    const { lastCheckAt, chats } = JSON.parse(readFileSync(pointFileFor(app, profile, env), "utf8")) as {
       lastCheckAt?: unknown
+      chats?: unknown
     }
-    return typeof lastCheckAt === "string" ? lastCheckAt : undefined
+    return {
+      ...(typeof lastCheckAt === "string" ? { lastCheckAt } : {}),
+      ...(chats !== null && typeof chats === "object"
+        ? {
+            chats: Object.fromEntries(
+              Object.entries(chats).filter((entry): entry is [string, string] => typeof entry[1] === "string"),
+            ),
+          }
+        : {}),
+    }
   } catch {
-    return undefined
+    return {}
   }
 }
 
@@ -42,9 +59,10 @@ const savedPoint = (app: AppIdentity, profile: string, env: NodeJS.ProcessEnv): 
  * **Plain `inbox` — what is unread**, as the messenger counts it. For a person.
  *
  * **`--new` — what arrived since the last check.** For a scheduled run: the point it starts from is
- * kept per profile and moved only by a run that printed, so each message shows once, and a run
- * that fails shows it again rather than never (max-cli `NEED-162`). `--since-time` is a one-off look
- * from a time of your choosing and leaves that point where it was.
+ * kept per chat and moved only by a run that printed, so each message shows once, and a run that
+ * fails shows it again rather than never (max-cli `NEED-162`). `lastCheckAt`, the first check, stays
+ * put: it is where a chat never read yet starts, so a chat skipped by one run is not lost.
+ * `--since-time` is a one-off look from a time of your choosing and leaves the points where they were.
  */
 export const inboxCommand = (messenger: Messenger): Command =>
   new Command("inbox")
@@ -53,6 +71,7 @@ export const inboxCommand = (messenger: Messenger): Command =>
     .option("--since-time <time>", "what arrived after this ISO 8601 time, or 2h / 1d ago; the saved point stays put")
     .option("--limit <n>", "at most this many per chat, the newest", positiveCount("--limit"))
     .option("--all", "muted and archived chats too — left out unless they mention you or reply to you")
+    .option("--kind <kinds>", `only chats of these kinds, comma-separated: ${CHAT_KINDS.join(", ")}`)
     .option(...TRANSCRIBE_OPTION)
     .option(...MODEL_OPTION)
     .action(async function (this: Command) {
@@ -60,12 +79,14 @@ export const inboxCommand = (messenger: Messenger): Command =>
         new: fresh,
         sinceTime: since,
         all,
+        kind,
         transcribe,
         model,
       } = this.opts<{
         new?: boolean
         sinceTime?: string
         all?: boolean
+        kind?: string
         transcribe?: boolean
         model?: string
       }>()
@@ -73,18 +94,19 @@ export const inboxCommand = (messenger: Messenger): Command =>
       const context = messengerContext(this, messenger)
       const { app } = messenger
       const { settings, renderer, format, streams, env } = context
-      const saved = savedPoint(app, settings.profile, env)
-      const from =
-        since !== undefined
-          ? momentOf(since, "--since-time")
-          : fresh
-            ? saved === undefined
-              ? Date.now() - FIRST_LOOK_MS
-              : Date.parse(saved)
-            : undefined
+      const kinds = kind === undefined ? undefined : kindsOf(kind)
+      const saved = savedPoints(app, settings.profile, env)
+      const first = saved.lastCheckAt ?? new Date(Date.now() - FIRST_LOOK_MS).toISOString()
+      const from = since !== undefined ? momentOf(since, "--since-time") : fresh ? Date.parse(first) : undefined
+      const points =
+        fresh && since === undefined
+          ? new Map(Object.entries(saved.chats ?? {}).map(([chat, at]) => [chat, Date.parse(at)]))
+          : undefined
       const { inbox, read, hearing } = await context.withServices(async (services, connect) => {
         const inbox = await services.inbox.read({
           ...(from === undefined ? {} : { since: from }),
+          ...(points === undefined ? {} : { points }),
+          ...(kinds === undefined ? {} : { kinds }),
           limit: settings.limit,
           all: all === true,
         })
@@ -134,11 +156,8 @@ export const inboxCommand = (messenger: Messenger): Command =>
         )
       }
 
-      if (fresh && since === undefined && inbox.until !== undefined && inbox.until !== inbox.since) {
-        writeSecurely(
-          pointFileFor(app, settings.profile, env),
-          `${JSON.stringify({ lastCheckAt: inbox.until })}\n`,
-          0o600,
-        )
+      if (points !== undefined && Object.keys(inbox.checked ?? {}).length > 0) {
+        const kept: Saved = { lastCheckAt: first, chats: { ...saved.chats, ...inbox.checked } }
+        writeSecurely(pointFileFor(app, settings.profile, env), `${JSON.stringify(kept)}\n`, 0o600)
       }
     })

@@ -1,10 +1,10 @@
-import { mkdtempSync } from "node:fs"
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { captureStreams } from "@leemour/cli-core"
 import { describe, expect, it } from "vitest"
 import type { Chat, Message } from "../../domain/models.js"
-import { INBOX_CHATS, newIn, unreadIn } from "../../services/inbox.js"
+import { INBOX_CHATS, kindsOf, newIn, reviewIn, unreadIn } from "../../services/inbox.js"
 import { momentOf } from "../../services/moment.js"
 import { run } from "../program.js"
 import { settingsFor } from "../settings.js"
@@ -99,6 +99,19 @@ describe("the unread inbox", () => {
     expect(inbox.skipped.map((chat) => chat.id)).toEqual([String(INBOX_CHATS), String(INBOX_CHATS + 1)])
   })
 
+  it("keeps only the kinds asked for, before the cap, so a busy kind does not crowd out another", async () => {
+    const groups = Array.from({ length: INBOX_CHATS + 2 }, (_, index) => chatAt(String(index), 59 - index, 1))
+    const channel = { ...chatAt("c", 0, 1), kind: "channel" as const }
+    const chats = [...groups, channel]
+    const histories = Object.fromEntries(chats.map((chat) => [chat.id, [messageAt(chat.id, "1", 0)]]))
+    const { adapter, read } = messengerWith(chats, histories)
+
+    const inbox = await unreadIn(adapter, { limit: 20, kinds: ["channel"] })
+
+    expect(read).toEqual(["c"])
+    expect(inbox.skipped).toEqual([])
+  })
+
   it("leaves out muted and archived chats unless they mention the owner, and counts them", async () => {
     const chats = [
       { ...chatAt("1", 5, 1), muted: true },
@@ -153,6 +166,52 @@ describe("what is new since a moment", () => {
   })
 })
 
+describe("a point per chat", () => {
+  it("starts each chat from its own point, and from since where it has none", async () => {
+    const histories = { "1": [messageAt("1", "10", 3), messageAt("1", "11", 6)], "2": [messageAt("2", "20", 4)] }
+    const { adapter } = messengerWith([chatAt("1", 6), chatAt("2", 4)], histories)
+
+    const inbox = await newIn(adapter, {
+      since: Date.parse(at(2)),
+      points: new Map([["1", Date.parse(at(5))]]),
+      limit: 20,
+    })
+
+    expect(inbox.chats.map((chat) => [chat.id, chat.messages.map((one) => one.id)])).toEqual([
+      ["1", ["11"]],
+      ["2", ["20"]],
+    ])
+    expect(inbox.checked).toEqual({ "1": at(6), "2": at(6) })
+  })
+
+  it("checks only the chats it read: other kinds and chats past the cap keep their point", async () => {
+    const histories = { g: [messageAt("g", "1", 4)], c: [messageAt("c", "2", 5)] }
+    const { adapter } = messengerWith([chatAt("g", 4), { ...chatAt("c", 5), kind: "channel" }], histories)
+
+    const inbox = await newIn(adapter, { since: Date.parse(at(2)), limit: 20, kinds: ["channel"] })
+
+    expect(inbox.checked).toEqual({ c: at(5) })
+  })
+})
+
+describe("--kind", () => {
+  it("takes kinds comma-separated and refuses anything else", () => {
+    expect(kindsOf("dialog, group")).toEqual(["dialog", "group"])
+    expect(() => kindsOf("groups")).toThrow(/dialog, group, channel, saved/)
+    expect(() => kindsOf(",")).toThrow(/--kind/)
+  })
+
+  it("narrows a review to those kinds", async () => {
+    const histories = { g: [messageAt("g", "1", 4)], c: [messageAt("c", "2", 5)] }
+    const { adapter, read } = messengerWith([chatAt("g", 4), { ...chatAt("c", 5), kind: "channel" }], histories)
+
+    const review = await reviewIn(adapter, { since: Date.parse(at(2)), kinds: ["group"] })
+
+    expect(review.chats.map((chat) => chat.id)).toEqual(["g"])
+    expect(read).toEqual(["g"])
+  })
+})
+
 describe("--since", () => {
   it("takes an ISO time or 30m, 2h, 1d ago, and refuses a message id", () => {
     const now = Date.parse("2026-09-28T12:00:00Z")
@@ -201,13 +260,30 @@ describe("inbox --new", () => {
       )
       return { code, answer: streams.stdout[0] ? JSON.parse(streams.stdout[0]) : undefined }
     }
+    const pointFile = join(env.CHAT_STATE_DIR, "inbox", "default.json")
     return {
       inbox,
       fail: (on: boolean) => {
         failing = on
       },
+      saved: () => JSON.parse(readFileSync(pointFile, "utf8")),
+      save: (points: unknown) => {
+        mkdirSync(join(env.CHAT_STATE_DIR, "inbox"), { recursive: true })
+        writeFileSync(pointFile, JSON.stringify(points))
+      },
     }
   }
+
+  const minutesAgo = (minutes: number) => new Date(Date.now() - minutes * 60_000).toISOString()
+  const recentChat = (id: string, minutes: number, kind: Chat["kind"] = "group"): Chat => ({
+    ...chatAt(id, 0),
+    kind,
+    lastMessageAt: minutesAgo(minutes),
+  })
+  const recentMessage = (chat: string, minutes: number): Message => ({
+    ...messageAt(chat, `${chat}-1`, 0),
+    timestamp: minutesAgo(minutes),
+  })
 
   it("shows each message once: a second run starts where the first one printed up to", async () => {
     const recent = new Date(Date.now() - 60_000).toISOString()
@@ -220,6 +296,40 @@ describe("inbox --new", () => {
     expect(first.answer.chats.map((one: { id: string }) => one.id)).toEqual(["1"])
     expect(second.answer.chats).toEqual([])
     expect(second.answer.since).toBe(recent)
+  })
+
+  it(`loses nothing past the first ${INBOX_CHATS} chats: the next run shows the ones skipped`, async () => {
+    const chats = Array.from({ length: INBOX_CHATS + 2 }, (_, index) => recentChat(`c${index}`, index + 1))
+    const histories = Object.fromEntries(chats.map((chat, index) => [chat.id, [recentMessage(chat.id, index + 1)]]))
+    const { inbox } = setup(histories, chats)
+
+    const first = await inbox(["--new"])
+    const second = await inbox(["--new"])
+
+    expect(first.answer.chats).toHaveLength(INBOX_CHATS)
+    expect(second.answer.chats.map((one: { id: string }) => one.id)).toEqual([`c${INBOX_CHATS}`, `c${INBOX_CHATS + 1}`])
+  })
+
+  it("a channels-only run leaves the groups for the next run", async () => {
+    const chats = [recentChat("g", 2), recentChat("c", 1, "channel")]
+    const { inbox } = setup({ g: [recentMessage("g", 2)], c: [recentMessage("c", 1)] }, chats)
+
+    const channels = await inbox(["--new", "--kind", "channel"])
+    const groups = await inbox(["--new", "--kind", "group"])
+
+    expect(channels.answer.chats.map((one: { id: string }) => one.id)).toEqual(["c"])
+    expect(groups.answer.chats.map((one: { id: string }) => one.id)).toEqual(["g"])
+  })
+
+  it("reads the single point older versions kept, and keeps it as where unread chats start", async () => {
+    const point = minutesAgo(10)
+    const { inbox, save, saved } = setup({ g: [recentMessage("g", 5)] }, [recentChat("g", 5)])
+    save({ lastCheckAt: point })
+
+    const { answer } = await inbox(["--new"])
+
+    expect(answer.since).toBe(point)
+    expect(saved()).toEqual({ lastCheckAt: point, chats: { g: answer.until } })
   })
 
   it("--all takes in muted and archived chats", async () => {
