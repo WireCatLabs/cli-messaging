@@ -257,7 +257,7 @@ export const addBotCopyReads = (messages: Command, bot: BotMessenger): void => {
         for (const { from, to } of found.corrections) context.renderer.note(`${from} → ${to.join(", ")}`)
         if (!found.wordsReady) {
           context.renderer.note(
-            `the word index is still being built, so this searched pieces of words — \`${bot.app.command} store migrate\` finishes it`,
+            `the word index is still being built, so a search by words reads pieces of words until \`${bot.app.command} store migrate\` finishes it`,
           )
         }
         if (context.format === "pretty") context.streams.data(messagesText(context, bot, found.items))

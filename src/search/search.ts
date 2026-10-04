@@ -64,9 +64,10 @@ export const search = async (
   scope: SearchScope,
   { limit, newest = false }: { limit: number; newest?: boolean },
 ): Promise<SearchAnswer> => {
+  const wordsReady = (await store.searchIndexState())?.ready === true
   const answer = (found: { items: SearchHit[]; hasMore: boolean }, rest: Partial<SearchAnswer> = {}) => ({
     corrections: [],
-    wordsReady: true,
+    wordsReady,
     ...found,
     ...rest,
   })
@@ -74,9 +75,9 @@ export const search = async (
     const page = await store.matchFilters(scope, { limit })
     return answer({ items: tagged(page, "filters"), hasMore: page.hasMore })
   }
-  if (!(await store.searchIndexState())?.ready) {
+  if (!wordsReady) {
     const page = await store.matchSubstring(query, scope, { limit })
-    return answer({ items: tagged(page, "substring"), hasMore: page.hasMore }, { wordsReady: false })
+    return answer({ items: tagged(page, "substring"), hasMore: page.hasMore })
   }
 
   const options = { limit, newest }
