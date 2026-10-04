@@ -141,7 +141,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--block` | `<value>` | Set to `true` if user should be blocked in chat. |  | `bot chats members remove` |
 | `--bot` |  | the bot section of the profile's settings, rather than the personal account's |  | `config set` (planned), `config show` (planned), `config unset` (planned) |
 | `--bots` | `<profiles>` | also read these bots' copies, comma separated — each allowed by readOtherBots |  | `bot contacts show`, `bot messages between`, `bot messages search` |
-| `--by` | `<chat\|sender\|day\|hour>` | what to count by |  | `messages stats` (planned) |
+| `--by` | `<grouping>` | what to count by. **each command names its own groupings — messages stats chat, sender, day or hour; chats stats day or week, as a series beside its totals — so it differs on purpose (Help text rule 4)** |  | `chats stats` (planned), `messages stats` (planned) |
 | `--can` | `<rights>` | what they may do, comma-separated: read, members, admins, info, pin, link, post, edit, delete. **lists the rights each messenger has — MAX has `read`, Telegram does not — so it differs on purpose (Help text rule 4)** |  | `bot chats admins add`, `chats admins add` |
 | `--channel` |  | a private channel instead of a group; people join it by its link |  | `chats create` |
 | `--chat` | `<chat>` | a chat, by id or name; repeat it for more. **chat addressing follows each messenger's supported names, usernames and Saved Messages aliases, so it differs on purpose (Help text rule 4); both message searches resolve stored names without networking** |  | `chats folders create`, `conversations batches next`, `conversations batches status`, `conversations build`, `conversations embed`, `conversations embed clear`, `conversations embed status`, `conversations links clear` (planned), `conversations list`, `conversations search`, `conversations status` (planned), `messages search`, `messages stats` (planned), `review` |
@@ -227,14 +227,14 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--show-phone` |  | print the whole phone number |  | `account show` |
 | `--silent` |  | deliver without a notification |  | `bot messages send`, `messages forward`, `messages send`, `polls create` |
 | `--since` | `<id-or-time>` | from this message id, an ISO 8601 time, or 2h / 1d ago; each command says its default. **becomes `--since-time` everywhere — NEED-485** |  | `inbox` (planned), `review` (planned) |
-| `--since-time` | `<time>` | from this ISO 8601 time, or 2h / 1d ago; each command says its default |  | `bot chats moderate`, `bot store fetch`, `chats events` (planned), `chats moderate` (planned), `conversations list`, `conversations search`, `inbox` (planned), `review` (planned), `store export`, `store fetch` |
+| `--since-time` | `<time>` | from this ISO 8601 time, or 2h / 1d ago; each command says its default |  | `bot chats moderate`, `bot store fetch`, `chats events` (planned), `chats moderate` (planned), `chats stats` (planned), `conversations list`, `conversations search`, `inbox` (planned), `review` (planned), `store export`, `store fetch` |
 | `--size` | `<n>` | messages to answer per batch, 10–200; 50 by default |  | `conversations batches next`, `conversations batches status` |
 | `--source` | `<messenger>` | every account of this messenger held in the store; personal, bots or all — the same as in: in the query |  | `messages search`, `messages stats` (planned) |
 | `--store-token` | `<profile>` | keep a returned authentication token only in this bot profile's OS keyring; never print it |  | `bot api` |
 | `--text` | `<text>` | the message's new text; - reads stdin |  | `bot callbacks answer` |
 | `--threads` | `<n>` | threads in all | `min(8, cores)` | `conversations embed` |
 | `--timeout` | `<duration>` | give up on the whole command after this — 30s, 2m, 500ms |  | every command |
-| `--timezone` | `<zone>` | the IANA timezone for calendar date boundaries | `system IANA timezone` | `messages search`, `messages stats` (planned) |
+| `--timezone` | `<zone>` | the IANA timezone for calendar date boundaries | `system IANA timezone` | `chats stats` (planned), `messages search`, `messages stats` (planned) |
 | `--title` | `<title>` | the new name — of a chat or a folder |  | `bot chats admins add`, `chats folders update`, `chats update` |
 | `--to` | `<chat>` | the chat to forward it to: an id, or part of a chat name. **the sentence says how to name a chat the messenger's way, so it differs on purpose (Help text rule 4)** |  | `messages forward`, `store export` |
 | `--topic` | `<id>` | send to this forum topic. **Telegram group forums only; MAX explicitly refuses this option before sending** |  | `messages send`, `polls create` |

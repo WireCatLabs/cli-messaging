@@ -244,7 +244,7 @@ export interface MessageStats {
   coverage: SearchCoverage
   completeness: (ChatCompleteness & AccountKey)[]
 }
-const calendarKey = (zone: string, by: "day" | "hour") => {
+export const calendarKey = (zone: string, by: "day" | "hour") => {
   const format = new Intl.DateTimeFormat("en-CA", {
     timeZone: zone,
     year: "numeric",

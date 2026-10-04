@@ -4,7 +4,7 @@ import type { MessengerAdapter } from "../../cli/messenger/port.js"
 import { listed } from "../../cli/paging.js"
 import type { SendGuard } from "../../sends/guard.js"
 import { checkedFilter } from "../../services/chats.js"
-import { CHAT_SCAN, EVENTS_DAYS, onlineDeps, servicesFor } from "../../services/index.js"
+import { CHAT_SCAN, EVENTS_DAYS, onlineDeps, servicesFor, storedDeps } from "../../services/index.js"
 import { momentOf } from "../../services/moment.js"
 import { type AnyTool, chatOf, envelope, limit, page, paging, READ, tool } from "../tool.js"
 
@@ -54,6 +54,29 @@ export const chatsTools = (messenger: Messenger): Record<string, AnyTool> => {
         })
         return { ...listed(events), hasMore: more, ...rest }
       },
+    }),
+
+    chats_stats: tool({
+      title: "A chat's numbers for a period",
+      description:
+        `Counts over a chat's stored messages since \`since_time\` (${EVENTS_DAYS} days back if not given): messages, ` +
+        "senders, replies, threads, reactions, views and forwards where the messenger gave them, topPosts, and " +
+        "questions { asked, answered, medianMinutesToAnswer }. `by` adds a series row per day or week. Reads the local " +
+        "store only, so joins and leaves are not in it — chats_events has them. complete is false when the store does " +
+        "not hold the chat whole: then every number is a lower bound, and fetch names the CLI command that fills it.",
+      input: v.object({
+        chat,
+        since_time: v.optional(v.pipe(v.string(), v.description("an ISO 8601 time, or 2h / 1d ago"))),
+        by: v.optional(v.picklist(["day", "week"])),
+        timezone: v.optional(v.pipe(v.string(), v.description("the IANA timezone for calendar days"))),
+      }),
+      annotations: { ...READ, openWorldHint: false },
+      stored: (store, account, args, defaults) =>
+        servicesFor(storedDeps(messenger, store, account, defaults.guard)).chats.stats(args.chat, {
+          ...(args.since_time === undefined ? {} : { since: momentOf(args.since_time, "since_time") }),
+          ...(args.by ? { by: args.by } : {}),
+          ...(args.timezone === undefined ? {} : { timezone: args.timezone }),
+        }),
     }),
 
     chats_members: tool({

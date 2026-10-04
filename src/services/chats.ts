@@ -9,16 +9,22 @@ import type {
   Id,
   LinkTarget,
   Member,
+  Message,
   Page,
 } from "../domain/models.js"
+import { timezoneOf } from "../search/lucene/dates.js"
 import { codeOf, guardedWrite, type Operated } from "../sends/guarded.js"
 import { newOperationId } from "../sends/send-id.js"
 import type { AccountKey, MessageStore } from "../store/store.js"
+import { type ChatStats, chatStats, type StatsPeriod } from "./chat-stats.js"
 import { fromStore, nothingStored, type ServiceDeps, storeIfOpen } from "./deps.js"
 import { storedChatId } from "./messages.js"
 
 /** How far back `events` looks without `since`, as in max-cli. */
 export const EVENTS_DAYS = 7
+
+/** How many stored messages one read of the store takes while `stats` walks the period. */
+const STATS_PAGE = 1000
 
 /** A filtered list searches the newest this many: paging through every dialog hit FLOOD_WAIT (tg handoff §4.14). */
 export const CHAT_SCAN = 200
@@ -69,6 +75,11 @@ export interface ChatsService {
   /** `since` in ms, parsed by the caller; `only` keeps the events named, comma-separated as typed. */
   events(chat: string, options: { since?: number; only?: string }): Promise<ChatEvents>
   inspect(link: string): Promise<LinkTarget>
+  /**
+   * Counts over the stored messages since `since` (ms; `EVENTS_DAYS` ago when unset). Joins and leaves
+   * come from the messenger, so they are absent offline; the rest never asks it.
+   */
+  stats(chat: string, options: { since?: number; by?: StatsPeriod; timezone?: string }): Promise<ChatStats>
   /** Through the guard; never counts toward the hourly limit. */
   markRead(request: { chat: string; until?: string }): Promise<Operated<MarkedRead>>
 }
@@ -143,6 +154,33 @@ export const chatsService = (deps: ServiceDeps): ChatsService => ({
     return capability(await deps.connection(), "inspect", "read a link")(link)
   },
 
+  stats: async (chat, { since, by, timezone }) => {
+    const store = await deps.store()
+    const account = await deps.account()
+    const chatId = await storedChatId(deps.messenger, chat, store, account)
+    const [completeness] = await store.chatCompleteness(account, [chatId])
+    if (!completeness) throw new CliError("not_found", `no stored chat ${chatId}`)
+    const from = since ?? Date.now() - EVENTS_DAYS * 86_400_000
+    const until = Date.now()
+    const messages = await storedSince(store, account, chatId, new Date(from).toISOString())
+    const connection = fromStore(deps) ? undefined : await deps.connection()
+    const events = connection?.chatEvents ? await connection.chatEvents(chatId, { since: from }) : undefined
+    const admins = (await connection?.admins?.(chatId)) ?? null
+    const stats = chatStats(messages, {
+      chatId,
+      since: from,
+      until,
+      completeness,
+      ...(events ? { events } : {}),
+      admins,
+      ...(by ? { by } : {}),
+      timezone: timezoneOf(timezone),
+    })
+    return completeness.state === "complete"
+      ? stats
+      : { ...stats, fetch: `${deps.messenger.app.command} store fetch ${chatId}` }
+  },
+
   markRead: async ({ chat, until }) => {
     const connection = await deps.connection()
     const markRead = capability(connection, "markRead", "mark a chat read")
@@ -156,6 +194,19 @@ export const chatsService = (deps: ServiceDeps): ChatsService => ({
     return { operationId, chatId, until: until ?? null }
   },
 })
+
+/** Oldest first. */
+const storedSince = async (store: MessageStore, account: AccountKey, chatId: Id, since: string): Promise<Message[]> => {
+  const pages: Message[][] = []
+  let before: Id | undefined
+  for (;;) {
+    const page = await store.messages(account, chatId, { limit: STATS_PAGE, since, ...(before ? { before } : {}) })
+    pages.unshift(page.items)
+    const oldest = page.items[0]
+    if (!page.hasMore || !oldest) return pages.flat()
+    before = oldest.id
+  }
+}
 
 /** `null` when no member list was ever saved: not knowing who is there is not nobody being there. */
 const storedMembers = async (store: MessageStore, account: AccountKey, chatId: Id): Promise<Member[] | null> => {
