@@ -8,8 +8,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Fixed
 
-- The parity manifest lists `mcp --http`, `--port`, `--public-url` and `--revoke`, available in tg and planned for
-  max, so a CLI that adopts 0.145.0 passes its parity check.
+- The parity manifest lists `mcp --http`, `--port`, `--public-url` and `--revoke`, planned for tg's next
+  cli-messaging bump and for max, so tg's parity check passes both before and after it adopts them.
 
 ## 0.145.0 — 04.10.2026
 

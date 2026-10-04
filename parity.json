@@ -1571,27 +1571,31 @@
         "--allow-send": "all",
         "--confirm-send": "all",
         "--http": {
-          "in": ["tg"],
+          "in": [],
           "planned": {
-            "max": "CLI-58"
+            "max": "CLI-58",
+            "tg": "tg's next cli-messaging bump"
           }
         },
         "--port": {
-          "in": ["tg"],
+          "in": [],
           "planned": {
-            "max": "CLI-58"
+            "max": "CLI-58",
+            "tg": "tg's next cli-messaging bump"
           }
         },
         "--public-url": {
-          "in": ["tg"],
+          "in": [],
           "planned": {
-            "max": "CLI-58"
+            "max": "CLI-58",
+            "tg": "tg's next cli-messaging bump"
           }
         },
         "--revoke": {
-          "in": ["tg"],
+          "in": [],
           "planned": {
-            "max": "CLI-58"
+            "max": "CLI-58",
+            "tg": "tg's next cli-messaging bump"
           }
         },
         "--yes": {
