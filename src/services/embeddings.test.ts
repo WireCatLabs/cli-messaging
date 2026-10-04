@@ -357,6 +357,87 @@ describe("derived index freshness", () => {
   })
 })
 
+describe("catching up without --chat", () => {
+  const inChat = (chatId: string, one: Message): Message => ({ ...one, chatId })
+  const withChats = async () => {
+    const set = await setUp()
+    await set.store.saveChats(account, [
+      { id: "10", title: "Other", kind: "group", unreadCount: 0, lastMessageAt: null, participantsCount: null },
+      { id: "11", title: "Zoe", kind: "dialog", unreadCount: 0, lastMessageAt: null, participantsCount: null },
+    ])
+    await set.store.saveMessages(account, "10", [inChat("10", message("200", "fish dog"))], { via: "history" })
+    await set.store.saveMessages(account, "11", [inChat("11", message("300", "cat"))], { via: "history" })
+    return set
+  }
+
+  it("**rebuilds a changed chat before building a group never built**, within --max-chats, and names the rest", async () => {
+    const { store, embeddings } = await withChats()
+    await store.saveMessages(account, "9", [message("120", "zebra")], { via: "live" })
+
+    const first = await embeddings.refresh({ model: "tiny", maxChats: 1, embed: false })
+    expect(first.built.map(({ chat }) => chat)).toEqual(["9"])
+    expect([first.embedded, first.left]).toEqual([[], [{ chat: "10", needs: "build" }]])
+
+    const second = await embeddings.refresh({ model: "tiny", embed: false })
+    expect([second.built.map(({ chat }) => chat), second.left]).toEqual([["10"], []])
+    expect((await embeddings.readiness({ model: "tiny" })).chats.map(({ chat }) => chat)).toEqual(["10", "9"])
+    await store.close()
+  })
+
+  it("**embeds what is left within --max-chunks**, the chats just built first, and resumes on the next run", async () => {
+    const { store, embeddings } = await withChats()
+
+    const first = await embeddings.refresh({ model: "tiny", maxChunks: 2, threads: 1 })
+    expect(first).toMatchObject({
+      model: "tiny",
+      modelAvailable: true,
+      built: [{ chat: "10" }],
+      embedded: [
+        { chat: "10", embedded: 1 },
+        { chat: "9", embedded: 1 },
+      ],
+      left: [{ chat: "9", needs: "embed" }],
+    })
+
+    const second = await embeddings.refresh({ model: "tiny", threads: 1 })
+    expect([second.built, second.embedded, second.left]).toEqual([
+      [],
+      [{ chat: "9", model: "tiny", embedded: 2, skipped: 0 }],
+      [],
+    ])
+    expect((await embeddings.readiness({ model: "tiny" })).chats.map(({ state }) => state)).toEqual(["ready", "ready"])
+    expect((await embeddings.refresh({ model: "tiny" })).embedded).toEqual([])
+    await store.close()
+  })
+
+  it("refreshes only the chat named, even one never built", async () => {
+    const { store, embeddings } = await withChats()
+    const done = await embeddings.refresh({ chat: "11", model: "tiny", threads: 1 })
+    expect(done).toMatchObject({ built: [{ chat: "11" }], embedded: [{ chat: "11", embedded: 1 }], left: [] })
+    await store.close()
+  })
+
+  it("builds but embeds nothing when the model is not downloaded, and an embed-only run refuses naming the download", async () => {
+    const { store, embeddings } = await withChats()
+    const done = await embeddings.refresh({})
+    expect(done).toMatchObject({ model: "e5-small", modelAvailable: false, built: [{ chat: "10" }], embedded: [] })
+    expect(done.left).toEqual([
+      { chat: "9", needs: "embed" },
+      { chat: "10", needs: "embed" },
+    ])
+    await expect(embeddings.refresh({ build: false })).rejects.toThrow("models text download e5-small")
+    await store.close()
+  })
+
+  it("stops one chat's embedding at --max-chunks, and the next run goes on from there", async () => {
+    const { store, embeddings } = await setUp()
+    expect(await embeddings.embed("9", { model: "tiny", threads: 1, maxChunks: 2 })).toMatchObject({ embedded: 2 })
+    expect(await embeddings.status("9", "tiny")).toMatchObject({ left: 1 })
+    expect(await embeddings.embed("9", { model: "tiny", threads: 1 })).toMatchObject({ embedded: 1 })
+    await store.close()
+  })
+})
+
 const withDatabase = async <T>(path: string, body: (run: (sql: string) => Record<string, unknown>[]) => T) => {
   const database = await openCache(path)
   try {

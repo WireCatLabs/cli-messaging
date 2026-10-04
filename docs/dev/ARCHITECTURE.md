@@ -110,7 +110,9 @@ again (`chunksToEmbed`, `src/store/sqlite/vectors.ts`), rebuilds its text with `
 only when the hash still matches; a chunk whose messages changed since the build waits for the next one. A
 search re-reads each meaning hit the same way (`chunkFreshness`) and marks it stale or drops it, and
 `tombstone` deletes the vectors of the chunks a deleted message was in (`purgeVectorsOf`); how fresh each chat
-is, is one query (`readiness`) behind `conversations status` and search's `readiness`. How
+is, is one query (`readiness`) behind `conversations status` and search's `readiness`. The same readiness picks
+what `conversations build` and `embed` without `--chat`, `search --refresh` and MCP `conversations_refresh` do:
+one service method, `embeddings.refresh`, bounded by chats and chunks. How
 the search over them works, end to end and measured: [search-indexes.md](../storage/search-indexes.md#search-by-meaning).
 
 **Where the queries live.** `src/store/store.ts` holds the `MessageStore` interface and `storeOver`, a

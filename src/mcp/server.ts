@@ -52,7 +52,8 @@ export const createServer = (
       ...deleteTools(messenger),
     }).filter(([key, one]) => {
       const level = levelOf(toolKey(key, one))
-      return level !== "deny" && (one.permission === undefined || level !== "readonly")
+      const writes = one.permission !== undefined || one.annotations.readOnlyHint !== true
+      return level !== "deny" && !(writes && level === "readonly")
     }),
   )
   const writes = Object.fromEntries(Object.entries(offered).filter(([, one]) => one.permission !== undefined))

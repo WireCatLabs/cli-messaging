@@ -245,6 +245,16 @@
       "meaning": "at most this many actions in one run",
       "default": "10"
     },
+    "--max-chats": {
+      "value": "<n>",
+      "meaning": "at most this many chats in one run",
+      "default": "20"
+    },
+    "--max-chunks": {
+      "value": "<n>",
+      "meaning": "at most this many chunks embedded in one run",
+      "default": "2000"
+    },
     "--max-tokens": {
       "value": "<n>",
       "meaning": "remote: stop before a run that could send more tokens than this"
@@ -369,7 +379,8 @@
       "note": "max's own copy is worded differently until T6 moves the command onto the shared one (e13)"
     },
     "--refresh": {
-      "meaning": "read the private chat with them from MAX first — one request"
+      "meaning": "read the private chat with them from MAX first — one request",
+      "note": "one idea, two sources: bring what the answer is read from up to date first. `bot contacts show` reads the private chat again from the messenger; `conversations search` builds and embeds, on this machine, the chats that changed (NEED-551 A, awaiting the owner's wording)"
     },
     "--regex": {
       "meaning": "the words are one regular expression, case-insensitive, tested against every stored text"
@@ -1217,7 +1228,14 @@
     "conversations build": {
       "in": "all",
       "options": {
-        "--chat": "all"
+        "--chat": "all",
+        "--max-chats": {
+          "in": [],
+          "planned": {
+            "max": "each CLI's next cli-messaging bump",
+            "tg": "each CLI's next cli-messaging bump"
+          }
+        }
       }
     },
     "conversations embed": {
@@ -1227,6 +1245,20 @@
         "--chat": "all",
         "--concurrency": "all",
         "--dims": "all",
+        "--max-chats": {
+          "in": [],
+          "planned": {
+            "max": "each CLI's next cli-messaging bump",
+            "tg": "each CLI's next cli-messaging bump"
+          }
+        },
+        "--max-chunks": {
+          "in": [],
+          "planned": {
+            "max": "each CLI's next cli-messaging bump",
+            "tg": "each CLI's next cli-messaging bump"
+          }
+        },
         "--max-tokens": "all",
         "--model": "all",
         "--provider": "all",
@@ -1309,8 +1341,29 @@
         "--chat": "all",
         "--dims": "all",
         "--limit": "all",
+        "--max-chats": {
+          "in": [],
+          "planned": {
+            "max": "each CLI's next cli-messaging bump",
+            "tg": "each CLI's next cli-messaging bump"
+          }
+        },
+        "--max-chunks": {
+          "in": [],
+          "planned": {
+            "max": "each CLI's next cli-messaging bump",
+            "tg": "each CLI's next cli-messaging bump"
+          }
+        },
         "--model": "all",
         "--provider": "all",
+        "--refresh": {
+          "in": [],
+          "planned": {
+            "max": "each CLI's next cli-messaging bump",
+            "tg": "each CLI's next cli-messaging bump"
+          }
+        },
         "--since-time": "all"
       }
     },

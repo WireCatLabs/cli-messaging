@@ -2,11 +2,16 @@ import { CliError } from "@leemour/cli-core"
 import * as v from "valibot"
 import type { Messenger } from "../../cli/messenger/context.js"
 import { listed } from "../../cli/paging.js"
+import { levelFor } from "../../sends/permissions.js"
+import { REFRESH_BOUNDS } from "../../services/embeddings.js"
 import { servicesFor, storedDeps } from "../../services/index.js"
 import { momentOf } from "../../services/moment.js"
 import { type AnyTool, chatOf, limit, message, READ, tool } from "../tool.js"
 
-/** Read-only: building a chat's conversations is the command's, run when the owner asks for it. */
+/** An MCP client gives up on a call long before 2,000 chunks are embedded. */
+const MCP_MAX_CHUNKS = 500
+
+/** Reads, and `conversations_refresh`, which writes derived indexes to the local store and never to the messenger. */
 export const conversationsTools = (messenger: Messenger): Record<string, AnyTool> => {
   const chat = chatOf(messenger)
   const command = messenger.app.command
@@ -93,6 +98,46 @@ export const conversationsTools = (messenger: Messenger): Record<string, AnyTool
           args.chat === undefined ? {} : { chat: args.chat },
         )
         return { ...listed(found.chats), model: found.model }
+      },
+    }),
+
+    conversations_refresh: tool({
+      title: "Bring conversations and vectors up to date",
+      description:
+        "Builds, then embeds with the model on this machine, the chats that changed since their build and the " +
+        "group chats never built — or only `chat` — at most `max_chats` chats " +
+        `(${REFRESH_BOUNDS.maxChats}) and \`max_chunks\` chunks (${MCP_MAX_CHUNKS}) per call; call again for the ` +
+        "rest. Writes only to the local store: nothing is sent, no model is downloaded and no remote model is " +
+        "used. Returns { model, modelAvailable, built, embedded, left }; `left` lists chats that still need " +
+        "`build` or `embed`. modelAvailable false means nothing was embedded: " +
+        `\`${command} models text download\`. What \`${command} conversations search --refresh\` runs first.`,
+      input: v.object({
+        chat: v.optional(chat),
+        max_chats: v.optional(
+          v.pipe(v.number(), v.integer(), v.minValue(1), v.description("at most this many chats in one run")),
+        ),
+        max_chunks: v.optional(
+          v.pipe(v.number(), v.integer(), v.minValue(1), v.description("at most this many chunks embedded in one run")),
+        ),
+      }),
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+      key: "conversations.embed",
+      stored: async (store, account, args, defaults) => {
+        const { level, key } = levelFor(defaults.settings.permissions ?? {}, "conversations.embed")
+        if (level === "ask") {
+          throw new CliError(
+            "confirmation_required",
+            `profile ${defaults.settings.profile} asks before conversations.embed writes (permissions.${key} is ` +
+              `ask); to allow it: ${command} ${defaults.settings.profile} config set permissions.conversations.embed allow`,
+            { permission: "conversations.embed" },
+          )
+        }
+        const deps = { ...storedDeps(messenger, store, account, defaults.guard), embedders: defaults.embedders }
+        return servicesFor(deps).embeddings.refresh({
+          ...(args.chat === undefined ? {} : { chat: args.chat }),
+          maxChats: args.max_chats ?? REFRESH_BOUNDS.maxChats,
+          maxChunks: args.max_chunks ?? MCP_MAX_CHUNKS,
+        })
       },
     }),
 

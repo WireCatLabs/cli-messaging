@@ -57,7 +57,7 @@ export interface Defaults {
   limit: number
   guard: SendGuard
   /** The profile's own entries, for a tool reading a setting of its own — `transcribeWith`. */
-  settings: Pick<Settings, "configured" | "shared" | "profile">
+  settings: Pick<Settings, "configured" | "shared" | "profile"> & Partial<Pick<Settings, "permissions">>
   env: NodeJS.ProcessEnv
   /** The server's open models, kept between `conversations_search` calls. */
   embedders?: WarmEmbedders

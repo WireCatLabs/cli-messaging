@@ -1402,6 +1402,83 @@ describe("the shared read commands", () => {
     expect(words.stderr.join("\n")).toContain("models text download e5-small")
   })
 
+  it("**catches up every changed chat** with build, embed and search --refresh, on this machine only", async () => {
+    const root = mkdtempSync(join(tmpdir(), "messenger-"))
+    const env = {
+      CHAT_STATE_DIR: join(root, "state"),
+      CHAT_CONFIG_DIR: join(root, "config"),
+      MESSAGING_STORE: join(root, "m.db"),
+      CLI_COMMON_CACHE_DIR: join(root, "cache"),
+      CHAT_OPENAI_API_KEY: "sk-test",
+    }
+    await call(["chats", "list", "--json"], async () => fake, env)
+    await call(["messages", "context", "Book", "2", "--json"], async () => fake, env)
+    const never = async (): Promise<MessengerAdapter> => {
+      throw new Error("catching up reads the store alone")
+    }
+    const sent: string[] = []
+    vi.stubGlobal("fetch", async (url: string) => {
+      sent.push(url)
+      return new Response("{}")
+    })
+    try {
+      const built = await call(["conversations", "build", "--max-chats", "5", "--json"], never, env)
+      expect(built.stdout).toHaveLength(1)
+      expect(JSON.parse(built.stdout[0] ?? "")).toMatchObject({
+        built: [{ chat: "7", messages: 3 }],
+        embedded: [],
+        left: [],
+      })
+      expect(built.stderr.join("\n")).toContain("chat 7: 3 messages → 1 conversations")
+
+      for (const remote of [
+        ["--provider", "openai"],
+        ["--base-url", "https://api.example.com/v1", "--dims", "8"],
+      ]) {
+        const embed = await call(["conversations", "embed", ...remote, "--yes", "--json"], never, env)
+        expect([embed.code, embed.stdout]).toEqual([2, []])
+        expect(embed.stderr.join("\n")).toContain("on this machine only")
+        const search = await call(["conversations", "search", "chapter", "--refresh", ...remote, "--json"], never, env)
+        expect([search.code, search.stdout]).toEqual([2, []])
+      }
+      expect(sent).toEqual([])
+
+      const embed = await call(["conversations", "embed", "--json"], never, env)
+      expect([embed.code, embed.stdout]).toEqual([6, []])
+      expect(embed.stderr.join("\n")).toContain("models text download e5-small")
+
+      const found = await call(
+        ["conversations", "search", "chapter", "--refresh", "--max-chunks", "10", "--json"],
+        never,
+        env,
+      )
+      expect([found.code, found.stdout.length]).toEqual([0, 1])
+      expect(JSON.parse(found.stdout[0] ?? "")).toMatchObject({
+        meaning: "unavailable",
+        refreshed: {
+          model: "e5-small",
+          modelAvailable: false,
+          built: [],
+          embedded: [],
+          left: [{ chat: "7", needs: "embed" }],
+        },
+      })
+      expect(found.stderr.join("\n")).toContain("nothing embedded: e5-small is not downloaded")
+      expect(sent).toEqual([])
+
+      mkdirSync(env.CHAT_CONFIG_DIR, { recursive: true })
+      writeFileSync(
+        join(env.CHAT_CONFIG_DIR, "config.json"),
+        JSON.stringify({ profiles: { default: { permissions: { "conversations.embed": "readonly" } } } }),
+      )
+      const refused = await call(["conversations", "search", "chapter", "--refresh", "--json"], never, env)
+      expect([refused.code, refused.stdout]).toEqual([5, []])
+      expect((await call(["conversations", "search", "chapter", "--json"], never, env)).code).toBe(0)
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
   it("**hands the agent a batch**, keeps its text out of the run record, and refuses it to a profile denying messages", async () => {
     const root = mkdtempSync(join(tmpdir(), "messenger-"))
     const env = {

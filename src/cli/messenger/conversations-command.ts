@@ -5,7 +5,14 @@ import { isLocal, remoteModel } from "../../embeddings/remote.js"
 import { renderMessages } from "../../render/messages.js"
 import { levelFor } from "../../sends/permissions.js"
 import { BATCH_SIZE } from "../../services/conversations.js"
-import type { ChatReadiness, EmbedStatus, FoundConversations, ModelChoice } from "../../services/embeddings.js"
+import {
+  type ChatReadiness,
+  type EmbedStatus,
+  type FoundConversations,
+  type ModelChoice,
+  REFRESH_BOUNDS,
+  type Refreshed,
+} from "../../services/embeddings.js"
 import { momentOf } from "../../services/moment.js"
 import type { AgentAnswer, ConversationSummary } from "../../store/store.js"
 import { embeddingKeys } from "../embedding-keys.js"
@@ -23,22 +30,36 @@ export const conversationsCommand = (messenger: Messenger): Command => {
     "the conversations inside a chat, found in the stored messages by replies, mentions and who wrote next",
   )
 
-  conversations
-    .command("build")
-    .description(
-      "find a chat's conversations in what the store holds, replacing the last build; never asks the messenger",
-    )
-    .requiredOption("--chat <chat>", messenger.chatArgument)
-    .action(async function (this: Command) {
-      const { chat } = this.opts<{ chat: string }>()
-      const context = messengerContext(this, messenger)
-      const built = await context.withServices((services) => services.conversations.build(chat))
-      if (context.format === "pretty") {
-        context.streams.data(
-          `${built.messages} messages → ${built.conversations} conversations, ${built.links} links (rules v${built.rulesVersion})\n`,
-        )
-      } else context.renderer.result(built)
-    })
+  boundOptions(
+    conversations
+      .command("build")
+      .description(
+        "find a chat's conversations in what the store holds, replacing the last build; without --chat, every " +
+          "chat that changed since its build and every group never built; never asks the messenger",
+      )
+      .option("--chat <chat>", messenger.chatArgument),
+    { chunks: false },
+  ).action(async function (this: Command) {
+    const { chat, maxChats } = this.opts<{ chat?: string; maxChats?: number }>()
+    const context = messengerContext(this, messenger)
+    if (chat === undefined) {
+      const refreshed = await context.withServices((services) =>
+        services.embeddings.refresh({
+          embed: false,
+          ...(maxChats ? { maxChats } : {}),
+          progress: (note) => context.renderer.note(note),
+        }),
+      )
+      renderRefreshed(context, refreshed, messenger.app.command)
+      return
+    }
+    const built = await context.withServices((services) => services.conversations.build(chat))
+    if (context.format === "pretty") {
+      context.streams.data(
+        `${built.messages} messages → ${built.conversations} conversations, ${built.links} links (rules v${built.rulesVersion})\n`,
+      )
+    } else context.renderer.result(built)
+  })
 
   conversations
     .command("list")
@@ -117,7 +138,7 @@ export const conversationsCommand = (messenger: Messenger): Command => {
     if (chats.length === 0) context.renderer.note("no chat has conversations yet — `conversations build --chat <chat>`")
   })
 
-  withModelOptions(conversations.command("search"))
+  boundOptions(withModelOptions(conversations.command("search")))
     .description(
       "the conversations nearest to a query in meaning and in words, best first, in one chat or every one — " +
         "meaning after `conversations embed`; runs on this machine",
@@ -126,20 +147,41 @@ export const conversationsCommand = (messenger: Messenger): Command => {
     .option("--chat <chat>", `only this chat: ${messenger.chatArgument}`)
     .option("--since-time <time>", "only those still going at this ISO 8601 time, or 30m / 2h / 1d ago, or later")
     .option("--limit <n>", "how many", positiveCount("--limit"))
+    .option(
+      "--refresh",
+      "first build and embed, on this machine, the chats in scope that changed or were never built — within " +
+        "--max-chats and --max-chunks",
+    )
     .action(async function (this: Command, query: string) {
-      const options = this.opts<ModelOptions & { chat?: string; sinceTime?: string }>()
+      const options = this.opts<
+        ModelOptions & { chat?: string; sinceTime?: string; refresh?: boolean } & BoundOptions
+      >()
       const { chat, sinceTime: since } = options
       const context = messengerContext(this, messenger)
       const model = choiceOf(options, messenger, context)
+      if (options.refresh) {
+        localOnly(model, "--refresh")
+        writable(context, messenger.app.command, EMBED_KEY)
+      }
       const { limit } = context.settings
-      const found = await context.withServices((services) =>
-        services.embeddings.search(query, {
+      const { found, refreshed } = await context.withServices(async (services) => {
+        const refreshed = options.refresh
+          ? await services.embeddings.refresh({
+              ...(chat === undefined ? {} : { chat }),
+              model: model as string,
+              ...bounds(options),
+              progress: (note) => context.renderer.note(note),
+            })
+          : undefined
+        const found = await services.embeddings.search(query, {
           limit,
           ...(chat === undefined ? {} : { chat }),
           model,
           ...(since === undefined ? {} : { since: new Date(momentOf(since, "--since-time")).toISOString() }),
-        }),
-      )
+        })
+        return { found, refreshed }
+      })
+      if (refreshed) for (const note of leftNotes(refreshed, messenger.app.command)) context.renderer.note(note)
       if (context.format === "pretty") {
         context.streams.data(
           found.hits
@@ -160,7 +202,15 @@ export const conversationsCommand = (messenger: Messenger): Command => {
       } else if (context.format === "jsonl") context.renderer.stream(found.hits)
       else {
         const { model, meaning, hits, readiness, embeddedOnlyElsewhere } = found
-        context.renderer.result({ model, meaning, items: hits, limit, readiness, embeddedOnlyElsewhere })
+        context.renderer.result({
+          model,
+          meaning,
+          items: hits,
+          limit,
+          readiness,
+          embeddedOnlyElsewhere,
+          ...(refreshed ? { refreshed } : {}),
+        })
       }
       const command = messenger.app.command
       if (found.meaning === "unavailable") {
@@ -270,7 +320,8 @@ export const conversationsCommand = (messenger: Messenger): Command => {
     new Command("embed")
       .description(
         "compute a vector for each chunk of a chat's conversations for search by meaning — on this machine, or " +
-          "with --provider through a service and your key; resumes where it stopped",
+          "with --provider through a service and your key; resumes where it stopped; without --chat, every " +
+          "built chat with chunks left, on this machine only",
       )
       .option("--chat <chat>", messenger.chatArgument),
   )
@@ -286,36 +337,59 @@ export const conversationsCommand = (messenger: Messenger): Command => {
       "remote: stop before a run that could send more tokens than this",
       positiveCount("--max-tokens"),
     )
-    .action(async function (this: Command) {
-      const options = this.optsWithGlobals<
-        ModelOptions & { chat?: string; workers?: number; threads?: number; maxTokens?: number; yes?: boolean }
-      >()
-      const chat = chatOf(options)
-      const context = messengerContext(this, messenger)
-      writable(context, messenger.app.command, EMBED_KEY)
-      const model = choiceOf(options, messenger, context)
-      const done = await context.withServices(async (services) => {
-        const status = await services.embeddings.status(chat, model)
-        context.renderer.note(
-          `${status.left} of ${status.chunks} chunks to embed with ${status.model}` +
-            (status.estimateSeconds === null ? "" : `, ${minutes(status.estimateSeconds)} on one session`),
-        )
-        if (typeof model !== "string" && status.left > 0 && !isLocal(model.remote.baseUrl)) {
-          await consent(this, status, model.remote.baseUrl, options)
-        }
-        return services.embeddings.embed(chat, {
-          model,
+  boundOptions(embed)
+  embed.action(async function (this: Command) {
+    const options = this.optsWithGlobals<
+      ModelOptions & {
+        chat?: string
+        workers?: number
+        threads?: number
+        maxTokens?: number
+        yes?: boolean
+      } & BoundOptions
+    >()
+    const context = messengerContext(this, messenger)
+    writable(context, messenger.app.command, EMBED_KEY)
+    const model = choiceOf(options, messenger, context)
+    if (options.chat === undefined) {
+      localOnly(model, "embedding without --chat")
+      const refreshed = await context.withServices((services) =>
+        services.embeddings.refresh({
+          build: false,
+          model: model as string,
+          ...bounds(options),
           ...(options.workers ? { workers: options.workers } : {}),
           ...(options.threads ? { threads: options.threads } : {}),
-          progress: (embedded, left) => context.renderer.note(`${embedded} embedded, ${left} left`),
-        })
+          progress: (note) => context.renderer.note(note),
+        }),
+      )
+      renderRefreshed(context, refreshed, messenger.app.command)
+      return
+    }
+    const chat = options.chat
+    const done = await context.withServices(async (services) => {
+      const status = await services.embeddings.status(chat, model)
+      context.renderer.note(
+        `${status.left} of ${status.chunks} chunks to embed with ${status.model}` +
+          (status.estimateSeconds === null ? "" : `, ${minutes(status.estimateSeconds)} on one session`),
+      )
+      if (typeof model !== "string" && status.left > 0 && !isLocal(model.remote.baseUrl)) {
+        await consent(this, status, model.remote.baseUrl, options)
+      }
+      return services.embeddings.embed(chat, {
+        model,
+        ...(options.workers ? { workers: options.workers } : {}),
+        ...(options.threads ? { threads: options.threads } : {}),
+        ...(options.maxChunks ? { maxChunks: options.maxChunks } : {}),
+        progress: (embedded, left) => context.renderer.note(`${embedded} embedded, ${left} left`),
       })
-      if (context.format === "pretty") {
-        context.streams.data(
-          `${done.embedded} chunks embedded with ${done.model}${done.skipped ? `, ${done.skipped} changed since the build — run \`conversations build\` again` : ""}\n`,
-        )
-      } else context.renderer.result(done)
     })
+    if (context.format === "pretty") {
+      context.streams.data(
+        `${done.embedded} chunks embedded with ${done.model}${done.skipped ? `, ${done.skipped} changed since the build — run \`conversations build\` again` : ""}\n`,
+      )
+    } else context.renderer.result(done)
+  })
 
   withModelOptions(
     embed
@@ -410,6 +484,75 @@ const withModelOptions = (command: Command): Command =>
       "remote: the vector size — needed with --base-url; shortens an OpenAI model's",
       positiveCount("--dims"),
     )
+
+interface BoundOptions {
+  maxChats?: number
+  maxChunks?: number
+}
+
+/** How much one run over many chats may do: the owner's machine, not a background job, pays for it. */
+const boundOptions = (command: Command, { chunks = true }: { chunks?: boolean } = {}): Command => {
+  command.option(
+    "--max-chats <n>",
+    `at most this many chats in one run; ${REFRESH_BOUNDS.maxChats} if not given`,
+    positiveCount("--max-chats"),
+  )
+  if (chunks) {
+    command.option(
+      "--max-chunks <n>",
+      `at most this many chunks embedded in one run; ${REFRESH_BOUNDS.maxChunks} if not given`,
+      positiveCount("--max-chunks"),
+    )
+  }
+  return command
+}
+
+const bounds = ({ maxChats, maxChunks }: BoundOptions) => ({
+  ...(maxChats ? { maxChats } : {}),
+  ...(maxChunks ? { maxChunks } : {}),
+})
+
+/** Work nobody named chat by chat never sends chat text off the machine. */
+const localOnly = (model: ModelChoice, what: string) => {
+  if (typeof model !== "string") {
+    throw new CliError(
+      "validation_error",
+      `${what} uses the model on this machine only — drop --provider and --base-url, or embed one chat with --chat`,
+    )
+  }
+}
+
+const renderRefreshed = (context: MessengerContext, refreshed: Refreshed, command: string) => {
+  if (context.format === "pretty") {
+    context.streams.data(
+      [
+        ...refreshed.built.map(
+          (one) => `${one.chat}  built: ${one.messages} messages → ${one.conversations} conversations\n`,
+        ),
+        ...refreshed.embedded.map((one) => `${one.chat}  ${one.embedded} chunks embedded with ${one.model}\n`),
+      ].join(""),
+    )
+    if (refreshed.built.length + refreshed.embedded.length === 0 && refreshed.left.length === 0) {
+      context.renderer.note("every chat is up to date")
+    }
+  } else context.renderer.result(refreshed)
+  for (const note of leftNotes(refreshed, command)) context.renderer.note(note)
+}
+
+const leftNotes = ({ model, modelAvailable, embedded, left }: Refreshed, command: string) => {
+  const of = (needs: "build" | "embed") => left.filter((one) => one.needs === needs).map(({ chat }) => chat)
+  const build = of("build")
+  const embed = of("embed")
+  return [
+    build.length > 0 ? `still to build: chat ${build.join(", ")} — run it again, or raise --max-chats` : "",
+    embed.length > 0 && modelAvailable
+      ? `still to embed: chat ${embed.join(", ")} — run it again, or raise --max-chats and --max-chunks`
+      : "",
+    embed.length > 0 && !modelAvailable && embedded.length === 0
+      ? `nothing embedded: ${model} is not downloaded — \`${command} models text download ${model}\``
+      : "",
+  ].filter(Boolean)
+}
 
 /** A local model id, or a remote model with its key from `models text key set`. */
 const choiceOf = (

@@ -175,6 +175,8 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--mark-read` |  | also mark the chat read up to the newest message shown; the other person sees it |  | `messages list` |
 | `--marker` | `<value>` | Marker |  | `bot chats members list` (max-only) |
 | `--max-actions` | `<n>` | at most this many actions in one run | `10` | `bot chats moderate`, `chats moderate` (planned) |
+| `--max-chats` | `<n>` | at most this many chats in one run | `20` | `conversations build` (planned), `conversations embed` (planned), `conversations search` (planned) |
+| `--max-chunks` | `<n>` | at most this many chunks embedded in one run | `2000` | `conversations embed` (planned), `conversations search` (planned) |
 | `--max-tokens` | `<n>` | remote: stop before a run that could send more tokens than this |  | `conversations embed` |
 | `--md` |  | read this messenger's Markdown; see its formatting guide for supported syntax |  | `bot messages edit`, `bot messages send`, `messages edit`, `messages send` |
 | `--members-see-link` | `<on\|off>` | members may see the invite link |  | `chats update` (max-only) |
@@ -207,7 +209,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--qr-file` | `<png>` | write the QR code to this PNG instead of drawing it, for an agent to pass on |  | `session start` (tg-only), `setup` (planned) |
 | `--quiet` |  | diagnostics off. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | every command |
 | `--record` |  | keep this run under `runs` — ids and timings, never message content. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | every command |
-| `--refresh` |  | read the private chat with them from MAX first — one request |  | `bot contacts show` |
+| `--refresh` |  | read the private chat with them from MAX first — one request. **one idea, two sources: bring what the answer is read from up to date first. `bot contacts show` reads the private chat again from the messenger; `conversations search` builds and embeds, on this machine, the chats that changed (NEED-551 A, awaiting the owner's wording)** |  | `bot contacts show`, `conversations search` (planned) |
 | `--regex` |  | the words are one regular expression, case-insensitive, tested against every stored text |  | `messages search` |
 | `--remove` | `<chat>` | take a chat out of a folder; repeat it for more |  | `chats folders update` |
 | `--reply-to` | `<message>` | answer this message id in the same chat |  | `bot messages send`, `messages send` |
@@ -370,7 +372,8 @@ many), `--allow-any-file` (which files).
 ## MCP
 
 1. **A tool is named `<tool>_<resource>_<verb>`** after its command: `max_store_export`,
-   `tg_chats_list`; a bot's, `<tool>_bot_<resource>_<verb>`: `tg_bot_messages_send`. A tool with no command (`<tool>_status`) is named after what it answers.
+   `tg_chats_list`; a bot's, `<tool>_bot_<resource>_<verb>`: `tg_bot_messages_send`. A tool with no command (`<tool>_status`) is named after what it answers. `<tool>_conversations_refresh` runs what
+   `conversations search --refresh` runs before it searches (NEED-551 A).
 2. **Arguments are the command's options in snake_case**, with the option's name: `--send-id` is
    `send_id`, `--since-time` is `since_time`, `--before-n` is `before_n`.
 3. **Every tool that only reads says `readOnlyHint: true`**; every tool that writes says what it

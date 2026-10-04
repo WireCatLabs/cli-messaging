@@ -214,6 +214,8 @@ export interface MessageStore {
    * conversations were ever built. A chat never built answers `builtAt: null`.
    */
   readiness(key: AccountKey, options: { chatId?: Id; model: string }): Promise<StoredReadiness[]>
+  /** Group chats with stored messages whose conversations were never built, the newest message first. */
+  unbuiltGroups(key: AccountKey): Promise<Id[]>
   /** Chats in scope embedded with another model and not with `model`, which a search with it cannot see. */
   embeddedOnlyElsewhere(key: AccountKey, options: { chatId?: Id; model: string }): Promise<Id[]>
   /** Whether the chat's conversations were built, and when; `undefined` when never. */
@@ -792,6 +794,11 @@ const storeOver = (context: StoreContext): MessageStore => {
               vectors: { chunks: 0, embedded: 0, current: 0, stale: 0, missing: 0 },
             }
       })
+    },
+
+    unbuiltGroups: async (key) => {
+      const accountPk = findAccountPk(key)
+      return accountPk === undefined ? [] : vectors.unbuiltGroups(context, accountPk)
     },
 
     embeddedOnlyElsewhere: async (key, { chatId, model }) => {
