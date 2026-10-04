@@ -6,6 +6,13 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- `server status` says when a unit stopped on an exit its CLI marked as not worth a restart (`noRestartOn`): for a
+  refused login, run `session start`, then `server start`. JSON adds `stopped` (`exitCode`, `reason`,
+  `restarts: false`) and `unit.exitCode`, read from systemd's `ExecMainStatus` (only for a normal exit, not a
+  signal) or launchd's `last exit code`.
+
 ## 0.146.0 — 04.10.2026
 
 Released early: tg-cli: its parity check refuses the mcp --http flags of 0.145.0; max-cli needs the exported HTTP pieces

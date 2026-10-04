@@ -1,6 +1,6 @@
 import { existsSync, rmSync } from "node:fs"
 import { join } from "node:path"
-import { CliError, resolvePaths, writeSecurely } from "@leemour/cli-core"
+import { CliError, EXIT_CODES, exitCodeFor, resolvePaths, writeSecurely } from "@leemour/cli-core"
 import { Command } from "commander"
 import { lockPath, readLock } from "../../background/lock.js"
 import { alive, carries } from "../../background/processes.js"
@@ -285,6 +285,12 @@ export const serverCommand = (messenger: Messenger, options: ServerOptions = {})
           ? `It runs ${app.command} ${held.version}, and ${app.command} is now ${app.version} — \`${app.command} server restart\`.`
           : undefined
       if (outdated && context.format !== "pretty") context.renderer.note(outdated)
+      const gaveUp =
+        !held && !state.active && state.exitCode !== undefined && unit.noRestartOn?.includes(state.exitCode)
+          ? state.exitCode
+          : undefined
+      const gaveUpReason =
+        gaveUp === undefined ? undefined : Object.entries(EXIT_CODES).find(([, code]) => code === gaveUp)?.[0]
       const unitLine = isInstalled
         ? `Unit: ${tilde(unit.path, context.env)} — ${state.detail ?? (state.active ? "active" : "inactive")}.`
         : `No unit installed — \`${app.command} server install\` adds one, for starting under systemd or launchd.`
@@ -305,6 +311,9 @@ export const serverCommand = (messenger: Messenger, options: ServerOptions = {})
           cliVersion: app.version,
           log: isInstalled && unit.path.endsWith(".service") ? `journalctl --user -u ${unit.name}` : unit.logPath,
           ...(left ? { stale: { pid: left.pid, startedAt: left.startedAt } } : {}),
+          ...(gaveUp !== undefined
+            ? { stopped: { exitCode: gaveUp, reason: gaveUpReason ?? null, restarts: false } }
+            : {}),
           unit: { name: unit.name, path: unit.path, installed: isInstalled, ...state },
         },
         [
@@ -312,7 +321,16 @@ export const serverCommand = (messenger: Messenger, options: ServerOptions = {})
             ? held.connected
               ? `Serving profile ${unit.profile} since ${clock(held.startedAt)} (PID ${held.pid}), connected${held.connectedAt ? ` since ${clock(held.connectedAt)}` : ""}, ${how(by ?? "hand", unit)}.`
               : `Starting profile ${unit.profile} since ${clock(held.startedAt)} (PID ${held.pid}) — not connected yet, ${how(by ?? "hand", unit)}.`
-            : `Not serving profile ${unit.profile}.${isInstalled && state.detail?.startsWith("failed") ? ` The unit failed — \`${app.command} server logs\`.` : ""}`,
+            : `Not serving profile ${unit.profile}.${isInstalled && gaveUp === undefined && state.detail?.startsWith("failed") ? ` The unit failed — \`${app.command} server logs\`.` : ""}`,
+          ...(gaveUp === exitCodeFor("authentication_error")
+            ? [
+                `It stopped because the login is no longer valid, and it will not restart by itself — \`${app.command} session start\`, then \`${app.command} server start\`.`,
+              ]
+            : gaveUp !== undefined
+              ? [
+                  `It stopped with ${gaveUpReason ?? `exit code ${gaveUp}`}, which a restart would not fix, so it will not restart by itself — \`${app.command} server logs\`, then \`${app.command} server start\`.`,
+                ]
+              : []),
           ...(left
             ? [
                 `A serve that started ${clock(left.startedAt)} (PID ${left.pid}) is gone and left its lock — the next start takes it over.`,
