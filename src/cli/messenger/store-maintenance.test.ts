@@ -422,3 +422,26 @@ describe("the stems", () => {
     expect(stderr.join("\n")).toContain("rebuilding them with snowball-3.1.1 cyrillic=none latin=spanish")
   })
 })
+
+describe("store repair and store copies delete", () => {
+  it("repairs nothing in a healthy store, and deletes only a repair copy, by name", async () => {
+    const env = envFor()
+    const database = await seeded(env)
+    database.exec("CREATE TABLE chats__repair_0123abcd (pk integer)")
+    database.close()
+
+    const dry = await call(["store", "repair", "--dry-run", "--json"], env)
+    const refused = await call(["store", "copies", "delete", "chats", "--json"], env)
+    const deleted = await call(["store", "copies", "delete", "chats__repair_0123abcd", "--json"], env)
+
+    expect(dry.answer).toMatchObject({
+      dryRun: true,
+      repaired: [],
+      mismatches: [],
+      copies: [{ name: "chats__repair_0123abcd" }],
+    })
+    expect(refused.code).not.toBe(0)
+    expect(deleted.answer).toMatchObject({ deleted: { name: "chats__repair_0123abcd", rows: 0 } })
+    expect((await call(["store", "info", "--json"], env)).answer.rows.chats).toBe(2)
+  })
+})

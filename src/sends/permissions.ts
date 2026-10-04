@@ -297,7 +297,7 @@ const HOUSEKEEPING = new Set([
 /** Under `bot`: its token, its names, its lists and its MCP server. */
 const BOT_HOUSEKEEPING = new Set(["auth", "list", "sends", "recipients", "mcp"])
 
-const STORE_MAINTENANCE = new Set(["info", "check", "migrate", "backup", "restore"])
+const STORE_MAINTENANCE = new Set(["info", "check", "migrate", "backup", "restore", "repair", "copies"])
 
 /** Commands outside `messages` that print what people wrote, so `deny messages` reaches them too. */
 const SHOW_MESSAGES = new Set(["inbox", "review", "watch", "serve", "store", "conversations"])

@@ -2334,6 +2334,14 @@
         "--left": "all"
       }
     },
+    "store copies": {
+      "in": [],
+      "planned": { "max": "max's next cli-messaging bump", "tg": "tg's next cli-messaging bump" }
+    },
+    "store copies delete": {
+      "in": [],
+      "planned": { "max": "max's next cli-messaging bump", "tg": "tg's next cli-messaging bump" }
+    },
     "store decrypt": {
       "in": "all",
       "options": {
@@ -2386,6 +2394,16 @@
       "in": ["max"],
       "planned": {
         "tg": "tg: cli-messaging 0.97.0 bump"
+      }
+    },
+    "store repair": {
+      "in": [],
+      "planned": { "max": "max's next cli-messaging bump", "tg": "tg's next cli-messaging bump" },
+      "options": {
+        "--dry-run": {
+          "in": [],
+          "planned": { "max": "max's next cli-messaging bump", "tg": "tg's next cli-messaging bump" }
+        }
       }
     },
     "store restore": {

@@ -19,7 +19,7 @@ guessable from the others.
 
 1. **`<tool> [profile] <resource> <verb> [arguments]`.** The resource is a noun: **plural** for a
    collection (`chats`, `contacts`, `messages`, `polls`, `reactions`, `recipients`, `replies`, `sends`,
-   `runs`, `topics`, `models`, `tags`, `searches`), **singular** for what a profile has exactly
+   `runs`, `topics`, `models`, `tags`, `searches`, `copies`), **singular** for what a profile has exactly
    one of (`session`, `account`, `config`, `server`, `store`, `skill`, `cache`, `flood`). A group is never
    named with a verb. `tags` and `searches` are the owner's own records in the local store, never
    sent; their writes have their own keys (`tags.add`), so a read-only profile hides them.
@@ -44,7 +44,9 @@ guessable from the others.
    - `fetch` from the messenger into the store · `export` from the store to a file · `import` ·
      `download` · `transcribe` · `sync` take a whole list again
    - `migrate` bring a file up to this build's schema · `backup` copy it somewhere safe ·
-     `restore` put a backup back in its place
+     `restore` put a backup back in its place · `repair` bring a file's tables to this build's shape
+     without deleting anything — a table of the wrong shape is kept as a copy (`store repair`, its copies
+     in `store copies`)
    - `link` / `unlink` record in the store that two identities are one person, or undo it — a
      decision someone made, never inferred from a name (`contacts link`)
    - `lookup` ask the messenger who is behind a phone number · `inspect` look at a link without
@@ -161,7 +163,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--defaults` |  | change what every profile gets, rather than this profile |  | `config set`, `config unset` |
 | `--description` | `<text>` | the new about text — of a chat or of your account |  | `account update`, `chats update` |
 | `--dims` | `<n>` | remote: the vector size — needed with --base-url; shortens an OpenAI model's |  | `conversations embed`, `conversations embed clear`, `conversations embed status`, `conversations related` (planned), `conversations search`, `conversations status` (planned) |
-| `--dry-run` |  | judge and plan; do nothing |  | `bot chats moderate`, `chats moderate` (planned), `config migrate` |
+| `--dry-run` |  | judge and plan; do nothing |  | `bot chats moderate`, `chats moderate` (planned), `config migrate`, `store repair` (planned) |
 | `--encrypt` |  | compress and encrypt with a password, typed at a hidden prompt or piped on stdin; never kept |  | `store backup`, `store export` |
 | `--estimate` |  | only say what the fetch would cost, from this machine's copy; nothing is sent. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | `store fetch` |
 | `--events` |  | also print edits, deletions and reactions; every line then names its event. **watch updates use this flag independently of the group event --type filter** |  | `bot watch`, `watch` |
