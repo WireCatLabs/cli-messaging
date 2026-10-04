@@ -1,9 +1,9 @@
 import { CliError } from "@leemour/cli-core"
 import type { Attachment, Id, Message, Page, WindowedMessage } from "../../domain/models.js"
 import type { ChatStats } from "../store.js"
-import { and, asc, desc, eq, gt, gte, inArray, isNull, lte, type SQL, sql } from "./drizzle/core.js"
+import { and, asc, desc, eq, gt, gte, inArray, isNull, lte, or, type SQL, sql } from "./drizzle/core.js"
 import type { StoreContext } from "./open.js"
-import { attachments, chats, identities, messages } from "./schema.js"
+import { attachments, chats, identities, messageRevisions, messages } from "./schema.js"
 import { parsed, present, toIso, toMs } from "./values.js"
 
 /**
@@ -93,6 +93,34 @@ export const countMessages = ({ orm }: StoreContext, chatKey: number, since: str
       .where(live(chatKey, since === undefined ? undefined : gte(messages.sentAt, toMs(since) as number)))
       .get()?.n,
   )
+
+/**
+ * What changed in a chat after `at`, a time on this machine's clock: messages first saved or edited
+ * since, oldest first, and the ids deleted since. Send time cannot answer it — an edit made today to
+ * a message from last year was sent last year. A change to reactions alone leaves no time, so it is
+ * not here.
+ */
+export const changesSince = (
+  context: StoreContext,
+  chatKey: number,
+  at: number,
+): { messages: Message[]; deleted: Id[] } => {
+  const edited = context.orm
+    .select({ pk: messageRevisions.messagePk })
+    .from(messageRevisions)
+    .where(gt(messageRevisions.capturedAt, at))
+  const rows = selectMessages(context)
+    .where(live(chatKey, or(gt(messages.ingestedAt, at), inArray(messages.pk, edited))))
+    .orderBy(asc(messages.sentAt), asc(messages.pk))
+    .all()
+  const deleted = context.orm
+    .select({ id: messages.nativeId })
+    .from(messages)
+    .where(and(eq(messages.chatPk, chatKey), gt(messages.deletedAt, at)))
+    .orderBy(asc(messages.deletedAt), asc(messages.pk))
+    .all()
+  return { messages: toMessages(context, rows), deleted: deleted.map((row) => row.id) }
+}
 
 export const messagesWindow = (
   context: StoreContext,

@@ -1721,6 +1721,62 @@ describe("the shared read commands", () => {
     expect((await call(["store", "export", "7", "--since-time", "4242"], never, env)).code).toBe(2)
   })
 
+  it("**export chats into a folder, and run again for only what changed** — a deletion without its text", async () => {
+    const root = mkdtempSync(join(tmpdir(), "messenger-"))
+    const env = { CHAT_STATE_DIR: join(root, "state"), MESSAGING_STORE: join(root, "m.db") }
+    await call(["messages", "context", "Book", "2", "--json"], async () => fake, env)
+    const never = async (): Promise<MessengerAdapter> => {
+      throw new Error("the archive commands must never connect")
+    }
+    const dir = join(root, "export")
+    const exported = async () =>
+      JSON.parse((await call(["store", "export", "7", "--to", dir, "--json"], never, env)).stdout[0] ?? "")
+    const lines = (file: string) =>
+      readFileSync(join(dir, file), "utf8")
+        .trim()
+        .split("\n")
+        .map((line) => JSON.parse(line))
+
+    const first = await exported()
+    const unchanged = await exported()
+    const manifest = JSON.parse(readFileSync(join(dir, "manifest.json"), "utf8"))
+    const store = await openStore({ path: env.MESSAGING_STORE })
+    await store.markDeleted({ provider: manifest.provider, account: manifest.account }, ["2"], { chatId: "7" })
+    await store.close()
+    const after = await exported()
+
+    expect(lines(first.chats[0].file).map((one: { id: string }) => one.id)).toEqual(["1", "2", "3"])
+    expect(statSync(join(dir, first.chats[0].file)).mode & 0o777).toBe(0o600)
+    expect(unchanged.chats[0]).toMatchObject({ file: null, messages: 0, deleted: 0 })
+    expect(lines(after.chats[0].file)).toEqual([{ id: "2", chatId: "7", deleted: true }])
+    expect(JSON.parse(readFileSync(join(dir, "manifest.json"), "utf8")).chats["7"]).toMatchObject({
+      messages: 3,
+      deleted: 1,
+      files: [first.chats[0].file, after.chats[0].file],
+    })
+  })
+
+  it("refuses an export folder it cannot add to safely, and --to with what it does not keep", async () => {
+    const root = mkdtempSync(join(tmpdir(), "messenger-"))
+    const env = { CHAT_STATE_DIR: join(root, "state"), MESSAGING_STORE: join(root, "m.db") }
+    await call(["messages", "context", "Book", "2", "--json"], async () => fake, env)
+    const never = async (): Promise<MessengerAdapter> => {
+      throw new Error("the archive commands must never connect")
+    }
+    const busy = join(root, "busy")
+    mkdirSync(busy)
+    writeFileSync(join(busy, "notes.txt"), "mine")
+
+    const intoBusy = await call(["store", "export", "7", "--to", busy], never, env)
+    const markdown = await call(["store", "export", "7", "--to", join(root, "x"), "--format", "markdown"], never, env)
+    const nothing = await call(["store", "export", "--to", join(root, "y")], never, env)
+    const several = await call(["store", "export", "7", "8"], never, env)
+
+    expect(intoBusy.stderr.join("\n")).toContain("holds other files")
+    expect([intoBusy.code, markdown.code, nothing.code, several.code]).toEqual([2, 2, 2, 2])
+    expect(existsSync(join(root, "x"))).toBe(false)
+  })
+
   it("keep the account file where tg-cli 0.x kept it", () => {
     const tg = { command: "tg", appName: "tg-cli", envPrefix: "TG", description: "", version: "0" }
     expect(accountFileFor(tg, "work", { TG_STATE_DIR: "/state" })).toBe("/state/accounts/work.json")

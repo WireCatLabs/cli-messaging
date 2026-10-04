@@ -2,7 +2,7 @@ import { setTimeout as sleep } from "node:timers/promises"
 import { CliError } from "@leemour/cli-core"
 import type { Fetching } from "../cli/messenger/context.js"
 import { capability } from "../cli/messenger/port.js"
-import type { Id, Message } from "../domain/models.js"
+import type { ChatKind, Id, Message } from "../domain/models.js"
 import { type AccountKey, type ChatStats, historyStartKey, type MessageStore, type Range } from "../store/store.js"
 import { type Estimate, estimateBackfill } from "./backfill-estimate.js"
 import type { ServiceDeps } from "./deps.js"
@@ -71,6 +71,17 @@ export interface ArchiveService {
   /** One chat's stored messages, oldest first, and its title. */
   /** `since` is an ISO time: only what was sent then or later. */
   export(chat: string, options?: { since?: string }): Promise<{ title: string; messages: Message[] }>
+  /** The chats an export to a folder covers: those named, or every stored chat, of these kinds if given. */
+  exportable(options: { chats?: string[]; kinds?: readonly ChatKind[] }): Promise<{
+    account: AccountKey
+    chats: { id: Id; title: string | null }[]
+  }>
+  /**
+   * A chat's messages for an export to a folder: every stored one, or with `after` (an earlier
+   * `mark`) only what changed since, with the ids deleted since. `mark` is taken before reading, so
+   * a message saved during the read shows again next time rather than never.
+   */
+  changes(chatId: Id, after?: string): Promise<{ messages: Message[]; deleted: Id[]; mark: string }>
   /** What a full fetch would still cost, from the store alone. */
   estimate(
     chat: string,
@@ -113,6 +124,32 @@ export const archiveService = (deps: ServiceDeps): ArchiveService => {
         title: (await store.chatStats(account, chatId))[0]?.title ?? chatId,
         messages: (await store.messages(account, chatId, window)).items,
       }
+    },
+
+    exportable: async ({ chats, kinds }) => {
+      const store = await deps.store()
+      const account = await deps.account()
+      if (chats !== undefined && chats.length > 0) {
+        const named = await Promise.all(chats.map((chat) => storedChatId(deps.messenger, chat, store, account)))
+        const titles = new Map((await store.chatStats(account)).map((one) => [one.chatId, one.title]))
+        return { account, chats: [...new Set(named)].map((id) => ({ id, title: titles.get(id) ?? null })) }
+      }
+      const stored = (await store.chats(account, {})).items
+      return {
+        account,
+        chats: stored
+          .filter((chat) => kinds === undefined || kinds.includes(chat.kind))
+          .map(({ id, title }) => ({ id, title })),
+      }
+    },
+
+    changes: async (chatId, after) => {
+      const store = await deps.store()
+      const account = await deps.account()
+      const mark = new Date().toISOString()
+      if (after !== undefined) return { ...(await store.changes(account, chatId, after)), mark }
+      const { items } = await store.messages(account, chatId, { limit: Number.MAX_SAFE_INTEGER })
+      return { messages: items, deleted: [], mark }
     },
 
     estimate: async (chat, { limit, pageSize, pauseMs }) => {

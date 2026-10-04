@@ -228,6 +228,8 @@ export interface MessageStore {
   messages(key: AccountKey, chatId: Id, window: { limit: number; before?: Id; since?: string }): Promise<Page<Message>>
   /** How many stored messages the chat has, sent at `since` or later when it is given. */
   countMessages(key: AccountKey, chatId: Id, options?: { since?: string }): Promise<number>
+  /** Saved or edited after `at` (ISO, this machine's clock), oldest first, and the ids deleted after it. */
+  changes(key: AccountKey, chatId: Id, at: string): Promise<{ messages: Message[]; deleted: Id[] }>
   /**
    * By time rather than by id: `before` messages sent at `at` or earlier and `after` sent later,
    * oldest first. `around` answers the same question for a message id.
@@ -832,6 +834,13 @@ const storeOver = (context: StoreContext): MessageStore => {
     countMessages: async (key, chatId, { since } = {}) => {
       const chatKey = chatKeyOf(key, chatId)
       return chatKey === undefined ? 0 : reads.countMessages(context, chatKey, since)
+    },
+
+    changes: async (key, chatId, at) => {
+      const chatKey = chatKeyOf(key, chatId)
+      return chatKey === undefined
+        ? { messages: [], deleted: [] }
+        : reads.changesSince(context, chatKey, Date.parse(at))
     },
 
     messagesWindow: async (key, chatId, window) => {
