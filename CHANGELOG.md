@@ -6,6 +6,16 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Changed — may break callers
+
+- `config set permissions.<key>` refuses a key that names no command and no checked write (exit 2,
+  `validation_error`), and names the known keys beside it: `permissions.messages.dlete names no command — the known
+  ones there are messages.delete, messages.edit, …`. `config unset` still removes such a key. Commands that read a
+  file holding one warn on stderr, once per key, and go on. The known keys are every command of the program
+  (through `keyForCommand`, or the new optional `Messenger.permissionKey` for a CLI's own commands), every key in the
+  new `WRITE_KEYS` export (`/sends`) and their parents. `configCommand` takes an optional third argument
+  `{ permissionKey }`; a CLI with its own `config set` calls the new `refuseUnknownKey`.
+
 ## 0.144.0 — 04.10.2026
 
 ### Added

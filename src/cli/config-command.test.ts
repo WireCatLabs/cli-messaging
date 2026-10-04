@@ -59,6 +59,22 @@ describe("config", () => {
     })
   })
 
+  it("**refuses a permission key that names no command**, and still removes one", async () => {
+    const root = mkdtempSync(join(tmpdir(), "config-"))
+    const env = { CHAT_CONFIG_DIR: join(root, "config"), CHAT_STATE_DIR: join(root, "state") }
+    const streams = captureStreams()
+    const refused = await run(
+      ["config", "set", "permissions.messages.dlete", "allow"],
+      { app, commands: () => [configCommand(app, config)] },
+      { streams, tty: false, env },
+    )
+    expect(refused).toBe(2)
+    expect(streams.stderr.join("\n")).toMatch(/permissions\.messages\.dlete names no command — .*messages\.delete/)
+
+    expect((await call(["config", "set", "permissions.messages.delete", "allow"], env)).code).toBe(0)
+    expect((await call(["config", "unset", "permissions.messages.dlete"], env)).code).toBe(0)
+  })
+
   it("refuses to change every profile from a process locked to one", async () => {
     const root = mkdtempSync(join(tmpdir(), "config-"))
     const env = { CHAT_CONFIG_DIR: join(root, "config"), CHAT_PROFILE_LOCK: "work" }

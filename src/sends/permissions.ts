@@ -228,6 +228,48 @@ export const keyForWrite = (kind: SendKind, action?: string): PermissionKey => {
   return KIND_KEYS[kind]
 }
 
+/** Write keys written out where a write is checked; `permission-keys.test.ts` keeps this list whole. */
+const NAMED_WRITE_KEYS = [
+  "account.sessions.list",
+  "bot.callbacks.answer",
+  "bot.chats.action",
+  "bot.chats.admins.add",
+  "bot.chats.admins.remove",
+  "bot.chats.leave",
+  "bot.chats.members.remove",
+  "bot.chats.moderate",
+  "bot.messages.delete",
+  "bot.messages.edit",
+  "bot.messages.pin",
+  "bot.messages.send",
+  "bot.messages.unpin",
+  "chats.admins.add",
+  "chats.admins.remove",
+  "chats.link.reset",
+  "chats.members.add",
+  "chats.members.remove",
+  "chats.moderate",
+  "conversations.embed",
+  "conversations.links",
+  "polls.close",
+  "polls.create",
+  "polls.vote",
+  "topics.create",
+  "topics.enable",
+]
+
+/** Every key a write is checked against that a command path may not spell out. */
+export const WRITE_KEYS: readonly PermissionKey[] = [
+  ...new Set([
+    ...NAMED_WRITE_KEYS,
+    ...Object.keys(DEFAULT_PERMISSIONS),
+    ...Object.values(KIND_KEYS),
+    ...Object.values(ACCOUNT_KEYS),
+    ...(Object.values(CHAT_KEYS) as PermissionKey[]),
+    ...PERMISSIONS.flatMap((word) => [...OLD_WORDS[word], ...botKeysOf(word)]),
+  ]),
+]
+
 /** Commands that look after the tool and its files and never show a message: no level stops them. */
 const HOUSEKEEPING = new Set([
   "config",

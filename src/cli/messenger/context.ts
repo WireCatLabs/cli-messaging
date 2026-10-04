@@ -9,6 +9,7 @@ import type { OpenRecognizer } from "../../speech/transcribe.js"
 import { type AccountKey, type DeletionScope, type MessageStore, openStore } from "../../store/store.js"
 import type { AppIdentity } from "../app.js"
 import { type BaseContext, baseContext, environmentOf } from "../context.js"
+import { knownPermissionKeys, type PermissionKeyOf, unknownPermissionKeys } from "../permission-keys.js"
 import type { EventSink } from "../runs/events.js"
 import type { GlobalFlags, ResolveOptions, Settings } from "../settings.js"
 import { recalledAccount, rememberAccount } from "./accounts.js"
@@ -95,6 +96,8 @@ export interface Messenger {
    * background server journals what it forwards, so a command over it records only its refusals.
    */
   guard?: (command: Command, settings: Settings, warn: (message: string) => void) => SendGuard
+  /** The permission key of one of this CLI's own commands, when `keyForCommand` does not know it. */
+  permissionKey?: PermissionKeyOf
   /** The CLI's SKILL.md, which the MCP server also serves as `<command>://skill`. */
   skill?: URL
   /** What only this messenger can say about itself for `doctor`, read from disk — never a secret. */
@@ -246,6 +249,12 @@ export const messengerContext = (command: Command, messenger: Messenger): Messen
   const base = baseContext(command, messenger.resolveSettings)
   const { profile } = base.settings
   refuseDenied(command, base.settings)
+  for (const key of unknownPermissionKeys(
+    base.settings.permissions,
+    knownPermissionKeys(command, messenger.permissionKey),
+  )) {
+    base.renderer.warn(`permissions.${key} names no command and does nothing — \`config unset permissions.${key}\``)
+  }
   const guard =
     messenger.guard?.(command, base.settings, base.renderer.warn) ??
     guardFor(app, base.settings, base.renderer.warn, base.env, terminalAsker(command))
