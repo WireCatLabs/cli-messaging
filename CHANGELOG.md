@@ -50,10 +50,12 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 - `doctor` says `login: { state: "not checked" }` until `--online` is given — a session file on disk is not a
   working login. With `--online` the login is `ok` or `failed`, with a hint.
 - `doctor` names every private file or folder others can read — the store and its `-wal`/`-shm`, the send journal,
-  the runs folder — with the `chmod` that fixes it. It never changes a mode itself. Not checked on Windows.
+  the runs folder, and the store's folder unless `MESSAGING_STORE` chose it — with the `chmod` that fixes it. It never
+  changes a mode itself. Not checked on Windows.
 - `doctor --online` reports `clock: { skewMs, uncertaintyMs, ok }` against the messenger's own time, warning at 10 s,
   and `standing` (`active`, `frozen`, `banned`, `deactivated`, `revoked`, `unknown`) with any dates and appeal link.
-  Both come from the new optional adapter group `AccountHealth` and from `details.standing` on a refusal.
+  Both come from the new optional adapter group `AccountHealth` and from `details.standing` on a refusal. A messenger
+  with `health` that could not check the standing reports `unknown`, never `active`.
 - `mcp doctor` shows the last 20 lines (at most 2 KB) of the server's stderr when it fails to start, with the home
   folder, long numbers and token-like strings hidden.
 

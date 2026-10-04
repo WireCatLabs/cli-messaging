@@ -349,6 +349,8 @@ export interface AccountHealth {
     serverTime?: number
     /** 1000 when the messenger counts whole seconds; the round trip adds to it. */
     serverTimeResolutionMs?: number
+    /** False when the messenger could not say whether the account is restricted; it is then `unknown`, never `active`. */
+    standingChecked: boolean
     standing?: AccountStanding
   }>
 }

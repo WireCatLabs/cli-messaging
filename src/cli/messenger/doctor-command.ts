@@ -157,7 +157,8 @@ const diagnose = async (
       runs: { directory: runsDirFor(app, env), kept: listRuns(runsDirFor(app, env)).length },
       files: privateFiles({
         files: [...withSqliteSidecars(store), sends],
-        dirs: [dirname(store), dirname(sends), runsDirFor(app, env)],
+        // A folder the owner chose with MESSAGING_STORE may rightly be shared, like the home folder itself.
+        dirs: [...(env.MESSAGING_STORE ? [] : [dirname(store)]), dirname(sends), runsDirFor(app, env)],
       }),
       [provider]: await (messenger.diagnose?.(command, context) ?? Promise.resolve({})).catch((error) => ({
         error: messageOf(error),
@@ -190,25 +191,37 @@ const standingOf = (error: unknown): AccountStanding | undefined => {
   return standing && STANDINGS.has(standing.state) ? standing : undefined
 }
 
-const clockOf = async (connection: MessengerAdapter) => {
-  if (!connection.health) return { clock: null }
+interface Health {
+  clock: { skewMs: number; uncertaintyMs: number; ok: boolean; warnAboveMs: number } | null
+  /** A messenger without `health` has no restriction a login would not show. */
+  standingChecked: boolean
+  standing?: AccountStanding
+  healthError?: string
+}
+
+const healthOf = async (connection: MessengerAdapter): Promise<Health> => {
+  if (!connection.health) return { clock: null, standingChecked: true }
   const sent = Date.now()
   try {
-    const { serverTime, serverTimeResolutionMs = 0, standing } = await connection.health()
+    const { serverTime, serverTimeResolutionMs = 0, standing, standingChecked } = await connection.health()
     const received = Date.now()
-    if (serverTime === undefined) return { clock: null, standing }
-    const skewMs = Math.round((sent + received) / 2 - serverTime)
+    const skewMs = serverTime === undefined ? undefined : Math.round((sent + received) / 2 - serverTime)
     return {
-      clock: {
-        skewMs,
-        uncertaintyMs: Math.ceil(serverTimeResolutionMs + (received - sent) / 2),
-        ok: Math.abs(skewMs) < CLOCK_SKEW_WARN_MS,
-        warnAboveMs: CLOCK_SKEW_WARN_MS,
-      },
-      standing,
+      clock:
+        skewMs === undefined
+          ? null
+          : {
+              skewMs,
+              uncertaintyMs: Math.ceil(serverTimeResolutionMs + (received - sent) / 2),
+              ok: Math.abs(skewMs) < CLOCK_SKEW_WARN_MS,
+              warnAboveMs: CLOCK_SKEW_WARN_MS,
+            },
+      standingChecked,
+      ...(standing ? { standing } : {}),
     }
   } catch (error) {
-    return { clock: null, healthError: codeOf(error), standing: standingOf(error) }
+    const standing = standingOf(error)
+    return { clock: null, standingChecked: false, healthError: codeOf(error), ...(standing ? { standing } : {}) }
   }
 }
 
@@ -218,10 +231,10 @@ const clockOf = async (connection: MessengerAdapter) => {
  */
 const onlineCheck = async (command: Command, messenger: Messenger, remembered: string | undefined) => {
   const started = Date.now()
-  const read: { health: Awaited<ReturnType<typeof clockOf>> } = { health: { clock: null } }
+  const read: { health: Health } = { health: { clock: null, standingChecked: false } }
   try {
     const me = await messengerContext(command, messenger).withMessenger(async (connection) => {
-      read.health = await clockOf(connection)
+      read.health = await healthOf(connection)
       return connection.me()
     })
     const { health } = read
@@ -231,7 +244,7 @@ const onlineCheck = async (command: Command, messenger: Messenger, remembered: s
       account: me.id,
       ...(remembered === undefined ? {} : { matchesRemembered: me.id === remembered }),
       durationMs: Date.now() - started,
-      standing: standing ?? { state: "active" },
+      standing: standing ?? { state: health.standingChecked ? "active" : "unknown" },
       clock: health.clock,
       ...(health.healthError ? { healthError: health.healthError } : {}),
       ...(standing?.hint ? { hint: standing.hint } : {}),

@@ -95,25 +95,38 @@ describe("doctor", () => {
     expect(answer.online).toBeUndefined()
   })
 
-  it("names each private file anybody else can read, with the command that fixes it, and changes nothing", async () => {
+  it.skipIf(process.platform === "win32")(
+    "names each private file anybody else can read, with the command that fixes it, and changes nothing",
+    async () => {
+      const { root, env } = setup()
+      await call(["chats", "list"], env, async () => connection)
+      expect((await call(["doctor", "--json"], env, refused)).answer.files).toEqual({
+        checked: true,
+        ok: true,
+        problems: [],
+      })
+
+      const runs = join(root, "state", "runs")
+      mkdirSync(runs, { recursive: true })
+      chmodSync(env.MESSAGING_STORE, 0o644)
+      chmodSync(runs, 0o755)
+      const { answer } = await call(["doctor", "--json"], env, refused)
+
+      expect(answer.files.ok).toBe(false)
+      expect(answer.files.problems).toEqual([
+        { path: env.MESSAGING_STORE, mode: "0644", want: "0600", fix: `chmod 600 '${env.MESSAGING_STORE}'` },
+        { path: runs, mode: "0755", want: "0700", fix: `chmod 700 '${runs}'` },
+      ])
+      expect(statSync(env.MESSAGING_STORE).mode & 0o777).toBe(0o644)
+    },
+  )
+
+  it("leaves alone the folder the owner chose for the store", async () => {
     const { root, env } = setup()
     await call(["chats", "list"], env, async () => connection)
-    expect((await call(["doctor", "--json"], env, refused)).answer.files).toEqual({
-      checked: true,
-      ok: true,
-      problems: [],
-    })
-
-    chmodSync(env.MESSAGING_STORE, 0o644)
     chmodSync(root, 0o755)
     const { answer } = await call(["doctor", "--json"], env, refused)
-
-    expect(answer.files.ok).toBe(false)
-    expect(answer.files.problems).toEqual([
-      { path: env.MESSAGING_STORE, mode: "0644", want: "0600", fix: `chmod 600 '${env.MESSAGING_STORE}'` },
-      { path: root, mode: "0755", want: "0700", fix: `chmod 700 '${root}'` },
-    ])
-    expect(statSync(env.MESSAGING_STORE).mode & 0o777).toBe(0o644)
+    expect(answer.files.problems ?? []).not.toContainEqual(expect.objectContaining({ path: root }))
   })
 
   it("reads the store and the remembered account once something was read", async () => {
@@ -170,7 +183,7 @@ describe("doctor --online", () => {
   it("measures the clock against the messenger's and warns when it is far off", async () => {
     const { env } = setup()
     const fine = await call(["doctor", "--online", "--json"], env, async () =>
-      withHealth(async () => ({ serverTime: Date.now(), serverTimeResolutionMs: 1000 })),
+      withHealth(async () => ({ standingChecked: true, serverTime: Date.now(), serverTimeResolutionMs: 1000 })),
     )
     expect(fine.answer.online).toMatchObject({ ok: true, standing: { state: "active" }, clock: { ok: true } })
     expect(Math.abs(fine.answer.online.clock.skewMs)).toBeLessThan(1000)
@@ -178,7 +191,7 @@ describe("doctor --online", () => {
     expect(fine.answer.login).toEqual({ state: "ok" })
 
     const ahead = await call(["doctor", "--online", "--json"], env, async () =>
-      withHealth(async () => ({ serverTime: Date.now() - 2 * CLOCK_SKEW_WARN_MS })),
+      withHealth(async () => ({ standingChecked: true, serverTime: Date.now() - 2 * CLOCK_SKEW_WARN_MS })),
     )
     expect(ahead.answer.online.clock).toMatchObject({ ok: false, warnAboveMs: CLOCK_SKEW_WARN_MS })
     expect(ahead.answer.online.clock.skewMs).toBeGreaterThanOrEqual(2 * CLOCK_SKEW_WARN_MS - 100)
@@ -200,7 +213,7 @@ describe("doctor --online", () => {
       hint: "appeal before the account is deleted",
     }
     const { code, answer } = await call(["doctor", "--online", "--json"], env, async () =>
-      withHealth(async () => ({ serverTime: Date.now(), standing: frozen })),
+      withHealth(async () => ({ standingChecked: true, serverTime: Date.now(), standing: frozen })),
     )
     expect(code).toBe(0)
     expect(answer.online).toMatchObject({ ok: true, standing: frozen, hint: frozen.hint })
@@ -211,7 +224,7 @@ describe("doctor --online", () => {
     const { env } = setup()
     const banned = async () =>
       ({
-        ...withHealth(async () => ({ serverTime: Date.now() })),
+        ...withHealth(async () => ({ serverTime: Date.now(), standingChecked: true })),
         me: async () => {
           throw new CliError("authentication_error", "the messenger ended this account", {
             providerError: "USER_DEACTIVATED_BAN",
@@ -239,7 +252,20 @@ describe("doctor --online", () => {
         throw new CliError("network_error", "gone")
       }),
     )
-    expect(answer.online).toMatchObject({ ok: true, clock: null, healthError: "network_error" })
+    expect(answer.online).toMatchObject({
+      ok: true,
+      clock: null,
+      healthError: "network_error",
+      standing: { state: "unknown" },
+    })
+  })
+
+  it("**never says active when the messenger could not check the account's standing**", async () => {
+    const { env } = setup()
+    const { answer } = await call(["doctor", "--online", "--json"], env, async () =>
+      withHealth(async () => ({ serverTime: Date.now(), standingChecked: false })),
+    )
+    expect(answer.online).toMatchObject({ ok: true, standing: { state: "unknown" }, clock: { ok: true } })
   })
 })
 

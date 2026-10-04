@@ -38,7 +38,7 @@ describe("mcp doctor", () => {
     const { code, root, stderr } = await doctorOf(
       [
         "for (let i = 0; i < 40; i++) console.error('noise ' + i)",
-        "console.error('cannot open ' + process.env.HOME + '/state/session for 123456789')",
+        "console.error('cannot open ' + (process.env.HOME ?? process.env.USERPROFILE) + '/state/session for 123456789')",
         "console.error('token abcdefghijklmnopqrstuvwxyz0123456789ABCD')",
         "process.exit(1)",
       ].join("\n"),
