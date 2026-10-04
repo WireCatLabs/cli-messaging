@@ -60,7 +60,7 @@ export const chatsTools = (messenger: Messenger): Record<string, AnyTool> => {
       title: "A chat's numbers for a period",
       description:
         `Counts over a chat's stored messages since \`since_time\` (${EVENTS_DAYS} days back if not given): messages, ` +
-        "senders, replies, threads, reactions, views and forwards where the messenger gave them, topPosts, and " +
+        "senders, replies, threads, reactions, views, forwards and comments where the messenger gave them, topPosts, and " +
         "questions { asked, answered, medianMinutesToAnswer }. `by` adds a series row per day or week. Reads the local " +
         "store only, so joins and leaves are not in it — chats_events has them. complete is false when the store does " +
         "not hold the chat whole: then every number is a lower bound, and fetch names the CLI command that fills it.",

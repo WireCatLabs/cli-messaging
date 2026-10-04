@@ -36,7 +36,7 @@ const history = [
   message("2", "02T10:05", "30", "Room four", { replyToId: "1" }),
   message("3", "02T10:10", "22", "Anyone?", {
     reactions: { counts: [{ reaction: "👍", count: 3 }], mine: null, total: 3 },
-    providerMetadata: { views: 120, forwards: 2 },
+    providerMetadata: { views: 120, forwards: 2, comments: 4 },
   }),
   message("5", "02T10:15", "23", "", { providerMetadata: { action: "chat_add_user" } }),
   message("4", "02T10:20", "21", "ok"),
@@ -129,7 +129,8 @@ describe("chats stats", () => {
       reactions: 3,
       views: 120,
       forwards: 2,
-      topPosts: [{ messageId: "3", reactions: 3, views: 120, forwards: 2 }],
+      comments: 4,
+      topPosts: [{ messageId: "3", reactions: 3, views: 120, forwards: 2, comments: 4 }],
       questions: { asked: 2, answered: 1, medianMinutesToAnswer: 5, answeredBy: "owner-and-admins" },
       members: { joined: 1, left: 1, net: 0, wrote: 1, medianMinutesToFirstMessage: 1380, more: false },
       series: [
