@@ -34,6 +34,14 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Fixed
 
+- **Permissions: the nearest section wins first, then the longest key.** A key a profile sets hides that key and
+  every key under it in `personal.defaults`/`bot.defaults` and `defaults`. Before, `profiles.agent.permissions:
+  {"messages": "readonly"}` did not stop `defaults.permissions: {"messages.delete": "allow"}`, so a read-only
+  profile deleted without asking. This also loosens: a profile's `messages: allow` now hides a shared
+  `messages.delete: deny`, and deleting falls back to the built-in `ask`. Old `readOnly` and `allow` count in the
+  section they are written in. `config migrate` uses the same rule. New export `layerPermissions` (`/sends`).
+- `config show` prints the permissions in force from every section, with a `sources` map per key, not only the
+  nearest section's `permissions` object.
 - `inbox --new` keeps a point per chat. A channels-only run no longer moves the point for groups, and chats past
   the first 20 read in one run show on the next run instead of never. A points file written by an older version is
   still read.

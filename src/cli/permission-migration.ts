@@ -3,6 +3,7 @@ import {
   fromOldSettings,
   LEVELS,
   type Level,
+  layerPermissions,
   levelFor,
   PERMISSIONS,
   type Permission,
@@ -34,17 +35,25 @@ const scopes = (config: Config): Map<string, Scope> =>
   ])
 const levels = (scope: Scope | undefined): Levels => (scope?.permissions ?? {}) as Levels
 const effective = (config: Config, kind: ProfileKind, profile?: string): Levels => {
-  const layers = [
-    config.defaults,
+  const own = (profiles: Record<string, Scope> | undefined) =>
+    profile === undefined || !Object.hasOwn(profiles ?? {}, profile) ? undefined : profiles?.[profile]
+  const layers: (Scope | undefined)[] = [
+    own(config[kind]?.profiles),
+    own(config.profiles),
     config[kind]?.defaults,
-    profile === undefined || !Object.hasOwn(config.profiles, profile) ? undefined : config.profiles[profile],
-    profile === undefined || !Object.hasOwn(config[kind]?.profiles ?? {}, profile)
-      ? undefined
-      : config[kind]?.profiles?.[profile],
+    config.defaults,
   ]
-  const readOnly = layers.findLast((scope) => scope?.readOnly !== undefined)?.readOnly === true
-  const allow = layers.findLast((scope) => scope?.allow !== undefined)?.allow as Permission[] | undefined
-  return Object.assign(fromOldSettings(readOnly, allow, { bot: kind === "bot" }), ...layers.map(levels))
+  const nearest = (key: string) => layers.findIndex((scope) => scope?.[key] !== undefined)
+  const readOnly = layers[nearest("readOnly")]?.readOnly === true
+  const allow = layers[nearest("allow")]?.allow as Permission[] | undefined
+  const old = fromOldSettings(readOnly, allow, { bot: kind === "bot" })
+  const oldAt = nearest(readOnly ? "readOnly" : "allow")
+  return layerPermissions(
+    layers.flatMap((scope, at): [string, Levels][] => [
+      ["", levels(scope)],
+      ...(at === oldAt ? [["", old] as [string, Levels]] : []),
+    ]),
+  ).levels
 }
 
 /** Input is a schema-validated configuration; legacy fields are checked before any transformation. */

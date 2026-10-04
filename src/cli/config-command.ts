@@ -141,6 +141,11 @@ const scopeOf = (kind: string | undefined, profile: string | undefined): string 
 
 /** A shared setting from what was resolved; a messenger's own from the file, where it lives. */
 const sourced = (settings: Settings, setting: string) => {
+  // Every layer adds to `permissions`, so the nearest layer's object alone is not what holds.
+  if (setting === "permissions") {
+    const from = Object.keys(settings.permissions).length > 0 ? "config file" : "default"
+    return { setting, value: settings.permissions, from, sources: settings.permissionSources }
+  }
   if (setting in settings.sources) {
     const value = (settings as unknown as Record<string, unknown>)[setting]
     // No list is every action, and `null` would read as none.

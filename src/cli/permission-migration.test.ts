@@ -100,6 +100,20 @@ describe("permission configuration migration", () => {
     expect(Reflect.get(Object, "permissions")).toBeUndefined()
   })
 
+  it("keeps a profile's old `readOnly` nearer than a shared section's `permissions`", () => {
+    const input: Config = {
+      defaults: { permissions: { "messages.delete": "allow", "messages.send": "allow" } },
+      profiles: { alice: { readOnly: true } },
+    }
+    const { path, env } = fresh()
+    saveConfigFile(path, input)
+    const before = snapshot(env)
+    saveConfigFile(path, migratePermissionConfig(input).config)
+    expect(snapshot(env)).toEqual(before)
+    const alice = configuration.resolveSettings({ profile: "alice" }, { env })
+    expect(levelFor(alice.permissions, "messages.delete").level).toBe("readonly")
+  })
+
   it("does not let a replacement allow-list inherit a parent's permitted write", () => {
     const input: Config = { defaults: { allow: ["send"] }, profiles: { alice: { allow: ["reaction"] } } }
     const { path, env } = fresh()

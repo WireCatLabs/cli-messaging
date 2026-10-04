@@ -141,6 +141,25 @@ export const fromOldSettings = (
   return levels
 }
 
+/**
+ * Layers come nearest first. A key a nearer layer sets hides that key and every key under it in the
+ * farther layers, so a profile's `messages: readonly` is not undone by `messages.delete: allow` in
+ * `defaults` — the nearest section wins, as it does for every other setting (NEED-573).
+ */
+export const layerPermissions = (layers: readonly [string, Readonly<Record<PermissionKey, Level>> | undefined][]) => {
+  const levels: Record<PermissionKey, Level> = {}
+  const sources: Record<PermissionKey, string> = {}
+  for (const [from, layer] of layers) {
+    const nearer = Object.keys(levels)
+    for (const [key, level] of Object.entries(layer ?? {})) {
+      if (nearer.some((named) => key === named || key.startsWith(`${named}.`))) continue
+      levels[key] = level
+      sources[key] = from
+    }
+  }
+  return { levels, sources }
+}
+
 const ALLOWED = { level: "allow", key: null } as const
 
 const ORDER: Record<Level, number> = { deny: 0, readonly: 1, ask: 2, allow: 3 }
