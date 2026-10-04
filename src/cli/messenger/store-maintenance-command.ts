@@ -21,6 +21,7 @@ import type { CacheDatabase } from "../../store/driver.js"
 import { MIGRATIONS, migrate } from "../../store/migrations.js"
 import { openCache } from "../../store/open.js"
 import { storePath } from "../../store/path.js"
+import { deleteCopy, type RepairReport, repairStore } from "../../store/repair.js"
 import { pendingNormalization } from "../../store/sqlite/backfill.js"
 import { fillSearchIndex, resetSearchIndex, searchIndexState } from "../../store/sqlite/search-index.js"
 import { fillStems, resetStems, stemsState } from "../../store/sqlite/stems.js"
@@ -95,7 +96,84 @@ export const storeMaintenanceCommands = (messenger: Messenger): Command[] => [
   backupCommand(),
   restoreCommand(messenger),
   decryptCommand(),
+  repairCommand(messenger),
+  copiesCommand(),
 ]
+
+/** Renaming tables under a running `serve` would pull them from under its statements. */
+const refuseWhileServing = (command: Command, messenger: Messenger) => {
+  const serving = servingProfiles(messenger.app, environmentOf(command).env ?? process.env)
+  if (serving.length > 0) {
+    throw new CliError(
+      "validation_error",
+      `${messenger.app.command} serve is running for ${serving.join(", ")} — \`${messenger.app.command} server stop\` first`,
+    )
+  }
+}
+
+const repairCommand = (messenger: Messenger): Command =>
+  new Command("repair")
+    .description(
+      "bring every table to this build's shape, deleting nothing: a table of the wrong shape is kept as a copy beside a new one",
+    )
+    .option("--dry-run", "say what it would do, and change nothing")
+    .action(async function (this: Command) {
+      const { renderer, format } = outputFor(this)
+      const { dryRun } = this.opts<{ dryRun?: boolean }>()
+      const path = storePath(environmentOf(this).env ?? process.env)
+      if (!existsSync(path)) {
+        renderer.result({ path, exists: false })
+        return
+      }
+      if (!dryRun) refuseWhileServing(this, messenger)
+      const fresh = await openCache(":memory:")
+      try {
+        const report = await reading(path, (database) => repairStore(database, fresh, { dryRun: dryRun === true }))
+        renderer.result({ path, ...report })
+        if (format === "pretty") for (const note of notesOf(report, messenger.app.command)) renderer.note(note)
+      } finally {
+        fresh.close()
+      }
+    })
+
+const notesOf = (report: RepairReport, command: string): string[] => {
+  const will = report.dryRun ? "would be" : "was"
+  const notes = report.repaired.map((one) => {
+    if (one.action === "created") return `${one.table}: ${will} created`
+    if (one.action === "columns-added") return `${one.table}: ${one.columnsAdded?.join(", ")} ${will} added`
+    const left = (one.rowsInCopy ?? 0) - (one.rowsCopied ?? 0)
+    return (
+      `${one.table}: ${will} rebuilt; the old one is kept as ${one.copy}, ${one.rowsCopied} of ${one.rowsInCopy} rows copied` +
+      (left > 0 ? ` — ${left} did not fit the new shape and are only in the copy` : "") +
+      (one.onlyInCopy?.length ? `; columns only in the copy: ${one.onlyInCopy.join(", ")}` : "")
+    )
+  })
+  if (report.repaired.length === 0) notes.push("every table already has this build's shape")
+  for (const { table, what } of report.mismatches) notes.push(`${table}: ${what} — left for you to decide`)
+  for (const { table, rows } of report.foreignKeyViolations)
+    notes.push(`${table}: ${rows} rows point at a row that is not there`)
+  if (report.copies.length > 0) {
+    notes.push(
+      `copies kept: ${report.copies.map((one) => `${one.name} (${one.rows} rows)`).join(", ")} — ` +
+        `\`${command} store copies delete <name>\` deletes one once you have looked at it`,
+    )
+  }
+  return notes
+}
+
+const copiesCommand = (): Command =>
+  new Command("copies").description("the tables `store repair` kept as copies").addCommand(
+    new Command("delete")
+      .description("delete one copy `store repair` kept, named exactly; refuses any other table")
+      .argument("<name>", "the copy's name, as `store repair` printed it")
+      .action(async function (this: Command, name: string) {
+        const { renderer } = outputFor(this)
+        const path = storePath(environmentOf(this).env ?? process.env)
+        if (!existsSync(path)) throw new CliError("not_found", `no store at ${path}`)
+        const deleted = await reading(path, (database) => deleteCopy(database, name))
+        renderer.result({ path, deleted })
+      }),
+  )
 
 const infoCommand = (): Command =>
   new Command("info")

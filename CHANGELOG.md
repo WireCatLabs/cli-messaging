@@ -8,6 +8,12 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Added
 
+- `store repair [--dry-run]` brings every table of the store to this build's shape without deleting anything. A
+  table only missing columns it can take gets them added; any other difference renames it to a copy,
+  `<table>__repair_<hash>`, beside a new table that holds every row that fits. The answer lists what was done,
+  rows left only in a copy, columns only a copy has, and every mismatch left for a person to decide.
+  `--dry-run` does the same work and rolls it back. `store copies delete <name>` deletes one copy, named exactly.
+  Repairs a store an early draft of version 13 set up, where reading a message failed on `messages.mentions`.
 - `contacts context <person> [--limit] [--since-time]` and read-only MCP `contacts_context`: what the store holds
   about one person in every messenger linked to them — shared chats, the last message each way, their recent
   messages in the direct chat and in groups, where others mentioned them, each with a locator. Store only, marks
