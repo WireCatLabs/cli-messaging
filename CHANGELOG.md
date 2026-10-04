@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.142.0 — 04.10.2026
+
 ### Added
 
 - `--encrypt` on `store export` (with `--output` or `--to`) and `store backup`: gzip, then AES-256-GCM with a key
