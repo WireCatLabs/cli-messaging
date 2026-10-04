@@ -293,7 +293,16 @@ const LINKS = /https?:\/\/\S+/g
 export const unanswered = (
   messages: Message[],
   { answerers, before }: { answerers: ReadonlySet<Id>; before: number },
-): Message[] => {
+): Message[] =>
+  questions(messages, { answerers })
+    .filter(({ question, answer }) => answer === undefined && Date.parse(question.timestamp) < before)
+    .map(({ question }) => question)
+
+/** Every question from others, as `unanswered` reads them, with the message that answered it, if one did. */
+export const questions = (
+  messages: Message[],
+  { answerers }: { answerers: ReadonlySet<Id> },
+): { question: Message; answer?: Message }[] => {
   const answers = (message: Message) =>
     message.outgoing === true || (message.senderId !== null && answerers.has(message.senderId))
   const byId = new Map(messages.map((message) => [message.id, message]))
@@ -307,15 +316,18 @@ export const unanswered = (
     )
   }
 
-  return messages.filter((message, index) => {
-    if (answers(message) || Date.parse(message.timestamp) >= before) return false
+  return messages.flatMap((message, index) => {
+    if (answers(message)) return []
     const transcript = "transcript" in message && typeof message.transcript === "string" ? message.transcript : ""
     if (![message.text, transcript].join("\n").replace(LINKS, "").includes("?") && !repliesToAnswerer(message))
-      return false
+      return []
     const later = messages.slice(index + 1)
-    if (later.some((reply) => (reply.replyTo?.id ?? reply.replyToId) === message.id && answers(reply))) return false
+    const reply = later.find((one) => (one.replyTo?.id ?? one.replyToId) === message.id && answers(one))
     const next = later.find((other) => other.senderId !== message.senderId)
-    return !(next && answers(next))
+    const answer = [reply, next && answers(next) ? next : undefined]
+      .filter((one) => one !== undefined)
+      .sort((a, b) => Date.parse(a.timestamp) - Date.parse(b.timestamp))[0]
+    return [{ question: message, ...(answer ? { answer } : {}) }]
   })
 }
 

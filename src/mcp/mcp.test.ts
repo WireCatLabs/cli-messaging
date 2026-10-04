@@ -428,6 +428,7 @@ describe("the MCP server", () => {
       "chat_chats_members",
       "chat_chats_rules_show",
       "chat_chats_show",
+      "chat_chats_stats",
       "chat_contacts_list",
       "chat_contacts_lookup",
       "chat_contacts_show",

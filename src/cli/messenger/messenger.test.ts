@@ -1318,6 +1318,17 @@ describe("the shared read commands", () => {
       const badGrouping = await call(["messages", "stats", "--by", "week", "--json"], never, env, {}, { provider })
       expect(badGrouping.code).toBe(2)
       expect(badGrouping.stdout).toEqual([])
+      const chatStats = await call(
+        ["chats", "stats", "7", "--offline", "--since-time", "2000-01-01", "--json"],
+        never,
+        env,
+        {},
+        { provider },
+      )
+      expect(chatStats.code).toBe(0)
+      expect(chatStats.stdout).toHaveLength(1)
+      expect(JSON.parse(chatStats.stdout[0] ?? "null")).toMatchObject({ chatId: "7", complete: false })
+      expect(chatStats.stderr.join("\n")).toContain("joins and leaves were not asked of the messenger")
       for (const recipe of searchRecipes.negative) {
         const result = await call(["messages", "search", recipe.query, "--json"], never, env, {}, { provider })
         expect(result.code).toBe(2)

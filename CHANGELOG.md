@@ -6,6 +6,17 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- `chats stats <chat> [--since-time] [--by day|week] [--timezone]` and read-only MCP `chats_stats`: a group's or
+  channel's numbers for a period (7 days by default) — messages, people who wrote, replies, threads, reactions, the
+  top posts, Telegram views and forwards where a post carries them, and questions asked and answered with the median
+  minutes to an answer, by the rule `review --unanswered` uses. Counted from the local store; the command also asks
+  the messenger who joined and left, how many of them wrote and how soon (`members`), which `--offline` and the MCP
+  tool leave out rather than report as zero. `complete: false` when the store does not hold the chat whole or the
+  messenger stopped reading joins early: every number is then a lower bound, and the terminal names the
+  `store fetch` that fills it. Services: `ChatsService.stats`.
+
 ### Changed — may break callers
 
 - `config set permissions.<key>` refuses a key that names no command and no checked write (exit 2,

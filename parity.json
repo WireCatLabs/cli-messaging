@@ -1085,6 +1085,24 @@
     "chats show": {
       "in": "all"
     },
+    "chats stats": {
+      "in": [],
+      "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" },
+      "options": {
+        "--by": {
+          "in": [],
+          "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" }
+        },
+        "--since-time": {
+          "in": [],
+          "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" }
+        },
+        "--timezone": {
+          "in": [],
+          "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" }
+        }
+      }
+    },
     "chats update": {
       "in": "all",
       "options": {
