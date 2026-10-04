@@ -134,8 +134,8 @@ export const statsStore = async (
   return statsLucene(store, account, request, messenger)
 }
 
-/** What a store search reads of the messenger: its saved-messages chat, when it has one. */
-type Saved = Partial<Pick<Messenger, "savedChatId">>
+/** What a store search reads of the messenger: its saved-messages chat, and its command for a hint. */
+type Saved = Partial<Pick<Messenger, "savedChatId" | "app">>
 
 /** Every write goes through the guard: asked before it goes, told after, on every outcome. */
 export interface MessagesService {

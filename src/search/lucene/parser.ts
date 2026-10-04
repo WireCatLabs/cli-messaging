@@ -243,12 +243,16 @@ export const parseLucene = (text: string): QueryAst => {
         span: token.span,
       })
     }
-    if (["~", "^", "@"].includes(peek().kind))
+    if (peek().kind === "~")
       queryError(
         "unsupported_operator",
         peek().span,
-        "fuzzy, proximity, boost and minimum-should-match are not supported",
+        node.kind === "predicate" && node.operator === "phrase"
+          ? "proximity (~) is not in strict search — drop the ~ for the exact phrase, or search the words with AND"
+          : "fuzzy matching (~) is not in strict search — drop the ~ and add --language legacy, which corrects typos, or use a prefix such as word* to catch word forms",
       )
+    if (["^", "@"].includes(peek().kind))
+      queryError("unsupported_operator", peek().span, "boost and minimum-should-match are not supported")
     return { node, ...(modifier ? { modifier } : {}) }
   }
   const root = query("text")

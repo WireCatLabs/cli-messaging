@@ -1,7 +1,13 @@
 import { CliError } from "@leemour/cli-core"
 import type { Page } from "../../domain/models.js"
 import { tagOf } from "../../domain/tags.js"
-import { type Automaton, compileAutomaton, type MatchBudget, wildcardPattern } from "../../search/lucene/automaton.js"
+import {
+  type Automaton,
+  compileAutomaton,
+  foldRegex,
+  type MatchBudget,
+  wildcardPattern,
+} from "../../search/lucene/automaton.js"
 import { PRESETS } from "../../search/lucene/presets.js"
 import { parseBytes } from "../../search/lucene/registry.js"
 import type { QueryExecution, ResolvedNode, ResolvedPredicate } from "../../search/lucene/resolved.js"
@@ -49,6 +55,15 @@ const wordMatch = (match: string): Fragment => ({
   exact: true,
   fts: match,
 })
+// The vocabulary is the whole store's, so a chat or date filter does not shorten it.
+const tooManyWords = ({ field, operator, value, span }: ResolvedPredicate, alone: boolean): never => {
+  const term = `${field}:${operator === "regex" ? `/${value}/` : value}`
+  throw new CliError(
+    "validation_error",
+    `search: ${term}${alone ? " matches" : " and the patterns before it match"} more than ${QUERY_LIMITS.expansions} indexed words, the term expansions budget — use a longer prefix, or body:/…/ inside one chat`,
+    { reason: "query_limit", budget: "term expansions", complete: false, term, limit: QUERY_LIMITS.expansions, span },
+  )
+}
 export type QueryGrouping = "chat" | "sender" | "time"
 export interface QueryGroup {
   provider?: string
@@ -119,7 +134,7 @@ const runQuery = async (
         const text = normalize(value)
         fragment = /[\p{L}\p{N}]/u.test(text) ? wordMatch(quoted(text)) : bound("0")
       } else {
-        const pattern = operator === "wildcard" ? wildcardPattern(normalize(value)) : value
+        const pattern = operator === "wildcard" ? wildcardPattern(normalize(value)) : foldRegex(value, node.span)
         const automaton = patternOf(pattern, node)
         const cached = expanded.get(pattern)
         if (cached) return { node, fragment: cached }
@@ -130,7 +145,7 @@ const runQuery = async (
           )
           .all(...(prefix ? [prefix, `${prefix}\u{10ffff}`] : []), QUERY_LIMITS.expansions + 1)
         expansions += terms.length
-        if (expansions > QUERY_LIMITS.expansions) exhausted("term expansions")
+        if (expansions > QUERY_LIMITS.expansions) tooManyWords(node, terms.length > QUERY_LIMITS.expansions)
         const matches = terms.flatMap(({ term }) => {
           check()
           return automaton.test(String(term), budget) ? [quoted(String(term))] : []
