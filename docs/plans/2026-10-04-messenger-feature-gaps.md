@@ -81,8 +81,8 @@ fetch first.
 - max: opcode 73 `{query, count, chatId}` (max-api-docs `protocol/messaging.md:946`, a claim).
   Measure first. Leave 68 and 60 out: sources disagree on what they are.
 - Guard: read, `messages`.
-- Open: whether a `live` result is also written to the local store (recommended: yes, as
-  `messages list` already does).
+- Decided 2026-10-04: a `live` result is also written to the local store, as `messages list`
+  already does, so the next archive search finds it.
 
 ### 2. Drafts — both, shared (owned by Telegram actions G4, B3)
 
@@ -166,12 +166,11 @@ storage, and the chat is bound to one device) and calls (no voice or video stack
 
 ## Decisions for the owner
 
-Taken 2026-10-04: server search is `--backend live|archive|both` (slice 1); drafts start as
-`messages send --draft` (slice 2).
+Taken 2026-10-04: server search is `--backend live|archive|both`, and `live` results are stored
+locally (slice 1); drafts start as `messages send --draft` (slice 2).
 
 Open:
 
-1. Whether a `live` search result is also stored locally (slice 1, search lane).
-2. Whether album items count once or per item toward `sendsPerHour` (slice 3).
-3. A verb for pressing a button (slice 6).
-4. Whether clear chat is allowed at all (slice 8).
+1. Whether album items count once or per item toward `sendsPerHour` (slice 3).
+2. A verb for pressing a button (slice 6).
+3. Whether clear chat is allowed at all (slice 8).
