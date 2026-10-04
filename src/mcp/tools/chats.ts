@@ -93,6 +93,27 @@ export const chatsTools = (messenger: Messenger): Record<string, AnyTool> => {
       },
     }),
 
+    chats_members_audit: tool({
+      title: "Members that look like bots",
+      description:
+        "Members of a group that look like bots, highest score first: { id, name, username, score, reasons }. " +
+        "Reasons: bot, scam, fake, deleted, no_photo, no_username, odd_name, never_wrote, link_first, burst_join, " +
+        "mass_invited. A score is a hint, never a verdict; the owner and admins are left out. Reads the member list " +
+        "a page at a time (budget pages); unknown names the signals the messenger gave nothing for; more says some " +
+        "members were not read. Removes nobody — that is chats_moderate, with the owner's confirmation.",
+      input: v.object({
+        chat,
+        budget: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1), v.description("pages of members to read"))),
+        min_score: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1))),
+      }),
+      annotations: READ,
+      online: (adapter, args, { guard }) =>
+        chats(adapter, guard).audit(args.chat, {
+          ...(args.budget === undefined ? {} : { budget: args.budget }),
+          ...(args.min_score === undefined ? {} : { minScore: args.min_score }),
+        }),
+    }),
+
     chats_inspect: tool({
       title: "What a link leads to",
       description:

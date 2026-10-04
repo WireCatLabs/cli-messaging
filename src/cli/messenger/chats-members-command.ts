@@ -1,6 +1,7 @@
 import { annotate } from "@leemour/cli-core/commands"
 import { Command } from "commander"
-import { renderPage, window, withPaging } from "../paging.js"
+import { AUDIT_BUDGET, AUDIT_MIN_SCORE, AUDIT_PAGE } from "../../services/members-audit.js"
+import { positiveCount, renderPage, window, withPaging } from "../paging.js"
 import { type Messenger, messengerContext } from "./context.js"
 
 /** `chats members …`; a subcommand that changes membership belongs here too. */
@@ -18,6 +19,56 @@ export const membersCommand = (messenger: Messenger): Command => {
       const page = await context.withServices((services) => services.chats.members(chat, wanted))
       renderPage(context, page)
     }),
+  )
+
+  members.addCommand(
+    new Command("audit")
+      .description(
+        "members that look like bots, each with its reasons — read from the member list and the local store; " +
+          "never one request per person, and it removes nobody",
+      )
+      .argument("<chat>", messenger.chatArgument)
+      .option(
+        "--budget <pages>",
+        `at most this many pages of ${AUDIT_PAGE} members, a pause between them (default: ${AUDIT_BUDGET})`,
+        positiveCount("--budget"),
+      )
+      .option(
+        "--min-score <n>",
+        `only members scoring at least this; 1 lists everyone with a reason (default: ${AUDIT_MIN_SCORE})`,
+        positiveCount("--min-score"),
+      )
+      .action(async function (this: Command, chat: string) {
+        const context = messengerContext(this, messenger)
+        const { budget, minScore } = this.opts<{ budget?: number; minScore?: number }>()
+        const audit = await context.withServices((services) =>
+          services.chats.audit(chat, {
+            ...(budget === undefined ? {} : { budget }),
+            ...(minScore === undefined ? {} : { minScore }),
+          }),
+        )
+        if (audit.more) {
+          const of = audit.participantsCount === null ? "" : ` of ${audit.participantsCount}`
+          context.renderer.note(`${audit.read}${of} members read; a higher --budget reads more`)
+        }
+        if (audit.fetch)
+          context.renderer.note(`"never wrote" counts only stored messages — \`${audit.fetch}\` fetches the rest`)
+        if (audit.unknown.length > 0)
+          context.renderer.note(`not judged, nothing to judge by: ${audit.unknown.join(", ")}`)
+        if (context.format !== "pretty") {
+          context.renderer.result(audit)
+          return
+        }
+        context.renderer.stream(
+          audit.items.map(({ id, name, username, score, reasons }) => ({
+            score,
+            id,
+            name: name ?? "",
+            username: username ?? "",
+            reasons: reasons.join(", "),
+          })),
+        )
+      }),
   )
 
   const add = annotate(new Command("add"), { mutates: true })

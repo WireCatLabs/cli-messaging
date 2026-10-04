@@ -385,6 +385,16 @@ export interface GroupMember extends Member {
   lastSeenAt?: string | null
   /** ISO 8601, when their account was made; absent where the messenger does not say — Telegram never does. */
   registeredAt?: string | null
+  /** ISO 8601, when they joined this group; `null` when the messenger did not say for this one. */
+  joinedAt?: string | null
+  /** Who added them or whose invite they used. */
+  invitedBy?: Id | null
+  isBot?: boolean
+  /** The account was deleted; the member stays in the list. */
+  deleted?: boolean
+  /** What the messenger itself marked the account as. */
+  flagged?: "scam" | "fake"
+  hasPhoto?: boolean
 }
 
 /** One chat and who is in it. `members` is `null` where nobody recorded that — a channel, always. */

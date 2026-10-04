@@ -11,6 +11,15 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 - MCP `inbox` and `review` take `kinds` (`["dialog", "group", "channel", "saved"]`) and `new`: what arrived since
   the last call with `new`, each message once, from saved points the MCP tools keep apart from the owner's
   `inbox --new` and `review --new`. `new` refuses `since_time`, and on `review` also `unanswered`.
+- `chats members audit <chat> [--budget <pages>] [--min-score <n>]` and read-only MCP `chats_members_audit`: members
+  of a group that look like bots, highest score first, each with its reasons — `bot`, `scam`, `fake`, `deleted`,
+  `no_photo`, `no_username` (only where others in the list have one), `odd_name`, `never_wrote` and `link_first` (from
+  the stored messages), `burst_join` and `mass_invited`. Reads the member list a page of 200 at a time, at most
+  `--budget` pages (10) with a second's pause between them, and never one request per person; `more` says some
+  members were not read, and `unknown` names the signals the messenger gave nothing for. The owner and admins are
+  left out. It removes nobody. Not with `--offline`: the store keeps no member lists.
+- `GroupMember` takes optional `joinedAt`, `invitedBy`, `isBot`, `deleted`, `flagged` (`scam` | `fake`) and
+  `hasPhoto`, absent where a messenger does not say. Telegram's list carries all of them; tg maps them next.
 
 ### Changed — may break callers
 
