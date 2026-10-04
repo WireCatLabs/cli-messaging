@@ -82,8 +82,6 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   `doctor --online` sets a frozen hold on a frozen standing, with the messenger's dates, and lifts it on an active
   one; it never lifts a spam limit.
 
-### Changed — may break callers
-
 - The adapter contract case for `historyAfter` no longer requires `hasMore: false` on a page shorter than the
   limit: Telegram drops deleted messages from a page, so a short page proves no end. It now reads past the newest
   message and requires an empty page with `hasMore: false`. The case is renamed to say so.
