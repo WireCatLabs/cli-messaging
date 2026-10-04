@@ -104,11 +104,11 @@ export const conversationsTools = (messenger: Messenger): Record<string, AnyTool
       annotations: { ...READ, openWorldHint: false },
       stored: async (store, account, args, defaults) => {
         const size = args.limit ?? defaults.limit
-        const found = await servicesFor(storedDeps(messenger, store, account, defaults.guard)).embeddings.related(
-          args.chat,
-          args.message,
-          { limit: size },
-        )
+        const found = await servicesFor({
+          ...storedDeps(messenger, store, account, defaults.guard),
+          env: defaults.env,
+          profile: defaults.settings.profile,
+        }).embeddings.related(args.chat, args.message, { limit: size })
         return { model: found.model, source: found.source, items: found.hits, limit: size, readiness: found.readiness }
       },
     }),
