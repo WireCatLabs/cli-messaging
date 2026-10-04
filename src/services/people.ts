@@ -4,9 +4,10 @@ import type { Account, Chat, Contact, Id, Member, Page, PersonCard, PhoneBookEnt
 import { pickPerson } from "../resolve.js"
 import { guardedWrite, type Operated } from "../sends/guarded.js"
 import { newOperationId } from "../sends/send-id.js"
-import type { AccountKey, MessageStore } from "../store/store.js"
+import type { AccountKey, MessageStore, PersonRecord } from "../store/store.js"
 import type { PageWindow } from "./chats.js"
 import { fromStore, type ServiceDeps, storeIfOpen } from "./deps.js"
+import { type ContextOptions, identityIn, type PersonContext, personContext } from "./person-context.js"
 
 export interface ContactSync {
   added: number
@@ -31,6 +32,11 @@ export interface PeopleService {
   block(person: string): Promise<Operated<{ personId: Id }>>
   unblock(person: string): Promise<Operated<{ personId: Id }>>
   rename(person: string, firstName: string, lastName?: string): Promise<Operated<{ person: Member }>>
+  /** What the store holds about them, across every messenger linked to them; never connects. */
+  context(person: string, options?: ContextOptions): Promise<PersonContext>
+  /** `other` may name another messenger of the store: `max:Ana`. */
+  link(person: string, other: string, method?: string): Promise<PersonRecord>
+  unlink(person: string): Promise<PersonRecord>
   /** Only counts and the people recognised: never a number. */
   import(entries: PhoneBookEntry[]): Promise<Operated<{ sent: number; recognised: Member[] }>>
 }
@@ -85,6 +91,26 @@ export const peopleService = (deps: ServiceDeps): PeopleService => {
       if (card.chats.length > 0) return card
       const held = await storeIfOpen(deps)
       return held ? { ...card, chats: await sharedChats(held.store, held.account, card.id) } : card
+    },
+
+    context: async (person, options) => personContext(await deps.store(), await deps.account(), person, options),
+
+    link: async (person, other, method = "manual") => {
+      const store = await deps.store()
+      const account = await deps.account()
+      const one = await identityIn(store, account, person)
+      const two = await identityIn(store, account, other)
+      if (one.provider === two.provider && one.id === two.id)
+        throw new CliError("validation_error", "that is the same person twice")
+      return store.linkIdentities(one, two, { method, by: "owner" })
+    },
+
+    unlink: async (person) => {
+      const store = await deps.store()
+      return store.unlinkIdentity(await identityIn(store, await deps.account(), person), {
+        method: "manual",
+        by: "owner",
+      })
     },
 
     lookup: async (phone) => capability(await deps.connection(), "lookup", "find a person by phone")(phone),

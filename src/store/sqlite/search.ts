@@ -122,6 +122,12 @@ export const find = (context: StoreContext, filter: MessageFilter): Page<StoredH
   return { items: toHits(context, page), hasMore: rows.length > page.length }
 }
 
+/** The newest `limit` hits under a condition the caller built, with `hasMore`. */
+export const hitsWhere = (context: StoreContext, where: SQL | undefined, limit: number): Page<StoredHit> => {
+  const rows: HitRow[] = newestHits(context, where, limit + 1).all()
+  return { items: toHits(context, rows.slice(0, limit)), hasMore: rows.length > limit }
+}
+
 const toHits = (context: StoreContext, rows: HitRow[]): StoredHit[] => {
   const found = toMessages(context, rows)
   return rows.map((row, index) => {

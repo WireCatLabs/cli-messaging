@@ -41,6 +41,8 @@ guessable from the others.
      `download` · `transcribe` · `sync` take a whole list again
    - `migrate` bring a file up to this build's schema · `backup` copy it somewhere safe ·
      `restore` put a backup back in its place
+   - `link` / `unlink` record in the store that two identities are one person, or undo it — a
+     decision someone made, never inferred from a name (`contacts link`)
    - `lookup` ask the messenger who is behind a phone number · `inspect` look at a link without
      joining it
    - the messenger's plain verbs: `send`, `edit`, `forward`, `pin`, `unpin`, `vote`, `close`,
@@ -174,7 +176,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--last` | `<n>` | stop once the newest n messages are held; not with --since. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | `bot store fetch`, `store fetch` |
 | `--last-name` | `<name>` | your last name |  | `account update` |
 | `--left` |  | only the chats this account has left |  | `store clear` |
-| `--limit` | `<n>` | how many: rows to show, or messages one run fetches. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | `bot chats members list` (max-only), `bot contacts show`, `bot messages between`, `bot messages list`, `bot messages search`, `bot store fetch`, `chats list`, `chats members list` (planned), `contacts list`, `conversations list`, `conversations related` (planned), `conversations search`, `inbox`, `messages evidence`, `messages list`, `messages search`, `messages stats` (planned), `runs list`, `sends list`, `store fetch` |
+| `--limit` | `<n>` | how many: rows to show, or messages one run fetches. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | `bot chats members list` (max-only), `bot contacts show`, `bot messages between`, `bot messages list`, `bot messages search`, `bot store fetch`, `chats list`, `chats members list` (planned), `contacts context` (planned), `contacts list`, `conversations list`, `conversations related` (planned), `conversations search`, `inbox`, `messages evidence`, `messages list`, `messages search`, `messages stats` (planned), `runs list`, `sends list`, `store fetch` |
 | `--lines` | `<n>` | how many lines | `50` | `server logs` |
 | `--local` |  | use the model on this machine, never the messenger |  | `messages transcribe` (tg-only) |
 | `--mark-read` |  | also mark the chat read up to the newest message shown; the other person sees it |  | `inbox`, `messages list`, `review` |
@@ -233,7 +235,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--show-phone` |  | print the whole phone number |  | `account show` |
 | `--silent` |  | deliver without a notification |  | `bot messages send`, `messages forward`, `messages send`, `polls create` |
 | `--since` | `<id-or-time>` | from this message id, an ISO 8601 time, or 2h / 1d ago; each command says its default. **becomes `--since-time` everywhere — NEED-485** |  | `inbox` (planned), `review` (planned) |
-| `--since-time` | `<time>` | from this ISO 8601 time, or 2h / 1d ago; each command says its default |  | `bot chats moderate`, `bot store fetch`, `chats events` (planned), `chats moderate` (planned), `chats stats` (planned), `conversations list`, `conversations search`, `inbox` (planned), `review` (planned), `store export`, `store fetch` |
+| `--since-time` | `<time>` | from this ISO 8601 time, or 2h / 1d ago; each command says its default |  | `bot chats moderate`, `bot store fetch`, `chats events` (planned), `chats moderate` (planned), `chats stats` (planned), `contacts context` (planned), `conversations list`, `conversations search`, `inbox` (planned), `review` (planned), `store export`, `store fetch` |
 | `--size` | `<n>` | messages to answer per batch, 10–200; 50 by default |  | `conversations batches next`, `conversations batches status` |
 | `--source` | `<messenger>` | every account of this messenger held in the store; personal, bots or all — the same as in: in the query |  | `messages search`, `messages stats` (planned) |
 | `--store-token` | `<profile>` | keep a returned authentication token only in this bot profile's OS keyring; never print it |  | `bot api` |

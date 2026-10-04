@@ -1,0 +1,148 @@
+import { mkdtempSync } from "node:fs"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
+import { afterEach, beforeEach, describe, expect, it } from "vitest"
+import type { Messenger } from "../cli/messenger/context.js"
+import type { Chat, Message } from "../domain/models.js"
+import type { SendGuard } from "../sends/guard.js"
+import { historyStartKey, type MessageStore, openStore } from "../store/store.js"
+import { storedDeps } from "./deps.js"
+import { peopleService } from "./people.js"
+
+const tg = { provider: "telegram", account: "500" }
+const max = { provider: "max", account: "900" }
+const messenger = { provider: "telegram", chatArgument: "a chat", app: { command: "tg" } } as Messenger
+
+const chat = (id: string, kind: Chat["kind"], title: string, last = "2026-09-03T12:00:00.000Z"): Chat => ({
+  id,
+  title,
+  kind,
+  unreadCount: 0,
+  lastMessageAt: last,
+  participantsCount: null,
+})
+
+const message = (
+  chatId: string,
+  id: string,
+  senderId: string,
+  text: string,
+  extra: Partial<Message> = {},
+): Message => ({
+  id,
+  chatId,
+  senderId,
+  senderName: null,
+  timestamp: `2026-09-02T10:0${id}:00.000Z`,
+  editedAt: null,
+  text,
+  outgoing: false,
+  attachments: [],
+  replyTo: null,
+  forwardedFrom: null,
+  reactions: null,
+  ...extra,
+})
+
+let store: MessageStore
+const people = () => peopleService(storedDeps(messenger, store, tg, {} as SendGuard))
+
+beforeEach(async () => {
+  store = await openStore({ path: join(mkdtempSync(join(tmpdir(), "person-")), "m.db") })
+  await store.saveChats(tg, [
+    chat("11", "dialog", "Ana", "2026-09-02T10:02:00.000Z"),
+    chat("12", "dialog", "Ana", "2026-09-02T10:01:00.000Z"),
+    chat("-7", "group", "Club"),
+  ])
+  await store.savePeople(tg, [
+    { id: "11", name: "Ana", username: "ana_a" },
+    { id: "12", name: "Ana", username: "ana_ab" },
+    { id: "13", name: "Bo" },
+  ])
+  await store.saveMessages(
+    tg,
+    "11",
+    [message("11", "1", "11", "from the first Ana"), message("11", "2", "500", "to the first Ana", { outgoing: true })],
+    { via: "test" },
+  )
+  await store.saveMessages(tg, "12", [message("12", "1", "12", "from the second Ana")], { via: "test" })
+  await store.saveMessages(
+    tg,
+    "-7",
+    [
+      message("-7", "1", "11", "first in the group"),
+      message("-7", "2", "12", "second in the group"),
+      message("-7", "3", "13", "ask @ana_a"),
+      message("-7", "4", "13", "ask @ana_ab"),
+    ],
+    { via: "test" },
+  )
+  await store.saveMembers(tg, "11", ["11", "500"])
+  await store.saveMembers(tg, "12", ["12", "500"])
+  await store.saveMembers(tg, "-7", ["11", "12", "13", "500"])
+  for (const [id, last] of [
+    ["11", 2],
+    ["12", 1],
+  ] as const) {
+    await store.markRange(tg, id, 1, last)
+    await store.setSyncState(tg, historyStartKey(id), "1")
+  }
+
+  await store.saveChats(max, [chat("m1", "dialog", "Ana")])
+  await store.savePeople(max, [{ id: "m5", name: "Ana" }])
+  await store.saveMessages(max, "m1", [message("m1", "5", "m5", "from Ana on MAX")], { via: "test" })
+  await store.saveMembers(max, "m1", ["m5", "900"])
+})
+
+afterEach(async () => {
+  await store.close()
+})
+
+const texts = (items: { text: string }[]) => items.map((one) => one.text)
+
+describe("contacts context", () => {
+  it("keeps two people with one name apart and refuses to guess between them", async () => {
+    await expect(people().context("Ana")).rejects.toMatchObject({
+      message: expect.stringContaining("matches 2 people"),
+    })
+
+    const found = await people().context("11")
+    expect(found.person.identities.map((one) => one.id)).toEqual(["11"])
+    expect(texts(found.recent.direct)).toEqual(["to the first Ana", "from the first Ana"])
+    expect(texts(found.recent.groups)).toEqual(["first in the group"])
+    expect(texts(found.mentions)).toEqual(["ask @ana_a"])
+    expect(found.last.fromThem?.text).toBe("from the first Ana")
+    expect(found.last.fromMe?.text).toBe("to the first Ana")
+    expect(found.recent.direct[0]?.locator).toBe("msg:telegram/500/11/2")
+  })
+
+  it("is incomplete while a shared chat is not stored whole", async () => {
+    const found = await people().context("11")
+    expect(found.complete).toBe(false)
+    expect(found.notRead).toEqual([
+      expect.objectContaining({ provider: "telegram", account: "500", chatId: "-7", reason: expect.any(String) }),
+    ])
+  })
+
+  it("spans a linked MAX identity until it is unlinked", async () => {
+    const linked = await people().link("11", "max:m5")
+    expect(linked.identities.map((one) => `${one.provider}:${one.id}`)).toEqual(["max:m5", "telegram:11"])
+
+    const both = await people().context("11")
+    expect(texts(both.recent.direct)).toContain("from Ana on MAX")
+    expect(both.shared).toContainEqual(expect.objectContaining({ provider: "max", account: "900", chatId: "m1" }))
+
+    await people().unlink("max:m5")
+    const alone = await people().context("11")
+    expect(alone.person.identities).toHaveLength(1)
+    expect(texts(alone.recent.direct)).not.toContain("from Ana on MAX")
+  })
+
+  it("keeps a renamed person's history and key", async () => {
+    const before = await people().context("11")
+    await store.savePeople(tg, [{ id: "11", name: "Ana María" }])
+    const after = await people().context("11")
+    expect(after.person.uid).toBe(before.person.uid)
+    expect(texts(after.recent.direct)).toEqual(texts(before.recent.direct))
+  })
+})
