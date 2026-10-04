@@ -77,6 +77,8 @@ body regex остаётся raw и case-sensitive.
 Vocabulary общий для store, без chat/date условия: превышение `expansions` — `query_limit` с
 `budget:"term expansions"`, `term`, `limit`, span; alternative — длиннее prefix или body regex в чате.
 Folding v1 сливает разные слова (мой/мои, año/ano); это known limit до смены NORMALIZER_VERSION.
+FIELD_VERSION не меняется: поле не переименовано, а regex, молча не находивший ничего, теперь находит;
+сохранённые поиски разбираются заново и получают это поведение.
 
 Date endpoints собственные typed mappings над стандартной grammar: calendar day в IANA zone,
 exact timestamp с offset, mixed inclusive/exclusive/open bounds. DST вычисляется через календарь,
