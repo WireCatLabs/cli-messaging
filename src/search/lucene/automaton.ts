@@ -1,4 +1,5 @@
 // Grammar port: Lucene 9.12.3 util/automaton/RegExp.java (Apache-2.0); see scripts/search-reference notices.
+import { fold } from "../../store/normalize.js"
 import { exhausted, QUERY_LIMITS, queryError, type Span } from "./types.js"
 
 type Atom = { kind: "char"; ranges: [number, number][]; negate: boolean } | { kind: "empty" } | { kind: "epsilon" }
@@ -277,4 +278,108 @@ export const wildcardPattern = (value: string): string => {
     } else pattern += c === "*" ? ".*" : c === "?" ? "." : /[|&?*+(){}[\].#@<>"~\\]/u.test(c) ? `\\${c}` : c
   }
   return pattern
+}
+
+const FOLD_RANGE = 4096
+const unfoldable = (span: Span, what: string): never =>
+  queryError(
+    "unsupported_regex",
+    span,
+    `${what} has no single lowercase form without accents, which is what text: words are — write it that way, or use body:/…/ to match the original text`,
+  )
+const classChar = (point: number) => {
+  const c = String.fromCodePoint(point)
+  return /[\p{L}\p{N}]/u.test(c) ? c : `\\${c}`
+}
+
+/**
+ * A `text:` regex with its literal characters folded as the word index folds words, since it runs over
+ * that folded vocabulary. Operators, predefined classes and the case of `\D` `\W` `\S` stay as written.
+ */
+export const foldRegex = (pattern: string, span: Span): string => {
+  const chars = [...pattern.normalize("NFC")]
+  let out = ""
+  let at = 0
+  const literal = (c: string): string => {
+    if (!/[\p{L}\p{N}\p{M}]/u.test(c)) return c
+    const folded = fold(c)
+    if (folded === "") return unfoldable(span, `"${c}"`)
+    if ([...folded].length === 1 && /[\p{L}\p{N}]/u.test(folded)) return folded
+    if (folded.includes('"')) return unfoldable(span, `"${c}"`)
+    return `"${folded}"`
+  }
+  const characterClass = () => {
+    const begin = at - 1
+    let negate = ""
+    if (chars[at] === "^") {
+      negate = "^"
+      at++
+    }
+    const kept: string[] = []
+    const points = new Set<number>()
+    do {
+      const start = at
+      if (chars[at] === "\\" && /^[a-zA-Z]$/u.test(chars[at + 1] ?? "")) {
+        kept.push(`\\${chars[at + 1]}`)
+        at += 2
+        continue
+      }
+      const escaped = () => {
+        if (chars[at] === "\\") at++
+        return (chars[at++] ?? "").codePointAt(0) ?? 0
+      }
+      const lo = escaped()
+      let hi = lo
+      if (chars[at] === "-") {
+        at++
+        hi = escaped()
+      }
+      if (at > chars.length) {
+        out += chars.slice(begin).join("")
+        return
+      }
+      const single = (point: number) => [...fold(String.fromCodePoint(point))]
+      if (hi < lo) kept.push(chars.slice(start, at).join(""))
+      else if (hi - lo >= FOLD_RANGE) {
+        if (single(lo).join("") !== String.fromCodePoint(lo) || single(hi).join("") !== String.fromCodePoint(hi))
+          unfoldable(span, `the range ${chars.slice(start, at).join("")}`)
+        kept.push(chars.slice(start, at).join(""))
+      } else
+        for (let point = lo; point <= hi; point++) {
+          const folded = single(point)
+          if (folded.length === 1) points.add(folded[0]?.codePointAt(0) ?? 0)
+          else if (lo === hi) unfoldable(span, `"${String.fromCodePoint(point)}"`)
+        }
+    } while (at < chars.length && chars[at] !== "]")
+    const sorted = [...points].sort((a, b) => a - b)
+    const ranges: string[] = []
+    for (let i = 0; i < sorted.length; i++) {
+      const first = sorted[i] as number
+      while (sorted[i + 1] === (sorted[i] as number) + 1) i++
+      const last = sorted[i] as number
+      ranges.push(last === first ? classChar(first) : `${classChar(first)}-${classChar(last)}`)
+    }
+    if (!kept.length && !ranges.length) unfoldable(span, "the class")
+    out += `[${negate}${kept.join("")}${ranges.join("")}`
+  }
+  while (at < chars.length) {
+    const c = chars[at++] as string
+    if (c === "\\") {
+      const next = chars[at++]
+      if (next === undefined) out += c
+      else out += (next.codePointAt(0) ?? 0) < 128 ? `${c}${next}` : literal(next)
+    } else if (c === '"') {
+      const end = chars.indexOf('"', at)
+      if (end < 0) {
+        out += chars.slice(at - 1).join("")
+        break
+      }
+      const folded = fold(chars.slice(at, end).join(""))
+      if (folded.includes('"')) unfoldable(span, `"${chars.slice(at, end).join("")}"`)
+      out += `"${folded}"`
+      at = end + 1
+    } else if (c === "[") characterClass()
+    else out += literal(c)
+  }
+  return out
 }

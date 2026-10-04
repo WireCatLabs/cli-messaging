@@ -177,8 +177,8 @@ tg messages search 'invoice NOT tag:work' --timezone UTC
 | range | `date:[2026-01-01 TO 2026-02-01}` | Inclusive [ ], exclusive { }, смешанные границы и * |
 | comparison | `date>=2026-01-01` | Стандартный typed open range |
 | wildcard | `text:invo*` | Полный term; * — любое число символов, ? — один |
-| regex | `text:/pass(port)?/` | Полный term; bounded subset Lucene RegExp |
-| fuzzy / proximity | `invoice~1` | unsupported_operator; используйте legacy discovery либо точные слова |
+| regex | `text:/pass(port)?/` | Полный term; bounded subset Lucene RegExp; буквы text приводятся как в индексе |
+| fuzzy / proximity | `invoice~1` | unsupported_operator; опечатки исправляет `--language legacy`, формы слова ловит prefix `word*` |
 | boost / minimum / intervals | `invoice^2` | unsupported_operator |
 
 <!-- operators: end -->
@@ -250,9 +250,16 @@ accounts провайдера/класса, включая `all`. Отрицат
 
 `text:/alpha/` совпадает с термом alpha внутри текста, но не с alphabeta.
 `body:/alpha/` совпадает только с полным текстом alpha; для вхождения используйте
-`body:/.*alpha.*/`. `body` — исходный keyword, case-sensitive; `text` содержит
-normalized lowercase tokens. Regex syntax не подвергается целиком lowercase/normalization:
-literal pattern должен соответствовать indexed term. Wildcard text literals нормализуются.
+`body:/.*alpha.*/`.
+
+`text` хранит слова в нижнем регистре и без ударений, поэтому буквы в `text:` regex приводятся
+так же, как в индексе: `text:/Квартир.*/` = `text:/квартир.*/`, `text:/счёт/` находит «счёт» и «счет».
+Это касается и букв в классах: `[А-Я]` работает как `[а-я]`. Операторы, `\d \w \s` и их
+отрицания `\D \W \S` не меняются. Символ, у которого нет одной такой буквы (лигатура `ﬁ` внутри
+класса, отдельный знак ударения), даёт `unsupported_regex` с подсказкой — не пустой ответ.
+
+**`body` различает регистр и ударения.** `body:/квартира.*/` не найдёт «Квартира свободна»;
+пишите оба варианта: `body:/[Кк]вартира.*/`. Wildcard по `text` тоже нормализуется, по `body` — нет.
 
 Поддержаны union `|`, concatenation, groups, `.`, classes/ranges/negation, `? * + {n} {n,m} {n,}`,
 quoted literals, `#` (пустой язык), `@` (любая строка), Unicode code points и ASCII predefined
@@ -264,8 +271,10 @@ Lookaround, `(?:...)`, backreferences и `/i` suffix не являются по�
 
 Pattern исполняется NFA без backtracking, с work/state limits. Для text regex/wildcard
 bounded vocabulary expansion использует безопасный literal prefix, если он доказан.
-Слишком широкий dictionary pattern может быть отвергнут даже при узком chat scope;
-укажите literal prefix либо используйте bounded `body` regex по одному чату.
+Словарь общий для всего архива: короткий prefix вроде `к*` на большом архиве даёт больше
+10 000 слов и отвергается — `query_limit` с `budget: "term expansions"`, `term` и `limit`.
+Фильтр чата или даты здесь не помогает. Удлините prefix (`квартир*`) либо ищите `body` regex
+внутри одного чата.
 Широкий body/preset scan выше бюджета отвергается до чтения всех тел.
 
 ## Escaping и Unicode
@@ -275,7 +284,20 @@ bounded vocabulary expansion использует безопасный literal p
 В shell оборачивайте query в одинарные кавычки. Regex escapes имеют отдельную Lucene semantics.
 
 Текст нормализуется v1: NFKD → удалить marks → NFC → lowercase → control/whitespace folding.
-Это игнорирует accents и сливает, например, `año/ano`, `мой/мои`; оригинальный body сохраняется.
+Это игнорирует accents; оригинальный body сохраняется.
+
+**Известное ограничение: некоторые разные слова в индексе совпадают.** Снятие ударений превращает
+й в и и ñ в n, поэтому `мой` находит и «мои», `ano` — и «año», `счет` — и «счёт». Индекс так
+устроен; изменить это можно только перестроив его. Точное слово ищите через `body` regex вместе
+со словом — слово быстро сужает выбор, regex оставляет только точную форму:
+
+```sh
+tg messages search 'мой AND body:/(.*[^а-яёА-ЯЁ])?[Мм]ой([^а-яёА-ЯЁ].*)?/' --chat <chat>
+```
+
+`body` различает регистр, поэтому `[Мм]` покрывает начало предложения. В Lucene regex нет `\b`,
+а `^`/`$` — обычные символы; границу слова задают `(.*[^буквы])?` и `([^буквы].*)?`.
+`--chat` держит проверку тел в пределах бюджета.
 Word index использует SQLite `unicode61 remove_diacritics 2`; пунктуация и emoji сами не образуют
 индексированных слов. Анализированный literal term с несколькими tokens сопоставляется как
 последовательность, а несколько отдельных query terms — как Boolean clauses.
@@ -377,13 +399,17 @@ Detector сообщает **кандидата**, а не подтверждён
 <!-- limits: end -->
 
 `query_limit` — reason внутри `validation_error`, с `budget` и `complete:false`;
-сузьте чат/дату/pattern. Timeout/abort освобождает worker и timer. Предел времени проверяется
+сузьте чат/дату/pattern. Для `term expansions` сужать надо сам pattern — см. выше. Timeout/abort освобождает worker и timer. Предел времени проверяется
 между синхронными SQLite calls и bounded batches; уже выполняющийся SQLite statement не прерывается.
 NFA work budget ограничивает один match; legacy JS worker принудительно завершается на deadline.
 Query page: 1–1000 results, context: прежняя CLI/MCP модель. SQL и FTS получают bound values.
 
 Syntax/field/operator errors несут UTF-16 span `[start,end)`, reason и guide/alternative;
-CLI печатает позицию с единицы. `index_not_ready` требует `store migrate`.
+CLI печатает позицию с единицы. `~` после слова (fuzzy) даёт `unsupported_operator` с подсказкой:
+опечатки исправляет `--language legacy` (без `~`), формы слова ловит prefix `word*`.
+`index_not_ready` говорит, насколько построен word index (процент или сколько сообщений ждут
+нормализации), и точную команду: `<cli> store migrate` достраивает его сразу; каждый поиск тоже
+строит понемногу. Запросы без слов (`has:`, `kind:`, `date:`) работают и до этого.
 `unsupported_field` отличается от `unknown_field`; incomplete archive — состояние охвата, не syntax error.
 
 ## Миграция legacy

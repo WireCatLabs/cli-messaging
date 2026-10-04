@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs"
 import { describe, expect, it } from "vitest"
-import { compileAutomaton, wildcardPattern } from "./automaton.js"
+import { compileAutomaton, foldRegex, wildcardPattern } from "./automaton.js"
 
 interface Fixture {
   pattern: string
@@ -60,5 +60,47 @@ describe("Lucene 9.12.3 regex subset", () => {
     const matcher = compileAutomaton("(a+)+b")
     expect(() => matcher.test("a".repeat(100), { work: 0, maxWork: 50 })).toThrow("work")
     expect(matcher.test("aaaaab")).toBe(true)
+  })
+})
+
+describe("folding a text: regex", () => {
+  const folded = (pattern: string) => foldRegex(pattern, { start: 0, end: pattern.length })
+  const matches = (pattern: string, term: string) => compileAutomaton(folded(pattern)).test(term)
+  it("lowercases and strips accents from literals, as the word index does", () => {
+    expect(folded("Квартир.*")).toBe("квартир.*")
+    expect(matches("Квартир.*", "квартира")).toBe(true)
+    expect(matches("счёт", "счет")).toBe(true)
+    expect(matches("сче\u0308т", "счет")).toBe(true)
+    expect(matches("\\Ё", "е")).toBe(true)
+    expect(matches('"AÑO"', "ano")).toBe(true)
+    expect(matches("(Año|Mes){1,2}", "anomes")).toBe(true)
+    expect(matches("ﬁx+", "fixx")).toBe(true)
+    expect(matches("ﬁx+", "fifix")).toBe(false)
+  })
+  it("folds classes and ranges, and keeps predefined classes and their negation", () => {
+    expect(folded("[А-Я]+")).toBe("[а-ик-я]+")
+    expect(matches("[А-Я]вартира", "квартира")).toBe(true)
+    expect(matches("[^Ё]", "е")).toBe(false)
+    expect(matches("[ÀÉ]", "e")).toBe(true)
+    expect(folded("\\D\\W\\S")).toBe("\\D\\W\\S")
+    expect(matches("\\d+", "42")).toBe(true)
+    expect(matches("\\W", "a")).toBe(false)
+    expect(matches("[\\-x]", "-")).toBe(true)
+  })
+  it("refuses what has no single folded form instead of matching nothing", () => {
+    expect(() => folded(".\u0301")).toThrow("unsupported_regex")
+    expect(() => folded("[ﬁ]")).toThrow("body:")
+    expect(() => folded("[a-\u{10ffff}]")).not.toThrow()
+    expect(() => folded("[A-\u{10ffff}]")).toThrow("the range")
+  })
+  it("leaves every lowercase reference pattern meaning what it meant", () => {
+    for (const row of fixtures.filter(({ pattern, parsed }) => parsed && !unsupported.has(pattern))) {
+      if (/[^\p{Ll}\P{L}]|[^\x20-\x7e]/u.test(row.pattern)) continue
+      const automaton = compileAutomaton(folded(row.pattern))
+      expect(
+        samples.filter((sample) => automaton.test(sample)),
+        row.pattern,
+      ).toEqual(row.matches)
+    }
   })
 })

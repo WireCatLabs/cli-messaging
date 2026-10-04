@@ -46,7 +46,7 @@ const prepareLucene = async (
   store: MessageStore,
   account: AccountKey,
   request: SearchQuery,
-  messenger: Partial<Pick<Messenger, "savedChatId">>,
+  messenger: Partial<Pick<Messenger, "savedChatId" | "app">>,
 ): Promise<Prepared> => {
   if (!Number.isInteger(request.limit) || request.limit < 1 || request.limit > QUERY_PAGE_LIMIT)
     queryError("invalid_limit", { start: 0, end: 0 }, `use 1–${QUERY_PAGE_LIMIT} results`)
@@ -138,10 +138,7 @@ const prepareLucene = async (
       queryError("topic_scope", { start: 0, end: 0 }, "name one required chat or use --chat")
   }
   const wordsReady = (await store.searchIndexState())?.ready === true
-  if (hasText(ast.root) && !wordsReady)
-    throw new CliError("validation_error", "the word index is not ready — run store migrate before strict search", {
-      reason: "index_not_ready",
-    })
+  if (hasText(ast.root) && !wordsReady) await indexNotReady(store, messenger.app?.command)
   const execution: QueryExecution = {
     root,
     accounts: scopeAccounts,
@@ -152,6 +149,20 @@ const prepareLucene = async (
     newest: request.newest,
   }
   return { execution, timezone, wordsReady, scopeAccounts, ...(selectedChat ? { selectedChat } : {}) }
+}
+const indexNotReady = async (store: MessageStore, command: string | undefined): Promise<never> => {
+  const state = await store.searchIndexState()
+  const migrate = `\`${command ? `${command} ` : ""}store migrate\``
+  const progress = !state
+    ? "this store file has no word index yet"
+    : state.pendingNormalization > 0
+      ? `${state.pendingNormalization} messages still wait to be normalized before their words are indexed`
+      : `the word index is about ${Math.floor((state.filledThrough / Math.max(state.watermark, 1)) * 100)}% built (message ${state.filledThrough} of ${state.watermark})`
+  throw new CliError(
+    "validation_error",
+    `the word index is not ready: ${progress}. ${state ? `Each search builds a little more; ${migrate} finishes it now` : `${migrate} builds it`}. Searches without words (has:, kind:, date:) work meanwhile`,
+    { reason: "index_not_ready" },
+  )
 }
 const coverageOf = async (
   store: MessageStore,
@@ -198,7 +209,7 @@ export const searchLucene = async (
   store: MessageStore,
   account: AccountKey,
   request: SearchQuery,
-  messenger: Partial<Pick<Messenger, "savedChatId">> = {},
+  messenger: Partial<Pick<Messenger, "savedChatId" | "app">> = {},
 ): Promise<SearchFound> => {
   const prepared = await prepareLucene(store, account, request, messenger)
   const execute = store.matchQuery
@@ -272,7 +283,7 @@ export const statsLucene = async (
   store: MessageStore,
   account: AccountKey,
   request: SearchQuery & { by: StatsGrouping },
-  messenger: Partial<Pick<Messenger, "savedChatId">> = {},
+  messenger: Partial<Pick<Messenger, "savedChatId" | "app">> = {},
 ): Promise<MessageStats> => {
   const prepared = await prepareLucene(store, account, request, messenger)
   const count = store.countQuery

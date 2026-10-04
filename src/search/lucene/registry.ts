@@ -328,11 +328,15 @@ export const QUERY_OPERATORS = [
   },
   { name: "comparison", example: "date>=2026-01-01", semantics: "Стандартный typed open range" },
   { name: "wildcard", example: "text:invo*", semantics: "Полный term; * — любое число символов, ? — один" },
-  { name: "regex", example: "text:/pass(port)?/", semantics: "Полный term; bounded subset Lucene RegExp" },
+  {
+    name: "regex",
+    example: "text:/pass(port)?/",
+    semantics: "Полный term; bounded subset Lucene RegExp; буквы text приводятся как в индексе",
+  },
   {
     name: "fuzzy / proximity",
     example: "invoice~1",
-    semantics: "unsupported_operator; используйте legacy discovery либо точные слова",
+    semantics: "unsupported_operator; опечатки исправляет `--language legacy`, формы слова ловит prefix `word*`",
   },
   { name: "boost / minimum / intervals", example: "invoice^2", semantics: "unsupported_operator" },
 ] as const

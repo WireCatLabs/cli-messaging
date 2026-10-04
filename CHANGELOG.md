@@ -80,7 +80,16 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   dialog (one request per 100 chats, as resolving a typed chat title already does) and MAX from the chats its
   login sent, which may be only part of them. `partial` now means only that the messenger could not list every
   chat; the notes for chats past the 20-per-run cap say `skipped N chats`.
-
+- Strict search: a `text:` regex folds its letters as the word index does, so `text:/Квартир.*/` and
+  `text:/счёт/` find words they never matched; `[А-Я]` works as `[а-я]`, `\D \W \S` keep their meaning. A
+  character with no single folded form answers `unsupported_regex` with a hint instead of an empty result.
+  `body:` stays case-sensitive, and the guide now says so.
+- Strict search errors say what to do: `~` names `--language legacy` for typos and `word*` for word forms; a
+  short prefix such as `к*` over the term-expansions budget names the term, the budget of 10,000 words and a
+  longer prefix (a chat or date filter does not help — the word list is the whole store's), with `term` and
+  `limit` in the error; `index_not_ready` says how far the word index is and the exact `<cli> store migrate`.
+- The search guide documents that folding merges some words (`мой`/`мои`, `ano`/`año`) and how to find the
+  exact form with a `body:` regex.
 - The parity manifest lists `mcp --http`, `--port`, `--public-url` and `--revoke` in both tg and max, which now
   have them.
 - Two `serve`s started in the same instant for one profile can no longer both run. The lock is now
