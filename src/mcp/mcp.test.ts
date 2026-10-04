@@ -496,6 +496,7 @@ describe("the MCP server", () => {
       "chat_polls_show",
       "chat_review",
       "chat_status",
+      "chat_tags_list",
       "chat_topics_list",
     ])
     expect(tools.every((one) => one.annotations?.readOnlyHint === true)).toBe(true)
@@ -867,6 +868,40 @@ describe("the MCP server", () => {
     expect(refused.isError).toBe(true)
     expect(refused.body).toMatchObject({ error: { code: "confirmation_required" } })
     expect(telegram.opened()).toBe(0)
+  })
+
+  it("**tags through MCP as the command does**, hides the writes where tags are read-only, and asks", async () => {
+    const telegram = scripted()
+    const { call, env } = await connect(telegram)
+    await call("chat_chats_list")
+    const store = await openStore({ path: env.MESSAGING_STORE })
+    await seedSearchRecipes(store, { provider: "chat", account: "500" })
+    await store.close()
+
+    const added = await call("chat_tags_add", { tags: ["Paid"], chat: "7", message: "101" })
+    expect(added.body).toMatchObject({ target: { type: "message", messageId: "101" }, added: ["paid"] })
+    expect((await call("chat_tags_list", { tag: "paid" })).body).toMatchObject({
+      items: [{ tag: "paid", type: "message", locator: "msg:chat/500/7/101" }],
+      hasMore: false,
+    })
+    const found = await call("chat_messages_search", { text: "tag:paid OR tag:family", language: "lucene" })
+    expect(found.body.items.map(({ id }: { id: string }) => id).sort()).toEqual(["101", "103", "108"])
+    expect((await call("chat_tags_remove", { tags: ["paid"], message: "msg:chat/500/7/101" })).body).toMatchObject({
+      removed: ["paid"],
+    })
+    const twoTargets = await call("chat_tags_add", { tags: ["x"], chat: "7", contact: "11" })
+    expect([twoTargets.isError, twoTargets.body.error.code]).toEqual([true, "validation_error"])
+
+    const readOnly = await connect(scripted(), { config: levels({ tags: "readonly" }) })
+    const names = (await readOnly.client.listTools()).tools.map(({ name }) => name)
+    expect(names).toContain("chat_tags_list")
+    expect(names).not.toContain("chat_tags_add")
+    expect(names).not.toContain("chat_tags_remove")
+
+    const asked = await connect(scripted(), { config: levels({ "tags.add": "ask" }) })
+    await asked.call("chat_chats_list")
+    const refused = await asked.call("chat_tags_add", { tags: ["x"], chat: "7" })
+    expect([refused.isError, refused.body.error.code]).toEqual([true, "confirmation_required"])
   })
 
   it("asks before conversations_refresh where conversations.embed asks, and hides it where it is read-only", async () => {

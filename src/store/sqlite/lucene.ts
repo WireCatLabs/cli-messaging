@@ -1,5 +1,6 @@
 import { CliError } from "@leemour/cli-core"
 import type { Page } from "../../domain/models.js"
+import { tagOf } from "../../domain/tags.js"
 import { type Automaton, compileAutomaton, type MatchBudget, wildcardPattern } from "../../search/lucene/automaton.js"
 import { PRESETS } from "../../search/lucene/presets.js"
 import { parseBytes } from "../../search/lucene/registry.js"
@@ -224,6 +225,17 @@ const runQuery = async (
           sender.id,
         )
       else queryError("invalid_ast", node.span)
+    } else if (field === "tag") {
+      const tag = tagOf(value)
+      if (tag === undefined) queryError("invalid_tag", node.span)
+      fragment = bound(
+        "m.pk IN (SELECT taggable_pk FROM tags WHERE tag=? AND taggable_type='message') OR " +
+          "m.chat_pk IN (SELECT taggable_pk FROM tags WHERE tag=? AND taggable_type='chat') OR " +
+          "m.sender_identity_pk IN (SELECT taggable_pk FROM tags WHERE tag=? AND taggable_type='contact')",
+        tag,
+        tag,
+        tag,
+      )
     } else if (field === "topic") fragment = bound("m.thread_native_id = ?", value)
     else if (field === "kind") {
       const kind = value.toLowerCase()

@@ -13,6 +13,23 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   `store check` report it (`stemIndex`), and `config set searchStemmers.cyrillic|latin` chooses the stemmers
   for the whole store (`russian` or `none`; `spanish`, `english` or `none`). `MessageStore` gains `stemsState`,
   `fillStems`, `stemmers` and `saveStemmers`.
+- Tags: the owner's own labels on a chat, a person or one message, kept in the local store and never sent.
+  `tags add <tag...> --chat <chat> | --contact <person> | --message <message>` (an id with `--chat`, or a `msg:`
+  locator alone), `tags remove` with the same target, `tags list [--tag <tag>] [--type chat|contact|message]`, and
+  MCP `tags_list` (read-only), `tags_add` and `tags_remove`. A tag is 1–32 letters a–z, digits and hyphens; upper
+  case is lowered and anything else is refused (`invalid_tag`). Writes check `permissions.tags.add` and
+  `tags.remove`: `readonly` refuses them and hides the MCP writes, `ask` refuses with `confirmation_required`, since
+  there is no question to put. Each CLI mounts `tagsCommand` at its next bump; until then the parity rows are
+  planned. Services: `TagsService` (`services.tags`); store: `addTags`, `removeTags`, `tags`.
+- `tag:<tag>` in a strict search, until now refused with `unsupported_field`: a message tagged, in a tagged chat,
+  or from a tagged person. Exact, so `NOT tag:work` is exact too. Store version 16 adds the `tags` table and the
+  triggers that drop a message's or chat's tags when it is deleted, under any build; `min_compatible` stays 6.
+
+### Changed — may break callers
+
+- `MessageStore` has three new required methods, `addTags`, `removeTags` and `tags`, and `Services` a new `tags`
+  member. A store or a `Services` object written by hand — a test fake — adds them; `openStore` and `servicesFor`
+  already do.
 
 ## 0.147.0 — 04.10.2026
 

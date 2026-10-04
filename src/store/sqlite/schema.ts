@@ -454,3 +454,23 @@ export const chunkVectors = sqliteTable(
   },
   (table) => [primaryKey({ columns: [table.model, table.contentHash] })],
 )
+
+/**
+ * The owner's own labels on a chat, a contact (an `identities` row) or one message. Polymorphic, so no
+ * foreign key: triggers drop a tag when its chat or message goes, whichever build deletes it.
+ */
+export const tags = sqliteTable(
+  "tags",
+  {
+    pk: integer("pk").primaryKey(),
+    /** `chat`, `contact` or `message`. */
+    taggableType: text("taggable_type").notNull(),
+    taggablePk: integer("taggable_pk").notNull(),
+    tag: text("tag").notNull(),
+    createdAt: integer("created_at").notNull(),
+  },
+  (table) => [
+    unique().on(table.taggableType, table.taggablePk, table.tag),
+    index("tags_by_tag").on(table.tag, table.taggableType, table.taggablePk),
+  ],
+)

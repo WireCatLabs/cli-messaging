@@ -3,7 +3,7 @@ import type { Command } from "commander"
 import { servingProfiles } from "../../background/lock.js"
 import type { AdminRight, Chat, GroupSettings, Id, Provider } from "../../domain/models.js"
 import { guardFor, type SendGuard } from "../../sends/guard.js"
-import { keyForCommand, levelFor } from "../../sends/permissions.js"
+import { keyForCommand, levelFor, type PermissionKey } from "../../sends/permissions.js"
 import { OFFLINE, type Override, type ServiceDeps, type Services, servicesFor } from "../../services/index.js"
 import type { OpenRecognizer } from "../../speech/transcribe.js"
 import { type AccountKey, type DeletionScope, type MessageStore, openStore } from "../../store/store.js"
@@ -243,6 +243,24 @@ const refuseDenied = (command: Command, settings: Settings) => {
     `profile ${settings.profile} denies ${key} (permissions.${named} is deny, from the ` +
       `${settings.permissionSources[named ?? ""] ?? "default"})`,
     { permission: key },
+  )
+}
+
+/**
+ * A write to the local store alone. `deny` already stopped the command (`messengerContext`); `readonly`
+ * stops this write too. There is no question to put to the owner here, so `ask` refuses rather than
+ * writing unasked.
+ */
+export const refuseLocalWrite = (context: MessengerContext, command: string, permission: PermissionKey): void => {
+  const { settings } = context
+  const { level, key } = levelFor(settings.permissions, permission)
+  if (level === "allow") return
+  throw new CliError(
+    level === "ask" ? "confirmation_required" : "permission_error",
+    `profile ${settings.profile} does not let ${permission} write (permissions.${key} is ${level}, from the ` +
+      `${settings.permissionSources[key ?? ""] ?? "default"}); to allow it: ` +
+      `${command} ${settings.profile} config set permissions.${permission} allow`,
+    { permission },
   )
 }
 

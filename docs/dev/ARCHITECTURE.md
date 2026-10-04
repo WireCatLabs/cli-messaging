@@ -115,10 +115,17 @@ what `conversations build` and `embed` without `--chat`, `search --refresh` and 
 one service method, `embeddings.refresh`, bounded by chats and chunks. How
 the search over them works, end to end and measured: [search-indexes.md](../storage/search-indexes.md#search-by-meaning).
 
+**The owner's tags** (version 16) are one table, `tags`, for a chat, a person (an `identities` row) or a
+message — `taggable_type` and `taggable_pk`, so no foreign key. Triggers in the file drop a message's tags
+when it is deleted or tombstoned and a chat's when it is deleted, so a build that knows nothing of tags —
+0.49.0 included — cannot leave one behind; identities are never deleted. `tag:` in a strict search
+compiles to one exact condition over the three (`src/store/sqlite/lucene.ts`), and `tags` commands and
+MCP tools write through `services.tags` with their own permission keys (`tags.add`, `tags.remove`).
+
 **Where the queries live.** `src/store/store.ts` holds the `MessageStore` interface and `storeOver`, a
 facade that opens the transaction and delegates. The SQL is in `src/store/sqlite/`, one module per kind
 of record — `accounts`, `identities`, `chats`, `messages` (writes), `reads`, `search`, `ranges`,
-`sync` (state and fetch leases), `transcripts`, `conversations` — as plain functions taking a `StoreContext`: the
+`sync` (state and fetch leases), `transcripts`, `conversations`, `tags` — as plain functions taking a `StoreContext`: the
 connection as the `CacheDatabase` seam and as Drizzle (`orm`), and the clock. Queries are Drizzle's
 builder, called synchronously (`.get()`, `.all()`, `.run()`); FTS `MATCH`, `json_extract` and the
 `coalesce(excluded.…)` upserts stay `sql` fragments. Use `inTransaction`, never Drizzle's

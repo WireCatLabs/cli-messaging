@@ -23,6 +23,7 @@ import { reactionsCommand } from "./reactions-command.js"
 import { reviewCommand } from "./review.js"
 import { serveCommand } from "./serve-command.js"
 import { serverCommand } from "./server-command.js"
+import { tagsCommand } from "./tags-command.js"
 import { topicsCommand } from "./topics-command.js"
 import { watchCommand } from "./watch-command.js"
 
@@ -57,6 +58,7 @@ describe("the permission key of a command", () => {
       serverCommand(messenger),
       storeCommand(messenger),
       conversationsCommand(messenger),
+      tagsCommand(messenger),
       recipientsCommand(messenger),
       sendsCommand(messenger),
       modelsCommand(messenger),
@@ -77,5 +79,6 @@ describe("the permission key of a command", () => {
     expect(keyForCommand(["conversations", "embed", "clear"])).toBe("conversations.embed")
     expect(keyForCommand(["store", "backup"])).toBeNull()
     expect(keyForCommand(["chats", "members", "list"])).toBe("chats.members.list")
+    expect(keyForCommand(["tags", "add"])).toBe("tags.add")
   })
 })

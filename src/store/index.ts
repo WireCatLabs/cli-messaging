@@ -28,5 +28,8 @@ export {
   type Range,
   type StoredChatFilter,
   type StoredHit,
+  type StoredTag,
   type StoreOptions,
+  type TagFilter,
+  type TagTarget,
 } from "./store.js"

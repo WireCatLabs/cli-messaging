@@ -3,7 +3,6 @@ import { Command } from "commander"
 import { DEFAULT_TEXT_MODEL } from "../../embeddings/models.js"
 import { isLocal, remoteModel } from "../../embeddings/remote.js"
 import { renderMessages } from "../../render/messages.js"
-import { levelFor } from "../../sends/permissions.js"
 import { BATCH_SIZE } from "../../services/conversations.js"
 import {
   type ChatReadiness,
@@ -19,7 +18,7 @@ import type { AgentAnswer, ConversationSummary } from "../../store/store.js"
 import { embeddingKeys } from "../embedding-keys.js"
 import { positiveCount, renderList } from "../paging.js"
 import { answerOf as askOwner } from "./ask.js"
-import { type Messenger, type MessengerContext, messengerContext } from "./context.js"
+import { type Messenger, type MessengerContext, messengerContext, refuseLocalWrite } from "./context.js"
 import { readAll } from "./stdin.js"
 
 /**
@@ -211,7 +210,7 @@ export const conversationsCommand = (messenger: Messenger): Command => {
       const model = choiceOf(options, messenger, context)
       if (options.refresh) {
         localOnly(model, "--refresh")
-        writable(context, messenger.app.command, EMBED_KEY)
+        refuseLocalWrite(context, messenger.app.command, EMBED_KEY)
       }
       const { limit } = context.settings
       const { found, refreshed } = await context.withServices(async (services) => {
@@ -335,7 +334,7 @@ export const conversationsCommand = (messenger: Messenger): Command => {
     .action(async function (this: Command) {
       const { batch } = this.opts<{ batch: string }>()
       const context = messengerContext(this, messenger)
-      writable(context, messenger.app.command)
+      refuseLocalWrite(context, messenger.app.command, LINKS_KEY)
       const answer = answerOf(await readAll(context.stdin))
       const stored = await context.withServices((services) => services.conversations.addAnswers(batch, answer))
       if (context.format === "pretty") {
@@ -353,7 +352,7 @@ export const conversationsCommand = (messenger: Messenger): Command => {
     .action(async function (this: Command) {
       const { chat, model } = this.opts<{ chat: string; model?: string }>()
       const context = messengerContext(this, messenger)
-      writable(context, messenger.app.command)
+      refuseLocalWrite(context, messenger.app.command, LINKS_KEY)
       const cleared = await context.withServices((services) => services.conversations.clearAnswers(chat, model))
       if (context.format === "pretty") context.streams.data(`${cleared.cleared} answers dropped\n`)
       else context.renderer.result(cleared)
@@ -392,7 +391,7 @@ export const conversationsCommand = (messenger: Messenger): Command => {
       } & BoundOptions
     >()
     const context = messengerContext(this, messenger)
-    writable(context, messenger.app.command, EMBED_KEY)
+    refuseLocalWrite(context, messenger.app.command, EMBED_KEY)
     const model = choiceOf(options, messenger, context)
     if (options.chat === undefined) {
       localOnly(model, "embedding without --chat")
@@ -464,7 +463,7 @@ export const conversationsCommand = (messenger: Messenger): Command => {
     const options = this.optsWithGlobals<ModelOptions & { chat?: string }>()
     const chat = chatOf(options)
     const context = messengerContext(this, messenger)
-    writable(context, messenger.app.command, EMBED_KEY)
+    refuseLocalWrite(context, messenger.app.command, EMBED_KEY)
     const given = options.model !== undefined || options.provider !== undefined || options.baseUrl !== undefined
     const model = given ? choiceOf(options, messenger, context, { needKey: false }) : undefined
     const cleared = await context.withServices((services) => services.embeddings.clear(chat, model))
@@ -475,23 +474,6 @@ export const conversationsCommand = (messenger: Messenger): Command => {
   conversations.addCommand(embed)
 
   return conversations
-}
-
-/**
- * `deny` already stopped the command (`messengerContext`); `readonly` stops this write too. There is no
- * question to put to the owner here, so `ask` refuses rather than writing unasked.
- */
-const writable = (context: MessengerContext, command: string, permission = LINKS_KEY) => {
-  const { settings } = context
-  const { level, key } = levelFor(settings.permissions, permission)
-  if (level === "allow") return
-  throw new CliError(
-    level === "ask" ? "confirmation_required" : "permission_error",
-    `profile ${settings.profile} does not let ${permission} write (permissions.${key} is ${level}, from the ` +
-      `${settings.permissionSources[key ?? ""] ?? "default"}); to allow it: ` +
-      `${command} ${settings.profile} config set permissions.${permission} allow`,
-    { permission },
-  )
 }
 
 /**

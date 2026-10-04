@@ -5,6 +5,11 @@ import type { AccountKey, MessageStore } from "../store/store.js"
 export interface SearchRecipes {
   chats: Pick<Chat, "id" | "title" | "kind">[]
   messages: Pick<Message, "id" | "chatId" | "text" | "timestamp" | "senderId" | "senderName">[]
+  tags: (
+    | { type: "chat"; chat: string; tag: string }
+    | { type: "contact"; person: string; tag: string }
+    | { type: "message"; chat: string; message: string; tag: string }
+  )[]
   recipes: { title: string; query: string; ids: string[] }[]
   negative: { query: string; code: string; reason: string }[]
 }
@@ -33,5 +38,14 @@ export const seedSearchRecipes = async (store: MessageStore, account: AccountKey
         })),
       { via: "history" },
     )
+  }
+  for (const one of searchRecipes.tags) {
+    const target =
+      one.type === "chat"
+        ? { type: one.type, chatId: one.chat }
+        : one.type === "contact"
+          ? { type: one.type, personId: one.person }
+          : { type: one.type, chatId: one.chat, messageId: one.message }
+    await store.addTags(account, target, [one.tag])
   }
 }

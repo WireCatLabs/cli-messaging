@@ -42,6 +42,8 @@ import * as searchIndex from "./sqlite/search-index.js"
 import type { StemsFill, StemsState } from "./sqlite/stems.js"
 import * as stems from "./sqlite/stems.js"
 import * as sync from "./sqlite/sync.js"
+import type { StoredTag, TagFilter, TagTarget } from "./sqlite/tags.js"
+import * as tagQueries from "./sqlite/tags.js"
 import * as transcripts from "./sqlite/transcripts.js"
 import { toMs } from "./sqlite/values.js"
 import type { ChunkToEmbed } from "./sqlite/vectors.js"
@@ -393,6 +395,12 @@ export interface MessageStore {
   chatStats(key: AccountKey, chatId?: Id): Promise<ChatStats[]>
   /** The stretches held completely, oldest first. */
   ranges(key: AccountKey, chatId: Id): Promise<Range[]>
+  /** Labels one stored chat, person or message; answers the tags it did not have. `not_found` for one not held. */
+  addTags(key: AccountKey, target: TagTarget, tags: string[]): Promise<string[]>
+  /** Answers the tags it had. */
+  removeTags(key: AccountKey, target: TagTarget, tags: string[]): Promise<string[]>
+  /** The account's tagged chats and messages, and its messenger's tagged people. */
+  tags(key: AccountKey, filter?: TagFilter): Promise<StoredTag[]>
   close(): Promise<void>
 }
 
@@ -1089,9 +1097,28 @@ const storeOver = (context: StoreContext): MessageStore => {
       return chatKey === undefined ? [] : ranges.ranges(context, chatKey)
     },
 
+    addTags: async (key, target, list) => {
+      let added: string[] = []
+      inTransaction(() => {
+        added = tagQueries.addTags(context, tagQueries.targetPk(context, key, target), target.type, list)
+      })
+      return added
+    },
+
+    removeTags: async (key, target, list) => {
+      let removed: string[] = []
+      inTransaction(() => {
+        removed = tagQueries.removeTags(context, tagQueries.targetPk(context, key, target), target.type, list)
+      })
+      return removed
+    },
+
+    tags: async (key, filter = {}) => tagQueries.tagsOf(context, key, filter),
+
     close: async () => database.close(),
   }
 }
 
 export { CHAT_LIST_KEY, type ChatCompleteness, fetchedKey, historyStartKey } from "./sqlite/completeness.js"
+export type { StoredTag, TagFilter, TagTarget } from "./sqlite/tags.js"
 export type { ScoredHit, SearchScope, WordOptions, WordQuery } from "./sqlite/words.js"

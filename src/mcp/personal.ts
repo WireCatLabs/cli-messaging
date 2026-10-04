@@ -1,13 +1,14 @@
 import * as v from "valibot"
 import type { Messenger } from "../cli/messenger/context.js"
 import type { AnyTool } from "./tool.js"
-import { deleteTools, markReadTools, readTools, sendTools } from "./tools.js"
+import { deleteTools, localTools, markReadTools, readTools, sendTools } from "./tools.js"
 
 /** The same definitions a built-in server mounts, for a host retaining its own session and guards. */
 export const personalMcpTools = (messenger: Messenger): Record<string, AnyTool> =>
   Object.fromEntries(
     Object.entries({
       ...readTools(messenger),
+      ...localTools(messenger),
       ...sendTools(messenger),
       ...markReadTools(messenger),
       ...deleteTools(messenger),
