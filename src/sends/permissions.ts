@@ -67,6 +67,8 @@ export const DEFAULT_PERMISSIONS: Readonly<Record<PermissionKey, Level>> = {
   "account.sessions.end": "ask",
   "bot.messages.delete": "ask",
   "topics.enable": "ask",
+  // NEED-568: a rule writes to people with nobody typing a command; it waits for the owner's own allow.
+  "replies.send": "deny",
 }
 
 /** The resources at the top of the command tree, which `readOnly` and `allow` turn read-only as a whole. */
@@ -82,6 +84,7 @@ export const RESOURCES = [
   "conversations",
   "tags",
   "searches",
+  "replies",
 ] as const
 
 const OLD_WORDS: Record<Permission, PermissionKey[]> = {
@@ -292,6 +295,8 @@ const HOUSEKEEPING = new Set([
   "sends",
   "recipients",
   "mcp",
+  // Its commands read the rules or flip the pause switch; what a rule sends is checked as `replies.send`.
+  "replies",
 ])
 
 /** Under `bot`: its token, its names, its lists and its MCP server. */

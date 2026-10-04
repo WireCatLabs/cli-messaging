@@ -117,8 +117,16 @@ const rule = v.pipe(
 
 export type ReplyRule = v.InferOutput<typeof rule>
 
+const tester = v.strictObject({
+  provider: v.optional(v.pipe(v.string(), v.minLength(1))),
+  id: v.pipe(v.string(), v.minLength(1)),
+})
+
+export type Tester = v.InferOutput<typeof tester>
+
 const file = v.pipe(
-  v.strictObject({ rules: v.array(rule) }),
+  // NEED-601: rules answer test accounts only, until the owner rules otherwise; no list, nobody.
+  v.strictObject({ testers: v.optional(v.array(tester), []), rules: v.array(rule) }),
   v.check(
     ({ rules }) => new Set(rules.map((one) => one.id)).size === rules.length,
     "two rules share an id; each needs its own",
@@ -148,23 +156,35 @@ export const defaultRule = (id: string) => ({
 export const repliesPathFor = (app: AppIdentity, profile: string, env: NodeJS.ProcessEnv = process.env): string =>
   join(resolvePaths({ appName: app.appName, prefix: app.envPrefix, env }).config, `${profile}.replies.json`)
 
+export interface Replies {
+  testers: Tester[]
+  rules: ReplyRule[]
+}
+
 /** The owner's rules, in file order. No file is no rules; a file that does not check out refuses, naming the field. */
-export const readReplyRules = (path: string): ReplyRule[] => {
-  if (!existsSync(path)) return []
+export const readReplyRules = (path: string): ReplyRule[] => readReplies(path).rules
+
+export const readReplies = (path: string): Replies => {
+  if (!existsSync(path)) return { testers: [], rules: [] }
   let parsed: unknown
   try {
     parsed = JSON.parse(readFileSync(path, "utf8"))
   } catch (error) {
     throw broken(path, error instanceof Error ? error.message : String(error))
   }
-  return parseReplyRules(parsed, path)
+  return parseReplies(parsed, path)
 }
 
-export const parseReplyRules = (parsed: unknown, path: string): ReplyRule[] => {
+export const parseReplyRules = (parsed: unknown, path: string): ReplyRule[] => parseReplies(parsed, path).rules
+
+export const parseReplies = (parsed: unknown, path: string): Replies => {
   const checked = v.safeParse(file, parsed)
   if (!checked.success) throw broken(path, checked.issues.map(problem).join("; "))
-  return checked.output.rules
+  return checked.output
 }
+
+export const isTester = (testers: readonly Tester[], provider: string, id: string | null): boolean =>
+  id !== null && testers.some((one) => one.id === id && (one.provider === undefined || one.provider === provider))
 
 const problem = (issue: v.BaseIssue<unknown>): string => {
   const at = v.getDotPath(issue) ?? "the file"

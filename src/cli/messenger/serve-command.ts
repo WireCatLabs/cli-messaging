@@ -1,8 +1,18 @@
 import { CliError } from "@leemour/cli-core"
 import { Command } from "commander"
 import { holdLock, lockPath, releaseLock, takeLock } from "../../background/lock.js"
-import type { MessageEvent } from "../../domain/models.js"
-import { type Messenger, messengerContext } from "./context.js"
+import type { ChatKind, Message, MessageEvent } from "../../domain/models.js"
+import { senderFacts } from "../../replies/dry-run.js"
+import { repliesPathFor } from "../../replies/rules.js"
+import { NO_RULES, type Replied, replyTo } from "../../replies/serve.js"
+import { repliesStatePathFor } from "../../replies/state.js"
+import { levelFor } from "../../sends/permissions.js"
+import { newSendId } from "../../sends/send-id.js"
+import { onlineDeps } from "../../services/deps.js"
+import { servicesFor } from "../../services/index.js"
+import { recalledAccount } from "./accounts.js"
+import { type Messenger, type MessengerContext, messengerContext } from "./context.js"
+import type { MessengerAdapter } from "./port.js"
 import { listenUntilStopped } from "./watch-command.js"
 
 export { type Lock, lockPath, readLock, servingProfiles } from "../../background/lock.js"
@@ -37,20 +47,106 @@ export const serveCommand = (messenger: Messenger): Command => {
     }
 
     const counts: Record<string, number> = {}
+    const rules = replying(context, messenger, Date.parse(startedAt))
     const count = (event: MessageEvent) => {
       counts[event.event] = (counts[event.event] ?? 0) + 1
+      if (event.event === "message") rules.arrived(event.message)
     }
     try {
       await listenUntilStopped(this, context, messenger, count, {
         stop: new AbortController(),
         catchUp: true,
         onReady,
+        connected: rules.connected,
       })
     } finally {
+      await rules.settled()
       releaseLock(path)
     }
-    context.renderer.result({ profile: context.profile, startedAt, stoppedAt: new Date().toISOString(), kept: counts })
+    context.renderer.result({
+      profile: context.profile,
+      startedAt,
+      stoppedAt: new Date().toISOString(),
+      kept: counts,
+      ...rules.summary(),
+    })
   })
 
   return command
+}
+
+/**
+ * The reply rules, one message at a time in the order they came: two at once would both read the
+ * limits before either counted its reply.
+ */
+const replying = (context: MessengerContext, messenger: Messenger, since: number) => {
+  const { app, provider } = messenger
+  const { profile, env, settings, renderer } = context
+  let connection: MessengerAdapter | undefined
+  let queue = Promise.resolve()
+  const sent: Record<string, number> = {}
+  const skipped: Record<string, number> = {}
+  const chats = new Map<string, Promise<{ id: string; kind: ChatKind }>>()
+  const owner = recalledAccount(app, provider, profile, env)?.account ?? null
+
+  const handle = async (message: Message) => {
+    if (connection === undefined) return
+    const open = connection
+    const answer: Replied = await replyTo(
+      {
+        rulesPath: repliesPathFor(app, profile, env),
+        statePath: repliesStatePathFor(app, profile, env),
+        provider,
+        owner: { id: owner },
+        since,
+        allowed: () => levelFor(settings.permissions ?? {}, "replies.send").level === "allow",
+        chatOf: (chat) => {
+          if (!chats.has(chat))
+            chats.set(
+              chat,
+              open.resolve(chat).then(({ id, kind }) => ({ id, kind })),
+            )
+          return chats.get(chat) as Promise<{ id: string; kind: ChatKind }>
+        },
+        senderOf: (person) =>
+          context.withStore(
+            async (store, account) => {
+              const { isContact, botOf } = await senderFacts(store, account)
+              return { isBot: (await botOf(person)) === true, isContact: isContact(person) }
+            },
+            { name: "serve replies" },
+          ),
+        send: (reply) =>
+          servicesFor(onlineDeps(messenger, open, context.guard, { profile, env })).messages.send({
+            chat: reply.chat,
+            text: reply.text,
+            sendId: reply.sendId,
+            key: "replies.send",
+            origin: reply.origin,
+            ...(reply.replyTo === undefined ? {} : { replyTo: reply.replyTo }),
+          }),
+        newSendId: () => open.newSendId?.() ?? newSendId(),
+      },
+      message,
+    )
+    if ("sent" in answer) sent[answer.sent] = (sent[answer.sent] ?? 0) + 1
+    else if (answer.skip !== NO_RULES) skipped[answer.skip] = (skipped[answer.skip] ?? 0) + 1
+  }
+
+  return {
+    connected: (open: MessengerAdapter) => {
+      connection = open
+    },
+    arrived: (message: Message) => {
+      if (message.outgoing !== false) return
+      queue = queue.then(() =>
+        handle(message).catch((error) =>
+          renderer.warn(`a reply rule failed: ${error instanceof Error ? error.message : String(error)}`),
+        ),
+      )
+    },
+    settled: () => queue,
+    summary: () =>
+      Object.keys(sent).length === 0 && Object.keys(skipped).length === 0 ? {} : { replies: { sent, skipped } },
+  }
 }

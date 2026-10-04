@@ -10,6 +10,7 @@ import { isId, pickChat, pickPerson } from "../resolve.js"
 import { inSource, parseQuery, sourceOf } from "../search/query.js"
 import { type Match, search } from "../search/search.js"
 import { codeOf, guardedWrite, type Operated } from "../sends/guarded.js"
+import type { PermissionKey } from "../sends/permissions.js"
 import { newOperationId, newSendId } from "../sends/send-id.js"
 import type { Upload } from "../sends/upload.js"
 import type {
@@ -95,6 +96,10 @@ export interface SendRequest {
   /** ISO time to send it at; refused together with `sendId`. */
   at?: string
   attachments?: Upload[]
+  /** The level it is checked against, where it is not `messages.send`: a rule's reply is `replies.send`. */
+  key?: PermissionKey
+  /** Who sent it, in the send journal: `rule:<id>`. */
+  origin?: string
 }
 
 /** One message in a chat, as typed. */
@@ -304,6 +309,8 @@ export const messagesService = (deps: ServiceDeps): MessagesService => {
       markdown,
       at,
       attachments = [],
+      key,
+      origin,
     }) => {
       const connection = await deps.connection()
       if (at !== undefined && sendId !== undefined) {
@@ -332,6 +339,8 @@ export const messagesService = (deps: ServiceDeps): MessagesService => {
         ...(replyTo === undefined ? {} : { replyTo }),
         ...(threadId === undefined ? {} : { threadId }),
         ...(at === undefined ? {} : { scheduledFor: at }),
+        ...(key === undefined ? {} : { key }),
+        ...(origin === undefined ? {} : { origin }),
         ...(attachments.length === 0
           ? {}
           : { attachments: attachments.map(({ kind, bytes }) => ({ kind, bytes: bytes.byteLength })) }),

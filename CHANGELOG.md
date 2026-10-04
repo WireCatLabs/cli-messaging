@@ -16,6 +16,16 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   rows left only in a copy, columns only a copy has, and every mismatch left for a person to decide.
   `--dry-run` does the same work and rolls it back. `store copies delete <name>` deletes one copy, named exactly.
   Repairs a store an early draft of version 13 set up, where reading a message failed on `messages.mentions`.
+- `serve` answers with the reply rules (`config/<profile>.replies.json`), **only to the test accounts named in its
+  new `testers` list** (`[{ "id": "<sender id>" }]`, `provider` optional) — nobody else, and nobody at all while the
+  list is empty or missing. A new message from a tester goes through the rules in file order, and the first that
+  answers sends, under the new permission key `replies.send` (`deny` by default; `ask` sends nothing, since `serve`
+  has nobody to ask). Messages from before `serve` started, edits and messages already answered are left alone. A
+  failed send is tried once more with the same send id. The send journal records `origin: "rule:<id>"`, and
+  `serve`'s result counts `replies: { sent, skipped }` by reason. `replies test` reports a sender who is not a
+  tester as `not a test account`. `replies pause` stops every rule at once, a running `serve` too; `replies resume`
+  undoes it; `replies status` says whether the rules may send, which are on, and how many testers there are.
+  `SendRequest` takes `key` and `origin`; `SendEntry` has `origin`; `replies` is a permission resource.
 - `contacts context <person> [--limit] [--since-time]` and read-only MCP `contacts_context`: what the store holds
   about one person in every messenger linked to them — shared chats, the last message each way, their recent
   messages in the direct chat and in groups, where others mentioned them, each with a locator. Store only, marks

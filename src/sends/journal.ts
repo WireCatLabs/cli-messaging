@@ -79,6 +79,8 @@ export interface SendEntry {
   scheduledFor?: string
   /** Whether a pin told the members. */
   notify?: boolean
+  /** What sent it when no command did: `rule:<id>` for an auto-reply. */
+  origin?: string
   /** Pairs an outcome with the `reserved` line it settles. */
   reservation?: string
   errorCode?: string

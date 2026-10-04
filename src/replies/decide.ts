@@ -8,7 +8,8 @@ export interface Incoming {
   chat: Pick<Chat, "id" | "kind">
   /** The owner, to tell a mention or a reply to them; `null` when the account is not known. */
   owner: { id: Id | null; username?: string }
-  sender: { isBot: boolean; isContact: boolean }
+  /** `isTester`: named in the file's `testers` — nobody else is ever answered (NEED-601). */
+  sender: { isBot: boolean; isContact: boolean; isTester: boolean }
   /** ms: when `serve` began catching up. Older messages are never answered — a week away must not get a week of replies. */
   since: number
 }
@@ -18,6 +19,8 @@ export type Decision =
   | { skip: string }
 
 const skip = (why: string): Decision => ({ skip: why })
+
+export const NOT_A_TESTER = "not a test account"
 
 /**
  * Whether `rule` answers this message at `now`, and with what — or why not, in words `replies test`
@@ -29,6 +32,7 @@ export const decide = (rule: ReplyRule, incoming: Incoming, state: RepliesState,
   if (!rule.on) return skip("the rule is off")
   if (message.outgoing !== false) return skip(message.outgoing ? "your own message" : "the account is not known")
   if (message.senderIsChat || message.senderId === null) return skip("sent as a chat, not by a person")
+  if (!sender.isTester) return skip(NOT_A_TESTER)
   if (sender.isBot) return skip("sent by a bot")
   if (chat.kind !== "dialog" && chat.kind !== "group") return skip(`a ${chat.kind} is never answered`)
   if (message.editedAt !== null) return skip("an edited message")

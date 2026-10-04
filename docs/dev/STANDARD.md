@@ -36,6 +36,8 @@ guessable from the others.
      (`store check`)
    - `test` run rules over what is already stored and say what they would have done, doing none of
      it (`replies test`)
+   - `pause` / `resume` stop and restart what a running process does for a profile, without stopping
+     the process (`replies pause`)
    - `create` / `delete` make or destroy a thing · `add` / `remove` put an existing thing into or
      out of a set (members, admins, contacts, recipients, reactions) · `clear` empty a set
    - `update` change a thing's fields · `set` / `unset` one named key · `rename` its name only

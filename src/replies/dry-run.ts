@@ -3,7 +3,7 @@ import { formatLocator } from "../domain/locator.js"
 import type { Chat, Id, Message } from "../domain/models.js"
 import type { AccountKey, MessageStore } from "../store/store.js"
 import { decide } from "./decide.js"
-import type { ReplyRule } from "./rules.js"
+import { isTester, type ReplyRule, type Tester } from "./rules.js"
 import { emptyState, recordReply } from "./state.js"
 
 export const DRY_RUN_DAYS = 7
@@ -44,7 +44,12 @@ export const dryRun = async (
   store: MessageStore,
   account: AccountKey,
   rules: ReplyRule[],
-  { since, until = Date.now(), only }: { since: number; until?: number; only?: string },
+  {
+    since,
+    until = Date.now(),
+    only,
+    testers,
+  }: { since: number; until?: number; only?: string; testers: readonly Tester[] },
 ): Promise<DryRun> => {
   const tried = only === undefined ? rules : rules.filter((rule) => rule.id === only)
   if (only !== undefined && tried.length === 0) {
@@ -60,19 +65,7 @@ export const dryRun = async (
   arrived.sort((a, b) => Date.parse(a.message.timestamp) - Date.parse(b.message.timestamp))
 
   const people = await store.people(account.provider, { account: account.account })
-  const contacts = new Set(
-    (await store.contacts(account, { order: "recent", limit: Number.MAX_SAFE_INTEGER })).items.map((one) => one.id),
-  )
-  const botFlags = new Map<Id, boolean | null>()
-  const botOf = async (id: Id): Promise<boolean | null> => {
-    if (!botFlags.has(id)) {
-      const person = await store.personOf({ provider: account.provider, id })
-      const own = person?.identities.find((one) => one.provider === account.provider && one.id === id)
-      botFlags.set(id, own?.isBot ?? null)
-    }
-    return botFlags.get(id) ?? null
-  }
-
+  const { isContact, botOf, botFlags } = await senderFacts(store, account)
   const results = tried.map((rule) => ({
     id: rule.id,
     would: [] as WouldReply[],
@@ -91,7 +84,11 @@ export const dryRun = async (
           message,
           chat,
           owner: { id: account.account },
-          sender: { isBot: isBot === true, isContact: sender !== null && contacts.has(sender) },
+          sender: {
+            isBot: isBot === true,
+            isContact: sender !== null && isContact(sender),
+            isTester: isTester(testers, account.provider, sender),
+          },
           since,
         },
         state,
@@ -127,6 +124,26 @@ export const dryRun = async (
     rules: results,
     botUnknown: [...senders].filter((id) => botFlags.get(id) === null).length,
   }
+}
+
+/**
+ * What a message does not say about its sender, from the store: a contact is someone with a
+ * one-to-one chat, as `contacts list` counts them; `null` when the store has no bot flag.
+ */
+export const senderFacts = async (store: MessageStore, account: AccountKey) => {
+  const contacts = new Set(
+    (await store.contacts(account, { order: "recent", limit: Number.MAX_SAFE_INTEGER })).items.map((one) => one.id),
+  )
+  const botFlags = new Map<Id, boolean | null>()
+  const botOf = async (id: Id): Promise<boolean | null> => {
+    if (!botFlags.has(id)) {
+      const person = await store.personOf({ provider: account.provider, id })
+      const own = person?.identities.find((one) => one.provider === account.provider && one.id === id)
+      botFlags.set(id, own?.isBot ?? null)
+    }
+    return botFlags.get(id) ?? null
+  }
+  return { isContact: (id: Id) => contacts.has(id), botOf, botFlags }
 }
 
 const storedSince = async (store: MessageStore, account: AccountKey, chat: Id, since: number): Promise<Message[]> => {
