@@ -39,6 +39,8 @@ import * as reads from "./sqlite/reads.js"
 import * as search from "./sqlite/search.js"
 import type { SearchIndexFill, SearchIndexState } from "./sqlite/search-index.js"
 import * as searchIndex from "./sqlite/search-index.js"
+import type { SearchRecord, StoredSearch } from "./sqlite/searches.js"
+import * as searchRecords from "./sqlite/searches.js"
 import type { StemsFill, StemsState } from "./sqlite/stems.js"
 import * as stems from "./sqlite/stems.js"
 import * as sync from "./sqlite/sync.js"
@@ -401,6 +403,18 @@ export interface MessageStore {
   removeTags(key: AccountKey, target: TagTarget, tags: string[]): Promise<string[]>
   /** The account's tagged chats and messages, and its messenger's tagged people. */
   tags(key: AccountKey, filter?: TagFilter): Promise<StoredTag[]>
+  /** One run of a search or stats; the same unnamed run again counts on its row. `saved` is the saved search it ran. */
+  recordSearch(run: SearchRecord, options?: { saved?: string }): Promise<void>
+  /** A saved search by name; a name already taken is refused unless `replace`. */
+  saveSearch(name: string, search: SearchRecord, options?: { replace?: boolean }): Promise<StoredSearch>
+  /** A saved search by name, or any row by id. */
+  storedSearch(reference: string): Promise<StoredSearch | undefined>
+  savedSearches(): Promise<StoredSearch[]>
+  /** Runs, newest first, one more than `limit` when there are more. */
+  searchHistory(limit: number): Promise<StoredSearch[]>
+  deleteSearch(reference: string): Promise<StoredSearch>
+  /** Drops the unnamed runs; answers how many. */
+  clearSearchHistory(): Promise<number>
   close(): Promise<void>
 }
 
@@ -1115,10 +1129,43 @@ const storeOver = (context: StoreContext): MessageStore => {
 
     tags: async (key, filter = {}) => tagQueries.tagsOf(context, key, filter),
 
+    recordSearch: async (run, { saved } = {}) => inTransaction(() => searchRecords.recordRun(context, run, saved)),
+
+    saveSearch: async (name, search, { replace = false } = {}) => {
+      let saved: StoredSearch | undefined
+      inTransaction(() => {
+        saved = searchRecords.saveSearch(context, name, search, replace)
+      })
+      return saved as StoredSearch
+    },
+
+    storedSearch: async (reference) => searchRecords.findSearch(context, reference),
+
+    savedSearches: async () => searchRecords.savedSearches(context),
+
+    searchHistory: async (limit) => searchRecords.searchHistory(context, limit),
+
+    deleteSearch: async (reference) => {
+      let deleted: StoredSearch | undefined
+      inTransaction(() => {
+        deleted = searchRecords.deleteSearch(context, reference)
+      })
+      return deleted as StoredSearch
+    },
+
+    clearSearchHistory: async () => {
+      let cleared = 0
+      inTransaction(() => {
+        cleared = searchRecords.clearHistory(context)
+      })
+      return cleared
+    },
+
     close: async () => database.close(),
   }
 }
 
 export { CHAT_LIST_KEY, type ChatCompleteness, fetchedKey, historyStartKey } from "./sqlite/completeness.js"
+export type { SearchCommand, SearchRecord, StoredSearch } from "./sqlite/searches.js"
 export type { StoredTag, TagFilter, TagTarget } from "./sqlite/tags.js"
 export type { ScoredHit, SearchScope, WordOptions, WordQuery } from "./sqlite/words.js"

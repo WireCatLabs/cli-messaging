@@ -25,6 +25,8 @@ export interface ServiceDeps {
   env?: NodeJS.ProcessEnv
   /** A long-running process's open models, so a search does not load one each time. */
   embedders?: WarmEmbedders
+  /** `false` keeps no search history: recording was turned off by name. Kept when unset. */
+  history?: boolean
 }
 
 /**

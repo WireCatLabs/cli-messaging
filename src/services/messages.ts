@@ -12,7 +12,15 @@ import { type Match, search } from "../search/search.js"
 import { codeOf, guardedWrite, type Operated } from "../sends/guarded.js"
 import { newOperationId, newSendId } from "../sends/send-id.js"
 import type { Upload } from "../sends/upload.js"
-import type { AccountKey, ChatCompleteness, MessageStore, SearchScope, StoredHit, WordQuery } from "../store/store.js"
+import type {
+  AccountKey,
+  ChatCompleteness,
+  MessageStore,
+  SearchCommand,
+  SearchScope,
+  StoredHit,
+  WordQuery,
+} from "../store/store.js"
 import { fromStore, nothingStored, PUSHED, type ServiceDeps } from "./deps.js"
 import {
   type MessageStats,
@@ -22,6 +30,7 @@ import {
   searchLucene,
   statsLucene,
 } from "./messages-search.js"
+import { type SearchParams, searchRecordOf } from "./searches.js"
 
 export interface ListWindow {
   limit: number
@@ -57,6 +66,8 @@ export interface SearchQuery {
   newest?: boolean
   /** Messages before and after each hit, from the store. */
   context?: number
+  /** The saved search this run came from (`--saved`), by id: its row counts the run too. */
+  saved?: string
 }
 
 export type FoundMessage = StoredHit & { match?: Match; score?: number | null; context?: WindowedMessage[] }
@@ -159,6 +170,19 @@ export const messagesService = (deps: ServiceDeps): MessagesService => {
   const inStore = async <T>(read: (store: MessageStore, account: AccountKey) => Promise<T>): Promise<T> =>
     read(await deps.store(), await deps.account())
 
+  /**
+   * Only a run that answered is kept: a refused query is the caller's typo, not a search. The answer is
+   * already in hand, so a history write that fails — the store busy under `serve` — never fails the search.
+   */
+  const remember = async (store: MessageStore, command: SearchCommand, query: SearchQuery & { by?: StatsGrouping }) => {
+    if (deps.history === false) return
+    await store
+      .recordSearch(searchRecordOf(command, paramsOf(command, query)), {
+        ...(query.saved === undefined ? {} : { saved: query.saved }),
+      })
+      .catch(() => undefined)
+  }
+
   const pinning = async (
     { chat, message }: MessageTarget,
     pinned: boolean,
@@ -255,9 +279,19 @@ export const messagesService = (deps: ServiceDeps): MessagesService => {
     download: async (chat, message) =>
       capability(await deps.connection(), "download", "download attachments")(chat, message),
 
-    search: (query) => inStore((store, account) => searchStore(store, account, query, deps.messenger)),
+    search: (query) =>
+      inStore(async (store, account) => {
+        const found = await searchStore(store, account, query, deps.messenger)
+        await remember(store, "search", query)
+        return found
+      }),
 
-    stats: (query) => inStore((store, account) => statsStore(store, account, query, deps.messenger)),
+    stats: (query) =>
+      inStore(async (store, account) => {
+        const stats = await statsStore(store, account, query, deps.messenger)
+        await remember(store, "stats", query)
+        return stats
+      }),
 
     send: async ({
       chat,
@@ -687,3 +721,21 @@ const scopeOf = async (
   }
   return [{ required: parsed.required, excluded: parsed.excluded }, scope]
 }
+
+/** What a run is kept as: the query and options it was given — a regular expression as its source. */
+const paramsOf = (command: SearchCommand, query: SearchQuery & { by?: StatsGrouping }): SearchParams => ({
+  ...(query.pattern
+    ? { text: query.pattern.source, regex: true }
+    : query.text === undefined
+      ? {}
+      : { text: query.text }),
+  ...(query.ast === undefined ? {} : { ast: query.ast }),
+  ...(query.language === undefined ? {} : { language: query.language }),
+  ...(query.chat === undefined ? {} : { chat: query.chat }),
+  ...(query.source === undefined ? {} : { source: query.source }),
+  ...(query.timezone === undefined ? {} : { timezone: query.timezone }),
+  limit: query.limit,
+  ...(command === "search"
+    ? { newest: query.newest === true, ...(query.context === undefined ? {} : { context: query.context }) }
+    : { by: query.by }),
+})

@@ -11,7 +11,10 @@ export const messagesStatsCommand = (messenger: Messenger): Command =>
     .description(
       "how many stored messages match, by chat, sender, day or hour — the local store only; never asks the messenger",
     )
-    .argument("[query...]", "a strict Lucene query, as for messages search; none counts every stored message")
+    .argument(
+      "[query...]",
+      "a strict Lucene query, as for messages search; none counts every stored message; with --saved, more words AND-ed to it",
+    )
     .option("--by <chat|sender|day|hour>", "what to count by (default: chat)", groupingOf)
     .option("--chat <chat>", `only this chat — the same as chat: in the query; ${messenger.chatArgument}`)
     .option(
@@ -20,30 +23,67 @@ export const messagesStatsCommand = (messenger: Messenger): Command =>
     )
     .option("--limit <n>", "how many rows", positiveCount("--limit"))
     .option("--timezone <zone>", "the IANA timezone for calendar days and hours")
+    .option(
+      "--saved <name|id>",
+      "count what a saved search or an earlier run matches; options typed here replace its own",
+    )
     .addHelpText(
       "after",
       "Search guide: https://github.com/leemour/cli-messaging/blob/main/docs/search/query-language.md",
     )
     .action(async function (this: Command, words: string[]) {
       const context = messengerContext(this, messenger)
-      const { by, chat, source, timezone } = this.opts<{
+      const {
+        by,
+        chat,
+        source,
+        timezone,
+        limit: typedLimit,
+        saved,
+      } = this.opts<{
         by?: StatsGrouping
         chat?: string
         source?: string
         timezone?: string
+        limit?: number
+        saved?: string
       }>()
-      const { limit } = context.settings
-      const stats = await context.withServices((services) =>
-        services.messages.stats({
-          ...(words.length ? { text: words.join(" ") } : {}),
-          by: by ?? "chat",
+      const typed = {
+        ...(by === undefined ? {} : { by }),
+        ...(chat === undefined ? {} : { chat }),
+        ...(source === undefined ? {} : { source }),
+        ...(timezone === undefined ? {} : { timezone }),
+        ...(typedLimit === undefined ? {} : { limit: typedLimit }),
+      }
+      let limit = context.settings.limit
+      const stats = await context.withServices(async (services) => {
+        if (saved === undefined)
+          return services.messages.stats({
+            ...typed,
+            ...(words.length ? { text: words.join(" ") } : {}),
+            by: by ?? "chat",
+            limit,
+            language: "lucene",
+          })
+        const { id, params } = await services.searches.resolve(saved, { ...typed, text: words.join(" ") })
+        if (params.regex || params.language === "legacy")
+          throw new CliError(
+            "validation_error",
+            "messages stats counts strict Lucene queries; this saved search is legacy",
+          )
+        limit = params.limit ?? limit
+        return services.messages.stats({
+          ...(params.text === undefined ? {} : { text: params.text }),
+          ...(params.ast === undefined ? {} : { ast: params.ast }),
+          ...(params.chat === undefined ? {} : { chat: params.chat }),
+          ...(params.source === undefined ? {} : { source: params.source }),
+          ...(params.timezone === undefined ? {} : { timezone: params.timezone }),
+          by: params.by ?? "chat",
           limit,
           language: "lucene",
-          ...(timezone === undefined ? {} : { timezone }),
-          ...(chat === undefined ? {} : { chat }),
-          ...(source === undefined ? {} : { source }),
-        }),
-      )
+          saved: id,
+        })
+      })
       const incomplete = stats.completeness.filter((one) => one.state !== "complete").length
       if (incomplete > 0)
         context.renderer.note(
@@ -63,7 +103,7 @@ export const messagesStatsCommand = (messenger: Messenger): Command =>
       else context.renderer.result({ ...stats, page: 1, limit })
     })
 
-const groupingOf = (value: string): StatsGrouping => {
+export const groupingOf = (value: string): StatsGrouping => {
   if (!(GROUPINGS as string[]).includes(value))
     throw new CliError("validation_error", `--by takes ${GROUPINGS.join(", ")}`)
   return value as StatsGrouping

@@ -35,12 +35,27 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   messages (7 days if not given), to whom, with what text, and how many messages each rule passed over and why.
   It tries a rule that is off as if it were on, applies the limits as `serve` would, and starts each run from an
   empty memory of past replies. It never connects, sends nothing and writes no file. Nothing answers messages yet.
+- Saved searches and search history. Every successful `messages search` and `messages stats` — command or MCP —
+  records its query and options in the local store, never a message or a result; the same run again counts on its
+  row, and the newest 1,000 runs are kept. A refused query and a run with `--no-record` are not recorded. `searches
+  create <name> [query...]` saves without running and takes `messages search`'s options plus `--by`, refusing a
+  taken name unless `--replace`; `searches list`, `searches show <name|id>`, `searches history [--limit]`,
+  `searches delete <name|id>`, `searches clear` (the history; saved ones stay). `messages search --saved
+  <name|id>` and `messages stats --saved <name|id>` run one: the stored query is parsed and checked again, more
+  words are AND-ed, typed options replace stored ones. MCP: `searches_list`, `searches_history` (read-only),
+  `searches_create`, `searches_delete`, `searches_clear`, and `saved` on `messages_search` and `messages_stats`
+  (`answerMessagesSearch` and `answerMessagesStats` take the searches service as a fourth argument; without it
+  `saved` is refused). Keys `searches.create`, `searches.delete`, `searches.clear`. Store version 17 adds the
+  `searches` table; `min_compatible` stays 6. Each CLI mounts `searchesCommand` at its next bump.
 
 ### Changed — may break callers
 
-- `MessageStore` has three new required methods, `addTags`, `removeTags` and `tags`, and `Services` a new `tags`
-  member. A store or a `Services` object written by hand — a test fake — adds them; `openStore` and `servicesFor`
-  already do.
+- `MessageStore` has new required methods — `addTags`, `removeTags`, `tags`, and `recordSearch`, `saveSearch`,
+  `storedSearch`, `savedSearches`, `searchHistory`, `deleteSearch`, `clearSearchHistory` — and `Services` new
+  `tags` and `searches` members. A store or a `Services` object written by hand — a test fake — adds them;
+  `openStore` and `servicesFor` already do.
+- `messages search` takes its query as optional (`[query...]`), since `--saved` can stand alone; without either
+  it still refuses with a validation error.
 
 ### Fixed
 

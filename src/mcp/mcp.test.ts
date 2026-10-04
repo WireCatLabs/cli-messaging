@@ -495,6 +495,8 @@ describe("the MCP server", () => {
       "chat_messages_transcribe",
       "chat_polls_show",
       "chat_review",
+      "chat_searches_history",
+      "chat_searches_list",
       "chat_status",
       "chat_tags_list",
       "chat_topics_list",
@@ -902,6 +904,37 @@ describe("the MCP server", () => {
     await asked.call("chat_chats_list")
     const refused = await asked.call("chat_tags_add", { tags: ["x"], chat: "7" })
     expect([refused.isError, refused.body.error.code]).toEqual([true, "confirmation_required"])
+  })
+
+  it("**saves and runs searches through MCP as the commands do**, and hides the writes where searches are read-only", async () => {
+    const telegram = scripted()
+    const { call, env } = await connect(telegram)
+    await call("chat_chats_list")
+    const store = await openStore({ path: env.MESSAGING_STORE })
+    await seedSearchRecipes(store, { provider: "chat", account: "500" })
+    await store.close()
+
+    expect(
+      (await call("chat_searches_create", { name: "invoices", text: "invoice", by: "sender" })).body,
+    ).toMatchObject({
+      name: "invoices",
+      command: "stats",
+    })
+    const found = await call("chat_messages_search", { saved: "invoices", text: "alpha", limit: 5 })
+    expect(found.body.items.map(({ id }: { id: string }) => id).sort()).toEqual(["101", "106"])
+    expect((await call("chat_messages_stats", { saved: "invoices" })).body).toMatchObject({ by: "sender", total: 3 })
+    const ast = await call("chat_messages_search", { saved: "invoices", ast: parseLucene("alpha") })
+    expect([ast.isError, ast.body.error.code]).toEqual([true, "validation_error"])
+    expect((await call("chat_searches_list")).body).toMatchObject({ items: [{ name: "invoices", runs: 2 }] })
+    expect((await call("chat_searches_history", { limit: 1 })).body).toMatchObject({ limit: 1, hasMore: true })
+    expect((await call("chat_searches_clear")).body).toEqual({ cleared: 2 })
+    expect((await call("chat_searches_delete", { name: "invoices" })).body).toMatchObject({ name: "invoices" })
+
+    const readOnly = await connect(scripted(), { config: levels({ searches: "readonly" }) })
+    const names = (await readOnly.client.listTools()).tools.map(({ name }) => name)
+    expect(names).toEqual(expect.arrayContaining(["chat_searches_list", "chat_searches_history"]))
+    for (const write of ["chat_searches_create", "chat_searches_delete", "chat_searches_clear"])
+      expect(names).not.toContain(write)
   })
 
   it("asks before conversations_refresh where conversations.embed asks, and hides it where it is read-only", async () => {

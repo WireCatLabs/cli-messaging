@@ -2,10 +2,11 @@ import { CliError } from "@leemour/cli-core"
 import * as v from "valibot"
 import type { Messenger } from "../../cli/messenger/context.js"
 import type { MessagesService } from "../../services/messages.js"
+import type { SearchesService, SearchParams } from "../../services/searches.js"
 import { chatOf, limit } from "../tool.js"
 
 export const MESSAGES_SEARCH_DESCRIPTION =
-  "Search only the local store using the Lucene 9.12.3 profile, default AND, with strict Boolean matching. Legacy discovery is explicit with language=legacy. Text or a versioned AST, account-scoped filters, calendar timezone, term/body regex and candidate presets use one service. Empty hits still report archive coverage. Guide: https://github.com/leemour/cli-messaging/blob/main/docs/search/query-language.md. Returns { items, page, limit, hasMore, corrections, completeness, wordsReady, query, coverage }."
+  "Search only the local store using the Lucene 9.12.3 profile, default AND, with strict Boolean matching. Legacy discovery is explicit with language=legacy. Text or a versioned AST, account-scoped filters, calendar timezone, term/body regex and candidate presets use one service. Empty hits still report archive coverage. `saved` runs a saved search (searches_list) or an earlier run (searches_history). Guide: https://github.com/leemour/cli-messaging/blob/main/docs/search/query-language.md. Returns { items, page, limit, hasMore, corrections, completeness, wordsReady, query, coverage }."
 
 export const messagesSearchInput = (messenger: Messenger) =>
   v.object({
@@ -28,17 +29,64 @@ export const messagesSearchInput = (messenger: Messenger) =>
       v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(20), v.description("messages around each hit")),
     ),
     limit,
+    saved: v.optional(
+      v.pipe(
+        v.string(),
+        v.minLength(1),
+        v.description(
+          "run a saved search (name) or an earlier run (id); text is AND-ed to it, other arguments replace its own",
+        ),
+      ),
+    ),
   })
 
 export type MessagesSearchArgs = v.InferOutput<ReturnType<typeof messagesSearchInput>>
+
+const typedOf = (args: Record<string, unknown>): SearchParams =>
+  Object.fromEntries(
+    ["text", "language", "timezone", "chat", "source", "newest", "context", "limit", "by"].flatMap((key) =>
+      args[key] === undefined ? [] : [[key, args[key]]],
+    ),
+  )
+
+/** `saved` needs the searches service; a host that mounts the tool without it refuses `saved` rather than ignore it. */
+const resolveSaved = async (
+  searches: Pick<SearchesService, "resolve"> | undefined,
+  args: { saved?: string; ast?: unknown } & Record<string, unknown>,
+) => {
+  if (args.saved === undefined) return undefined
+  if (!searches) throw new CliError("validation_error", "saved searches are not available on this server")
+  if (args.ast !== undefined) throw new CliError("validation_error", "with saved, give more words as text, not an AST")
+  return searches.resolve(args.saved, typedOf(args))
+}
 
 export const answerMessagesSearch = async (
   messages: Pick<MessagesService, "search">,
   args: MessagesSearchArgs,
   defaults: { limit: number; signal?: AbortSignal },
+  searches?: Pick<SearchesService, "resolve">,
 ) => {
+  const resolved = await resolveSaved(searches, args)
+  if (resolved) {
+    const { params, pattern } = resolved
+    const size = params.limit ?? defaults.limit
+    const found = await messages.search({
+      ...(pattern ? { pattern } : params.text === undefined ? {} : { text: params.text }),
+      ...(params.ast === undefined ? {} : { ast: params.ast }),
+      language: params.language ?? (pattern ? "legacy" : "lucene"),
+      signal: defaults.signal,
+      ...(params.timezone === undefined ? {} : { timezone: params.timezone }),
+      limit: size,
+      newest: params.newest === true,
+      context: params.context ?? 0,
+      ...(params.chat === undefined ? {} : { chat: params.chat }),
+      ...(params.source === undefined ? {} : { source: params.source }),
+      saved: resolved.id,
+    })
+    return { ...found, page: 1, limit: size }
+  }
   if (args.text === undefined && args.ast === undefined)
-    throw new CliError("validation_error", "give search text or a versioned AST")
+    throw new CliError("validation_error", "give search text, a versioned AST, or saved")
   const size = args.limit ?? defaults.limit
   const found = await messages.search({
     ...(args.text === undefined ? {} : { text: args.text }),
@@ -73,24 +121,39 @@ export const messagesStatsInput = (messenger: Messenger) =>
       ),
     ),
     limit,
+    saved: v.optional(
+      v.pipe(
+        v.string(),
+        v.minLength(1),
+        v.description(
+          "run a saved search (name) or an earlier run (id); text is AND-ed to it, other arguments replace its own",
+        ),
+      ),
+    ),
   })
 
 export const answerMessagesStats = async (
   messages: Pick<MessagesService, "stats">,
   args: v.InferOutput<ReturnType<typeof messagesStatsInput>>,
   defaults: { limit: number; signal?: AbortSignal },
+  searches?: Pick<SearchesService, "resolve">,
 ) => {
-  const size = args.limit ?? defaults.limit
+  const resolved = await resolveSaved(searches, args)
+  const params: SearchParams = resolved?.params ?? args
+  if (params.regex || params.language === "legacy")
+    throw new CliError("validation_error", "messages stats counts strict Lucene queries; this saved search is legacy")
+  const size = params.limit ?? defaults.limit
   const stats = await messages.stats({
-    ...(args.text === undefined ? {} : { text: args.text }),
-    ...(args.ast === undefined ? {} : { ast: args.ast }),
-    by: args.by ?? "chat",
+    ...(params.text === undefined ? {} : { text: params.text }),
+    ...(params.ast === undefined ? {} : { ast: params.ast }),
+    by: params.by ?? "chat",
     language: "lucene",
     signal: defaults.signal,
-    ...(args.timezone === undefined ? {} : { timezone: args.timezone }),
+    ...(params.timezone === undefined ? {} : { timezone: params.timezone }),
     limit: size,
-    ...(args.chat === undefined ? {} : { chat: args.chat }),
-    ...(args.source === undefined ? {} : { source: args.source }),
+    ...(params.chat === undefined ? {} : { chat: params.chat }),
+    ...(params.source === undefined ? {} : { source: params.source }),
+    ...(resolved ? { saved: resolved.id } : {}),
   })
   return { ...stats, page: 1, limit: size }
 }

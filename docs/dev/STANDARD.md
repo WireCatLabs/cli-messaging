@@ -53,7 +53,7 @@ guessable from the others.
      `join`, `leave`, `block`, `unblock`, `mark-read`, `reset` (replace; the old one stops
      working), `moderate` (apply a chat's rules: delete what breaks them, act on who broke them)
    - A **noun as the last word** names a view and shows it: `server logs`, `chats events`,
-     `messages scheduled`, `messages context`, `runs path`, `mcp config`.
+     `messages scheduled`, `messages context`, `runs path`, `mcp config`, `searches history`.
 4. **One action, one command.** A variant is an option, never a sibling command, and no command
    both shows and changes.
 5. **Options are plain words, never a wire field** (`--send-id`, not `--cid`). One meaning, one
@@ -148,15 +148,15 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--bot` |  | the bot section of the profile's settings, rather than the personal account's |  | `config set` (planned), `config show` (planned), `config unset` (planned) |
 | `--bots` | `<profiles>` | also read these bots' copies, comma separated — each allowed by readOtherBots |  | `bot contacts show`, `bot messages between`, `bot messages search` |
 | `--budget` | `<pages>` | at most this many pages of a list, with a pause between them |  | `chats members audit` (planned) |
-| `--by` | `<grouping>` | what to count by. **each command names its own groupings — messages stats chat, sender, day or hour; chats stats day or week, as a series beside its totals — so it differs on purpose (Help text rule 4)** |  | `chats stats` (planned), `messages stats` (planned) |
+| `--by` | `<grouping>` | what to count by. **each command names its own groupings — messages stats chat, sender, day or hour, and searches create the same for messages stats --saved; chats stats day or week, as a series beside its totals — so it differs on purpose (Help text rule 4)** |  | `chats stats` (planned), `messages stats` (planned), `searches create` (planned) |
 | `--can` | `<rights>` | what they may do, comma-separated: read, members, admins, info, pin, link, post, edit, delete. **lists the rights each messenger has — MAX has `read`, Telegram does not — so it differs on purpose (Help text rule 4)** |  | `bot chats admins add`, `chats admins add` |
 | `--channel` |  | a private channel instead of a group; people join it by its link |  | `chats create` |
-| `--chat` | `<chat>` | a chat, by id or name; repeat it for more. **chat addressing follows each messenger's supported names, usernames and Saved Messages aliases, so it differs on purpose (Help text rule 4); both message searches resolve stored names without networking** |  | `chats folders create`, `conversations batches next`, `conversations batches status`, `conversations build`, `conversations embed`, `conversations embed clear`, `conversations embed status`, `conversations links clear` (planned), `conversations list`, `conversations search`, `conversations status` (planned), `messages search`, `messages stats` (planned), `review`, `tags add` (planned), `tags remove` (planned) |
+| `--chat` | `<chat>` | a chat, by id or name; repeat it for more. **chat addressing follows each messenger's supported names, usernames and Saved Messages aliases, so it differs on purpose (Help text rule 4); both message searches resolve stored names without networking** |  | `chats folders create`, `conversations batches next`, `conversations batches status`, `conversations build`, `conversations embed`, `conversations embed clear`, `conversations embed status`, `conversations links clear` (planned), `conversations list`, `conversations search`, `conversations status` (planned), `messages search`, `messages stats` (planned), `review`, `searches create` (planned), `tags add` (planned), `tags remove` (planned) |
 | `--check` |  | say whether a newer version exists, and install nothing |  | `bot list`, `upgrade` |
 | `--concurrency` | `<n>` | remote: requests at once (default: 4) |  | `conversations embed` |
 | `--confirm-send` |  | show the owner every write the MCP server offers, in a form to approve. **MAX retains its native wrapper wording; confirmation semantics already follow profile permissions in both CLIs** |  | `bot mcp`, `bot mcp config`, `mcp`, `mcp config`, `mcp doctor` (planned), `mcp setup` (planned) |
 | `--contact` | `<person>` | the person to tag or untag: their id, @username or name, as the local store knows them |  | `tags add` (planned), `tags remove` (planned) |
-| `--context` | `<n>` | messages before and after each hit |  | `messages search` |
+| `--context` | `<n>` | messages before and after each hit |  | `messages search`, `searches create` (planned) |
 | `--defaults` |  | change what every profile gets, rather than this profile |  | `config set`, `config unset` |
 | `--description` | `<text>` | the new about text — of a chat or of your account |  | `account update`, `chats update` |
 | `--dims` | `<n>` | remote: the vector size — needed with --base-url; shortens an OpenAI model's |  | `conversations embed`, `conversations embed clear`, `conversations embed status`, `conversations related` (planned), `conversations search`, `conversations status` (planned) |
@@ -177,11 +177,11 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--json` |  | machine-readable output: one JSON value on stdout, nothing else |  | every command |
 | `--jsonl` |  | machine-readable output: one JSON object per line, for streaming and jq |  | every command |
 | `--kind` | `<kind>` | only chats of this kind: dialog, group, channel or saved |  | `chats list`, `inbox`, `review`, `store export` |
-| `--language` | `<lucene\|legacy>` | the query language: strict Lucene or legacy discovery | `lucene` | `messages search` |
+| `--language` | `<lucene\|legacy>` | the query language: strict Lucene or legacy discovery | `lucene` | `messages search`, `searches create` (planned) |
 | `--last` | `<n>` | stop once the newest n messages are held; not with --since. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | `bot store fetch`, `store fetch` |
 | `--last-name` | `<name>` | your last name |  | `account update` |
 | `--left` |  | only the chats this account has left |  | `store clear` |
-| `--limit` | `<n>` | how many: rows to show, or messages one run fetches. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | `bot chats members list` (max-only), `bot contacts show`, `bot messages between`, `bot messages list`, `bot messages search`, `bot store fetch`, `chats list`, `chats members list` (planned), `contacts context` (planned), `contacts list`, `conversations list`, `conversations related` (planned), `conversations search`, `inbox`, `messages evidence`, `messages list`, `messages search`, `messages stats` (planned), `runs list`, `sends list`, `store fetch` |
+| `--limit` | `<n>` | how many: rows to show, or messages one run fetches. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | `bot chats members list` (max-only), `bot contacts show`, `bot messages between`, `bot messages list`, `bot messages search`, `bot store fetch`, `chats list`, `chats members list` (planned), `contacts context` (planned), `contacts list`, `conversations list`, `conversations related` (planned), `conversations search`, `inbox`, `messages evidence`, `messages list`, `messages search`, `messages stats` (planned), `runs list`, `searches create` (planned), `searches history` (planned), `sends list`, `store fetch` |
 | `--lines` | `<n>` | how many lines | `50` | `server logs` |
 | `--local` |  | use the model on this machine, never the messenger |  | `messages transcribe` (tg-only) |
 | `--mark-read` |  | also mark the chat read up to the newest message shown; the other person sees it |  | `inbox`, `messages list`, `review` |
@@ -198,7 +198,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--model` | `<id>` | which downloaded speech model hears them; `models audio list` shows them. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | `conversations embed`, `conversations embed clear`, `conversations embed status`, `conversations links clear` (planned), `conversations related` (planned), `conversations search`, `conversations status` (planned), `inbox`, `messages list`, `messages transcribe`, `review` (planned) |
 | `--multiple` |  | people may pick several answers |  | `polls create` |
 | `--new` |  | what arrived since the last check, each message once — for scheduled runs |  | `inbox`, `review` |
-| `--newest` |  | newest first instead of best first |  | `bot messages search`, `messages search` |
+| `--newest` |  | newest first instead of best first |  | `bot messages search`, `messages search`, `searches create` (planned) |
 | `--no-ban` |  | remove without banning; by default a removed person cannot come back by the link |  | `bot chats moderate` |
 | `--no-mark-read` |  | do not mark read, whatever the catchUpMarksRead setting says |  | `inbox`, `review` |
 | `--no-preview` |  | no preview card for a link in the text |  | `messages send` |
@@ -227,13 +227,15 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--quiet` |  | diagnostics off. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | every command |
 | `--record` |  | keep this run under `runs` — ids and timings, never message content. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | every command |
 | `--refresh` |  | read the private chat with them from MAX first — one request. **one idea, two sources: bring what the answer is read from up to date first. `bot contacts show` reads the private chat again from the messenger; `conversations search` builds and embeds, on this machine, the chats that changed (NEED-551 A, awaiting the owner's wording)** |  | `bot contacts show`, `conversations search` (planned) |
-| `--regex` |  | the words are one regular expression, case-insensitive, tested against every stored text |  | `messages search` |
+| `--regex` |  | the words are one regular expression, case-insensitive, tested against every stored text |  | `messages search`, `searches create` (planned) |
 | `--remove` | `<chat>` | take a chat out of a folder; repeat it for more |  | `chats folders update` |
+| `--replace` |  | overwrite a saved search of the same name |  | `searches create` (planned) |
 | `--reply-to` | `<message>` | answer this message id in the same chat |  | `bot messages send`, `messages send` |
 | `--retract` |  | take your vote back, where the poll allows it |  | `polls vote` |
 | `--revoke` |  | forget every login given to a browser app over --http |  | `mcp` |
 | `--revote` |  | people may change their vote |  | `polls create` |
 | `--run` | `<id>` | the run the report is about; the newest failed one if not given |  | `doctor report create` |
+| `--saved` | `<name\|id>` | run a saved search, or an earlier run by its id; options typed with it replace its own, more words are AND-ed |  | `messages search` (planned), `messages stats` (planned) |
 | `--search` | `<text>` | only chats whose name contains this; at least 3 characters |  | `chats list`, `contacts list` |
 | `--secret-stdin` |  | a secret MAX sends back in X-Max-Bot-Api-Secret — asked for, or read from a pipe |  | `bot webhooks set` |
 | `--send-id` | `<id>` | identify a send or creation attempt; message/poll retries reuse it, while an unknown topic creation must never be repeated |  | `messages forward`, `messages send`, `polls create`, `topics create` (tg-only) |
@@ -243,13 +245,13 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--since` | `<id-or-time>` | from this message id, an ISO 8601 time, or 2h / 1d ago; each command says its default. **becomes `--since-time` everywhere — NEED-485** |  | `inbox` (planned), `review` (planned) |
 | `--since-time` | `<time>` | from this ISO 8601 time, or 2h / 1d ago; each command says its default |  | `bot chats moderate`, `bot store fetch`, `chats events` (planned), `chats moderate` (planned), `chats stats` (planned), `contacts context` (planned), `conversations list`, `conversations search`, `inbox` (planned), `replies test` (planned), `review` (planned), `store export`, `store fetch` |
 | `--size` | `<n>` | messages to answer per batch, 10–200; 50 by default |  | `conversations batches next`, `conversations batches status` |
-| `--source` | `<messenger>` | every account of this messenger held in the store; personal, bots or all — the same as in: in the query |  | `messages search`, `messages stats` (planned) |
+| `--source` | `<messenger>` | every account of this messenger held in the store; personal, bots or all — the same as in: in the query |  | `messages search`, `messages stats` (planned), `searches create` (planned) |
 | `--store-token` | `<profile>` | keep a returned authentication token only in this bot profile's OS keyring; never print it |  | `bot api` |
 | `--tag` | `<tag>` | only this tag |  | `tags list` (planned) |
 | `--text` | `<text>` | the message's new text; - reads stdin |  | `bot callbacks answer` |
 | `--threads` | `<n>` | threads in all | `min(8, cores)` | `conversations embed` |
 | `--timeout` | `<duration>` | give up on the whole command after this — 30s, 2m, 500ms |  | every command |
-| `--timezone` | `<zone>` | the IANA timezone for calendar date boundaries | `system IANA timezone` | `chats stats` (planned), `messages search`, `messages stats` (planned) |
+| `--timezone` | `<zone>` | the IANA timezone for calendar date boundaries | `system IANA timezone` | `chats stats` (planned), `messages search`, `messages stats` (planned), `searches create` (planned) |
 | `--title` | `<title>` | the new name — of a chat or a folder |  | `bot chats admins add`, `chats folders update`, `chats update` |
 | `--to` | `<chat>` | the chat to forward it to: an id, or part of a chat name. **the sentence says how to name a chat the messenger's way, so it differs on purpose (Help text rule 4)** |  | `messages forward`, `store export` |
 | `--topic` | `<id>` | send to this forum topic. **Telegram group forums only; MAX explicitly refuses this option before sending** |  | `messages send`, `polls create` |

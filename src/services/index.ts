@@ -10,6 +10,7 @@ import { type InboxService, inboxService } from "./inbox.js"
 import { type MessagesService, messagesService } from "./messages.js"
 import { type ModerationService, moderationService } from "./moderation.js"
 import { type PeopleService, peopleService } from "./people.js"
+import { type SearchesService, searchesService } from "./searches.js"
 import { type TagsService, tagsService } from "./tags.js"
 import { type TopicsService, topicsService } from "./topics.js"
 
@@ -52,6 +53,8 @@ export type { ModerateOptions, ModerationService, ShownRules } from "./moderatio
 export { moderationService } from "./moderation.js"
 export type { ContactSync, PeopleService } from "./people.js"
 export { peopleService, phoneOf } from "./people.js"
+export type { ResolvedSearch, SearchesService, SearchParams } from "./searches.js"
+export { searchesService, searchRecordOf } from "./searches.js"
 export type { TagsAdded, TagsRemoved, TagsService, TagTargetInput, TagTargetView } from "./tags.js"
 export { tagsService } from "./tags.js"
 export { type TopicsService, topicsService } from "./topics.js"
@@ -70,6 +73,7 @@ export interface Services {
   conversations: ConversationsService
   embeddings: EmbeddingsService
   tags: TagsService
+  searches: SearchesService
 }
 
 /**
@@ -94,6 +98,7 @@ export const servicesFor = (deps: ServiceDeps): Services => {
     conversations: conversationsService(deps),
     embeddings: embeddingsService(deps),
     tags: tagsService(deps),
+    searches: searchesService(deps),
   }
   return deps.messenger.services ? { ...base, ...deps.messenger.services(base, deps) } : base
 }
