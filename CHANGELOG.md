@@ -26,6 +26,9 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 - `GroupMember` takes optional `joinedAt`, `invitedBy`, `isBot`, `deleted`, `flagged` (`scam` | `fake`) and
   `hasPhoto`, absent where a messenger does not say. Telegram's list carries all of them; tg maps them next.
 
+- `chats stats` and MCP `chats_stats` also sum `comments` — the comment count a channel post carries in its
+  provider metadata, beside `views` and `forwards` — and show it on each top post. Absent where no post carries it.
+
 ### Changed — may break callers
 
 - `store fetch --page-size` takes at most 100 with the shared Telegram fetching defaults; a larger size is

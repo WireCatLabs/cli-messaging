@@ -45,7 +45,7 @@ export const statsCommand = (messenger: Messenger): Command =>
         `messages ${stats.messages}, from ${stats.senders} people; replies ${stats.replies}, threads ${stats.threads}`,
         `reactions ${stats.reactions}${stats.views === undefined ? "" : `, views ${stats.views}`}${
           stats.forwards === undefined ? "" : `, forwards ${stats.forwards}`
-        }`,
+        }${stats.comments === undefined ? "" : `, comments ${stats.comments}`}`,
         `questions ${questions.asked}, answered ${questions.answered}${minutes(questions.medianMinutesToAnswer, "answer")}`,
         ...(members
           ? [

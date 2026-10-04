@@ -14,6 +14,8 @@ export interface TopPost {
   /** Telegram channel posts only; absent where the messenger did not say. */
   views?: number
   forwards?: number
+  /** Comments under a channel post. */
+  comments?: number
 }
 
 export interface MemberChanges {
@@ -54,6 +56,7 @@ export interface ChatStats {
   /** Present only when some stored message carries the number. */
   views?: number
   forwards?: number
+  comments?: number
   topPosts: TopPost[]
   questions: {
     asked: number
@@ -117,6 +120,7 @@ export const chatStats = (
     reactions: sum(held.map(reactionsOf)),
     ...summed(held, "views"),
     ...summed(held, "forwards"),
+    ...summed(held, "comments"),
     topPosts: topPosts(held),
     questions: {
       asked: asked.length,
@@ -133,12 +137,14 @@ const sendersOf = (messages: Message[]) => new Set(messages.flatMap(({ senderId 
 
 const reactionsOf = ({ reactions }: Message) => reactions?.total ?? 0
 
-const counted = (message: Message, name: "views" | "forwards"): number | undefined => {
+type Counted = "views" | "forwards" | "comments"
+
+const counted = (message: Message, name: Counted): number | undefined => {
   const value = message.providerMetadata?.[name]
   return typeof value === "number" ? value : undefined
 }
 
-const summed = (messages: Message[], name: "views" | "forwards") => {
+const summed = (messages: Message[], name: Counted) => {
   const values = messages.flatMap((one) => counted(one, name) ?? [])
   return values.length === 0 ? {} : { [name]: sum(values) }
 }
@@ -148,12 +154,14 @@ const topPosts = (messages: Message[]): TopPost[] =>
     .map((one) => {
       const views = counted(one, "views")
       const forwards = counted(one, "forwards")
+      const comments = counted(one, "comments")
       return {
         messageId: one.id,
         timestamp: one.timestamp,
         reactions: reactionsOf(one),
         ...(views === undefined ? {} : { views }),
         ...(forwards === undefined ? {} : { forwards }),
+        ...(comments === undefined ? {} : { comments }),
       }
     })
     .filter((one) => one.reactions > 0 || (one.views ?? 0) > 0)
