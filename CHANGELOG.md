@@ -8,6 +8,11 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Added
 
+- `server status` says when a unit stopped on an exit its CLI marked as not worth a restart (`noRestartOn`): for a
+  refused login, run `session start`, then `server start`. JSON adds `stopped` (`exitCode`, `reason`,
+  `restarts: false`) and `unit.exitCode`, read from systemd's `ExecMainStatus` (only for a normal exit, not a
+  signal) or launchd's `last exit code`.
+
 - MCP `inbox` and `review` take `kinds` (`["dialog", "group", "channel", "saved"]`) and `new`: what arrived since
   the last call with `new`, each message once, from saved points the MCP tools keep apart from the owner's
   `inbox --new` and `review --new`. `new` refuses `since_time`, and on `review` also `unanswered`.

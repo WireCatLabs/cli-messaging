@@ -52,7 +52,7 @@ export interface Platform {
   text: (unit: Unit, app: AppIdentity) => string
   start: (unit: Unit) => string[][]
   stop: (unit: Unit) => string[][]
-  state: (unit: Unit) => Promise<{ loaded: boolean; active: boolean; pid?: number; detail?: string }>
+  state: (unit: Unit) => Promise<{ loaded: boolean; active: boolean; pid?: number; detail?: string; exitCode?: number }>
   logs: (unit: Unit, lines: number) => Promise<string>
   /** What must exist before the unit first runs. */
   prepare?: (unit: Unit) => void
@@ -119,6 +119,10 @@ export const systemd = (app: AppIdentity, system: ServerSystem, env: NodeJS.Proc
           "SubState",
           "-p",
           "MainPID",
+          "-p",
+          "ExecMainCode",
+          "-p",
+          "ExecMainStatus",
         ],
         env,
       )
@@ -129,10 +133,13 @@ export const systemd = (app: AppIdentity, system: ServerSystem, env: NodeJS.Proc
           .map((line) => [line.slice(0, line.indexOf("=")), line.slice(line.indexOf("=") + 1)]),
       )
       const pid = Number(fields.MainPID)
+      // ExecMainStatus is the signal's number when the process was killed; 1 (CLD_EXITED) means it exited.
+      const exitCode = fields.ExecMainCode === "1" ? Number(fields.ExecMainStatus) : 0
       return {
         loaded: fields.LoadState === "loaded",
         active: fields.ActiveState === "active",
         ...(pid > 0 ? { pid } : {}),
+        ...(exitCode > 0 ? { exitCode } : {}),
         ...(fields.ActiveState ? { detail: `${fields.ActiveState} (${fields.SubState})` } : {}),
       }
     },
@@ -193,10 +200,12 @@ export const launchd = (app: AppIdentity, system: ServerSystem, env: NodeJS.Proc
       if (ran.code !== 0) return { loaded: false, active: false }
       const state = /^\s*state = (.+)$/m.exec(ran.stdout)?.[1]?.trim()
       const pid = Number(/^\s*pid = (\d+)$/m.exec(ran.stdout)?.[1])
+      const exitCode = Number(/^\s*last exit code = (\d+)/m.exec(ran.stdout)?.[1])
       return {
         loaded: true,
         active: state === "running",
         ...(pid > 0 ? { pid } : {}),
+        ...(exitCode > 0 ? { exitCode } : {}),
         ...(state ? { detail: state } : {}),
       }
     },
