@@ -34,7 +34,7 @@ export const EVENTS_DAYS = 7
 /** How many stored messages one read of the store takes while `stats` walks the period. */
 const STATS_PAGE = 1000
 
-/** A filtered list searches the newest this many: paging through every dialog hit FLOOD_WAIT (tg handoff §4.14). */
+/** @deprecated A filtered list now searches every chat; kept because `./services` exports it. */
 export const CHAT_SCAN = 200
 
 /** Checked by the caller, in its own words (`checkedFilter`). */
@@ -74,8 +74,8 @@ export interface MarkedRead {
 
 export interface ChatsService {
   /**
-   * Newest first. A filtered list is cut from the newest `CHAT_SCAN` — or from every stored chat
-   * offline — and `partial` says there were older chats that were not searched.
+   * Newest first. A filtered list searches every chat — Telegram's unread can sit anywhere in a list
+   * sorted by the last message — and `partial` says the messenger could not list them all.
    */
   list(filter: ChatFilter, window: PageWindow): Promise<Page<Chat> & { partial: boolean }>
   show(chat: string): Promise<ChatCard>
@@ -108,7 +108,7 @@ export const chatsService = (deps: ServiceDeps): ChatsService => ({
     }
     const scanned = fromStore(deps)
       ? await (await deps.store()).chats(await deps.account(), { offset: 0 })
-      : await capability(await deps.connection(), "chats", "list chats")({ limit: CHAT_SCAN, offset: 0 })
+      : await capability(await deps.connection(), "chats", "list chats")({ offset: 0 })
     const found = scanned.items.filter(matches(filter))
     const end = window.limit === undefined ? found.length : window.offset + window.limit
     return { items: found.slice(window.offset, end), hasMore: found.length > end, partial: scanned.hasMore }

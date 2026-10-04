@@ -604,7 +604,7 @@ describe("the MCP server", () => {
     expect(seen).toEqual([{ limit: 5, offset: 0, search: "pis" }])
   })
 
-  it("filters chat_chats_list, and says when older chats were not searched", async () => {
+  it("filters chat_chats_list, and says when the messenger could not list every chat", async () => {
     const { call } = await connect(scripted())
 
     const { body } = await call("chat_chats_list", { kind: "channel" })

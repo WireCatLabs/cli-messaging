@@ -50,6 +50,9 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Changed — may break callers
 
+- The adapter contract case for `historyAfter` no longer requires `hasMore: false` on a page shorter than the
+  limit: Telegram drops deleted messages from a page, so a short page proves no end. It now reads past the newest
+  message and requires an empty page with `hasMore: false`. The case is renamed to say so.
 - `MessageStore` has new required methods — `addTags`, `removeTags`, `tags`, and `recordSearch`, `saveSearch`,
   `storedSearch`, `savedSearches`, `searchHistory`, `deleteSearch`, `clearSearchHistory` — and `Services` new
   `tags` and `searches` members. A store or a `Services` object written by hand — a test fake — adds them;
@@ -58,6 +61,14 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   it still refuses with a validation error.
 
 ### Fixed
+
+- **`inbox`, `inbox --new`, `review` and `chats list --unread` (also `--search`, `--kind`) look at every chat**, not
+  only the newest 100 or 200. A chat further down the list with unread or new messages was silently left out:
+  the chat list is sorted by the last message, so an unread chat can be anywhere, and Telegram has no server-side
+  unread filter. The services now call the adapter's `chats` without a limit, which tg answers by walking every
+  dialog (one request per 100 chats, as resolving a typed chat title already does) and MAX from the chats its
+  login sent, which may be only part of them. `partial` now means only that the messenger could not list every
+  chat; the notes for chats past the 20-per-run cap say `skipped N chats`.
 
 - The parity manifest lists `mcp --http`, `--port`, `--public-url` and `--revoke` in both tg and max, which now
   have them.

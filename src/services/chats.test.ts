@@ -49,13 +49,21 @@ afterEach(async () => {
 })
 
 describe("the chats service", () => {
-  it("filters the newest chats online, and says when older ones were not searched", async () => {
-    const adapter = { self: () => "500", chats: async () => ({ items: chats, hasMore: true }) }
+  it("filters every chat online, and says when the messenger could not list them all", async () => {
+    const asked: unknown[] = []
+    const adapter = {
+      self: () => "500",
+      chats: async (window: unknown) => {
+        asked.push(window)
+        return { items: chats, hasMore: true }
+      },
+    }
     const service = chatsService(onlineDeps(messenger, adapter as unknown as MessengerAdapter, guard))
 
     const found = await service.list({ unread: true }, { limit: 1, offset: 0 })
 
     expect(found).toEqual({ items: [chats[0]], hasMore: true, partial: true })
+    expect(asked).toEqual([{ offset: 0 }])
   })
 
   it("refuses a read the messenger's server cannot answer when its adapter has no server reads", async () => {

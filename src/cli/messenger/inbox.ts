@@ -2,7 +2,7 @@ import { Command } from "commander"
 import type { MessageHit } from "../../domain/models.js"
 import { renderMessages } from "../../render/messages.js"
 import { CHAT_KINDS } from "../../services/chats.js"
-import { CHAT_WINDOW, kindsOf } from "../../services/inbox.js"
+import { kindsOf } from "../../services/inbox.js"
 import { momentOf } from "../../services/moment.js"
 import { modelWith } from "../../speech/hearing.js"
 import { positiveCount } from "../paging.js"
@@ -19,6 +19,9 @@ import {
 import { checkPoints } from "./points.js"
 
 const FIRST_LOOK_MS = 24 * 60 * 60 * 1000
+
+export const PARTIAL_NOTE =
+  "the messenger did not list every chat, and did not say how many it left out; one may have more"
 
 /**
  * Two questions, one command — max-cli's `inbox` (its `NEED-171`).
@@ -98,11 +101,12 @@ export const inboxCommand = (messenger: Messenger): Command =>
       }
       if (inbox.skipped.length > 0) {
         const names = inbox.skipped.map((chat) => chat.title ?? chat.id).join(", ")
-        renderer.note(`not read — too many chats at once: ${names} — \`${app.command} messages list <chat>\` reads one`)
+        renderer.note(
+          `skipped ${inbox.skipped.length} chats — too many at once: ${names} — \`${app.command} messages list <chat>\` reads one`,
+        )
       }
       if (inbox.quiet > 0) renderer.note(`${inbox.quiet} muted or archived chats left out — --all shows them`)
-      if (inbox.partial)
-        renderer.note(`only the ${CHAT_WINDOW} newest chats were looked at; an older one may have more`)
+      if (inbox.partial) renderer.note(PARTIAL_NOTE)
       if (marked !== undefined) renderer.note(`marked ${marked.length} chat(s) read up to the newest message shown`)
 
       const messages = heardItems(read, hearing)

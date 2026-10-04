@@ -3,7 +3,7 @@ import { Command } from "commander"
 import type { MessageHit, Review } from "../../domain/models.js"
 import { renderMessages } from "../../render/messages.js"
 import { CHAT_KINDS } from "../../services/chats.js"
-import { CHAT_WINDOW, kindsOf, REVIEW_DAYS, reviewStart, UNANSWERED_HOURS } from "../../services/inbox.js"
+import { kindsOf, REVIEW_DAYS, reviewStart, UNANSWERED_HOURS } from "../../services/inbox.js"
 import { momentOf } from "../../services/moment.js"
 import { type Hearing, modelWith } from "../../speech/hearing.js"
 import { parseDuration } from "../settings.js"
@@ -17,6 +17,7 @@ import {
   spokenItems,
   TRANSCRIBE_OPTION,
 } from "./hearing-command.js"
+import { PARTIAL_NOTE } from "./inbox.js"
 import { checkPoints } from "./points.js"
 
 /** `--unanswered` with no value is `true`. */
@@ -140,9 +141,10 @@ const notes = (found: Review, command: string, fresh: boolean, note: (message: s
       note(`${chat.title ?? chat.id}: its admins are not known, so only your answers count`)
   }
   if (found.skipped.length > 0) {
-    note(`not read — too many chats at once: ${found.skipped.map((chat) => chat.title ?? chat.id).join(", ")}`)
+    const names = found.skipped.map((chat) => chat.title ?? chat.id).join(", ")
+    note(`skipped ${found.skipped.length} chats — too many at once: ${names}`)
   }
-  if (found.partial) note(`only the ${CHAT_WINDOW} newest chats were looked at; an older one may have more`)
+  if (found.partial) note(PARTIAL_NOTE)
   if (found.quiet > 0) note(`${found.quiet} muted or archived chats left out — --all reads them`)
   if (found.unanswered) {
     note(

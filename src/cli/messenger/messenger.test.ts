@@ -2572,7 +2572,7 @@ describe("the guard, account and mcp config commands", () => {
     expect(table.stderr.join("\n")).toContain("page 1 of more")
   })
 
-  it("**filter chats list** by --search, --kind and --unread together, over the newest chats only", async () => {
+  it("**filter chats list** by --search, --kind and --unread together, over every chat", async () => {
     const env = sandbox()
     const asked: unknown[] = []
     const busy: MessengerAdapter = {
@@ -2595,8 +2595,8 @@ describe("the guard, account and mcp config commands", () => {
     const people_ = await call(["chats", "list", "--kind", "dialog", "--limit", "1", "--json"], online, env)
 
     expect(json(found.stdout).items.map((one: Chat) => one.id)).toEqual(["22"])
-    expect(found.stderr.join("\n")).toContain("newest chats were searched")
-    expect(asked[0]).toEqual({ limit: 200, offset: 0 })
+    expect(found.stderr.join("\n")).toContain("did not list every chat")
+    expect(asked[0]).toEqual({ offset: 0 })
     expect(json(people_.stdout)).toMatchObject({ items: [{ id: "20" }], hasMore: true })
   })
 
