@@ -139,6 +139,7 @@ export { contactsCommand } from "./messenger/contacts-command.js"
 export {
   type ConnectOptions,
   type Fetching,
+  type MediaOption,
   type Messenger,
   type MessengerContext,
   messengerContext,

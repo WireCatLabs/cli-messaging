@@ -324,6 +324,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--budget` | `<pages>` | at most this many pages of a list, with a pause between them |  | `chats members audit`, `chats members fetch` (planned) |
 | `--by` | `<grouping>` | what to count by. **each command names its own groupings — stats messages show chat, sender, day or hour, and searches create the same for stats messages show --saved; stats chats show day or week, as a series beside its totals — so it differs on purpose (Help text rule 4)** |  | `searches create`, `stats charts`, `stats chats show`, `stats messages show` |
 | `--can` | `<rights>` | what they may do, comma-separated: read, members, admins, info, pin, link, post, edit, delete. **lists the rights each messenger has — MAX has `read`, Telegram does not — so it differs on purpose (Help text rule 4)** |  | `bot chats admins add`, `chats admins add` |
+| `--caption-above` |  | show the text above the --photo or --file, not below it |  | `messages send` (planned) |
 | `--catch-up` |  | prepare local search after this fetch |  | `store fetch` (planned), `store gaps repair` (planned) |
 | `--catch-up-chunks` | `<n>` | at most this many local vector chunks |  | `store fetch` (planned), `store gaps repair` (planned) |
 | `--catch-up-messages` | `<n>` | skip a graph rebuild above this message budget |  | `store fetch` (planned), `store gaps repair` (planned) |
@@ -466,6 +467,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--since-time` | `<time>` | from this ISO 8601 time, or 2h / 1d ago; each command says its default |  | `bot chats moderate`, `bot store fetch`, `chats events` (planned), `chats members history` (planned), `chats moderate` (planned), `contacts context`, `conversations list`, `conversations search`, `inbox` (planned), `replies test`, `review` (planned), `stats charts`, `stats chats show`, `store export`, `store fetch` |
 | `--size` | `<n>` | messages to answer per batch, 10–200; 50 by default |  | `conversations batches next`, `conversations batches status`, `conversations build` |
 | `--source` | `<messenger>` | every account of this messenger held in the store; personal, bots or all — the same as in: in the query |  | `conversations search`, `messages search`, `searches create`, `stats messages show` |
+| `--spoiler` |  | hide the --photo or video behind a spoiler until tapped |  | `messages send` (planned) |
 | `--state` | `<state>` | only tasks in this state: open, done or dismissed |  | `tasks list` |
 | `--store-token` | `<profile>` | keep a returned authentication token only in this bot profile's OS keyring; never print it |  | `bot api` |
 | `--sync-first` |  | first fetch new messages within the chat, time and message bounds |  | `conversations search`, `messages search`, `stats messages show` |

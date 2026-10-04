@@ -48,6 +48,14 @@ session, account-scoped store, defaults and permission scope (`around`); `withSe
 `release` function for local inference. The host closes `warmEmbedders()` on shutdown. The same
 strict catalogue is mounted by the built-in server; unknown arguments fail before execution.
 
+## Media options
+
+`messages send --spoiler` hides a photo or video until tapped, and `--caption-above` shows the text above the
+attachment (send tool: `spoiler`, `caption_above`). A messenger offers them through `Messenger.mediaOptions`;
+where it is unset the service refuses them before connecting, so an adapter that does not know an option never
+receives one to drop. Both need an attachment. Per-message forward protection is left out: Telegram grants it
+to bots only, and a personal account protects a whole chat instead.
+
 ## Message permalinks
 
 The personal `messages link <chat> <message>` command also accepts a `msg:` locator.

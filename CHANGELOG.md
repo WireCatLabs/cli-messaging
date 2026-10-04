@@ -6,6 +6,12 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- `messages send --spoiler` and `--caption-above` (send tool `spoiler`, `caption_above`) for a photo, video or
+  file, where the messenger lists them in the new `Messenger.mediaOptions`; elsewhere they are refused before
+  connecting.
+
 ## 0.162.0 — 07.10.2026
 
 ### Added

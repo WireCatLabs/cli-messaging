@@ -147,6 +147,9 @@
       "meaning": "what they may do, comma-separated: read, members, admins, info, pin, link, post, edit, delete",
       "note": "lists the rights each messenger has \u2014 MAX has `read`, Telegram does not \u2014 so it differs on purpose (Help text rule 4)"
     },
+    "--caption-above": {
+      "meaning": "show the text above the --photo or --file, not below it"
+    },
     "--catch-up": {
       "meaning": "prepare local search after this fetch"
     },
@@ -691,6 +694,9 @@
     "--source": {
       "value": "<messenger>",
       "meaning": "every account of this messenger held in the store; personal, bots or all \u2014 the same as in: in the query"
+    },
+    "--spoiler": {
+      "meaning": "hide the --photo or video behind a spoiler until tapped"
     },
     "--state": {
       "value": "<state>",
@@ -2315,6 +2321,11 @@
         "--allow-any-file": "all",
         "--as-file": "all",
         "--at-time": "all",
+        "--caption-above": {
+          "in": [],
+          "reason": "MAX has no spoilers or caption placement",
+          "planned": { "tg": "G1 feat/media-options" }
+        },
         "--file": "all",
         "--md": "all",
         "--no-preview": "all",
@@ -2322,6 +2333,11 @@
         "--reply-to": "all",
         "--send-id": "all",
         "--silent": "all",
+        "--spoiler": {
+          "in": [],
+          "reason": "MAX has no spoilers or caption placement",
+          "planned": { "tg": "G1 feat/media-options" }
+        },
         "--topic": "all",
         "--voice": "all"
       }

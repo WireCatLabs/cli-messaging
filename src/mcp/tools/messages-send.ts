@@ -35,6 +35,8 @@ export const messageSendTools = (messenger: Messenger): Record<string, AnyTool> 
         as_file: v.optional(
           v.pipe(v.boolean(), v.description("send the file as a file to download, a video included")),
         ),
+        spoiler: v.optional(v.pipe(v.boolean(), v.description("hide the photo or video behind a spoiler"))),
+        caption_above: v.optional(v.pipe(v.boolean(), v.description("show the text above the photo or file"))),
         voice: v.optional(
           v.pipe(v.string(), v.minLength(1), v.description("an Ogg Opus file to send as a voice message, alone")),
         ),
@@ -78,6 +80,8 @@ export const messageSendTools = (messenger: Messenger): Record<string, AnyTool> 
           chat: args.chat,
           text: args.text ?? "",
           ...(attachments.length === 0 ? {} : { attachments }),
+          ...(args.spoiler === true ? { spoiler: true } : {}),
+          ...(args.caption_above === true ? { captionAbove: true } : {}),
           ...(args.send_id === undefined ? {} : { sendId: args.send_id }),
           ...(args.topic === undefined ? {} : { threadId: args.topic }),
           ...(args.reply_to === undefined ? {} : { replyTo: args.reply_to }),
