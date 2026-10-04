@@ -26,6 +26,27 @@ const ask = async (confirm: ReturnType<typeof confirmer>, tool: typeof SEND, arg
 }
 
 describe("the write confirmation", () => {
+  it("seals the displayed clock time so a delayed approval cannot move a relative schedule", async () => {
+    let time = Date.parse("2026-09-25T10:00:00Z")
+    const confirm = confirmer({ now: () => time })
+    const act = vi.fn(async () => ({}))
+    const args = { chat: "111", text: "later", at_time: "2h" }
+    const state = await ask(confirm, SEND, args)
+    time += 120_000
+    await confirm(SEND, client, args, retry(state), act)
+    expect(act).toHaveBeenCalledWith({ ...args, at_time: "2026-09-25T12:00:00.000Z" })
+  })
+
+  it("refuses a changed relative schedule even while the approval is valid", async () => {
+    const confirm = confirmer({ now: () => Date.parse("2026-09-25T10:00:00Z") })
+    const act = vi.fn(async () => ({}))
+    const args = { chat: "111", text: "later", at_time: "2h" }
+    const state = await ask(confirm, SEND, args)
+    await expect(confirm(SEND, client, { ...args, at_time: "3h" }, retry(state), act)).rejects.toMatchObject({
+      code: "confirmation_required",
+    })
+    expect(act).not.toHaveBeenCalled()
+  })
   it("writes what the form showed, with the chat as the id it resolved to, once the owner said yes", async () => {
     const confirm = confirmer()
     const act = vi.fn(async () => ({ id: "1" }))

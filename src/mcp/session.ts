@@ -56,7 +56,7 @@ export class MessengerSession {
     this.#now = now
   }
 
-  use<T>(name: string, body: (adapter: MessengerAdapter) => Promise<T>): Promise<T> {
+  use<T>(name: string, body: (adapter: MessengerAdapter, release: () => Promise<void>) => Promise<T>): Promise<T> {
     const turn = this.#queue.then(() => this.#call(name, body))
     this.#queue = turn.catch(() => {})
     return turn
@@ -68,14 +68,17 @@ export class MessengerSession {
     await this.#release()
   }
 
-  async #call<T>(name: string, body: (adapter: MessengerAdapter) => Promise<T>): Promise<T> {
+  async #call<T>(
+    name: string,
+    body: (adapter: MessengerAdapter, release: () => Promise<void>) => Promise<T>,
+  ): Promise<T> {
     if (this.#closed) throw new Error("the MCP server is shutting down")
     clearTimeout(this.#idle)
 
     try {
       return await this.#run(name, async (events) => {
         this.#events = events
-        return body(await this.#hold())
+        return body(await this.#hold(), () => this.#release())
       })
     } catch (error) {
       if (!(isCliFailure(error) && HARMLESS.has(error.code))) await this.#release()

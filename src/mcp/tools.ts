@@ -39,10 +39,10 @@ export const readTools = (messenger: Messenger): Record<string, AnyTool> => ({
   ...messagesTranscribeTools(messenger),
 })
 
-/** Offered only with `--allow-mark-read`, which `--allow-send` does not imply: the other side sees it. */
+/** Separate from sending: the other side sees this deliberate mark-read operation. */
 export const markReadTools = (messenger: Messenger): Record<string, AnyTool> => chatsReadTools(messenger)
 
-/** Offered only with `--allow-delete`: the owner's own copy, never for everyone — that is the command's alone. */
+/** The owner's own copy, never for everyone — that is the command's alone. */
 export const deleteTools = (messenger: Messenger): Record<string, AnyTool> => messageDeleteTools(messenger)
 
 /** The writes others see, offered by the profile's permissions like every write. */

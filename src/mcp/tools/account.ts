@@ -23,6 +23,7 @@ export const accountTools = (messenger: Messenger): Record<string, AnyTool> => {
         "location, lastActiveAt, createdAt? }] }. Reads only; nothing is ended.",
       input: v.object({}),
       annotations: READ,
+      key: "account.sessions.list",
       online: async (adapter) => ({ items: await capability(adapter, "sessions", "list the account's sessions")() }),
     }),
   }

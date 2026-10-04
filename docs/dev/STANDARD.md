@@ -123,10 +123,10 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--all-can-pin` | `<on\|off>` | every member may pin messages |  | `chats update` |
 | `--allow-any-file` |  | send a --file even from a hidden folder, ~/.ssh or the tool's own folders |  | `bot messages send`, `messages send` |
 | `--allow-dangerous` |  | go ahead without the question an ask level puts before a deletion |  | `bot chats moderate`, `bot mcp`, `bot mcp config`, `bot messages delete`, `chats moderate` (planned), `mcp` (planned), `mcp config` (planned), `mcp doctor` (planned), `mcp setup` (planned), `messages delete`, `store clear` |
-| `--allow-delete` |  | offer the tool that deletes messages for you only; it cannot be undone. **max's own `mcp` is worded differently until the permission levels (P7) replace these flags there (e13)** |  | `bot mcp`, `bot mcp config`, `mcp`, `mcp config`, `mcp doctor` (planned), `mcp setup` (planned) |
-| `--allow-mark-read` |  | offer the tool that marks a chat read; the other person sees it. **max's own `mcp` is worded differently until the permission levels (P7) replace these flags there (e13)** |  | `mcp`, `mcp config`, `mcp doctor` (planned), `mcp setup` (planned) |
-| `--allow-moderate` |  | offer the tool that applies a group's rules — delete others' messages, remove people. **max only, until permissions (P7) replace the MCP flags** |  | `bot mcp`, `bot mcp config`, `mcp` (planned), `mcp config` (planned), `mcp doctor` (planned), `mcp setup` (planned) |
-| `--allow-send` |  | offer the send tool; without it the server can only read. **max's own `mcp` is worded differently until the permission levels (P7) replace these flags there (e13)** |  | `bot mcp`, `bot mcp config`, `mcp`, `mcp config`, `mcp doctor` (planned), `mcp setup` (planned) |
+| `--allow-delete` |  | offer the tool that deletes messages for you only; it cannot be undone. **retired access flag: accepted with a warning, grants no permissions in either CLI** |  | `bot mcp`, `bot mcp config`, `mcp`, `mcp config`, `mcp doctor` (planned), `mcp setup` (planned) |
+| `--allow-mark-read` |  | offer the tool that marks a chat read; the other person sees it. **retired access flag: accepted with a warning, grants no permissions in either CLI** |  | `mcp`, `mcp config`, `mcp doctor` (planned), `mcp setup` (planned) |
+| `--allow-moderate` |  | offer the tool that applies a group's rules — delete others' messages, remove people. **retired access flag: accepted with a warning, grants no permissions in either CLI** |  | `bot mcp`, `bot mcp config`, `mcp` (planned), `mcp config` (planned), `mcp doctor` (planned), `mcp setup` (planned) |
+| `--allow-send` |  | offer the send tool; without it the server can only read. **retired access flag: accepted with a warning, grants no permissions in either CLI** |  | `bot mcp`, `bot mcp config`, `mcp`, `mcp config`, `mcp doctor` (planned), `mcp setup` (planned) |
 | `--allow-writes` |  | acknowledge that the profile offers writing tools when installing local MCP |  | `mcp setup` (planned) |
 | `--anonymous` |  | nobody sees who voted for what |  | `polls create` |
 | `--app` | `<how>` | the first time only: how to get this profile's app from my.telegram.org | `browser` | `session start` (tg-only), `setup` (planned) |
@@ -147,12 +147,12 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--chat` | `<chat>` | a chat, by id or name; repeat it for more. **chat addressing follows each messenger's supported names, usernames and Saved Messages aliases, so it differs on purpose (Help text rule 4); both message searches resolve stored names without networking** |  | `chats folders create`, `conversations batches next`, `conversations batches status`, `conversations build`, `conversations embed`, `conversations embed clear`, `conversations embed status`, `conversations links clear` (planned), `conversations list`, `conversations search`, `conversations status` (planned), `messages search`, `messages stats` (planned), `review` |
 | `--check` |  | say whether a newer version exists, and install nothing |  | `bot list`, `upgrade` |
 | `--concurrency` | `<n>` | remote: requests at once (default: 4) |  | `conversations embed` |
-| `--confirm-send` |  | show the owner every write the MCP server offers, in a form to approve. **max's own `mcp` is worded differently until the permission levels (P7) replace these flags there (e13)** |  | `bot mcp`, `bot mcp config`, `mcp`, `mcp config`, `mcp doctor` (planned), `mcp setup` (planned) |
+| `--confirm-send` |  | show the owner every write the MCP server offers, in a form to approve |  | `bot mcp`, `bot mcp config`, `mcp`, `mcp config`, `mcp doctor` (planned), `mcp setup` (planned) |
 | `--context` | `<n>` | messages before and after each hit |  | `messages search` |
 | `--defaults` |  | change what every profile gets, rather than this profile |  | `config set`, `config unset` |
 | `--description` | `<text>` | the new about text — of a chat or of your account |  | `account update`, `chats update` |
 | `--dims` | `<n>` | remote: the vector size — needed with --base-url; shortens an OpenAI model's |  | `conversations embed`, `conversations embed clear`, `conversations embed status`, `conversations related` (planned), `conversations search`, `conversations status` (planned) |
-| `--dry-run` |  | judge and plan; do nothing |  | `bot chats moderate`, `chats moderate` (planned), `config migrate` (planned) |
+| `--dry-run` |  | judge and plan; do nothing |  | `bot chats moderate`, `chats moderate` (planned), `config migrate` |
 | `--encrypt` |  | compress and encrypt with a password, typed at a hidden prompt or piped on stdin; never kept |  | `store backup`, `store export` |
 | `--estimate` |  | only say what the fetch would cost, from this machine's copy; nothing is sent. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | `store fetch` |
 | `--events` |  | also print edits, deletions and reactions; every line then names its event. **watch updates use this flag independently of the group event --type filter** |  | `bot watch`, `watch` |
@@ -388,7 +388,10 @@ many), `--allow-any-file` (which files).
    puts every write through the form, whatever its level. `--allow-send`, `--allow-mark-read` and
    `--allow-delete` decide nothing any more: they are accepted with a warning, so an agent set up
    with them still starts, and go in a later release.
-5. **A tool and its command run the same service method**, so they answer the same result and the
+5. **Unknown arguments are refused before execution.** A retired schedule field must never turn
+   a scheduled write into an immediate one. Consumers retaining their own session use the public
+   personal MCP catalogue and registration seam, filtering only unsupported capabilities.
+6. **A tool and its command run the same service method**, so they answer the same result and the
    same error for the same input.
 
 ## Help text

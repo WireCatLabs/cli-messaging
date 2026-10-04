@@ -6,11 +6,21 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Changed — may break callers
+
+- Unknown personal MCP arguments are refused before acting. Use the advertised schema, including `at_time`.
+
 ## 0.143.0 — 04.10.2026
 
 Released early: tg-cli and max-cli cannot move to 0.142.0: its parity manifest lacks rows for its own new options
 
 ### Fixed
+
+- Confirmed scheduled sends execute the absolute time shown in the approval form, even after a
+  delayed response. Personal MCP rejects unknown arguments before connecting or acting.
+- Session callbacks can release the connection before local transcription. Stored conversation
+  tools retain the selected profile and environment; held embedding models have a public disposer.
+- Session listings use the exact `account.sessions.list` permission key.
 
 - The parity manifest lists the commands and options 0.142.0 added — `inbox`/`review --kind`, `--mark-read`,
   `--no-mark-read`, `review --new`, `store export --to`/`--kind`/`--all`/`--encrypt`, `store backup --encrypt`,
@@ -20,6 +30,10 @@ Released early: tg-cli and max-cli cannot move to 0.142.0: its parity manifest l
 ## 0.142.0 — 04.10.2026
 
 ### Added
+
+- Public personal MCP catalogue and registration APIs in `./cli` let consumers retain their own
+  sessions, permission scopes and account-scoped services while mounting the canonical tools.
+- Photo previews accept an optional attachment `index`; direct transcription accepts `model`.
 
 - `--encrypt` on `store export` (with `--output` or `--to`) and `store backup`: gzip, then AES-256-GCM with a key
   derived from a password by scrypt — Node's own `zlib` and `crypto`, no new dependency. The password is typed at a
@@ -75,6 +89,9 @@ Released early: tg-cli and max-cli cannot move to 0.142.0: its parity manifest l
   `embeddedOnlyElsewhere` stays as it was.
 
 ### Changed — may break callers
+
+- Obsolete or unknown personal MCP arguments now fail validation instead of being ignored.
+  Clients must use the advertised schema, including `at_time` for scheduled sends.
 
 - `MessageStore` has a new `changes(key, chatId, at)` method. tg-cli and max-cli do not implement `MessageStore`,
   so neither needs a change.

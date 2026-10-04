@@ -20,13 +20,24 @@ export const messagesPhotoTools = (messenger: Messenger): Record<string, AnyTool
     description:
       `A message's photo, as an image to look at. Up to ${PHOTO_LIMIT / 1024} KB; anything larger, and ` +
       "files, videos and voice messages, are refused with the command the owner runs to save them.",
-    input: v.object({ chat: chatOf(messenger), message }),
+    input: v.object({
+      chat: chatOf(messenger),
+      message,
+      index: v.optional(
+        v.pipe(
+          v.number(),
+          v.integer(),
+          v.minValue(0),
+          v.description("attachment index from 0; omit for the first photo"),
+        ),
+      ),
+    }),
     annotations: READ,
     online: async (adapter, args) => {
       const { id: chatId } = await adapter.resolve(args.chat)
       const saveIt = `the owner can save it with \`${messenger.app.command} messages download ${chatId} ${args.message}\``
       const { files } = await capability(adapter, "download", "download attachments")(chatId, args.message)
-      const photo = files.find((file) => file.kind === "photo")
+      const photo = args.index === undefined ? files.find((file) => file.kind === "photo") : files[args.index]
       if (!photo) {
         const kinds = files.map((file) => file.kind).join(", ")
         throw new CliError(
@@ -36,6 +47,8 @@ export const messagesPhotoTools = (messenger: Messenger): Record<string, AnyTool
             : `the message has a ${kinds}, not a photo — ${saveIt}`,
         )
       }
+      if (photo.kind !== "photo")
+        throw new CliError("validation_error", `the selected attachment is not a photo — ${saveIt}`)
       const bytes = await readUpTo(photo, PHOTO_LIMIT, saveIt)
       const mimeType = IMAGE_TYPES.find(([, is]) => is(bytes))?.[0]
       if (!mimeType) throw new CliError("validation_error", `the photo is not JPEG, PNG or WebP — ${saveIt}`)
