@@ -1,4 +1,5 @@
-import { sql } from "./drizzle/core.js"
+import { chunkHash, chunkTextOf } from "../../conversations/chunks.js"
+import { type SQL, sql } from "./drizzle/core.js"
 import type { StoreContext } from "./open.js"
 
 /** A chunk of the chat's current build: its hash, and the messages its text is cut from. */
@@ -32,15 +33,59 @@ export const chunksToEmbed = (
   )
   return chunks.map(({ hash, conversation, first, last }) => ({
     hash,
-    lines: orm.all<{ id: string; sender: string | null; text: string }>(
-      sql`SELECT m.native_id AS id, m.sender_name AS sender, m.text FROM conversation_messages cm
+    lines: chunkLines(orm, conversation, first, last).flatMap(({ deleted, ...line }) => (deleted ? [] : [line])),
+  }))
+}
+
+/** A chunk's messages as they are now, the deleted ones flagged: what `embed` hashes and a search checks. */
+const chunkLines = (orm: StoreContext["orm"], conversation: number, first: number, last: number) =>
+  orm
+    .all<{ id: string; sender: string | null; text: string; deleted: number }>(
+      sql`SELECT m.native_id AS id, m.sender_name AS sender, m.text, m.deleted_at IS NOT NULL AS deleted
+        FROM conversation_messages cm
         JOIN messages m ON m.pk = cm.message_pk
         JOIN messages f ON f.pk = ${first} JOIN messages l ON l.pk = ${last}
-        WHERE cm.conversation_pk = ${conversation} AND m.deleted_at IS NULL
+        WHERE cm.conversation_pk = ${conversation}
           AND (m.sent_at, m.pk) >= (f.sent_at, f.pk) AND (m.sent_at, m.pk) <= (l.sent_at, l.pk)
         ORDER BY m.sent_at, m.pk`,
-    ),
-  }))
+    )
+    .map(({ deleted, ...line }) => ({ ...line, deleted: Boolean(deleted) }))
+
+/**
+ * Whether a found chunk still says what its vector encodes. A build never makes a deleted message a member,
+ * so any deleted one in range went after the build: the hit goes, whatever text is left (NEED-393, NEED-550).
+ */
+export const chunkFreshness = (
+  { orm }: StoreContext,
+  { conversationPk, firstMessagePk, lastMessagePk, hash }: NearestChunk,
+): "current" | "stale" | "deleted" => {
+  const lines = chunkLines(orm, conversationPk, firstMessagePk, lastMessagePk)
+  if (lines.some(({ deleted }) => deleted)) return "deleted"
+  return chunkHash(chunkTextOf(lines)) === hash ? "current" : "stale"
+}
+
+/**
+ * Drops every vector of a chunk that held this just-deleted message, of every model, unless a current chunk
+ * with no deleted message still uses its text — in any chat or account, since vectors are keyed by text alone.
+ */
+export const purgeVectorsOf = ({ orm }: StoreContext, messagePk: number): void => {
+  orm.run(
+    sql`DELETE FROM chunk_vectors
+      WHERE content_hash IN (SELECT k.content_hash FROM conversation_messages cm
+          JOIN messages m ON m.pk = cm.message_pk
+          JOIN conversation_chunks k ON k.conversation_pk = cm.conversation_pk
+          JOIN messages f ON f.pk = k.first_message_pk JOIN messages l ON l.pk = k.last_message_pk
+          WHERE cm.message_pk = ${messagePk}
+            AND (m.sent_at, m.pk) >= (f.sent_at, f.pk) AND (m.sent_at, m.pk) <= (l.sent_at, l.pk))
+        AND NOT EXISTS (SELECT 1 FROM conversation_chunks o
+          JOIN conversations c ON c.pk = o.conversation_pk
+          JOIN conversation_state s ON s.chat_pk = c.chat_pk AND s.current_build = c.build
+          JOIN messages f ON f.pk = o.first_message_pk JOIN messages l ON l.pk = o.last_message_pk
+          WHERE o.content_hash = chunk_vectors.content_hash
+            AND NOT EXISTS (SELECT 1 FROM conversation_messages om JOIN messages d ON d.pk = om.message_pk
+              WHERE om.conversation_pk = o.conversation_pk AND d.deleted_at IS NOT NULL
+                AND (d.sent_at, d.pk) >= (f.sent_at, f.pk) AND (d.sent_at, d.pk) <= (l.sent_at, l.pk)))`,
+  )
 }
 
 /** A vector already there for the same model and text is kept: the same text gives the same vector. */
@@ -89,6 +134,7 @@ export interface NearestChunk {
   conversationPk: number
   firstMessagePk: number
   lastMessagePk: number
+  hash: string
   score: number
 }
 
@@ -120,11 +166,18 @@ export const nearestChunks = (
   const best = new Map<number, NearestChunk>()
   let after = { conversation: 0, ordinal: -1 }
   for (;;) {
-    const rows = orm.all<{ conversation: number; ordinal: number; first: number; last: number; vector: Uint8Array }>(
+    const rows = orm.all<{
+      conversation: number
+      ordinal: number
+      first: number
+      last: number
+      hash: string
+      vector: Uint8Array
+    }>(
       // CROSS JOIN keeps the chunks first, so each page walks their key; led by the vectors, SQLite re-read and
       // sorted every one of them per page — 1.3 s against 140 ms at 42k chunks (bench/embeddings/README.md).
       sql`SELECT k.conversation_pk AS conversation, k.ordinal, k.first_message_pk AS first, k.last_message_pk AS last,
-          v.vector FROM conversation_chunks k
+          k.content_hash AS hash, v.vector FROM conversation_chunks k
         CROSS JOIN conversations c ON c.pk = k.conversation_pk
         JOIN conversation_state s ON s.chat_pk = c.chat_pk AND s.current_build = c.build
         JOIN chats ch ON ch.pk = c.chat_pk
@@ -143,6 +196,7 @@ export const nearestChunks = (
           conversationPk: row.conversation,
           firstMessagePk: row.first,
           lastMessagePk: row.last,
+          hash: row.hash,
           score,
         })
       }
@@ -195,3 +249,64 @@ export const messageIds = ({ orm }: StoreContext, pks: number[]): Map<number, st
           )
           .map(({ pk, id }) => [pk, id]),
   )
+
+/** Chats of the account whose conversations were ever built, or started to be. */
+export const builtChats = ({ orm }: StoreContext, accountPk: number): { chatKey: number; id: string }[] =>
+  orm.all<{ chatKey: number; id: string }>(
+    sql`SELECT ch.pk AS chatKey, ch.native_id AS id FROM conversation_state s JOIN chats ch ON ch.pk = s.chat_pk
+      WHERE ch.account_pk = ${accountPk} ORDER BY ch.native_id`,
+  )
+
+/**
+ * What the chat's current build has not seen, and its chunks for `model`. Membership is exact for new and
+ * deleted messages; an edit is known only by its revision's time, so one in the build's first millisecond
+ * counts as pending. A changed sender name leaves no trace and is not counted.
+ */
+export const readiness = ({ orm }: StoreContext, chatKey: number, model: string) => {
+  const state = orm.get<{ builtAt: number | null; algorithmVersion: number | null; build: number | null }>(
+    sql`SELECT built_at AS builtAt, algorithm_version AS algorithmVersion, current_build AS build
+      FROM conversation_state WHERE chat_pk = ${chatKey}`,
+  )
+  if (!state || state.builtAt === null || state.build === null) return undefined
+  const { builtAt, build } = state
+  const member = (pk: SQL) => sql`EXISTS (SELECT 1 FROM conversation_messages cm
+    JOIN conversations c ON c.pk = cm.conversation_pk WHERE cm.message_pk = ${pk} AND c.build = ${build})`
+  const editedSince = (pk: SQL) =>
+    sql`EXISTS (SELECT 1 FROM message_revisions r WHERE r.message_pk = ${pk} AND r.captured_at >= ${builtAt})`
+  const pending = orm.get<{ new: number; edited: number; deleted: number }>(
+    sql`SELECT
+        sum(m.deleted_at IS NULL AND NOT ${member(sql`m.pk`)}) AS new,
+        sum(m.deleted_at IS NULL AND ${editedSince(sql`m.pk`)} AND ${member(sql`m.pk`)}) AS edited,
+        sum(m.deleted_at IS NOT NULL AND ${member(sql`m.pk`)}) AS deleted
+      FROM messages m WHERE m.chat_pk = ${chatKey}`,
+  )
+  const vectors = orm.get<{ chunks: number; embedded: number; current: number; stale: number }>(
+    sql`WITH changed AS (SELECT m.pk, m.sent_at, cm.conversation_pk FROM messages m
+          JOIN conversation_messages cm ON cm.message_pk = m.pk
+          JOIN conversations c ON c.pk = cm.conversation_pk AND c.build = ${build}
+          WHERE m.chat_pk = ${chatKey} AND (m.deleted_at IS NOT NULL OR ${editedSince(sql`m.pk`)})),
+        stale AS (SELECT DISTINCT k.content_hash AS hash FROM changed g
+          JOIN conversation_chunks k ON k.conversation_pk = g.conversation_pk
+          JOIN messages f ON f.pk = k.first_message_pk JOIN messages l ON l.pk = k.last_message_pk
+          WHERE (g.sent_at, g.pk) >= (f.sent_at, f.pk) AND (g.sent_at, g.pk) <= (l.sent_at, l.pk)),
+        hashes AS (SELECT DISTINCT h.content_hash AS hash,
+            EXISTS (SELECT 1 FROM chunk_vectors v WHERE v.model = ${model} AND v.content_hash = h.content_hash) AS vector,
+            h.content_hash IN (SELECT hash FROM stale) AS stale
+          FROM (${currentChunks(chatKey)}) h)
+      SELECT count(*) AS chunks, sum(vector) AS embedded, sum(vector AND NOT stale) AS current, sum(stale) AS stale
+      FROM hashes`,
+  )
+  const chunks = Number(vectors?.chunks ?? 0)
+  const current = Number(vectors?.current ?? 0)
+  const stale = Number(vectors?.stale ?? 0)
+  return {
+    builtAt,
+    algorithmVersion: state.algorithmVersion,
+    pending: {
+      new: Number(pending?.new ?? 0),
+      edited: Number(pending?.edited ?? 0),
+      deleted: Number(pending?.deleted ?? 0),
+    },
+    vectors: { chunks, embedded: Number(vectors?.embedded ?? 0), current, stale, missing: chunks - current - stale },
+  }
+}

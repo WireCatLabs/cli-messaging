@@ -1317,6 +1317,16 @@
     "conversations show": {
       "in": "all"
     },
+    "conversations status": {
+      "in": "all",
+      "options": {
+        "--base-url": "all",
+        "--chat": "all",
+        "--dims": "all",
+        "--model": "all",
+        "--provider": "all"
+      }
+    },
     "doctor": {
       "in": "all",
       "options": {

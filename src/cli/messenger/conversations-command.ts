@@ -5,11 +5,11 @@ import { isLocal, remoteModel } from "../../embeddings/remote.js"
 import { renderMessages } from "../../render/messages.js"
 import { levelFor } from "../../sends/permissions.js"
 import { BATCH_SIZE } from "../../services/conversations.js"
-import type { EmbedStatus, ModelChoice } from "../../services/embeddings.js"
+import type { ChatReadiness, EmbedStatus, FoundConversations, ModelChoice } from "../../services/embeddings.js"
 import { momentOf } from "../../services/moment.js"
 import type { AgentAnswer, ConversationSummary } from "../../store/store.js"
 import { embeddingKeys } from "../embedding-keys.js"
-import { positiveCount } from "../paging.js"
+import { positiveCount, renderList } from "../paging.js"
 import { answerOf as askOwner } from "./ask.js"
 import { type Messenger, type MessengerContext, messengerContext } from "./context.js"
 import { readAll } from "./stdin.js"
@@ -94,6 +94,29 @@ export const conversationsCommand = (messenger: Messenger): Command => {
       else context.renderer.result({ ...summary, messages })
     })
 
+  withModelOptions(
+    conversations
+      .command("status")
+      .description(
+        "how fresh each built chat's conversations and vectors are: messages the build has not seen, chunks " +
+          "with a current, stale or missing vector",
+      )
+      .option("--chat <chat>", `only this chat: ${messenger.chatArgument}`),
+  ).action(async function (this: Command) {
+    const options = this.opts<ModelOptions & { chat?: string }>()
+    const context = messengerContext(this, messenger)
+    const model = choiceOf(options, messenger, context, { needKey: false })
+    const { model: id, chats } = await context.withServices((services) =>
+      services.embeddings.readiness({ ...(options.chat === undefined ? {} : { chat: options.chat }), model }),
+    )
+    if (context.format !== "pretty") {
+      renderList(context.renderer, context.format, chats, { model: id })
+      return
+    }
+    context.streams.data(chats.map((one) => `${readinessLine(one, id)}\n`).join(""))
+    if (chats.length === 0) context.renderer.note("no chat has conversations yet — `conversations build --chat <chat>`")
+  })
+
   withModelOptions(conversations.command("search"))
     .description(
       "the conversations nearest to a query in meaning and in words, best first, in one chat or every one — " +
@@ -121,28 +144,31 @@ export const conversationsCommand = (messenger: Messenger): Command => {
         context.streams.data(
           found.hits
             .map(
-              ({ summary, chunk, score }) =>
-                `${score === null ? "  —  " : score.toFixed(3)}  ${line(summary)}  (messages ${chunk.firstMessageId}–${chunk.lastMessageId})\n`,
+              ({ summary, chunk, score, stale }) =>
+                `${score === null ? "  —  " : score.toFixed(3)}  ${line(summary)}  (messages ${chunk.firstMessageId}–${chunk.lastMessageId})${stale ? "  stale" : ""}\n`,
             )
             .join(""),
         )
         if (found.hits.length === 0) {
           context.renderer.note(
-            `nothing matches in words, nor in meaning among the chats embedded with ${found.model} — ` +
-              "`conversations embed --chat <chat>` for meaning",
+            found.meaning === "unavailable"
+              ? "nothing matches in words"
+              : `nothing matches in words, nor in meaning among the chats embedded with ${found.model} — ` +
+                  "`conversations embed --chat <chat>` for meaning",
           )
         }
       } else if (context.format === "jsonl") context.renderer.stream(found.hits)
       else {
-        const { model, hits, embeddedOnlyElsewhere } = found
-        context.renderer.result({ model, items: hits, limit, embeddedOnlyElsewhere })
+        const { model, meaning, hits, readiness, embeddedOnlyElsewhere } = found
+        context.renderer.result({ model, meaning, items: hits, limit, readiness, embeddedOnlyElsewhere })
       }
-      if (found.embeddedOnlyElsewhere.length > 0) {
+      const command = messenger.app.command
+      if (found.meaning === "unavailable") {
         context.renderer.note(
-          `not searched by meaning, embedded only with another model: chat ${found.embeddedOnlyElsewhere.join(", ")} — ` +
-            "give that model with --model, or `conversations embed` them with this one",
+          `searched by words only: ${found.model} is not downloaded — \`${command} models text download ${found.model}\``,
         )
       }
+      for (const note of readinessNotes(found, command)) context.renderer.note(note)
     })
 
   const batches = conversations
@@ -495,3 +521,37 @@ export const linksCommand = (messenger: Messenger): Command =>
 const line = (one: ConversationSummary) =>
   `${one.id}  ${one.firstAt.slice(0, 16).replace("T", " ")}–${one.lastAt.slice(11, 16)}  ` +
   `${one.messageCount} messages · ${one.senders} people · from message ${one.firstMessageId}`
+
+const readinessLine = ({ chat, state, graph, pending, vectors }: ChatReadiness, model: string) =>
+  graph === null
+    ? `${chat}  ${state} — \`conversations build --chat ${chat}\``
+    : `${chat}  ${state}  built ${graph.builtAt.slice(0, 16).replace("T", " ")}, rules v${graph.rulesVersion}` +
+      `${graph.outdatedRules ? " (outdated)" : ""} · not in the build: ${pending.new} new, ${pending.edited} edited, ` +
+      `${pending.deleted} deleted · ${model}: ${vectors.current} current, ${vectors.stale} stale, ` +
+      `${vectors.missing} missing of ${vectors.chunks} chunks`
+
+/** What the search could not see, and the command that fixes each. */
+const readinessNotes = ({ meaning, model, readiness, embeddedOnlyElsewhere }: FoundConversations, command: string) => {
+  const chats = (ids: string[]) => `chat ${ids.join(", ")}`
+  const elsewhere = new Set(embeddedOnlyElsewhere)
+  const neverEmbedded = readiness.wordsOnly.filter((id) => !elsewhere.has(id))
+  return [
+    embeddedOnlyElsewhere.length > 0
+      ? `not searched by meaning, embedded only with another model: ${chats(embeddedOnlyElsewhere)} — ` +
+        "give that model with --model, or `conversations embed` them with this one"
+      : "",
+    meaning === "searched" && neverEmbedded.length > 0
+      ? `searched by words only, no vector of ${model}: ${chats(neverEmbedded)} — \`${command} conversations embed --chat <chat>\``
+      : "",
+    readiness.partial.length > 0
+      ? `some chunks have no vector yet: ${chats(readiness.partial)} — \`${command} conversations embed --chat <chat>\``
+      : "",
+    readiness.stale.length > 0
+      ? `changed since the last build: ${chats(readiness.stale)} — \`${command} conversations build --chat <chat>\``
+      : "",
+    readiness.notBuilt.length > 0
+      ? `never built, so their matches are not shown: ${chats(readiness.notBuilt)} — ` +
+        `\`${command} conversations build --chat <chat>\``
+      : "",
+  ].filter(Boolean)
+}

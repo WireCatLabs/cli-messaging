@@ -7,6 +7,7 @@ import { identityPk } from "./identities.js"
 import type { Orm, StoreContext } from "./open.js"
 import { attachments, chats, messageRevisions, messages, transcripts } from "./schema.js"
 import { json, parsed, toMs } from "./values.js"
+import { purgeVectorsOf } from "./vectors.js"
 
 const FIELDS = [
   "threadNativeId",
@@ -179,9 +180,10 @@ export const upsertMessage = (
 
 /**
  * The owner's ruling (NEED-393 A): a deleted message keeps its row, so a later sync cannot bring it
- * back, and leaves no text — not in the row, the search copy, the edit history or a transcript.
+ * back, and leaves no text — not in the row, the search copy, the edit history, a transcript or a vector.
  */
-export const tombstone = ({ orm, now }: StoreContext, pk: number): number => {
+export const tombstone = (context: StoreContext, pk: number): number => {
+  const { orm, now } = context
   const row = orm
     .update(messages)
     .set({ deletedAt: now(), text: "", normalizedText: null })
@@ -190,6 +192,7 @@ export const tombstone = ({ orm, now }: StoreContext, pk: number): number => {
     .get()
   if (!row) return 0
   orm.delete(messageRevisions).where(eq(messageRevisions.messagePk, pk)).run()
+  purgeVectorsOf(context, pk)
   orm
     .delete(transcripts)
     .where(and(eq(transcripts.chatPk, row.chatPk), eq(transcripts.messageNativeId, row.nativeId)))

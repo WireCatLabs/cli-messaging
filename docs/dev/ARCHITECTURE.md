@@ -105,7 +105,10 @@ with them. `chunk_vectors` is keyed by model and that hash, with no chat: a rebu
 conversation rows, and a vector tied to them would be thrown away each time, while a chunk whose text
 did not change keeps its hash and finds its vector again. `conversations embed` reads a chunk's messages
 again (`chunksToEmbed`, `src/store/sqlite/vectors.ts`), rebuilds its text with `chunkTextOf` and embeds it
-only when the hash still matches; a chunk whose messages changed since the build waits for the next one. How
+only when the hash still matches; a chunk whose messages changed since the build waits for the next one. A
+search re-reads each meaning hit the same way (`chunkFreshness`) and marks it stale or drops it, and
+`tombstone` deletes the vectors of the chunks a deleted message was in (`purgeVectorsOf`); how fresh each chat
+is, is one query (`readiness`) behind `conversations status` and search's `readiness`. How
 the search over them works, end to end and measured: [search-indexes.md](../storage/search-indexes.md#search-by-meaning).
 
 **Where the queries live.** `src/store/store.ts` holds the `MessageStore` interface and `storeOver`, a
