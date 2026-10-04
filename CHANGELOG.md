@@ -8,6 +8,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 - `filename:` and `mime:` alone no longer fail on an archive with more than 50,000 messages with files: names are
   matched before the main query, so the candidate row limit does not apply to them.
+- `has:link` also finds a message whose link exists only as a preview card (MAX `share`, Telegram `webpage`),
+  not only a URL typed in the text. A photo's own URL still does not count.
 ## 0.141.0 — 04.10.2026
 
 ### Added
