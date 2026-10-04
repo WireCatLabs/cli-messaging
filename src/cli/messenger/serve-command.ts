@@ -1,7 +1,6 @@
 import { CliError } from "@leemour/cli-core"
 import { Command } from "commander"
-import { holdLock, lockPath, readLock, releaseLock } from "../../background/lock.js"
-import { alive } from "../../background/processes.js"
+import { holdLock, lockPath, releaseLock, takeLock } from "../../background/lock.js"
 import type { MessageEvent } from "../../domain/models.js"
 import { type Messenger, messengerContext } from "./context.js"
 import { listenUntilStopped } from "./watch-command.js"
@@ -22,16 +21,15 @@ export const serveCommand = (messenger: Messenger): Command => {
     const context = messengerContext(this, messenger)
     if (context.settings.offline) throw new CliError("validation_error", "serve listens live; --offline cannot")
     const path = lockPath(messenger.app, context.profile, context.env)
-    const held = readLock(path)
-    if (held && held.pid !== process.pid && alive(held.pid)) {
+    const startedAt = new Date().toISOString()
+    const { version } = messenger.app
+    const held = takeLock(path, { pid: process.pid, startedAt, version })
+    if (held) {
       throw new CliError(
         "validation_error",
         `${messenger.app.command} serve is already running for profile ${context.profile} (PID ${held.pid}, since ${held.startedAt})`,
       )
     }
-    const startedAt = new Date().toISOString()
-    const { version } = messenger.app
-    holdLock(path, { pid: process.pid, startedAt, version })
     // `server start` answers on this, not on the lock alone: a lock is written before the connection opens.
     const onReady = () => {
       holdLock(path, { pid: process.pid, startedAt, version, listeningAt: new Date().toISOString() })

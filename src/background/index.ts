@@ -1,4 +1,4 @@
-export { holdLock, type Lock, lockPath, readLock, releaseLock, servingProfiles } from "./lock.js"
+export { holdLock, type Lock, lockPath, readLock, releaseLock, servingProfiles, takeLock } from "./lock.js"
 export { alive, carries, holdersOf } from "./processes.js"
 export { type Ran, runProgram, type ServerSystem, thisMachine } from "./system.js"
 export {

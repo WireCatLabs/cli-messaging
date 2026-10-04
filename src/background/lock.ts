@@ -1,4 +1,4 @@
-import { existsSync, readdirSync, readFileSync, rmSync } from "node:fs"
+import { existsSync, linkSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import { dirname, join } from "node:path"
 import { resolvePaths, writeSecurely } from "@leemour/cli-core"
 import type { AppIdentity } from "../cli/app.js"
@@ -26,6 +26,33 @@ export const readLock = (path: string): Lock | undefined => {
 }
 
 export const holdLock = (path: string, lock: Lock) => writeSecurely(path, `${JSON.stringify(lock)}\n`, 0o600)
+
+/**
+ * Takes the lock unless a live process holds it, and then answers that holder. The lock appears by
+ * `link`, which fails if the file exists, and appears already written: two serves started in the same
+ * instant cannot both pass, and none reads a half-written lock as stale.
+ */
+export const takeLock = (path: string, lock: Lock): Lock | undefined => {
+  mkdirSync(dirname(path), { recursive: true, mode: 0o700 })
+  const draft = `${path}.${lock.pid}.tmp`
+  writeFileSync(draft, `${JSON.stringify(lock)}\n`, { mode: 0o600 })
+  try {
+    for (let attempt = 0; attempt < 5; attempt++) {
+      try {
+        linkSync(draft, path)
+        return undefined
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error
+      }
+      const held = readLock(path)
+      if (held && held.pid !== lock.pid && alive(held.pid)) return held
+      rmSync(path, { force: true })
+    }
+    throw new Error(`could not take the lock ${path}: it keeps changing`)
+  } finally {
+    rmSync(draft, { force: true })
+  }
+}
 
 /** Only the process that holds the lock removes it: one refused as a second serve must not free it. */
 export const releaseLock = (path: string, pid = process.pid) => {
