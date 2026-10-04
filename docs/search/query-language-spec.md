@@ -62,12 +62,21 @@ text — существующий SQLite FTS5 `unicode61 remove_diacritics 2` н
 NFKD/mark stripping/NFC/lowercase/control-whitespace folding не меняются. Literal с несколькими
 анализированными tokens сопоставляется как последовательность; несколько query terms — Boolean.
 Phrase proximity, boost и fuzzy profile operators отвергаются; discovery никогда не добавляет hits.
+`~` после term — alternative про `--language legacy` и prefix `word*`; после phrase — про proximity.
 body — исходный case-sensitive keyword. Его empty quoted literal/empty regex выбирают empty body;
 empty text literal не совпадает с индексированным token.
 
 Regex анализирует normalized term либо полный raw body. Pattern syntax целиком не нормализуется.
-Wildcard literals text нормализуются; regex literal case должен соответствовать lowercase vocabulary.
+Wildcard и regex literals text нормализуются той же `fold` (NFKD/marks/NFC/lowercase), что и индекс
+(`foldRegex`): обычные, экранированные не-ASCII и quoted literals, члены классов и диапазоны
+(диапазон до 4096 code points раскрывается и сворачивается; шире — только если концы не меняются).
+`\D \W \S` и прочие ASCII escapes не трогаются. Символ без единственной свёрнутой формы →
+`unsupported_regex` с alternative. Это сознательное отличие от Lucene, где regex не анализируется.
+body regex остаётся raw и case-sensitive.
 Доказанный prefix лишь сокращает dictionary enumeration; OR/nullable prefix не должен терять terms.
+Vocabulary общий для store, без chat/date условия: превышение `expansions` — `query_limit` с
+`budget:"term expansions"`, `term`, `limit`, span; alternative — длиннее prefix или body regex в чате.
+Folding v1 сливает разные слова (мой/мои, año/ano); это known limit до смены NORMALIZER_VERSION.
 
 Date endpoints собственные typed mappings над стандартной grammar: calendar day в IANA zone,
 exact timestamp с offset, mixed inclusive/exclusive/open bounds. DST вычисляется через календарь,
@@ -94,7 +103,8 @@ Positive in/--source явно выбирают доступные локальн
 и `bm25(1.0,0.0)`; scope tokens не влияют на score. Full Boolean predicate остаётся final guard.
 Ветви без обязательного text используют newest order; --newest всегда сортирует по времени.
 Tie-breaker: sentAt DESC, provider/account/chat ASC, message DESC; qualified locators предотвращают collisions.
-Explicit chat-only scan стартует с chat/time index. Index not ready — явная ошибка, не substring fallback.
+Explicit chat-only scan стартует с chat/time index. Index not ready — явная ошибка, не substring fallback;
+message называет прогресс (`filledThrough/watermark` либо pendingNormalization) и `<cli> store migrate`.
 
 Postfilter candidate selection — SQL superset без unsafe отрицания bounded predicates; full AST
 проверяется на candidates. Row/byte caps проверяются до body loading; bounded batches позволяют abort.
