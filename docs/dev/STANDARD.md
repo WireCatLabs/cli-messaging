@@ -18,7 +18,7 @@ A name a person reads once should say what the command does; a name an agent rea
 guessable from the others.
 
 1. **`<tool> [profile] <resource> <verb> [arguments]`.** The resource is a noun: **plural** for a
-   collection (`chats`, `contacts`, `messages`, `polls`, `reactions`, `recipients`, `sends`,
+   collection (`chats`, `contacts`, `messages`, `polls`, `reactions`, `recipients`, `replies`, `sends`,
    `runs`, `topics`, `models`, `tags`, `searches`), **singular** for what a profile has exactly
    one of (`session`, `account`, `config`, `server`, `store`, `skill`, `cache`). A group is never
    named with a verb. `tags` and `searches` are the owner's own records in the local store, never
@@ -34,6 +34,8 @@ guessable from the others.
      or what the store holds per chat (`store status`)
    - `check` verify, and change nothing — the answer says what is wrong and how to fix it
      (`store check`)
+   - `test` run rules over what is already stored and say what they would have done, doing none of
+     it (`replies test`)
    - `create` / `delete` make or destroy a thing · `add` / `remove` put an existing thing into or
      out of a set (members, admins, contacts, recipients, reactions) · `clear` empty a set
    - `update` change a thing's fields · `set` / `unset` one named key · `rename` its name only
@@ -239,7 +241,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--show-phone` |  | print the whole phone number |  | `account show` |
 | `--silent` |  | deliver without a notification |  | `bot messages send`, `messages forward`, `messages send`, `polls create` |
 | `--since` | `<id-or-time>` | from this message id, an ISO 8601 time, or 2h / 1d ago; each command says its default. **becomes `--since-time` everywhere — NEED-485** |  | `inbox` (planned), `review` (planned) |
-| `--since-time` | `<time>` | from this ISO 8601 time, or 2h / 1d ago; each command says its default |  | `bot chats moderate`, `bot store fetch`, `chats events` (planned), `chats moderate` (planned), `chats stats` (planned), `contacts context` (planned), `conversations list`, `conversations search`, `inbox` (planned), `review` (planned), `store export`, `store fetch` |
+| `--since-time` | `<time>` | from this ISO 8601 time, or 2h / 1d ago; each command says its default |  | `bot chats moderate`, `bot store fetch`, `chats events` (planned), `chats moderate` (planned), `chats stats` (planned), `contacts context` (planned), `conversations list`, `conversations search`, `inbox` (planned), `replies test` (planned), `review` (planned), `store export`, `store fetch` |
 | `--size` | `<n>` | messages to answer per batch, 10–200; 50 by default |  | `conversations batches next`, `conversations batches status` |
 | `--source` | `<messenger>` | every account of this messenger held in the store; personal, bots or all — the same as in: in the query |  | `messages search`, `messages stats` (planned) |
 | `--store-token` | `<profile>` | keep a returned authentication token only in this bot profile's OS keyring; never print it |  | `bot api` |
