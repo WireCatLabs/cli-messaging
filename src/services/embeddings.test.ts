@@ -62,8 +62,9 @@ const setUp = async ({
   ])
   await store.saveMessages(account, "9", messages, { via: "history" })
   const deps = storedDeps({ provider: "test", app: { command: "chat" } } as Messenger, store, account, {} as SendGuard)
-  if (build) await conversationsService(deps).build("9")
-  return { store, embeddings: embeddingsService(deps) }
+  const conversations = conversationsService(deps)
+  if (build) await conversations.build("9")
+  return { store, embeddings: embeddingsService(deps), conversations }
 }
 
 beforeEach(() => {
@@ -169,6 +170,116 @@ describe("embeddings", () => {
       storedDeps({ provider: "test", app: { command: "chat" } } as Messenger, store, account, {} as SendGuard),
     ).build("9")
     await expect(embeddings.embed("9", { model: "e5-small" })).rejects.toThrow("chat models text download e5-small")
+    await store.close()
+  })
+})
+
+describe("derived index freshness — today's behaviour, known gaps", () => {
+  const edited = (id: string, text: string): Message => ({
+    ...message(id, text),
+    editedAt: "2026-10-05T00:00:00.000Z",
+  })
+
+  it("returns a conversation by meaning for text that was edited away (stale, known gap)", async () => {
+    const { store, embeddings, conversations } = await setUp()
+    await embeddings.embed("9", { model: "tiny", threads: 1 })
+    await store.saveMessages(account, "9", [edited("40", "zebra")], { via: "live" })
+
+    const [top] = (await embeddings.search("fish", { model: "tiny", limit: 3 })).hits
+    expect(top).toMatchObject({ summary: { firstMessageId: "40" }, chunk: { firstMessageId: "40" }, by: ["meaning"] })
+    expect(top?.score).toBeCloseTo(1)
+    const evidence = await conversations.show({ chat: "9", message: "40" })
+    expect(evidence.messages.map(({ text }) => text)).toEqual(["zebra"])
+
+    expect(await embeddings.status("9", "tiny")).toMatchObject({ chunks: 3, embedded: 3, left: 0 })
+    expect(await embeddings.embed("9", { model: "tiny", threads: 1 })).toMatchObject({ embedded: 0, skipped: 0 })
+
+    await conversations.build("9")
+    expect(await embeddings.status("9", "tiny")).toMatchObject({ chunks: 3, embedded: 2, left: 1 })
+    await store.close()
+  })
+
+  it("returns a conversation by meaning for a message deleted after embedding (stale, known gap)", async () => {
+    const { store, embeddings, conversations } = await setUp()
+    await embeddings.embed("9", { model: "tiny", threads: 1 })
+    await store.markDeleted(account, ["40"], { chatId: "9" })
+
+    const [top] = (await embeddings.search("fish", { model: "tiny", limit: 3 })).hits
+    expect(top).toMatchObject({ summary: { firstMessageId: "40" }, by: ["meaning"] })
+    expect(top?.score).toBeCloseTo(1)
+    expect((await conversations.show({ chat: "9", message: "40" })).messages).toEqual([])
+    expect(await embeddings.status("9", "tiny")).toMatchObject({ left: 0 })
+
+    await conversations.build("9")
+    expect(await embeddings.status("9", "tiny")).toMatchObject({ chunks: 2, embedded: 2, left: 0 })
+    const after = (await embeddings.search("fish", { model: "tiny", limit: 3 })).hits
+    expect(after.map(({ summary }) => summary.firstMessageId)).not.toContain("40")
+    await store.close()
+  })
+
+  it("drops a word match on a message saved after the build, with no pending count anywhere (missing, known gap)", async () => {
+    const { store, embeddings, conversations } = await setUp()
+    await embeddings.embed("9", { model: "tiny", threads: 1 })
+    const builtAt = (await store.conversationState(account, "9"))?.builtAt
+    await store.saveMessages(account, "9", [message("120", "zebra")], { via: "live" })
+
+    const { hits } = await embeddings.search("zebra", { model: "tiny", limit: 5 })
+    expect(hits.filter(({ by }) => by.includes("words"))).toEqual([])
+    expect(hits.map(({ chunk }) => chunk.lastMessageId)).not.toContain("120")
+    await expect(conversations.show({ chat: "9", message: "120" })).rejects.toThrow("is in no conversation of chat 9")
+    expect(await embeddings.status("9", "tiny")).toMatchObject({ chunks: 3, left: 0 })
+    expect((await store.conversationState(account, "9"))?.builtAt).toBe(builtAt)
+
+    await conversations.build("9")
+    const rebuilt = (await embeddings.search("zebra", { model: "tiny", limit: 5 })).hits
+    expect(rebuilt.find(({ by }) => by.includes("words"))).toMatchObject({
+      summary: { firstMessageId: "120" },
+      score: null,
+      by: ["words"],
+    })
+    await store.close()
+  })
+
+  it("flags only a chat with no vector of the model, not one missing some (partial, known gap)", async () => {
+    const { store, embeddings, conversations } = await setUp()
+    await embeddings.embed("9", { model: "tiny", threads: 1 })
+    await embeddings.embed("9", { model: "tiny-2", threads: 1 })
+    await store.saveMessages(account, "9", [message("120", "zebra")], { via: "live" })
+    await conversations.build("9")
+    await embeddings.embed("9", { model: "tiny", threads: 1 })
+
+    const found = await embeddings.search("zebra", { model: "tiny-2", limit: 5 })
+    expect(found.embeddedOnlyElsewhere).toEqual([])
+    expect(found.hits.find(({ summary }) => summary.firstMessageId === "120")).toMatchObject({
+      score: null,
+      by: ["words"],
+    })
+    expect(await embeddings.status("9", "tiny-2")).toMatchObject({ chunks: 4, embedded: 3, left: 1 })
+    await store.close()
+  })
+
+  it("returns every conversation by meaning, even at score 0, and ranks the only word match below one (no floor, known gap)", async () => {
+    const { store, embeddings, conversations } = await setUp({
+      messages: [message("1", "cat dog"), message("40", "fish")],
+    })
+    await embeddings.embed("9", { model: "tiny", threads: 1 })
+    await store.saveMessages(account, "9", [message("80", "zebra")], { via: "live" })
+    await conversations.build("9")
+
+    const { hits } = await embeddings.search("zebra", { model: "tiny", limit: 5 })
+    expect(hits.map(({ summary, score, by }) => [summary.firstMessageId, score, by])).toEqual([
+      ["1", 0, ["meaning"]],
+      ["80", null, ["words"]],
+      ["40", 0, ["meaning"]],
+    ])
+    await store.close()
+  })
+
+  it("refuses a word-only search when the model is not downloaded (no fallback, known gap)", async () => {
+    const { store, embeddings } = await setUp()
+    await expect(embeddings.search("zebra", { model: "e5-small", limit: 5 })).rejects.toThrow(
+      "chat models text download e5-small",
+    )
     await store.close()
   })
 })
