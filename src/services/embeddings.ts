@@ -65,8 +65,14 @@ export interface EmbeddingsService {
    * one: the mean of its current vectors is the query, so no model runs and none need be downloaded.
    */
   related(chat: string, message: Id, options: { model?: ModelChoice; limit: number }): Promise<RelatedConversations>
-  /** How fresh one chat's conversations and vectors are, or every built chat's. */
-  readiness(options: { chat?: string; model?: ModelChoice }): Promise<{ model: string; chats: ChatReadiness[] }>
+  /**
+   * How fresh one chat's conversations and vectors are, or every built chat's — and then how many group chats
+   * were never built, which `conversations build` would also do.
+   */
+  readiness(options: {
+    chat?: string
+    model?: ModelChoice
+  }): Promise<{ model: string; chats: ChatReadiness[]; unbuiltGroups?: number }>
   /**
    * Builds and embeds, on this machine, the chats that changed or were never built — one chat, or every built
    * chat and every group chat never built — within the bounds (NEED-551 A). Never downloads a model.
@@ -450,7 +456,9 @@ export const embeddingsService = (deps: ServiceDeps): EmbeddingsService => {
       const account = await deps.account()
       const target = resolve(choice)
       const chatId = chat === undefined ? undefined : await storedChatId(deps.messenger, chat, store, account)
-      return { model: target.id, chats: await readinessOf(chatId, target.key) }
+      const chats = await readinessOf(chatId, target.key)
+      if (chatId !== undefined) return { model: target.id, chats }
+      return { model: target.id, chats, unbuiltGroups: (await store.unbuiltGroups(account)).length }
     },
 
     refresh: async ({

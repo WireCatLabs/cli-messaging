@@ -373,6 +373,8 @@ describe("catching up without --chat", () => {
   it("**rebuilds a changed chat before building a group never built**, within --max-chats, and names the rest", async () => {
     const { store, embeddings } = await withChats()
     await store.saveMessages(account, "9", [message("120", "zebra")], { via: "live" })
+    expect(await embeddings.readiness({ model: "tiny" })).toMatchObject({ unbuiltGroups: 1 })
+    expect(await embeddings.readiness({ chat: "9", model: "tiny" })).not.toHaveProperty("unbuiltGroups")
 
     const first = await embeddings.refresh({ model: "tiny", maxChats: 1, embed: false })
     expect(first.built.map(({ chat }) => chat)).toEqual(["9"])
@@ -380,7 +382,8 @@ describe("catching up without --chat", () => {
 
     const second = await embeddings.refresh({ model: "tiny", embed: false })
     expect([second.built.map(({ chat }) => chat), second.left]).toEqual([["10"], []])
-    expect((await embeddings.readiness({ model: "tiny" })).chats.map(({ chat }) => chat)).toEqual(["10", "9"])
+    const after = await embeddings.readiness({ model: "tiny" })
+    expect([after.chats.map(({ chat }) => chat), after.unbuiltGroups]).toEqual([["10", "9"], 0])
     await store.close()
   })
 
