@@ -145,32 +145,32 @@ export const QUERY_FIELDS = [
   {
     name: "filename",
     example: "filename:*.pdf",
-    index: "planned",
+    index: "attachments.name / bounded postfilter",
     aliases: [],
     type: "keyword",
     operators: [...terms, "wildcard", "regex"],
-    normalization: "planned",
-    support: "planned",
+    normalization: "NFKD/marks/NFC/lowercase v1, whole name",
+    support: "A2",
   },
   {
     name: "mime",
-    example: "mime:application/pdf",
-    index: "planned",
+    example: 'mime:"application/pdf" OR mime:image',
+    index: "attachments.mime / bounded postfilter",
     aliases: [],
     type: "keyword",
     operators: [...terms, "wildcard"],
-    normalization: "planned",
-    support: "planned",
+    normalization: "lowercase; a value without / matches the first part; only where the messenger reports a type",
+    support: "A2",
   },
   {
     name: "size",
-    example: "size:[1024 TO 4096]",
-    index: "planned",
+    example: "size>10MB",
+    index: "attachments.size",
     aliases: [],
     type: "bytes",
     operators: [...terms, "range"],
-    normalization: "planned",
-    support: "planned",
+    normalization: "bytes; KB/MB/GB are 1024-based",
+    support: "A2",
   },
   {
     name: "tag",
@@ -184,6 +184,23 @@ export const QUERY_FIELDS = [
   },
 ] as const
 
+const UNITS: Record<string, number> = {
+  "": 1,
+  b: 1,
+  k: 1024,
+  kb: 1024,
+  m: 1024 ** 2,
+  mb: 1024 ** 2,
+  g: 1024 ** 3,
+  gb: 1024 ** 3,
+}
+export const parseBytes = (value: string, span: Span): number => {
+  const [, amount, unit] = /^(\d+(?:\.\d+)?)\s*([a-z]*)$/iu.exec(value.trim()) ?? []
+  const scale = UNITS[unit?.toLowerCase() ?? ""]
+  if (amount === undefined || scale === undefined) queryError("invalid_size", span, "use bytes or KB/MB/GB, e.g. 10MB")
+  return Math.round(Number(amount) * scale)
+}
+
 export const validatePredicate = (node: Predicate): void => {
   const field = QUERY_FIELDS.find(({ name }) => name === node.field)
   if (!field && ["after", "before"].includes(node.field))
@@ -196,6 +213,9 @@ export const validatePredicate = (node: Predicate): void => {
   if (node.value === "" && !["text", "body"].includes(node.field)) queryError("missing_value", node.span)
   if ("values" in field && !field.values.includes(node.value.toLowerCase() as never))
     queryError("unknown_value", node.span, `${field.name} takes ${field.values.join(", ")}`)
+  if (field.name === "size")
+    for (const bound of node.operator === "range" ? [node.value, node.upper] : [node.value])
+      if (bound !== undefined && bound !== "*") parseBytes(bound, node.span)
   if (field.name === "topic" && !/^\d+$/u.test(node.value))
     queryError("invalid_topic", node.span, "use a thread id in one chat")
 }

@@ -44,7 +44,7 @@
       "timestamp": "2026-01-24T10:00:00.000Z",
       "senderId": "10",
       "senderName": "Alice Synthetic",
-      "attachments": [{ "kind": "file", "name": "invoice.pdf" }]
+      "attachments": [{ "kind": "file", "name": "invoice.pdf", "size": 2097152 }]
     },
     {
       "id": "106",
@@ -53,6 +53,23 @@
       "timestamp": "2026-01-25T10:00:00.000Z",
       "senderId": "11",
       "senderName": "Bob Synthetic"
+    },
+    {
+      "id": "107",
+      "chatId": "7",
+      "text": "notes at https://example.org/docs",
+      "timestamp": "2026-01-26T10:00:00.000Z",
+      "senderId": "11",
+      "senderName": "Bob Synthetic"
+    },
+    {
+      "id": "108",
+      "chatId": "9",
+      "text": "",
+      "timestamp": "2026-01-27T10:00:00.000Z",
+      "senderId": "11",
+      "senderName": "Bob Synthetic",
+      "attachments": [{ "kind": "file", "name": "Отчёт.PDF", "size": 524288 }]
     }
   ],
   "recipes": [
@@ -69,11 +86,16 @@
     { "title": "Кандидат secret в Избранном", "query": "preset:secret kind:saved", "ids": ["104"] },
     { "title": "Regex по терму", "query": "text:/pass(port)?/ kind:private", "ids": ["103"] },
     { "title": "Regex по полному тексту", "query": "body:/.*invoice.*/", "ids": ["101", "102", "106"] },
-    { "title": "Сообщение только с файлом", "query": "has:file", "ids": ["105"] }
+    { "title": "Сообщение только с файлом", "query": "has:file", "ids": ["105", "108"] },
+    { "title": "Файл по имени", "query": "filename:*.pdf", "ids": ["105", "108"] },
+    { "title": "Имя файла без учёта регистра и ё", "query": "filename:отчет.pdf", "ids": ["108"] },
+    { "title": "Файл больше 1 МБ", "query": "size>1MB", "ids": ["105"] },
+    { "title": "Ссылка на сайт", "query": "has:link AND \"example.org\"", "ids": ["107"] }
   ],
   "negative": [
     { "query": "foo:bar", "code": "validation_error", "reason": "unknown_field" },
-    { "query": "filename:*.pdf", "code": "validation_error", "reason": "unsupported_field" },
+    { "query": "tag:work", "code": "validation_error", "reason": "unsupported_field" },
+    { "query": "size>10TB", "code": "validation_error", "reason": "invalid_size" },
     { "query": "invoice~1", "code": "validation_error", "reason": "unsupported_operator" },
     { "query": "kind:person", "code": "validation_error", "reason": "unknown_value" }
   ]

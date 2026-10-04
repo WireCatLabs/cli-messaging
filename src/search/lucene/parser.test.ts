@@ -65,7 +65,7 @@ describe("versioned structured AST and field registry", () => {
   })
   it.each([
     ["unknown:foo", "unknown_field"],
-    ["filename:invoice*", "unsupported_field"],
+    ["tag:work", "unsupported_field"],
     ["kind:dialog", "unknown_value"],
     ["has:imaginary", "unknown_value"],
     ["preset:money", "unknown_value"],
