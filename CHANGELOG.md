@@ -6,6 +6,11 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- `./cli` exports `serveOverHttp`, `OVER_HTTP`, `httpTokenFile`, `revokeAll` and `MCP_PATH`, so a CLI with its own MCP
+  server (max) can offer `mcp --http` the same way.
+
 ### Fixed
 
 - The parity manifest lists `mcp --http`, `--port`, `--public-url` and `--revoke`, planned for tg's next
