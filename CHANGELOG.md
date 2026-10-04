@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.148.0 — 04.10.2026
+
 ### Added
 
 - `store repair [--dry-run]` brings every table of the store to this build's shape without deleting anything. A
