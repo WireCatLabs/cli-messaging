@@ -1,6 +1,7 @@
+import { type ChildProcessWithoutNullStreams, spawn } from "node:child_process"
 import { realpathSync } from "node:fs"
 import { join } from "node:path"
-import { CliError, resolvePaths } from "@leemour/cli-core"
+import { CliError, resolvePaths, visibleControls } from "@leemour/cli-core"
 import { annotate } from "@leemour/cli-core/commands"
 import { installerOf } from "@leemour/cli-core/update"
 import { Command } from "commander"
@@ -203,8 +204,11 @@ export const mcpCommand = (messenger: Messenger): Command => {
         const entry = Object.values(configuration.config.mcpServers)[0]
         if (!entry) throw new CliError("validation_error", "the MCP entry is empty")
         const { probeStdio } = await import("@leemour/cli-core/mcp")
+        const stderr = stderrTail()
         try {
-          const { tools, potentialWrites } = await probeStdio(entry as Parameters<typeof probeStdio>[0])
+          const { tools, potentialWrites } = await probeStdio(entry as Parameters<typeof probeStdio>[0], {
+            start: stderr.start,
+          })
           renderer.result({
             healthy: true,
             profile: settings.profile,
@@ -212,12 +216,60 @@ export const mcpCommand = (messenger: Messenger): Command => {
             potentialWrites: potentialWrites.length,
           })
         } catch (error) {
-          throw new CliError("validation_error", error instanceof Error ? error.message : "MCP doctor failed")
+          const tail = await stderr.tail()
+          throw new CliError(
+            "validation_error",
+            `${error instanceof Error ? error.message : "MCP doctor failed"}${tail ? ` — its last words on stderr:\n${tail}` : ""}`,
+            tail ? { stderr: tail } : undefined,
+          )
         }
       },
     ),
   )
   return command
+}
+
+const TAIL_LINES = 20
+const TAIL_BYTES = 2_000
+const TAIL_WAIT_MS = 500
+
+/**
+ * The server's own stderr, so a failed start says why rather than only that it exited. Read as it
+ * comes, which also keeps a chatty server from blocking on a full pipe. Only the end is kept, with the
+ * home folder hidden, terminal control codes made visible, and long digit runs — ids, phone numbers —
+ * and long token-like runs masked.
+ */
+export const stderrTail = () => {
+  let kept = ""
+  let home: string | undefined
+  let ended: Promise<void> = Promise.resolve()
+  const start = (file: string, args: string[], env: NodeJS.ProcessEnv): ChildProcessWithoutNullStreams => {
+    home = env.HOME ?? env.USERPROFILE
+    const child = spawn(file, args, { env, stdio: "pipe" })
+    child.stderr.setEncoding("utf8")
+    child.stderr.on("data", (chunk: string) => {
+      kept = (kept + chunk).slice(-TAIL_BYTES * 4)
+    })
+    ended = new Promise((resolve) => {
+      child.stderr.once("close", resolve)
+      child.once("error", () => resolve())
+    })
+    return child
+  }
+  // The exit that fails the probe can arrive before the last stderr chunk, and the last lines say why.
+  const tail = async (): Promise<string> => {
+    await Promise.race([ended, new Promise((resolve) => setTimeout(resolve, TAIL_WAIT_MS).unref())])
+    return redactTail(kept, home)
+  }
+  return { start, tail }
+}
+
+export const redactTail = (text: string, home: string | undefined): string => {
+  let out = visibleControls(text)
+  if (home) out = out.split(home).join("~")
+  out = out.replace(/[A-Za-z0-9_\-+=]{32,}/g, "[hidden]").replace(/\+?\d[\d ]{5,}\d/g, "[number]")
+  const lines = out.split("\n").filter((line) => line.trim() !== "")
+  return lines.slice(-TAIL_LINES).join("\n").slice(-TAIL_BYTES)
 }
 
 const VERSION_MANAGER = /[\\/](\.nvm|nvm|\.fnm|fnm|fnm_multishells|\.volta|volta|\.asdf|mise)[\\/]/i

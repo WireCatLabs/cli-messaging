@@ -1,11 +1,15 @@
-import { resolve } from "node:path"
+import { dirname, resolve } from "node:path"
 import { writeSecurely } from "@leemour/cli-core"
 import { Command } from "commander"
 import { SendJournal, sendsPathFor } from "../../sends/journal.js"
+import { storePath } from "../../store/path.js"
 import { type BaseContext, baseContext, environmentOf, outputFor } from "../context.js"
+import { providerErrorKey } from "../runs/events.js"
 import { listRuns, runsDirFor, runtime } from "../runs/run.js"
 import { recalledAccount } from "./accounts.js"
 import { type Messenger, messengerContext } from "./context.js"
+import type { AccountStanding, MessengerAdapter } from "./port.js"
+import { privateFiles, withSqliteSidecars } from "./private-files.js"
 import { buildReport, reportFileName } from "./report.js"
 import { storeSummary } from "./store-maintenance-command.js"
 
@@ -22,7 +26,11 @@ export const doctorCommand = (messenger: Messenger): Command => {
     .action(async function (this: Command) {
       const { online } = this.opts<{ online?: boolean }>()
       const { report, renderer } = await diagnose(this, messenger)
-      if (online && renderer) report.online = await onlineCheck(this, messenger, rememberedOf(report))
+      if (online && renderer) {
+        const checked = await onlineCheck(this, messenger, rememberedOf(report))
+        report.online = checked
+        report.login = { state: checked.ok ? "ok" : "failed", ...(checked.hint ? { hint: checked.hint } : {}) }
+      }
       ;(renderer ?? outputFor(this).renderer).result(report)
     })
   command.addCommand(reportCommand(messenger))
@@ -128,6 +136,8 @@ const diagnose = async (
   const { settings, renderer } = context
   const { profile } = settings
   const account = recalledAccount(app, provider, profile, env)
+  const store = storePath(env)
+  const sends = sendsPathFor(app, profile, env)
 
   return {
     renderer,
@@ -137,9 +147,18 @@ const diagnose = async (
       profile,
       config: { path: settings.configPath, found: settings.configFound },
       account: { remembered: account?.account ?? null },
+      // A session file on disk says nothing about whether the messenger still accepts it.
+      login: {
+        state: "not checked",
+        hint: `\`${app.command} doctor --online\` logs in once and checks it; it sends nothing`,
+      },
       store: await storeSummary(env),
       sends: sendsState(new SendJournal(sendsPathFor(app, profile, env))),
       runs: { directory: runsDirFor(app, env), kept: listRuns(runsDirFor(app, env)).length },
+      files: privateFiles({
+        files: [...withSqliteSidecars(store), sends],
+        dirs: [dirname(store), dirname(sends), runsDirFor(app, env)],
+      }),
       [provider]: await (messenger.diagnose?.(command, context) ?? Promise.resolve({})).catch((error) => ({
         error: messageOf(error),
       })),
@@ -156,24 +175,86 @@ const sendsState = (journal: SendJournal) => {
   }
 }
 
+/**
+ * MTProto (Telegram) refuses a request stamped more than 30 s ahead of its clock or 300 s behind it
+ * (core.telegram.org/mtproto/description). A client library may correct its own offset, but times
+ * this tool computes — `--at-time`, `--since-time` — would still be off, so warn well inside the
+ * tighter limit and well above what one whole-second reading over a round trip can measure.
+ */
+export const CLOCK_SKEW_WARN_MS = 10_000
+
+const STANDINGS = new Set<AccountStanding["state"]>(["frozen", "banned", "deactivated", "revoked"])
+
+const standingOf = (error: unknown): AccountStanding | undefined => {
+  const standing = (error as { details?: { standing?: AccountStanding } })?.details?.standing
+  return standing && STANDINGS.has(standing.state) ? standing : undefined
+}
+
+const clockOf = async (connection: MessengerAdapter) => {
+  if (!connection.health) return { clock: null }
+  const sent = Date.now()
+  try {
+    const { serverTime, serverTimeResolutionMs = 0, standing } = await connection.health()
+    const received = Date.now()
+    if (serverTime === undefined) return { clock: null, standing }
+    const skewMs = Math.round((sent + received) / 2 - serverTime)
+    return {
+      clock: {
+        skewMs,
+        uncertaintyMs: Math.ceil(serverTimeResolutionMs + (received - sent) / 2),
+        ok: Math.abs(skewMs) < CLOCK_SKEW_WARN_MS,
+        warnAboveMs: CLOCK_SKEW_WARN_MS,
+      },
+      standing,
+    }
+  } catch (error) {
+    return { clock: null, healthError: codeOf(error), standing: standingOf(error) }
+  }
+}
+
+/**
+ * Never throws: each step fails into a field. The clock is read before the login, so a refused login
+ * still says whether this machine's time is right.
+ */
 const onlineCheck = async (command: Command, messenger: Messenger, remembered: string | undefined) => {
   const started = Date.now()
+  const read: { health: Awaited<ReturnType<typeof clockOf>> } = { health: { clock: null } }
   try {
-    const me = await messengerContext(command, messenger).withMessenger((connection) => connection.me())
+    const me = await messengerContext(command, messenger).withMessenger(async (connection) => {
+      read.health = await clockOf(connection)
+      return connection.me()
+    })
+    const { health } = read
+    const standing = health.standing
     return {
       ok: true,
       account: me.id,
       ...(remembered === undefined ? {} : { matchesRemembered: me.id === remembered }),
       durationMs: Date.now() - started,
+      standing: standing ?? { state: "active" },
+      clock: health.clock,
+      ...(health.healthError ? { healthError: health.healthError } : {}),
+      ...(standing?.hint ? { hint: standing.hint } : {}),
     }
   } catch (error) {
-    const code = (error as { code?: unknown })?.code
+    const { health } = read
+    const standing = standingOf(error) ?? health.standing
+    const providerError = providerErrorKey((error as { details?: { providerError?: unknown } })?.details?.providerError)
     return {
       ok: false,
-      errorCode: typeof code === "string" ? code : "generic_failure",
+      errorCode: codeOf(error),
+      ...(providerError ? { providerError } : {}),
       durationMs: Date.now() - started,
+      standing: standing ?? { state: "unknown" },
+      clock: health.clock,
+      hint: standing?.hint ?? messageOf(error),
     }
   }
+}
+
+const codeOf = (error: unknown): string => {
+  const code = (error as { code?: unknown })?.code
+  return typeof code === "string" ? code : "generic_failure"
 }
 
 const messageOf = (error: unknown): string => (error instanceof Error ? error.message : String(error))

@@ -330,6 +330,30 @@ export interface ChatFolders {
 }
 
 /**
+ * A state the messenger put the account in, where it is not simply logged in. An adapter reports
+ * `frozen` from `health`; the others come as `details.standing` on the error its requests throw.
+ * Dates are ISO 8601.
+ */
+export interface AccountStanding {
+  state: "frozen" | "banned" | "deactivated" | "revoked"
+  since?: string
+  until?: string
+  appealUrl?: string
+  hint?: string
+}
+
+/** What `doctor --online` asks beyond the login. Reads only. */
+export interface AccountHealth {
+  health(): Promise<{
+    /** Milliseconds since the epoch, as the messenger reported it during this call. */
+    serverTime?: number
+    /** 1000 when the messenger counts whole seconds; the round trip adds to it. */
+    serverTimeResolutionMs?: number
+    standing?: AccountStanding
+  }>
+}
+
+/**
  * What a messenger does for the shared commands. Each CLI implements it over its own library, and
  * nothing of that library's shape crosses it. A chat is passed as typed — a title, an id, a handle —
  * because only the adapter knows how its messenger finds one.
@@ -362,7 +386,8 @@ export interface MessengerAdapter
     Partial<GroupAdmin>,
     Partial<ChatFolders>,
     Partial<ContactBook>,
-    Partial<AccountEditing> {}
+    Partial<AccountEditing>,
+    Partial<AccountHealth> {}
 
 type Method = (...args: never[]) => unknown
 
