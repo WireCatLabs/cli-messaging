@@ -26,7 +26,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 - `conversations search` no longer fails with `not_found` (exit 6) when the local model is not downloaded: it
   answers word matches with `meaning: "unavailable"` and names `models text download` on stderr. It never
   downloads a model or calls a remote one in its place. `ConversationHit` and `FoundConversation` have a new
-  required `stale` field, and `MessageStore` a new `readiness` method.
+  required `stale` field, and `MessageStore` a new `readiness` method; tg-cli and max-cli only call
+  `MessageStore` and use neither hit type, so neither needs a change.
 
 ### Fixed
 
