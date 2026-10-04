@@ -31,6 +31,13 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   downloads a model or calls a remote one in its place. `ConversationHit` and `FoundConversation` have a new
   required `stale` field, and `MessageStore` a new `readiness` method; tg-cli and max-cli only call
   `MessageStore` and use neither hit type, so neither needs a change.
+- `messages search` JSON (and MCP `messages_search`) reports `coverage` and `wordsReady` from the store instead of
+  constants. `wordsReady` is `false` for a metadata-only query (`has:file`, `kind:`) while the word index is still
+  being built; before, it was always `true` there. `coverage.inventoryComplete` is `true` once every account in
+  scope has handed the store its whole chat list (`markChatsLeft` now records when), and its type widens from
+  `false` to `boolean`. `coverage.lastSyncedAt` is the oldest `store fetch` of the chats in scope, `null` when one
+  of them was never fetched; each `completeness` entry adds `fetchedAt`. An existing store answers `false` and
+  `null` until its next full chat list and `store fetch`.
 
 ### Fixed
 

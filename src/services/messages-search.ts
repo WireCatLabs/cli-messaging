@@ -8,7 +8,7 @@ import { FIELD_VERSION, validateAst, validateFields } from "../search/lucene/reg
 import { hasText, type QueryExecution, type ResolvedNode } from "../search/lucene/resolved.js"
 import { type QueryAst, type QueryNode, queryError, walkQuery } from "../search/lucene/types.js"
 import { inSource, sourceOf } from "../search/query.js"
-import type { AccountKey, ChatCompleteness, MessageStore } from "../store/store.js"
+import { type AccountKey, CHAT_LIST_KEY, type ChatCompleteness, type MessageStore } from "../store/store.js"
 import { chatAmong, type SearchFound, type SearchQuery, senderAmong } from "./messages.js"
 
 export interface QueryMetadata {
@@ -21,8 +21,10 @@ export interface QueryMetadata {
 }
 export interface SearchCoverage {
   state: "complete" | "partial" | "unknown"
+  /** The oldest `store fetch` of the chats in scope; `null` when one of them was never fetched. */
   lastSyncedAt: string | null
-  inventoryComplete: false
+  /** Every account in scope has handed the store its whole chat list at least once. */
+  inventoryComplete: boolean
   accounts: AccountKey[]
   chat?: string
   coveredChats: number
@@ -128,7 +130,8 @@ export const searchLucene = async (
     if (!globalChat && (chats.length !== 1 || !requiresChat(ast.root, chats[0] as QueryNode)))
       queryError("topic_scope", { start: 0, end: 0 }, "name one required chat or use --chat")
   }
-  if (hasText(ast.root) && !(await store.searchIndexState())?.ready)
+  const wordsReady = (await store.searchIndexState())?.ready === true
+  if (hasText(ast.root) && !wordsReady)
     throw new CliError("validation_error", "the word index is not ready — run store migrate before strict search", {
       reason: "index_not_ready",
     })
@@ -146,7 +149,9 @@ export const searchLucene = async (
   }
   const found = scopeAccounts.length ? await execute(execution) : { items: [], hasMore: false }
   const completeness: (ChatCompleteness & AccountKey)[] = []
+  let inventoryComplete = scopeAccounts.length > 0
   for (const selected of scopeAccounts) {
+    if (!(await store.syncState(selected, CHAT_LIST_KEY))) inventoryComplete = false
     const chatIds = selectedChat
       ? selected.provider === selectedChat.account.provider && selected.account === selectedChat.account.account
         ? [selectedChat.chatId]
@@ -177,7 +182,7 @@ export const searchLucene = async (
     ...found,
     items,
     corrections: [],
-    wordsReady: true,
+    wordsReady,
     completeness,
     query: {
       language: "lucene-v1",
@@ -189,8 +194,8 @@ export const searchLucene = async (
     },
     coverage: {
       state,
-      lastSyncedAt: null,
-      inventoryComplete: false,
+      lastSyncedAt: oldestFetch(completeness),
+      inventoryComplete,
       accounts: scopeAccounts,
       ...(selectedChat ? { chat: selectedChat.chatId } : {}),
       coveredChats: completeness.length,
@@ -198,6 +203,10 @@ export const searchLucene = async (
   }
 }
 const QUERY_PAGE_LIMIT = 1000
+const oldestFetch = (chats: ChatCompleteness[]): string | null =>
+  chats.length === 0 || chats.some(({ fetchedAt }) => fetchedAt === null)
+    ? null
+    : (chats.map(({ fetchedAt }) => fetchedAt as string).sort()[0] as string)
 const requiresChat = (node: QueryNode, chat: QueryNode): boolean =>
   node === chat ||
   (node.kind === "boolean" && node.clauses.some((clause) => clause.occur === "must" && requiresChat(clause.node, chat)))

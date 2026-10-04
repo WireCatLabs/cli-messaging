@@ -118,7 +118,7 @@ describe("the search, over the owner's scenarios", () => {
 describe("completeness", () => {
   it("**is unknown for a chat nobody fetched**, and complete once fetched to its start without gaps", async () => {
     expect(await store.chatCompleteness(ME, ["1"])).toEqual([
-      { chatId: "1", state: "unknown", upToDate: null, gaps: false, reachesStart: false },
+      { chatId: "1", state: "unknown", upToDate: null, gaps: false, reachesStart: false, fetchedAt: null },
     ])
 
     await store.markRange(ME, "1", 1, 6)

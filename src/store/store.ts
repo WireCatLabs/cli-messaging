@@ -254,6 +254,7 @@ export interface MessageStore {
   /**
    * Given every chat the account is in, marks the rest `left` and says how many it marked. Only
    * ever from a complete list: a page or a cut list says nothing about the chats it leaves out.
+   * Remembers when, so a search can say the store knows the account's whole chat list.
    */
   markChatsLeft(key: AccountKey, present: Id[]): Promise<number>
   /** The chats marked left and the messages they hold; with `clear`, deletes them and all under them. */
@@ -859,7 +860,13 @@ const storeOver = (context: StoreContext): MessageStore => {
 
     markChatsLeft: async (key, present) => {
       const accountKey = findAccountPk(key)
-      return accountKey === undefined ? 0 : chatQueries.markLeft(context, accountKey, present)
+      if (accountKey === undefined) return 0
+      let marked = 0
+      inTransaction(() => {
+        marked = chatQueries.markLeft(context, accountKey, present)
+        writeState(accountKey, completeness.CHAT_LIST_KEY, String(present.length))
+      })
+      return marked
     },
 
     leftChats: async (key, { clear = false } = {}) => {
@@ -961,5 +968,5 @@ const storeOver = (context: StoreContext): MessageStore => {
   }
 }
 
-export { type ChatCompleteness, historyStartKey } from "./sqlite/completeness.js"
+export { CHAT_LIST_KEY, type ChatCompleteness, fetchedKey, historyStartKey } from "./sqlite/completeness.js"
 export type { ScoredHit, SearchScope, WordOptions, WordQuery } from "./sqlite/words.js"

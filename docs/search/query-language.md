@@ -349,8 +349,18 @@ Shared `migrateLegacyQuery` — pure preview, без записи saved query и
 CLI/MCP возвращают `{ items, page, limit, hasMore, corrections, completeness, wordsReady, query, coverage }`.
 Strict `corrections` пуст; version/fieldsVersion/presetVersion/timezone/order описывают execution.
 `coverage` сообщает accounts/chat/coveredChats, complete/partial/unknown, lastSyncedAt и inventoryComplete.
-LastSyncedAt сейчас null: нет доказанного profile refresh watermark. Полнота explicit chat выводится
-из существующих ranges/history-start markers; profile inventory остаётся unknown, даже при hits=0.
+Полнота explicit chat выводится из существующих ranges/history-start markers, даже при hits=0.
+
+- `completeness[].fetchedAt` — когда `store fetch` последний раз прочитал самую новую страницу чата; `null`,
+  если ни разу. Чтение истории другими командами и live-сообщения его не двигают.
+- `lastSyncedAt` — самый старый `fetchedAt` среди чатов охвата; `null`, если хотя бы один чат охвата ни разу
+  не скачивался `store fetch`. Один свежий чат не говорит за весь охват.
+- `inventoryComplete` — `true`, когда каждый account охвата хотя бы раз передал store полный список чатов
+  (первая страница списка без `hasMore`). Это знание «когда-то», а не «сейчас»: чат, появившийся позже,
+  store увидит только при следующем списке. Store до этой версии отвечает `false`/`null`, пока не получит
+  список чатов и `store fetch`.
+- `wordsReady` — реальное состояние word index для любого запроса. Запрос со словами при `false` даёт
+  `index_not_ready`; запрос только по метаданным (`has:file`, `kind:`) работает и честно отвечает `false`.
 Pagination `hasMore` не означает полноту сетевого архива.
 
 MCP принимает `text` или versioned `ast`, не оба; текст и structured input проходят один validator.

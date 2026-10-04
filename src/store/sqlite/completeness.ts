@@ -1,8 +1,13 @@
 import type { Id } from "../../domain/models.js"
 import type { StoreContext } from "./open.js"
+import { toIso } from "./values.js"
 
 /** The sync state that marks a chat fetched back to its first message (phase 2 plan S10). */
 export const historyStartKey = (chatId: Id): string => `history_start:${chatId}`
+/** Set when a `store fetch` run holds the chat's newest page; its `at` is when. */
+export const fetchedKey = (chatId: Id): string => `fetched:${chatId}`
+/** Set when the store was handed the account's whole chat list (`markChatsLeft`); its `at` is when. */
+export const CHAT_LIST_KEY = "chat_list_complete"
 
 export interface ChatCompleteness {
   chatId: Id
@@ -13,6 +18,8 @@ export interface ChatCompleteness {
   /** More than one stretch held, with history missing between them. */
   gaps: boolean
   reachesStart: boolean
+  /** When a `store fetch` last read the chat's newest page; `null` when none has. */
+  fetchedAt: string | null
 }
 
 /** Three facts per chat (NEED-455 A): the newest held against the chat list's, the stretches, and the start reached. */
@@ -24,7 +31,9 @@ export const chatCompleteness = ({ database }: StoreContext, accountKey: number,
          (SELECT max(m.sent_at) FROM messages m WHERE m.chat_pk = c.pk AND m.deleted_at IS NULL) AS held,
          (SELECT count(*) FROM sync_ranges r WHERE r.chat_pk = c.pk) AS stretches,
          EXISTS (SELECT 1 FROM sync_state s WHERE s.account_pk = c.account_pk AND s.key = 'history_start:' || c.native_id)
-           AS start
+           AS start,
+         (SELECT s.at FROM sync_state s WHERE s.account_pk = c.account_pk AND s.key = 'fetched:' || c.native_id)
+           AS fetched
        FROM chats c WHERE c.account_pk = ? AND c.native_id IN (${chatIds.map(() => "?").join(", ")})`,
     )
     .all(accountKey, ...chatIds)
@@ -40,6 +49,7 @@ export const chatCompleteness = ({ database }: StoreContext, accountKey: number,
         upToDate,
         gaps,
         reachesStart,
+        fetchedAt: toIso(row.fetched),
       }
     })
 }
