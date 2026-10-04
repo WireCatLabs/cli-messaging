@@ -72,6 +72,11 @@
       "attachments": [{ "kind": "file", "name": "Отчёт.PDF", "size": 524288 }]
     }
   ],
+  "tags": [
+    { "type": "chat", "chat": "9", "tag": "family" },
+    { "type": "contact", "person": "11", "tag": "work" },
+    { "type": "message", "chat": "7", "message": "102", "tag": "work" }
+  ],
   "recipes": [
     { "title": "Точное слово", "query": "invoice", "ids": ["101", "102", "106"] },
     { "title": "Фраза", "query": "\"invoice paid\"", "ids": ["101", "106"] },
@@ -90,11 +95,14 @@
     { "title": "Файл по имени", "query": "filename:*.pdf", "ids": ["105", "108"] },
     { "title": "Имя файла без учёта регистра и ё", "query": "filename:отчет.pdf", "ids": ["108"] },
     { "title": "Файл больше 1 МБ", "query": "size>1MB", "ids": ["105"] },
-    { "title": "Ссылка на сайт", "query": "has:link AND \"example.org\"", "ids": ["107"] }
+    { "title": "Ссылка на сайт", "query": "has:link AND \"example.org\"", "ids": ["107"] },
+    { "title": "Метка на сообщении или авторе", "query": "tag:work invoice", "ids": ["102", "106"] },
+    { "title": "Метка на чате", "query": "tag:family", "ids": ["103", "108"] },
+    { "title": "Без метки", "query": "invoice NOT tag:work", "ids": ["101"] }
   ],
   "negative": [
     { "query": "foo:bar", "code": "validation_error", "reason": "unknown_field" },
-    { "query": "tag:work", "code": "validation_error", "reason": "unsupported_field" },
+    { "query": "tag:\"two words\"", "code": "validation_error", "reason": "invalid_tag" },
     { "query": "size>10TB", "code": "validation_error", "reason": "invalid_size" },
     { "query": "invoice~1", "code": "validation_error", "reason": "unsupported_operator" },
     { "query": "kind:person", "code": "validation_error", "reason": "unknown_value" }

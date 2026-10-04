@@ -19,6 +19,7 @@ import { moderationTools } from "./tools/moderation.js"
 import { pollReadTools, pollWriteTools } from "./tools/polls.js"
 import { reactionTools } from "./tools/reactions.js"
 import { reviewTools } from "./tools/review.js"
+import { tagsTools } from "./tools/tags.js"
 import { topicsTools, topicWriteTools } from "./tools/topics.js"
 
 /**
@@ -57,3 +58,6 @@ export const sendTools = (messenger: Messenger): Record<string, AnyTool> => ({
   ...reactionTools(messenger),
   ...pollWriteTools(messenger),
 })
+
+/** The owner's own records in the local store — tags — read and written; never sent to the messenger. */
+export const localTools = (messenger: Messenger): Record<string, AnyTool> => tagsTools(messenger)

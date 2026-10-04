@@ -65,7 +65,8 @@ describe("versioned structured AST and field registry", () => {
   })
   it.each([
     ["unknown:foo", "unknown_field"],
-    ["tag:work", "unsupported_field"],
+    ['tag:"two words"', "invalid_tag"],
+    [`tag:${"a".repeat(33)}`, "invalid_tag"],
     ["kind:dialog", "unknown_value"],
     ["has:imaginary", "unknown_value"],
     ["preset:money", "unknown_value"],

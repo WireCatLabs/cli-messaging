@@ -29,6 +29,8 @@ export const MANIFEST: ManifestEntry[] = [
   { name: "20261001231437_version-14-chunks", version: 14, minCompatible: 6 },
   { name: "20261004194933_version-15-stem-state", version: 15, minCompatible: 6 },
   { name: "20261004194950_version-15-stem-index", version: 15, minCompatible: 6 },
+  { name: "20261004201838_version-16-tags", version: 16, minCompatible: 6 },
+  { name: "20261004201839_version-16-tag-triggers", version: 16, minCompatible: 6 },
 ]
 
 export const generatedMigrations = (

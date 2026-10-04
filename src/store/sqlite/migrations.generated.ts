@@ -136,5 +136,20 @@ export const GENERATED: { name: string; statements: string[] }[] = [
       "CREATE TRIGGER message_stems_ad AFTER DELETE ON messages BEGIN\n  DELETE FROM message_stems WHERE rowid = old.pk;\n  DELETE FROM message_stems_pending WHERE pk = old.pk;\nEND;",
       "-- 1 is NORMALIZER_VERSION as of this version; a migration is frozen. Every file starts unbuilt\n-- (analyzer NULL): the first JS fill claims the row with its analyzer and fills up to the watermark.\nINSERT INTO search_index_state (name, watermark, filled_through, terms_through, normalizer_version, analyzer)\n  SELECT 'message_stems', coalesce(max(pk), 0), 0, 0, 1, NULL FROM messages;"
     ]
+  },
+  {
+    "name": "20261004201838_version-16-tags",
+    "statements": [
+      "CREATE TABLE `tags` (\n\t`pk` integer PRIMARY KEY,\n\t`taggable_type` text NOT NULL,\n\t`taggable_pk` integer NOT NULL,\n\t`tag` text NOT NULL,\n\t`created_at` integer NOT NULL,\n\tCONSTRAINT `tags_taggable_type_taggable_pk_tag_unique` UNIQUE(`taggable_type`,`taggable_pk`,`tag`)\n);",
+      "CREATE INDEX `tags_by_tag` ON `tags` (`tag`,`taggable_type`,`taggable_pk`);"
+    ]
+  },
+  {
+    "name": "20261004201839_version-16-tag-triggers",
+    "statements": [
+      "-- A tag has no foreign key to cascade by: these keep a deleted message's or chat's tags from outliving it.\nCREATE TRIGGER tags_message_tombstone AFTER UPDATE OF deleted_at ON messages\n  WHEN old.deleted_at IS NULL AND new.deleted_at IS NOT NULL BEGIN\n  DELETE FROM tags WHERE taggable_type = 'message' AND taggable_pk = new.pk;\nEND;",
+      "CREATE TRIGGER tags_message_ad AFTER DELETE ON messages BEGIN\n  DELETE FROM tags WHERE taggable_type = 'message' AND taggable_pk = old.pk;\nEND;",
+      "CREATE TRIGGER tags_chat_ad AFTER DELETE ON chats BEGIN\n  DELETE FROM tags WHERE taggable_type = 'chat' AND taggable_pk = old.pk;\nEND;"
+    ]
   }
 ]

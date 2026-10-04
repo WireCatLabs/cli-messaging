@@ -132,6 +132,30 @@ tg messages search 'has:link AND "example.org"' --timezone UTC
 
 На synthetic fixture: ids 107. В MAX замените первый аргумент `tg` на `max`.
 
+### Метка на сообщении или авторе
+
+```sh
+tg messages search 'tag:work invoice' --timezone UTC
+```
+
+На synthetic fixture: ids 102, 106. В MAX замените первый аргумент `tg` на `max`.
+
+### Метка на чате
+
+```sh
+tg messages search 'tag:family' --timezone UTC
+```
+
+На synthetic fixture: ids 103, 108. В MAX замените первый аргумент `tg` на `max`.
+
+### Без метки
+
+```sh
+tg messages search 'invoice NOT tag:work' --timezone UTC
+```
+
+На synthetic fixture: ids 101. В MAX замените первый аргумент `tg` на `max`.
+
 <!-- recipes: end -->
 
 ## Операторы
@@ -191,7 +215,7 @@ enum или unsupported сочетание дают ошибку, а не пус
 | `filename` | keyword | NFKD/marks/NFC/lowercase v1, whole name | `filename:*.pdf` | term, phrase, wildcard, regex |
 | `mime` | keyword | lowercase; a value without / matches the first part; only where the messenger reports a type | `mime:"application/pdf" OR mime:image` | term, phrase, wildcard |
 | `size` | bytes | bytes; KB/MB/GB are 1024-based | `size>10MB` | term, phrase, range |
-| `tag` | local-tag | planned | `tag:work` | Планируется; запрос даёт unsupported_field |
+| `tag` | local-tag | lowercase a-z, 0-9 and -, 1-32 characters | `tag:work` | term, phrase |
 
 <!-- fields: end -->
 
@@ -206,7 +230,11 @@ enum или unsupported сочетание дают ошибку, а не пус
 MAX — нет, там ищите по расширению (`filename:*.pdf`). `/` в запросе начинает regex, поэтому полный
 тип пишется в кавычках (`mime:"application/pdf"`), а `mime:image` находит любые картинки.
 Ссылку на сайт находит фраза: `has:link AND "github.com"`; ссылка только карточкой предпросмотра
-тоже считается. `tag` пока даёт unsupported_field.
+тоже считается. `tag:work` находит сообщение с меткой `work`, сообщение в чате с этой меткой и
+сообщение от человека с этой меткой. Метки ставит владелец: `tags add work --chat <chat>`,
+`--contact <person>` или `--message <id> --chat <chat>`; они живут только в локальном хранилище и
+никуда не отправляются. Метка — 1–32 символа a–z, цифры и дефис, регистр не важен; `NOT tag:work`
+точен.
 `date` понимает и относительные даты: `date:today` и `date:yesterday` — календарный день в
 `--timezone`; `date:7d` — с момента 7 дней назад (также `30m`, `2h`); `date>=7d` и
 `date:[30d TO 7d}` — то же в сравнении и диапазоне. Отсчёт идёт от момента запроса.

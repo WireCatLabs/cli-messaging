@@ -14,7 +14,7 @@ import type { MessengerAdapter } from "../cli/messenger/port.js"
 import type { Settings } from "../cli/settings.js"
 import type { WarmEmbedders } from "../embeddings/embed.js"
 import type { SendGuard } from "../sends/guard.js"
-import { keyForCommand, type Permission, type PermissionKey } from "../sends/permissions.js"
+import { keyForCommand, levelFor, type Permission, type PermissionKey } from "../sends/permissions.js"
 import { onlineDeps, storeModeDeps } from "../services/deps.js"
 import { type Services, servicesFor } from "../services/index.js"
 import type { AccountKey, MessageStore } from "../store/store.js"
@@ -100,6 +100,25 @@ export type AnyTool = Omit<Tool<Input>, "online" | "stored" | "served"> & {
 
 /** Typed where it is written; erased here because the SDK checks the arguments against `input` first. */
 export const tool = <S extends Input>(definition: Tool<S>): AnyTool => definition as unknown as AnyTool
+
+/**
+ * A write to the local store alone has no form of its own to put to the owner: where its key asks, it
+ * refuses and names the setting, whichever host mounted it.
+ */
+export const refuseAskedLocalWrite = (
+  defaults: Pick<Defaults, "settings">,
+  permission: PermissionKey,
+  command: string,
+) => {
+  const { level, key } = levelFor(defaults.settings.permissions ?? {}, permission)
+  if (level !== "ask") return
+  throw new CliError(
+    "confirmation_required",
+    `profile ${defaults.settings.profile} asks before ${permission} writes (permissions.${key} is ask); to allow ` +
+      `it: ${command} ${defaults.settings.profile} config set permissions.${permission} allow`,
+    { permission },
+  )
+}
 
 /** The envelope `--json` prints for a paged listing. */
 export const envelope = <T>(

@@ -1,3 +1,4 @@
+import { tagOf } from "../../domain/tags.js"
 import {
   type Operator,
   type Predicate,
@@ -175,12 +176,12 @@ export const QUERY_FIELDS = [
   {
     name: "tag",
     example: "tag:work",
-    index: "planned",
+    index: "tags: the message, its chat or its sender",
     aliases: [],
     type: "local-tag",
     operators: terms,
-    normalization: "planned",
-    support: "planned",
+    normalization: "lowercase a-z, 0-9 and -, 1-32 characters",
+    support: "A2",
   },
 ] as const
 
@@ -206,8 +207,6 @@ export const validatePredicate = (node: Predicate): void => {
   if (!field && ["after", "before"].includes(node.field))
     queryError("legacy_date_field", node.span, "use --language legacy or standard date ranges")
   if (!field) queryError("unknown_field", node.span, "use a field from the search field reference")
-  if (field.support === "planned")
-    queryError("unsupported_field", node.span, `${field.name} is planned for the next archive phase`)
   if (!(field.operators as readonly string[]).includes(node.operator))
     queryError("unsupported_operator", node.span, `${field.name} takes ${field.operators.join(", ")}`)
   if (node.value === "" && !["text", "body"].includes(node.field)) queryError("missing_value", node.span)
@@ -216,6 +215,8 @@ export const validatePredicate = (node: Predicate): void => {
   if (field.name === "size")
     for (const bound of node.operator === "range" ? [node.value, node.upper] : [node.value])
       if (bound !== undefined && bound !== "*") parseBytes(bound, node.span)
+  if (field.name === "tag" && tagOf(node.value) === undefined)
+    queryError("invalid_tag", node.span, "a tag is 1-32 letters a-z, digits and hyphens")
   if (field.name === "topic" && !/^\d+$/u.test(node.value))
     queryError("invalid_topic", node.span, "use a thread id in one chat")
 }

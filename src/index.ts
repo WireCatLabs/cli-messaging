@@ -8,6 +8,7 @@ export { formatLocator, isLocator, type MessageLocator, parseLocator } from "./d
 export { type Markup, parseMarkdown } from "./domain/markdown.js"
 export type { MessageLink, MessagePermalink } from "./domain/message-link.js"
 export type * from "./domain/models.js"
+export { normalizeTag, TAG_TYPES, type TagType } from "./domain/tags.js"
 export type { CheckRow, Finding, Moderator } from "./moderation/check.js"
 export { act, judge } from "./moderation/check.js"
 export type { GroupRules } from "./moderation/rules.js"

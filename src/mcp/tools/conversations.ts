@@ -2,11 +2,10 @@ import { CliError } from "@leemour/cli-core"
 import * as v from "valibot"
 import type { Messenger } from "../../cli/messenger/context.js"
 import { listed } from "../../cli/paging.js"
-import { levelFor } from "../../sends/permissions.js"
 import { REFRESH_BOUNDS } from "../../services/embeddings.js"
 import { servicesFor, storedDeps } from "../../services/index.js"
 import { momentOf } from "../../services/moment.js"
-import { type AnyTool, chatOf, limit, message, READ, tool } from "../tool.js"
+import { type AnyTool, chatOf, limit, message, READ, refuseAskedLocalWrite, tool } from "../tool.js"
 
 /** An MCP client gives up on a call long before 2,000 chunks are embedded. */
 const MCP_MAX_CHUNKS = 500
@@ -159,15 +158,7 @@ export const conversationsTools = (messenger: Messenger): Record<string, AnyTool
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
       key: "conversations.embed",
       stored: async (store, account, args, defaults) => {
-        const { level, key } = levelFor(defaults.settings.permissions ?? {}, "conversations.embed")
-        if (level === "ask") {
-          throw new CliError(
-            "confirmation_required",
-            `profile ${defaults.settings.profile} asks before conversations.embed writes (permissions.${key} is ` +
-              `ask); to allow it: ${command} ${defaults.settings.profile} config set permissions.conversations.embed allow`,
-            { permission: "conversations.embed" },
-          )
-        }
+        refuseAskedLocalWrite(defaults, "conversations.embed", command)
         const deps = {
           ...storedDeps(messenger, store, account, defaults.guard),
           env: defaults.env,

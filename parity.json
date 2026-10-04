@@ -138,6 +138,10 @@
       "meaning": "show the owner every write the MCP server offers, in a form to approve",
       "note": "MAX retains its native wrapper wording; confirmation semantics already follow profile permissions in both CLIs"
     },
+    "--contact": {
+      "value": "<person>",
+      "meaning": "the person to tag or untag: their id, @username or name, as the local store knows them"
+    },
     "--context": {
       "value": "<n>",
       "meaning": "messages before and after each hit"
@@ -277,6 +281,10 @@
     "--members-see-link": {
       "value": "<on|off>",
       "meaning": "members may see the invite link"
+    },
+    "--message": {
+      "value": "<message>",
+      "meaning": "the message to tag or untag: its id in --chat, or a msg: locator alone"
     },
     "--method": {
       "value": "<method>",
@@ -471,6 +479,10 @@
       "value": "<profile>",
       "meaning": "keep a returned authentication token only in this bot profile's OS keyring; never print it"
     },
+    "--tag": {
+      "value": "<tag>",
+      "meaning": "only this tag"
+    },
     "--text": {
       "value": "<text>",
       "meaning": "the message's new text; - reads stdin"
@@ -513,7 +525,8 @@
     },
     "--type": {
       "value": "<names>",
-      "meaning": "only events of these types, comma-separated, as the messenger names them"
+      "meaning": "only these types",
+      "note": "each command names its own types — chats events the messenger's event types, comma-separated, as it names them; tags list chat, contact or message — so it differs on purpose (Help text rule 4)"
     },
     "--types": {
       "value": "<value>",
@@ -2291,6 +2304,60 @@
     },
     "store status": {
       "in": "all"
+    },
+    "tags": {
+      "in": [],
+      "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" }
+    },
+    "tags add": {
+      "in": [],
+      "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" },
+      "options": {
+        "--chat": {
+          "in": [],
+          "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" }
+        },
+        "--contact": {
+          "in": [],
+          "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" }
+        },
+        "--message": {
+          "in": [],
+          "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" }
+        }
+      }
+    },
+    "tags list": {
+      "in": [],
+      "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" },
+      "options": {
+        "--tag": {
+          "in": [],
+          "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" }
+        },
+        "--type": {
+          "in": [],
+          "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" }
+        }
+      }
+    },
+    "tags remove": {
+      "in": [],
+      "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" },
+      "options": {
+        "--chat": {
+          "in": [],
+          "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" }
+        },
+        "--contact": {
+          "in": [],
+          "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" }
+        },
+        "--message": {
+          "in": [],
+          "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" }
+        }
+      }
     },
     "topics": {
       "in": ["tg"],
