@@ -15,7 +15,10 @@ export interface ChatCompleteness {
   reachesStart: boolean
 }
 
-/** Three facts per chat (NEED-455 A): the newest held against the chat list's, the stretches, and the start reached. */
+/**
+ * Three facts per chat (NEED-455 A): the newest held against the chat list's, the stretches, and the start reached.
+ * A start mark that a later fetch reached past was wrong, so it stops counting.
+ */
 export const chatCompleteness = ({ database }: StoreContext, accountKey: number, chatIds: Id[]): ChatCompleteness[] => {
   if (chatIds.length === 0) return []
   return database
@@ -23,7 +26,8 @@ export const chatCompleteness = ({ database }: StoreContext, accountKey: number,
       `SELECT c.native_id AS chat, c.last_message_at AS newest,
          (SELECT max(m.sent_at) FROM messages m WHERE m.chat_pk = c.pk AND m.deleted_at IS NULL) AS held,
          (SELECT count(*) FROM sync_ranges r WHERE r.chat_pk = c.pk) AS stretches,
-         EXISTS (SELECT 1 FROM sync_state s WHERE s.account_pk = c.account_pk AND s.key = 'history_start:' || c.native_id)
+         EXISTS (SELECT 1 FROM sync_state s WHERE s.account_pk = c.account_pk AND s.key = 'history_start:' || c.native_id
+           AND NOT EXISTS (SELECT 1 FROM sync_ranges r WHERE r.chat_pk = c.pk AND r.from_key < CAST(s.value AS INTEGER)))
            AS start
        FROM chats c WHERE c.account_pk = ? AND c.native_id IN (${chatIds.map(() => "?").join(", ")})`,
     )

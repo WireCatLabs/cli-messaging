@@ -6,6 +6,18 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Changed — may break callers
+
+- `store fetch --page-size` takes at most 100 with the shared Telegram fetching defaults; a larger size is
+  refused with `validation_error` (exit 2). A messenger that declares its own `fetching` without
+  `maxPageSize` — MAX — keeps any size.
+
+### Fixed
+
+- A chat no longer reads as complete when a later `store fetch` held messages older than the point an earlier
+  fetch took for its first one. Run `store fetch <chat>` again: once it finds older messages, the chat reads as
+  partial until a fetch reaches its real start.
+
 ## 0.146.0 — 04.10.2026
 
 Released early: tg-cli: its parity check refuses the mcp --http flags of 0.145.0; max-cli needs the exported HTTP pieces

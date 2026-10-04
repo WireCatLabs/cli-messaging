@@ -25,7 +25,7 @@ const pushed = (deps: ServiceDeps, what: string) => {
 export const PAGE = 100
 
 /** How `store fetch` reads a messenger's history, where it says nothing of its own. */
-export const FETCHING: Fetching = { page: PAGE, pause: "1s", maxPages: 10, orderBy: "id" }
+export const FETCHING: Fetching = { page: PAGE, maxPageSize: PAGE, pause: "1s", maxPages: 10, orderBy: "id" }
 
 /**
  * What a held stretch is keyed by, for `store fetch` and `download --all` alike: the message id, or its
