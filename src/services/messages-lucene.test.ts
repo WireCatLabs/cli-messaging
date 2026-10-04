@@ -181,6 +181,23 @@ describe.each(["max", "telegram"])("strict store profile (%s)", (provider) => {
     expect(ids(await run(store, account, "filename:*.pdf"))).toEqual([count])
     expect((await run(store, account, "has:file AND NOT filename:*.jpg")).items).toHaveLength(1)
   }, 60_000)
+  it("counts a link preview without a typed URL as a link", async () => {
+    const store = await open()
+    await store.saveChats(account, [chat("1")])
+    await store.saveMessages(
+      account,
+      "1",
+      [
+        message("1", "1", "look", { attachments: [{ kind: "share", url: "https://example.org", title: "A page" }] }),
+        message("2", "1", "look", { attachments: [{ kind: "webpage" }] }),
+        message("3", "1", "see https://example.org"),
+        message("4", "1", "look", { attachments: [{ kind: "photo", url: "https://example.org/a.jpg" }] }),
+      ],
+      { via: "history" },
+    )
+    expect(ids(await run(store, account, "has:link"))).toEqual([1, 2, 3])
+    expect(ids(await run(store, account, "look AND NOT has:link"))).toEqual([4])
+  })
   it("uses typed date ranges and body/term regex with stable pagination", async () => {
     const store = await open()
     await seed(store, account)

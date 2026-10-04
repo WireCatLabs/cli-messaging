@@ -201,7 +201,10 @@ export const matchQuery = async (context: StoreContext, execution: QueryExecutio
       const kind = value.toLowerCase()
       fragment =
         kind === "link"
-          ? bound("m.pk IN (SELECT rowid FROM messages_fts WHERE messages_fts MATCH ?)", quoted("://"))
+          ? bound(
+              "(m.pk IN (SELECT rowid FROM messages_fts WHERE messages_fts MATCH ?) OR EXISTS (SELECT 1 FROM attachments att WHERE att.message_pk=m.pk AND att.kind IN ('share','webpage')))",
+              quoted("://"),
+            )
           : kind === "attachment"
             ? bound("EXISTS (SELECT 1 FROM attachments att WHERE att.message_pk=m.pk)")
             : bound("EXISTS (SELECT 1 FROM attachments att WHERE att.message_pk=m.pk AND att.kind=?)", kind)
