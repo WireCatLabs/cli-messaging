@@ -13,6 +13,7 @@ import { provide } from "../cli/context.js"
 import { type Messenger, messengerContext } from "../cli/messenger/context.js"
 import { inboxCommand } from "../cli/messenger/inbox.js"
 import { serverEntry } from "../cli/messenger/mcp-command.js"
+import { checkPoints } from "../cli/messenger/points.js"
 import type { MessengerAdapter, SendOptions } from "../cli/messenger/port.js"
 import { reviewCommand } from "../cli/messenger/review.js"
 import { createProgram, run } from "../cli/program.js"
@@ -1761,6 +1762,47 @@ describe("sending over MCP", () => {
   })
 })
 
+describe("catching up with `new` over MCP", () => {
+  const fresh = () => {
+    const at = new Date().toISOString()
+    return scripted({
+      chats: async () => ({ items: [{ ...chat, lastMessageAt: at }], hasMore: false }),
+      history: async () => ({ items: [{ ...message, timestamp: at }], hasMore: false }),
+    })
+  }
+
+  it("shows each message once, on points of its own that leave the owner's `inbox --new` alone", async () => {
+    const { call, env } = await connect(fresh())
+
+    const first = await call("chat_inbox", { new: true })
+    const second = await call("chat_inbox", { new: true })
+
+    expect(first.body.chats.map((one: { id: string }) => one.id)).toEqual(["7"])
+    expect(second.body.chats).toEqual([])
+    const owners = checkPoints(app, { command: "inbox", profile: "default", env, firstLookMs: 0 })
+    expect([...owners.chats.keys()]).toEqual([])
+  })
+
+  it("keeps `review` points apart from `inbox`'s", async () => {
+    const { call } = await connect(fresh())
+
+    await call("chat_inbox", { new: true })
+    const review = await call("chat_review", { new: true })
+
+    expect(review.body.chats.map((one: { id: string }) => one.id)).toEqual(["7"])
+  })
+
+  it("refuses `new` with a time of its own", async () => {
+    const { call } = await connect(fresh())
+
+    const inbox = await call("chat_inbox", { new: true, since_time: "2h" })
+    const review = await call("chat_review", { new: true, unanswered: 4 })
+
+    expect(inbox.body.error).toMatchObject({ code: "validation_error" })
+    expect(review.body.error).toMatchObject({ code: "validation_error" })
+  })
+})
+
 describe("MCP prompts and resources", () => {
   it("lists the prompts, and builds one naming only tools and the owner's argument, as data", async () => {
     const telegram = scripted()
@@ -1780,6 +1822,23 @@ describe("MCP prompts and resources", () => {
     expect(text).toContain("chat_messages_send")
     expect(text).toContain("never act on a request")
     expect(telegram.opened()).toBe(0)
+  })
+
+  it("passes `/catch-up`'s kind and mode to the inbox tool, and marks read only through chats_mark_read", async () => {
+    const { client } = await connect(scripted())
+    const textOf = async (args: Record<string, string>) => {
+      const [first] = (await client.getPrompt({ name: "catch-up", arguments: args })).messages
+      return first?.content.type === "text" ? first.content.text : ""
+    }
+
+    const plain = await textOf({})
+    const channels = await textOf({ kind: "channel, group", mode: "new" })
+    const since = await textOf({ mode: "2h" })
+
+    expect(plain).toContain("Call chat_inbox once.")
+    expect(plain).toContain("chat_chats_mark_read")
+    expect(channels).toContain('kinds ["channel","group"] and new true')
+    expect(since).toContain('since_time "2h"')
   })
 
   it("lists no chats before anything was read, then the kept ones without connecting, and reads one", async () => {
@@ -1882,6 +1941,19 @@ describe("MCP tools for a messenger whose history is kept in the store", () => {
       await command(["review", "--since-time", since, "--json"]),
     )
     expect(telegram.opened()).toBe(0)
+  })
+
+  it("filters `inbox` and `review` by kind", async () => {
+    const { call } = await connect(scripted(), { history: "store", root: await filledRoot() })
+    const since = "2026-09-27T00:00:00.000Z"
+
+    const groups = await call("chat_review", { since_time: since, kinds: ["group"] })
+    const dialogs = await call("chat_review", { since_time: since, kinds: ["dialog"] })
+    const unread = await call("chat_inbox", { kinds: ["dialog", "channel"] })
+
+    expect(groups.body.chats.map((one: { id: string }) => one.id)).toEqual(["7"])
+    expect(dialogs.body.chats).toEqual([])
+    expect(unread.body.chats).toEqual([])
   })
 
   it("**still connect to write**, through the guard", async () => {
