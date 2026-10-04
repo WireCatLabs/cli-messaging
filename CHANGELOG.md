@@ -31,6 +31,10 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 - `tag:<tag>` in a strict search, until now refused with `unsupported_field`: a message tagged, in a tagged chat,
   or from a tagged person. Exact, so `NOT tag:work` is exact too. Store version 16 adds the `tags` table and the
   triggers that drop a message's or chat's tags when it is deleted, under any build; `min_compatible` stays 6.
+- `replies test [rule] [--since-time <time>]`: what the auto-reply rules would have answered in the stored
+  messages (7 days if not given), to whom, with what text, and how many messages each rule passed over and why.
+  It tries a rule that is off as if it were on, applies the limits as `serve` would, and starts each run from an
+  empty memory of past replies. It never connects, sends nothing and writes no file. Nothing answers messages yet.
 
 ### Changed — may break callers
 

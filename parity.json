@@ -2012,6 +2012,20 @@
     "recipients remove": {
       "in": "all"
     },
+    "replies": {
+      "in": [],
+      "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" }
+    },
+    "replies test": {
+      "in": [],
+      "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" },
+      "options": {
+        "--since-time": {
+          "in": [],
+          "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" }
+        }
+      }
+    },
     "review": {
       "in": "all",
       "options": {

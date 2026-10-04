@@ -159,6 +159,7 @@ export type {
   Transcript,
 } from "./messenger/port.js"
 export { reactionsCommand } from "./messenger/reactions-command.js"
+export { repliesCommand } from "./messenger/replies-command.js"
 export { reviewCommand } from "./messenger/review.js"
 export { serveCommand, servingProfiles } from "./messenger/serve-command.js"
 export {
