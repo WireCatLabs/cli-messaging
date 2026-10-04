@@ -130,7 +130,8 @@
       "meaning": "remote: requests at once (default: 4)"
     },
     "--confirm-send": {
-      "meaning": "show the owner every write the MCP server offers, in a form to approve"
+      "meaning": "show the owner every write the MCP server offers, in a form to approve",
+      "note": "MAX retains its native wrapper wording; confirmation semantics already follow profile permissions in both CLIs"
     },
     "--context": {
       "value": "<n>",
