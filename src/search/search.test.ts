@@ -107,11 +107,17 @@ describe("the search, over the owner's scenarios", () => {
     database.exec("UPDATE search_index_state SET filled_through = 0, watermark = 99")
     database.close()
     const found = await search(store, parseQuery("gestor"), { accounts: [ME] }, { limit: 10 })
+    const filtered = await search(store, parseQuery("before:2026-09-02"), { accounts: [ME] }, { limit: 10 })
     const restore = await openCache(path)
     restore.exec("UPDATE search_index_state SET filled_through = 6, watermark = 6")
     restore.close()
 
     expect(found).toMatchObject({ wordsReady: false, items: [{ id: "1", match: "substring" }] })
+    expect(filtered.wordsReady).toBe(false)
+    expect(filtered.items[0]).toMatchObject({ match: "filters" })
+    expect(await search(store, parseQuery("before:2026-09-02"), { accounts: [ME] }, { limit: 1 })).toMatchObject({
+      wordsReady: true,
+    })
   })
 })
 

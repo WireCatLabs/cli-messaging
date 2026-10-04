@@ -416,7 +416,7 @@ export const searchStore = async (
           ...(chat === undefined ? {} : { chatId: await storedChatId(messenger, chat, store, account) }),
         })),
         corrections: [],
-        wordsReady: true,
+        wordsReady: (await store.searchIndexState())?.ready === true,
       }
     : await search(
         store,

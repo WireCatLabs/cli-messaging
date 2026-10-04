@@ -40,6 +40,9 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   `null` until its next full chat list and `store fetch`. `ChatCompleteness` gains a required `fetchedAt`; neither
   CLI builds one. max-cli's `src/mcp.test.ts` expects `coverage.inventoryComplete: false` after a login that hands
   the store the whole chat list, so it will likely read `true` after the upgrade.
+- Legacy `messages search` (`--language legacy`, `--regex`) and bot `people search` report the real `wordsReady` for
+  a filters-only or `--regex` search too, instead of always `true`. The stderr note now says a search by words
+  reads pieces of words until `store migrate` finishes the index.
 
 ### Fixed
 

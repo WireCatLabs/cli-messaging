@@ -72,7 +72,7 @@ export const messagesSearchCommand = (messenger: Messenger): Command =>
         context.renderer.note(
           found.query
             ? `the word index is still being built, so a search by words fails until \`${command} store migrate\` finishes it`
-            : `the word index is still being built, so this searched pieces of words — \`${command} store migrate\` finishes it`,
+            : `the word index is still being built, so a search by words reads pieces of words until \`${command} store migrate\` finishes it`,
         )
       }
       const incomplete = found.completeness.filter((chat) => chat.state !== "complete").length
