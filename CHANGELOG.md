@@ -47,6 +47,17 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   (`answerMessagesSearch` and `answerMessagesStats` take the searches service as a fourth argument; without it
   `saved` is refused). Keys `searches.create`, `searches.delete`, `searches.clear`. Store version 17 adds the
   `searches` table; `min_compatible` stays 6. Each CLI mounts `searchesCommand` at its next bump.
+- `doctor` says `login: { state: "not checked" }` until `--online` is given — a session file on disk is not a
+  working login. With `--online` the login is `ok` or `failed`, with a hint.
+- `doctor` names every private file or folder others can read — the store and its `-wal`/`-shm`, the send journal,
+  the runs folder, and the store's folder unless `MESSAGING_STORE` chose it — with the `chmod` that fixes it. It never
+  changes a mode itself. Not checked on Windows.
+- `doctor --online` reports `clock: { skewMs, uncertaintyMs, ok }` against the messenger's own time, warning at 10 s,
+  and `standing` (`active`, `frozen`, `banned`, `deactivated`, `revoked`, `unknown`) with any dates and appeal link.
+  Both come from the new optional adapter group `AccountHealth` and from `details.standing` on a refusal. A messenger
+  with `health` that could not check the standing reports `unknown`, never `active`.
+- `mcp doctor` shows the last 20 lines (at most 2 KB) of the server's stderr when it fails to start, with the home
+  folder, long numbers and token-like strings hidden.
 
 ### Changed — may break callers
 
@@ -74,6 +85,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   have them.
 - Two `serve`s started in the same instant for one profile can no longer both run. The lock is now
   taken in one step (`takeLock`, exported from `background`), not read and then written.
+- A problem report labels every id of a send-journal line: `threadId`, `resultChatId`, `operationId`,
+  `parentOperationId` and `reservation` were copied raw, and a send's raw `operationId` is its `sendId`.
 
 ## 0.147.0 — 04.10.2026
 

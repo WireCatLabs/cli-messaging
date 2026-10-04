@@ -131,6 +131,8 @@ export { pinCommand, unpinCommand } from "./messenger/messages-pin-command.js"
 export { modelsCommand } from "./messenger/models-command.js"
 export { pollsCommand } from "./messenger/polls-command.js"
 export type {
+  AccountHealth,
+  AccountStanding,
   AccountTools,
   After,
   ChatReading,
@@ -158,6 +160,7 @@ export type {
   ThreadAddressing,
   Transcript,
 } from "./messenger/port.js"
+export { type ModeProblem, type PrivateFiles, privateFiles, withSqliteSidecars } from "./messenger/private-files.js"
 export { reactionsCommand } from "./messenger/reactions-command.js"
 export { repliesCommand } from "./messenger/replies-command.js"
 export { reviewCommand } from "./messenger/review.js"

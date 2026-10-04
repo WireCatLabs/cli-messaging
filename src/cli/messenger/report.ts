@@ -65,15 +65,34 @@ export const buildReport = ({
       ...(account?.remembered ? { account: { ...account, remembered: label(account.remembered) } } : {}),
     },
     run: chosen ? { metadata: chosen.metadata, events: readEvents(chosen.dir).map(eventOf(label)) } : null,
-    sends: sends.slice(-RECENT_SENDS).map((entry) => ({
-      ...entry,
-      chatId: entry.chatId === null ? null : label(entry.chatId),
-      ...(entry.messageId === undefined ? {} : { messageId: label(entry.messageId) }),
-      ...(entry.replyTo === undefined ? {} : { replyTo: label(entry.replyTo) }),
-      ...(entry.sendId === undefined ? {} : { sendId: label(entry.sendId) }),
-    })),
+    sends: sends.slice(-RECENT_SENDS).map((entry) => labelled(entry, label)),
   }
   return JSON.parse(hideHome(JSON.stringify(report), home)) as Report
+}
+
+/**
+ * Every field of a journal line that names a chat, a message or a write. A send's `operationId` is
+ * its `sendId`, so one left raw would undo the other's label.
+ */
+export const SEND_ID_FIELDS = [
+  "chatId",
+  "messageId",
+  "replyTo",
+  "threadId",
+  "resultChatId",
+  "sendId",
+  "operationId",
+  "parentOperationId",
+  "reservation",
+] as const satisfies readonly (keyof SendEntry)[]
+
+const labelled = (entry: SendEntry, label: (id: string) => string): SendEntry => {
+  const copy: Record<string, unknown> = { ...entry }
+  for (const field of SEND_ID_FIELDS) {
+    const value = copy[field]
+    if (value !== undefined && value !== null) copy[field] = label(String(value))
+  }
+  return copy as unknown as SendEntry
 }
 
 export const reportFileName = (app: string, now: Date): string =>
