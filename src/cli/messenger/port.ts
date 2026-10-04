@@ -332,10 +332,10 @@ export interface ChatFolders {
 /**
  * A state the messenger put the account in, where it is not simply logged in. An adapter reports
  * `frozen` from `health`; the others come as `details.standing` on the error its requests throw.
- * Dates are ISO 8601.
+ * `limited` is a write refused as spam, with no end the messenger reports. Dates are ISO 8601.
  */
 export interface AccountStanding {
-  state: "frozen" | "banned" | "deactivated" | "revoked"
+  state: "frozen" | "limited" | "banned" | "deactivated" | "revoked"
   since?: string
   until?: string
   appealUrl?: string

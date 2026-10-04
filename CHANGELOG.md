@@ -58,8 +58,29 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   with `health` that could not check the standing reports `unknown`, never `active`.
 - `mcp doctor` shows the last 20 lines (at most 2 KB) of the server's stderr when it fails to start, with the home
   folder, long numbers and token-like strings hidden.
+- **`flood clear`** forgets the profile's remembered waits and lifts its hold on writes, says what it cleared, and
+  answers `{ profile, cleared: { deadlines, sendBlock } }` with `--json`. It never connects. Exported as
+  `floodCommand` from `./cli`; tg and max list it as planned until their next cli-messaging bump. No MCP tool on
+  purpose: an agent must not lift a hold. STANDARD adds `flood` to the singular resources and defines the word.
+- `server status` and `doctor` show the waits a messenger asked this profile to keep, and a hold on its writes, as
+  `flood: { deadlines, sendBlock }`. `FloodMemory` and `floodPathFor` are exported from `./sends`. The new
+  `AccountStanding` state `limited` is a write refused as spam, with no end the messenger reports.
 
 ### Changed — may break callers
+
+- **A wait the messenger asked for is remembered.** A `rate_limited` answer with `retryAfterMs` is kept in
+  `<state dir>/flood/<profile>.json` (0600) per adapter call, and per chat when the call named one by id. Until it
+  passes, the same call fails at once with `rate_limited`, `retryAfterMs` and `details.remembered: true`, without
+  asking the messenger. A caller that retried at once after exit 8 now gets exit 8 again, sooner. At most 50 are
+  kept; expired ones are dropped. The consumer test this touches: "stops at a long wait with what it had read kept"
+  in `backfill.test.ts` now expects the next run refused until the wait passes.
+- **A frozen or spam-limited account's writes are held.** A refusal with `details.standing.state` `frozen` or
+  `limited` holds every write that counts toward `sendsPerHour` — reads, reactions and marking read still work —
+  with a `permission_error` (exit 5) that says until when and points the owner to `doctor --online` and
+  `flood clear`. The hold lasts until the messenger's `until`; without one, a spam limit holds for an hour
+  (`LIMITED_HOLD_MS`), set again by each new refusal, and a frozen account for a day (`FROZEN_HOLD_MS`).
+  `doctor --online` sets a frozen hold on a frozen standing, with the messenger's dates, and lifts it on an active
+  one; it never lifts a spam limit.
 
 - The adapter contract case for `historyAfter` no longer requires `hasMore: false` on a page shorter than the
   limit: Telegram drops deleted messages from a page, so a short page proves no end. It now reads past the newest

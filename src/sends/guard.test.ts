@@ -1,8 +1,12 @@
 import { existsSync, mkdirSync, mkdtempSync, utimesSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { dirname, join } from "node:path"
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
+import { flooded } from "../cli/messenger/flooded.js"
+import type { MessengerAdapter } from "../cli/messenger/port.js"
+import { FloodMemory } from "./flood.js"
 import { sendGuard } from "./guard.js"
+import { guardedWrite } from "./guarded.js"
 import { SendJournal, sendsPathFor as sendsPath } from "./journal.js"
 import { RecipientList, recipientsPathFor as recipientsPath } from "./recipients.js"
 import { newSendId } from "./send-id.js"
@@ -298,5 +302,71 @@ describe("topic creation identities", () => {
     expect(() => forProfile("topic-reservation").check(request)).toThrow("already attempted")
     first.record({ ...request, outcome: "failed", errorCode: "permission_error" })
     expect(() => forProfile("topic-reservation").check(request, { reserve: false })).not.toThrow()
+  })
+})
+
+describe("a profile whose writes are held", () => {
+  it("**refuses a message before it goes, journals the refusal, and still lets a reaction through**", async () => {
+    const profile = "held"
+    const flood = new FloodMemory(join(env.APP_STATE_DIR, "flood", `${profile}.json`))
+    flood.block({ state: "limited", hint: "Telegram limited this account's messages as spam" })
+    const journal = new SendJournal(sendsPathFor(profile))
+    const guard = sendGuard({
+      profile,
+      command: "app",
+      readOnly: false,
+      readOnlyFrom: "default",
+      sendsPerHour: 30,
+      journal,
+      recipients: new RecipientList(recipientsPathFor(profile), app.command),
+      flood,
+      warn: () => {},
+    })
+    const act = vi.fn(async () => ({}))
+
+    const refused = guardedWrite(guard, { chatId: "1", sendId: "9", operationId: "9" }, act)
+    await expect(refused).rejects.toMatchObject({
+      code: "permission_error",
+      details: { standing: { state: "limited" } },
+    })
+    await expect(refused).rejects.toThrow(
+      /do not retry: the owner checks the account with `app held doctor --online`, and lifts the hold with `app held flood clear` once it is over$/,
+    )
+    expect(act).not.toHaveBeenCalled()
+    expect(journal.entries().map((entry) => entry.outcome)).toEqual(["refused"])
+
+    expect(() => guard.check({ chatId: "1", kind: "reaction" })).not.toThrow()
+  })
+})
+
+describe("a send the messenger asked to hold off on", () => {
+  it("**is journaled failed with rate_limited, its reservation settled** — never an unknown outcome", async () => {
+    const profile = "remembered"
+    const flood = new FloodMemory(join(env.APP_STATE_DIR, "flood", `${profile}.json`))
+    flood.remember({ operation: "send", chatId: "1", waitMs: 60_000 })
+    const journal = new SendJournal(sendsPathFor(profile))
+    const guard = sendGuard({
+      profile,
+      readOnly: false,
+      readOnlyFrom: "default",
+      sendsPerHour: 30,
+      journal,
+      recipients: new RecipientList(recipientsPathFor(profile), app.command),
+      flood,
+      warn: () => {},
+    })
+    const inner = { self: () => "1", send: vi.fn(async () => ({})) } as unknown as MessengerAdapter
+    const adapter = flooded(inner, flood, { name: "Chat", warn: () => {} })
+
+    await expect(
+      guardedWrite(guard, { chatId: "1", sendId: "9", operationId: "9" }, () =>
+        adapter.send("1", "hi", { sendId: "9" }),
+      ),
+    ).rejects.toMatchObject({ code: "rate_limited", details: { remembered: true } })
+    expect(inner.send).not.toHaveBeenCalled()
+    // One line: the reservation was folded into its outcome, so it no longer counts toward the hour.
+    expect(journal.entries()).toEqual([
+      expect.objectContaining({ outcome: "failed", errorCode: "rate_limited", sendId: "9" }),
+    ])
   })
 })

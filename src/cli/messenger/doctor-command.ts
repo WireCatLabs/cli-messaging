@@ -1,6 +1,7 @@
 import { dirname, resolve } from "node:path"
 import { writeSecurely } from "@leemour/cli-core"
 import { Command } from "commander"
+import { FloodMemory, floodPathFor } from "../../sends/flood.js"
 import { SendJournal, sendsPathFor } from "../../sends/journal.js"
 import { storePath } from "../../store/path.js"
 import { type BaseContext, baseContext, environmentOf, outputFor } from "../context.js"
@@ -30,6 +31,8 @@ export const doctorCommand = (messenger: Messenger): Command => {
         const checked = await onlineCheck(this, messenger, rememberedOf(report))
         report.online = checked
         report.login = { state: checked.ok ? "ok" : "failed", ...(checked.hint ? { hint: checked.hint } : {}) }
+        const flood = report.flood as { path: string } | undefined
+        if (flood) report.flood = floodState(followStanding(new FloodMemory(flood.path), checked.standing))
       }
       ;(renderer ?? outputFor(this).renderer).result(report)
     })
@@ -138,6 +141,7 @@ const diagnose = async (
   const account = recalledAccount(app, provider, profile, env)
   const store = storePath(env)
   const sends = sendsPathFor(app, profile, env)
+  const flood = floodPathFor(app, profile, env)
 
   return {
     renderer,
@@ -154,17 +158,41 @@ const diagnose = async (
       },
       store: await storeSummary(env),
       sends: sendsState(new SendJournal(sendsPathFor(app, profile, env))),
+      flood: floodState(new FloodMemory(flood)),
       runs: { directory: runsDirFor(app, env), kept: listRuns(runsDirFor(app, env)).length },
       files: privateFiles({
-        files: [...withSqliteSidecars(store), sends],
+        files: [...withSqliteSidecars(store), sends, flood],
         // A folder the owner chose with MESSAGING_STORE may rightly be shared, like the home folder itself.
-        dirs: [...(env.MESSAGING_STORE ? [] : [dirname(store)]), dirname(sends), runsDirFor(app, env)],
+        dirs: [...(env.MESSAGING_STORE ? [] : [dirname(store)]), dirname(sends), dirname(flood), runsDirFor(app, env)],
       }),
       [provider]: await (messenger.diagnose?.(command, context) ?? Promise.resolve({})).catch((error) => ({
         error: messageOf(error),
       })),
     },
   }
+}
+
+/** What the messenger asked this profile to wait for, still in force — what the next command would be refused. */
+export const floodState = (memory: FloodMemory) => {
+  const { deadlines, sendBlock } = memory.read()
+  return { path: memory.path, deadlines, sendBlock: sendBlock ?? null }
+}
+
+/**
+ * A frozen account seen here holds writes as a refused one would; one seen active lifts a frozen
+ * hold. A spam limit is never lifted here: the messenger does not say when one ends.
+ */
+const followStanding = (memory: FloodMemory, standing: { state: string; until?: string; hint?: string }) => {
+  try {
+    if (standing.state === "frozen") {
+      memory.block({
+        state: "frozen",
+        hint: standing.hint ?? "the account is frozen",
+        ...(standing.until ? { until: standing.until } : {}),
+      })
+    } else if (standing.state === "active") memory.unblock("frozen")
+  } catch {}
+  return memory
 }
 
 const sendsState = (journal: SendJournal) => {
@@ -184,7 +212,7 @@ const sendsState = (journal: SendJournal) => {
  */
 export const CLOCK_SKEW_WARN_MS = 10_000
 
-const STANDINGS = new Set<AccountStanding["state"]>(["frozen", "banned", "deactivated", "revoked"])
+const STANDINGS = new Set<AccountStanding["state"]>(["frozen", "limited", "banned", "deactivated", "revoked"])
 
 const standingOf = (error: unknown): AccountStanding | undefined => {
   const standing = (error as { details?: { standing?: AccountStanding } })?.details?.standing

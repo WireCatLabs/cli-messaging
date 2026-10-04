@@ -4,6 +4,7 @@ import { join } from "node:path"
 import { CliError, captureStreams } from "@leemour/cli-core"
 import { describe, expect, it } from "vitest"
 import type { Chat } from "../../domain/models.js"
+import { FloodMemory } from "../../sends/flood.js"
 import type { SendEntry } from "../../sends/journal.js"
 import { MIGRATIONS, migrate } from "../../store/migrations.js"
 import { openCache } from "../../store/open.js"
@@ -218,6 +219,25 @@ describe("doctor --online", () => {
     expect(code).toBe(0)
     expect(answer.online).toMatchObject({ ok: true, standing: frozen, hint: frozen.hint })
     expect(answer.login).toEqual({ state: "ok", hint: frozen.hint })
+  })
+
+  it("**holds writes once it sees the account frozen, and lifts only that hold once it sees it active**", async () => {
+    const { env } = setup()
+    const until = new Date(Date.now() + 30 * 86_400_000).toISOString()
+    const frozen = { state: "frozen" as const, until, hint: "frozen until the appeal" }
+    const first = await call(["doctor", "--online", "--json"], env, async () =>
+      withHealth(async () => ({ standingChecked: true, serverTime: Date.now(), standing: frozen })),
+    )
+    expect(first.answer.flood).toMatchObject({ deadlines: [], sendBlock: { state: "frozen", until } })
+
+    const active = async () => withHealth(async () => ({ standingChecked: true, serverTime: Date.now() }))
+    expect((await call(["doctor", "--online", "--json"], env, active)).answer.flood.sendBlock).toBeNull()
+
+    new FloodMemory(join(env.CHAT_STATE_DIR, "flood", "default.json")).block({ state: "limited", hint: "spam" })
+    expect((await call(["doctor", "--online", "--json"], env, active)).answer.flood.sendBlock).toMatchObject({
+      state: "limited",
+    })
+    expect((await call(["doctor", "--json"], env, refused)).answer.flood.sendBlock).toMatchObject({ state: "limited" })
   })
 
   it("reports a banned account as a state, from the refusal, and still reads the clock", async () => {

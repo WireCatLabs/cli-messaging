@@ -2,6 +2,7 @@ import { CliError } from "@leemour/cli-core"
 import type { Command } from "commander"
 import { servingProfiles } from "../../background/lock.js"
 import type { AdminRight, Chat, GroupSettings, Id, Provider } from "../../domain/models.js"
+import { FloodMemory, floodPathFor } from "../../sends/flood.js"
 import { guardFor, type SendGuard } from "../../sends/guard.js"
 import { keyForCommand, levelFor, type PermissionKey } from "../../sends/permissions.js"
 import { OFFLINE, type Override, type ServiceDeps, type Services, servicesFor } from "../../services/index.js"
@@ -14,6 +15,7 @@ import type { EventSink } from "../runs/events.js"
 import type { GlobalFlags, ResolveOptions, Settings } from "../settings.js"
 import { recalledAccount, rememberAccount } from "./accounts.js"
 import { terminalAsker } from "./ask.js"
+import { flooded } from "./flooded.js"
 import { observed } from "./observed.js"
 import type { MessengerAdapter } from "./port.js"
 import { stored } from "./stored.js"
@@ -156,13 +158,14 @@ const settled = async (pending: Set<Promise<void>>, ms: number): Promise<boolean
  */
 export const connected = (
   connection: MessengerAdapter,
-  { app, provider, deletedWithoutChat }: Pick<Messenger, "app" | "provider" | "deletedWithoutChat">,
+  { app, provider, name, deletedWithoutChat }: Pick<Messenger, "app" | "provider" | "name" | "deletedWithoutChat">,
   { settings, env, renderer }: Pick<BaseContext, "settings" | "env" | "renderer">,
   events: EventSink,
 ): { adapter: MessengerAdapter; close: () => Promise<void> } => {
   const self = connection.self()
   if (self !== null) rememberAccount(app, settings.profile, self, env)
-  const adapter = observed(connection, events)
+  const memory = new FloodMemory(floodPathFor(app, settings.profile, env))
+  const adapter = observed(flooded(connection, memory, { name: name ?? app.command, warn: renderer.warn }), events)
   let store: Promise<MessageStore | undefined> | undefined
   const pending = new Set<Promise<void>>()
   return {

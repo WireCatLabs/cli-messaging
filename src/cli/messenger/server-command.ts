@@ -6,6 +6,7 @@ import { lockPath, readLock } from "../../background/lock.js"
 import { alive, carries } from "../../background/processes.js"
 import { type ServerSystem, thisMachine } from "../../background/system.js"
 import { locationVariables, platformFor, tail, type Unit } from "../../background/units.js"
+import { FloodMemory, floodPathFor } from "../../sends/flood.js"
 import type { AppIdentity } from "../app.js"
 import { type BaseEnvironment, environmentOf } from "../context.js"
 import { listed } from "../paging.js"
@@ -291,6 +292,7 @@ export const serverCommand = (messenger: Messenger, options: ServerOptions = {})
           : undefined
       const gaveUpReason =
         gaveUp === undefined ? undefined : Object.entries(EXIT_CODES).find(([, code]) => code === gaveUp)?.[0]
+      const flood = new FloodMemory(floodPathFor(app, unit.profile, context.env)).read()
       const unitLine = isInstalled
         ? `Unit: ${tilde(unit.path, context.env)} — ${state.detail ?? (state.active ? "active" : "inactive")}.`
         : `No unit installed — \`${app.command} server install\` adds one, for starting under systemd or launchd.`
@@ -315,6 +317,7 @@ export const serverCommand = (messenger: Messenger, options: ServerOptions = {})
             ? { stopped: { exitCode: gaveUp, reason: gaveUpReason ?? null, restarts: false } }
             : {}),
           unit: { name: unit.name, path: unit.path, installed: isInstalled, ...state },
+          flood: { deadlines: flood.deadlines, sendBlock: flood.sendBlock ?? null },
         },
         [
           held
@@ -337,6 +340,13 @@ export const serverCommand = (messenger: Messenger, options: ServerOptions = {})
               ]
             : []),
           unitLine,
+          ...(flood.sendBlock
+            ? [`Writes are held until ${clock(flood.sendBlock.until)}: ${flood.sendBlock.hint}.`]
+            : []),
+          ...flood.deadlines.map(
+            (one) =>
+              `Asked to wait before ${one.operation}${one.chatId ? ` in chat ${one.chatId}` : ""} until ${clock(one.until)}.`,
+          ),
           ...(outdated ? [outdated] : []),
         ],
       )
