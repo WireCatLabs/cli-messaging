@@ -6,7 +6,14 @@ import { listed } from "../../cli/paging.js"
 import { readEvidencePacket, servicesFor, storedDeps } from "../../services/index.js"
 import { heard, hearForTool, modelWith } from "../../speech/hearing.js"
 import { type AnyTool, chatOf, limit, message, nameOf, READ, snakeOf, tool } from "../tool.js"
-import { answerMessagesSearch, MESSAGES_SEARCH_DESCRIPTION, messagesSearchInput } from "./search.js"
+import {
+  answerMessagesSearch,
+  answerMessagesStats,
+  MESSAGES_SEARCH_DESCRIPTION,
+  MESSAGES_STATS_DESCRIPTION,
+  messagesSearchInput,
+  messagesStatsInput,
+} from "./search.js"
 
 export const messagesTools = (messenger: Messenger): Record<string, AnyTool> => {
   const chat = chatOf(messenger)
@@ -148,6 +155,19 @@ export const messagesTools = (messenger: Messenger): Record<string, AnyTool> => 
       annotations: { ...READ, openWorldHint: false },
       stored: (store, account, args, defaults) =>
         answerMessagesSearch(
+          servicesFor(storedDeps(messenger, store, account, defaults.guard)).messages,
+          args,
+          defaults,
+        ),
+    }),
+
+    messages_stats: tool({
+      title: "Count messages",
+      description: MESSAGES_STATS_DESCRIPTION,
+      input: messagesStatsInput(messenger),
+      annotations: { ...READ, openWorldHint: false },
+      stored: (store, account, args, defaults) =>
+        answerMessagesStats(
           servicesFor(storedDeps(messenger, store, account, defaults.guard)).messages,
           args,
           defaults,

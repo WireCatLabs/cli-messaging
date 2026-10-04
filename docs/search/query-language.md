@@ -264,6 +264,19 @@ Quoted timestamp должен содержать секунды и offset: `"202
 Для него inclusive/exclusive сравнивает точный UTC instant. `date:2026-01-01` означает весь день.
 `7d` не является Lucene date math; legacy `after:7d` остаётся в legacy mode.
 
+## Подсчёт: messages stats
+
+`messages stats` считает то же, что нашёл бы `messages search` с тем же запросом, каждое сообщение один
+раз: `--by chat` (по умолчанию) и `--by sender` — больше всего сверху, `--by day` и `--by hour` —
+календарные дни и часы в `--timezone`, по порядку. Без запроса считаются все сохранённые сообщения.
+
+```sh
+tg messages stats invoice --by chat
+tg messages stats 'from:me date>=30d' --by day --timezone Europe/Madrid
+```
+
+Если чаты сохранены не целиком, числа — нижняя граница; stderr говорит, сколько таких чатов.
+
 ## Presets
 
 Detector сообщает **кандидата**, а не подтверждённую credential/действительный банковский документ.

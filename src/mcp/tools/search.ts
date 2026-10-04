@@ -54,3 +54,43 @@ export const answerMessagesSearch = async (
   })
   return { ...found, page: 1, limit: size }
 }
+
+export const MESSAGES_STATS_DESCRIPTION =
+  "Count what a strict Lucene query matches in the local store, by chat, sender, calendar day or hour (in the timezone). Each message is counted once; no text means every stored message. Counts are lower bounds where coverage is not complete. Returns { by, items: [{ key, name, account?, count }], total, hasMore, page, limit, query, coverage, completeness }."
+
+export const messagesStatsInput = (messenger: Messenger) =>
+  v.object({
+    text: v.optional(v.pipe(v.string(), v.minLength(1), v.description("a strict Lucene query; omit to count all"))),
+    ast: v.optional(v.unknown()),
+    by: v.optional(v.picklist(["chat", "sender", "day", "hour"])),
+    timezone: v.optional(v.string()),
+    chat: v.optional(chatOf(messenger)),
+    source: v.optional(
+      v.pipe(
+        v.string(),
+        v.minLength(1),
+        v.description("a messenger held on this machine; personal, bots or all — as in: in text"),
+      ),
+    ),
+    limit,
+  })
+
+export const answerMessagesStats = async (
+  messages: Pick<MessagesService, "stats">,
+  args: v.InferOutput<ReturnType<typeof messagesStatsInput>>,
+  defaults: { limit: number; signal?: AbortSignal },
+) => {
+  const size = args.limit ?? defaults.limit
+  const stats = await messages.stats({
+    ...(args.text === undefined ? {} : { text: args.text }),
+    ...(args.ast === undefined ? {} : { ast: args.ast }),
+    by: args.by ?? "chat",
+    language: "lucene",
+    signal: defaults.signal,
+    ...(args.timezone === undefined ? {} : { timezone: args.timezone }),
+    limit: size,
+    ...(args.chat === undefined ? {} : { chat: args.chat }),
+    ...(args.source === undefined ? {} : { source: args.source }),
+  })
+  return { ...stats, page: 1, limit: size }
+}

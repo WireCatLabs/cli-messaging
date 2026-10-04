@@ -320,6 +320,7 @@ describe("the MCP server", () => {
       "chat_messages_photo",
       "chat_messages_scheduled",
       "chat_messages_search",
+      "chat_messages_stats",
       "chat_messages_transcribe",
       "chat_polls_show",
       "chat_review",

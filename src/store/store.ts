@@ -28,6 +28,7 @@ import * as completeness from "./sqlite/completeness.js"
 import * as conversationQueries from "./sqlite/conversations.js"
 import * as identities from "./sqlite/identities.js"
 import { findRegex } from "./sqlite/legacy-regex.js"
+import type { QueryGroup, QueryGrouping } from "./sqlite/lucene.js"
 import * as lucene from "./sqlite/lucene.js"
 import * as messageWrites from "./sqlite/messages.js"
 import { openSqlite, type StoreContext } from "./sqlite/open.js"
@@ -278,6 +279,8 @@ export interface MessageStore {
    * not searchable are left out unless the scope names the chat.
    */
   matchQuery?(execution: QueryExecution): Promise<Page<ScoredHit>>
+  /** The same matches as `matchQuery`, each counted once, grouped by chat, sender or quarter hour. */
+  countQuery?(execution: QueryExecution, by: QueryGrouping): Promise<QueryGroup[]>
   matchWords(query: WordQuery, scope: SearchScope, options: WordOptions): Promise<Page<ScoredHit>>
   /** The substring index, newest first (step 5); pieces under three letters are dropped. */
   matchSubstring(query: WordQuery, scope: SearchScope, options: { limit: number }): Promise<Page<ScoredHit>>
@@ -879,6 +882,7 @@ const storeOver = (context: StoreContext): MessageStore => {
     find: async (filter) => (filter.pattern ? findRegex(context, filter) : search.find(context, filter)),
 
     matchQuery: async (execution) => lucene.matchQuery(context, execution),
+    countQuery: async (execution, by) => lucene.countQuery(context, execution, by),
 
     matchWords: async (query, scope, options) => words.matchWords(context, query, scope, options),
 

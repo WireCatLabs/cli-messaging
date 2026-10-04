@@ -14,7 +14,14 @@ import { newOperationId, newSendId } from "../sends/send-id.js"
 import type { Upload } from "../sends/upload.js"
 import type { AccountKey, ChatCompleteness, MessageStore, SearchScope, StoredHit, WordQuery } from "../store/store.js"
 import { fromStore, nothingStored, PUSHED, type ServiceDeps } from "./deps.js"
-import { type QueryMetadata, type SearchCoverage, searchLucene } from "./messages-search.js"
+import {
+  type MessageStats,
+  type QueryMetadata,
+  type SearchCoverage,
+  type StatsGrouping,
+  searchLucene,
+  statsLucene,
+} from "./messages-search.js"
 
 export interface ListWindow {
   limit: number
@@ -104,6 +111,17 @@ export const DELETE_AT_ONCE = 10
 /** How long a search may spend building the word index first (phase 2 plan S3: about 200 ms). */
 export const SEARCH_FILL_MS = 200
 
+export const statsStore = async (
+  store: MessageStore,
+  account: AccountKey,
+  request: SearchQuery & { by: StatsGrouping },
+  messenger: Saved = {},
+): Promise<MessageStats> => {
+  const stop = Date.now() + SEARCH_FILL_MS
+  await store.fillSearchIndex({ until: () => Date.now() >= stop })
+  return statsLucene(store, account, request, messenger)
+}
+
 /** What a store search reads of the messenger: its saved-messages chat, when it has one. */
 type Saved = Partial<Pick<Messenger, "savedChatId">>
 
@@ -116,6 +134,8 @@ export interface MessagesService {
   download(chat: string, message: Id): Promise<Download>
   /** From the local store only; never asks the messenger. */
   search(query: SearchQuery): Promise<SearchFound>
+  /** Counts of what a strict query matches, by chat, sender, day or hour; from the local store only. */
+  stats(query: SearchQuery & { by: StatsGrouping }): Promise<MessageStats>
   /** A reply is a send with `replyTo`. */
   send(request: SendRequest): Promise<Operated<Sent>>
   /** With `markdown`, the marks are taken out as a send takes them. */
@@ -235,6 +255,8 @@ export const messagesService = (deps: ServiceDeps): MessagesService => {
       capability(await deps.connection(), "download", "download attachments")(chat, message),
 
     search: (query) => inStore((store, account) => searchStore(store, account, query, deps.messenger)),
+
+    stats: (query) => inStore((store, account) => statsStore(store, account, query, deps.messenger)),
 
     send: async ({
       chat,

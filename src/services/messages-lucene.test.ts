@@ -6,7 +6,7 @@ import type { Chat, Message } from "../domain/models.js"
 import { parseLucene } from "../search/lucene/parser.js"
 import { PRESETS } from "../search/lucene/presets.js"
 import { type AccountKey, type MessageStore, openStore } from "../store/store.js"
-import { searchStore } from "./messages.js"
+import { searchStore, statsStore } from "./messages.js"
 
 interface Fixture {
   query: string
@@ -198,6 +198,51 @@ describe.each(["max", "telegram"])("strict store profile (%s)", (provider) => {
     expect(ids(await run(store, account, "date>=7d"))).toEqual([1, 2])
     expect(ids(await run(store, account, "date:[60d TO 7d}"))).toEqual([3])
     expect(ids(await run(store, account, "date:today OR date:yesterday", { limit: 100, timezone: "UTC" }))).toContain(1)
+  })
+  it("counts distinct matches by chat, sender, day and hour", async () => {
+    const store = await open()
+    await store.saveChats(account, [chat("1"), chat("2")])
+    const at = (iso: string) => ({ timestamp: iso })
+    await store.saveMessages(
+      account,
+      "1",
+      [
+        message("1", "1", "invoice paid", at("2026-03-01T22:30:00.000Z")),
+        message("2", "1", "invoice sent", at("2026-03-02T09:00:00.000Z")),
+        message("3", "1", "invoice late", { ...at("2026-03-02T09:10:00.000Z"), outgoing: true }),
+      ],
+      { via: "history" },
+    )
+    await store.saveMessages(account, "2", [message("4", "2", "invoice", at("2026-03-02T10:00:00.000Z"))], {
+      via: "history",
+    })
+    const stats = (text: string, by: "chat" | "sender" | "day" | "hour", extra = {}) =>
+      statsStore(store, account, { text, language: "lucene", limit: 10, by, timezone: "UTC", ...extra })
+    const byChat = await stats("invoice", "chat")
+    expect(byChat.items.map(({ key, count }) => [key, count])).toEqual([
+      ["1", 3],
+      ["2", 1],
+    ])
+    expect(byChat).toMatchObject({ total: 4, hasMore: false, by: "chat", coverage: { state: "unknown" } })
+    expect((await stats("invoice", "chat", { limit: 1 })).hasMore).toBe(true)
+    expect((await stats("invoice", "sender")).items.map(({ key, count }) => [key, count])).toEqual([
+      ["200", 2],
+      ["201", 2],
+    ])
+    expect((await stats("invoice", "day")).items).toEqual([
+      { key: "2026-03-01", name: null, count: 1 },
+      { key: "2026-03-02", name: null, count: 3 },
+    ])
+    expect((await stats("invoice", "day", { timezone: "Asia/Kolkata" })).items.map(({ key }) => key)).toEqual([
+      "2026-03-02",
+    ])
+    expect((await stats("invoice", "hour")).items.map(({ key, count }) => [key, count])).toEqual([
+      ["2026-03-01T22", 1],
+      ["2026-03-02T09", 2],
+      ["2026-03-02T10", 1],
+    ])
+    expect((await stats("body:/invoice (paid|late)/", "chat")).total).toBe(2)
+    expect((await stats("invoice AND NOT late", "chat")).total).toBe(3)
   })
   it("uses typed date ranges and body/term regex with stable pagination", async () => {
     const store = await open()
