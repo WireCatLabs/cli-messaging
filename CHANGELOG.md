@@ -6,6 +6,12 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Fixed
+
+- The parity manifest lists the commands and options 0.142.0 added — `inbox`/`review --kind`, `--mark-read`,
+  `--no-mark-read`, `review --new`, `store export --to`/`--kind`/`--all`/`--encrypt`, `store backup --encrypt`,
+  `store decrypt` — so tg-cli and max-cli can move to it: their pre-push check refused every one.
+
 ## 0.142.0 — 04.10.2026
 
 ### Added

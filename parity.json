@@ -151,6 +151,9 @@
     "--dry-run": {
       "meaning": "judge and plan; do nothing"
     },
+    "--encrypt": {
+      "meaning": "compress and encrypt with a password, typed at a hidden prompt or piped on stdin; never kept"
+    },
     "--estimate": {
       "meaning": "only say what the fetch would cost, from this machine's copy; nothing is sent",
       "note": "max's own copy is worded differently until T6 moves the command onto the shared one (e13)"
@@ -287,6 +290,9 @@
     },
     "--no-ban": {
       "meaning": "remove without banning; by default a removed person cannot come back by the link"
+    },
+    "--no-mark-read": {
+      "meaning": "do not mark read, whatever the catchUpMarksRead setting says"
     },
     "--no-preview": {
       "meaning": "no preview card for a link in the text"
@@ -1485,9 +1491,12 @@
             "tg": "T6"
           }
         },
+        "--kind": "all",
         "--limit": "all",
+        "--mark-read": "all",
         "--model": "all",
         "--new": "all",
+        "--no-mark-read": "all",
         "--since": {
           "in": [],
           "planned": {
@@ -1924,6 +1933,8 @@
           }
         },
         "--chat": "all",
+        "--kind": "all",
+        "--mark-read": "all",
         "--model": {
           "in": [],
           "planned": {
@@ -1931,6 +1942,8 @@
             "tg": "T6"
           }
         },
+        "--new": "all",
+        "--no-mark-read": "all",
         "--since": {
           "in": [],
           "planned": {
@@ -2103,7 +2116,10 @@
       "in": "all"
     },
     "store backup": {
-      "in": "all"
+      "in": "all",
+      "options": {
+        "--encrypt": "all"
+      }
     },
     "store check": {
       "in": "all"
@@ -2115,12 +2131,22 @@
         "--left": "all"
       }
     },
+    "store decrypt": {
+      "in": "all",
+      "options": {
+        "--output": "all"
+      }
+    },
     "store export": {
       "in": "all",
       "options": {
+        "--all": "all",
+        "--encrypt": "all",
         "--format": "all",
+        "--kind": "all",
         "--output": "all",
-        "--since-time": "all"
+        "--since-time": "all",
+        "--to": "all"
       }
     },
     "store fetch": {
