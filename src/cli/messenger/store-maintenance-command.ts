@@ -16,6 +16,7 @@ import { CliError } from "@leemour/cli-core"
 import { Command } from "commander"
 import { holdersOf } from "../../background/processes.js"
 import { RULES_VERSION } from "../../conversations/link.js"
+import { isSealed, sealFile, unsealFile } from "../../sealed.js"
 import type { CacheDatabase } from "../../store/driver.js"
 import { MIGRATIONS, migrate } from "../../store/migrations.js"
 import { openCache } from "../../store/open.js"
@@ -24,6 +25,7 @@ import { pendingNormalization } from "../../store/sqlite/backfill.js"
 import { fillSearchIndex, resetSearchIndex, searchIndexState } from "../../store/sqlite/search-index.js"
 import { environmentOf, outputFor } from "../context.js"
 import type { Messenger } from "./context.js"
+import { ENCRYPT_OPTION, passwordOf } from "./password.js"
 import { servingProfiles } from "./serve-command.js"
 
 const SPEAKS = MIGRATIONS.at(-1)?.version ?? 0
@@ -91,6 +93,7 @@ export const storeMaintenanceCommands = (messenger: Messenger): Command[] => [
   reindexCommand(messenger),
   backupCommand(),
   restoreCommand(messenger),
+  decryptCommand(),
 ]
 
 const infoCommand = (): Command =>
@@ -354,26 +357,60 @@ const backupCommand = (): Command =>
   new Command("backup")
     .description("copy the store into a new file, while it is in use; never overwrites a file")
     .argument("<file>", "the new file")
+    .option(...ENCRYPT_OPTION)
     .action(async function (this: Command, file: string) {
       const { renderer } = outputFor(this)
+      const { encrypt } = this.opts<{ encrypt?: boolean }>()
       const path = storePath(environmentOf(this).env ?? process.env)
       const target = resolve(file)
       if (!existsSync(path)) throw new CliError("not_found", `no store at ${path} to back up`)
       if (existsSync(target))
         throw new CliError("validation_error", `${target} exists — a backup never overwrites a file`)
+      const password = encrypt ? await passwordOf(this, { twice: true }) : undefined
+      // SQLite copies only into a file. Sealed, that plain copy goes beside the store, which holds the
+      // same text already — never beside the target, which may be a synced folder or a removable disk.
+      const copyAt = password === undefined ? target : `${path}.backup-${process.pid}`
       // VACUUM INTO fills an empty file and keeps its mode; a file it creates itself is readable by all.
-      writeFileSync(target, "", { flag: "wx", mode: 0o600 })
+      writeFileSync(copyAt, "", { flag: "wx", mode: 0o600 })
       try {
-        await reading(path, (database) => database.prepare("VACUUM INTO ?").run(target))
+        await reading(path, (database) => database.prepare("VACUUM INTO ?").run(copyAt))
+        const copy = await reading(copyAt, (database) => ({
+          schema: schemaOf(database),
+          rows: { chats: count(database, "chats"), messages: count(database, "messages") },
+        }))
+        if (password !== undefined) await sealFile(copyAt, target, password)
+        renderer.result({
+          path: target,
+          from: path,
+          bytes: bytesOf(target),
+          schema: copy.schema.version,
+          rows: copy.rows,
+          ...(password === undefined ? {} : { encrypted: true }),
+        })
       } catch (error) {
-        rmSync(target)
+        if (password === undefined) rmSync(target, { force: true })
         throw error
+      } finally {
+        if (password !== undefined) rmSync(copyAt, { force: true })
       }
-      const copy = await reading(target, (database) => ({
-        schema: schemaOf(database).version,
-        rows: { chats: count(database, "chats"), messages: count(database, "messages") },
-      }))
-      renderer.result({ path: target, from: path, bytes: bytesOf(target), ...copy })
+    })
+
+/** The only way back into a sealed file: the format is this tool's own. */
+const decryptCommand = (): Command =>
+  new Command("decrypt")
+    .description("open a file written with --encrypt into a new file; asks for its password")
+    .argument("<file>", "a file `store backup --encrypt` or `store export --encrypt` wrote")
+    .requiredOption("--output <file>", "the new file, readable only by you")
+    .action(async function (this: Command, file: string) {
+      const { renderer } = outputFor(this)
+      const { output } = this.opts<{ output: string }>()
+      const from = resolve(file)
+      const to = resolve(output)
+      if (!existsSync(from)) throw new CliError("not_found", `no file at ${from}`)
+      if (!isSealed(from)) throw new CliError("validation_error", `${from} was not written with --encrypt`)
+      if (existsSync(to)) throw new CliError("validation_error", `${to} exists — never overwritten`)
+      await unsealFile(from, to, await passwordOf(this, { twice: false }))
+      renderer.result({ path: to, from, bytes: bytesOf(to) })
     })
 
 /**
@@ -384,50 +421,62 @@ const backupCommand = (): Command =>
 const restoreCommand = (messenger: Messenger): Command =>
   new Command("restore")
     .description("put a backup in place of the store; the store it replaces is kept beside it, never deleted")
-    .argument("<file>", "a file `store backup` wrote")
+    .argument("<file>", "a file `store backup` wrote; one written with --encrypt asks for its password")
     .action(async function (this: Command, file: string) {
-      const { renderer } = outputFor(this)
       const path = storePath(environmentOf(this).env ?? process.env)
-      const backup = resolve(file)
-      if (!existsSync(backup)) throw new CliError("not_found", `no file at ${backup}`)
-      if (existsSync(path) && realpathSync(backup) === realpathSync(path)) {
-        throw new CliError("validation_error", `${backup} is the store itself`)
-      }
-      const schema = await backupSchema(backup)
-
-      const env = environmentOf(this).env ?? process.env
-      const serving = servingProfiles(messenger.app, env)
+      const given = resolve(file)
+      if (!existsSync(given)) throw new CliError("not_found", `no file at ${given}`)
+      const serving = servingProfiles(messenger.app, environmentOf(this).env ?? process.env)
       if (serving.length > 0) {
         throw new CliError(
           "validation_error",
           `${messenger.app.command} serve is running for ${serving.join(", ")} — \`${messenger.app.command} server stop\` first`,
         )
       }
-      const stamp = new Date().toISOString().replace(/[:.]/g, "-")
-      const kept = existsSync(path) ? `${path}.before-restore-${stamp}` : null
-      if (kept) await quiesce(path, messenger, (message) => renderer.warn(message))
-      else mkdirSync(dirname(path), { recursive: true, mode: 0o700 })
-
-      const incoming = `${path}.restoring-${stamp}`
-      copyFileSync(backup, incoming, constants.COPYFILE_EXCL)
-      chmodSync(incoming, 0o600)
-      if (kept) {
-        renameSync(path, kept)
-        for (const suffix of ["-wal", "-shm"])
-          if (existsSync(`${path}${suffix}`)) renameSync(`${path}${suffix}`, `${kept}${suffix}`)
-      }
-      renameSync(incoming, path)
-
-      renderer.result({ path, restoredFrom: backup, keptAt: kept, schema: schema.version })
-      if (kept) renderer.note(`the store it replaced is kept at ${kept}`)
-      // One that has not touched the store yet holds nothing open, and was not seen.
-      renderer.note("restart every serve and mcp of either CLI that was running, so they read the restored store")
-      if (schema.version < SPEAKS) {
-        renderer.note(
-          `the backup is behind this build; the next command migrates it — \`${messenger.app.command} store migrate\` now`,
-        )
+      if (!isSealed(given)) return restoreFrom(this, messenger, given, given)
+      const opened = `${path}.unsealing-${process.pid}`
+      mkdirSync(dirname(path), { recursive: true, mode: 0o700 })
+      try {
+        await unsealFile(given, opened, await passwordOf(this, { twice: false }))
+        await restoreFrom(this, messenger, opened, given)
+      } finally {
+        rmSync(opened, { force: true })
       }
     })
+
+const restoreFrom = async (command: Command, messenger: Messenger, backup: string, given: string) => {
+  const { renderer } = outputFor(command)
+  const path = storePath(environmentOf(command).env ?? process.env)
+  if (existsSync(path) && realpathSync(backup) === realpathSync(path)) {
+    throw new CliError("validation_error", `${backup} is the store itself`)
+  }
+  const schema = await backupSchema(backup)
+
+  const stamp = new Date().toISOString().replace(/[:.]/g, "-")
+  const kept = existsSync(path) ? `${path}.before-restore-${stamp}` : null
+  if (kept) await quiesce(path, messenger, (message) => renderer.warn(message))
+  else mkdirSync(dirname(path), { recursive: true, mode: 0o700 })
+
+  const incoming = `${path}.restoring-${stamp}`
+  copyFileSync(backup, incoming, constants.COPYFILE_EXCL)
+  chmodSync(incoming, 0o600)
+  if (kept) {
+    renameSync(path, kept)
+    for (const suffix of ["-wal", "-shm"])
+      if (existsSync(`${path}${suffix}`)) renameSync(`${path}${suffix}`, `${kept}${suffix}`)
+  }
+  renameSync(incoming, path)
+
+  renderer.result({ path, restoredFrom: given, keptAt: kept, schema: schema.version })
+  if (kept) renderer.note(`the store it replaced is kept at ${kept}`)
+  // One that has not touched the store yet holds nothing open, and was not seen.
+  renderer.note("restart every serve and mcp of either CLI that was running, so they read the restored store")
+  if (schema.version < SPEAKS) {
+    renderer.note(
+      `the backup is behind this build; the next command migrates it — \`${messenger.app.command} store migrate\` now`,
+    )
+  }
+}
 
 const backupSchema = async (backup: string) => {
   let read: { integrity: string; schema: ReturnType<typeof schemaOf> }

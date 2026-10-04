@@ -1,16 +1,20 @@
 import { writeFileSync } from "node:fs"
 import { resolve } from "node:path"
+import { Readable } from "node:stream"
 import { CliError } from "@leemour/cli-core"
 import { Command } from "commander"
+import type { Id } from "../../domain/models.js"
 import { toMarkdown } from "../../render/markdown.js"
 import { renderMessages } from "../../render/messages.js"
+import { seal } from "../../sealed.js"
 import { CHAT_KINDS } from "../../services/chats.js"
 import { kindsOf } from "../../services/inbox.js"
 import { momentOf } from "../../services/moment.js"
 import { renderList } from "../paging.js"
 import { fetchCommand, jobsCommand } from "./backfill-command.js"
 import { type Messenger, messengerContext } from "./context.js"
-import { openFolder, saveManifest, writeChanges } from "./export-folder.js"
+import { admitPassword, linesOf, openFolder, runFileFor, saveManifest, sealRun, writeChanges } from "./export-folder.js"
+import { ENCRYPT_OPTION, passwordOf } from "./password.js"
 import { storeMaintenanceCommands } from "./store-maintenance-command.js"
 
 /** `store`: the local store of messages — what it holds, filling it, reading it out, and looking after the file. */
@@ -96,6 +100,7 @@ const exportCommand = (messenger: Messenger): Command =>
     )
     .option("--kind <kinds>", `with --to: every stored chat of these kinds, comma-separated: ${CHAT_KINDS.join(", ")}`)
     .option("--all", "with --to: every stored chat of this account")
+    .option(...ENCRYPT_OPTION)
     .action(async function (this: Command, chats: string[]) {
       const {
         format,
@@ -104,6 +109,7 @@ const exportCommand = (messenger: Messenger): Command =>
         to,
         kind,
         all,
+        encrypt,
       } = this.opts<{
         format?: string
         sinceTime?: string
@@ -111,6 +117,7 @@ const exportCommand = (messenger: Messenger): Command =>
         to?: string
         kind?: string
         all?: boolean
+        encrypt?: boolean
       }>()
       if (format !== undefined && format !== "markdown" && format !== "jsonl") {
         throw new CliError("validation_error", `--format is jsonl or markdown, not "${format}"`)
@@ -128,21 +135,28 @@ const exportCommand = (messenger: Messenger): Command =>
         }
         const kinds = kind === undefined ? undefined : kindsOf(kind)
         const dir = resolve(to)
+        const password = encrypt ? await passwordOf(this, { twice: true }) : undefined
         context.renderer.result(
           await context.withServices(async (services) => {
             const { account, chats: chosen } = await services.archive.exportable({
               chats,
               ...(kinds === undefined ? {} : { kinds }),
             })
-            const manifest = openFolder(dir, account)
-            const written = []
-            for (const { id, title } of chosen) {
+            const manifest = openFolder(dir, account, password !== undefined)
+            if (password !== undefined) await admitPassword(manifest, password)
+            const run = runFileFor(new Date().toISOString())
+            const written: { id: Id; title: string | null; file: string | null; messages: number; deleted: number }[] =
+              []
+            const exportChat = async function* ({ id, title: named }: { id: Id; title: string | null }) {
+              const title = password === undefined ? named : null
               const before = manifest.chats[id]
               const changes = await services.archive.changes(id, before?.mark)
-              const file =
-                before !== undefined && changes.messages.length === 0 && changes.deleted.length === 0
-                  ? null
-                  : writeChanges(dir, id, changes.mark, changes)
+              const empty = changes.messages.length === 0 && changes.deleted.length === 0
+              let file: string | null = null
+              if (password !== undefined) {
+                yield* linesOf(id, changes)
+                if (!empty) file = run
+              } else if (before === undefined || !empty) file = writeChanges(dir, id, changes.mark, changes)
               manifest.chats[id] = {
                 title,
                 mark: changes.mark,
@@ -152,8 +166,14 @@ const exportCommand = (messenger: Messenger): Command =>
               }
               written.push({ id, title, file, messages: changes.messages.length, deleted: changes.deleted.length })
             }
+            const everyChat = async function* () {
+              for (const chat of chosen) yield* exportChat(chat)
+            }
+            if (password !== undefined) await sealRun(dir, run, everyChat(), password)
+            // Unsealed, each chat is written as it is read; nothing is yielded, the walk is the work.
+            else for await (const _ of everyChat()) void _
             saveManifest(dir, manifest)
-            return { path: dir, chats: written }
+            return { path: dir, ...(password === undefined ? {} : { encrypted: true }), chats: written }
           }),
         )
         return
@@ -161,6 +181,10 @@ const exportCommand = (messenger: Messenger): Command =>
       if (chats.length !== 1 || kind !== undefined || all === true) {
         throw new CliError("validation_error", "one chat at a time without --to; --kind and --all need --to")
       }
+      if (encrypt && output === undefined) {
+        throw new CliError("validation_error", "--encrypt writes a file — with --output or --to")
+      }
+      const password = encrypt ? await passwordOf(this, { twice: true }) : undefined
       const chat = chats[0] as string
       const from = since === undefined ? undefined : new Date(momentOf(since, "--since-time")).toISOString()
       const { title, messages } = await context.withServices((services) =>
@@ -173,13 +197,19 @@ const exportCommand = (messenger: Messenger): Command =>
             ? toMarkdown(title, messages)
             : messages.map((message) => `${JSON.stringify(message)}\n`).join("")
         try {
-          writeFileSync(path, body, { flag: "wx", mode: 0o600 })
+          if (password !== undefined) await seal(() => Readable.from([body]), path, password)
+          else writeFileSync(path, body, { flag: "wx", mode: 0o600 })
         } catch (error) {
           if ((error as NodeJS.ErrnoException).code === "EEXIST")
             throw new CliError("validation_error", `${path} exists — an export never overwrites a file`)
           throw error
         }
-        context.renderer.result({ path, format: format ?? "jsonl", count: messages.length })
+        context.renderer.result({
+          path,
+          format: format ?? "jsonl",
+          count: messages.length,
+          ...(password === undefined ? {} : { encrypted: true }),
+        })
         return
       }
       if (format === "markdown") context.streams.data(toMarkdown(title, messages).replace(/\n$/, ""))

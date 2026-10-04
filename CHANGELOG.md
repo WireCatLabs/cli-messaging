@@ -8,6 +8,13 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Added
 
+- `--encrypt` on `store export` (with `--output` or `--to`) and `store backup`: gzip, then AES-256-GCM with a key
+  derived from a password by scrypt — Node's own `zlib` and `crypto`, no new dependency. The password is typed at a
+  hidden prompt (twice) or piped on stdin, and kept nowhere: lose it and the file cannot be opened. An encrypted
+  `--to` folder takes one sealed file per run and a manifest without chat titles, and refuses a later run whose
+  password differs from the first. `store decrypt <file> --output
+  <file>` opens one; `store restore` asks for the password of an encrypted backup. A wrong password or a changed
+  byte fails and writes nothing.
 - `messages stats [query] --by chat|sender|day|hour` and the read-only MCP tool `messages_stats` count what a strict
   query matches in the local store, each message once: by chat or sender (most first), or by calendar day or hour in
   `--timezone` (in order). No query counts every stored message. JSON: `{ by, items: [{ key, name, account?, count }],
