@@ -198,6 +198,25 @@ describe.each(["max", "telegram"])("strict store profile (%s)", (provider) => {
     expect(ids(await run(store, account, "has:link"))).toEqual([1, 2, 3])
     expect(ids(await run(store, account, "look AND NOT has:link"))).toEqual([4])
   })
+  it("reads relative dates against the current time", async () => {
+    const store = await open()
+    await store.saveChats(account, [chat("1")])
+    const at = (ago: number) => new Date(Date.now() - ago).toISOString()
+    await store.saveMessages(
+      account,
+      "1",
+      [
+        message("1", "1", "fresh", { timestamp: at(60_000) }),
+        message("2", "1", "older", { timestamp: at(3 * 86_400_000) }),
+        message("3", "1", "oldest", { timestamp: at(30 * 86_400_000) }),
+      ],
+      { via: "history" },
+    )
+    expect(ids(await run(store, account, "date:1h"))).toEqual([1])
+    expect(ids(await run(store, account, "date>=7d"))).toEqual([1, 2])
+    expect(ids(await run(store, account, "date:[60d TO 7d}"))).toEqual([3])
+    expect(ids(await run(store, account, "date:today OR date:yesterday", { limit: 100, timezone: "UTC" }))).toContain(1)
+  })
   it("uses typed date ranges and body/term regex with stable pagination", async () => {
     const store = await open()
     await seed(store, account)

@@ -35,7 +35,7 @@ describe("typed calendar boundaries", () => {
     "2026-02-29",
     "2026-13-01",
     "2026-01-32",
-    "7d",
+    "7w",
     "2026-01-01T25:00:00Z",
     "2026-01-01T10:00:00",
     "2026-02-30T10:00:00Z",
@@ -47,5 +47,33 @@ describe("typed calendar boundaries", () => {
     expect(() => timezoneOf("Europe/Imaginary")).toThrow("IANA timezone")
     expect(timezoneOf("UTC")).toBe("UTC")
     expect(timezoneOf()).toBeTruthy()
+  })
+})
+
+describe("relative dates", () => {
+  const now = Date.parse("2026-10-04T10:30:00Z")
+  it("reads today and yesterday as calendar days in the timezone", () => {
+    expect(dateRange("today", "today", true, true, "Europe/Madrid", span, now)).toEqual({
+      lower: Date.parse("2026-10-03T22:00:00Z"),
+      upper: Date.parse("2026-10-04T22:00:00Z"),
+      lowerInclusive: true,
+      upperInclusive: false,
+    })
+    expect(dateRange("Yesterday", "yesterday", true, true, "UTC", span, now)).toMatchObject({
+      lower: Date.parse("2026-10-03T00:00:00Z"),
+      upper: Date.parse("2026-10-04T00:00:00Z"),
+    })
+  })
+  it("reads 30m/2h/7d as that long before now, and a bare one as since then", () => {
+    expect(dateRange("7d", "*", true, true, "UTC", span, now)).toMatchObject({ lower: now - 7 * 86_400_000 })
+    expect(dateRange("2h", "2h", true, true, "UTC", span, now)).toEqual({
+      lower: now - 2 * 3_600_000,
+      lowerInclusive: true,
+      upperInclusive: true,
+    })
+    expect(dateRange("2026-10-01", "30m", true, false, "UTC", span, now)).toMatchObject({ upper: now - 1_800_000 })
+  })
+  it("still refuses an unknown word", () => {
+    expect(() => dateRange("tomorrow", "*", true, true, "UTC", span, now)).toThrow("invalid_date")
   })
 })
