@@ -76,6 +76,13 @@ export const fetchCommand = (messenger: Messenger): Command => {
         throw new CliError("validation_error", "give --since-time or --last, not both: how far back the fetch goes")
       }
       const pageSize = sizes.pageSize ?? fetching.page
+      // Above the cap every full page comes back short, and an adapter may read a short page as the chat's start.
+      if (fetching.maxPageSize !== undefined && pageSize > fetching.maxPageSize) {
+        throw new CliError(
+          "validation_error",
+          `--page-size takes at most ${fetching.maxPageSize}: ${messenger.name ?? messenger.app.command} returns no more per request`,
+        )
+      }
       const limit = sizes.limit ?? fetching.maxPages * fetching.page
       const pauseMs = parseDuration(pause, "--pause")
       const sinceMs = since === undefined ? undefined : momentOf(since, "--since-time")

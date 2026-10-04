@@ -8,15 +8,43 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Added
 
+- `server status` says when a unit stopped on an exit its CLI marked as not worth a restart (`noRestartOn`): for a
+  refused login, run `session start`, then `server start`. JSON adds `stopped` (`exitCode`, `reason`,
+  `restarts: false`) and `unit.exitCode`, read from systemd's `ExecMainStatus` (only for a normal exit, not a
+  signal) or launchd's `last exit code`.
+
 - MCP `inbox` and `review` take `kinds` (`["dialog", "group", "channel", "saved"]`) and `new`: what arrived since
   the last call with `new`, each message once, from saved points the MCP tools keep apart from the owner's
   `inbox --new` and `review --new`. `new` refuses `since_time`, and on `review` also `unanswered`.
 
 ### Changed — may break callers
 
+- `store fetch --page-size` takes at most 100 with the shared Telegram fetching defaults; a larger size is
+  refused with `validation_error` (exit 2). A messenger that declares its own `fetching` without
+  `maxPageSize` — MAX — keeps any size.
+
+- `messages search` JSON (and MCP `<cli>_messages_search`) reports `coverage` and `wordsReady` from the store instead of
+  constants. `wordsReady` is `false` for a metadata-only query (`has:file`, `kind:`) while the word index is still
+  being built; before, it was always `true` there. `coverage.inventoryComplete` is `true` once every account in
+  scope has handed the store its whole chat list (`markChatsLeft` now records when), and its type widens from
+  `false` to `boolean`. `coverage.lastSyncedAt` is the oldest `store fetch` of the chats in scope, `null` when one
+  of them was never fetched; each `completeness` entry adds `fetchedAt`. An existing store answers `false` and
+  `null` until its next full chat list and `store fetch`. `ChatCompleteness` gains a required `fetchedAt`; neither
+  CLI builds one. max-cli's `src/mcp.test.ts` expects `coverage.inventoryComplete: false` after a login that hands
+  the store the whole chat list, so it will likely read `true` after the upgrade.
+- Legacy `messages search` (`--language legacy`, `--regex`) and bot `people search` report the real `wordsReady` for
+  a filters-only or `--regex` search too, instead of always `true`. The stderr note now says a search by words
+  reads pieces of words until `store migrate` finishes the index.
+
 - The `/catch-up` prompt takes `kind` and `mode` (`unread`, the default; `new`; or a time) in place of `since`;
   a time goes in `mode`. It marks read only when the owner asks, through `chats_mark_read` per chat shown, so the
   approval that tool carries still applies — `inbox` and `review` over MCP never mark read.
+
+### Fixed
+
+- A chat no longer reads as complete when a later `store fetch` held messages older than the point an earlier
+  fetch took for its first one. Run `store fetch <chat>` again: once it finds older messages, the chat reads as
+  partial until a fetch reaches its real start.
 
 ## 0.146.0 — 04.10.2026
 

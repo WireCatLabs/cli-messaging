@@ -107,18 +107,24 @@ describe("the search, over the owner's scenarios", () => {
     database.exec("UPDATE search_index_state SET filled_through = 0, watermark = 99")
     database.close()
     const found = await search(store, parseQuery("gestor"), { accounts: [ME] }, { limit: 10 })
+    const filtered = await search(store, parseQuery("before:2026-09-02"), { accounts: [ME] }, { limit: 10 })
     const restore = await openCache(path)
     restore.exec("UPDATE search_index_state SET filled_through = 6, watermark = 6")
     restore.close()
 
     expect(found).toMatchObject({ wordsReady: false, items: [{ id: "1", match: "substring" }] })
+    expect(filtered.wordsReady).toBe(false)
+    expect(filtered.items[0]).toMatchObject({ match: "filters" })
+    expect(await search(store, parseQuery("before:2026-09-02"), { accounts: [ME] }, { limit: 1 })).toMatchObject({
+      wordsReady: true,
+    })
   })
 })
 
 describe("completeness", () => {
   it("**is unknown for a chat nobody fetched**, and complete once fetched to its start without gaps", async () => {
     expect(await store.chatCompleteness(ME, ["1"])).toEqual([
-      { chatId: "1", state: "unknown", upToDate: null, gaps: false, reachesStart: false },
+      { chatId: "1", state: "unknown", upToDate: null, gaps: false, reachesStart: false, fetchedAt: null },
     ])
 
     await store.markRange(ME, "1", 1, 6)
@@ -127,5 +133,16 @@ describe("completeness", () => {
 
     await store.markRange(ME, "1", 9, 10)
     expect((await store.chatCompleteness(ME, ["1"]))[0]).toMatchObject({ state: "partial", gaps: true })
+  })
+
+  it("**stops counting a start mark once older messages are held**, so a wrong mark heals with the next fetch", async () => {
+    const chat = { id: "40", title: "Marked", kind: "group" as const, unreadCount: 0, lastMessageAt: null }
+    await store.saveChats(ME, [{ ...chat, participantsCount: null }])
+    await store.markRange(ME, "40", 4, 6)
+    await store.setSyncState(ME, historyStartKey("40"), "4")
+    expect((await store.chatCompleteness(ME, ["40"]))[0]).toMatchObject({ state: "complete", reachesStart: true })
+
+    await store.markRange(ME, "40", 2, 6)
+    expect((await store.chatCompleteness(ME, ["40"]))[0]).toMatchObject({ state: "partial", reachesStart: false })
   })
 })

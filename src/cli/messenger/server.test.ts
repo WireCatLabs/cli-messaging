@@ -509,4 +509,56 @@ describe("a CLI's own server process", () => {
     )
     expect(agent).not.toContain("KeepAlive")
   })
+
+  it("**status says a unit stopped for good on a refused login**, and what to run", async () => {
+    const { env } = setup()
+    const { options } = own()
+    const failed =
+      "LoadState=loaded\nActiveState=failed\nSubState=failed\nMainPID=0\nExecMainCode=1\nExecMainStatus=4\n"
+    const { system } = machine("linux", { answers: { "systemctl --user show": { stdout: failed } } })
+    await call(["install"], env, system, false, options)
+
+    expect((await call(["status", "--json"], env, system, false, options)).answer).toMatchObject({
+      running: false,
+      stopped: { exitCode: 4, reason: "authentication_error", restarts: false },
+      unit: { active: false, exitCode: 4 },
+    })
+    const said = (await call(["status"], env, system, true, options)).text
+    expect(said).toContain("the login is no longer valid")
+    expect(said).toContain("`chat session start`, then `chat server start`")
+    expect(said).not.toContain("The unit failed")
+
+    const darwin = machine("darwin", {
+      answers: { "launchctl print": { stdout: "\tstate = not running\n\tlast exit code = 8\n" } },
+    }).system
+    await call(["install"], env, darwin, false, options)
+    expect((await call(["status"], env, darwin, true, options)).text).toContain(
+      "It stopped with rate_limited, which a restart would not fix",
+    )
+  })
+
+  it("a crash whose signal number matches a code is not read as that exit", async () => {
+    const { env } = setup()
+    const { options } = own()
+    const killed =
+      "LoadState=loaded\nActiveState=activating\nSubState=auto-restart\nMainPID=0\nExecMainCode=2\nExecMainStatus=11\n"
+    const { system } = machine("linux", { answers: { "systemctl --user show": { stdout: killed } } })
+    await call(["install"], env, system, false, options)
+
+    const status = await call(["status", "--json"], env, system, false, options)
+    expect(status.answer.stopped).toBeUndefined()
+    expect(status.answer.unit.exitCode).toBeUndefined()
+  })
+
+  it("status says nothing of the kind for an exit a restart may fix", async () => {
+    const { env } = setup()
+    const failed =
+      "LoadState=loaded\nActiveState=failed\nSubState=failed\nMainPID=0\nExecMainCode=1\nExecMainStatus=4\n"
+    const { system } = machine("linux", { answers: { "systemctl --user show": { stdout: failed } } })
+    await call(["install"], env, system)
+
+    const status = await call(["status", "--json"], env, system)
+    expect(status.answer.stopped).toBeUndefined()
+    expect((await call(["status"], env, system, true)).text).toContain("The unit failed")
+  })
 })

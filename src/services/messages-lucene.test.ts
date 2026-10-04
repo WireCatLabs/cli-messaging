@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it } from "vitest"
 import type { Chat, Message } from "../domain/models.js"
 import { parseLucene } from "../search/lucene/parser.js"
 import { PRESETS } from "../search/lucene/presets.js"
-import { type AccountKey, type MessageStore, openStore } from "../store/store.js"
+import { type AccountKey, fetchedKey, type MessageStore, openStore } from "../store/store.js"
 import { searchStore, statsStore } from "./messages.js"
 
 interface Fixture {
@@ -99,7 +99,10 @@ describe.each(["max", "telegram"])("strict store profile (%s)", (provider) => {
       searchIndexState: async () => undefined,
     }
     await expect(run(partial, account, "alpha")).rejects.toThrow("index is not ready")
-    expect(ids(await run(partial, account, "kind:group"))).toEqual([0, 2, 4, 6, 8, 10, 12, 14])
+    const metadataOnly = await run(partial, account, "kind:group")
+    expect(ids(metadataOnly)).toEqual([0, 2, 4, 6, 8, 10, 12, 14])
+    expect(metadataOnly.wordsReady).toBe(false)
+    expect((await run(store, account, "kind:group")).wordsReady).toBe(true)
   })
   it("finds media-only, unknown peers and same-thread ids without merging chats", async () => {
     const store = await open()
@@ -291,6 +294,38 @@ describe.each(["max", "telegram"])("strict store profile (%s)", (provider) => {
     const page = await run(store, account, "alpha", { limit: 2, newest: true })
     expect(page.items.map(({ id }) => id)).toEqual(["73", "72"])
     expect(page.hasMore).toBe(true)
+  })
+  it("reports when the store last fetched the chats in scope and whether it knows the whole chat list", async () => {
+    let clock = Date.parse("2026-10-01T09:00:00Z")
+    const store = await open(() => clock)
+    await seed(store, account)
+    await store.setSyncState(account, fetchedKey("1"), "1")
+    expect((await run(store, account, "alpha")).coverage).toMatchObject({
+      lastSyncedAt: null,
+      inventoryComplete: false,
+    })
+
+    clock = Date.parse("2026-10-02T09:00:00Z")
+    await store.setSyncState(account, fetchedKey("2"), "1")
+    await store.markChatsLeft(account, ["1", "2"])
+    const all = await run(store, account, "alpha")
+    expect(all.coverage).toMatchObject({ lastSyncedAt: "2026-10-01T09:00:00.000Z", inventoryComplete: true })
+    const counted = await statsStore(store, account, { text: "alpha", by: "chat", limit: 10 })
+    expect(counted.coverage).toEqual(all.coverage)
+    expect(all.completeness.map(({ fetchedAt }) => fetchedAt)).toEqual([
+      "2026-10-01T09:00:00.000Z",
+      "2026-10-02T09:00:00.000Z",
+    ])
+    expect((await run(store, account, "alpha", { limit: 100, chat: "Chat 2" })).coverage).toMatchObject({
+      lastSyncedAt: "2026-10-02T09:00:00.000Z",
+      inventoryComplete: true,
+    })
+    const other = { provider: account.provider, account: "other" }
+    await store.saveChats(other, [chat("9")])
+    expect(
+      (await searchStore(store, account, { language: "lucene", text: "alpha", limit: 10, accounts: [account, other] }))
+        .coverage,
+    ).toMatchObject({ lastSyncedAt: null, inventoryComplete: false })
   })
   it("reports coverage even for empty hits and refuses invalid versions/modes", async () => {
     const store = await open()
