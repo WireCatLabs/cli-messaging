@@ -298,9 +298,10 @@ Saving what a read answered and timing each call stay decorators on the adapter 
   personal account still keeps its own cache; moving it here is the proposal's Phase 4.~~
   **Correction 2026-10-04:** both its personal account and its bots. The personal account is a
   `Messenger` (`src/messenger.ts`) whose `connect` returns `maxAdapter` (`src/adapter/max-adapter.ts`)
-  over max's own protocol client, and it uses the shared commands, services, store, guard and MCP
-  server; its own cache is gone (max-cli #330–#344, last `56bd224`). max keeps its protocol,
-  session, `max serve` and the Bot API slice.
+  over max's own protocol client, and it uses the shared commands, services, store and guard; its
+  own cache is gone (max-cli #330–#344, last `56bd224`). max keeps its protocol, session,
+  `max serve`, the Bot API slice and its own MCP server (`MaxSession`, `src/mcp/server.ts`), whose
+  tools run the shared services through `withShared` (`src/mcp/shared.ts`).
 
 Both pin an exact version; a change here reaches them through a release and a bump in each.
 
