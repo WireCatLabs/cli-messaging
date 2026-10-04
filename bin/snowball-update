@@ -1,0 +1,63 @@
+#!/usr/bin/env bash
+# Regenerates the vendored Snowball stemmers in src/search/snowball/ from the official source, plus the
+# 2,000-word samples of snowball-data that src/search/stem.test.ts checks them against.
+#
+#   bin/snowball-update            regenerate at the pinned commits and show the diff
+#   bin/snowball-update --check    regenerate into a temp dir and fail if anything differs from what is committed
+#   bin/snowball-update <sha>      regenerate at another snowball commit (then update SNOWBALL_VERSION in stem.ts)
+#
+# Needs git, curl, make and a C compiler.
+set -euo pipefail
+
+SNOWBALL_SHA=cd195b51e948a902a4312f023f4a14392516a543 # tag v3.1.1
+DATA_SHA=a0ec0d0a2839ec885878868de20fcb63209d92b0
+LANGS="russian spanish english"
+SAMPLE=2000
+
+check=false
+case "${1:-}" in
+--check) check=true ;;
+"") ;;
+*) SNOWBALL_SHA="$1" ;;
+esac
+
+root="$(cd "$(dirname "$0")/.." && pwd)"
+target="$root/src/search/snowball"
+work="$(mktemp -d)"
+trap 'rm -rf "$work"' EXIT
+
+git init -q "$work/snowball"
+git -C "$work/snowball" fetch -q --depth 1 https://github.com/snowballstem/snowball.git "$SNOWBALL_SHA"
+git -C "$work/snowball" checkout -q FETCH_HEAD
+make -C "$work/snowball" -s -j8 snowball >/dev/null
+
+out="$work/out"
+mkdir -p "$out/samples"
+for lang in $LANGS; do
+  "$work/snowball/snowball" "$work/snowball/algorithms/$lang.sbl" -js -o "$out/$lang-stemmer"
+  curl -fsSL -o "$work/voc.txt" "https://raw.githubusercontent.com/snowballstem/snowball-data/$DATA_SHA/$lang/voc.txt"
+  curl -fsSL -o "$work/output.txt" "https://raw.githubusercontent.com/snowballstem/snowball-data/$DATA_SHA/$lang/output.txt"
+  paste "$work/voc.txt" "$work/output.txt" |
+    awk -v n="$(wc -l <"$work/voc.txt")" -v k="$SAMPLE" 'BEGIN { step = int(n / k) } (NR - 1) % step == 0 && c < k { print; c++ }' \
+      >"$out/samples/$lang.tsv"
+done
+cp "$work/snowball/javascript/base-stemmer.js" "$out/"
+cp "$work/snowball/COPYING" "$out/LICENSE"
+curl -fsSL -o "$out/samples/COPYING" "https://raw.githubusercontent.com/snowballstem/snowball-data/$DATA_SHA/COPYING"
+
+generated="base-stemmer.js russian-stemmer.js spanish-stemmer.js english-stemmer.js LICENSE samples/COPYING samples/russian.tsv samples/spanish.tsv samples/english.tsv"
+if $check; then
+  status=0
+  for f in $generated; do
+    cmp -s "$out/$f" "$target/$f" || {
+      echo "differs: src/search/snowball/$f"
+      status=1
+    }
+  done
+  [ "$status" = 0 ] && echo "ok: src/search/snowball matches snowball ${SNOWBALL_SHA:0:8}, snowball-data ${DATA_SHA:0:8}"
+  exit "$status"
+fi
+
+mkdir -p "$target/samples"
+for f in $generated; do cp "$out/$f" "$target/$f"; done
+git -C "$root" diff --stat -- src/search/snowball
