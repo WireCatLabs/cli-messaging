@@ -18,15 +18,10 @@ interface Fragment {
   exact: boolean
   fts?: string
 }
-interface Attached {
-  kind: string
-  name: string | null
-  mime: string | null
-}
 interface Leaf {
   node: ResolvedPredicate
   fragment: Fragment
-  test?: (text: string, attachments: Attached[]) => boolean
+  test?: (text: string, attachments: string[]) => boolean
 }
 const quoted = (value: string) => `"${value.replaceAll('"', '""')}"`
 const combine = (parts: Fragment[], operator: "AND" | "OR"): Fragment => ({
@@ -120,35 +115,36 @@ export const matchQuery = async (context: StoreContext, execution: QueryExecutio
       test = (text, attachments) => {
         budget.work += text.length
         if (budget.work > QUERY_LIMITS.work) exhausted("detector work")
-        return (
-          PRESETS[value.toLowerCase()]?.candidate(
-            text,
-            attachments.map(({ kind }) => kind),
-          ) ?? false
-        )
+        return PRESETS[value.toLowerCase()]?.candidate(text, attachments) ?? false
       }
     } else if (field === "filename" || field === "mime") {
       const column = field === "filename" ? "name" : "mime"
-      fragment = {
-        sql: `EXISTS (SELECT 1 FROM attachments att WHERE att.message_pk=m.pk AND att.${column} IS NOT NULL)`,
-        params: [],
-        exact: false,
-      }
       const wanted = normalize(value)
       const automaton =
         operator === "wildcard" || operator === "regex"
           ? patternOf(operator === "wildcard" ? wildcardPattern(wanted) : value, node)
           : undefined
-      test = (_, attachments) =>
-        attachments.some((attachment) => {
-          const known = attachment[column]
-          if (known === null) return false
-          const name = normalize(known)
-          budget.work += name.length
-          if (budget.work > QUERY_LIMITS.work) exhausted("detector work")
-          if (automaton) return automaton.test(name, budget)
-          return name === wanted || (column === "mime" && !wanted.includes("/") && name.startsWith(`${wanted}/`))
-        })
+      const fits = (known: string) => {
+        const name = normalize(known)
+        budget.work += name.length
+        if (budget.work > QUERY_LIMITS.work) exhausted("detector work")
+        if (automaton) return automaton.test(name, budget)
+        return name === wanted || (column === "mime" && !wanted.includes("/") && name.startsWith(`${wanted}/`))
+      }
+      const scope = combine(
+        execution.accounts.map(({ provider, account }) => bound("ac.provider=? AND ac.native_id=?", provider, account)),
+        "OR",
+      )
+      const page = database.prepare(
+        `SELECT att.pk AS pk, att.message_pk AS message, att.${column} AS value FROM attachments att JOIN messages m ON m.pk=att.message_pk JOIN accounts ac ON ac.pk=m.account_pk WHERE att.pk > ? AND att.${column} IS NOT NULL AND m.deleted_at IS NULL AND ${scope.sql} ORDER BY att.pk LIMIT 5000`,
+      )
+      const messages = new Set<number>()
+      for (let rows = page.all(0, ...scope.params); rows.length > 0; ) {
+        check()
+        for (const row of rows) if (fits(String(row.value))) messages.add(Number(row.message))
+        rows = page.all(Number(rows.at(-1)?.pk), ...scope.params)
+      }
+      fragment = bound("m.pk IN (SELECT value FROM json_each(?))", JSON.stringify([...messages]))
     } else if (field === "size") {
       const conditions =
         operator === "range"
@@ -325,12 +321,7 @@ export const matchQuery = async (context: StoreContext, execution: QueryExecutio
   const exact = leaves.filter(({ test }) => test === undefined)
   const projection = exact.map(({ fragment }, index) => `coalesce(${fragment.sql},0) AS q${index}`).join(",")
   const projectionParams = exact.flatMap(({ fragment }) => fragment.params)
-  const evaluate = (
-    node: ResolvedNode,
-    row: Record<string, unknown>,
-    text: string,
-    attachments: Attached[],
-  ): boolean => {
+  const evaluate = (node: ResolvedNode, row: Record<string, unknown>, text: string, attachments: string[]): boolean => {
     if (node.kind === "predicate") {
       const leaf = fragments.get(node) as Leaf
       return leaf.test ? leaf.test(text, attachments) : Number(row[`q${exact.indexOf(leaf)}`]) === 1
@@ -381,17 +372,15 @@ export const matchQuery = async (context: StoreContext, execution: QueryExecutio
     const pks = candidates.slice(offset, offset + 500).map(({ pk }) => Number(pk))
     const rows = database
       .prepare(
-        `SELECT m.pk AS pk,m.text AS body${projection ? `,${projection}` : ""},(SELECT json_group_array(json_object('kind',att.kind,'name',att.name,'mime',att.mime)) FROM attachments att WHERE att.message_pk=m.pk) AS attached ${joinedFrom} WHERE m.pk IN (${pks.map(() => "?").join(",")})`,
+        `SELECT m.pk AS pk,m.text AS body${projection ? `,${projection}` : ""},(SELECT json_group_array(att.kind) FROM attachments att WHERE att.message_pk=m.pk) AS attachment_kinds ${joinedFrom} WHERE m.pk IN (${pks.map(() => "?").join(",")})`,
       )
       .all(...projectionParams, ...pks)
     const byPk = new Map(rows.map((row) => [Number(row.pk), row]))
     for (const pk of pks) {
       check()
       const row = byPk.get(pk) as Record<string, unknown>
-      const attachments: unknown = JSON.parse(String(row.attached))
-      if (
-        evaluate(execution.root, row, String(row.body), Array.isArray(attachments) ? (attachments as Attached[]) : [])
-      )
+      const attachments: unknown = JSON.parse(String(row.attachment_kinds))
+      if (evaluate(execution.root, row, String(row.body), Array.isArray(attachments) ? attachments.map(String) : []))
         found.push(pk)
       if (found.length > execution.limit) break
     }

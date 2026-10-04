@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+- `filename:` and `mime:` alone no longer fail on an archive with more than 50,000 messages with files: names are
+  matched before the main query, so the candidate row limit does not apply to them.
 ## 0.141.0 — 04.10.2026
 
 ### Added
