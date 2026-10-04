@@ -1,6 +1,3 @@
-import { readFileSync } from "node:fs"
-import { join } from "node:path"
-import { resolvePaths, writeSecurely } from "@leemour/cli-core"
 import { Command } from "commander"
 import type { MessageHit } from "../../domain/models.js"
 import { renderMessages } from "../../render/messages.js"
@@ -8,8 +5,8 @@ import { CHAT_KINDS } from "../../services/chats.js"
 import { CHAT_WINDOW, kindsOf } from "../../services/inbox.js"
 import { momentOf } from "../../services/moment.js"
 import { modelWith } from "../../speech/hearing.js"
-import type { AppIdentity } from "../app.js"
 import { positiveCount } from "../paging.js"
+import { MARK_READ_OPTION, markShown, marksRead, NO_MARK_READ_OPTION } from "./catch-up.js"
 import { type Messenger, messengerContext } from "./context.js"
 import {
   heardItems,
@@ -19,39 +16,9 @@ import {
   spokenItems,
   TRANSCRIBE_OPTION,
 } from "./hearing-command.js"
+import { checkPoints } from "./points.js"
 
 const FIRST_LOOK_MS = 24 * 60 * 60 * 1000
-
-/** Where `inbox --new` stopped, per profile, beside the remembered account. */
-const pointFileFor = (app: AppIdentity, profile: string, env: NodeJS.ProcessEnv): string =>
-  join(resolvePaths({ appName: app.appName, prefix: app.envPrefix, env }).state, "inbox", `${profile}.json`)
-
-interface Saved {
-  /** Where a chat with no point of its own starts: the first check, or the one point older versions kept. */
-  lastCheckAt?: string
-  chats?: Record<string, string>
-}
-
-const savedPoints = (app: AppIdentity, profile: string, env: NodeJS.ProcessEnv): Saved => {
-  try {
-    const { lastCheckAt, chats } = JSON.parse(readFileSync(pointFileFor(app, profile, env), "utf8")) as {
-      lastCheckAt?: unknown
-      chats?: unknown
-    }
-    return {
-      ...(typeof lastCheckAt === "string" ? { lastCheckAt } : {}),
-      ...(chats !== null && typeof chats === "object"
-        ? {
-            chats: Object.fromEntries(
-              Object.entries(chats).filter((entry): entry is [string, string] => typeof entry[1] === "string"),
-            ),
-          }
-        : {}),
-    }
-  } catch {
-    return {}
-  }
-}
 
 /**
  * Two questions, one command — max-cli's `inbox` (its `NEED-171`).
@@ -74,6 +41,8 @@ export const inboxCommand = (messenger: Messenger): Command =>
     .option("--kind <kinds>", `only chats of these kinds, comma-separated: ${CHAT_KINDS.join(", ")}`)
     .option(...TRANSCRIBE_OPTION)
     .option(...MODEL_OPTION)
+    .option(...MARK_READ_OPTION)
+    .option(...NO_MARK_READ_OPTION)
     .action(async function (this: Command) {
       const {
         new: fresh,
@@ -82,6 +51,7 @@ export const inboxCommand = (messenger: Messenger): Command =>
         kind,
         transcribe,
         model,
+        markRead,
       } = this.opts<{
         new?: boolean
         sinceTime?: string
@@ -89,20 +59,21 @@ export const inboxCommand = (messenger: Messenger): Command =>
         kind?: string
         transcribe?: boolean
         model?: string
+        markRead?: boolean
       }>()
       const hearWith = modelWith(transcribe, model)
       const context = messengerContext(this, messenger)
       const { app } = messenger
       const { settings, renderer, format, streams, env } = context
       const kinds = kind === undefined ? undefined : kindsOf(kind)
-      const saved = savedPoints(app, settings.profile, env)
-      const first = saved.lastCheckAt ?? new Date(Date.now() - FIRST_LOOK_MS).toISOString()
-      const from = since !== undefined ? momentOf(since, "--since-time") : fresh ? Date.parse(first) : undefined
-      const points =
+      const saved =
         fresh && since === undefined
-          ? new Map(Object.entries(saved.chats ?? {}).map(([chat, at]) => [chat, Date.parse(at)]))
+          ? checkPoints(app, { command: "inbox", profile: settings.profile, env, firstLookMs: FIRST_LOOK_MS })
           : undefined
-      const { inbox, read, hearing } = await context.withServices(async (services, connect) => {
+      const from = since !== undefined ? momentOf(since, "--since-time") : saved?.first
+      const points = saved?.chats
+      const marking = marksRead(markRead, settings)
+      const { inbox, read, hearing, marked } = await context.withServices(async (services, connect) => {
         const inbox = await services.inbox.read({
           ...(from === undefined ? {} : { since: from }),
           ...(points === undefined ? {} : { points }),
@@ -114,7 +85,8 @@ export const inboxCommand = (messenger: Messenger): Command =>
           chat.messages.map((message) => ({ ...message, chatTitle: chat.title })),
         )
         const hearing = await hearForCommand(context, messenger, read, transcribe === true, hearWith, connect)
-        return { inbox, read, hearing }
+        const marked = marking ? await markShown(services, inbox.chats) : undefined
+        return { inbox, read, hearing, marked }
       })
 
       for (const chat of inbox.chats) {
@@ -131,12 +103,14 @@ export const inboxCommand = (messenger: Messenger): Command =>
       if (inbox.quiet > 0) renderer.note(`${inbox.quiet} muted or archived chats left out — --all shows them`)
       if (inbox.partial)
         renderer.note(`only the ${CHAT_WINDOW} newest chats were looked at; an older one may have more`)
+      if (marked !== undefined) renderer.note(`marked ${marked.length} chat(s) read up to the newest message shown`)
 
       const messages = heardItems(read, hearing)
       if (format === "jsonl") renderer.stream(messages)
       else if (format !== "pretty") {
         renderer.result({
           ...inbox,
+          ...(marked === undefined ? {} : { markedRead: marked }),
           chats: inbox.chats.map((chat) => ({ ...chat, messages: heardItems(chat.messages, hearing) })),
           ...hearingFields(hearing, transcribe === true),
         })
@@ -156,8 +130,5 @@ export const inboxCommand = (messenger: Messenger): Command =>
         )
       }
 
-      if (points !== undefined && Object.keys(inbox.checked ?? {}).length > 0) {
-        const kept: Saved = { lastCheckAt: first, chats: { ...saved.chats, ...inbox.checked } }
-        writeSecurely(pointFileFor(app, settings.profile, env), `${JSON.stringify(kept)}\n`, 0o600)
-      }
+      saved?.save(inbox.checked ?? {})
     })

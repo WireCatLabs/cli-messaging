@@ -15,6 +15,11 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   password differs from the first. `store decrypt <file> --output
   <file>` opens one; `store restore` asks for the password of an encrypted backup. A wrong password or a changed
   byte fails and writes nothing.
+- `review --new`: what changed since the last `review --new`, a point per chat kept apart from `inbox --new`'s, so
+  one never moves the other. A chat cut short keeps its point. Not with `--since-time` or `--unanswered`.
+- `inbox --mark-read` and `review --mark-read` mark each chat shown read, up to the newest message shown, under
+  `permissions.chats.mark-read`; JSON gains `markedRead`. The profile setting `catchUpMarksRead` (off unless set)
+  makes it the default, and `--no-mark-read` overrides it. The other side sees the mark.
 - `messages stats [query] --by chat|sender|day|hour` and the read-only MCP tool `messages_stats` count what a strict
   query matches in the local store, each message once: by chat or sender (most first), or by calendar day or hour in
   `--timezone` (in order). No query counts every stored message. JSON: `{ by, items: [{ key, name, account?, count }],

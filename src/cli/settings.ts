@@ -72,6 +72,7 @@ const SHARED_PROFILE_ENTRIES = {
   sendsPerHour: v.optional(count),
   transcribeWith: v.optional(v.picklist(["auto", "messenger", "local"], plain("has to be auto, messenger or local"))),
   speechModel: v.optional(v.string(plain("has to be a model id from `models audio list`, in quotes"))),
+  catchUpMarksRead: v.optional(flag),
 }
 
 /**
@@ -154,6 +155,8 @@ export interface Settings {
   /** Unset means "decide from the terminal", which is `resolveOutput`'s job, not this one's. */
   color: boolean | undefined
   senderColors: boolean
+  /** `inbox` and `review` mark each chat they show read, as `--mark-read` does; the other side sees it. Off unless set. */
+  catchUpMarksRead: boolean
   limit: number
   /** Which page, 1-based. Per invocation only — a page number in a file is a setting nobody wants twice. */
   page: number
@@ -333,6 +336,7 @@ export const settingsFor = (app: AppIdentity, extension: SettingsExtension = {})
     const timeoutMs = fromLayers<number | undefined>("timeoutMs", undefined)
     const color = fromLayers<boolean | undefined>("color", undefined)
     const senderColors = fromLayers("senderColors", false)
+    const catchUpMarksRead = fromLayers("catchUpMarksRead", false)
     const keepRunsForDays = fromLayers("keepRunsForDays", DEFAULT_KEEP_RUNS_FOR_DAYS)
     const readOnly = fromLayers("readOnly", false)
     const allow = fromLayers<readonly Permission[] | undefined>("allow", undefined)
@@ -375,6 +379,7 @@ export const settingsFor = (app: AppIdentity, extension: SettingsExtension = {})
       offline: flags.offline === true,
       color: color.value,
       senderColors: senderColors.value,
+      catchUpMarksRead: catchUpMarksRead.value,
       limit: limit.value,
       page: flags.page ?? 1,
       all: flags.all === true,
@@ -405,6 +410,7 @@ export const settingsFor = (app: AppIdentity, extension: SettingsExtension = {})
         commandTimeoutMs: timeout.from,
         color: color.from,
         senderColors: senderColors.from,
+        catchUpMarksRead: catchUpMarksRead.from,
         record: record.from,
         keepRunsForDays: keepRunsForDays.from,
         readOnly: readOnly.from,

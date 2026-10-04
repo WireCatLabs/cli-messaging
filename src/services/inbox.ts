@@ -183,6 +183,8 @@ const REVIEW_PER_CHAT = 300
 
 export interface ReviewOptions {
   since: number
+  /** A chat's own start, where it has one; `since` for the rest. */
+  points?: ReadonlyMap<Id, number>
   /** A chat as typed; only that one is read, muted or not. */
   chat?: string
   /** Only chats of these kinds; ignored with `chat`. */
@@ -221,11 +223,12 @@ const window = async (adapter: InboxReader, chat: Id, since: number, cut: number
  */
 export const reviewIn = async (
   adapter: InboxReader,
-  { since, chat, kinds, all = false, unansweredAfterHours, now = Date.now(), enrich }: ReviewOptions,
+  { since, points, chat, kinds, all = false, unansweredAfterHours, now = Date.now(), enrich }: ReviewOptions,
 ): Promise<Review> => {
   const page = await adapter.chats({ limit: CHAT_WINDOW, offset: 0 })
+  const startOf = (id: Id) => points?.get(id) ?? since
   const changed = byRecency(
-    page.items.filter((one) => one.lastMessageAt !== null && Date.parse(one.lastMessageAt) > since),
+    page.items.filter((one) => one.lastMessageAt !== null && Date.parse(one.lastMessageAt) > startOf(one.id)),
   )
   const cut = Math.max(since, ...changed.map((one) => Date.parse(one.lastMessageAt ?? "")))
   const only = chat === undefined ? undefined : (await adapter.resolve(chat)).id
@@ -236,19 +239,24 @@ export const reviewIn = async (
   const { read, skipped } = capped(wanted, REVIEW_CHATS)
 
   const chats: ReviewChat[] = []
+  // A chat cut short keeps its point: what was left out shows next time instead of never.
+  const checked: Record<Id, string> = {}
   for (const { id, title, kind } of read) {
-    const { messages, more } = await window(adapter, id, since, cut)
+    const { messages, more } = await window(adapter, id, startOf(id), cut)
     if (messages.length > 0) chats.push({ id, title, kind, messages, more })
+    if (!more) checked[id] = new Date(cut).toISOString()
   }
   const partial = page.hasMore && changed.length === page.items.length
+  const earliest = changed.length > 0 ? Math.min(...changed.map((one) => startOf(one.id))) : since
   const found: Review = {
-    since: new Date(since).toISOString(),
+    since: new Date(points === undefined ? since : earliest).toISOString(),
     until: new Date(cut).toISOString(),
     complete: skipped.length === 0 && !partial && chats.every((one) => !one.more),
     chats,
     skipped,
     partial,
     quiet,
+    ...(points === undefined ? {} : { checked }),
   }
   const answerers = new Map<Id, Id[] | undefined>()
   if (unansweredAfterHours !== undefined) {
