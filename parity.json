@@ -1516,8 +1516,9 @@
       "in": "all"
     },
     "chats send-as": {
-      "in": ["tg"],
-      "reason": "MAX has no identities to post as other than the account itself"
+      "in": [],
+      "reason": "MAX has no identities to post as other than the account itself",
+      "planned": { "tg": "G1 feat/send-as-identities" }
     },
     "chats show": {
       "in": "all"
@@ -2339,7 +2340,10 @@
         "--no-preview": "all",
         "--photo": "all",
         "--reply-to": "all",
-        "--send-as": "all",
+        "--send-as": {
+          "in": [],
+          "planned": { "max": "G1 feat/send-as-identities", "tg": "G1 feat/send-as-identities" }
+        },
         "--send-id": "all",
         "--silent": "all",
         "--spoiler": {
