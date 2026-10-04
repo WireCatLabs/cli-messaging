@@ -49,6 +49,22 @@ speech (parte NOUN / VERB), and the ground truth counts those as wrong for every
 | T1 vocabulary (exists today) | 4.2 s | 34 MB | 26 s | 203 MB | 14.0 / 47.0 (correction + search) | 8.3 / 12.6 |
 | T2 (normalized text) | 8.5 s | 58 MB | 66 s | 538 MB | 10.7 / 24.2 | 2.4 / 7.3 |
 
+## Gate §S12 through the store (2026-10-05)
+
+`gate.ts` runs the plan's gate on the product code: migration 15, `fillStems`, the write drain of
+`saveMessages`, and the planned exact-first query written as SQL (the compiler is work item 5). Quality
+through the store is the "S via store" row in each treebank section.
+
+- **Pass, 6 of 7.** At 1M: fill 28.0 s (≤ 75), of which Snowball 7.6 s (≤ 25); disk 101 MB (≤ 140); ingest
+  +22 % with the drain on, the median of 5 rounds (≤ +25; one round moves between +9 and +30 %); 0 exact
+  hits missing. Through the store, Russian recall / precision is 0.881 / 0.839 and Spanish 0.956 / 0.691,
+  within 0.002 of S [run].
+- **Miss: query p95 43.3 ms (≤ 30).** Today's exact query over the same words is already 26.5 ms p95, so the
+  target sits just above today's search. Stemmed search costs about 1.6× today's, in line with its larger
+  result sets [run].
+- **For the compiler:** the stems set and its bm25 must be computed once. Joined row by row, the same query
+  took 420 ms p95 at 100k; materialized, 5 ms [run].
+
 ## Recommendation
 
 - **Ship S.** It has the best F1 in both languages [run]. In Russian it raises recall from 0.26 to 0.88 and
@@ -162,6 +178,7 @@ Known words — `stem(lower(word))`, then `normalize()` of that stem (what the i
 | T1 (no cap) | 0.830 | 0.512 | 0.634 | 44.0 | 158.1 | 1/204 |
 | T2 | 0.315 | 0.883 | 0.465 | 2.9 | 27.9 | 19/204 |
 | S | 0.881 | 0.839 | 0.860 | 37.8 | 61.4 | 4/204 |
+| S via store (migration 15, fillStems, OR exact) | 0.881 | 0.839 | 0.860 | 37.8 | 61.4 | 4/204 |
 | S (fold, then stem) | 0.785 | 0.854 | 0.818 | 29.7 | 51.2 | 9/204 |
 | S+T1 | 0.913 | 0.522 | 0.664 | 46.9 | 149.2 | 1/204 |
 
@@ -177,6 +194,7 @@ By band × query type — recall / precision / F1 / gain:
 | T1 (no cap) | 0.77 / 0.50 / 0.61 / 1.6 | 0.85 / 0.56 / 0.67 / 1.1 | 0.89 / 0.42 / 0.57 / 9.9 | 0.86 / 0.56 / 0.68 / 10.1 | 0.88 / 0.45 / 0.60 / 110.1 | 0.73 / 0.59 / 0.65 / 131.5 | 0.85 / 0.46 / 0.59 / 40.5 | 0.81 / 0.57 / 0.67 / 47.6 |
 | T2 | 0.29 / 0.85 / 0.44 / 0.2 | 0.48 / 0.94 / 0.63 / 0.0 | 0.42 / 0.83 / 0.56 / 1.6 | 0.23 / 0.94 / 0.37 / 0.1 | 0.40 / 0.82 / 0.54 / 14.4 | 0.07 / 0.90 / 0.12 / 1.0 | 0.37 / 0.83 / 0.51 / 5.4 | 0.26 / 0.93 / 0.40 / 0.4 |
 | S | 0.90 / 0.87 / 0.88 / 1.9 | 0.96 / 0.85 / 0.90 / 1.4 | 0.87 / 0.81 / 0.84 / 10.2 | 0.90 / 0.85 / 0.87 / 11.3 | 0.86 / 0.84 / 0.85 / 81.0 | 0.80 / 0.83 / 0.81 / 121.2 | 0.88 / 0.84 / 0.86 / 31.0 | 0.88 / 0.84 / 0.86 / 44.6 |
+| S via store (migration 15, fillStems, OR exact) | 0.90 / 0.87 / 0.88 / 1.9 | 0.96 / 0.85 / 0.90 / 1.4 | 0.87 / 0.81 / 0.84 / 10.2 | 0.90 / 0.85 / 0.87 / 11.3 | 0.86 / 0.84 / 0.85 / 81.0 | 0.80 / 0.83 / 0.81 / 121.2 | 0.88 / 0.84 / 0.86 / 31.0 | 0.88 / 0.84 / 0.86 / 44.6 |
 | S (fold, then stem) | 0.68 / 0.90 / 0.78 / 1.3 | 0.87 / 0.84 / 0.85 / 1.2 | 0.84 / 0.82 / 0.83 / 9.7 | 0.88 / 0.85 / 0.87 / 11.0 | 0.71 / 0.88 / 0.78 / 40.8 | 0.73 / 0.84 / 0.78 / 114.1 | 0.74 / 0.86 / 0.80 / 17.3 | 0.83 / 0.84 / 0.84 / 42.1 |
 | S+T1 | 0.91 / 0.50 / 0.64 / 1.9 | 0.96 / 0.54 / 0.69 / 1.4 | 0.90 / 0.42 / 0.58 / 10.5 | 0.93 / 0.58 / 0.71 / 11.8 | 0.92 / 0.46 / 0.62 / 113.9 | 0.88 / 0.63 / 0.73 / 141.8 | 0.91 / 0.46 / 0.61 / 42.1 | 0.92 / 0.58 / 0.71 / 51.7 |
 
@@ -188,6 +206,8 @@ False merges over content tokens — classes (folded form or stem) that hold mor
 | Snowball by script (stem, then fold) | 47,163 | 6,679 | 14.2% |
 
 False-merge examples (stem: form (lemma) + form (lemma)), most frequent first: `пот`: потому (потому) + потом (потом); `част`: часть (часть) + часто (часто); `больш`: больше (больше) + большой (большой); `прав`: право (право) + правило (правило); `ряд`: рядом (рядом) + ряд (ряд); `главн`: главное (главное) + главный (главный); `нача`: начала (начало) + начал (начать); `ран`: ран (ран) + ранее (ранее).
+
+Store row: exact hits the stems alone miss 0 of 2193 (the OR with the word index returns them) [run].
 
 ## Quality — Russian: UD_Russian-GSD r2.18 (CC BY-SA 4.0) [run]
 
@@ -206,6 +226,7 @@ False-merge examples (stem: form (lemma) + form (lemma)), most frequent first: `
 | T1 (no cap) | 0.841 | 0.630 | 0.720 | 27.7 | 54.9 | 1/204 |
 | T2 | 0.348 | 0.853 | 0.494 | 7.1 | 17.8 | 21/204 |
 | S | 0.862 | 0.874 | 0.868 | 28.3 | 37.2 | 3/204 |
+| S via store (migration 15, fillStems, OR exact) | 0.862 | 0.874 | 0.868 | 28.3 | 37.2 | 3/204 |
 | S (fold, then stem) | 0.756 | 0.879 | 0.813 | 24.3 | 32.5 | 8/204 |
 | S+T1 | 0.916 | 0.650 | 0.761 | 30.3 | 54.6 | 0/204 |
 
@@ -221,6 +242,7 @@ By band × query type — recall / precision / F1 / gain:
 | T1 (no cap) | 0.84 / 0.46 / 0.59 / 1.6 | 0.93 / 0.54 / 0.69 / 1.0 | 0.85 / 0.65 / 0.74 / 8.4 | 0.82 / 0.67 / 0.74 / 8.9 | 0.84 / 0.71 / 0.77 / 71.0 | 0.77 / 0.75 / 0.76 / 75.4 | 0.84 / 0.61 / 0.70 / 27.0 | 0.84 / 0.65 / 0.73 / 28.4 |
 | T2 | 0.43 / 0.78 / 0.56 / 0.5 | 0.54 / 0.94 / 0.69 / 0.0 | 0.45 / 0.83 / 0.59 / 1.5 | 0.23 / 0.90 / 0.36 / 1.4 | 0.36 / 0.78 / 0.49 / 38.4 | 0.08 / 0.85 / 0.14 / 0.4 | 0.41 / 0.80 / 0.55 / 13.5 | 0.28 / 0.90 / 0.43 / 0.6 |
 | S | 0.82 / 0.80 / 0.81 / 1.6 | 0.92 / 0.86 / 0.89 / 1.0 | 0.94 / 0.89 / 0.91 / 9.7 | 0.89 / 0.85 / 0.87 / 10.5 | 0.82 / 0.90 / 0.86 / 70.4 | 0.79 / 0.93 / 0.86 / 76.8 | 0.86 / 0.86 / 0.86 / 27.3 | 0.86 / 0.88 / 0.87 / 29.4 |
+| S via store (migration 15, fillStems, OR exact) | 0.82 / 0.80 / 0.81 / 1.6 | 0.92 / 0.86 / 0.89 / 1.0 | 0.94 / 0.89 / 0.91 / 9.7 | 0.89 / 0.85 / 0.87 / 10.5 | 0.82 / 0.90 / 0.86 / 70.4 | 0.79 / 0.93 / 0.86 / 76.8 | 0.86 / 0.86 / 0.86 / 27.3 | 0.86 / 0.88 / 0.87 / 29.4 |
 | S (fold, then stem) | 0.74 / 0.80 / 0.77 / 1.4 | 0.88 / 0.86 / 0.87 / 0.9 | 0.80 / 0.89 / 0.84 / 7.1 | 0.80 / 0.85 / 0.83 / 9.0 | 0.67 / 0.92 / 0.78 / 60.3 | 0.65 / 0.94 / 0.77 / 67.3 | 0.74 / 0.87 / 0.80 / 22.9 | 0.78 / 0.89 / 0.83 / 25.7 |
 | S+T1 | 0.89 / 0.46 / 0.61 / 1.8 | 0.96 / 0.53 / 0.69 / 1.1 | 0.96 / 0.68 / 0.79 / 9.8 | 0.93 / 0.66 / 0.77 / 10.9 | 0.90 / 0.76 / 0.83 / 77.1 | 0.86 / 0.80 / 0.83 / 81.1 | 0.92 / 0.63 / 0.75 / 29.6 | 0.91 / 0.67 / 0.77 / 31.0 |
 
@@ -232,6 +254,8 @@ False merges over content tokens — classes (folded form or stem) that hold mor
 | Snowball by script (stem, then fold) | 15,197 | 1,272 | 8.4% |
 
 False-merge examples (stem: form (lemma) + form (lemma)), most frequent first: `част`: часть (часть) + часто (часто); `прав`: права (право) + правило (правило); `сам`: сам (сам) + самых (самый); `друг`: других (другой) + друг (друг); `основн`: основном (основное) + основной (основной); `ряд`: ряд (ряд) + рядом (рядом); `нача`: начал (начать) + начала (начало); `цел`: целью (цель) + целом (целое).
+
+Store row: exact hits the stems alone miss 0 of 994 (the OR with the word index returns them) [run].
 
 ## Quality — Spanish: UD_Spanish-AnCora r2.18 (CC BY 4.0) [run]
 
@@ -250,6 +274,7 @@ False-merge examples (stem: form (lemma) + form (lemma)), most frequent first: `
 | T1 (no cap) | 0.941 | 0.431 | 0.592 | 26.1 | 181.4 | 0/204 |
 | T2 | 0.563 | 0.799 | 0.661 | 8.4 | 38.8 | 4/204 |
 | S | 0.956 | 0.693 | 0.804 | 25.8 | 67.8 | 0/204 |
+| S via store (migration 15, fillStems, OR exact) | 0.956 | 0.691 | 0.802 | 25.8 | 67.8 | 0/204 |
 | S (fold, then stem) | 0.945 | 0.687 | 0.796 | 24.7 | 66.5 | 0/204 |
 | S+T1 | 0.980 | 0.397 | 0.565 | 30.5 | 170.3 | 0/204 |
 
@@ -265,6 +290,7 @@ By band × query type — recall / precision / F1 / gain:
 | T1 (no cap) | 0.99 / 0.39 / 0.56 / 2.1 | 0.96 / 0.46 / 0.62 / 1.1 | 0.98 / 0.38 / 0.55 / 8.5 | 0.92 / 0.40 / 0.56 / 10.6 | 0.96 / 0.44 / 0.60 / 61.7 | 0.84 / 0.52 / 0.65 / 72.6 | 0.97 / 0.40 / 0.57 / 24.1 | 0.91 / 0.46 / 0.61 / 28.1 |
 | T2 | 0.63 / 0.68 / 0.66 / 1.1 | 0.63 / 0.93 / 0.75 / 0.1 | 0.77 / 0.76 / 0.77 / 4.7 | 0.38 / 0.83 / 0.52 / 0.3 | 0.72 / 0.77 / 0.75 / 28.8 | 0.24 / 0.80 / 0.37 / 15.6 | 0.71 / 0.74 / 0.72 / 11.5 | 0.42 / 0.85 / 0.56 / 5.4 |
 | S | 0.97 / 0.67 / 0.79 / 2.1 | 0.97 / 0.68 / 0.80 / 1.1 | 0.98 / 0.63 / 0.77 / 8.6 | 0.93 / 0.67 / 0.78 / 10.9 | 0.97 / 0.75 / 0.84 / 60.9 | 0.91 / 0.75 / 0.82 / 71.4 | 0.97 / 0.68 / 0.80 / 23.9 | 0.94 / 0.70 / 0.80 / 27.8 |
+| S via store (migration 15, fillStems, OR exact) | 0.97 / 0.67 / 0.79 / 2.1 | 0.97 / 0.68 / 0.80 / 1.1 | 0.98 / 0.63 / 0.77 / 8.6 | 0.93 / 0.66 / 0.77 / 10.9 | 0.97 / 0.75 / 0.84 / 60.9 | 0.91 / 0.75 / 0.82 / 71.4 | 0.97 / 0.68 / 0.80 / 23.9 | 0.94 / 0.70 / 0.80 / 27.8 |
 | S (fold, then stem) | 0.97 / 0.66 / 0.78 / 2.1 | 0.97 / 0.67 / 0.80 / 1.1 | 0.96 / 0.62 / 0.76 / 8.2 | 0.93 / 0.66 / 0.77 / 11.0 | 0.95 / 0.75 / 0.84 / 57.5 | 0.89 / 0.75 / 0.82 / 68.0 | 0.96 / 0.68 / 0.79 / 22.6 | 0.93 / 0.70 / 0.80 / 26.7 |
 | S+T1 | 0.99 / 0.34 / 0.50 / 2.1 | 0.99 / 0.40 / 0.56 / 1.1 | 1.00 / 0.34 / 0.50 / 8.7 | 0.93 / 0.35 / 0.51 / 10.9 | 0.99 / 0.46 / 0.63 / 71.5 | 0.98 / 0.50 / 0.66 / 88.5 | 0.99 / 0.38 / 0.55 / 27.4 | 0.97 / 0.41 / 0.58 / 33.5 |
 
@@ -276,6 +302,8 @@ False merges over content tokens — classes (folded form or stem) that hold mor
 | Snowball by script (stem, then fold) | 14,215 | 2,851 | 20.1% |
 
 False-merge examples (stem: form (lemma) + form (lemma)), most frequent first: `part`: partido (partido) + parte (parte); `cas`: caso (caso) + casa (casa); `estad`: estado (estado) + estados (estados); `mayor`: mayor (mayor) + mayoría (mayoría); `pas`: pasado (pasado) + paso (paso); `europe`: europea (europea) + europeo (europeo); `mar`: maría (maría) + mar (mar); `plaz`: plazo (plazo) + plaza (plaza).
+
+Store row: exact hits the stems alone miss 2 of 4205 (the OR with the word index returns them) [run].
 
 ## Quality — English: UD_English-EWT r2.18 (CC BY-SA 4.0) [run]
 
@@ -294,6 +322,7 @@ False-merge examples (stem: form (lemma) + form (lemma)), most frequent first: `
 | T1 (no cap) | 0.865 | 0.349 | 0.498 | 13.5 | 270.1 | 1/204 |
 | T2 | 0.678 | 0.773 | 0.722 | 5.3 | 54.3 | 1/204 |
 | S | 0.648 | 0.787 | 0.711 | 5.6 | 50.9 | 6/204 |
+| S via store (migration 15, fillStems, OR exact) | 0.648 | 0.787 | 0.711 | 5.6 | 50.9 | 6/204 |
 | S (fold, then stem) | 0.648 | 0.787 | 0.711 | 5.6 | 50.9 | 6/204 |
 | S+T1 | 0.843 | 0.363 | 0.507 | 13.2 | 238.7 | 1/204 |
 | S (English stemmer) | 0.899 | 0.711 | 0.794 | 12.7 | 52.9 | 0/204 |
@@ -310,6 +339,7 @@ By band × query type — recall / precision / F1 / gain:
 | T1 (no cap) | 0.91 / 0.22 / 0.35 / 1.7 | 0.94 / 0.32 / 0.48 / 0.9 | 0.88 / 0.36 / 0.51 / 5.1 | 0.81 / 0.47 / 0.59 / 9.2 | 0.91 / 0.34 / 0.50 / 21.5 | 0.75 / 0.38 / 0.50 / 42.9 | 0.90 / 0.31 / 0.46 / 9.4 | 0.83 / 0.39 / 0.53 / 17.7 |
 | T2 | 0.93 / 0.62 / 0.74 / 1.7 | 0.67 / 0.85 / 0.75 / 0.0 | 0.93 / 0.70 / 0.80 / 6.4 | 0.34 / 0.89 / 0.49 / 0.0 | 0.94 / 0.74 / 0.83 / 22.0 | 0.25 / 0.83 / 0.39 / 2.0 | 0.93 / 0.69 / 0.79 / 10.0 | 0.42 / 0.86 / 0.57 / 0.7 |
 | S | 0.52 / 0.62 / 0.57 / 0.6 | 0.72 / 0.80 / 0.76 / 0.2 | 0.79 / 0.78 / 0.79 / 3.6 | 0.60 / 0.85 / 0.71 / 3.6 | 0.81 / 0.82 / 0.81 / 8.5 | 0.44 / 0.81 / 0.57 / 17.4 | 0.71 / 0.75 / 0.73 / 4.2 | 0.59 / 0.82 / 0.69 / 7.0 |
+| S via store (migration 15, fillStems, OR exact) | 0.52 / 0.62 / 0.57 / 0.6 | 0.72 / 0.80 / 0.76 / 0.2 | 0.79 / 0.78 / 0.79 / 3.6 | 0.60 / 0.85 / 0.71 / 3.6 | 0.81 / 0.82 / 0.81 / 8.5 | 0.44 / 0.81 / 0.57 / 17.4 | 0.71 / 0.75 / 0.73 / 4.2 | 0.59 / 0.82 / 0.69 / 7.0 |
 | S (fold, then stem) | 0.52 / 0.62 / 0.57 / 0.6 | 0.72 / 0.80 / 0.76 / 0.2 | 0.79 / 0.78 / 0.79 / 3.6 | 0.60 / 0.85 / 0.71 / 3.6 | 0.81 / 0.82 / 0.81 / 8.5 | 0.44 / 0.81 / 0.57 / 17.4 | 0.71 / 0.75 / 0.73 / 4.2 | 0.59 / 0.82 / 0.69 / 7.0 |
 | S+T1 | 0.82 / 0.22 / 0.35 / 1.4 | 0.90 / 0.33 / 0.48 / 0.7 | 0.90 / 0.37 / 0.53 / 6.0 | 0.81 / 0.48 / 0.60 / 9.1 | 0.89 / 0.36 / 0.52 / 19.9 | 0.73 / 0.41 / 0.53 / 42.0 | 0.87 / 0.32 / 0.47 / 9.1 | 0.81 / 0.41 / 0.54 / 17.3 |
 | S (English stemmer) | 0.97 / 0.67 / 0.79 / 1.8 | 0.97 / 0.64 / 0.77 / 0.9 | 0.95 / 0.68 / 0.80 / 6.6 | 0.91 / 0.70 / 0.79 / 11.4 | 0.91 / 0.80 / 0.86 / 19.9 | 0.69 / 0.78 / 0.73 / 35.6 | 0.94 / 0.72 / 0.82 / 9.4 | 0.86 / 0.70 / 0.77 / 16.0 |
@@ -324,51 +354,85 @@ False merges over content tokens — classes (folded form or stem) that hold mor
 
 False-merge examples (stem: form (lemma) + form (lemma)), most frequent first: `car`: car (car) + care (care); `are`: area (area) + are (be); `indi`: india (india) + indian (indian); `form`: form (form) + former (former); `cle`: clean (clean) + clear (clear); `lead`: leader (leader) + lead (lead); `sit`: site (site) + sit (sit); `liv`: live (live) + lives (life).
 
+Store row: exact hits the stems alone miss 0 of 5764 (the OR with the word index returns them) [run].
+
 ## Cost — synthetic corpus (bench/search/gen.ts, seed 42) [run]
 
 ### N = 100,000 [run]
 
-- Databases on `tmpfs` (RAM); 10180 MB available RAM at query time; node v24.19.0.
+- Databases on `tmpfs` (RAM); 7472 MB available RAM at query time; node v24.19.0.
 - Peak RSS of this process 327 MB.
 
 | index | build | disk | notes |
 |---|---|---|---|
-| message_words (Exact, today) | 3.52 s | 22 MB | product DDL, optimize included |
-| T1 vocabulary (search_terms + trigrams, today) | 4.22 s | 34 MB | 143,516 terms |
-| S: message_stems | 9.26 s | 15 MB | of which Snowball in JS 6.41 s |
-| T2: message_trigrams (normalized, contentless) | 8.45 s | 58 MB | |
+| message_words (Exact, today) | 1.62 s | 22 MB | product DDL, optimize included |
+| T1 vocabulary (search_terms + trigrams, today) | 2.11 s | 34 MB | 143,516 terms |
+| S: message_stems | 4.34 s | 15 MB | of which Snowball in JS 2.97 s |
+| T2: message_trigrams (normalized, contentless) | 3.42 s | 58 MB | |
 
 | query | words | p50 ms | p95 ms | avg rows (LIMIT 20) |
 |---|---|---|---|---|
-| Exact (today) | ~1% df (0.3–3%) | 0.98 | 3.03 | 20.0 |
-| S | ~1% df (0.3–3%) | 1.00 | 3.17 | 20.0 |
-| T1 (correction + search) | ~1% df (0.3–3%) | 8.02 | 14.10 | 20.0 |
-| T2 | ~1% df (0.3–3%) | 2.27 | 4.39 | 20.0 |
-| Exact (today) | rare (0.01–0.1% df) | 0.07 | 0.17 | 15.5 |
-| S | rare (0.01–0.1% df) | 0.07 | 0.16 | 15.8 |
-| T1 (correction + search) | rare (0.01–0.1% df) | 6.37 | 57.68 | 18.0 |
-| T2 | rare (0.01–0.1% df) | 0.58 | 1.92 | 16.0 |
+| Exact (today) | ~1% df (0.3–3%) | 0.94 | 3.42 | 20.0 |
+| S | ~1% df (0.3–3%) | 0.41 | 1.74 | 20.0 |
+| T1 (correction + search) | ~1% df (0.3–3%) | 4.29 | 9.08 | 20.0 |
+| T2 | ~1% df (0.3–3%) | 1.06 | 2.54 | 20.0 |
+| Exact (today) | rare (0.01–0.1% df) | 0.03 | 0.10 | 15.5 |
+| S | rare (0.01–0.1% df) | 0.04 | 0.10 | 15.8 |
+| T1 (correction + search) | rare (0.01–0.1% df) | 3.21 | 28.14 | 18.0 |
+| T2 | rare (0.01–0.1% df) | 0.31 | 1.07 | 16.0 |
 
 ### N = 1,000,000 [run]
 
-- Databases on `tmpfs` (RAM); 7912 MB available RAM at query time; node v24.19.0.
-- Peak RSS of this process 881 MB.
+- Databases on `tmpfs` (RAM); 12607 MB available RAM at query time; node v24.19.0.
+- Peak RSS of this process 846 MB.
 
 | index | build | disk | notes |
 |---|---|---|---|
-| message_words (Exact, today) | 40.19 s | 170 MB | product DDL, optimize included |
-| T1 vocabulary (search_terms + trigrams, today) | 25.98 s | 203 MB | 522,924 terms |
-| S: message_stems | 142.44 s | 97 MB | of which Snowball in JS 93.19 s |
-| T2: message_trigrams (normalized, contentless) | 66.43 s | 538 MB | |
+| message_words (Exact, today) | 30.53 s | 170 MB | product DDL, optimize included |
+| T1 vocabulary (search_terms + trigrams, today) | 47.59 s | 203 MB | 522,924 terms |
+| S: message_stems | 44.88 s | 97 MB | of which Snowball in JS 29.95 s |
+| T2: message_trigrams (normalized, contentless) | 109.72 s | 538 MB | |
 
 | query | words | p50 ms | p95 ms | avg rows (LIMIT 20) |
 |---|---|---|---|---|
-| Exact (today) | ~1% df (0.3–3%) | 5.25 | 17.82 | 20.0 |
-| S | ~1% df (0.3–3%) | 5.25 | 18.89 | 20.0 |
-| T1 (correction + search) | ~1% df (0.3–3%) | 14.00 | 46.97 | 20.0 |
-| T2 | ~1% df (0.3–3%) | 10.69 | 24.19 | 20.0 |
-| Exact (today) | rare (0.01–0.1% df) | 0.31 | 1.24 | 20.0 |
-| S | rare (0.01–0.1% df) | 0.34 | 1.45 | 20.0 |
-| T1 (correction + search) | rare (0.01–0.1% df) | 8.29 | 12.55 | 20.0 |
-| T2 | rare (0.01–0.1% df) | 2.42 | 7.34 | 20.0 |
+| Exact (today) | ~1% df (0.3–3%) | 5.82 | 16.96 | 20.0 |
+| S | ~1% df (0.3–3%) | 6.56 | 35.64 | 20.0 |
+| T1 (correction + search) | ~1% df (0.3–3%) | 13.16 | 31.22 | 20.0 |
+| T2 | ~1% df (0.3–3%) | 13.18 | 22.69 | 20.0 |
+| Exact (today) | rare (0.01–0.1% df) | 0.24 | 1.11 | 20.0 |
+| S | rare (0.01–0.1% df) | 0.65 | 1.27 | 20.0 |
+| T1 (correction + search) | rare (0.01–0.1% df) | 6.97 | 10.36 | 20.0 |
+| T2 | rare (0.01–0.1% df) | 2.94 | 8.51 | 20.0 |
+
+## Gate §S12 — through the store code (gate.ts) [run]
+
+### N = 100,000 [run]
+
+- Store on `tmpfs` (RAM); 11423 MB available RAM; node v24.19.0; peak RSS 324 MB.
+- Archive written at version 14 in 12.2 s (messages, word and trigram triggers), then migrated to snowball-3.1.1 cyrillic=russian latin=spanish.
+
+| metric | target | measured | verdict |
+|---|---|---|---|
+| stem fill (`fillStems`, batches of 5,000) | ≤ 75 s | 2.0 s | pass |
+| of which Snowball with the cache (one stemmer over every text, timed apart) | ≤ 25 s | 0.9 s | pass |
+| disk, `message_stems` | ≤ 140 MB | 12 MB (dbstat); file grew 12 MB | pass |
+| query p95, ~1% df word, page 20, exact tier first (§S7–S8 as SQL; the compiler is work item 5) | ≤ 30 ms | 4.6 ms (p50 1.3, 20.0 rows) | pass |
+| ingest of 5,000 messages via `saveMessages`, pages of 100, drain on vs off, median of 5 rounds | ≤ +25 % | +22 % (rounds: +22 %, +25 %, +25 %, +16 %, +11 %; first round 0.8 s vs 0.6 s) | pass |
+| for scale, not gated: today's exact query, same words, page 20 | — | p95 2.6 ms (p50 0.8) | — |
+| exact hits the stems alone miss, 20 query words | 0 with the §S7 OR | 0 of 14790 | pass |
+
+### N = 1,000,000 [run]
+
+- Store on `tmpfs` (RAM); 12637 MB available RAM; node v24.19.0; peak RSS 385 MB.
+- Archive written at version 14 in 138.4 s (messages, word and trigram triggers), then migrated to snowball-3.1.1 cyrillic=russian latin=spanish.
+
+| metric | target | measured | verdict |
+|---|---|---|---|
+| stem fill (`fillStems`, batches of 5,000) | ≤ 75 s | 28.0 s | pass |
+| of which Snowball with the cache (one stemmer over every text, timed apart) | ≤ 25 s | 7.6 s | pass |
+| disk, `message_stems` | ≤ 140 MB | 101 MB (dbstat); file grew 101 MB | pass |
+| query p95, ~1% df word, page 20, exact tier first (§S7–S8 as SQL; the compiler is work item 5) | ≤ 30 ms | 43.3 ms (p50 12.1, 20.0 rows) | **miss** |
+| ingest of 5,000 messages via `saveMessages`, pages of 100, drain on vs off, median of 5 rounds | ≤ +25 % | +22 % (rounds: +30 %, +22 %, +23 %, +18 %, +9 %; first round 0.9 s vs 0.7 s) | pass |
+| for scale, not gated: today's exact query, same words, page 20 | — | p95 26.5 ms (p50 6.3) | — |
+| exact hits the stems alone miss, 20 query words | 0 with the §S7 OR | 0 of 136181 | pass |
 

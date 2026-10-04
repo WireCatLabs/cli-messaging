@@ -2,10 +2,12 @@
 // holding a token with the same (lemma, UPOS). Every row runs as real FTS5 queries without a limit.
 //
 //   node quality.ts syntagrus|ru-gsd|ancora|ewt
-import { readdirSync, readFileSync } from "node:fs"
+import { mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs"
+import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { DatabaseSync } from "node:sqlite"
 import {
+  archiveStore,
   correctWords,
   DATA,
   editDistance,
@@ -16,6 +18,7 @@ import {
   normalize,
   type Order,
   out,
+  product,
   quoted,
   stemQuery,
   stemTokens,
@@ -148,6 +151,33 @@ const ftsTerms = Number(
   db.prepare("SELECT count(*) AS n FROM message_words_vocab WHERE col = 'normalized_text'").get()?.n,
 )
 
+// ---- the same sentences through the store: migration 15's table, `fillStems`, the product stemmer
+const storeDir = mkdtempSync(join(tmpdir(), "stem-quality-"))
+const store = await archiveStore(
+  join(storeDir, "store.db"),
+  texts.map((text, i) => ({ id: i + 1, text, normalized: normalize(text) })),
+)
+product.fillStems(store)
+if (!product.stemsState(store)?.ready) throw new Error("the store's stems are not ready after fillStems")
+const productStemmer = product.createStemmer()
+const storeMatch = store.prepare("SELECT rowid FROM message_stems WHERE message_stems MATCH ?")
+const viaStore = (q: string): Set<number> => {
+  const stems = productStemmer.stemTokens(q)
+  if (stems.length === 0) return new Set()
+  // §S7: the words index OR the stems — the OR keeps every exact hit a different fold would lose.
+  const found = new Set(storeMatch.all(quoted(stems.join(" "))).map((r) => Number(r.rowid)))
+  const exactHits = exact(q)
+  exactSeen += exactHits.size
+  for (const id of exactHits) if (!found.has(id)) exactMissing++
+  return union(found, exactHits)
+}
+let exactSeen = 0
+let exactMissing = 0
+process.on("exit", () => {
+  store.close()
+  rmSync(storeDir, { recursive: true, force: true })
+})
+
 // ---- rows
 const context = { database: db }
 const matchStmt = new Map<string, ReturnType<DatabaseSync["prepare"]>>()
@@ -203,6 +233,7 @@ const ROWS: Row[] = [
     run: (q) => (normalize(q).length >= 3 ? match("message_trigrams", quoted(normalize(q))) : exact(q)),
   },
   { name: "S", run: (q) => stemmed("message_stems", q) },
+  { name: "S via store (migration 15, fillStems, OR exact)", run: viaStore },
   { name: "S (fold, then stem)", run: (q) => stemmed("message_stems_folded", q, "fold-then-stem") },
   {
     name: "S+T1",
@@ -384,5 +415,9 @@ for (const { label, t } of tallies) {
 out()
 out(
   `False-merge examples (stem: form (lemma) + form (lemma)), most frequent first: ${(tallies[1]?.t.examples ?? []).map((e) => e.text).join("; ")}.`,
+)
+out()
+out(
+  `Store row: exact hits the stems alone miss ${exactMissing} of ${exactSeen} (the OR with the word index returns them) [run].`,
 )
 out()
