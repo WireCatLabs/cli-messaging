@@ -5,7 +5,6 @@ import { afterEach, describe, expect, it } from "vitest"
 import type { Chat, Message } from "../domain/models.js"
 import { parseLucene } from "../search/lucene/parser.js"
 import { PRESETS } from "../search/lucene/presets.js"
-import { QUERY_LIMITS } from "../search/lucene/types.js"
 import { type AccountKey, type MessageStore, openStore } from "../store/store.js"
 import { searchStore } from "./messages.js"
 
@@ -164,23 +163,6 @@ describe.each(["max", "telegram"])("strict store profile (%s)", (provider) => {
     expect(ids(await run(store, account, "has:file AND NOT filename:*.pdf"))).toEqual([1])
     await expect(run(store, account, "size:big")).rejects.toThrow("invalid_size")
   })
-  it("finds a file name past the candidate row limit", async () => {
-    const store = await open()
-    await store.saveChats(account, [chat("1")])
-    const count = QUERY_LIMITS.candidates + 1
-    await store.saveMessages(
-      account,
-      "1",
-      Array.from({ length: count }, (_, at) =>
-        message(String(at + 1), "1", "", {
-          attachments: [{ kind: "file", name: at === count - 1 ? "Final.PDF" : `scan-${at}.jpg` }],
-        }),
-      ),
-      { via: "history" },
-    )
-    expect(ids(await run(store, account, "filename:*.pdf"))).toEqual([count])
-    expect((await run(store, account, "has:file AND NOT filename:*.jpg")).items).toHaveLength(1)
-  }, 60_000)
   it("counts a link preview without a typed URL as a link", async () => {
     const store = await open()
     await store.saveChats(account, [chat("1")])

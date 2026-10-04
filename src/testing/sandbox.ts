@@ -20,6 +20,12 @@ for (const prefix of ["APP", "CHAT", "TG", "MAX"]) {
   process.env[`${prefix}_CACHE_DIR`] = join(sandbox, prefix, "cache")
 }
 process.env.TMPDIR = sandbox
+// The default folders when a test passes its own env without the *_DIR overrides: env-paths reads these from
+// process.env, so a partial env would otherwise reach the owner's real ~/.cache.
+process.env.HOME = join(sandbox, "home")
+process.env.USERPROFILE = join(sandbox, "home")
+for (const name of ["XDG_CACHE_HOME", "XDG_CONFIG_HOME", "XDG_DATA_HOME", "XDG_STATE_HOME", "APPDATA", "LOCALAPPDATA"])
+  process.env[name] = join(sandbox, "home", name.toLowerCase())
 // Set in an agent's own shell, where it would make every run print the skill hint and read the real ~/.claude.
 delete process.env.AI_AGENT
 delete process.env.CLAUDECODE
