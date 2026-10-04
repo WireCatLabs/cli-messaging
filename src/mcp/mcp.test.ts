@@ -794,12 +794,22 @@ describe("the MCP server", () => {
     vi.unstubAllEnvs()
   })
 
+  it("refuses local refresh under confirm-send before opening the archive", async () => {
+    const telegram = scripted()
+    const { client, call } = await connect(telegram, { confirmSend: true })
+    expect((await client.listTools()).tools.map(({ name }) => name)).toContain("chat_conversations_refresh")
+    const refused = await call("chat_conversations_refresh")
+    expect(refused.isError).toBe(true)
+    expect(refused.body).toMatchObject({ error: { code: "confirmation_required" } })
+    expect(telegram.opened()).toBe(0)
+  })
+
   it("asks before conversations_refresh where conversations.embed asks, and hides it where it is read-only", async () => {
     const asked = await connect(scripted(), { config: levels({ "conversations.embed": "ask" }) })
     await asked.call("chat_chats_list")
     const refused = await asked.call("chat_conversations_refresh")
     expect([refused.isError, refused.body.error.code]).toEqual([true, "confirmation_required"])
-    expect(refused.body.error.message).toContain("config set permissions.conversations.embed allow")
+    expect(refused.body.error.message).toContain("run the CLI command")
 
     const { client } = await connect(scripted(), { config: levels({ "conversations.embed": "readonly" }) })
     const names = (await client.listTools()).tools.map(({ name }) => name)

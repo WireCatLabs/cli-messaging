@@ -1,3 +1,4 @@
+import { CliError } from "@leemour/cli-core"
 import {
   type CallToolResult,
   isInputRequiredResult,
@@ -188,6 +189,11 @@ export const registerTools = (
         try {
           const execute = async () => {
             const { online, stored, served, permission } = definition
+            if (stored && !reads && confirmed && confirms(key, definition))
+              throw new CliError(
+                "confirmation_required",
+                "this local write requires confirmation; run the CLI command with the owner's approval",
+              )
             const result = stored
               ? await withStore(
                   (store, account) => stored(store, account, args, { ...defaults, signal: ctx.mcpReq.signal }),
