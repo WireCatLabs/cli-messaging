@@ -291,7 +291,7 @@ A miss stops the flip and comes back to the owner with the numbers.
 | 0 | `docs(plans)` | this plan | none |
 | 1 | `docs(plans)` | claim migration **15** in the lanes plan | none |
 | 2 | `feat(search)` | vendored Snowball (Russian, Spanish, English) + `LICENSE` + `bin/snowball-update` + `stemTokens` with the per-script choice + cache + unit tests (§6) | none |
-| 3 | `feat(store)` | migration 15 (stems, queue, `analyzer`, `store_settings`), triggers, `fillStems`, write drain, open/migrate/reindex incl. rebuild on a changed analyzer, readiness by row name, `stemsReady`, `config set searchStemmers.*` | `store migrate` builds stems; queries unchanged. After #505/#508 |
+| 3 | `feat(store)` | migration 15 (stems, queue, `analyzer`, `store_settings`), triggers, `fillStems`, write drain, open/migrate/reindex incl. rebuild on a changed analyzer, readiness by row name, `stemsReady`, `config set searchStemmers.*` | `store migrate` builds stems; queries unchanged. After #505/#508. Handoff: [store handoff](2026-10-04-stemmed-search-store-handoff.md) |
 | 4 | `bench(search)` | gate (§S12) through the store; after #504 merges | none |
 | 5 | `feat(search)!` | parser (`exact` field, `--exact`), compile §S7, ranking §S8, transparency §S9, MCP, `parity.json`, `FIELD_VERSION` 2, docs, changelog | **may break callers** — its own release, inside the once-a-week breaking budget |
 | 6 | consumers | tg-cli and max-cli bump the exact pin; release notes say «run `store migrate`» | |
