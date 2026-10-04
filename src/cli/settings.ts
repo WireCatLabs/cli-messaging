@@ -5,6 +5,7 @@ import {
   fromOldSettings,
   LEVELS,
   type Level,
+  layerPermissions,
   PERMISSIONS,
   type Permission,
   type PermissionKey,
@@ -345,15 +346,15 @@ export const settingsFor = (app: AppIdentity, extension: SettingsExtension = {})
       kind === "bot"
         ? fromLayers<boolean | readonly string[]>("readOtherBots", false, kindLayers)
         : { value: false, from: "default" }
-    const permissions = layered([
-      [readOnly.value ? "readOnly" : "allow", fromOldSettings(readOnly.value, allow.value, { bot: kind === "bot" })],
-      ...[...layers]
-        .reverse()
-        .map(([from, scope]): [Source, Record<PermissionKey, Level> | undefined] => [
-          from,
-          scope?.permissions as Record<PermissionKey, Level> | undefined,
-        ]),
-    ])
+    // The old settings sit in the layer they were written in, under that layer's own `permissions`.
+    const old = readOnly.value ? { label: "readOnly", from: readOnly.from } : { label: "allow", from: allow.from }
+    const oldLevels = fromOldSettings(readOnly.value, allow.value, { bot: kind === "bot" })
+    const permissions = layerPermissions(
+      layers.flatMap(([from, scope]): [Source, Record<PermissionKey, Level> | undefined][] => [
+        [from, scope?.permissions as Record<PermissionKey, Level> | undefined],
+        ...(from === old.from ? [[old.label, oldLevels] as [Source, Record<PermissionKey, Level>]] : []),
+      ]),
+    )
     const updateCheck = first([["config defaults", shared.updateCheck as boolean | undefined]], true)
     const skillHint = first([["config defaults", shared.skillHint as boolean | undefined]], true)
     const timeout = first<string | undefined>(
@@ -527,19 +528,6 @@ const namedProfiles = (config: Config): string[] =>
       ...Object.keys(config.bot?.profiles ?? {}),
     ]),
   ].sort()
-
-/** Later layers win key by key, and each key remembers the layer it came from. */
-const layered = (layers: [Source, Readonly<Record<PermissionKey, Level>> | undefined][]) => {
-  const levels: Record<PermissionKey, Level> = {}
-  const sources: Record<PermissionKey, Source> = {}
-  for (const [from, layer] of layers) {
-    for (const [key, level] of Object.entries(layer ?? {})) {
-      levels[key] = level
-      sources[key] = from
-    }
-  }
-  return { levels, sources }
-}
 
 const DURATION = /^(\d+)(ms|s|m|h|d)$/
 const UNIT_MS: Record<string, number> = { ms: 1, s: 1000, m: 60_000, h: 3_600_000, d: 86_400_000 }

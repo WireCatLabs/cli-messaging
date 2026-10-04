@@ -44,6 +44,21 @@ describe("config", () => {
     expect(await setting("limit")).toMatchObject({ from: "default" })
   })
 
+  it("**shows the permissions in force**, from every section, not only the profile's own", async () => {
+    const root = mkdtempSync(join(tmpdir(), "config-"))
+    const env = { CHAT_CONFIG_DIR: join(root, "config"), CHAT_STATE_DIR: join(root, "state") }
+    await call(["work", "config", "set", "permissions.messages", "readonly"], env)
+    await call(["config", "set", "permissions.contacts", "deny", "--defaults"], env)
+
+    const shown = (await call(["work", "config", "show", "--json"], env)).answer.settings
+    expect(shown.find((one: { setting: string }) => one.setting === "permissions")).toEqual({
+      setting: "permissions",
+      value: { messages: "readonly", contacts: "deny" },
+      from: "config file",
+      sources: { messages: "config file", contacts: "config defaults" },
+    })
+  })
+
   it("refuses to change every profile from a process locked to one", async () => {
     const root = mkdtempSync(join(tmpdir(), "config-"))
     const env = { CHAT_CONFIG_DIR: join(root, "config"), CHAT_PROFILE_LOCK: "work" }

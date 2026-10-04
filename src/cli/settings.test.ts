@@ -2,6 +2,7 @@ import { mkdtempSync, readFileSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { beforeEach, describe, expect, it } from "vitest"
+import { levelFor } from "../sends/permissions.js"
 import { settingsFor } from "./settings.js"
 
 const { changeSetting, configuredProfiles, resolveSettings } = settingsFor({
@@ -168,6 +169,62 @@ describe("the order a setting is decided in", () => {
   it("leaves a profile the file says nothing about on the defaults", () => {
     withConfig(JSON.stringify({ profiles: { personal: { limit: 99 } } }))
     expect(settings({ profile: "other" })).toMatchObject({ limit: 20, timeoutMs: undefined, color: undefined })
+  })
+})
+
+describe("permissions across sections", () => {
+  const levelsOf = (file: object, keys: string[], kind?: "bot") => {
+    withConfig(JSON.stringify(file))
+    const { permissions } = resolveSettings({ profile: "agent" }, { env: {}, configDir, ...(kind ? { kind } : {}) })
+    return Object.fromEntries(keys.map((key) => [key, levelFor(permissions, key).level]))
+  }
+
+  it("**lets a profile's key hide every key under it in a broader section**", () => {
+    const file = {
+      defaults: { permissions: { "messages.delete": "allow" } },
+      profiles: { agent: { permissions: { messages: "readonly" } } },
+    }
+    expect(levelsOf(file, ["messages.delete", "messages.send"])).toEqual({
+      "messages.delete": "readonly",
+      "messages.send": "readonly",
+    })
+  })
+
+  it("keeps a broader section's key when the profile names one under it", () => {
+    const file = {
+      defaults: { permissions: { messages: "readonly" } },
+      profiles: { agent: { permissions: { "messages.delete": "allow" } } },
+    }
+    expect(levelsOf(file, ["messages.delete", "messages.send"])).toEqual({
+      "messages.delete": "allow",
+      "messages.send": "readonly",
+    })
+  })
+
+  it("**loosens too**: a profile's `messages: allow` hides a shared deny, and deleting falls back to asking", () => {
+    const file = {
+      defaults: { permissions: { "messages.delete": "deny" } },
+      profiles: { agent: { permissions: { messages: "allow" } } },
+    }
+    expect(levelsOf(file, ["messages.delete"])).toEqual({ "messages.delete": "ask" })
+  })
+
+  it("reads an old `readOnly` in the profile as nearer than `defaults.permissions`", () => {
+    const file = {
+      defaults: { permissions: { "messages.send": "allow" } },
+      profiles: { agent: { readOnly: true } },
+    }
+    expect(levelsOf(file, ["messages.send"])).toEqual({ "messages.send": "readonly" })
+  })
+
+  it("puts a bot profile's own section before the bot defaults", () => {
+    const file = {
+      bot: {
+        defaults: { permissions: { "bot.messages.send": "allow" } },
+        profiles: { agent: { permissions: { bot: "readonly" } } },
+      },
+    }
+    expect(levelsOf(file, ["bot.messages.send"], "bot")).toEqual({ "bot.messages.send": "readonly" })
   })
 })
 

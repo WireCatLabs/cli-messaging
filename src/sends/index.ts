@@ -24,6 +24,7 @@ export {
   keyForWrite,
   LEVELS,
   type Level,
+  layerPermissions,
   levelFor,
   PERMISSIONS,
   type Permission,
