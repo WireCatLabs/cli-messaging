@@ -6,6 +6,14 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- `messages download` records in the local store where each file of a held message went
+  (`attachments.local_path`), single messages and `--all` alike, so a file's text can be read from it later.
+  A file is matched to its attachment by kind, in order, or by a unique name; one it cannot tell apart is
+  not recorded. A failed store write only warns: the file is saved. `RemoteFile.position` is optional: an
+  adapter that knows the attachment's place may set it, and the store then matches by it.
+
 ## 0.148.2 — 05.10.2026
 
 Released early: MAX and TG adoption is blocked by contact-context message reads bypassing denied message permissions

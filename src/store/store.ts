@@ -2,6 +2,7 @@ import { mkdirSync, writeFileSync } from "node:fs"
 import { dirname } from "node:path"
 import { CliError } from "@leemour/cli-core"
 import type { Link, LinkInput } from "../conversations/link.js"
+import type { DownloadedFile } from "../domain/attachments.js"
 import type {
   Chat,
   Contact,
@@ -21,6 +22,7 @@ import { migrate } from "./migrations.js"
 import { storeCapable } from "./open.js"
 import { storePath } from "./path.js"
 import * as accounts from "./sqlite/accounts.js"
+import * as attachmentRows from "./sqlite/attachments.js"
 import { backfillNormalized, pendingNormalization } from "./sqlite/backfill.js"
 import * as batches from "./sqlite/batches.js"
 import * as chatQueries from "./sqlite/chats.js"
@@ -214,6 +216,11 @@ export interface MessageStore {
   transcript(key: AccountKey, chatId: Id, messageId: Id): Promise<{ text: string; source: string } | undefined>
   /** Keeps a finished transcript; an empty one is not kept, so the message is heard again. */
   keepTranscript(key: AccountKey, chatId: Id, messageId: Id, text: string, source: string): Promise<void>
+  /**
+   * Where `messages download` saved a held message's files, for reading them later. Answers how many
+   * attachments it recorded: a file it cannot tell apart from another is not recorded.
+   */
+  keepDownloads(key: AccountKey, chatId: Id, messageId: Id, files: readonly DownloadedFile[]): Promise<number>
   /** A chat's live messages for the conversation rules, oldest first; pass `next` back as `after`. */
   linkInputs(
     key: AccountKey,
@@ -770,6 +777,16 @@ const storeOver = (context: StoreContext): MessageStore => {
       inTransaction(() =>
         transcripts.keepTranscript(context, chatPkFor(accountPk(key), chatId), messageId, text, source),
       )
+    },
+
+    keepDownloads: async (key, chatId, messageId, files) => {
+      const chatKey = chatKeyOf(key, chatId)
+      if (chatKey === undefined || files.length === 0) return 0
+      let kept = 0
+      inTransaction(() => {
+        kept = attachmentRows.keepDownloads(context, chatKey, messageId, files)
+      })
+      return kept
     },
 
     linkInputs: async (key, chatId, page) => {

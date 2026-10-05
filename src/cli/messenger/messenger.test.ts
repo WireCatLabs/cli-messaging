@@ -8,6 +8,7 @@ import { describe, expect, it, vi } from "vitest"
 import { parseMarkdown } from "../../domain/markdown.js"
 import type { Chat, Member, Message, WindowedMessage } from "../../domain/models.js"
 import { SendJournal, sendsPathFor } from "../../sends/journal.js"
+import { openCache } from "../../store/open.js"
 import { openStore } from "../../store/store.js"
 import { searchRecipes, seedSearchRecipes } from "../../testing/search-recipes.js"
 import { commandsCommand } from "../commands-command.js"
@@ -2046,6 +2047,35 @@ describe("messages download", () => {
     expect(readFileSync(join(into, "bashrc"), "utf8")).toBe("notes")
     expect(readdirSync(into).sort()).toEqual(["1-2.jpg", "bashrc"])
     expect(stderr.join("")).toContain("poll")
+  })
+
+  it("**records in the local store where each file of a held message went**", async () => {
+    const { root, env } = setup()
+    const into = join(root, "out")
+    const held: MessengerAdapter = {
+      ...withFiles,
+      history: async () => ({
+        items: [
+          { ...message, attachments: [{ kind: "file", name: "../../.bashrc" }, { kind: "poll" }, { kind: "photo" }] },
+        ],
+        hasMore: false,
+      }),
+    }
+    await call(["messages", "list", "Book", "--json"], async () => held, env)
+    const { code } = await call(["messages", "download", "Book", "1", "--output-dir", into], async () => held, env)
+    const database = await openCache(env.MESSAGING_STORE)
+    const rows = database
+      .prepare("SELECT position, local_path AS path FROM attachments ORDER BY position")
+      .all()
+      .map((row) => ({ ...row }))
+    database.close()
+
+    expect(code).toBe(0)
+    expect(rows).toEqual([
+      { position: 0, path: join(into, "bashrc") },
+      { position: 1, path: null },
+      { position: 2, path: join(into, "1-2.jpg") },
+    ])
   })
 
   it("**never overwrites a file already there**", async () => {
