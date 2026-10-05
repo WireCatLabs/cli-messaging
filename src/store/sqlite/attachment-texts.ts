@@ -135,3 +135,87 @@ export const resetAttachmentWords = (database: CacheDatabase): number => {
     return Number(changes)
   })
 }
+
+/** One file attachment and what the store holds of its text — never the text itself. */
+export interface AttachmentView {
+  pk: number
+  chatId: Id
+  messageId: Id
+  position: number
+  kind: string
+  name: string | null
+  localPath: string | null
+  text: { origin: TextOrigin; extractor: string; chars: number; error: string | null } | null
+}
+
+/** Kinds no one reads text from: sound and moving pictures. */
+const NO_TEXT_LIST = ["voice", "audio", "video", "video_note", "sticker", "animation", "gif"]
+  .map((kind) => `'${kind}'`)
+  .join(",")
+
+/**
+ * This account's file attachments of live messages, newest first. `needsText`: saved on this machine and
+ * with no text yet, or none an extraction could find — what an agent reads and writes back.
+ */
+export const attachmentViews = (
+  { database }: StoreContext,
+  accountKey: number,
+  {
+    chatKey,
+    messageId,
+    needsText = false,
+    offset = 0,
+    limit,
+  }: { chatKey?: number; messageId?: Id; needsText?: boolean; offset?: number; limit: number },
+): AttachmentView[] => {
+  const where = [
+    "m.account_pk = ?",
+    "m.deleted_at IS NULL",
+    `att.kind NOT IN (${NOT_FILE_LIST})`,
+    ...(chatKey === undefined ? [] : ["m.chat_pk = ?"]),
+    ...(messageId === undefined ? [] : ["m.native_id = ?"]),
+    ...(needsText
+      ? [
+          "att.local_path IS NOT NULL",
+          `att.kind NOT IN (${NO_TEXT_LIST})`,
+          "(t.attachment_pk IS NULL OR (t.origin = 'extracted' AND t.normalized_text = ''))",
+        ]
+      : []),
+  ]
+  return database
+    .prepare(
+      `SELECT att.pk, c.native_id AS chat_id, m.native_id AS message_id, att.position, att.kind, att.name,
+         att.local_path, t.origin, t.extractor, length(t.text) AS chars, t.error
+       FROM attachments att
+       JOIN messages m ON m.pk = att.message_pk
+       JOIN chats c ON c.pk = m.chat_pk
+       LEFT JOIN attachment_texts t ON t.attachment_pk = att.pk
+       WHERE ${where.join(" AND ")}
+       ORDER BY m.sent_at DESC, att.pk DESC, att.position LIMIT ? OFFSET ?`,
+    )
+    .all(
+      accountKey,
+      ...(chatKey === undefined ? [] : [chatKey]),
+      ...(messageId === undefined ? [] : [messageId]),
+      limit,
+      offset,
+    )
+    .map((row) => ({
+      pk: Number(row.pk),
+      chatId: String(row.chat_id),
+      messageId: String(row.message_id),
+      position: Number(row.position),
+      kind: String(row.kind),
+      name: row.name == null ? null : String(row.name),
+      localPath: row.local_path == null ? null : String(row.local_path),
+      text:
+        row.origin == null
+          ? null
+          : {
+              origin: String(row.origin) as TextOrigin,
+              extractor: String(row.extractor),
+              chars: Number(row.chars),
+              error: row.error == null ? null : String(row.error),
+            },
+    }))
+}

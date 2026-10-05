@@ -74,6 +74,10 @@
       "value": "<time>",
       "meaning": "let the messenger send it later, even with this machine off: a local time like 2026-09-25T09:00, or 30m"
     },
+    "--attachment": {
+      "value": "<n>",
+      "meaning": "which file of the message, from 1; needed when it has more than one"
+    },
     "--background": {
       "meaning": "run as a job that outlives this command; `store jobs show` follows it"
     },
@@ -302,6 +306,9 @@
     "--multiple": {
       "meaning": "people may pick several answers"
     },
+    "--needs-text": {
+      "meaning": "only files saved here whose text nobody has yet: what an agent reads and writes back"
+    },
     "--new": {
       "meaning": "what arrived since the last check, each message once — for scheduled runs"
     },
@@ -498,6 +505,10 @@
       "value": "<text>",
       "meaning": "the message's new text; - reads stdin"
     },
+    "--text-file": {
+      "value": "<path>",
+      "meaning": "read the text from this file; - or none reads stdin"
+    },
     "--threads": {
       "value": "<n>",
       "meaning": "threads in all",
@@ -664,6 +675,50 @@
           "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" }
         },
         "--output-dir": {
+          "in": [],
+          "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" }
+        }
+      }
+    },
+    "attachments list": {
+      "in": [],
+      "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" },
+      "options": {
+        "--all": {
+          "in": [],
+          "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" }
+        },
+        "--chat": {
+          "in": [],
+          "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" }
+        },
+        "--limit": {
+          "in": [],
+          "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" }
+        },
+        "--needs-text": {
+          "in": [],
+          "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" }
+        },
+        "--page": {
+          "in": [],
+          "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" }
+        }
+      }
+    },
+    "attachments text": {
+      "in": [],
+      "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" }
+    },
+    "attachments text set": {
+      "in": [],
+      "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" },
+      "options": {
+        "--attachment": {
+          "in": [],
+          "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" }
+        },
+        "--text-file": {
           "in": [],
           "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" }
         }

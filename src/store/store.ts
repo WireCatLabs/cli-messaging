@@ -22,7 +22,7 @@ import { migrate } from "./migrations.js"
 import { storeCapable } from "./open.js"
 import { storePath } from "./path.js"
 import * as accounts from "./sqlite/accounts.js"
-import type { AttachmentTextEntry, FileAttachment } from "./sqlite/attachment-texts.js"
+import type { AttachmentTextEntry, AttachmentView, FileAttachment } from "./sqlite/attachment-texts.js"
 import * as attachmentTexts from "./sqlite/attachment-texts.js"
 import * as attachmentRows from "./sqlite/attachments.js"
 import { backfillNormalized, pendingNormalization } from "./sqlite/backfill.js"
@@ -225,6 +225,11 @@ export interface MessageStore {
   keepDownloads(key: AccountKey, chatId: Id, messageId: Id, files: readonly DownloadedFile[]): Promise<number>
   /** File attachments of this account's live messages, newest first, below `beforePk`; never one an agent wrote. */
   fileAttachments(key: AccountKey, page: { chatId?: Id; beforePk?: number; limit: number }): Promise<FileAttachment[]>
+  /** File attachments of live messages and what is held of their text, newest first; never the text. */
+  attachments(
+    key: AccountKey,
+    filter: { chatId?: Id; messageId?: Id; needsText?: boolean; offset?: number; limit: number },
+  ): Promise<AttachmentView[]>
   /** Where the file of one attachment was saved, when that is recorded. */
   localPathOf(attachmentPk: number): Promise<string | null>
   /** An extraction never replaces an agent's text; answers whether it was kept. */
@@ -795,6 +800,14 @@ const storeOver = (context: StoreContext): MessageStore => {
       return chatKey === undefined ? [] : attachmentTexts.fileAttachments(context, accountKey, { ...page, chatKey })
     },
 
+    attachments: async (key, { chatId, ...filter }) => {
+      const accountKey = findAccountPk(key)
+      if (accountKey === undefined) return []
+      if (chatId === undefined) return attachmentTexts.attachmentViews(context, accountKey, filter)
+      const chatKey = findChatPk(accountKey, chatId)
+      return chatKey === undefined ? [] : attachmentTexts.attachmentViews(context, accountKey, { ...filter, chatKey })
+    },
+
     localPathOf: async (attachmentPk) => attachmentTexts.localPathOf(context, attachmentPk),
 
     keepAttachmentText: async (attachmentPk, entry) => {
@@ -1267,7 +1280,7 @@ const storeOver = (context: StoreContext): MessageStore => {
   }
 }
 
-export type { AttachmentTextEntry, FileAttachment, TextOrigin } from "./sqlite/attachment-texts.js"
+export type { AttachmentTextEntry, AttachmentView, FileAttachment, TextOrigin } from "./sqlite/attachment-texts.js"
 export { CHAT_LIST_KEY, type ChatCompleteness, fetchedKey, historyStartKey } from "./sqlite/completeness.js"
 export type { SearchCommand, SearchRecord, StoredSearch } from "./sqlite/searches.js"
 export type { StoredTag, TagFilter, TagTarget } from "./sqlite/tags.js"

@@ -131,6 +131,8 @@ packages loaded on first use (`src/attachments/extract.ts`) — or what an agent
 exact condition over it and stays out of bm25 ranking, which ANDs required words into `message_words`. No
 foreign key, so the purges of older builds still work; triggers erase the text when its message is tombstoned
 or deleted, or its attachment deleted (NEED-393 A, tested against 0.49.0). `store reindex` rebuilds the index.
+`attachments list --needs-text` and `attachments text set` (MCP `attachments_list`, `attachments_text_set`) are
+how an agent finds a scan, reads it itself and writes the text back, all through `services.attachments`.
 
 **Searches** (version 17) are one table, `searches`: every successful `messages search` and `messages stats`
 run records its parameters as canonical JSON (`searchRecordOf`, `src/services/searches.ts`) — never a

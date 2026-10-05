@@ -1,6 +1,7 @@
 import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
+import { Readable } from "node:stream"
 import { captureStreams } from "@leemour/cli-core"
 import { describe, expect, it } from "vitest"
 import type { LoadEngine } from "../../attachments/extract.js"
@@ -125,23 +126,28 @@ const setup = async ({ config, load }: { config?: object; load?: LoadEngine } = 
     ...(load
       ? {
           services: (base) => ({
-            attachments: { extract: (options) => base.attachments.extract({ ...options, load }) },
+            attachments: { ...base.attachments, extract: (options) => base.attachments.extract({ ...options, load }) },
           }),
         }
       : {}),
   }
   const runs =
-    (tty: boolean) =>
+    (tty: boolean, stdin?: string) =>
     async (...argv: string[]) => {
       const streams = captureStreams()
       const code = await run(
         argv,
         { app, commands: () => [attachmentsCommand(messenger), messagesCommand(messenger), storeCommand(messenger)] },
-        { streams, tty, env: { ...env, NO_COLOR: "1" } },
+        {
+          streams,
+          tty,
+          env: { ...env, NO_COLOR: "1" },
+          ...(stdin === undefined ? {} : { stdin: Object.assign(Readable.from([stdin]), { isTTY: false }) }),
+        },
       )
       return { code, stdout: streams.stdout.join(""), stderr: streams.stderr.join("\n") }
     }
-  return { call: runs(false), pretty: runs(true), root, env, files }
+  return { call: runs(false), pretty: runs(true), piped: (text: string) => runs(false, text), root, env, files }
 }
 
 const json = (result: { stdout: string }) => JSON.parse(result.stdout || "null")
@@ -284,5 +290,71 @@ describe("attachments extract", () => {
     await call("attachments", "extract")
     expect(json(await call("store", "reindex", "--json"))).toMatchObject({ fileTexts: 3 })
     expect(await hits(call, "content:invoice")).toEqual(["1"])
+  })
+})
+
+describe("an agent's text for a file", () => {
+  it("**lists what needs reading, keeps what the agent read, and content: finds it**", async () => {
+    const { call, piped, root } = await setup()
+    await call("attachments", "extract")
+    const needs = json(await call("attachments", "list", "--needs-text", "--json"))
+    expect(needs).toMatchObject({ page: 1, hasMore: false })
+    expect(needs.items.map(({ locator }: { locator: string }) => locator)).toEqual([
+      "msg:chat/500/7/5",
+      "msg:chat/500/7/4",
+    ])
+    expect(needs.items[1]).toMatchObject({
+      attachment: 1,
+      name: "blank.pdf",
+      text: { origin: "extracted", chars: 0, error: "no_text" },
+    })
+
+    const textFile = join(root, "read.txt")
+    writeFileSync(textFile, "Акт сверки за март")
+    const kept = json(await call("attachments", "text", "set", "Work fixture", "4", "--text-file", textFile, "--json"))
+    expect(kept).toEqual({
+      locator: "msg:chat/500/7/4",
+      attachment: 1,
+      origin: "agent",
+      chars: 18,
+      replaced: "extracted",
+    })
+    const fromStdin = await piped("Фото доски: план релиза")("attachments", "text", "set", "msg:chat/500/7/5", "--json")
+    expect(json(fromStdin)).toMatchObject({ locator: "msg:chat/500/7/5", replaced: null })
+    expect(fromStdin.stderr).not.toContain("релиза")
+
+    expect(await hits(call, "content:сверки")).toEqual(["4"])
+    expect(await hits(call, 'content:"план релиза"')).toEqual(["5"])
+    expect(json(await call("attachments", "list", "--needs-text", "--json")).items).toEqual([])
+    expect(json(await call("attachments", "list", "--chat", "7", "--limit", "2", "--json"))).toMatchObject({
+      hasMore: true,
+    })
+
+    await call("attachments", "extract")
+    expect(await hits(call, "content:сверки")).toEqual(["4"])
+  })
+
+  it("refuses empty text, a message the store lacks, an unknown file number, another account and read-only", async () => {
+    const { piped, env } = await setup()
+    expect((await piped("  ")("attachments", "text", "set", "7", "4")).stderr).toContain("empty")
+    expect((await piped("x")("attachments", "text", "set", "7", "99")).code).toBe(6)
+    expect((await piped("x")("attachments", "text", "set", "7", "4", "--attachment", "2")).stderr).toContain(
+      "no file number 2",
+    )
+    expect((await piped("x")("attachments", "text", "set", "msg:chat/501/7/4")).stderr).toContain("another account")
+    expect((await piped("x")("attachments", "text", "set", "7")).stderr).toContain("which message")
+    const store = await openStore({ path: env.MESSAGING_STORE })
+    await store.saveMessages(OWNER, "7", [message("8", [{ kind: "photo" }, { kind: "photo" }])], { via: "history" })
+    await store.close()
+    expect((await piped("x")("attachments", "text", "set", "7", "8")).stderr).toContain("has 2 files")
+    expect(json(await piped("x")("attachments", "text", "set", "7", "8", "--attachment", "2", "--json"))).toMatchObject(
+      {
+        attachment: 2,
+      },
+    )
+    const locked = await setup({
+      config: { profiles: { default: { permissions: { "attachments.text.set": "readonly" } } } },
+    })
+    expect((await locked.piped("x")("attachments", "text", "set", "7", "4")).code).toBe(5)
   })
 })

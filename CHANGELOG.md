@@ -8,6 +8,14 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Added
 
+- Agents write back the text they read from scans and photos. `attachments list [--chat <chat>] [--needs-text]`
+  (paged; MCP `attachments_list`, read-only) names each file of a stored message — locator, attachment number,
+  `localPath`, and whether its text is held (`origin`, `extractor`, `chars`) — never the text; `--needs-text`
+  keeps the files saved here that have no text yet. `attachments text set <chat> [message] [--attachment <n>]
+  [--text-file <path>]` (or a `msg:` locator alone; stdin when no file is given) and MCP `attachments_text_set`
+  keep that text with origin `agent`, replacing what was there; `attachments extract` never replaces it. The
+  text never passes through the command line. Permission keys: `attachments.text.set` (a local write);
+  `attachments list` counts as `messages`, since file names and places say as much as a message.
 - Search inside files (store version 19). `attachments extract [--chat <chat>] [--limit <n>]` reads the text
   layer of files `messages download` saved — plain text (txt, md, csv, tsv, json, log), Word (docx) and PDF with
   a text layer — into the local store, and `content:<word>` or `content:"a phrase"` in a strict search finds the

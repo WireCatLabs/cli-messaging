@@ -22,7 +22,9 @@ export { adminService } from "./admin.js"
 export type { ArchiveService, Fetched, FetchOptions } from "./archive.js"
 export { archiveService } from "./archive.js"
 export type {
+  AttachmentItem,
   AttachmentsService,
+  AttachmentTextSet,
   ExtractItem,
   ExtractOptions,
   ExtractRun,
