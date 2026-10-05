@@ -6,6 +6,10 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.148.1 — 05.10.2026
+
+Released early: MAX and TG need the explicit query-history recording opt-out fixed before adopting this SDK
+
 ### Fixed
 
 - Release notes place member history in 0.148.0, whose published build already contains store version 18;
