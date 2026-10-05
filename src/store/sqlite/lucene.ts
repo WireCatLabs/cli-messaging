@@ -94,11 +94,14 @@ export const countQuery = (
   execution: QueryExecution,
   by: QueryGrouping,
 ): Promise<QueryGroup[]> => runQuery(context, execution, by) as Promise<QueryGroup[]>
+/** All matching message keys, without materializing message bodies or imposing a hit-page limit. */
+export const queryMessagePks = (context: StoreContext, execution: QueryExecution): Promise<number[]> =>
+  runQuery(context, execution, "pks") as Promise<number[]>
 const runQuery = async (
   context: StoreContext,
   execution: QueryExecution,
-  by?: QueryGrouping,
-): Promise<Page<ScoredHit> | QueryGroup[]> => {
+  by?: QueryGrouping | "pks",
+): Promise<Page<ScoredHit> | QueryGroup[] | number[]> => {
   const { database } = context
   const started = context.now()
   const budget: MatchBudget = { work: 0 }
@@ -353,6 +356,23 @@ const runQuery = async (
       "AND",
     )
   let where = combine([{ sql: "m.deleted_at IS NULL", params: [], exact: true }, scope, expression], "AND")
+  if (execution.conversationIds !== undefined || execution.conversationSince !== undefined) {
+    const ids = execution.conversationIds
+    where = combine(
+      [
+        where,
+        {
+          sql: `m.pk IN (SELECT cm.message_pk FROM conversation_messages cm JOIN conversations cv ON cv.pk=cm.conversation_pk JOIN conversation_state cs ON cs.chat_pk=cv.chat_pk AND cs.current_build=cv.build WHERE 1${ids === undefined ? "" : " AND cv.pk IN (SELECT value FROM json_each(?))"}${execution.conversationSince === undefined ? "" : " AND cv.last_at>=?"})`,
+          params: [
+            ...(ids === undefined ? [] : [JSON.stringify(ids)]),
+            ...(execution.conversationSince === undefined ? [] : [execution.conversationSince]),
+          ],
+          exact: true,
+        },
+      ],
+      "AND",
+    )
+  }
   const joinedFrom =
     "FROM messages m JOIN chats c ON c.pk=m.chat_pk JOIN accounts ac ON ac.pk=m.account_pk LEFT JOIN identities i ON i.pk=m.sender_identity_pk"
   let baseFrom = joinedFrom
@@ -422,7 +442,13 @@ const runQuery = async (
         count: Number(row.count),
       }))
   }
-  if (by && leaves.every(({ test }) => !test)) return grouped(where.sql, where.params, from)
+  if (by === "pks" && leaves.every(({ test }) => !test)) {
+    const rows = database.prepare(`SELECT m.pk AS pk ${from} WHERE ${where.sql}`).all(...where.params)
+    await new Promise<void>((resolve) => setImmediate(resolve))
+    check()
+    return rows.map(({ pk }) => Number(pk))
+  }
+  if (by && by !== "pks" && leaves.every(({ test }) => !test)) return grouped(where.sql, where.params, from)
   if (leaves.every(({ test }) => !test)) {
     const rows = database
       .prepare(`SELECT m.pk AS pk, ${relevance} AS relevance ${from} WHERE ${where.sql} ORDER BY ${order} LIMIT ?`)
@@ -473,6 +499,7 @@ const runQuery = async (
     }
     if (!by && found.length > execution.limit) break
   }
+  if (by === "pks") return found
   if (by) return grouped("m.pk IN (SELECT value FROM json_each(?))", [JSON.stringify(found)], joinedFrom)
   return {
     items: hitsByPk(context, found.slice(0, execution.limit)).map((hit, index) => ({

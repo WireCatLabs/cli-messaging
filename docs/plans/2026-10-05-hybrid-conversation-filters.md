@@ -1,0 +1,7 @@
+# Hybrid conversation filters and account scope
+
+Owner assigned the SR-2 handoff on 2026-10-05. Extend conversation search with a separate strict Lucene `--filter`/MCP `filter`, timezone and explicit `--source`; the natural-language query is embedded unchanged. Eligibility means any message in a conversation matches the whole filter. Both vector and word branches must constrain conversations before candidate ranking, using the same resolved query/account scope. Default remains the active account. Results and readiness carry qualified account/chat identities.
+
+Reuse the message-search preparation, validator and execution. SR-1 file-content v1 finished in #567 before implementation. Add a narrow message-PK output mode to the existing compiler and an internal conversation scope gate; keep its predicates and grammar unchanged. This returns all eligible PKs rather than a truncated page of ranked hits. Conversation eligibility belongs in a store wrapper and SQL vector scan. CLI refresh combined with widened/filter scope must never refresh unrelated accounts accidentally; reject unsupported combinations until bounded scoped refresh is implemented.
+
+Check author/date/tag/kind/attachment/chat filters, zero/invalid/negative clauses, conversations whose matching message is outside their best chunk, candidate limiting before top-N, accounts with equal native chat/message IDs, model isolation, word-only fallback and scoped readiness. Keep new options planned in parity until consumer adoption. No consumer edits or SDK publication.

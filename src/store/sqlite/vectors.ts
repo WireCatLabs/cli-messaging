@@ -189,7 +189,16 @@ export const nearestChunks = (
     limit,
     query,
     exclude,
-  }: { chatKey?: number; model: string; since?: number; limit: number; query: Float32Array; exclude?: number },
+    conversations,
+  }: {
+    chatKey?: number
+    model: string
+    since?: number
+    limit: number
+    query: Float32Array
+    exclude?: number
+    conversations?: string[]
+  },
 ): NearestChunk[] => {
   const best = new Map<number, NearestChunk>()
   let after = { conversation: 0, ordinal: -1 }
@@ -214,6 +223,7 @@ export const nearestChunks = (
           ${chatKey === undefined ? sql`` : sql`AND c.chat_pk = ${chatKey}`}
           ${since === undefined ? sql`` : sql`AND c.last_at >= ${since}`}
           ${exclude === undefined ? sql`` : sql`AND c.pk <> ${exclude}`}
+          ${conversations === undefined ? sql`` : sql`AND c.pk IN (SELECT value FROM json_each(${JSON.stringify(conversations)}))`}
           AND (k.conversation_pk, k.ordinal) > (${after.conversation}, ${after.ordinal})
         ORDER BY k.conversation_pk, k.ordinal LIMIT ${SCAN_PAGE}`,
     )

@@ -13,6 +13,7 @@ import { openStore } from "../store/store.js"
 import { conversationsService } from "./conversations.js"
 import { storedDeps } from "./deps.js"
 import { embeddingsService } from "./embeddings.js"
+import { prepareLucene } from "./messages-search.js"
 
 const tiny: TextModel = {
   id: "tiny",
@@ -173,6 +174,119 @@ describe("embeddings", () => {
       storedDeps({ provider: "test", app: { command: "chat" } } as Messenger, store, account, {} as SendGuard),
     ).build("9")
     await expect(embeddings.embed("9", { model: "e5-small" })).rejects.toThrow("chat models text download e5-small")
+    await store.close()
+  })
+})
+
+describe("strict conversation search scope", () => {
+  it("filters before ranking and allows a matching author anywhere in the conversation", async () => {
+    const { store, embeddings } = await setUp({
+      messages: [message("1", "fish"), { ...message("2", "dog", "1"), senderId: "200" }, message("40", "fish")],
+    })
+    await embeddings.embed("9", { model: "tiny", threads: 1 })
+    const result = await embeddings.search("fish", { model: "tiny", limit: 1, filter: "from:200" })
+    expect(result.hits).toHaveLength(1)
+    expect(result.hits[0]).toMatchObject({
+      summary: { firstMessageId: "1" },
+      by: ["meaning", "words"],
+      source: account,
+    })
+    expect((await embeddings.search("fish", { model: "tiny", limit: 1, filter: "date:2030-01-01" })).hits).toEqual([])
+    await store.close()
+  })
+
+  it("uses the same date, author, chat and negative predicates in word-only fallback", async () => {
+    const { store, embeddings } = await setUp()
+    const result = await embeddings.search("fish", {
+      model: "e5-small",
+      limit: 1,
+      filter: "chat:9 kind:group from:100 date:2026-10-02 NOT has:file",
+      timezone: "UTC",
+    })
+    expect(result).toMatchObject({
+      meaning: "unavailable",
+      hits: [{ summary: { firstMessageId: "40" }, by: ["words"] }],
+    })
+    expect((await embeddings.search("fish", { model: "e5-small", limit: 1, filter: "date:2026-10-03" })).hits).toEqual(
+      [],
+    )
+    await expect(embeddings.search("fish", { model: "tiny", limit: 1, filter: "from:" })).rejects.toThrow()
+    await expect(embeddings.search("fish", { model: "tiny", limit: 1, timezone: "invalid/zone" })).rejects.toThrow()
+    expect(
+      (await embeddings.search("fish", { model: "e5-small", limit: 1, since: "2026-10-03T00:00:00Z" })).hits,
+    ).toEqual([])
+    await store.close()
+  })
+
+  it("keeps all eligible conversations, rather than the filter's first page of messages", async () => {
+    const { store } = await setUp({
+      messages: Array.from({ length: 1002 }, (_, index) => message(String(index * 24 + 1), "fish")),
+    })
+    const { execution } = await prepareLucene(store, account, { text: "from:100", limit: 1 }, {
+      app: { command: "chat" },
+    } as Messenger)
+    expect((await store.conversationEligibility?.(execution))?.conversations).toHaveLength(1002)
+    await store.close()
+  })
+
+  it("shares tag and attachment eligibility and includes unbuilt matching chats in readiness", async () => {
+    const { store, embeddings } = await setUp({
+      messages: [message("1", "fish"), { ...message("40", "fish"), attachments: [{ kind: "file", name: "plan.txt" }] }],
+    })
+    await store.addTags(account, { type: "message", chatId: "9", messageId: "40" }, ["release"])
+    expect(
+      (await embeddings.search("fish", { model: "e5-small", limit: 10, filter: "tag:release has:file" })).hits,
+    ).toMatchObject([{ summary: { firstMessageId: "40" } }])
+    expect(
+      (await embeddings.search("fish", { model: "e5-small", limit: 10, filter: "tag:release NOT has:file" })).hits,
+    ).toEqual([])
+    await store.saveChats(account, [
+      { id: "10", title: "Unbuilt", kind: "group", unreadCount: 0, lastMessageAt: null, participantsCount: null },
+    ])
+    await store.saveMessages(account, "10", [{ ...message("1", "dog"), chatId: "10" }], { via: "history" })
+    const found = await embeddings.search("fish", { model: "e5-small", limit: 10, filter: "chat:10" })
+    expect(found.hits).toEqual([])
+    expect(found.readiness.notBuilt).toEqual(["10"])
+    await store.close()
+  })
+
+  it("widens only explicitly and qualifies colliding native IDs in results and readiness", async () => {
+    const { store, embeddings } = await setUp()
+    const bot = { provider: "test-bot", account: "1" }
+    await store.saveChats(bot, [
+      { id: "9", title: "Bot group", kind: "group", unreadCount: 0, lastMessageAt: null, participantsCount: null },
+    ])
+    await store.saveMessages(bot, "9", [message("40", "fish")], { via: "history" })
+    const botDeps = storedDeps(
+      { provider: "test-bot", app: { command: "chat" } } as Messenger,
+      store,
+      bot,
+      {} as SendGuard,
+    )
+    await conversationsService(botDeps).build("9")
+    await embeddings.embed("9", { model: "tiny", threads: 1 })
+    await embeddingsService(botDeps).embed("9", { model: "tiny", threads: 1 })
+    expect(
+      (await embeddings.search("fish", { model: "tiny", limit: 10 })).hits.every(
+        ({ source }) => source?.provider === "test",
+      ),
+    ).toBe(true)
+    const all = await embeddings.search("fish", { model: "tiny", limit: 10, source: "all" })
+    expect(new Set(all.hits.map(({ source }) => source?.provider))).toEqual(new Set(["test", "test-bot"]))
+    expect(all.hits.filter(({ chunk }) => chunk.firstMessageId === "40").map(({ locator }) => locator)).toHaveLength(2)
+    expect(new Set(all.hits.map(({ locator }) => locator)).size).toBe(all.hits.length)
+    expect(all.readiness.searchedByMeaning).toEqual(["test-bot/1/9", "test/1/9"])
+    const bots = await embeddings.search("fish", { model: "tiny", limit: 10, source: "bots" })
+    expect(bots.hits).toHaveLength(1)
+    expect(bots.accounts).toEqual([bot])
+    const excluded = await embeddings.search("fish", {
+      model: "tiny",
+      limit: 10,
+      source: "all",
+      filter: "date:2030-01-01",
+    })
+    expect(excluded.hits).toEqual([])
+    expect(excluded.readiness.searchedByMeaning).toEqual([])
     await store.close()
   })
 })

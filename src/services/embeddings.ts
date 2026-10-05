@@ -1,14 +1,16 @@
 import { CliError } from "@leemour/cli-core"
 import { CHUNK_CHARS, chunkHash, chunkTextOf } from "../conversations/chunks.js"
 import { RULES_VERSION } from "../conversations/link.js"
+import { formatLocator, parseLocator } from "../domain/locator.js"
 import type { Id } from "../domain/models.js"
 import { defaultThreads, type Embedder, isTextModelInstalled, textModelsDirectory } from "../embeddings/embed.js"
 import { DEFAULT_TEXT_MODEL, type TextModel, textModel } from "../embeddings/models.js"
 import { type RemoteModel, remoteKey } from "../embeddings/remote.js"
-import type { ConversationHit, ConversationSummary, StoredReadiness } from "../store/store.js"
+import type { AccountKey, ConversationHit, ConversationSummary, StoredReadiness } from "../store/store.js"
 import { type Built, conversationsService } from "./conversations.js"
 import type { ServiceDeps } from "./deps.js"
-import { searchStore, storedChatId } from "./messages.js"
+import { storedChatId } from "./messages.js"
+import { type Prepared, prepareLucene } from "./messages-search.js"
 
 /** A local model by id (the default when nothing is given), or a remote one with the user's key (E11). */
 export type ModelChoice = string | { remote: RemoteModel; apiKey?: string; concurrency?: number }
@@ -58,7 +60,15 @@ export interface EmbeddingsService {
    */
   search(
     query: string,
-    options: { chat?: string; model?: ModelChoice; since?: string; limit: number },
+    options: {
+      chat?: string
+      model?: ModelChoice
+      since?: string
+      limit: number
+      filter?: string
+      source?: string
+      timezone?: string
+    },
   ): Promise<FoundConversations>
   /**
    * The conversations of every built chat nearest in meaning to the one `message` is in, best first, never that
@@ -107,6 +117,7 @@ export interface Refreshed {
 export const REFRESH_BOUNDS = { maxChats: 20, maxChunks: 2_000 }
 
 export interface FoundConversations {
+  accounts?: AccountKey[]
   model: string
   /** `unavailable`: the local model is not downloaded, and only words were searched. */
   meaning: "searched" | "unavailable"
@@ -126,6 +137,7 @@ export interface RelatedConversations {
 
 /** Chat ids by how the search could see them; a chat can be in more than one list. */
 export interface SearchReadiness {
+  scopes?: { source: AccountKey; readiness: SearchReadiness }[]
   /** Built chats with vectors of the model. */
   searchedByMeaning: Id[]
   /** Built chats with no vector of the model, or every built chat when the model is unavailable. */
@@ -151,6 +163,8 @@ export interface ChatReadiness {
 
 /** A conversation found by meaning, by words, or both (E9). */
 export interface FoundConversation {
+  source?: AccountKey
+  locator?: string
   summary: ConversationSummary
   /** The chunk nearest in meaning; the best message found by words when only words found it. */
   chunk: { firstMessageId: Id; lastMessageId: Id }
@@ -241,33 +255,63 @@ export const embeddingsService = (deps: ServiceDeps): EmbeddingsService => {
    * Only whole words and their beginnings count: a corrected spelling or a piece of a word would pass a
    * near-miss off as a match, which is what the meaning half is for.
    */
-  const byWords = async (query: string, chatId: Id | undefined, since: string | undefined) => {
+  const byWords = async (
+    query: string,
+    prepared: Prepared,
+    conversations: string[] | undefined,
+    since: string | undefined,
+  ) => {
     const words = [...new Set(query.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? [])]
-    if (words.length === 0) return { hits: [], outside: new Set<Id>() }
+    const outside = new Map<string, { account: AccountKey; chats: Set<Id> }>()
+    if (!words.length || !prepared.scopeAccounts.length)
+      return { hits: [], outside, sources: new Map<string, AccountKey>() }
     const store = await deps.store()
-    const account = await deps.account()
-    const { items: found } = await searchStore(
+    const lexical = await prepareLucene(
       store,
-      account,
-      { text: words.join(" OR "), ...(chatId === undefined ? {} : { chat: chatId }), limit: WORD_HITS },
+      await deps.account(),
+      {
+        text: words.map((word) => (word.length >= 3 ? `${word}*` : `"${word}"`)).join(" OR "),
+        accounts: prepared.scopeAccounts,
+        limit: WORD_HITS,
+      },
       deps.messenger,
     )
-    const items = found.filter(({ match }) => match === "words" || match === "beginnings")
-    const summaries = await store.conversationsOfMessages(
-      account,
-      items.map(({ chatId, id }) => ({ chatId, messageId: id })),
-    )
+    if (!store.matchQuery) throw new CliError("validation_error", "the store does not support strict search")
+    const { items } = await store.matchQuery({
+      ...lexical.execution,
+      ...(prepared.selectedChat ? { chat: prepared.selectedChat } : {}),
+      ...(conversations === undefined ? {} : { conversationIds: conversations }),
+      ...(since === undefined ? {} : { conversationSince: Date.parse(since) }),
+    })
+    const summaries = new Map<number, ConversationSummary>()
+    const sources = new Map<string, AccountKey>()
+    for (const account of prepared.scopeAccounts) {
+      const refs = items.flatMap((hit, index) => {
+        const at = parseLocator(hit.locator)
+        return at.provider === account.provider && at.account === account.account ? [{ hit, index }] : []
+      })
+      const found = await store.conversationsOfMessages(
+        account,
+        refs.map(({ hit }) => ({ chatId: hit.chatId, messageId: hit.id })),
+      )
+      const chats = new Set<Id>()
+      refs.forEach(({ hit, index }, at) => {
+        const summary = found[at]
+        if (summary) {
+          summaries.set(index, summary)
+          sources.set(summary.id, account)
+        } else chats.add(hit.chatId)
+      })
+      outside.set(JSON.stringify(account), { account, chats })
+    }
     const seen = new Set<string>()
-    const outside = new Set<Id>()
-    const hits = items.flatMap(({ id, chatId }, index) => {
-      const summary = summaries[index]
-      if (!summary) outside.add(chatId)
-      if (!summary || seen.has(summary.id) || (since !== undefined && Date.parse(summary.lastAt) < Date.parse(since)))
-        return []
+    const hits = items.flatMap(({ id }, index) => {
+      const summary = summaries.get(index)
+      if (!summary || seen.has(summary.id)) return []
       seen.add(summary.id)
       return [{ summary, chunk: { firstMessageId: id, lastMessageId: id } }]
     })
-    return { hits, outside }
+    return { hits, outside, sources }
   }
 
   const readinessOf = async (chatId: Id | undefined, key: string): Promise<ChatReadiness[]> => {
@@ -381,36 +425,119 @@ export const embeddingsService = (deps: ServiceDeps): EmbeddingsService => {
       )
     },
 
-    search: async (query, { chat, model: choice, since, limit }) => {
+    search: async (query, { chat, model: choice, since, limit, filter, source, timezone }) => {
       const store = await deps.store()
       const account = await deps.account()
       const target = resolve(choice)
-      const chatId = chat === undefined ? undefined : await storedChatId(deps.messenger, chat, store, account)
-      const scope = chatId === undefined ? {} : { chatId }
-      const words = await byWords(query, chatId, since)
-      let meaning: ConversationHit[] = []
-      if (target.installed) {
-        const warm = typeof choice !== "object" ? deps.embedders : undefined
-        const embedder = warm ? await warm.get(target.key, () => target.open({ apart: true })) : await target.open()
-        try {
+      const stop = Date.now() + 200
+      await store.fillSearchIndex({ until: () => Date.now() >= stop })
+      await store.fillStems({ until: () => Date.now() >= stop })
+      const prepared = await prepareLucene(
+        store,
+        account,
+        {
+          ...(filter === undefined ? {} : { text: filter }),
+          ...(source === undefined ? {} : { source }),
+          ...(chat === undefined ? {} : { chat }),
+          ...(timezone === undefined ? {} : { timezone }),
+          limit,
+        },
+        deps.messenger,
+      )
+      if (filter !== undefined && !store.conversationEligibility)
+        throw new CliError(
+          "validation_error",
+          "the store does not support conversation filters — upgrade cli-messaging",
+        )
+      const eligibility = filter === undefined ? undefined : await store.conversationEligibility?.(prepared.execution)
+      const selected = prepared.selectedChat
+      const scopeOf = (one: AccountKey) =>
+        selected
+          ? selected.account.provider === one.provider && selected.account.account === one.account
+            ? { chatId: selected.chatId }
+            : null
+          : {}
+      const words = await byWords(query, prepared, eligibility?.conversations, since)
+      const meaning: ConversationHit[] = []
+      const sources = words.sources
+      if (target.installed && prepared.scopeAccounts.length && eligibility?.conversations.length !== 0) {
+        await withEmbedder(target, choice, {}, async (embedder) => {
           const [vector] = await embedder.embed([query], "query")
-          meaning = await store.nearestConversations(account, {
-            ...scope,
-            ...(since === undefined ? {} : { since }),
-            model: target.key,
-            limit: Math.max(limit, CANDIDATES),
-            query: vector as Float32Array,
-          })
-        } finally {
-          if (!warm) await embedder.close()
-        }
+          for (const one of prepared.scopeAccounts) {
+            const scope = scopeOf(one)
+            if (scope === null) continue
+            const hits = await store.nearestConversations(one, {
+              ...scope,
+              ...(since === undefined ? {} : { since }),
+              model: target.key,
+              limit: Math.max(limit, CANDIDATES),
+              query: vector as Float32Array,
+              ...(eligibility ? { conversations: eligibility.conversations } : {}),
+            })
+            for (const hit of hits) sources.set(hit.summary.id, one)
+            meaning.push(...hits)
+          }
+        })
       }
-      const elsewhere = await store.embeddedOnlyElsewhere(account, { ...scope, model: target.key })
+      meaning.sort((a, b) => b.score - a.score)
+      const scoped: { source: AccountKey; readiness: SearchReadiness }[] = []
+      const elsewhere: string[] = []
+      for (const one of prepared.scopeAccounts) {
+        const scope = scopeOf(one)
+        if (scope === null) continue
+        const eligibleChats = eligibility?.chats
+          .filter(({ account }) => account.provider === one.provider && account.account === one.account)
+          .map(({ chat }) => chat)
+        const rows =
+          eligibleChats === undefined
+            ? await store.readiness(one, { ...scope, model: target.key })
+            : (
+                await Promise.all(eligibleChats.map((chatId) => store.readiness(one, { chatId, model: target.key })))
+              ).flat()
+        const readiness = searchReadiness(
+          rows.map(shaped),
+          target.installed,
+          words.outside.get(JSON.stringify(one))?.chats ?? new Set(),
+        )
+        scoped.push({ source: one, readiness })
+        const other = await store.embeddedOnlyElsewhere(one, { ...scope, model: target.key })
+        elsewhere.push(
+          ...other
+            .filter((id) => eligibleChats === undefined || eligibleChats.includes(id))
+            .map((id) =>
+              prepared.scopeAccounts.length > 1
+                ? [one.provider, one.account, id].map(encodeURIComponent).join("/")
+                : id,
+            ),
+        )
+      }
+      const readiness: SearchReadiness = { searchedByMeaning: [], wordsOnly: [], partial: [], stale: [], notBuilt: [] }
+      for (const key of ["searchedByMeaning", "wordsOnly", "partial", "stale", "notBuilt"] as const)
+        readiness[key] = [
+          ...new Set(
+            scoped.flatMap(({ source, readiness }) =>
+              readiness[key].map((id) =>
+                scoped.length > 1 ? [source.provider, source.account, id].map(encodeURIComponent).join("/") : id,
+              ),
+            ),
+          ),
+        ].sort()
+      if (scoped.length > 1) readiness.scopes = scoped
       return {
+        accounts: prepared.scopeAccounts,
         model: target.id,
         meaning: target.installed ? "searched" : "unavailable",
-        hits: fused(meaning, words.hits).slice(0, limit),
-        readiness: searchReadiness(await readinessOf(chatId, target.key), target.installed, words.outside),
+        hits: fused(meaning, words.hits)
+          .slice(0, limit)
+          .map((hit) => {
+            const source = sources.get(hit.summary.id) as AccountKey
+            return {
+              ...hit,
+              source,
+              locator: formatLocator({ ...source, chat: hit.summary.chatId, message: hit.chunk.firstMessageId }),
+            }
+          }),
+        readiness,
         embeddedOnlyElsewhere: elsewhere,
       }
     },

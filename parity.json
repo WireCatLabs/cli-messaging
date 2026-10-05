@@ -182,6 +182,10 @@
       "value": "<file>",
       "meaning": "attach a file; images go as a photo, videos as a video. Repeat it for more"
     },
+    "--filter": {
+      "value": "query",
+      "meaning": "Strict Lucene filter: any message in the conversation must match; the meaning query stays unchanged"
+    },
     "--first-name": {
       "value": "<name>",
       "meaning": "your first name"
@@ -1569,6 +1573,13 @@
         "--base-url": "all",
         "--chat": "all",
         "--dims": "all",
+        "--filter": {
+          "in": [],
+          "planned": {
+            "max": "each CLI's next cli-messaging bump",
+            "tg": "each CLI's next cli-messaging bump"
+          }
+        },
         "--limit": "all",
         "--max-chats": {
           "in": [],
@@ -1593,7 +1604,21 @@
             "tg": "each CLI's next cli-messaging bump"
           }
         },
-        "--since-time": "all"
+        "--since-time": "all",
+        "--source": {
+          "in": [],
+          "planned": {
+            "max": "each CLI's next cli-messaging bump",
+            "tg": "each CLI's next cli-messaging bump"
+          }
+        },
+        "--timezone": {
+          "in": [],
+          "planned": {
+            "max": "each CLI's next cli-messaging bump",
+            "tg": "each CLI's next cli-messaging bump"
+          }
+        }
       }
     },
     "conversations show": {

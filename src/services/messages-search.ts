@@ -35,14 +35,14 @@ const positiveSources = (node: QueryNode): string[] =>
       ? [node.value.toLowerCase()]
       : []
     : node.clauses.filter(({ occur }) => occur !== "mustNot").flatMap(({ node }) => positiveSources(node))
-interface Prepared {
+export interface Prepared {
   wordsReady: boolean
   execution: QueryExecution
   timezone: string
   scopeAccounts: AccountKey[]
   selectedChat?: { account: AccountKey; chatId: string }
 }
-const prepareLucene = async (
+export const prepareLucene = async (
   store: MessageStore,
   account: AccountKey,
   request: SearchQuery,
