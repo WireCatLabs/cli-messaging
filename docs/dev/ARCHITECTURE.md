@@ -273,6 +273,14 @@ it by editing that line in a PR of its own, merged before the migration.
 
 A migration is frozen once released: fix a mistake with the next version, never by editing a folder.
 
+### Open tasks
+
+Tasks waiting on the owner belong to `@leemour/cli-tasks`, which knows no messenger and no SQLite.
+The store implements its `TaskStore` as `store.tasks`, in the `tasks` table (store version 20,
+`src/store/sqlite/tasks.ts`), so backup, restore and export carry tasks with the messages, and a task
+joins its message in one query. A task holds a locator, never the message text; `kind`, `state` and
+`origin` are checked in code, as `chats.kind` is.
+
 ## The command skeleton
 
 `run()` (`src/cli/program.ts`) never throws; it returns an exit code. It lifts a profile given as

@@ -6,6 +6,18 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- **Open tasks in the store (store version 20).** `store.tasks` keeps what `@leemour/cli-tasks` tracks — a
+  question, request, mention or promise waiting on the owner — as a locator to its message, never the text.
+  Backup, restore and export carry the tasks with the messages. Builds from 0.49.0 on still open the file.
+
+### Changed — may break callers
+
+- `MessageStore` has a new required member, `tasks`: the `TaskStore` of `@leemour/cli-tasks` over store version 20.
+  A `MessageStore` written by hand — a test fake — adds it, `memoryTaskStore()` from `@leemour/cli-tasks/testing`
+  will do; `openStore` already does.
+
 ## 0.150.0 — 06.10.2026
 
 ### Added

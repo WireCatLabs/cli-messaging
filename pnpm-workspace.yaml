@@ -9,3 +9,4 @@ minimumReleaseAgeExclude:
   - '@leemour/cli-messaging@0.49.0'
   - '@leemour/cli-messaging-onnx@1.0.0'
   - '@leemour/cli-messaging-sqlite@1.0.0'
+  - '@leemour/cli-tasks@0.1.0'
