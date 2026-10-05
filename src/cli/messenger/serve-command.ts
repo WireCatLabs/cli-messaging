@@ -10,6 +10,7 @@ import { levelFor } from "../../sends/permissions.js"
 import { newSendId } from "../../sends/send-id.js"
 import { onlineDeps } from "../../services/deps.js"
 import { servicesFor } from "../../services/index.js"
+import { applyTaskRulesOnArrival } from "../../services/task-rules.js"
 import { recalledAccount } from "./accounts.js"
 import { type Messenger, type MessengerContext, messengerContext } from "./context.js"
 import type { MessengerAdapter } from "./port.js"
@@ -49,9 +50,12 @@ export const serveCommand = (messenger: Messenger): Command => {
 
     const counts: Record<string, number> = {}
     const rules = replying(context, messenger, Date.parse(startedAt))
+    const tasks = tasking(context)
     const count = (event: MessageEvent) => {
       counts[event.event] = (counts[event.event] ?? 0) + 1
-      if (event.event === "message") rules.arrived(event.message)
+      if (event.event !== "message") return
+      rules.arrived(event.message)
+      tasks.arrived(event.message)
     }
     let connection: MessengerAdapter | undefined
     const members = memberFetches({
@@ -81,6 +85,7 @@ export const serveCommand = (messenger: Messenger): Command => {
     } finally {
       await members.stop()
       await rules.settled()
+      await tasks.settled()
       releaseLock(path)
     }
     context.renderer.result({
@@ -90,6 +95,7 @@ export const serveCommand = (messenger: Messenger): Command => {
       kept: counts,
       ...rules.summary(),
       ...(members.summary().fetched + members.summary().failed > 0 ? { members: members.summary() } : {}),
+      ...tasks.summary(),
     })
   })
 
@@ -169,5 +175,28 @@ const replying = (context: MessengerContext, messenger: Messenger, since: number
     settled: () => queue,
     summary: () =>
       Object.keys(sent).length === 0 && Object.keys(skipped).length === 0 ? {} : { replies: { sent, skipped } },
+  }
+}
+
+/** The task rules over each message as it arrives, the owner's too — an answer closes a task. In order, one at a time. */
+const tasking = (context: MessengerContext) => {
+  let queue = Promise.resolve()
+  const total = { added: 0, closed: 0 }
+  return {
+    arrived: (message: Message) => {
+      queue = queue.then(() =>
+        context
+          .withStore((store, account) => applyTaskRulesOnArrival(store, account, message), { name: "serve tasks" })
+          .then(({ added, closed }) => {
+            total.added += added
+            total.closed += closed
+          })
+          .catch((error) =>
+            context.renderer.warn(`a task rule failed: ${error instanceof Error ? error.message : String(error)}`),
+          ),
+      )
+    },
+    settled: () => queue,
+    summary: () => (total.added + total.closed === 0 ? {} : { tasks: total }),
   }
 }

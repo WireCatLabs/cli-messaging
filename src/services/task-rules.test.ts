@@ -10,7 +10,7 @@ import type { SendGuard } from "../sends/guard.js"
 import { openStore } from "../store/store.js"
 import { onlineDeps } from "./deps.js"
 import { inboxService } from "./inbox.js"
-import { applyTaskRules } from "./task-rules.js"
+import { applyTaskRules, applyTaskRulesOnArrival } from "./task-rules.js"
 
 const account = { provider: "telegram", account: "500" } as const
 const at = (minute: number) => new Date(Date.UTC(2026, 9, 6, 10, minute)).toISOString()
@@ -144,6 +144,30 @@ describe("review", () => {
       { added: 0, closed: 0 },
     ])
     expect((await store.tasks.list({})).map((task) => task.source)).toEqual(["msg:telegram/500/-1001/1"])
+    await store.close()
+  })
+})
+
+describe("serve's rule pass", () => {
+  it("opens a task when a question arrives and closes it when the owner's answer arrives", async () => {
+    const store = await openStore({ path: join(mkdtempSync(join(tmpdir(), "task-arrival-")), "messages.db") })
+    const question = said("1", 1, "who has the keys?")
+    await store.saveMessages(account, "-1001", [said("0", 0, "morning"), question], { via: "test" })
+
+    expect(await applyTaskRulesOnArrival(store, account, question)).toEqual({ added: 1, closed: 0 })
+    expect(await applyTaskRulesOnArrival(store, account, question)).toEqual({ added: 0, closed: 0 })
+
+    const answer = said("2", 2, "I do", { outgoing: true, replyToId: "1" })
+    await store.saveMessages(account, "-1001", [answer], { via: "test" })
+    expect(await applyTaskRulesOnArrival(store, account, answer)).toEqual({ added: 0, closed: 1 })
+    expect((await store.tasks.list({})).map((task) => task.state)).toEqual(["done"])
+    await store.close()
+  })
+
+  it("sees an arrival the store has not saved yet", async () => {
+    const store = await openStore({ path: join(mkdtempSync(join(tmpdir(), "task-arrival-")), "messages.db") })
+
+    expect(await applyTaskRulesOnArrival(store, account, said("1", 1, "anyone?"))).toEqual({ added: 1, closed: 0 })
     await store.close()
   })
 })
