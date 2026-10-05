@@ -1,5 +1,11 @@
 # Поиск в локальном архиве
 
+Это справка — третья из четырёх частей документации поиска. Поиск на каждый день и поиск по темам
+описаны в каждом CLI: `docs/search.md` и `docs/topic-search.md`
+([tg](https://github.com/leemour/tg-cli/blob/main/docs/search.md),
+[max](https://github.com/leemour/max-cli/blob/main/docs/search.md)); устройство — на странице
+[How search works](https://wirecat.dev/en/docs/search-architecture).
+
 Lucene profile v1 доступен через shared services, CLI и MCP; потребителям нужна
 версия cli-messaging с этим профилем. Синтаксис основан на Apache Lucene 9.12.3
 StandardSyntaxParser и PrecedenceQueryParser, default AND, default field `text`.
@@ -59,6 +65,22 @@ tg messages search 'invoice date:[2026-01-20 TO 2026-01-22}' --timezone UTC
 ```
 
 На synthetic fixture: ids 101, 102. В MAX замените первый аргумент `tg` на `max`.
+
+### Все сообщения автора
+
+```sh
+tg messages search 'from:"Bob Synthetic"' --timezone UTC
+```
+
+На synthetic fixture: ids 106, 107, 108. В MAX замените первый аргумент `tg` на `max`.
+
+### Начиная с даты
+
+```sh
+tg messages search 'invoice date>=2026-01-21' --timezone UTC
+```
+
+На synthetic fixture: ids 102, 106. В MAX замените первый аргумент `tg` на `max`.
 
 ### Личная переписка
 
@@ -335,7 +357,8 @@ Exclusive нижняя day boundary начинает со следующего �
 
 Quoted timestamp должен содержать секунды и offset: `"2026-01-01T10:00:00+02:00"`.
 Для него inclusive/exclusive сравнивает точный UTC instant. `date:2026-01-01` означает весь день.
-`7d` не является Lucene date math; legacy `after:7d` остаётся в legacy mode.
+`date:7d` — относительная дата этого профиля (см. «Поля»), а не Lucene date math; legacy `after:7d`
+остаётся в legacy mode.
 
 ## Подсчёт: messages stats
 
@@ -453,8 +476,8 @@ Legacy regex теперь также имеет row/byte/time budgets; преж�
 
 Shared `migrateLegacyQuery` — pure preview, без записи saved query и без новой команды.
 Он сохраняет legacy grouping/instants, закрывает ранее tolerated quote с предупреждением,
-но не обещает сохранить discovery results. SavedQuery model хранит language/version;
-репозиторий saved queries и миграция сохранённых записей — следующий этап.
+но не обещает сохранить discovery results. Сохранённые поиски (`searches`) хранят
+language/version и разбираются заново при каждом запуске — см. «Сохранённые поиски и история».
 
 ## Машинный контракт и охват
 
