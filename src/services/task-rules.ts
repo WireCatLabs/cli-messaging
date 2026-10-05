@@ -1,7 +1,7 @@
 import { createTaskService, type TaskKind, type TaskStore } from "@leemour/cli-tasks"
 import { formatLocator } from "../domain/locator.js"
-import type { Id, Message, Review } from "../domain/models.js"
-import type { AccountKey } from "../store/store.js"
+import type { Id, Message, ReviewChat } from "../domain/models.js"
+import type { AccountKey, MessageStore } from "../store/store.js"
 import { questions } from "./questions.js"
 
 export interface RuleResult {
@@ -19,7 +19,7 @@ export const taskAccount = ({ provider, account }: AccountKey): string => `${pro
  * for none. A mention is one the messenger marks by id; an `@handle` is not seen.
  */
 export const applyTaskRules = async (
-  review: Review,
+  review: { chats: Pick<ReviewChat, "id" | "messages">[] },
   { store, account, now }: { store: TaskStore; account: AccountKey; now?: () => Date },
 ): Promise<RuleResult> => {
   const tasks = createTaskService({ store, ...(now ? { now } : {}) })
@@ -59,6 +59,22 @@ export const applyTaskRules = async (
     }
   }
   return result
+}
+
+/** How far back `serve` looks when a message arrives: enough to see whether it answers a recent question. */
+export const ARRIVAL_WINDOW = 50
+
+/** `serve`'s rule pass: the new message with the chat's stored messages before it, as a review would read them. */
+export const applyTaskRulesOnArrival = async (
+  store: MessageStore,
+  account: AccountKey,
+  message: Message,
+): Promise<RuleResult> => {
+  const page = await store.messages(account, message.chatId, { limit: ARRIVAL_WINDOW })
+  const messages = [...page.items.filter((one) => one.id !== message.id), message].sort(
+    (a, b) => Date.parse(a.timestamp) - Date.parse(b.timestamp),
+  )
+  return applyTaskRules({ chats: [{ id: message.chatId, messages }] }, { store: store.tasks, account })
 }
 
 /** The owner replied to the message, or to anything its sender said, later in the chat. */

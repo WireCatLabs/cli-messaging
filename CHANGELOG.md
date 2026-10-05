@@ -8,11 +8,11 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Added
 
-- **`review` keeps a list of what waits on you.** Each review opens a task in the local store for a
-  question nobody answered and a message that mentions you by name, and closes it once you answer. Run
-  twice over the same chats, it adds nothing; a task you dismissed stays dismissed. Only your own answers
-  count, and an `@handle` mention is not seen yet. The JSON answer says how many tasks it opened and
-  closed (`tasks`).
+- **`review` and `serve` keep a list of what waits on you.** Each review, and `serve` as each message
+  arrives, opens a task in the local store for a question nobody answered and a message that mentions you
+  by name, and closes it once you answer. Run twice over the same chats, it adds nothing; a task you
+  dismissed stays dismissed. Only your own answers count, and an `@handle` mention is not seen yet.
+  `review --json` and `serve`'s final summary say how many tasks were opened and closed (`tasks`).
 - **Open tasks in the store (store version 20).** `store.tasks` keeps what `@leemour/cli-tasks` tracks — a
   question, request, mention or promise waiting on the owner — as a locator to its message, never the text.
   Backup, restore and export carry the tasks with the messages. Builds from 0.49.0 on still open the file.
