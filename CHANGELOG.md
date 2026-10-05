@@ -8,6 +8,20 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Added
 
+- Search inside files (store version 19). `attachments extract [--chat <chat>] [--limit <n>]` reads the text
+  layer of files `messages download` saved — plain text (txt, md, csv, tsv, json, log), Word (docx) and PDF with
+  a text layer — into the local store, and `content:<word>` or `content:"a phrase"` in a strict search finds the
+  messages whose files hold it. `text:` still looks only at what was written, and file words do not rank
+  results. `--download --output-dir <dir>` first saves, from the messenger, files no download saved yet; nothing
+  is fetched without it. A scan or a photo is answered `needs-agent`: there is no OCR. The answer names each file
+  (locator, attachment number from 1, status, extractor, characters), never its text. A re-run reads only new
+  files and files whose size changed; `--limit` stops after that many files and the next run continues.
+- Word and PDF need the optional packages `mammoth` and `unpdf`, declared as optional peer dependencies and
+  never installed with this package; without one, those files are skipped, a note names the install, and the
+  next run reads them. Consumers add `attachmentsCommand` to their command list; the permission key is
+  `attachments.extract`, a local write refused by a read-only profile.
+- Deleting a message erases its files' text and words, also under builds pinned to older versions of this
+  package. `store reindex` rebuilds the files' word index too, and answers `fileTexts`.
 - `messages download` records in the local store where each file of a held message went
   (`attachments.local_path`), single messages and `--all` alike, so a file's text can be read from it later.
   A file is matched to its attachment by kind, in order, or by a unique name; one it cannot tell apart is

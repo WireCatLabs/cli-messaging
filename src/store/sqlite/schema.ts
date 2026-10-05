@@ -566,3 +566,24 @@ export const identityRevisions = sqliteTable(
   },
   (table) => [index("identity_revisions_by_identity").on(table.identityPk, table.capturedAt)],
 )
+
+/**
+ * The text of one attachment: read from the saved file (`origin` `extracted`) or written back by an
+ * agent that read a scan or a photo (`agent`). No foreign key: a build that predates this table deletes
+ * attachments in its purges, and a key would refuse that; triggers erase the text instead (NEED-393 A).
+ */
+export const attachmentTexts = sqliteTable("attachment_texts", {
+  attachmentPk: integer("attachment_pk").primaryKey(),
+  text: text("text").notNull(),
+  normalizedText: text("normalized_text").notNull(),
+  /** `extracted` or `agent`. */
+  origin: text("origin").notNull(),
+  /** `plain`, `docx:mammoth@1.13.0`, `pdf:unpdf@1.8.1`, or the agent's own label. */
+  extractor: text("extractor").notNull(),
+  contentSha256: text("content_sha256"),
+  /** The file's size when it was read; a file of another size is read again. */
+  bytes: integer("bytes"),
+  /** Why no text came out — a reason code, never a line of the file. */
+  error: text("error"),
+  writtenAt: integer("written_at").notNull(),
+})

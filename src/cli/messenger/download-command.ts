@@ -92,6 +92,26 @@ const recordPaths = async (
   }
 }
 
+/**
+ * Every file of one message, as `--all` saves them — a taken name gets the message's prefix, never
+ * overwrites — and where they went recorded in the store. For `attachments extract --download`.
+ */
+export const downloadMessage = async (
+  messages: Pick<MessagesService, "download" | "keepDownloaded">,
+  chat: string,
+  message: Id,
+  output: string,
+  warn: (message: string) => void,
+): Promise<Saved[]> => {
+  const { files } = await messages.download(chat, message)
+  mkdirSync(output, { recursive: true })
+  const done: Saved[] = []
+  for (const [index, file] of files.entries())
+    done.push(await save(file, output, `${message}-${index + 1}`, { unique: true }))
+  await recordPaths(messages, chat, message, files, done, warn)
+  return done
+}
+
 /** The most messages a provider hands out per history request — Telegram's cap. */
 const PAGE = 100
 

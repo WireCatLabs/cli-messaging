@@ -7,6 +7,7 @@ import { runsCommand } from "../runs/command.js"
 import { settingsFor } from "../settings.js"
 import { accountCommand } from "./account-command.js"
 import { storeCommand } from "./archive-commands.js"
+import { attachmentsCommand } from "./attachments-command.js"
 import { chatsCommand } from "./chats-command.js"
 import { completeCommand } from "./complete-command.js"
 import { contactsCommand } from "./contacts-command.js"
@@ -60,6 +61,7 @@ describe("the permission key of a command", () => {
       storeCommand(messenger),
       conversationsCommand(messenger),
       tagsCommand(messenger),
+      attachmentsCommand(messenger),
       searchesCommand(messenger),
       recipientsCommand(messenger),
       sendsCommand(messenger),
@@ -82,6 +84,7 @@ describe("the permission key of a command", () => {
     expect(keyForCommand(["store", "backup"])).toBeNull()
     expect(keyForCommand(["chats", "members", "list"])).toBe("chats.members.list")
     expect(keyForCommand(["tags", "add"])).toBe("tags.add")
+    expect(keyForCommand(["attachments", "extract"])).toBe("attachments.extract")
     expect(keyForCommand(["searches", "history"])).toBe("searches.history")
   })
 })

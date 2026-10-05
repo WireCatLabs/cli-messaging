@@ -156,6 +156,22 @@ tg messages search 'invoice NOT tag:work' --timezone UTC
 
 На synthetic fixture: ids 101. В MAX замените первый аргумент `tg` на `max`.
 
+### Слово внутри файла
+
+```sh
+tg messages search 'content:накладная' --timezone UTC
+```
+
+На synthetic fixture: ids 105. В MAX замените первый аргумент `tg` на `max`.
+
+### Фраза внутри файла, а не в сообщении
+
+```sh
+tg messages search 'content:"оплата до" NOT text:оплата' --timezone UTC
+```
+
+На synthetic fixture: ids 105. В MAX замените первый аргумент `tg` на `max`.
+
 <!-- recipes: end -->
 
 ## Операторы
@@ -215,6 +231,7 @@ enum или unsupported сочетание дают ошибку, а не пус
 | `filename` | keyword | NFKD/marks/NFC/lowercase v1, whole name | `filename:*.pdf` | term, phrase, wildcard, regex |
 | `mime` | keyword | lowercase; a value without / matches the first part; only where the messenger reports a type | `mime:"application/pdf" OR mime:image` | term, phrase, wildcard |
 | `size` | bytes | bytes; KB/MB/GB are 1024-based | `size>10MB` | term, phrase, range |
+| `content` | tokens | NFKD/marks/NFC/lowercase v1; the text of files attachments extract read or an agent wrote | `content:invoice` | term, phrase |
 | `tag` | local-tag | lowercase a-z, 0-9 and -, 1-32 characters | `tag:work` | term, phrase |
 
 <!-- fields: end -->
@@ -235,6 +252,12 @@ MAX — нет, там ищите по расширению (`filename:*.pdf`). 
 `--contact <person>` или `--message <id> --chat <chat>`; они живут только в локальном хранилище и
 никуда не отправляются. Метка — 1–32 символа a–z, цифры и дефис, регистр не важен; `NOT tag:work`
 точен.
+`content:договор` ищет внутри файлов: подходит сообщение, в тексте хотя бы одного файла которого
+есть это слово (или фраза в кавычках). Текст файлов кладёт в локальное хранилище
+`attachments extract` — из того, что сохранил `messages download` (или сам скачивает с `--download`):
+обычный текст, Word и PDF с текстовым слоем. Сканы и фото читает агент и записывает текст обратно.
+`text:` по-прежнему ищет только написанное в сообщении, а слова файлов не влияют на порядок
+результатов; `content:` берёт только term и phrase, без wildcard и regex.
 `date` понимает и относительные даты: `date:today` и `date:yesterday` — календарный день в
 `--timezone`; `date:7d` — с момента 7 дней назад (также `30m`, `2h`); `date>=7d` и
 `date:[30d TO 7d}` — то же в сравнении и диапазоне. Отсчёт идёт от момента запроса.

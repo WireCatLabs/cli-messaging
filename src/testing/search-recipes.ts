@@ -10,6 +10,8 @@ export interface SearchRecipes {
     | { type: "contact"; person: string; tag: string }
     | { type: "message"; chat: string; message: string; tag: string }
   )[]
+  /** Text of a file, as `attachments extract` would keep it; `attachment` counts from 1. */
+  fileTexts: { chat: string; message: string; attachment: number; text: string }[]
   recipes: { title: string; query: string; ids: string[] }[]
   negative: { query: string; code: string; reason: string }[]
 }
@@ -47,5 +49,13 @@ export const seedSearchRecipes = async (store: MessageStore, account: AccountKey
           ? { type: one.type, personId: one.person }
           : { type: one.type, chatId: one.chat, messageId: one.message }
     await store.addTags(account, target, [one.tag])
+  }
+  const files = await store.fileAttachments(account, { limit: 1000 })
+  for (const one of searchRecipes.fileTexts) {
+    const file = files.find(
+      ({ chatId, messageId, position }) =>
+        chatId === one.chat && messageId === one.message && position === one.attachment - 1,
+    )
+    if (file) await store.keepAttachmentText(file.pk, { text: one.text, origin: "extracted", extractor: "plain" })
   }
 }

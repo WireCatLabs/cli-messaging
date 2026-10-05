@@ -157,6 +157,9 @@
       "value": "<n>",
       "meaning": "remote: the vector size — needed with --base-url; shortens an OpenAI model's"
     },
+    "--download": {
+      "meaning": "first save, from the messenger, the files no download saved yet"
+    },
     "--dry-run": {
       "meaning": "judge and plan; do nothing"
     },
@@ -362,7 +365,8 @@
     "--output-dir": {
       "value": "<dir>",
       "meaning": "the folder to write into, created if missing",
-      "default": "."
+      "default": ".",
+      "note": "`attachments extract` takes it only with --download, and has no default there, so extraction never fills the working folder unasked"
     },
     "--page": {
       "value": "<n>",
@@ -637,6 +641,32 @@
         "--first-name": "all",
         "--last-name": "all",
         "--photo": "all"
+      }
+    },
+    "attachments": {
+      "in": [],
+      "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" }
+    },
+    "attachments extract": {
+      "in": [],
+      "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" },
+      "options": {
+        "--chat": {
+          "in": [],
+          "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" }
+        },
+        "--download": {
+          "in": [],
+          "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" }
+        },
+        "--limit": {
+          "in": [],
+          "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" }
+        },
+        "--output-dir": {
+          "in": [],
+          "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" }
+        }
       }
     },
     "bot": {
