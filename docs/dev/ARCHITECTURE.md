@@ -386,7 +386,9 @@ text is fetched; `conversations_batches_next` returns the next window or `{ batc
 and `conversations_build` rebuilds one stored chat without inference. The last three write only
 locally under `conversations.links`: readonly/deny hides them, ask refuses with the config key.
 The `link-conversations` prompt reads the same shipped skill as the CLI; its cost/consent gate is
-per chat. These tools call `services.conversations`; the CLI never calls a model to link.
+per chat. These tools call `services.conversations`; inference in this MCP loop belongs to the
+owner's agent. **Correction 2026-10-05:** the explicit CLI `build --analyze` path can call a
+configured provider with consent; see [AI providers](../search/ai-providers.md).
 
 Consumer parity: planned for both CLIs on their next SDK adoption. Source-level shared schema and
 synthetic MCP proof are tested here; installed consumer parity is not claimed before publication.

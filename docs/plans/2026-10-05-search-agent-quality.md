@@ -25,3 +25,18 @@ and word ranks without a floor. SR-2 is not merged at the start of this work.
    Bun checks before commits. Push and open GitHub PRs; merge only when every required check is green.
 
 No model calls for graph linking, no real chats or store, no changes to linking rules, chunking or models.
+
+
+## Measured implementation decision
+
+SR-4 merged as #572 (`d6b6581`) after all required checks. SR-2 #571 and SR-10 #574
+merged before this fusion patch. SR-6 uses cosine >0.80 only for `local:e5-small:384`;
+other models require positive cosine. This is the dev selection under a recall-preservation
+constraint, not a universal model threshold. Held-out hybrid recall89.6%→87.5%, MRR0.769→0.825,
+no-answer hits30→9; the higher0.85 floor is rejected for excessive recall loss.
+
+The complete corpus, rankings, machine/model hashes and report are in
+[the benchmark](../../bench/search-quality/README.md). A1M-vector exact scan needs ANN for
+interactive use (fastest4.42s); under a proposed1s scan budget,≥300k chunks demonstrate need,
+with~200k as an interpolation for when to schedule it. Index implementation stays after this
+closed search list. No linking, chunking or model changes are made.

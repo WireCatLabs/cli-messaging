@@ -320,3 +320,15 @@ and the MCP search took 1.4 s.
 | the commands | `src/cli/messenger/conversations-command.ts` |
 | the MCP tool | `src/mcp/tools/conversations.ts` |
 
+
+
+## Conversation quality and cosine floor
+
+Hybrid `conversations search` filters cosine before reciprocal rank fusion: local e5-small at 384
+dimensions requires score >0.80; unmeasured models require positive cosine. Word-only matches remain
+eligible. The floor is calibrated on dev queries and evaluated on a synthetic held-out set, with
+noise reduced at a small recall cost; it does not make scores probabilities or prove relevance.
+`conversations related` retains neighbour-lookup semantics. Reproduce the scores and the 1M-vector
+scan with [the quality benchmark](../../bench/search-quality/README.md). The exact scan is sufficient
+at the measured smaller scale; ≥300k eligible chunks demonstrate the need for ANN under a proposed
+one-second scan budget. No vector-index dependency is introduced by this measurement.

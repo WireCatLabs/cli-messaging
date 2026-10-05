@@ -6,7 +6,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import type { Messenger } from "../cli/messenger/context.js"
 import { chunkHash } from "../conversations/chunks.js"
 import type { Message } from "../domain/models.js"
+import * as embeddingRuntime from "../embeddings/embed.js"
 import type { TextModel } from "../embeddings/models.js"
+import { textModel } from "../embeddings/models.js"
 import type { SendGuard } from "../sends/guard.js"
 import { openCache } from "../store/open.js"
 import { openStore } from "../store/store.js"
@@ -108,7 +110,7 @@ describe("embeddings", () => {
 
     const { hits } = await embeddings.search("fish", { model: "tiny", limit: 3 })
 
-    expect(hits).toHaveLength(3)
+    expect(hits).toHaveLength(1)
     expect([hits[0]?.summary.firstMessageId, hits[0]?.chunk]).toEqual([
       "40",
       { firstMessageId: "40", lastMessageId: "40" },
@@ -118,7 +120,7 @@ describe("embeddings", () => {
       (await embeddings.search("fish", { model: "tiny", chat: "9", limit: 5, since: "2026-10-03T00:00:00Z" })).hits.map(
         ({ summary }) => summary.firstMessageId,
       ),
-    ).toEqual(["80"])
+    ).toEqual([])
     await store.close()
   })
 
@@ -148,7 +150,7 @@ describe("embeddings", () => {
     expect(byWords).toMatchObject({
       summary: { firstMessageId: "40" },
       chunk: { firstMessageId: "40", lastMessageId: "40" },
-      by: ["meaning", "words"],
+      by: ["words"],
     })
     await store.close()
   })
@@ -305,7 +307,7 @@ describe("derived index freshness", () => {
     const found = await embeddings.search("fish", { model: "tiny", limit: 3 })
     expect(found.hits[0]).toMatchObject({ summary: { firstMessageId: "40" }, by: ["meaning"], stale: true })
     expect(found.hits[0]?.score).toBeCloseTo(1)
-    expect(found.hits.slice(1).map(({ stale }) => stale)).toEqual([false, false])
+    expect(found.hits).toHaveLength(1)
     expect(found.readiness).toMatchObject({ searchedByMeaning: ["9"], stale: ["9"], partial: [] })
     expect((await embeddings.readiness({ chat: "9", model: "tiny" })).chats).toMatchObject([
       {
@@ -404,7 +406,7 @@ describe("derived index freshness", () => {
     await store.close()
   })
 
-  it("returns every conversation by meaning, even at score 0, and ranks the only word match below one (no floor, known gap)", async () => {
+  it("keeps the exact word match and drops nonpositive meaning hits before fusion", async () => {
     const { store, embeddings, conversations } = await setUp({
       messages: [message("1", "cat dog"), message("40", "fish")],
     })
@@ -413,12 +415,47 @@ describe("derived index freshness", () => {
     await conversations.build("9")
 
     const { hits } = await embeddings.search("zebra", { model: "tiny", limit: 5 })
-    expect(hits.map(({ summary, score, by }) => [summary.firstMessageId, score, by])).toEqual([
-      ["1", 0, ["meaning"]],
-      ["80", null, ["words"]],
-      ["40", 0, ["meaning"]],
-    ])
+    expect(hits.map(({ summary, score, by }) => [summary.firstMessageId, score, by])).toEqual([["80", null, ["words"]]])
     await store.close()
+  })
+
+  it("applies the measured e5 floor before ranking, preserving exact words and current readiness", async () => {
+    const { store } = await setUp({
+      messages: [message("1", "cat dog"), message("40", "fish"), message("80", "zebra")],
+    })
+    const installed = vi.spyOn(embeddingRuntime, "isTextModelInstalled").mockReturnValue(true)
+    const nearest = vi.spyOn(store, "nearestConversations").mockImplementation(async () =>
+      (await store.conversations(account, "9", { limit: 10 })).items
+        .map((summary) => ({
+          summary,
+          chunk: { firstMessageId: summary.firstMessageId, lastMessageId: summary.firstMessageId },
+          score: summary.firstMessageId === "1" ? 0.8001 : summary.firstMessageId === "40" ? 0.8 : 0.79,
+          stale: false,
+        }))
+        .sort((a, b) => b.score - a.score),
+    )
+    const model = textModel("e5-small")
+    const embeddings = embeddingsService({
+      ...storedDeps({ provider: "test", app: { command: "chat" } } as Messenger, store, account, {} as SendGuard),
+      embedders: {
+        get: async () => ({ model, embed: async () => [new Float32Array(384)], close: async () => {} }),
+        close: async () => {},
+      },
+    })
+    try {
+      const result = await embeddings.search("zebra", { model: "e5-small", limit: 10 })
+      expect(result.hits.map(({ summary, by }) => [summary.firstMessageId, by])).toEqual([
+        ["1", ["meaning"]],
+        ["80", ["words"]],
+      ])
+      const noAnswer = await embeddings.search("nonexistent", { model: "e5-small", limit: 10 })
+      expect(noAnswer.hits.map(({ summary }) => summary.firstMessageId)).toEqual(["1"])
+      expect(result.meaning).toBe("searched")
+    } finally {
+      nearest.mockRestore()
+      installed.mockRestore()
+      await store.close()
+    }
   })
 
   it("searches by words alone when the model is not downloaded, and says so", async () => {

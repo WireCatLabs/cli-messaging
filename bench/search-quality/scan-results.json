@@ -1,0 +1,77 @@
+{
+  "date": "2026-10-05T15:32:28.159Z",
+  "cpu": "AMD Ryzen AI 9 HX 470 w/ Radeon 890M",
+  "threads": 24,
+  "ramGiB": 30.001419067382812,
+  "node": "v24.19.0",
+  "dims": 384,
+  "runs": 3,
+  "method": "production nearestChunks with migrated SQLite schema; 10 chunks per conversation; unique vector rows; no inference, summary hydration or freshness checks; first run after checkpoint, next runs warm",
+  "root": "/tmp/search-vector-scan-EuiCv4",
+  "elapsedMs": 56054.760858,
+  "results": [
+    {
+      "chunks": 100000,
+      "conversations": 10000,
+      "milliseconds": [
+        455.8268939999998,
+        601.2933540000001,
+        454.2283349999998
+      ],
+      "medianMs": 455.8268939999998,
+      "loadStart": [
+        14.48,
+        6.66,
+        4.01
+      ],
+      "loadEnd": [
+        13.8,
+        6.64,
+        4.02
+      ],
+      "rssMiB": 261.6328125
+    },
+    {
+      "chunks": 300000,
+      "conversations": 30000,
+      "milliseconds": [
+        1622.834285,
+        1492.9898970000004,
+        1169.2229470000002
+      ],
+      "medianMs": 1492.9898970000004,
+      "loadStart": [
+        13.8,
+        6.64,
+        4.02
+      ],
+      "loadEnd": [
+        12.94,
+        6.58,
+        4.01
+      ],
+      "rssMiB": 319.08203125
+    },
+    {
+      "chunks": 1000000,
+      "conversations": 100000,
+      "milliseconds": [
+        20189.984271,
+        13637.469928999999,
+        4420.509764999995
+      ],
+      "medianMs": 13637.469928999999,
+      "loadStart": [
+        17.6,
+        7.81,
+        4.44
+      ],
+      "loadEnd": [
+        23.12,
+        10.26,
+        5.38
+      ],
+      "rssMiB": 334.39453125
+    }
+  ]
+}
