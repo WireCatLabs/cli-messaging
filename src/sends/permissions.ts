@@ -294,6 +294,7 @@ const HOUSEKEEPING = new Set([
   "runs",
   "sends",
   "recipients",
+  "flood",
   "mcp",
   // Its commands read the rules or flip the pause switch; what a rule sends is checked as `replies.send`.
   "replies",

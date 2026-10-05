@@ -244,4 +244,5 @@ export {
   settingsFor,
 } from "./settings.js"
 export { skillCommand } from "./skill-command.js"
+export { changeStoreSetting, isStoreSetting, STORE_SETTINGS, storeSettings } from "./store-settings.js"
 export { type UpgradeContext, upgradeCommand } from "./upgrade-command.js"

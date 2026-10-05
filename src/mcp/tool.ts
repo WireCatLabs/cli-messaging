@@ -64,6 +64,8 @@ export interface Defaults {
   env: NodeJS.ProcessEnv
   /** The server's open models, kept between `conversations_search` calls. */
   embedders?: WarmEmbedders
+  /** False when recording was explicitly disabled; stored search tools keep no query history. */
+  history?: boolean
 }
 
 interface Tool<S extends Input> {

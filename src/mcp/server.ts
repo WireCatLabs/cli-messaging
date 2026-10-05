@@ -93,7 +93,14 @@ export const createServer = (
       messenger,
       session,
       withStore: context.withStore,
-      defaults: { limit: settings.limit, guard, settings, env: context.env, embedders },
+      defaults: {
+        limit: settings.limit,
+        guard,
+        settings,
+        env: context.env,
+        embedders,
+        history: settings.keepFailedRuns,
+      },
       confirmed,
       confirms,
     })
