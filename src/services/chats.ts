@@ -1,5 +1,6 @@
 import { CliError } from "@leemour/cli-core"
 import { capability } from "../cli/messenger/port.js"
+import { threadIdOf } from "../cli/messenger/thread.js"
 import type {
   Chat,
   ChatCard,
@@ -70,6 +71,8 @@ export interface MarkedRead {
   chatId: Id
   /** `null`: up to the newest message. */
   until: Id | null
+  /** Only this forum topic was marked read. */
+  threadId?: Id
 }
 
 export interface ChatsService {
@@ -94,7 +97,7 @@ export interface ChatsService {
    */
   audit(chat: string, options: { budget?: number; minScore?: number; pauseMs?: number }): Promise<MembersAudit>
   /** Through the guard; never counts toward the hourly limit. */
-  markRead(request: { chat: string; until?: string }): Promise<Operated<MarkedRead>>
+  markRead(request: { chat: string; until?: string; threadId?: string }): Promise<Operated<MarkedRead>>
 }
 
 export const chatsService = (deps: ServiceDeps): ChatsService => ({
@@ -235,17 +238,31 @@ export const chatsService = (deps: ServiceDeps): ChatsService => ({
     }
   },
 
-  markRead: async ({ chat, until }) => {
+  markRead: async ({ chat, until, threadId: typedThread }) => {
+    const threadId = threadIdOf(typedThread)
     const connection = await deps.connection()
-    const markRead = capability(connection, "markRead", "mark a chat read")
+    let act: (chatId: Id) => Promise<void>
+    if (threadId === undefined) {
+      const markRead = capability(connection, "markRead", "mark a chat read")
+      act = (chatId) => markRead(chatId, until)
+    } else {
+      const markTopicRead = capability(connection, "markTopicRead", "mark a forum topic read")
+      act = (chatId) => markTopicRead(chatId, threadId, until)
+    }
     const { id: chatId } = await connection.resolve(chat)
     const operationId = newOperationId()
     await guardedWrite(
       deps.guard,
-      { operationId, chatId, kind: "read", ...(until === undefined ? {} : { messageId: until }) },
-      () => markRead(chatId, until),
+      {
+        operationId,
+        chatId,
+        kind: "read",
+        ...(until === undefined ? {} : { messageId: until }),
+        ...(threadId === undefined ? {} : { threadId }),
+      },
+      () => act(chatId),
     )
-    return { operationId, chatId, until: until ?? null }
+    return { operationId, chatId, until: until ?? null, ...(threadId === undefined ? {} : { threadId }) }
   },
 })
 

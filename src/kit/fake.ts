@@ -314,6 +314,10 @@ export const fakeAdapter = (seed: Seed = contractSeed(), options: { feed?: boole
       chatOf(chatId).unreadCount = 0
     },
 
+    markTopicRead: async (chatId) => {
+      chatOf(chatId)
+    },
+
     poll: async (chatId, messageId) => ({ ...pollOf(chatId, messageId) }),
     vote: async (chatId, messageId, answerIds) => {
       const poll = pollOf(chatId, messageId)

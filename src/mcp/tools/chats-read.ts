@@ -7,9 +7,16 @@ export const chatsReadTools = (messenger: Messenger): Record<string, AnyTool> =>
   chats_mark_read: tool({
     title: "Mark a chat read",
     description:
-      "Mark a chat read up to a message, or up to its newest message. The other side sees that it was read. " +
+      "Mark a chat read up to a message, or up to its newest message; with topic, only that forum topic. " +
+      "The other side sees that it was read. " +
       "Only when the owner asked for it.",
-    input: v.object({ chat: chatOf(messenger), until: v.optional(message) }),
+    input: v.object({
+      chat: chatOf(messenger),
+      until: v.optional(message),
+      topic: v.optional(
+        v.pipe(v.string(), v.minLength(1), v.description("only this forum topic; unsupported without topics")),
+      ),
+    }),
     annotations: WRITE,
     _meta: APPROVE,
     permission: "read",
@@ -18,6 +25,7 @@ export const chatsReadTools = (messenger: Messenger): Record<string, AnyTool> =>
       servicesFor(onlineDeps(messenger, adapter, guard)).chats.markRead({
         chat: args.chat,
         ...(args.until === undefined ? {} : { until: args.until }),
+        ...(args.topic === undefined ? {} : { threadId: args.topic }),
       }),
   }),
 })
