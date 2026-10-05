@@ -25,6 +25,8 @@ guessable from the others.
    sent; their writes have their own keys (`tags.add`), so a read-only profile hides them.
    `attachments` are the files of stored messages: their text, read or written back, is kept in the
    local store for `content:` in a search and never sent; `attachments.extract` is a local write.
+   `chats tracking` is the one collection named by what it does rather than a plural: the chats whose
+   member lists `serve` fetches daily into the local store — owner's wording, 2026-10-05.
 2. **Top-level words** only for what spans every chat or is the tool itself: `inbox`, `review`,
    `watch`, `serve`, `doctor`, `upgrade`, `commands`, `complete`, `mcp`, `bot`. A new one needs a
    reason in its pull request.
