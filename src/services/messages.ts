@@ -32,6 +32,7 @@ import {
   searchLucene,
   statsLucene,
 } from "./messages-search.js"
+import { refreshSearch, type SearchRefreshed, type SyncOptions, withRefresh } from "./search-refresh.js"
 import { type SearchParams, searchRecordOf } from "./searches.js"
 
 export interface ListWindow {
@@ -49,6 +50,7 @@ export interface AroundWindow {
 }
 
 export interface SearchQuery {
+  syncFirst?: SyncOptions
   /** The query language of the phase 2 plan, §4: words, "phrases", -word, OR, and filters. */
   text?: string
   language?: "lucene" | "legacy"
@@ -75,6 +77,7 @@ export interface SearchQuery {
 export type FoundMessage = StoredHit & { match?: Match; score?: number | null; context?: WindowedMessage[] }
 
 export interface SearchFound extends Page<FoundMessage> {
+  refreshed?: SearchRefreshed
   query?: QueryMetadata
   coverage?: SearchCoverage
   corrections: { from: string; to: string[] }[]
@@ -300,16 +303,18 @@ export const messagesService = (deps: ServiceDeps): MessagesService => {
 
     search: (query) =>
       inStore(async (store, account) => {
+        const refreshed = await refreshSearch(deps, query)
         const found = await searchStore(store, account, query, deps.messenger)
         await remember(store, "search", query)
-        return found
+        return withRefresh(found, refreshed)
       }),
 
     stats: (query) =>
       inStore(async (store, account) => {
+        const refreshed = await refreshSearch(deps, query)
         const stats = await statsStore(store, account, query, deps.messenger)
         await remember(store, "stats", query)
-        return stats
+        return withRefresh(stats, refreshed)
       }),
 
     send: async ({
@@ -456,6 +461,22 @@ export const messagesService = (deps: ServiceDeps): MessagesService => {
   }
 }
 
+export const validateSearchDialect = (request: SearchQuery): void => {
+  const { pattern } = request
+  if (request.language !== undefined && !["lucene", "legacy"].includes(request.language))
+    throw new CliError("validation_error", "--language takes lucene or legacy")
+  if (pattern && (request.language === "lucene" || request.ast !== undefined || request.timezone !== undefined))
+    throw new CliError("validation_error", "--regex is legacy JavaScript mode; not with Lucene, AST or timezone")
+  if (request.language === "legacy" && (request.ast !== undefined || request.timezone !== undefined))
+    throw new CliError("validation_error", "AST and timezone require the Lucene language")
+  if (pattern && (request.source !== undefined || request.accounts !== undefined || request.senders !== undefined)) {
+    throw new CliError(
+      "validation_error",
+      "--regex reads the account it runs as — not with --source, other accounts or senders",
+    )
+  }
+}
+
 /**
  * `messages search` over a store, from the account given — or from `query.accounts`, which a caller such
  * as a bot's search passes after checking it may read them.
@@ -469,24 +490,13 @@ export const searchStore = async (
   const { text, pattern, chat, source, accounts, senders, limit, newest = false, context = 0 } = request
   if (request.signal?.aborted)
     throw new CliError("validation_error", "search was aborted", { reason: "query_aborted", complete: false })
-  if (request.language !== undefined && !["lucene", "legacy"].includes(request.language))
-    throw new CliError("validation_error", "--language takes lucene or legacy")
-  if (pattern && (request.language === "lucene" || request.ast !== undefined || request.timezone !== undefined))
-    throw new CliError("validation_error", "--regex is legacy JavaScript mode; not with Lucene, AST or timezone")
-  if (request.language === "legacy" && (request.ast !== undefined || request.timezone !== undefined))
-    throw new CliError("validation_error", "AST and timezone require the Lucene language")
+  validateSearchDialect(request)
   // A large file builds its word index a slice per search as well as in `store migrate` (NEED-453 A).
   const stop = Date.now() + SEARCH_FILL_MS
   await store.fillSearchIndex({ until: () => Date.now() >= stop })
   await store.fillStems({ until: () => Date.now() >= stop })
   if (!pattern && (request.language === "lucene" || request.ast !== undefined))
     return searchLucene(store, account, request, messenger)
-  if (pattern && (source !== undefined || accounts !== undefined || senders !== undefined)) {
-    throw new CliError(
-      "validation_error",
-      "--regex reads the account it runs as — not with --source, other accounts or senders",
-    )
-  }
   const found = pattern
     ? {
         ...(await store.find({
@@ -688,7 +698,7 @@ export const senderAmong = async (store: MessageStore, accounts: AccountKey[], r
  * messenger `in:` or `--source` names. `chat:` resolves as `--chat` does, `from:` through the names
  * `contacts search` uses, `from:me` as what the accounts sent — all inside the accounts chosen.
  */
-const scopeOf = async (
+export const scopeOf = async (
   messenger: Saved,
   store: MessageStore,
   account: AccountKey,

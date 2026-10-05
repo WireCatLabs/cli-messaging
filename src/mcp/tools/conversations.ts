@@ -5,7 +5,9 @@ import { listed } from "../../cli/paging.js"
 import { REFRESH_BOUNDS } from "../../services/embeddings.js"
 import { servicesFor, storedDeps } from "../../services/index.js"
 import { momentOf } from "../../services/moment.js"
+import { searchServices, syncInputs } from "../search-sync.js"
 import { type AnyTool, chatOf, limit, message, READ, refuseAskedLocalWrite, tool } from "../tool.js"
+import { syncArgs } from "./search.js"
 
 /** An MCP client gives up on a call long before 2,000 chunks are embedded. */
 const MCP_MAX_CHUNKS = 500
@@ -56,8 +58,12 @@ export const conversationsTools = (messenger: Messenger): Record<string, AnyTool
         "were searched. readiness lists chat ids: searchedByMeaning, wordsOnly, partial (some chunks not " +
         "embedded), stale (changed since the build) and notBuilt. embeddedOnlyElsewhere names chats embedded " +
         "only with another model. filter is strict Lucene: any message in the conversation must match before ranking. " +
-        "source explicitly widens accounts; by default only the active account is searched. Hits include source and locator.",
+        "source explicitly widens accounts; by default only the active account is searched. Hits include source and locator. " +
+        "sync_first optionally fetches new messages first under messages.sync-first; max_chats (5), sync_time (30s) " +
+        "and max_messages (500) bound the fetch. This does not build or embed; refreshed describes the network step " +
+        "and incomplete refreshes label coverage stale.",
       input: v.object({
+        ...syncInputs,
         query: v.pipe(v.string(), v.minLength(1), v.description("what to look for, in your own words")),
         filter: v.optional(v.pipe(v.string(), v.minLength(1))),
         source: v.optional(v.pipe(v.string(), v.minLength(1))),
@@ -69,15 +75,17 @@ export const conversationsTools = (messenger: Messenger): Record<string, AnyTool
         limit,
       }),
       annotations: { ...READ, openWorldHint: false },
-      stored: async (store, account, args, defaults) => {
+      stored: async (store, account, args, defaults, connect) => {
         const size = args.limit ?? defaults.limit
-        const deps = {
-          ...storedDeps(messenger, store, account, defaults.guard),
-          env: defaults.env,
-          profile: defaults.settings.profile,
-          embedders: defaults.embedders,
-        }
-        const found = await servicesFor(deps).embeddings.search(args.query, {
+        const found = await searchServices(
+          messenger,
+          store,
+          account,
+          defaults,
+          args.sync_first ? connect : undefined,
+        ).embeddings.search(args.query, {
+          ...syncArgs(args),
+          signal: defaults.signal,
           limit: size,
           ...(args.filter === undefined ? {} : { filter: args.filter }),
           ...(args.source === undefined ? {} : { source: args.source }),
@@ -87,6 +95,7 @@ export const conversationsTools = (messenger: Messenger): Record<string, AnyTool
         })
         return {
           accounts: found.accounts,
+          ...(found.refreshed ? { refreshed: found.refreshed, coverage: found.coverage } : {}),
           model: found.model,
           meaning: found.meaning,
           items: found.hits,

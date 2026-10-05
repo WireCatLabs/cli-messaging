@@ -3,8 +3,9 @@ import { listStart } from "../../cli/messenger/after.js"
 import type { Messenger } from "../../cli/messenger/context.js"
 import { capability } from "../../cli/messenger/port.js"
 import { listed } from "../../cli/paging.js"
-import { readEvidencePacket, servicesFor, storedDeps } from "../../services/index.js"
+import { readEvidencePacket } from "../../services/index.js"
 import { heard, hearForTool, modelWith } from "../../speech/hearing.js"
+import { searchServices } from "../search-sync.js"
 import { type AnyTool, chatOf, limit, message, nameOf, READ, snakeOf, tool } from "../tool.js"
 import {
   answerMessagesSearch,
@@ -154,11 +155,8 @@ export const messagesTools = (messenger: Messenger): Record<string, AnyTool> => 
       description: MESSAGES_SEARCH_DESCRIPTION,
       input: messagesSearchInput(messenger),
       annotations: { ...READ, openWorldHint: false },
-      stored: (store, account, args, defaults) => {
-        const services = servicesFor({
-          ...storedDeps(messenger, store, account, defaults.guard),
-          history: defaults.history,
-        })
+      stored: (store, account, args, defaults, connect) => {
+        const services = searchServices(messenger, store, account, defaults, args.sync_first ? connect : undefined)
         return answerMessagesSearch(services.messages, args, defaults, services.searches)
       },
     }),
@@ -168,11 +166,8 @@ export const messagesTools = (messenger: Messenger): Record<string, AnyTool> => 
       description: MESSAGES_STATS_DESCRIPTION,
       input: messagesStatsInput(messenger),
       annotations: { ...READ, openWorldHint: false },
-      stored: (store, account, args, defaults) => {
-        const services = servicesFor({
-          ...storedDeps(messenger, store, account, defaults.guard),
-          history: defaults.history,
-        })
+      stored: (store, account, args, defaults, connect) => {
+        const services = searchServices(messenger, store, account, defaults, args.sync_first ? connect : undefined)
         return answerMessagesStats(services.messages, args, defaults, services.searches)
       },
     }),

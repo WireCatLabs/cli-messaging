@@ -236,6 +236,7 @@ export const keyForWrite = (kind: SendKind, action?: string): PermissionKey => {
 
 /** Write keys written out where a write is checked; `permission-keys.test.ts` keeps this list whole. */
 const NAMED_WRITE_KEYS = [
+  "messages.sync-first",
   "account.sessions.list",
   "attachments.extract",
   "attachments.text.set",

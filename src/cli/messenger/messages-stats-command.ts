@@ -3,13 +3,14 @@ import { Command } from "commander"
 import type { StatsGrouping } from "../../services/messages-search.js"
 import { positiveCount } from "../paging.js"
 import { type Messenger, messengerContext } from "./context.js"
+import { syncOptions, syncRequest } from "./search-sync-options.js"
 
 const GROUPINGS: StatsGrouping[] = ["chat", "sender", "day", "hour"]
 
 export const messagesStatsCommand = (messenger: Messenger): Command =>
-  new Command("stats")
+  syncOptions(new Command("stats"))
     .description(
-      "how many stored messages match, by chat, sender, day or hour — the local store only; never asks the messenger",
+      "how many stored messages match, by chat, sender, day or hour — the local store only; optionally fetches new messages with --sync-first",
     )
     .argument(
       "[query...]",
@@ -48,6 +49,7 @@ export const messagesStatsCommand = (messenger: Messenger): Command =>
         limit?: number
         saved?: string
       }>()
+      const syncing = syncRequest(this, context)
       const typed = {
         ...(by === undefined ? {} : { by }),
         ...(chat === undefined ? {} : { chat }),
@@ -59,6 +61,7 @@ export const messagesStatsCommand = (messenger: Messenger): Command =>
       const stats = await context.withServices(async (services) => {
         if (saved === undefined)
           return services.messages.stats({
+            ...syncing,
             ...typed,
             ...(words.length ? { text: words.join(" ") } : {}),
             by: by ?? "chat",
@@ -73,6 +76,7 @@ export const messagesStatsCommand = (messenger: Messenger): Command =>
           )
         limit = params.limit ?? limit
         return services.messages.stats({
+          ...syncing,
           ...(params.text === undefined ? {} : { text: params.text }),
           ...(params.ast === undefined ? {} : { ast: params.ast }),
           ...(params.chat === undefined ? {} : { chat: params.chat }),

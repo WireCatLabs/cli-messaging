@@ -184,11 +184,19 @@ export const archiveService = (deps: ServiceDeps): ArchiveService => {
     },
 
     fetch: async (chat, options) => {
+      if (deps.withConnection && !deps.offline && deps.reads !== "store")
+        return deps.withConnection((adapter) =>
+          archiveService({ ...deps, withConnection: undefined, connection: async () => adapter }).fetch(chat, options),
+        )
       pushed(deps, "`store fetch`")
+      options.stop.throwIfAborted()
       const connection = await deps.connection()
       const history = capability(connection, "history", "read a chat's history")
       const self = connection.self()
       if (self === null) throw new CliError("authentication_error", "not logged in — nothing to fetch for")
+      if (self !== (await deps.account()).account)
+        throw new CliError("authentication_error", "the connection belongs to another account")
+      if (options.stop.aborted) return { chat: null, fetched: 0, complete: false, ranges: [], stopped: true }
       return fetchInto({
         history: (window) => history(chat, { ...window, reactions: false }),
         store: await deps.store(),

@@ -11,6 +11,7 @@ import { type Built, conversationsService } from "./conversations.js"
 import type { ServiceDeps } from "./deps.js"
 import { storedChatId } from "./messages.js"
 import { type Prepared, prepareLucene } from "./messages-search.js"
+import { refreshSearch, type SearchRefreshed, type SyncOptions } from "./search-refresh.js"
 
 /** A local model by id (the default when nothing is given), or a remote one with the user's key (E11). */
 export type ModelChoice = string | { remote: RemoteModel; apiKey?: string; concurrency?: number }
@@ -68,6 +69,10 @@ export interface EmbeddingsService {
       filter?: string
       source?: string
       timezone?: string
+      syncFirst?: SyncOptions
+      signal?: AbortSignal
+      /** Local graph catch-up after any network refresh and before searching. */
+      refresh?: RefreshOptions
     },
   ): Promise<FoundConversations>
   /**
@@ -118,6 +123,9 @@ export const REFRESH_BOUNDS = { maxChats: 20, maxChunks: 2_000 }
 
 export interface FoundConversations {
   accounts?: AccountKey[]
+  prepared?: Refreshed
+  refreshed?: SearchRefreshed
+  coverage?: { state: "partial" | "stale" }
   model: string
   /** `unavailable`: the local model is not downloaded, and only words were searched. */
   meaning: "searched" | "unavailable"
@@ -425,7 +433,21 @@ export const embeddingsService = (deps: ServiceDeps): EmbeddingsService => {
       )
     },
 
-    search: async (query, { chat, model: choice, since, limit, filter, source, timezone }) => {
+    search: async (
+      query,
+      { chat, model: choice, since, limit, filter, source, timezone, syncFirst, signal, refresh },
+    ) => {
+      const refreshed = await refreshSearch(deps, {
+        chat,
+        limit,
+        syncFirst,
+        signal,
+        language: "lucene",
+        text: filter,
+        source,
+        timezone,
+      })
+      const locallyRefreshed = refresh ? await embeddingsService(deps).refresh(refresh) : undefined
       const store = await deps.store()
       const account = await deps.account()
       const target = resolve(choice)
@@ -538,6 +560,10 @@ export const embeddingsService = (deps: ServiceDeps): EmbeddingsService => {
             }
           }),
         readiness,
+        ...(locallyRefreshed ? { prepared: locallyRefreshed } : {}),
+        ...(refreshed
+          ? { refreshed, coverage: { state: refreshed.complete ? ("partial" as const) : ("stale" as const) } }
+          : {}),
         embeddedOnlyElsewhere: elsewhere,
       }
     },

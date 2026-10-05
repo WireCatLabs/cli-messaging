@@ -5,10 +5,13 @@ import { renderMessages } from "../../render/messages.js"
 import { environmentOf } from "../context.js"
 import { positiveCount } from "../paging.js"
 import { type Messenger, messengerContext } from "./context.js"
+import { syncOptions, syncRequest } from "./search-sync-options.js"
 
 export const messagesSearchCommand = (messenger: Messenger): Command =>
-  new Command("search")
-    .description("search the local store — what was read, fetched or kept by serve; never asks the messenger")
+  syncOptions(new Command("search"))
+    .description(
+      "search the local store — what was read, fetched or kept by serve; optionally fetches new messages with --sync-first",
+    )
     .argument(
       "[query...]",
       'strict Lucene query: words, "phrases", AND/OR/NOT, field groups and date ranges; --language legacy keeps discovery; with --saved, more words AND-ed to it',
@@ -74,6 +77,7 @@ export const messagesSearchCommand = (messenger: Messenger): Command =>
         if (saved === undefined) {
           const pattern = regex ? patternOf(words.join(" ")) : undefined
           return services.messages.search({
+            ...syncRequest(this, context),
             ...typed,
             ...(pattern ? { pattern } : { text: words.join(" ") }),
             limit,
@@ -86,6 +90,7 @@ export const messagesSearchCommand = (messenger: Messenger): Command =>
         const { id, params, pattern } = await services.searches.resolve(saved, { ...typed, text: words.join(" ") })
         limit = params.limit ?? limit
         return services.messages.search({
+          ...syncRequest(this, context),
           ...(pattern ? { pattern } : params.text === undefined ? {} : { text: params.text }),
           ...(params.ast === undefined ? {} : { ast: params.ast }),
           ...(params.chat === undefined ? {} : { chat: params.chat }),

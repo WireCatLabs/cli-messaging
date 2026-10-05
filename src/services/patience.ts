@@ -11,6 +11,7 @@ export const patiently = async <T>(
   stop: AbortSignal,
 ): Promise<T> => {
   for (let attempt = 1; ; attempt += 1) {
+    stop.throwIfAborted()
     try {
       return await request()
     } catch (error) {

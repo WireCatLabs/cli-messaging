@@ -10,6 +10,7 @@ import { type QueryAst, type QueryNode, queryError, walkQuery } from "../search/
 import { inSource, sourceOf } from "../search/query.js"
 import { type AccountKey, CHAT_LIST_KEY, type ChatCompleteness, type MessageStore } from "../store/store.js"
 import { chatAmong, type SearchFound, type SearchQuery, senderAmong } from "./messages.js"
+import type { SearchRefreshed } from "./search-refresh.js"
 
 export interface QueryMetadata {
   language: "lucene-v1"
@@ -20,7 +21,7 @@ export interface QueryMetadata {
   order: "newest" | "relevance"
 }
 export interface SearchCoverage {
-  state: "complete" | "partial" | "unknown"
+  state: "complete" | "partial" | "unknown" | "stale"
   /** The oldest `store fetch` of the chats in scope; `null` when one of them was never fetched. */
   lastSyncedAt: string | null
   /** Every account in scope has handed the store its whole chat list at least once. */
@@ -257,6 +258,7 @@ export interface StatsRow {
   count: number
 }
 export interface MessageStats {
+  refreshed?: SearchRefreshed
   by: StatsGrouping
   items: StatsRow[]
   total: number
