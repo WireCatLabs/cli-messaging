@@ -51,6 +51,10 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   not recorded. A failed store write only warns: the file is saved. `RemoteFile.position` is optional: an
   adapter that knows the attachment's place may set it, and the store then matches by it.
 
+### Fixed
+
+- `conversations embed --max-chunks` help says there is no limit with `--chat`, as the command behaves; it said 2000.
+
 ## 0.148.2 — 05.10.2026
 
 Released early: MAX and TG adoption is blocked by contact-context message reads bypassing denied message permissions
