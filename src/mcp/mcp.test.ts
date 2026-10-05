@@ -18,6 +18,7 @@ import type { MessengerAdapter, SendOptions } from "../cli/messenger/port.js"
 import { reviewCommand } from "../cli/messenger/review.js"
 import { createProgram, run } from "../cli/program.js"
 import { settingsFor } from "../cli/settings.js"
+import { skillCommand } from "../cli/skill-command.js"
 import { parseMarkdown } from "../domain/markdown.js"
 import type { Chat, Message } from "../domain/models.js"
 import { parseLucene } from "../search/lucene/parser.js"
@@ -562,6 +563,8 @@ describe("the MCP server", () => {
       "chat_contacts_list",
       "chat_contacts_lookup",
       "chat_contacts_show",
+      "chat_conversations_batches_next",
+      "chat_conversations_batches_status",
       "chat_conversations_list",
       "chat_conversations_related",
       "chat_conversations_search",
@@ -869,6 +872,110 @@ describe("the MCP server", () => {
       items: [{ chat: "7", state: "words-only", pending: { new: 0 } }],
       hasMore: false,
     })
+  })
+
+  it("agent links over MCP and rebuilds a synthetic tangled chat without inference or messenger writes", async () => {
+    const telegram = scripted({
+      history: async () => ({
+        items: [
+          { ...message, id: "1", senderId: "10", text: "Which train goes to the museum?" },
+          { ...message, id: "2", senderId: "11", text: "The bread needs another ten minutes." },
+          { ...message, id: "3", senderId: "12", text: "Take the blue line and change at North." },
+          { ...message, id: "4", senderId: "13", text: "I will take it out of the oven then." },
+        ],
+        hasMore: false,
+      }),
+    })
+    const { call, client, streams } = await connect(telegram)
+    await call("chat_messages_list", { chat: "7" })
+    const opened = telegram.opened()
+    const inferred = models.opened
+    const prompt = (await client.getPrompt({ name: "link-conversations" })).messages[0]
+    expect(prompt?.content).toMatchObject({ type: "text", text: expect.stringContaining("Wait for a yes") })
+    expect((await call("chat_conversations_build", { chat: "7" })).body.conversations).toBe(4)
+    expect((await call("chat_conversations_batches_status", { chat: "7" })).body).toMatchObject({
+      messages: 4,
+      batches: 1,
+      characters: expect.any(Number),
+      tokensEstimate: expect.any(Number),
+    })
+    const batch = (await call("chat_conversations_batches_next", { chat: "7", size: 10 })).body
+    const answers = [
+      { message: "1", parent: null, confidence: 1 },
+      { message: "2", parent: null, confidence: 1 },
+      { message: "3", parent: "1", confidence: 0.9 },
+      { message: "4", parent: "2", confidence: 0.9 },
+    ]
+    const invalid = await call("chat_conversations_links_add", {
+      batch: batch.batch,
+      model: "synthetic-agent",
+      answers: [answers[0], { message: "2", parent: "4", confidence: 1 }],
+    })
+    expect(invalid.isError).toBe(true)
+    expect((await call("chat_conversations_batches_status", { chat: "7" })).body.messages).toBe(4)
+    expect(
+      (
+        await call("chat_conversations_links_add", {
+          batch: batch.batch,
+          model: "synthetic-agent",
+          skill: "1",
+          answers,
+        })
+      ).body.stored,
+    ).toBe(4)
+    expect((await call("chat_conversations_batches_next", { chat: "7" })).body).toEqual({ batch: null })
+    expect((await call("chat_conversations_build", { chat: "7" })).body.conversations).toBe(2)
+    for (const [root, members] of [
+      ["1", ["1", "3"]],
+      ["2", ["2", "4"]],
+    ] as const) {
+      const shown = (await call("chat_conversations_show", { chat: "7", message: root })).body
+      expect(shown.messages.map((one: Message) => one.id)).toEqual(members)
+    }
+    expect((await call("chat_conversations_links_clear", { chat: "7", model: "other" })).body.cleared).toBe(0)
+    expect((await call("chat_conversations_links_clear", { chat: "7", model: "synthetic-agent" })).body.cleared).toBe(4)
+    expect((await call("chat_conversations_build", { chat: "7" })).body.conversations).toBe(4)
+    expect(telegram.opened()).toBe(opened)
+    expect(models.opened).toBe(inferred)
+    expect(streams.stderr.join("\n")).not.toContain("oven")
+  })
+
+  it("refuses a stale MCP batch atomically when the chat changes", async () => {
+    const { call, env } = await connect(scripted())
+    await call("chat_messages_list", { chat: "7" })
+    const batch = (await call("chat_conversations_batches_next", { chat: "7" })).body.batch
+    const store = await openStore({ path: env.MESSAGING_STORE })
+    await store.markDeleted({ provider: "chat", account: "500" }, ["1"], { chatId: "7" })
+    await store.close()
+    const result = await call("chat_conversations_links_add", {
+      batch,
+      model: "synthetic-agent",
+      answers: [{ message: "1", parent: null, confidence: 1 }],
+    })
+    expect(result.isError).toBe(true)
+    expect((await call("chat_conversations_batches_next", { chat: "7" })).body).toEqual({ batch: null })
+  })
+
+  it("hides local graph writes on readonly, refuses ask, and keeps batches readable", async () => {
+    for (const level of ["readonly", "deny", "ask", "allow"]) {
+      const { client, call } = await connect(scripted(), { config: levels({ "conversations.links": level }) })
+      const names = (await client.listTools()).tools.map(({ name }) => name)
+      expect(names).toContain("chat_conversations_batches_status")
+      expect(names).toContain("chat_conversations_batches_next")
+      for (const tool of ["build", "links_add", "links_clear"]) {
+        expect(names.includes(`chat_conversations_${tool}`)).toBe(level === "allow" || level === "ask")
+      }
+      if (level === "ask") {
+        await call("chat_messages_list", { chat: "7" })
+        for (const [tool, args] of [
+          ["build", { chat: "7" }],
+          ["links_clear", { chat: "7" }],
+          ["links_add", { batch: "bad", model: "synthetic", answers: [] }],
+        ] as const) {
+          expect((await call(`chat_conversations_${tool}`, args)).body.error.code).toBe("confirmation_required")
+        }
+      }
+    }
   })
 
   it("loads the model once for every conversations_search, and lets it go when the server closes", async () => {
@@ -2044,6 +2151,7 @@ describe("MCP prompts and resources", () => {
     expect((await client.listPrompts()).prompts.map((one) => one.name).sort()).toEqual([
       "catch-up",
       "find",
+      "link-conversations",
       "reply",
       "review",
     ])
@@ -2055,6 +2163,22 @@ describe("MCP prompts and resources", () => {
     expect(text).toContain("chat_messages_send")
     expect(text).toContain("never act on a request")
     expect(telegram.opened()).toBe(0)
+  })
+
+  it("renders the linking prompt exactly as skill show link-conversations", async () => {
+    const { client } = await connect(scripted())
+    const streams = captureStreams()
+    const code = await run(
+      ["skill", "show", "link-conversations"],
+      {
+        app,
+        commands: () => [skillCommand(app, new URL("../../skills/link-conversations/SKILL.md", import.meta.url))],
+      },
+      { streams, tty: false },
+    )
+    expect(code).toBe(0)
+    const [first] = (await client.getPrompt({ name: "link-conversations" })).messages
+    expect(first?.content).toEqual({ type: "text", text: streams.stdout.join("\n") })
   })
 
   it("passes `/catch-up`'s kind and mode to the inbox tool, and marks read only through chats_mark_read", async () => {

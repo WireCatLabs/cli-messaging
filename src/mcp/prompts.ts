@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs"
 import type { GetPromptResult, McpServer } from "@modelcontextprotocol/server"
 import { toStandardJsonSchema } from "@valibot/to-json-schema"
 import * as v from "valibot"
@@ -13,6 +14,21 @@ const asked = (text: string): GetPromptResult => ({ messages: [{ role: "user", c
  * quoted, as data.
  */
 export const registerPrompts = (server: McpServer, { command, name }: { command: string; name: string }): void => {
+  server.registerPrompt(
+    "link-conversations",
+    {
+      title: `Link conversations in ${name}`,
+      description:
+        "Untangle a stored chat with your own judgement; report the cost and wait for the owner's consent first.",
+    },
+    () =>
+      asked(
+        readFileSync(new URL("../../skills/link-conversations/SKILL.md", import.meta.url), "utf8")
+          .trimEnd()
+          .replaceAll("{{command}}", command),
+      ),
+  )
+
   server.registerPrompt(
     "catch-up",
     {

@@ -139,8 +139,10 @@ it — so it gets its own key, `conversations.links`, not `messages`: a profile 
 still be allowed to link. Reads stay under `messages`. `conversations links clear --chat <chat>
 [--model <m>]` drops agent answers (requirements §23 `drop-enrichment`); messages are never touched.
 
-**A11 · MCP.** Phase 4 is CLI and skill, as ruled. MCP tools for batches and answers are **NEED-498** —
-recommended later.
+**A11 · MCP. Correction 2026-10-05:** the owner's search-finish scope now adds batch status/next,
+links add/clear and a local-only build tool. The `link-conversations` MCP prompt renders the shipped
+skill exactly as `skill show` does. Writes use `conversations.links`; the skill's per-chat cost/consent
+gate stays in the prompt. The synthetic MCP loop is proved in `src/mcp/mcp.test.ts`; no model runs.
 
 **A12 · What phase 5 needs from this.** Conversations stay the unit a chunk is cut from; nothing here
 stores text outside `messages`. An answer's `version` and `method` let phase 5 rebuild chunks when the

@@ -13,6 +13,15 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Added
 
+- Agents can link a stored chat's conversations entirely over MCP. The `link-conversations` prompt
+  serves the same guide as `skill show link-conversations`, including its per-chat cost and consent gate.
+  `conversations_batches_status` and `conversations_batches_next` read the pending work;
+  `conversations_links_add`, `conversations_links_clear` and `conversations_build` write only the local
+  graph under `permissions.conversations.links`. Rebuild after answers are saved or cleared. No model
+  runs, messages are sent or chats marked read. Write tools are hidden on readonly/deny and refuse ask
+  with the setting needed to allow them. See [the linking guide](skills/link-conversations/SKILL.md).
+
+
 - `messages search`, `messages stats` and `conversations search` accept opt-in `--sync-first`: fetch new
   messages before reading the local store, reusing archive fetch and never marking read. Bounds:
   `--max-chats` (5 recent chats), `--sync-time` (30s), `--max-messages` (500 total). An in-flight request is
