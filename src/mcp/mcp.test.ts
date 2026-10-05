@@ -906,6 +906,19 @@ describe("the MCP server", () => {
     expect([refused.isError, refused.body.error.code]).toEqual([true, "confirmation_required"])
   })
 
+  it.each([false, true])("MCP search history follows explicit recording %s", async (record) => {
+    const { call, env } = await connect(scripted(), { config: { defaults: { record } } })
+    await call("chat_chats_list")
+    const store = await openStore({ path: env.MESSAGING_STORE })
+    await seedSearchRecipes(store, { provider: "chat", account: "500" })
+    await store.close()
+    const found = await call("chat_messages_search", { text: "invoice" })
+    const counted = await call("chat_messages_stats", { text: "invoice" })
+    expect(found.isError).toBe(false)
+    expect(counted.body).toMatchObject({ total: 3 })
+    expect((await call("chat_searches_history")).body.items).toHaveLength(record ? 2 : 0)
+  })
+
   it("**saves and runs searches through MCP as the commands do**, and hides the writes where searches are read-only", async () => {
     const telegram = scripted()
     const { call, env } = await connect(telegram)

@@ -6,6 +6,23 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Fixed
+
+- Release notes place member history in 0.148.0, whose published build already contains store version 18;
+  this patch adds no migration.
+- MCP message search/statistics keep no query history when recording was explicitly disabled (`--no-record`
+  or `record: false`), matching the commands. Personal MCP hosts pass the new optional `history` default.
+- `flood clear` maps as owner maintenance, like configuration and diagnostic commands, so consumers mounting
+  it do not fail with an unknown permission path. It remains absent from MCP.
+
+### Added
+
+- `./cli` exports the shared store-setting helpers for CLIs with their own configuration command:
+  `STORE_SETTINGS`, `isStoreSetting`, `storeSettings` and `changeStoreSetting`. They preserve global scope,
+  validation and reindex guidance without a second implementation.
+
+## 0.148.0 — 04.10.2026
+
 ### Added
 
 - Member history in the store (store version 18): `saveRoster` records one read of a group's member list — a stay
@@ -14,10 +31,6 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   fake, deleted and photo marks) when it changes. Someone is recorded as gone only from a list read whole. Read
   with `memberStays`, `memberCounts` and `profileRevisions`; `trackMembers` and `trackedChats` keep the chats a
   daily fetch will cover. Older builds keep opening the file: version 18 only adds tables and a nullable column.
-
-## 0.148.0 — 04.10.2026
-
-### Added
 
 - `store repair [--dry-run]` brings every table of the store to this build's shape without deleting anything. A
   table only missing columns it can take gets them added; any other difference renames it to a copy,

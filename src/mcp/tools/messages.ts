@@ -155,7 +155,10 @@ export const messagesTools = (messenger: Messenger): Record<string, AnyTool> => 
       input: messagesSearchInput(messenger),
       annotations: { ...READ, openWorldHint: false },
       stored: (store, account, args, defaults) => {
-        const services = servicesFor(storedDeps(messenger, store, account, defaults.guard))
+        const services = servicesFor({
+          ...storedDeps(messenger, store, account, defaults.guard),
+          history: defaults.history,
+        })
         return answerMessagesSearch(services.messages, args, defaults, services.searches)
       },
     }),
@@ -166,7 +169,10 @@ export const messagesTools = (messenger: Messenger): Record<string, AnyTool> => 
       input: messagesStatsInput(messenger),
       annotations: { ...READ, openWorldHint: false },
       stored: (store, account, args, defaults) => {
-        const services = servicesFor(storedDeps(messenger, store, account, defaults.guard))
+        const services = servicesFor({
+          ...storedDeps(messenger, store, account, defaults.guard),
+          history: defaults.history,
+        })
         return answerMessagesStats(services.messages, args, defaults, services.searches)
       },
     }),
