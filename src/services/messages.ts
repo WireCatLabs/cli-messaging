@@ -2,6 +2,7 @@ import { CliError, singleLine } from "@leemour/cli-core"
 import type { Messenger } from "../cli/messenger/context.js"
 import { type After, capability, type Download, type Sent } from "../cli/messenger/port.js"
 import { threadIdOf } from "../cli/messenger/thread.js"
+import type { DownloadedFile } from "../domain/attachments.js"
 import { validateFormattedText } from "../domain/formatting.js"
 import { formatLocator, parseLocator } from "../domain/locator.js"
 import { type MessageLink, messageLinkTarget, validatePermalink } from "../domain/message-link.js"
@@ -149,6 +150,11 @@ export interface MessagesService {
   link(chat: string, message?: string): Promise<MessageLink>
   /** The files of one message. Always from the messenger, whatever its history is read from. */
   download(chat: string, message: Id): Promise<Download>
+  /**
+   * Records in the local store where the files went, so their text can be read later. Only a
+   * message the store holds; answers how many attachments it recorded.
+   */
+  keepDownloaded(chat: string, message: Id, files: readonly DownloadedFile[]): Promise<number>
   /** From the local store only; never asks the messenger. */
   search(query: SearchQuery): Promise<SearchFound>
   /** Counts of what a strict query matches, by chat, sender, day or hour; from the local store only. */
@@ -283,6 +289,14 @@ export const messagesService = (deps: ServiceDeps): MessagesService => {
 
     download: async (chat, message) =>
       capability(await deps.connection(), "download", "download attachments")(chat, message),
+
+    keepDownloaded: (chat, message, files) =>
+      inStore(async (store, account) => {
+        const chatId =
+          (await storedChatId(deps.messenger, chat, store, account).catch(() => undefined)) ??
+          (await (await deps.connection()).resolve(chat)).id
+        return store.keepDownloads(account, chatId, message, files)
+      }),
 
     search: (query) =>
       inStore(async (store, account) => {

@@ -35,6 +35,8 @@ export interface RemoteFile {
   name?: string
   mime?: string
   size?: number
+  /** Its place among the message's attachments, from 0. Without it the store matches files by kind and name. */
+  position?: number
   bytes(): AsyncIterable<Uint8Array>
 }
 

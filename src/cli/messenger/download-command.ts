@@ -6,6 +6,7 @@ import { pipeline } from "node:stream/promises"
 import { setTimeout as sleep } from "node:timers/promises"
 import { CliError } from "@leemour/cli-core"
 import type { Command } from "commander"
+import { NOT_FILES } from "../../domain/attachments.js"
 import type { Id } from "../../domain/models.js"
 import { FETCHING, keyOf } from "../../services/archive.js"
 import { OFFLINE } from "../../services/deps.js"
@@ -14,7 +15,7 @@ import { patiently } from "../../services/patience.js"
 import { parseDuration } from "../settings.js"
 import { type Fetching, type Messenger, type MessengerContext, messengerContext } from "./context.js"
 import { stopOnSignal } from "./patience.js"
-import { capability, type RemoteFile } from "./port.js"
+import type { RemoteFile } from "./port.js"
 
 export interface Saved {
   kind: string
@@ -50,13 +51,14 @@ export const downloadSubcommand = (messages: Command, messenger: Messenger): Com
       }
       if (messageId === undefined) throw new CliError("validation_error", "name a message id, or use --all")
       const id = messageId.trim()
-      const saved = await context.withMessenger(async (connection) => {
-        const { files, skipped } = await capability(connection, "download", "download attachments")(chat, id)
+      const saved = await context.withServices(async (services) => {
+        const { files, skipped } = await services.messages.download(chat, id)
         if (skipped.length > 0) context.renderer.note(`not a file, not downloaded: ${skipped.join(", ")}`)
         if (files.length === 0) throw new CliError("not_found", `message ${id} has no file to download`)
         mkdirSync(output, { recursive: true })
         const done: Saved[] = []
         for (const [index, file] of files.entries()) done.push(await save(file, output, `${id}-${index + 1}`))
+        await recordPaths(services.messages, chat, id, files, done, context.renderer.warn)
         return done
       })
       if (context.format === "pretty") context.streams.data(`${saved.map((one) => one.path).join("\n")}\n`)
@@ -64,11 +66,34 @@ export const downloadSubcommand = (messages: Command, messenger: Messenger): Com
       else context.renderer.result({ items: saved })
     })
 
+/**
+ * The files are saved whatever happens here: a store that cannot take the paths costs only the later
+ * `attachments extract`, so it warns and never fails the download.
+ */
+const recordPaths = async (
+  messages: Pick<MessagesService, "keepDownloaded">,
+  chat: string,
+  message: Id,
+  files: readonly RemoteFile[],
+  saved: readonly Saved[],
+  warn: (message: string) => void,
+): Promise<number> => {
+  const downloaded = saved.map((one, index) => ({
+    kind: one.kind,
+    path: one.path,
+    ...(files[index]?.name === undefined ? {} : { name: files[index]?.name }),
+    ...(files[index]?.position === undefined ? {} : { position: files[index]?.position }),
+  }))
+  try {
+    return await messages.keepDownloaded(chat, message, downloaded)
+  } catch (error) {
+    warn(`not recorded in the local store where message ${message}'s files went: ${(error as Error).message}`)
+    return 0
+  }
+}
+
 /** The most messages a provider hands out per history request — Telegram's cap. */
 const PAGE = 100
-
-/** Attachments that are never a file, so their messages cost no download request. */
-const NOT_FILES = new Set(["webpage", "share", "poll", "location", "contact"])
 
 interface Stretch {
   from: number
@@ -134,6 +159,7 @@ const downloadChat = async (
         fromStore: messenger.history === "store",
         stop: stop.signal,
         note: context.renderer.note,
+        warn: context.renderer.warn,
         onSaved,
       }),
     )
@@ -155,6 +181,7 @@ interface ChatWalk {
   fromStore: boolean
   stop: AbortSignal
   note: (message: string) => void
+  warn: (message: string) => void
   onSaved: (one: Saved) => void
 }
 
@@ -185,9 +212,9 @@ const joined = (a: Stretch, b: Stretch): Stretch => {
  * what this run already walked is passed over. A stretch's ends hold only the messages it names.
  */
 const walkChat = async (
-  messages: Pick<MessagesService, "list" | "download">,
+  messages: Pick<MessagesService, "list" | "download" | "keepDownloaded">,
   chat: string,
-  { output, pauseMs, fetching, fromStore, stop, note, onSaved }: ChatWalk,
+  { output, pauseMs, fetching, fromStore, stop, note, warn, onSaved }: ChatWalk,
 ) => {
   const by: KeyedBy = fetching.orderBy ?? "id"
   const keyed = keyOf(fetching)
@@ -257,6 +284,7 @@ const walkChat = async (
       }
       if (message.attachments.some(({ kind }) => !NOT_FILES.has(kind))) {
         const { files } = await patiently(() => messages.download(chat, message.id), note, stop)
+        const done: Saved[] = []
         for (const [index, file] of files.entries()) {
           const one = await patiently(
             () => save(file, output, `${message.id}-${index + 1}`, { unique: true }),
@@ -265,8 +293,10 @@ const walkChat = async (
           )
           if (one.existing) existing += 1
           else saved += 1
+          done.push(one)
           onSaved(one)
         }
+        await recordPaths(messages, message.chatId, message.id, files, done, warn)
         run = run ? joined(run, point(key, message.id)) : point(key, message.id)
         remember()
       } else run = run ? joined(run, point(key, message.id)) : point(key, message.id)
