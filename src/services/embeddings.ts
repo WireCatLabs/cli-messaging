@@ -549,7 +549,7 @@ export const embeddingsService = (deps: ServiceDeps): EmbeddingsService => {
         accounts: prepared.scopeAccounts,
         model: target.id,
         meaning: target.installed ? "searched" : "unavailable",
-        hits: fused(meaning, words.hits)
+        hits: fused(meaning, words.hits, target.key === "local:e5-small:384" ? 0.8 : 0)
           .slice(0, limit)
           .map((hit) => {
             const source = sources.get(hit.summary.id) as AccountKey
@@ -706,11 +706,15 @@ export const embeddingsService = (deps: ServiceDeps): EmbeddingsService => {
 const fused = (
   meaning: ConversationHit[],
   words: Pick<ConversationHit, "summary" | "chunk">[],
+  minimumCosine: number,
 ): FoundConversation[] => {
   const merged = new Map<string, FoundConversation & { fused: number }>()
-  meaning.forEach(({ summary, chunk, score, stale }, index) => {
-    merged.set(summary.id, { summary, chunk, score, by: ["meaning"], stale, fused: 1 / (RRF_K + index + 1) })
-  })
+  // The e5 floor is measured in bench/search-quality; RRF scores are ranks, not calibrated similarities.
+  meaning
+    .filter(({ score }) => score > minimumCosine)
+    .forEach(({ summary, chunk, score, stale }, index) => {
+      merged.set(summary.id, { summary, chunk, score, by: ["meaning"], stale, fused: 1 / (RRF_K + index + 1) })
+    })
   words.forEach(({ summary, chunk }, index) => {
     const share = 1 / (RRF_K + index + 1)
     const held = merged.get(summary.id)

@@ -67,6 +67,16 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 - `conversations embed --max-chunks` help says there is no limit with `--chat`, as the command behaves; it said 2000.
 
+### Changed — may break callers
+
+- `conversations search` stops padding hybrid results with nonpositive meaning scores. Local e5-small
+  (384 dimensions) now keeps cosine strictly above 0.80 before rank fusion; other models keep positive
+  cosine, since their scores have not been calibrated. Exact word matches remain eligible. Searches
+  may return fewer results and a formerly combined hit may become words-only (`score: null`). The
+  synthetic held-out set reduces false no-answer hits from 30 to nine, with recall89.6%→87.5% and
+  MRR0.769→0.825. The cutoff does not guarantee relevance and does not change `conversations related`.
+  See [the reproducible quality report](bench/search-quality/README.md).
+
 ## 0.148.2 — 05.10.2026
 
 Released early: MAX and TG adoption is blocked by contact-context message reads bypassing denied message permissions

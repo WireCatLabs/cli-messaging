@@ -1,0 +1,1147 @@
+{
+  "description": "Entirely invented conversations and labelled queries. Fixed dev/test queries; groups interleave messages. Media-only labels intentionally expose an unsearchable case.",
+  "documents": [
+    {
+      "id": "901",
+      "chat": "70",
+      "texts": [
+        "Project LANTERN-42 release is blocked by the checksum mismatch.",
+        "Verify the SHA256 digest before deploying the archive."
+      ]
+    },
+    {
+      "id": "902",
+      "chat": "71",
+      "texts": [
+        "Робот КЕДР-17 не запускается из-за перегрева двигателя.",
+        "Нужно заменить вентилятор охлаждения."
+      ]
+    },
+    {
+      "id": "903",
+      "chat": "72",
+      "texts": [
+        "The museum train departs at 09:30 from Cedar station.",
+        "Use the blue metro line and change at North."
+      ]
+    },
+    {
+      "id": "904",
+      "chat": "70",
+      "texts": [
+        "Хлеб на закваске нужно выпекать сорок минут.",
+        "Духовку прогреть до двухсот градусов."
+      ]
+    },
+    {
+      "id": "905",
+      "chat": "71",
+      "texts": [
+        "Synthetic engineer Mira Solen owns ticket AX-2048.",
+        "The login failure is caused by an expired certificate."
+      ]
+    },
+    {
+      "id": "906",
+      "chat": "72",
+      "texts": [
+        "Инженер Лада Зорина отвечает за заявку БК-512.",
+        "Сбой базы данных связан с нехваткой свободного места на диске."
+      ]
+    },
+    {
+      "id": "907",
+      "chat": "70",
+      "texts": [
+        "The balcony tomatoes need watering each morning.",
+        "Yellow leaves can mean too much water around the roots."
+      ]
+    },
+    {
+      "id": "908",
+      "chat": "71",
+      "texts": [
+        "На велосипедной цепи появилась ржавчина после дождя.",
+        "Сначала очистить цепь, затем нанести смазку."
+      ]
+    },
+    {
+      "id": "909",
+      "chat": "72",
+      "texts": [
+        "The workshop rent invoice is due on Friday.",
+        "Send payment to the landlord before the weekend."
+      ]
+    },
+    {
+      "id": "910",
+      "chat": "70",
+      "texts": [
+        "Собрание книжного клуба перенесено на субботу.",
+        "Обсудим финал романа в библиотеке."
+      ]
+    },
+    {
+      "id": "911",
+      "chat": "71",
+      "texts": [
+        "Our API returns status 429 when request quota is exceeded.",
+        "Wait sixty seconds before retrying."
+      ]
+    },
+    {
+      "id": "912",
+      "chat": "72",
+      "texts": [
+        "Кошка отказывается от корма и прячется под кроватью.",
+        "Записать питомца к ветеринару на осмотр."
+      ]
+    },
+    {
+      "id": "913",
+      "chat": "70",
+      "texts": [
+        "The camera memory card is full.",
+        "Copy the photos to a computer before formatting."
+      ]
+    },
+    {
+      "id": "914",
+      "chat": "71",
+      "texts": [
+        "Тёплый шарф потерялся в автобусе маршрута 64.",
+        "Позвонить в бюро находок перевозчика."
+      ]
+    },
+    {
+      "id": "915",
+      "chat": "72",
+      "texts": [
+        "The choir rehearsal starts at seven in the evening.",
+        "Bring the sheet music for the spring concert."
+      ]
+    },
+    {
+      "id": "916",
+      "chat": "70",
+      "texts": [
+        "Для ремонта кухни купили синюю плитку.",
+        "Мастер придёт во вторник укладывать пол."
+      ]
+    },
+    {
+      "id": "917",
+      "chat": "71",
+      "texts": [
+        "OK",
+        "yes"
+      ]
+    },
+    {
+      "id": "918",
+      "chat": "72",
+      "texts": [
+        "",
+        ""
+      ]
+    },
+    {
+      "id": "919",
+      "chat": "70",
+      "texts": [
+        "Dinner reservations are for six people at the Harbour restaurant.",
+        "The table is booked for eight oclock."
+      ]
+    },
+    {
+      "id": "920",
+      "chat": "71",
+      "texts": [
+        "Конференция по робототехнике пройдёт в Казани.",
+        "Регистрация участников закрывается первого ноября."
+      ]
+    },
+    {
+      "id": "921",
+      "chat": "72",
+      "texts": [
+        "The garden shed roof leaks whenever it rains.",
+        "Replace the damaged tiles above the door."
+      ]
+    },
+    {
+      "id": "922",
+      "chat": "70",
+      "texts": [
+        "На марафон потребуется справка от спортивного врача.",
+        "Медицинский осмотр можно пройти в клинике на Сосновой улице."
+      ]
+    },
+    {
+      "id": "923",
+      "chat": "71",
+      "texts": [
+        "The password vault is unlocked with a hardware security key.",
+        "Keep a spare token in the office safe."
+      ]
+    },
+    {
+      "id": "924",
+      "chat": "72",
+      "texts": [
+        "Пакет семян редиса лежит на верхней полке.",
+        "Посеять их весной после последних заморозков."
+      ]
+    }
+  ],
+  "queries": [
+    {
+      "id": "dev-901-0",
+      "split": "dev",
+      "category": "exact",
+      "text": "LANTERN-42",
+      "relevant": [
+        "901"
+      ]
+    },
+    {
+      "id": "dev-901-1",
+      "split": "dev",
+      "category": "paraphrase",
+      "text": "How can we confirm the release file is intact?",
+      "relevant": [
+        "901"
+      ]
+    },
+    {
+      "id": "test-901-0",
+      "split": "test",
+      "category": "exact",
+      "text": "checksum mismatch",
+      "relevant": [
+        "901"
+      ]
+    },
+    {
+      "id": "test-901-1",
+      "split": "test",
+      "category": "paraphrase",
+      "text": "Why is the deployment blocked?",
+      "relevant": [
+        "901"
+      ]
+    },
+    {
+      "id": "dev-902-0",
+      "split": "dev",
+      "category": "exact",
+      "text": "КЕДР-17",
+      "relevant": [
+        "902"
+      ]
+    },
+    {
+      "id": "dev-902-1",
+      "split": "dev",
+      "category": "paraphrase",
+      "text": "Как починить охлаждение робота?",
+      "relevant": [
+        "902"
+      ]
+    },
+    {
+      "id": "test-902-0",
+      "split": "test",
+      "category": "exact",
+      "text": "перегрев двигателя",
+      "relevant": [
+        "902"
+      ]
+    },
+    {
+      "id": "test-902-1",
+      "split": "test",
+      "category": "paraphrase",
+      "text": "Почему робот перестал работать?",
+      "relevant": [
+        "902"
+      ]
+    },
+    {
+      "id": "dev-903-0",
+      "split": "dev",
+      "category": "exact",
+      "text": "Cedar station",
+      "relevant": [
+        "903"
+      ]
+    },
+    {
+      "id": "dev-903-1",
+      "split": "dev",
+      "category": "paraphrase",
+      "text": "How do I travel to the museum by rail?",
+      "relevant": [
+        "903"
+      ]
+    },
+    {
+      "id": "test-903-0",
+      "split": "test",
+      "category": "exact",
+      "text": "museum train",
+      "relevant": [
+        "903"
+      ]
+    },
+    {
+      "id": "test-903-1",
+      "split": "test",
+      "category": "paraphrase",
+      "text": "Which metro gets us to the exhibition?",
+      "relevant": [
+        "903"
+      ]
+    },
+    {
+      "id": "dev-904-0",
+      "split": "dev",
+      "category": "exact",
+      "text": "хлеб закваске",
+      "relevant": [
+        "904"
+      ]
+    },
+    {
+      "id": "dev-904-1",
+      "split": "dev",
+      "category": "paraphrase",
+      "text": "Сколько держать тесто в духовке?",
+      "relevant": [
+        "904"
+      ]
+    },
+    {
+      "id": "test-904-0",
+      "split": "test",
+      "category": "exact",
+      "text": "двести градусов",
+      "relevant": [
+        "904"
+      ]
+    },
+    {
+      "id": "test-904-1",
+      "split": "test",
+      "category": "paraphrase",
+      "text": "Как приготовить домашнюю буханку?",
+      "relevant": [
+        "904"
+      ]
+    },
+    {
+      "id": "dev-905-0",
+      "split": "dev",
+      "category": "exact",
+      "text": "AX-2048",
+      "relevant": [
+        "905"
+      ]
+    },
+    {
+      "id": "dev-905-1",
+      "split": "dev",
+      "category": "paraphrase",
+      "text": "Who is responsible for fixing sign-in?",
+      "relevant": [
+        "905"
+      ]
+    },
+    {
+      "id": "test-905-0",
+      "split": "test",
+      "category": "exact",
+      "text": "Mira Solen",
+      "relevant": [
+        "905"
+      ]
+    },
+    {
+      "id": "test-905-1",
+      "split": "test",
+      "category": "paraphrase",
+      "text": "Why are users unable to authenticate?",
+      "relevant": [
+        "905"
+      ]
+    },
+    {
+      "id": "dev-906-0",
+      "split": "dev",
+      "category": "exact",
+      "text": "БК-512",
+      "relevant": [
+        "906"
+      ]
+    },
+    {
+      "id": "dev-906-1",
+      "split": "dev",
+      "category": "paraphrase",
+      "text": "Кто исправит ошибку базы данных?",
+      "relevant": [
+        "906"
+      ]
+    },
+    {
+      "id": "test-906-0",
+      "split": "test",
+      "category": "exact",
+      "text": "Лада Зорина",
+      "relevant": [
+        "906"
+      ]
+    },
+    {
+      "id": "test-906-1",
+      "split": "test",
+      "category": "paraphrase",
+      "text": "Почему закончилось место в хранилище?",
+      "relevant": [
+        "906"
+      ]
+    },
+    {
+      "id": "dev-907-0",
+      "split": "dev",
+      "category": "exact",
+      "text": "balcony tomatoes",
+      "relevant": [
+        "907"
+      ]
+    },
+    {
+      "id": "dev-907-1",
+      "split": "dev",
+      "category": "paraphrase",
+      "text": "How frequently should I irrigate my plants?",
+      "relevant": [
+        "907"
+      ]
+    },
+    {
+      "id": "test-907-0",
+      "split": "test",
+      "category": "exact",
+      "text": "yellow leaves",
+      "relevant": [
+        "907"
+      ]
+    },
+    {
+      "id": "test-907-1",
+      "split": "test",
+      "category": "paraphrase",
+      "text": "Why is the vegetable foliage discoloured?",
+      "relevant": [
+        "907"
+      ]
+    },
+    {
+      "id": "dev-908-0",
+      "split": "dev",
+      "category": "exact",
+      "text": "велосипедной цепи",
+      "relevant": [
+        "908"
+      ]
+    },
+    {
+      "id": "dev-908-1",
+      "split": "dev",
+      "category": "paraphrase",
+      "text": "Чем обработать велосипед после сырой погоды?",
+      "relevant": [
+        "908"
+      ]
+    },
+    {
+      "id": "test-908-0",
+      "split": "test",
+      "category": "exact",
+      "text": "ржавчина",
+      "relevant": [
+        "908"
+      ]
+    },
+    {
+      "id": "test-908-1",
+      "split": "test",
+      "category": "paraphrase",
+      "text": "Как защитить передачу от коррозии?",
+      "relevant": [
+        "908"
+      ]
+    },
+    {
+      "id": "dev-909-0",
+      "split": "dev",
+      "category": "exact",
+      "text": "workshop rent",
+      "relevant": [
+        "909"
+      ]
+    },
+    {
+      "id": "dev-909-1",
+      "split": "dev",
+      "category": "paraphrase",
+      "text": "When should the property owner receive the money?",
+      "relevant": [
+        "909"
+      ]
+    },
+    {
+      "id": "test-909-0",
+      "split": "test",
+      "category": "exact",
+      "text": "rent invoice",
+      "relevant": [
+        "909"
+      ]
+    },
+    {
+      "id": "test-909-1",
+      "split": "test",
+      "category": "paraphrase",
+      "text": "What bill must be paid this week?",
+      "relevant": [
+        "909"
+      ]
+    },
+    {
+      "id": "dev-910-0",
+      "split": "dev",
+      "category": "exact",
+      "text": "книжного клуба",
+      "relevant": [
+        "910"
+      ]
+    },
+    {
+      "id": "dev-910-1",
+      "split": "dev",
+      "category": "paraphrase",
+      "text": "Когда участники поговорят о прочитанной книге?",
+      "relevant": [
+        "910"
+      ]
+    },
+    {
+      "id": "test-910-0",
+      "split": "test",
+      "category": "exact",
+      "text": "библиотеке",
+      "relevant": [
+        "910"
+      ]
+    },
+    {
+      "id": "test-910-1",
+      "split": "test",
+      "category": "paraphrase",
+      "text": "Где встречаются любители литературы?",
+      "relevant": [
+        "910"
+      ]
+    },
+    {
+      "id": "dev-911-0",
+      "split": "dev",
+      "category": "exact",
+      "text": "status 429",
+      "relevant": [
+        "911"
+      ]
+    },
+    {
+      "id": "dev-911-1",
+      "split": "dev",
+      "category": "paraphrase",
+      "text": "What should a client do after hitting the rate limit?",
+      "relevant": [
+        "911"
+      ]
+    },
+    {
+      "id": "test-911-0",
+      "split": "test",
+      "category": "exact",
+      "text": "request quota",
+      "relevant": [
+        "911"
+      ]
+    },
+    {
+      "id": "test-911-1",
+      "split": "test",
+      "category": "paraphrase",
+      "text": "Why does the server reject frequent calls?",
+      "relevant": [
+        "911"
+      ]
+    },
+    {
+      "id": "dev-912-0",
+      "split": "dev",
+      "category": "exact",
+      "text": "ветеринару",
+      "relevant": [
+        "912"
+      ]
+    },
+    {
+      "id": "dev-912-1",
+      "split": "dev",
+      "category": "paraphrase",
+      "text": "Куда обратиться если животное перестало есть?",
+      "relevant": [
+        "912"
+      ]
+    },
+    {
+      "id": "test-912-0",
+      "split": "test",
+      "category": "exact",
+      "text": "кошка корма",
+      "relevant": [
+        "912"
+      ]
+    },
+    {
+      "id": "test-912-1",
+      "split": "test",
+      "category": "paraphrase",
+      "text": "Что делать с заболевшим домашним питомцем?",
+      "relevant": [
+        "912"
+      ]
+    },
+    {
+      "id": "dev-913-0",
+      "split": "dev",
+      "category": "exact",
+      "text": "memory card",
+      "relevant": [
+        "913"
+      ]
+    },
+    {
+      "id": "dev-913-1",
+      "split": "dev",
+      "category": "paraphrase",
+      "text": "How can I make room for new pictures?",
+      "relevant": [
+        "913"
+      ]
+    },
+    {
+      "id": "test-913-0",
+      "split": "test",
+      "category": "exact",
+      "text": "camera photos",
+      "relevant": [
+        "913"
+      ]
+    },
+    {
+      "id": "test-913-1",
+      "split": "test",
+      "category": "paraphrase",
+      "text": "Where should the images go before erasing storage?",
+      "relevant": [
+        "913"
+      ]
+    },
+    {
+      "id": "dev-914-0",
+      "split": "dev",
+      "category": "exact",
+      "text": "маршрута 64",
+      "relevant": [
+        "914"
+      ]
+    },
+    {
+      "id": "dev-914-1",
+      "split": "dev",
+      "category": "paraphrase",
+      "text": "Как вернуть вещь оставленную в общественном транспорте?",
+      "relevant": [
+        "914"
+      ]
+    },
+    {
+      "id": "test-914-0",
+      "split": "test",
+      "category": "exact",
+      "text": "бюро находок",
+      "relevant": [
+        "914"
+      ]
+    },
+    {
+      "id": "test-914-1",
+      "split": "test",
+      "category": "paraphrase",
+      "text": "Где искать забытый шарф?",
+      "relevant": [
+        "914"
+      ]
+    },
+    {
+      "id": "dev-915-0",
+      "split": "dev",
+      "category": "exact",
+      "text": "choir rehearsal",
+      "relevant": [
+        "915"
+      ]
+    },
+    {
+      "id": "dev-915-1",
+      "split": "dev",
+      "category": "paraphrase",
+      "text": "When will the singers practise together?",
+      "relevant": [
+        "915"
+      ]
+    },
+    {
+      "id": "test-915-0",
+      "split": "test",
+      "category": "exact",
+      "text": "spring concert",
+      "relevant": [
+        "915"
+      ]
+    },
+    {
+      "id": "test-915-1",
+      "split": "test",
+      "category": "paraphrase",
+      "text": "What should musicians carry to practice?",
+      "relevant": [
+        "915"
+      ]
+    },
+    {
+      "id": "dev-916-0",
+      "split": "dev",
+      "category": "exact",
+      "text": "синюю плитку",
+      "relevant": [
+        "916"
+      ]
+    },
+    {
+      "id": "dev-916-1",
+      "split": "dev",
+      "category": "paraphrase",
+      "text": "Когда рабочий займётся покрытием кухни?",
+      "relevant": [
+        "916"
+      ]
+    },
+    {
+      "id": "test-916-0",
+      "split": "test",
+      "category": "exact",
+      "text": "ремонта кухни",
+      "relevant": [
+        "916"
+      ]
+    },
+    {
+      "id": "test-916-1",
+      "split": "test",
+      "category": "paraphrase",
+      "text": "Каким материалом заменят кухонный пол?",
+      "relevant": [
+        "916"
+      ]
+    },
+    {
+      "id": "dev-917-0",
+      "split": "dev",
+      "category": "short",
+      "text": "OK",
+      "relevant": [
+        "917"
+      ]
+    },
+    {
+      "id": "dev-917-1",
+      "split": "dev",
+      "category": "short",
+      "text": "agreement",
+      "relevant": [
+        "917"
+      ]
+    },
+    {
+      "id": "test-917-0",
+      "split": "test",
+      "category": "short",
+      "text": "yes",
+      "relevant": [
+        "917"
+      ]
+    },
+    {
+      "id": "test-917-1",
+      "split": "test",
+      "category": "short",
+      "text": "brief confirmation",
+      "relevant": [
+        "917"
+      ]
+    },
+    {
+      "id": "dev-918-0",
+      "split": "dev",
+      "category": "media-only",
+      "text": "photograph of the comet",
+      "relevant": [
+        "918"
+      ]
+    },
+    {
+      "id": "dev-918-1",
+      "split": "dev",
+      "category": "media-only",
+      "text": "comet image",
+      "relevant": [
+        "918"
+      ]
+    },
+    {
+      "id": "test-918-0",
+      "split": "test",
+      "category": "media-only",
+      "text": "изображение кометы",
+      "relevant": [
+        "918"
+      ]
+    },
+    {
+      "id": "test-918-1",
+      "split": "test",
+      "category": "media-only",
+      "text": "фотография кометы",
+      "relevant": [
+        "918"
+      ]
+    },
+    {
+      "id": "dev-919-0",
+      "split": "dev",
+      "category": "exact",
+      "text": "Harbour restaurant",
+      "relevant": [
+        "919"
+      ]
+    },
+    {
+      "id": "dev-919-1",
+      "split": "dev",
+      "category": "paraphrase",
+      "text": "Where will our group eat tonight?",
+      "relevant": [
+        "919"
+      ]
+    },
+    {
+      "id": "test-919-0",
+      "split": "test",
+      "category": "exact",
+      "text": "six people",
+      "relevant": [
+        "919"
+      ]
+    },
+    {
+      "id": "test-919-1",
+      "split": "test",
+      "category": "paraphrase",
+      "text": "How many diners can sit at our reserved table?",
+      "relevant": [
+        "919"
+      ]
+    },
+    {
+      "id": "dev-920-0",
+      "split": "dev",
+      "category": "exact",
+      "text": "Казани",
+      "relevant": [
+        "920"
+      ]
+    },
+    {
+      "id": "dev-920-1",
+      "split": "dev",
+      "category": "paraphrase",
+      "text": "В каком городе собираются специалисты по роботам?",
+      "relevant": [
+        "920"
+      ]
+    },
+    {
+      "id": "test-920-0",
+      "split": "test",
+      "category": "exact",
+      "text": "первого ноября",
+      "relevant": [
+        "920"
+      ]
+    },
+    {
+      "id": "test-920-1",
+      "split": "test",
+      "category": "paraphrase",
+      "text": "Когда заканчивается запись на техническую конференцию?",
+      "relevant": [
+        "920"
+      ]
+    },
+    {
+      "id": "dev-921-0",
+      "split": "dev",
+      "category": "exact",
+      "text": "shed roof",
+      "relevant": [
+        "921"
+      ]
+    },
+    {
+      "id": "dev-921-1",
+      "split": "dev",
+      "category": "paraphrase",
+      "text": "How can we stop rain entering the storage hut?",
+      "relevant": [
+        "921"
+      ]
+    },
+    {
+      "id": "test-921-0",
+      "split": "test",
+      "category": "exact",
+      "text": "damaged tiles",
+      "relevant": [
+        "921"
+      ]
+    },
+    {
+      "id": "test-921-1",
+      "split": "test",
+      "category": "paraphrase",
+      "text": "What part of the outbuilding needs repair?",
+      "relevant": [
+        "921"
+      ]
+    },
+    {
+      "id": "dev-922-0",
+      "split": "dev",
+      "category": "exact",
+      "text": "марафон справка",
+      "relevant": [
+        "922"
+      ]
+    },
+    {
+      "id": "dev-922-1",
+      "split": "dev",
+      "category": "paraphrase",
+      "text": "Какой документ нужен для участия в забеге?",
+      "relevant": [
+        "922"
+      ]
+    },
+    {
+      "id": "test-922-0",
+      "split": "test",
+      "category": "exact",
+      "text": "Сосновой улице",
+      "relevant": [
+        "922"
+      ]
+    },
+    {
+      "id": "test-922-1",
+      "split": "test",
+      "category": "paraphrase",
+      "text": "Где спортсмен может получить допуск к соревнованиям?",
+      "relevant": [
+        "922"
+      ]
+    },
+    {
+      "id": "dev-923-0",
+      "split": "dev",
+      "category": "exact",
+      "text": "hardware security key",
+      "relevant": [
+        "923"
+      ]
+    },
+    {
+      "id": "dev-923-1",
+      "split": "dev",
+      "category": "paraphrase",
+      "text": "How do we regain access if the primary login token is lost?",
+      "relevant": [
+        "923"
+      ]
+    },
+    {
+      "id": "test-923-0",
+      "split": "test",
+      "category": "exact",
+      "text": "password vault",
+      "relevant": [
+        "923"
+      ]
+    },
+    {
+      "id": "test-923-1",
+      "split": "test",
+      "category": "paraphrase",
+      "text": "Where should the backup authentication device stay?",
+      "relevant": [
+        "923"
+      ]
+    },
+    {
+      "id": "dev-924-0",
+      "split": "dev",
+      "category": "exact",
+      "text": "семян редиса",
+      "relevant": [
+        "924"
+      ]
+    },
+    {
+      "id": "dev-924-1",
+      "split": "dev",
+      "category": "paraphrase",
+      "text": "Когда можно высаживать ранние овощи?",
+      "relevant": [
+        "924"
+      ]
+    },
+    {
+      "id": "test-924-0",
+      "split": "test",
+      "category": "exact",
+      "text": "после заморозков",
+      "relevant": [
+        "924"
+      ]
+    },
+    {
+      "id": "test-924-1",
+      "split": "test",
+      "category": "paraphrase",
+      "text": "Где хранятся семена для весеннего посева?",
+      "relevant": [
+        "924"
+      ]
+    },
+    {
+      "id": "dev-none-0",
+      "split": "dev",
+      "category": "no-answer",
+      "text": "quantum gravity black hole entropy",
+      "relevant": []
+    },
+    {
+      "id": "dev-none-1",
+      "split": "dev",
+      "category": "no-answer",
+      "text": "глубоководная экспедиция батискаф",
+      "relevant": []
+    },
+    {
+      "id": "dev-none-2",
+      "split": "dev",
+      "category": "no-answer",
+      "text": "volcanic lava eruption",
+      "relevant": []
+    },
+    {
+      "id": "dev-none-3",
+      "split": "dev",
+      "category": "no-answer",
+      "text": "пересадка печени донор",
+      "relevant": []
+    },
+    {
+      "id": "dev-none-4",
+      "split": "dev",
+      "category": "no-answer",
+      "text": "ZXQ999 nonexistent shipment",
+      "relevant": []
+    },
+    {
+      "id": "dev-none-5",
+      "split": "dev",
+      "category": "no-answer",
+      "text": "шахматный эндшпиль ферзь",
+      "relevant": []
+    },
+    {
+      "id": "test-none-0",
+      "split": "test",
+      "category": "no-answer",
+      "text": "neutrino oscillation reactor",
+      "relevant": []
+    },
+    {
+      "id": "test-none-1",
+      "split": "test",
+      "category": "no-answer",
+      "text": "антарктические пингвины популяция",
+      "relevant": []
+    },
+    {
+      "id": "test-none-2",
+      "split": "test",
+      "category": "no-answer",
+      "text": "medieval heraldry coat of arms",
+      "relevant": []
+    },
+    {
+      "id": "test-none-3",
+      "split": "test",
+      "category": "no-answer",
+      "text": "ядерный распад изотопа",
+      "relevant": []
+    },
+    {
+      "id": "test-none-4",
+      "split": "test",
+      "category": "no-answer",
+      "text": "ZZX808 nonexistent subscription",
+      "relevant": []
+    },
+    {
+      "id": "test-none-5",
+      "split": "test",
+      "category": "no-answer",
+      "text": "баллистическая траектория спутника",
+      "relevant": []
+    }
+  ]
+}
