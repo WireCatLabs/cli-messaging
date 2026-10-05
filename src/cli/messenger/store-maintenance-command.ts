@@ -22,6 +22,7 @@ import { MIGRATIONS, migrate } from "../../store/migrations.js"
 import { openCache } from "../../store/open.js"
 import { storePath } from "../../store/path.js"
 import { deleteCopy, type RepairReport, repairStore } from "../../store/repair.js"
+import { resetAttachmentWords } from "../../store/sqlite/attachment-texts.js"
 import { pendingNormalization } from "../../store/sqlite/backfill.js"
 import { fillSearchIndex, resetSearchIndex, searchIndexState } from "../../store/sqlite/search-index.js"
 import { fillStems, resetStems, stemsState } from "../../store/sqlite/stems.js"
@@ -444,7 +445,9 @@ const buildStems = (database: CacheDatabase, note: (text: string) => void, { for
 
 const reindexCommand = (messenger: Messenger): Command =>
   new Command("reindex")
-    .description("rebuild the word index, its typo vocabulary and the stems from the stored messages; loses no message")
+    .description(
+      "rebuild the word index, its typo vocabulary, the stems and the files' word index from the stored messages; loses no message",
+    )
     .action(async function (this: Command) {
       const { renderer } = outputFor(this)
       const path = storePath(environmentOf(this).env ?? process.env)
@@ -460,8 +463,15 @@ const reindexCommand = (messenger: Messenger): Command =>
           )
         }
         resetSearchIndex(database)
+        const fileTexts = resetAttachmentWords(database)
         const words = buildWordIndex(database, (note) => renderer.note(note))
-        return { path, exists: true, ...words, ...buildStems(database, (note) => renderer.note(note), { force: true }) }
+        return {
+          path,
+          exists: true,
+          ...words,
+          fileTexts,
+          ...buildStems(database, (note) => renderer.note(note), { force: true }),
+        }
       })
       renderer.result(answer)
     })

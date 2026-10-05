@@ -117,8 +117,10 @@
     "esbuild": "0.25.12",
     "jsqr": "1.4.0",
     "lefthook": "^2.1.8",
+    "mammoth": "1.13.0",
     "pngjs": "7.0.0",
     "typescript": "^7.0.2",
+    "unpdf": "1.8.1",
     "vitest": "^5.0.1"
   },
   "publishConfig": {
@@ -126,9 +128,19 @@
   },
   "peerDependencies": {
     "@leemour/cli-core": ">=0.16.0 <0.18.0",
-    "commander": ">=15"
+    "commander": ">=15",
+    "mammoth": ">=1.8.0 <2",
+    "unpdf": ">=1.0.0 <2"
   },
   "bin": {
     "cli-messaging-parity": "dist/parity/bin.js"
+  },
+  "peerDependenciesMeta": {
+    "mammoth": {
+      "optional": true
+    },
+    "unpdf": {
+      "optional": true
+    }
   }
 }

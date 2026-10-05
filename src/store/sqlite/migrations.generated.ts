@@ -171,5 +171,23 @@ export const GENERATED: { name: string; statements: string[] }[] = [
       "CREATE UNIQUE INDEX `member_stays_open` ON `member_stays` (`chat_pk`,`identity_pk`) WHERE gone_at IS NULL;",
       "CREATE INDEX `member_stays_by_identity` ON `member_stays` (`identity_pk`);"
     ]
+  },
+  {
+    "name": "20261005142356_version-19-attachment-texts",
+    "statements": [
+      "CREATE TABLE `attachment_texts` (\n\t`attachment_pk` integer PRIMARY KEY,\n\t`text` text NOT NULL,\n\t`normalized_text` text NOT NULL,\n\t`origin` text NOT NULL,\n\t`extractor` text NOT NULL,\n\t`content_sha256` text,\n\t`bytes` integer,\n\t`error` text,\n\t`written_at` integer NOT NULL\n);"
+    ]
+  },
+  {
+    "name": "20261005142357_version-19-attachment-words",
+    "statements": [
+      "-- Words of the attachments' text, rowid = attachment pk. Kept apart from message_words so `text:` stays\n-- what was written and a file's words never rank a message (max-cli plan, file content search, D3 a).\nCREATE VIRTUAL TABLE attachment_words USING fts5(\n  normalized_text,\n  content = '', contentless_delete = 1,\n  tokenize = 'unicode61 remove_diacritics 2');",
+      "CREATE TRIGGER attachment_words_ai AFTER INSERT ON attachment_texts WHEN new.normalized_text <> '' BEGIN\n  INSERT INTO attachment_words (rowid, normalized_text) VALUES (new.attachment_pk, new.normalized_text);\nEND;",
+      "CREATE TRIGGER attachment_words_au AFTER UPDATE OF normalized_text ON attachment_texts\n  WHEN old.normalized_text IS NOT new.normalized_text BEGIN\n  DELETE FROM attachment_words WHERE rowid = old.attachment_pk;\n  INSERT INTO attachment_words (rowid, normalized_text)\n    SELECT new.attachment_pk, new.normalized_text WHERE new.normalized_text <> '';\nEND;",
+      "CREATE TRIGGER attachment_words_ad AFTER DELETE ON attachment_texts BEGIN\n  DELETE FROM attachment_words WHERE rowid = old.attachment_pk;\nEND;",
+      "-- Triggers, not code, so a build pinned to an older package still erases a deleted message's file text.\nCREATE TRIGGER attachment_texts_message_tombstone AFTER UPDATE OF deleted_at ON messages\n  WHEN old.deleted_at IS NULL AND new.deleted_at IS NOT NULL BEGIN\n  DELETE FROM attachment_texts WHERE attachment_pk IN (SELECT pk FROM attachments WHERE message_pk = new.pk);\nEND;",
+      "CREATE TRIGGER attachment_texts_message_ad AFTER DELETE ON messages BEGIN\n  DELETE FROM attachment_texts WHERE attachment_pk IN (SELECT pk FROM attachments WHERE message_pk = old.pk);\nEND;",
+      "CREATE TRIGGER attachment_texts_attachment_ad AFTER DELETE ON attachments BEGIN\n  DELETE FROM attachment_texts WHERE attachment_pk = old.pk;\nEND;"
+    ]
   }
 ]

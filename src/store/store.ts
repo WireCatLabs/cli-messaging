@@ -22,6 +22,8 @@ import { migrate } from "./migrations.js"
 import { storeCapable } from "./open.js"
 import { storePath } from "./path.js"
 import * as accounts from "./sqlite/accounts.js"
+import type { AttachmentTextEntry, FileAttachment } from "./sqlite/attachment-texts.js"
+import * as attachmentTexts from "./sqlite/attachment-texts.js"
 import * as attachmentRows from "./sqlite/attachments.js"
 import { backfillNormalized, pendingNormalization } from "./sqlite/backfill.js"
 import * as batches from "./sqlite/batches.js"
@@ -221,6 +223,12 @@ export interface MessageStore {
    * attachments it recorded: a file it cannot tell apart from another is not recorded.
    */
   keepDownloads(key: AccountKey, chatId: Id, messageId: Id, files: readonly DownloadedFile[]): Promise<number>
+  /** File attachments of this account's live messages, newest first, below `beforePk`; never one an agent wrote. */
+  fileAttachments(key: AccountKey, page: { chatId?: Id; beforePk?: number; limit: number }): Promise<FileAttachment[]>
+  /** Where the file of one attachment was saved, when that is recorded. */
+  localPathOf(attachmentPk: number): Promise<string | null>
+  /** An extraction never replaces an agent's text; answers whether it was kept. */
+  keepAttachmentText(attachmentPk: number, entry: AttachmentTextEntry): Promise<boolean>
   /** A chat's live messages for the conversation rules, oldest first; pass `next` back as `after`. */
   linkInputs(
     key: AccountKey,
@@ -779,6 +787,24 @@ const storeOver = (context: StoreContext): MessageStore => {
       )
     },
 
+    fileAttachments: async (key, { chatId, ...page }) => {
+      const accountKey = findAccountPk(key)
+      if (accountKey === undefined) return []
+      if (chatId === undefined) return attachmentTexts.fileAttachments(context, accountKey, page)
+      const chatKey = findChatPk(accountKey, chatId)
+      return chatKey === undefined ? [] : attachmentTexts.fileAttachments(context, accountKey, { ...page, chatKey })
+    },
+
+    localPathOf: async (attachmentPk) => attachmentTexts.localPathOf(context, attachmentPk),
+
+    keepAttachmentText: async (attachmentPk, entry) => {
+      let kept = false
+      inTransaction(() => {
+        kept = attachmentTexts.keepText(context, attachmentPk, entry)
+      })
+      return kept
+    },
+
     keepDownloads: async (key, chatId, messageId, files) => {
       const chatKey = chatKeyOf(key, chatId)
       if (chatKey === undefined || files.length === 0) return 0
@@ -1241,6 +1267,7 @@ const storeOver = (context: StoreContext): MessageStore => {
   }
 }
 
+export type { AttachmentTextEntry, FileAttachment, TextOrigin } from "./sqlite/attachment-texts.js"
 export { CHAT_LIST_KEY, type ChatCompleteness, fetchedKey, historyStartKey } from "./sqlite/completeness.js"
 export type { SearchCommand, SearchRecord, StoredSearch } from "./sqlite/searches.js"
 export type { StoredTag, TagFilter, TagTarget } from "./sqlite/tags.js"

@@ -93,6 +93,11 @@ mime без / совпадает с первой частью типа. size: SQ
 точное условие, поэтому NOT tag точен. ~~tag распознаётся, но возвращает unsupported_field.~~
 **Поправка 2026-10-04:** работает с этой версии; FIELD_VERSION не меняется — ни одно поле не
 переименовано, ранее отклонённый запрос теперь выполняется.
+content: (store version 19) — `m.pk IN (SELECT message_pk FROM attachments WHERE pk IN (SELECT rowid
+FROM attachment_words WHERE attachment_words MATCH ?))`; term и phrase, normalize как у text. Фрагмент
+не задаёт fts, поэтому слова файлов не входят в bm25-ранжирование (оно AND-ит все обязательные слова
+против message_words) и не правятся опечатками. Точное условие, поэтому NOT content точен.
+FIELD_VERSION не меняется: новое поле, ничего не переименовано.
 
 ## SQL compiler и порядок
 

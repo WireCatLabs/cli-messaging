@@ -77,6 +77,7 @@
     { "type": "contact", "person": "11", "tag": "work" },
     { "type": "message", "chat": "7", "message": "102", "tag": "work" }
   ],
+  "fileTexts": [{ "chat": "7", "message": "105", "attachment": 1, "text": "Накладная № 17, оплата до 31 января" }],
   "recipes": [
     { "title": "Точное слово", "query": "invoice", "ids": ["101", "102", "106"] },
     { "title": "Фраза", "query": "\"invoice paid\"", "ids": ["101", "106"] },
@@ -98,7 +99,13 @@
     { "title": "Ссылка на сайт", "query": "has:link AND \"example.org\"", "ids": ["107"] },
     { "title": "Метка на сообщении или авторе", "query": "tag:work invoice", "ids": ["102", "106"] },
     { "title": "Метка на чате", "query": "tag:family", "ids": ["103", "108"] },
-    { "title": "Без метки", "query": "invoice NOT tag:work", "ids": ["101"] }
+    { "title": "Без метки", "query": "invoice NOT tag:work", "ids": ["101"] },
+    { "title": "Слово внутри файла", "query": "content:накладная", "ids": ["105"] },
+    {
+      "title": "Фраза внутри файла, а не в сообщении",
+      "query": "content:\"оплата до\" NOT text:оплата",
+      "ids": ["105"]
+    }
   ],
   "negative": [
     { "query": "foo:bar", "code": "validation_error", "reason": "unknown_field" },

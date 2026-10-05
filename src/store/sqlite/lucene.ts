@@ -212,6 +212,15 @@ const runQuery = async (
         `EXISTS (SELECT 1 FROM attachments att WHERE att.message_pk=m.pk AND att.size IS NOT NULL AND ${range.sql})`,
         ...range.params,
       )
+    } else if (field === "content") {
+      const text = normalize(value)
+      // Never `fts`: the ranking ANDs every required word into message_words, where a file's words are not.
+      fragment = /[\p{L}\p{N}]/u.test(text)
+        ? bound(
+            "m.pk IN (SELECT att.message_pk FROM attachments att WHERE att.pk IN (SELECT rowid FROM attachment_words WHERE attachment_words MATCH ?))",
+            quoted(text),
+          )
+        : bound("0")
     } else if (field === "date") {
       const range = resolution?.date
       if (!range) queryError("invalid_ast", node.span)

@@ -85,6 +85,7 @@ export const RESOURCES = [
   "tags",
   "searches",
   "replies",
+  "attachments",
 ] as const
 
 const OLD_WORDS: Record<Permission, PermissionKey[]> = {
@@ -236,6 +237,7 @@ export const keyForWrite = (kind: SendKind, action?: string): PermissionKey => {
 /** Write keys written out where a write is checked; `permission-keys.test.ts` keeps this list whole. */
 const NAMED_WRITE_KEYS = [
   "account.sessions.list",
+  "attachments.extract",
   "bot.callbacks.answer",
   "bot.chats.action",
   "bot.chats.admins.add",

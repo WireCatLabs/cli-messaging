@@ -122,6 +122,16 @@ when it is deleted or tombstoned and a chat's when it is deleted, so a build tha
 compiles to one exact condition over the three (`src/store/sqlite/lucene.ts`), and `tags` commands and
 MCP tools write through `services.tags` with their own permission keys (`tags.add`, `tags.remove`).
 
+**The text of files** (version 19) is `attachment_texts`, one row per attachment: what `attachments extract`
+read from the file `messages download` saved (`attachments.local_path`, written by the download since this
+version's package) — plain text, Word through `mammoth`, a PDF's text layer through `unpdf`, both optional peer
+packages loaded on first use (`src/attachments/extract.ts`) — or what an agent wrote back after reading a scan
+(`origin`: `extracted` or `agent`; an extraction never replaces an agent's text). Its words are in
+`attachment_words`, contentless FTS5 with rowid = attachment pk, kept by triggers; `content:` compiles to an
+exact condition over it and stays out of bm25 ranking, which ANDs required words into `message_words`. No
+foreign key, so the purges of older builds still work; triggers erase the text when its message is tombstoned
+or deleted, or its attachment deleted (NEED-393 A, tested against 0.49.0). `store reindex` rebuilds the index.
+
 **Searches** (version 17) are one table, `searches`: every successful `messages search` and `messages stats`
 run records its parameters as canonical JSON (`searchRecordOf`, `src/services/searches.ts`) — never a
 message or a result — from `MessagesService`, so the command and the MCP tool both record. An identical

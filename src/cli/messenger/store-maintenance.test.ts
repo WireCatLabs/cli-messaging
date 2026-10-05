@@ -223,7 +223,15 @@ describe("the word index", () => {
 
     const { answer } = await call(["store", "reindex", "--json"], env)
 
-    expect(answer).toEqual({ path: env.MESSAGING_STORE, exists: true, normalized: 0, indexed: 2, terms: 4, stemmed: 2 })
+    expect(answer).toEqual({
+      path: env.MESSAGING_STORE,
+      exists: true,
+      normalized: 0,
+      indexed: 2,
+      terms: 4,
+      fileTexts: 0,
+      stemmed: 2,
+    })
     expect(await words(env, "hola")).toBe(1)
     const { answer: info } = await call(["store", "info", "--json"], env)
     expect(info.wordIndex).toMatchObject({ watermark: 2, filledThrough: 2, ready: true, pendingNormalization: 0 })

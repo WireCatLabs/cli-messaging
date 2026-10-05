@@ -174,6 +174,16 @@ export const QUERY_FIELDS = [
     support: "A2",
   },
   {
+    name: "content",
+    example: "content:invoice",
+    index: "attachment_words",
+    aliases: [],
+    type: "tokens",
+    operators: terms,
+    normalization: "NFKD/marks/NFC/lowercase v1; the text of files attachments extract read or an agent wrote",
+    support: "A2",
+  },
+  {
     name: "tag",
     example: "tag:work",
     index: "tags: the message, its chat or its sender",

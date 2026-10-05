@@ -1,6 +1,7 @@
 import { type AccountService, accountService } from "./account.js"
 import { type AdminService, adminService } from "./admin.js"
 import { type ArchiveService, archiveService } from "./archive.js"
+import { type AttachmentsService, attachmentsService } from "./attachments.js"
 import { type ChatsService, chatsService } from "./chats.js"
 import { type ConversationsService, conversationsService } from "./conversations.js"
 import type { ServiceDeps } from "./deps.js"
@@ -20,6 +21,14 @@ export type { AdminService, NewGroup } from "./admin.js"
 export { adminService } from "./admin.js"
 export type { ArchiveService, Fetched, FetchOptions } from "./archive.js"
 export { archiveService } from "./archive.js"
+export type {
+  AttachmentsService,
+  ExtractItem,
+  ExtractOptions,
+  ExtractRun,
+  ExtractStatus,
+} from "./attachments.js"
+export { attachmentsService } from "./attachments.js"
 export type { ChatFilter, ChatsService, MarkedRead, PageWindow } from "./chats.js"
 export { CHAT_SCAN, chatsService, EVENTS_DAYS } from "./chats.js"
 export type { BatchStatus, Built, ConversationsService, MessageLinks } from "./conversations.js"
@@ -74,6 +83,7 @@ export interface Services {
   embeddings: EmbeddingsService
   tags: TagsService
   searches: SearchesService
+  attachments: AttachmentsService
 }
 
 /**
@@ -98,6 +108,7 @@ export const servicesFor = (deps: ServiceDeps): Services => {
     conversations: conversationsService(deps),
     embeddings: embeddingsService(deps),
     tags: tagsService(deps),
+    attachments: attachmentsService(deps),
     searches: searchesService(deps),
   }
   return deps.messenger.services ? { ...base, ...deps.messenger.services(base, deps) } : base
