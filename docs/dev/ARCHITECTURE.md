@@ -376,3 +376,17 @@ installer/latest/install and optional host lifecycle ports. `upgradeCommand` ren
 consumers bind their existing update environment and server restart policy. No installer runs on
 check/no-op paths, and a failed install or callback never retries. The [upgrade plan](../plans/2026-10-03-shared-upgrade.md)
 describes the common result and consumer adoption.
+
+
+## Agent conversation linking over MCP
+
+`conversations_batches_status` reports messages, batches, characters and a token estimate before
+text is fetched; `conversations_batches_next` returns the next window or `{ batch: null }`.
+`conversations_links_add` stores batch answers atomically, `conversations_links_clear` drops them,
+and `conversations_build` rebuilds one stored chat without inference. The last three write only
+locally under `conversations.links`: readonly/deny hides them, ask refuses with the config key.
+The `link-conversations` prompt reads the same shipped skill as the CLI; its cost/consent gate is
+per chat. These tools call `services.conversations`; the CLI never calls a model to link.
+
+Consumer parity: planned for both CLIs on their next SDK adoption. Source-level shared schema and
+synthetic MCP proof are tested here; installed consumer parity is not claimed before publication.

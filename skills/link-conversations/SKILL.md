@@ -75,3 +75,23 @@ was added or deleted inside it: ask for the next batch instead.
   touched.
 - See your answers in place: `{{command}} conversations show "<chat>" <message>` prints a
   conversation, and `{{command}} messages links "<chat>" <message>` says why a message sits where it does.
+
+
+## Through MCP
+
+Follow the same cost gate and loop using these tools instead of shell commands:
+
+| CLI operation | MCP tool |
+|---|---|
+| conversations build | {{command}}_conversations_build |
+| conversations batches status | {{command}}_conversations_batches_status |
+| conversations batches next | {{command}}_conversations_batches_next |
+| conversations links add | {{command}}_conversations_links_add |
+| conversations links clear | {{command}}_conversations_links_clear |
+| conversations show | {{command}}_conversations_show |
+
+Use `chat` for the chat reference, and `size` for the batch size (10–200, default 50).
+Send `batch`, `model`, `skill` and `answers` as the links-add tool's arguments.
+Next returns `{ "batch": null }` when finished. Build before status and once more after the last
+answer. The write tools need `permissions.conversations.links` set to `allow`; on `ask` they
+refuse and explain the setting. A read-only profile offers only status and next.
