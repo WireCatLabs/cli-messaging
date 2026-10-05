@@ -2,13 +2,15 @@ import { CliError } from "@leemour/cli-core"
 import { Command } from "commander"
 import { parseLocator } from "../../domain/locator.js"
 import { renderMessages } from "../../render/messages.js"
+import { renderThreadLinks } from "../../render/thread-context.js"
 import { environmentOf } from "../context.js"
 import { positiveCount } from "../paging.js"
 import { type Messenger, messengerContext } from "./context.js"
 import { syncOptions, syncRequest } from "./search-sync-options.js"
+import { threadOptions, threadRequest } from "./thread-options.js"
 
 export const messagesSearchCommand = (messenger: Messenger): Command =>
-  syncOptions(new Command("search"))
+  threadOptions(syncOptions(new Command("search")))
     .description(
       "search the local store — what was read, fetched or kept by serve; optionally fetches new messages with --sync-first",
     )
@@ -78,6 +80,7 @@ export const messagesSearchCommand = (messenger: Messenger): Command =>
           const pattern = regex ? patternOf(words.join(" ")) : undefined
           return services.messages.search({
             ...syncRequest(this, context),
+            ...threadRequest(this),
             ...typed,
             ...(pattern ? { pattern } : { text: words.join(" ") }),
             limit,
@@ -91,6 +94,7 @@ export const messagesSearchCommand = (messenger: Messenger): Command =>
         limit = params.limit ?? limit
         return services.messages.search({
           ...syncRequest(this, context),
+          ...threadRequest(this),
           ...(pattern ? { pattern } : params.text === undefined ? {} : { text: params.text }),
           ...(params.ast === undefined ? {} : { ast: params.ast }),
           ...(params.chat === undefined ? {} : { chat: params.chat }),
@@ -104,6 +108,12 @@ export const messagesSearchCommand = (messenger: Messenger): Command =>
           saved: id,
         })
       })
+      for (const hit of found.items) {
+        if (hit.thread?.fallback) context.renderer.note(`thread context uses time neighbours: ${hit.thread.fallback}`)
+        if (hit.thread?.stale) context.renderer.note("thread graph may be stale; stale links were not followed")
+        if (hit.thread?.stopped.length)
+          context.renderer.note(`thread context stopped: ${hit.thread.stopped.join(", ")}`)
+      }
       const { command } = messenger.app
       for (const { from, to } of found.corrections) context.renderer.note(`${from} → ${to.join(", ")}`)
       if (!found.wordsReady) {
@@ -134,7 +144,8 @@ export const messagesSearchCommand = (messenger: Messenger): Command =>
           hits
             .map(({ hit, at }) => {
               const title = hit.chatTitle ?? hit.chatId
-              return `${spans ? `${at.provider} · ${title}` : title}  ${hit.locator}\n${renderMessages(hit.context ?? [hit], options)}`
+              const links = hit.thread ? renderThreadLinks(hit.thread) : ""
+              return `${spans ? `${at.provider} · ${title}` : title}  ${hit.locator}\n${renderMessages(hit.thread?.items ?? hit.context ?? [hit], options)}${links ? `\n${links}` : ""}`
             })
             .join("\n\n"),
         )

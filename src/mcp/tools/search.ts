@@ -5,13 +5,15 @@ import { parseDuration } from "../../cli/settings.js"
 import type { MessagesService } from "../../services/messages.js"
 import type { SearchesService, SearchParams } from "../../services/searches.js"
 import { syncInputs } from "../search-sync.js"
+import { threadArgs, threadInputs } from "../thread-options.js"
 import { chatOf, limit } from "../tool.js"
 
 export const MESSAGES_SEARCH_DESCRIPTION =
-  "Search the local store using the Lucene 9.12.3 profile, default AND, with strict Boolean matching. Legacy discovery is explicit with language=legacy. Text or a versioned AST, account-scoped filters, calendar timezone, term/body regex and candidate presets use one service. Empty hits still report archive coverage. `saved` runs a saved search (searches_list) or an earlier run (searches_history). With sync_first, first fetch new messages within max_chats (5), sync_time (30s), max_messages (500), under messages.sync-first permission. A failed or bounded refresh keeps local results with stale coverage and refreshed details. Guide: https://github.com/leemour/cli-messaging/blob/main/docs/search/query-language.md. Returns { items, page, limit, hasMore, corrections, completeness, wordsReady, query, coverage }."
+  "Search the local store using the Lucene 9.12.3 profile, default AND, with strict Boolean matching. Legacy discovery is explicit with language=legacy. Text or a versioned AST, account-scoped filters, calendar timezone, term/body regex and candidate presets use one service. Empty hits still report archive coverage. `saved` runs a saved search (searches_list) or an earlier run (searches_history). With sync_first, first fetch new messages within max_chats (5), sync_time (30s), max_messages (500), under messages.sync-first permission. A failed or bounded refresh keeps local results with stale coverage and refreshed details. thread=true attaches each hit's bounded parent/reply graph, with provenance and stale-edge labels; thread_hops, thread_messages, thread_bytes, thread_within set its separate bounds. Guide: https://github.com/leemour/cli-messaging/blob/main/docs/search/query-language.md. Returns { items, page, limit, hasMore, corrections, completeness, wordsReady, query, coverage }."
 
 export const messagesSearchInput = (messenger: Messenger) =>
   v.object({
+    ...threadInputs,
     ...syncInputs,
     text: v.optional(
       v.pipe(v.string(), v.minLength(1), v.description("the query: Lucene text or explicit legacy syntax")),
@@ -91,6 +93,7 @@ export const answerMessagesSearch = async (
     const size = params.limit ?? defaults.limit
     const found = await messages.search({
       ...syncArgs(args),
+      ...threadArgs(args),
       ...(pattern ? { pattern } : params.text === undefined ? {} : { text: params.text }),
       ...(params.ast === undefined ? {} : { ast: params.ast }),
       language: params.language ?? (pattern ? "legacy" : "lucene"),
@@ -110,6 +113,7 @@ export const answerMessagesSearch = async (
   const size = args.limit ?? defaults.limit
   const found = await messages.search({
     ...syncArgs(args),
+    ...threadArgs(args),
     ...(args.text === undefined ? {} : { text: args.text }),
     ...(args.ast === undefined ? {} : { ast: args.ast }),
     language: args.language ?? "lucene",

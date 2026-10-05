@@ -1198,6 +1198,97 @@ describe("the shared read commands", () => {
     expect(never).not.toHaveBeenCalled()
   })
 
+  it("**thread context** follows stored replies by locator and keeps JSON/JSONL data pure", async () => {
+    const root = mkdtempSync(join(tmpdir(), "thread-cli-"))
+    const env = {
+      ...process.env,
+      CHAT_STATE_DIR: join(root, "state"),
+      CHAT_CONFIG_DIR: join(root, "config"),
+      MESSAGING_STORE: join(root, "m.db"),
+    }
+    const records = thread.map((item, i) => ({
+      ...item,
+      senderId: String(10 + i),
+      ...(i ? { replyToId: String(i) } : {}),
+    }))
+    const backend = { ...fake, history: async () => ({ items: records, hasMore: false }) }
+    await call(["messages", "list", "7", "--json"], async () => backend, env)
+    await call(["conversations", "build", "--chat", "7", "--json"], async () => backend, env)
+    const never = vi.fn(async () => {
+      throw new Error("thread must stay local")
+    })
+    const context = await call(["messages", "context", "msg:chat/500/7/3", "--thread", "--json"], never, env)
+    expect(context.code).toBe(0)
+    expect(context.stdout).toHaveLength(1)
+    const found = JSON.parse(context.stdout[0] ?? "")
+    expect(found).toMatchObject({ mode: "thread", chain: ["2", "1"], stale: false, stopped: [] })
+    expect(found.items.map((item: { id: string }) => item.id)).toEqual(["1", "2", "3"])
+    const search = await call(["messages", "search", "chapter", "--thread", "--json"], never, env)
+    expect(JSON.parse(search.stdout[0] ?? "").items.find((hit: { id: string }) => hit.id === "3").thread).toEqual(found)
+    const capped = await call(
+      ["messages", "context", "7", "3", "--thread", "--thread-hops", "0", "--jsonl"],
+      never,
+      env,
+    )
+    expect(capped.code).toBe(0)
+    expect(capped.stdout).toHaveLength(1)
+    expect(JSON.parse(capped.stdout[0] ?? "")).toMatchObject({ items: [{ id: "3" }], stopped: ["hops"] })
+    expect(capped.stderr.join("\n")).toContain("thread context stopped")
+    const pretty = await call(["messages", "context", "7", "3", "--thread"], never, env, { tty: true })
+    expect(pretty.stdout.join("\n")).toContain("provider/reply")
+    const wrong = await call(["messages", "context", "msg:chat/600/7/3", "--thread", "--json"], never, env)
+    expect(wrong.code).toBe(2)
+    expect(never).not.toHaveBeenCalled()
+  })
+
+  it("**thread time fallback** names the missing graph on stderr", async () => {
+    const root = mkdtempSync(join(tmpdir(), "thread-cli-"))
+    const env = {
+      ...process.env,
+      CHAT_STATE_DIR: join(root, "state"),
+      CHAT_CONFIG_DIR: join(root, "config"),
+      MESSAGING_STORE: join(root, "m.db"),
+    }
+    await call(["messages", "context", "Book", "2", "--json"], async () => fake, env)
+    const never = vi.fn(async () => {
+      throw new Error("never connects")
+    })
+    const found = await call(
+      [
+        "messages",
+        "context",
+        "7",
+        "2",
+        "--thread",
+        "--thread-messages",
+        "1",
+        "--thread-within",
+        "1d",
+        "--thread-bytes",
+        "65536",
+        "--json",
+      ],
+      never,
+      env,
+    )
+    expect(found.code).toBe(0)
+    expect(found.stdout).toHaveLength(1)
+    expect(JSON.parse(found.stdout[0] ?? "")).toMatchObject({
+      mode: "time",
+      fallback: "not_built",
+      items: [{ id: "2" }],
+      stopped: ["messages"],
+    })
+    expect(found.stderr.join("\n")).toContain("thread context uses time neighbours: not_built")
+    const invalid = await call(
+      ["messages", "context", "7", "2", "--thread", "--thread-hops", "bad", "--json"],
+      never,
+      env,
+    )
+    expect(invalid.code).toBe(2)
+    expect(never).not.toHaveBeenCalled()
+  })
+
   it("**search the store without connecting**, and name each hit by its locator", async () => {
     const root = mkdtempSync(join(tmpdir(), "messenger-"))
     const env = { CHAT_STATE_DIR: join(root, "state"), MESSAGING_STORE: join(root, "m.db") }

@@ -2,6 +2,7 @@ import { CliError } from "@leemour/cli-core"
 import { Command } from "commander"
 import { isLocator, parseLocator } from "../../domain/locator.js"
 import { renderMessages } from "../../render/messages.js"
+import { renderThreadLinks } from "../../render/thread-context.js"
 import { modelWith } from "../../speech/hearing.js"
 import { listed, positiveCount } from "../paging.js"
 import { listStart } from "./after.js"
@@ -26,6 +27,7 @@ import { scheduledCommand } from "./messages-scheduled-command.js"
 import { messagesSearchCommand } from "./messages-search-command.js"
 import { sendCommand } from "./messages-send-command.js"
 import { messagesStatsCommand } from "./messages-stats-command.js"
+import { threadOptions, threadRequest } from "./thread-options.js"
 import { transcribeSubcommand } from "./transcribe-command.js"
 
 /** `messages`: reading, and sending through the guard. A CLI may add its own subcommands. */
@@ -139,8 +141,7 @@ export const messagesCommand = (messenger: Messenger): Command => {
       await readWindow(this, chat, message, { before: 0, after: 0 })
     })
 
-  messages
-    .command("context")
+  threadOptions(messages.command("context"))
     .description("a message and what came either side of it, oldest first")
     .argument("<chat>", `${messenger.chatArgument}; or a msg: locator, with no message id after it`)
     .argument("[message]", "the message id")
@@ -148,6 +149,37 @@ export const messagesCommand = (messenger: Messenger): Command => {
     .option("--after-n <n>", "how many after it", count, 5)
     .action(async function (this: Command, chat: string, message: string | undefined) {
       const { beforeN: before, afterN: after } = this.opts<{ beforeN: number; afterN: number }>()
+      const requested = threadRequest(this).thread
+      if (requested) {
+        const context = messengerContext(this, messenger)
+        const target = targetOf(messenger, chat, message)
+        const found = await context.withServices((services) =>
+          services.messages.thread(isLocator(chat) ? chat : target.chat, isLocator(chat) ? undefined : target.message, {
+            ...requested,
+            before,
+            after,
+          }),
+        )
+        if (found.fallback) context.renderer.note(`thread context uses time neighbours: ${found.fallback}`)
+        if (found.stale) context.renderer.note("thread graph may be stale; stale links were not followed")
+        if (found.stopped.length) context.renderer.note(`thread context stopped: ${found.stopped.join(", ")}`)
+        if (context.format === "pretty") {
+          context.streams.data(
+            renderMessages(found.items, {
+              color: context.color,
+              verbosity: context.settings.detail,
+              senderColors: context.settings.senderColors,
+              profile: context.profile,
+              provider: messenger.provider,
+              locale: messenger.app.locale,
+            }),
+          )
+          const links = renderThreadLinks(found)
+          if (links) context.streams.data(`\n${links}\n`)
+        } else if (context.format === "jsonl") context.renderer.stream([found])
+        else context.renderer.result(found)
+        return
+      }
       await readWindow(this, chat, message, { before, after })
     })
 

@@ -266,6 +266,11 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--tag` | `<tag>` | only this tag |  | `tags list` (planned) |
 | `--text` | `<text>` | the message's new text; - reads stdin |  | `bot callbacks answer` |
 | `--text-file` | `<path>` | read the text from this file; - or none reads stdin |  | `attachments text set` (planned) |
+| `--thread` |  | the stored reply chain and replies instead of time neighbours; falls back when no graph exists |  | `messages context` (planned), `messages search` (planned) |
+| `--thread-bytes` | `<n>` | at most this many bytes of whole messages and links in each context (default: 65536) |  | `messages context` (planned), `messages search` (planned) |
+| `--thread-hops` | `<n>` | at most this many links from the hit (default: 8) |  | `messages context` (planned), `messages search` (planned) |
+| `--thread-messages` | `<n>` | at most this many messages in each thread context (default: 50) |  | `messages context` (planned), `messages search` (planned) |
+| `--thread-within` | `<duration>` | messages within this long either side of the hit (default: 1d) |  | `messages context` (planned), `messages search` (planned) |
 | `--threads` | `<n>` | threads in all | `min(8, cores)` | `conversations embed` |
 | `--timeout` | `<duration>` | give up on the whole command after this — 30s, 2m, 500ms |  | every command |
 | `--timezone` | `<zone>` | the IANA timezone for calendar date boundaries | `system IANA timezone` | `chats stats` (planned), `conversations search` (planned), `messages search`, `messages stats` (planned), `searches create` (planned) |

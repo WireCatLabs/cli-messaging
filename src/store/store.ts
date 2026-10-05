@@ -264,7 +264,8 @@ export interface MessageStore {
     refs: { chatId: Id; messageId: Id }[],
   ): Promise<(ConversationSummary | undefined)[]>
   /** Every link a message has, the messenger's first. */
-  links(key: AccountKey, chatId: Id, messageId: Id): Promise<StoredLink[]>
+  links(key: AccountKey, chatId: Id, messageId: Id, options?: { limit: number }): Promise<StoredLink[]>
+  replies?(key: AccountKey, chatId: Id, messageId: Id, limit: number): Promise<Page<{ messageId: Id }>>
   /** The user's agent's current answer per message: its parent, or `null` for "starts a conversation". */
   agentAnswers(key: AccountKey, chatId: Id): Promise<Map<Id, Id | null>>
   /** Stores the agent's answer to a batch, checked whole first; answers how many were stored (A5). */
@@ -318,7 +319,9 @@ export interface MessageStore {
   conversationState(
     key: AccountKey,
     chatId: Id,
-  ): Promise<{ enabledAt: string; builtAt: string | null; algorithmVersion: number | null } | undefined>
+  ): Promise<
+    { enabledAt: string; builtAt: string | null; algorithmVersion: number | null; changed?: boolean } | undefined
+  >
   /** Oldest to newest, like a provider's history page. */
   messages(key: AccountKey, chatId: Id, window: { limit: number; before?: Id; since?: string }): Promise<Page<Message>>
   /** How many stored messages the chat has, sent at `since` or later when it is given. */
@@ -894,9 +897,16 @@ const storeOver = (context: StoreContext): MessageStore => {
       return pks.map((pk) => (pk === undefined ? undefined : found.get(pk)))
     },
 
-    links: async (key, chatId, messageId) => {
+    links: async (key, chatId, messageId, options) => {
       const chatKey = chatKeyOf(key, chatId)
-      return chatKey === undefined ? [] : conversationQueries.linksOf(context, chatKey, messageId)
+      return chatKey === undefined ? [] : conversationQueries.linksOf(context, chatKey, messageId, options?.limit)
+    },
+
+    replies: async (key, chatId, messageId, limit) => {
+      const chatKey = chatKeyOf(key, chatId)
+      return chatKey === undefined
+        ? { items: [], hasMore: false }
+        : conversationQueries.repliesTo(context, chatKey, messageId, limit)
     },
 
     agentAnswers: async (key, chatId) => {

@@ -528,6 +528,25 @@
       "value": "<path>",
       "meaning": "read the text from this file; - or none reads stdin"
     },
+    "--thread": {
+      "meaning": "the stored reply chain and replies instead of time neighbours; falls back when no graph exists"
+    },
+    "--thread-bytes": {
+      "value": "<n>",
+      "meaning": "at most this many bytes of whole messages and links in each context (default: 65536)"
+    },
+    "--thread-hops": {
+      "value": "<n>",
+      "meaning": "at most this many links from the hit (default: 8)"
+    },
+    "--thread-messages": {
+      "value": "<n>",
+      "meaning": "at most this many messages in each thread context (default: 50)"
+    },
+    "--thread-within": {
+      "value": "<duration>",
+      "meaning": "messages within this long either side of the hit (default: 1d)"
+    },
     "--threads": {
       "value": "<n>",
       "meaning": "threads in all",
@@ -2011,7 +2030,42 @@
       "in": "all",
       "options": {
         "--after-n": "all",
-        "--before-n": "all"
+        "--before-n": "all",
+        "--thread": {
+          "in": [],
+          "planned": {
+            "max": "each CLI's next cli-messaging bump",
+            "tg": "each CLI's next cli-messaging bump"
+          }
+        },
+        "--thread-bytes": {
+          "in": [],
+          "planned": {
+            "max": "each CLI's next cli-messaging bump",
+            "tg": "each CLI's next cli-messaging bump"
+          }
+        },
+        "--thread-hops": {
+          "in": [],
+          "planned": {
+            "max": "each CLI's next cli-messaging bump",
+            "tg": "each CLI's next cli-messaging bump"
+          }
+        },
+        "--thread-messages": {
+          "in": [],
+          "planned": {
+            "max": "each CLI's next cli-messaging bump",
+            "tg": "each CLI's next cli-messaging bump"
+          }
+        },
+        "--thread-within": {
+          "in": [],
+          "planned": {
+            "max": "each CLI's next cli-messaging bump",
+            "tg": "each CLI's next cli-messaging bump"
+          }
+        }
       }
     },
     "messages delete": {
@@ -2117,6 +2171,41 @@
         "--sync-time": {
           "in": [],
           "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" }
+        },
+        "--thread": {
+          "in": [],
+          "planned": {
+            "max": "each CLI's next cli-messaging bump",
+            "tg": "each CLI's next cli-messaging bump"
+          }
+        },
+        "--thread-bytes": {
+          "in": [],
+          "planned": {
+            "max": "each CLI's next cli-messaging bump",
+            "tg": "each CLI's next cli-messaging bump"
+          }
+        },
+        "--thread-hops": {
+          "in": [],
+          "planned": {
+            "max": "each CLI's next cli-messaging bump",
+            "tg": "each CLI's next cli-messaging bump"
+          }
+        },
+        "--thread-messages": {
+          "in": [],
+          "planned": {
+            "max": "each CLI's next cli-messaging bump",
+            "tg": "each CLI's next cli-messaging bump"
+          }
+        },
+        "--thread-within": {
+          "in": [],
+          "planned": {
+            "max": "each CLI's next cli-messaging bump",
+            "tg": "each CLI's next cli-messaging bump"
+          }
         },
         "--timezone": "all"
       }

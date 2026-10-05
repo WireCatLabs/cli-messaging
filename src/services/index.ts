@@ -131,3 +131,5 @@ export {
 } from "./package-upgrade.js"
 export type { SearchRefreshed, SyncOptions } from "./search-refresh.js"
 export { SYNC_BOUNDS, SYNC_KEY } from "./search-refresh.js"
+export type { ThreadContext, ThreadOptions } from "./thread-context.js"
+export { readThreadContext, THREAD_BOUNDS } from "./thread-context.js"
