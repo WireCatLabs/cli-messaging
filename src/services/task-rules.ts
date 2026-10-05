@@ -1,0 +1,76 @@
+import { createTaskService, type TaskKind, type TaskStore } from "@leemour/cli-tasks"
+import { formatLocator } from "../domain/locator.js"
+import type { Id, Message, Review } from "../domain/models.js"
+import type { AccountKey } from "../store/store.js"
+import { questions } from "./questions.js"
+
+export interface RuleResult {
+  added: number
+  closed: number
+}
+
+export const taskAccount = ({ provider, account }: AccountKey): string => `${provider}:${account}`
+
+/**
+ * Opens a task for each question nobody answered and each message that mentions the owner, and closes
+ * one when the owner answered it — over every message a review read, before `--unanswered` narrows it.
+ * Run twice over the same window it changes nothing: the service returns the task a source already has.
+ * Only the owner's answers count: the store knows no admins, and a review without `--unanswered` asks
+ * for none. A mention is one the messenger marks by id; an `@handle` is not seen.
+ */
+export const applyTaskRules = async (
+  review: Review,
+  { store, account, now }: { store: TaskStore; account: AccountKey; now?: () => Date },
+): Promise<RuleResult> => {
+  const tasks = createTaskService({ store, ...(now ? { now } : {}) })
+  const owner = taskAccount(account)
+  const result: RuleResult = { added: 0, closed: 0 }
+  const sourceOf = (message: Message) =>
+    formatLocator({ provider: account.provider, account: account.account, chat: message.chatId, message: message.id })
+
+  const open = async (message: Message, group: Id, kind: TaskKind) => {
+    const { created } = await tasks.add({
+      source: sourceOf(message),
+      sourceKind: "message",
+      account: owner,
+      group,
+      kind,
+      origin: "rule",
+    })
+    if (created) result.added += 1
+  }
+  const close = async (message: Message, kind: TaskKind) => {
+    for (const task of await store.findBySource(owner, sourceOf(message))) {
+      if (task.kind !== kind || task.state !== "open") continue
+      await tasks.close(task.id, { as: "done", by: "rule" })
+      result.closed += 1
+    }
+  }
+
+  for (const chat of review.chats) {
+    for (const { question, answer } of questions(chat.messages, { answerers: new Set() })) {
+      if (answer) await close(question, "question")
+      else await open(question, chat.id, "question")
+    }
+    for (const [index, message] of chat.messages.entries()) {
+      if (message.outgoing || !message.mentions?.includes(account.account)) continue
+      if (ownerAnswered(chat.messages, index)) await close(message, "mention")
+      else await open(message, chat.id, "mention")
+    }
+  }
+  return result
+}
+
+/** The owner replied to the message, or to anything its sender said, later in the chat. */
+const ownerAnswered = (messages: Message[], index: number): boolean => {
+  const message = messages[index]
+  if (!message) return false
+  const senders = new Map(messages.map((one) => [one.id, one.senderId]))
+  return messages.slice(index + 1).some((one) => {
+    if (one.outgoing !== true) return false
+    const to = one.replyTo?.id ?? one.replyToId
+    if (to === message.id) return true
+    const repliedSender = one.replyTo?.senderId ?? (to === undefined ? undefined : senders.get(to))
+    return repliedSender != null && repliedSender === message.senderId
+  })
+}
