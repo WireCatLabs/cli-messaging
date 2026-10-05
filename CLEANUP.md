@@ -5,4 +5,4 @@
 
 - 2026-10-05: `/tmp/search-vector-scan-EuiCv4` — synthetic SR-6 1M-vector benchmark store (~1.8 GB); report committed under `bench/search-quality/`, remove after owner confirms.
 
-- 2026-10-05: `../cli-messaging-wt-search-thread-context` — context implementation worktree; remove after merge and owner confirmation.
+- 2026-10-05: `../cli-messaging-wt-search-thread-context` — context implementation worktree; removed 2026-10-05 after merge and owner confirmation.
