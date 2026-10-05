@@ -6,6 +6,10 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.148.2 — 05.10.2026
+
+Released early: MAX and TG adoption is blocked by contact-context message reads bypassing denied message permissions
+
 ### Fixed
 
 - `contacts context`, including MCP, is checked as a message read because it returns stored message bodies.
