@@ -27,7 +27,8 @@ export const unansweredHours = (value: unknown, flag = "--unanswered"): number =
 /**
  * **Everything said since a point, both sides, in every chat that changed** — the reading half of a
  * review of who owes what (max-cli's `review`). Sorting it is the reader's job, person or agent.
- * Reads only: nothing is marked read, and `inbox --new` keeps its point.
+ * Nothing is marked read unless asked, and `inbox --new` keeps its point. The rules open and close
+ * tasks in the local store from what it read (`../../services/task-rules.ts`); nothing reaches the messenger.
  */
 export const reviewCommand = (messenger: Messenger): Command =>
   new Command("review")
@@ -144,6 +145,8 @@ const notes = (found: Review, command: string, fresh: boolean, note: (message: s
     const names = found.skipped.map((chat) => chat.title ?? chat.id).join(", ")
     note(`skipped ${found.skipped.length} chats — too many at once: ${names}`)
   }
+  if (found.tasks && found.tasks.added + found.tasks.closed > 0)
+    note(`tasks: ${found.tasks.added} opened, ${found.tasks.closed} closed by the rules`)
   if (found.partial) note(PARTIAL_NOTE)
   if (found.quiet > 0) note(`${found.quiet} muted or archived chats left out — --all reads them`)
   if (found.unanswered) {

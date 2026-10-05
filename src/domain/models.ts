@@ -295,6 +295,8 @@ export interface Review {
   unanswered?: { olderThanHours: number }
   /** With saved points: each chat read whole, and the time its next check starts from. */
   checked?: Record<Id, string>
+  /** Tasks the review opened and closed in the store, by the rules; absent when the store was not open. */
+  tasks?: { added: number; closed: number }
 }
 
 /** One change to who is in a chat, or to the chat itself, read from a service message. */

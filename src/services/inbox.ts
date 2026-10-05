@@ -3,13 +3,17 @@ import { capability, type MessengerAdapter, type ServerReads } from "../cli/mess
 import type { Chat, ChatKind, Id, Inbox, InboxChat, Message, Review, ReviewChat } from "../domain/models.js"
 import type { AccountKey, MessageStore } from "../store/store.js"
 import { CHAT_KINDS } from "./chats.js"
-import type { ServiceDeps } from "./deps.js"
+import { type ServiceDeps, storeIfOpen } from "./deps.js"
 import { readChatId } from "./messages.js"
+import { unanswered } from "./questions.js"
+import { applyTaskRules, type RuleResult } from "./task-rules.js"
 
 /**
  * **At most this many history reads per `inbox`**, as in max-cli: a person opening twenty chats in
  * one burst is already more than a person does, and the rest are named in `skipped`, not lost.
  */
+export { questions, unanswered } from "./questions.js"
+
 export const INBOX_CHATS = 20
 
 /** Owner's ruling in max-cli: without a boundary, a review looks at the last three days. */
@@ -201,6 +205,8 @@ export interface ReviewOptions {
   now?: number
   /** Apply retained or newly heard transcripts before unanswered filtering. */
   enrich?: (review: Review) => Promise<Review>
+  /** Sees every message read, transcripts applied, before `--unanswered` narrows them. */
+  onReviewed?: (review: Review) => Promise<void>
 }
 
 /**
@@ -229,7 +235,17 @@ const window = async (adapter: InboxReader, chat: Id, since: number, cut: number
  */
 export const reviewIn = async (
   adapter: InboxReader,
-  { since, points, chat, kinds, all = false, unansweredAfterHours, now = Date.now(), enrich }: ReviewOptions,
+  {
+    since,
+    points,
+    chat,
+    kinds,
+    all = false,
+    unansweredAfterHours,
+    now = Date.now(),
+    enrich,
+    onReviewed,
+  }: ReviewOptions,
 ): Promise<Review> => {
   const page = await everyChat(adapter)
   const startOf = (id: Id) => points?.get(id) ?? since
@@ -271,6 +287,7 @@ export const reviewIn = async (
     }
   }
   const reviewed = enrich ? await enrich(found) : found
+  await onReviewed?.(reviewed)
   if (unansweredAfterHours === undefined) return reviewed
 
   const open: ReviewChat[] = []
@@ -285,56 +302,6 @@ export const reviewIn = async (
     }
   }
   return { ...reviewed, chats: open, unanswered: { olderThanHours: unansweredAfterHours } }
-}
-
-/** A shared link's query string is not a question. */
-const LINKS = /https?:\/\/\S+/g
-
-/**
- * Questions from others still waiting, as max-cli counts them. A question is a message with `?` in
- * it, or a reply to the owner or an admin. It is answered when one of them replied to it, or was the
- * next to speak after the person who asked — "the next to speak" rather than "spoke later", because
- * in a busy group an admin answering somebody else says nothing about this question.
- */
-export const unanswered = (
-  messages: Message[],
-  { answerers, before }: { answerers: ReadonlySet<Id>; before: number },
-): Message[] =>
-  questions(messages, { answerers })
-    .filter(({ question, answer }) => answer === undefined && Date.parse(question.timestamp) < before)
-    .map(({ question }) => question)
-
-/** Every question from others, as `unanswered` reads them, with the message that answered it, if one did. */
-export const questions = (
-  messages: Message[],
-  { answerers }: { answerers: ReadonlySet<Id> },
-): { question: Message; answer?: Message }[] => {
-  const answers = (message: Message) =>
-    message.outgoing === true || (message.senderId !== null && answerers.has(message.senderId))
-  const byId = new Map(messages.map((message) => [message.id, message]))
-  // Telegram names only the id a reply answers; the message itself is found in the window, or not at all.
-  const repliesToAnswerer = (message: Message) => {
-    const to = message.replyTo?.id ?? message.replyToId
-    const quoted = to === undefined ? undefined : byId.get(to)
-    if (quoted) return answers(quoted)
-    return (
-      message.replyTo !== null && (message.replyTo.outgoing === true || answerers.has(message.replyTo.senderId ?? ""))
-    )
-  }
-
-  return messages.flatMap((message, index) => {
-    if (answers(message)) return []
-    const transcript = "transcript" in message && typeof message.transcript === "string" ? message.transcript : ""
-    if (![message.text, transcript].join("\n").replace(LINKS, "").includes("?") && !repliesToAnswerer(message))
-      return []
-    const later = messages.slice(index + 1)
-    const reply = later.find((one) => (one.replyTo?.id ?? one.replyToId) === message.id && answers(one))
-    const next = later.find((other) => other.senderId !== message.senderId)
-    const answer = [reply, next && answers(next) ? next : undefined]
-      .filter((one) => one !== undefined)
-      .sort((a, b) => Date.parse(a.timestamp) - Date.parse(b.timestamp))[0]
-    return [{ question: message, ...(answer ? { answer } : {}) }]
-  })
 }
 
 export interface InboxService {
@@ -384,7 +351,15 @@ export const inboxService = (deps: ServiceDeps): InboxService => {
       if (deps.offline && deps.reads !== "store") {
         throw new CliError("validation_error", "`review` asks the messenger what changed; with `--offline` nothing did")
       }
-      return reviewIn(await reader(), options)
+      let tasks: RuleResult | undefined
+      const found = await reviewIn(await reader(), {
+        ...options,
+        onReviewed: async (full) => {
+          const held = await storeIfOpen(deps)
+          if (held) tasks = await applyTaskRules(full, { store: held.store.tasks, account: held.account })
+        },
+      })
+      return tasks ? { ...found, tasks } : found
     },
   }
 }
