@@ -325,7 +325,7 @@ export const keyForCommand = (path: readonly string[]): PermissionKey | null | u
   if (top === "conversations" && next === "links") return "conversations.links"
   // Vectors are written to the local store only, and the text never leaves the machine (phase 5 E10).
   if (top === "conversations" && next === "embed") return "conversations.embed"
-  if (SHOW_MESSAGES.has(top)) return "messages"
+  if (SHOW_MESSAGES.has(top) || (top === "contacts" && next === "context")) return "messages"
   if ((RESOURCES as readonly string[]).includes(top)) return path.join(".")
   return undefined
 }
