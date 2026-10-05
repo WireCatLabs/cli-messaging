@@ -159,7 +159,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--block` | `<value>` | Set to `true` if user should be blocked in chat. |  | `bot chats members remove` |
 | `--bot` |  | the bot section of the profile's settings, rather than the personal account's |  | `config set` (planned), `config show` (planned), `config unset` (planned) |
 | `--bots` | `<profiles>` | also read these bots' copies, comma separated — each allowed by readOtherBots |  | `bot contacts show`, `bot messages between`, `bot messages search` |
-| `--budget` | `<pages>` | at most this many pages of a list, with a pause between them |  | `chats members audit` (planned) |
+| `--budget` | `<pages>` | at most this many pages of a list, with a pause between them |  | `chats members audit` (planned), `chats members fetch` (planned) |
 | `--by` | `<grouping>` | what to count by. **each command names its own groupings — messages stats chat, sender, day or hour, and searches create the same for messages stats --saved; chats stats day or week, as a series beside its totals — so it differs on purpose (Help text rule 4)** |  | `chats stats` (planned), `messages stats` (planned), `searches create` (planned) |
 | `--can` | `<rights>` | what they may do, comma-separated: read, members, admins, info, pin, link, post, edit, delete. **lists the rights each messenger has — MAX has `read`, Telegram does not — so it differs on purpose (Help text rule 4)** |  | `bot chats admins add`, `chats admins add` |
 | `--channel` |  | a private channel instead of a group; people join it by its link |  | `chats create` |
@@ -280,6 +280,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--to` | `<chat>` | the chat to forward it to: an id, or part of a chat name. **the sentence says how to name a chat the messenger's way, so it differs on purpose (Help text rule 4)** |  | `messages forward`, `store export` |
 | `--topic` | `<id>` | address this forum topic: send to it, or mark only it read. **Telegram group forums only; MAX explicitly refuses this option before sending** |  | `chats mark-read` (planned), `messages send`, `polls create` |
 | `--trace` |  | one line per request on stderr: ids and timings, never message content. **max logs one line per request, tg the connection's own lines: the same option, a different mechanism (Help text rule 4)** |  | every command |
+| `--track` |  | also do it daily while serve runs |  | `chats members fetch` (planned) |
 | `--transcribe` |  | hear voice messages not heard yet, on this machine; slow, the model must be downloaded. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | `inbox`, `messages list`, `review` |
 | `--type` | `<names>` | only these types. **each command names its own types — chats events the messenger's event types, comma-separated, as it names them; tags list chat, contact or message — so it differs on purpose (Help text rule 4)** |  | `chats events` (planned), `tags list` (planned) |
 | `--types` | `<value>` | Comma separated list of update types your bot want to receive |  | `bot watch`, `bot webhooks set` |

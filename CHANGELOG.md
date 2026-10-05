@@ -12,6 +12,15 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   new optional `ReadState.markTopicRead`; a messenger without it refuses rather than mark the whole chat read.
   The journal records the topic id.
 
+- `chats members fetch <chat> [--track] [--budget <pages>]` reads a group's whole member list into the store's member
+  history (store version 18): who is new, who is gone, whose profile changed, and today's count. Someone is recorded
+  as gone only when every member was read and the chat's own count agrees — never from a list cut by `--budget`,
+  Telegram's cap or MAX's partial lists. `--track` also puts the chat on the daily list.
+- `chats tracking list|show|add|remove`: the chats whose member lists `serve` will fetch daily — review them, see one
+  chat's count per day for 30 days, add or remove one (a local write, `chats.tracking.add`/`.remove`). Read-only MCP
+  `chats_tracking_list` and `chats_tracking_show`. The daily fetch in `serve` comes next.
+- `./store` exports the member-history types (`MemberStay`, `MemberCount`, `ProfileRevision`, `RosterRead`,
+  `RosterChange`, `TrackedChat`).
 - `messages context --thread` reads a stored message's parent chain and chosen replies, keeping interleaved
   discussions apart. `messages search --thread` attaches the same graph context to each hit. Each link names
   its source (`provider`, `rule`, `agent`), kind, confidence and method. Bounds are independent of network

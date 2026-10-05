@@ -579,6 +579,7 @@
       "meaning": "one line per request on stderr: ids and timings, never message content",
       "note": "max logs one line per request, tg the connection's own lines: the same option, a different mechanism (Help text rule 4)"
     },
+    "--track": { "meaning": "also do it daily while serve runs" },
     "--transcribe": {
       "meaning": "hear voice messages not heard yet, on this machine; slow, the model must be downloaded",
       "note": "max's own copy is worded differently until T6 moves the command onto the shared one (e13)"
@@ -1193,6 +1194,20 @@
         }
       }
     },
+    "chats members fetch": {
+      "in": [],
+      "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" },
+      "options": {
+        "--budget": {
+          "in": [],
+          "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" }
+        },
+        "--track": {
+          "in": [],
+          "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" }
+        }
+      }
+    },
     "chats members list": {
       "in": "all",
       "options": {
@@ -1283,6 +1298,26 @@
           "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" }
         }
       }
+    },
+    "chats tracking": {
+      "in": [],
+      "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" }
+    },
+    "chats tracking add": {
+      "in": [],
+      "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" }
+    },
+    "chats tracking list": {
+      "in": [],
+      "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" }
+    },
+    "chats tracking remove": {
+      "in": [],
+      "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" }
+    },
+    "chats tracking show": {
+      "in": [],
+      "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" }
     },
     "chats update": {
       "in": "all",
