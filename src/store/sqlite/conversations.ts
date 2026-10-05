@@ -1,6 +1,6 @@
 import { setTimeout } from "node:timers/promises"
 import type { Link, LinkInput } from "../../conversations/link.js"
-import type { Id, Message } from "../../domain/models.js"
+import type { Id, Message, Page } from "../../domain/models.js"
 import type { ConversationBuild, ConversationSummary, StoredLink } from "../store.js"
 import { and, asc, desc, eq, isNull, type SQL, sql } from "./drizzle/core.js"
 import type { StoreContext } from "./open.js"
@@ -427,40 +427,77 @@ export const conversationOf = ({ orm }: StoreContext, chatKey: number, messageId
   return found ? String(found.pk) : undefined
 }
 
+const staleLink = (chatKey: number) => sql<boolean>`(${messageLinks.staleAt} IS NOT NULL
+  OR EXISTS (SELECT 1 FROM message_revisions r WHERE r.message_pk IN (${messageLinks.messagePk}, ${messageLinks.parentPk})
+    AND r.captured_at >= ${messageLinks.createdAt})
+  OR EXISTS (SELECT 1 FROM messages d WHERE d.pk IN (${messageLinks.messagePk}, ${messageLinks.parentPk}) AND (d.deleted_at IS NOT NULL OR d.edited_at > ${messageLinks.createdAt}))
+  OR (${messageLinks.source} = 'provider' AND ${messageLinks.kind} = 'reply' AND
+    (SELECT m.reply_to_native_id FROM messages m WHERE m.pk = ${messageLinks.messagePk}) IS NOT
+    (SELECT p.native_id FROM messages p WHERE p.pk = ${messageLinks.parentPk}))
+  OR EXISTS (SELECT 1 FROM messages p WHERE p.pk = ${messageLinks.parentPk} AND p.chat_pk <> ${chatKey}))`
+
+const currentLink = (chatKey: number) => sql`(${messageLinks.build} IS NULL OR ${messageLinks.build} =
+  (SELECT ${conversationState.currentBuild} FROM ${conversationState} WHERE ${conversationState.chatPk} = ${chatKey}))`
+
 /** Every link a message has, the messenger's first, then the strongest. */
-export const linksOf = ({ orm }: StoreContext, chatKey: number, messageId: Id): StoredLink[] =>
+export const linksOf = ({ orm }: StoreContext, chatKey: number, messageId: Id, limit?: number): StoredLink[] =>
   orm
     .select({
-      parentId: sql<string | null>`(SELECT p.native_id FROM messages p WHERE p.pk = ${messageLinks.parentPk})`,
+      parentId: sql<
+        string | null
+      >`(SELECT p.native_id FROM messages p WHERE p.pk = ${messageLinks.parentPk} AND p.chat_pk = ${chatKey})`,
       source: messageLinks.source,
       kind: messageLinks.kind,
       confidence: messageLinks.confidence,
       method: messageLinks.method,
       version: messageLinks.version,
       createdAt: messageLinks.createdAt,
-      staleAt: messageLinks.staleAt,
+      stale: staleLink(chatKey),
     })
+    .from(messageLinks)
+    .innerJoin(messages, eq(messages.pk, messageLinks.messagePk))
+    .where(and(eq(messages.chatPk, chatKey), eq(messages.nativeId, messageId), currentLink(chatKey)))
+    .orderBy(
+      sql`CASE ${messageLinks.source} WHEN 'provider' THEN 0 WHEN 'agent' THEN 1 ELSE 2 END`,
+      desc(messageLinks.confidence),
+      desc(messageLinks.createdAt),
+      messageLinks.parentPk,
+    )
+    .limit(limit ?? -1)
+    .all()
+    .map(({ createdAt, stale, ...link }) => ({
+      ...link,
+      source: link.source as StoredLink["source"],
+      createdAt: toIso(createdAt) as string,
+      stale: Boolean(stale),
+    }))
+
+/** Candidates only: the caller checks which parent each child chooses, using the same link reader. */
+export const repliesTo = (
+  { orm }: StoreContext,
+  chatKey: number,
+  messageId: Id,
+  limit: number,
+): Page<{ messageId: Id }> => {
+  const rows = orm
+    .select({ messageId: messages.nativeId })
     .from(messageLinks)
     .innerJoin(messages, eq(messages.pk, messageLinks.messagePk))
     .where(
       and(
         eq(messages.chatPk, chatKey),
-        eq(messages.nativeId, messageId),
-        sql`(${messageLinks.build} IS NULL OR ${messageLinks.build} = (SELECT ${conversationState.currentBuild}
-          FROM ${conversationState} WHERE ${conversationState.chatPk} = ${chatKey}))`,
+        currentLink(chatKey),
+        sql`${messageLinks.parentPk} = (SELECT p.pk FROM messages p WHERE p.chat_pk = ${chatKey} AND p.native_id = ${messageId})`,
       ),
     )
-    .orderBy(
-      sql`CASE ${messageLinks.source} WHEN 'provider' THEN 0 WHEN 'agent' THEN 1 ELSE 2 END`,
-      desc(messageLinks.confidence),
-    )
+    .orderBy(sql`${messageLinks}.rowid`)
+    .limit(limit + 1)
     .all()
-    .map(({ createdAt, staleAt, ...link }) => ({
-      ...link,
-      source: link.source as StoredLink["source"],
-      createdAt: toIso(createdAt) as string,
-      stale: staleAt !== null,
-    }))
+  return {
+    items: [...new Map(rows.slice(0, limit).map((row) => [row.messageId, row])).values()],
+    hasMore: rows.length > limit,
+  }
+}
 
 export const stateOf = ({ orm }: StoreContext, chatKey: number) => {
   const found = orm.select().from(conversationState).where(eq(conversationState.chatPk, chatKey)).get()

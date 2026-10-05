@@ -1,3 +1,4 @@
+import { CliError } from "@leemour/cli-core"
 import * as v from "valibot"
 import { listStart } from "../../cli/messenger/after.js"
 import type { Messenger } from "../../cli/messenger/context.js"
@@ -6,6 +7,7 @@ import { listed } from "../../cli/paging.js"
 import { readEvidencePacket } from "../../services/index.js"
 import { heard, hearForTool, modelWith } from "../../speech/hearing.js"
 import { searchServices } from "../search-sync.js"
+import { threadArgs, threadInputs } from "../thread-options.js"
 import { type AnyTool, chatOf, limit, message, nameOf, READ, snakeOf, tool } from "../tool.js"
 import {
   answerMessagesSearch,
@@ -121,21 +123,41 @@ export const messagesTools = (messenger: Messenger): Record<string, AnyTool> => 
       title: "Show a message",
       description:
         "One message by id, and optionally the messages either side of it, oldest first. The one asked for " +
-        "carries anchor: true; `before_n` and `after_n` say how many either side. Returns { items, page, limit, hasMore }.",
+        "carries anchor: true; `before_n` and `after_n` say how many either side. Returns { items, page, limit, hasMore }. " +
+        "With thread=true, reads the stored parent chain and replies without connecting: returns locator, mode, items, links with provenance/stale labels, chain, stale, stopped and bounds. " +
+        "thread_hops (8), thread_messages (50), thread_bytes (65536) and thread_within (1d) bound it; no graph gives a labelled local time fallback. " +
+        "A locator in chat needs no message argument with thread.",
       input: v.object({
+        ...threadInputs,
         chat,
-        message,
+        message: v.optional(message),
         before_n: v.optional(v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(100))),
         after_n: v.optional(v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(100))),
       }),
       annotations: READ,
-      served: async (services, args) =>
-        listed(
+      storedWhen: (args) => {
+        if (args.thread) return true
+        if (args.message === undefined)
+          throw new CliError("validation_error", "give a message id; a locator alone requires thread")
+        return false
+      },
+      stored: (store, account, args, defaults) =>
+        searchServices(messenger, store, account, defaults).messages.thread(args.chat, args.message, {
+          ...threadArgs(args).thread,
+          before: args.before_n ?? 5,
+          after: args.after_n ?? 5,
+          signal: defaults.signal,
+        }),
+      served: async (services, args) => {
+        if (args.message === undefined)
+          throw new CliError("validation_error", "give a message id; a locator alone requires thread")
+        return listed(
           await services.messages.around(args.chat, args.message, {
             before: args.before_n ?? 0,
             after: args.after_n ?? 0,
           }),
-        ),
+        )
+      },
     }),
 
     messages_scheduled: tool({

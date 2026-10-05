@@ -874,6 +874,77 @@ describe("the MCP server", () => {
     })
   })
 
+  it("thread context and search use the same stored graph and never mark read or infer", async () => {
+    const records = [
+      ["1", undefined],
+      ["2", undefined],
+      ["3", "1"],
+      ["4", "2"],
+      ["5", "3"],
+      ["6", "1"],
+    ].map(([id, parent], i) => ({
+      ...message,
+      id: id as string,
+      senderId: String(10 + i),
+      text: `synthetic graph message ${id}`,
+      timestamp: new Date(Date.parse(message.timestamp) + i * 600_000).toISOString(),
+      ...(parent ? { replyToId: parent } : {}),
+    }))
+    const markRead = vi.fn(async () => {})
+    const backend = scripted({ history: async () => ({ items: records, hasMore: false }), markRead })
+    const { call, session, env } = await connect(backend)
+    await call("chat_messages_list", { chat: "7" })
+    await call("chat_conversations_build", { chat: "7" })
+    await session.close()
+    const inferred = models.opened
+    const context = await call("chat_messages_context", { chat: "7", message: "5", thread: true })
+    expect(context.isError).toBe(false)
+    expect(context.body.items.map((item: { id: string }) => item.id)).toEqual(["1", "3", "5", "6"])
+    expect(context.body).toMatchObject({ mode: "thread", chain: ["3", "1"], stale: false })
+    const located = await call("chat_messages_context", { chat: "msg:chat/500/7/5", thread: true })
+    expect(located.body).toEqual(context.body)
+    expect((await call("chat_messages_context", { chat: "msg:chat/600/7/5", thread: true })).isError).toBe(true)
+    const search = await call("chat_messages_search", { text: 'text:"synthetic graph message 5"', thread: true })
+    expect(search.body.items[0].thread).toEqual(context.body)
+    const capped = await call("chat_messages_context", { chat: "7", message: "5", thread: true, thread_hops: 0 })
+    expect(capped.body).toMatchObject({ items: [{ id: "5" }], stopped: ["hops"] })
+    expect(markRead).not.toHaveBeenCalled()
+    expect(models.opened).toBe(inferred)
+    expect(backend.opened()).toBe(1)
+    const store = await openStore({ env })
+    try {
+      const direct = servicesFor(
+        storedDeps(
+          { app, provider: "chat" } as Messenger,
+          store,
+          { provider: "chat", account: "500" },
+          {} as SendGuard,
+        ),
+      )
+      expect(await direct.messages.thread("7", "5")).toEqual(context.body)
+    } finally {
+      await store.close()
+    }
+  })
+
+  it("read-only MCP thread context falls back locally when there is no graph", async () => {
+    const root = await filledRoot()
+    const backend = scripted()
+    const { call } = await connect(backend, { root, config: levels({ messages: "readonly" }) })
+    const found = await call("chat_messages_context", {
+      chat: "7",
+      message: "1",
+      thread: true,
+      thread_bytes: 1000,
+      thread_within: "1d",
+    })
+    expect(found.isError).toBe(false)
+    expect(found.body).toMatchObject({ mode: "time", fallback: "not_built", items: [{ id: "1", anchor: true }] })
+    expect(backend.opened()).toBe(0)
+    expect((await call("chat_messages_context", { chat: "7" })).isError).toBe(true)
+    expect(backend.opened()).toBe(0)
+  })
+
   it("agent links over MCP and rebuilds a synthetic tangled chat without inference or messenger writes", async () => {
     const telegram = scripted({
       history: async () => ({

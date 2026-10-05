@@ -34,6 +34,7 @@ import {
 } from "./messages-search.js"
 import { refreshSearch, type SearchRefreshed, type SyncOptions, withRefresh } from "./search-refresh.js"
 import { type SearchParams, searchRecordOf } from "./searches.js"
+import { readThreadContext, type ThreadContext, type ThreadOptions, threadBounds } from "./thread-context.js"
 
 export interface ListWindow {
   limit: number
@@ -50,6 +51,7 @@ export interface AroundWindow {
 }
 
 export interface SearchQuery {
+  thread?: ThreadOptions
   syncFirst?: SyncOptions
   /** The query language of the phase 2 plan, §4: words, "phrases", -word, OR, and filters. */
   text?: string
@@ -74,7 +76,12 @@ export interface SearchQuery {
   saved?: string
 }
 
-export type FoundMessage = StoredHit & { match?: Match; score?: number | null; context?: WindowedMessage[] }
+export type FoundMessage = StoredHit & {
+  match?: Match
+  score?: number | null
+  context?: WindowedMessage[]
+  thread?: ThreadContext
+}
 
 export interface SearchFound extends Page<FoundMessage> {
   refreshed?: SearchRefreshed
@@ -150,6 +157,7 @@ type Saved = Partial<Pick<Messenger, "savedChatId" | "app">>
 export interface MessagesService {
   list(chat: string, window: ListWindow): Promise<Page<Message>>
   around(chat: string, message: string, window: AroundWindow): Promise<WindowedMessage[]>
+  thread(chat: string, message?: Id, options?: ThreadOptions): Promise<ThreadContext>
   link(chat: string, message?: string): Promise<MessageLink>
   /** The files of one message. Always from the messenger, whatever its history is read from. */
   download(chat: string, message: Id): Promise<Download>
@@ -250,6 +258,23 @@ export const messagesService = (deps: ServiceDeps): MessagesService => {
       return capability(await deps.connection(), "around", "read the messages around one")(chat, message, window)
     },
 
+    thread: (reference, message, options) =>
+      inStore(async (store, account) => {
+        const target = messageLinkTarget(reference, message, deps.messenger.provider)
+        if (
+          account.provider !== deps.messenger.provider ||
+          (target.account !== undefined && target.account !== account.account)
+        )
+          throw new CliError("validation_error", "that locator belongs to another account; select its profile first")
+        return readThreadContext(
+          store,
+          account,
+          await storedChatId(deps.messenger, target.chat, store, account),
+          target.message,
+          options,
+        )
+      }),
+
     link: async (reference, message) => {
       const target = messageLinkTarget(reference, message, deps.messenger.provider)
       const account = await deps.account()
@@ -303,6 +328,7 @@ export const messagesService = (deps: ServiceDeps): MessagesService => {
 
     search: (query) =>
       inStore(async (store, account) => {
+        if (query.thread) threadBounds(query.thread)
         const refreshed = await refreshSearch(deps, query)
         const found = await searchStore(store, account, query, deps.messenger)
         await remember(store, "search", query)
@@ -461,6 +487,22 @@ export const messagesService = (deps: ServiceDeps): MessagesService => {
   }
 }
 
+const withThreads = async (store: MessageStore, found: SearchFound, request: SearchQuery): Promise<SearchFound> => {
+  if (!request.thread) return found
+  const items: FoundMessage[] = []
+  for (const hit of found.items)
+    items.push({
+      ...hit,
+      thread: await readThreadContext(store, accountOf(hit), hit.chatId, hit.id, {
+        before: request.context ?? 0,
+        after: request.context ?? 0,
+        ...request.thread,
+        signal: request.signal,
+      }),
+    })
+  return { ...found, items }
+}
+
 export const validateSearchDialect = (request: SearchQuery): void => {
   const { pattern } = request
   if (request.language !== undefined && !["lucene", "legacy"].includes(request.language))
@@ -491,12 +533,13 @@ export const searchStore = async (
   if (request.signal?.aborted)
     throw new CliError("validation_error", "search was aborted", { reason: "query_aborted", complete: false })
   validateSearchDialect(request)
+  if (request.thread) threadBounds(request.thread)
   // A large file builds its word index a slice per search as well as in `store migrate` (NEED-453 A).
   const stop = Date.now() + SEARCH_FILL_MS
   await store.fillSearchIndex({ until: () => Date.now() >= stop })
   await store.fillStems({ until: () => Date.now() >= stop })
   if (!pattern && (request.language === "lucene" || request.ast !== undefined))
-    return searchLucene(store, account, request, messenger)
+    return withThreads(store, await searchLucene(store, account, request, messenger), request)
   const found = pattern
     ? {
         ...(await store.find({
@@ -524,7 +567,7 @@ export const searchStore = async (
         : hit,
     ),
   )
-  return { ...found, items, completeness: await completenessOf(store, found.items) }
+  return withThreads(store, { ...found, items, completeness: await completenessOf(store, found.items) }, request)
 }
 
 /**

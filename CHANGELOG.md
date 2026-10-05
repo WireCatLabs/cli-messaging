@@ -6,12 +6,19 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
-- Profiles can configure embedding and analysis providers/models/endpoints; flags override configuration, while local e5-small embeddings and owner-agent analysis remain defaults. `models text key set anthropic` supports Anthropic credentials; custom endpoint keys never fall back to a public provider key.
-- `conversations build --analyze --chat` opts into bounded OpenAI-compatible or Anthropic batch linking, using the existing linking skill and atomic answer validation. Analysis consent is remembered per account/chat/provider endpoint, listed/revoked with `conversations consents`. Embedding consent remains per run.
-
-- Conversation search accepts a separate strict Lucene `--filter`, `--timezone`, and explicit `--source` account scope. Any matching message makes its conversation eligible before word/vector ranking; results include qualified locators and scoped readiness. Default search remains the active account.
-
 ### Added
+
+- `messages context --thread` reads a stored message's parent chain and chosen replies, keeping interleaved
+  discussions apart. `messages search --thread` attaches the same graph context to each hit. Each link names
+  its source (`provider`, `rule`, `agent`), kind, confidence and method. Bounds are independent of network
+  refresh: `--thread-hops` (8), `--thread-messages` (50), `--thread-bytes` (65536 bytes of whole message/link
+  JSON) and `--thread-within` (1 day either side). The answer names every bound that stopped expansion.
+  Edges whose endpoints changed are labelled stale at read time and are never followed; deleted text is
+  excluded. A chat never built falls back to bounded local time context and says why. Ordinary time context
+  stays available separately. Thread reads never connect, mark read, rebuild or infer. MCP uses matching
+  snake_case arguments under the message-read permission. Context JSONL with `--thread` emits one context
+  record, including links and bounds; search JSONL keeps one hit per row with its `thread` field.
+  See the [thread context guide](docs/search/thread-context.md).
 
 - Agents can link a stored chat's conversations entirely over MCP. The `link-conversations` prompt
   serves the same guide as `skill show link-conversations`, including its per-chat cost and consent gate.
@@ -20,7 +27,6 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   graph under `permissions.conversations.links`. Rebuild after answers are saved or cleared. No model
   runs, messages are sent or chats marked read. Write tools are hidden on readonly/deny and refuse ask
   with the setting needed to allow them. See [the linking guide](skills/link-conversations/SKILL.md).
-
 
 - `messages search`, `messages stats` and `conversations search` accept opt-in `--sync-first`: fetch new
   messages before reading the local store, reusing archive fetch and never marking read. Bounds:
@@ -64,6 +70,15 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   adapter that knows the attachment's place may set it, and the store then matches by it.
 
 ### Fixed
+
+- Stored link reads label changed or deleted endpoints stale immediately, for provider and rule links as
+  well as agent answers. Earlier reads trusted the persisted flag and could follow an outdated parent until
+  the next rebuild. `conversations links` now excludes these edges from its chosen parent chain.
+
+- Profiles can configure embedding and analysis providers/models/endpoints; flags override configuration, while local e5-small embeddings and owner-agent analysis remain defaults. `models text key set anthropic` supports Anthropic credentials; custom endpoint keys never fall back to a public provider key.
+- `conversations build --analyze --chat` opts into bounded OpenAI-compatible or Anthropic batch linking, using the existing linking skill and atomic answer validation. Analysis consent is remembered per account/chat/provider endpoint, listed/revoked with `conversations consents`. Embedding consent remains per run.
+
+- Conversation search accepts a separate strict Lucene `--filter`, `--timezone`, and explicit `--source` account scope. Any matching message makes its conversation eligible before word/vector ranking; results include qualified locators and scoped readiness. Default search remains the active account.
 
 - `conversations embed --max-chunks` help says there is no limit with `--chat`, as the command behaves; it said 2000.
 

@@ -82,6 +82,7 @@ interface Tool<S extends Input> {
   key?: PermissionKey
   /** Over the session's connection. */
   online?: (adapter: MessengerAdapter, args: v.InferOutput<S>, defaults: Defaults) => Promise<object>
+  storedWhen?: (args: v.InferOutput<S>) => boolean
   /** Uses the local store; an explicit network option may use the retained session. */
   stored?: (
     store: MessageStore,
@@ -235,7 +236,8 @@ export const registerTools = (
           const execute = async () => {
             if (args.sync_first && !syncAllowed)
               throw new CliError("permission_error", "messages.sync-first is not allowed by this profile")
-            const { online, stored, served, permission } = definition
+            const { online, stored: local, served, permission } = definition
+            const stored = local && (!definition.storedWhen || definition.storedWhen(args)) ? local : undefined
             if (stored && !reads && confirmed && confirms(key, definition))
               throw new CliError(
                 "confirmation_required",
