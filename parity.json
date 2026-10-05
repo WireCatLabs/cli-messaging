@@ -309,6 +309,10 @@
       "value": "<dir>",
       "meaning": "read nonrecursive files from this directory for one explicit chat"
     },
+    "--hidden": {
+      "value": "<on|off>",
+      "meaning": "on hides a forum's General topic from the topic list, off shows it"
+    },
     "--history": {
       "meaning": "the people added also see the messages from before they came"
     },
@@ -3287,6 +3291,7 @@
       "planned": { "tg": "G2 feat/topic-edit" },
       "options": {
         "--closed": { "in": [], "reason": "MAX has no forum topics", "planned": { "tg": "G2 feat/topic-edit" } },
+        "--hidden": { "in": [], "reason": "MAX has no forum topics", "planned": { "tg": "G2 feat/topic-edit" } },
         "--pinned": { "in": [], "reason": "MAX has no forum topics", "planned": { "tg": "G2 feat/topic-edit" } },
         "--title": { "in": [], "reason": "MAX has no forum topics", "planned": { "tg": "G2 feat/topic-edit" } }
       }

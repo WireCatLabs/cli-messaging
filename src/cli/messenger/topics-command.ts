@@ -68,17 +68,25 @@ export const topicsCommand = (messenger: Messenger): Command => {
     .option("--title <title>", "the new title, at most 128 UTF-8 bytes")
     .option("--closed <on|off>", "on closes the topic to new messages, off reopens it")
     .option("--pinned <on|off>", "on pins the topic at the top of the list, off unpins it")
+    .option("--hidden <on|off>", "on hides the General topic from the topic list, off shows it")
     .action(async function (this: Command, chat: string, topic: string) {
       const context = messengerContext(this, messenger)
-      const { title, closed, pinned } = this.opts<{ title?: string; closed?: string; pinned?: string }>()
+      const { title, closed, pinned, hidden } = this.opts<{
+        title?: string
+        closed?: string
+        pinned?: string
+        hidden?: string
+      }>()
       const closes = onOff("--closed", closed)
       const pins = onOff("--pinned", pinned)
+      const hides = onOff("--hidden", hidden)
       context.renderer.result(
         await context.withServices((services) =>
           services.topics.edit(chat, topic, {
             ...(title === undefined ? {} : { title }),
             ...(closes === undefined ? {} : { closed: closes }),
             ...(pins === undefined ? {} : { pinned: pins }),
+            ...(hides === undefined ? {} : { hidden: hides }),
           }),
         ),
       )

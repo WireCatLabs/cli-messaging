@@ -43,6 +43,8 @@ describe("editing a forum topic", () => {
     [{ pinned: true }, "topic-pin"],
     [{ pinned: false }, "topic-unpin"],
     [{ closed: true, pinned: true }, "topic-edit"],
+    [{ hidden: true }, "topic-hide"],
+    [{ hidden: false }, "topic-unhide"],
   ] as const)("passes %j and journals %s with the topic id, never the title", async (change, action) => {
     const f = fixture()
     expect(await f.service.edit("synthetic group", " 12 ", change)).toMatchObject({ chatId: "7", topic })

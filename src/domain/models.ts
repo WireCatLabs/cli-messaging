@@ -344,6 +344,8 @@ export interface Topic {
   title: string
   closed: boolean
   pinned: boolean
+  /** The General topic only, when the messenger says. */
+  hidden?: boolean
   unreadCount: number | null
   /** ISO 8601. */
   lastMessageAt: string | null
@@ -366,6 +368,8 @@ export interface TopicChange {
   title?: string
   closed?: boolean
   pinned?: boolean
+  /** Only a forum's General topic can be hidden from the topic list. */
+  hidden?: boolean
 }
 
 /** What a link leads to, read without joining. */

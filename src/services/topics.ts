@@ -20,11 +20,12 @@ export interface TopicsService {
   order(chat: string, topics: string[]): Promise<Operated<{ chatId: string; order: string[] }>>
 }
 
-const actionOf = ({ title, closed, pinned }: TopicChange): ChatAction => {
-  if (title !== undefined) return "topic-edit"
-  if (closed !== undefined && pinned === undefined) return closed ? "topic-close" : "topic-reopen"
-  if (pinned !== undefined && closed === undefined) return pinned ? "topic-pin" : "topic-unpin"
-  return "topic-edit"
+const actionOf = ({ title, closed, pinned, hidden }: TopicChange): ChatAction => {
+  const set = [closed, pinned, hidden].filter((one) => one !== undefined).length
+  if (title !== undefined || set !== 1) return "topic-edit"
+  if (closed !== undefined) return closed ? "topic-close" : "topic-reopen"
+  if (pinned !== undefined) return pinned ? "topic-pin" : "topic-unpin"
+  return hidden ? "topic-hide" : "topic-unhide"
 }
 
 const validTitle = (title: string): void => {
@@ -170,9 +171,9 @@ export const topicsService = (deps: ServiceDeps): TopicsService => {
       return { operationId: id, sendId: id, chatId: target, topic }
     },
     edit: async (chat, typedTopic, change) => {
-      const { title, closed, pinned } = change
-      if (title === undefined && closed === undefined && pinned === undefined)
-        throw new CliError("validation_error", "nothing to change — rename, close, reopen, pin or unpin it")
+      const { title, closed, pinned, hidden } = change
+      if (title === undefined && closed === undefined && pinned === undefined && hidden === undefined)
+        throw new CliError("validation_error", "nothing to change — rename, close, reopen, pin, unpin or hide it")
       if (title !== undefined) validTitle(title)
       const topicId = typedTopic.trim()
       if (topicId === "") throw new CliError("validation_error", "which topic? give its id from `topics list`")
@@ -189,6 +190,7 @@ export const topicsService = (deps: ServiceDeps): TopicsService => {
             ...(title === undefined ? {} : { title }),
             ...(closed === undefined ? {} : { closed }),
             ...(pinned === undefined ? {} : { pinned }),
+            ...(hidden === undefined ? {} : { hidden }),
           }),
       )
       return { operationId, chatId, topic }
