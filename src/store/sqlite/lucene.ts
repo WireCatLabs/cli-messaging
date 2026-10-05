@@ -175,7 +175,7 @@ const runQuery = async (
       const wanted = normalize(value)
       const automaton =
         operator === "wildcard" || operator === "regex"
-          ? patternOf(operator === "wildcard" ? wildcardPattern(wanted) : value, node)
+          ? patternOf(operator === "wildcard" ? wildcardPattern(wanted) : foldRegex(value, node.span), node)
           : undefined
       const fits = (known: string) => {
         const name = normalize(known)

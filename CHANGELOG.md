@@ -445,6 +445,9 @@ Released early: max-cli chart adoption needs the capability that hides unsupport
 
 - Ordinary context preserves account-qualified locators and refuses foreign accounts before reads. Topic search rejects empty and oversized queries before refresh or index access.
 
+- Strict search: a `filename:` regex folds its letters as file names are compared, so `filename:/Invoice.*/`
+  finds `invoice.pdf` and `filename:/счёт.*/` finds `Счет.pdf`. A character with no single folded form answers
+  `unsupported_regex`, as in a `text:` regex.
 - Stored link reads label changed or deleted endpoints stale immediately, for provider and rule links as
   well as agent answers. Earlier reads trusted the persisted flag and could follow an outdated parent until
   the next rebuild. `conversations links` now excludes these edges from its chosen parent chain.
