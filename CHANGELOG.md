@@ -10,6 +10,17 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Added
 
+- `messages search`, `messages stats` and `conversations search` accept opt-in `--sync-first`: fetch new
+  messages before reading the local store, reusing archive fetch and never marking read. Bounds:
+  `--max-chats` (5 recent chats), `--sync-time` (30s), `--max-messages` (500 total). An in-flight request is
+  awaited; the time budget stops between requests. Explicit chat filters narrow the refresh. JSON adds
+  `refreshed: { chats, messages, failed, complete }`; failed or bounded refreshes keep the local answer with
+  stale coverage and a diagnostic. A refresh cannot fetch other stored accounts over the active connection,
+  or MAX's pushed-history mode: those scopes remain stale. MCP uses `sync_first`, `max_chats`, `sync_time`,
+  `max_messages`, available only under `messages.sync-first: allow`; local reads stay available without them.
+  Conversation sync does not build or embed: `--refresh` remains that separate local step; using both keeps
+  its existing `refreshed` graph report and adds `networkRefreshed` for the network report.
+
 - Agents write back the text they read from scans and photos. `attachments list [--chat <chat>] [--needs-text]`
   (paged; MCP `attachments_list`, read-only) names each file of a stored message — locator, attachment number,
   `localPath`, and whether its text is held (`origin`, `extractor`, `chars`) — never the text; `--needs-text`

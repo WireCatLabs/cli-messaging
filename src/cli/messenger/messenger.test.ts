@@ -1136,6 +1136,68 @@ describe("the shared read commands", () => {
     expect(existsSync(join(root, "m.db"))).toBe(false)
   })
 
+  it("**sync-first refresh failures** keep a single JSON value and close the connection without mark-read", async () => {
+    const root = mkdtempSync(join(tmpdir(), "messenger-"))
+    const env = {
+      ...process.env,
+      CHAT_STATE_DIR: join(root, "state"),
+      CHAT_CONFIG_DIR: join(root, "config"),
+      MESSAGING_STORE: join(root, "m.db"),
+    }
+    await call(["messages", "context", "Book", "2", "--json"], async () => fake, env)
+    const close = vi.fn(async () => {})
+    const markRead = vi.fn(async () => {})
+    const broken = {
+      ...fake,
+      close,
+      markRead,
+      history: async () => {
+        throw new Error("private detail")
+      },
+    }
+    for (const path of [
+      ["messages", "search", "chapter"],
+      ["messages", "stats", "chapter"],
+      ["conversations", "search", "chapter"],
+    ]) {
+      const result = await call(
+        [...path, "--chat", "7", "--sync-first", "--sync-time", "1s", "--max-messages", "10", "--json"],
+        async () => broken,
+        env,
+      )
+      expect(result.code).toBe(0)
+      expect(result.stdout).toHaveLength(1)
+      expect(JSON.parse(result.stdout[0] ?? "")).toMatchObject({
+        refreshed: { complete: false },
+        coverage: { state: "stale" },
+      })
+      expect(result.stderr.join("\n")).toContain("refresh incomplete")
+      expect(result.stderr.join("\n")).not.toContain("private detail")
+    }
+    expect(close).toHaveBeenCalledTimes(3)
+    expect(markRead).not.toHaveBeenCalled()
+  })
+
+  it("**sync-first permission** denies network before connecting", async () => {
+    const root = mkdtempSync(join(tmpdir(), "messenger-"))
+    const env = {
+      ...process.env,
+      CHAT_STATE_DIR: join(root, "state"),
+      CHAT_CONFIG_DIR: join(root, "config"),
+      MESSAGING_STORE: join(root, "m.db"),
+    }
+    await call(["messages", "context", "Book", "2", "--json"], async () => fake, env)
+    mkdirSync(env.CHAT_CONFIG_DIR, { recursive: true })
+    writeFileSync(
+      join(env.CHAT_CONFIG_DIR, "config.json"),
+      JSON.stringify({ profiles: { default: { permissions: { messages: "readonly" } } } }),
+    )
+    const never = vi.fn(async () => fake)
+    const result = await call(["messages", "search", "chapter", "--sync-first", "--json"], never, env)
+    expect(result.code).toBe(5)
+    expect(never).not.toHaveBeenCalled()
+  })
+
   it("**search the store without connecting**, and name each hit by its locator", async () => {
     const root = mkdtempSync(join(tmpdir(), "messenger-"))
     const env = { CHAT_STATE_DIR: join(root, "state"), MESSAGING_STORE: join(root, "m.db") }

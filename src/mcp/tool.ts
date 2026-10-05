@@ -54,6 +54,7 @@ export type Connect = <T>(work: (adapter: MessengerAdapter) => Promise<T>) => Pr
 
 /** What a tool may need beyond its arguments. */
 export interface Defaults {
+  syncAllowed?: boolean
   signal?: AbortSignal
   /** Drop a held connection before synchronous local inference. */
   release?: () => Promise<void>
@@ -80,8 +81,14 @@ interface Tool<S extends Input> {
   key?: PermissionKey
   /** Over the session's connection. */
   online?: (adapter: MessengerAdapter, args: v.InferOutput<S>, defaults: Defaults) => Promise<object>
-  /** From the local store alone; never connects. */
-  stored?: (store: MessageStore, account: AccountKey, args: v.InferOutput<S>, defaults: Defaults) => Promise<object>
+  /** Uses the local store; an explicit network option may use the retained session. */
+  stored?: (
+    store: MessageStore,
+    account: AccountKey,
+    args: v.InferOutput<S>,
+    defaults: Defaults,
+    connect?: Connect,
+  ) => Promise<object>
   /**
    * Over the services, as its command: from the store when the messenger's history is kept there
    * (`Messenger.history`), over the session's connection otherwise. A read only.
@@ -96,6 +103,7 @@ export type AnyTool = Omit<Tool<Input>, "online" | "stored" | "served"> & {
     account: AccountKey,
     args: Record<string, unknown>,
     defaults: Defaults,
+    connect?: Connect,
   ) => Promise<object>
   served?: (services: Services, args: Record<string, unknown>, defaults: Defaults, connect: Connect) => Promise<object>
 }
@@ -193,6 +201,8 @@ export const registerTools = (
   }: Registration,
 ): void => {
   const where = { profile: defaults.settings.profile, env: defaults.env }
+  const syncAllowed =
+    defaults.syncAllowed ?? levelFor(defaults.settings.permissions ?? {}, "messages.sync-first").level === "allow"
   for (const [key, definition] of Object.entries(tools)) {
     const name = `${command}_${key}`
     const run = `mcp ${key.replaceAll("_", " ")}`
@@ -202,13 +212,25 @@ export const registerTools = (
       {
         title: definition.title,
         description: reads ? `${definition.description} ${UNTRUSTED}` : definition.description,
-        inputSchema: toStandardJsonSchema(definition.input),
+        inputSchema: toStandardJsonSchema(
+          syncAllowed || !("sync_first" in definition.input.entries)
+            ? definition.input
+            : v.strictObject(
+                Object.fromEntries(
+                  Object.entries(definition.input.entries).filter(
+                    ([name]) => !["sync_first", "sync_time", "max_chats", "max_messages"].includes(name),
+                  ),
+                ),
+              ),
+        ),
         annotations: definition.annotations,
         ...(definition._meta ? { _meta: definition._meta } : {}),
       },
       async (args: Record<string, unknown>, ctx: ServerContext) => {
         try {
           const execute = async () => {
+            if (args.sync_first && !syncAllowed)
+              throw new CliError("permission_error", "messages.sync-first is not allowed by this profile")
             const { online, stored, served, permission } = definition
             if (stored && !reads && confirmed && confirms(key, definition))
               throw new CliError(
@@ -217,7 +239,10 @@ export const registerTools = (
               )
             const result = stored
               ? await withStore(
-                  (store, account) => stored(store, account, args, { ...defaults, signal: ctx.mcpReq.signal }),
+                  (store, account) =>
+                    stored(store, account, args, { ...defaults, signal: ctx.mcpReq.signal }, (work) =>
+                      session.use(run, work),
+                    ),
                   {
                     name: run,
                   },

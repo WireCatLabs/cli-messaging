@@ -18,6 +18,8 @@ export interface ServiceDeps {
   account: () => Promise<AccountKey>
   /** Already saving what its reads answer, and recording each call as a run event. */
   connection: () => Promise<MessengerAdapter>
+  /** A retained session serializes the whole fetch, including ingestion. */
+  withConnection?: <T>(work: (adapter: MessengerAdapter) => Promise<T>) => Promise<T>
   store: () => Promise<MessageStore>
   guard: SendGuard
   /** For the profile's own files — a group's moderation rules. `default` and `process.env` when unset. */

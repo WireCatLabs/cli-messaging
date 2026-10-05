@@ -198,8 +198,9 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--mark-read` |  | also mark the chat read up to the newest message shown; the other person sees it |  | `inbox`, `messages list`, `review` |
 | `--marker` | `<value>` | Marker |  | `bot chats members list` (max-only) |
 | `--max-actions` | `<n>` | at most this many actions in one run | `10` | `bot chats moderate`, `chats moderate` (planned) |
-| `--max-chats` | `<n>` | at most this many chats in one run | `20` | `conversations build` (planned), `conversations embed` (planned), `conversations search` (planned) |
+| `--max-chats` | `<n>` | at most this many chats in one run | `20` | `conversations build` (planned), `conversations embed` (planned), `conversations search` (planned), `messages search` (planned), `messages stats` (planned) |
 | `--max-chunks` | `<n>` | at most this many chunks embedded in one run | `2000` | `conversations embed` (planned), `conversations search` (planned) |
+| `--max-messages` | `<n>` | fetch at most this many messages total (default: 500) |  | `conversations search` (planned), `messages search` (planned), `messages stats` (planned) |
 | `--max-tokens` | `<n>` | remote: stop before a run that could send more tokens than this |  | `conversations embed` |
 | `--md` |  | read this messenger's Markdown; see its formatting guide for supported syntax |  | `bot messages edit`, `bot messages send`, `messages edit`, `messages send` |
 | `--members-see-link` | `<on\|off>` | members may see the invite link |  | `chats update` (max-only) |
@@ -259,6 +260,8 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--size` | `<n>` | messages to answer per batch, 10–200; 50 by default |  | `conversations batches next`, `conversations batches status` |
 | `--source` | `<messenger>` | every account of this messenger held in the store; personal, bots or all — the same as in: in the query |  | `conversations search` (planned), `messages search`, `messages stats` (planned), `searches create` (planned) |
 | `--store-token` | `<profile>` | keep a returned authentication token only in this bot profile's OS keyring; never print it |  | `bot api` |
+| `--sync-first` |  | first fetch new messages within the chat, time and message bounds |  | `conversations search` (planned), `messages search` (planned), `messages stats` (planned) |
+| `--sync-time` | `<duration>` | stop fetching after this long (default: 30s) |  | `conversations search` (planned), `messages search` (planned), `messages stats` (planned) |
 | `--tag` | `<tag>` | only this tag |  | `tags list` (planned) |
 | `--text` | `<text>` | the message's new text; - reads stdin |  | `bot callbacks answer` |
 | `--text-file` | `<path>` | read the text from this file; - or none reads stdin |  | `attachments text set` (planned) |

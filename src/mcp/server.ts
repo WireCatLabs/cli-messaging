@@ -46,6 +46,7 @@ export const createServer = (
   const { settings } = context
   const levelOf = (key: string | null | undefined) => (key ? levelFor(settings.permissions, key).level : "allow")
   // A tool the level would refuse is not offered: an agent is not handed a tool that cannot work.
+  const syncAllowed = levelOf("messages.sync-first") === "allow"
   const offered = Object.fromEntries(
     Object.entries(personalMcpTools(messenger)).filter(([key, one]) => {
       const level = levelOf(toolKey(key, one))
@@ -95,6 +96,7 @@ export const createServer = (
       withStore: context.withStore,
       defaults: {
         limit: settings.limit,
+        syncAllowed,
         guard,
         settings,
         env: context.env,

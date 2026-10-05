@@ -457,6 +457,82 @@ const sending = () => {
 }
 
 describe("the MCP server", () => {
+  it("refreshes local search and stats over a held session without marking read", async () => {
+    const root = await filledRoot()
+    const markRead = vi.fn(async () => {})
+    const history = vi.fn(async () => ({ items: [{ ...message, id: "2" }], hasMore: false }))
+    const backend = scripted({ history, markRead })
+    const { call } = await connect(backend, { root })
+    const search = await call("chat_messages_search", {
+      text: "chapter chat:7",
+      sync_first: true,
+      max_messages: 10,
+      sync_time: "1s",
+    })
+    expect(search.isError).toBe(false)
+    expect(search.body).toMatchObject({ refreshed: { chats: ["7"], messages: 1, complete: true } })
+    expect(search.body.items.map((hit: { id: string }) => hit.id).sort()).toEqual(["1", "2"])
+    const stats = await call("chat_messages_stats", { text: "chapter", chat: "7", sync_first: true })
+    expect(stats.body.total).toBe(2)
+    expect(stats.body.refreshed.complete).toBe(true)
+    expect(backend.opened()).toBe(1)
+    expect(markRead).not.toHaveBeenCalled()
+  })
+
+  it("keeps hits when a refresh connection fails", async () => {
+    const root = await filledRoot()
+    const backend = scripted()
+    const { call } = await connect(backend, {
+      root,
+      connect: async () => {
+        throw new Error("private detail")
+      },
+    })
+    const search = await call("chat_messages_search", { text: "chapter", chat: "7", sync_first: true })
+    expect(search.isError).toBe(false)
+    expect(search.body).toMatchObject({
+      items: [{ id: "1" }],
+      coverage: { state: "stale" },
+      refreshed: { complete: false },
+    })
+    expect(JSON.stringify(search.body)).not.toContain("private detail")
+  })
+
+  it.each(["readonly", "deny", "ask"])(
+    "hides network arguments under messages.sync-first %s while preserving local search",
+    async (level) => {
+      const root = await filledRoot()
+      const backend = scripted()
+      const { client, call } = await connect(backend, { root, config: levels({ "messages.sync-first": level }) })
+      const { tools } = await client.listTools()
+      for (const name of ["chat_messages_search", "chat_messages_stats", "chat_conversations_search"]) {
+        const schema = tools.find((tool) => tool.name === name)?.inputSchema.properties
+        expect(schema).not.toHaveProperty("sync_first")
+        expect(schema).not.toHaveProperty("sync_time")
+        expect(schema).not.toHaveProperty("max_messages")
+      }
+      expect((await call("chat_messages_search", { text: "chapter" })).isError).toBe(false)
+      expect(
+        (await client.callTool({ name: "chat_messages_search", arguments: { text: "chapter", sync_first: true } }))
+          .isError,
+      ).toBe(true)
+      expect(backend.opened()).toBe(0)
+    },
+  )
+
+  it("conversation sync refresh is separate from local graph freshness", async () => {
+    const root = await filledRoot()
+    const backend = scripted()
+    const { call } = await connect(backend, { root, history: "store" })
+    const answer = await call("chat_conversations_search", { query: "chapter", chat: "7", sync_first: true })
+    expect(answer.isError).toBe(false)
+    expect(answer.body).toMatchObject({
+      coverage: { state: "stale" },
+      refreshed: { failed: [{ reason: "pushed_history" }] },
+    })
+    expect(backend.opened()).toBe(0)
+  })
+
   it("offers only reading on a read-only profile, named after the command, each marked read-only", async () => {
     const { client } = await connect(scripted(), { config: READ_ONLY })
     const { tools } = await client.listTools()

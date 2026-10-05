@@ -19,6 +19,7 @@ import { embeddingKeys } from "../embedding-keys.js"
 import { positiveCount, renderList } from "../paging.js"
 import { answerOf as askOwner } from "./ask.js"
 import { type Messenger, type MessengerContext, messengerContext, refuseLocalWrite } from "./context.js"
+import { syncOptions, syncRequest } from "./search-sync-options.js"
 import { readAll } from "./stdin.js"
 
 /**
@@ -187,7 +188,7 @@ export const conversationsCommand = (messenger: Messenger): Command => {
       context.renderer.note("no chat has conversations yet — `conversations build --chat <chat>`")
   })
 
-  boundOptions(withModelOptions(conversations.command("search")))
+  syncOptions(boundOptions(withModelOptions(conversations.command("search"))))
     .description(
       "the conversations nearest to a query in meaning and in words, best first, in one chat or every one — " +
         "meaning after `conversations embed`; runs on this machine",
@@ -235,15 +236,19 @@ export const conversationsCommand = (messenger: Messenger): Command => {
       }
       const { limit } = context.settings
       const { found, refreshed } = await context.withServices(async (services) => {
-        const refreshed = options.refresh
-          ? await services.embeddings.refresh({
-              ...(chat === undefined ? {} : { chat }),
-              model: model as string,
-              ...bounds(options),
-              progress: (note) => context.renderer.note(note),
-            })
-          : undefined
+        const syncing = syncRequest(this, context)
         const found = await services.embeddings.search(query, {
+          ...syncing,
+          ...(options.refresh
+            ? {
+                refresh: {
+                  ...(chat === undefined ? {} : { chat }),
+                  model: model as string,
+                  ...bounds(options),
+                  progress: (note: string) => context.renderer.note(note),
+                },
+              }
+            : {}),
           limit,
           ...(options.filter === undefined ? {} : { filter: options.filter }),
           ...(options.source === undefined ? {} : { source: options.source }),
@@ -252,7 +257,7 @@ export const conversationsCommand = (messenger: Messenger): Command => {
           model,
           ...(since === undefined ? {} : { since: new Date(momentOf(since, "--since-time")).toISOString() }),
         })
-        return { found, refreshed }
+        return { found, refreshed: found.prepared }
       })
       if (refreshed) for (const note of leftNotes(refreshed, messenger.app.command)) context.renderer.note(note)
       if (context.format === "pretty") {
@@ -277,6 +282,12 @@ export const conversationsCommand = (messenger: Messenger): Command => {
           readiness,
           embeddedOnlyElsewhere,
           ...(refreshed ? { refreshed } : {}),
+          ...(found.refreshed
+            ? {
+                ...(refreshed ? { networkRefreshed: found.refreshed } : { refreshed: found.refreshed }),
+                coverage: found.coverage,
+              }
+            : {}),
         })
       }
       const command = messenger.app.command

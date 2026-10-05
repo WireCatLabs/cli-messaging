@@ -32,6 +32,7 @@ import {
   searchLucene,
   statsLucene,
 } from "./messages-search.js"
+import { refreshSearch, type SearchRefreshed, type SyncOptions, withRefresh } from "./search-refresh.js"
 import { type SearchParams, searchRecordOf } from "./searches.js"
 
 export interface ListWindow {
@@ -49,6 +50,7 @@ export interface AroundWindow {
 }
 
 export interface SearchQuery {
+  syncFirst?: SyncOptions
   /** The query language of the phase 2 plan, §4: words, "phrases", -word, OR, and filters. */
   text?: string
   language?: "lucene" | "legacy"
@@ -75,6 +77,7 @@ export interface SearchQuery {
 export type FoundMessage = StoredHit & { match?: Match; score?: number | null; context?: WindowedMessage[] }
 
 export interface SearchFound extends Page<FoundMessage> {
+  refreshed?: SearchRefreshed
   query?: QueryMetadata
   coverage?: SearchCoverage
   corrections: { from: string; to: string[] }[]
@@ -300,16 +303,18 @@ export const messagesService = (deps: ServiceDeps): MessagesService => {
 
     search: (query) =>
       inStore(async (store, account) => {
+        const refreshed = await refreshSearch(deps, query)
         const found = await searchStore(store, account, query, deps.messenger)
         await remember(store, "search", query)
-        return found
+        return withRefresh(found, refreshed)
       }),
 
     stats: (query) =>
       inStore(async (store, account) => {
+        const refreshed = await refreshSearch(deps, query)
         const stats = await statsStore(store, account, query, deps.messenger)
         await remember(store, "stats", query)
-        return stats
+        return withRefresh(stats, refreshed)
       }),
 
     send: async ({
@@ -688,7 +693,7 @@ export const senderAmong = async (store: MessageStore, accounts: AccountKey[], r
  * messenger `in:` or `--source` names. `chat:` resolves as `--chat` does, `from:` through the names
  * `contacts search` uses, `from:me` as what the accounts sent — all inside the accounts chosen.
  */
-const scopeOf = async (
+export const scopeOf = async (
   messenger: Saved,
   store: MessageStore,
   account: AccountKey,

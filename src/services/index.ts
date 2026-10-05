@@ -129,3 +129,5 @@ export {
   type ServerRestarts,
   upgradePackage,
 } from "./package-upgrade.js"
+export type { SearchRefreshed, SyncOptions } from "./search-refresh.js"
+export { SYNC_BOUNDS, SYNC_KEY } from "./search-refresh.js"

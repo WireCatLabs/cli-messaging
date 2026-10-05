@@ -1,0 +1,39 @@
+import type { Command } from "commander"
+import type { SyncOptions } from "../../services/search-refresh.js"
+import { environmentOf } from "../context.js"
+import { positiveCount } from "../paging.js"
+import { parseDuration } from "../settings.js"
+import { type MessengerContext, refuseLocalWrite } from "./context.js"
+
+export const syncOptions = (command: Command): Command => {
+  command.option("--sync-first", "first fetch new messages within the chat, time and message bounds")
+  if (!command.options.some((one) => one.long === "--max-chats"))
+    command.option("--max-chats <n>", "refresh at most this many chats (default: 5)", positiveCount("--max-chats"))
+  return command
+    .option("--sync-time <duration>", "stop fetching after this long (default: 30s)")
+    .option(
+      "--max-messages <n>",
+      "fetch at most this many messages total (default: 500)",
+      positiveCount("--max-messages"),
+    )
+}
+
+export const syncRequest = (
+  command: Command,
+  context: MessengerContext,
+): { syncFirst?: SyncOptions; signal?: AbortSignal } => {
+  const options = command.opts<{ syncFirst?: boolean; maxChats?: number; syncTime?: string; maxMessages?: number }>()
+  if (!options.syncFirst) return {}
+  let root = command
+  while (root.parent) root = root.parent
+  refuseLocalWrite(context, root.name(), "messages.sync-first")
+  return {
+    signal: environmentOf(command).signal,
+    syncFirst: {
+      ...(options.maxChats === undefined ? {} : { maxChats: options.maxChats }),
+      ...(options.syncTime === undefined ? {} : { timeMs: parseDuration(options.syncTime, "--sync-time") }),
+      ...(options.maxMessages === undefined ? {} : { maxMessages: options.maxMessages }),
+      note: (note) => context.renderer.note(note),
+    },
+  }
+}
