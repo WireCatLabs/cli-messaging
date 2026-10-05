@@ -55,9 +55,13 @@ export const conversationsTools = (messenger: Messenger): Record<string, AnyTool
         `"unavailable" when the model is not downloaded (\`${command} models text download\`) and only words ` +
         "were searched. readiness lists chat ids: searchedByMeaning, wordsOnly, partial (some chunks not " +
         "embedded), stale (changed since the build) and notBuilt. embeddedOnlyElsewhere names chats embedded " +
-        "only with another model.",
+        "only with another model. filter is strict Lucene: any message in the conversation must match before ranking. " +
+        "source explicitly widens accounts; by default only the active account is searched. Hits include source and locator.",
       input: v.object({
         query: v.pipe(v.string(), v.minLength(1), v.description("what to look for, in your own words")),
+        filter: v.optional(v.pipe(v.string(), v.minLength(1))),
+        source: v.optional(v.pipe(v.string(), v.minLength(1))),
+        timezone: v.optional(v.pipe(v.string(), v.minLength(1))),
         chat: v.optional(chat),
         since: v.optional(
           v.pipe(v.string(), v.description("only those still going at this ISO 8601 time, or 2h / 1d ago, or later")),
@@ -75,10 +79,14 @@ export const conversationsTools = (messenger: Messenger): Record<string, AnyTool
         }
         const found = await servicesFor(deps).embeddings.search(args.query, {
           limit: size,
+          ...(args.filter === undefined ? {} : { filter: args.filter }),
+          ...(args.source === undefined ? {} : { source: args.source }),
+          ...(args.timezone === undefined ? {} : { timezone: args.timezone }),
           ...(args.chat === undefined ? {} : { chat: args.chat }),
           ...(args.since === undefined ? {} : { since: new Date(momentOf(args.since, "since")).toISOString() }),
         })
         return {
+          accounts: found.accounts,
           model: found.model,
           meaning: found.meaning,
           items: found.hits,

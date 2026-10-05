@@ -195,6 +195,15 @@ export const conversationsCommand = (messenger: Messenger): Command => {
     .argument("<query>", "what to look for, in your own words, in any language the model reads")
     .option("--chat <chat>", `only this chat: ${messenger.chatArgument}`)
     .option("--since-time <time>", "only those still going at this ISO 8601 time, or 30m / 2h / 1d ago, or later")
+    .option(
+      "--filter <query>",
+      "strict Lucene filter: any message in a conversation must match; does not change the meaning query",
+    )
+    .option(
+      "--source <source>",
+      "accounts to search: personal, bots, all, or a provider; defaults to the active account",
+    )
+    .option("--timezone <zone>", "IANA timezone for filter dates; UTC by default")
     .option("--limit <n>", "how many", positiveCount("--limit"))
     .option(
       "--refresh",
@@ -203,12 +212,24 @@ export const conversationsCommand = (messenger: Messenger): Command => {
     )
     .action(async function (this: Command, query: string) {
       const options = this.opts<
-        ModelOptions & { chat?: string; sinceTime?: string; refresh?: boolean } & BoundOptions
+        ModelOptions & {
+          chat?: string
+          sinceTime?: string
+          refresh?: boolean
+          filter?: string
+          source?: string
+          timezone?: string
+        } & BoundOptions
       >()
       const { chat, sinceTime: since } = options
       const context = messengerContext(this, messenger)
       const model = choiceOf(options, messenger, context)
       if (options.refresh) {
+        if (options.filter !== undefined || options.source !== undefined)
+          throw new CliError(
+            "validation_error",
+            "--refresh cannot be combined with --filter or --source; build and embed the chosen chats separately",
+          )
         localOnly(model, "--refresh")
         refuseLocalWrite(context, messenger.app.command, EMBED_KEY)
       }
@@ -224,6 +245,9 @@ export const conversationsCommand = (messenger: Messenger): Command => {
           : undefined
         const found = await services.embeddings.search(query, {
           limit,
+          ...(options.filter === undefined ? {} : { filter: options.filter }),
+          ...(options.source === undefined ? {} : { source: options.source }),
+          ...(options.timezone === undefined ? {} : { timezone: options.timezone }),
           ...(chat === undefined ? {} : { chat }),
           model,
           ...(since === undefined ? {} : { since: new Date(momentOf(since, "--since-time")).toISOString() }),
@@ -243,11 +267,12 @@ export const conversationsCommand = (messenger: Messenger): Command => {
         }
       } else if (context.format === "jsonl") context.renderer.stream(found.hits)
       else {
-        const { model, meaning, hits, readiness, embeddedOnlyElsewhere } = found
+        const { accounts, model, meaning, hits, readiness, embeddedOnlyElsewhere } = found
         context.renderer.result({
           model,
           meaning,
           items: hits,
+          accounts,
           limit,
           readiness,
           embeddedOnlyElsewhere,
@@ -690,9 +715,9 @@ const line = (one: ConversationSummary) =>
   `${one.id}  ${one.firstAt.slice(0, 16).replace("T", " ")}–${one.lastAt.slice(11, 16)}  ` +
   `${one.messageCount} messages · ${one.senders} people · from message ${one.firstMessageId}`
 
-const hitLine = ({ summary, chunk, score, stale }: FoundConversation) =>
+const hitLine = ({ summary, chunk, score, stale, locator }: FoundConversation) =>
   `${score === null ? "  —  " : score.toFixed(3)}  ${line(summary)}  ` +
-  `(messages ${chunk.firstMessageId}–${chunk.lastMessageId})${stale ? "  stale" : ""}`
+  `(messages ${chunk.firstMessageId}–${chunk.lastMessageId})${locator ? `  ${locator}` : ""}${stale ? "  stale" : ""}`
 
 const readinessLine = ({ chat, state, graph, pending, vectors }: ChatReadiness, model: string) =>
   graph === null

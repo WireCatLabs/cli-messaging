@@ -22,6 +22,9 @@ export interface QueryExecution {
   limit: number
   newest?: boolean
   signal?: AbortSignal
+  /** Internal conversation eligibility, applied before lexical ranking. */
+  conversationIds?: string[]
+  conversationSince?: number
 }
 export const hasText = (node: QueryNode): boolean =>
   node.kind === "predicate" ? node.field === "text" : node.clauses.some(({ node }) => hasText(node))

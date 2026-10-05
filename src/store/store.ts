@@ -30,6 +30,7 @@ import * as batches from "./sqlite/batches.js"
 import * as chatQueries from "./sqlite/chats.js"
 import type { ChatCompleteness } from "./sqlite/completeness.js"
 import * as completeness from "./sqlite/completeness.js"
+import { type ConversationEligibility, conversationEligibility } from "./sqlite/conversation-eligibility.js"
 import * as conversationQueries from "./sqlite/conversations.js"
 import * as identities from "./sqlite/identities.js"
 import { findRegex } from "./sqlite/legacy-regex.js"
@@ -289,7 +290,15 @@ export interface MessageStore {
   /** The conversations nearest in meaning to `query`, in one chat or every one of the account, best first. */
   nearestConversations(
     key: AccountKey,
-    options: { chatId?: Id; model: string; since?: string; limit: number; query: Float32Array; exclude?: string },
+    options: {
+      chatId?: Id
+      model: string
+      since?: string
+      limit: number
+      query: Float32Array
+      exclude?: string
+      conversations?: string[]
+    },
   ): Promise<ConversationHit[]>
   /**
    * A conversation of the current build: how many chunks it has, and the vectors of `model` of those whose
@@ -370,6 +379,7 @@ export interface MessageStore {
    * not searchable are left out unless the scope names the chat.
    */
   matchQuery?(execution: QueryExecution): Promise<Page<ScoredHit>>
+  conversationEligibility?(execution: QueryExecution): Promise<ConversationEligibility>
   /** The same matches as `matchQuery`, each counted once, grouped by chat, sender or quarter hour. */
   countQuery?(execution: QueryExecution, by: QueryGrouping): Promise<QueryGroup[]>
   matchWords(query: WordQuery, scope: SearchScope, options: WordOptions): Promise<Page<ScoredHit>>
@@ -964,7 +974,7 @@ const storeOver = (context: StoreContext): MessageStore => {
       return cleared
     },
 
-    nearestConversations: async (key, { chatId, model, since, limit, query, exclude }) => {
+    nearestConversations: async (key, { chatId, model, since, limit, query, exclude, conversations }) => {
       const accountPk = findAccountPk(key)
       if (accountPk === undefined) return []
       const chatKey = chatId === undefined ? undefined : chatKeyOf(key, chatId)
@@ -976,6 +986,7 @@ const storeOver = (context: StoreContext): MessageStore => {
         model,
         limit,
         query,
+        ...(conversations === undefined ? {} : { conversations }),
       })
       const found = conversationQueries.summariesOf(
         context,
@@ -1139,6 +1150,7 @@ const storeOver = (context: StoreContext): MessageStore => {
     find: async (filter) => (filter.pattern ? findRegex(context, filter) : search.find(context, filter)),
 
     matchQuery: async (execution) => lucene.matchQuery(context, execution),
+    conversationEligibility: async (execution) => conversationEligibility(context, execution),
     countQuery: async (execution, by) => lucene.countQuery(context, execution, by),
 
     matchWords: async (query, scope, options) => words.matchWords(context, query, scope, options),

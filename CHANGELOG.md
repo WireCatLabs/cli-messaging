@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+- Conversation search accepts a separate strict Lucene `--filter`, `--timezone`, and explicit `--source` account scope. Any matching message makes its conversation eligible before word/vector ranking; results include qualified locators and scoped readiness. Default search remains the active account.
+
 ### Added
 
 - Agents write back the text they read from scans and photos. `attachments list [--chat <chat>] [--needs-text]`

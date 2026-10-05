@@ -507,3 +507,18 @@ Remote Telegram/MAX search не реализуется этим профилем
 remote unsupported operators требуют явного отказа или bounded local postfilter с видимым охватом.
 
 [Техническая спецификация](query-language-spec.md)
+
+## Filters in conversation search
+
+`conversations search` takes a natural-language question and a separate `--filter` in this query language:
+
+```sh
+max conversations search 'what did we decide about the release?' --filter 'from:alice date:2026-10 NOT has:video' --timezone Europe/Madrid
+max conversations search 'deployment' --source all --filter 'kind:group'
+```
+
+A conversation is eligible when **any of its current, undeleted messages matches the whole filter**. The matching message can be outside the chunk nearest in meaning. The filter constrains both word and vector retrieval before ranking; the question is embedded unchanged. `--since-time` additionally constrains when the conversation was last active.
+
+Search uses the active account by default. `--source personal|bots|all` (or a stored provider) explicitly widens it, with the same account rules as message search, including `in:`. Hits include `source` and a qualified message `locator`; readiness covers only eligible chats and reports separate account scopes when widened. Vectors of different embedding models never mix. A missing local model falls back to words under the same filter.
+
+MCP `conversations_search` accepts `filter`, `source`, and `timezone` with the same semantics. `--refresh` cannot yet be combined with `--filter` or `--source`; build and embed the chosen chats separately. These SDK options reach each CLI at its next dependency bump.
