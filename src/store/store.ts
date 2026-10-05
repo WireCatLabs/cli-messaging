@@ -319,9 +319,7 @@ export interface MessageStore {
   conversationState(
     key: AccountKey,
     chatId: Id,
-  ): Promise<
-    { enabledAt: string; builtAt: string | null; algorithmVersion: number | null; changed?: boolean } | undefined
-  >
+  ): Promise<{ enabledAt: string; builtAt: string | null; algorithmVersion: number | null } | undefined>
   /** Oldest to newest, like a provider's history page. */
   messages(key: AccountKey, chatId: Id, window: { limit: number; before?: Id; since?: string }): Promise<Page<Message>>
   /** How many stored messages the chat has, sent at `since` or later when it is given. */

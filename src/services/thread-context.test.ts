@@ -155,11 +155,17 @@ describe("graph context around a hit", () => {
     expect(found.links[0]?.stale).toBe(true)
   })
 
-  it("labels the graph stale when a new message has not been built", async () => {
+  it("uses a labelled time fallback for a hit not included in the graph snapshot", async () => {
     const one = await setup()
     one.advance()
     await one.store.saveMessages(account, "7", [message(7, 5)], { via: "history" })
-    expect((await one.services.messages.thread("7", "5")).stale).toBe(true)
+    expect(await one.services.messages.thread("7", "7")).toMatchObject({
+      mode: "time",
+      fallback: "not_linked",
+      stale: true,
+      builtAt: expect.any(String),
+    })
+    expect((await one.services.messages.thread("7", "5")).builtAt).toBe("2026-10-06T00:00:00.000Z")
   })
 
   it("carries rule provenance and lets an agent root override a rule", async () => {
@@ -265,6 +271,15 @@ describe("graph context around a hit", () => {
     expect(found.stopped).toContain("messages")
     const small = await one.services.messages.thread("7", "3", { maxBytes: 1 })
     expect(small.stopped).toContain("bytes")
+  })
+
+  it("caps time fallback reads before retrieving neighbours", async () => {
+    const one = await setup(false)
+    const around = vi.spyOn(one.store, "around")
+    const found = await one.services.messages.thread("7", "3", { before: 100, after: 100, maxMessages: 1 })
+    expect(ids(found)).toEqual(["3"])
+    for (const [, , , window] of around.mock.calls) expect(window.before + window.after + 1).toBeLessThanOrEqual(1)
+    expect(found.stopped).toContain("messages")
   })
 
   it("stops an aborted read without opening a connection", async () => {

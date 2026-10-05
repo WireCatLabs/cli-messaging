@@ -22,3 +22,9 @@ Implements the approved SR-5 handoff after SR-4 #572 merged (`d6b6581`). Source:
 The byte cap covers whole items plus links; the bounded metadata envelope is additional. An oversized
 anchor returns no message data and a bytes stop. Message/link reads are also capped; malformed or excessive
 candidate edges may stop earlier than the requested result count. No build or link rule changes, no migration.
+
+Review correction: whole-chat freshness checks would scan unbounded history. Context reads the build time
+and an indexed membership check for the hit; full-chat status remains explicit. A new hit uses not_linked
+time fallback. Stale=false certifies no whole-chat freshness; link endpoints are checked locally.
+The reply scan takes a bounded prefix from the existing parent index and deduplicates only that prefix.
+It does not group/sort the whole reply fan-out before applying the limit. Result messages are sorted later.

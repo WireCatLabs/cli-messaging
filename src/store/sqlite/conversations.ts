@@ -235,7 +235,7 @@ export const replaceConversations = async (
   )
 
   const changedSince = (end: SQL) => sql`(
-    EXISTS (SELECT 1 FROM message_revisions r WHERE r.message_pk = ${end} AND r.captured_at >= ${messageLinks.createdAt})
+    EXISTS (SELECT 1 FROM message_revisions r WHERE r.message_pk = ${end} AND r.captured_at > ${messageLinks.createdAt})
     OR EXISTS (SELECT 1 FROM messages d WHERE d.pk = ${end} AND d.deleted_at > ${messageLinks.createdAt}))`
   await inTurns(
     context,
@@ -486,40 +486,28 @@ export const repliesTo = (
     .where(
       and(
         eq(messages.chatPk, chatKey),
-        isNull(messages.deletedAt),
         currentLink(chatKey),
         sql`${messageLinks.parentPk} = (SELECT p.pk FROM messages p WHERE p.chat_pk = ${chatKey} AND p.native_id = ${messageId})`,
       ),
     )
-    .groupBy(messages.pk)
-    .orderBy(asc(messages.sentAt), asc(messages.pk))
+    .orderBy(sql`${messageLinks}.rowid`)
     .limit(limit + 1)
     .all()
-  return { items: rows.slice(0, limit), hasMore: rows.length > limit }
+  return {
+    items: [...new Map(rows.slice(0, limit).map((row) => [row.messageId, row])).values()],
+    hasMore: rows.length > limit,
+  }
 }
 
 export const stateOf = ({ orm }: StoreContext, chatKey: number) => {
   const found = orm.select().from(conversationState).where(eq(conversationState.chatPk, chatKey)).get()
-  if (!found) return undefined
-  const changed =
-    found.builtAt === null
-      ? false
-      : Boolean(
-          orm.get<{ changed: number }>(sql`SELECT (
-    EXISTS (SELECT 1 FROM messages m WHERE m.chat_pk = ${chatKey} AND (
-      m.deleted_at IS NOT NULL AND EXISTS (SELECT 1 FROM conversation_messages cm JOIN conversations c ON c.pk = cm.conversation_pk
-        WHERE cm.message_pk = m.pk AND c.build = ${found.currentBuild})
-      OR m.deleted_at IS NULL AND NOT EXISTS (SELECT 1 FROM conversation_messages cm JOIN conversations c ON c.pk = cm.conversation_pk
-        WHERE cm.message_pk = m.pk AND c.build = ${found.currentBuild})))
-    OR EXISTS (SELECT 1 FROM message_revisions r JOIN messages m ON m.pk = r.message_pk
-      WHERE m.chat_pk = ${chatKey} AND r.captured_at >= ${found.builtAt})) AS changed`)?.changed,
-        )
-  return {
-    enabledAt: toIso(found.enabledAt) as string,
-    builtAt: toIso(found.builtAt),
-    algorithmVersion: found.algorithmVersion,
-    ...(changed ? { changed: true } : {}),
-  }
+  return found
+    ? {
+        enabledAt: toIso(found.enabledAt) as string,
+        builtAt: toIso(found.builtAt),
+        algorithmVersion: found.algorithmVersion,
+      }
+    : undefined
 }
 
 /**

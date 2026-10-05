@@ -19,7 +19,7 @@ data; the bounded metadata envelope is additional. An oversized hit returns no m
 `stopped: ["bytes"]` rather than clipping its text.
 
 The result has `locator`, `chat`, `message`, `mode`, `items`, `links`, `chain`, `stale`, `stopped` and
-`bounds`. Every returned link has `messageId`, `parentId`, `source`, `kind`, `confidence`, `method`,
+`bounds`, and the graph snapshot's `builtAt` (null without a build). Every returned link has `messageId`, `parentId`, `source`, `kind`, `confidence`, `method`,
 `version`, `createdAt`, `chosen` and `stale`. Confidence is the provider/rule/agent's weight, not a calibrated
 probability. A null parent is an agent's explicit conversation start. Pretty output prints link evidence
 beside the messages. JSONL for thread context emits one context record; search JSONL emits hits with their
@@ -27,8 +27,10 @@ thread field. Diagnostics go only to stderr.
 
 Changes, edits and deletions are checked at read time. Stale edges are visible as evidence but never followed;
 deleted text is never returned. Revisions in the same millisecond as the build are conservatively stale.
-The whole graph is marked stale when stored messages changed or its rules version differs from this build.
-Rebuild explicitly to use fresh grouping. New messages may have no graph links until then.
+The reader checks only the bounded component, not the whole chat. `stale: false` does not certify that all
+new replies have reached the graph. The build time identifies the snapshot; `conversations status` checks
+whole-chat freshness separately. Outdated rules are marked stale. Rebuild explicitly to use fresh grouping.
+A hit added since the build uses a labelled `not_linked` time fallback.
 
 `stopped` can contain `hops`, `messages`, `bytes`, `time`, `thread`, `links`, `cycle` or `aborted`.
 Message and link reads are capped too; excessive or invalid candidate links can stop with fewer returned
@@ -36,7 +38,7 @@ messages than the limit. An answer with a stop reason is partial, and an empty a
 reply existed. The reader never silently changes the bounds or crosses a stale edge to fill the answer.
 
 When no graph exists, `mode: "time"` and `fallback: "not_built"` say the answer is bounded local time
-context. A missing/deleted hit says `not_stored`. An older custom store without reply expansion says
+context. A hit not included in the snapshot says `not_linked` and is marked stale. A missing/deleted hit says `not_stored`. An older custom store without reply expansion says
 `unsupported_store`. The same byte/message/time/topic caps hold for these fallbacks. The before/after
 options set the cheap time window only; they do not set graph depth.
 

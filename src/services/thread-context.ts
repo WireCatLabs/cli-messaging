@@ -20,11 +20,12 @@ export interface ThreadContext {
   chat: Id
   message: Id
   mode: "thread" | "time"
-  fallback?: "not_built" | "not_stored" | "unsupported_store"
+  fallback?: "not_built" | "not_stored" | "unsupported_store" | "not_linked"
   items: WindowedMessage[]
   links: (StoredLink & { messageId: Id; chosen: boolean })[]
   chain: Id[]
   stale: boolean
+  builtAt: string | null
   stopped: ("hops" | "messages" | "bytes" | "time" | "links" | "cycle" | "aborted" | "thread")[]
   bounds: typeof THREAD_BOUNDS
 }
@@ -73,6 +74,7 @@ export const readThreadContext = async (
     links: [],
     chain: [],
     stale: false,
+    builtAt: null,
     stopped: [],
     bounds,
   }
@@ -90,11 +92,27 @@ export const readThreadContext = async (
     })
   const [anchor] = await around(message)
   const state = await store.conversationState(account, chat)
+  result.builtAt = state?.builtAt ?? null
+  const linked = anchor && state?.builtAt ? (await store.conversationOf(account, chat, message)) !== undefined : false
   const repliesTo = store.replies?.bind(store)
-  if (!anchor || !state?.builtAt || !repliesTo) {
+  if (!anchor || !state?.builtAt || !repliesTo || !linked) {
     result.mode = "time"
-    result.fallback = !anchor ? "not_stored" : !state?.builtAt ? "not_built" : "unsupported_store"
-    const neighbours = anchor ? await around(message, options.before ?? 5, options.after ?? 5) : []
+    result.fallback = !anchor
+      ? "not_stored"
+      : !state?.builtAt
+        ? "not_built"
+        : !repliesTo
+          ? "unsupported_store"
+          : "not_linked"
+    result.stale = state?.builtAt !== undefined && state?.builtAt !== null && !linked
+    const wantedBefore = options.before ?? 5
+    const wantedAfter = options.after ?? 5
+    const available = bounds.maxMessages - 1
+    let before = Math.min(wantedBefore, Math.ceil(available / 2))
+    const after = Math.min(wantedAfter, available - before)
+    before = Math.min(wantedBefore, available - after)
+    if (anchor && before + after < wantedBefore + wantedAfter) stopped("messages")
+    const neighbours = anchor ? await around(message, before, after) : []
     // Keep the hit when the byte/message cap cannot fit its neighbours.
     const nearest = neighbours.sort(
       (a, b) =>
@@ -124,7 +142,7 @@ export const readThreadContext = async (
     result.items.sort((a, b) => a.timestamp.localeCompare(b.timestamp) || a.id.localeCompare(b.id))
     return result
   }
-  result.stale = state.changed === true || state.algorithmVersion !== RULES_VERSION
+  result.stale = state.algorithmVersion !== RULES_VERSION
   const at = Date.parse(anchor.timestamp)
   const cache = new Map<Id, StoredLink[]>()
   const linksOf = async (id: Id) => {
