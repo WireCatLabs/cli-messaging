@@ -1,7 +1,9 @@
 import { CliError } from "@leemour/cli-core"
 import { Command } from "commander"
-import { DEFAULT_TEXT_MODEL } from "../../embeddings/models.js"
-import { isLocal, remoteModel } from "../../embeddings/remote.js"
+import { analysisConsents } from "../../analysis/consents.js"
+import { openAnalysis, providerIdentity } from "../../analysis/provider.js"
+import { runAnalysis } from "../../analysis/runner.js"
+import { isLocal } from "../../embeddings/remote.js"
 import { renderMessages } from "../../render/messages.js"
 import { BATCH_SIZE } from "../../services/conversations.js"
 import {
@@ -13,9 +15,11 @@ import {
   REFRESH_BOUNDS,
   type Refreshed,
 } from "../../services/embeddings.js"
+import { servicesFor, storedDeps } from "../../services/index.js"
 import { momentOf } from "../../services/moment.js"
 import type { AgentAnswer, ConversationSummary } from "../../store/store.js"
-import { embeddingKeys } from "../embedding-keys.js"
+import { type AnalysisOptions, analysisChoice } from "../analysis-choice.js"
+import { embeddingChoice, type ModelOptions } from "../embedding-choice.js"
 import { positiveCount, renderList } from "../paging.js"
 import { answerOf as askOwner } from "./ask.js"
 import { type Messenger, type MessengerContext, messengerContext, refuseLocalWrite } from "./context.js"
@@ -38,11 +42,88 @@ export const conversationsCommand = (messenger: Messenger): Command => {
         "find a chat's conversations in what the store holds, replacing the last build; without --chat, every " +
           "chat that changed since its build and every group never built; never asks the messenger",
       )
-      .option("--chat <chat>", messenger.chatArgument),
+      .option("--chat <chat>", messenger.chatArgument)
+      .option(
+        "--analyze",
+        "link batches using the configured analysis provider; requires --chat and remembers consent for this chat/provider",
+      )
+      .option("--provider <provider>", "analysis: agent, openai or anthropic")
+      .option("--model <model>", "analysis model; overrides analysisModel")
+      .option("--base-url <url>", "analysis API endpoint; overrides analysisBaseUrl")
+      .option("--size <n>", "analysis answer messages per batch, 10–200; default 50", positiveCount("--size"))
+      .option(
+        "--max-tokens <n>",
+        "analysis input/output reservation cap per run; default 100000",
+        positiveCount("--max-tokens"),
+      ),
     { chunks: false },
   ).action(async function (this: Command) {
-    const { chat, maxChats } = this.opts<{ chat?: string; maxChats?: number }>()
+    const options = this.optsWithGlobals<
+      AnalysisOptions & {
+        chat?: string
+        maxChats?: number
+        analyze?: boolean
+        size?: number
+        maxTokens?: number
+        yes?: boolean
+      }
+    >()
+    const { chat, maxChats } = options
     const context = messengerContext(this, messenger)
+    if (options.analyze) {
+      if (!chat) throw new CliError("validation_error", "--analyze requires --chat")
+      refuseLocalWrite(context, messenger.app.command, LINKS_KEY)
+      refuseLocalWrite(context, messenger.app.command, "conversations.build")
+      const target = analysisChoice(options, messenger.app, context.settings, context.env)
+      const maxTokens = options.maxTokens ?? 100_000
+      const size = options.size ?? BATCH_SIZE.default
+      const result = await context.withStore(async (store, account) => {
+        const services = servicesFor({
+          ...storedDeps(messenger, store, account, context.guard),
+          env: context.env,
+          profile: context.profile,
+        })
+        const status = await services.conversations.batchStatus(chat, size)
+        const consents = analysisConsents(store, account)
+        const identity = providerIdentity(target)
+        if (status.messages && !(await consents.has(status.chat, identity))) {
+          const what = `${status.messages} messages, ${status.characters} characters (about ${status.tokensEstimate} message tokens, plus prompt and batch context), go to ${target.model} at ${target.baseUrl}; this run reserves at most ${maxTokens} input/output tokens. Consent is remembered for this chat and provider until revoked`
+          if (!options.yes) {
+            const answer = await askOwner(this, `${what}. Allow analysis? [y/N] `)
+            if (answer === null) throw new CliError("confirmation_required", `${what} — add --yes`)
+            if (!/^y(es)?$/i.test(answer.trim())) throw new CliError("cancelled", "cancelled — nothing was sent")
+          }
+          await consents.remember(status.chat, identity)
+        }
+        await services.conversations.build(chat)
+        const request = openAnalysis(target)
+        return runAnalysis(
+          services.conversations,
+          chat,
+          async (...args) => {
+            if (!(await consents.has(status.chat, identity)))
+              throw new CliError("permission_error", "analysis consent was revoked; no further batch was sent")
+            return request(...args)
+          },
+          {
+            model: target.model,
+            command: messenger.app.command,
+            size,
+            maxTokens,
+          },
+        )
+      })
+      context.renderer.result(result)
+      return
+    }
+    if (
+      options.provider !== undefined ||
+      options.model !== undefined ||
+      options.baseUrl !== undefined ||
+      options.size !== undefined ||
+      options.maxTokens !== undefined
+    )
+      throw new CliError("validation_error", "analysis options require --analyze")
     if (chat === undefined) {
       const refreshed = await context.withServices((services) =>
         services.embeddings.refresh({
@@ -204,7 +285,7 @@ export const conversationsCommand = (messenger: Messenger): Command => {
       "--source <source>",
       "accounts to search: personal, bots, all, or a provider; defaults to the active account",
     )
-    .option("--timezone <zone>", "IANA timezone for filter dates; UTC by default")
+    .option("--timezone <zone>", "IANA timezone for filter dates; system timezone by default")
     .option("--limit <n>", "how many", positiveCount("--limit"))
     .option(
       "--refresh",
@@ -507,6 +588,37 @@ export const conversationsCommand = (messenger: Messenger): Command => {
     else context.renderer.result(cleared)
   })
 
+  const consents = conversations
+    .command("consents")
+    .description("remembered analysis permissions for this account's chats and provider endpoints")
+  consents.command("list").action(async function (this: Command) {
+    const context = messengerContext(this, messenger)
+    const items = await context.withStore((store, account) => analysisConsents(store, account).list())
+    context.renderer.result({ items })
+  })
+  consents
+    .command("revoke")
+    .option("--chat <chat>", "revoke only this chat's consents; defaults to every chat")
+    .option("--provider <identity>", "exact provider identity from consents list; defaults to every provider")
+    .action(async function (this: Command) {
+      const { chat, provider } = this.opts<{ chat?: string; provider?: string }>()
+      const context = messengerContext(this, messenger)
+      refuseLocalWrite(context, messenger.app.command, LINKS_KEY)
+      await context.withStore(async (store, account) => {
+        const chatId =
+          chat === undefined
+            ? undefined
+            : (
+                await servicesFor(storedDeps(messenger, store, account, context.guard)).conversations.batchStatus(
+                  chat,
+                  BATCH_SIZE.default,
+                )
+              ).chat
+        await analysisConsents(store, account).revoke(chatId, provider)
+      })
+      context.renderer.result({ revoked: true })
+    })
+
   conversations.addCommand(embed)
 
   return conversations
@@ -521,21 +633,13 @@ const chatOf = ({ chat }: { chat?: string }): string => {
   return chat
 }
 
-interface ModelOptions {
-  model?: string
-  provider?: string
-  baseUrl?: string
-  dims?: number
-  concurrency?: number
-}
-
 const withModelOptions = (command: Command): Command =>
   command
     .option(
       "--model <model>",
       "local: a model id from `models text list` (default: e5-small); remote: the provider's model",
     )
-    .option("--provider <provider>", "embed through a service with your key instead of on this machine: openai")
+    .option("--provider <provider>", "embedding provider: local or openai; flags override profile settings")
     .option(
       "--base-url <url>",
       "a server with OpenAI's /v1/embeddings: Gemini, Jina, or Ollama and LM Studio on this machine",
@@ -619,32 +723,12 @@ const leftNotes = ({ model, modelAvailable, embedded, left }: Refreshed, command
   ].filter(Boolean)
 }
 
-/** A local model id, or a remote model with its key from `models text key set`. */
 const choiceOf = (
-  { model, provider, baseUrl, dims, concurrency }: ModelOptions,
+  options: ModelOptions,
   messenger: Messenger,
   context: MessengerContext,
-  { needKey = true }: { needKey?: boolean } = {},
-): ModelChoice => {
-  if (provider === undefined && baseUrl === undefined) return model ?? DEFAULT_TEXT_MODEL
-  if (provider !== undefined && provider !== "openai") {
-    throw new CliError("validation_error", `no provider ${provider} — openai, or a server with --base-url`)
-  }
-  const remote = remoteModel({
-    ...(model ? { model } : {}),
-    ...(baseUrl ? { baseUrl } : {}),
-    ...(dims ? { dims } : {}),
-  })
-  const keyName = baseUrl === undefined ? "openai" : new URL(baseUrl).host
-  const key = embeddingKeys(messenger.app, context.env).read(keyName)?.key
-  if (!key && needKey && baseUrl === undefined) {
-    throw new CliError(
-      "authentication_error",
-      `no OpenAI key — \`${messenger.app.command} models text key set openai\`, or OPENAI_API_KEY`,
-    )
-  }
-  return { remote, ...(key ? { apiKey: key } : {}), ...(concurrency ? { concurrency } : {}) }
-}
+  extra?: { needKey?: boolean },
+): ModelChoice => embeddingChoice(options, messenger.app, context.settings, context.env, extra)
 
 /**
  * The messages leave the machine: say where, how much and what it may cost, and wait for a yes — `--yes`

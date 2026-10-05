@@ -1,5 +1,6 @@
 import { CliError } from "@leemour/cli-core"
 import * as v from "valibot"
+import { embeddingChoice } from "../../cli/embedding-choice.js"
 import type { Messenger } from "../../cli/messenger/context.js"
 import { listed } from "../../cli/paging.js"
 import { REFRESH_BOUNDS } from "../../services/embeddings.js"
@@ -61,7 +62,7 @@ export const conversationsTools = (messenger: Messenger): Record<string, AnyTool
         "source explicitly widens accounts; by default only the active account is searched. Hits include source and locator. " +
         "sync_first optionally fetches new messages first under messages.sync-first; max_chats (5), sync_time (30s) " +
         "and max_messages (500) bound the fetch. This does not build or embed; refreshed describes the network step " +
-        "and incomplete refreshes label coverage stale.",
+        "and incomplete refreshes label coverage stale. Uses the profile embedding provider/model settings; remote providers receive query text.",
       input: v.object({
         ...syncInputs,
         query: v.pipe(v.string(), v.minLength(1), v.description("what to look for, in your own words")),
@@ -87,6 +88,7 @@ export const conversationsTools = (messenger: Messenger): Record<string, AnyTool
           ...syncArgs(args),
           signal: defaults.signal,
           limit: size,
+          model: embeddingChoice({}, messenger.app, defaults.settings, defaults.env),
           ...(args.filter === undefined ? {} : { filter: args.filter }),
           ...(args.source === undefined ? {} : { source: args.source }),
           ...(args.timezone === undefined ? {} : { timezone: args.timezone }),
@@ -124,7 +126,10 @@ export const conversationsTools = (messenger: Messenger): Record<string, AnyTool
           ...storedDeps(messenger, store, account, defaults.guard),
           env: defaults.env,
           profile: defaults.settings.profile,
-        }).embeddings.related(args.chat, args.message, { limit: size })
+        }).embeddings.related(args.chat, args.message, {
+          limit: size,
+          model: embeddingChoice({}, messenger.app, defaults.settings, defaults.env, { needKey: false }),
+        })
         return { model: found.model, source: found.source, items: found.hits, limit: size, readiness: found.readiness }
       },
     }),
@@ -144,7 +149,10 @@ export const conversationsTools = (messenger: Messenger): Record<string, AnyTool
           ...storedDeps(messenger, store, account, defaults.guard),
           env: defaults.env,
           profile: defaults.settings.profile,
-        }).embeddings.readiness(args.chat === undefined ? {} : { chat: args.chat })
+        }).embeddings.readiness({
+          ...(args.chat === undefined ? {} : { chat: args.chat }),
+          model: embeddingChoice({}, messenger.app, defaults.settings, defaults.env, { needKey: false }),
+        })
         return {
           ...listed(found.chats),
           model: found.model,

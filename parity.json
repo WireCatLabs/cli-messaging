@@ -59,6 +59,9 @@
     "--allow-writes": {
       "meaning": "acknowledge that the profile offers writing tools when installing local MCP"
     },
+    "--analyze": {
+      "meaning": "link conversation batches using the configured analysis provider, with remembered chat/provider consent"
+    },
     "--anonymous": {
       "meaning": "nobody sees who voted for what"
     },
@@ -289,7 +292,7 @@
     },
     "--max-tokens": {
       "value": "<n>",
-      "meaning": "remote: stop before a run that could send more tokens than this"
+      "meaning": "remote embeddings: bound input tokens; analysis: reserve input and output tokens across this run"
     },
     "--md": {
       "meaning": "read this messenger's Markdown; see its formatting guide for supported syntax"
@@ -412,7 +415,7 @@
     },
     "--provider": {
       "value": "<provider>",
-      "meaning": "embed through a service with your key instead of on this machine: openai"
+      "meaning": "embedding provider: local or openai; analysis: agent, openai or anthropic; consents revoke: exact provider identity from the list"
     },
     "--public-url": {
       "value": "<url>",
@@ -1429,8 +1432,87 @@
     "conversations build": {
       "in": "all",
       "options": {
+        "--analyze": {
+          "in": [],
+          "planned": {
+            "max": "each CLI's next cli-messaging bump",
+            "tg": "each CLI's next cli-messaging bump"
+          }
+        },
+        "--base-url": {
+          "in": [],
+          "planned": {
+            "max": "each CLI's next cli-messaging bump",
+            "tg": "each CLI's next cli-messaging bump"
+          }
+        },
         "--chat": "all",
         "--max-chats": {
+          "in": [],
+          "planned": {
+            "max": "each CLI's next cli-messaging bump",
+            "tg": "each CLI's next cli-messaging bump"
+          }
+        },
+        "--max-tokens": {
+          "in": [],
+          "planned": {
+            "max": "each CLI's next cli-messaging bump",
+            "tg": "each CLI's next cli-messaging bump"
+          }
+        },
+        "--model": {
+          "in": [],
+          "planned": {
+            "max": "each CLI's next cli-messaging bump",
+            "tg": "each CLI's next cli-messaging bump"
+          }
+        },
+        "--provider": {
+          "in": [],
+          "planned": {
+            "max": "each CLI's next cli-messaging bump",
+            "tg": "each CLI's next cli-messaging bump"
+          }
+        },
+        "--size": {
+          "in": [],
+          "planned": {
+            "max": "each CLI's next cli-messaging bump",
+            "tg": "each CLI's next cli-messaging bump"
+          }
+        }
+      }
+    },
+    "conversations consents": {
+      "in": [],
+      "planned": {
+        "max": "each CLI's next cli-messaging bump",
+        "tg": "each CLI's next cli-messaging bump"
+      }
+    },
+    "conversations consents list": {
+      "in": [],
+      "planned": {
+        "max": "each CLI's next cli-messaging bump",
+        "tg": "each CLI's next cli-messaging bump"
+      }
+    },
+    "conversations consents revoke": {
+      "in": [],
+      "planned": {
+        "max": "each CLI's next cli-messaging bump",
+        "tg": "each CLI's next cli-messaging bump"
+      },
+      "options": {
+        "--chat": {
+          "in": [],
+          "planned": {
+            "max": "each CLI's next cli-messaging bump",
+            "tg": "each CLI's next cli-messaging bump"
+          }
+        },
+        "--provider": {
           "in": [],
           "planned": {
             "max": "each CLI's next cli-messaging bump",

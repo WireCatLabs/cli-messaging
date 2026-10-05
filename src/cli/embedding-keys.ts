@@ -2,9 +2,9 @@ import { type CredentialSource, Credentials, pathsAreOverridden, resolvePaths } 
 import { type AppIdentity, envName } from "./app.js"
 
 /**
- * An embedding provider's API key (phase 5 E11), kept as bot tokens are: the keyring account
+ * An AI provider's API key (phase 5 E11), kept as bot tokens are: the keyring account
  * `embeddings:<provider>` under the app's own service, then `<PREFIX>_OPENAI_API_KEY` or OpenAI's own
- * `OPENAI_API_KEY` for `openai`, then a 0600 file. Never printed, never in an error.
+ * `OPENAI_API_KEY` for `openai`, or the corresponding Anthropic variable, then a 0600 file. Never printed, never in an error.
  */
 export const embeddingKeys = (app: AppIdentity, env: NodeJS.ProcessEnv = process.env) => {
   const where = { appName: app.appName, prefix: app.envPrefix, env }
@@ -12,7 +12,9 @@ export const embeddingKeys = (app: AppIdentity, env: NodeJS.ProcessEnv = process
     new Credentials({
       configDir: resolvePaths(where).config,
       service: app.appName,
-      ...(provider === "openai" ? { envVar: envName(app, "OPENAI_API_KEY") } : {}),
+      ...(["openai", "anthropic"].includes(provider)
+        ? { envVar: envName(app, `${provider.toUpperCase()}_API_KEY`) }
+        : {}),
       isolated: pathsAreOverridden(where),
       env,
       warn: (message) => process.stderr.write(`${message}\n`),
@@ -22,7 +24,9 @@ export const embeddingKeys = (app: AppIdentity, env: NodeJS.ProcessEnv = process
     read: (provider: string): { key: string; source: CredentialSource | "env" } | undefined => {
       const stored = credentials(provider).read(account(provider))
       if (stored) return { key: stored.secret, source: stored.source }
-      const shared = provider === "openai" ? env.OPENAI_API_KEY?.trim() : undefined
+      const shared = ["openai", "anthropic"].includes(provider)
+        ? env[`${provider.toUpperCase()}_API_KEY`]?.trim()
+        : undefined
       return shared ? { key: shared, source: "env" } : undefined
     },
     write: (provider: string, key: string): CredentialSource => credentials(provider).write(account(provider), key),

@@ -8,6 +8,7 @@ import {
 } from "@modelcontextprotocol/server"
 import { toStandardJsonSchema } from "@valibot/to-json-schema"
 import * as v from "valibot"
+import type { AISettings } from "../analysis/settings.js"
 import { isCliFailure } from "../cli/failures.js"
 import type { Messenger } from "../cli/messenger/context.js"
 import type { MessengerAdapter } from "../cli/messenger/port.js"
@@ -61,7 +62,7 @@ export interface Defaults {
   limit: number
   guard: SendGuard
   /** The profile's own entries, for a tool reading a setting of its own — `transcribeWith`. */
-  settings: Pick<Settings, "configured" | "shared" | "profile"> & Partial<Pick<Settings, "permissions">>
+  settings: Pick<Settings, "configured" | "shared" | "profile"> & Partial<Pick<Settings, "permissions">> & AISettings
   env: NodeJS.ProcessEnv
   /** The server's open models, kept between `conversations_search` calls. */
   embedders?: WarmEmbedders

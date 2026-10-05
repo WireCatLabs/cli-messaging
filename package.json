@@ -87,6 +87,7 @@
     "search:docs": "pnpm build && node scripts/search-docs.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "0.131.0",
     "@bomb.sh/tab": "0.0.22",
     "@huggingface/tokenizers": "0.2.0",
     "@leemour/cli-messaging-onnx": "1.0.0",

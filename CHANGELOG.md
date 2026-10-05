@@ -6,6 +6,9 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+- Profiles can configure embedding and analysis providers/models/endpoints; flags override configuration, while local e5-small embeddings and owner-agent analysis remain defaults. `models text key set anthropic` supports Anthropic credentials; custom endpoint keys never fall back to a public provider key.
+- `conversations build --analyze --chat` opts into bounded OpenAI-compatible or Anthropic batch linking, using the existing linking skill and atomic answer validation. Analysis consent is remembered per account/chat/provider endpoint, listed/revoked with `conversations consents`. Embedding consent remains per run.
+
 - Conversation search accepts a separate strict Lucene `--filter`, `--timezone`, and explicit `--source` account scope. Any matching message makes its conversation eligible before word/vector ranking; results include qualified locators and scoped readiness. Default search remains the active account.
 
 ### Added
