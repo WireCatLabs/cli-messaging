@@ -174,7 +174,14 @@ describe("attachments extract", () => {
       complete: true,
     })
     expect(answer.items).toEqual([
-      { locator: "msg:chat/500/7/5", attachment: 1, kind: "photo", name: "5-1.jpg", status: "needs-agent" },
+      {
+        locator: "msg:chat/500/7/5",
+        attachment: 1,
+        kind: "photo",
+        name: "5-1.jpg",
+        status: "needs-agent",
+        extractor: "none",
+      },
       expect.objectContaining({
         locator: "msg:chat/500/7/4",
         status: "needs-agent",
@@ -208,12 +215,12 @@ describe("attachments extract", () => {
     await call("attachments", "extract", "--json")
     expect(json(await call("attachments", "extract", "--json"))).toMatchObject({
       extracted: 0,
-      unchanged: 4,
-      items: [expect.objectContaining({ status: "needs-agent" })],
+      unchanged: 5,
+      items: [],
     })
 
     writeFileSync(join(files, "notes.txt"), "Revised estimate")
-    expect(json(await call("attachments", "extract", "--json"))).toMatchObject({ extracted: 1, unchanged: 3 })
+    expect(json(await call("attachments", "extract", "--json"))).toMatchObject({ extracted: 1, unchanged: 4 })
     expect(await hits(call, "content:estimate")).toEqual(["1"])
     expect(await hits(call, "content:invoice")).toEqual([])
   })
@@ -227,8 +234,32 @@ describe("attachments extract", () => {
     expect(json(await call("attachments", "extract", "--json"))).toMatchObject({
       complete: true,
       extracted: 3,
-      unchanged: 1,
+      unchanged: 2,
     })
+  })
+
+  it("**--limit moves on past photos: a photo is noted once, for an agent, and not read again**", async () => {
+    const { call, env, files } = await setup()
+    const store = await openStore({ path: env.MESSAGING_STORE })
+    await store.saveMessages(OWNER, "7", [message("8", [{ kind: "photo" }]), message("9", [{ kind: "photo" }])], {
+      via: "history",
+    })
+    for (const id of ["8", "9"]) {
+      writeFileSync(join(files, `${id}-1.jpg`), new Uint8Array([0xff, 0xd8]))
+      await store.keepDownloads(OWNER, "7", id, [{ kind: "photo", path: join(files, `${id}-1.jpg`) }])
+    }
+    await store.close()
+
+    const seen: string[] = []
+    for (let run = 0; run < 3; run += 1) {
+      const { items } = json(await call("attachments", "extract", "--limit", "1", "--json"))
+      seen.push(...items.map(({ locator }: { locator: string }) => locator))
+    }
+    expect(seen).toEqual(["msg:chat/500/7/9", "msg:chat/500/7/8", "msg:chat/500/7/5"])
+    const needs = json(await call("attachments", "list", "--needs-text", "--json")).items
+    expect(needs.slice(0, 3)).toMatchObject(
+      ["9", "8", "5"].map((id) => ({ locator: `msg:chat/500/7/${id}`, text: { extractor: "none", error: "no_text" } })),
+    )
   })
 
   it("names a file that is gone, and reads only one chat's files with --chat", async () => {
@@ -320,7 +351,7 @@ describe("an agent's text for a file", () => {
       replaced: "extracted",
     })
     const fromStdin = await piped("Фото доски: план релиза")("attachments", "text", "set", "msg:chat/500/7/5", "--json")
-    expect(json(fromStdin)).toMatchObject({ locator: "msg:chat/500/7/5", replaced: null })
+    expect(json(fromStdin)).toMatchObject({ locator: "msg:chat/500/7/5", replaced: "extracted" })
     expect(fromStdin.stderr).not.toContain("релиза")
 
     expect(await hits(call, "content:сверки")).toEqual(["4"])

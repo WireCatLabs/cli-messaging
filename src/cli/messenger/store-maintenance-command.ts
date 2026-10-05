@@ -276,6 +276,7 @@ const inspect = (path: string) =>
       ...(schema.version > 0 ? SEARCH_INDEXES.map((index) => [index, indexIntegrity(database, index)]) : []),
       ...(wordIndex ? [[WORD_INDEX, indexIntegrity(database, WORD_INDEX, 0)]] : []),
       ...(stems ? [["message_stems", indexIntegrity(database, "message_stems", 0)]] : []),
+      ...(schema.version >= 19 ? [["attachment_words", indexIntegrity(database, "attachment_words", 0)]] : []),
     ])
     const size = bytesOf(path) + bytesOf(`${path}-wal`)
     const { bavail, bsize } = statfsSync(dirname(path))

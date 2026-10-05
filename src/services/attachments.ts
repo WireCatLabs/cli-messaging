@@ -2,6 +2,7 @@ import { createHash } from "node:crypto"
 import { readFile, stat } from "node:fs/promises"
 import { CliError } from "@leemour/cli-core"
 import {
+  classify,
   type Engine,
   type Extraction,
   extractText,
@@ -106,14 +107,26 @@ const outcome = async (
   )
   if (size === undefined) return { status: "missing" }
   if (file.read?.origin === "extracted" && file.read.bytes === size) return { status: "unchanged" }
+  const hint = { kind: file.kind, name: file.name, mime: file.mime, path }
+  const known = classify(hint)
+  if (known === "unsupported") return { status: "unsupported" }
+  // Kept with no text, so a later run passes over it and --needs-text still offers it to an agent.
+  if (known === "image")
+    return { status: "needs-agent", extraction: { status: "needs-agent", extractor: "none" }, bytes: size }
   if (size > MAX_FILE_BYTES) return { status: "too-large" }
   const bytes = new Uint8Array(await readFile(path))
-  const extraction = await extractText(bytes, { kind: file.kind, name: file.name, mime: file.mime, path }, load)
+  const extraction = await extractText(bytes, hint, load)
   const sha = createHash("sha256").update(bytes).digest("hex")
   return { status: extraction.status, extraction, bytes: size, sha }
 }
 
-const keep = async (store: MessageStore, file: FileAttachment, extraction: Extraction, bytes: number, sha: string) => {
+const keep = async (
+  store: MessageStore,
+  file: FileAttachment,
+  extraction: Extraction,
+  bytes: number,
+  sha: string | undefined,
+) => {
   const base = { origin: "extracted" as const, contentSha256: sha, bytes }
   if (extraction.status === "extracted") {
     await store.keepAttachmentText(file.pk, { ...base, text: extraction.text, extractor: extraction.extractor })
@@ -209,7 +222,7 @@ export const attachmentsService = (deps: ServiceDeps): AttachmentsService => ({
           run.unsupported += 1
           continue
         }
-        if (extraction && bytes !== undefined && sha !== undefined) await keep(store, file, extraction, bytes, sha)
+        if (extraction && bytes !== undefined) await keep(store, file, extraction, bytes, sha)
         if (status !== "missing" && status !== "too-large" && status !== "engine-missing") read += 1
         if (extraction?.status === "engine-missing" && !run.enginesMissing.includes(extraction.engine))
           run.enginesMissing.push(extraction.engine)

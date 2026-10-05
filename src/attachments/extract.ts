@@ -140,6 +140,26 @@ export const extractText = async (bytes: Uint8Array, hint: FileHint, load: LoadE
   return { status: "unsupported" }
 }
 
+const SILENT_KINDS = new Set(["voice", "audio", "video", "video_note", "sticker", "animation", "gif"])
+const SILENT = new Set([".ogg", ".oga", ".opus", ".mp3", ".m4a", ".wav", ".mp4", ".mov", ".webm", ".mkv", ".tgs"])
+
+/**
+ * What a file is, from its kind, type and name alone, so a photo or a video is never read only to be
+ * set aside. `undefined`: its bytes decide.
+ */
+export const classify = (hint: FileHint): "image" | "unsupported" | undefined => {
+  const extension = extensionOf(hint)
+  if (hint.kind === "photo" || hint.mime?.startsWith("image/") || IMAGES.has(extension)) return "image"
+  if (
+    SILENT_KINDS.has(hint.kind) ||
+    hint.mime?.startsWith("audio/") ||
+    hint.mime?.startsWith("video/") ||
+    SILENT.has(extension)
+  )
+    return "unsupported"
+  return undefined
+}
+
 /** The one note a run gives for a format it skipped, naming what to install. */
 export const engineHint = (engine: Engine, command: string): string =>
   `${engine === "unpdf" ? "PDF" : "Word"} files need the optional package ${engine}, installed where ${command} is ` +

@@ -246,6 +246,7 @@ describe("the word index", () => {
     const { answer, stderr } = await call(["store", "check", "--json"], env)
 
     expect(answer.searchIndexes.message_words).toBe("ok")
+    expect(answer.searchIndexes.attachment_words).toBe("ok")
     expect(answer.wordIndex).toMatchObject({ watermark: 10, filledThrough: 1, ready: false })
     expect(stderr.join("\n")).toContain("the word index reaches message 1 of 10 — `chat store migrate` finishes it")
   })
