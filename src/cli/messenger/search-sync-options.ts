@@ -7,8 +7,9 @@ import { type MessengerContext, refuseLocalWrite } from "./context.js"
 
 export const syncOptions = (command: Command): Command => {
   command.option("--sync-first", "first fetch new messages within the chat, time and message bounds")
-  if (!command.options.some((one) => one.long === "--max-chats"))
-    command.option("--max-chats <n>", "refresh at most this many chats (default: 5)", positiveCount("--max-chats"))
+  const existing = command.options.find((one) => one.long === "--max-chats")
+  if (existing) existing.description = "at most this many chats; 5 with --sync-first, 20 with --refresh if not given"
+  else command.option("--max-chats <n>", "refresh at most this many chats (default: 5)", positiveCount("--max-chats"))
   return command
     .option("--sync-time <duration>", "stop fetching after this long (default: 30s)")
     .option(

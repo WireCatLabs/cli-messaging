@@ -223,7 +223,10 @@ export const registerTools = (
                 ),
               ),
         ),
-        annotations: definition.annotations,
+        annotations: {
+          ...definition.annotations,
+          ...("sync_first" in definition.input.entries ? { openWorldHint: syncAllowed } : {}),
+        },
         ...(definition._meta ? { _meta: definition._meta } : {}),
       },
       async (args: Record<string, unknown>, ctx: ServerContext) => {

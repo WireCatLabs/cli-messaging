@@ -198,7 +198,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--mark-read` |  | also mark the chat read up to the newest message shown; the other person sees it |  | `inbox`, `messages list`, `review` |
 | `--marker` | `<value>` | Marker |  | `bot chats members list` (max-only) |
 | `--max-actions` | `<n>` | at most this many actions in one run | `10` | `bot chats moderate`, `chats moderate` (planned) |
-| `--max-chats` | `<n>` | at most this many chats in one run | `20` | `conversations build` (planned), `conversations embed` (planned), `conversations search` (planned), `messages search` (planned), `messages stats` (planned) |
+| `--max-chats` | `<n>` | at most this many chats in one run. **local graph work defaults to 20; opt-in --sync-first network refresh defaults to 5, so help distinguishes the two uses** | `20` | `conversations build` (planned), `conversations embed` (planned), `conversations search` (planned), `messages search` (planned), `messages stats` (planned) |
 | `--max-chunks` | `<n>` | at most this many chunks embedded in one run | `2000` | `conversations embed` (planned), `conversations search` (planned) |
 | `--max-messages` | `<n>` | fetch at most this many messages total (default: 500) |  | `conversations search` (planned), `messages search` (planned), `messages stats` (planned) |
 | `--max-tokens` | `<n>` | remote: stop before a run that could send more tokens than this |  | `conversations embed` |

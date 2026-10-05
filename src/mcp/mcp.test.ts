@@ -463,6 +463,7 @@ describe("the MCP server", () => {
     const history = vi.fn(async () => ({ items: [{ ...message, id: "2" }], hasMore: false }))
     const backend = scripted({ history, markRead })
     const { call } = await connect(backend, { root })
+    await call("chat_searches_create", { name: "chapter-query", text: "chapter", chat: "7" })
     const search = await call("chat_messages_search", {
       text: "chapter chat:7",
       sync_first: true,
@@ -475,6 +476,11 @@ describe("the MCP server", () => {
     const stats = await call("chat_messages_stats", { text: "chapter", chat: "7", sync_first: true })
     expect(stats.body.total).toBe(2)
     expect(stats.body.refreshed.complete).toBe(true)
+    const saved = await call("chat_messages_search", { saved: "chapter-query", sync_first: true })
+    expect(saved.body.refreshed.complete).toBe(true)
+    const local = await call("chat_messages_search", { saved: "chapter-query" })
+    expect(local.body.refreshed).toBeUndefined()
+    expect(history).toHaveBeenCalledTimes(3)
     expect(backend.opened()).toBe(1)
     expect(markRead).not.toHaveBeenCalled()
   })
@@ -507,6 +513,7 @@ describe("the MCP server", () => {
       const { tools } = await client.listTools()
       for (const name of ["chat_messages_search", "chat_messages_stats", "chat_conversations_search"]) {
         const schema = tools.find((tool) => tool.name === name)?.inputSchema.properties
+        expect(tools.find((tool) => tool.name === name)?.annotations?.openWorldHint).toBe(false)
         expect(schema).not.toHaveProperty("sync_first")
         expect(schema).not.toHaveProperty("sync_time")
         expect(schema).not.toHaveProperty("max_messages")

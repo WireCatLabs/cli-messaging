@@ -275,7 +275,8 @@
     "--max-chats": {
       "value": "<n>",
       "meaning": "at most this many chats in one run",
-      "default": "20"
+      "default": "20",
+      "note": "local graph work defaults to 20; opt-in --sync-first network refresh defaults to 5, so help distinguishes the two uses"
     },
     "--max-chunks": {
       "value": "<n>",
