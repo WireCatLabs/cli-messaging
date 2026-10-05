@@ -2,7 +2,7 @@ import { CliError, isCliError } from "@leemour/cli-core"
 import { capability, type ForumState } from "../cli/messenger/port.js"
 import type { Chat, Topic, TopicChange } from "../domain/models.js"
 import { guardedWrite, type Operated } from "../sends/guarded.js"
-import type { SendEntry } from "../sends/journal.js"
+import type { ChatAction, SendEntry } from "../sends/journal.js"
 import { newOperationId, newSendId } from "../sends/send-id.js"
 import type { ServiceDeps } from "./deps.js"
 
@@ -17,6 +17,14 @@ export interface TopicsService {
     options: { sendId?: string },
   ): Promise<Operated<{ chatId: string; topic: Topic; sendId: string }>>
   edit(chat: string, topic: string, change: TopicChange): Promise<Operated<{ chatId: string; topic: Topic }>>
+  order(chat: string, topics: string[]): Promise<Operated<{ chatId: string; order: string[] }>>
+}
+
+const actionOf = ({ title, closed, pinned }: TopicChange): ChatAction => {
+  if (title !== undefined) return "topic-edit"
+  if (closed !== undefined && pinned === undefined) return closed ? "topic-close" : "topic-reopen"
+  if (pinned !== undefined && closed === undefined) return pinned ? "topic-pin" : "topic-unpin"
+  return "topic-edit"
 }
 
 const validTitle = (title: string): void => {
@@ -161,9 +169,10 @@ export const topicsService = (deps: ServiceDeps): TopicsService => {
       )
       return { operationId: id, sendId: id, chatId: target, topic }
     },
-    edit: async (chat, typedTopic, { title, closed }) => {
-      if (title === undefined && closed === undefined)
-        throw new CliError("validation_error", "nothing to change — give a new title, or close or reopen it")
+    edit: async (chat, typedTopic, change) => {
+      const { title, closed, pinned } = change
+      if (title === undefined && closed === undefined && pinned === undefined)
+        throw new CliError("validation_error", "nothing to change — rename, close, reopen, pin or unpin it")
       if (title !== undefined) validTitle(title)
       const topicId = typedTopic.trim()
       if (topicId === "") throw new CliError("validation_error", "which topic? give its id from `topics list`")
@@ -171,8 +180,7 @@ export const topicsService = (deps: ServiceDeps): TopicsService => {
       const editTopic = capability(connection, "editTopic", "edit forum topics")
       const chatId = (await connection.resolve(chat)).id
       const operationId = newOperationId()
-      const action =
-        title !== undefined || closed === undefined ? "topic-edit" : closed ? "topic-close" : "topic-reopen"
+      const action = actionOf(change)
       const topic = await guardedWrite(
         deps.guard,
         { operationId, chatId, kind: "chat", action, key: "topics.edit", threadId: topicId },
@@ -180,9 +188,27 @@ export const topicsService = (deps: ServiceDeps): TopicsService => {
           editTopic(chatId, topicId, {
             ...(title === undefined ? {} : { title }),
             ...(closed === undefined ? {} : { closed }),
+            ...(pinned === undefined ? {} : { pinned }),
           }),
       )
       return { operationId, chatId, topic }
+    },
+    order: async (chat, typed) => {
+      const order = typed.map((one) => one.trim())
+      if (order.length === 0 || order.includes(""))
+        throw new CliError("validation_error", "which topics? give the pinned topics' ids in the order wanted")
+      if (new Set(order).size !== order.length)
+        throw new CliError("validation_error", "a topic is named twice; give each one once")
+      const connection = await online()
+      const reorder = capability(connection, "orderPinnedTopics", "order pinned forum topics")
+      const chatId = (await connection.resolve(chat)).id
+      const operationId = newOperationId()
+      await guardedWrite(
+        deps.guard,
+        { operationId, chatId, kind: "chat", action: "topic-order", key: "topics.edit" },
+        () => reorder(chatId, order),
+      )
+      return { operationId, chatId, order }
     },
   }
 }

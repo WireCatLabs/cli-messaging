@@ -25,9 +25,13 @@ const fixture = (capable = true) => {
     record: (entry) => records.push(entry),
   } as SendGuard
   const editTopic = vi.fn(async () => topic)
-  const adapter = { resolve: async () => chat, ...(capable ? { editTopic } : {}) } as unknown as MessengerAdapter
+  const orderPinnedTopics = vi.fn(async () => {})
+  const adapter = {
+    resolve: async () => chat,
+    ...(capable ? { editTopic, orderPinnedTopics } : {}),
+  } as unknown as MessengerAdapter
   const deps = onlineDeps({ provider: "test" } as Messenger, adapter, guard)
-  return { service: topicsService(deps), deps, editTopic, records, checked }
+  return { service: topicsService(deps), deps, editTopic, orderPinnedTopics, records, checked }
 }
 
 describe("editing a forum topic", () => {
@@ -36,6 +40,9 @@ describe("editing a forum topic", () => {
     [{ closed: true }, "topic-close"],
     [{ closed: false }, "topic-reopen"],
     [{ title: "renamed synthetic topic", closed: true }, "topic-edit"],
+    [{ pinned: true }, "topic-pin"],
+    [{ pinned: false }, "topic-unpin"],
+    [{ closed: true, pinned: true }, "topic-edit"],
   ] as const)("passes %j and journals %s with the topic id, never the title", async (change, action) => {
     const f = fixture()
     expect(await f.service.edit("synthetic group", " 12 ", change)).toMatchObject({ chatId: "7", topic })
@@ -63,5 +70,27 @@ describe("editing a forum topic", () => {
       "not with --offline",
     )
     await expect(fixture(false).service.edit("7", "12", { closed: true })).rejects.toThrow("cannot edit forum topics")
+  })
+})
+
+describe("ordering pinned topics", () => {
+  it("passes the ids in order and journals topic-order", async () => {
+    const f = fixture()
+    expect(await f.service.order("synthetic group", [" 12", "3 "])).toMatchObject({ chatId: "7", order: ["12", "3"] })
+    expect(f.orderPinnedTopics).toHaveBeenCalledWith("7", ["12", "3"])
+    expect(f.records).toMatchObject([{ action: "topic-order", outcome: "sent" }])
+  })
+
+  it.each([[[]], [["12", " "]], [["12", "12"]]])("refuses %j before connecting", async (order) => {
+    const f = fixture()
+    const connection = vi.fn(f.deps.connection)
+    await expect(topicsService({ ...f.deps, connection }).order("7", order)).rejects.toMatchObject({
+      code: "validation_error",
+    })
+    expect(connection).not.toHaveBeenCalled()
+  })
+
+  it("refuses a messenger without the capability", async () => {
+    await expect(fixture(false).service.order("7", ["12"])).rejects.toThrow("cannot order pinned forum topics")
   })
 })

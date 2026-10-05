@@ -3518,8 +3518,14 @@ describe("topics edit", () => {
     expect(reopened.code).toBe(0)
     expect(editTopic).toHaveBeenLastCalledWith("7", "12", { closed: false })
 
-    const wrong = await call(["topics", "edit", "7", "12", "--closed", "yes", "--json"], connect, env)
-    expect(wrong.code).not.toBe(0)
-    expect(editTopic).toHaveBeenCalledTimes(2)
+    const pinned = await call(["topics", "edit", "7", "12", "--pinned", "on", "--json"], connect, env)
+    expect(pinned.code).toBe(0)
+    expect(editTopic).toHaveBeenLastCalledWith("7", "12", { pinned: true })
+
+    for (const flag of ["--closed", "--pinned"]) {
+      const wrong = await call(["topics", "edit", "7", "12", flag, "yes", "--json"], connect, env)
+      expect(wrong.code).not.toBe(0)
+    }
+    expect(editTopic).toHaveBeenCalledTimes(3)
   })
 })

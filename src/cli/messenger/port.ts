@@ -216,6 +216,8 @@ export interface ForumControl {
 export interface TopicEditing {
   /** Renames, closes or reopens one topic; the answer is the topic as it now stands. A repeat changes nothing. */
   editTopic(chatId: Id, topicId: Id, change: TopicChange): Promise<Topic>
+  /** Puts the pinned topics in this order; a topic that is not pinned stays unpinned. */
+  orderPinnedTopics(chatId: Id, topicIds: Id[]): Promise<void>
 }
 
 export interface ThreadAddressing {

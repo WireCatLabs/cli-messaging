@@ -8,9 +8,11 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Added
 
-- `topics edit <chat> <topic> [--title <t>] [--closed on|off]` and the MCP tool `topics_edit` rename, close or
-  reopen a forum topic, through the optional adapter group `TopicEditing`. Journaled as `topic-edit`,
-  `topic-close` or `topic-reopen` with the topic id, under the permission key `topics.edit`.
+- `topics edit <chat> <topic> [--title <t>] [--closed on|off] [--pinned on|off]` and the MCP tool `topics_edit`
+  rename, close, reopen, pin or unpin a forum topic; `topics order <chat> <topic...>` and `topics_order` put the
+  pinned topics in order, pinning nothing. Through the optional adapter group `TopicEditing`; journaled as
+  `topic-edit`, `-close`, `-reopen`, `-pin`, `-unpin` or `-order` with the topic id, under the permission key
+  `topics.edit`.
 
 - `chats send-as <chat>` and the read-only MCP tool `chats_send_as` list the identities the account may post
   as in a chat, through the optional adapter group `SenderIdentities`. `messages send`, `messages forward` and

@@ -61,15 +61,16 @@ export const topicWriteTools = (messenger: Messenger): Record<string, AnyTool> =
       }),
   }),
   topics_edit: tool({
-    title: "Rename, close or reopen a forum topic",
+    title: "Rename, close, reopen, pin or unpin a forum topic",
     description:
       "Only when the owner requested this change. title renames the topic; closed: true closes it to new messages, " +
-      "false reopens it. Returns { operationId, chatId, topic }. On outcome_unknown, repeating it is safe.",
+      "false reopens it; pinned: true pins it, false unpins it. Returns { operationId, chatId, topic }. On outcome_unknown, repeating it is safe.",
     input: v.object({
       chat: chatOf(messenger),
       topic: v.pipe(v.string(), v.minLength(1), v.description("the topic id, from topics_list")),
       title: v.optional(v.pipe(v.string(), v.minLength(1))),
       closed: v.optional(v.boolean()),
+      pinned: v.optional(v.boolean()),
     }),
     annotations: WRITE,
     _meta: APPROVE,
@@ -78,6 +79,22 @@ export const topicWriteTools = (messenger: Messenger): Record<string, AnyTool> =
       servicesFor(onlineDeps(messenger, adapter, guard)).topics.edit(args.chat, args.topic, {
         ...(args.title === undefined ? {} : { title: args.title }),
         ...(args.closed === undefined ? {} : { closed: args.closed }),
+        ...(args.pinned === undefined ? {} : { pinned: args.pinned }),
       }),
+  }),
+  topics_order: tool({
+    title: "Order the pinned forum topics",
+    description:
+      "Only when the owner requested this order. Puts the pinned topics in the order given; it pins and unpins " +
+      "nothing. Returns { operationId, chatId, order }. On outcome_unknown, repeating it is safe.",
+    input: v.object({
+      chat: chatOf(messenger),
+      topics: v.pipe(v.array(v.pipe(v.string(), v.minLength(1))), v.minLength(1)),
+    }),
+    annotations: WRITE,
+    _meta: APPROVE,
+    permission: "groups",
+    online: (adapter, args, { guard }) =>
+      servicesFor(onlineDeps(messenger, adapter, guard)).topics.order(args.chat, args.topics),
   }),
 })

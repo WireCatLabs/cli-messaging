@@ -30,6 +30,9 @@ export type ChatAction =
   | "topic-edit"
   | "topic-close"
   | "topic-reopen"
+  | "topic-pin"
+  | "topic-unpin"
+  | "topic-order"
 
 /** What an `account` entry changed. Never the value it changed it to — no name, number or title. */
 export type AccountAction =

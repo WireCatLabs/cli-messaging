@@ -365,6 +365,7 @@ export interface SenderIdentity {
 export interface TopicChange {
   title?: string
   closed?: boolean
+  pinned?: boolean
 }
 
 /** What a link leads to, read without joining. */
