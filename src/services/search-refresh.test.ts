@@ -357,6 +357,20 @@ describe("bounded search refresh", () => {
     expect(one.connection).not.toHaveBeenCalled()
   })
 
+  it.each([
+    { pattern: /chapter/u, language: "lucene" as const },
+    { pattern: /chapter/u, ast: parseLucene("chapter") },
+    { pattern: /chapter/u, source: "all" },
+    { language: "legacy" as const, timezone: "UTC" },
+    { language: "legacy" as const, ast: parseLucene("chapter") },
+  ])("rejects conflicting query modes %j before network use", async (query) => {
+    const one = await setup()
+    await expect(refreshSearch(one.deps, { ...query, limit: 20, syncFirst: {} })).rejects.toMatchObject({
+      code: "validation_error",
+    })
+    expect(one.connection).not.toHaveBeenCalled()
+  })
+
   it("validates queries before network use", async () => {
     const one = await setup()
     await expect(

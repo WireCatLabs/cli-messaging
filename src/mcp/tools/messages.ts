@@ -156,7 +156,7 @@ export const messagesTools = (messenger: Messenger): Record<string, AnyTool> => 
       input: messagesSearchInput(messenger),
       annotations: { ...READ, openWorldHint: false },
       stored: (store, account, args, defaults, connect) => {
-        const services = searchServices(messenger, store, account, defaults, connect)
+        const services = searchServices(messenger, store, account, defaults, args.sync_first ? connect : undefined)
         return answerMessagesSearch(services.messages, args, defaults, services.searches)
       },
     }),
@@ -167,7 +167,7 @@ export const messagesTools = (messenger: Messenger): Record<string, AnyTool> => 
       input: messagesStatsInput(messenger),
       annotations: { ...READ, openWorldHint: false },
       stored: (store, account, args, defaults, connect) => {
-        const services = searchServices(messenger, store, account, defaults, connect)
+        const services = searchServices(messenger, store, account, defaults, args.sync_first ? connect : undefined)
         return answerMessagesStats(services.messages, args, defaults, services.searches)
       },
     }),

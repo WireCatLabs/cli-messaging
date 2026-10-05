@@ -20,7 +20,7 @@ export const searchServices = (
 ) =>
   servicesFor({
     ...storedDeps(messenger, store, account, defaults.guard),
-    offline: false,
+    offline: connect === undefined,
     history: defaults.history,
     profile: defaults.settings.profile,
     env: defaults.env,

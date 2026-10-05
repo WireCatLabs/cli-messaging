@@ -77,7 +77,13 @@ export const conversationsTools = (messenger: Messenger): Record<string, AnyTool
       annotations: { ...READ, openWorldHint: false },
       stored: async (store, account, args, defaults, connect) => {
         const size = args.limit ?? defaults.limit
-        const found = await searchServices(messenger, store, account, defaults, connect).embeddings.search(args.query, {
+        const found = await searchServices(
+          messenger,
+          store,
+          account,
+          defaults,
+          args.sync_first ? connect : undefined,
+        ).embeddings.search(args.query, {
           ...syncArgs(args),
           signal: defaults.signal,
           limit: size,

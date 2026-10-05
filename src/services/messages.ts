@@ -461,6 +461,22 @@ export const messagesService = (deps: ServiceDeps): MessagesService => {
   }
 }
 
+export const validateSearchDialect = (request: SearchQuery): void => {
+  const { pattern } = request
+  if (request.language !== undefined && !["lucene", "legacy"].includes(request.language))
+    throw new CliError("validation_error", "--language takes lucene or legacy")
+  if (pattern && (request.language === "lucene" || request.ast !== undefined || request.timezone !== undefined))
+    throw new CliError("validation_error", "--regex is legacy JavaScript mode; not with Lucene, AST or timezone")
+  if (request.language === "legacy" && (request.ast !== undefined || request.timezone !== undefined))
+    throw new CliError("validation_error", "AST and timezone require the Lucene language")
+  if (pattern && (request.source !== undefined || request.accounts !== undefined || request.senders !== undefined)) {
+    throw new CliError(
+      "validation_error",
+      "--regex reads the account it runs as — not with --source, other accounts or senders",
+    )
+  }
+}
+
 /**
  * `messages search` over a store, from the account given — or from `query.accounts`, which a caller such
  * as a bot's search passes after checking it may read them.
@@ -474,24 +490,13 @@ export const searchStore = async (
   const { text, pattern, chat, source, accounts, senders, limit, newest = false, context = 0 } = request
   if (request.signal?.aborted)
     throw new CliError("validation_error", "search was aborted", { reason: "query_aborted", complete: false })
-  if (request.language !== undefined && !["lucene", "legacy"].includes(request.language))
-    throw new CliError("validation_error", "--language takes lucene or legacy")
-  if (pattern && (request.language === "lucene" || request.ast !== undefined || request.timezone !== undefined))
-    throw new CliError("validation_error", "--regex is legacy JavaScript mode; not with Lucene, AST or timezone")
-  if (request.language === "legacy" && (request.ast !== undefined || request.timezone !== undefined))
-    throw new CliError("validation_error", "AST and timezone require the Lucene language")
+  validateSearchDialect(request)
   // A large file builds its word index a slice per search as well as in `store migrate` (NEED-453 A).
   const stop = Date.now() + SEARCH_FILL_MS
   await store.fillSearchIndex({ until: () => Date.now() >= stop })
   await store.fillStems({ until: () => Date.now() >= stop })
   if (!pattern && (request.language === "lucene" || request.ast !== undefined))
     return searchLucene(store, account, request, messenger)
-  if (pattern && (source !== undefined || accounts !== undefined || senders !== undefined)) {
-    throw new CliError(
-      "validation_error",
-      "--regex reads the account it runs as — not with --source, other accounts or senders",
-    )
-  }
   const found = pattern
     ? {
         ...(await store.find({

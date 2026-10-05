@@ -4,7 +4,7 @@ import type { QueryExecution, ResolvedNode } from "../search/lucene/resolved.js"
 import type { AccountKey } from "../store/store.js"
 import { archiveService } from "./archive.js"
 import type { ServiceDeps } from "./deps.js"
-import { type SearchQuery, scopeOf } from "./messages.js"
+import { type SearchQuery, scopeOf, validateSearchDialect } from "./messages.js"
 import { prepareLucene } from "./messages-search.js"
 
 export const SYNC_KEY = "messages.sync-first"
@@ -60,6 +60,7 @@ export const refreshSearch = async (deps: ServiceDeps, request: SearchQuery): Pr
     if (!Number.isSafeInteger(value) || value < 1 || value > max)
       throw new CliError("validation_error", `${name} takes a whole number from 1 to ${max}`)
   }
+  validateSearchDialect(request)
   const guardRequest = { chatId: null, kind: "reaction" as const, key: SYNC_KEY }
   await deps.guard.ask?.(guardRequest)
   deps.guard.check(guardRequest, { reserve: false })
@@ -71,14 +72,6 @@ export const refreshSearch = async (deps: ServiceDeps, request: SearchQuery): Pr
     : (
         await scopeOf(deps.messenger, store, account, { ...request, text: request.pattern ? "" : (request.text ?? "") })
       )[1]
-  if (
-    request.pattern &&
-    (request.source !== undefined || request.accounts !== undefined || request.senders !== undefined)
-  )
-    throw new CliError(
-      "validation_error",
-      "--regex reads the account it runs as — not with --source, other accounts or senders",
-    )
   const scoped = execution.chat ? [execution.chat] : "root" in execution ? chatScope(execution.root) : undefined
   const options = { ...SYNC_BOUNDS, ...request.syncFirst }
   const note = options.note ?? (() => {})
