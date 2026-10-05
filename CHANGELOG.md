@@ -8,6 +8,10 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Added
 
+- `chats mark-read --topic <id>` and the `chats_mark_read` tool's `topic` mark one forum topic read, through the
+  new optional `ReadState.markTopicRead`; a messenger without it refuses rather than mark the whole chat read.
+  The journal records the topic id.
+
 - `messages context --thread` reads a stored message's parent chain and chosen replies, keeping interleaved
   discussions apart. `messages search --thread` attaches the same graph context to each hit. Each link names
   its source (`provider`, `rule`, `agent`), kind, confidence and method. Bounds are independent of network

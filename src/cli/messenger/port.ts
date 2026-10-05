@@ -172,6 +172,8 @@ export interface MessageReactions {
 export interface ReadState {
   /** Marks the chat read up to `until`, or to its newest message; the other side sees it. */
   markRead(chatId: Id, until?: Id): Promise<void>
+  /** One forum topic only, up to `until` or its newest message; the rest of the chat stays as it is. */
+  markTopicRead(chatId: Id, topicId: Id, until?: Id): Promise<void>
 }
 
 export interface ForumState {
