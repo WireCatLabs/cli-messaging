@@ -415,7 +415,7 @@ export const conversationsCommand = (messenger: Messenger): Command => {
       "remote: stop before a run that could send more tokens than this",
       positiveCount("--max-tokens"),
     )
-  boundOptions(embed)
+  boundOptions(embed, { oneChatUnbounded: true })
   embed.action(async function (this: Command) {
     const options = this.optsWithGlobals<
       ModelOptions & {
@@ -552,7 +552,10 @@ interface BoundOptions {
 }
 
 /** How much one run over many chats may do: the owner's machine, not a background job, pays for it. */
-const boundOptions = (command: Command, { chunks = true }: { chunks?: boolean } = {}): Command => {
+const boundOptions = (
+  command: Command,
+  { chunks = true, oneChatUnbounded = false }: { chunks?: boolean; oneChatUnbounded?: boolean } = {},
+): Command => {
   command.option(
     "--max-chats <n>",
     `at most this many chats in one run; ${REFRESH_BOUNDS.maxChats} if not given`,
@@ -561,7 +564,8 @@ const boundOptions = (command: Command, { chunks = true }: { chunks?: boolean } 
   if (chunks) {
     command.option(
       "--max-chunks <n>",
-      `at most this many chunks embedded in one run; ${REFRESH_BOUNDS.maxChunks} if not given`,
+      `at most this many chunks embedded in one run; ${REFRESH_BOUNDS.maxChunks} if not given` +
+        (oneChatUnbounded ? ", and no limit with --chat" : ""),
       positiveCount("--max-chunks"),
     )
   }
