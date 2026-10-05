@@ -24,3 +24,5 @@ millions of messages. Start with [`HANDOFF.md`](HANDOFF.md).
 | [`research/2026-09-29-pglite-web-check.md`](research/2026-09-29-pglite-web-check.md) | the PGlite findings against its docs, issues and source |
 | [`research/2026-09-29-drizzle.md`](research/2026-09-29-drizzle.md) | what Drizzle can and cannot do for these stores |
 | [`../../bench/search/`](../../bench/search/) | the benchmark fixture and its full results |
+
+Search AI configuration and opt-in analysis: [`../search/ai-providers.md`](../search/ai-providers.md).

@@ -1,0 +1,48 @@
+import { CliError } from "@leemour/cli-core"
+import type { AnalysisProvider } from "../analysis/provider.js"
+import { endpoint } from "../analysis/settings.js"
+import type { AppIdentity } from "./app.js"
+import { embeddingKeys } from "./embedding-keys.js"
+import type { Settings } from "./settings.js"
+
+export interface AnalysisOptions {
+  provider?: string
+  model?: string
+  baseUrl?: string
+}
+export const analysisChoice = (
+  options: AnalysisOptions,
+  app: AppIdentity,
+  settings: Settings,
+  env: NodeJS.ProcessEnv,
+): AnalysisProvider => {
+  const override =
+    (options.provider !== undefined && options.provider !== (settings.analysisProvider ?? "agent")) ||
+    (options.baseUrl !== undefined &&
+      options.baseUrl.replace(/\/+$/, "") !== settings.analysisBaseUrl?.replace(/\/+$/, ""))
+  const provider =
+    options.provider ??
+    (settings.analysisProvider && settings.analysisProvider !== "agent"
+      ? settings.analysisProvider
+      : options.baseUrl
+        ? "openai"
+        : "agent")
+  if (provider === "agent")
+    throw new CliError(
+      "validation_error",
+      "analysisProvider is agent; use your linking skill, or configure openai/anthropic to use --analyze",
+    )
+  if (provider !== "openai" && provider !== "anthropic")
+    throw new CliError("validation_error", "analysis provider must be agent, openai or anthropic")
+  const model = options.model ?? (override ? undefined : settings.analysisModel)
+  if (!model?.trim()) throw new CliError("validation_error", "set analysisModel or give --model before --analyze")
+  const customUrl = options.baseUrl ?? (override ? undefined : settings.analysisBaseUrl)
+  const baseUrl = customUrl ?? (provider === "anthropic" ? "https://api.anthropic.com" : "https://api.openai.com/v1")
+  if (!endpoint(baseUrl))
+    throw new CliError("validation_error", "use an HTTP/S analysis endpoint without credentials, query or fragment")
+  const keyName = customUrl === undefined ? provider : new URL(baseUrl).host
+  const apiKey = embeddingKeys(app, env).read(keyName)?.key
+  if (!apiKey && customUrl === undefined)
+    throw new CliError("authentication_error", `no ${provider} key — use models text key set ${provider}`)
+  return { provider, model, baseUrl, ...(apiKey ? { apiKey } : {}) }
+}

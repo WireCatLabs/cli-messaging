@@ -152,13 +152,11 @@ export const modelsCommand = (messenger: Messenger): Command => {
       )
     })
 
-  const key = text
-    .command("key")
-    .description("the API key of an embedding service, for `conversations embed --provider`")
+  const key = text.command("key").description("API keys for embedding and analysis providers")
 
   key
     .command("set")
-    .argument("<provider>", "openai, or the host of a --base-url server that wants a key")
+    .argument("<provider>", "openai, anthropic, or the host of a --base-url server that wants a key")
     .description("store a key, typed at a hidden prompt or piped on stdin — never as an argument")
     .action(async function (this: Command, provider: string) {
       const context = baseContext(this, messenger.resolveSettings)
@@ -173,7 +171,7 @@ export const modelsCommand = (messenger: Messenger): Command => {
 
   key
     .command("remove")
-    .argument("<provider>", "openai, or a server's host")
+    .argument("<provider>", "openai, anthropic, or a server's host")
     .description("forget a stored key")
     .action(async function (this: Command, provider: string) {
       const context = baseContext(this, messenger.resolveSettings)
