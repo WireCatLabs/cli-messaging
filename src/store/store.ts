@@ -1,6 +1,7 @@
 import { mkdirSync, writeFileSync } from "node:fs"
 import { dirname } from "node:path"
 import { CliError } from "@leemour/cli-core"
+import type { TaskStore } from "@leemour/cli-tasks"
 import type { Link, LinkInput } from "../conversations/link.js"
 import type { DownloadedFile } from "../domain/attachments.js"
 import type {
@@ -61,6 +62,7 @@ import * as stems from "./sqlite/stems.js"
 import * as sync from "./sqlite/sync.js"
 import type { StoredTag, TagFilter, TagTarget } from "./sqlite/tags.js"
 import * as tagQueries from "./sqlite/tags.js"
+import { taskStoreOver } from "./sqlite/tasks.js"
 import * as transcripts from "./sqlite/transcripts.js"
 import { toMs } from "./sqlite/values.js"
 import type { ChunkToEmbed } from "./sqlite/vectors.js"
@@ -472,6 +474,8 @@ export interface MessageStore {
   deleteSearch(reference: string): Promise<StoredSearch>
   /** Drops the unnamed runs; answers how many. */
   clearSearchHistory(): Promise<number>
+  /** Open tasks waiting on the owner, for `@leemour/cli-tasks`'s service. */
+  readonly tasks: TaskStore
   close(): Promise<void>
 }
 
@@ -1313,6 +1317,8 @@ const storeOver = (context: StoreContext): MessageStore => {
       })
       return cleared
     },
+
+    tasks: taskStoreOver(database),
 
     close: async () => database.close(),
   }

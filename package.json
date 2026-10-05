@@ -93,6 +93,7 @@
     "@huggingface/tokenizers": "0.2.0",
     "@leemour/cli-messaging-onnx": "1.0.0",
     "@leemour/cli-messaging-sqlite": "1.0.0",
+    "@leemour/cli-tasks": "0.1.0",
     "@modelcontextprotocol/server": "2.1.0",
     "@valibot/to-json-schema": "1.8.0",
     "lossless-json": "4.3.0",

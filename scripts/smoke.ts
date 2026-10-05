@@ -84,6 +84,23 @@ migrate(sqlite.database)
 sqlite.database.prepare("INSERT INTO accounts (provider, native_id, created_at) VALUES ('telegram', '1', 0)").run()
 check("Drizzle reads the row the seam wrote", (await sqlite.orm.select().from(accounts))[0]?.nativeId === "1")
 sqlite.database.close()
+const tasksFile = join(mkdtempSync(join(tmpdir(), "cli-messaging-smoke-")), "messages.db")
+const withTasks = await openStore({ path: tasksFile })
+await withTasks.tasks.insert({
+  id: "t1",
+  source: "msg:telegram:1:-1002:3",
+  sourceKind: "message",
+  account: "telegram:1",
+  group: "-1002",
+  kind: "question",
+  state: "open",
+  origin: "rule",
+  createdAt: new Date("2026-10-05T10:00:00Z"),
+})
+await withTasks.close()
+const reopened = await openStore({ path: tasksFile })
+check("the store keeps a task across a reopen", (await reopened.tasks.get("t1"))?.kind === "question")
+await reopened.close()
 check(
   "the normalizer folds accents, ё and й as under Node",
   normalize("Ёжик ﬁnds\tЙогурт в València") === "ежик finds иогурт в valencia",

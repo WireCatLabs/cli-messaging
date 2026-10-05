@@ -189,5 +189,13 @@ export const GENERATED: { name: string; statements: string[] }[] = [
       "CREATE TRIGGER attachment_texts_message_ad AFTER DELETE ON messages BEGIN\n  DELETE FROM attachment_texts WHERE attachment_pk IN (SELECT pk FROM attachments WHERE message_pk = old.pk);\nEND;",
       "CREATE TRIGGER attachment_texts_attachment_ad AFTER DELETE ON attachments BEGIN\n  DELETE FROM attachment_texts WHERE attachment_pk = old.pk;\nEND;"
     ]
+  },
+  {
+    "name": "20261005215529_version-20-tasks",
+    "statements": [
+      "CREATE TABLE `tasks` (\n\t`id` text PRIMARY KEY,\n\t`source` text NOT NULL,\n\t`source_kind` text NOT NULL,\n\t`account` text NOT NULL,\n\t`group_key` text NOT NULL,\n\t`kind` text NOT NULL,\n\t`state` text NOT NULL,\n\t`reason` text,\n\t`origin` text NOT NULL,\n\t`created_at` integer NOT NULL,\n\t`due_at` integer,\n\t`closed_at` integer,\n\t`closed_by` text\n);",
+      "CREATE INDEX `tasks_by_source` ON `tasks` (`account`,`source`);",
+      "CREATE INDEX `tasks_by_state` ON `tasks` (`account`,`state`,`group_key`);"
+    ]
   }
 ]

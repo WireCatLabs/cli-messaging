@@ -587,3 +587,30 @@ export const attachmentTexts = sqliteTable("attachment_texts", {
   error: text("error"),
   writtenAt: integer("written_at").notNull(),
 })
+
+/**
+ * What `@leemour/cli-tasks` keeps: a question, request, mention or promise waiting on the owner. `source`
+ * is a locator (`msg:…`), never the message text. Times are milliseconds.
+ */
+export const tasks = sqliteTable(
+  "tasks",
+  {
+    id: text("id").primaryKey(),
+    source: text("source").notNull(),
+    sourceKind: text("source_kind").notNull(),
+    account: text("account").notNull(),
+    groupKey: text("group_key").notNull(),
+    kind: text("kind").notNull(),
+    state: text("state").notNull(),
+    reason: text("reason"),
+    origin: text("origin").notNull(),
+    createdAt: integer("created_at").notNull(),
+    dueAt: integer("due_at"),
+    closedAt: integer("closed_at"),
+    closedBy: text("closed_by"),
+  },
+  (table) => [
+    index("tasks_by_source").on(table.account, table.source),
+    index("tasks_by_state").on(table.account, table.state, table.groupKey),
+  ],
+)
