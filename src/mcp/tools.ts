@@ -2,6 +2,7 @@ import type { Messenger } from "../cli/messenger/context.js"
 import type { AnyTool } from "./tool.js"
 import { accountTools } from "./tools/account.js"
 import { adminTools } from "./tools/admin.js"
+import { attachmentsTools } from "./tools/attachments.js"
 import { chatsTools } from "./tools/chats.js"
 import { chatsReadTools } from "./tools/chats-read.js"
 import { contactsTools } from "./tools/contacts.js"
@@ -60,8 +61,9 @@ export const sendTools = (messenger: Messenger): Record<string, AnyTool> => ({
   ...pollWriteTools(messenger),
 })
 
-/** The owner's own records in the local store — tags, saved searches — read and written; never sent. */
+/** The owner's own records in the local store — tags, saved searches, files' text — read and written; never sent. */
 export const localTools = (messenger: Messenger): Record<string, AnyTool> => ({
   ...tagsTools(messenger),
   ...searchesTools(messenger),
+  ...attachmentsTools(messenger),
 })

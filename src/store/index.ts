@@ -15,6 +15,7 @@ export {
 export {
   type AccountKey,
   type AttachmentTextEntry,
+  type AttachmentView,
   type ChatStats,
   type DeletionScope,
   type Delta,

@@ -464,6 +464,7 @@ describe("the MCP server", () => {
     expect(tools.map((one) => one.name).sort()).toEqual([
       "chat_account_sessions",
       "chat_account_show",
+      "chat_attachments_list",
       "chat_chats_events",
       "chat_chats_folders_list",
       "chat_chats_inspect",
@@ -904,6 +905,49 @@ describe("the MCP server", () => {
     await asked.call("chat_chats_list")
     const refused = await asked.call("chat_tags_add", { tags: ["x"], chat: "7" })
     expect([refused.isError, refused.body.error.code]).toEqual([true, "confirmation_required"])
+  })
+
+  it("**an agent finds files without text and writes back what it read**, as the command does", async () => {
+    const { call, env } = await connect(scripted())
+    await call("chat_chats_list")
+    const store = await openStore({ path: env.MESSAGING_STORE })
+    await seedSearchRecipes(store, { provider: "chat", account: "500" })
+    await store.keepDownloads({ provider: "chat", account: "500" }, "9", "108", [
+      { kind: "file", name: "Отчёт.PDF", path: "/saved/report.pdf" },
+    ])
+    await store.close()
+
+    expect((await call("chat_attachments_list", { needs_text: true })).body).toEqual({
+      items: [
+        {
+          locator: "msg:chat/500/9/108",
+          attachment: 1,
+          kind: "file",
+          name: "Отчёт.PDF",
+          localPath: "/saved/report.pdf",
+          text: null,
+        },
+      ],
+      page: 1,
+      limit: expect.any(Number),
+      hasMore: false,
+    })
+    const kept = await call("chat_attachments_text_set", { message: "msg:chat/500/9/108", text: "Квартальный отчёт" })
+    expect(kept.body).toEqual({
+      locator: "msg:chat/500/9/108",
+      attachment: 1,
+      origin: "agent",
+      chars: 17,
+      replaced: null,
+    })
+    const found = await call("chat_messages_search", { text: "content:квартальный", language: "lucene" })
+    expect(found.body.items.map(({ id }: { id: string }) => id)).toEqual(["108"])
+    expect((await call("chat_attachments_list", { needs_text: true })).body.items).toEqual([])
+
+    const readOnly = await connect(scripted(), { config: levels({ attachments: "readonly" }) })
+    const names = (await readOnly.client.listTools()).tools.map(({ name }) => name)
+    expect(names).toContain("chat_attachments_list")
+    expect(names).not.toContain("chat_attachments_text_set")
   })
 
   it("hides contact context when message reading is denied", async () => {
