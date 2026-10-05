@@ -150,6 +150,29 @@ describe("bounded search refresh", () => {
     expect(one.connection).not.toHaveBeenCalled()
   })
 
+  it("conversation strict filters select the same refresh chats as message search", async () => {
+    const one = await setup()
+    const answer = await one.services.embeddings.search("chapter", { filter: "chat:8", limit: 20, syncFirst: {} })
+    expect(one.asked).toEqual(["8"])
+    expect(answer.refreshed?.complete).toBe(true)
+  })
+
+  it("conversation cross-account refresh reports unconnected accounts", async () => {
+    const one = await setup()
+    await one.store.saveAccount({ provider: "test", account: "600" }, { name: "Other" })
+    const answer = await one.services.embeddings.search("chapter", {
+      source: "all",
+      limit: 20,
+      syncFirst: { maxChats: 1 },
+    })
+    expect(answer.refreshed?.failed).toContainEqual({
+      account: { provider: "test", account: "600" },
+      chat: null,
+      reason: "account_not_connected",
+    })
+    expect(answer.coverage?.state).toBe("stale")
+  })
+
   it("refreshes the graph after ingesting new messages when both steps are requested", async () => {
     const one = await setup()
     await one.services.conversations.build("7")
