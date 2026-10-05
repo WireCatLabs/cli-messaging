@@ -6,6 +6,12 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Fixed
+
+- `contacts context`, including MCP, is checked as a message read because it returns stored message bodies.
+  `permissions.messages: deny` now blocks/hides it like the other reads. Local identity linking keeps its own
+  contact permission; it returns no message bodies.
+
 ## 0.148.1 — 05.10.2026
 
 ### Fixed

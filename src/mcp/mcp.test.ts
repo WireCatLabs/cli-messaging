@@ -906,6 +906,11 @@ describe("the MCP server", () => {
     expect([refused.isError, refused.body.error.code]).toEqual([true, "confirmation_required"])
   })
 
+  it("hides contact context when message reading is denied", async () => {
+    const { client } = await connect(scripted(), { config: levels({ messages: "deny" }) })
+    expect((await client.listTools()).tools.map(({ name }) => name)).not.toContain("chat_contacts_context")
+  })
+
   it.each([false, true])("MCP search history follows explicit recording %s", async (record) => {
     const { call, env } = await connect(scripted(), { config: { defaults: { record } } })
     await call("chat_chats_list")
