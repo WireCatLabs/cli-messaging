@@ -21,9 +21,11 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   a text layer — into the local store, and `content:<word>` or `content:"a phrase"` in a strict search finds the
   messages whose files hold it. `text:` still looks only at what was written, and file words do not rank
   results. `--download --output-dir <dir>` first saves, from the messenger, files no download saved yet; nothing
-  is fetched without it. A scan or a photo is answered `needs-agent`: there is no OCR. The answer names each file
-  (locator, attachment number from 1, status, extractor, characters), never its text. A re-run reads only new
-  files and files whose size changed; `--limit` stops after that many files and the next run continues.
+  is fetched without it. A scan or a photo is answered `needs-agent`: there is no OCR. A photo is known by its
+  kind, type or name and never read; voice, audio, video and stickers are passed over unread. The answer names
+  each file (locator, attachment number from 1, status, extractor, characters), never its text. Each file is
+  looked at once — photos and PDFs with no text layer included — and again only when its size changes; `--limit`
+  stops after that many files and the next run continues. `store check` checks the files' word index too.
 - Word and PDF need the optional packages `mammoth` and `unpdf`, declared as optional peer dependencies and
   never installed with this package; without one, those files are skipped, a note names the install, and the
   next run reads them. Consumers add `attachmentsCommand` to their command list; the permission key is
