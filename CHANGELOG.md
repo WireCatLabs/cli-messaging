@@ -6,6 +6,10 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.160.0 — 07.10.2026
+
+Released early: MAX and Telegram cannot adopt 0.159.0 — a timed-out Bot API write reads as safe to repeat, and tg session start --qr-file is refused
+
 ### Fixed
 
 - `session start qr` and `sms` run again without a terminal: 0.157.0 refused them first, which broke
