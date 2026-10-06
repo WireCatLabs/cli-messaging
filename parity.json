@@ -1215,7 +1215,10 @@
         },
         "--deep": {
           "in": [],
-          "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" }
+          "planned": {
+            "max": "each CLI's next cli-messaging bump",
+            "tg": "each CLI's next cli-messaging bump"
+          }
         },
         "--min-score": {
           "in": [],
@@ -1504,11 +1507,17 @@
     },
     "contacts check": {
       "in": [],
-      "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" },
+      "planned": {
+        "max": "each CLI's next cli-messaging bump",
+        "tg": "each CLI's next cli-messaging bump"
+      },
       "options": {
         "--no-registries": {
           "in": [],
-          "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" }
+          "planned": {
+            "max": "each CLI's next cli-messaging bump",
+            "tg": "each CLI's next cli-messaging bump"
+          }
         }
       }
     },
@@ -2576,51 +2585,44 @@
       "in": "all"
     },
     "stats": {
-      "in": [],
+      "in": ["max"],
       "planned": {
-        "max": "stats charts adoption",
         "tg": "stats charts adoption"
       }
     },
     "stats charts": {
-      "in": [],
+      "in": ["max"],
       "planned": {
-        "max": "stats charts adoption",
         "tg": "stats charts adoption"
       },
       "options": {
         "--by": {
-          "in": [],
+          "in": ["max"],
           "planned": {
-            "max": "stats charts adoption",
             "tg": "stats charts adoption"
           }
         },
         "--chart-kind": {
-          "in": [],
+          "in": ["max"],
           "planned": {
-            "max": "stats charts adoption",
             "tg": "stats charts adoption"
           }
         },
         "--output": {
-          "in": [],
+          "in": ["max"],
           "planned": {
-            "max": "stats charts adoption",
             "tg": "stats charts adoption"
           }
         },
         "--since-time": {
-          "in": [],
+          "in": ["max"],
           "planned": {
-            "max": "stats charts adoption",
             "tg": "stats charts adoption"
           }
         },
         "--timezone": {
-          "in": [],
+          "in": ["max"],
           "planned": {
-            "max": "stats charts adoption",
             "tg": "stats charts adoption"
           }
         }
@@ -2765,69 +2767,114 @@
     },
     "tasks": {
       "in": [],
-      "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" }
+      "planned": {
+        "max": "each CLI's next cli-messaging bump",
+        "tg": "each CLI's next cli-messaging bump"
+      }
     },
     "tasks add": {
       "in": [],
-      "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" },
+      "planned": {
+        "max": "each CLI's next cli-messaging bump",
+        "tg": "each CLI's next cli-messaging bump"
+      },
       "options": {
         "--type": {
           "in": [],
-          "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" }
+          "planned": {
+            "max": "each CLI's next cli-messaging bump",
+            "tg": "each CLI's next cli-messaging bump"
+          }
         }
       }
     },
     "tasks close": {
       "in": [],
-      "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" },
+      "planned": {
+        "max": "each CLI's next cli-messaging bump",
+        "tg": "each CLI's next cli-messaging bump"
+      },
       "options": {
         "--as": {
           "in": [],
-          "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" }
+          "planned": {
+            "max": "each CLI's next cli-messaging bump",
+            "tg": "each CLI's next cli-messaging bump"
+          }
         },
         "--reason": {
           "in": [],
-          "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" }
+          "planned": {
+            "max": "each CLI's next cli-messaging bump",
+            "tg": "each CLI's next cli-messaging bump"
+          }
         }
       }
     },
     "tasks list": {
       "in": [],
-      "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" },
+      "planned": {
+        "max": "each CLI's next cli-messaging bump",
+        "tg": "each CLI's next cli-messaging bump"
+      },
       "options": {
         "--before-time": {
           "in": [],
-          "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" }
+          "planned": {
+            "max": "each CLI's next cli-messaging bump",
+            "tg": "each CLI's next cli-messaging bump"
+          }
         },
         "--chat": {
           "in": [],
-          "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" }
+          "planned": {
+            "max": "each CLI's next cli-messaging bump",
+            "tg": "each CLI's next cli-messaging bump"
+          }
         },
         "--limit": {
           "in": [],
-          "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" }
+          "planned": {
+            "max": "each CLI's next cli-messaging bump",
+            "tg": "each CLI's next cli-messaging bump"
+          }
         },
         "--state": {
           "in": [],
-          "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" }
+          "planned": {
+            "max": "each CLI's next cli-messaging bump",
+            "tg": "each CLI's next cli-messaging bump"
+          }
         },
         "--type": {
           "in": [],
-          "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" }
+          "planned": {
+            "max": "each CLI's next cli-messaging bump",
+            "tg": "each CLI's next cli-messaging bump"
+          }
         }
       }
     },
     "tasks stats": {
       "in": [],
-      "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" },
+      "planned": {
+        "max": "each CLI's next cli-messaging bump",
+        "tg": "each CLI's next cli-messaging bump"
+      },
       "options": {
         "--chat": {
           "in": [],
-          "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" }
+          "planned": {
+            "max": "each CLI's next cli-messaging bump",
+            "tg": "each CLI's next cli-messaging bump"
+          }
         },
         "--type": {
           "in": [],
-          "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" }
+          "planned": {
+            "max": "each CLI's next cli-messaging bump",
+            "tg": "each CLI's next cli-messaging bump"
+          }
         }
       }
     },
