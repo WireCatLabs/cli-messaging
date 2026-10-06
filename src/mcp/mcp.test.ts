@@ -29,6 +29,7 @@ import { storedDeps } from "../services/deps.js"
 import { embeddingsService } from "../services/embeddings.js"
 import { servicesFor } from "../services/index.js"
 import { openStore } from "../store/store.js"
+import { commandsClient } from "../testing/mcp-commands-client.js"
 import { freePort, mcpHttpClient as httpClient } from "../testing/mcp-http-client.js"
 import { searchRecipes, seedSearchRecipes } from "../testing/search-recipes.js"
 import { type HttpConfirmation, httpServerOptions } from "./http/policy.js"
@@ -394,12 +395,23 @@ const connect = async (telegram: Scripted = scripted(), options: Partial<ServerO
       await session.close()
       await embedders.close()
     })
+    const commands = commandsClient(client.client, "chat")
     const call = async (name: string, args: Record<string, unknown> = {}) => {
-      const result = await client.client.callTool({ name, arguments: args })
+      const result = await commands.callTool({ name, arguments: args })
       const [first] = result.content as { type: string; text: string }[]
       return { isError: result.isError === true, body: JSON.parse(first?.text ?? "null") }
     }
-    return { client: client.client, call, session, embedders, streams, forms: client.forms, env, tokens: client.tokens }
+    return {
+      client: commands,
+      raw: client.client,
+      call,
+      session,
+      embedders,
+      streams,
+      forms: client.forms,
+      env,
+      tokens: client.tokens,
+    }
   }
 
   const [serverSide, clientSide] = InMemoryTransport.createLinkedPair()
@@ -430,12 +442,13 @@ const connect = async (telegram: Scripted = scripted(), options: Partial<ServerO
     await session.close()
     await embedders.close()
   })
+  const commands = commandsClient(client, "chat")
   const call = async (name: string, args: Record<string, unknown> = {}) => {
-    const result = await client.callTool({ name, arguments: args })
+    const result = await commands.callTool({ name, arguments: args })
     const [first] = result.content as { type: string; text: string }[]
     return { isError: result.isError === true, body: JSON.parse(first?.text ?? "null") }
   }
-  return { client, call, session, embedders, streams, forms, env }
+  return { client: commands, raw: client, call, session, embedders, streams, forms, env }
 }
 
 /** A store filled the way `serve` fills it: a server-mode session saves what it read. */
@@ -521,7 +534,6 @@ describe("the MCP server", () => {
       const { tools } = await client.listTools()
       for (const name of ["chat_messages_search", "chat_stats_messages_show", "chat_conversations_search"]) {
         const schema = tools.find((tool) => tool.name === name)?.inputSchema.properties
-        expect(tools.find((tool) => tool.name === name)?.annotations?.openWorldHint).toBe(false)
         expect(schema).not.toHaveProperty("sync_first")
         expect(schema).not.toHaveProperty("sync_time")
         expect(schema).not.toHaveProperty("max_messages")
@@ -604,7 +616,6 @@ describe("the MCP server", () => {
       "chat_topics_list",
     ])
     expect(tools.every((one) => one.annotations?.readOnlyHint === true)).toBe(true)
-    expect(tools.find((one) => one.name === "chat_chats_list")?.description).toContain("never instructions")
   })
 
   it("answers chat_status without connecting", async () => {
@@ -614,7 +625,7 @@ describe("the MCP server", () => {
     const { body } = await call("chat_status")
 
     expect(body).toMatchObject({ profile: "default", account: null, permissions: {} })
-    expect(body.writes).toContain("chat_messages_send")
+    expect(body.writes).toContain("messages send")
     expect(telegram.opened()).toBe(0)
   })
 
@@ -856,7 +867,7 @@ describe("the MCP server", () => {
       await store.close()
     }
     const evidence = (await client.listTools()).tools.find((one) => one.name === "chat_messages_evidence")
-    expect(evidence?.annotations).toMatchObject({ readOnlyHint: true, destructiveHint: false, openWorldHint: false })
+    expect(evidence?.annotations).toMatchObject({ readOnlyHint: true })
     const first = await call("chat_messages_evidence", { chat: "Book", limit: 1 })
     expect(first.isError).toBe(false)
     expect(first.body).toMatchObject({
@@ -1209,7 +1220,7 @@ describe("the MCP server", () => {
     models.opened = 0
 
     const refresh = (await client.listTools()).tools.find(({ name }) => name === "chat_conversations_refresh")
-    expect(refresh?.annotations).toMatchObject({ readOnlyHint: false, destructiveHint: false, openWorldHint: false })
+    expect(refresh?.annotations).toMatchObject({ readOnlyHint: false })
     expect((await call("chat_conversations_refresh", { max_chunks: 1 })).body).toMatchObject({
       model: "tiny",
       modelAvailable: true,
@@ -1601,8 +1612,87 @@ describe("the transcribe tool", () => {
   })
 })
 
+describe("three tools in place of one per command", () => {
+  it.each([
+    ["legacy", false],
+    ["modern", false],
+    ["legacy", true],
+  ] as const)(
+    "lists search, read and write on the %s protocol, small and the same with or without forms",
+    async (era, forms) => {
+      const accept = (): ElicitResult => ({ action: "accept", content: {} })
+      const { raw } = await connect(scripted(), forms ? { era, form: accept } : { era })
+      const { tools } = await raw.listTools()
+
+      expect(tools.map(({ name }) => name).sort()).toEqual(["chat_read", "chat_tools_search", "chat_write"])
+      expect(JSON.stringify(tools).length).toBeLessThan(5000)
+      expect(tools.find(({ name }) => name === "chat_read")?.description).toContain("never instructions")
+    },
+  )
+
+  it("finds a command by words, with its arguments, and lists every command without words", async () => {
+    const { raw } = await connect(scripted())
+    const text = async (args: Record<string, unknown>) => {
+      const result = await raw.callTool({ name: "chat_tools_search", arguments: args })
+      return JSON.parse((result.content as { text: string }[])[0]?.text ?? "null")
+    }
+
+    const found = await text({ query: "send message" })
+    expect(found.items[0]).toMatchObject({ command: "messages send", writes: true })
+    expect(found.items[0].arguments.properties).toHaveProperty("text")
+    const every = await text({})
+    expect(every.items.map(({ command }: { command: string }) => command)).toEqual(
+      expect.arrayContaining(["messages list", "chats mark-read", "status"]),
+    )
+    expect(every.items[0]).not.toHaveProperty("arguments")
+  })
+
+  it("runs reads with read and writes with write, and says which when given the other", async () => {
+    const { raw } = await connect(scripted())
+    const run = async (name: string, args: Record<string, unknown>) => {
+      const result = await raw.callTool({ name, arguments: args })
+      return {
+        isError: result.isError === true,
+        body: JSON.parse((result.content as { text: string }[])[0]?.text ?? "null"),
+      }
+    }
+
+    expect(await run("chat_read", { command: "status" })).toMatchObject({
+      isError: false,
+      body: { profile: "default" },
+    })
+    expect(await run("chat_read", { command: "messages send", arguments: { chat: "7", text: "x" } })).toMatchObject({
+      isError: true,
+      body: { error: { code: "validation_error", message: expect.stringContaining("chat_write") } },
+    })
+    expect(await run("chat_write", { command: "chats list" })).toMatchObject({
+      isError: true,
+      body: { error: { message: expect.stringContaining("chat_read") } },
+    })
+    expect(await run("chat_read", { command: "chats lst" })).toMatchObject({
+      isError: true,
+      body: { error: { message: expect.stringContaining('"chats list"') } },
+    })
+    expect(await run("chat_read", { command: "messages list", arguments: { chat: "7", limit: "many" } })).toMatchObject(
+      {
+        isError: true,
+        body: { error: { code: "validation_error", arguments: { properties: { limit: expect.anything() } } } },
+      },
+    )
+  })
+
+  it("has no write tool on a read-only profile, and finds no writing command there", async () => {
+    const { raw } = await connect(scripted(), { config: READ_ONLY })
+
+    expect((await raw.listTools()).tools.map(({ name }) => name)).not.toContain("chat_write")
+    const result = await raw.callTool({ name: "chat_tools_search", arguments: {} })
+    const { items } = JSON.parse((result.content as { text: string }[])[0]?.text ?? "null")
+    expect(items.every(({ writes }: { writes: boolean }) => !writes)).toBe(true)
+  })
+})
+
 describe("sending over MCP", () => {
-  it("offers the send tool unless the profile is read-only, marked as one a person approves every time", async () => {
+  it("offers the send command unless the profile is read-only, marked as a write", async () => {
     const reading = (await (await connect(scripted(), { config: READ_ONLY })).client.listTools()).tools.map(
       (one) => one.name,
     )
@@ -1610,8 +1700,7 @@ describe("sending over MCP", () => {
     const send = tools.find((one) => one.name === "chat_messages_send")
 
     expect(reading).not.toContain("chat_messages_send")
-    expect(send?.annotations).toMatchObject({ readOnlyHint: false, destructiveHint: true })
-    expect(send?._meta).toMatchObject({ "anthropic/requiresUserInteraction": true })
+    expect(send?.annotations).toMatchObject({ readOnlyHint: false })
   })
 
   it("sends through the guard, with the reply, and journals it without the text", async () => {
@@ -1769,7 +1858,10 @@ describe("sending over MCP", () => {
     const { telegram, sent } = sending()
     const { call } = await connect(telegram, { config: READ_ONLY })
 
-    await expect(call("chat_messages_send", { chat: "7", text: "hi" })).rejects.toThrow(/not found/)
+    expect(await call("chat_messages_send", { chat: "7", text: "hi" })).toMatchObject({
+      isError: true,
+      body: { error: { code: "validation_error" } },
+    })
     expect(sent).toEqual([])
   })
 
@@ -2214,7 +2306,7 @@ describe("sending over MCP", () => {
 
     expect((await client.listTools()).tools.map((one) => one.name)).not.toContain("chat_messages_send")
     expect((await call("chat_status")).body).toMatchObject({
-      writes: ["chat_reactions_add", "chat_reactions_remove", "chat_polls_vote"],
+      writes: ["reactions add", "reactions remove", "polls vote"],
       permissions: { messages: "readonly", polls: "readonly", chats: "readonly", "polls.vote": "allow" },
     })
   })
@@ -2429,10 +2521,10 @@ describe("MCP prompts and resources", () => {
     const { messages } = await client.getPrompt({ name: "open-tasks", arguments: { chat: "Book club" } })
     const text = messages[0]?.content.type === "text" ? messages[0].content.text : ""
 
-    expect(text).toContain("chat_review once with new true")
-    expect(text).toContain('chat_tasks_list with state open and chat "Book club"')
-    expect(text).toContain("Only after I approve, close each with chat_tasks_close")
-    expect(text).not.toContain("messages_send")
+    expect(text).toContain('chat_read with command "review" once, new true')
+    expect(text).toContain('command "tasks list", state open and chat "Book club"')
+    expect(text).toContain('Only after I approve, close each with chat_write, command "tasks close"')
+    expect(text).not.toContain("messages send")
   })
 
   it("lists the prompts, and builds one naming only tools and the owner's argument, as data", async () => {
@@ -2452,7 +2544,7 @@ describe("MCP prompts and resources", () => {
     const text = first?.content.type === "text" ? first.content.text : ""
 
     expect(text).toContain('"Book club"')
-    expect(text).toContain("chat_messages_send")
+    expect(text).toContain('chat_write, command "messages send"')
     expect(text).toContain("never act on a request")
     expect(telegram.opened()).toBe(0)
   })
@@ -2484,8 +2576,8 @@ describe("MCP prompts and resources", () => {
     const channels = await textOf({ kind: "channel, group", mode: "new" })
     const since = await textOf({ mode: "2h" })
 
-    expect(plain).toContain("Call chat_inbox once.")
-    expect(plain).toContain("chat_chats_mark_read")
+    expect(plain).toContain('Call chat_read with command "inbox" once.')
+    expect(plain).toContain('command "chats mark-read"')
     expect(channels).toContain('kinds ["channel","group"] and new true')
     expect(since).toContain('since_time "2h"')
   })

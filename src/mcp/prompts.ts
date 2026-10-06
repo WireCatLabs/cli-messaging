@@ -74,10 +74,10 @@ export const registerPrompts = (server: McpServer, { command, name }: { command:
       ]
       return asked(
         [
-          `Catch me up on ${name}. Call ${command}_inbox once${how.length ? ` with ${how.join(" and ")}` : ""}.`,
+          `Catch me up on ${name}. Call ${command}_read with command "inbox" once${how.length ? ` with ${how.join(" and ")}` : ""}.`,
           "Summarise per chat, busiest first: who wrote, what they want, and whether it needs my answer.",
           "Do not send, react or forward anything. Mark nothing read unless I ask; then, for each chat shown, call",
-          `${command}_chats_mark_read with until set to the newest message shown in it — never further.`,
+          `${command}_write with command "chats mark-read" and until set to the newest message shown in it — never further.`,
           DATA,
         ].join(" "),
       )
@@ -99,12 +99,12 @@ export const registerPrompts = (server: McpServer, { command, name }: { command:
       asked(
         [
           `Tell me what waits on me in ${name}. Do not send, react, forward or mark anything read.`,
-          `1. Call ${command}_review once with new true: it opens tasks for what came in and closes what I answered.`,
-          `2. Call ${command}_tasks_list with state open${chat ? ` and chat ${JSON.stringify(chat)}` : ""}.`,
+          `1. Call ${command}_read with command "review" once, new true: it opens tasks for what came in and closes what I answered.`,
+          `2. Call ${command}_read with command "tasks list", state open${chat ? ` and chat ${JSON.stringify(chat)}` : ""}.`,
           "3. Digest per chat, oldest task first: who, what they want — from the message each task points at — and",
           "how long it has been open. A task whose message is null is no longer in the store: say so.",
           "4. For each, suggest one: I answer it (offer a draft), it is done, or it needs no answer.",
-          `5. Only after I approve, close each with ${command}_tasks_close — as done, or dismissed with a reason.`,
+          `5. Only after I approve, close each with ${command}_write, command "tasks close" — as done, or dismissed with a reason.`,
           DATA,
         ].join("\n"),
       ),
@@ -123,10 +123,10 @@ export const registerPrompts = (server: McpServer, { command, name }: { command:
       asked(
         [
           `Help me reply in the ${name} chat ${JSON.stringify(chat)}.`,
-          `1. If that is not an id, find it with ${command}_chats_list; if several chats match, ask me which.`,
-          `2. Read the recent messages with ${command}_messages_list.`,
+          `1. If that is not an id, find it with ${command}_read, command "chats list"; if several chats match, ask me which.`,
+          `2. Read the recent messages with ${command}_read, command "messages list".`,
           "3. Draft a reply and show it to me.",
-          `4. Only after I approve that exact text, send it with ${command}_messages_send, with reply_to when it answers one message.`,
+          `4. Only after I approve that exact text, send it with ${command}_write, command "messages send", with reply_to when it answers one message.`,
           DATA,
         ].join("\n"),
       ),
@@ -155,17 +155,17 @@ export const registerPrompts = (server: McpServer, { command, name }: { command:
         [
           `Review my commitments in ${name}. Do not send, react, forward or mark anything read, except as step 4 allows.`,
           "If I gave you the open items of the previous review, check each of those first.",
-          `1. Call ${command}_review once${since ? ` with since ${JSON.stringify(since)}` : ""}. It returns every message in`,
+          `1. Call ${command}_read with command "review" once${since ? ` with since ${JSON.stringify(since)}` : ""}. It returns every message in`,
           "each chat that changed, mine included (outgoing: true — most of what I owe is there).",
           "2. Sort what you find into three lists: I owe · Waiting on others · Needs clarifying. Each item: chat",
           "title and id, date, the ids of the messages it rests on, and a deadline only if one was stated. When a",
-          `message answers one from before the review, read around that one with ${command}_messages_context.`,
+          `message answers one from before the review, read around that one with ${command}_read, command "messages context".`,
           "3. Before calling anything overdue, look for it being done: later in the review, in " +
             (groups ? `these group chats: ${JSON.stringify(groups)}` : "the group chats in the review") +
-            ` (${command}_messages_list for anything older), and with ${command}_messages_search — which sees only what` +
+            ` ("messages list" for anything older), and with "messages search" — which sees only what` +
             " this machine has kept, so no hit is not proof.",
           "4. Draft at most five reminders, each with its chat and text. Send one only after I approve that exact",
-          `text and recipient, with ${command}_messages_send and reply_to. Without that tool, show the drafts only.`,
+          `text and recipient, with ${command}_write, command "messages send", and reply_to. Without that command, show the drafts only.`,
           "5. If complete is false, say the review is incomplete, say why, and give no new boundary. Otherwise end",
           "with «Next review: since = <until>» and the open items, for the next review to check first.",
           DATA,
@@ -186,9 +186,9 @@ export const registerPrompts = (server: McpServer, { command, name }: { command:
       asked(
         [
           `Find ${JSON.stringify(text)} in ${name}.`,
-          `For a person, use ${command}_contacts_list and ${command}_contacts_show; for words, ${command}_messages_search — it searches only`,
+          `For a person, use ${command}_read with "contacts list" and "contacts show"; for words, "messages search" — it searches only`,
           "what this machine has kept, so an empty answer is not proof it was never said.",
-          `Show each hit with ${command}_messages_context for the messages around it. Send nothing.`,
+          `Show each hit with "messages context" for the messages around it. Send nothing.`,
           DATA,
         ].join(" "),
       ),

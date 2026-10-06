@@ -2,7 +2,6 @@ import { CliError } from "@leemour/cli-core"
 import { skillResource } from "@leemour/cli-core/skill"
 import { McpServer } from "@modelcontextprotocol/server"
 import { serveStdio } from "@modelcontextprotocol/server/stdio"
-import { toStandardJsonSchema } from "@valibot/to-json-schema"
 import * as v from "valibot"
 import { recalledAccount } from "../cli/messenger/accounts.js"
 import { skipFlagFor } from "../cli/messenger/ask.js"
@@ -18,7 +17,8 @@ import { personalMcpTools } from "./personal.js"
 import { registerPrompts } from "./prompts.js"
 import { registerResources } from "./resources.js"
 import { MessengerSession, type SessionOptions } from "./session.js"
-import { type AnyTool, answered, failed, READ, registerTools, toolKey } from "./tool.js"
+import { commandOf, registerSurface } from "./surface.js"
+import { type AnyTool, READ, tool, toolKey } from "./tool.js"
 
 export interface ServerOptions extends SessionOptions {
   /** Every write through the form, whatever its level. */
@@ -78,6 +78,22 @@ export const createServer = (
   )
 
   const embedders = warmEmbedders()
+  const status = tool({
+    title: "This server's profile and login",
+    description:
+      "Which profile this server speaks for, which account it last logged in as here, and which writing commands " +
+      "are on. Never connects, so it answers when the login is what is broken.",
+    input: v.strictObject({}),
+    annotations: { ...READ, idempotentHint: true },
+    local: async () => ({
+      profile: settings.profile,
+      account: recalledAccount(app, provider, settings.profile, context.env)?.account ?? null,
+      writes: Object.keys(writes).map(commandOf),
+      confirmSend,
+      permissions: settings.permissions,
+      ...(messenger.diagnose ? { [messenger.provider]: await messenger.diagnose(command, context) } : {}),
+    }),
+  })
   const skill = messenger.skill ? skillResource(app, messenger.skill) : undefined
 
   const build = (): McpServer => {
@@ -94,23 +110,27 @@ export const createServer = (
         }),
       },
     )
-    registerTools(server, offered, {
-      command: app.command,
-      messenger,
-      session,
-      withStore: context.withStore,
-      defaults: {
-        limit: settings.limit,
-        syncAllowed,
-        guard,
-        settings,
-        env: context.env,
-        embedders,
-        history: settings.keepFailedRuns,
+    registerSurface(
+      server,
+      { ...offered, status },
+      {
+        command: app.command,
+        messenger,
+        session,
+        withStore: context.withStore,
+        defaults: {
+          limit: settings.limit,
+          syncAllowed,
+          guard,
+          settings,
+          env: context.env,
+          embedders,
+          history: settings.keepFailedRuns,
+        },
+        confirmed,
+        confirms,
       },
-      confirmed,
-      confirms,
-    })
+    )
     // The prompts and resources show messages, so a profile that may not read them gets neither.
     if (levelOf("messages") !== "deny") registerPrompts(server, { command: app.command, name })
     if (levelOf("messages") !== "deny")
@@ -127,31 +147,6 @@ export const createServer = (
       const { uri, name: resource, title, description, mimeType, read } = skill
       server.registerResource(resource, uri, { title, description, mimeType }, read)
     }
-    server.registerTool(
-      `${app.command}_status`,
-      {
-        title: "This server's profile and login",
-        description:
-          "Which profile this server speaks for, which account it last logged in as here, and which writing tools " +
-          "are on. Never connects, so it answers when the login is what is broken.",
-        inputSchema: toStandardJsonSchema(v.strictObject({})),
-        annotations: { ...READ, idempotentHint: true },
-      },
-      async () => {
-        try {
-          return answered({
-            profile: settings.profile,
-            account: recalledAccount(app, provider, settings.profile, context.env)?.account ?? null,
-            writes: Object.keys(writes).map((key) => `${app.command}_${key}`),
-            confirmSend,
-            permissions: settings.permissions,
-            ...(messenger.diagnose ? { [messenger.provider]: await messenger.diagnose(command, context) } : {}),
-          })
-        } catch (error) {
-          return failed(error)
-        }
-      },
-    )
     return server
   }
   return { session, embedders, build }
