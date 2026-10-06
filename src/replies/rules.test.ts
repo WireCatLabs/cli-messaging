@@ -2,7 +2,14 @@ import { mkdtempSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { describe, expect, it } from "vitest"
-import { defaultRule, parseReplyRules, readReplyRules } from "./rules.js"
+import {
+  audienceWarnings,
+  defaultRule,
+  outsideAudience,
+  parseReplies,
+  parseReplyRules,
+  readReplyRules,
+} from "./rules.js"
 
 const valid = () => ({
   ...defaultRule("after-hours"),
@@ -95,5 +102,55 @@ describe("reply rules", () => {
     const path = join(mkdtempSync(join(tmpdir(), "replies-")), "replies.json")
     writeFileSync(path, "{ rules: ")
     expect(() => readReplyRules(path)).toThrow(`the reply rules ${path} cannot be read`)
+  })
+})
+
+describe("who may be answered", () => {
+  const audienceOf = (audience: unknown) => parseReplies({ audience, rules: [] }, "replies.json").audience
+
+  it("answers everyone by default, and never the deny list", () => {
+    const open = audienceOf(undefined)
+    const denied = audienceOf({ deny: { people: ["p1"], chats: ["c9"] } })
+
+    expect(outsideAudience(open, "p1", "c1")).toBeNull()
+    expect(outsideAudience(denied, "p1", "c1")).toBe("a person on the deny list")
+    expect(outsideAudience(denied, "p2", "c9")).toBe("a chat on the deny list")
+    expect(outsideAudience(denied, "p2", "c1")).toBeNull()
+  })
+
+  it("answers only the allow list when listed, and deny wins over allow", () => {
+    const listed = audienceOf({
+      reply: "listed",
+      allow: { people: ["p1", "p2"], chats: ["g1"] },
+      deny: { people: ["p2"] },
+    })
+
+    expect(outsideAudience(listed, "p1", "c1")).toBeNull()
+    expect(outsideAudience(listed, "p3", "g1")).toBeNull()
+    expect(outsideAudience(listed, "p3", "c1")).toBe("not on the allow list")
+    expect(outsideAudience(listed, "p2", "g1")).toBe("a person on the deny list")
+  })
+
+  it("warns about what does not do what it seems to, and refuses an unknown mode", () => {
+    expect(
+      audienceWarnings(
+        audienceOf({
+          reply: "listed",
+          allow: { people: ["p2"], chats: ["g1"] },
+          deny: { people: ["p2"], chats: ["g1"] },
+        }),
+      ),
+    ).toEqual([
+      "person p2 is on both lists: deny wins, nobody answers them",
+      "chat g1 is on both lists: deny wins, nothing is answered there",
+    ])
+    expect(audienceWarnings(audienceOf({ allow: { people: ["p1"] } }))).toEqual([
+      'the allow list does nothing while audience.reply is "all" — set it to "listed" to answer only those',
+    ])
+    expect(audienceWarnings(audienceOf({ reply: "listed" }))).toEqual([
+      'audience.reply is "listed" and the allow list is empty: nobody is answered',
+    ])
+    expect(audienceWarnings(audienceOf(undefined))).toEqual([])
+    expect(() => audienceOf({ reply: "some" })).toThrow(/audience\.reply/)
   })
 })

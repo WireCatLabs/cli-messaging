@@ -1,7 +1,7 @@
 import type { Chat, Id, Message } from "../domain/models.js"
 import { codeOf } from "../sends/guarded.js"
 import { decide } from "./decide.js"
-import { isTester, readReplies } from "./rules.js"
+import { isTester, outsideAudience, readReplies } from "./rules.js"
 import { readRepliesState, recordReply, writeRepliesState } from "./state.js"
 
 export const NOT_ALLOWED = "replies.send is not allow"
@@ -42,7 +42,7 @@ const FINAL = new Set(["permission_error", "confirmation_required", "rate_limite
  * reply may have gone is kept as answered.
  */
 export const replyTo = async (deps: Replier, message: Message): Promise<Replied> => {
-  const { rules, testers } = readReplies(deps.rulesPath)
+  const { rules, testers, audience } = readReplies(deps.rulesPath)
   if (rules.length === 0) return { skip: NO_RULES }
   let state = readRepliesState(deps.statePath)
   const now = deps.now?.() ?? Date.now()
@@ -57,6 +57,7 @@ export const replyTo = async (deps: Replier, message: Message): Promise<Replied>
     chat,
     owner: deps.owner,
     sender: { ...facts, isTester: tester },
+    outside: outsideAudience(audience, message.senderId, message.chatId),
     since: deps.since,
   }
 

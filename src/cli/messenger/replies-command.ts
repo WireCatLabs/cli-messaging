@@ -1,6 +1,6 @@
 import { Command } from "commander"
 import { DRY_RUN_DAYS, dryRun } from "../../replies/dry-run.js"
-import { readReplies, repliesPathFor } from "../../replies/rules.js"
+import { audienceWarnings, readReplies, repliesPathFor } from "../../replies/rules.js"
 import { paused, readRepliesState, repliesStatePathFor, writeRepliesState } from "../../replies/state.js"
 import { levelFor } from "../../sends/permissions.js"
 import { momentOf } from "../../services/moment.js"
@@ -26,13 +26,19 @@ export const repliesCommand = (messenger: Messenger): Command => {
       const { settings, renderer, format, streams, env } = context
       const since = momentOf(sinceTime ?? `${DRY_RUN_DAYS}d`, "--since-time")
       const path = repliesPathFor(messenger.app, settings.profile, env)
-      const { rules, testers } = readReplies(path)
+      const { rules, testers, audience } = readReplies(path)
       if (rules.length === 0) {
         renderer.note(`no reply rules yet — they live in ${path}`)
       }
+      for (const warning of audienceWarnings(audience)) renderer.warn(warning)
       const found = await context.withStore(
         (store, account) =>
-          dryRun(store, account, rules, { since, testers, ...(rule === undefined ? {} : { only: rule }) }),
+          dryRun(store, account, rules, {
+            since,
+            testers,
+            audience,
+            ...(rule === undefined ? {} : { only: rule }),
+          }),
         { name: "replies test" },
       )
       if (found.botUnknown > 0) {
@@ -82,7 +88,9 @@ export const repliesCommand = (messenger: Messenger): Command => {
     .description("whether the rules may send, which are on, and who they may answer")
     .action(async function (this: Command) {
       const { settings, renderer, env } = messengerContext(this, messenger)
-      const { rules, testers } = readReplies(repliesPathFor(messenger.app, settings.profile, env))
+      const { rules, testers, audience } = readReplies(repliesPathFor(messenger.app, settings.profile, env))
+      const warnings = audienceWarnings(audience)
+      for (const warning of warnings) renderer.warn(warning)
       const state = readRepliesState(repliesStatePathFor(messenger.app, settings.profile, env))
       const level = levelFor(settings.permissions ?? {}, "replies.send").level
       if (level !== "allow") renderer.note(`replies.send is ${level}: serve sends nothing until it is allow`)
@@ -91,6 +99,12 @@ export const repliesCommand = (messenger: Messenger): Command => {
         paused: state.paused,
         send: level,
         testers: testers.length,
+        audience: {
+          reply: audience.reply,
+          allow: audience.allow.people.length + audience.allow.chats.length,
+          deny: audience.deny.people.length + audience.deny.chats.length,
+        },
+        warnings,
         rules: rules.map(({ id, on }) => ({ id, on })),
       })
     })

@@ -32,12 +32,14 @@ const setUp = ({
   perChat = "5/1d",
   does = ["reply"],
   tasks = true,
+  audience,
 }: {
   testers?: { id: string }[]
   allowed?: boolean
   perChat?: string
   does?: string[]
   tasks?: boolean
+  audience?: unknown
 } = {}) => {
   const root = mkdtempSync(join(tmpdir(), "replies-serve-"))
   const rule = {
@@ -48,7 +50,7 @@ const setUp = ({
     limits: { perChat, perPerson: "5/1d" },
   }
   const rulesPath = join(root, "replies.json")
-  writeFileSync(rulesPath, JSON.stringify({ testers, rules: [rule] }))
+  writeFileSync(rulesPath, JSON.stringify({ testers, ...(audience === undefined ? {} : { audience }), rules: [rule] }))
   const sent: { chat: string; text: string; sendId: string; origin: string }[] = []
   const opened: { message: string; origin: string }[] = []
   let fails = 0
@@ -183,5 +185,32 @@ describe("serve's reply rules", () => {
 
     expect(again).toEqual({ skip: "already answered" })
     expect(opened).toHaveLength(1)
+  })
+
+  it("**answers by the audience in every mode**, a test account still first", async () => {
+    const everyone = setUp()
+    const listedIn = setUp({ audience: { reply: "listed", allow: { people: ["tester"] } } })
+    const listedOut = setUp({ audience: { reply: "listed", allow: { chats: ["other"] } } })
+    const denied = setUp({ audience: { deny: { people: ["tester"] } } })
+    const deniedChat = setUp({ audience: { deny: { chats: ["c1"] } } })
+    const conflict = setUp({
+      audience: { reply: "listed", allow: { people: ["tester"] }, deny: { people: ["tester"] } },
+    })
+
+    expect(await replyTo(everyone.deps, said("m1"))).toEqual({ sent: "away" })
+    expect(await replyTo(listedIn.deps, said("m1"))).toEqual({ sent: "away" })
+    expect(await replyTo(listedOut.deps, said("m1"))).toEqual({ skip: "not on the allow list" })
+    expect(await replyTo(denied.deps, said("m1"))).toEqual({ skip: "a person on the deny list" })
+    expect(await replyTo(deniedChat.deps, said("m1"))).toEqual({ skip: "a chat on the deny list" })
+    expect(await replyTo(conflict.deps, said("m1"))).toEqual({ skip: "a person on the deny list" })
+    expect(await replyTo(listedIn.deps, said("m2", { senderId: "someone" }))).toEqual({ skip: "not a test account" })
+  })
+
+  it("opens a task for someone the audience will not answer", async () => {
+    const { deps, sent, opened } = setUp({ does: ["reply", "task"], audience: { deny: { people: ["tester"] } } })
+
+    expect(await replyTo(deps, said("m1"))).toEqual({ skip: ONLY_TASK, task: "away" })
+    expect(opened).toHaveLength(1)
+    expect(sent).toEqual([])
   })
 })

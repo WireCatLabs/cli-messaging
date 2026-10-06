@@ -3,7 +3,7 @@ import { formatLocator } from "../domain/locator.js"
 import type { Chat, Id, Message } from "../domain/models.js"
 import type { AccountKey, MessageStore } from "../store/store.js"
 import { decide } from "./decide.js"
-import { isTester, type ReplyRule, type Tester } from "./rules.js"
+import { type Audience, EVERYONE, isTester, outsideAudience, type ReplyRule, type Tester } from "./rules.js"
 import { emptyState, recordReply } from "./state.js"
 
 export const DRY_RUN_DAYS = 7
@@ -52,7 +52,8 @@ export const dryRun = async (
     until = Date.now(),
     only,
     testers,
-  }: { since: number; until?: number; only?: string; testers: readonly Tester[] },
+    audience = EVERYONE,
+  }: { since: number; until?: number; only?: string; testers: readonly Tester[]; audience?: Audience },
 ): Promise<DryRun> => {
   const tried = only === undefined ? rules : rules.filter((rule) => rule.id === only)
   if (only !== undefined && tried.length === 0) {
@@ -92,6 +93,7 @@ export const dryRun = async (
             isContact: sender !== null && isContact(sender),
             isTester: isTester(testers, account.provider, sender),
           },
+          outside: outsideAudience(audience, sender, chat.id),
           since,
         },
         state,
