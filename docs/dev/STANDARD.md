@@ -750,3 +750,22 @@ tool pins, the MCP tools each offers, the user pages and their headings, the REA
 release and QA scripts and skills. Each MCP server starts in an empty temporary home, so nothing
 reaches Telegram or MAX. `--max <dir> --tg <dir>`, one option per CLI in `clis`, uses checkouts already
 built.
+
+## Search preparation and archive gaps
+
+Approved2026-10-07. These additive shared surfaces are implemented in the search follow-up plan.
+
+- `attachments extract --from-dir <dir>` reads a nonrecursive directory for one explicitly named
+  `--chat`; it cannot be combined with `--download` or `--output-dir`. MCP `attachments_extract`
+  uses `from_dir`, `download`, `output_dir` and `limit`, matching CLI semantics.
+- `messages download --extract` extracts only the files this download mapped to stored attachments.
+- Per-profile `searchCatchUp` defaults to false. `store fetch --catch-up` or `--no-catch-up` overrides
+  it; `--catch-up-chunks`, `--catch-up-messages` and `--catch-up-time` bound local preparation.
+  Defaults are500chunks,10,000messages and30seconds for the fetched chat. It never downloads a model
+  or activates a remote embedding/analysis provider.
+- `store gaps plan <chat>` inspects recorded coverage locally. `store gaps repair <chat>` explicitly
+  fetches interior gaps; `--max-gaps`, `--limit`, `--repair-time`, provider `--page-size` and `--pause`
+  bound the operation. `--background` uses existing jobs. MCP names are `store_gaps_plan` and
+  `store_gaps_repair`; options use underscores. Defaults are5gaps,500messages and30seconds.
+- Local extraction/preparation require their write permissions. Gap repair requires permission for
+  its explicit fetch. A dry plan is read-only; gaps never authorize deletion or weaker rate limits.
