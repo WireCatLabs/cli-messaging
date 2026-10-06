@@ -48,3 +48,21 @@ A new wait in the code gets a seam like these, never a longer timeout in the tes
 ## Parity evidence
 
 [Detailed parity audit](PARITY-AUDIT.md) runs fresh isolated consumer checks and records every schema/source/coverage difference. `scripts/parity/evidence.test.ts` checks MCP framing, timeout/exit/errors and mixed mounting evidence; `src/parity/deep.test.ts` checks direct structural differences and exemptions.
+
+## Agent guidance and task evaluations
+
+The `skill-validation` export reads YAML frontmatter, checks portable names/description/metadata,
+local references and literal command paths against a supplied program. Consumers validate the
+source skill and the version prepared for installation against their own command discovery. It
+never executes a skill example or opens a messenger session.
+
+`evaluateAgent` runs an injected policy through a synthetic CLI definition and scores task-specific
+checks. It reports correctness, call counts and serialized output bytes, excluding arguments,
+message bodies and policy reasoning from persisted metrics. The deterministic baseline covers
+scoped schema discovery, ambiguity, pagination, validation recovery, compact output and refusing
+a replay of an unknown write. Its six passing tasks validate the harness; they do not measure a
+language model. Real agent passes must be labelled separately with the skill/build and task set,
+and use the same isolated synthetic provider without owner accounts or external credentials.
+
+The [independent agent pass](evaluations/2026-10-06-cli-agent-evaluation.md) records the source skill,
+task outcomes, calls, bytes and limitations of the first measured synthetic run.
