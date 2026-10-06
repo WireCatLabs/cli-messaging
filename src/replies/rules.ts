@@ -6,6 +6,7 @@ import type { AppIdentity } from "../cli/app.js"
 
 export const REPLY_ACTIONS = ["reply", "task"] as const
 export const REPLY_MODELS = ["fill-only", "may-reword"] as const
+export type ReplyAction = (typeof REPLY_ACTIONS)[number]
 /** Channels, saved messages and chats of unknown kind are never answered, so a rule cannot name them. */
 export const REPLY_KINDS = ["dialog", "group"] as const
 export const PLACEHOLDERS = ["firstName", "name"] as const
@@ -111,8 +112,6 @@ const rule = v.pipe(
     reply: v.strictObject({ template, model: v.picklist(REPLY_MODELS), asReply: v.boolean() }),
     limits: v.strictObject({ perChat: limit, perPerson: limit }),
   }),
-  // NEED-582: a rule may open a task, but there is no tasks package to open it in yet.
-  v.check((one) => !one.do.includes("task"), '"task" waits for the tasks package; only "reply" works now'),
 )
 
 export type ReplyRule = v.InferOutput<typeof rule>

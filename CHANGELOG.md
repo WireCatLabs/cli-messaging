@@ -6,6 +6,15 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- A reply rule's `"do"` may name `"task"` now that tasks are in the store: it opens one `request` task for the
+  message, for anyone the rule matches — only the answer still waits for a sender named in `testers`, and for
+  `replies.send` at `allow`. `serve`'s result counts them as `replies.tasks`; `replies test` shows `task: true`
+  and `text: null` where nothing would be sent. `Replied` gains an optional `task`, and a rule that only opens
+  a task reports `skip: "opened a task, sent nothing"`, so a reader that counts `sent` and `skip` keeps working.
+  `openRequestTask` is exported for a CLI with its own `serve`.
+
 ## 0.151.0 — 06.10.2026
 
 Released early: max-cli chart adoption needs the capability that hides unsupported daily member tracking

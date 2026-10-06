@@ -53,7 +53,7 @@ const incomingWith = (changes: Omit<Partial<Incoming>, "message"> & { message?: 
 
 const outcome = (rule: ReplyRule, incoming: Incoming, state: RepliesState = emptyState(), now = WEDNESDAY_EVENING) => {
   const decided = decide(rule, incoming, state, now)
-  return "reply" in decided ? decided.reply.text : decided.skip
+  return "skip" in decided ? decided.skip : (decided.reply?.text ?? decided.actions.join("+"))
 }
 
 const MADRID = { outside: "09:00-19:00", days: "mon-fri", timezone: "Europe/Madrid" }
@@ -63,7 +63,23 @@ const REPLY = "Thanks, Ana — tomorrow morning."
 describe("decide", () => {
   it("answers a direct message with the template filled", () => {
     expect(decide(ruleWith(), incomingWith(), emptyState(), WEDNESDAY_EVENING)).toEqual({
+      actions: ["reply"],
       reply: { text: REPLY, asReply: true, model: "fill-only" },
+    })
+  })
+
+  it("opens a task for anyone, but answers only a test account", () => {
+    const both = ruleWith({ do: ["reply", "task"] })
+    const stranger = incomingWith({ sender: { isBot: false, isContact: true, isTester: false } })
+
+    expect(decide(both, stranger, emptyState(), WEDNESDAY_EVENING)).toEqual({ actions: ["task"], reply: null })
+    expect(decide(ruleWith({ do: ["task"] }), incomingWith(), emptyState(), WEDNESDAY_EVENING)).toEqual({
+      actions: ["task"],
+      reply: null,
+    })
+    expect(decide(both, incomingWith(), emptyState(), WEDNESDAY_EVENING)).toMatchObject({
+      actions: ["reply", "task"],
+      reply: { text: REPLY },
     })
   })
 

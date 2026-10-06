@@ -6,8 +6,11 @@ import { readRepliesState, recordReply, writeRepliesState } from "./state.js"
 
 export const NOT_ALLOWED = "replies.send is not allow"
 export const NO_RULES = "no rules"
+export const ONLY_TASK = "opened a task, sent nothing"
+export const NO_TASKS = "this serve cannot open tasks"
 
-export type Replied = { sent: string } | { skip: string }
+/** `task`: the rule that opened a task for the message — beside a reply, or beside why none went. */
+export type Replied = { sent: string; task?: string } | { skip: string; task?: string }
 
 export interface Replier {
   /** The profile's rules and state files, read on every message so an edit or `replies pause` applies at once. */
@@ -23,6 +26,8 @@ export interface Replier {
   senderOf: (person: Id) => Promise<{ isBot: boolean; isContact: boolean }>
   send: (reply: { chat: Id; text: string; replyTo?: Id; sendId: string; origin: string }) => Promise<unknown>
   newSendId: () => string
+  /** A rule's `task` action: a `request` task for the message; `false` when the message already had one. */
+  openTask?: (message: Message, origin: string) => Promise<boolean>
   now?: () => number
 }
 
@@ -30,8 +35,9 @@ export interface Replier {
 const FINAL = new Set(["permission_error", "confirmation_required", "rate_limited", "validation_error", "not_found"])
 
 /**
- * One arriving message through the rules, in file order, the first that answers sending — only to a
- * sender named in `testers` (NEED-601), only with `replies.send` at `allow`. A send that fails is
+ * One arriving message through the rules, in file order, the first that matches acting: a task opens
+ * for anyone (NEED-582), a reply goes only to a sender named in `testers` (NEED-601) and only with
+ * `replies.send` at `allow`. A send that fails is
  * tried once more with the same send id, so the messenger delivers at most one; a message whose
  * reply may have gone is kept as answered.
  */
@@ -41,9 +47,11 @@ export const replyTo = async (deps: Replier, message: Message): Promise<Replied>
   let state = readRepliesState(deps.statePath)
   const now = deps.now?.() ?? Date.now()
   const tester = isTester(testers, deps.provider, message.senderId)
-  const chat = tester ? await deps.chatOf(message.chatId) : { id: message.chatId, kind: "unknown" as const }
+  // Asked only where a rule may act: for a test account, or when a rule opens tasks for anyone.
+  const looks = tester || rules.some((rule) => rule.on && rule.do.includes("task"))
+  const chat = looks ? await deps.chatOf(message.chatId) : { id: message.chatId, kind: "unknown" as const }
   const facts =
-    tester && message.senderId !== null ? await deps.senderOf(message.senderId) : { isBot: false, isContact: false }
+    looks && message.senderId !== null ? await deps.senderOf(message.senderId) : { isBot: false, isContact: false }
   const incoming = {
     message,
     chat,
@@ -59,20 +67,33 @@ export const replyTo = async (deps: Replier, message: Message): Promise<Replied>
       why = decision.skip
       continue
     }
-    if (!deps.allowed()) return { skip: NOT_ALLOWED }
+    const origin = `rule:${rule.id}`
+    let task: string | undefined
+    if (decision.actions.includes("task")) {
+      if (deps.openTask) {
+        await deps.openTask(message, origin)
+        task = rule.id
+      } else if (decision.reply === null) return { skip: NO_TASKS }
+    }
+    const opened = task === undefined ? {} : { task }
+    if (decision.reply === null) {
+      writeRepliesState(deps.statePath, recordReply(readRepliesState(deps.statePath), rule, message, now))
+      return { skip: ONLY_TASK, ...opened }
+    }
+    if (!deps.allowed()) return { skip: NOT_ALLOWED, ...opened }
     const sendId = deps.newSendId()
     const reply = {
       chat: message.chatId,
       text: decision.reply.text,
       ...(decision.reply.asReply ? { replyTo: message.id } : {}),
       sendId,
-      origin: `rule:${rule.id}`,
+      origin,
     }
     let failed: unknown
     try {
       await deps.send(reply)
     } catch (error) {
-      if (FINAL.has(codeOf(error))) return { skip: codeOf(error) }
+      if (FINAL.has(codeOf(error))) return { skip: codeOf(error), ...opened }
       try {
         await deps.send(reply)
       } catch (again) {
@@ -82,7 +103,7 @@ export const replyTo = async (deps: Replier, message: Message): Promise<Replied>
     state = recordReply(readRepliesState(deps.statePath), rule, message, now)
     writeRepliesState(deps.statePath, state)
     if (failed !== undefined) throw failed
-    return { sent: rule.id }
+    return { sent: rule.id, ...opened }
   }
   return { skip: why }
 }

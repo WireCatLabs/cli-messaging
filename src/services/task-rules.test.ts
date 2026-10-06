@@ -10,7 +10,7 @@ import type { SendGuard } from "../sends/guard.js"
 import { openStore } from "../store/store.js"
 import { onlineDeps } from "./deps.js"
 import { inboxService } from "./inbox.js"
-import { applyTaskRules, applyTaskRulesOnArrival } from "./task-rules.js"
+import { applyTaskRules, applyTaskRulesOnArrival, openRequestTask } from "./task-rules.js"
 
 const account = { provider: "telegram", account: "500" } as const
 const at = (minute: number) => new Date(Date.UTC(2026, 9, 6, 10, minute)).toISOString()
@@ -168,6 +168,20 @@ describe("serve's rule pass", () => {
     const store = await openStore({ path: join(mkdtempSync(join(tmpdir(), "task-arrival-")), "messages.db") })
 
     expect(await applyTaskRulesOnArrival(store, account, said("1", 1, "anyone?"))).toEqual({ added: 1, closed: 0 })
+    await store.close()
+  })
+})
+
+describe("a reply rule's task", () => {
+  it("opens one request task for a message, however many times it arrives", async () => {
+    const store = await openStore({ path: join(mkdtempSync(join(tmpdir(), "task-rule-")), "messages.db") })
+
+    const first = await openRequestTask(store, account, said("41", 1))
+    const again = await openRequestTask(store, account, said("41", 1))
+    const tasks = await store.tasks.list({})
+
+    expect([first, again]).toEqual([true, false])
+    expect(tasks.map((task) => [task.kind, task.state, task.origin])).toEqual([["request", "open", "rule"]])
     await store.close()
   })
 })

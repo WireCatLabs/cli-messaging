@@ -77,6 +77,27 @@ export const applyTaskRulesOnArrival = async (
   return applyTaskRules({ chats: [{ id: message.chatId, messages }] }, { store: store.tasks, account })
 }
 
+/**
+ * A reply rule's `task` action: one `request` task pointing at the message. The service gives back
+ * the task a source already has, so a message arriving twice opens one.
+ */
+export const openRequestTask = async (store: MessageStore, account: AccountKey, message: Message): Promise<boolean> => {
+  const { created } = await createTaskService({ store: store.tasks }).add({
+    source: formatLocator({
+      provider: account.provider,
+      account: account.account,
+      chat: message.chatId,
+      message: message.id,
+    }),
+    sourceKind: "message",
+    account: taskAccount(account),
+    group: message.chatId,
+    kind: "request",
+    origin: "rule",
+  })
+  return created
+}
+
 /** The owner replied to the message, or to anything its sender said, later in the chat. */
 const ownerAnswered = (messages: Message[], index: number): boolean => {
   const message = messages[index]

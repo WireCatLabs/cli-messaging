@@ -15,8 +15,11 @@ export interface WouldReply {
   chatTitle: string | null
   to: { id: Id; name: string | null }
   at: string
-  text: string
+  /** `null`: the rule would send nothing here — it only opens a task, or the sender is not a test account. */
+  text: string | null
   asReply: boolean
+  /** It would open a task for the message. */
+  task: boolean
 }
 
 export interface RuleDryRun {
@@ -109,8 +112,9 @@ export const dryRun = async (
         chatTitle: chat.title,
         to: { id: sender as Id, name: message.senderName ?? people.get(sender as Id)?.name ?? null },
         at: message.timestamp,
-        text: decision.reply.text,
-        asReply: decision.reply.asReply,
+        text: decision.reply?.text ?? null,
+        asReply: decision.reply?.asReply ?? false,
+        task: decision.actions.includes("task"),
       })
       state = recordReply(state, rule, message, now)
       break
