@@ -40,7 +40,7 @@ conformance or imply that planned command paths are already implemented.
 | `./store` | `src/store/` | the SQLite seam and the shared message store |
 | `./sends` | `src/sends/` | the send guard: read-only, the allow-list, the recipient list, the hourly limit, the journal (never the text), the send id |
 | `./speech` | `src/speech/` | the pinned catalogue, shared model directories and verified installer, without loading the recognizer |
-| `./charts` | `src/charts/` | neutral chart data and a replaceable renderer interface; SVG rendering loads ECharts only on demand |
+| `./charts` | `src/charts/` | neutral chart data and a replaceable renderer interface; SVG rendering loads ECharts only on demand; a separate lazy PNG encoder uses resvg and bundled fonts |
 | `./models` | `src/models/` | purpose-specific text generation, OpenAI-compatible and Anthropic adapters, strict adapter options, injected key and consent resolvers; no configured provider means no call |
 | `./services` | `src/services/` | the use cases, once each, that commands and MCP tools call — see [Services](#services) |
 | `./background` | `src/background/` | what any background process needs and no messenger: the lock per app and profile, whether a PID is alive and ours, the machine seam tests replace, systemd and launchd units — `serve` and `server` are built on it, each CLI's server stays its own (NEED-492 C) |

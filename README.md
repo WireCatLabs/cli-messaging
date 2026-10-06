@@ -19,7 +19,7 @@ provider has travels in `providerMetadata`.
 | | |
 |---|---|
 | `.` | `Chat`, `Message`, `Contact`, `Page`… · `formatLocator` / `parseLocator` · `renderMessages` · `pickChat` / `pickPerson` |
-| `./charts` | neutral chart data, a replaceable renderer interface and an on-demand dark SVG renderer |
+| `./charts` | neutral chart data, a replaceable renderer interface and on-demand dark SVG and PNG images |
 | `./models` | `modelGateway`, provider-neutral requests, adapter-owned option checks, injected keys and purpose consent, and `modelTarget` for effective configuration; [provider settings](docs/search/ai-providers.md) |
 | `./store` | `openCache` — `node:sqlite` under Node, `bun:sqlite` under Bun, WAL and a busy timeout on both · `openStore` — the shared message store, every method async: one file for every messenger (`MESSAGING_STORE` overrides where), forward-only migrations with `min_compatible`, every sender an identity with a person of their own, edits kept as revisions, a message by its id, deletions kept as tombstones, trigram search · `find` — by text, by sender, or both; `together` for the chats where every sender wrote, `perChat` to cap each chat · `savePeople` and `people` — usernames and bot flags, and a `PeopleLookup` for `pickPerson` |
 | `./sends` | the send guard: a level per command path (`permissions`: deny, readonly, ask, allow — `readOnly` and `allow` read as levels), a recipient list, an hourly limit, and a journal of every attempt that never holds the text; `newSendId` for a send's identity across retries |
@@ -123,17 +123,19 @@ News collection and news digests remain separate future workflows. The detailed
 
 `statsCommand(messenger)` from `./cli` mounts `stats charts <chat>`. It returns `{ chart }`:
 messages per day/week, active authors, or joins and leaves (`--chart-kind`). `--output activity.svg`
-also saves a dark SVG in a new private file and returns `chartFile`. The command reads the same
+or `--output activity.png` also saves a dark image in a new private file and returns `chartFile`. The command reads the same
 statistics service; the chart itself never fetches extra history, sends or marks read. Missing dates
-are gaps, and partial data is labelled. `--jsonl`, PNG and image output to stdout are unavailable.
+are gaps, and partial data is labelled. `--jsonl` and image output to stdout are unavailable.
 
 The read-only MCP `stats_charts` returns the same chart JSON from the store, without writing a file
-or connecting. Membership is unavailable in that stored mode because it needs online events.
+or connecting. Optional `format: "png"` returns PNG image content and JSON text containing
+`chart` and `image: { format, width, height }`; the default remains JSON. Membership is unavailable in that stored mode because it needs online events.
 Both interfaces inherit the `messages` read permission.
 
 `./charts` exports the library-neutral `ChartData`, `ChartRenderer`, `chatChart`, `CHART_SIZE`
-and the lazy `chartRenderer()` loader. ECharts types stay in the renderer module; JSON-only commands
-do not load it. Pass a renderer loader as the second argument to `statsCommand` to replace the image implementation
+and the lazy `chartRenderer()` loader, plus the separate `chartPng(svg)` encoder. ECharts types stay in the renderer module; JSON-only commands
+do not load it. PNG lazily loads resvg-js 2.6.2 and uses bundled Noto Sans Regular (SIL OFL 1.1),
+with system fonts disabled. SVG does not load resvg. Pass a renderer loader as the second argument to `statsCommand` to replace the image implementation
 while keeping the neutral data and command contract. Images default to a dark theme. ECharts is pinned at 6.1.0; its published unpacked files
 plus zrender and tslib total about 61.6 MiB before package-manager deduplication.
 

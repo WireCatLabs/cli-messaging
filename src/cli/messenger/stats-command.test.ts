@@ -162,6 +162,27 @@ describe("stats charts", () => {
     expect(connect).toHaveBeenCalledTimes(1)
   })
 
+  it("writes PNG privately with the same neutral data and exclusive file semantics", async () => {
+    const { call, root, connect } = await setup()
+    const path = join(root, "activity.PNG")
+    const result = await call(["--output", path, "--json"])
+    expect(result.code).toBe(0)
+    const body = JSON.parse(result.stdout)
+    expect(body).toMatchObject({ chartFile: { path, format: "png", width: 800, height: 400 } })
+    expect(body.chart).toEqual(JSON.parse((await call(["--json"])).stdout).chart)
+    const bytes = readFileSync(path)
+    expect([...bytes.subarray(0, 8)]).toEqual([137, 80, 78, 71, 13, 10, 26, 10])
+    if (process.platform !== "win32") expect(statSync(path).mode & 0o777).toBe(0o600)
+    expect((await call(["--output", path])).code).toBe(2)
+    if (process.platform !== "win32") {
+      const linked = join(root, "linked.png")
+      symlinkSync(path, linked)
+      expect((await call(["--output", linked])).code).toBe(2)
+    }
+    expect(readFileSync(path)).toEqual(bytes)
+    expect(connect).not.toHaveBeenCalled()
+  })
+
   it("renders data in pretty mode and respects quiet", async () => {
     const { call, root } = await setup()
     expect((await call([], true)).stdout).toContain("Messages per day")
@@ -176,7 +197,7 @@ describe("stats charts", () => {
     for (const args of [
       ["--jsonl"],
       ["--output", "-"],
-      ["--output", "chart.png"],
+      ["--output", "chart.jpg"],
       ["--chart-kind", "pie"],
       ["--by", "hour"],
       ["--timezone", "invalid/zone"],

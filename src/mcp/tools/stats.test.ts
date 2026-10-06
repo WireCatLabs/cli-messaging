@@ -7,7 +7,7 @@ import type { Messenger } from "../../cli/messenger/context.js"
 import { servicesFor, storedDeps } from "../../services/index.js"
 import { openStore } from "../../store/store.js"
 import { seedSearchRecipes } from "../../testing/search-recipes.js"
-import type { Defaults } from "../tool.js"
+import { answered, type Defaults, Picture } from "../tool.js"
 import { statsTools } from "./stats.js"
 
 const messenger = {
@@ -41,6 +41,26 @@ describe("stats_charts", () => {
       expect(
         await tool.stored(store, account, { chat: "7", since_time: "2026-01-01", timezone: "UTC" }, defaults),
       ).toEqual({ chart: chatChart(stats, { by: "day", kind: "messages", timezone: "UTC" }) })
+      const image = await tool.stored(
+        store,
+        account,
+        { chat: "7", since_time: "2026-01-01", timezone: "UTC", format: "png" },
+        defaults,
+      )
+      expect(image).toBeInstanceOf(Picture)
+      const response = answered(image)
+      const content = response.content[0]
+      if (content?.type !== "image") throw new Error("missing MCP image")
+      expect(content.mimeType).toBe("image/png")
+      const png = Buffer.from(content.data, "base64")
+      expect([...png.subarray(0, 8)]).toEqual([137, 80, 78, 71, 13, 10, 26, 10])
+      expect([png.readUInt32BE(16), png.readUInt32BE(20)]).toEqual([800, 400])
+      const about = response.content[1]
+      if (about?.type !== "text") throw new Error("missing chart JSON")
+      expect(JSON.parse(about.text)).toEqual({
+        chart: chatChart(stats, { by: "day", kind: "messages", timezone: "UTC" }),
+        image: { format: "png", width: 800, height: 400 },
+      })
       expect(
         await tool.stored(
           store,

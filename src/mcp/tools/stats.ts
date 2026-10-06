@@ -1,17 +1,20 @@
 import * as v from "valibot"
 import { chatChart } from "../../charts/chat.js"
-import { CHART_KINDS } from "../../charts/model.js"
+import { CHART_KINDS, CHART_SIZE } from "../../charts/model.js"
+import { chartPng } from "../../charts/png.js"
+import { chartRenderer } from "../../charts/render.js"
 import type { Messenger } from "../../cli/messenger/context.js"
 import { timezoneOf } from "../../search/lucene/dates.js"
 import { servicesFor, storedDeps } from "../../services/index.js"
 import { momentOf } from "../../services/moment.js"
-import { type AnyTool, chatOf, READ, tool } from "../tool.js"
+import { type AnyTool, chatOf, Picture, READ, tool } from "../tool.js"
 
 export const statsTools = (messenger: Messenger): Record<string, AnyTool> => ({
   stats_charts: tool({
     title: "A chart from a chat's statistics",
     description:
-      "A neutral chart description as JSON: messages or active authors per day or week, from the local store. " +
+      "A neutral chart description as JSON, or a dark PNG image with that JSON when format is png: " +
+      "messages or active authors per day or week, from the local store. " +
       "Missing dates are gaps, and partial marks lower bounds. Membership needs online events and is unavailable here. " +
       "No image file is written and no messenger connection is opened.",
     input: v.object({
@@ -20,6 +23,7 @@ export const statsTools = (messenger: Messenger): Record<string, AnyTool> => ({
       by: v.optional(v.picklist(["day", "week"])),
       since_time: v.optional(v.pipe(v.string(), v.description("an ISO 8601 time, or 2h / 1d ago"))),
       timezone: v.optional(v.pipe(v.string(), v.description("the IANA timezone for calendar days"))),
+      format: v.optional(v.pipe(v.picklist(["json", "png"]), v.description("JSON by default; png adds image content"))),
     }),
     annotations: { ...READ, openWorldHint: false },
     stored: async (store, account, args, defaults) => {
@@ -30,7 +34,13 @@ export const statsTools = (messenger: Messenger): Record<string, AnyTool> => ({
         timezone,
         ...(args.since_time === undefined ? {} : { since: momentOf(args.since_time, "since_time") }),
       })
-      return { chart: chatChart(stats, { kind: args.chart_kind ?? "messages", by, timezone }) }
+      const chart = chatChart(stats, { kind: args.chart_kind ?? "messages", by, timezone })
+      if (args.format !== "png") return { chart }
+      const image = await chartPng(await (await chartRenderer()).render(chart, CHART_SIZE))
+      return new Picture(image.bytes, image.mimeType, {
+        chart,
+        image: { format: image.format, width: image.width, height: image.height },
+      })
     },
   }),
 })

@@ -118,3 +118,28 @@ if (
 )
   throw new Error("./speech lost consumer model ordering or claims absent files are installed")
 console.log("dist: ./speech reuses the pinned catalogue and shared model directory")
+
+const { chartRenderer, chartPng, CHART_SIZE } = await import("@leemour/cli-messaging/charts")
+const chart = {
+  version: 1 as const,
+  kind: "bar" as const,
+  title: "Сообщения клуба",
+  x: { type: "day" as const, values: ["2026-10-01", "2026-10-02", "2026-10-03"] },
+  series: [{ name: "Messages", values: [4, null, 2] }],
+  unit: "messages" as const,
+  timezone: "UTC",
+  partial: true,
+  reasons: ["store-incomplete" as const],
+}
+const png = await chartPng(await (await chartRenderer()).render(chart, CHART_SIZE))
+const pngBytes = Buffer.from(png.bytes)
+if (
+  png.mimeType !== "image/png" ||
+  pngBytes.subarray(0, 8).toString("hex") !== "89504e470d0a1a0a" ||
+  pngBytes.readUInt32BE(16) !== 800 ||
+  pngBytes.readUInt32BE(20) !== 400
+)
+  throw new Error("./charts from dist did not encode an 800×400 PNG")
+if (!readFileSync(join(root, "charts/fonts/OFL.txt"), "utf8").includes("SIL OPEN FONT LICENSE"))
+  throw new Error("the chart font license is absent from dist")
+console.log("dist: ./charts renders dark PNG with the bundled Cyrillic font")
