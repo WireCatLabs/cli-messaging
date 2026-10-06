@@ -101,6 +101,21 @@ describe("agent CLI contract", () => {
     expect(JSON.parse(result.stderr[0] ?? "").error.reason).toBe("input_required")
   })
 
+  it("allows headless setup to verify existing credentials without prompting", async () => {
+    const result = await invoke(["setup", "--json"])
+    expect(result.result).toBe(0)
+    expect(result.performed).toHaveBeenCalledOnce()
+  })
+
+  it("still refuses a credential prompt inside headless setup", async () => {
+    const input = Object.assign(new PassThrough(), { isTTY: true })
+    const result = await invoke(["setup", "--json"], { tty: true, stdin: input }, async (command) => {
+      await readSecret("credential", { input: environmentOf(command).stdin })
+    })
+    expect(result.result).toBe(2)
+    expect(JSON.parse(result.stderr[0] ?? "").error.reason).toBe("input_required")
+  })
+
   it("allows explicit piped credentials while --no-input is set", async () => {
     const input = new PassThrough()
     input.end("synthetic credential")
