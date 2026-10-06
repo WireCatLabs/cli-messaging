@@ -49,6 +49,13 @@ export { INBOX_CHATS, newIn, REVIEW_CHATS, reviewIn, unanswered, unreadIn } from
 export { momentOf } from "../services/moment.js"
 export { maskedAccount } from "../services/people.js"
 export { openRequestTask } from "../services/task-rules.js"
+export {
+  type AgentPolicy,
+  type AgentTask,
+  type EvaluationResult,
+  evaluateAgent,
+  type Observation,
+} from "./agent-evaluation.js"
 export { type AppIdentity, envName } from "./app.js"
 export { botAdminsCommand, botMembersCommand } from "./bot/admins.js"
 export { type ApiCommandInput, type ApiCommands, generatedApiCommand } from "./bot/api.js"

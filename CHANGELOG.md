@@ -8,6 +8,11 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Added
 
+- `skill-validation` checks portable YAML frontmatter, local references, emitted version and
+  literal command paths against consumer discovery. `evaluateAgent` provides an isolated
+  synthetic task harness reporting correctness, call counts and output bytes without persisting
+  message bodies. Its deterministic baseline covers six agent tasks and rejects unknown-write replay.
+
 - `commands schema <path...>` publishes versioned JSON Schema 2020-12 descriptions of argv,
   result coverage, effects, permissions and retry guidance. MCP tools advertise open object
   result schemas with structured content and bounded serialized responses.
