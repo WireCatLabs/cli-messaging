@@ -1,3 +1,4 @@
+import { type BotCheckService, botCheckService } from "../botcheck/service.js"
 import { type AccountService, accountService } from "./account.js"
 import { type AdminService, adminService } from "./admin.js"
 import { type ArchiveService, archiveService } from "./archive.js"
@@ -86,6 +87,7 @@ export interface Services {
   tags: TagsService
   searches: SearchesService
   attachments: AttachmentsService
+  botcheck: BotCheckService
 }
 
 /**
@@ -112,6 +114,7 @@ export const servicesFor = (deps: ServiceDeps): Services => {
     tags: tagsService(deps),
     attachments: attachmentsService(deps),
     searches: searchesService(deps),
+    botcheck: botCheckService(deps),
   }
   return deps.messenger.services ? { ...base, ...deps.messenger.services(base, deps) } : base
 }

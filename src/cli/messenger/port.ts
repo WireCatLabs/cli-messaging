@@ -279,6 +279,12 @@ export interface PersonProfiles {
   profile(person: string): Promise<ProfileFacts>
 }
 
+/** Their profile photos, for telling an account made last week from one with years of them. */
+export interface ProfilePhotos {
+  /** How many they show and the oldest one's upload time; reading them tells them nothing. */
+  photos(person: Id): Promise<{ count: number; oldestAt: string | null }>
+}
+
 /** Making, joining and leaving groups. Everything here is seen by other people. */
 export interface GroupAdmin {
   /** The person ids these references name — an id, a handle, a name — in the order given; one that is not a person is refused. */
@@ -404,6 +410,7 @@ export interface MessengerAdapter
     Partial<MessagePermalinks>,
     Partial<GroupModeration>,
     Partial<AccountTools>,
+    Partial<ProfilePhotos>,
     Partial<GroupAdmin>,
     Partial<ChatFolders>,
     Partial<ContactBook>,

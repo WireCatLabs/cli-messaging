@@ -1,11 +1,13 @@
 import { CliError } from "@leemour/cli-core"
 import { Command } from "commander"
+import { REGISTRIES } from "../../botcheck/registries.js"
 import { phoneOf } from "../../services/index.js"
 import { momentOf } from "../../services/moment.js"
 import { maskedAccount } from "../../services/people.js"
 import { CHAT_MESSAGES, CONTEXT_BYTES, CONTEXT_MESSAGES } from "../../services/person-context.js"
 import { readSecret } from "../../terminal/prompt.js"
 import { positiveCount, renderPage, window, withPaging } from "../paging.js"
+import { casKey } from "../registry-keys.js"
 import { contactWriteCommands } from "./admin-contacts-command.js"
 import { type Messenger, messengerContext } from "./context.js"
 
@@ -123,6 +125,33 @@ export const contactsCommand = (messenger: Messenger): Command => {
       }
       if (found.hasMore) context.renderer.note("cut at --limit; a larger one shows more")
       context.renderer.result(found)
+    })
+
+  contacts
+    .command("check")
+    .description(
+      "whether one person looks like a bot, a fake or a spammer: their profile, what they wrote in the store, " +
+        `and the public ban lists (${Object.values(REGISTRIES)
+          .map(({ title }) => title)
+          .join(", ")}), which are sent their id — a hint, never a verdict`,
+    )
+    .argument("<person>", "their id, @username, or part of their name")
+    .option("--no-registries", "do not ask the public ban lists; nothing about them leaves this machine")
+    .action(async function (this: Command, person: string) {
+      const { registries } = this.opts<{ registries: boolean }>()
+      const context = messengerContext(this, messenger)
+      const key = registries ? casKey(messenger.app, context.env) : undefined
+      const checked = await context.withServices((services) =>
+        services.botcheck.person(person, { registries, ...(key ? { registry: { casKey: key } } : {}) }),
+      )
+      for (const note of checked.notes) context.renderer.note(note)
+      for (const { name, answer, detail } of checked.registries) {
+        if (answer === "unknown") context.renderer.note(`${name}: not known — ${detail ?? "no answer"}`)
+      }
+      if (checked.unknown.length > 0)
+        context.renderer.note(`not judged, nothing to judge by: ${checked.unknown.join(", ")}`)
+      const { notes: _, ...answer } = checked
+      context.renderer.result(answer)
     })
 
   contacts

@@ -16,11 +16,27 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   them, how many of their messages the store holds, the first and the last, and whether the chat is stored whole.
   `--offline` describes them from the store. An adapter gives the facts through the optional
   `PersonProfiles.profile`; without it the store answers.
+- `contacts check <person> [--no-registries]` and read-only MCP `contacts_check`: whether one person looks like a bot,
+  a fake or a spammer — `{ person, score, reasons: [{ reason, weight, source, detail }], registries: [{ name, answer:
+  listed|clean|unknown, checkedAt, detail }], unknown }`. Reasons: the messenger's own marks (`bot`, `scam`, `fake`,
+  `deleted`), the profile (`no_photo`, `no_username`, `odd_name`, `no_bio`, `new_account` with where its date came
+  from, `photo_recent` from the oldest photo still shown), the store (`never_wrote`, `link_first`, `same_text` — one
+  text in several chats), and the public ban lists Combot CAS and lols.bot (`cas_banned`, `lols_banned`,
+  `lols_scammer`), **which are sent the person's id**; `--no-registries` asks none of them, `--offline` asks nothing
+  online. A list down or refusing is `unknown`, the rest still answer; a Telegram-only list says so for another
+  messenger. A CAS key, where the owner keeps one, is read from the keyring account `registries:cas` or
+  `<PREFIX>_CAS_API_KEY` and only ever sent as a header. A hint, never a verdict.
+- `chats members audit --deep <n>` (MCP `deep`): the top n flagged members also get the full check, one a second.
+- `MessengerAdapter` takes an optional `photos(person)` (`ProfilePhotos`): how many profile photos they show and the
+  oldest one's time.
 
 ### Changed — may break callers
 
 - `MessageStore` has a new required method, `senderStats`: one person's stored messages per chat. A store
   written by hand — a test fake — adds it; `openStore` already does.
+- `Services` has a new required member, `botcheck`. A `Services` object written by hand — a test fake — adds it;
+  `servicesFor` already does. The audit's reasons and weights moved to `src/botcheck/reasons.ts`; `AuditReason` is
+  still exported from the same place.
 
 ## 0.150.0 — 06.10.2026
 

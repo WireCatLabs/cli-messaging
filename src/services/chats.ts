@@ -1,4 +1,6 @@
 import { CliError } from "@leemour/cli-core"
+import type { RegistryOptions } from "../botcheck/registries.js"
+import { botCheckService } from "../botcheck/service.js"
 import { capability, type MessengerAdapter } from "../cli/messenger/port.js"
 import { threadIdOf } from "../cli/messenger/thread.js"
 import type {
@@ -25,6 +27,7 @@ import {
   AUDIT_MIN_SCORE,
   AUDIT_PAGE,
   AUDIT_PAUSE_MS,
+  type AuditedMember,
   auditMembers,
   type MembersAudit,
 } from "./members-audit.js"
@@ -110,7 +113,10 @@ export interface ChatsService {
    * Members that look like bots, each with its reasons. Reads the member list a page at a time, at most
    * `budget` pages with a pause between them, and never asks about one person. Acts on nobody.
    */
-  audit(chat: string, options: { budget?: number; minScore?: number; pauseMs?: number }): Promise<MembersAudit>
+  audit(
+    chat: string,
+    options: { budget?: number; minScore?: number; pauseMs?: number; deep?: number; registry?: RegistryOptions },
+  ): Promise<MembersAudit>
   /**
    * Reads the whole member list, as `audit` does, into the store's member history. Someone is recorded as gone
    * only when every member was read and the chat's own count agrees. `track` also puts the chat on `serve`'s
@@ -127,6 +133,31 @@ export interface ChatsService {
   track(chat: string, tracked: boolean): Promise<{ chatId: Id; tracked: boolean }>
   /** Through the guard; never counts toward the hourly limit. */
   markRead(request: { chat: string; until?: string; threadId?: string }): Promise<Operated<MarkedRead>>
+}
+
+/** One person a second: a whole group at once would be many requests, and some go to the ban lists. */
+const deepChecks = async (
+  deps: ServiceDeps,
+  items: AuditedMember[],
+  deep: number,
+  pauseMs: number,
+  registry: RegistryOptions | undefined,
+): Promise<AuditedMember[]> => {
+  const checks = botCheckService(deps)
+  const checked: AuditedMember[] = []
+  for (const [index, item] of items.entries()) {
+    if (index >= deep) {
+      checked.push(item)
+      continue
+    }
+    if (index > 0) await new Promise((resolve) => setTimeout(resolve, pauseMs))
+    const { score, reasons, registries, unknown } = await checks.person(item.id, {
+      registries: true,
+      ...(registry ? { registry } : {}),
+    })
+    checked.push({ ...item, check: { score, reasons, registries, unknown } })
+  }
+  return checked
 }
 
 export const chatsService = (deps: ServiceDeps): ChatsService => ({
@@ -235,7 +266,10 @@ export const chatsService = (deps: ServiceDeps): ChatsService => ({
       : { ...counted, fetch: `${deps.messenger.app.command} store fetch ${chatId}` }
   },
 
-  audit: async (chat, { budget = AUDIT_BUDGET, minScore = AUDIT_MIN_SCORE, pauseMs = AUDIT_PAUSE_MS }) => {
+  audit: async (
+    chat,
+    { budget = AUDIT_BUDGET, minScore = AUDIT_MIN_SCORE, pauseMs = AUDIT_PAUSE_MS, deep = 0, registry },
+  ) => {
     if (fromStore(deps)) {
       throw new CliError(
         "validation_error",
@@ -246,11 +280,12 @@ export const chatsService = (deps: ServiceDeps): ChatsService => ({
     const { chatId: id, members: read, more } = await readMembers(connection, chat, budget, pauseMs)
     const held = await storeIfOpen(deps)
     const stored = held ? await storedFacts(held.store, held.account, id) : undefined
-    const { items, unknown } = auditMembers(read, {
+    const { items: judged, unknown } = auditMembers(read, {
       firstMessages: stored?.firstMessages,
       self: connection.self(),
       minScore,
     })
+    const items = deep > 0 ? await deepChecks(deps, judged, deep, pauseMs, registry) : judged
     return {
       chatId: id,
       read: read.length,

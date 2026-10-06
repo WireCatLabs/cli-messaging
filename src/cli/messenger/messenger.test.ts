@@ -1786,6 +1786,115 @@ describe("the shared read commands", () => {
     expect(JSON.parse(found.stdout[0] ?? "null")).toMatchObject({ id: "11", flags: {}, chats: [{ id: "11" }] })
   })
 
+  it("contacts check scores a person, asks the ban lists only when it may, and --deep checks the audit's top", async () => {
+    const root = mkdtempSync(join(tmpdir(), "bot-check-"))
+    const env = {
+      CHAT_STATE_DIR: join(root, "state"),
+      CHAT_CONFIG_DIR: join(root, "config"),
+      MESSAGING_STORE: join(root, "m.db"),
+    }
+    rememberAccount(app, "default", "500", env)
+    const asked: string[] = []
+    vi.stubGlobal("fetch", async (input: string | URL) => {
+      asked.push(new URL(String(input)).hostname)
+      return new Response(
+        String(input).includes("lols")
+          ? JSON.stringify({ ok: true, user_id: 40, banned: true, scammer: false, offenses: 3 })
+          : JSON.stringify({ ok: false, description: "Record not found." }),
+        { status: 200 },
+      )
+    })
+    try {
+      const person = async () =>
+        ({
+          self: () => "500",
+          contact: async () => ({
+            id: "40",
+            name: "",
+            username: null,
+            description: null,
+            lastMessagedAt: null,
+            chats: [],
+          }),
+          photos: async () => ({ count: 1, oldestAt: new Date().toISOString() }),
+          members: async () => ({
+            chatId: "7",
+            hasMore: false,
+            items: [{ id: "40", name: "", username: null, isBot: true }],
+          }),
+          close: async () => {},
+        }) as unknown as MessengerAdapter
+
+      const checked = await call(["contacts", "check", "40", "--json"], person, env, {}, { provider: "telegram" })
+      expect(checked.code).toBe(0)
+      expect(checked.stdout).toHaveLength(1)
+      const answer = JSON.parse(checked.stdout[0] ?? "null")
+      expect(answer.reasons.map((one: { reason: string }) => one.reason)).toEqual(
+        expect.arrayContaining(["lols_banned", "no_bio", "photo_recent", "odd_name", "no_username"]),
+      )
+      expect(answer.registries.map((one: { name: string; answer: string }) => [one.name, one.answer])).toEqual([
+        ["cas", "clean"],
+        ["lols", "listed"],
+      ])
+      expect(asked.sort()).toEqual(["api.cas.chat", "api.lols.bot"])
+
+      asked.length = 0
+      const quiet = await call(
+        ["contacts", "check", "40", "--no-registries", "--json"],
+        person,
+        env,
+        {},
+        { provider: "telegram" },
+      )
+      expect(JSON.parse(quiet.stdout[0] ?? "null").registries).toEqual([])
+      expect(quiet.stderr.join("\n")).toContain("the ban lists were not asked")
+      expect(asked).toEqual([])
+
+      const other = await call(["contacts", "check", "40", "--json"], person, env, {}, { provider: "max" })
+      expect(JSON.parse(other.stdout[0] ?? "null").registries.map((one: { answer: string }) => one.answer)).toEqual([
+        "unknown",
+        "unknown",
+      ])
+      expect(asked).toEqual([])
+
+      const profiled = async () =>
+        ({
+          ...(await person()),
+          profile: async () => ({
+            id: "41",
+            name: "Ana",
+            usernames: ["ana"],
+            bio: "teacher",
+            flags: { bot: false, scam: true },
+            hasPhoto: true,
+            registered: { at: new Date().toISOString(), source: "estimate", precision: "month" },
+            chats: [],
+          }),
+        }) as unknown as MessengerAdapter
+      const marked = await call(["contacts", "check", "41", "--json"], profiled, env, {}, { provider: "telegram" })
+      const read = JSON.parse(marked.stdout[0] ?? "null")
+      expect(read.reasons.map((one: { reason: string; source: string }) => [one.reason, one.source])).toEqual(
+        expect.arrayContaining([
+          ["scam", "messenger"],
+          ["new_account", "estimate"],
+        ]),
+      )
+      expect(read.unknown).toEqual(expect.arrayContaining(["fake", "deleted"]))
+
+      const deep = await call(
+        ["chats", "members", "audit", "7", "--deep", "1", "--json"],
+        person,
+        env,
+        {},
+        { provider: "telegram" },
+      )
+      expect(deep.code).toBe(0)
+      expect(JSON.parse(deep.stdout[0] ?? "null").items[0].check.registries).toHaveLength(2)
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
   it("**builds a chat's conversations** and explains a message's place in one, without connecting", async () => {
     const root = mkdtempSync(join(tmpdir(), "messenger-"))
     const env = {

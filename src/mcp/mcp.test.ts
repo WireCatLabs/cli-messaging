@@ -562,6 +562,7 @@ describe("the MCP server", () => {
       "chat_chats_stats",
       "chat_chats_tracking_list",
       "chat_chats_tracking_show",
+      "chat_contacts_check",
       "chat_contacts_context",
       "chat_contacts_list",
       "chat_contacts_lookup",
@@ -1281,6 +1282,17 @@ describe("the MCP server", () => {
     const names = (await readOnly.client.listTools()).tools.map(({ name }) => name)
     expect(names).toContain("chat_attachments_list")
     expect(names).not.toContain("chat_attachments_text_set")
+  })
+
+  it("checks one person without the ban lists when asked, and says a non-Telegram account is not in them", async () => {
+    const { call } = await connect(scripted())
+    const quiet = await call("chat_contacts_check", { person: "Olga", registries: false })
+    const asked = await call("chat_contacts_check", { person: "Olga" })
+
+    expect(quiet.isError).toBe(false)
+    expect(quiet.body.registries).toEqual([])
+    expect(quiet.body.notes).toContain("the ban lists were not asked")
+    expect(asked.body.registries.map((one: { answer: string }) => one.answer)).toEqual(["unknown", "unknown"])
   })
 
   it("hides contact context when message reading is denied", async () => {

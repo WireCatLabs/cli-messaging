@@ -3,6 +3,7 @@ import { Command } from "commander"
 import { AUDIT_BUDGET, AUDIT_MIN_SCORE, AUDIT_PAGE } from "../../services/members-audit.js"
 import { momentOf } from "../../services/moment.js"
 import { listed, positiveCount, renderPage, window, withPaging } from "../paging.js"
+import { casKey } from "../registry-keys.js"
 import { type Messenger, messengerContext } from "./context.js"
 
 /** `chats members …`; a subcommand that changes membership belongs here too. */
@@ -39,13 +40,22 @@ export const membersCommand = (messenger: Messenger): Command => {
         `only members scoring at least this; 1 lists everyone with a reason (default: ${AUDIT_MIN_SCORE})`,
         positiveCount("--min-score"),
       )
+      .option(
+        "--deep <n>",
+        "also check the top n in full — profile, photos, everything they wrote, and the public ban lists, which are " +
+          "sent their ids — one person a second",
+        positiveCount("--deep"),
+      )
       .action(async function (this: Command, chat: string) {
         const context = messengerContext(this, messenger)
-        const { budget, minScore } = this.opts<{ budget?: number; minScore?: number }>()
+        const { budget, minScore, deep } = this.opts<{ budget?: number; minScore?: number; deep?: number }>()
+        const key = deep === undefined ? undefined : casKey(messenger.app, context.env)
         const audit = await context.withServices((services) =>
           services.chats.audit(chat, {
             ...(budget === undefined ? {} : { budget }),
             ...(minScore === undefined ? {} : { minScore }),
+            ...(deep === undefined ? {} : { deep }),
+            ...(key ? { registry: { casKey: key } } : {}),
           }),
         )
         if (audit.more) {
@@ -61,12 +71,21 @@ export const membersCommand = (messenger: Messenger): Command => {
           return
         }
         context.renderer.stream(
-          audit.items.map(({ id, name, username, score, reasons }) => ({
+          audit.items.map(({ id, name, username, score, reasons, check }) => ({
             score,
             id,
             name: name ?? "",
             username: username ?? "",
             reasons: reasons.join(", "),
+            ...(check
+              ? {
+                  checked: check.score,
+                  listed: check.registries
+                    .filter(({ answer }) => answer === "listed")
+                    .map(({ name }) => name)
+                    .join(", "),
+                }
+              : {}),
           })),
         )
       }),
