@@ -21,6 +21,7 @@ import { pollReadTools, pollWriteTools } from "./tools/polls.js"
 import { reactionTools } from "./tools/reactions.js"
 import { reviewTools } from "./tools/review.js"
 import { searchesTools } from "./tools/searches.js"
+import { statsTools } from "./tools/stats.js"
 import { tagsTools } from "./tools/tags.js"
 import { topicsTools, topicWriteTools } from "./tools/topics.js"
 
@@ -34,6 +35,7 @@ export const readTools = (messenger: Messenger): Record<string, AnyTool> => ({
   ...topicsTools(messenger),
   ...accountTools(messenger),
   ...chatsTools(messenger),
+  ...statsTools(messenger),
   ...contactsTools(messenger),
   ...messagesTools(messenger),
   ...conversationsTools(messenger),

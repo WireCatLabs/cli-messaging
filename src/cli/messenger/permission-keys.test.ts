@@ -25,6 +25,7 @@ import { reviewCommand } from "./review.js"
 import { searchesCommand } from "./searches-command.js"
 import { serveCommand } from "./serve-command.js"
 import { serverCommand } from "./server-command.js"
+import { statsCommand } from "./stats-command.js"
 import { tagsCommand } from "./tags-command.js"
 import { topicsCommand } from "./topics-command.js"
 import { watchCommand } from "./watch-command.js"
@@ -60,6 +61,7 @@ describe("the permission key of a command", () => {
       serverCommand(messenger),
       storeCommand(messenger),
       conversationsCommand(messenger),
+      statsCommand(messenger),
       tagsCommand(messenger),
       attachmentsCommand(messenger),
       searchesCommand(messenger),

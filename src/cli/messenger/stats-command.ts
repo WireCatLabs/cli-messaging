@@ -1,0 +1,76 @@
+import { writeFileSync } from "node:fs"
+import { extname, resolve } from "node:path"
+import { CliError } from "@leemour/cli-core"
+import { Command } from "commander"
+import { chartKindOf, chartPeriodOf, chatChart } from "../../charts/chat.js"
+import { CHART_SIZE, type ChartKind, type ChartPeriod } from "../../charts/model.js"
+import { chartRenderer } from "../../charts/render.js"
+import { timezoneOf } from "../../search/lucene/dates.js"
+import { EVENTS_DAYS } from "../../services/chats.js"
+import { momentOf } from "../../services/moment.js"
+import { type Messenger, messengerContext } from "./context.js"
+
+export const statsCommand = (messenger: Messenger, loadRenderer = chartRenderer): Command => {
+  const stats = new Command("stats").description("charts from the account's statistics")
+  stats
+    .command("charts")
+    .description("a chart's data from a chat's statistics, and optionally a dark SVG image")
+    .argument("<chat>", messenger.chatArgument)
+    .option(
+      "--chart-kind <messages|active|membership>",
+      "what to draw: messages, active authors, or joins and leaves",
+      chartKindOf,
+      "messages",
+    )
+    .option("--by <day|week>", "one point per calendar day or week (weeks start on Monday)", chartPeriodOf, "day")
+    .option("--since-time <time>", `ISO 8601, or 2h / 1d ago; ${EVENTS_DAYS} days ago if not given`)
+    .option("--timezone <zone>", "the IANA timezone for calendar days")
+    .option("--output <file>", "write a dark SVG image to a new .svg file")
+    .action(async function (this: Command, chat: string) {
+      const context = messengerContext(this, messenger)
+      const {
+        chartKind,
+        by,
+        sinceTime,
+        timezone: given,
+        output,
+      } = this.opts<{
+        chartKind: ChartKind
+        by: ChartPeriod
+        sinceTime?: string
+        timezone?: string
+        output?: string
+      }>()
+      if (context.format === "jsonl")
+        throw new CliError("validation_error", "charts return one JSON object — use --json, not --jsonl")
+      if (output !== undefined && (output === "-" || extname(output).toLowerCase() !== ".svg")) {
+        throw new CliError("validation_error", "--output takes a .svg file; image output to stdout is unavailable")
+      }
+      const timezone = timezoneOf(given)
+      const found = await context.withServices((services) =>
+        services.chats.stats(chat, {
+          by,
+          timezone,
+          ...(sinceTime === undefined ? {} : { since: momentOf(sinceTime, "--since-time") }),
+        }),
+      )
+      const chart = chatChart(found, { kind: chartKind, by, timezone })
+      let chartFile: { path: string; format: "svg"; width: number; height: number } | undefined
+      if (output !== undefined) {
+        const rendered = await (await loadRenderer()).render(chart, CHART_SIZE)
+        const path = resolve(output)
+        try {
+          writeFileSync(path, rendered.bytes, { flag: "wx", mode: 0o600 })
+        } catch (error) {
+          if ((error as NodeJS.ErrnoException).code === "EEXIST")
+            throw new CliError("validation_error", `${path} exists — a chart never overwrites a file`)
+          throw error
+        }
+        chartFile = { path, format: rendered.format, width: rendered.width, height: rendered.height }
+        context.renderer.note(`chart written to ${path}`)
+      }
+      if (chart.partial) context.renderer.note("partial data — the chart shows lower bounds")
+      context.renderer.result({ chart, ...(chartFile === undefined ? {} : { chartFile }) })
+    })
+  return stats
+}
