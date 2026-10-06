@@ -1208,6 +1208,16 @@
         }
       }
     },
+    "chats members history": {
+      "in": [],
+      "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" },
+      "options": {
+        "--since-time": {
+          "in": [],
+          "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" }
+        }
+      }
+    },
     "chats members list": {
       "in": "all",
       "options": {

@@ -114,6 +114,29 @@ export const chatsTools = (messenger: Messenger): Record<string, AnyTool> => {
         }),
     }),
 
+    chats_members_history: tool({
+      title: "Who joined, left or changed their profile",
+      description:
+        "A group's member history as the local store recorded it with chats members fetch, oldest first: " +
+        "{ chatId, items: [{ at, event: joined | left | changed, id, name, username, invitedBy?, before? }] }. " +
+        "before is the profile seen until then. A leave is recorded only from a member list read whole. Reads the " +
+        "local store only; empty until the owner fetches or tracks the chat.",
+      input: v.object({
+        chat,
+        since_time: v.optional(v.pipe(v.string(), v.description("an ISO 8601 time, or 2h / 1d ago"))),
+      }),
+      annotations: { ...READ, openWorldHint: false },
+      stored: async (store, account, args, defaults) => {
+        const { chatId, events } = await servicesFor(
+          storedDeps(messenger, store, account, defaults.guard),
+        ).chats.memberHistory(
+          args.chat,
+          args.since_time === undefined ? {} : { since: momentOf(args.since_time, "since_time") },
+        )
+        return { chatId, items: events }
+      },
+    }),
+
     chats_tracking_list: tool({
       title: "Chats whose members are recorded daily",
       description:

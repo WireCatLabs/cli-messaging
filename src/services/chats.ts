@@ -19,6 +19,7 @@ import { newOperationId } from "../sends/send-id.js"
 import type { AccountKey, MemberCount, MessageStore, RosterChange, TrackedChat } from "../store/store.js"
 import { type ChatStats, chatStats, type StatsPeriod } from "./chat-stats.js"
 import { fromStore, nothingStored, type ServiceDeps, storeIfOpen } from "./deps.js"
+import { type MemberEvent, memberEvents } from "./member-history.js"
 import {
   AUDIT_BUDGET,
   AUDIT_MIN_SCORE,
@@ -120,6 +121,8 @@ export interface ChatsService {
   tracked(): Promise<TrackedChat[]>
   /** One chat's tracking and its member counts of the last `TRACKED_DAYS` days, tracked or not. */
   trackedChat(chat: string): Promise<{ chatId: Id; trackedAt: string | null; counts: MemberCount[] }>
+  /** Joins, leaves and profile changes the store recorded, oldest first; `since` in ms. Never asks the messenger. */
+  memberHistory(chat: string, options: { since?: number }): Promise<{ chatId: Id; events: MemberEvent[] }>
   /** Starts or stops the daily fetch; history already kept stays. A local write. */
   track(chat: string, tracked: boolean): Promise<{ chatId: Id; tracked: boolean }>
   /** Through the guard; never counts toward the hourly limit. */
@@ -170,8 +173,15 @@ export const chatsService = (deps: ServiceDeps): ChatsService => ({
     return held ? { ...card, members: await storedMembers(held.store, held.account, card.id) } : card
   },
 
-  members: async (chat, window) =>
-    capability(await deps.connection(), "members", "list a group's members")(chat, window),
+  members: async (chat, window) => {
+    if (!fromStore(deps)) return capability(await deps.connection(), "members", "list a group's members")(chat, window)
+    const store = await deps.store()
+    const account = await deps.account()
+    const chatId = await storedChatId(deps.messenger, chat, store, account)
+    const everyone = await store.members(account, chatId)
+    const end = window.limit === undefined ? everyone.length : window.offset + window.limit
+    return { chatId, items: everyone.slice(window.offset, end), hasMore: everyone.length > end }
+  },
 
   events: async (chat, { since, only }) => {
     if (deps.offline) {
@@ -218,9 +228,11 @@ export const chatsService = (deps: ServiceDeps): ChatsService => ({
       ...(by ? { by } : {}),
       timezone: timezoneOf(timezone),
     })
+    const counts = await store.memberCounts(account, chatId, { since: new Date(from).toISOString().slice(0, 10) })
+    const counted = counts.length > 0 ? { ...stats, memberCounts: counts } : stats
     return completeness.state === "complete"
-      ? stats
-      : { ...stats, fetch: `${deps.messenger.app.command} store fetch ${chatId}` }
+      ? counted
+      : { ...counted, fetch: `${deps.messenger.app.command} store fetch ${chatId}` }
   },
 
   audit: async (chat, { budget = AUDIT_BUDGET, minScore = AUDIT_MIN_SCORE, pauseMs = AUDIT_PAUSE_MS }) => {
@@ -273,6 +285,17 @@ export const chatsService = (deps: ServiceDeps): ChatsService => ({
   },
 
   tracked: async () => (await deps.store()).trackedChats(await deps.account()),
+
+  memberHistory: async (chat, { since }) => {
+    const store = await deps.store()
+    const account = await deps.account()
+    const chatId = await storedChatId(deps.messenger, chat, store, account)
+    const [stays, revisions] = await Promise.all([
+      store.memberStays(account, chatId),
+      store.profileRevisions(account, chatId),
+    ])
+    return { chatId, events: memberEvents(stays, revisions, since) }
+  },
 
   trackedChat: async (chat) => {
     const store = await deps.store()

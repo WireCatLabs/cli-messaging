@@ -12,6 +12,10 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   a minute after it connects so catch-up goes first. A chat already fetched that day is skipped, so a restart does
   not fetch it twice; a chat that fails is named on stderr and the rest go on. Its answer adds
   `members: { fetched, failed }` when it fetched any. The timer ends with `serve`.
+- `chats members history <chat> [--since-time]` and read-only MCP `chats_members_history`: who joined, who left and
+  whose profile changed (with what it was before), oldest first, from what `chats members fetch` recorded — never
+  asks the messenger. `chats stats` adds `memberCounts`, the recorded count per day in its period, and
+  `chats members list --offline` answers from the store.
 
 ## 0.149.0 — 06.10.2026
 

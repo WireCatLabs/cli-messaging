@@ -106,3 +106,38 @@ describe("chats tracking", () => {
     expect((await service.trackedChat("7")).counts).toHaveLength(1)
   })
 })
+
+describe("chats members history", () => {
+  it("lists joins, leaves and profile changes from the store alone, oldest first", async () => {
+    const store = await heldStore(2)
+    await chatsService(online(store, listing([member("21"), member("22")]))).fetchMembers("7", { pauseMs: 0 })
+    await store.saveChats(account, [
+      { id: "7", title: "Club", kind: "group", unreadCount: 0, lastMessageAt: null, participantsCount: 1 },
+    ])
+    const renamed = { ...member("21"), name: "New name", username: "newname" }
+    await chatsService(online(store, listing([renamed]))).fetchMembers("7", { pauseMs: 0 })
+    const offline = chatsService(storedDeps(messenger, store, account, guard))
+
+    const { chatId, events } = await offline.memberHistory("Club", {})
+
+    expect(chatId).toBe("7")
+    expect(events.map(({ event, id }) => `${event} ${id}`).sort()).toEqual([
+      "changed 21",
+      "joined 21",
+      "joined 22",
+      "left 22",
+    ])
+    expect(events.find(({ event }) => event === "changed")).toMatchObject({
+      name: "New name",
+      before: { name: "Member 21", username: null },
+    })
+    expect(await offline.members("7", { offset: 0 })).toEqual({
+      chatId: "7",
+      items: [expect.objectContaining({ id: "21" })],
+      hasMore: false,
+    })
+    expect((await offline.stats("7", { since: Date.now() - 86_400_000 })).memberCounts).toEqual([
+      expect.objectContaining({ participants: 1, listed: 1, complete: true }),
+    ])
+  })
+})

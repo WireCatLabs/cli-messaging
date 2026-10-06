@@ -1,5 +1,5 @@
 import type { ChatEvents, Id, Message } from "../domain/models.js"
-import type { ChatCompleteness } from "../store/store.js"
+import type { ChatCompleteness, MemberCount } from "../store/store.js"
 import { questions } from "./inbox.js"
 import { calendarKey } from "./messages-search.js"
 
@@ -64,6 +64,8 @@ export interface ChatStats {
     medianMinutesToAnswer: number | null
     answeredBy: "owner" | "owner-and-admins"
   }
+  /** The tracked member count per day in the period, from `chats members fetch`; absent when none was recorded. */
+  memberCounts?: MemberCount[]
   /** Absent where the messenger was not asked: `--offline`, or one that does not say who joined. */
   members?: MemberChanges
   series?: StatsRow[]
