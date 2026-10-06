@@ -37,6 +37,10 @@
     "--allow-any-file": {
       "meaning": "send a --file even from a hidden folder, ~/.ssh or the tool's own folders"
     },
+    "--allow-chats": {
+      "meaning": "replace allowed chat ids, comma-separated; empty clears",
+      "value": "<ids>"
+    },
     "--allow-dangerous": {
       "meaning": "go ahead without the question an ask level puts before a deletion"
     },
@@ -51,6 +55,10 @@
     "--allow-moderate": {
       "meaning": "offer the tool that applies a group's rules — delete others' messages, remove people",
       "note": "retired access flag: accepted with a warning, grants no permissions in either CLI"
+    },
+    "--allow-people": {
+      "meaning": "replace allowed sender ids, comma-separated; empty clears",
+      "value": "<ids>"
     },
     "--allow-send": {
       "meaning": "offer the send tool; without it the server can only read",
@@ -76,6 +84,9 @@
     },
     "--as-file": {
       "meaning": "send every --file as a plain file to download, a video included"
+    },
+    "--as-reply": {
+      "meaning": "send as a reply to the matched message"
     },
     "--at-time": {
       "value": "<time>",
@@ -146,6 +157,10 @@
       "meaning": "a chat, by id or name; repeat it for more",
       "note": "chat addressing follows each messenger's supported names, usernames and Saved Messages aliases, so it differs on purpose (Help text rule 4); both message searches resolve stored names without networking"
     },
+    "--chats": {
+      "meaning": "only these chat ids, comma-separated; empty for any",
+      "value": "<ids>"
+    },
     "--check": {
       "meaning": "say whether a newer version exists, and install nothing"
     },
@@ -161,9 +176,16 @@
       "value": "<person>",
       "meaning": "the person to tag or untag: their id, @username or name, as the local store knows them"
     },
+    "--contacts-only": {
+      "meaning": "match only contacts"
+    },
     "--context": {
       "value": "<n>",
       "meaning": "messages before and after each hit"
+    },
+    "--days": {
+      "meaning": "days of the working window, such as mon-fri or sat,sun",
+      "value": "<days>"
     },
     "--deep": {
       "value": "<n>",
@@ -172,6 +194,14 @@
     "--defaults": {
       "meaning": "change what every profile gets, rather than this profile"
     },
+    "--deny-chats": {
+      "meaning": "replace denied chat ids, comma-separated; empty clears; deny wins",
+      "value": "<ids>"
+    },
+    "--deny-people": {
+      "meaning": "replace denied sender ids, comma-separated; empty clears; deny wins",
+      "value": "<ids>"
+    },
     "--description": {
       "value": "<text>",
       "meaning": "the new about text — of a chat or of your account"
@@ -179,6 +209,10 @@
     "--dims": {
       "value": "<n>",
       "meaning": "remote: the vector size — needed with --base-url; shortens an OpenAI model's"
+    },
+    "--do": {
+      "meaning": "actions: reply, task, or both, comma-separated",
+      "value": "<actions>"
     },
     "--download": {
       "meaning": "first save, from the messenger, the files no download saved yet"
@@ -249,6 +283,10 @@
       "value": "<kind>",
       "meaning": "only chats of this kind: dialog, group, channel or saved"
     },
+    "--kinds": {
+      "meaning": "chat kinds: dialog, group; comma-separated, empty for any",
+      "value": "<kinds>"
+    },
     "--language": {
       "value": "<lucene|legacy>",
       "meaning": "the query language: strict Lucene or legacy discovery",
@@ -317,6 +355,9 @@
       "value": "<on|off>",
       "meaning": "members may see the invite link"
     },
+    "--mentions-me": {
+      "meaning": "require a mention of you or a reply to you"
+    },
     "--message": {
       "value": "<message>",
       "meaning": "the message to tag or untag: its id in --chat, or a msg: locator alone"
@@ -332,7 +373,7 @@
     "--model": {
       "value": "<id>",
       "meaning": "which downloaded speech model hears them; `models audio list` shows them",
-      "note": "max's own copy is worded differently until T6 moves the command onto the shared one (e13)"
+      "note": "max's own copy is worded differently until T6 moves the command onto the shared one (e13); replies edit uses this option for template model mode: fill-only or may-reword; rewording is not yet available"
     },
     "--multiple": {
       "meaning": "people may pick several answers"
@@ -346,14 +387,29 @@
     "--newest": {
       "meaning": "newest first instead of best first"
     },
+    "--no-as-reply": {
+      "meaning": "send without linking to the matched message"
+    },
     "--no-ban": {
       "meaning": "remove without banning; by default a removed person cannot come back by the link"
+    },
+    "--no-contacts-only": {
+      "meaning": "do not require a contact"
+    },
+    "--no-hours": {
+      "meaning": "clear the working window"
     },
     "--no-mark-read": {
       "meaning": "do not mark read, whatever the catchUpMarksRead setting says"
     },
+    "--no-mentions-me": {
+      "meaning": "do not require a mention of you or a reply to you"
+    },
     "--no-preview": {
       "meaning": "no preview card for a link in the text"
+    },
+    "--no-question": {
+      "meaning": "do not require a question"
     },
     "--no-record": {
       "meaning": "do not keep it, whatever the configuration says"
@@ -363,6 +419,14 @@
     },
     "--no-serve": {
       "meaning": "do not start it; log in on this command's own connection unless one is running"
+    },
+    "--not-chats": {
+      "meaning": "leave these chat ids out, comma-separated; empty clears",
+      "value": "<ids>"
+    },
+    "--not-people": {
+      "meaning": "leave these sender ids out, comma-separated; empty clears",
+      "value": "<ids>"
     },
     "--notification": {
       "value": "<text>",
@@ -409,6 +473,10 @@
       "default": ".",
       "note": "`attachments extract` takes it only with --download, and has no default there, so extraction never fills the working folder unasked"
     },
+    "--outside": {
+      "meaning": "answer outside this 24-hour window, such as 09:00-19:00",
+      "value": "<hours>"
+    },
     "--page": {
       "value": "<n>",
       "meaning": "which page, starting at 1"
@@ -423,6 +491,18 @@
       "meaning": "the least wait between pages, 5s or 500ms; each is up to twice that",
       "default": "5s",
       "note": "max's own copy is worded differently until T6 moves the command onto the shared one (e13)"
+    },
+    "--people": {
+      "meaning": "only these sender ids, comma-separated; empty for any",
+      "value": "<ids>"
+    },
+    "--per-chat": {
+      "meaning": "at most this many per chat, such as 1/12h",
+      "value": "<limit>"
+    },
+    "--per-person": {
+      "meaning": "at most this many per person, such as 1/1d",
+      "value": "<limit>"
     },
     "--personal": {
       "meaning": "the personal account's section of the profile's settings"
@@ -446,6 +526,9 @@
     "--qr-file": {
       "value": "<png>",
       "meaning": "write the QR code to this PNG instead of drawing it, for an agent to pass on"
+    },
+    "--question": {
+      "meaning": "match only questions"
     },
     "--quiet": {
       "meaning": "diagnostics off",
@@ -472,6 +555,10 @@
     },
     "--replace": {
       "meaning": "overwrite a saved search of the same name"
+    },
+    "--reply": {
+      "meaning": "answer all or only listed senders and chats: all, listed",
+      "value": "<mode>"
     },
     "--reply-to": {
       "value": "<message>",
@@ -550,6 +637,10 @@
       "value": "<tag>",
       "meaning": "only this tag"
     },
+    "--template": {
+      "meaning": "the reply template",
+      "value": "<text>"
+    },
     "--text": {
       "value": "<text>",
       "meaning": "the message's new text; - reads stdin"
@@ -589,7 +680,8 @@
     "--timezone": {
       "value": "<zone>",
       "meaning": "the IANA timezone for calendar date boundaries",
-      "default": "system IANA timezone"
+      "default": "system IANA timezone",
+      "note": "replies edit uses this option for the IANA timezone for the working window"
     },
     "--title": {
       "value": "<title>",
@@ -651,6 +743,10 @@
     "--voice": {
       "value": "<file>",
       "meaning": "send an Ogg Opus file as a voice message, alone, with no text"
+    },
+    "--words": {
+      "meaning": "match any of these whole words, comma-separated; empty clears",
+      "value": "<words>"
     },
     "--workers": {
       "value": "<n>",
@@ -2288,6 +2384,241 @@
     },
     "replies": {
       "in": "all"
+    },
+    "replies add": {
+      "in": [],
+      "planned": {
+        "max": "next cli-messaging bump",
+        "tg": "next cli-messaging bump"
+      }
+    },
+    "replies audience": {
+      "in": [],
+      "planned": {
+        "max": "next cli-messaging bump",
+        "tg": "next cli-messaging bump"
+      },
+      "options": {
+        "--allow-chats": {
+          "in": [],
+          "planned": {
+            "max": "next cli-messaging bump",
+            "tg": "next cli-messaging bump"
+          }
+        },
+        "--allow-people": {
+          "in": [],
+          "planned": {
+            "max": "next cli-messaging bump",
+            "tg": "next cli-messaging bump"
+          }
+        },
+        "--deny-chats": {
+          "in": [],
+          "planned": {
+            "max": "next cli-messaging bump",
+            "tg": "next cli-messaging bump"
+          }
+        },
+        "--deny-people": {
+          "in": [],
+          "planned": {
+            "max": "next cli-messaging bump",
+            "tg": "next cli-messaging bump"
+          }
+        },
+        "--reply": {
+          "in": [],
+          "planned": {
+            "max": "next cli-messaging bump",
+            "tg": "next cli-messaging bump"
+          }
+        }
+      }
+    },
+    "replies edit": {
+      "in": [],
+      "planned": {
+        "max": "next cli-messaging bump",
+        "tg": "next cli-messaging bump"
+      },
+      "options": {
+        "--as-reply": {
+          "in": [],
+          "planned": {
+            "max": "next cli-messaging bump",
+            "tg": "next cli-messaging bump"
+          }
+        },
+        "--chats": {
+          "in": [],
+          "planned": {
+            "max": "next cli-messaging bump",
+            "tg": "next cli-messaging bump"
+          }
+        },
+        "--contacts-only": {
+          "in": [],
+          "planned": {
+            "max": "next cli-messaging bump",
+            "tg": "next cli-messaging bump"
+          }
+        },
+        "--days": {
+          "in": [],
+          "planned": {
+            "max": "next cli-messaging bump",
+            "tg": "next cli-messaging bump"
+          }
+        },
+        "--do": {
+          "in": [],
+          "planned": {
+            "max": "next cli-messaging bump",
+            "tg": "next cli-messaging bump"
+          }
+        },
+        "--kinds": {
+          "in": [],
+          "planned": {
+            "max": "next cli-messaging bump",
+            "tg": "next cli-messaging bump"
+          }
+        },
+        "--mentions-me": {
+          "in": [],
+          "planned": {
+            "max": "next cli-messaging bump",
+            "tg": "next cli-messaging bump"
+          }
+        },
+        "--model": {
+          "in": [],
+          "planned": {
+            "max": "next cli-messaging bump",
+            "tg": "next cli-messaging bump"
+          }
+        },
+        "--no-as-reply": {
+          "in": [],
+          "planned": {
+            "max": "next cli-messaging bump",
+            "tg": "next cli-messaging bump"
+          }
+        },
+        "--no-contacts-only": {
+          "in": [],
+          "planned": {
+            "max": "next cli-messaging bump",
+            "tg": "next cli-messaging bump"
+          }
+        },
+        "--no-hours": {
+          "in": [],
+          "planned": {
+            "max": "next cli-messaging bump",
+            "tg": "next cli-messaging bump"
+          }
+        },
+        "--no-mentions-me": {
+          "in": [],
+          "planned": {
+            "max": "next cli-messaging bump",
+            "tg": "next cli-messaging bump"
+          }
+        },
+        "--no-question": {
+          "in": [],
+          "planned": {
+            "max": "next cli-messaging bump",
+            "tg": "next cli-messaging bump"
+          }
+        },
+        "--not-chats": {
+          "in": [],
+          "planned": {
+            "max": "next cli-messaging bump",
+            "tg": "next cli-messaging bump"
+          }
+        },
+        "--not-people": {
+          "in": [],
+          "planned": {
+            "max": "next cli-messaging bump",
+            "tg": "next cli-messaging bump"
+          }
+        },
+        "--outside": {
+          "in": [],
+          "planned": {
+            "max": "next cli-messaging bump",
+            "tg": "next cli-messaging bump"
+          }
+        },
+        "--people": {
+          "in": [],
+          "planned": {
+            "max": "next cli-messaging bump",
+            "tg": "next cli-messaging bump"
+          }
+        },
+        "--per-chat": {
+          "in": [],
+          "planned": {
+            "max": "next cli-messaging bump",
+            "tg": "next cli-messaging bump"
+          }
+        },
+        "--per-person": {
+          "in": [],
+          "planned": {
+            "max": "next cli-messaging bump",
+            "tg": "next cli-messaging bump"
+          }
+        },
+        "--question": {
+          "in": [],
+          "planned": {
+            "max": "next cli-messaging bump",
+            "tg": "next cli-messaging bump"
+          }
+        },
+        "--template": {
+          "in": [],
+          "planned": {
+            "max": "next cli-messaging bump",
+            "tg": "next cli-messaging bump"
+          }
+        },
+        "--timezone": {
+          "in": [],
+          "planned": {
+            "max": "next cli-messaging bump",
+            "tg": "next cli-messaging bump"
+          }
+        },
+        "--words": {
+          "in": [],
+          "planned": {
+            "max": "next cli-messaging bump",
+            "tg": "next cli-messaging bump"
+          }
+        }
+      }
+    },
+    "replies off": {
+      "in": [],
+      "planned": {
+        "max": "next cli-messaging bump",
+        "tg": "next cli-messaging bump"
+      }
+    },
+    "replies on": {
+      "in": [],
+      "planned": {
+        "max": "next cli-messaging bump",
+        "tg": "next cli-messaging bump"
+      }
     },
     "replies pause": {
       "in": "all"

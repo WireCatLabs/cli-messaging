@@ -5,12 +5,14 @@ import { paused, readRepliesState, repliesStatePathFor, writeRepliesState } from
 import { levelFor } from "../../sends/permissions.js"
 import { momentOf } from "../../services/moment.js"
 import { type Messenger, messengerContext } from "./context.js"
+import { addReplyEditors } from "./replies-edit-command.js"
 
 /** `replies`: rules that answer messages for the owner, from `serve`, and only to its test accounts (`NEED-601`). */
 export const repliesCommand = (messenger: Messenger): Command => {
   const replies = new Command("replies").description(
     "rules that answer messages for you, kept in a file of this profile",
   )
+  addReplyEditors(replies, messenger)
 
   replies
     .command("test")
