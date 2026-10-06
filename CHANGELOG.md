@@ -14,6 +14,11 @@ Released early: MAX native server daily member fetching needs the public schedul
 
 ### Fixed
 
+- `setup` runs again without a terminal, in CI or with `--json`: 0.157.0 refused it outright, which
+  also stopped an agent installing the skill (`setup --agent codex`) and a token piped on stdin. Setup
+  refuses on its own the steps that need a terminal; a QR or SMS `session start` is still refused
+  without one, before it starts.
+
 - Searches report imported mail coverage once, with `memo mail import --since <date>` as the next
   step, rather than counting every mail thread as an incomplete messenger chat and suggesting
   `store fetch`. JSON completeness still reports missing or unknown history.

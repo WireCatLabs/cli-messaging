@@ -51,6 +51,8 @@ const invoke = async (
           ),
           { mutates: true },
         ),
+        new Command("setup").option("--agent <agent>").action(performed),
+        new Command("session").addCommand(new Command("start").argument("[method]").action(performed)),
         commandsCommand(app),
       ],
     },
@@ -70,6 +72,19 @@ describe("agent CLI contract", () => {
       preview: true,
       effects: { actionInvoked: false, writeReserved: false },
     })
+  })
+
+  it("runs setup without a terminal, where it decides itself what needs one", async () => {
+    const result = await invoke(["setup", "--agent", "codex", "--json"])
+    expect(result.result).toBe(0)
+    expect(result.performed).toHaveBeenCalledOnce()
+  })
+
+  it("refuses a QR login without a terminal before it starts", async () => {
+    const result = await invoke(["session", "start", "qr", "--json"])
+    expect(result.result).toBe(2)
+    expect(result.performed).not.toHaveBeenCalled()
+    expect(JSON.parse(result.stderr[0] ?? "").error.reason).toBe("input_required")
   })
 
   it("makes JSON on a TTY headless before a secret prompt", async () => {
