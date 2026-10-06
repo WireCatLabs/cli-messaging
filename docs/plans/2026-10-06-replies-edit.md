@@ -1,6 +1,6 @@
 # Reply rules editing commands
 
-Status: approved by the owner on 2026-10-06; 🚧 `feat/replies-edit`.
+Status: implementation merged in #621 on 2026-10-06; initial publication 0.154.0.
 Implementation follows the approved private handoff and editing plan. No store migration.
 
 Add local `replies add|edit|on|off` and `replies audience`. New rules contain every default
