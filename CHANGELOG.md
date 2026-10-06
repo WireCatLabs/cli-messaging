@@ -6,6 +6,10 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.154.0 — 06.10.2026
+
+Released early: max-cli needs PNG chart files and MCP image output for the owner-requested immediate adoption
+
 ### Added
 
 - `./models` exports one model gateway for purpose-specific prompts and untrusted data, with
