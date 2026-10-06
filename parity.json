@@ -190,7 +190,7 @@
     "--deep": {
       "value": "<n>",
       "meaning": "also check the top n in full — profile, photos, everything they wrote, and the public ban lists, which are sent their ids — one person a second",
-      "note": "max-cli main still uses the older SDK help; current tg-cli names the bounded Telegram audit. Align after both adopt the HTTP confirmation SDK release."
+      "note": "TG specializes the SDK help with the bounded Telegram audit; MAX retains the generic SDK wording. Align the shared help with provider capabilities separately; SDK adoption alone does not remove the difference."
     },
     "--defaults": {
       "meaning": "change what every profile gets, rather than this profile"
@@ -421,7 +421,7 @@
     },
     "--no-registries": {
       "meaning": "do not ask the public ban lists; nothing about them leaves this machine",
-      "note": "max-cli main still uses the older SDK help; current tg-cli distinguishes public registries from Telegram profile reads. Align after both adopt the HTTP confirmation SDK release."
+      "note": "TG clarifies that profile and photo reads still use Telegram when public registries are disabled; MAX retains the generic SDK wording. Public registry queries apply to Telegram only."
     },
     "--no-serve": {
       "meaning": "do not start it; log in on this command's own connection unless one is running"
@@ -1948,20 +1948,8 @@
         "--allow-send": "all",
         "--confirm-send": "all",
         "--http": "all",
-        "--http-confirmation": {
-          "in": [],
-          "planned": {
-            "max": "HTTP confirmation compatibility",
-            "tg": "HTTP confirmation compatibility"
-          }
-        },
-        "--permission": {
-          "in": [],
-          "planned": {
-            "max": "HTTP confirmation compatibility",
-            "tg": "HTTP confirmation compatibility"
-          }
-        },
+        "--http-confirmation": "all",
+        "--permission": "all",
         "--port": "all",
         "--public-url": "all",
         "--revoke": "all",
@@ -1995,13 +1983,7 @@
         },
         "--allow-send": "all",
         "--confirm-send": "all",
-        "--permission": {
-          "in": [],
-          "planned": {
-            "max": "HTTP confirmation compatibility",
-            "tg": "HTTP confirmation compatibility"
-          }
-        },
+        "--permission": "all",
         "--yes": {
           "in": [],
           "planned": {
@@ -2060,13 +2042,7 @@
             "tg": "local MCP setup"
           }
         },
-        "--permission": {
-          "in": [],
-          "planned": {
-            "max": "HTTP confirmation compatibility",
-            "tg": "HTTP confirmation compatibility"
-          }
-        }
+        "--permission": "all"
       }
     },
     "mcp setup": {
@@ -2125,13 +2101,7 @@
             "tg": "local MCP setup"
           }
         },
-        "--permission": {
-          "in": [],
-          "planned": {
-            "max": "HTTP confirmation compatibility",
-            "tg": "HTTP confirmation compatibility"
-          }
-        }
+        "--permission": "all"
       }
     },
     "messages": {

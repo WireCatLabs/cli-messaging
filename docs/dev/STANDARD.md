@@ -298,7 +298,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--contacts-only` |  | match only contacts |  | `replies edit` (planned) |
 | `--context` | `<n>` | messages before and after each hit |  | `messages search`, `searches create` |
 | `--days` | `<days>` | days of the working window, such as mon-fri or sat,sun |  | `replies edit` (planned) |
-| `--deep` | `<n>` | also check the top n in full — profile, photos, everything they wrote, and the public ban lists, which are sent their ids — one person a second. **max-cli main still uses the older SDK help; current tg-cli names the bounded Telegram audit. Align after both adopt the HTTP confirmation SDK release.** |  | `chats members audit` |
+| `--deep` | `<n>` | also check the top n in full — profile, photos, everything they wrote, and the public ban lists, which are sent their ids — one person a second. **TG specializes the SDK help with the bounded Telegram audit; MAX retains the generic SDK wording. Align the shared help with provider capabilities separately; SDK adoption alone does not remove the difference.** |  | `chats members audit` |
 | `--defaults` |  | change what every profile gets, rather than this profile |  | `config set`, `config unset` |
 | `--deny-chats` | `<ids>` | replace denied chat ids, comma-separated; empty clears; deny wins |  | `replies audience` (planned) |
 | `--deny-people` | `<ids>` | replace denied sender ids, comma-separated; empty clears; deny wins |  | `replies audience` (planned) |
@@ -320,7 +320,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--history` |  | the people added also see the messages from before they came |  | `chats members add` (max-only) |
 | `--html` |  | the text is HTML: <b>, <i>, <a href>, <code> |  | `bot messages edit`, `bot messages send` |
 | `--http` |  | serve MCP over HTTP on 127.0.0.1 behind the owner's tunnel, with a one-owner login; every write asks first by default |  | `mcp` |
-| `--http-confirmation` | `<mode>` | required (default): every write needs a server form; permissions: follow the effective profile levels |  | `mcp` (planned) |
+| `--http-confirmation` | `<mode>` | required (default): every write needs a server form; permissions: follow the effective profile levels |  | `mcp` |
 | `--idle` | `<duration>` | stop after this long with nobody using it — 15m, 1h |  | `serve` (max-only), `server restart` (max-only), `server start` (max-only) |
 | `--json` |  | machine-readable output: one JSON value on stdout, nothing else |  | every command |
 | `--jsonl` |  | machine-readable output: one JSON object per line, for streaming and jq |  | every command |
@@ -360,7 +360,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--no-preview` |  | no preview card for a link in the text |  | `messages send` |
 | `--no-question` |  | do not require a question |  | `replies edit` (planned) |
 | `--no-record` |  | do not keep it, whatever the configuration says |  | every command |
-| `--no-registries` |  | do not ask the public ban lists; nothing about them leaves this machine. **max-cli main still uses the older SDK help; current tg-cli distinguishes public registries from Telegram profile reads. Align after both adopt the HTTP confirmation SDK release.** |  | `contacts check` |
+| `--no-registries` |  | do not ask the public ban lists; nothing about them leaves this machine. **TG clarifies that profile and photo reads still use Telegram when public registries are disabled; MAX retains the generic SDK wording. Public registry queries apply to Telegram only.** |  | `contacts check` |
 | `--no-serve` |  | do not start it; log in on this command's own connection unless one is running |  | every command (planned) |
 | `--not-chats` | `<ids>` | leave these chat ids out, comma-separated; empty clears |  | `replies edit` (planned) |
 | `--not-people` | `<ids>` | leave these sender ids out, comma-separated; empty clears |  | `replies edit` (planned) |
@@ -382,7 +382,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--people` | `<ids>` | only these sender ids, comma-separated; empty for any |  | `replies edit` (planned) |
 | `--per-chat` | `<limit>` | at most this many per chat, such as 1/12h |  | `replies edit` (planned) |
 | `--per-person` | `<limit>` | at most this many per person, such as 1/1d |  | `replies edit` (planned) |
-| `--permission` | `<key=level>` | override a permission for this MCP server only; repeat for more keys |  | `mcp` (planned), `mcp config` (planned), `mcp doctor` (planned), `mcp setup` (planned) |
+| `--permission` | `<key=level>` | override a permission for this MCP server only; repeat for more keys |  | `mcp`, `mcp config`, `mcp doctor`, `mcp setup` |
 | `--personal` |  | the personal account's section of the profile's settings |  | `config set` (planned), `config unset` (planned) |
 | `--photo` | `<file>` | an image file — a profile photo in `account update`, a photo to send in `messages send` |  | `account update`, `bot messages send`, `messages send` |
 | `--port` | `<port>` | the local port for --http |  | `mcp` |
