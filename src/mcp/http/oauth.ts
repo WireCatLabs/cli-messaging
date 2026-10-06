@@ -229,7 +229,8 @@ export const ownerLogin = ({
         "cache-control": "no-store",
         "x-frame-options": "DENY",
         "content-security-policy": `default-src 'none'; style-src 'unsafe-inline'; form-action 'self' ${target.origin}; frame-ancestors 'none'`,
-        "referrer-policy": "no-referrer",
+        // no-referrer makes the browser post this form with `Origin: null`, which the Origin check refuses.
+        "referrer-policy": "same-origin",
       },
     })
   }

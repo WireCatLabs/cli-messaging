@@ -20,6 +20,10 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   a task reports `skip: "opened a task, sent nothing"`, so a reader that counts `sent` and `skip` keeps working.
   `openRequestTask` is exported for a CLI with its own `serve`.
 
+### Fixed
+
+- `mcp --http`: the consent page no longer makes the browser post its form with `Origin: null`, which the
+  server's Origin check refused, so a browser app could not finish logging in. Found in the owner's live check.
 ## 0.151.0 — 06.10.2026
 
 Released early: max-cli chart adoption needs the capability that hides unsupported daily member tracking
