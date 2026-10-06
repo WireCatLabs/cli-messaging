@@ -6,6 +6,12 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Fixed
+
+- Person context includes private dialogs named by the person's id when no members are recorded,
+  restoring direct messages and the last message each way in existing Telegram stores. Recorded
+  membership remains authoritative; groups, left chats and other accounts are not inferred.
+
 ### Changed — may break callers
 
 - **The personal MCP server lists three tools instead of one per command**: `<cli>_tools_search`
