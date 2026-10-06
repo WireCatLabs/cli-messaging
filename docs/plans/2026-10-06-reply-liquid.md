@@ -1,6 +1,6 @@
 # Liquid reply templates
 
-Status: approved by the owner on 2026-10-06; 🚧 `feat/reply-liquid`.
+Status: implementation merged in #628 on 2026-10-06; publication prepared for 0.156.0.
 Requires the model gateway and rule editor PRs on main before opening this implementation PR.
 Renderer pinned to LiquidJS 10.30.0; validate its documented limits in installed-version tests.
 No store migration; keep `Replied` as sent/skip variants.

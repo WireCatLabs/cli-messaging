@@ -1,6 +1,6 @@
 # Model gateway
 
-Status: approved by the owner on 2026-10-06; 🚧 `feat/model-gateway`.
+Status: implementation merged in #622 on 2026-10-06; initial publication 0.154.0.
 Source baseline: `6471d01`. No store migration. Shared module, exported as `./models`.
 
 Implement provider-neutral requests, adapters for OpenAI-compatible endpoints and Anthropic,

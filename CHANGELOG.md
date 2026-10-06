@@ -6,7 +6,19 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.156.0 — 06.10.2026
+
+Released early: MAX and Telegram reply-model adoption cannot build without the new published replyRenderer API
+
 ### Added
+
+- Reply templates use Liquid variables, filters and optional `ai` blocks with literal fallbacks.
+  Only blocks can call a model; incoming message data is never a template variable. Render/file access
+  and output bounds, separate profile/endpoint consent and chat opt-outs guard calls. `replies consents
+  show|grant|revoke|deny|allow` controls consent; `replies test --ai` opts into model calls while ordinary
+  previews show instructions/fallback without calls. Old placeholders and may-reword files keep their
+  original literal fallback behavior with warnings. Pause, rule, audience and consent changes during
+  model calls prevent stale replies from being sent.
 
 - **MCP prompt `open-tasks`** (`chat` optional): a digest of what waits on the owner. The agent refreshes the
   tasks with `review` `new`, lists the open ones, sums them up per chat, oldest first, and closes one only after
@@ -28,6 +40,17 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 - If a consumer failure handler cannot finish, the original error includes `settlementFailed: true`
   instead of an additional text diagnostic, so the machine error stream remains parseable.
 
+### Fixed
+
+- Text generation requests are aborted on CLI timeout and serve shutdown, so a completed timeout
+  does not leave HTTP work holding the process open. AI reply previews respect message-read denial.
+
+### Security
+
+- Custom endpoints whose host is literally openai or anthropic no longer inherit public provider
+  credentials. Their key names are endpoint:openai and endpoint:anthropic; save a separate key for
+  these hosts with models text key set. Ordinary custom host/port names stay as before.
+
 ## 0.155.0 — 06.10.2026
 
 Released early: tg-cli and max-cli browser sends are blocked by unsupported server elicitation; explicit startup permission overrides are needed now
@@ -45,14 +68,6 @@ Released early: tg-cli and max-cli browser sends are blocked by unsupported serv
 Released early: max-cli needs PNG chart files and MCP image output for the owner-requested immediate adoption
 
 ### Added
-
-- Reply templates use Liquid variables, filters and optional `ai` blocks with literal fallbacks.
-  Only blocks can call a model; incoming message data is never a template variable. Render/file access
-  and output bounds, separate profile/endpoint consent and chat opt-outs guard calls. `replies consents
-  show|grant|revoke|deny|allow` controls consent; `replies test --ai` opts into model calls while ordinary
-  previews show instructions/fallback without calls. Old placeholders and may-reword files keep their
-  original literal fallback behavior with warnings. Pause, rule, audience and consent changes during
-  model calls prevent stale replies from being sent.
 
 - `./models` exports one model gateway for purpose-specific prompts and untrusted data, with
   OpenAI-compatible and Anthropic adapters. Adapter options are checked before requests; missing
