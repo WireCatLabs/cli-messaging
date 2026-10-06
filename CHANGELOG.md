@@ -6,6 +6,10 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.159.0 — 07.10.2026
+
+Released early: MAX and Telegram agent CLI adoption requires headless setup reuse from the latest shared source
+
 ## 0.158.0 — 07.10.2026
 
 Released early: MAX and Telegram agent CLI adoption requires the published headless setup correction
