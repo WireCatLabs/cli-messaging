@@ -80,6 +80,7 @@ export const registerCommands = (server: McpServer, prefix: string, commands: Re
   server.registerTool(
     `${prefix}_tools_search`,
     {
+      outputSchema: toStandardJsonSchema(v.looseObject({})),
       title: "Find a command",
       description:
         `Find the command for a task — "unread", "send message", "chat members" — before calling ` +
@@ -152,6 +153,7 @@ export const registerCommands = (server: McpServer, prefix: string, commands: Re
   server.registerTool(
     `${prefix}_read`,
     {
+      outputSchema: toStandardJsonSchema(v.looseObject({})),
       title: "Run a reading command",
       description: `Run one command that only reads, with the arguments ${prefix}_tools_search showed. ${UNTRUSTED}`,
       inputSchema: toStandardJsonSchema(call),
@@ -163,6 +165,7 @@ export const registerCommands = (server: McpServer, prefix: string, commands: Re
     server.registerTool(
       `${prefix}_write`,
       {
+        outputSchema: toStandardJsonSchema(v.looseObject({})),
         title: "Run a writing command",
         description: `Run one command that changes something — sends, edits, deletes, joins — with the arguments ${prefix}_tools_search showed.`,
         inputSchema: toStandardJsonSchema(call),
