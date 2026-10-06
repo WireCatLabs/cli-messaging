@@ -6,6 +6,11 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Fixed
+
+- `chats members audit --deep` and MCP `chats_members_audit` say the ids go to the public ban lists only on
+  Telegram; on another messenger the help says nothing is sent.
+
 ## 0.159.0 — 07.10.2026
 
 Released early: MAX and Telegram agent CLI adoption requires headless setup reuse from the latest shared source
