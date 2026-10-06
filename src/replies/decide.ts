@@ -10,6 +10,8 @@ export interface Incoming {
   owner: { id: Id | null; username?: string }
   /** `isTester`: named in the file's `testers` — nobody else is ever answered (NEED-601); a task opens for anyone. */
   sender: { isBot: boolean; isContact: boolean; isTester: boolean }
+  /** Why the file's audience lets no answer go to this sender in this chat, or `null`/absent when it does. */
+  outside?: string | null
   /** ms: when `serve` began catching up. Older messages are never answered — a week away must not get a week of replies. */
   since: number
 }
@@ -34,8 +36,9 @@ export const decide = (rule: ReplyRule, incoming: Incoming, state: RepliesState,
   if (message.outgoing !== false) return skip(message.outgoing ? "your own message" : "the account is not known")
   if (message.senderIsChat || message.senderId === null) return skip("sent as a chat, not by a person")
   // A task stays on this machine; only an answer to a real person waits for the testing to end.
-  const actions = sender.isTester ? rule.do : rule.do.filter((action) => action !== "reply")
-  if (actions.length === 0) return skip(NOT_A_TESTER)
+  const answerable = sender.isTester && !incoming.outside
+  const actions = answerable ? rule.do : rule.do.filter((action) => action !== "reply")
+  if (actions.length === 0) return skip(sender.isTester ? (incoming.outside ?? NOT_A_TESTER) : NOT_A_TESTER)
   if (sender.isBot) return skip("sent by a bot")
   if (chat.kind !== "dialog" && chat.kind !== "group") return skip(`a ${chat.kind} is never answered`)
   if (message.editedAt !== null) return skip("an edited message")

@@ -8,6 +8,11 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Added
 
+- The reply rules file takes an `audience` for every rule: `"reply": "all"` (the default) or `"listed"`, an
+  `allow` and a `deny` list of `people` and `chats`. `listed` answers only those on `allow`; `deny` is never
+  answered and wins over `allow`. An id on both lists, an `allow` list under `"all"`, and `"listed"` with
+  nothing allowed are warned about by `replies status`, `replies test` and `serve`, never refused. It limits
+  answers only: a rule's task still opens. The test-account limit stays on top of it.
 - A reply rule's `"do"` may name `"task"` now that tasks are in the store: it opens one `request` task for the
   message, for anyone the rule matches — only the answer still waits for a sender named in `testers`, and for
   `replies.send` at `allow`. `serve`'s result counts them as `replies.tasks`; `replies test` shows `task: true`

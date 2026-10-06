@@ -3,7 +3,7 @@ import { Command } from "commander"
 import { holdLock, lockPath, releaseLock, takeLock } from "../../background/lock.js"
 import type { ChatKind, Message, MessageEvent } from "../../domain/models.js"
 import { senderFacts } from "../../replies/dry-run.js"
-import { repliesPathFor } from "../../replies/rules.js"
+import { audienceWarnings, readReplies, repliesPathFor } from "../../replies/rules.js"
 import { NO_RULES, type Replied, replyTo } from "../../replies/serve.js"
 import { repliesStatePathFor } from "../../replies/state.js"
 import { levelFor } from "../../sends/permissions.js"
@@ -116,6 +116,11 @@ const replying = (context: MessengerContext, messenger: Messenger, since: number
   const tasks: Record<string, number> = {}
   const chats = new Map<string, Promise<{ id: string; kind: ChatKind }>>()
   const owner = recalledAccount(app, provider, profile, env)?.account ?? null
+  // A file that does not read is said on each message instead; it must not stop serve.
+  try {
+    for (const warning of audienceWarnings(readReplies(repliesPathFor(app, profile, env)).audience))
+      renderer.warn(warning)
+  } catch {}
 
   const handle = async (message: Message) => {
     if (connection === undefined) return

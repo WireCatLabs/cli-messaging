@@ -123,9 +123,25 @@ const tester = v.strictObject({
 
 export type Tester = v.InferOutput<typeof tester>
 
+const side = v.optional(v.strictObject({ people: v.optional(ids, []), chats: v.optional(ids, []) }), {
+  people: [],
+  chats: [],
+})
+
+/**
+ * Who may get an answer at all, whatever a rule says: everyone, or only those listed in `allow`; and
+ * never anyone in `deny`, which wins when an id is in both. Tasks are not limited by it.
+ */
+const audienceShape = v.optional(
+  v.strictObject({ reply: v.optional(v.picklist(["all", "listed"]), "all"), allow: side, deny: side }),
+  { reply: "all", allow: { people: [], chats: [] }, deny: { people: [], chats: [] } },
+)
+
+export type Audience = v.InferOutput<typeof audienceShape>
+
 const file = v.pipe(
   // NEED-601: rules answer test accounts only, until the owner rules otherwise; no list, nobody.
-  v.strictObject({ testers: v.optional(v.array(tester), []), rules: v.array(rule) }),
+  v.strictObject({ testers: v.optional(v.array(tester), []), audience: audienceShape, rules: v.array(rule) }),
   v.check(
     ({ rules }) => new Set(rules.map((one) => one.id)).size === rules.length,
     "two rules share an id; each needs its own",
@@ -157,14 +173,42 @@ export const repliesPathFor = (app: AppIdentity, profile: string, env: NodeJS.Pr
 
 export interface Replies {
   testers: Tester[]
+  audience: Audience
   rules: ReplyRule[]
 }
+
+export const EVERYONE: Audience = { reply: "all", allow: { people: [], chats: [] }, deny: { people: [], chats: [] } }
+
+/** Why nobody may be answered here, or `null` when the audience lets the reply go. */
+export const outsideAudience = (audience: Audience, person: string | null, chat: string): string | null => {
+  if (person !== null && audience.deny.people.includes(person)) return "a person on the deny list"
+  if (audience.deny.chats.includes(chat)) return "a chat on the deny list"
+  if (audience.reply === "all") return null
+  const listed = (person !== null && audience.allow.people.includes(person)) || audience.allow.chats.includes(chat)
+  return listed ? null : "not on the allow list"
+}
+
+/** What in the audience does not do what it seems to say — said, never refused. */
+export const audienceWarnings = ({ reply, allow, deny }: Audience): string[] => [
+  ...allow.people
+    .filter((id) => deny.people.includes(id))
+    .map((id) => `person ${id} is on both lists: deny wins, nobody answers them`),
+  ...allow.chats
+    .filter((id) => deny.chats.includes(id))
+    .map((id) => `chat ${id} is on both lists: deny wins, nothing is answered there`),
+  ...(reply === "all" && allow.people.length + allow.chats.length > 0
+    ? ['the allow list does nothing while audience.reply is "all" — set it to "listed" to answer only those']
+    : []),
+  ...(reply === "listed" && allow.people.length + allow.chats.length === 0
+    ? ['audience.reply is "listed" and the allow list is empty: nobody is answered']
+    : []),
+]
 
 /** The owner's rules, in file order. No file is no rules; a file that does not check out refuses, naming the field. */
 export const readReplyRules = (path: string): ReplyRule[] => readReplies(path).rules
 
 export const readReplies = (path: string): Replies => {
-  if (!existsSync(path)) return { testers: [], rules: [] }
+  if (!existsSync(path)) return { testers: [], audience: EVERYONE, rules: [] }
   let parsed: unknown
   try {
     parsed = JSON.parse(readFileSync(path, "utf8"))
