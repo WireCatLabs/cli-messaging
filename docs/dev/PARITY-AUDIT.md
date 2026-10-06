@@ -15,8 +15,12 @@ pnpm parity:audit --fresh --deep --output /tmp/parity-report-new
 
 The runner clones and builds each consumer's main, pins its commit, and captures discovery/MCP in
 empty homes. It runs full coverage, available lint/typecheck/docs/dist/Bun gates, argv matrices,
-and the same documented synthetic local search/read fixture through both consumers. No tool is
-invoked on a messenger account; no credentials or installed user binaries are used.
+and the same documented synthetic local search/read fixture through both consumers under Node and
+Bun. Queries execute through the actual CLI, a consumer MCP stdio subprocess, and installed SDK
+services; ordered locators, query metadata, coverage and structured error reasons are compared.
+Scope, bounds, context, file-text write-back and permission checks use disposable synthetic accounts.
+Network guards refuse connections, including swallowed failures. No real account, credentials,
+installed user binary or model/provider call is used.
 
 The output directory must not already exist. The existing `pnpm parity:audit --fresh` surface-only
 stdout interface remains available. For auditor development, both `--max <isolated-built-checkout>`
@@ -37,7 +41,7 @@ fresh test coverage or a complete functional audit.
   source anchors. Dynamic/aliased bindings remain unresolved, not inferred shared implementations.
 - `search.md`: query versions/fields/operators/budgets exported by each consumer's pinned package.
 - `scenarios.md`: positive/negative search recipes, explicit/default language and bounded offline
-  read/diagnostic outcomes. Only temporary store paths, free disk and index build timestamps are
+  read/diagnostic outcomes, behavioural checks and both runtimes. Only temporary store paths, free disk and index build timestamps are
   excluded from store-check comparison; scenario results and search ids/error reasons are kept.
 - `tests.md`: every test file and skip, fresh line/branch/function coverage, exact coverage config,
   gate results/logs and argv exceptions. Consumer coverage does not include dependency sources.
@@ -63,7 +67,8 @@ additional properties and annotations. Required/enum/choice sets ignore order, p
 No output schema means output validation is unknown, not proof that responses agree. Planned
 manifest rows and opt-in visibility are not implementation absence or passing behaviour tests.
 
-The synthetic fixture covers local personal archive queries/reads. Bot legacy search, embeddings,
+The synthetic fixture covers local personal archive queries/reads and words-only conversation fallback.
+Bot legacy search, semantic model execution,
 provider name filters and future remote search are separate workflows. Checked-in reference
 fixtures do not mean Java harnesses, benchmarks, real models or all operator/value combinations
 ran in this audit. Live accounts, delivery/read acknowledgements, OS services/browser auth and

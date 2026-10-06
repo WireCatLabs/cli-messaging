@@ -128,6 +128,10 @@ try {
         limit: 20,
       })
       assert.equal(mcp.isError, false, recipe.title)
+      assert.deepEqual(direct.query, a.query, `${recipe.title}: CLI/service query metadata`)
+      assert.deepEqual(mcp.body.query, a.query, `${recipe.title}: CLI/MCP query metadata`)
+      assert.deepEqual(direct.coverage, a.coverage, `${recipe.title}: CLI/service coverage`)
+      assert.deepEqual(mcp.body.coverage, a.coverage, `${recipe.title}: CLI/MCP coverage`)
       const ordered = a.items.map((hit) => hit.locator)
       assert.deepEqual(
         direct.items.map((hit) => hit.locator),
@@ -157,7 +161,7 @@ try {
           timezone: "UTC",
           limit: 20,
         }),
-        (error) => error.code === recipe.code,
+        (error) => error.code === recipe.code && error.details.reason === recipe.reason,
       )
       const mcp = await callTool("messages_search", {
         text: recipe.query,
@@ -167,6 +171,7 @@ try {
       })
       assert.equal(mcp.isError, true)
       assert.equal(mcp.body.error.code, recipe.code)
+      assert.equal(mcp.body.error.reason, recipe.reason)
       results.push({
         query: recipe.query,
         mode: recipe.explicit ? "explicit" : "default",

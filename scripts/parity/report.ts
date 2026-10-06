@@ -147,7 +147,7 @@ export const renderReports = (bundle: DeepBundle, output: string): void => {
   const mcp = [
     "# MCP tools, schemas and visibility",
     "",
-    "No tool was invoked. Required/enum/choices sets ignore order for structural comparison; positional arrays keep order. Missing outputSchema is unknown output validation, not proof of equal results.",
+    "Schema collection invokes no tools; separate synthetic tool calls are recorded in scenarios.md. Required/enum/choices sets ignore order for structural comparison; positional arrays keep order. Missing outputSchema is unknown output validation, not proof of equal results.",
     "",
   ]
   for (const mode of ["default", "send", "flags", "configured"]) {
