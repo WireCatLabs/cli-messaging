@@ -145,16 +145,21 @@ export const execution = (
       try {
         return await Promise.race([running, interruption])
       } catch (error) {
+        let settled: unknown
         if (stop.signal.aborted) {
           let grace: NodeJS.Timeout | undefined
           await Promise.race([
-            running.catch(() => {}),
+            running.catch((own: unknown) => {
+              settled = own
+            }),
             new Promise<void>((resolve) => {
               grace = setTimeout(resolve, 100)
             }),
           ])
           if (grace) clearTimeout(grace)
         }
+        // A command that knows its own write went out unanswered says so more precisely than a timeout.
+        if (settled instanceof CliError && settled.code === "outcome_unknown") throw settled
         throw interrupted ?? error
       }
     },

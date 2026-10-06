@@ -25,6 +25,10 @@ Released early: MAX native server daily member fetching needs the public schedul
 
 ### Fixed
 
+- A command stopped by `--timeout` or Ctrl-C while its own write was unanswered reports
+  `outcome_unknown` again, as it says itself, instead of `timeout`. 0.157.0 replaced it with
+  `timeout`, which reads as safe to repeat — a repeat could send twice.
+
 - `setup` runs again without a terminal, in CI or with `--json`: 0.157.0 refused it outright, which
   also stopped an agent installing the skill (`setup --agent codex`) and a token piped on stdin. Setup
   refuses on its own the steps that need a terminal; a QR or SMS `session start` is still refused

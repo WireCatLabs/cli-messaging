@@ -1,4 +1,4 @@
-import { type CliError, captureStreams } from "@leemour/cli-core"
+import { CliError, captureStreams } from "@leemour/cli-core"
 import { describe, expect, it } from "vitest"
 import { guardedWrite, writesInFlight } from "../sends/guarded.js"
 import { withDeadline } from "./deadline.js"
@@ -64,6 +64,19 @@ describe("bounded command execution", () => {
     ).rejects.toMatchObject({ code: "outcome_unknown", details: { retryable: false, operationIds: ["op-synthetic"] } })
     expect(cuts).toBe(1)
     await control.finish()
+  })
+
+  it("keeps a command's own unknown outcome when the deadline stops it", async () => {
+    const control = execution(captureStreams(), { timeoutMs: 5 })
+    const own = new CliError("outcome_unknown", "synthetic write got no answer")
+    await expect(
+      control.race(
+        () =>
+          new Promise((_, reject) => {
+            control.signal.addEventListener("abort", () => reject(own), { once: true })
+          }),
+      ),
+    ).rejects.toBe(own)
   })
 
   it("keeps a write that was still preparing as a definite timeout", async () => {
