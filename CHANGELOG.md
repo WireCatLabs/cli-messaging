@@ -8,6 +8,10 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Fixed
 
+- A command stopped by `--timeout` or Ctrl-C while its own write was unanswered reports
+  `outcome_unknown` again, as it says itself, instead of `timeout`. 0.157.0 replaced it with
+  `timeout`, which reads as safe to repeat — a repeat could send twice.
+
 - `chats members audit --deep` and MCP `chats_members_audit` say the ids go to the public ban lists only on
   Telegram; on another messenger the help says nothing is sent.
 
@@ -15,19 +19,7 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 Released early: MAX and Telegram agent CLI adoption requires headless setup reuse from the latest shared source
 
-## 0.158.0 — 07.10.2026
-
-Released early: MAX and Telegram agent CLI adoption requires the published headless setup correction
-
-Released early: MAX native server daily member fetching needs the public scheduler export
-
-- Export the daily member-fetch scheduler for MAX native server integration. Long rounds no longer overlap, and shutdown waits for the running round.
-
 ### Fixed
-
-- A command stopped by `--timeout` or Ctrl-C while its own write was unanswered reports
-  `outcome_unknown` again, as it says itself, instead of `timeout`. 0.157.0 replaced it with
-  `timeout`, which reads as safe to repeat — a repeat could send twice.
 
 - `setup` runs again without a terminal, in CI or with `--json`: 0.157.0 refused it outright, which
   also stopped an agent installing the skill (`setup --agent codex`) and a token piped on stdin. Setup
@@ -37,6 +29,14 @@ Released early: MAX native server daily member fetching needs the public schedul
 - Ctrl-C ends `watch`, `bot watch`, `serve` and `mcp` normally again, exit 0: 0.157.0 cancelled them
   with 130 like any other command, though stopping on Ctrl-C is how they end. Other commands still
   exit 130 on Ctrl-C; SIGTERM still ends every command with 143.
+
+## 0.158.0 — 07.10.2026
+
+Released early: MAX native server daily member fetching needs the public scheduler export
+
+- Export the daily member-fetch scheduler for MAX native server integration. Long rounds no longer overlap, and shutdown waits for the running round.
+
+### Fixed
 
 - Searches report imported mail coverage once, with `memo mail import --since <date>` as the next
   step, rather than counting every mail thread as an incomplete messenger chat and suggesting
