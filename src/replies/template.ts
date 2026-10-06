@@ -1,3 +1,4 @@
+import { CliError } from "@leemour/cli-core"
 import {
   Context,
   type Emitter,
@@ -148,8 +149,13 @@ export const renderReplyTemplate = async (reply: ReplyRule["reply"], input: Temp
               )
                 throw new Error("invalid model output")
               text = answer.text
-            } catch {
-              reason = "reply model unavailable, consent missing, call limit reached or output refused"
+            } catch (error) {
+              reason =
+                error instanceof CliError && error.code === "permission_error"
+                  ? "reply model consent missing or revoked — check replies consents show; use replies consents grant or replies consents allow"
+                  : error instanceof CliError && error.code === "configuration_error"
+                    ? "reply model not configured — set models.replies.provider and models.replies.model"
+                    : "reply model unavailable, call limit reached or output refused"
             } finally {
               paused += performance.now() - started
             }

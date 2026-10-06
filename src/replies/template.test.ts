@@ -1,3 +1,4 @@
+import { CliError } from "@leemour/cli-core"
 import { describe, expect, it, vi } from "vitest"
 import { renderReplyTemplate, type TemplateInput } from "./template.js"
 
@@ -86,6 +87,19 @@ describe("reply templates", () => {
     expect(failed.text).toBe("Start Hi Ana end")
     expect(JSON.stringify(failed)).not.toContain("synthetic private body")
     expect((await render("{% ai %}Hello{% endai %}")).text).toBeNull()
+    for (const [code, hint] of [
+      ["permission_error", "replies consents grant"],
+      ["configuration_error", "models.replies.provider"],
+    ] as const) {
+      const missing = await render("{% ai %}Hello{% endai %}", {
+        allowAI: true,
+        complete: async () => {
+          throw new CliError(code, "private synthetic detail")
+        },
+      })
+      expect(missing.reason).toContain(hint)
+      expect(JSON.stringify(missing)).not.toContain("private synthetic detail")
+    }
   })
 
   it("refuses echoes, oversized and empty answers and bounds calls within loops", async () => {
