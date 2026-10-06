@@ -1,3 +1,4 @@
+export { commandsClient as mcpCommandsClient } from "../testing/mcp-commands-client.js"
 export { type ContractCase, type ContractOptions, contractCases, OPTIONAL_METHODS } from "./contract.js"
 export { type FakeAdapter, fakeAdapter } from "./fake.js"
 export { type SearchRecipes, searchRecipes, seedSearchRecipes } from "./search-recipes.js"
