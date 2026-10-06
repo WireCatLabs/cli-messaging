@@ -1,4 +1,4 @@
-import { chunkHash, chunkTextOf } from "../../conversations/chunks.js"
+import { chunkHash, chunkTextOf, type TextRange } from "../../conversations/chunks.js"
 import { type SQL, sql } from "./drizzle/core.js"
 import type { StoreContext } from "./open.js"
 
@@ -9,7 +9,7 @@ export interface ChunkToEmbed {
 }
 
 const currentChunks = (chatKey: number) => sql`SELECT k.content_hash, k.conversation_pk, k.first_message_pk,
-    k.last_message_pk FROM conversation_chunks k JOIN conversations c ON c.pk = k.conversation_pk
+    k.last_message_pk, k.text_start, k.text_end FROM conversation_chunks k JOIN conversations c ON c.pk = k.conversation_pk
   WHERE c.chat_pk = ${chatKey}
     AND c.build = (SELECT s.current_build FROM conversation_state s WHERE s.chat_pk = ${chatKey})`
 
@@ -23,19 +23,34 @@ export const chunksToEmbed = (
   model: string,
   { after, limit }: { after?: string; limit: number },
 ): ChunkToEmbed[] => {
-  const chunks = orm.all<{ hash: string; conversation: number; first: number; last: number }>(
+  const chunks = orm.all<{
+    hash: string
+    conversation: number
+    first: number
+    last: number
+    start: number | null
+    end: number | null
+  }>(
     sql`SELECT k.content_hash AS hash, min(k.conversation_pk) AS conversation, k.first_message_pk AS first,
-        k.last_message_pk AS last
+        k.last_message_pk AS last, k.text_start AS start, k.text_end AS end
       FROM (${currentChunks(chatKey)}) k
       WHERE k.content_hash > ${after ?? ""}
         AND NOT EXISTS (SELECT 1 FROM chunk_vectors v WHERE v.model = ${model} AND v.content_hash = k.content_hash)
       GROUP BY k.content_hash ORDER BY k.content_hash LIMIT ${limit}`,
   )
-  return chunks.map(({ hash, conversation, first, last }) => ({
-    hash,
-    lines: chunkLines(orm, conversation, first, last).flatMap(({ deleted, ...line }) => (deleted ? [] : [line])),
-  }))
+  return chunks.map(({ hash, conversation, first, last, start, end }) => {
+    const range = rangeOf(start, end)
+    return {
+      hash,
+      lines: chunkLines(orm, conversation, first, last).flatMap(({ deleted, ...line }) =>
+        deleted ? [] : [range === undefined ? line : { ...line, text: line.text.slice(range.start, range.end) }],
+      ),
+    }
+  })
 }
+
+const rangeOf = (start: number | null, end: number | null): TextRange | undefined =>
+  start === null || end === null ? undefined : { start, end }
 
 /** A chunk's messages as they are now, the deleted ones flagged: what `embed` hashes and a search checks. */
 const chunkLines = (orm: StoreContext["orm"], conversation: number, first: number, last: number) =>
@@ -57,11 +72,11 @@ const chunkLines = (orm: StoreContext["orm"], conversation: number, first: numbe
  */
 export const chunkFreshness = (
   { orm }: StoreContext,
-  { conversationPk, firstMessagePk, lastMessagePk, hash }: NearestChunk,
+  { conversationPk, firstMessagePk, lastMessagePk, hash, range }: NearestChunk,
 ): "current" | "stale" | "deleted" => {
   const lines = chunkLines(orm, conversationPk, firstMessagePk, lastMessagePk)
   if (lines.some(({ deleted }) => deleted)) return "deleted"
-  return chunkHash(chunkTextOf(lines)) === hash ? "current" : "stale"
+  return chunkHash(chunkTextOf(lines, range)) === hash ? "current" : "stale"
 }
 
 /**
@@ -97,18 +112,32 @@ export const conversationVectors = (
   conversationPk: number,
   model: string,
 ): { chunks: number; vectors: Float32Array[] } => {
-  const rows = context.orm.all<{ first: number; last: number; hash: string; vector: Uint8Array | null }>(
-    sql`SELECT k.first_message_pk AS first, k.last_message_pk AS last, k.content_hash AS hash, v.vector
+  const rows = context.orm.all<{
+    first: number
+    last: number
+    start: number | null
+    end: number | null
+    hash: string
+    vector: Uint8Array | null
+  }>(
+    sql`SELECT k.first_message_pk AS first, k.last_message_pk AS last, k.text_start AS start, k.text_end AS end,
+        k.content_hash AS hash, v.vector
       FROM conversation_chunks k
       JOIN conversations c ON c.pk = k.conversation_pk
       JOIN conversation_state s ON s.chat_pk = c.chat_pk AND s.current_build = c.build
       LEFT JOIN chunk_vectors v ON v.model = ${model} AND v.content_hash = k.content_hash
       WHERE k.conversation_pk = ${conversationPk} ORDER BY k.ordinal`,
   )
-  const vectors = rows.flatMap(({ first, last, hash, vector }) =>
+  const vectors = rows.flatMap(({ first, last, start, end, hash, vector }) =>
     vector &&
-    chunkFreshness(context, { conversationPk, firstMessagePk: first, lastMessagePk: last, hash, score: 0 }) ===
-      "current"
+    chunkFreshness(context, {
+      conversationPk,
+      firstMessagePk: first,
+      lastMessagePk: last,
+      ...(rangeOf(start, end) ? { range: rangeOf(start, end) } : {}),
+      hash,
+      score: 0,
+    }) === "current"
       ? [new Float32Array(vector.buffer.slice(vector.byteOffset, vector.byteOffset + vector.byteLength))]
       : [],
   )
@@ -161,6 +190,8 @@ export interface NearestChunk {
   conversationPk: number
   firstMessagePk: number
   lastMessagePk: number
+  /** The stretch of one long message, when the chunk is a piece of it. */
+  range?: TextRange
   hash: string
   score: number
 }
@@ -208,13 +239,15 @@ export const nearestChunks = (
       ordinal: number
       first: number
       last: number
+      start: number | null
+      end: number | null
       hash: string
       vector: Uint8Array
     }>(
       // CROSS JOIN keeps the chunks first, so each page walks their key; led by the vectors, SQLite re-read and
       // sorted every one of them per page — 1.3 s against 140 ms at 42k chunks (bench/embeddings/README.md).
       sql`SELECT k.conversation_pk AS conversation, k.ordinal, k.first_message_pk AS first, k.last_message_pk AS last,
-          k.content_hash AS hash, v.vector FROM conversation_chunks k
+          k.text_start AS start, k.text_end AS end, k.content_hash AS hash, v.vector FROM conversation_chunks k
         CROSS JOIN conversations c ON c.pk = k.conversation_pk
         JOIN conversation_state s ON s.chat_pk = c.chat_pk AND s.current_build = c.build
         JOIN chats ch ON ch.pk = c.chat_pk
@@ -231,10 +264,12 @@ export const nearestChunks = (
       const score = dot(query, row.vector)
       const held = best.get(row.conversation)
       if (!held || score > held.score) {
+        const range = rangeOf(row.start, row.end)
         best.set(row.conversation, {
           conversationPk: row.conversation,
           firstMessagePk: row.first,
           lastMessagePk: row.last,
+          ...(range ? { range } : {}),
           hash: row.hash,
           score,
         })

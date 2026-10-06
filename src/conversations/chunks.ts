@@ -7,15 +7,26 @@ import type { Id } from "../domain/models.js"
  */
 export const CHUNK_CHARS = 1_200
 
+/** How much of the piece before a split piece repeats at its start, so a sentence cut in two is whole in one. */
+export const CHUNK_OVERLAP = 150
+
 export interface ChunkLine {
   id: Id
   sender: string | null
   text: string
 }
 
+/** The stretch of one long message a chunk holds, as offsets into its text. */
+export interface TextRange {
+  start: number
+  end: number
+}
+
 export interface Chunk {
   firstId: Id
   lastId: Id
+  /** Set when the chunk is a piece of one message longer than a chunk: `firstId` and `lastId` are that message. */
+  range?: TextRange
   /** What the model is given; never stored, only its hash. */
   text: string
   hash: string
@@ -24,18 +35,51 @@ export interface Chunk {
 const lineOf = ({ sender, text }: ChunkLine) => (sender ? `${sender}: ${text}` : text)
 
 /** A chunk's text from its messages, as the build cut it: what is hashed and what the model reads. */
-export const chunkTextOf = (lines: ChunkLine[]): string =>
+export const chunkTextOf = (lines: ChunkLine[], range?: TextRange): string =>
   lines
+    .map((line) => (range === undefined ? line : { ...line, text: line.text.slice(range.start, range.end) }))
     .filter(({ text }) => text.trim())
     .map(lineOf)
     .join("\n")
+
+const BREAKS = [/\n\s*\n/g, /\n/g, /[.!?…](?=\s)/g, /\s/g]
+
+/** The last place at or before `end`, and after the first half of the piece, where `text` breaks most naturally. */
+const breakBefore = (text: string, start: number, end: number): number => {
+  const floor = start + Math.floor((end - start) / 2)
+  for (const pattern of BREAKS) {
+    let found = -1
+    for (const match of text.slice(floor, end).matchAll(pattern)) found = floor + match.index + match[0].length
+    if (found > floor) return found
+  }
+  return end
+}
+
+/**
+ * One text longer than `room` as overlapping pieces of at most `room` characters, cut at a paragraph,
+ * then a line, a sentence or a word where it can. Each piece after the first starts `overlap` before the
+ * last one ended, at a word.
+ */
+export const splitText = (text: string, room: number, overlap = CHUNK_OVERLAP): TextRange[] => {
+  const ranges: TextRange[] = []
+  for (let start = 0; start < text.length; ) {
+    const end = start + room >= text.length ? text.length : breakBefore(text, start, start + room)
+    ranges.push({ start, end })
+    if (end >= text.length) break
+    const back = Math.max(start + 1, end - overlap)
+    const word = text.slice(back, end).search(/\s\S/)
+    start = word === -1 ? back : back + word + 1
+  }
+  return ranges
+}
 
 export const chunkHash = (text: string): string => createHash("sha256").update(text).digest("hex")
 
 /**
  * A conversation, oldest message first, cut at message boundaries into chunks of at most `limit`
- * characters. A message longer than the limit is a chunk of its own; the model cuts it further.
- * Messages with no text add nothing, and a conversation of only those has no chunk.
+ * characters. A message longer than the limit is split into overlapping pieces, a chunk each, so the
+ * model reads all of a long note or mail rather than its beginning. Messages with no text add nothing,
+ * and a conversation of only those has no chunk.
  */
 export const cutChunks = (members: ChunkLine[], limit = CHUNK_CHARS): Chunk[] => {
   const chunks: Chunk[] = []
@@ -53,6 +97,15 @@ export const cutChunks = (members: ChunkLine[], limit = CHUNK_CHARS): Chunk[] =>
   for (const member of members) {
     if (!member.text.trim()) continue
     const length = lineOf(member).length
+    if (length > limit) {
+      close()
+      const room = Math.max(Math.floor(limit / 2), limit - (lineOf(member).length - member.text.length))
+      for (const range of splitText(member.text, room)) {
+        const text = chunkTextOf([member], range)
+        if (text) chunks.push({ firstId: member.id, lastId: member.id, range, text, hash: chunkHash(text) })
+      }
+      continue
+    }
     if (open.length > 0 && size + 1 + length > limit) close()
     size += (open.length > 0 ? 1 : 0) + length
     open.push(member)

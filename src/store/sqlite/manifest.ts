@@ -36,6 +36,7 @@ export const MANIFEST: ManifestEntry[] = [
   { name: "20261005142356_version-19-attachment-texts", version: 19, minCompatible: 6 },
   { name: "20261005142357_version-19-attachment-words", version: 19, minCompatible: 6 },
   { name: "20261005215529_version-20-tasks", version: 20, minCompatible: 6 },
+  { name: "20261006182644_version-21-chunk-ranges", version: 21, minCompatible: 6 },
 ]
 
 export const generatedMigrations = (
