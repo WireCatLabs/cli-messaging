@@ -79,7 +79,9 @@ interface Tool<S extends Input> {
   /** A write, and what the profile's `allow` must name for it to be offered. */
   permission?: Permission
   /** The command path its level is read from, where the tool's name does not spell it: `chats.mark-read`. */
-  key?: PermissionKey
+  key?: PermissionKey | null
+  /** A host-owned entry with its own connection and confirmation lifecycle. */
+  custom?: (args: v.InferOutput<S>, defaults: Defaults, ctx: ServerContext) => Promise<object | InputRequiredResult>
   /** Neither the store nor the connection: answers from what this process already knows. */
   local?: (args: v.InferOutput<S>, defaults: Defaults) => Promise<object>
   /** Over the session's connection. */
@@ -161,7 +163,7 @@ export interface Registration {
 
 /** The key a tool's level is read from: its own, or its name read as a command path. */
 export const toolKey = (name: string, definition: Pick<AnyTool, "key">): PermissionKey | null | undefined =>
-  definition.key ?? keyForCommand(name.split("_"))
+  definition.key !== undefined ? definition.key : keyForCommand(name.split("_"))
 
 /** The arguments an entry takes: without the sync options when the profile does not allow syncing first. */
 export const inputOf = (definition: AnyTool, syncAllowed: boolean): Input =>
@@ -220,6 +222,10 @@ export const entryRunner = ({
         }
         if (args.sync_first && !syncAllowed)
           throw new CliError("permission_error", "messages.sync-first is not allowed by this profile")
+        if (definition.custom) {
+          const result = await definition.custom(args, { ...defaults, signal: ctx.mcpReq.signal }, ctx)
+          return isInputRequiredResult(result) ? result : answered(result)
+        }
         if (definition.local) return answered(await definition.local(args, defaults))
         const { online, stored: local, served } = definition
         const stored = local && (!definition.storedWhen || definition.storedWhen(args)) ? local : undefined

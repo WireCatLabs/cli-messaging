@@ -24,6 +24,7 @@ export {
   type PersonalMcpDefaults,
   type PersonalMcpRegistration,
   type PersonalMcpTool,
+  personalMcpCommand,
   personalMcpToolKey,
   personalMcpTools,
   registerPersonalMcpSurface,
