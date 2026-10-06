@@ -7,6 +7,7 @@ import { readSecret } from "../terminal/prompt.js"
 import { commandContract, findCommand, resultSchemaFor } from "./command-contract.js"
 import { commandsCommand } from "./commands-command.js"
 import { environmentOf, outputFor } from "./context.js"
+import { preview } from "./preview.js"
 import { run } from "./program.js"
 
 const app = {
@@ -151,4 +152,15 @@ describe("agent CLI contract", () => {
     expect(resultSchemaFor(["stats", "messages", "show"]).coverage).toBe("declared")
     expect(resultSchemaFor(["tasks", "list"]).coverage).toBe("collection-with-open-items")
   })
+})
+
+it("refuses preview of denied source data and write paths before exposing targets", () => {
+  const root = new Command("fixture")
+  const stats = new Command("stats").addCommand(new Command("messages").addCommand(new Command("show")))
+  root.addCommand(stats)
+  const leaf = findCommand(root, ["stats", "messages", "show"])
+  expect(() => preview(leaf, { messages: "deny" })).toThrow("messages")
+  expect(() => preview(leaf, { "messages.stats": "deny" })).toThrow("config migrate")
+  root.addCommand(new Command("messages").addCommand(new Command("send")))
+  expect(() => preview(findCommand(root, ["messages", "send"]), { messages: "readonly" })).toThrow("does not permit")
 })

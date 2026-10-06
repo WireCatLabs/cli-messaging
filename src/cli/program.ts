@@ -211,6 +211,7 @@ export const run = async (argv: string[], definition: ProgramDefinition, options
     }
     if (flags.dryRun && !localPreview) {
       const resolved = (definition.configuration ?? settingsFor(definition.app)).resolveSettings(flags, {
+        kind: path[0] === "bot" ? "bot" : "personal",
         env: options.env ?? process.env,
       })
       const permissions = "permissions" in resolved ? (resolved.permissions as Settings["permissions"]) : {}

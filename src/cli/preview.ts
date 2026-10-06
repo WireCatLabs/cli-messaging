@@ -1,7 +1,14 @@
 import { CliError } from "@leemour/cli-core"
 import { metaOf } from "@leemour/cli-core/commands"
 import type { Command } from "commander"
-import { keyForCommand, type Level, levelFor } from "../sends/permissions.js"
+import {
+  assertStatsPermissionsCurrent,
+  keyForCommand,
+  type Level,
+  levelFor,
+  readKeysForCommand,
+  WRITE_KEYS,
+} from "../sends/permissions.js"
 import { commandPathOf } from "./command-contract.js"
 
 export class PreviewComplete extends Error {}
@@ -10,8 +17,14 @@ export const preview = (command: Command, permissions: Readonly<Record<string, L
   const path = commandPathOf(command)
   const key = keyForCommand(path)
   const level = key ? levelFor(permissions, key).level : "allow"
+  assertStatsPermissionsCurrent(path, permissions)
+  for (const source of readKeysForCommand(path)) {
+    if (levelFor(permissions, source).level === "deny")
+      throw new CliError("permission_error", `this profile does not permit ${source}`, { permission: source })
+  }
   const meta = metaOf(command)
-  if (level === "deny" || (meta.mutates === true && level === "readonly"))
+  const writes = meta.mutates === true || (key !== null && key !== undefined && WRITE_KEYS.includes(key))
+  if (level === "deny" || (writes && level === "readonly"))
     throw new CliError("permission_error", `this profile does not permit ${path.join(" ")}`, { permission: key })
   const targets = new Set(["chat", "message", "person", "profile"])
   return {
