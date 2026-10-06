@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.150.0 — 06.10.2026
+
 ### Added
 
 - `./cli` exports the reply step a CLI with its own server calls per arriving message — `replyTo` with its
