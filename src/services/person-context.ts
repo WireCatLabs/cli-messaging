@@ -242,6 +242,10 @@ const lean = (key: AccountKey, message: Message, detail: Detail): LeanMessage =>
   }
 }
 
+/** On Telegram a one-to-one chat has the person's own id, and the store may not know that chat yet. */
+const kindOf = (chat: { kind: ChatKind } | undefined, chatId: Id, person: Id): ChatKind =>
+  chat && chat.kind !== "unknown" ? chat.kind : chatId === person ? "dialog" : (chat?.kind ?? "unknown")
+
 /**
  * One person's newest messages in each chat named, from the store, oldest first in each — what an
  * agent reads to summarise them. Short by default: metadata only at a higher `detail`.
@@ -262,7 +266,7 @@ export const personMessages = async (
     const chat = stored.find((one) => one.id === chatId)
     const page = await store.find({ account: asked, senders: [found.id], chatId, limit })
     answer.push({
-      chat: { id: chatId, title: chat?.title ?? null, kind: chat?.kind ?? "unknown" },
+      chat: { id: chatId, title: chat?.title ?? null, kind: kindOf(chat, chatId, found.id) },
       messages: page.items
         .toSorted((a, b) => Date.parse(a.timestamp) - Date.parse(b.timestamp))
         .map((message) => lean(asked, message, detail)),

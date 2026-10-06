@@ -13,6 +13,13 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   shows or edits the profile's allow and deny lists. Invalid edits leave the existing file untouched;
   testers, rule order and reply history are preserved. Lists replace the whole list; an empty value clears it.
 
+### Fixed
+
+- `contacts context --chat` calls a chat named by the person's own id their dialog when the store has no
+  such chat yet, instead of `unknown` (Telegram gives a one-to-one chat the person's id).
+- `contacts check` and MCP `contacts_check` say the person's id goes to the public ban lists only on Telegram;
+  on another messenger the help says the lists cover Telegram only and nothing is sent.
+
 ## 0.153.0 — 06.10.2026
 
 Released early: cli-memo: the owner asked to release now, so long notes and mail are embedded whole (store version 21)

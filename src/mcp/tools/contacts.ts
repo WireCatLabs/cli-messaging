@@ -1,6 +1,6 @@
 import { CliError } from "@leemour/cli-core"
 import * as v from "valibot"
-import { REGISTRIES } from "../../botcheck/registries.js"
+import { REGISTRIES, registriesCover } from "../../botcheck/registries.js"
 import type { Messenger } from "../../cli/messenger/context.js"
 import type { MessengerAdapter } from "../../cli/messenger/port.js"
 import { casKey } from "../../cli/registry-keys.js"
@@ -120,10 +120,13 @@ export const contactsTools = (messenger: Messenger): Record<string, AnyTool> => 
       title: "Does a person look like a bot",
       description:
         "Scores one person as a possible bot, fake or spammer: the messenger's own marks, their profile, what they " +
-        "wrote in the store, and the public ban lists " +
-        `${Object.values(REGISTRIES)
-          .map(({ title, docs }) => `${title} (${docs})`)
-          .join(", ")} — **the person's id is sent to each of them** unless registries is false. Returns { person, ` +
+        (registriesCover(messenger.provider)
+          ? "wrote in the store, and the public ban lists " +
+            `${Object.values(REGISTRIES)
+              .map(({ title, docs }) => `${title} (${docs})`)
+              .join(", ")} — **the person's id is sent to each of them** unless registries is false. `
+          : "wrote in the store. The public ban lists cover Telegram only, so nothing is sent. ") +
+        "Returns { person, " +
         "score, reasons: [{ reason, weight, source, detail }], registries: [{ name, answer: listed|clean|unknown, " +
         "checkedAt, detail }], unknown, notes }. A hint, never a verdict; changes nothing.",
       input: v.object({
