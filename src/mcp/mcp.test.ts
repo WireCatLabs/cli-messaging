@@ -757,6 +757,28 @@ describe("the MCP server", () => {
     expect((await call("chat_contacts_show", { person: "Olga" })).body).toMatchObject({ id: "9", name: "Olga" })
   })
 
+  it("profiles a person with the phone always masked", async () => {
+    const { call } = await connect(
+      scripted({
+        profile: async () => ({
+          id: "9",
+          name: "Olga",
+          usernames: [],
+          bio: null,
+          phone: "+34 600 000 123",
+          flags: { scam: false },
+          seen: "week",
+          chats: [{ id: "7", title: "Book club", kind: "group", lastMessageAt: null }],
+        }),
+      }),
+    )
+
+    const { body } = await call("chat_contacts_profile", { person: "Olga" })
+
+    expect(body).toMatchObject({ id: "9", phone: "***0123", seen: "week" })
+    expect(body.chats).toMatchObject([{ id: "7", kind: "group" }])
+  })
+
   it("runs calls that arrive together one after another, over the one connection", async () => {
     const telegram = scripted()
     const { call } = await connect(telegram)
