@@ -83,7 +83,7 @@ export const renderReplyTemplate = async (reply: ReplyRule["reply"], input: Temp
       ownPropertyOnly: true,
       strictVariables: true,
       strictFilters: true,
-      lenientIf: true,
+      lenientIf: false,
       parseLimit: limits.parse,
       renderLimit: limits.milliseconds,
       memoryLimit: limits.memory,

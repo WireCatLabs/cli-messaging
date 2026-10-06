@@ -37,6 +37,8 @@ describe("reply templates", () => {
     "{{ sender.constructor }}",
     "{{ sender.__proto__ }}",
     "{{ missing }}",
+    "{% if missing %}yes{% endif %}",
+    '{{ message | default: "fallback" }}',
     "{{ sender.name | missing_filter }}",
     '{% include "private.txt" %}',
     '{% render "private.txt" %}',
