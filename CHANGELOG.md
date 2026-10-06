@@ -6,6 +6,10 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.151.0 — 06.10.2026
+
+Released early: max-cli chart adoption needs the capability that hides unsupported daily member tracking
+
 ### Fixed
 
 - `Messenger.tracksMembers: false` omits `chats members fetch --track` for a CLI whose own
