@@ -1946,8 +1946,20 @@
         "--allow-send": "all",
         "--confirm-send": "all",
         "--http": "all",
-        "--http-confirmation": "all",
-        "--permission": "all",
+        "--http-confirmation": {
+          "in": [],
+          "planned": {
+            "max": "HTTP confirmation compatibility",
+            "tg": "HTTP confirmation compatibility"
+          }
+        },
+        "--permission": {
+          "in": [],
+          "planned": {
+            "max": "HTTP confirmation compatibility",
+            "tg": "HTTP confirmation compatibility"
+          }
+        },
         "--port": "all",
         "--public-url": "all",
         "--revoke": "all",
@@ -1981,7 +1993,13 @@
         },
         "--allow-send": "all",
         "--confirm-send": "all",
-        "--permission": "all",
+        "--permission": {
+          "in": [],
+          "planned": {
+            "max": "HTTP confirmation compatibility",
+            "tg": "HTTP confirmation compatibility"
+          }
+        },
         "--yes": {
           "in": [],
           "planned": {
@@ -2040,7 +2058,13 @@
             "tg": "local MCP setup"
           }
         },
-        "--permission": "all"
+        "--permission": {
+          "in": [],
+          "planned": {
+            "max": "HTTP confirmation compatibility",
+            "tg": "HTTP confirmation compatibility"
+          }
+        }
       }
     },
     "mcp setup": {
@@ -2099,7 +2123,13 @@
             "tg": "local MCP setup"
           }
         },
-        "--permission": "all"
+        "--permission": {
+          "in": [],
+          "planned": {
+            "max": "HTTP confirmation compatibility",
+            "tg": "HTTP confirmation compatibility"
+          }
+        }
       }
     },
     "messages": {
