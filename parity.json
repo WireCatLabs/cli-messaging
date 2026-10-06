@@ -3071,14 +3071,44 @@
       "in": "all",
       "options": {
         "--background": "all",
-        "--catch-up": "all",
-        "--catch-up-chunks": "all",
-        "--catch-up-messages": "all",
-        "--catch-up-time": "all",
+        "--catch-up": {
+          "in": [],
+          "planned": {
+            "max": "search catch-up SDK adoption",
+            "tg": "search catch-up SDK adoption"
+          }
+        },
+        "--catch-up-chunks": {
+          "in": [],
+          "planned": {
+            "max": "search catch-up SDK adoption",
+            "tg": "search catch-up SDK adoption"
+          }
+        },
+        "--catch-up-messages": {
+          "in": [],
+          "planned": {
+            "max": "search catch-up SDK adoption",
+            "tg": "search catch-up SDK adoption"
+          }
+        },
+        "--catch-up-time": {
+          "in": [],
+          "planned": {
+            "max": "search catch-up SDK adoption",
+            "tg": "search catch-up SDK adoption"
+          }
+        },
         "--estimate": "all",
         "--last": "all",
         "--limit": "all",
-        "--no-catch-up": "all",
+        "--no-catch-up": {
+          "in": [],
+          "planned": {
+            "max": "search catch-up SDK adoption",
+            "tg": "search catch-up SDK adoption"
+          }
+        },
         "--page-size": "all",
         "--pause": "all",
         "--since-time": "all"
