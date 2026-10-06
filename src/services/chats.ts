@@ -100,7 +100,10 @@ export interface ChatsService {
    */
   list(filter: ChatFilter, window: PageWindow): Promise<Page<Chat> & { partial: boolean }>
   show(chat: string): Promise<ChatCard>
-  members(chat: string, window: PageWindow): Promise<Page<GroupMember> & { chatId: Id }>
+  members(
+    chat: string,
+    window: PageWindow,
+  ): Promise<Page<GroupMember> & { chatId: Id; participantsCount?: number | null }>
   /** `since` in ms, parsed by the caller; `only` keeps the events named, comma-separated as typed. */
   events(chat: string, options: { since?: number; only?: string }): Promise<ChatEvents>
   inspect(link: string): Promise<LinkTarget>
@@ -277,7 +280,7 @@ export const chatsService = (deps: ServiceDeps): ChatsService => ({
       )
     }
     const connection = await deps.connection()
-    const { chatId: id, members: read, more } = await readMembers(connection, chat, budget, pauseMs)
+    const { chatId: id, members: read, more, participants } = await readMembers(connection, chat, budget, pauseMs)
     const held = await storeIfOpen(deps)
     const stored = held ? await storedFacts(held.store, held.account, id) : undefined
     const { items: judged, unknown } = auditMembers(read, {
@@ -289,7 +292,7 @@ export const chatsService = (deps: ServiceDeps): ChatsService => ({
     return {
       chatId: id,
       read: read.length,
-      participantsCount: stored?.participantsCount ?? null,
+      participantsCount: participants ?? stored?.participantsCount ?? null,
       more,
       unknown,
       ...(stored?.completeness ? { completeness: stored.completeness } : {}),
@@ -307,11 +310,14 @@ export const chatsService = (deps: ServiceDeps): ChatsService => ({
         "`chats members fetch` reads the member list from the messenger; not offline",
       )
     }
-    const { chatId, members, more } = await readMembers(await deps.connection(), chat, budget, pauseMs)
+    const read = await readMembers(await deps.connection(), chat, budget, pauseMs)
+    const { chatId, members, more } = read
     const store = await deps.store()
     const account = await deps.account()
     const participants =
-      (await store.chats(account, {})).items.find(({ id }) => id === chatId)?.participantsCount ?? null
+      read.participants ??
+      (await store.chats(account, {})).items.find(({ id }) => id === chatId)?.participantsCount ??
+      null
     const complete = !more && participants !== null && members.length >= participants
     const change = await store.saveRoster(account, chatId, { members, complete, participants })
     if (track) await store.trackMembers(account, chatId, true)
@@ -420,19 +426,21 @@ const readMembers = async (
   chat: string,
   budget: number,
   pauseMs: number,
-): Promise<{ chatId: Id; members: GroupMember[]; more: boolean }> => {
+): Promise<{ chatId: Id; members: GroupMember[]; more: boolean; participants: number | null }> => {
   const members = capability(connection, "members", "list a group's members")
   const read: GroupMember[] = []
   let chatId: Id | undefined
+  let participants: number | null = null
   let more = true
   for (let page = 0; page < budget && more; page++) {
     if (page > 0) await new Promise((resolve) => setTimeout(resolve, pauseMs))
     const found = await members(chatId ?? chat, { limit: AUDIT_PAGE, offset: read.length })
     chatId = found.chatId
+    participants = found.participantsCount ?? participants
     read.push(...found.items)
     more = found.hasMore && found.items.length > 0
   }
-  return { chatId: chatId ?? chat, members: read, more }
+  return { chatId: chatId ?? chat, members: read, more, participants }
 }
 
 /** `null` when no member list was ever saved: not knowing who is there is not nobody being there. */
