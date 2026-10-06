@@ -1,3 +1,4 @@
+import { CliError } from "@leemour/cli-core"
 import { describe, expect, it, vi } from "vitest"
 import type { SendGuard } from "../sends/guard.js"
 import { guardedWrite } from "../sends/guarded.js"
@@ -101,4 +102,17 @@ it("does not reserve or send a new write after its scope has timed out", async (
   await expect(continued).rejects.toMatchObject({ code: "timeout" })
   expect(check).not.toHaveBeenCalled()
   expect(send).not.toHaveBeenCalled()
+})
+
+it("correlates provider unknown outcomes with the guarded operation id", async () => {
+  const { guard, entries } = recording()
+  await expect(
+    guardedWrite(guard, { operationId: "op-provider", chatId: "synthetic", kind: "message" }, async () => {
+      throw new CliError("outcome_unknown", "synthetic", { sendId: "synthetic-send" })
+    }),
+  ).rejects.toMatchObject({
+    code: "outcome_unknown",
+    details: { operationId: "op-provider", sendId: "synthetic-send", retryable: false },
+  })
+  expect(entries).toHaveLength(1)
 })

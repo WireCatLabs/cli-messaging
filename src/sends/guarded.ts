@@ -111,6 +111,12 @@ export const guardedWrite = async <T>(
   } catch (error) {
     const code = codeOf(error)
     once({ ...attempt, outcome: code === "outcome_unknown" ? "outcome_unknown" : "failed", errorCode: code })
+    if (code === "outcome_unknown" && error instanceof Error)
+      throw new CliError("outcome_unknown", error.message, {
+        ...(error as CliError).details,
+        operationId: attempt.operationId,
+        retryable: false,
+      })
     throw error
   } finally {
     for (const scope of scopes) scope.delete(flight)

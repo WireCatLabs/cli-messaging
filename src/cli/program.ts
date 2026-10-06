@@ -252,7 +252,8 @@ export const run = async (argv: string[], definition: ProgramDefinition, options
   try {
     await control.race(() => program.parseAsync(rest, { from: "user" }))
     const code = process.exitCode === undefined ? 0 : Number(process.exitCode)
-    const hint = code === 0 && !rest.includes("--quiet") ? hintFor(definition, rest, options) : undefined
+    const hint =
+      code === 0 && rest[0] !== "commands" && !rest.includes("--quiet") ? hintFor(definition, rest, options) : undefined
     if (hint) streams.diagnostic(hint)
     return code
   } catch (caught) {
