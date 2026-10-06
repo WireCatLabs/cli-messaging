@@ -4,7 +4,12 @@ import { servingProfiles } from "../../background/lock.js"
 import type { AdminRight, Chat, GroupSettings, Id, Provider } from "../../domain/models.js"
 import { FloodMemory, floodPathFor } from "../../sends/flood.js"
 import { guardFor, type SendGuard } from "../../sends/guard.js"
-import { keyForCommand, levelFor, type PermissionKey } from "../../sends/permissions.js"
+import {
+  assertStatsPermissionsCurrent,
+  levelFor,
+  type PermissionKey,
+  readKeysForCommand,
+} from "../../sends/permissions.js"
 import { OFFLINE, type Override, type ServiceDeps, type Services, servicesFor } from "../../services/index.js"
 import type { OpenRecognizer } from "../../speech/transcribe.js"
 import { type AccountKey, type DeletionScope, type MessageStore, openStore } from "../../store/store.js"
@@ -239,16 +244,17 @@ const pathOf = (command: Command): string[] => {
 
 /** `deny` stops a read too, before anything connects: what the profile may not see is never fetched. */
 const refuseDenied = (command: Command, settings: Settings) => {
-  const key = keyForCommand(pathOf(command))
-  if (!key) return
-  const { level, key: named } = levelFor(settings.permissions, key)
-  if (level !== "deny") return
-  throw new CliError(
-    "permission_error",
-    `profile ${settings.profile} denies ${key} (permissions.${named} is deny, from the ` +
-      `${settings.permissionSources[named ?? ""] ?? "default"})`,
-    { permission: key },
-  )
+  assertStatsPermissionsCurrent(pathOf(command), settings.permissions)
+  for (const key of readKeysForCommand(pathOf(command))) {
+    const { level, key: named } = levelFor(settings.permissions, key)
+    if (level !== "deny") continue
+    throw new CliError(
+      "permission_error",
+      `profile ${settings.profile} denies ${key} (permissions.${named} is deny, from the ` +
+        `${settings.permissionSources[named ?? ""] ?? "default"})`,
+      { permission: key },
+    )
+  }
 }
 
 /**

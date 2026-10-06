@@ -140,7 +140,7 @@
     "--by": {
       "value": "<grouping>",
       "meaning": "what to count by",
-      "note": "each command names its own groupings \u2014 messages stats chat, sender, day or hour, and searches create the same for messages stats --saved; chats stats day or week, as a series beside its totals \u2014 so it differs on purpose (Help text rule 4)"
+      "note": "each command names its own groupings \u2014 stats messages show chat, sender, day or hour, and searches create the same for stats messages show --saved; stats chats show day or week, as a series beside its totals \u2014 so it differs on purpose (Help text rule 4)"
     },
     "--can": {
       "value": "<rights>",
@@ -1485,32 +1485,10 @@
     "chats stats": {
       "in": [],
       "planned": {
-        "max": "each CLI's next cli-messaging bump",
-        "tg": "each CLI's next cli-messaging bump"
+        "max": "retire this path at exact shared SDK adoption; no runtime alias",
+        "tg": "retire this path at exact shared SDK adoption; no runtime alias"
       },
-      "options": {
-        "--by": {
-          "in": [],
-          "planned": {
-            "max": "each CLI's next cli-messaging bump",
-            "tg": "each CLI's next cli-messaging bump"
-          }
-        },
-        "--since-time": {
-          "in": [],
-          "planned": {
-            "max": "each CLI's next cli-messaging bump",
-            "tg": "each CLI's next cli-messaging bump"
-          }
-        },
-        "--timezone": {
-          "in": [],
-          "planned": {
-            "max": "each CLI's next cli-messaging bump",
-            "tg": "each CLI's next cli-messaging bump"
-          }
-        }
-      }
+      "subtree": true
     },
     "chats tracking": {
       "in": [],
@@ -2331,38 +2309,11 @@
       "in": "all"
     },
     "messages stats": {
-      "in": "all",
-      "options": {
-        "--by": {
-          "in": "all"
-        },
-        "--chat": {
-          "in": "all"
-        },
-        "--limit": {
-          "in": "all"
-        },
-        "--max-chats": {
-          "in": "all"
-        },
-        "--max-messages": {
-          "in": "all"
-        },
-        "--saved": {
-          "in": "all"
-        },
-        "--source": {
-          "in": "all"
-        },
-        "--sync-first": {
-          "in": "all"
-        },
-        "--sync-time": {
-          "in": "all"
-        },
-        "--timezone": {
-          "in": "all"
-        }
+      "in": [],
+      "subtree": true,
+      "planned": {
+        "max": "retire this path at exact shared SDK adoption; no runtime alias",
+        "tg": "retire this path at exact shared SDK adoption; no runtime alias"
       }
     },
     "messages transcribe": {
@@ -3065,29 +3016,29 @@
     "stats chats show": {
       "in": [],
       "planned": {
-        "max": "stats hierarchy migration and rankings after naming approval",
-        "tg": "stats hierarchy migration and rankings after naming approval"
+        "max": "statistics relocation in the next shared adoption",
+        "tg": "statistics relocation in the next shared adoption"
       },
       "options": {
         "--by": {
           "in": [],
           "planned": {
-            "max": "stats hierarchy migration and rankings after naming approval",
-            "tg": "stats hierarchy migration and rankings after naming approval"
+            "max": "statistics relocation in the next shared adoption",
+            "tg": "statistics relocation in the next shared adoption"
           }
         },
         "--since-time": {
           "in": [],
           "planned": {
-            "max": "stats hierarchy migration and rankings after naming approval",
-            "tg": "stats hierarchy migration and rankings after naming approval"
+            "max": "statistics relocation in the next shared adoption",
+            "tg": "statistics relocation in the next shared adoption"
           }
         },
         "--timezone": {
           "in": [],
           "planned": {
-            "max": "stats hierarchy migration and rankings after naming approval",
-            "tg": "stats hierarchy migration and rankings after naming approval"
+            "max": "statistics relocation in the next shared adoption",
+            "tg": "statistics relocation in the next shared adoption"
           }
         }
       }
@@ -3116,78 +3067,78 @@
     "stats messages show": {
       "in": [],
       "planned": {
-        "max": "stats hierarchy migration and rankings after naming approval",
-        "tg": "stats hierarchy migration and rankings after naming approval"
+        "max": "statistics relocation in the next shared adoption",
+        "tg": "statistics relocation in the next shared adoption"
       },
       "options": {
         "--by": {
           "in": [],
           "planned": {
-            "max": "stats hierarchy migration and rankings after naming approval",
-            "tg": "stats hierarchy migration and rankings after naming approval"
+            "max": "statistics relocation in the next shared adoption",
+            "tg": "statistics relocation in the next shared adoption"
           }
         },
         "--chat": {
           "in": [],
           "planned": {
-            "max": "stats hierarchy migration and rankings after naming approval",
-            "tg": "stats hierarchy migration and rankings after naming approval"
+            "max": "statistics relocation in the next shared adoption",
+            "tg": "statistics relocation in the next shared adoption"
           }
         },
         "--limit": {
           "in": [],
           "planned": {
-            "max": "stats hierarchy migration and rankings after naming approval",
-            "tg": "stats hierarchy migration and rankings after naming approval"
+            "max": "statistics relocation in the next shared adoption",
+            "tg": "statistics relocation in the next shared adoption"
           }
         },
         "--max-chats": {
           "in": [],
           "planned": {
-            "max": "stats hierarchy migration and rankings after naming approval",
-            "tg": "stats hierarchy migration and rankings after naming approval"
+            "max": "statistics relocation in the next shared adoption",
+            "tg": "statistics relocation in the next shared adoption"
           }
         },
         "--max-messages": {
           "in": [],
           "planned": {
-            "max": "stats hierarchy migration and rankings after naming approval",
-            "tg": "stats hierarchy migration and rankings after naming approval"
+            "max": "statistics relocation in the next shared adoption",
+            "tg": "statistics relocation in the next shared adoption"
           }
         },
         "--saved": {
           "in": [],
           "planned": {
-            "max": "stats hierarchy migration and rankings after naming approval",
-            "tg": "stats hierarchy migration and rankings after naming approval"
+            "max": "statistics relocation in the next shared adoption",
+            "tg": "statistics relocation in the next shared adoption"
           }
         },
         "--source": {
           "in": [],
           "planned": {
-            "max": "stats hierarchy migration and rankings after naming approval",
-            "tg": "stats hierarchy migration and rankings after naming approval"
+            "max": "statistics relocation in the next shared adoption",
+            "tg": "statistics relocation in the next shared adoption"
           }
         },
         "--sync-first": {
           "in": [],
           "planned": {
-            "max": "stats hierarchy migration and rankings after naming approval",
-            "tg": "stats hierarchy migration and rankings after naming approval"
+            "max": "statistics relocation in the next shared adoption",
+            "tg": "statistics relocation in the next shared adoption"
           }
         },
         "--sync-time": {
           "in": [],
           "planned": {
-            "max": "stats hierarchy migration and rankings after naming approval",
-            "tg": "stats hierarchy migration and rankings after naming approval"
+            "max": "statistics relocation in the next shared adoption",
+            "tg": "statistics relocation in the next shared adoption"
           }
         },
         "--timezone": {
           "in": [],
           "planned": {
-            "max": "stats hierarchy migration and rankings after naming approval",
-            "tg": "stats hierarchy migration and rankings after naming approval"
+            "max": "statistics relocation in the next shared adoption",
+            "tg": "statistics relocation in the next shared adoption"
           }
         }
       }
@@ -3197,6 +3148,36 @@
       "planned": {
         "max": "stats hierarchy migration and rankings after naming approval",
         "tg": "stats hierarchy migration and rankings after naming approval"
+      }
+    },
+    "stats tasks": {
+      "in": [],
+      "planned": {
+        "max": "statistics relocation in the next shared adoption",
+        "tg": "statistics relocation in the next shared adoption"
+      }
+    },
+    "stats tasks show": {
+      "in": [],
+      "planned": {
+        "max": "statistics relocation in the next shared adoption",
+        "tg": "statistics relocation in the next shared adoption"
+      },
+      "options": {
+        "--chat": {
+          "in": [],
+          "planned": {
+            "max": "statistics relocation in the next shared adoption",
+            "tg": "statistics relocation in the next shared adoption"
+          }
+        },
+        "--type": {
+          "in": [],
+          "planned": {
+            "max": "statistics relocation in the next shared adoption",
+            "tg": "statistics relocation in the next shared adoption"
+          }
+        }
       }
     },
     "store": {
@@ -3429,25 +3410,10 @@
     "tasks stats": {
       "in": [],
       "planned": {
-        "max": "each CLI's next cli-messaging bump",
-        "tg": "each CLI's next cli-messaging bump"
+        "max": "retire this path at exact shared SDK adoption; no runtime alias",
+        "tg": "retire this path at exact shared SDK adoption; no runtime alias"
       },
-      "options": {
-        "--chat": {
-          "in": [],
-          "planned": {
-            "max": "each CLI's next cli-messaging bump",
-            "tg": "each CLI's next cli-messaging bump"
-          }
-        },
-        "--type": {
-          "in": [],
-          "planned": {
-            "max": "each CLI's next cli-messaging bump",
-            "tg": "each CLI's next cli-messaging bump"
-          }
-        }
-      }
+      "subtree": true
     },
     "topics": {
       "in": ["tg"],

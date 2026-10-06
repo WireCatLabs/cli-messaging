@@ -57,7 +57,7 @@ export const chatsTools = (messenger: Messenger): Record<string, AnyTool> => {
       },
     }),
 
-    chats_stats: tool({
+    stats_chats_show: tool({
       title: "A chat's numbers for a period",
       description:
         `Counts over a chat's stored messages since \`since_time\` (${EVENTS_DAYS} days back if not given): messages, ` +

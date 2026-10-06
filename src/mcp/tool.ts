@@ -15,7 +15,14 @@ import type { MessengerAdapter } from "../cli/messenger/port.js"
 import type { Settings } from "../cli/settings.js"
 import type { WarmEmbedders } from "../embeddings/embed.js"
 import type { SendGuard } from "../sends/guard.js"
-import { keyForCommand, levelFor, type Permission, type PermissionKey } from "../sends/permissions.js"
+import {
+  assertStatsPermissionsCurrent,
+  keyForCommand,
+  levelFor,
+  type Permission,
+  type PermissionKey,
+  readKeysForCommand,
+} from "../sends/permissions.js"
 import { onlineDeps, storeModeDeps } from "../services/deps.js"
 import { type Services, servicesFor } from "../services/index.js"
 import type { AccountKey, MessageStore } from "../store/store.js"
@@ -203,9 +210,13 @@ export const registerTools = (
   }: Registration,
 ): void => {
   const where = { profile: defaults.settings.profile, env: defaults.env }
-  const syncAllowed =
+  const sharedSyncAllowed =
     defaults.syncAllowed ?? levelFor(defaults.settings.permissions ?? {}, "messages.sync-first").level === "allow"
   for (const [key, definition] of Object.entries(tools)) {
+    const syncAllowed =
+      sharedSyncAllowed &&
+      (key !== "stats_messages_show" ||
+        levelFor(defaults.settings.permissions ?? {}, "stats.messages.show.sync-first").level === "allow")
     const name = `${command}_${key}`
     const run = `mcp ${key.replaceAll("_", " ")}`
     const reads = definition.annotations.readOnlyHint === true
@@ -234,6 +245,11 @@ export const registerTools = (
       async (args: Record<string, unknown>, ctx: ServerContext) => {
         try {
           const execute = async () => {
+            assertStatsPermissionsCurrent(key.split("_"), defaults.settings.permissions ?? {})
+            for (const permission of readKeysForCommand(key.split("_"))) {
+              if (levelFor(defaults.settings.permissions ?? {}, permission).level === "deny")
+                throw new CliError("permission_error", `profile denies ${permission}`, { permission })
+            }
             if (args.sync_first && !syncAllowed)
               throw new CliError("permission_error", "messages.sync-first is not allowed by this profile")
             const { online, stored: local, served, permission } = definition

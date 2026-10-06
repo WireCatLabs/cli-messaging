@@ -30,6 +30,7 @@ import { modelsCommand } from "./models-command.js"
 import { pollsCommand } from "./polls-command.js"
 import type { MessengerAdapter, SendOptions } from "./port.js"
 import { reactionsCommand } from "./reactions-command.js"
+import { statsCommand } from "./stats-command.js"
 import { topicsCommand } from "./topics-command.js"
 
 const app = {
@@ -134,6 +135,7 @@ const call = async (
       commands: () => [
         accountCommand(messenger),
         chatsCommand(messenger),
+        statsCommand(messenger),
         messagesCommand(messenger),
         reactionsCommand(messenger),
         pollsCommand(messenger),
@@ -1157,7 +1159,7 @@ describe("the shared read commands", () => {
     }
     for (const path of [
       ["messages", "search", "chapter"],
-      ["messages", "stats", "chapter"],
+      ["stats", "messages", "show", "chapter"],
       ["conversations", "search", "chapter"],
     ]) {
       const result = await call(
@@ -1460,7 +1462,7 @@ describe("the shared read commands", () => {
         })
         expect(result.stdout).toHaveLength(1)
       }
-      const stats = await call(["messages", "stats", "invoice", "--json"], never, env, {}, { provider })
+      const stats = await call(["stats", "messages", "show", "invoice", "--json"], never, env, {}, { provider })
       expect(stats.code).toBe(0)
       expect(stats.stdout).toHaveLength(1)
       expect(JSON.parse(stats.stdout[0] ?? "null")).toMatchObject({
@@ -1469,11 +1471,17 @@ describe("the shared read commands", () => {
         items: [{ key: "7", name: "Work fixture", count: 3 }],
         query: { language: "lucene-v1" },
       })
-      const badGrouping = await call(["messages", "stats", "--by", "week", "--json"], never, env, {}, { provider })
+      const badGrouping = await call(
+        ["stats", "messages", "show", "--by", "week", "--json"],
+        never,
+        env,
+        {},
+        { provider },
+      )
       expect(badGrouping.code).toBe(2)
       expect(badGrouping.stdout).toEqual([])
       const chatStats = await call(
-        ["chats", "stats", "7", "--offline", "--since-time", "2000-01-01", "--json"],
+        ["stats", "chats", "show", "7", "--offline", "--since-time", "2000-01-01", "--json"],
         never,
         env,
         {},
@@ -1495,7 +1503,7 @@ describe("the shared read commands", () => {
           close: async () => {},
         }) as unknown as MessengerAdapter
       const online = await call(
-        ["chats", "stats", "7", "--since-time", "2000-01-01", "--json"],
+        ["stats", "chats", "show", "7", "--since-time", "2000-01-01", "--json"],
         joins,
         env,
         {},

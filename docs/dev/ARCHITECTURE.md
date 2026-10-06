@@ -158,7 +158,7 @@ or deleted, or its attachment deleted (NEED-393 A, tested against 0.49.0). `stor
 `attachments list --needs-text` and `attachments text set` (MCP `attachments_list`, `attachments_text_set`) are
 how an agent finds a scan, reads it itself and writes the text back, all through `services.attachments`.
 
-**Searches** (version 17) are one table, `searches`: every successful `messages search` and `messages stats`
+**Searches** (version 17) are one table, `searches`: every successful `messages search` and `stats messages show`
 run records its parameters as canonical JSON (`searchRecordOf`, `src/services/searches.ts`) — never a
 message or a result — from `MessagesService`, so the command and the MCP tool both record. An identical
 unnamed run counts on its row (a unique index over command and parameters where the name is null); unnamed

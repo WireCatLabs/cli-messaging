@@ -8,7 +8,7 @@ import { syncOptions, syncRequest } from "./search-sync-options.js"
 const GROUPINGS: StatsGrouping[] = ["chat", "sender", "day", "hour"]
 
 export const messagesStatsCommand = (messenger: Messenger): Command =>
-  syncOptions(new Command("stats"))
+  syncOptions(new Command("show"))
     .description(
       "how many stored messages match, by chat, sender, day or hour — the local store only; optionally fetches new messages with --sync-first",
     )
@@ -72,7 +72,7 @@ export const messagesStatsCommand = (messenger: Messenger): Command =>
         if (params.regex || params.language === "legacy")
           throw new CliError(
             "validation_error",
-            "messages stats counts strict Lucene queries; this saved search is legacy",
+            "stats messages show counts strict Lucene queries; this saved search is legacy",
           )
         limit = params.limit ?? limit
         return services.messages.stats({

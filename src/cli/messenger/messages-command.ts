@@ -26,7 +26,6 @@ import { pinCommand, unpinCommand } from "./messages-pin-command.js"
 import { scheduledCommand } from "./messages-scheduled-command.js"
 import { messagesSearchCommand } from "./messages-search-command.js"
 import { sendCommand } from "./messages-send-command.js"
-import { messagesStatsCommand } from "./messages-stats-command.js"
 import { threadOptions, threadRequest } from "./thread-options.js"
 import { transcribeSubcommand } from "./transcribe-command.js"
 
@@ -132,7 +131,6 @@ export const messagesCommand = (messenger: Messenger): Command => {
   }
 
   messages.addCommand(messagesSearchCommand(messenger))
-  messages.addCommand(messagesStatsCommand(messenger))
 
   messages.addCommand(sendCommand(messenger))
 

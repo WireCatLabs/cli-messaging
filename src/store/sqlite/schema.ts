@@ -484,7 +484,7 @@ export const tags = sqliteTable(
 )
 
 /**
- * Every run of `messages search` and `messages stats`, with the parameters as the caller gave them — never
+ * Every run of `messages search` and `stats messages show`, with the parameters as the caller gave them — never
  * a message or a result. A row with a name is a saved search; an identical unnamed run counts on its row.
  */
 export const searches = sqliteTable(

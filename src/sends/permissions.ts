@@ -88,6 +88,7 @@ export const RESOURCES = [
   "tasks",
   "replies",
   "attachments",
+  "stats",
 ] as const
 
 const OLD_WORDS: Record<Permission, PermissionKey[]> = {
@@ -239,6 +240,7 @@ export const keyForWrite = (kind: SendKind, action?: string): PermissionKey => {
 /** Write keys written out where a write is checked; `permission-keys.test.ts` keeps this list whole. */
 const NAMED_WRITE_KEYS = [
   "messages.sync-first",
+  "stats.messages.show.sync-first",
   "account.sessions.list",
   "attachments.extract",
   "attachments.text.set",
@@ -314,7 +316,39 @@ const BOT_HOUSEKEEPING = new Set(["auth", "list", "sends", "recipients", "mcp"])
 const STORE_MAINTENANCE = new Set(["info", "check", "migrate", "backup", "restore", "repair", "copies"])
 
 /** Commands outside `messages` that print what people wrote, so `deny messages` reaches them too. */
-const SHOW_MESSAGES = new Set(["stats", "inbox", "review", "watch", "serve", "store", "conversations"])
+const SHOW_MESSAGES = new Set(["inbox", "review", "watch", "serve", "store", "conversations"])
+
+export const assertStatsPermissionsCurrent = (
+  path: readonly string[],
+  permissions: Readonly<Record<string, Level>>,
+): void => {
+  if (path[0] === "bot") {
+    assertStatsPermissionsCurrent(path.slice(1), permissions)
+    return
+  }
+  if (path[0] !== "stats") return
+  if (Object.keys(permissions).some((key) => /^(bot\.)?(messages|chats|tasks)\.stats(?:\.|$)/.test(key)))
+    throw new CliError(
+      "configuration_error",
+      "statistics permission paths have moved — run config migrate before reading statistics",
+      { retryable: false },
+    )
+}
+
+export const readKeysForCommand = (path: readonly string[]): PermissionKey[] => {
+  if (path[0] === "bot") return readKeysForCommand(path.slice(1)).map((key) => `bot.${key}`)
+  const key = keyForCommand(path)
+  if (!key) return []
+  if (path[0] !== "stats") return [key]
+  const resource = path[1] === "charts" ? "chats" : path[1]
+  return [
+    ...new Set([
+      key,
+      "messages",
+      ...(["chats", "contacts", "tasks"].includes(resource ?? "") ? [resource as string] : []),
+    ]),
+  ]
+}
 
 /**
  * The key a command path is checked against: `null` for housekeeping, which no level stops, and

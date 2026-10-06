@@ -10,6 +10,7 @@ import { settingsFor } from "../settings.js"
 import { rememberAccount } from "./accounts.js"
 import { storeCommand } from "./archive-commands.js"
 import type { Messenger } from "./context.js"
+import { statsCommand } from "./stats-command.js"
 import { tasksCommand } from "./tasks-command.js"
 
 const app = { command: "chat", appName: "chat-cli", envPrefix: "CHAT", description: "", version: "1.0.0" }
@@ -69,7 +70,7 @@ const setup = async (config?: object) => {
       const streams = captureStreams()
       const code = await run(
         argv,
-        { app, commands: () => [tasksCommand(messenger), storeCommand(messenger)] },
+        { app, commands: () => [statsCommand(messenger), tasksCommand(messenger), storeCommand(messenger)] },
         { streams, tty, env },
       )
       return { code, stdout: streams.stdout, stderr: streams.stderr.join("\n") }
@@ -141,8 +142,8 @@ describe("tasks", () => {
     await call("tasks", "add", PROMISE, "--type", "promise", "--json")
     await call("tasks", "add", "msg:chat/500/7/2", "--type", "question", "--json")
 
-    expect(json(await call("tasks", "stats", "--json")).items).toMatchObject([{ group: "7", open: 2 }])
-    expect(json(await call("tasks", "stats", "--type", "question", "--json")).items).toMatchObject([
+    expect(json(await call("stats", "tasks", "show", "--json")).items).toMatchObject([{ group: "7", open: 2 }])
+    expect(json(await call("stats", "tasks", "show", "--type", "question", "--json")).items).toMatchObject([
       { group: "7", open: 1 },
     ])
   })
@@ -171,6 +172,19 @@ describe("tasks", () => {
     await call("tasks", "add", PROMISE, "--type", "promise")
     const shown = await call("tasks", "list")
     expect(shown.stdout.join("")).toContain("Ana: I'll send the invoice tomorrow")
-    expect((await call("tasks", "stats")).stdout.join("")).toContain("1 open")
+    expect((await call("stats", "tasks", "show")).stdout.join("")).toContain("1 open")
   })
+})
+
+it("removes resource-local statistics without aliases and retains independent data denials", async () => {
+  const call = await setup()
+  expect((await call("tasks", "stats", "--json")).code).toBe(2)
+  for (const key of ["stats.tasks.show", "tasks", "messages"]) {
+    const denied = await setup({ profiles: { default: { permissions: { [key]: "deny" } } } })
+    const result = await denied("stats", "tasks", "show", "--json")
+    expect(result.code).toBe(5)
+    expect(result.stdout).toEqual([])
+  }
+  const old = await setup({ profiles: { default: { permissions: { "tasks.stats": "deny" } } } })
+  expect((await old("stats", "tasks", "show", "--json")).code).toBe(3)
 })

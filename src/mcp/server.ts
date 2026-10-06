@@ -9,7 +9,7 @@ import { skipFlagFor } from "../cli/messenger/ask.js"
 import { connected, type Messenger, type MessengerContext } from "../cli/messenger/context.js"
 import { warmEmbedders } from "../embeddings/embed.js"
 import { guardFor } from "../sends/guard.js"
-import { levelFor } from "../sends/permissions.js"
+import { levelFor, readKeysForCommand } from "../sends/permissions.js"
 import { confirmer } from "./confirm.js"
 import { type HttpConfirmation, httpServerOptions } from "./http/policy.js"
 import type { HttpOptions } from "./http/serve.js"
@@ -52,7 +52,11 @@ export const createServer = (
     Object.entries(personalMcpTools(messenger)).filter(([key, one]) => {
       const level = levelOf(toolKey(key, one))
       const writes = one.permission !== undefined || one.annotations.readOnlyHint !== true
-      return level !== "deny" && !(writes && level === "readonly")
+      return (
+        level !== "deny" &&
+        !(writes && level === "readonly") &&
+        readKeysForCommand(key.split("_")).every((data) => levelOf(data) !== "deny")
+      )
     }),
   )
   const writes = Object.fromEntries(Object.entries(offered).filter(([, one]) => one.permission !== undefined))

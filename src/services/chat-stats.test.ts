@@ -111,7 +111,7 @@ afterEach(async () => {
   for (const store of opened.splice(0)) await store.close()
 })
 
-describe("chats stats", () => {
+describe("stats chats show", () => {
   it("counts a held chat's period, its questions and who joined and wrote", async () => {
     const stats = await chatsService(onlineWith(await heldStore({ whole: true }))).stats("7", {
       since: SINCE,

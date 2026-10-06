@@ -16,10 +16,10 @@ const line = ({ id, name, command, params, runs, lastRunAt }: StoredSearch) =>
     lastRunAt?.slice(0, 16).replace("T", " ") ?? "never run",
   ].join("  ")
 
-/** Saved searches and the history of `messages search` and `messages stats`, in the local store only. */
+/** Saved searches and the history of `messages search` and `stats messages show`, in the local store only. */
 export const searchesCommand = (messenger: Messenger): Command => {
   const searches = new Command("searches").description(
-    "saved searches and the history of messages search and messages stats, kept in the local store; --saved runs one",
+    "saved searches and the history of messages search and stats messages show, kept in the local store; --saved runs one",
   )
 
   searches
@@ -38,7 +38,7 @@ export const searchesCommand = (messenger: Messenger): Command => {
     .option("--language <lucene|legacy>", "the query language: strict Lucene or legacy discovery", languageOf)
     .option("--timezone <zone>", "the IANA timezone for calendar date boundaries")
     .option("--regex", "the words are one regular expression, case-insensitive, tested against every stored text")
-    .option("--by <chat|sender|day|hour>", "what messages stats --saved counts by", groupingOf)
+    .option("--by <chat|sender|day|hour>", "what stats messages show --saved counts by", groupingOf)
     .option("--replace", "overwrite a saved search of the same name")
     .action(async function (this: Command, name: string, words: string[]) {
       const context = messengerContext(this, messenger)

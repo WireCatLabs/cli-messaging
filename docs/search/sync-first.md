@@ -1,6 +1,6 @@
 # Refresh before searching
 
-Search normally reads only the local store. Add `--sync-first` to `messages search`, `messages stats` or
+Search normally reads only the local store. Add `--sync-first` to `messages search`, `stats messages show` or
 `conversations search` to fetch new messages before reading it. No message is marked read.
 
 The refresh uses the active profile's archive fetch. `--chat` and required `chat:` filters select the chats;

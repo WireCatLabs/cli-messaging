@@ -86,8 +86,11 @@ export const tasksCommand = (messenger: Messenger): Command => {
       else context.streams.data(`${line(closed)}\n`)
     })
 
-  tasks
-    .command("stats")
+  return tasks
+}
+
+export const tasksStatsCommand = (messenger: Messenger): Command => {
+  return new Command("show")
     .description("per chat: how many tasks are open, the oldest open one, the median time to close")
     .option("--chat <chat>", `only this chat; ${messenger.chatArgument}`)
     .option("--type <name>", "only this type: question, request, mention or promise", taskTypeOf)
@@ -118,6 +121,4 @@ export const tasksCommand = (messenger: Messenger): Command => {
             .join("\n")}\n`,
         )
     })
-
-  return tasks
 }

@@ -21,7 +21,7 @@ export const searchesTools = (messenger: Messenger): Record<string, AnyTool> => 
   return {
     searches_list: tool({
       title: "List saved searches",
-      description: `The saved searches, by name; messages_search and messages_stats run one with \`saved\`. Returns { items: [${ROW}], page, limit, hasMore }.`,
+      description: `The saved searches, by name; messages_search and stats_messages_show run one with \`saved\`. Returns { items: [${ROW}], page, limit, hasMore }.`,
       input: v.object({}),
       annotations: { ...READ, openWorldHint: false },
       stored: async (store, account, _args, defaults) =>
@@ -45,7 +45,7 @@ export const searchesTools = (messenger: Messenger): Record<string, AnyTool> => 
       title: "Save a search",
       description:
         "Saves a search under a name without running it; the query is checked against today's fields. Takes " +
-        "messages_search's arguments, plus `by` for messages_stats. A taken name is refused unless `replace`. " +
+        "messages_search's arguments, plus `by` for stats_messages_show. A taken name is refused unless `replace`. " +
         `Writes only to the local store. Returns ${ROW}.`,
       input: v.object({
         name: v.pipe(v.string(), v.minLength(1), v.description("up to 64 letters a–z, digits and hyphens")),

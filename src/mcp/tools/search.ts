@@ -165,7 +165,10 @@ export const answerMessagesStats = async (
   const resolved = await resolveSaved(searches, args)
   const params: SearchParams = resolved?.params ?? args
   if (params.regex || params.language === "legacy")
-    throw new CliError("validation_error", "messages stats counts strict Lucene queries; this saved search is legacy")
+    throw new CliError(
+      "validation_error",
+      "stats messages show counts strict Lucene queries; this saved search is legacy",
+    )
   const size = params.limit ?? defaults.limit
   const stats = await messages.stats({
     ...syncArgs(args),
