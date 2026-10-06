@@ -224,6 +224,14 @@ describe("bot mcp tools by permission level", () => {
     ])
   })
 
+  it("**finds a command by its exact name first**, even when the name is part of many others", async () => {
+    const { raw } = await connect()
+    const result = await raw.callTool({ name: "chat_bot_tools_search", arguments: { query: "me" } })
+    const { items } = JSON.parse((result.content as { text: string }[])[0]?.text ?? "null")
+
+    expect(items[0]).toMatchObject({ command: "me" })
+  })
+
   it("**the CLI's own tool replaces the shared one with the same words**", async () => {
     const { client } = await connect()
     const { tools } = await client.listTools()

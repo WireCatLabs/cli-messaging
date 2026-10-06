@@ -1620,6 +1620,10 @@ describe("three tools in place of one per command", () => {
     const found = await text({ query: "send message" })
     expect(found.items[0]).toMatchObject({ command: "messages send", writes: true })
     expect(found.items[0].arguments.properties).toHaveProperty("text")
+    expect((await text({ query: "messages list" })).items[0]).toMatchObject({ command: "messages list" })
+    expect((await text({ query: "list" })).items.map(({ command }: { command: string }) => command)).toContain(
+      "chats list",
+    )
     const every = await text({})
     expect(every.items.map(({ command }: { command: string }) => command)).toEqual(
       expect.arrayContaining(["messages list", "chats mark-read", "status"]),
