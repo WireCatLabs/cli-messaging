@@ -85,6 +85,32 @@ export const registerPrompts = (server: McpServer, { command, name }: { command:
   )
 
   server.registerPrompt(
+    "open-tasks",
+    {
+      title: `What waits on me in ${name}`,
+      description:
+        "A digest of the open tasks — questions nobody answered, mentions, requests, promises — oldest first, " +
+        "with what each needs. Closes a task only after the owner approves; sends nothing.",
+      argsSchema: toStandardJsonSchema(
+        v.object({ chat: v.optional(v.pipe(v.string(), v.description("only this chat, by id or part of a name"))) }),
+      ),
+    },
+    ({ chat }) =>
+      asked(
+        [
+          `Tell me what waits on me in ${name}. Do not send, react, forward or mark anything read.`,
+          `1. Call ${command}_review once with new true: it opens tasks for what came in and closes what I answered.`,
+          `2. Call ${command}_tasks_list with state open${chat ? ` and chat ${JSON.stringify(chat)}` : ""}.`,
+          "3. Digest per chat, oldest task first: who, what they want — from the message each task points at — and",
+          "how long it has been open. A task whose message is null is no longer in the store: say so.",
+          "4. For each, suggest one: I answer it (offer a draft), it is done, or it needs no answer.",
+          `5. Only after I approve, close each with ${command}_tasks_close — as done, or dismissed with a reason.`,
+          DATA,
+        ].join("\n"),
+      ),
+  )
+
+  server.registerPrompt(
     "reply",
     {
       title: `Reply in a ${name} chat`,
