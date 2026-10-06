@@ -1,6 +1,7 @@
 # PNG chart export and MCP images
 
-Status: approved by the owner on 2026-10-06; 🚧 `feat/charts-png-mcp`.
+Status: implemented in `feat/charts-png-mcp`, approved by the owner on 2026-10-06.
+Synthetic local checks pass; shared publication and MAX adoption follow the implementation PR.
 
 The existing `stats charts` command gains `.png` output beside `.svg`. The existing stored-only
 `stats_charts` MCP tool gains optional `format: json|png`, default `json`; PNG returns image content
