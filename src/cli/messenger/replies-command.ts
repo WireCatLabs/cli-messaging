@@ -44,10 +44,15 @@ export const repliesCommand = (messenger: Messenger): Command => {
         return
       }
       const lines = found.rules.flatMap(({ id, would, skipped }) => [
-        `${id}: would answer ${would.length}`,
+        `${id}: would act on ${would.length}`,
         ...would.map(
           (one) =>
-            `  ${one.at}  ${one.chatTitle ?? one.chatId} → ${one.to.name ?? one.to.id}: ${JSON.stringify(one.text)}`,
+            `  ${one.at}  ${one.chatTitle ?? one.chatId} → ${one.to.name ?? one.to.id}: ${[
+              one.text === null ? undefined : JSON.stringify(one.text),
+              one.task ? "a task" : undefined,
+            ]
+              .filter(Boolean)
+              .join(" + ")}`,
         ),
         ...Object.entries(skipped)
           .sort(([, a], [, b]) => b - a)

@@ -10,7 +10,7 @@ import { levelFor } from "../../sends/permissions.js"
 import { newSendId } from "../../sends/send-id.js"
 import { onlineDeps } from "../../services/deps.js"
 import { servicesFor } from "../../services/index.js"
-import { applyTaskRulesOnArrival } from "../../services/task-rules.js"
+import { applyTaskRulesOnArrival, openRequestTask } from "../../services/task-rules.js"
 import { recalledAccount } from "./accounts.js"
 import { type Messenger, type MessengerContext, messengerContext } from "./context.js"
 import type { MessengerAdapter } from "./port.js"
@@ -113,6 +113,7 @@ const replying = (context: MessengerContext, messenger: Messenger, since: number
   let queue = Promise.resolve()
   const sent: Record<string, number> = {}
   const skipped: Record<string, number> = {}
+  const tasks: Record<string, number> = {}
   const chats = new Map<string, Promise<{ id: string; kind: ChatKind }>>()
   const owner = recalledAccount(app, provider, profile, env)?.account ?? null
 
@@ -153,9 +154,12 @@ const replying = (context: MessengerContext, messenger: Messenger, since: number
             ...(reply.replyTo === undefined ? {} : { replyTo: reply.replyTo }),
           }),
         newSendId: () => open.newSendId?.() ?? newSendId(),
+        openTask: (arrived) =>
+          context.withStore((store, account) => openRequestTask(store, account, arrived), { name: "serve replies" }),
       },
       message,
     )
+    if (answer.task !== undefined) tasks[answer.task] = (tasks[answer.task] ?? 0) + 1
     if ("sent" in answer) sent[answer.sent] = (sent[answer.sent] ?? 0) + 1
     else if (answer.skip !== NO_RULES) skipped[answer.skip] = (skipped[answer.skip] ?? 0) + 1
   }
@@ -174,7 +178,9 @@ const replying = (context: MessengerContext, messenger: Messenger, since: number
     },
     settled: () => queue,
     summary: () =>
-      Object.keys(sent).length === 0 && Object.keys(skipped).length === 0 ? {} : { replies: { sent, skipped } },
+      Object.keys(sent).length + Object.keys(skipped).length + Object.keys(tasks).length === 0
+        ? {}
+        : { replies: { sent, skipped, ...(Object.keys(tasks).length === 0 ? {} : { tasks }) } },
   }
 }
 

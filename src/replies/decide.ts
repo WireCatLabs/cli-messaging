@@ -1,5 +1,5 @@
 import type { Chat, Id, Message } from "../domain/models.js"
-import { DAYS, type Day, type Limit, type ReplyRule, type Window } from "./rules.js"
+import { DAYS, type Day, type Limit, type ReplyAction, type ReplyRule, type Window } from "./rules.js"
 import { answeredKey, type RepliesState } from "./state.js"
 
 /** What the matcher knows about one arriving message beyond the message itself. */
@@ -8,14 +8,15 @@ export interface Incoming {
   chat: Pick<Chat, "id" | "kind">
   /** The owner, to tell a mention or a reply to them; `null` when the account is not known. */
   owner: { id: Id | null; username?: string }
-  /** `isTester`: named in the file's `testers` — nobody else is ever answered (NEED-601). */
+  /** `isTester`: named in the file's `testers` — nobody else is ever answered (NEED-601); a task opens for anyone. */
   sender: { isBot: boolean; isContact: boolean; isTester: boolean }
   /** ms: when `serve` began catching up. Older messages are never answered — a week away must not get a week of replies. */
   since: number
 }
 
+/** `reply` is `null` when the rule only opens a task, or the sender may get no answer. */
 export type Decision =
-  | { reply: { text: string; asReply: boolean; model: ReplyRule["reply"]["model"] } }
+  | { actions: ReplyAction[]; reply: { text: string; asReply: boolean; model: ReplyRule["reply"]["model"] } | null }
   | { skip: string }
 
 const skip = (why: string): Decision => ({ skip: why })
@@ -32,7 +33,9 @@ export const decide = (rule: ReplyRule, incoming: Incoming, state: RepliesState,
   if (!rule.on) return skip("the rule is off")
   if (message.outgoing !== false) return skip(message.outgoing ? "your own message" : "the account is not known")
   if (message.senderIsChat || message.senderId === null) return skip("sent as a chat, not by a person")
-  if (!sender.isTester) return skip(NOT_A_TESTER)
+  // A task stays on this machine; only an answer to a real person waits for the testing to end.
+  const actions = sender.isTester ? rule.do : rule.do.filter((action) => action !== "reply")
+  if (actions.length === 0) return skip(NOT_A_TESTER)
   if (sender.isBot) return skip("sent by a bot")
   if (chat.kind !== "dialog" && chat.kind !== "group") return skip(`a ${chat.kind} is never answered`)
   if (message.editedAt !== null) return skip("an edited message")
@@ -64,9 +67,15 @@ export const decide = (rule: ReplyRule, incoming: Incoming, state: RepliesState,
   if (over(sent?.chats[chat.id], rule.limits.perChat, now)) return skip("the chat's limit is reached")
   if (over(sent?.people[message.senderId], rule.limits.perPerson, now)) return skip("the person's limit is reached")
 
+  if (!actions.includes("reply")) return { actions, reply: null }
   const text = filled(rule.reply.template, message.senderName)
-  if (text === undefined) return skip("the template needs a name the sender has not given")
-  return { reply: { text, asReply: rule.reply.asReply, model: rule.reply.model } }
+  if (text === undefined) {
+    const rest = actions.filter((action) => action !== "reply")
+    return rest.length === 0
+      ? skip("the template needs a name the sender has not given")
+      : { actions: rest, reply: null }
+  }
+  return { actions, reply: { text, asReply: rule.reply.asReply, model: rule.reply.model } }
 }
 
 const mentionsOwner = (message: Message, owner: Incoming["owner"]): boolean =>

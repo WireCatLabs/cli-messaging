@@ -5,7 +5,7 @@ import { CliError } from "@leemour/cli-core"
 import { describe, expect, it } from "vitest"
 import type { Message } from "../domain/models.js"
 import { defaultRule } from "./rules.js"
-import { NOT_ALLOWED, type Replier, replyTo } from "./serve.js"
+import { NO_TASKS, NOT_ALLOWED, ONLY_TASK, type Replier, replyTo } from "./serve.js"
 import { paused, readRepliesState, writeRepliesState } from "./state.js"
 
 const NOW = Date.parse("2026-10-07T18:30:00Z")
@@ -26,17 +26,31 @@ const said = (id: string, changes: Partial<Message> = {}): Message => ({
   ...changes,
 })
 
-const setUp = ({ testers = [{ id: "tester" }], allowed = true, perChat = "5/1d" } = {}) => {
+const setUp = ({
+  testers = [{ id: "tester" }],
+  allowed = true,
+  perChat = "5/1d",
+  does = ["reply"],
+  tasks = true,
+}: {
+  testers?: { id: string }[]
+  allowed?: boolean
+  perChat?: string
+  does?: string[]
+  tasks?: boolean
+} = {}) => {
   const root = mkdtempSync(join(tmpdir(), "replies-serve-"))
   const rule = {
     ...defaultRule("away"),
     on: true,
+    do: does,
     reply: { template: "Thanks, {firstName}.", model: "fill-only", asReply: true },
     limits: { perChat, perPerson: "5/1d" },
   }
   const rulesPath = join(root, "replies.json")
   writeFileSync(rulesPath, JSON.stringify({ testers, rules: [rule] }))
   const sent: { chat: string; text: string; sendId: string; origin: string }[] = []
+  const opened: { message: string; origin: string }[] = []
   let fails = 0
   const deps: Replier = {
     rulesPath,
@@ -56,9 +70,17 @@ const setUp = ({ testers = [{ id: "tester" }], allowed = true, perChat = "5/1d" 
       sent.push(reply)
     },
     newSendId: () => `send-${sent.length}`,
+    ...(tasks
+      ? {
+          openTask: async (message: Message, origin: string) => {
+            opened.push({ message: message.id, origin })
+            return true
+          },
+        }
+      : {}),
     now: () => NOW,
   }
-  return { deps, sent, failNext: (times: number) => (fails = times) }
+  return { deps, sent, opened, failNext: (times: number) => (fails = times) }
 }
 
 describe("serve's reply rules", () => {
@@ -125,5 +147,41 @@ describe("serve's reply rules", () => {
 
     expect(echo).toEqual({ skip: "the chat's limit is reached" })
     expect(sent).toHaveLength(1)
+  })
+
+  it("**opens a task for anyone a rule matches**, and sends nothing without replies.send", async () => {
+    const { deps, sent, opened } = setUp({ does: ["reply", "task"], allowed: false })
+
+    const stranger = await replyTo(deps, said("m1", { senderId: "someone" }))
+    const tester = await replyTo(deps, said("m2"))
+
+    expect(stranger).toEqual({ skip: ONLY_TASK, task: "away" })
+    expect(tester).toEqual({ skip: NOT_ALLOWED, task: "away" })
+    expect(opened).toEqual([
+      { message: "m1", origin: "rule:away" },
+      { message: "m2", origin: "rule:away" },
+    ])
+    expect(sent).toEqual([])
+  })
+
+  it("answers and opens a task in one go, and still answers where tasks cannot open", async () => {
+    const both = setUp({ does: ["reply", "task"] })
+    const noTasks = setUp({ does: ["reply", "task"], tasks: false })
+    const onlyTask = setUp({ does: ["task"], tasks: false })
+
+    expect(await replyTo(both.deps, said("m1"))).toEqual({ sent: "away", task: "away" })
+    expect(await replyTo(noTasks.deps, said("m1"))).toEqual({ sent: "away" })
+    expect(await replyTo(onlyTask.deps, said("m1"))).toEqual({ skip: NO_TASKS })
+    expect(both.sent).toHaveLength(1)
+  })
+
+  it("opens one task per message, however many times it arrives", async () => {
+    const { deps, opened } = setUp({ does: ["task"] })
+
+    await replyTo(deps, said("m1", { senderId: "someone" }))
+    const again = await replyTo(deps, said("m1", { senderId: "someone" }))
+
+    expect(again).toEqual({ skip: "already answered" })
+    expect(opened).toHaveLength(1)
   })
 })

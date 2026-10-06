@@ -83,7 +83,6 @@ describe("reply rules", () => {
       "{firstName}, {name}",
     ],
     ["a model that writes freely", { ...valid(), reply: { ...valid().reply, model: "free" } }, "rules.0.reply.model"],
-    ["a task before the tasks package", { ...valid(), do: ["reply", "task"] }, "waits for the tasks package"],
   ])("refuses %s, naming it", (_, rule, words) => {
     expect(refusal([rule])).toContain(words)
   })
