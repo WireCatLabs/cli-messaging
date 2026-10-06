@@ -52,7 +52,9 @@ const invoke = async (
           { mutates: true },
         ),
         new Command("setup").option("--agent <agent>").action(performed),
-        new Command("session").addCommand(new Command("start").argument("[method]").action(performed)),
+        new Command("session").addCommand(
+          new Command("start").argument("[method]").option("--qr-file <path>").action(performed),
+        ),
         new Command("watch").action(async function (this: Command) {
           const stopped = environmentOf(this).signal
           setImmediate(() => process.emit("SIGINT"))
@@ -98,6 +100,22 @@ describe("agent CLI contract", () => {
   it("ends a listening command on Ctrl-C with 0, and any other with 130", async () => {
     expect((await invoke(["watch", "--json"])).result).toBe(0)
     expect((await invoke(["wait", "--json"])).result).toBe(130)
+  })
+
+  it("allows an explicit QR artifact while keeping headless prompts disabled", async () => {
+    const result = await invoke(["session", "start", "qr", "--qr-file", "synthetic.png", "--json"])
+    expect(result.result).toBe(0)
+    expect(result.performed).toHaveBeenCalledOnce()
+    const input = Object.assign(new PassThrough(), { isTTY: true })
+    const prompted = await invoke(
+      ["session", "start", "qr", "--qr-file", "synthetic.png", "--json"],
+      { tty: true, stdin: input },
+      async (command) => {
+        await readSecret("credential", { input: environmentOf(command).stdin })
+      },
+    )
+    expect(prompted.result).toBe(2)
+    expect(JSON.parse(prompted.stderr[0] ?? "").error.reason).toBe("input_required")
   })
 
   it("makes JSON on a TTY headless before a secret prompt", async () => {
