@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.150.0 — 06.10.2026
+
 ### Added
 
 - **`review` and `serve` keep a list of what waits on you.** Each review, and `serve` as each message
@@ -16,17 +18,6 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 - **Open tasks in the store (store version 20).** `store.tasks` keeps what `@leemour/cli-tasks` tracks — a
   question, request, mention or promise waiting on the owner — as a locator to its message, never the text.
   Backup, restore and export carry the tasks with the messages. Builds from 0.49.0 on still open the file.
-
-### Changed — may break callers
-
-- `MessageStore` has a new required member, `tasks`: the `TaskStore` of `@leemour/cli-tasks` over store version 20.
-  A `MessageStore` written by hand — a test fake — adds it, `memoryTaskStore()` from `@leemour/cli-tasks/testing`
-  will do; `openStore` already does.
-
-## 0.150.0 — 06.10.2026
-
-### Added
-
 - `contacts profile <person> [--show-phone]` and read-only MCP `contacts_profile`: what the messenger says about
   one person — every handle, bio, birthday, phone where shown (last four digits unless `--show-phone`), its own
   flags (`bot`, `verified`, `premium`, `scam`, `fake`, `restricted`, `deleted`, `support`), `seen` (`online`,
@@ -67,6 +58,9 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Changed — may break callers
 
+- `MessageStore` has a new required member, `tasks`: the `TaskStore` of `@leemour/cli-tasks` over store version 20.
+  A `MessageStore` written by hand — a test fake — adds it, `memoryTaskStore()` from `@leemour/cli-tasks/testing`
+  will do; `openStore` already does.
 - `MessageStore` has a new required method, `senderStats`: one person's stored messages per chat. A store
   written by hand — a test fake — adds it; `openStore` already does.
 - `Services` has a new required member, `botcheck`. A `Services` object written by hand — a test fake — adds it;
