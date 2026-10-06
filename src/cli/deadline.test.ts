@@ -78,3 +78,27 @@ describe("a deadline that ends the command", () => {
     expect(entries).toMatchObject([{ operationId: "op-2", outcome: "sent" }])
   })
 })
+
+it("does not reserve or send a new write after its scope has timed out", async () => {
+  let release = () => {}
+  const delayed = new Promise<void>((resolve) => {
+    release = resolve
+  })
+  const check = vi.fn()
+  const send = vi.fn(async () => "sent")
+  const guard: SendGuard = { check, record: () => {} }
+  let continued: Promise<string> | undefined
+  await expect(
+    withDeadline(5, [], () => {
+      continued = (async () => {
+        await delayed
+        return guardedWrite(guard, { operationId: "op-late", chatId: "synthetic", kind: "message" }, send)
+      })()
+      return continued
+    }),
+  ).rejects.toMatchObject({ code: "timeout" })
+  release()
+  await expect(continued).rejects.toMatchObject({ code: "timeout" })
+  expect(check).not.toHaveBeenCalled()
+  expect(send).not.toHaveBeenCalled()
+})

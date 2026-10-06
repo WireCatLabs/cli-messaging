@@ -268,7 +268,9 @@ describe.each(["max", "tg"])("shared shell contract for %s", (name) => {
     streams.stdout.length = 0
     expect(await run(["messages", "list", "--offline", "--no-record"], provider, options)).toBe(6)
     expect(streams.stdout).toEqual([])
-    expect(JSON.parse(streams.stderr[0] ?? "")).toEqual({ error: { code: "not_found", message: "nothing recorded" } })
+    expect(JSON.parse(streams.stderr[0] ?? "")).toEqual({
+      error: { code: "not_found", message: "nothing recorded", retryable: false },
+    })
   })
 })
 

@@ -12,6 +12,7 @@ jobs:
       checks: |
         pnpm docs:check
         pnpm check:dist
+        pnpm check:agent-process
       # The smoke runs the sources; only the second line loads the Bun half of the Drizzle bundle in dist.
       bun-run: |
         pnpm smoke:bun

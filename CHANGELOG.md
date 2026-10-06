@@ -6,6 +6,26 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- `commands schema <path...>` publishes versioned JSON Schema 2020-12 descriptions of argv,
+  result coverage, effects, permissions and retry guidance. MCP tools advertise open object
+  result schemas with structured content and bounded serialized responses.
+- Agent execution flags: `--no-input`, `--max-input-bytes`, `--max-output-bytes`, `--fields`
+  and a general `--dry-run` preview before preparation or action. Specialized previews retain
+  their existing behavior. Previews exclude payload content and leave remote targets unresolved.
+
+### Changed — may break callers
+
+- One-shot commands default to a 30-second deadline; explicit `--timeout` overrides it. Persistent
+  watch/serve/MCP and interactive login have their own lifecycles. Buffered input defaults to
+  16 MiB, secret input to 64 KiB, and machine output to 4 MiB. Exceeding output limits fails visibly;
+  JSONL errors identify already-emitted rows. `--max-output-bytes 0` disables the output cap.
+- JSON/JSONL and nonterminal execution cannot prompt or launch interactive login. Explicit piped
+  input remains available. SIGINT exits 130, SIGTERM 143, and a closed output pipe ends quietly.
+  Errors expose conservative retry guidance; interrupted writes retain unknown-outcome correlation.
+  Timed-out work cannot reserve another write after its scope has ended.
+
 ## 0.157.0 — 07.10.2026
 
 ### Fixed

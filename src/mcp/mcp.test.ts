@@ -1433,7 +1433,10 @@ describe("the MCP server", () => {
     const { call } = await connect(telegram)
 
     const missing = await call("chat_chats_show", { chat: "Bok" })
-    expect(missing).toEqual({ isError: true, body: { error: { code: "not_found", message: "no chat matches Bok" } } })
+    expect(missing).toEqual({
+      isError: true,
+      body: { error: { code: "not_found", message: "no chat matches Bok", retryable: false } },
+    })
     expect(telegram.closed()).toBe(0)
 
     failure = new CliError("network_error", "the socket closed")

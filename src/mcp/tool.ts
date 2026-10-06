@@ -3,7 +3,9 @@ import type { CallToolResult, McpServer, ServerContext, ToolAnnotations } from "
 import { toStandardJsonSchema } from "@valibot/to-json-schema"
 import * as v from "valibot"
 import type { AISettings } from "../analysis/settings.js"
+import { DEFAULT_OUTPUT_BYTES } from "../cli/execution.js"
 import { isCliFailure } from "../cli/failures.js"
+import { MAX_BUFFERED_INPUT } from "../cli/input-policy.js"
 import type { Messenger } from "../cli/messenger/context.js"
 import type { MessengerAdapter } from "../cli/messenger/port.js"
 import type { Settings } from "../cli/settings.js"
@@ -205,6 +207,12 @@ export const entryRunner = ({
     const run = `mcp ${key.replaceAll("_", " ")}`
     try {
       const execute = async () => {
+        if (Buffer.byteLength(JSON.stringify(args)) > MAX_BUFFERED_INPUT)
+          throw new CliError("validation_error", "tool arguments exceed the buffered input limit", {
+            reason: "input_limit",
+            maxBytes: MAX_BUFFERED_INPUT,
+            retryable: false,
+          })
         assertStatsPermissionsCurrent(key.split("_"), defaults.settings.permissions ?? {})
         for (const permission of readKeysForCommand(key.split("_"))) {
           if (levelFor(defaults.settings.permissions ?? {}, permission).level === "deny")
@@ -282,6 +290,7 @@ export const registerTools = (server: McpServer, tools: Record<string, AnyTool>,
     server.registerTool(
       `${registration.command}_${key}`,
       {
+        outputSchema: toStandardJsonSchema(v.looseObject({})),
         title: definition.title,
         description: reads ? `${definition.description} ${UNTRUSTED}` : definition.description,
         inputSchema: toStandardJsonSchema(inputOf(definition, syncAllowed)),
@@ -305,24 +314,42 @@ export class Picture {
   ) {}
 }
 
-export const answered = (value: object): CallToolResult => {
+export const answered = (value: object, maxBytes = DEFAULT_OUTPUT_BYTES): CallToolResult => {
+  const bounded = (result: CallToolResult): CallToolResult => {
+    if (maxBytes !== 0 && Buffer.byteLength(JSON.stringify(result)) > maxBytes)
+      throw new CliError(
+        "invalid_response",
+        "tool output exceeds its byte limit — reduce limit or use a narrower request",
+        { reason: "output_limit", maxBytes, retryable: false },
+      )
+    return result
+  }
+  if (value === null || Array.isArray(value) || typeof value !== "object")
+    throw new CliError("invalid_response", "tool result must be an object", { retryable: false })
+  const objectBody = (value: object): Record<string, unknown> => {
+    const serialized = JSON.parse(JSON.stringify(value)) as unknown
+    if (serialized === null || Array.isArray(serialized) || typeof serialized !== "object")
+      throw new CliError("invalid_response", "serialized tool result must be an object", { retryable: false })
+    return serialized as Record<string, unknown>
+  }
   if (value instanceof Picture) {
-    return {
+    return bounded({
+      structuredContent: objectBody(value.about),
       content: [
         { type: "image", data: Buffer.from(value.bytes).toString("base64"), mimeType: value.mimeType },
         { type: "text", text: JSON.stringify(value.about) },
       ],
-    }
+    })
   }
-  const body = value as Record<string, unknown>
-  return { content: [{ type: "text", text: JSON.stringify(body) }], structuredContent: body }
+  const body = objectBody(value)
+  return bounded({ content: [{ type: "text", text: JSON.stringify(body) }], structuredContent: body })
 }
 
 /** The same object the CLI prints on stderr, so an agent reads one error shape from both. */
 export const failed = (error: unknown): CallToolResult => {
   const body = isCliFailure(error)
-    ? { code: error.code, message: error.message, ...error.details }
-    : { code: "generic_failure", message: error instanceof Error ? error.message : String(error) }
+    ? { code: error.code, message: error.message, retryable: false, ...error.details }
+    : { code: "generic_failure", message: error instanceof Error ? error.message : String(error), retryable: false }
   return {
     content: [{ type: "text", text: JSON.stringify({ error: body }) }],
     structuredContent: { error: body },

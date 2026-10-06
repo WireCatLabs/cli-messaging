@@ -6,6 +6,7 @@ import {
   type Streams,
   singleLine,
 } from "@leemour/cli-core"
+import { fieldsOf, projectFields } from "./cli/result-fields.js"
 
 export interface OutputOptions {
   json?: boolean
@@ -15,6 +16,7 @@ export interface OutputOptions {
   /** Whether a person is looking. Defaults to whether stdout is a terminal. */
   tty?: boolean
   color?: boolean
+  fields?: string
 }
 
 /**
@@ -25,12 +27,30 @@ export interface OutputOptions {
  * instead. In every machine mode **stdout carries JSON and nothing else** — diagnostics are on stderr in all modes, which is what makes
  * that contract hold by construction rather than by remembering.
  */
-export const resolveOutput = ({ json, jsonl, quiet, streams = processStreams, tty, color }: OutputOptions = {}) => {
+export const resolveOutput = ({
+  json,
+  jsonl,
+  quiet,
+  streams = processStreams,
+  tty,
+  color,
+  fields,
+}: OutputOptions = {}) => {
   const interactive = tty ?? process.stdout.isTTY === true
   const format: RenderFormat = jsonl ? "jsonl" : json || !interactive ? "json" : "pretty"
   const painted = color ?? (format === "pretty" && process.env.NO_COLOR === undefined)
   const created = createRenderer({ format, color: painted, streams })
-  const renderer = format === "pretty" ? oneLineFields(created) : created
+  const paths = fields === undefined ? undefined : fieldsOf(fields)
+  const renderer =
+    format === "pretty"
+      ? oneLineFields(created)
+      : paths
+        ? {
+            ...created,
+            result: (value: unknown) => created.result(projectFields(value, paths)),
+            stream: (items: Iterable<unknown>) => created.stream([...items].map((item) => projectFields(item, paths))),
+          }
+        : created
 
   return { format, color: painted, streams, renderer: quiet ? silence(renderer) : renderer }
 }

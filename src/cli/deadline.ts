@@ -1,5 +1,5 @@
 import { CliError } from "@leemour/cli-core"
-import { type WriteInFlight, writesInFlight } from "../sends/guarded.js"
+import { stopWrites, type WriteInFlight, withWriteScope } from "../sends/guarded.js"
 
 /** Anything holding something that would keep the process alive — a messenger connection is one. */
 export interface Closeable {
@@ -39,7 +39,6 @@ export const withDeadline = async <T>(
     timer = setTimeout(() => {
       const pending = [...writes]
       const cut = pending.filter((write) => !write.preparing)
-      for (const write of pending) write.cut()
       timedOut =
         cut.length > 0
           ? new CliError(
@@ -49,6 +48,7 @@ export const withDeadline = async <T>(
               { operationIds: cut.map((write) => write.operationId), retryable: false },
             )
           : new CliError("timeout", `the command did not finish within ${ms}ms — \`--timeout\` ended it`)
+      stopWrites(writes, timedOut)
       // Sockets first, then the message: the rejection is what the person reads, and the closing
       // is what lets the process actually end once they have read it.
       void Promise.allSettled(closeables.map((closeable) => closeable.close())).then(() => reject(timedOut))
@@ -56,7 +56,7 @@ export const withDeadline = async <T>(
   })
 
   try {
-    return await Promise.race([writesInFlight.run(writes, body), expired])
+    return await Promise.race([withWriteScope(writes, body), expired])
   } catch (error) {
     // Closing rejects the body's own request, and that rejection arrives first.
     throw timedOut ?? error
