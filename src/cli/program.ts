@@ -101,13 +101,19 @@ export type RunOptions = BaseEnvironment & Record<string, unknown>
  */
 export const run = async (argv: string[], definition: ProgramDefinition, options: RunOptions = {}): Promise<number> => {
   const streams = options.streams ?? processStreams
+  const delimiter = argv.indexOf("--")
+  const machine = argv
+    .slice(0, delimiter < 0 ? undefined : delimiter)
+    .some((word) => word === "--json" || word === "--jsonl")
+  const reporting = machine ? { ...options, tty: false } : options
   const { command } = definition.app
   const program = createProgram(definition, {
     out: (text) => streams.data(text.replace(/\n$/, "")),
-    err: (text) => streams.diagnostic(text.replace(/\n$/, "")),
+    err: () => {},
   })
   const environment = { ...options, streams, app: definition.app }
   provide(program, environment)
+  program.hook("preAction", async () => definition.prepare?.(program, environment))
   // Depth-first: a subcommand left with the default behaviour kills the process from inside a test.
   forEachCommand(program, (child) => child.exitOverride())
 
@@ -122,44 +128,46 @@ export const run = async (argv: string[], definition: ProgramDefinition, options
     const message =
       `"${profile}" is not a command, so it was read as a profile name — and no command followed it. ` +
       `Run \`${command} --help\` for the commands, or \`${command} ${profile} account show\` if "${profile}" is your profile.`
-    report(streams, options, { code: "validation_error", message })
     const failure = new CliError("validation_error", message)
-    await settleFailure(failure, { definition, program, rest, profile, options })
+    const settled = await settleFailure(failure, { definition, program, rest, profile, options })
+    report(streams, reporting, { code: "validation_error", message, ...settled })
     return exitCodeFor("validation_error")
   }
 
   try {
-    await definition.prepare?.(program, environment)
     await program.parseAsync(rest, { from: "user" })
     const code = process.exitCode === undefined ? 0 : Number(process.exitCode)
     const hint = code === 0 && !rest.includes("--quiet") ? hintFor(definition, rest, options) : undefined
     if (hint) streams.diagnostic(hint)
     return code
   } catch (error) {
-    if (!isCommanderFailure(error) || error.exitCode !== 0) {
-      const failure = isCommanderFailure(error) ? new CliError("validation_error", error.message) : error
-      await settleFailure(failure, { definition, program, rest, profile, options })
-    }
     if (isCommanderFailure(error)) {
+      if (error.exitCode === 0) return 0
+      let message = error.message.replace(/^error: /, "")
+      if (error.code === "commander.helpDisplayed")
+        message = `give a command — run \`${command} --help\` for the commands`
       if (
         profile !== undefined &&
         error.code === "commander.unknownCommand" &&
         rest[0] !== undefined &&
         !commandWords(program).has(rest[0])
       ) {
-        streams.diagnostic(
-          `"${profile}" is not a command, so it was read as a profile name — which left "${rest[0]}" to be one.`,
-        )
+        message += ` "${profile}" is not a command, so it was read as a profile name — which left "${rest[0]}" to be one.`
       }
-      return error.exitCode
+      const failure = new CliError("validation_error", message)
+      const settled = await settleFailure(failure, { definition, program, rest, profile, options })
+      report(streams, reporting, { code: "validation_error", message, ...settled })
+      return exitCodeFor("validation_error")
     }
+    const settled = await settleFailure(error, { definition, program, rest, profile, options })
     if (isCliFailure(error)) {
-      report(streams, options, { code: error.code, message: error.message, ...error.details })
+      report(streams, reporting, { code: error.code, message: error.message, ...error.details, ...settled })
       return exitCodeFor(error.code)
     }
-    report(streams, options, {
+    report(streams, reporting, {
       code: "generic_failure",
       message: error instanceof Error ? error.message : String(error),
+      ...settled,
     })
     return GENERIC_FAILURE
   }
@@ -186,14 +194,15 @@ interface Failed {
   options: RunOptions
 }
 
-const settleFailure = async (failure: unknown, state: Failed): Promise<void> => {
+const settleFailure = async (failure: unknown, state: Failed): Promise<{ settlementFailed?: true }> => {
+  let settlementFailed: true | undefined
   try {
     await state.definition.onFailure?.(failure, state.program)
   } catch {
-    const streams = state.options.streams ?? processStreams
-    streams.diagnostic("could not finish the command's failure handler")
+    settlementFailed = true
   }
   await keepFailure(failure, state)
+  return settlementFailed ? { settlementFailed } : {}
 }
 
 /**
