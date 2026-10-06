@@ -41,12 +41,20 @@ const normal = (command: string): string =>
 const haystack = (command: string, one: McpCommand): string =>
   [command, one.title, one.description, ...Object.keys(one.input.entries)].join(" ").toLowerCase()
 
-/** Every query word must appear; a word in the command itself ranks first. No word lists everything. */
+/**
+ * Every query word must appear. The command named exactly ranks first, then whole words of the command,
+ * then parts of them. No word lists everything.
+ */
 export const search = (commands: Record<string, McpCommand>, query: string): [string, McpCommand][] => {
   const words = query.toLowerCase().split(/\s+/).filter(Boolean)
   return Object.entries(commands)
     .filter(([command, one]) => words.every((word) => haystack(command, one).includes(word)))
-    .map((entry) => ({ entry, rank: words.filter((word) => entry[0].includes(word)).length }))
+    .map((entry) => {
+      const parts = entry[0].split(/[\s-]/)
+      const exact = entry[0] === words.join(" ") ? 100 : 0
+      const whole = words.filter((word) => parts.includes(word)).length * 10
+      return { entry, rank: exact + whole + words.filter((word) => entry[0].includes(word)).length }
+    })
     .sort((a, b) => b.rank - a.rank || a.entry[0].localeCompare(b.entry[0]))
     .map(({ entry }) => entry)
 }
