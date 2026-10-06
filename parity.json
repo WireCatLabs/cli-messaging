@@ -2320,41 +2320,21 @@
       "in": "all"
     },
     "replies": {
-      "in": ["tg"],
-      "planned": {
-        "max": "max's own serve does not run the reply rules yet"
-      }
+      "in": "all"
     },
     "replies pause": {
-      "in": ["tg"],
-      "planned": {
-        "max": "max's own serve does not run the reply rules yet"
-      }
+      "in": "all"
     },
     "replies resume": {
-      "in": ["tg"],
-      "planned": {
-        "max": "max's own serve does not run the reply rules yet"
-      }
+      "in": "all"
     },
     "replies status": {
-      "in": ["tg"],
-      "planned": {
-        "max": "max's own serve does not run the reply rules yet"
-      }
+      "in": "all"
     },
     "replies test": {
-      "in": ["tg"],
-      "planned": {
-        "max": "max's own serve does not run the reply rules yet"
-      },
+      "in": "all",
       "options": {
-        "--since-time": {
-          "in": ["tg"],
-          "planned": {
-            "max": "max's own serve does not run the reply rules yet"
-          }
-        }
+        "--since-time": "all"
       }
     },
     "review": {
