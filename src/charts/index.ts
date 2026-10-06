@@ -9,4 +9,5 @@ export {
   type ChartSize,
   type RenderedChart,
 } from "./model.js"
+export { chartPng, type RenderedPng } from "./png.js"
 export { chartRenderer } from "./render.js"

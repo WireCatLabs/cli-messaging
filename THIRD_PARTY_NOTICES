@@ -751,3 +751,10 @@ Copyright 2017-2026 The Apache Software Foundation
 This product includes software developed at
 The Apache Software Foundation (https://www.apache.org/).
 Apache ECharts is distributed under the Apache License 2.0; its LICENSE is shipped in the echarts package.
+
+Noto Sans Regular
+Copyright 2018 The Noto Project Authors (github.com/googlei18n/noto-fonts)
+Licensed under SIL Open Font License 1.1; see dist/charts/fonts/OFL.txt and SOURCE.md.
+
+PNG rasterization uses @resvg/resvg-js under MPL-2.0. Its original sources are
+available at https://github.com/thx/resvg-js/tree/v2.6.2.

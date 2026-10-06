@@ -13,6 +13,12 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   configuration or consent makes no call. `models.<purpose>.provider|model|baseUrl` settings fall back
   to `models.default`, can be edited with dotted config keys, and report field sources in `config show`.
   Existing analysis settings and per-chat consents keep working; conversation analysis uses the gateway.
+
+- `stats charts --output activity.png` exports a dark PNG beside SVG, using a separate lazy
+  encoder and a bundled font for Cyrillic labels. The stored-only MCP `stats_charts` accepts
+  `format: "png"` to return image content with the same chart JSON; omitted format stays JSON.
+  PNG files are private and never replace existing files, and MCP writes no files or opens a connection.
+
 - `replies add|edit|on|off` edit the profile's rules without opening a connection: new rules write
   every default and stay off; enabling a rule that replies requires a nonempty template. `replies audience`
   shows or edits the profile's allow and deny lists. Invalid edits leave the existing file untouched;

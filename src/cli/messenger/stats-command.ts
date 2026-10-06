@@ -4,6 +4,7 @@ import { CliError } from "@leemour/cli-core"
 import { Command } from "commander"
 import { chartKindOf, chartPeriodOf, chatChart } from "../../charts/chat.js"
 import { CHART_SIZE, type ChartKind, type ChartPeriod } from "../../charts/model.js"
+import { chartPng } from "../../charts/png.js"
 import { chartRenderer } from "../../charts/render.js"
 import { timezoneOf } from "../../search/lucene/dates.js"
 import { EVENTS_DAYS } from "../../services/chats.js"
@@ -14,7 +15,7 @@ export const statsCommand = (messenger: Messenger, loadRenderer = chartRenderer)
   const stats = new Command("stats").description("charts from the account's statistics")
   stats
     .command("charts")
-    .description("a chart's data from a chat's statistics, and optionally a dark SVG image")
+    .description("a chart's data from a chat's statistics, and optionally a dark SVG or PNG image")
     .argument("<chat>", messenger.chatArgument)
     .option(
       "--chart-kind <messages|active|membership>",
@@ -25,7 +26,7 @@ export const statsCommand = (messenger: Messenger, loadRenderer = chartRenderer)
     .option("--by <day|week>", "one point per calendar day or week (weeks start on Monday)", chartPeriodOf, "day")
     .option("--since-time <time>", `ISO 8601, or 2h / 1d ago; ${EVENTS_DAYS} days ago if not given`)
     .option("--timezone <zone>", "the IANA timezone for calendar days")
-    .option("--output <file>", "write a dark SVG image to a new .svg file")
+    .option("--output <file>", "write a dark image to a new .svg or .png file")
     .action(async function (this: Command, chat: string) {
       const context = messengerContext(this, messenger)
       const {
@@ -43,8 +44,12 @@ export const statsCommand = (messenger: Messenger, loadRenderer = chartRenderer)
       }>()
       if (context.format === "jsonl")
         throw new CliError("validation_error", "charts return one JSON object — use --json, not --jsonl")
-      if (output !== undefined && (output === "-" || extname(output).toLowerCase() !== ".svg")) {
-        throw new CliError("validation_error", "--output takes a .svg file; image output to stdout is unavailable")
+      const extension = output === undefined ? undefined : extname(output).toLowerCase()
+      if (output !== undefined && extension !== ".svg" && extension !== ".png") {
+        throw new CliError(
+          "validation_error",
+          "--output takes a .svg or .png file; image output to stdout is unavailable",
+        )
       }
       const timezone = timezoneOf(given)
       const found = await context.withServices((services) =>
@@ -55,9 +60,10 @@ export const statsCommand = (messenger: Messenger, loadRenderer = chartRenderer)
         }),
       )
       const chart = chatChart(found, { kind: chartKind, by, timezone })
-      let chartFile: { path: string; format: "svg"; width: number; height: number } | undefined
+      let chartFile: { path: string; format: "svg" | "png"; width: number; height: number } | undefined
       if (output !== undefined) {
-        const rendered = await (await loadRenderer()).render(chart, CHART_SIZE)
+        const svg = await (await loadRenderer()).render(chart, CHART_SIZE)
+        const rendered = extension === ".png" ? await chartPng(svg) : svg
         const path = resolve(output)
         try {
           writeFileSync(path, rendered.bytes, { flag: "wx", mode: 0o600 })

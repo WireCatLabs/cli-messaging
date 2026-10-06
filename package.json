@@ -74,7 +74,7 @@
     }
   },
   "scripts": {
-    "build": "tsc --build && node scripts/bundle-drizzle.ts && node scripts/copy-snowball.ts",
+    "build": "tsc --build && node scripts/bundle-drizzle.ts && node scripts/copy-snowball.ts && node scripts/copy-chart-fonts.ts",
     "check:dist": "node scripts/check-dist.ts",
     "typecheck": "tsc --build --force --emitDeclarationOnly && tsc -p tsconfig.test.json && tsc -p tsconfig.scripts.json",
     "lint": "biome check .",
@@ -103,6 +103,7 @@
     "@leemour/cli-messaging-sqlite": "1.0.0",
     "@leemour/cli-tasks": "0.1.0",
     "@modelcontextprotocol/server": "2.1.0",
+    "@resvg/resvg-js": "2.6.2",
     "@valibot/to-json-schema": "1.8.0",
     "echarts": "6.1.0",
     "lossless-json": "4.3.0",

@@ -874,7 +874,25 @@ describe("the MCP server", () => {
     const telegram = scripted()
     const { client } = await connect(telegram, { config: levels({ messages: "deny" }) })
     expect((await client.listTools()).tools.map(({ name }) => name)).not.toContain("chat_messages_evidence")
+    expect((await client.listTools()).tools.map(({ name }) => name)).not.toContain("chat_stats_charts")
     expect(telegram.opened()).toBe(0)
+  })
+
+  it.each(["legacy", "modern"] as const)("returns a chart image over the %s MCP transport", async (era) => {
+    const telegram = scripted()
+    const { client, call } = await connect(telegram, { era })
+    await call("chat_messages_list", { chat: "7" })
+    const opened = telegram.opened()
+    const result = await client.callTool({ name: "chat_stats_charts", arguments: { chat: "7", format: "png" } })
+    expect(result.isError).not.toBe(true)
+    const content = result.content as { type: string; data?: string; mimeType?: string; text?: string }[]
+    expect(content[0]).toMatchObject({ type: "image", mimeType: "image/png" })
+    expect([...Buffer.from(content[0]?.data ?? "", "base64").subarray(0, 8)]).toEqual([137, 80, 78, 71, 13, 10, 26, 10])
+    expect(JSON.parse(content[1]?.text ?? "null")).toMatchObject({
+      chart: { version: 1, kind: "bar" },
+      image: { format: "png", width: 800, height: 400 },
+    })
+    expect(telegram.opened()).toBe(opened)
   })
 
   it("answers member history and the tracking list from the store, empty before any fetch", async () => {

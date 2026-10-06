@@ -570,6 +570,11 @@ many), `--allow-any-file` (which files).
 
 ## MCP
 
+`stats charts --output` selects SVG or PNG by the file extension; images never go to stdout.
+The stored-only `stats_charts` tool accepts optional `format: json|png` (default `json`).
+PNG adds `image/png` content and JSON text `{ chart, image: { format, width, height } }`;
+it writes no file and uses the same `messages` read permission.
+
 1. **A tool follows its full command path, joined by underscores after `<tool>_`**:
    `max_store_export`, `tg_chats_members_list`, `max_stats_messages_top`;
    a bot's path includes `bot`: `tg_bot_messages_send`.
