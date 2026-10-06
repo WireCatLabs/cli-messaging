@@ -53,6 +53,15 @@ const invoke = async (
         ),
         new Command("setup").option("--agent <agent>").action(performed),
         new Command("session").addCommand(new Command("start").argument("[method]").action(performed)),
+        new Command("watch").action(async function (this: Command) {
+          const stopped = environmentOf(this).signal
+          setImmediate(() => process.emit("SIGINT"))
+          await new Promise((resolve) => stopped?.addEventListener("abort", resolve, { once: true }))
+        }),
+        new Command("wait").action(async () => {
+          setImmediate(() => process.emit("SIGINT"))
+          await new Promise(() => {})
+        }),
         commandsCommand(app),
       ],
     },
@@ -85,6 +94,11 @@ describe("agent CLI contract", () => {
     expect(result.result).toBe(2)
     expect(result.performed).not.toHaveBeenCalled()
     expect(JSON.parse(result.stderr[0] ?? "").error.reason).toBe("input_required")
+  })
+
+  it("ends a listening command on Ctrl-C with 0, and any other with 130", async () => {
+    expect((await invoke(["watch", "--json"])).result).toBe(0)
+    expect((await invoke(["wait", "--json"])).result).toBe(130)
   })
 
   it("makes JSON on a TTY headless before a secret prompt", async () => {

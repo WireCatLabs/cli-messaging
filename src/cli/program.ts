@@ -118,8 +118,10 @@ export const run = async (argv: string[], definition: ProgramDefinition, options
   const control = execution(streams, { maxOutputBytes: 0 })
   let restoreInput: (() => void) | undefined
   let signalExit: number | undefined
+  // Ctrl-C is how a command that listens until stopped ends: still aborted, but exit 0, not 130.
+  let listens = false
   const interrupted = (signal: "SIGINT" | "SIGTERM") => {
-    signalExit = signal === "SIGINT" ? 130 : 143
+    signalExit = signal === "SIGINT" ? (listens ? 0 : 130) : 143
     control.abort(new CliError("cancelled", `command interrupted by ${signal}`, { reason: signal, retryable: false }))
   }
   const sigint = () => interrupted("SIGINT")
@@ -196,6 +198,7 @@ export const run = async (argv: string[], definition: ProgramDefinition, options
       ["watch", "serve", "mcp"].includes(path[0] ?? "") ||
       path.includes("mcp") ||
       (path[0] === "bot" && path[1] === "watch")
+    listens = persistent
     const interactiveLogin = !headless && (path[0] === "setup" || (path[0] === "session" && path[1] === "start"))
     const timeout = flags.timeout ?? (commandEnv[envName(definition.app, "TIMEOUT")]?.trim() || undefined)
     control.start(

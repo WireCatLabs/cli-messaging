@@ -19,6 +19,10 @@ Released early: MAX native server daily member fetching needs the public schedul
   refuses on its own the steps that need a terminal; a QR or SMS `session start` is still refused
   without one, before it starts.
 
+- Ctrl-C ends `watch`, `bot watch`, `serve` and `mcp` normally again, exit 0: 0.157.0 cancelled them
+  with 130 like any other command, though stopping on Ctrl-C is how they end. Other commands still
+  exit 130 on Ctrl-C; SIGTERM still ends every command with 143.
+
 - Searches report imported mail coverage once, with `memo mail import --since <date>` as the next
   step, rather than counting every mail thread as an incomplete messenger chat and suggesting
   `store fetch`. JSON completeness still reports missing or unknown history.
