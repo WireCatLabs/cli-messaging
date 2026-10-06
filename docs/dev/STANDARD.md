@@ -354,7 +354,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--from` | `<who\|link>` | sender to match in bot messages search; starting message link in tg bot store fetch |  | `bot messages search`, `bot store fetch` (tg-only) |
 | `--history` |  | the people added also see the messages from before they came |  | `chats members add` (max-only) |
 | `--html` |  | the text is HTML: <b>, <i>, <a href>, <code> |  | `bot messages edit`, `bot messages send` |
-| `--http` |  | serve MCP over HTTP on 127.0.0.1 behind the owner's tunnel, with a one-owner login; every write asks first by default |  | `mcp` |
+| `--http` |  | serve MCP over HTTP on 127.0.0.1 behind the owner's tunnel, with a one-owner login; every write asks first by default. **MAX wording catches up with Telegram’s explicit “by default” at the next shared SDK adoption; both HTTP servers confirm writes by default** |  | `mcp` |
 | `--http-confirmation` | `<mode>` | required (default): every write needs a server form; permissions: follow the effective profile levels |  | `mcp` |
 | `--idle` | `<duration>` | stop after this long with nobody using it — 15m, 1h |  | `serve` (max-only), `server restart` (max-only), `server start` (max-only) |
 | `--json` |  | machine-readable output: one JSON value on stdout, nothing else |  | every command |

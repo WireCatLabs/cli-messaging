@@ -53,7 +53,7 @@
       "note": "retired access flag: accepted with a warning, grants no permissions in either CLI"
     },
     "--allow-moderate": {
-      "meaning": "offer the tool that applies a group's rules — delete others' messages, remove people",
+      "meaning": "offer the tool that applies a group's rules \u2014 delete others' messages, remove people",
       "note": "retired access flag: accepted with a warning, grants no permissions in either CLI"
     },
     "--allow-people": {
@@ -80,7 +80,7 @@
     },
     "--as": {
       "value": "<state>",
-      "meaning": "how a task is closed: done, or dismissed — it needs no answer"
+      "meaning": "how a task is closed: done, or dismissed \u2014 it needs no answer"
     },
     "--as-file": {
       "meaning": "send every --file as a plain file to download, a video included"
@@ -128,7 +128,7 @@
     },
     "--bots": {
       "value": "<profiles>",
-      "meaning": "also read these bots' copies, comma separated — each allowed by readOtherBots"
+      "meaning": "also read these bots' copies, comma separated \u2014 each allowed by readOtherBots"
     },
     "--budget": {
       "value": "<pages>",
@@ -137,12 +137,12 @@
     "--by": {
       "value": "<grouping>",
       "meaning": "what to count by",
-      "note": "each command names its own groupings — messages stats chat, sender, day or hour, and searches create the same for messages stats --saved; chats stats day or week, as a series beside its totals — so it differs on purpose (Help text rule 4)"
+      "note": "each command names its own groupings \u2014 messages stats chat, sender, day or hour, and searches create the same for messages stats --saved; chats stats day or week, as a series beside its totals \u2014 so it differs on purpose (Help text rule 4)"
     },
     "--can": {
       "value": "<rights>",
       "meaning": "what they may do, comma-separated: read, members, admins, info, pin, link, post, edit, delete",
-      "note": "lists the rights each messenger has — MAX has `read`, Telegram does not — so it differs on purpose (Help text rule 4)"
+      "note": "lists the rights each messenger has \u2014 MAX has `read`, Telegram does not \u2014 so it differs on purpose (Help text rule 4)"
     },
     "--channel": {
       "meaning": "a private channel instead of a group; people join it by its link"
@@ -189,7 +189,7 @@
     },
     "--deep": {
       "value": "<n>",
-      "meaning": "also check the top n in full — profile, photos, everything they wrote, and the public ban lists, which are sent their ids — one person a second",
+      "meaning": "also check the top n in full \u2014 profile, photos, everything they wrote, and the public ban lists, which are sent their ids \u2014 one person a second",
       "note": "TG specializes the SDK help with the bounded Telegram audit; MAX retains the generic SDK wording. Align the shared help with provider capabilities separately; SDK adoption alone does not remove the difference."
     },
     "--defaults": {
@@ -205,11 +205,11 @@
     },
     "--description": {
       "value": "<text>",
-      "meaning": "the new about text — of a chat or of your account"
+      "meaning": "the new about text \u2014 of a chat or of your account"
     },
     "--dims": {
       "value": "<n>",
-      "meaning": "remote: the vector size — needed with --base-url; shortens an OpenAI model's"
+      "meaning": "remote: the vector size \u2014 needed with --base-url; shortens an OpenAI model's"
     },
     "--do": {
       "meaning": "actions: reply, task, or both, comma-separated",
@@ -255,7 +255,7 @@
       "default": "all"
     },
     "--for-everyone": {
-      "meaning": "delete for everyone in the chat, not only for you — they cannot get it back"
+      "meaning": "delete for everyone in the chat, not only for you \u2014 they cannot get it back"
     },
     "--format": {
       "value": "<format>",
@@ -273,7 +273,8 @@
       "meaning": "the text is HTML: <b>, <i>, <a href>, <code>"
     },
     "--http": {
-      "meaning": "serve MCP over HTTP on 127.0.0.1 behind the owner's tunnel, with a one-owner login; every write asks first by default"
+      "meaning": "serve MCP over HTTP on 127.0.0.1 behind the owner's tunnel, with a one-owner login; every write asks first by default",
+      "note": "MAX wording catches up with Telegram\u2019s explicit \u201cby default\u201d at the next shared SDK adoption; both HTTP servers confirm writes by default"
     },
     "--http-confirmation": {
       "value": "<mode>",
@@ -281,7 +282,7 @@
     },
     "--idle": {
       "value": "<duration>",
-      "meaning": "stop after this long with nobody using it — 15m, 1h"
+      "meaning": "stop after this long with nobody using it \u2014 15m, 1h"
     },
     "--json": {
       "meaning": "machine-readable output: one JSON value on stdout, nothing else"
@@ -402,7 +403,7 @@
       "meaning": "only files saved here whose text nobody has yet: what an agent reads and writes back"
     },
     "--new": {
-      "meaning": "what arrived since the last check, each message once — for scheduled runs"
+      "meaning": "what arrived since the last check, each message once \u2014 for scheduled runs"
     },
     "--newest": {
       "meaning": "newest first instead of best first"
@@ -489,7 +490,7 @@
     "--output": {
       "meaning": "where to write: a directory for `messages download`, a file for `store export`",
       "default": ".",
-      "note": "MAX `messages download --output <dir>` remains a compatibility alias for `--output-dir`; other commands use --output for a file — e10"
+      "note": "MAX `messages download --output <dir>` remains a compatibility alias for `--output-dir`; other commands use --output for a file \u2014 e10"
     },
     "--output-dir": {
       "value": "<dir>",
@@ -537,7 +538,7 @@
     },
     "--photo": {
       "value": "<file>",
-      "meaning": "an image file — a profile photo in `account update`, a photo to send in `messages send`"
+      "meaning": "an image file \u2014 a profile photo in `account update`, a photo to send in `messages send`"
     },
     "--port": {
       "value": "<port>",
@@ -564,14 +565,14 @@
     },
     "--reason": {
       "value": "<text>",
-      "meaning": "why a task was closed, kept with it — no-reply-needed, for example"
+      "meaning": "why a task was closed, kept with it \u2014 no-reply-needed, for example"
     },
     "--record": {
-      "meaning": "keep this run under `runs` — ids and timings, never message content",
+      "meaning": "keep this run under `runs` \u2014 ids and timings, never message content",
       "note": "max's own copy is worded differently until T6 moves the command onto the shared one (e13)"
     },
     "--refresh": {
-      "meaning": "read the private chat with them from MAX first — one request",
+      "meaning": "read the private chat with them from MAX first \u2014 one request",
       "note": "one idea, two sources: bring what the answer is read from up to date first. `bot contacts show` reads the private chat again from the messenger; `conversations search` builds and embeds, on this machine, the chats that changed (NEED-551 A, awaiting the owner's wording)"
     },
     "--regex": {
@@ -614,7 +615,7 @@
       "meaning": "only chats whose name contains this; at least 3 characters"
     },
     "--secret-stdin": {
-      "meaning": "a secret MAX sends back in X-Max-Bot-Api-Secret — asked for, or read from a pipe"
+      "meaning": "a secret MAX sends back in X-Max-Bot-Api-Secret \u2014 asked for, or read from a pipe"
     },
     "--send-id": {
       "value": "<id>",
@@ -632,7 +633,7 @@
     "--since": {
       "value": "<id-or-time>",
       "meaning": "from this message id, an ISO 8601 time, or 2h / 1d ago; each command says its default",
-      "note": "becomes `--since-time` everywhere — NEED-485"
+      "note": "becomes `--since-time` everywhere \u2014 NEED-485"
     },
     "--since-time": {
       "value": "<time>",
@@ -640,11 +641,11 @@
     },
     "--size": {
       "value": "<n>",
-      "meaning": "messages to answer per batch, 10–200; 50 by default"
+      "meaning": "messages to answer per batch, 10\u2013200; 50 by default"
     },
     "--source": {
       "value": "<messenger>",
-      "meaning": "every account of this messenger held in the store; personal, bots or all — the same as in: in the query"
+      "meaning": "every account of this messenger held in the store; personal, bots or all \u2014 the same as in: in the query"
     },
     "--state": {
       "value": "<state>",
@@ -703,7 +704,7 @@
     },
     "--timeout": {
       "value": "<duration>",
-      "meaning": "give up on the whole command after this — 30s, 2m, 500ms"
+      "meaning": "give up on the whole command after this \u2014 30s, 2m, 500ms"
     },
     "--timezone": {
       "value": "<zone>",
@@ -713,7 +714,7 @@
     },
     "--title": {
       "value": "<title>",
-      "meaning": "the new name — of a chat or a folder"
+      "meaning": "the new name \u2014 of a chat or a folder"
     },
     "--to": {
       "value": "<chat>",
@@ -739,7 +740,7 @@
     "--type": {
       "value": "<names>",
       "meaning": "only these types",
-      "note": "each command names its own types — chats events the messenger's event types, comma-separated, as it names them; tags list chat, contact or message; tasks list question, request, mention or promise, and tasks add gives the new task one of them — so it differs on purpose (Help text rule 4)"
+      "note": "each command names its own types \u2014 chats events the messenger's event types, comma-separated, as it names them; tags list chat, contact or message; tasks list question, request, mention or promise, and tasks add gives the new task one of them \u2014 so it differs on purpose (Help text rule 4)"
     },
     "--types": {
       "value": "<value>",
@@ -747,7 +748,7 @@
     },
     "--unanswered": {
       "value": "[duration]",
-      "meaning": "only questions to you or a group's admins that nobody answered, asked at least this long ago — 4h, 1d",
+      "meaning": "only questions to you or a group's admins that nobody answered, asked at least this long ago \u2014 4h, 1d",
       "note": "max's own `review` still takes bare hours until T6 moves it (e2)",
       "default": "24h"
     },
