@@ -6,6 +6,13 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- `replies add|edit|on|off` edit the profile's rules without opening a connection: new rules write
+  every default and stay off; enabling a rule that replies requires a nonempty template. `replies audience`
+  shows or edits the profile's allow and deny lists. Invalid edits leave the existing file untouched;
+  testers, rule order and reply history are preserved. Lists replace the whole list; an empty value clears it.
+
 ## 0.153.0 — 06.10.2026
 
 Released early: cli-memo: the owner asked to release now, so long notes and mail are embedded whole (store version 21)

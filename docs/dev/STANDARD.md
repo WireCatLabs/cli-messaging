@@ -259,10 +259,12 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--all-bots` |  | also read every other bot's copy on this machine that readOtherBots allows |  | `bot contacts show`, `bot messages between`, `bot messages search` |
 | `--all-can-pin` | `<on\|off>` | every member may pin messages |  | `chats update` |
 | `--allow-any-file` |  | send a --file even from a hidden folder, ~/.ssh or the tool's own folders |  | `bot messages send`, `messages send` |
+| `--allow-chats` | `<ids>` | replace allowed chat ids, comma-separated; empty clears |  | `replies audience` (planned) |
 | `--allow-dangerous` |  | go ahead without the question an ask level puts before a deletion |  | `bot chats moderate`, `bot mcp`, `bot mcp config`, `bot messages delete`, `chats moderate` (planned), `mcp` (planned), `mcp config` (planned), `mcp doctor` (planned), `mcp setup` (planned), `messages delete`, `store clear` |
 | `--allow-delete` |  | offer the tool that deletes messages for you only; it cannot be undone. **retired access flag: accepted with a warning, grants no permissions in either CLI** |  | `bot mcp`, `bot mcp config`, `mcp`, `mcp config`, `mcp doctor` (planned), `mcp setup` (planned) |
 | `--allow-mark-read` |  | offer the tool that marks a chat read; the other person sees it. **retired access flag: accepted with a warning, grants no permissions in either CLI** |  | `mcp`, `mcp config`, `mcp doctor` (planned), `mcp setup` (planned) |
 | `--allow-moderate` |  | offer the tool that applies a group's rules — delete others' messages, remove people. **retired access flag: accepted with a warning, grants no permissions in either CLI** |  | `bot mcp`, `bot mcp config`, `mcp` (planned), `mcp config` (planned), `mcp doctor` (planned), `mcp setup` (planned) |
+| `--allow-people` | `<ids>` | replace allowed sender ids, comma-separated; empty clears |  | `replies audience` (planned) |
 | `--allow-send` |  | offer the send tool; without it the server can only read. **retired access flag: accepted with a warning, grants no permissions in either CLI** |  | `bot mcp`, `bot mcp config`, `mcp`, `mcp config`, `mcp doctor` (planned), `mcp setup` (planned) |
 | `--allow-writes` |  | acknowledge that the profile offers writing tools when installing local MCP |  | `mcp setup` (planned) |
 | `--analyze` |  | link conversation batches using the configured analysis provider, with remembered chat/provider consent |  | `conversations build` |
@@ -270,6 +272,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--app` | `<how>` | the first time only: how to get this profile's app from my.telegram.org | `browser` | `session start` (tg-only), `setup` (planned) |
 | `--as` | `<state>` | how a task is closed: done, or dismissed — it needs no answer |  | `tasks close` (planned) |
 | `--as-file` |  | send every --file as a plain file to download, a video included |  | `bot messages send`, `messages send` |
+| `--as-reply` |  | send as a reply to the matched message |  | `replies edit` (planned) |
 | `--at-time` | `<time>` | let the messenger send it later, even with this machine off: a local time like 2026-09-25T09:00, or 30m |  | `messages send` |
 | `--attachment` | `<n>` | which file of the message, from 1; needed when it has more than one |  | `attachments text set` |
 | `--background` |  | run as a job that outlives this command; `store jobs show` follows it |  | `store fetch` |
@@ -287,15 +290,21 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--channel` |  | a private channel instead of a group; people join it by its link |  | `chats create` |
 | `--chart-kind` | `<messages\|active\|membership>` | what to draw: messages, active authors, or joins and leaves | `messages` | `stats charts` (planned) |
 | `--chat` | `<chat>` | a chat, by id or name; repeat it for more. **chat addressing follows each messenger's supported names, usernames and Saved Messages aliases, so it differs on purpose (Help text rule 4); both message searches resolve stored names without networking** |  | `attachments extract`, `attachments list`, `chats folders create`, `contacts context`, `conversations batches next`, `conversations batches status`, `conversations build`, `conversations consents revoke`, `conversations embed`, `conversations embed clear`, `conversations embed status`, `conversations links clear`, `conversations list`, `conversations search`, `conversations status`, `messages search`, `messages stats`, `review`, `searches create`, `stats messages show` (planned), `tags add`, `tags remove`, `tasks list` (planned), `tasks stats` (planned) |
+| `--chats` | `<ids>` | only these chat ids, comma-separated; empty for any |  | `replies edit` (planned) |
 | `--check` |  | say whether a newer version exists, and install nothing |  | `bot list`, `upgrade` |
 | `--concurrency` | `<n>` | remote: requests at once (default: 4) |  | `conversations embed` |
 | `--confirm-send` |  | show the owner every write the MCP server offers, in a form to approve. **MAX retains its native wrapper wording; confirmation semantics already follow profile permissions in both CLIs** |  | `bot mcp`, `bot mcp config`, `mcp`, `mcp config`, `mcp doctor` (planned), `mcp setup` (planned) |
 | `--contact` | `<person>` | the person to tag or untag: their id, @username or name, as the local store knows them |  | `tags add`, `tags remove` |
+| `--contacts-only` |  | match only contacts |  | `replies edit` (planned) |
 | `--context` | `<n>` | messages before and after each hit |  | `messages search`, `searches create` |
+| `--days` | `<days>` | days of the working window, such as mon-fri or sat,sun |  | `replies edit` (planned) |
 | `--deep` | `<n>` | also check the top n in full — profile, photos, everything they wrote, and the public ban lists, which are sent their ids — one person a second |  | `chats members audit` |
 | `--defaults` |  | change what every profile gets, rather than this profile |  | `config set`, `config unset` |
+| `--deny-chats` | `<ids>` | replace denied chat ids, comma-separated; empty clears; deny wins |  | `replies audience` (planned) |
+| `--deny-people` | `<ids>` | replace denied sender ids, comma-separated; empty clears; deny wins |  | `replies audience` (planned) |
 | `--description` | `<text>` | the new about text — of a chat or of your account |  | `account update`, `chats update` |
 | `--dims` | `<n>` | remote: the vector size — needed with --base-url; shortens an OpenAI model's |  | `conversations embed`, `conversations embed clear`, `conversations embed status`, `conversations related`, `conversations search`, `conversations status` |
+| `--do` | `<actions>` | actions: reply, task, or both, comma-separated |  | `replies edit` (planned) |
 | `--download` |  | first save, from the messenger, the files no download saved yet |  | `attachments extract` |
 | `--dry-run` |  | judge and plan; do nothing |  | `bot chats moderate`, `chats moderate` (planned), `config migrate`, `store repair` |
 | `--encrypt` |  | compress and encrypt with a password, typed at a hidden prompt or piped on stdin; never kept |  | `store backup`, `store export` |
@@ -315,6 +324,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--json` |  | machine-readable output: one JSON value on stdout, nothing else |  | every command |
 | `--jsonl` |  | machine-readable output: one JSON object per line, for streaming and jq |  | every command |
 | `--kind` | `<kind>` | only chats of this kind: dialog, group, channel or saved |  | `chats list`, `inbox`, `review`, `store export` |
+| `--kinds` | `<kinds>` | chat kinds: dialog, group; comma-separated, empty for any |  | `replies edit` (planned) |
 | `--language` | `<lucene\|legacy>` | the query language: strict Lucene or legacy discovery | `lucene` | `messages search`, `searches create` |
 | `--last` | `<n>` | stop once the newest n messages are held; not with --since. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | `bot store fetch`, `store fetch` |
 | `--last-name` | `<name>` | your last name |  | `account update` |
@@ -331,20 +341,28 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--max-tokens` | `<n>` | remote embeddings: bound input tokens; analysis: reserve input and output tokens across this run |  | `conversations build`, `conversations embed` |
 | `--md` |  | read this messenger's Markdown; see its formatting guide for supported syntax |  | `bot messages edit`, `bot messages send`, `messages edit`, `messages send` |
 | `--members-see-link` | `<on\|off>` | members may see the invite link |  | `chats update` (max-only) |
+| `--mentions-me` |  | require a mention of you or a reply to you |  | `replies edit` (planned) |
 | `--message` | `<message>` | the message to tag or untag: its id in --chat, or a msg: locator alone |  | `tags add`, `tags remove` |
 | `--method` | `<method>` | how to log in when there is no session |  | `setup` (planned) |
 | `--min-score` | `<n>` | only rows scoring at least this |  | `chats members audit` |
-| `--model` | `<id>` | which downloaded speech model hears them; `models audio list` shows them. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | `conversations build`, `conversations embed`, `conversations embed clear`, `conversations embed status`, `conversations links clear`, `conversations related`, `conversations search`, `conversations status`, `inbox`, `messages list`, `messages transcribe`, `review` (planned) |
+| `--model` | `<id>` | which downloaded speech model hears them; `models audio list` shows them. **max's own copy is worded differently until T6 moves the command onto the shared one (e13); replies edit uses this option for template model mode: fill-only or may-reword; rewording is not yet available** |  | `conversations build`, `conversations embed`, `conversations embed clear`, `conversations embed status`, `conversations links clear`, `conversations related`, `conversations search`, `conversations status`, `inbox`, `messages list`, `messages transcribe`, `replies edit` (planned), `review` (planned) |
 | `--multiple` |  | people may pick several answers |  | `polls create` |
 | `--needs-text` |  | only files saved here whose text nobody has yet: what an agent reads and writes back |  | `attachments list` |
 | `--new` |  | what arrived since the last check, each message once — for scheduled runs |  | `inbox`, `review` |
 | `--newest` |  | newest first instead of best first |  | `bot messages search`, `messages search`, `searches create` |
+| `--no-as-reply` |  | send without linking to the matched message |  | `replies edit` (planned) |
 | `--no-ban` |  | remove without banning; by default a removed person cannot come back by the link |  | `bot chats moderate` |
+| `--no-contacts-only` |  | do not require a contact |  | `replies edit` (planned) |
+| `--no-hours` |  | clear the working window |  | `replies edit` (planned) |
 | `--no-mark-read` |  | do not mark read, whatever the catchUpMarksRead setting says |  | `inbox`, `review` |
+| `--no-mentions-me` |  | do not require a mention of you or a reply to you |  | `replies edit` (planned) |
 | `--no-preview` |  | no preview card for a link in the text |  | `messages send` |
+| `--no-question` |  | do not require a question |  | `replies edit` (planned) |
 | `--no-record` |  | do not keep it, whatever the configuration says |  | every command |
 | `--no-registries` |  | do not ask the public ban lists; nothing about them leaves this machine |  | `contacts check` |
 | `--no-serve` |  | do not start it; log in on this command's own connection unless one is running |  | every command (planned) |
+| `--not-chats` | `<ids>` | leave these chat ids out, comma-separated; empty clears |  | `replies edit` (planned) |
+| `--not-people` | `<ids>` | leave these sender ids out, comma-separated; empty clears |  | `replies edit` (planned) |
 | `--notification` | `<text>` | a note only the person who pressed sees |  | `bot callbacks answer` |
 | `--notify` |  | tell the chat's members about the pin |  | `bot messages pin`, `messages pin` |
 | `--offline` |  | answer from what was recorded and never connect; fails if nothing was |  | every command |
@@ -356,15 +374,20 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--others` |  | every session but this one. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | `account sessions end` |
 | `--output` |  | where to write: a directory for `messages download`, a file for `store export`. **MAX `messages download --output <dir>` remains a compatibility alias for `--output-dir`; other commands use --output for a file — e10** | `.` | `doctor report create`, `messages download` (max-only), `stats charts` (planned), `store decrypt`, `store export` |
 | `--output-dir` | `<dir>` | the folder to write into, created if missing. **`attachments extract` takes it only with --download, and has no default there, so extraction never fills the working folder unasked** | `.` | `attachments extract`, `messages download` |
+| `--outside` | `<hours>` | answer outside this 24-hour window, such as 09:00-19:00 |  | `replies edit` (planned) |
 | `--page` | `<n>` | which page, starting at 1 |  | `attachments list`, `chats list`, `chats members list` (planned), `contacts list` |
 | `--page-size` | `<n>` | how many items one request to the messenger asks for; the messenger's own if not given. **the default is each messenger's own page: 30 on MAX, 100 on Telegram** |  | `bot store fetch`, `store fetch` |
 | `--pause` | `<duration>` | the least wait between pages, 5s or 500ms; each is up to twice that. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** | `5s` | `bot store fetch`, `messages download`, `store fetch` |
+| `--people` | `<ids>` | only these sender ids, comma-separated; empty for any |  | `replies edit` (planned) |
+| `--per-chat` | `<limit>` | at most this many per chat, such as 1/12h |  | `replies edit` (planned) |
+| `--per-person` | `<limit>` | at most this many per person, such as 1/1d |  | `replies edit` (planned) |
 | `--personal` |  | the personal account's section of the profile's settings |  | `config set` (planned), `config unset` (planned) |
 | `--photo` | `<file>` | an image file — a profile photo in `account update`, a photo to send in `messages send` |  | `account update`, `bot messages send`, `messages send` |
 | `--port` | `<port>` | the local port for --http |  | `mcp` |
 | `--provider` | `<provider>` | embedding provider: local or openai; analysis: agent, openai or anthropic; consents revoke: exact provider identity from the list |  | `conversations build`, `conversations consents revoke`, `conversations embed`, `conversations embed clear`, `conversations embed status`, `conversations related`, `conversations search`, `conversations status` |
 | `--public-url` | `<url>` | the tunnel's https address the browser apps use |  | `mcp` |
 | `--qr-file` | `<png>` | write the QR code to this PNG instead of drawing it, for an agent to pass on |  | `session start` (tg-only), `setup` (planned) |
+| `--question` |  | match only questions |  | `replies edit` (planned) |
 | `--quiet` |  | diagnostics off. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | every command |
 | `--reason` | `<text>` | why a task was closed, kept with it — no-reply-needed, for example |  | `tasks close` (planned) |
 | `--record` |  | keep this run under `runs` — ids and timings, never message content. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | every command |
@@ -372,6 +395,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--regex` |  | the words are one regular expression, case-insensitive, tested against every stored text |  | `messages search`, `searches create` |
 | `--remove` | `<chat>` | take a chat out of a folder; repeat it for more |  | `chats folders update` |
 | `--replace` |  | overwrite a saved search of the same name |  | `searches create` |
+| `--reply` | `<mode>` | answer all or only listed senders and chats: all, listed |  | `replies audience` (planned) |
 | `--reply-to` | `<message>` | answer this message id in the same chat |  | `bot messages send`, `messages send` |
 | `--retract` |  | take your vote back, where the poll allows it |  | `polls vote` |
 | `--revoke` |  | forget every login given to a browser app over --http |  | `mcp` |
@@ -393,6 +417,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--sync-first` |  | first fetch new messages within the chat, time and message bounds |  | `conversations search`, `messages search`, `messages stats`, `stats messages show` (planned) |
 | `--sync-time` | `<duration>` | stop fetching after this long (default: 30s) |  | `conversations search`, `messages search`, `messages stats`, `stats messages show` (planned) |
 | `--tag` | `<tag>` | only this tag |  | `tags list` |
+| `--template` | `<text>` | the reply template |  | `replies edit` (planned) |
 | `--text` | `<text>` | the message's new text; - reads stdin |  | `bot callbacks answer` |
 | `--text-file` | `<path>` | read the text from this file; - or none reads stdin |  | `attachments text set` |
 | `--thread` |  | the stored reply chain and replies instead of time neighbours; falls back when no graph exists |  | `messages context`, `messages search` |
@@ -402,7 +427,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--thread-within` | `<duration>` | messages within this long either side of the hit (default: 1d) |  | `messages context`, `messages search` |
 | `--threads` | `<n>` | threads in all | `min(8, cores)` | `conversations embed` |
 | `--timeout` | `<duration>` | give up on the whole command after this — 30s, 2m, 500ms |  | every command |
-| `--timezone` | `<zone>` | the IANA timezone for calendar date boundaries | `system IANA timezone` | `chats stats` (planned), `conversations search`, `messages search`, `messages stats`, `searches create`, `stats charts` (planned), `stats chats show` (planned), `stats messages show` (planned) |
+| `--timezone` | `<zone>` | the IANA timezone for calendar date boundaries. **replies edit uses this option for the IANA timezone for the working window** | `system IANA timezone` | `chats stats` (planned), `conversations search`, `messages search`, `messages stats`, `replies edit` (planned), `searches create`, `stats charts` (planned), `stats chats show` (planned), `stats messages show` (planned) |
 | `--title` | `<title>` | the new name — of a chat or a folder |  | `bot chats admins add`, `chats folders update`, `chats update` |
 | `--to` | `<chat>` | the chat to forward it to: an id, or part of a chat name. **the sentence says how to name a chat the messenger's way, so it differs on purpose (Help text rule 4)** |  | `messages forward`, `store export` |
 | `--topic` | `<id>` | address this forum topic: send to it, or mark only it read. **Telegram group forums only; MAX explicitly refuses this option before sending** |  | `chats mark-read` (planned), `messages send`, `polls create` |
@@ -418,6 +443,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--verbose` |  | more detail in what is shown: -v ids, -vv everything known | `0` | every command |
 | `--version` |  | print the version number |  | every command |
 | `--voice` | `<file>` | send an Ogg Opus file as a voice message, alone, with no text |  | `bot messages send`, `messages send` |
+| `--words` | `<words>` | match any of these whole words, comma-separated; empty clears |  | `replies edit` (planned) |
 | `--workers` | `<n>` | sessions in parallel, each with its own copy of the model |  | `conversations embed` |
 | `--yes` |  | go ahead without the question an ask level puts before a write |  | every command, `account sessions end` (planned), `mcp` (planned), `mcp config` (planned) |
 

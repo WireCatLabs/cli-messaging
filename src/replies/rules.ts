@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from "node:fs"
 import { join } from "node:path"
-import { CliError, resolvePaths } from "@leemour/cli-core"
+import { CliError, resolvePaths, writeSecurely } from "@leemour/cli-core"
 import * as v from "valibot"
 import type { AppIdentity } from "../cli/app.js"
 
@@ -89,7 +89,6 @@ const ids = v.array(v.pipe(v.string(), v.minLength(1)))
 
 const template = v.pipe(
   v.string(),
-  v.minLength(1, "a reply template cannot be empty"),
   v.check(
     (text) => [...text.matchAll(/\{(\w*)\}/g)].every(([, name]) => PLACEHOLDERS.includes(name as never)),
     `a template fills only ${PLACEHOLDERS.map((name) => `{${name}}`).join(", ")}`,
@@ -112,9 +111,17 @@ const rule = v.pipe(
     reply: v.strictObject({ template, model: v.picklist(REPLY_MODELS), asReply: v.boolean() }),
     limits: v.strictObject({ perChat: limit, perPerson: limit }),
   }),
+  v.forward(
+    v.check(
+      (one) => !one.on || !one.do.includes("reply") || one.reply.template.trim().length > 0,
+      "an enabled reply rule needs a nonempty template — edit its template before turning it on",
+    ),
+    ["reply", "template"],
+  ),
 )
 
 export type ReplyRule = v.InferOutput<typeof rule>
+export type ReplyRuleFile = v.InferInput<typeof rule>
 
 const tester = v.strictObject({
   provider: v.optional(v.pipe(v.string(), v.minLength(1))),
@@ -152,7 +159,7 @@ const file = v.pipe(
  * Every key written out, so the file shows all there is to set, as moderation's does (max-cli
  * `NEED-314`). Off until the owner turns it on, and the limits are the tightest worth having.
  */
-export const defaultRule = (id: string) => ({
+export const defaultRule = (id: string): ReplyRuleFile => ({
   id,
   on: false,
   do: ["reply"],
@@ -208,14 +215,34 @@ export const audienceWarnings = ({ reply, allow, deny }: Audience): string[] => 
 export const readReplyRules = (path: string): ReplyRule[] => readReplies(path).rules
 
 export const readReplies = (path: string): Replies => {
-  if (!existsSync(path)) return { testers: [], audience: EVERYONE, rules: [] }
+  return parseReplies(readRepliesFile(path), path)
+}
+
+export interface RepliesFile {
+  testers: Tester[]
+  audience: Audience
+  rules: ReplyRuleFile[]
+}
+
+// Hours and limits are transformed by parsing; editing must keep their file input forms.
+export const readRepliesFile = (path: string): RepliesFile => {
+  if (!existsSync(path)) return { testers: [], audience: structuredClone(EVERYONE), rules: [] }
   let parsed: unknown
   try {
     parsed = JSON.parse(readFileSync(path, "utf8"))
   } catch (error) {
     throw broken(path, error instanceof Error ? error.message : String(error))
   }
-  return parseReplies(parsed, path)
+  const checked = parseReplies(parsed, path)
+  return { ...(parsed as RepliesFile), testers: checked.testers, audience: checked.audience }
+}
+
+export const writeRepliesFile = (path: string, contents: RepliesFile): void => {
+  const checked = v.safeParse(file, contents)
+  if (!checked.success) {
+    throw new CliError("validation_error", `reply edit cannot be saved (${checked.issues.map(problem).join("; ")})`)
+  }
+  writeSecurely(path, `${JSON.stringify(contents, null, 2)}\n`, 0o600)
 }
 
 export const parseReplyRules = (parsed: unknown, path: string): ReplyRule[] => parseReplies(parsed, path).rules
