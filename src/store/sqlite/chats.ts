@@ -1,7 +1,7 @@
 import { CliError } from "@leemour/cli-core"
 import type { Chat, Id, Member, Page } from "../../domain/models.js"
 import type { AccountKey, StoredChatFilter } from "../store.js"
-import { and, eq, gt, inArray, sql } from "./drizzle/core.js"
+import { and, eq, gt, inArray, or, sql } from "./drizzle/core.js"
 import { identityPk } from "./identities.js"
 import type { StoreContext } from "./open.js"
 import {
@@ -158,15 +158,27 @@ export const purgeChats = ({ orm }: StoreContext, pks: number[]): void => {
 export const chatsWith = ({ orm }: StoreContext, accountKey: number, key: AccountKey, memberId: Id): Chat[] =>
   orm
     .select({ chat: chats })
-    .from(chatMembers)
-    .innerJoin(chats, eq(chats.pk, chatMembers.chatPk))
-    .innerJoin(identities, eq(identities.pk, chatMembers.identityPk))
+    .from(chats)
     .where(
       and(
         eq(chats.accountPk, accountKey),
         notLeft,
-        eq(identities.provider, key.provider),
-        eq(identities.nativeId, memberId),
+        or(
+          inArray(
+            chats.pk,
+            orm
+              .select({ pk: chatMembers.chatPk })
+              .from(chatMembers)
+              .innerJoin(identities, eq(identities.pk, chatMembers.identityPk))
+              .where(and(eq(identities.provider, key.provider), eq(identities.nativeId, memberId))),
+          ),
+          // Some providers name a private dialog by its partner's id without recording members.
+          and(
+            eq(chats.kind, "dialog"),
+            eq(chats.nativeId, memberId),
+            sql`NOT EXISTS (SELECT 1 FROM ${chatMembers} WHERE ${chatMembers.chatPk} = ${chats.pk})`,
+          ),
+        ),
       ),
     )
     .orderBy(...byRecency)

@@ -19,6 +19,35 @@ const chat = (id: string, lastMessageAt: string | null): Chat => ({
 })
 
 describe("chat members", () => {
+  it("includes memberless dialogs named by the person id, with account and provider isolation", async () => {
+    const store = await openStore({ path: fresh() })
+    const tg = { provider: "telegram", account: "1" }
+    const otherTg = { provider: "telegram", account: "2" }
+    const dialog = { ...chat("7", "2026-09-10T00:00:00.000Z"), kind: "dialog" as const }
+    await store.saveChats(tg, [dialog, chat("-1", "2026-09-20T00:00:00.000Z")])
+    await store.saveMembers(tg, "-1", ["7", "8"])
+    await store.saveChats(otherTg, [{ ...dialog, title: "Other account" }])
+    await store.saveChats(OWNER, [chat("7", null)])
+
+    expect((await store.chatsWith(tg, "7")).map(({ id }) => id)).toEqual(["-1", "7"])
+    expect((await store.chatsWith(otherTg, "7")).map(({ title }) => title)).toEqual(["Other account"])
+    expect(await store.chatsWith(OWNER, "7")).toEqual([])
+    expect(await store.chatsWith({ provider: "telegram", account: "3" }, "7")).toEqual([])
+    expect(await store.chatsWith(tg, "8")).toHaveLength(1)
+    expect(await store.members(tg, "7")).toEqual([])
+
+    await store.saveMembers(tg, "7", ["7", "1"])
+    expect((await store.chatsWith(tg, "7")).map(({ id }) => id)).toEqual(["-1", "7"])
+    await store.saveMembers(tg, "7", ["8", "1"])
+    expect((await store.chatsWith(tg, "7")).map(({ id }) => id)).toEqual(["-1"])
+    expect((await store.chatsWith(tg, "8")).map(({ id }) => id)).toEqual(["-1", "7"])
+
+    await store.saveMembers(tg, "7", [])
+    await store.markChatsLeft(tg, ["-1"])
+    expect((await store.chatsWith(tg, "7")).map(({ id }) => id)).toEqual(["-1"])
+    await store.close()
+  })
+
   it("**a new list replaces the old one whole**, and members come back by name", async () => {
     const store = await openStore({ path: fresh() })
     await store.savePeople(OWNER, [

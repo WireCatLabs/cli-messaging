@@ -101,6 +101,16 @@ afterEach(async () => {
 const texts = (items: { text: string }[]) => items.map((one) => one.text)
 
 describe("contacts context", () => {
+  it("finds direct messages and the last each way when the dialog has no recorded members", async () => {
+    await store.saveMembers(tg, "11", [])
+
+    const found = await people().context("11")
+    expect(texts(found.recent.direct)).toEqual(["to the first Ana", "from the first Ana"])
+    expect(found.last.fromThem?.text).toBe("from the first Ana")
+    expect(found.last.fromMe?.text).toBe("to the first Ana")
+    expect(found.shared).toContainEqual(expect.objectContaining({ provider: "telegram", chatId: "11" }))
+  })
+
   it("keeps two people with one name apart and refuses to guess between them", async () => {
     await expect(people().context("Ana")).rejects.toMatchObject({
       message: expect.stringContaining("matches 2 people"),
