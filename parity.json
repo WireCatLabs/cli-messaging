@@ -219,7 +219,8 @@
       "meaning": "first save, from the messenger, the files no download saved yet"
     },
     "--dry-run": {
-      "meaning": "judge and plan; do nothing"
+      "meaning": "judge and plan; do nothing",
+      "note": "A command-specific dry run keeps its richer plan; otherwise the shared shell previews arguments and permissions without running the action. Targets remain unresolved unless that command provides a preview."
     },
     "--encrypt": {
       "meaning": "compress and encrypt with a password, typed at a hidden prompt or piped on stdin; never kept"
@@ -231,6 +232,10 @@
     "--events": {
       "meaning": "also print edits, deletions and reactions; every line then names its event",
       "note": "watch updates use this flag independently of the group event --type filter"
+    },
+    "--fields": {
+      "value": "<paths>",
+      "meaning": "only these comma-separated fields of machine result items; preserves list metadata"
     },
     "--file": {
       "value": "<file>",
@@ -345,9 +350,19 @@
       "meaning": "at most this many chunks embedded in one run",
       "default": "2000"
     },
+    "--max-input-bytes": {
+      "value": "<bytes>",
+      "meaning": "at most this many bytes of buffered stdin",
+      "default": "16777216"
+    },
     "--max-messages": {
       "value": "<n>",
       "meaning": "fetch at most this many messages total (default: 500)"
+    },
+    "--max-output-bytes": {
+      "value": "<bytes>",
+      "meaning": "at most this many serialized bytes of machine data; 0 disables the bound",
+      "default": "4194304"
     },
     "--max-tokens": {
       "value": "<n>",
@@ -403,6 +418,9 @@
     },
     "--no-hours": {
       "meaning": "clear the working window"
+    },
+    "--no-input": {
+      "meaning": "never prompt or open an interactive login; piped input remains available"
     },
     "--no-mark-read": {
       "meaning": "do not mark read, whatever the catchUpMarksRead setting says"
@@ -767,8 +785,43 @@
     }
   },
   "globalOptions": {
+    "--dry-run": {
+      "in": [],
+      "planned": {
+        "max": "full CLI audit remediation",
+        "tg": "full CLI audit remediation"
+      }
+    },
+    "--fields": {
+      "in": [],
+      "planned": {
+        "max": "full CLI audit remediation",
+        "tg": "full CLI audit remediation"
+      }
+    },
     "--json": "all",
     "--jsonl": "all",
+    "--max-input-bytes": {
+      "in": [],
+      "planned": {
+        "max": "full CLI audit remediation",
+        "tg": "full CLI audit remediation"
+      }
+    },
+    "--max-output-bytes": {
+      "in": [],
+      "planned": {
+        "max": "full CLI audit remediation",
+        "tg": "full CLI audit remediation"
+      }
+    },
+    "--no-input": {
+      "in": [],
+      "planned": {
+        "max": "full CLI audit remediation",
+        "tg": "full CLI audit remediation"
+      }
+    },
     "--no-record": "all",
     "--no-serve": {
       "in": [],
@@ -1513,6 +1566,13 @@
     },
     "commands": {
       "in": "all"
+    },
+    "commands schema": {
+      "in": [],
+      "planned": {
+        "max": "full CLI audit remediation",
+        "tg": "full CLI audit remediation"
+      }
     },
     "complete": {
       "in": "all"

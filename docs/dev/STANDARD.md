@@ -239,6 +239,40 @@ request fields have no generated argument flags: supply their JSON on stdin or i
 protected file. Tokens never enter diagnostics, traces or run records.
 
 
+## Agent execution contract
+
+The full audit remediation adds one scoped `commands schema <path...>` view, rather than a new
+root or a schema mode on message commands. It describes raw argv inputs, result schemas, effects,
+permissions, conditional arguments and safe-retry semantics in JSON Schema 2020-12. Open provider
+extensions must be labelled; a structural schema is not evidence of complete business validation.
+CLI and MCP use the same domain result definitions where available. MCP structured outputs are
+validated against any output schema advertised by the server.
+
+The shared shell adds these conventions; the manifest tracks adoption:
+
+- `--no-input` prohibits prompts and browser login. JSON/JSONL with a TTY also suppresses prompts.
+  Non-TTY data piped for an explicit command remains usable. Confirmation flags never lift deny.
+- `--max-input-bytes` bounds buffered stdin (16 MiB by default); cancellation releases listeners
+  and does not leave an open read waiting for EOF. Secrets have a tighter 64 KiB bound.
+- One-shot actions have a 30-second default budget unless a flag/environment supplies another.
+  Help/version and intended watch/serve/MCP lifetimes are exempt. Signals cancel tracked resources;
+  SIGINT/SIGTERM follow shell exit conventions. Broken pipes end quietly without a stack trace.
+- `--fields` projects machine result fields; list pagination/coverage metadata stays present.
+  `--max-output-bytes` bounds serialized machine data (4 MiB; zero explicitly disables the bound).
+  Exceeding a bound fails visibly with retryable:false, never a malformed or silently cropped JSON
+  response. File exports retain their streaming contract.
+- A global `--dry-run` validates parsed arguments and permission policy, then reports a preview
+  without invoking the action, reading credentials or reserving a write. Local command-specific
+  previews keep their richer behaviour. A preview declares unresolved targets and preparatory
+  effects; it is never a guarantee that a subsequent write will succeed.
+- Errors expose safe retry metadata. Unknown remote write outcomes remain non-retryable unless a
+  provider confirms replay safety with the same caller-owned id. operationId is correlation only.
+- Installed skills are checked against binary discovery. Synthetic task evaluations cover command
+  selection, bounded paging, validation recovery and refusing replay after an unknown write outcome.
+
+These defaults are technical execution limits, not profile data or new config-file keys.
+User pages explain the effective defaults and how to override them after consumer adoption.
+
 ## Option catalogue
 
 Every option of both tools, once: its value, what it means, its default and the commands that take
@@ -306,10 +340,11 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--dims` | `<n>` | remote: the vector size — needed with --base-url; shortens an OpenAI model's |  | `conversations embed`, `conversations embed clear`, `conversations embed status`, `conversations related`, `conversations search`, `conversations status` |
 | `--do` | `<actions>` | actions: reply, task, or both, comma-separated |  | `replies edit` (planned) |
 | `--download` |  | first save, from the messenger, the files no download saved yet |  | `attachments extract` |
-| `--dry-run` |  | judge and plan; do nothing |  | `bot chats moderate`, `chats moderate` (planned), `config migrate`, `store repair` |
+| `--dry-run` |  | judge and plan; do nothing. **A command-specific dry run keeps its richer plan; otherwise the shared shell previews arguments and permissions without running the action. Targets remain unresolved unless that command provides a preview.** |  | every command (planned), `bot chats moderate`, `chats moderate` (planned), `config migrate`, `store repair` |
 | `--encrypt` |  | compress and encrypt with a password, typed at a hidden prompt or piped on stdin; never kept |  | `store backup`, `store export` |
 | `--estimate` |  | only say what the fetch would cost, from this machine's copy; nothing is sent. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | `store fetch` |
 | `--events` |  | also print edits, deletions and reactions; every line then names its event. **watch updates use this flag independently of the group event --type filter** |  | `bot watch`, `watch` |
+| `--fields` | `<paths>` | only these comma-separated fields of machine result items; preserves list metadata |  | every command (planned) |
 | `--file` | `<file>` | attach a file; images go as a photo, videos as a video. Repeat it for more |  | `bot messages send`, `messages send` |
 | `--filter` | `query` | Strict Lucene filter: any message in the conversation must match; the meaning query stays unchanged |  | `conversations search` |
 | `--first-name` | `<name>` | your first name |  | `account update` |
@@ -338,7 +373,9 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--max-actions` | `<n>` | at most this many actions in one run | `10` | `bot chats moderate`, `chats moderate` (planned) |
 | `--max-chats` | `<n>` | at most this many chats in one run. **local graph work defaults to 20; opt-in --sync-first network refresh defaults to 5, so help distinguishes the two uses** | `20` | `conversations build`, `conversations embed`, `conversations search`, `messages search`, `messages stats`, `stats messages show` (planned) |
 | `--max-chunks` | `<n>` | at most this many chunks embedded in one run | `2000` | `conversations embed`, `conversations search` |
+| `--max-input-bytes` | `<bytes>` | at most this many bytes of buffered stdin | `16777216` | every command (planned) |
 | `--max-messages` | `<n>` | fetch at most this many messages total (default: 500) |  | `conversations search`, `messages search`, `messages stats`, `stats messages show` (planned) |
+| `--max-output-bytes` | `<bytes>` | at most this many serialized bytes of machine data; 0 disables the bound | `4194304` | every command (planned) |
 | `--max-tokens` | `<n>` | remote embeddings: bound input tokens; analysis: reserve input and output tokens across this run |  | `conversations build`, `conversations embed` |
 | `--md` |  | read this messenger's Markdown; see its formatting guide for supported syntax |  | `bot messages edit`, `bot messages send`, `messages edit`, `messages send` |
 | `--members-see-link` | `<on\|off>` | members may see the invite link |  | `chats update` (max-only) |
@@ -355,6 +392,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--no-ban` |  | remove without banning; by default a removed person cannot come back by the link |  | `bot chats moderate` |
 | `--no-contacts-only` |  | do not require a contact |  | `replies edit` (planned) |
 | `--no-hours` |  | clear the working window |  | `replies edit` (planned) |
+| `--no-input` |  | never prompt or open an interactive login; piped input remains available |  | every command (planned) |
 | `--no-mark-read` |  | do not mark read, whatever the catchUpMarksRead setting says |  | `inbox`, `review` |
 | `--no-mentions-me` |  | do not require a mention of you or a reply to you |  | `replies edit` (planned) |
 | `--no-preview` |  | no preview card for a link in the text |  | `messages send` |
