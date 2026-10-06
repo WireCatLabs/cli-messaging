@@ -20,7 +20,7 @@ export interface FileAttachment {
   size: number | null
   localPath: string | null
   /** What an earlier run left, when it read this file. */
-  read: { origin: TextOrigin; bytes: number | null; error: string | null } | null
+  read: { origin: TextOrigin; bytes: number | null; error: string | null; contentSha256?: string | null } | null
 }
 
 export interface AttachmentTextEntry {
@@ -41,22 +41,28 @@ const NOT_FILE_LIST = [...NOT_FILES].map((kind) => `'${kind}'`).join(",")
 export const fileAttachments = (
   { database }: StoreContext,
   accountKey: number,
-  { chatKey, beforePk, limit }: { chatKey?: number; beforePk?: number; limit: number },
+  { chatKey, messageId, beforePk, limit }: { chatKey?: number; messageId?: Id; beforePk?: number; limit: number },
 ): FileAttachment[] =>
   database
     .prepare(
       `SELECT att.pk, c.native_id AS chat_id, m.native_id AS message_id, att.position, att.kind, att.name, att.mime,
-         att.size, att.local_path, t.origin, t.bytes AS read_bytes, t.error
+         att.size, att.local_path, t.origin, t.bytes AS read_bytes, t.error, t.content_sha256
        FROM attachments att
        JOIN messages m ON m.pk = att.message_pk
        JOIN chats c ON c.pk = m.chat_pk
        LEFT JOIN attachment_texts t ON t.attachment_pk = att.pk
        WHERE m.account_pk = ? AND m.deleted_at IS NULL AND att.kind NOT IN (${NOT_FILE_LIST})
          AND (t.origin IS NULL OR t.origin <> 'agent')
-         ${chatKey === undefined ? "" : "AND m.chat_pk = ?"} AND att.pk < ?
+         ${chatKey === undefined ? "" : "AND m.chat_pk = ?"} ${messageId === undefined ? "" : "AND m.native_id = ?"} AND att.pk < ?
        ORDER BY att.pk DESC LIMIT ?`,
     )
-    .all(accountKey, ...(chatKey === undefined ? [] : [chatKey]), beforePk ?? Number.MAX_SAFE_INTEGER, limit)
+    .all(
+      accountKey,
+      ...(chatKey === undefined ? [] : [chatKey]),
+      ...(messageId === undefined ? [] : [messageId]),
+      beforePk ?? Number.MAX_SAFE_INTEGER,
+      limit,
+    )
     .map((row) => ({
       pk: Number(row.pk),
       chatId: String(row.chat_id),
@@ -73,6 +79,7 @@ export const fileAttachments = (
           : {
               origin: String(row.origin) as TextOrigin,
               bytes: row.read_bytes == null ? null : Number(row.read_bytes),
+              contentSha256: row.content_sha256 == null ? null : String(row.content_sha256),
               error: row.error == null ? null : String(row.error),
             },
     }))

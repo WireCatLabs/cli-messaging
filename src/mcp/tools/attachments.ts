@@ -1,6 +1,10 @@
+import { CliError } from "@leemour/cli-core"
 import * as v from "valibot"
 import { MAX_TEXT_CHARS } from "../../attachments/extract.js"
 import type { Messenger } from "../../cli/messenger/context.js"
+import { levelFor } from "../../sends/permissions.js"
+import { onlineDeps } from "../../services/deps.js"
+import { downloadMessage } from "../../services/file-download.js"
 import { servicesFor, storedDeps } from "../../services/index.js"
 import { type AnyTool, chatOf, paging, READ, tool } from "../tool.js"
 
@@ -9,6 +13,64 @@ const ITEM = "{ locator, attachment, kind, name, localPath, text: { origin, extr
 export const attachmentsTools = (messenger: Messenger): Record<string, AnyTool> => {
   const command = messenger.app.command
   return {
+    attachments_extract: tool({
+      title: "Extract text from saved files",
+      description:
+        "Keep plain text, DOCX or PDF text layers in the local content index; returns counts and statuses, never text. from_dir needs chat. Only explicit download connects and needs output_dir. Pass cursor to continue a bounded scan.",
+      key: "attachments.extract",
+      input: v.object({
+        chat: v.optional(chatOf(messenger)),
+        from_dir: v.optional(v.pipe(v.string(), v.minLength(1))),
+        download: v.optional(v.boolean()),
+        output_dir: v.optional(v.pipe(v.string(), v.minLength(1))),
+        limit: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(500))),
+        cursor: v.optional(v.pipe(v.string(), v.regex(/^[1-9][0-9]*$/))),
+      }),
+      annotations: { readOnlyHint: false, idempotentHint: true, openWorldHint: true, destructiveHint: false },
+      stored: async (store, account, args, defaults, connect) => {
+        if (args.download && (!args.output_dir || !connect))
+          throw new CliError("validation_error", "download needs output_dir and an online session")
+        if (args.output_dir && !args.download) throw new CliError("validation_error", "output_dir requires download")
+        if (args.from_dir && (!args.chat || args.download || args.output_dir))
+          throw new CliError(
+            "validation_error",
+            "from_dir needs chat and cannot be combined with download or output_dir",
+          )
+        if (
+          levelFor(defaults.settings.permissions ?? {}, "messages").level === "deny" ||
+          (args.download && levelFor(defaults.settings.permissions ?? {}, "messages.download").level === "deny")
+        )
+          throw new CliError("permission_error", "this profile does not allow reading these message files")
+        return servicesFor(storedDeps(messenger, store, account, defaults.guard)).attachments.extract({
+          ...(args.chat === undefined ? {} : { chat: args.chat }),
+          ...(args.from_dir === undefined ? {} : { fromDir: args.from_dir }),
+          ...(args.cursor === undefined ? {} : { cursor: args.cursor }),
+          limit: args.limit ?? 100,
+          scanLimit: 500,
+          signal: defaults.signal,
+          ...(args.download
+            ? {
+                download: async (chatId: string, messageId: string) => {
+                  await connect?.(async (adapter) => {
+                    const deps = onlineDeps(messenger, adapter, defaults.guard, {
+                      env: defaults.env,
+                      profile: defaults.settings.profile,
+                    })
+                    await downloadMessage(
+                      servicesFor({ ...deps, store: async () => store, account: async () => account }).messages,
+                      chatId,
+                      messageId,
+                      args.output_dir as string,
+                      () => {},
+                    )
+                  })
+                },
+              }
+            : {}),
+        })
+      },
+    }),
+
     attachments_list: tool({
       title: "List files of stored messages",
       description:

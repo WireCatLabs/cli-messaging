@@ -229,7 +229,10 @@ export interface MessageStore {
    */
   keepDownloads(key: AccountKey, chatId: Id, messageId: Id, files: readonly DownloadedFile[]): Promise<number>
   /** File attachments of this account's live messages, newest first, below `beforePk`; never one an agent wrote. */
-  fileAttachments(key: AccountKey, page: { chatId?: Id; beforePk?: number; limit: number }): Promise<FileAttachment[]>
+  fileAttachments(
+    key: AccountKey,
+    page: { chatId?: Id; messageId?: Id; beforePk?: number; limit: number },
+  ): Promise<FileAttachment[]>
   /** File attachments of live messages and what is held of their text, newest first; never the text. */
   attachments(
     key: AccountKey,

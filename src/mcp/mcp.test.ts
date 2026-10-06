@@ -1333,6 +1333,38 @@ describe("the MCP server", () => {
     expect(names).not.toContain("chat_attachments_text_set")
   })
 
+  it("extracts local file text through MCP without connecting and keeps the body out of its answer", async () => {
+    const root = await filledRoot()
+    const backend = scripted()
+    const { call, env } = await connect(backend, { root })
+    const store = await openStore({ path: env.MESSAGING_STORE })
+    const path = join(root, "extract-fixture.txt")
+    writeFileSync(path, "synthetic extractionneedle")
+    await store.saveMessages(
+      { provider: "chat", account: "500" },
+      "7",
+      [{ ...message, id: "900", attachments: [{ kind: "file", name: "extract-fixture.txt" }] }],
+      { via: "history" },
+    )
+    await store.keepDownloads({ provider: "chat", account: "500" }, "7", "900", [{ kind: "file", position: 0, path }])
+    await store.close()
+    const answer = await call("chat_attachments_extract", { chat: "7", limit: 1 })
+    expect(answer.isError).toBe(false)
+    expect(answer.body).toMatchObject({ extracted: 1 })
+    expect(JSON.stringify(answer.body)).not.toContain("extractionneedle")
+    expect(
+      (await call("chat_messages_search", { text: "content:extractionneedle" })).body.items.map(
+        ({ id }: { id: string }) => id,
+      ),
+    ).toEqual(["900"])
+    expect(backend.opened()).toBe(0)
+    const refused = await call("chat_attachments_extract", { from_dir: root })
+    expect(refused.isError).toBe(true)
+    expect(backend.opened()).toBe(0)
+    const readonly = await connect(scripted(), { root, config: levels({ attachments: "readonly" }) })
+    expect((await readonly.client.listTools()).tools.map(({ name }) => name)).not.toContain("chat_attachments_extract")
+  })
+
   it("checks one person without the ban lists when asked, and says a non-Telegram account is not in them", async () => {
     const { call } = await connect(scripted())
     const quiet = await call("chat_contacts_check", { person: "Olga", registries: false })

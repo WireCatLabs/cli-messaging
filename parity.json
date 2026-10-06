@@ -186,6 +186,10 @@
       "value": "<n>",
       "meaning": "messages before and after each hit"
     },
+    "--cursor": {
+      "value": "<cursor>",
+      "meaning": "continue from the extraction cursor"
+    },
     "--days": {
       "meaning": "days of the working window, such as mon-fri or sat,sun",
       "value": "<days>"
@@ -236,6 +240,9 @@
       "meaning": "also print edits, deletions and reactions; every line then names its event",
       "note": "watch updates use this flag independently of the group event --type filter"
     },
+    "--extract": {
+      "meaning": "extract text from files mapped by this download"
+    },
     "--fields": {
       "value": "<paths>",
       "meaning": "only these comma-separated fields of machine result items; preserves list metadata"
@@ -268,6 +275,10 @@
     "--from": {
       "value": "<who|link>",
       "meaning": "sender to match in bot messages search; starting message link in tg bot store fetch"
+    },
+    "--from-dir": {
+      "value": "<dir>",
+      "meaning": "read nonrecursive files from this directory for one explicit chat"
     },
     "--history": {
       "meaning": "the people added also see the messages from before they came"
@@ -898,7 +909,13 @@
         "--chat": {
           "in": "all"
         },
+        "--cursor": {
+          "in": "all"
+        },
         "--download": {
+          "in": "all"
+        },
+        "--from-dir": {
           "in": "all"
         },
         "--limit": {
@@ -2183,6 +2200,9 @@
       "in": "all",
       "options": {
         "--all": {
+          "in": "all"
+        },
+        "--extract": {
           "in": "all"
         },
         "--output": {

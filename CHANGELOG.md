@@ -6,6 +6,16 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- Attachment extraction is available over MCP, from an explicitly scoped nonrecursive directory,
+  and directly after `messages download --extract`. Bounded MCP scans return a continuation cursor;
+  output reports metadata without file text, and extraction preserves agent-written text.
+
+### Fixed
+
+- File extraction compares content hashes so same-size file replacements refresh content search.
+
 ## 0.162.0 — 07.10.2026
 
 ### Added
