@@ -569,7 +569,9 @@ whose values are levels. It holds for a command the owner types and for an agent
      (`messages.delete`) it is `deny`.
    - `ask` — in a terminal, a y/N question that shows what will change, default no. A flag skips
      it: `--allow-dangerous` for a deletion, `--yes` for every other write. With no terminal and
-     no flag the command answers `confirmation_required` (7). Over MCP, a form the owner answers.
+     no flag the command answers `confirmation_required` (7). **Correction 2026-10-07:** over MCP,
+     `ask` permits the requested write without a server form; separate moderation rule consent
+     remains authoritative.
    - `allow` — goes ahead and never asks.
 2. **A key is a command path**: `messages`, `messages.delete`, `chats.members.remove`,
    `account.sessions.end`. **The most specific key the owner set wins**; there is no wildcard, and a
