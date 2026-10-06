@@ -89,11 +89,10 @@ describe("agent CLI contract", () => {
     expect(result.performed).toHaveBeenCalledOnce()
   })
 
-  it("refuses a QR login without a terminal before it starts", async () => {
+  it("leaves a login without a terminal to the command, which knows what it must ask", async () => {
     const result = await invoke(["session", "start", "qr", "--json"])
-    expect(result.result).toBe(2)
-    expect(result.performed).not.toHaveBeenCalled()
-    expect(JSON.parse(result.stderr[0] ?? "").error.reason).toBe("input_required")
+    expect(result.result).toBe(0)
+    expect(result.performed).toHaveBeenCalledOnce()
   })
 
   it("ends a listening command on Ctrl-C with 0, and any other with 130", async () => {

@@ -8,6 +8,10 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Fixed
 
+- `session start qr` and `sms` run again without a terminal: 0.157.0 refused them first, which broke
+  `tg session start --qr-file` (a PNG an agent passes on) and answered before a CLI's own checks.
+  Each CLI's login already refuses what needs a terminal, with its own message.
+
 - A command stopped by `--timeout` or Ctrl-C while its own write was unanswered reports
   `outcome_unknown` again, as it says itself, instead of `timeout`. 0.157.0 replaced it with
   `timeout`, which reads as safe to repeat — a repeat could send twice.
