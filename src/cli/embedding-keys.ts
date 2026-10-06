@@ -1,6 +1,11 @@
 import { type CredentialSource, Credentials, pathsAreOverridden, resolvePaths } from "@leemour/cli-core"
 import { type AppIdentity, envName } from "./app.js"
 
+export const endpointKeyName = (baseUrl: string): string => {
+  const host = new URL(baseUrl).host
+  return ["openai", "anthropic"].includes(host) ? `endpoint:${host}` : host
+}
+
 /**
  * An AI provider's API key (phase 5 E11), kept as bot tokens are: the keyring account
  * `embeddings:<provider>` under the app's own service, then `<PREFIX>_OPENAI_API_KEY` or OpenAI's own

@@ -1,8 +1,8 @@
-import { mkdirSync, mkdtempSync, readdirSync, writeFileSync } from "node:fs"
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { captureStreams } from "@leemour/cli-core"
-import { describe, expect, it } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
 import { defaultRule } from "../../replies/rules.js"
 import { openStore } from "../../store/store.js"
 import { run } from "../program.js"
@@ -19,6 +19,7 @@ const app = {
   description: "A test messenger",
   version: "1.0.0",
 }
+afterEach(() => vi.unstubAllGlobals())
 
 const sendsNothing = async (): Promise<MessengerAdapter> => {
   throw new Error("replies test must never connect, let alone send")
@@ -81,6 +82,84 @@ const replies = async (argv: string[], env: NodeJS.ProcessEnv) => {
 }
 
 describe("replies test", () => {
+  it("previews ai instructions and fallback without a request, and calls only with --ai and consent", async () => {
+    const { env } = await setUp()
+    const path = join(env.CHAT_CONFIG_DIR, "default.replies.json")
+    const file = JSON.parse(readFileSync(path, "utf8"))
+    file.rules[0].reply = { template: "{% ai %}Greet {{ sender.firstName }}{% else %}Later{% endai %}", asReply: true }
+    writeFileSync(path, JSON.stringify(file))
+    writeFileSync(
+      join(env.CHAT_CONFIG_DIR, "config.json"),
+      JSON.stringify({
+        profiles: {
+          default: {
+            models: { replies: { provider: "openai", model: "test-model", baseUrl: "https://example.test/v1" } },
+          },
+        },
+      }),
+    )
+    const fetcher = vi.fn(
+      async () =>
+        new Response(
+          JSON.stringify({
+            choices: [{ finish_reason: "stop", message: { content: "Hello Ana" } }],
+            usage: { total_tokens: 3 },
+          }),
+        ),
+    )
+    vi.stubGlobal("fetch", fetcher)
+    expect((await replies(["replies", "consents", "grant", "--json"], env)).code).toBe(0)
+    const preview = await replies(["replies", "test", "--since-time", "1d", "--json"], env)
+    expect(JSON.parse(preview.stdout.join("")).rules[0].would[0]).toMatchObject({
+      text: "Later",
+      blocks: [{ instruction: "Greet Ana", fallback: "Later" }],
+    })
+    expect(fetcher).not.toHaveBeenCalled()
+    const modeled = await replies(["replies", "test", "--ai", "--json"], env)
+    expect(modeled.code).toBe(0)
+    expect(JSON.parse(modeled.stdout.join("")).rules[0].would[0].text).toBe("Hello Ana")
+    expect(fetcher).toHaveBeenCalledTimes(1)
+    const configPath = join(env.CHAT_CONFIG_DIR, "config.json")
+    const config = JSON.parse(readFileSync(configPath, "utf8"))
+    config.profiles.default.permissions = { messages: "deny" }
+    writeFileSync(configPath, JSON.stringify(config))
+    expect((await replies(["replies", "test", "--ai", "--json"], env)).code).not.toBe(0)
+    expect(fetcher).toHaveBeenCalledTimes(1)
+    delete config.profiles.default.permissions
+    writeFileSync(configPath, JSON.stringify(config))
+    expect((await replies(["replies", "test", "--ai", "--offline", "--json"], env)).code).toBe(2)
+    expect(fetcher).toHaveBeenCalledTimes(1)
+    expect((await replies(["replies", "consents", "deny", "11", "--json"], env)).code).toBe(0)
+    const denied = await replies(["replies", "test", "--ai", "--json"], env)
+    expect(JSON.parse(denied.stdout.join("")).rules[0].would[0].text).toBe("Later")
+    expect(fetcher).toHaveBeenCalledTimes(1)
+  })
+
+  it("shows, grants, revokes and manages profile chat opt-outs without a connection", async () => {
+    const { env } = await setUp()
+    const invoke = (args: string[]) => replies(["replies", "consents", ...args, "--json"], env)
+    expect(JSON.parse((await invoke(["show"])).stdout.join(""))).toEqual({ provider: null, deniedChats: [] })
+    expect((await invoke(["grant"])).code).toBe(3)
+    expect((await invoke(["deny", ""])).code).toBe(2)
+    for (const command of ["deny", "deny", "allow", "allow"]) {
+      const result = await invoke([command, "900719925474099399"])
+      expect(result.code).toBe(0)
+      expect(JSON.parse(result.stdout.join(""))).toEqual({
+        provider: null,
+        deniedChats: command === "deny" ? ["900719925474099399"] : [],
+      })
+    }
+    writeFileSync(
+      join(env.CHAT_CONFIG_DIR, "config.json"),
+      JSON.stringify({
+        profiles: { default: { models: { replies: { provider: "anthropic", model: "test-model" } } } },
+      }),
+    )
+    const granted = await invoke(["grant"])
+    expect(JSON.parse(granted.stdout.join("")).provider).toBe("anthropic:https://api.anthropic.com")
+    expect((await invoke(["revoke"])).code).toBe(0)
+    expect(JSON.parse((await invoke(["show"])).stdout.join("")).provider).toBeNull()
+  })
   it("**says what a rule would answer, counting its limits, and sends, connects and saves nothing**", async () => {
     const { env } = await setUp()
     const before = readdirSync(env.CHAT_STATE_DIR).sort()

@@ -75,6 +75,8 @@ export const conversationsCommand = (messenger: Messenger): Command => {
       refuseLocalWrite(context, messenger.app.command, LINKS_KEY)
       refuseLocalWrite(context, messenger.app.command, "conversations.build")
       const target = analysisChoice(options, messenger.app, context.settings, context.env)
+      const controller = new AbortController()
+      context.track({ close: async () => controller.abort() })
       const maxTokens = options.maxTokens ?? 100_000
       const size = options.size ?? BATCH_SIZE.default
       const result = await context.withStore(async (store, account) => {
@@ -96,7 +98,7 @@ export const conversationsCommand = (messenger: Messenger): Command => {
           await consents.remember(status.chat, identity)
         }
         await services.conversations.build(chat)
-        const request = openAnalysis(target)
+        const request = openAnalysis(target, controller.signal)
         return runAnalysis(
           services.conversations,
           chat,

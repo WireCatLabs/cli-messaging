@@ -4,7 +4,7 @@ import { DEFAULT_TEXT_MODEL } from "../embeddings/models.js"
 import { remoteModel } from "../embeddings/remote.js"
 import type { ModelChoice } from "../services/embeddings.js"
 import type { AppIdentity } from "./app.js"
-import { embeddingKeys } from "./embedding-keys.js"
+import { embeddingKeys, endpointKeyName } from "./embedding-keys.js"
 
 export interface ModelOptions {
   model?: string
@@ -44,7 +44,7 @@ export const embeddingChoice = (
     ...(baseUrl ? { baseUrl } : {}),
     ...(dims ? { dims } : {}),
   })
-  const keyName = baseUrl === undefined ? "openai" : new URL(baseUrl).host
+  const keyName = baseUrl === undefined ? "openai" : endpointKeyName(baseUrl)
   const key = embeddingKeys(app, env).read(keyName)?.key
   if (!key && needKey && baseUrl === undefined) {
     throw new CliError(

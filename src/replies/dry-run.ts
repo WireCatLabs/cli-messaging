@@ -3,8 +3,10 @@ import { formatLocator } from "../domain/locator.js"
 import type { Chat, Id, Message } from "../domain/models.js"
 import type { AccountKey, MessageStore } from "../store/store.js"
 import { decide } from "./decide.js"
+import type { ReplyRender } from "./rendering.js"
 import { type Audience, EVERYONE, isTester, outsideAudience, type ReplyRule, type Tester } from "./rules.js"
 import { emptyState, recordReply } from "./state.js"
+import { renderReplyTemplate, type TemplateBlock } from "./template.js"
 
 export const DRY_RUN_DAYS = 7
 const PAGE = 500
@@ -20,6 +22,8 @@ export interface WouldReply {
   asReply: boolean
   /** It would open a task for the message. */
   task: boolean
+  blocks?: TemplateBlock[]
+  reason?: string
 }
 
 export interface RuleDryRun {
@@ -53,7 +57,15 @@ export const dryRun = async (
     only,
     testers,
     audience = EVERYONE,
-  }: { since: number; until?: number; only?: string; testers: readonly Tester[]; audience?: Audience },
+    render,
+  }: {
+    since: number
+    until?: number
+    only?: string
+    testers: readonly Tester[]
+    audience?: Audience
+    render?: ReplyRender
+  },
 ): Promise<DryRun> => {
   const tried = only === undefined ? rules : rules.filter((rule) => rule.id === only)
   if (only !== undefined && tried.length === 0) {
@@ -103,6 +115,19 @@ export const dryRun = async (
         result.skipped[decision.skip] = (result.skipped[decision.skip] ?? 0) + 1
         continue
       }
+      const rendered =
+        decision.reply === null
+          ? undefined
+          : render
+            ? await render(rule, message, chat, now)
+            : await renderReplyTemplate(rule.reply, {
+                senderName: message.senderName,
+                chat,
+                now,
+                timezone: rule.when.hours?.timezone,
+                data: message.text,
+                preview: true,
+              })
       result.would.push({
         locator: formatLocator({
           provider: account.provider,
@@ -114,11 +139,13 @@ export const dryRun = async (
         chatTitle: chat.title,
         to: { id: sender as Id, name: message.senderName ?? people.get(sender as Id)?.name ?? null },
         at: message.timestamp,
-        text: decision.reply?.text ?? null,
+        text: rendered?.text ?? null,
         asReply: decision.reply?.asReply ?? false,
         task: decision.actions.includes("task"),
+        ...(rendered?.blocks.length ? { blocks: rendered.blocks } : {}),
+        ...(rendered?.reason ? { reason: rendered.reason } : {}),
       })
-      state = recordReply(state, rule, message, now)
+      if (decision.actions.includes("task") || rendered?.text) state = recordReply(state, rule, message, now)
       break
     }
   }

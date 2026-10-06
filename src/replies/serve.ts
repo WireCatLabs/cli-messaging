@@ -1,8 +1,10 @@
-import type { Chat, Id, Message } from "../domain/models.js"
+import type { Id, Message } from "../domain/models.js"
 import { codeOf } from "../sends/guarded.js"
 import { decide } from "./decide.js"
+import type { ReplyChat, ReplyRender } from "./rendering.js"
 import { isTester, outsideAudience, readReplies } from "./rules.js"
 import { readRepliesState, recordReply, writeRepliesState } from "./state.js"
+import { renderReplyTemplate } from "./template.js"
 
 export const NOT_ALLOWED = "replies.send is not allow"
 export const NO_RULES = "no rules"
@@ -22,7 +24,9 @@ export interface Replier {
   since: number
   /** Whether the profile's `replies.send` is `allow`. `ask` is no: `serve` has nobody to ask. */
   allowed: () => boolean
-  chatOf: (chat: Id) => Promise<Pick<Chat, "id" | "kind">>
+  chatOf: (chat: Id) => Promise<ReplyChat>
+  render?: ReplyRender
+  warn?: (message: string) => void
   senderOf: (person: Id) => Promise<{ isBot: boolean; isContact: boolean }>
   send: (reply: { chat: Id; text: string; replyTo?: Id; sendId: string; origin: string }) => Promise<unknown>
   newSendId: () => string
@@ -82,10 +86,32 @@ export const replyTo = async (deps: Replier, message: Message): Promise<Replied>
       return { skip: ONLY_TASK, ...opened }
     }
     if (!deps.allowed()) return { skip: NOT_ALLOWED, ...opened }
+    const rendered = deps.render
+      ? await deps.render(rule, message, chat, now)
+      : await renderReplyTemplate(rule.reply, {
+          senderName: message.senderName,
+          chat,
+          now,
+          timezone: rule.when.hours?.timezone,
+          data: message.text,
+        })
+    for (const warning of rendered.warnings) deps.warn?.(warning)
+    if (rendered.text === null) return { skip: rendered.reason ?? "reply template produced no reply", ...opened }
+    // Pause and consent can be revoked while an async model request is in flight.
+    if (readRepliesState(deps.statePath).paused || !deps.allowed())
+      return { skip: "replies paused or permission revoked during rendering", ...opened }
+    const fresh = readReplies(deps.rulesPath)
+    if (
+      JSON.stringify(fresh.rules.find((one) => one.id === rule.id)) !== JSON.stringify(rule) ||
+      !isTester(fresh.testers, deps.provider, message.senderId) ||
+      outsideAudience(fresh.audience, message.senderId, message.chatId)
+    ) {
+      return { skip: "reply rule or audience changed during rendering", ...opened }
+    }
     const sendId = deps.newSendId()
     const reply = {
       chat: message.chatId,
-      text: decision.reply.text,
+      text: rendered.text,
       ...(decision.reply.asReply ? { replyTo: message.id } : {}),
       sendId,
       origin,

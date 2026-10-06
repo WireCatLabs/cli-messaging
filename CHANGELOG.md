@@ -40,6 +40,14 @@ Released early: max-cli needs PNG chart files and MCP image output for the owner
 
 ### Added
 
+- Reply templates use Liquid variables, filters and optional `ai` blocks with literal fallbacks.
+  Only blocks can call a model; incoming message data is never a template variable. Render/file access
+  and output bounds, separate profile/endpoint consent and chat opt-outs guard calls. `replies consents
+  show|grant|revoke|deny|allow` controls consent; `replies test --ai` opts into model calls while ordinary
+  previews show instructions/fallback without calls. Old placeholders and may-reword files keep their
+  original literal fallback behavior with warnings. Pause, rule, audience and consent changes during
+  model calls prevent stale replies from being sent.
+
 - `./models` exports one model gateway for purpose-specific prompts and untrusted data, with
   OpenAI-compatible and Anthropic adapters. Adapter options are checked before requests; missing
   configuration or consent makes no call. `models.<purpose>.provider|model|baseUrl` settings fall back

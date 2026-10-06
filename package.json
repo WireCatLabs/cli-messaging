@@ -106,6 +106,7 @@
     "@resvg/resvg-js": "2.6.2",
     "@valibot/to-json-schema": "1.8.0",
     "echarts": "6.1.0",
+    "liquidjs": "10.30.0",
     "lossless-json": "4.3.0",
     "ogg-opus-decoder": "1.7.5",
     "qrcode-generator": "2.0.4",

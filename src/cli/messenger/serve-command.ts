@@ -3,6 +3,7 @@ import { Command } from "commander"
 import { holdLock, lockPath, releaseLock, takeLock } from "../../background/lock.js"
 import type { ChatKind, Message, MessageEvent } from "../../domain/models.js"
 import { senderFacts } from "../../replies/dry-run.js"
+import { replyRenderer } from "../../replies/rendering.js"
 import { audienceWarnings, readReplies, repliesPathFor } from "../../replies/rules.js"
 import { NO_RULES, type Replied, replyTo } from "../../replies/serve.js"
 import { repliesStatePathFor } from "../../replies/state.js"
@@ -83,6 +84,7 @@ export const serveCommand = (messenger: Messenger): Command => {
         },
       })
     } finally {
+      rules.stop()
       await members.stop()
       await rules.settled()
       await tasks.settled()
@@ -107,6 +109,7 @@ export const serveCommand = (messenger: Messenger): Command => {
  * limits before either counted its reply.
  */
 const replying = (context: MessengerContext, messenger: Messenger, since: number) => {
+  const controller = new AbortController()
   const { app, provider } = messenger
   const { profile, env, settings, renderer } = context
   let connection: MessengerAdapter | undefined
@@ -123,7 +126,7 @@ const replying = (context: MessengerContext, messenger: Messenger, since: number
   } catch {}
 
   const handle = async (message: Message) => {
-    if (connection === undefined) return
+    if (connection === undefined || controller.signal.aborted) return
     const open = connection
     const answer: Replied = await replyTo(
       {
@@ -137,7 +140,7 @@ const replying = (context: MessengerContext, messenger: Messenger, since: number
           if (!chats.has(chat))
             chats.set(
               chat,
-              open.resolve(chat).then(({ id, kind }) => ({ id, kind })),
+              open.resolve(chat).then(({ id, kind, title }) => ({ id, kind, title })),
             )
           return chats.get(chat) as Promise<{ id: string; kind: ChatKind }>
         },
@@ -159,6 +162,10 @@ const replying = (context: MessengerContext, messenger: Messenger, since: number
             ...(reply.replyTo === undefined ? {} : { replyTo: reply.replyTo }),
           }),
         newSendId: () => open.newSendId?.() ?? newSendId(),
+        render: replyRenderer(app, profile, () => messenger.resolveSettings({ profile }, { env }), env, renderer.warn, {
+          ai: true,
+          signal: controller.signal,
+        }),
         openTask: (arrived) =>
           context.withStore((store, account) => openRequestTask(store, account, arrived), { name: "serve replies" }),
       },
@@ -182,6 +189,7 @@ const replying = (context: MessengerContext, messenger: Messenger, since: number
       )
     },
     settled: () => queue,
+    stop: () => controller.abort(),
     summary: () =>
       Object.keys(sent).length + Object.keys(skipped).length + Object.keys(tasks).length === 0
         ? {}

@@ -2,7 +2,7 @@ import { mkdtempSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { CliError } from "@leemour/cli-core"
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 import type { Message } from "../domain/models.js"
 import { defaultRule } from "./rules.js"
 import { NO_TASKS, NOT_ALLOWED, ONLY_TASK, type Replier, replyTo } from "./serve.js"
@@ -86,6 +86,38 @@ const setUp = ({
 }
 
 describe("serve's reply rules", () => {
+  it("never invokes the renderer outside tester, audience and send permission gates", async () => {
+    for (const options of [{ testers: [] }, { allowed: false }, { audience: { deny: { people: ["tester"] } } }]) {
+      const { deps } = setUp(options)
+      const render = vi.fn(async () => ({ text: "Hello", warnings: [], blocks: [] }))
+      deps.render = render
+      await replyTo(deps, said("gated"))
+      expect(render).not.toHaveBeenCalled()
+    }
+  })
+  it("opens tasks even if a template cannot render, and checks pause and rule changes before sending async output", async () => {
+    const { deps, sent, opened } = setUp({ does: ["reply", "task"] })
+    deps.render = async () => ({ text: null, warnings: [], blocks: [], reason: "no model and no fallback" })
+    expect(await replyTo(deps, said("failed"))).toEqual({ skip: "no model and no fallback", task: "away" })
+    expect(opened).toHaveLength(1)
+    deps.render = async () => {
+      writeRepliesState(deps.statePath, paused(readRepliesState(deps.statePath), true))
+      return { text: "Hello", warnings: [], blocks: [] }
+    }
+    expect(await replyTo(deps, said("paused"))).toMatchObject({
+      skip: "replies paused or permission revoked during rendering",
+    })
+    expect(sent).toHaveLength(0)
+    writeRepliesState(deps.statePath, paused(readRepliesState(deps.statePath), false))
+    deps.render = async () => {
+      writeFileSync(deps.rulesPath, JSON.stringify({ rules: [], testers: [] }))
+      return { text: "Hello", warnings: [], blocks: [] }
+    }
+    expect(await replyTo(deps, said("changed"))).toMatchObject({
+      skip: "reply rule or audience changed during rendering",
+    })
+    expect(sent).toHaveLength(0)
+  })
   it("**answers a test account once, and nobody else at all**", async () => {
     const { deps, sent } = setUp()
 

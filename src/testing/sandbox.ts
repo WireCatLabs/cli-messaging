@@ -29,5 +29,8 @@ for (const name of ["XDG_CACHE_HOME", "XDG_CONFIG_HOME", "XDG_DATA_HOME", "XDG_S
 // Set in an agent's own shell, where it would make every run print the skill hint and read the real ~/.claude.
 delete process.env.AI_AGENT
 delete process.env.CLAUDECODE
+for (const key of Object.keys(process.env)) {
+  if (/^(APP|CHAT|TG|MAX)_(MODELS|EMBEDDING|ANALYSIS)_/.test(key)) delete process.env[key]
+}
 
 afterAll(() => rmSync(sandbox, { recursive: true, force: true }))
