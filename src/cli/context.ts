@@ -41,10 +41,11 @@ export const environmentOf = <E extends BaseEnvironment = BaseEnvironment>(comma
 
 /** For the commands that print but never need settings or a connection. */
 export const outputFor = (command: Command) => {
-  const { streams, tty } = environmentOf(command)
+  const { streams, tty, env } = environmentOf(command)
   return resolveOutput({
     ...command.optsWithGlobals(),
     ...(streams ? { streams } : {}),
+    ...(env ? { env } : {}),
     ...(tty === undefined ? {} : { tty }),
   })
 }
@@ -79,6 +80,7 @@ export const baseContext = (command: Command, resolveSettings: Resolve): BaseCon
   const settings = resolveSettings(command.optsWithGlobals<GlobalFlags>(), { env })
   const { renderer, format, color, streams } = resolveOutput({
     ...settings,
+    env,
     ...(command.optsWithGlobals<{ fields?: string }>().fields
       ? { fields: command.optsWithGlobals<{ fields?: string }>().fields }
       : {}),

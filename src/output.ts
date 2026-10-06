@@ -16,6 +16,7 @@ export interface OutputOptions {
   /** Whether a person is looking. Defaults to whether stdout is a terminal. */
   tty?: boolean
   color?: boolean
+  env?: NodeJS.ProcessEnv
   fields?: string
 }
 
@@ -35,10 +36,11 @@ export const resolveOutput = ({
   tty,
   color,
   fields,
+  env = process.env,
 }: OutputOptions = {}) => {
   const interactive = tty ?? process.stdout.isTTY === true
   const format: RenderFormat = jsonl ? "jsonl" : json || !interactive ? "json" : "pretty"
-  const painted = color ?? (format === "pretty" && process.env.NO_COLOR === undefined)
+  const painted = format === "pretty" && (color ?? (env.NO_COLOR === undefined && env.TERM !== "dumb" && !env.CI))
   const created = createRenderer({ format, color: painted, streams })
   const paths = fields === undefined ? undefined : fieldsOf(fields)
   const renderer =

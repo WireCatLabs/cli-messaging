@@ -10,7 +10,7 @@ import {
 } from "@leemour/cli-core"
 import { skillHint } from "@leemour/cli-core/skill"
 import { Command } from "commander"
-import type { AppIdentity } from "./app.js"
+import { type AppIdentity, envName } from "./app.js"
 import { commandPathOf } from "./command-contract.js"
 import { type BaseEnvironment, outputFor, provide } from "./context.js"
 import { byteCount, DEFAULT_COMMAND_MS, DEFAULT_OUTPUT_BYTES, execution } from "./execution.js"
@@ -155,7 +155,9 @@ export const run = async (argv: string[], definition: ProgramDefinition, options
         dryRun?: boolean
       }
     >()
-    const headless = machine || flags.input === false || (options.tty ?? process.stdout.isTTY) !== true
+    const commandEnv = options.env ?? process.env
+    const headless =
+      machine || flags.input === false || Boolean(commandEnv.CI) || (options.tty ?? process.stdout.isTTY) !== true
     control.configure({
       ...(flags.fields === undefined ? {} : { fields: flags.fields }),
       maxOutputBytes:
@@ -192,14 +194,15 @@ export const run = async (argv: string[], definition: ProgramDefinition, options
       path.includes("mcp") ||
       (path[0] === "bot" && path[1] === "watch")
     const interactiveLogin = !headless && (path[0] === "setup" || (path[0] === "session" && path[1] === "start"))
+    const timeout = flags.timeout ?? (commandEnv[envName(definition.app, "TIMEOUT")]?.trim() || undefined)
     control.start(
-      flags.timeout === undefined
+      timeout === undefined
         ? persistent || interactiveLogin
           ? undefined
           : DEFAULT_COMMAND_MS
         : persistent
           ? undefined
-          : parseDuration(flags.timeout, "--timeout"),
+          : parseDuration(timeout, flags.timeout === undefined ? envName(definition.app, "TIMEOUT") : "--timeout"),
     )
     process.on("SIGINT", sigint).on("SIGTERM", sigterm)
     if (!options.streams) process.stdout.on("error", pipeError)
@@ -310,14 +313,29 @@ interface Failed {
 }
 
 const settleFailure = async (failure: unknown, state: Failed): Promise<{ settlementFailed?: true }> => {
+  let timer: NodeJS.Timeout | undefined
   let settlementFailed: true | undefined
   try {
-    await state.definition.onFailure?.(failure, state.program)
+    const settle = (async () => {
+      try {
+        await state.definition.onFailure?.(failure, state.program)
+      } catch {
+        settlementFailed = true
+      }
+      await keepFailure(failure, state)
+    })()
+    await Promise.race([
+      settle,
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new Error("failure settlement deadline")), 1000)
+      }),
+    ])
+    return settlementFailed ? { settlementFailed } : {}
   } catch {
-    settlementFailed = true
+    return { settlementFailed: true }
+  } finally {
+    if (timer) clearTimeout(timer)
   }
-  await keepFailure(failure, state)
-  return settlementFailed ? { settlementFailed } : {}
 }
 
 /**

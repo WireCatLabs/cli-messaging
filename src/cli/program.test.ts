@@ -421,3 +421,25 @@ describe("machine failures", () => {
     expect(action).not.toHaveBeenCalled()
   })
 })
+
+it("bounds an unresponsive failure handler while preserving the original error", async () => {
+  vi.useFakeTimers()
+  const streams = captureStreams()
+  try {
+    const pending = run(
+      ["chats", "list", "--json", "--no-record"],
+      {
+        ...definition(async () => {
+          throw new CliError("not_found", "synthetic failure")
+        }),
+        onFailure: async () => new Promise(() => {}),
+      },
+      { streams, tty: false, env: process.env },
+    )
+    await vi.advanceTimersByTimeAsync(1000)
+    expect(await pending).toBe(6)
+    expect(JSON.parse(streams.stderr[0] ?? "{}").error).toMatchObject({ code: "not_found", settlementFailed: true })
+  } finally {
+    vi.useRealTimers()
+  }
+})

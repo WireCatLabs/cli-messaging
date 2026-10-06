@@ -1,5 +1,5 @@
 import { PassThrough } from "node:stream"
-import { captureStreams } from "@leemour/cli-core"
+import { CliError, captureStreams } from "@leemour/cli-core"
 import { annotate as described } from "@leemour/cli-core/commands"
 import { Argument, Command, Option } from "commander"
 import { describe, expect, it, vi } from "vitest"
@@ -163,4 +163,23 @@ it("refuses preview of denied source data and write paths before exposing target
   expect(() => preview(leaf, { "messages.stats": "deny" })).toThrow("config migrate")
   root.addCommand(new Command("messages").addCommand(new Command("send")))
   expect(() => preview(findCommand(root, ["messages", "send"]), { messages: "readonly" })).toThrow("does not permit")
+})
+
+it("honors the whole-command timeout environment and explicit flag precedence", async () => {
+  const hung = await invoke(
+    ["messages", "send", "synthetic", "--json"],
+    { env: { ...process.env, FIXTURE_TIMEOUT: "5ms" } },
+    async () => new Promise(() => {}),
+  )
+  expect(hung.result).toBe(9)
+  expect(hung.stderr.join()).toContain("5ms")
+  const overridden = await invoke(
+    ["messages", "send", "synthetic", "--json", "--timeout", "100ms"],
+    { env: { ...process.env, FIXTURE_TIMEOUT: "5ms" } },
+    async () => {
+      await new Promise((resolve) => setTimeout(resolve, 15))
+      throw new CliError("not_found", "synthetic")
+    },
+  )
+  expect(overridden.result).toBe(6)
 })

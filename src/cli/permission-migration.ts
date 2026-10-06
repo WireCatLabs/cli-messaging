@@ -150,13 +150,19 @@ export const migratePermissionConfig = (input: Config): PermissionMigration => {
     if (!scope.permissions || typeof scope.permissions !== "object" || Array.isArray(scope.permissions)) continue
     const permissions = scope.permissions as Levels
     let changed = false
-    for (const [old, next] of Object.entries(replacements)) {
-      if (!Object.hasOwn(permissions, old)) continue
-      if (Object.hasOwn(permissions, next) && permissions[next] !== permissions[old])
-        throw invalid(`${name}.permissions has conflicting ${old} and ${next} — keep one level before migrating`)
-      permissions[next] = permissions[old] as Level
-      delete permissions[old]
-      changed = true
+    for (const prefix of ["", "bot."]) {
+      for (const [from, to] of Object.entries(replacements)) {
+        const source = `${prefix}${from}`
+        for (const old of Object.keys(permissions)) {
+          if (old !== source && !old.startsWith(`${source}.`)) continue
+          const next = `${prefix}${to}${old.slice(source.length)}`
+          if (Object.hasOwn(permissions, next) && permissions[next] !== permissions[old])
+            throw invalid(`${name}.permissions has conflicting ${old} and ${next} — keep one level before migrating`)
+          permissions[next] = permissions[old] as Level
+          delete permissions[old]
+          changed = true
+        }
+      }
     }
     if (changed) changes.push({ scope: name, removed: [], permissions: { ...permissions } })
   }
