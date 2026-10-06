@@ -177,6 +177,7 @@ export type {
   MessengerAdapter,
   MessengerCore,
   NewPoll,
+  OfficialStats,
   PersonProfiles,
   PushedHistory,
   ReadState,

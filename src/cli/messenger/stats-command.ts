@@ -12,6 +12,7 @@ import { momentOf } from "../../services/moment.js"
 import { statsCommand as chatStatsCommand } from "./chats-stats-command.js"
 import { type Messenger, messengerContext } from "./context.js"
 import { messagesStatsCommand } from "./messages-stats-command.js"
+import { officialStatsCommand } from "./official-stats-command.js"
 import { tasksStatsCommand } from "./tasks-command.js"
 
 export const statsCommand = (messenger: Messenger, loadRenderer = chartRenderer): Command => {
@@ -21,9 +22,9 @@ export const statsCommand = (messenger: Messenger, loadRenderer = chartRenderer)
       .description("message statistics from the local store")
       .addCommand(messagesStatsCommand(messenger)),
   )
-  stats.addCommand(
-    new Command("chats").description("statistics about one chat").addCommand(chatStatsCommand(messenger)),
-  )
+  const chats = new Command("chats").description("statistics about one chat").addCommand(chatStatsCommand(messenger))
+  if (messenger.officialStats === true) chats.addCommand(officialStatsCommand(messenger))
+  stats.addCommand(chats)
   stats.addCommand(new Command("tasks").description("task statistics").addCommand(tasksStatsCommand(messenger)))
   stats
     .command("charts")

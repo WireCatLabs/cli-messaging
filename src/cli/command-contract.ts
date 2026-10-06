@@ -36,7 +36,8 @@ export const resultSchemaFor = (
 ): { schema: JsonSchema; coverage: string } => {
   const words = path.join(" ")
   if (format === "jsonl") {
-    if (words === "stats charts") return { schema: { not: {} }, coverage: "unsupported-format" }
+    if (words === "stats charts" || words === "stats chats official")
+      return { schema: { not: {} }, coverage: "unsupported-format" }
     if (path[0] === "messages" && ["list", "search", "between"].includes(path[1] ?? ""))
       return { schema: messageResult, coverage: "declared-domain-fields" }
     if (words === "stats messages show")

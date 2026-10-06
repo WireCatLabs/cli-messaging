@@ -504,3 +504,69 @@ export interface Profile {
 
 /** One message of a window around another, which carries `anchor: true`. */
 export type WindowedMessage = Message & { anchor?: true }
+
+/** A number the messenger reports for its period, beside the same number for the period before. */
+export interface OfficialValue {
+  current: number
+  previous: number
+}
+
+/**
+ * One of the messenger's own graphs, colours and zoom dropped. `x.type` is read from the points:
+ * `date` for UTC day starts (`YYYY-MM-DD`), `time` for other moments (ISO 8601), `number` as given.
+ */
+export interface OfficialGraph {
+  kind: string
+  x: { type: "date" | "time" | "number"; values: (string | number)[] }
+  series: { key: string; name: string; kind: string; values: number[] }[]
+  stacked?: boolean
+  percentage?: boolean
+}
+
+/** A graph the messenger could not give; the other graphs still answer. */
+export interface OfficialGraphError {
+  error: string
+}
+
+export interface OfficialPerson {
+  person: Id
+  name: string | null
+}
+
+interface OfficialStatsBase {
+  version: 1
+  chat: { id: Id; title: string }
+  /** The messenger chooses the period; ISO 8601. */
+  period: { since: string; until: string }
+}
+
+export interface OfficialGroupStats extends OfficialStatsBase {
+  kind: "group"
+  totals: Record<"members" | "messages" | "viewers" | "posters", OfficialValue>
+  top: {
+    posters: (OfficialPerson & { messages: number; averageChars: number })[]
+    admins: (OfficialPerson & { deleted: number; removed: number; banned: number })[]
+    inviters: (OfficialPerson & { invited: number })[]
+  }
+  graphs: Record<string, OfficialGraph | OfficialGraphError>
+}
+
+export interface OfficialChannelStats extends OfficialStatsBase {
+  kind: "channel"
+  totals: Record<
+    | "followers"
+    | "viewsPerPost"
+    | "sharesPerPost"
+    | "reactionsPerPost"
+    | "viewsPerStory"
+    | "sharesPerStory"
+    | "reactionsPerStory",
+    OfficialValue
+  >
+  notifications: { enabled: number; total: number }
+  recentPosts: { kind: "message" | "story"; id: Id; views: number; forwards: number; reactions: number }[]
+  graphs: Record<string, OfficialGraph | OfficialGraphError>
+}
+
+/** What the messenger itself computed for a group or channel, as it shows its admins. */
+export type OfficialChatStats = OfficialGroupStats | OfficialChannelStats

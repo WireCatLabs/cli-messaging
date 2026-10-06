@@ -96,6 +96,8 @@ export interface Messenger {
    * `serve` keeps filled, and never connect; writes still do. `server` when unset.
    */
   history?: "server" | "store"
+  /** Whether the messenger computes a chat's statistics for its admins — `stats chats official`; no when unset. */
+  officialStats?: boolean
   /** Whether this CLI's background service fetches tracked rosters daily; true when unset. */
   tracksMembers?: boolean
   /** Speech model ids, most suitable first, for `messages transcribe --local`; the first is the default. */
