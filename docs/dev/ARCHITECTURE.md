@@ -12,6 +12,26 @@ domain types, and `biome.json` refuses any import of `@mtcute/*`, `ws` or an ada
 under `src/`. What only one provider has travels in `providerMetadata`. The boundaries are in
 [proposal §3](../plans/2026-09-26-platform-proposal.md#3-package-boundaries).
 
+## CLI design references
+
+The command interface follows a shared [adoption profile](STANDARD.md#external-references-and-our-adoption-profile):
+[POSIX utility conventions](https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/V1_chap12.html)
+for utility syntax, [GNU CLI conventions](https://www.gnu.org/prep/standards/html_node/Command_002dLine-Interfaces)
+for common options, and [CLIG](https://clig.dev/) for modern CLI design. The standard records our
+additional agent contract and deliberate differences. These references do not choose a particular
+resource hierarchy; `stats` is a project decision.
+
+The shared program shell owns parsing and error routing; the renderer owns machine output;
+command discovery describes the tree; services own use cases and write guards enforce permissions.
+CLI and MCP are two adapters over those services. The [MCP tools specification](https://modelcontextprotocol.io/specification/2025-11-25/server/tools)
+governs the latter; [Agent Skills](https://agentskills.io/specification) describes the portable
+agent guidance format. Agent-oriented design references and their applicability are linked from
+the standard, so a reader need not treat a project example as a formal standard.
+
+The [compliance audit](CLI-COMPLIANCE.md) distinguishes source evidence, isolated observations,
+intentional deviations and work still needed. This architecture page does not certify complete
+conformance or imply that planned command paths are already implemented.
+
 ## Modules
 
 | Export | Directory | What it holds |

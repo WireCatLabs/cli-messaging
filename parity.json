@@ -2596,6 +2596,150 @@
         }
       }
     },
+    "stats chats": {
+      "in": [],
+      "planned": {
+        "max": "stats hierarchy migration and rankings after naming approval",
+        "tg": "stats hierarchy migration and rankings after naming approval"
+      }
+    },
+    "stats chats show": {
+      "in": [],
+      "planned": {
+        "max": "stats hierarchy migration and rankings after naming approval",
+        "tg": "stats hierarchy migration and rankings after naming approval"
+      },
+      "options": {
+        "--by": {
+          "in": [],
+          "planned": {
+            "max": "stats hierarchy migration and rankings after naming approval",
+            "tg": "stats hierarchy migration and rankings after naming approval"
+          }
+        },
+        "--since-time": {
+          "in": [],
+          "planned": {
+            "max": "stats hierarchy migration and rankings after naming approval",
+            "tg": "stats hierarchy migration and rankings after naming approval"
+          }
+        },
+        "--timezone": {
+          "in": [],
+          "planned": {
+            "max": "stats hierarchy migration and rankings after naming approval",
+            "tg": "stats hierarchy migration and rankings after naming approval"
+          }
+        }
+      }
+    },
+    "stats contacts": {
+      "in": [],
+      "planned": {
+        "max": "stats hierarchy migration and rankings after naming approval",
+        "tg": "stats hierarchy migration and rankings after naming approval"
+      }
+    },
+    "stats contacts top": {
+      "in": [],
+      "planned": {
+        "max": "stats hierarchy migration and rankings after naming approval",
+        "tg": "stats hierarchy migration and rankings after naming approval"
+      }
+    },
+    "stats messages": {
+      "in": [],
+      "planned": {
+        "max": "stats hierarchy migration and rankings after naming approval",
+        "tg": "stats hierarchy migration and rankings after naming approval"
+      }
+    },
+    "stats messages show": {
+      "in": [],
+      "planned": {
+        "max": "stats hierarchy migration and rankings after naming approval",
+        "tg": "stats hierarchy migration and rankings after naming approval"
+      },
+      "options": {
+        "--by": {
+          "in": [],
+          "planned": {
+            "max": "stats hierarchy migration and rankings after naming approval",
+            "tg": "stats hierarchy migration and rankings after naming approval"
+          }
+        },
+        "--chat": {
+          "in": [],
+          "planned": {
+            "max": "stats hierarchy migration and rankings after naming approval",
+            "tg": "stats hierarchy migration and rankings after naming approval"
+          }
+        },
+        "--limit": {
+          "in": [],
+          "planned": {
+            "max": "stats hierarchy migration and rankings after naming approval",
+            "tg": "stats hierarchy migration and rankings after naming approval"
+          }
+        },
+        "--max-chats": {
+          "in": [],
+          "planned": {
+            "max": "stats hierarchy migration and rankings after naming approval",
+            "tg": "stats hierarchy migration and rankings after naming approval"
+          }
+        },
+        "--max-messages": {
+          "in": [],
+          "planned": {
+            "max": "stats hierarchy migration and rankings after naming approval",
+            "tg": "stats hierarchy migration and rankings after naming approval"
+          }
+        },
+        "--saved": {
+          "in": [],
+          "planned": {
+            "max": "stats hierarchy migration and rankings after naming approval",
+            "tg": "stats hierarchy migration and rankings after naming approval"
+          }
+        },
+        "--source": {
+          "in": [],
+          "planned": {
+            "max": "stats hierarchy migration and rankings after naming approval",
+            "tg": "stats hierarchy migration and rankings after naming approval"
+          }
+        },
+        "--sync-first": {
+          "in": [],
+          "planned": {
+            "max": "stats hierarchy migration and rankings after naming approval",
+            "tg": "stats hierarchy migration and rankings after naming approval"
+          }
+        },
+        "--sync-time": {
+          "in": [],
+          "planned": {
+            "max": "stats hierarchy migration and rankings after naming approval",
+            "tg": "stats hierarchy migration and rankings after naming approval"
+          }
+        },
+        "--timezone": {
+          "in": [],
+          "planned": {
+            "max": "stats hierarchy migration and rankings after naming approval",
+            "tg": "stats hierarchy migration and rankings after naming approval"
+          }
+        }
+      }
+    },
+    "stats messages top": {
+      "in": [],
+      "planned": {
+        "max": "stats hierarchy migration and rankings after naming approval",
+        "tg": "stats hierarchy migration and rankings after naming approval"
+      }
+    },
     "store": {
       "in": "all"
     },

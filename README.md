@@ -59,6 +59,11 @@ A locator for another messenger or account is refused. Singular `link` differs f
 
 ## Command discovery
 
+The [CLI standard](docs/dev/STANDARD.md#external-references-and-our-adoption-profile) explains
+which POSIX, GNU, CLIG and agent-facing conventions we adopt. The [architecture](docs/dev/ARCHITECTURE.md#cli-design-references)
+shows where their contracts live; the [compliance audit](docs/dev/CLI-COMPLIANCE.md) records
+remaining gaps and deliberate differences.
+
 To discover arguments without reading the whole command tree, run
 `<cli> commands messages evidence --json`. Replace the path with any command or group;
 `<cli> commands messages --json` includes its descendants. The response retains global options
