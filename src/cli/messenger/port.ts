@@ -19,6 +19,7 @@ import type {
   Member,
   Message,
   MessageEvent,
+  OfficialChatStats,
   Page,
   PersonCard,
   PhoneBookEntry,
@@ -358,6 +359,11 @@ export interface ChatFolders {
   deleteFolder(folderId: string): Promise<void>
 }
 
+/** What the messenger computes for a group or channel and shows only its admins. Reads only. */
+export interface OfficialStats {
+  officialChatStats(chat: string): Promise<OfficialChatStats>
+}
+
 /**
  * A state the messenger put the account in, where it is not simply logged in. An adapter reports
  * `frozen` from `health`; the others come as `details.standing` on the error its requests throw.
@@ -421,7 +427,8 @@ export interface MessengerAdapter
     Partial<ChatFolders>,
     Partial<ContactBook>,
     Partial<AccountEditing>,
-    Partial<AccountHealth> {}
+    Partial<AccountHealth>,
+    Partial<OfficialStats> {}
 
 type Method = (...args: never[]) => unknown
 

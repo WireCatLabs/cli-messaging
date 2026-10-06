@@ -6,6 +6,15 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- `stats chats official <chat>`: what the messenger itself computed for a group or channel it shows its admins —
+  its own period, totals against the previous period, top posters, admins and inviters (groups), recent posts and
+  notification share (channels), and every graph as JSON series. One object with `kind` `group` or `channel`;
+  `--jsonl` is refused; a graph the messenger could not give is `{ error }` and the rest still answer. A messenger
+  offers it with the optional `OfficialStats` adapter group and `Messenger.officialStats: true`; without the flag the
+  command is not mounted, so MAX does not show it.
+
 ## 0.161.0 — 07.10.2026
 
 Released early: MAX cannot adopt 0.160.0 — a timed-out Bot API write still reads as safe to repeat

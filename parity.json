@@ -2796,6 +2796,13 @@
         "tg": "stats hierarchy migration and rankings after naming approval"
       }
     },
+    "stats chats official": {
+      "in": [],
+      "planned": {
+        "tg": "tg's next cli-messaging bump"
+      },
+      "reason": "MAX has no statistics request of its own for a chat"
+    },
     "stats chats show": {
       "in": [],
       "planned": {

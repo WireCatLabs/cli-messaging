@@ -124,7 +124,8 @@ guessable from the others.
      working), `moderate` (apply a chat's rules: delete what breaks them, act on who broke them)
    - A **noun as the last word** names a view and shows it: `server logs`, `chats events`,
      `messages scheduled`, `messages context`, `runs path`, `mcp config`, `searches history`.
-     `top` is a ranked view under `stats`, for example `stats messages top`.
+     `top` is a ranked view under `stats`, for example `stats messages top`. `official` is the view
+     the messenger itself computed, under `stats`: `stats chats official`.
 4. **One action or report, one leaf command.** A different action or independently useful report
    belongs in a nested command. Options choose the scope, measure, order or format of that action;
    they do not switch a search, send or list into another report. For example, ranking is
@@ -180,6 +181,7 @@ The canonical paths for the statistics migration and rankings are:
 |---|---|---|
 | `stats messages show [query...]` | Count matching stored messages, with the existing groupings | Planned relocation of `stats messages show` |
 | `stats chats show <chat>` | A chat's aggregate numbers for a period | Planned relocation of `stats chats show` |
+| `stats chats official <chat>` | What the messenger itself computed for a group or channel it shows its admins: its own period, totals against the previous one, top people, graphs as JSON series. One object, `kind` `group` or `channel`; `--jsonl` refused. Mounted only where `Messenger.officialStats` is set (Telegram) | Added |
 | `stats messages top [query...]` | Rank matching messages by a measure or score | Planned |
 | `stats contacts top [query...]` | Rank the authors of matching messages by a measure or score | Planned |
 
