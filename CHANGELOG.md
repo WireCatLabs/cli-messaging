@@ -8,6 +8,15 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Added
 
+- `statsCommand(messenger)` mounts `stats charts <chat>`: messages, active authors or joins and leaves
+  per calendar day or week as a neutral `{ chart }` JSON description. `--output activity.svg` writes
+  a new private SVG with a dark theme, preserving missing dates as gaps and labelling partial data.
+  MCP `stats_charts` returns chart data from the store without writing files or connecting; membership
+  is unavailable there. Existing statistics commands and their outputs do not change.
+- `./charts` exports the neutral data, builders and replaceable `ChartRenderer`. SVG rendering loads
+  Apache ECharts 6.1.0 only when an image is requested; JSON does not load it. The new dependency and
+  its transitive packages add about 61.6 MiB of published unpacked files before deduplication.
+
 - **`review` and `serve` keep a list of what waits on you.** Each review, and `serve` as each message
   arrives, opens a task in the local store for a question nobody answered and a message that mentions you
   by name, and closes it once you answer. Run twice over the same chats, it adds nothing; a task you

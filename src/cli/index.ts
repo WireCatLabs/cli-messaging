@@ -183,6 +183,7 @@ export {
   type ServerSystem,
   serverCommand,
 } from "./messenger/server-command.js"
+export { statsCommand } from "./messenger/stats-command.js"
 export { storeSummary } from "./messenger/store-maintenance-command.js"
 export { type Saving, stored } from "./messenger/stored.js"
 export { tagsCommand } from "./messenger/tags-command.js"
