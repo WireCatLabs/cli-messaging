@@ -4,6 +4,28 @@ Search defaults to local `e5-small` embeddings. Conversation analysis defaults t
 
 These shared SDK settings/options reach MAX and Telegram at their next cli-messaging dependency bump.
 
+All text generation uses the `./models` gateway. Set `models.<purpose>.provider`, `.model`, and
+`.baseUrl` for `analysis`, `replies`, or another caller's purpose. Each field falls back to
+`models.default`; `provider: off` explicitly disables a purpose. With no provider configured,
+the gateway refuses without resolving a key or making a request. A model id is required when
+a provider is enabled. Configuration alone never authorizes data transfer.
+
+Existing `analysisProvider`, `analysisModel` and `analysisBaseUrl` remain supported as analysis
+settings, ahead of the default-purpose fallback; explicit purpose settings take precedence.
+`config set models.analysis.provider openai` sets one field; `config unset models.analysis.provider`
+removes it. The whole `models` object can also be set as JSON. `config show` reports effective
+values and the source of each field. Environment overrides use names such as
+`MAX_MODELS_ANALYSIS_PROVIDER`, `MAX_MODELS_REPLIES_MODEL`, and `MAX_MODELS_DEFAULT_BASE_URL`.
+
+The gateway takes `purpose`, optional `system`, `prompt`, optional untrusted `data`, `maxTokens`
+and optional provider-specific `options`. The data is sent separately with instructions never to
+follow or copy it. Options are validated by the selected adapter: unknown keys and wrong types
+are refused before any request. OpenAI supports temperature, top_p, presence_penalty,
+frequency_penalty, seed, stop, and response_format (text or json_object); Anthropic supports
+temperature, top_p, top_k and stop_sequences. Callers cannot override the model, messages,
+credentials or token bound through options. The caller supplies a key resolver and a consent
+check; consent is checked before keys or network calls. Tests inject fake adapters and fetch.
+
 | Profile setting | Values / default |
 |---|---|
 | `embeddingProvider` | `local` (default), `openai` |

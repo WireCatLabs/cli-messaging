@@ -67,6 +67,10 @@
     "./charts": {
       "types": "./dist/charts/index.d.ts",
       "default": "./dist/charts/index.js"
+    },
+    "./models": {
+      "types": "./dist/models/index.d.ts",
+      "default": "./dist/models/index.js"
     }
   },
   "scripts": {

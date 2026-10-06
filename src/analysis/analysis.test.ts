@@ -9,6 +9,7 @@ import type { SendGuard } from "../sends/guard.js"
 import { conversationsService } from "../services/conversations.js"
 import { storedDeps } from "../services/deps.js"
 import { type LinkBatch, openStore } from "../store/store.js"
+import { analyze } from "./anthropic.js"
 import { analysisConsents } from "./consents.js"
 import { openAnalysis, providerIdentity } from "./provider.js"
 import { analysisAnswer, analysisPrompt, runAnalysis } from "./runner.js"
@@ -105,6 +106,18 @@ const answer = (messages = ["1", "2"]) =>
 const options = { model: "test-model", command: "chat", size: 10, maxTokens: 100_000 }
 
 describe("configured analysis", () => {
+  it("keeps the previous Anthropic analysis entry point compatible", async () => {
+    const server = await fake("anthropic", answer())
+    await expect(
+      analyze(
+        { provider: "anthropic", model: "test-model", baseUrl: server.baseUrl, apiKey: "fake-only" },
+        "system",
+        "input",
+        100,
+      ),
+    ).resolves.toEqual({ text: answer(), tokens: 100 })
+    expect(server.seen).toHaveLength(1)
+  })
   for (const provider of ["openai", "anthropic"] as const) {
     it(`links through the ${provider} API shape, reusing the skill prompt and rebuilding`, async () => {
       const { store, service } = await setup()

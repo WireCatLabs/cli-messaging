@@ -1,0 +1,48 @@
+import * as v from "valibot"
+import { checkedOptions, range } from "./options.js"
+import { type ModelAdapter, messagesFor, systemFor } from "./types.js"
+
+const options = v.strictObject({
+  temperature: range(0, 2),
+  top_p: range(0, 1),
+  presence_penalty: range(-2, 2),
+  frequency_penalty: range(-2, 2),
+  seed: v.optional(v.pipe(v.number(), v.integer())),
+  stop: v.optional(v.union([v.string(), v.array(v.string())])),
+  response_format: v.optional(v.strictObject({ type: v.picklist(["text", "json_object"]) })),
+})
+
+export const openai: ModelAdapter = {
+  baseUrl: "https://api.openai.com/v1",
+  validate: (given) => checkedOptions("openai", options, given),
+  complete: async (target, request, checked, apiKey, fetcher) => {
+    const response = await fetcher(`${target.baseUrl.replace(/\/+$/, "")}/chat/completions`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}) },
+      body: JSON.stringify({
+        ...checked,
+        model: target.model,
+        messages: [{ role: "system", content: systemFor(request) }, ...messagesFor(request)],
+        ...(new URL(target.baseUrl).hostname === "api.openai.com"
+          ? { max_completion_tokens: request.maxTokens }
+          : { max_tokens: request.maxTokens }),
+      }),
+      signal: AbortSignal.timeout(120_000),
+      redirect: "error",
+    })
+    if (!response.ok) throw new Error("provider rejected request")
+    const body = (await response.json()) as {
+      choices?: { finish_reason?: string; message?: { content?: unknown } }[]
+      usage?: { total_tokens?: number }
+    }
+    const choice = body.choices?.[0]
+    if (
+      choice?.finish_reason !== "stop" ||
+      typeof choice.message?.content !== "string" ||
+      !Number.isInteger(body.usage?.total_tokens) ||
+      (body.usage?.total_tokens ?? 0) < 1
+    )
+      throw new Error("incomplete response")
+    return { text: choice.message.content, tokens: body.usage?.total_tokens as number }
+  },
+}

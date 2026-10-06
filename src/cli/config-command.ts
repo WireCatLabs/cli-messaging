@@ -210,6 +210,14 @@ const scopeOf = (kind: string | undefined, profile: string | undefined): string 
 
 /** A shared setting from what was resolved; a messenger's own from the file, where it lives. */
 const sourced = (settings: Settings, setting: string) => {
+  if (setting === "models") {
+    return {
+      setting,
+      value: settings.models ?? {},
+      from: "resolved per purpose",
+      sources: Object.fromEntries(Object.entries(settings.sources).filter(([key]) => key.startsWith("models."))),
+    }
+  }
   // Every layer adds to `permissions`, so the nearest layer's object alone is not what holds.
   if (setting === "permissions") {
     const from = Object.keys(settings.permissions).length > 0 ? "config file" : "default"

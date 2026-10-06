@@ -16,6 +16,13 @@ export const analysisChoice = (
   settings: Settings,
   env: NodeJS.ProcessEnv,
 ): AnalysisProvider => {
+  const configured = { ...settings.models?.default, ...settings.models?.analysis }
+  settings = {
+    ...settings,
+    analysisProvider: configured.provider === "off" ? "agent" : (configured.provider ?? settings.analysisProvider),
+    analysisModel: configured.model ?? settings.analysisModel,
+    analysisBaseUrl: configured.baseUrl ?? settings.analysisBaseUrl,
+  }
   const override =
     (options.provider !== undefined && options.provider !== (settings.analysisProvider ?? "agent")) ||
     (options.baseUrl !== undefined &&

@@ -459,7 +459,8 @@ export const settingsFor = (app: AppIdentity, extension: SettingsExtension = {})
   ): unknown => {
     const [name = setting, ...rest] = setting.split(".")
     const level = name === "permissions" && rest.length > 0 ? rest.join(".") : undefined
-    if (!allSettings.includes(setting) && level === undefined) {
+    const modelField = /^models\.([a-z][a-z0-9-]*)\.(provider|model|baseUrl)$/.exec(setting)
+    if (!allSettings.includes(setting) && level === undefined && !modelField) {
       throw new CliError("validation_error", `no setting called "${setting}" — one of: ${allSettings.join(", ")}`)
     }
     if (profile !== undefined && defaultsOnlyKeys.includes(setting)) {
@@ -486,7 +487,18 @@ export const settingsFor = (app: AppIdentity, extension: SettingsExtension = {})
           ? section.defaults
           : section.profiles?.[profile]
     const scope: Scope = { ...current }
-    if (level !== undefined) {
+    if (modelField) {
+      const purpose = modelField[1] as string
+      const field = modelField[2] as string
+      const models = { ...(scope.models as Record<string, Scope> | undefined) }
+      const target = { ...models[purpose] }
+      if (value === undefined) delete target[field]
+      else target[field] = parseValue(value)
+      if (Object.keys(target).length > 0) models[purpose] = target
+      else delete models[purpose]
+      if (Object.keys(models).length > 0) scope.models = models
+      else delete scope.models
+    } else if (level !== undefined) {
       const levels = { ...(scope.permissions as Record<PermissionKey, string> | undefined) }
       if (value === undefined) delete levels[level]
       else levels[level] = value.trim()
@@ -524,6 +536,11 @@ export const settingsFor = (app: AppIdentity, extension: SettingsExtension = {})
       )
     }
     saveConfigFile(path, checked.output)
+    if (modelField)
+      return (
+        (scope.models as Record<string, Scope> | undefined)?.[modelField[1] as string]?.[modelField[2] as string] ??
+        null
+      )
     return level === undefined ? (scope[setting] ?? null) : ((scope.permissions as Scope | undefined)?.[level] ?? null)
   }
 
