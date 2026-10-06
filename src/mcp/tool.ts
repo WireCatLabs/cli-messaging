@@ -81,7 +81,7 @@ interface Tool<S extends Input> {
   /** The command path its level is read from, where the tool's name does not spell it: `chats.mark-read`. */
   key?: PermissionKey | null
   /** A host-owned entry with its own connection and confirmation lifecycle. */
-  custom?: (args: v.InferOutput<S>, defaults: Defaults, ctx: ServerContext) => Promise<object | InputRequiredResult>
+  custom?: (args: v.InferOutput<S>, defaults: Defaults, ctx: ServerContext) => Promise<object>
   /** Neither the store nor the connection: answers from what this process already knows. */
   local?: (args: v.InferOutput<S>, defaults: Defaults) => Promise<object>
   /** Over the session's connection. */
@@ -224,7 +224,7 @@ export const entryRunner = ({
           throw new CliError("permission_error", "messages.sync-first is not allowed by this profile")
         if (definition.custom) {
           const result = await definition.custom(args, { ...defaults, signal: ctx.mcpReq.signal }, ctx)
-          return isInputRequiredResult(result) ? result : answered(result)
+          return answered(result)
         }
         if (definition.local) return answered(await definition.local(args, defaults))
         const { online, stored: local, served } = definition
