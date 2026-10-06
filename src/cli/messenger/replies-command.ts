@@ -1,10 +1,13 @@
+import { CliError } from "@leemour/cli-core"
 import { Command } from "commander"
 import { DRY_RUN_DAYS, dryRun } from "../../replies/dry-run.js"
+import { replyRenderer } from "../../replies/rendering.js"
 import { audienceWarnings, readReplies, repliesPathFor } from "../../replies/rules.js"
 import { paused, readRepliesState, repliesStatePathFor, writeRepliesState } from "../../replies/state.js"
 import { levelFor } from "../../sends/permissions.js"
 import { momentOf } from "../../services/moment.js"
 import { type Messenger, messengerContext } from "./context.js"
+import { replyConsentsCommand } from "./replies-consents-command.js"
 import { addReplyEditors } from "./replies-edit-command.js"
 
 /** `replies`: rules that answer messages for the owner, from `serve`, and only to its test accounts (`NEED-601`). */
@@ -13,6 +16,7 @@ export const repliesCommand = (messenger: Messenger): Command => {
     "rules that answer messages for you, kept in a file of this profile",
   )
   addReplyEditors(replies, messenger)
+  replies.addCommand(replyConsentsCommand(messenger))
 
   replies
     .command("test")
@@ -22,10 +26,16 @@ export const repliesCommand = (messenger: Messenger): Command => {
     )
     .argument("[rule]", "only this rule, by its id; every rule in file order if not given")
     .option("--since-time <time>", `from this ISO 8601 time, or 2h / 1d ago; ${DRY_RUN_DAYS}d ago if not given`)
+    .option(
+      "--ai",
+      "call the configured reply model with stored message data; requires reply consent, otherwise uses fallback",
+    )
     .action(async function (this: Command, rule: string | undefined) {
-      const { sinceTime } = this.opts<{ sinceTime?: string }>()
+      const { sinceTime, ai } = this.opts<{ sinceTime?: string; ai?: boolean }>()
       const context = messengerContext(this, messenger)
       const { settings, renderer, format, streams, env } = context
+      if (ai && settings.offline)
+        throw new CliError("validation_error", "--ai calls a model and cannot be combined with --offline")
       const since = momentOf(sinceTime ?? `${DRY_RUN_DAYS}d`, "--since-time")
       const path = repliesPathFor(messenger.app, settings.profile, env)
       const { rules, testers, audience } = readReplies(path)
@@ -39,6 +49,14 @@ export const repliesCommand = (messenger: Messenger): Command => {
             since,
             testers,
             audience,
+            render: replyRenderer(
+              messenger.app,
+              settings.profile,
+              () => messenger.resolveSettings({ profile: settings.profile }, { env }),
+              env,
+              renderer.warn,
+              { ai: ai === true, preview: ai !== true },
+            ),
             ...(rule === undefined ? {} : { only: rule }),
           }),
         { name: "replies test" },
@@ -58,6 +76,11 @@ export const repliesCommand = (messenger: Messenger): Command => {
             `  ${one.at}  ${one.chatTitle ?? one.chatId} → ${one.to.name ?? one.to.id}: ${[
               one.text === null ? undefined : JSON.stringify(one.text),
               one.task ? "a task" : undefined,
+              one.reason,
+              ...(one.blocks ?? []).map(
+                (block) =>
+                  `ai instruction: ${JSON.stringify(block.instruction)}; fallback: ${JSON.stringify(block.fallback)}`,
+              ),
             ]
               .filter(Boolean)
               .join(" + ")}`,

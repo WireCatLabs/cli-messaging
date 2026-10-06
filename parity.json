@@ -24,6 +24,9 @@
       "value": "<agent>",
       "meaning": "install the skill for this agent; asks at a terminal, otherwise none"
     },
+    "--ai": {
+      "meaning": "call the configured reply model with stored message data; requires reply consent, otherwise uses fallback"
+    },
     "--all": {
       "meaning": "every row, no paging"
     },
@@ -378,7 +381,7 @@
     "--model": {
       "value": "<id>",
       "meaning": "which downloaded speech model hears them; `models audio list` shows them",
-      "note": "max's own copy is worded differently until T6 moves the command onto the shared one (e13); replies edit uses this option for template model mode: fill-only or may-reword; rewording is not yet available"
+      "note": "max's own copy is worded differently until T6 moves the command onto the shared one (e13); replies edit uses this option for legacy template mode: fill-only or may-reword; use ai blocks instead"
     },
     "--multiple": {
       "meaning": "people may pick several answers"
@@ -2481,6 +2484,48 @@
         }
       }
     },
+    "replies consents": {
+      "in": [],
+      "planned": {
+        "max": "next cli-messaging bump",
+        "tg": "next cli-messaging bump"
+      }
+    },
+    "replies consents allow": {
+      "in": [],
+      "planned": {
+        "max": "next cli-messaging bump",
+        "tg": "next cli-messaging bump"
+      }
+    },
+    "replies consents deny": {
+      "in": [],
+      "planned": {
+        "max": "next cli-messaging bump",
+        "tg": "next cli-messaging bump"
+      }
+    },
+    "replies consents grant": {
+      "in": [],
+      "planned": {
+        "max": "next cli-messaging bump",
+        "tg": "next cli-messaging bump"
+      }
+    },
+    "replies consents revoke": {
+      "in": [],
+      "planned": {
+        "max": "next cli-messaging bump",
+        "tg": "next cli-messaging bump"
+      }
+    },
+    "replies consents show": {
+      "in": [],
+      "planned": {
+        "max": "next cli-messaging bump",
+        "tg": "next cli-messaging bump"
+      }
+    },
     "replies edit": {
       "in": [],
       "planned": {
@@ -2677,6 +2722,13 @@
     "replies test": {
       "in": "all",
       "options": {
+        "--ai": {
+          "in": [],
+          "planned": {
+            "max": "next cli-messaging bump",
+            "tg": "next cli-messaging bump"
+          }
+        },
         "--since-time": "all"
       }
     },

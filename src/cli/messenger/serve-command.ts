@@ -3,6 +3,7 @@ import { Command } from "commander"
 import { holdLock, lockPath, releaseLock, takeLock } from "../../background/lock.js"
 import type { ChatKind, Message, MessageEvent } from "../../domain/models.js"
 import { senderFacts } from "../../replies/dry-run.js"
+import { replyRenderer } from "../../replies/rendering.js"
 import { audienceWarnings, readReplies, repliesPathFor } from "../../replies/rules.js"
 import { NO_RULES, type Replied, replyTo } from "../../replies/serve.js"
 import { repliesStatePathFor } from "../../replies/state.js"
@@ -137,7 +138,7 @@ const replying = (context: MessengerContext, messenger: Messenger, since: number
           if (!chats.has(chat))
             chats.set(
               chat,
-              open.resolve(chat).then(({ id, kind }) => ({ id, kind })),
+              open.resolve(chat).then(({ id, kind, title }) => ({ id, kind, title })),
             )
           return chats.get(chat) as Promise<{ id: string; kind: ChatKind }>
         },
@@ -159,6 +160,7 @@ const replying = (context: MessengerContext, messenger: Messenger, since: number
             ...(reply.replyTo === undefined ? {} : { replyTo: reply.replyTo }),
           }),
         newSendId: () => open.newSendId?.() ?? newSendId(),
+        render: replyRenderer(app, profile, () => messenger.resolveSettings({ profile }, { env }), env, renderer.warn),
         openTask: (arrived) =>
           context.withStore((store, account) => openRequestTask(store, account, arrived), { name: "serve replies" }),
       },

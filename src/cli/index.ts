@@ -40,6 +40,7 @@ export {
   messagesSearchInput,
 } from "../mcp/tools/search.js"
 export { senderFacts } from "../replies/dry-run.js"
+export { type ReplyRender, replyRenderer } from "../replies/rendering.js"
 export { repliesPathFor } from "../replies/rules.js"
 export { NO_RULES, NO_TASKS, NOT_ALLOWED, ONLY_TASK, type Replied, type Replier, replyTo } from "../replies/serve.js"
 export { repliesStatePathFor } from "../replies/state.js"

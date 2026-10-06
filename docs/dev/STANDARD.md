@@ -255,6 +255,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--after-n` | `<n>` | how many messages after it |  | `messages context` |
 | `--after-time` | `<time>` | read what came after this ISO 8601 time, or 2h / 1d ago; not with --after-id or the --before pair |  | `messages list` |
 | `--agent` | `<agent>` | install the skill for this agent; asks at a terminal, otherwise none |  | `setup` (planned) |
+| `--ai` |  | call the configured reply model with stored message data; requires reply consent, otherwise uses fallback |  | `replies test` (planned) |
 | `--all` |  | every row, no paging |  | `attachments list`, `chats list`, `chats members list` (planned), `contacts list`, `inbox` (planned), `messages download`, `review` (planned), `store export` |
 | `--all-bots` |  | also read every other bot's copy on this machine that readOtherBots allows |  | `bot contacts show`, `bot messages between`, `bot messages search` |
 | `--all-can-pin` | `<on\|off>` | every member may pin messages |  | `chats update` |
@@ -346,7 +347,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--message` | `<message>` | the message to tag or untag: its id in --chat, or a msg: locator alone |  | `tags add`, `tags remove` |
 | `--method` | `<method>` | how to log in when there is no session |  | `setup` (planned) |
 | `--min-score` | `<n>` | only rows scoring at least this |  | `chats members audit` |
-| `--model` | `<id>` | which downloaded speech model hears them; `models audio list` shows them. **max's own copy is worded differently until T6 moves the command onto the shared one (e13); replies edit uses this option for template model mode: fill-only or may-reword; rewording is not yet available** |  | `conversations build`, `conversations embed`, `conversations embed clear`, `conversations embed status`, `conversations links clear`, `conversations related`, `conversations search`, `conversations status`, `inbox`, `messages list`, `messages transcribe`, `replies edit` (planned), `review` (planned) |
+| `--model` | `<id>` | which downloaded speech model hears them; `models audio list` shows them. **max's own copy is worded differently until T6 moves the command onto the shared one (e13); replies edit uses this option for legacy template mode: fill-only or may-reword; use ai blocks instead** |  | `conversations build`, `conversations embed`, `conversations embed clear`, `conversations embed status`, `conversations links clear`, `conversations related`, `conversations search`, `conversations status`, `inbox`, `messages list`, `messages transcribe`, `replies edit` (planned), `review` (planned) |
 | `--multiple` |  | people may pick several answers |  | `polls create` |
 | `--needs-text` |  | only files saved here whose text nobody has yet: what an agent reads and writes back |  | `attachments list` |
 | `--new` |  | what arrived since the last check, each message once — for scheduled runs |  | `inbox`, `review` |

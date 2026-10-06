@@ -90,7 +90,7 @@ const ids = v.array(v.pipe(v.string(), v.minLength(1)))
 const template = v.pipe(
   v.string(),
   v.check(
-    (text) => [...text.matchAll(/\{(\w*)\}/g)].every(([, name]) => PLACEHOLDERS.includes(name as never)),
+    (text) => [...text.matchAll(/(?<!\{)\{(\w*)\}(?!\})/g)].every(([, name]) => PLACEHOLDERS.includes(name as never)),
     `a template fills only ${PLACEHOLDERS.map((name) => `{${name}}`).join(", ")}`,
   ),
 )
@@ -108,7 +108,7 @@ const rule = v.pipe(
       mentionsMe: v.boolean(),
       from: v.strictObject({ people: ids, notPeople: ids, contactsOnly: v.boolean() }),
     }),
-    reply: v.strictObject({ template, model: v.picklist(REPLY_MODELS), asReply: v.boolean() }),
+    reply: v.strictObject({ template, model: v.optional(v.picklist(REPLY_MODELS), "fill-only"), asReply: v.boolean() }),
     limits: v.strictObject({ perChat: limit, perPerson: limit }),
   }),
   v.forward(
@@ -171,7 +171,7 @@ export const defaultRule = (id: string): ReplyRuleFile => ({
     mentionsMe: false,
     from: { people: [], notPeople: [], contactsOnly: false },
   },
-  reply: { template: "", model: "fill-only", asReply: true },
+  reply: { template: "", asReply: true },
   limits: { perChat: "1/1d", perPerson: "1/1d" },
 })
 

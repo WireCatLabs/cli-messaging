@@ -19,7 +19,7 @@ export const REPLY_EDIT_OPTIONS = [
   ["--contacts-only", "match only contacts"],
   ["--no-contacts-only", "do not require a contact"],
   ["--template <text>", "the reply template"],
-  ["--model <mode>", "template model mode: fill-only or may-reword; rewording is not yet available"],
+  ["--model <mode>", "legacy template mode: fill-only or may-reword; use ai blocks instead"],
   ["--as-reply", "send as a reply to the matched message"],
   ["--no-as-reply", "send without linking to the matched message"],
   ["--per-chat <limit>", "at most this many per chat, such as 1/12h"],
