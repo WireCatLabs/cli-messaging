@@ -592,6 +592,8 @@ describe("the MCP server", () => {
       "chat_stats_charts",
       "chat_status",
       "chat_tags_list",
+      "chat_tasks_list",
+      "chat_tasks_stats",
       "chat_topics_list",
     ])
     expect(tools.every((one) => one.annotations?.readOnlyHint === true)).toBe(true)
@@ -1206,6 +1208,33 @@ describe("the MCP server", () => {
     expect(refused.isError).toBe(true)
     expect(refused.body).toMatchObject({ error: { code: "confirmation_required" } })
     expect(telegram.opened()).toBe(0)
+  })
+
+  it("**tasks through MCP as the command does**, recorded as the agent's, the writes hidden where tasks are read-only", async () => {
+    const telegram = scripted()
+    const { call, env } = await connect(telegram)
+    await call("chat_chats_list")
+    const store = await openStore({ path: env.MESSAGING_STORE })
+    await seedSearchRecipes(store, { provider: "chat", account: "500" })
+    await store.close()
+
+    const added = await call("chat_tasks_add", { message: "msg:chat/500/7/101", type: "promise" })
+    expect(added.body).toMatchObject({ kind: "promise", state: "open", origin: "agent", created: true })
+    expect((await call("chat_tasks_list", { state: "open", type: ["promise"] })).body).toMatchObject({
+      items: [{ id: added.body.id, message: { text: expect.any(String) } }],
+      hasMore: false,
+    })
+    const closed = await call("chat_tasks_close", { task: added.body.id, as: "dismissed", reason: "no-reply-needed" })
+    expect(closed.body).toMatchObject({ state: "dismissed", reason: "no-reply-needed", closedBy: "agent" })
+    expect((await call("chat_tasks_stats")).body).toMatchObject({ items: [{ group: "7", open: 0 }] })
+    const foreign = await call("chat_tasks_add", { message: "msg:chat/999/7/101", type: "promise" })
+    expect([foreign.isError, foreign.body.error.code]).toEqual([true, "validation_error"])
+
+    const readOnly = await connect(scripted(), { config: levels({ tasks: "readonly" }) })
+    const names = (await readOnly.client.listTools()).tools.map(({ name }) => name)
+    expect(names).toEqual(expect.arrayContaining(["chat_tasks_list", "chat_tasks_stats"]))
+    expect(names).not.toContain("chat_tasks_add")
+    expect(names).not.toContain("chat_tasks_close")
   })
 
   it("**tags through MCP as the command does**, hides the writes where tags are read-only, and asks", async () => {

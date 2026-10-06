@@ -14,6 +14,7 @@ import { type ModerationService, moderationService } from "./moderation.js"
 import { type PeopleService, peopleService } from "./people.js"
 import { type SearchesService, searchesService } from "./searches.js"
 import { type TagsService, tagsService } from "./tags.js"
+import { type TasksService, tasksService } from "./tasks.js"
 import { type TopicsService, topicsService } from "./topics.js"
 
 export type { AccountService } from "./account.js"
@@ -77,6 +78,8 @@ export type { ResolvedSearch, SearchesService, SearchParams } from "./searches.j
 export { searchesService, searchRecordOf } from "./searches.js"
 export type { TagsAdded, TagsRemoved, TagsService, TagTargetInput, TagTargetView } from "./tags.js"
 export { tagsService } from "./tags.js"
+export type { TaskListFilter, TasksService, TaskView } from "./tasks.js"
+export { tasksService } from "./tasks.js"
 export { type TopicsService, topicsService } from "./topics.js"
 
 export interface Services {
@@ -94,6 +97,7 @@ export interface Services {
   embeddings: EmbeddingsService
   tags: TagsService
   searches: SearchesService
+  tasks: TasksService
   attachments: AttachmentsService
   botcheck: BotCheckService
 }
@@ -122,6 +126,7 @@ export const servicesFor = (deps: ServiceDeps): Services => {
     tags: tagsService(deps),
     attachments: attachmentsService(deps),
     searches: searchesService(deps),
+    tasks: tasksService(deps),
     botcheck: botCheckService(deps),
   }
   return deps.messenger.services ? { ...base, ...deps.messenger.services(base, deps) } : base

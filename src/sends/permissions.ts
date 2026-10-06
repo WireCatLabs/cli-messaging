@@ -84,6 +84,7 @@ export const RESOURCES = [
   "conversations",
   "tags",
   "searches",
+  "tasks",
   "replies",
   "attachments",
 ] as const
@@ -268,6 +269,8 @@ const NAMED_WRITE_KEYS = [
   "searches.delete",
   "tags.add",
   "tags.remove",
+  "tasks.add",
+  "tasks.close",
   "topics.create",
   "topics.enable",
 ]

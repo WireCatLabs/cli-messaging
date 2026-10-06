@@ -6,6 +6,15 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- **`tasks list|add|close|stats`, and MCP `tasks_list`, `tasks_add`, `tasks_close`, `tasks_stats`**: what waits on
+  you, kept in the local store. `list` shows each task with the message it points at (`--state`, `--chat`,
+  `--type question,mention`, `--before-time`, `--limit`); `add <message> --type promise` adds one by `msg:`
+  locator for what the rules cannot see; `close <task> --as done|dismissed [--reason]` closes it for good;
+  `stats` counts open tasks per chat, the oldest, and the median time to close. Writes are local
+  (`tasks.add`, `tasks.close`); an agent's are recorded as the agent's. A CLI adds `tasksCommand` to its program.
+
 ## 0.152.0 — 06.10.2026
 
 ### Added
