@@ -25,6 +25,9 @@ frequency_penalty, seed, stop, and response_format (text or json_object); Anthro
 temperature, top_p, top_k and stop_sequences. Callers cannot override the model, messages,
 credentials or token bound through options. The caller supplies a key resolver and a consent
 check; consent is checked before keys or network calls. Tests inject fake adapters and fetch.
+Gateway callers may supply an AbortSignal, combined with each adapter's request timeout.
+Conversation analysis and AI reply previews register it with the CLI deadline; serve cancels reply
+requests on shutdown, so a timed-out one-shot does not leave an HTTP request holding it open.
 
 | Profile setting | Values / default |
 |---|---|

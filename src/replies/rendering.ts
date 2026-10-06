@@ -17,11 +17,12 @@ export const replyRenderer =
     settings: () => { models?: ModelSettings },
     env: NodeJS.ProcessEnv,
     warn: (message: string) => void,
-    options: { ai?: boolean; preview?: boolean } = { ai: true },
+    options: { ai?: boolean; preview?: boolean; signal?: AbortSignal } = { ai: true },
   ): ReplyRender =>
   async (rule, message, chat, now) => {
     let called: ModelTarget | undefined
     const gateway = modelGateway({
+      signal: options.signal,
       resolve: (purpose) => {
         called = modelTarget(settings(), purpose)
         return called
@@ -35,6 +36,7 @@ export const replyRenderer =
       key: (provider, target) =>
         embeddingKeys(app, env).read(target.baseUrl === undefined ? provider : new URL(target.baseUrl).host)?.key,
     })
+    if (options.signal?.aborted) throw new CliError("cancelled", "reply rendering cancelled")
     const result = await renderReplyTemplate(rule.reply, {
       senderName: message.senderName,
       chat,
@@ -52,6 +54,7 @@ export const replyRenderer =
           data,
           maxTokens: 512,
         })
+        if (options.signal?.aborted) throw new CliError("cancelled", "reply rendering cancelled")
         const current = modelTarget(settings(), "replies")
         const baseUrl =
           called?.baseUrl ??

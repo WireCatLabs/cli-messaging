@@ -34,6 +34,8 @@ export const repliesCommand = (messenger: Messenger): Command => {
       const { sinceTime, ai } = this.opts<{ sinceTime?: string; ai?: boolean }>()
       const context = messengerContext(this, messenger)
       const { settings, renderer, format, streams, env } = context
+      const controller = new AbortController()
+      context.track({ close: async () => controller.abort() })
       if (ai && settings.offline)
         throw new CliError("validation_error", "--ai calls a model and cannot be combined with --offline")
       const since = momentOf(sinceTime ?? `${DRY_RUN_DAYS}d`, "--since-time")
@@ -55,7 +57,7 @@ export const repliesCommand = (messenger: Messenger): Command => {
               () => messenger.resolveSettings({ profile: settings.profile }, { env }),
               env,
               renderer.warn,
-              { ai: ai === true, preview: ai !== true },
+              { ai: ai === true, preview: ai !== true, signal: controller.signal },
             ),
             ...(rule === undefined ? {} : { only: rule }),
           }),

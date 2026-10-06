@@ -13,10 +13,12 @@ export interface GatewayDeps {
   key?: (provider: string, target: ModelTarget) => string | undefined | Promise<string | undefined>
   adapters?: Readonly<Record<string, ModelAdapter>>
   fetch?: typeof fetch
+  signal?: AbortSignal
 }
 
 export const modelGateway = (deps: GatewayDeps) => ({
   complete: async (request: ModelRequest): Promise<ModelAnswer> => {
+    if (deps.signal?.aborted) throw new CliError("cancelled", "model request cancelled")
     const target = deps.resolve(request.purpose)
     if (!target || target.provider === "off")
       throw new CliError(
@@ -44,8 +46,18 @@ export const modelGateway = (deps: GatewayDeps) => ({
     if (!(await deps.consent(request, { ...target, baseUrl })))
       throw new CliError("permission_error", `model consent for ${request.purpose} is missing; no data was sent`)
     const apiKey = await deps.key?.(target.provider, target)
+    if (deps.signal?.aborted) throw new CliError("cancelled", "model request cancelled")
+    const fetcher = deps.fetch ?? fetch
+    const cancellable: typeof fetch = (input, init) => {
+      const signal = init?.signal ?? (input instanceof Request ? input.signal : undefined)
+      return fetcher(input, {
+        ...init,
+        signal: deps.signal ? AbortSignal.any([deps.signal, ...(signal ? [signal] : [])]) : signal,
+      })
+    }
     try {
-      const answer = await adapter.complete({ ...target, baseUrl }, request, options, apiKey, deps.fetch ?? fetch)
+      const answer = await adapter.complete({ ...target, baseUrl }, request, options, apiKey, cancellable)
+      if (deps.signal?.aborted) throw new Error("cancelled")
       if (typeof answer.text !== "string" || !Number.isSafeInteger(answer.tokens) || answer.tokens < 1)
         throw new Error("incomplete")
       return { ...answer, provider: target.provider, model: target.model }

@@ -1,5 +1,6 @@
 import { CliError } from "@leemour/cli-core"
 import { describe, expect, it, vi } from "vitest"
+import { withDeadline } from "../cli/deadline.js"
 import { anthropic } from "./anthropic.js"
 import { modelGateway } from "./index.js"
 import { openai } from "./openai.js"
@@ -14,6 +15,53 @@ const fake: ModelAdapter = {
 }
 
 describe("model gateway", () => {
+  it("an already cancelled request does not select a target or resolve keys", async () => {
+    const controller = new AbortController()
+    controller.abort()
+    const resolve = vi.fn(() => target)
+    const key = vi.fn(() => "synthetic-key")
+    await expect(
+      modelGateway({ resolve, key, consent: () => true, signal: controller.signal }).complete(request),
+    ).rejects.toMatchObject({ code: "cancelled" })
+    expect(resolve).not.toHaveBeenCalled()
+    expect(key).not.toHaveBeenCalled()
+  })
+  it.each(["openai", "anthropic"])(
+    "a deadline aborts an in-flight %s request before the command exits",
+    async (provider) => {
+      vi.useFakeTimers()
+      try {
+        const controller = new AbortController()
+        let active: AbortSignal | null | undefined
+        let began = () => {}
+        const started = new Promise<void>((resolve) => {
+          began = resolve
+        })
+        const fetcher: typeof fetch = async (_input, init) =>
+          new Promise<Response>((_resolve, reject) => {
+            active = init?.signal
+            active?.addEventListener("abort", () => reject(new Error("synthetic abort")), { once: true })
+            began()
+          })
+        const gateway = modelGateway({
+          resolve: () => ({ provider, model: "test", baseUrl: "https://example.test" }),
+          key: () => "synthetic-key",
+          consent: () => true,
+          fetch: fetcher,
+          signal: controller.signal,
+        })
+        const result = expect(
+          withDeadline(1, [{ close: async () => controller.abort() }], () => gateway.complete(request)),
+        ).rejects.toMatchObject({ code: "timeout" })
+        await started
+        await vi.advanceTimersByTimeAsync(1)
+        await result
+        expect(active?.aborted).toBe(true)
+      } finally {
+        vi.useRealTimers()
+      }
+    },
+  )
   it("does not resolve a key, consent or network when the purpose is off", async () => {
     const network = vi.fn(() => {
       throw new Error("must not send")
