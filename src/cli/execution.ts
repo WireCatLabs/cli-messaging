@@ -159,7 +159,10 @@ export const execution = (
           if (grace) clearTimeout(grace)
         }
         // A command that knows its own write went out unanswered says so more precisely than a timeout.
-        if (settled instanceof CliError && settled.code === "outcome_unknown") throw settled
+        if (settled instanceof CliError && settled.code === "outcome_unknown") {
+          interrupted = settled
+          throw settled
+        }
         throw interrupted ?? error
       }
     },

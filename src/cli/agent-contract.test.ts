@@ -60,6 +60,16 @@ const invoke = async (
           setImmediate(() => process.emit("SIGINT"))
           await new Promise((resolve) => stopped?.addEventListener("abort", resolve, { once: true }))
         }),
+        new Command("post").action(async function (this: Command) {
+          const stopped = environmentOf(this).signal
+          await new Promise((_, reject) =>
+            stopped?.addEventListener(
+              "abort",
+              () => reject(new CliError("outcome_unknown", "synthetic write got no answer")),
+              { once: true },
+            ),
+          )
+        }),
         new Command("wait").action(async () => {
           setImmediate(() => process.emit("SIGINT"))
           await new Promise(() => {})
@@ -116,6 +126,11 @@ describe("agent CLI contract", () => {
     )
     expect(prompted.result).toBe(2)
     expect(JSON.parse(prompted.stderr[0] ?? "").error.reason).toBe("input_required")
+  })
+
+  it("reports a command's own unknown outcome when --timeout stops it, never a plain timeout", async () => {
+    const result = await invoke(["--timeout", "50ms", "post", "--json"])
+    expect(JSON.parse(result.stderr[0] ?? "").error.code).toBe("outcome_unknown")
   })
 
   it("makes JSON on a TTY headless before a secret prompt", async () => {

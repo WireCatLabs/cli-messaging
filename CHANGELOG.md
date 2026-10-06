@@ -6,6 +6,11 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Fixed
+
+- The unknown outcome of a write stopped by `--timeout` now reaches the output. 0.160.0 kept it inside
+  the runner but still printed `timeout`, so the fix it announced did not show.
+
 ## 0.160.0 — 07.10.2026
 
 Released early: MAX and Telegram cannot adopt 0.159.0 — a timed-out Bot API write reads as safe to repeat, and tg session start --qr-file is refused

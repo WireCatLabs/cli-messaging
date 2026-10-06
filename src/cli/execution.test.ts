@@ -77,6 +77,7 @@ describe("bounded command execution", () => {
           }),
       ),
     ).rejects.toBe(own)
+    expect(control.failure()).toBe(own)
   })
 
   it("keeps a write that was still preparing as a definite timeout", async () => {
