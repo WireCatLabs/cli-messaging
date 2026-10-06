@@ -8,6 +8,12 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Added
 
+- **A long message is embedded whole.** A message longer than a chunk (1200 characters) is split into
+  overlapping pieces, cut at a paragraph, line, sentence or word, a chunk each — before, the model read only its
+  beginning. Store version 21 adds `conversation_chunks.text_start` / `text_end` (nullable; `minCompatible`
+  stays 6, so older builds keep writing the file). `RULES_VERSION` is 5: chats built before it read as outdated,
+  and `conversations build` / `search --refresh` rebuild them. Long notes and mail (cli-memo) need it most.
+
 - **`tasks list|add|close|stats`, and MCP `tasks_list`, `tasks_add`, `tasks_close`, `tasks_stats`**: what waits on
   you, kept in the local store. `list` shows each task with the message it points at (`--state`, `--chat`,
   `--type question,mention`, `--before-time`, `--limit`); `add <message> --type promise` adds one by `msg:`
