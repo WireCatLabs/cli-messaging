@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+- Export the daily member-fetch scheduler for MAX native server integration. Long rounds no longer overlap, and shutdown waits for the running round.
+
 ### Fixed
 
 - Searches report imported mail coverage once, with `memo mail import --since <date>` as the next

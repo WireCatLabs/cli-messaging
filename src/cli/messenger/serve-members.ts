@@ -51,10 +51,14 @@ export const memberFetches = ({
     })
 
   const tick = () => {
-    round = fetchAll().catch((error) =>
-      warn(`the daily member fetch failed: ${error instanceof Error ? error.message : String(error)}`),
-    )
-    timer = setTimeout(tick, everyMs)
+    const next = Date.now() + everyMs
+    round = fetchAll()
+      .catch((error) =>
+        warn(`the daily member fetch failed: ${error instanceof Error ? error.message : String(error)}`),
+      )
+      .finally(() => {
+        if (!stopped) timer = setTimeout(tick, Math.max(0, next - Date.now()))
+      })
   }
 
   return {
