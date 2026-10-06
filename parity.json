@@ -1380,25 +1380,17 @@
       "in": "all"
     },
     "contacts context": {
-      "in": [],
-      "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" },
+      "in": "all",
       "options": {
-        "--limit": {
-          "in": [],
-          "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" }
-        },
-        "--since-time": {
-          "in": [],
-          "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" }
-        }
+        "--limit": "all",
+        "--since-time": "all"
       }
     },
     "contacts import": {
       "in": "all"
     },
     "contacts link": {
-      "in": [],
-      "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" }
+      "in": "all"
     },
     "contacts list": {
       "in": "all",
@@ -1429,8 +1421,7 @@
       "in": "all"
     },
     "contacts unlink": {
-      "in": [],
-      "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" }
+      "in": "all"
     },
     "conversations": {
       "in": "all"
@@ -2377,28 +2368,28 @@
       "in": "all"
     },
     "replies": {
-      "in": [],
-      "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" }
+      "in": ["tg"],
+      "planned": { "max": "max's own serve does not run the reply rules yet" }
     },
     "replies pause": {
-      "in": [],
-      "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" }
+      "in": ["tg"],
+      "planned": { "max": "max's own serve does not run the reply rules yet" }
     },
     "replies resume": {
-      "in": [],
-      "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" }
+      "in": ["tg"],
+      "planned": { "max": "max's own serve does not run the reply rules yet" }
     },
     "replies status": {
-      "in": [],
-      "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" }
+      "in": ["tg"],
+      "planned": { "max": "max's own serve does not run the reply rules yet" }
     },
     "replies test": {
-      "in": [],
-      "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" },
+      "in": ["tg"],
+      "planned": { "max": "max's own serve does not run the reply rules yet" },
       "options": {
         "--since-time": {
-          "in": [],
-          "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" }
+          "in": ["tg"],
+          "planned": { "max": "max's own serve does not run the reply rules yet" }
         }
       }
     },
@@ -2692,8 +2683,7 @@
       "planned": { "max": "max's next cli-messaging bump", "tg": "tg's next cli-messaging bump" }
     },
     "store copies delete": {
-      "in": [],
-      "planned": { "max": "max's next cli-messaging bump", "tg": "tg's next cli-messaging bump" }
+      "in": "all"
     },
     "store decrypt": {
       "in": "all",
@@ -2750,13 +2740,9 @@
       }
     },
     "store repair": {
-      "in": [],
-      "planned": { "max": "max's next cli-messaging bump", "tg": "tg's next cli-messaging bump" },
+      "in": "all",
       "options": {
-        "--dry-run": {
-          "in": [],
-          "planned": { "max": "max's next cli-messaging bump", "tg": "tg's next cli-messaging bump" }
-        }
+        "--dry-run": "all"
       }
     },
     "store restore": {
