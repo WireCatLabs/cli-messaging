@@ -8,7 +8,6 @@ import type { AccountKey, MessageStore, PersonRecord } from "../store/store.js"
 import type { PageWindow } from "./chats.js"
 import { fromStore, type ServiceDeps, storeIfOpen } from "./deps.js"
 
-
 import { storedChatId } from "./messages.js"
 import {
   CHAT_MESSAGES,
@@ -21,7 +20,6 @@ import {
   personMessages,
 } from "./person-context.js"
 import { personProfile } from "./person-profile.js"
-
 
 export interface ContactSync {
   added: number
