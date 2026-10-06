@@ -30,6 +30,10 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Fixed
 
+- Searches report imported mail coverage once, with `memo mail import --since <date>` as the next
+  step, rather than counting every mail thread as an incomplete messenger chat and suggesting
+  `store fetch`. JSON completeness still reports missing or unknown history.
+
 - Person context includes private dialogs named by the person's id when no members are recorded,
   restoring direct messages and the last message each way in existing Telegram stores. Recorded
   membership remains authoritative; groups, left chats and other accounts are not inferred.
