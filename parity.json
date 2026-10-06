@@ -1200,33 +1200,11 @@
       }
     },
     "chats members audit": {
-      "in": [],
-      "planned": {
-        "max": "each CLI's next cli-messaging bump",
-        "tg": "each CLI's next cli-messaging bump"
-      },
+      "in": "all",
       "options": {
-        "--budget": {
-          "in": [],
-          "planned": {
-            "max": "each CLI's next cli-messaging bump",
-            "tg": "each CLI's next cli-messaging bump"
-          }
-        },
-        "--deep": {
-          "in": [],
-          "planned": {
-            "max": "each CLI's next cli-messaging bump",
-            "tg": "each CLI's next cli-messaging bump"
-          }
-        },
-        "--min-score": {
-          "in": [],
-          "planned": {
-            "max": "each CLI's next cli-messaging bump",
-            "tg": "each CLI's next cli-messaging bump"
-          }
-        }
+        "--budget": "all",
+        "--deep": "all",
+        "--min-score": "all"
       }
     },
     "chats members fetch": {
@@ -1506,19 +1484,9 @@
       "in": "all"
     },
     "contacts check": {
-      "in": [],
-      "planned": {
-        "max": "each CLI's next cli-messaging bump",
-        "tg": "each CLI's next cli-messaging bump"
-      },
+      "in": "all",
       "options": {
-        "--no-registries": {
-          "in": [],
-          "planned": {
-            "max": "each CLI's next cli-messaging bump",
-            "tg": "each CLI's next cli-messaging bump"
-          }
-        }
+        "--no-registries": "all"
       }
     },
     "contacts context": {

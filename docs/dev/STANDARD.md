@@ -169,7 +169,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--block` | `<value>` | Set to `true` if user should be blocked in chat. |  | `bot chats members remove` |
 | `--bot` |  | the bot section of the profile's settings, rather than the personal account's |  | `config set` (planned), `config show` (planned), `config unset` (planned) |
 | `--bots` | `<profiles>` | also read these bots' copies, comma separated — each allowed by readOtherBots |  | `bot contacts show`, `bot messages between`, `bot messages search` |
-| `--budget` | `<pages>` | at most this many pages of a list, with a pause between them |  | `chats members audit` (planned), `chats members fetch` (planned) |
+| `--budget` | `<pages>` | at most this many pages of a list, with a pause between them |  | `chats members audit`, `chats members fetch` (planned) |
 | `--by` | `<grouping>` | what to count by. **each command names its own groupings — messages stats chat, sender, day or hour, and searches create the same for messages stats --saved; chats stats day or week, as a series beside its totals — so it differs on purpose (Help text rule 4)** |  | `chats stats` (planned), `messages stats`, `searches create`, `stats charts` (planned) |
 | `--can` | `<rights>` | what they may do, comma-separated: read, members, admins, info, pin, link, post, edit, delete. **lists the rights each messenger has — MAX has `read`, Telegram does not — so it differs on purpose (Help text rule 4)** |  | `bot chats admins add`, `chats admins add` |
 | `--channel` |  | a private channel instead of a group; people join it by its link |  | `chats create` |
@@ -180,7 +180,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--confirm-send` |  | show the owner every write the MCP server offers, in a form to approve. **MAX retains its native wrapper wording; confirmation semantics already follow profile permissions in both CLIs** |  | `bot mcp`, `bot mcp config`, `mcp`, `mcp config`, `mcp doctor` (planned), `mcp setup` (planned) |
 | `--contact` | `<person>` | the person to tag or untag: their id, @username or name, as the local store knows them |  | `tags add`, `tags remove` |
 | `--context` | `<n>` | messages before and after each hit |  | `messages search`, `searches create` |
-| `--deep` | `<n>` | also check the top n in full — profile, photos, everything they wrote, and the public ban lists, which are sent their ids — one person a second |  | `chats members audit` (planned) |
+| `--deep` | `<n>` | also check the top n in full — profile, photos, everything they wrote, and the public ban lists, which are sent their ids — one person a second |  | `chats members audit` |
 | `--defaults` |  | change what every profile gets, rather than this profile |  | `config set`, `config unset` |
 | `--description` | `<text>` | the new about text — of a chat or of your account |  | `account update`, `chats update` |
 | `--dims` | `<n>` | remote: the vector size — needed with --base-url; shortens an OpenAI model's |  | `conversations embed`, `conversations embed clear`, `conversations embed status`, `conversations related`, `conversations search`, `conversations status` |
@@ -221,7 +221,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--members-see-link` | `<on\|off>` | members may see the invite link |  | `chats update` (max-only) |
 | `--message` | `<message>` | the message to tag or untag: its id in --chat, or a msg: locator alone |  | `tags add`, `tags remove` |
 | `--method` | `<method>` | how to log in when there is no session |  | `setup` (planned) |
-| `--min-score` | `<n>` | only rows scoring at least this |  | `chats members audit` (planned) |
+| `--min-score` | `<n>` | only rows scoring at least this |  | `chats members audit` |
 | `--model` | `<id>` | which downloaded speech model hears them; `models audio list` shows them. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | `conversations build`, `conversations embed`, `conversations embed clear`, `conversations embed status`, `conversations links clear`, `conversations related`, `conversations search`, `conversations status`, `inbox`, `messages list`, `messages transcribe`, `review` (planned) |
 | `--multiple` |  | people may pick several answers |  | `polls create` |
 | `--needs-text` |  | only files saved here whose text nobody has yet: what an agent reads and writes back |  | `attachments list` |
@@ -231,7 +231,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--no-mark-read` |  | do not mark read, whatever the catchUpMarksRead setting says |  | `inbox`, `review` |
 | `--no-preview` |  | no preview card for a link in the text |  | `messages send` |
 | `--no-record` |  | do not keep it, whatever the configuration says |  | every command |
-| `--no-registries` |  | do not ask the public ban lists; nothing about them leaves this machine |  | `contacts check` (planned) |
+| `--no-registries` |  | do not ask the public ban lists; nothing about them leaves this machine |  | `contacts check` |
 | `--no-serve` |  | do not start it; log in on this command's own connection unless one is running |  | every command (planned) |
 | `--notification` | `<text>` | a note only the person who pressed sees |  | `bot callbacks answer` |
 | `--notify` |  | tell the chat's members about the pin |  | `bot messages pin`, `messages pin` |
