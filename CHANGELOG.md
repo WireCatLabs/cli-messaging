@@ -8,6 +8,9 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Added
 
+- `./cli` exports the reply step a CLI with its own server calls per arriving message — `replyTo` with its
+  `Replier` dependencies, `Replied`, `NO_RULES`, `NOT_ALLOWED` — and `repliesPathFor`, `repliesStatePathFor` and
+  `senderFacts`, so max's `serve` answers by the same rules as tg's.
 - `serve` fetches every tracked chat's member list once a day (`chats tracking`), one chat after another, starting
   a minute after it connects so catch-up goes first. A chat already fetched that day is skipped, so a restart does
   not fetch it twice; a chat that fails is named on stderr and the rest go on. Its answer adds

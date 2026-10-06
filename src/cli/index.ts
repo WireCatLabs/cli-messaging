@@ -38,6 +38,10 @@ export {
   type MessagesSearchArgs,
   messagesSearchInput,
 } from "../mcp/tools/search.js"
+export { senderFacts } from "../replies/dry-run.js"
+export { repliesPathFor } from "../replies/rules.js"
+export { NO_RULES, NOT_ALLOWED, type Replied, type Replier, replyTo } from "../replies/serve.js"
+export { repliesStatePathFor } from "../replies/state.js"
 export { guardedClose, guardedCreatePoll, guardedVote } from "../sends/polls.js"
 export type { InboxReader } from "../services/inbox.js"
 export { INBOX_CHATS, newIn, REVIEW_CHATS, reviewIn, unanswered, unreadIn } from "../services/inbox.js"
