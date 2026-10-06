@@ -6,6 +6,10 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.153.0 — 06.10.2026
+
+Released early: cli-memo: the owner asked to release now, so long notes and mail are embedded whole (store version 21)
+
 ### Added
 
 - **A long message is embedded whole.** A message longer than a chunk (1200 characters) is split into
