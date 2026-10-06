@@ -37,7 +37,7 @@ export { CHAT_SCAN, chatsService, EVENTS_DAYS } from "./chats.js"
 export type { BatchStatus, Built, ConversationsService, MessageLinks } from "./conversations.js"
 export { BATCH_SIZE, conversationsService } from "./conversations.js"
 export type { ServiceDeps } from "./deps.js"
-export { OFFLINE, onlineDeps, storedDeps } from "./deps.js"
+export { OFFLINE, onlineDeps, storedDeps, storeOnlyDeps } from "./deps.js"
 export type { Embedded, EmbeddingsService, EmbedStatus, FoundConversation } from "./embeddings.js"
 export { embeddingsService } from "./embeddings.js"
 export type { EvidenceKind, EvidenceMessage, EvidencePacket, EvidencePacketInput, EvidenceSource } from "./evidence.js"
@@ -65,6 +65,14 @@ export type { ModerateOptions, ModerationService, ShownRules } from "./moderatio
 export { moderationService } from "./moderation.js"
 export type { ContactSync, PeopleService } from "./people.js"
 export { peopleService, phoneOf } from "./people.js"
+export type {
+  ContextMessage,
+  ContextOptions,
+  NotReadReason,
+  PersonContext,
+  SharedChat,
+} from "./person-context.js"
+export { CONTEXT_BYTES, CONTEXT_MESSAGES, identityIn, personContext } from "./person-context.js"
 export type { ResolvedSearch, SearchesService, SearchParams } from "./searches.js"
 export { searchesService, searchRecordOf } from "./searches.js"
 export type { TagsAdded, TagsRemoved, TagsService, TagTargetInput, TagTargetView } from "./tags.js"

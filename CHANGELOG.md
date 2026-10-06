@@ -76,6 +76,10 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 ## 0.149.0 — 06.10.2026
 
 ### Added
+- `storeOnlyDeps(store, account, { app })` in `./services`: the store-backed services — conversations,
+  embeddings, person context — for a program that is not a messenger but keeps its sources in the store
+  (cli-memo's notes and mail). It never connects and refuses every send. `personContext` and
+  `identityIn`, with their types, are exported from `./services` too (#578).
 
 - `chats mark-read --topic <id>` and the `chats_mark_read` tool's `topic` mark one forum topic read, through the
   new optional `ReadState.markTopicRead`; a messenger without it refuses rather than mark the whole chat read.
