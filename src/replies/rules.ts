@@ -238,7 +238,10 @@ export const readRepliesFile = (path: string): RepliesFile => {
 }
 
 export const writeRepliesFile = (path: string, contents: RepliesFile): void => {
-  parseReplies(contents, path)
+  const checked = v.safeParse(file, contents)
+  if (!checked.success) {
+    throw new CliError("validation_error", `reply edit cannot be saved (${checked.issues.map(problem).join("; ")})`)
+  }
   writeSecurely(path, `${JSON.stringify(contents, null, 2)}\n`, 0o600)
 }
 

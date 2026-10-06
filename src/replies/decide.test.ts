@@ -251,4 +251,12 @@ describe("decide", () => {
       "the template needs a name the sender has not given",
     )
   })
+
+  it("trying a newly added disabled rule does not propose an empty reply", () => {
+    const rule = ruleWith()
+    rule.reply.template = ""
+    expect(outcome(rule, incomingWith())).toBe("the reply template is empty")
+    rule.do = ["reply", "task"]
+    expect(decide(rule, incomingWith(), emptyState(), WEDNESDAY_EVENING)).toEqual({ actions: ["task"], reply: null })
+  })
 })

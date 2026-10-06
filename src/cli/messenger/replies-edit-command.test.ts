@@ -49,7 +49,7 @@ describe("reply editors", () => {
     expect(readReplies(path).rules[0]?.on).toBe(false)
     if (process.platform !== "win32") expect(statSync(path).mode & 0o777).toBe(0o600)
     const before = readFileSync(path, "utf8")
-    expect(await invoke("on", "away")).toMatchObject({ code: 3 })
+    expect(await invoke("on", "away")).toMatchObject({ code: 2 })
     expect(readFileSync(path, "utf8")).toBe(before)
     expect(await invoke("edit", "away", "--template", "Thanks, {firstName}")).toMatchObject({ code: 0 })
     for (const command of ["on", "on", "off", "off"]) {

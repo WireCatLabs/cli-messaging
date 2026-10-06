@@ -71,6 +71,10 @@ export const decide = (rule: ReplyRule, incoming: Incoming, state: RepliesState,
   if (over(sent?.people[message.senderId], rule.limits.perPerson, now)) return skip("the person's limit is reached")
 
   if (!actions.includes("reply")) return { actions, reply: null }
+  if (rule.reply.template.trim() === "") {
+    const rest = actions.filter((action) => action !== "reply")
+    return rest.length === 0 ? skip("the reply template is empty") : { actions: rest, reply: null }
+  }
   const text = filled(rule.reply.template, message.senderName)
   if (text === undefined) {
     const rest = actions.filter((action) => action !== "reply")
