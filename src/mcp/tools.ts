@@ -23,6 +23,7 @@ import { reviewTools } from "./tools/review.js"
 import { searchesTools } from "./tools/searches.js"
 import { statsTools } from "./tools/stats.js"
 import { tagsTools } from "./tools/tags.js"
+import { tasksTools } from "./tools/tasks.js"
 import { topicsTools, topicWriteTools } from "./tools/topics.js"
 
 /**
@@ -67,5 +68,6 @@ export const sendTools = (messenger: Messenger): Record<string, AnyTool> => ({
 export const localTools = (messenger: Messenger): Record<string, AnyTool> => ({
   ...tagsTools(messenger),
   ...searchesTools(messenger),
+  ...tasksTools(messenger),
   ...attachmentsTools(messenger),
 })
