@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.162.0 — 07.10.2026
+
 ### Added
 
 - `stats chats official <chat>`: what the messenger itself computed for a group or channel it shows its admins —
@@ -15,6 +17,13 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   offers it with the optional `OfficialStats` adapter group and `Messenger.officialStats: true`; without the flag the
   command is not mounted, so MAX does not show it.
 
+### Fixed
+
+- `chats members fetch` and `chats members audit` take the group's member count from the member list when
+  the messenger gives it there. A group whose count the chat list did not carry answered `participants: null`,
+  so nobody was ever recorded as gone and the tracked daily counts had no total. A messenger adds
+  `participantsCount` to its `members()` page.
+
 ## 0.161.0 — 07.10.2026
 
 Released early: MAX cannot adopt 0.160.0 — a timed-out Bot API write still reads as safe to repeat
@@ -23,11 +32,6 @@ Released early: MAX cannot adopt 0.160.0 — a timed-out Bot API write still rea
 
 - The unknown outcome of a write stopped by `--timeout` now reaches the output. 0.160.0 kept it inside
   the runner but still printed `timeout`, so the fix it announced did not show.
-
-- `chats members fetch` and `chats members audit` take the group's member count from the member list when
-  the messenger gives it there. A group whose count the chat list did not carry answered `participants: null`,
-  so nobody was ever recorded as gone and the tracked daily counts had no total. A messenger adds
-  `participantsCount` to its `members()` page.
 
 ## 0.160.0 — 07.10.2026
 
