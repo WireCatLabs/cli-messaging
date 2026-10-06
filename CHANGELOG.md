@@ -15,7 +15,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   checks. The old tool names (`tg_messages_list`, `max_chats_mark_read`, …) and `<cli>_status` (now the
   command `status`) are gone, and so are allow-rules that name them. Prompts and server instructions
   name the new flow. The tool list is under 5 KB, the same on both protocol versions, with or without
-  forms. The bot servers are unchanged.
+  forms. The bot servers do the same: `<cli>_bot_tools_search`, `<cli>_bot_read`, `<cli>_bot_write`,
+  with commands named without `bot` (`messages send`) and `status` as a command.
 - **MCP writes show no form**, on the personal and bot servers, over stdio and HTTP: the profile's
   permissions decide alone, and a level of `ask` goes ahead over MCP. With the built-in defaults this
   includes deleting the owner's own messages. Moderation still leaves the actions a group's rules put

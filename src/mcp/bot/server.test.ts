@@ -16,6 +16,7 @@ import { createProgram, run } from "../../cli/program.js"
 import { settingsFor } from "../../cli/settings.js"
 import type { Message } from "../../domain/models.js"
 import { ModerationRules, moderationPathFor } from "../../moderation/rules.js"
+import { commandsClient } from "../../testing/mcp-commands-client.js"
 import { type BotServerOptions, createBotServer, type RunBotCommand } from "./server.js"
 import type { BotTool } from "./tools.js"
 
@@ -151,10 +152,10 @@ const connect = async (
     await client.close()
     await server.close()
   })
-  return { client, offered, forms }
+  return { client: commandsClient(client, "chat_bot"), raw: client, offered, forms }
 }
 
-const call = async (client: Client, name: string, args: Record<string, unknown> = {}) => {
+const call = async (client: Pick<Client, "callTool">, name: string, args: Record<string, unknown> = {}) => {
   const result = await client.callTool({ name, arguments: args })
   const body = result.structuredContent as Record<string, unknown>
   return { isError: result.isError === true, body, error: body?.error as { code?: string } | undefined }
@@ -208,6 +209,19 @@ describe("bot mcp tools by permission level", () => {
 
     if (expected) expect(offered.sort()).toEqual([...expected].sort())
     else expect(offered.some((name) => name.startsWith("chat_bot_messages_"))).toBe(false)
+  })
+
+  it("**lists three tools**: search, read and write, and no write tool on a read-only profile", async () => {
+    expect((await (await connect()).raw.listTools()).tools.map(({ name }) => name).sort()).toEqual([
+      "chat_bot_read",
+      "chat_bot_tools_search",
+      "chat_bot_write",
+    ])
+    configure({ bot: { profiles: { sales: { permissions: { bot: "readonly" } } } } })
+    expect((await (await connect()).raw.listTools()).tools.map(({ name }) => name).sort()).toEqual([
+      "chat_bot_read",
+      "chat_bot_tools_search",
+    ])
   })
 
   it("**the CLI's own tool replaces the shared one with the same words**", async () => {

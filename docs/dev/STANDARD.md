@@ -619,7 +619,8 @@ it writes no file and uses the same `messages` read permission.
 1. **Three tools, not one per command** (NEED-766): `<tool>_tools_search` finds commands by words
    and gives each one's arguments; `<tool>_read` runs a command that only reads and `<tool>_write`
    one that changes something, as `{ "command": "messages list", "arguments": { … } }`. A command
-   is its CLI path; a bot's includes `bot`. `status` answers what the server is, never connecting.
+   is its CLI path. The bot server's three are `<tool>_bot_tools_search`, `<tool>_bot_read` and
+   `<tool>_bot_write`, and its commands are the path under `bot`. `status` answers what the server is.
    `conversations refresh` runs what `conversations search --refresh` runs before it searches
    (NEED-551 A). The list never changes during a connection.
 2. **Arguments are the command's options in snake_case**, with the option's name: `--send-id` is
