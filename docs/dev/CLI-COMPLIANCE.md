@@ -9,6 +9,12 @@ The shared baseline is ahead of those installed consumer pins. Source findings m
 again at adoption; a change on shared main alone does not fix a published consumer.
 No real session, keyring, messenger, browser login or account data was used.
 
+**Publication update:** documentation was replayed onto `bff850f` after an empty Git object
+prevented publishing from the common checkout. This newer base adds `stats charts` in shared
+code and plans `tasks stats` in the manifest. Neither was in the original behavioural sample;
+preserve the chart view and include the task-statistics path in the hierarchy migration review.
+The inspected parsing/tool-result files remain unchanged. Validation is rerun on this base.
+
 ## Scope and evidence
 
 The [external adoption profile](STANDARD.md#external-references-and-our-adoption-profile) owns
@@ -29,6 +35,7 @@ or through their official indexed content. Sources were consulted on the audit d
 | Help/version | `src/cli/program.ts:59`; synthetic help/version calls below | Observed exit 0, requested text on stdout, no stderr. No business action in the synthetic command. Audit consumer prepare/update hooks for filesystem/network purity separately. |
 | End of options and global flag placement | Commander 15; synthetic calls below | `--` and global `--json` before/after a leaf work in the sample. No claim that every variadic/nested path handles every ordering. Add representative bot/profile/negative-id cases. |
 | Consistent nesting | `docs/dev/STANDARD.md`, `src/cli/messenger/chats-command.ts:15` | Existing resource groups; new stats paths planned. Keep distinct reports as leaves and measures as options. Stats migration remains implementation work. |
+| Newly added statistics paths | `src/cli/messenger/stats-command.ts:14`, `parity.json` at `bff850f` | Charts now live under stats. The planned tasks stats report is outside the proposed namespace; review it with the old messages/chats statistics paths before implementation/adoption. Do not rename another session's feature silently. |
 | stdout/stderr separation | `src/cli/context.ts:40`, `src/cli/program.ts:264`, MAX `src/output.ts:28` | Shared/consumer renderers separate data and diagnostics; confirmed failure stdout is empty. Error serialization has the two gaps below. |
 | Parser failure in machine mode | `src/cli/program.ts:149`, MAX `src/program.test.ts:226` | **Observed gap:** unknown option returns exit 1 and prose, even with `--json`. Convert parser usage errors to validation_error/2 with a single JSON error on stderr. Do not append help to the JSON stream. |
 | Explicit JSON while a TTY is attached | `src/cli/program.ts:264` | **Observed gap:** a service validation error with `--json`, tty:true returns text. Error rendering currently keys off tty rather than explicit format. Make explicit JSON/JSONL take precedence, including failure hooks. |
@@ -127,7 +134,8 @@ Existing shared/consumer tests corroborate the same parsing and lifecycle bounda
    alternatives, buffered stdin budgets and finite one-shot deadlines. Test synthetic PTY/pipe,
    open stdin, abort, SIGINT/SIGTERM and EPIPE. Interactive login/watch/serve need documented exceptions.
 3. **Stats compatibility decision.** Choose immediate breaking relocation or a deprecation window
-   with explicit compatibility routes and permissions. Do not implement both contradictory rules.
+   with explicit compatibility routes and permissions. Include the newly planned tasks stats
+   path and keep the existing stats charts view discoverable. Do not implement contradictory rules.
 4. **Schema and effect discovery.** Extend the shared command contract with input/result schemas,
    conditional arguments, read/local/network effects and retry policy; reuse for CLI discovery/MCP.
    Preserve existing response shapes; version discovery independently where necessary.

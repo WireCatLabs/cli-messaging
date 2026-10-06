@@ -184,7 +184,9 @@ The canonical paths for the statistics migration and rankings are:
 
 These paths specify the command hierarchy, not implemented availability. Existing commands stay
 registered until the coordinated migration; no additional statistics commands may be added
-outside `stats`. A normal entity card may contain counts (`contacts profile`, `store info`);
+outside `stats`. The existing `stats charts` noun view remains under that namespace; review the
+planned `tasks stats` path as part of the same migration inventory. A normal entity card may
+contain counts (`contacts profile`, `store info`);
 that does not make it a statistics command. Its main purpose remains describing the entity.
 For bot-account statistics the account namespace comes first: `bot stats <resource> ...`, with
 the same meanings wherever the provider supports them; this rule does not add Bot API features.
