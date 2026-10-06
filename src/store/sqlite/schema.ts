@@ -435,6 +435,12 @@ export const conversationChunks = sqliteTable(
       .references(() => messages.pk, { onDelete: "cascade" }),
     /** sha256 of the text the model is given, hex. The chunk's text itself is never stored. */
     contentHash: text("content_hash").notNull(),
+    /**
+     * Set on a piece of one message longer than a chunk (`first_message_pk` = `last_message_pk`): the
+     * stretch of its text the piece holds, as offsets. `NULL` is the whole of every message in range.
+     */
+    textStart: integer("text_start"),
+    textEnd: integer("text_end"),
   },
   (table) => [
     primaryKey({ columns: [table.conversationPk, table.ordinal] }),

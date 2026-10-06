@@ -1,6 +1,7 @@
 import type { Id, Message } from "../domain/models.js"
 
-export const RULES_VERSION = 4
+/** 5: a message longer than a chunk is split into overlapping pieces, so builds before it are outdated. */
+export const RULES_VERSION = 5
 
 /** How far back a rule looks, in messages: 97% of reply parents sat within 50 in a measured group. */
 export const LOOK_BACK = 50

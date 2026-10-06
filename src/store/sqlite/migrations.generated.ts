@@ -197,5 +197,12 @@ export const GENERATED: { name: string; statements: string[] }[] = [
       "CREATE INDEX `tasks_by_source` ON `tasks` (`account`,`source`);",
       "CREATE INDEX `tasks_by_state` ON `tasks` (`account`,`state`,`group_key`);"
     ]
+  },
+  {
+    "name": "20261006182644_version-21-chunk-ranges",
+    "statements": [
+      "ALTER TABLE `conversation_chunks` ADD `text_start` integer;",
+      "ALTER TABLE `conversation_chunks` ADD `text_end` integer;"
+    ]
   }
 ]

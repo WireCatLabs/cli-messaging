@@ -9,7 +9,7 @@ import type { SendGuard } from "../sends/guard.js"
 import { conversationsService } from "../services/conversations.js"
 import { storedDeps } from "../services/deps.js"
 import { openStore } from "../store/store.js"
-import { chunkHash, cutChunks } from "./chunks.js"
+import { chunkHash, chunkTextOf, cutChunks, splitText } from "./chunks.js"
 
 describe("cutChunks", () => {
   it("**cuts a conversation at message boundaries**, each chunk within the limit", () => {
@@ -26,7 +26,7 @@ describe("cutChunks", () => {
     expect(chunks[0]?.hash).toBe(chunkHash(chunks[0]?.text ?? ""))
   })
 
-  it("keeps a message longer than the limit whole, alone, and skips messages with no text", () => {
+  it("splits a message longer than the limit into pieces of its own, and skips messages with no text", () => {
     const chunks = cutChunks(
       [
         { id: "1", sender: null, text: "short" },
@@ -35,11 +35,45 @@ describe("cutChunks", () => {
       ],
       20,
     )
-    expect(chunks.map(({ firstId, lastId }) => [firstId, lastId])).toEqual([
-      ["1", "1"],
-      ["2", "2"],
-    ])
+    expect(chunks[0]).toMatchObject({ firstId: "1", lastId: "1" })
+    expect(chunks[0]?.range).toBeUndefined()
+    const pieces = chunks.slice(1)
+    expect(pieces.length).toBeGreaterThan(2)
+    expect(pieces.every(({ firstId, lastId, text }) => firstId === "2" && lastId === "2" && text.length <= 20)).toBe(
+      true,
+    )
+    expect(pieces[0]?.range?.start).toBe(0)
+    expect(pieces.at(-1)?.range?.end).toBe(50)
     expect(cutChunks([{ id: "1", sender: null, text: "" }])).toEqual([])
+  })
+
+  it("cuts a long text at paragraphs and sentences, overlapping so a sentence cut in two is whole in one", () => {
+    const paragraph = (n: number) => `Paragraph ${n} talks about the harbour plan. It has a second sentence here.`
+    const text = Array.from({ length: 12 }, (_, n) => paragraph(n)).join("\n\n")
+
+    const ranges = splitText(text, 300, 60)
+
+    for (const [index, { start, end }] of ranges.entries()) {
+      expect(end - start).toBeLessThanOrEqual(300)
+      if (index < ranges.length - 1) expect(text.slice(start, end)).toMatch(/[.\n]\s*$/)
+      const next = ranges[index + 1]
+      if (next) expect(next.start).toBeLessThan(end)
+    }
+    expect(ranges[0]?.start).toBe(0)
+    expect(ranges.at(-1)?.end).toBe(text.length)
+  })
+
+  it("keeps the sender on every piece, within the limit", () => {
+    const pieces = cutChunks([{ id: "1", sender: "Rin", text: "word ".repeat(100) }], 120)
+
+    expect(pieces.every(({ text }) => text.startsWith("Rin: ") && text.length <= 120)).toBe(true)
+  })
+
+  it("rebuilds a piece's text from the message and its range, as the store reads it back", () => {
+    const line = { id: "1", sender: "Rin", text: "alpha beta gamma delta ".repeat(20) }
+    for (const piece of cutChunks([line], 100)) {
+      expect(chunkHash(chunkTextOf([line], piece.range))).toBe(piece.hash)
+    }
   })
 })
 

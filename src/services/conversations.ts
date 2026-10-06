@@ -105,7 +105,7 @@ export const conversationsService = (deps: ServiceDeps): ConversationsService =>
             const input = byId.get(id)
             return input ? [{ id, sender: input.senderName ?? null, text: input.text }] : []
           }),
-        ).map(({ firstId, lastId, hash }) => ({ firstId, lastId, hash })),
+        ).map(({ firstId, lastId, hash, range }) => ({ firstId, lastId, hash, ...(range ? { range } : {}) })),
       )
       await store.replaceConversations(account, chatId, {
         startedAt,

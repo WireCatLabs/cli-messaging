@@ -2,6 +2,7 @@ import { mkdirSync, writeFileSync } from "node:fs"
 import { dirname } from "node:path"
 import { CliError } from "@leemour/cli-core"
 import type { TaskStore } from "@leemour/cli-tasks"
+import type { TextRange } from "../conversations/chunks.js"
 import type { Link, LinkInput } from "../conversations/link.js"
 import type { DownloadedFile } from "../domain/attachments.js"
 import type {
@@ -507,7 +508,7 @@ export interface ConversationBuild {
   /** Message ids, each conversation oldest first. */
   conversations: Id[][]
   /** Each conversation's chunks, in the same order as `conversations` (phase 5). */
-  chunks?: { firstId: Id; lastId: Id; hash: string }[][]
+  chunks?: { firstId: Id; lastId: Id; hash: string; range?: TextRange }[][]
 }
 
 /**

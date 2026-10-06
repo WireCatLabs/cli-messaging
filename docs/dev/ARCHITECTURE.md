@@ -103,7 +103,9 @@ answers, in `src/store/sqlite/batches.ts`:
 **Chunks and vectors** (phase 5, store version 14, [plan](../storage/plans/phase-5.md)). Each build
 also writes `conversation_chunks`: a conversation cut at message boundaries into pieces of at most
 `CHUNK_CHARS` (`src/conversations/chunks.ts`), each with its first and last message and the sha256 of
-its text. The text is never stored. Chunks cascade with their conversation, so old builds' chunks go
+its text. A message longer than a chunk is split into overlapping pieces (`splitText`), a chunk each, and
+since store version 21 such a chunk also keeps the stretch of the message it holds (`text_start`,
+`text_end`), so every reader below cuts the text the same way. The text is never stored. Chunks cascade with their conversation, so old builds' chunks go
 with them. `chunk_vectors` is keyed by model and that hash, with no chat: a rebuild writes new
 conversation rows, and a vector tied to them would be thrown away each time, while a chunk whose text
 did not change keeps its hash and finds its vector again. `conversations embed` reads a chunk's messages

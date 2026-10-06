@@ -183,6 +183,8 @@ export const replaceConversations = async (
       firstMessagePk: sql.placeholder("firstMessagePk"),
       lastMessagePk: sql.placeholder("lastMessagePk"),
       contentHash: sql.placeholder("contentHash"),
+      textStart: sql.placeholder("textStart"),
+      textEnd: sql.placeholder("textEnd"),
     })
     .prepare()
   await inTurns(
@@ -227,6 +229,8 @@ export const replaceConversations = async (
             firstMessagePk: from.pk,
             lastMessagePk: to.pk,
             contentHash: chunk.hash,
+            textStart: chunk.range?.start ?? null,
+            textEnd: chunk.range?.end ?? null,
           })
           yield
         }
