@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.149.0 — 06.10.2026
+
 ### Added
 
 - `chats mark-read --topic <id>` and the `chats_mark_read` tool's `topic` mark one forum topic read, through the
