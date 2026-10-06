@@ -91,6 +91,13 @@ export const check = async (
   }
 }
 
+interface Described {
+  command: string
+  description: string
+  writes: boolean
+  arguments: unknown
+}
+
 export const mcpSchemas = async (
   bin: string,
   args: string[],
@@ -101,6 +108,12 @@ export const mcpSchemas = async (
   let buffer = ""
   let stderr = ""
   let completed = false
+  // A server of three tools is expanded into its commands, so two CLIs compare command by command.
+  let search: string | undefined
+  let commands: string[] = []
+  const expanded = new Map<string, CapturedTool>()
+  const answer = (message: { result?: { content?: { text: string }[] } }): unknown =>
+    JSON.parse(message.result?.content?.[0]?.text ?? "null")
   const send = (value: object) => child.stdin.write(`${JSON.stringify(value)}\n`)
   const result = new Promise<CapturedTool[]>((resolve, reject) => {
     const fail = (error: Error) => {
@@ -124,15 +137,49 @@ export const mcpSchemas = async (
         buffer = buffer.slice(at + 1)
         if (line) {
           try {
-            const message = JSON.parse(line) as { id?: number; error?: unknown; result?: { tools?: CapturedTool[] } }
+            const message = JSON.parse(line) as {
+              id?: number
+              error?: unknown
+              result?: { tools?: CapturedTool[]; content?: { text: string }[] }
+            }
             if (message.error) return fail(new Error(`MCP error: ${JSON.stringify(message.error)}`))
             if (message.id === 1) {
               send({ jsonrpc: "2.0", method: "notifications/initialized" })
               send({ jsonrpc: "2.0", id: 2, method: "tools/list" })
             } else if (message.id === 2) {
               if (!Array.isArray(message.result?.tools)) return fail(new Error("MCP returned no tools array"))
-              completed = true
-              resolve(message.result.tools)
+              search = message.result.tools.find((tool) => tool.name.endsWith("_tools_search"))?.name
+              if (!search) {
+                completed = true
+                resolve(message.result.tools)
+              } else send({ jsonrpc: "2.0", id: 3, method: "tools/call", params: { name: search, arguments: {} } })
+            } else if (message.id === 3) {
+              commands = (answer(message) as { items: { command: string }[] }).items.map(({ command }) => command)
+              if (commands.length === 0) {
+                completed = true
+                resolve([])
+              }
+              for (const [at, query] of commands.entries())
+                send({
+                  jsonrpc: "2.0",
+                  id: 4 + at,
+                  method: "tools/call",
+                  params: { name: search, arguments: { query } },
+                })
+            } else if (message.id !== undefined && message.id >= 4) {
+              const command = commands[message.id - 4] as string
+              const found = (answer(message) as { items: Described[] }).items.find((one) => one.command === command)
+              if (!found) return fail(new Error(`${search} did not describe ${command}`))
+              expanded.set(command, {
+                name: `${String(search).replace(/_tools_search$/, "")}_${command.replaceAll(/[ -]/g, "_")}`,
+                description: found.description,
+                inputSchema: found.arguments,
+                annotations: { readOnlyHint: !found.writes },
+              })
+              if (expanded.size === commands.length) {
+                completed = true
+                resolve(commands.map((one) => expanded.get(one) as CapturedTool))
+              }
             }
           } catch (error) {
             fail(error instanceof Error ? error : new Error(String(error)))
