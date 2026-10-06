@@ -11,6 +11,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 - `chats mark-read --topic <id>` and the `chats_mark_read` tool's `topic` mark one forum topic read, through the
   new optional `ReadState.markTopicRead`; a messenger without it refuses rather than mark the whole chat read.
   The journal records the topic id.
+- Published testing helpers include the synthetic search recipe corpus. The deep parity auditor compares actual CLI, MCP and service queries on Node and Bun, with scope, bounds, permissions and file-text checks.
+- Consumers can reuse AI setting resolution and the agent-linking MCP prompt. Ordinary MCP context accepts `offline: true` for local reads.
 
 - `messages context --thread` reads a stored message's parent chain and chosen replies, keeping interleaved
   discussions apart. `messages search --thread` attaches the same graph context to each hit. Each link names
@@ -75,6 +77,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Fixed
 
+- Ordinary context preserves account-qualified locators and refuses foreign accounts before reads. Topic search rejects empty and oversized queries before refresh or index access.
+
 - Stored link reads label changed or deleted endpoints stale immediately, for provider and rule links as
   well as agent answers. Earlier reads trusted the persisted flag and could follow an outdated parent until
   the next rebuild. `conversations links` now excludes these edges from its chosen parent chain.
@@ -87,6 +91,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 - `conversations embed --max-chunks` help says there is no limit with `--chat`, as the command behaves; it said 2000.
 
 ### Changed — may break callers
+
+- High-level message search and statistics default to strict Lucene, matching CLI and MCP. Callers needing the old syntax must pass `language: "legacy"`; RegExp requests and low-level store helpers retain their defaults.
 
 - `conversations search` stops padding hybrid results with nonpositive meaning scores. Local e5-small
   (384 dimensions) now keeps cosine strictly above 0.80 before rank fusion; other models keep positive

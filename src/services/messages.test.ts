@@ -87,6 +87,41 @@ describe("the messages service", () => {
     expect(asked).toEqual([])
   })
 
+  it("defaults the service to Lucene like CLI/MCP, keeping explicit legacy and the low-level helper", async () => {
+    const store = await keptStore()
+    const service = messagesService(storedDeps(messenger, store, account, guard))
+    const strict = await service.search({ text: "chapter OR nonexistent", limit: 10 })
+    expect(strict.query?.language).toBe("lucene-v1")
+    expect(strict.items.map(({ id }) => id)).toEqual(["3", "2", "1"])
+    await expect(service.search({ text: "chapter~1", limit: 10 })).rejects.toMatchObject({ code: "validation_error" })
+    expect((await service.stats({ text: "chapter OR nonexistent", by: "chat", limit: 10 })).total).toBe(3)
+    const explicit = await service.search({ text: "chapter", language: "legacy", limit: 10 })
+    expect(explicit.query).toBeUndefined()
+    expect((await searchStore(store, account, { text: "chapter", limit: 10 })).query).toBeUndefined()
+    expect((await service.search({ pattern: /chapter/u, limit: 10 })).query).toBeUndefined()
+  })
+
+  it("keeps locator account isolation for time context before store or messenger reads", async () => {
+    const store = await keptStore()
+    const deps = storedDeps(messenger, store, account, guard)
+    const open = vi.fn(deps.store)
+    const connect = vi.fn(deps.connection)
+    const service = messagesService({ ...deps, store: open, connection: connect })
+    await expect(service.around("msg:test/501/7/2", undefined, { before: 1, after: 0 })).rejects.toMatchObject({
+      code: "validation_error",
+    })
+    await expect(service.around("msg:other/500/7/2", undefined, { before: 1, after: 0 })).rejects.toMatchObject({
+      code: "validation_error",
+    })
+    expect(open).not.toHaveBeenCalled()
+    expect(connect).not.toHaveBeenCalled()
+    const result = await service.around("msg:test/500/7/2", undefined, { before: 1, after: 0 })
+    expect(result.map(({ id }) => id)).toEqual(["1", "2"])
+    await expect(service.around("msg:test/500/7/2", "2", { before: 0, after: 0 })).rejects.toMatchObject({
+      code: "validation_error",
+    })
+  })
+
   it("reads a stored chat offline by an id that is not digits", async () => {
     const store = await keptStore()
     await store.saveChats(account, [{ ...chat, id: "room-b", title: "Garden" }])

@@ -1,3 +1,4 @@
+export { AI_ENTRIES, AI_SETTING_KEYS, type AISettings, resolveAISettings } from "../analysis/settings.js"
 export { botInstructions } from "../mcp/bot/instructions.js"
 export { type BotServerOptions, botToolName, createBotServer, type RunBotCommand } from "../mcp/bot/server.js"
 export {
@@ -29,6 +30,7 @@ export {
   registerPersonalMcpTools,
   warmEmbedders,
 } from "../mcp/personal.js"
+export { registerLinkConversationsPrompt } from "../mcp/prompts.js"
 export { OVER_HTTP } from "../mcp/server.js"
 export {
   answerMessagesSearch,

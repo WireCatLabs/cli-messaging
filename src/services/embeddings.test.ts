@@ -458,6 +458,17 @@ describe("derived index freshness", () => {
     }
   })
 
+  it("rejects blank and oversized topic queries before refreshing or reading indexes", async () => {
+    const { store, embeddings } = await setUp()
+    const index = vi.spyOn(store, "fillSearchIndex")
+    for (const query of ["", "  ", "é".repeat(4097)])
+      await expect(embeddings.search(query, { model: "tiny", limit: 10 })).rejects.toMatchObject({
+        code: "validation_error",
+      })
+    expect(index).not.toHaveBeenCalled()
+    await store.close()
+  })
+
   it("searches by words alone when the model is not downloaded, and says so", async () => {
     const { store, embeddings } = await setUp()
     const found = await embeddings.search("fish", { model: "e5-small", limit: 5 })

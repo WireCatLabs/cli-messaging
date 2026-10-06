@@ -98,7 +98,7 @@ export const renderReports = (bundle: DeepBundle, output: string): void => {
     "",
     ...sides.map(
       ([cli, side]) =>
-        `- ${cli}: ${side.fixture ? `${side.fixture.results.length} search positive/negative recipes; ${side.fixture.reads.length} read/diagnostic scenarios; ${side.fixture.networkAttempts} attempted connections` : (side.fixtureError ?? "not checked")}.`,
+        `- ${cli}: ${side.fixture ? `${side.fixture.results.length} search positive/negative recipes; ${side.fixture.reads.length} read/diagnostic scenarios; ${side.fixture.checks?.length ?? 0} behavioural checks; Node and ${side.bunFixture ? "Bun" : "Bun capture missing"}; ${side.fixture.networkAttempts} attempted connections` : (side.fixtureError ?? "not checked")}.`,
     ),
     `- Cross-consumer differences: ${bundle.fixtureDifferences.length ? bundle.fixtureDifferences.join("; ") : "none for the recorded recipes/reads"}.`,
     "- The corpus checks documented local search, not every Lucene operator, full remote archive, bot search or model quality. Query parser/service/CLI/MCP tests are listed individually; recipes do not replace those contracts.",
@@ -308,6 +308,8 @@ export const renderReports = (bundle: DeepBundle, output: string): void => {
       `## ${cli}`,
       "",
       ...(side.fixture?.results.map((result) => `- ${inlineJson(result)}`) ?? [side.fixtureError ?? "not run"]),
+      ...(side.fixture?.checks?.map((one) => `- ${one.name}: ${one.pass ? "pass" : "FAIL"}`) ?? []),
+      `- Bun: ${side.bunFixture?.results.length ?? 0} recipes; ${side.bunFixture?.checks?.length ?? 0} checks; ${side.bunFixture?.networkAttempts ?? "unknown"} attempted connections.`,
       ...(side.fixture?.reads.map((read) => `- ${read.argv.join(" ")}: exit ${read.code}`) ?? []),
       "",
     ]),

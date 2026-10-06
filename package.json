@@ -19,7 +19,8 @@
     "skills",
     "README.md",
     "LICENSE",
-    "THIRD_PARTY_NOTICES"
+    "THIRD_PARTY_NOTICES",
+    "docs/search/recipes.json"
   ],
   "exports": {
     ".": {
