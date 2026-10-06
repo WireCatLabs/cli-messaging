@@ -3318,92 +3318,44 @@
       }
     },
     "tasks": {
-      "in": [],
-      "planned": {
-        "max": "each CLI's next cli-messaging bump",
-        "tg": "each CLI's next cli-messaging bump"
-      }
+      "in": "all"
     },
     "tasks add": {
-      "in": [],
-      "planned": {
-        "max": "each CLI's next cli-messaging bump",
-        "tg": "each CLI's next cli-messaging bump"
-      },
+      "in": "all",
       "options": {
         "--type": {
-          "in": [],
-          "planned": {
-            "max": "each CLI's next cli-messaging bump",
-            "tg": "each CLI's next cli-messaging bump"
-          }
+          "in": "all"
         }
       }
     },
     "tasks close": {
-      "in": [],
-      "planned": {
-        "max": "each CLI's next cli-messaging bump",
-        "tg": "each CLI's next cli-messaging bump"
-      },
+      "in": "all",
       "options": {
         "--as": {
-          "in": [],
-          "planned": {
-            "max": "each CLI's next cli-messaging bump",
-            "tg": "each CLI's next cli-messaging bump"
-          }
+          "in": "all"
         },
         "--reason": {
-          "in": [],
-          "planned": {
-            "max": "each CLI's next cli-messaging bump",
-            "tg": "each CLI's next cli-messaging bump"
-          }
+          "in": "all"
         }
       }
     },
     "tasks list": {
-      "in": [],
-      "planned": {
-        "max": "each CLI's next cli-messaging bump",
-        "tg": "each CLI's next cli-messaging bump"
-      },
+      "in": "all",
       "options": {
         "--before-time": {
-          "in": [],
-          "planned": {
-            "max": "each CLI's next cli-messaging bump",
-            "tg": "each CLI's next cli-messaging bump"
-          }
+          "in": "all"
         },
         "--chat": {
-          "in": [],
-          "planned": {
-            "max": "each CLI's next cli-messaging bump",
-            "tg": "each CLI's next cli-messaging bump"
-          }
+          "in": "all"
         },
         "--limit": {
-          "in": [],
-          "planned": {
-            "max": "each CLI's next cli-messaging bump",
-            "tg": "each CLI's next cli-messaging bump"
-          }
+          "in": "all"
         },
         "--state": {
-          "in": [],
-          "planned": {
-            "max": "each CLI's next cli-messaging bump",
-            "tg": "each CLI's next cli-messaging bump"
-          }
+          "in": "all"
         },
         "--type": {
-          "in": [],
-          "planned": {
-            "max": "each CLI's next cli-messaging bump",
-            "tg": "each CLI's next cli-messaging bump"
-          }
+          "in": "all"
         }
       }
     },

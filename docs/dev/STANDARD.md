@@ -305,7 +305,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--analyze` |  | link conversation batches using the configured analysis provider, with remembered chat/provider consent |  | `conversations build` |
 | `--anonymous` |  | nobody sees who voted for what |  | `polls create` |
 | `--app` | `<how>` | the first time only: how to get this profile's app from my.telegram.org | `browser` | `session start` (tg-only), `setup` (planned) |
-| `--as` | `<state>` | how a task is closed: done, or dismissed — it needs no answer |  | `tasks close` (planned) |
+| `--as` | `<state>` | how a task is closed: done, or dismissed — it needs no answer |  | `tasks close` |
 | `--as-file` |  | send every --file as a plain file to download, a video included |  | `bot messages send`, `messages send` |
 | `--as-reply` |  | send as a reply to the matched message |  | `replies edit` (planned) |
 | `--at-time` | `<time>` | let the messenger send it later, even with this machine off: a local time like 2026-09-25T09:00, or 30m |  | `messages send` |
@@ -315,7 +315,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--batch` | `<id>` | the batch id `conversations batches next` printed |  | `conversations links add` |
 | `--before-id` | `<id>` | read what came before this message id; not with --before-time |  | `messages evidence`, `messages list` |
 | `--before-n` | `<n>` | how many messages before it |  | `messages context` |
-| `--before-time` | `<time>` | read what came before this ISO 8601 time, or 2h / 1d ago; not with --before-id |  | `messages list`, `tasks list` (planned) |
+| `--before-time` | `<time>` | read what came before this ISO 8601 time, or 2h / 1d ago; not with --before-id |  | `messages list`, `tasks list` |
 | `--block` | `<value>` | Set to `true` if user should be blocked in chat. |  | `bot chats members remove` |
 | `--bot` |  | the bot section of the profile's settings, rather than the personal account's |  | `config set` (planned), `config show` (planned), `config unset` (planned) |
 | `--bots` | `<profiles>` | also read these bots' copies, comma separated — each allowed by readOtherBots |  | `bot contacts show`, `bot messages between`, `bot messages search` |
@@ -324,7 +324,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--can` | `<rights>` | what they may do, comma-separated: read, members, admins, info, pin, link, post, edit, delete. **lists the rights each messenger has — MAX has `read`, Telegram does not — so it differs on purpose (Help text rule 4)** |  | `bot chats admins add`, `chats admins add` |
 | `--channel` |  | a private channel instead of a group; people join it by its link |  | `chats create` |
 | `--chart-kind` | `<messages\|active\|membership>` | what to draw: messages, active authors, or joins and leaves | `messages` | `stats charts` (planned) |
-| `--chat` | `<chat>` | a chat, by id or name; repeat it for more. **chat addressing follows each messenger's supported names, usernames and Saved Messages aliases, so it differs on purpose (Help text rule 4); both message searches resolve stored names without networking** |  | `attachments extract`, `attachments list`, `chats folders create`, `contacts context`, `conversations batches next`, `conversations batches status`, `conversations build`, `conversations consents revoke`, `conversations embed`, `conversations embed clear`, `conversations embed status`, `conversations links clear`, `conversations list`, `conversations search`, `conversations status`, `messages search`, `review`, `searches create`, `stats messages show` (planned), `stats tasks show` (planned), `tags add`, `tags remove`, `tasks list` (planned) |
+| `--chat` | `<chat>` | a chat, by id or name; repeat it for more. **chat addressing follows each messenger's supported names, usernames and Saved Messages aliases, so it differs on purpose (Help text rule 4); both message searches resolve stored names without networking** |  | `attachments extract`, `attachments list`, `chats folders create`, `contacts context`, `conversations batches next`, `conversations batches status`, `conversations build`, `conversations consents revoke`, `conversations embed`, `conversations embed clear`, `conversations embed status`, `conversations links clear`, `conversations list`, `conversations search`, `conversations status`, `messages search`, `review`, `searches create`, `stats messages show` (planned), `stats tasks show` (planned), `tags add`, `tags remove`, `tasks list` |
 | `--chats` | `<ids>` | only these chat ids, comma-separated; empty for any |  | `replies edit` (planned) |
 | `--check` |  | say whether a newer version exists, and install nothing |  | `bot list`, `upgrade` |
 | `--concurrency` | `<n>` | remote: requests at once (default: 4) |  | `conversations embed` |
@@ -366,7 +366,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--last` | `<n>` | stop once the newest n messages are held; not with --since. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | `bot store fetch`, `store fetch` |
 | `--last-name` | `<name>` | your last name |  | `account update` |
 | `--left` |  | only the chats this account has left |  | `store clear` |
-| `--limit` | `<n>` | how many: rows to show, or messages one run fetches. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | `attachments extract`, `attachments list`, `bot chats members list` (max-only), `bot contacts show`, `bot messages between`, `bot messages list`, `bot messages search`, `bot store fetch`, `chats list`, `chats members list` (planned), `contacts context`, `contacts list`, `conversations list`, `conversations related`, `conversations search`, `inbox`, `messages evidence`, `messages list`, `messages search`, `runs list`, `searches create`, `searches history`, `sends list`, `stats messages show` (planned), `store fetch`, `tasks list` (planned) |
+| `--limit` | `<n>` | how many: rows to show, or messages one run fetches. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | `attachments extract`, `attachments list`, `bot chats members list` (max-only), `bot contacts show`, `bot messages between`, `bot messages list`, `bot messages search`, `bot store fetch`, `chats list`, `chats members list` (planned), `contacts context`, `contacts list`, `conversations list`, `conversations related`, `conversations search`, `inbox`, `messages evidence`, `messages list`, `messages search`, `runs list`, `searches create`, `searches history`, `sends list`, `stats messages show` (planned), `store fetch`, `tasks list` |
 | `--lines` | `<n>` | how many lines | `50` | `server logs` |
 | `--local` |  | use the model on this machine, never the messenger |  | `messages transcribe` (tg-only) |
 | `--mark-read` |  | also mark the chat read up to the newest message shown; the other person sees it |  | `inbox`, `messages list`, `review` |
@@ -430,7 +430,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--qr-file` | `<png>` | write the QR code to this PNG instead of drawing it, for an agent to pass on |  | `session start` (tg-only), `setup` (planned) |
 | `--question` |  | match only questions |  | `replies edit` (planned) |
 | `--quiet` |  | diagnostics off. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | every command |
-| `--reason` | `<text>` | why a task was closed, kept with it — no-reply-needed, for example |  | `tasks close` (planned) |
+| `--reason` | `<text>` | why a task was closed, kept with it — no-reply-needed, for example |  | `tasks close` |
 | `--record` |  | keep this run under `runs` — ids and timings, never message content. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | every command |
 | `--refresh` |  | read the private chat with them from MAX first — one request. **one idea, two sources: bring what the answer is read from up to date first. `bot contacts show` reads the private chat again from the messenger; `conversations search` builds and embeds, on this machine, the chats that changed (NEED-551 A, awaiting the owner's wording)** |  | `bot contacts show`, `contacts context`, `conversations search` |
 | `--regex` |  | the words are one regular expression, case-insensitive, tested against every stored text |  | `messages search`, `searches create` |
@@ -453,7 +453,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--since-time` | `<time>` | from this ISO 8601 time, or 2h / 1d ago; each command says its default |  | `bot chats moderate`, `bot store fetch`, `chats events` (planned), `chats members history` (planned), `chats moderate` (planned), `contacts context`, `conversations list`, `conversations search`, `inbox` (planned), `replies test`, `review` (planned), `stats charts` (planned), `stats chats show` (planned), `store export`, `store fetch` |
 | `--size` | `<n>` | messages to answer per batch, 10–200; 50 by default |  | `conversations batches next`, `conversations batches status`, `conversations build` |
 | `--source` | `<messenger>` | every account of this messenger held in the store; personal, bots or all — the same as in: in the query |  | `conversations search`, `messages search`, `searches create`, `stats messages show` (planned) |
-| `--state` | `<state>` | only tasks in this state: open, done or dismissed |  | `tasks list` (planned) |
+| `--state` | `<state>` | only tasks in this state: open, done or dismissed |  | `tasks list` |
 | `--store-token` | `<profile>` | keep a returned authentication token only in this bot profile's OS keyring; never print it |  | `bot api` |
 | `--sync-first` |  | first fetch new messages within the chat, time and message bounds |  | `conversations search`, `messages search`, `stats messages show` (planned) |
 | `--sync-time` | `<duration>` | stop fetching after this long (default: 30s) |  | `conversations search`, `messages search`, `stats messages show` (planned) |
@@ -475,7 +475,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--trace` |  | one line per request on stderr: ids and timings, never message content. **max logs one line per request, tg the connection's own lines: the same option, a different mechanism (Help text rule 4)** |  | every command |
 | `--track` |  | also do it daily while serve runs |  | `chats members fetch` (planned) |
 | `--transcribe` |  | hear voice messages not heard yet, on this machine; slow, the model must be downloaded. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | `inbox`, `messages list`, `review` |
-| `--type` | `<names>` | only these types. **each command names its own types — chats events the messenger's event types, comma-separated, as it names them; tags list chat, contact or message; tasks list question, request, mention or promise, and tasks add gives the new task one of them — so it differs on purpose (Help text rule 4)** |  | `chats events` (planned), `stats tasks show` (planned), `tags list`, `tasks add` (planned), `tasks list` (planned) |
+| `--type` | `<names>` | only these types. **each command names its own types — chats events the messenger's event types, comma-separated, as it names them; tags list chat, contact or message; tasks list question, request, mention or promise, and tasks add gives the new task one of them — so it differs on purpose (Help text rule 4)** |  | `chats events` (planned), `stats tasks show` (planned), `tags list`, `tasks add`, `tasks list` |
 | `--types` | `<value>` | Comma separated list of update types your bot want to receive |  | `bot watch`, `bot webhooks set` |
 | `--unanswered` | `[duration]` | only questions to you or a group's admins that nobody answered, asked at least this long ago — 4h, 1d. **max's own `review` still takes bare hours until T6 moves it (e2)** | `24h` | `review` |
 | `--unread` |  | only chats with unread messages |  | `chats list` |
