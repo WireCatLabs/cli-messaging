@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.152.0 — 06.10.2026
+
 ### Added
 
 - The reply rules file takes an `audience` for every rule: `"reply": "all"` (the default) or `"listed"`, an
