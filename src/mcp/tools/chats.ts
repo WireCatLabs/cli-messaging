@@ -114,6 +114,29 @@ export const chatsTools = (messenger: Messenger): Record<string, AnyTool> => {
         }),
     }),
 
+    chats_tracking_list: tool({
+      title: "Chats whose members are recorded daily",
+      description:
+        "The chats whose member lists serve fetches daily into the local store: [{ chatId, title, trackedAt, " +
+        "lastCount: { day, participants, listed, complete } | null }]. Reads the local store only. The owner adds " +
+        "one with the CLI: chats members fetch <chat> --track, or chats tracking add.",
+      input: v.object({}),
+      annotations: { ...READ, openWorldHint: false },
+      stored: async (store, account) => ({ items: await store.trackedChats(account) }),
+    }),
+
+    chats_tracking_show: tool({
+      title: "A chat's member count per day",
+      description:
+        "Whether a chat's members are recorded daily, and its member count per day for the last 30 days: " +
+        "{ chatId, trackedAt | null, counts: [{ day, participants, listed, complete }] }. complete is false for a " +
+        "day whose member list was not read whole. Reads the local store only.",
+      input: v.object({ chat }),
+      annotations: { ...READ, openWorldHint: false },
+      stored: (store, account, args, defaults) =>
+        servicesFor(storedDeps(messenger, store, account, defaults.guard)).chats.trackedChat(args.chat),
+    }),
+
     chats_inspect: tool({
       title: "What a link leads to",
       description:

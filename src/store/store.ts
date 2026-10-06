@@ -1302,6 +1302,14 @@ const storeOver = (context: StoreContext): MessageStore => {
 
 export type { AttachmentTextEntry, AttachmentView, FileAttachment, TextOrigin } from "./sqlite/attachment-texts.js"
 export { CHAT_LIST_KEY, type ChatCompleteness, fetchedKey, historyStartKey } from "./sqlite/completeness.js"
+export type {
+  MemberCount,
+  MemberStay,
+  ProfileRevision,
+  RosterChange,
+  RosterRead,
+  TrackedChat,
+} from "./sqlite/roster.js"
 export type { SearchCommand, SearchRecord, StoredSearch } from "./sqlite/searches.js"
 export type { StoredTag, TagFilter, TagTarget } from "./sqlite/tags.js"
 export type { ScoredHit, SearchScope, WordOptions, WordQuery } from "./sqlite/words.js"

@@ -71,6 +71,46 @@ export const membersCommand = (messenger: Messenger): Command => {
       }),
   )
 
+  members.addCommand(
+    new Command("fetch")
+      .description(
+        "read a group's whole member list into the local store's member history: who joined, who left, daily " +
+          "counts and profile changes; someone is recorded as gone only when every member was read",
+      )
+      .argument("<chat>", messenger.chatArgument)
+      .option("--track", "also fetch it daily while serve runs; chats tracking lists and edits those chats")
+      .option(
+        "--budget <pages>",
+        `at most this many pages of ${AUDIT_PAGE} members, a pause between them (default: ${AUDIT_BUDGET})`,
+        positiveCount("--budget"),
+      )
+      .action(async function (this: Command, chat: string) {
+        const context = messengerContext(this, messenger)
+        const { track, budget } = this.opts<{ track?: boolean; budget?: number }>()
+        const fetched = await context.withServices((services) =>
+          services.chats.fetchMembers(chat, {
+            ...(budget === undefined ? {} : { budget }),
+            ...(track ? { track } : {}),
+          }),
+        )
+        if (!fetched.complete) {
+          context.renderer.note(
+            fetched.more
+              ? `${fetched.read} members read; a higher --budget reads more — until then nobody is recorded as gone`
+              : "the chat's own member count is unknown or larger than the list — nobody is recorded as gone",
+          )
+        }
+        if (context.format !== "pretty") {
+          context.renderer.result(fetched)
+          return
+        }
+        context.streams.data(
+          `${fetched.read} members read; ${fetched.joined.length} new, ${fetched.gone.length} gone, ` +
+            `${fetched.changed.length} changed their profile${fetched.tracked ? "; tracked daily" : ""}`,
+        )
+      }),
+  )
+
   const add = annotate(new Command("add"), { mutates: true })
     .description("add people; they are told")
     .argument("<chat>", messenger.chatArgument)

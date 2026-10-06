@@ -1524,6 +1524,17 @@ describe("the shared read commands", () => {
         items: [{ id: "40", reasons: ["bot", "odd_name", "never_wrote"] }],
       })
       expect(asked).toEqual(["chatEvents", "members"])
+      const fetched = await call(["chats", "members", "fetch", "7", "--track", "--json"], roster, env, {}, { provider })
+      expect(fetched.code).toBe(0)
+      expect(fetched.stdout).toHaveLength(1)
+      expect(JSON.parse(fetched.stdout[0] ?? "null")).toMatchObject({
+        chatId: "7",
+        read: 1,
+        joined: ["40"],
+        tracked: true,
+      })
+      const tracked = await call(["chats", "tracking", "list", "--offline", "--json"], never, env, {}, { provider })
+      expect(JSON.parse(tracked.stdout[0] ?? "null").items.map((one: { chatId: string }) => one.chatId)).toEqual(["7"])
       for (const recipe of searchRecipes.negative) {
         const result = await call(["messages", "search", recipe.query, "--json"], never, env, {}, { provider })
         expect(result.code).toBe(2)

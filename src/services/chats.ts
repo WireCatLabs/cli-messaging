@@ -1,5 +1,5 @@
 import { CliError } from "@leemour/cli-core"
-import { capability } from "../cli/messenger/port.js"
+import { capability, type MessengerAdapter } from "../cli/messenger/port.js"
 import { threadIdOf } from "../cli/messenger/thread.js"
 import type {
   Chat,
@@ -16,7 +16,7 @@ import type {
 import { timezoneOf } from "../search/lucene/dates.js"
 import { codeOf, guardedWrite, type Operated } from "../sends/guarded.js"
 import { newOperationId } from "../sends/send-id.js"
-import type { AccountKey, MessageStore } from "../store/store.js"
+import type { AccountKey, MemberCount, MessageStore, RosterChange, TrackedChat } from "../store/store.js"
 import { type ChatStats, chatStats, type StatsPeriod } from "./chat-stats.js"
 import { fromStore, nothingStored, type ServiceDeps, storeIfOpen } from "./deps.js"
 import {
@@ -31,6 +31,20 @@ import { storedChatId } from "./messages.js"
 
 /** How far back `events` looks without `since`, as in max-cli. */
 export const EVENTS_DAYS = 7
+
+/** How far back `chats tracking show` lists daily counts. */
+export const TRACKED_DAYS = 30
+
+export interface FetchedMembers extends RosterChange {
+  chatId: Id
+  read: number
+  /** The chat's own count, from the store's chat list; `null` when unknown — then nobody is recorded as gone. */
+  participants: number | null
+  complete: boolean
+  /** The budget or the messenger's cap stopped the read. */
+  more: boolean
+  tracked: boolean
+}
 
 /** How many stored messages one read of the store takes while `stats` walks the period. */
 const STATS_PAGE = 1000
@@ -96,6 +110,18 @@ export interface ChatsService {
    * `budget` pages with a pause between them, and never asks about one person. Acts on nobody.
    */
   audit(chat: string, options: { budget?: number; minScore?: number; pauseMs?: number }): Promise<MembersAudit>
+  /**
+   * Reads the whole member list, as `audit` does, into the store's member history. Someone is recorded as gone
+   * only when every member was read and the chat's own count agrees. `track` also puts the chat on `serve`'s
+   * daily list.
+   */
+  fetchMembers(chat: string, options: { budget?: number; pauseMs?: number; track?: boolean }): Promise<FetchedMembers>
+  /** The chats whose members `serve` fetches daily, from the store. */
+  tracked(): Promise<TrackedChat[]>
+  /** One chat's tracking and its member counts of the last `TRACKED_DAYS` days, tracked or not. */
+  trackedChat(chat: string): Promise<{ chatId: Id; trackedAt: string | null; counts: MemberCount[] }>
+  /** Starts or stops the daily fetch; history already kept stays. A local write. */
+  track(chat: string, tracked: boolean): Promise<{ chatId: Id; tracked: boolean }>
   /** Through the guard; never counts toward the hourly limit. */
   markRead(request: { chat: string; until?: string; threadId?: string }): Promise<Operated<MarkedRead>>
 }
@@ -205,18 +231,7 @@ export const chatsService = (deps: ServiceDeps): ChatsService => ({
       )
     }
     const connection = await deps.connection()
-    const members = capability(connection, "members", "list a group's members")
-    const read: GroupMember[] = []
-    let chatId: Id | undefined
-    let more = true
-    for (let page = 0; page < budget && more; page++) {
-      if (page > 0) await new Promise((resolve) => setTimeout(resolve, pauseMs))
-      const found = await members(chatId ?? chat, { limit: AUDIT_PAGE, offset: read.length })
-      chatId = found.chatId
-      read.push(...found.items)
-      more = found.hasMore && found.items.length > 0
-    }
-    const id = chatId ?? chat
+    const { chatId: id, members: read, more } = await readMembers(connection, chat, budget, pauseMs)
     const held = await storeIfOpen(deps)
     const stored = held ? await storedFacts(held.store, held.account, id) : undefined
     const { items, unknown } = auditMembers(read, {
@@ -236,6 +251,48 @@ export const chatsService = (deps: ServiceDeps): ChatsService => ({
         : {}),
       items,
     }
+  },
+
+  fetchMembers: async (chat, { budget = AUDIT_BUDGET, pauseMs = AUDIT_PAUSE_MS, track = false }) => {
+    if (fromStore(deps)) {
+      throw new CliError(
+        "validation_error",
+        "`chats members fetch` reads the member list from the messenger; not offline",
+      )
+    }
+    const { chatId, members, more } = await readMembers(await deps.connection(), chat, budget, pauseMs)
+    const store = await deps.store()
+    const account = await deps.account()
+    const participants =
+      (await store.chats(account, {})).items.find(({ id }) => id === chatId)?.participantsCount ?? null
+    const complete = !more && participants !== null && members.length >= participants
+    const change = await store.saveRoster(account, chatId, { members, complete, participants })
+    if (track) await store.trackMembers(account, chatId, true)
+    const tracked = (await store.trackedChats(account)).some((one) => one.chatId === chatId)
+    return { chatId, read: members.length, participants, complete, more, ...change, tracked }
+  },
+
+  tracked: async () => (await deps.store()).trackedChats(await deps.account()),
+
+  trackedChat: async (chat) => {
+    const store = await deps.store()
+    const account = await deps.account()
+    const chatId = await storedChatId(deps.messenger, chat, store, account)
+    const entry = (await store.trackedChats(account)).find((one) => one.chatId === chatId)
+    const since = new Date(Date.now() - TRACKED_DAYS * 86_400_000).toISOString().slice(0, 10)
+    return {
+      chatId,
+      trackedAt: entry?.trackedAt ?? null,
+      counts: await store.memberCounts(account, chatId, { since }),
+    }
+  },
+
+  track: async (chat, tracked) => {
+    const store = await deps.store()
+    const account = await deps.account()
+    const chatId = await storedChatId(deps.messenger, chat, store, account)
+    await store.trackMembers(account, chatId, tracked)
+    return { chatId, tracked }
   },
 
   markRead: async ({ chat, until, threadId: typedThread }) => {
@@ -297,6 +354,27 @@ const storedSince = async (store: MessageStore, account: AccountKey, chatId: Id,
     if (!page.hasMore || !oldest) return pages.flat()
     before = oldest.id
   }
+}
+
+/** Pages of `AUDIT_PAGE`, at most `budget`, a pause between them; never one request per person. */
+const readMembers = async (
+  connection: MessengerAdapter,
+  chat: string,
+  budget: number,
+  pauseMs: number,
+): Promise<{ chatId: Id; members: GroupMember[]; more: boolean }> => {
+  const members = capability(connection, "members", "list a group's members")
+  const read: GroupMember[] = []
+  let chatId: Id | undefined
+  let more = true
+  for (let page = 0; page < budget && more; page++) {
+    if (page > 0) await new Promise((resolve) => setTimeout(resolve, pauseMs))
+    const found = await members(chatId ?? chat, { limit: AUDIT_PAGE, offset: read.length })
+    chatId = found.chatId
+    read.push(...found.items)
+    more = found.hasMore && found.items.length > 0
+  }
+  return { chatId: chatId ?? chat, members: read, more }
 }
 
 /** `null` when no member list was ever saved: not knowing who is there is not nobody being there. */
