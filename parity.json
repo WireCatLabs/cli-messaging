@@ -189,7 +189,8 @@
     },
     "--deep": {
       "value": "<n>",
-      "meaning": "also check the top n in full — profile, photos, everything they wrote, and the public ban lists, which are sent their ids — one person a second"
+      "meaning": "also check the top n in full — profile, photos, everything they wrote, and the public ban lists, which are sent their ids — one person a second",
+      "note": "max-cli main still uses the older SDK help; current tg-cli names the bounded Telegram audit. Align after both adopt the HTTP confirmation SDK release."
     },
     "--defaults": {
       "meaning": "change what every profile gets, rather than this profile"
@@ -419,7 +420,8 @@
       "meaning": "do not keep it, whatever the configuration says"
     },
     "--no-registries": {
-      "meaning": "do not ask the public ban lists; nothing about them leaves this machine"
+      "meaning": "do not ask the public ban lists; nothing about them leaves this machine",
+      "note": "max-cli main still uses the older SDK help; current tg-cli distinguishes public registries from Telegram profile reads. Align after both adopt the HTTP confirmation SDK release."
     },
     "--no-serve": {
       "meaning": "do not start it; log in on this command's own connection unless one is running"

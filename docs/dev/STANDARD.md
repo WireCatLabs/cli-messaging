@@ -298,7 +298,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--contacts-only` |  | match only contacts |  | `replies edit` (planned) |
 | `--context` | `<n>` | messages before and after each hit |  | `messages search`, `searches create` |
 | `--days` | `<days>` | days of the working window, such as mon-fri or sat,sun |  | `replies edit` (planned) |
-| `--deep` | `<n>` | also check the top n in full — profile, photos, everything they wrote, and the public ban lists, which are sent their ids — one person a second |  | `chats members audit` |
+| `--deep` | `<n>` | also check the top n in full — profile, photos, everything they wrote, and the public ban lists, which are sent their ids — one person a second. **max-cli main still uses the older SDK help; current tg-cli names the bounded Telegram audit. Align after both adopt the HTTP confirmation SDK release.** |  | `chats members audit` |
 | `--defaults` |  | change what every profile gets, rather than this profile |  | `config set`, `config unset` |
 | `--deny-chats` | `<ids>` | replace denied chat ids, comma-separated; empty clears; deny wins |  | `replies audience` (planned) |
 | `--deny-people` | `<ids>` | replace denied sender ids, comma-separated; empty clears; deny wins |  | `replies audience` (planned) |
@@ -360,7 +360,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--no-preview` |  | no preview card for a link in the text |  | `messages send` |
 | `--no-question` |  | do not require a question |  | `replies edit` (planned) |
 | `--no-record` |  | do not keep it, whatever the configuration says |  | every command |
-| `--no-registries` |  | do not ask the public ban lists; nothing about them leaves this machine |  | `contacts check` |
+| `--no-registries` |  | do not ask the public ban lists; nothing about them leaves this machine. **max-cli main still uses the older SDK help; current tg-cli distinguishes public registries from Telegram profile reads. Align after both adopt the HTTP confirmation SDK release.** |  | `contacts check` |
 | `--no-serve` |  | do not start it; log in on this command's own connection unless one is running |  | every command (planned) |
 | `--not-chats` | `<ids>` | leave these chat ids out, comma-separated; empty clears |  | `replies edit` (planned) |
 | `--not-people` | `<ids>` | leave these sender ids out, comma-separated; empty clears |  | `replies edit` (planned) |
