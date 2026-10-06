@@ -25,10 +25,15 @@ guessable from the others.
    sent; their writes have their own keys (`tags.add`), so a read-only profile hides them.
    `attachments` are the files of stored messages: their text, read or written back, is kept in the
    local store for `content:` in a search and never sent; `attachments.extract` is a local write.
+   `stats charts` is the statistics view across chart sources; it returns a neutral chart description
+   and optionally writes an SVG. The first source is a chat's statistics. The owner chose this
+   command on 2026-10-06. `--chart-kind` selects messages, active authors or joins and leaves;
+   `--output` names the image file. Charts default to a dark theme and their JSON is independent
+   of the rendering library. `--by` takes day or week here.
    `chats tracking` is the one collection named by what it does rather than a plural: the chats whose
    member lists `serve` fetches daily into the local store — owner's wording, 2026-10-05.
 2. **Top-level words** only for what spans every chat or is the tool itself: `inbox`, `review`,
-   `watch`, `serve`, `doctor`, `upgrade`, `commands`, `complete`, `mcp`, `bot`. A new one needs a
+   `watch`, `serve`, `stats`, `doctor`, `upgrade`, `commands`, `complete`, `mcp`, `bot`. A new one needs a
    reason in its pull request.
 3. **Verbs come from this list, each with one meaning.** A verb not on it is added here first.
    - `list` many · `show` one · `search` find by text — the description says where it looks
@@ -160,9 +165,10 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--bot` |  | the bot section of the profile's settings, rather than the personal account's |  | `config set` (planned), `config show` (planned), `config unset` (planned) |
 | `--bots` | `<profiles>` | also read these bots' copies, comma separated — each allowed by readOtherBots |  | `bot contacts show`, `bot messages between`, `bot messages search` |
 | `--budget` | `<pages>` | at most this many pages of a list, with a pause between them |  | `chats members audit` (planned), `chats members fetch` (planned) |
-| `--by` | `<grouping>` | what to count by. **each command names its own groupings — messages stats chat, sender, day or hour, and searches create the same for messages stats --saved; chats stats day or week, as a series beside its totals — so it differs on purpose (Help text rule 4)** |  | `chats stats` (planned), `messages stats`, `searches create` |
+| `--by` | `<grouping>` | what to count by. **each command names its own groupings — messages stats chat, sender, day or hour, and searches create the same for messages stats --saved; chats stats day or week, as a series beside its totals — so it differs on purpose (Help text rule 4)** |  | `chats stats` (planned), `messages stats`, `searches create`, `stats charts` (planned) |
 | `--can` | `<rights>` | what they may do, comma-separated: read, members, admins, info, pin, link, post, edit, delete. **lists the rights each messenger has — MAX has `read`, Telegram does not — so it differs on purpose (Help text rule 4)** |  | `bot chats admins add`, `chats admins add` |
 | `--channel` |  | a private channel instead of a group; people join it by its link |  | `chats create` |
+| `--chart-kind` | `<messages\|active\|membership>` | what to draw: messages, active authors, or joins and leaves | `messages` | `stats charts` (planned) |
 | `--chat` | `<chat>` | a chat, by id or name; repeat it for more. **chat addressing follows each messenger's supported names, usernames and Saved Messages aliases, so it differs on purpose (Help text rule 4); both message searches resolve stored names without networking** |  | `attachments extract`, `attachments list`, `chats folders create`, `contacts context` (planned), `conversations batches next`, `conversations batches status`, `conversations build`, `conversations consents revoke`, `conversations embed`, `conversations embed clear`, `conversations embed status`, `conversations links clear`, `conversations list`, `conversations search`, `conversations status`, `messages search`, `messages stats`, `review`, `searches create`, `tags add`, `tags remove` |
 | `--check` |  | say whether a newer version exists, and install nothing |  | `bot list`, `upgrade` |
 | `--concurrency` | `<n>` | remote: requests at once (default: 4) |  | `conversations embed` |
@@ -229,7 +235,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--only-owner-edits-info` | `<on\|off>` | only the owner may change the name and photo |  | `chats update` (max-only) |
 | `--order` | `<recent\|name>` | newest conversation first, or alphabetical |  | `contacts list` |
 | `--others` |  | every session but this one. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | `account sessions end` |
-| `--output` |  | where to write: a directory for `messages download`, a file for `store export`. **MAX `messages download --output <dir>` remains a compatibility alias for `--output-dir`; other commands use --output for a file — e10** | `.` | `doctor report create`, `messages download` (max-only), `store decrypt`, `store export` |
+| `--output` |  | where to write: a directory for `messages download`, a file for `store export`. **MAX `messages download --output <dir>` remains a compatibility alias for `--output-dir`; other commands use --output for a file — e10** | `.` | `doctor report create`, `messages download` (max-only), `stats charts` (planned), `store decrypt`, `store export` |
 | `--output-dir` | `<dir>` | the folder to write into, created if missing. **`attachments extract` takes it only with --download, and has no default there, so extraction never fills the working folder unasked** | `.` | `attachments extract`, `messages download` |
 | `--page` | `<n>` | which page, starting at 1 |  | `attachments list`, `chats list`, `chats members list` (planned), `contacts list` |
 | `--page-size` | `<n>` | how many items one request to the messenger asks for; the messenger's own if not given. **the default is each messenger's own page: 30 on MAX, 100 on Telegram** |  | `bot store fetch`, `store fetch` |
@@ -259,7 +265,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--show-phone` |  | print the whole phone number |  | `account show`, `contacts profile` (planned) |
 | `--silent` |  | deliver without a notification |  | `bot messages send`, `messages forward`, `messages send`, `polls create` |
 | `--since` | `<id-or-time>` | from this message id, an ISO 8601 time, or 2h / 1d ago; each command says its default. **becomes `--since-time` everywhere — NEED-485** |  | `inbox` (planned), `review` (planned) |
-| `--since-time` | `<time>` | from this ISO 8601 time, or 2h / 1d ago; each command says its default |  | `bot chats moderate`, `bot store fetch`, `chats events` (planned), `chats members history` (planned), `chats moderate` (planned), `chats stats` (planned), `contacts context`, `conversations list`, `conversations search`, `inbox` (planned), `replies test` (planned), `review` (planned), `store export`, `store fetch` |
+| `--since-time` | `<time>` | from this ISO 8601 time, or 2h / 1d ago; each command says its default |  | `bot chats moderate`, `bot store fetch`, `chats events` (planned), `chats members history` (planned), `chats moderate` (planned), `chats stats` (planned), `contacts context`, `conversations list`, `conversations search`, `inbox` (planned), `replies test` (planned), `review` (planned), `stats charts` (planned), `store export`, `store fetch` |
 | `--size` | `<n>` | messages to answer per batch, 10–200; 50 by default |  | `conversations batches next`, `conversations batches status`, `conversations build` |
 | `--source` | `<messenger>` | every account of this messenger held in the store; personal, bots or all — the same as in: in the query |  | `conversations search`, `messages search`, `messages stats`, `searches create` |
 | `--store-token` | `<profile>` | keep a returned authentication token only in this bot profile's OS keyring; never print it |  | `bot api` |
@@ -275,7 +281,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--thread-within` | `<duration>` | messages within this long either side of the hit (default: 1d) |  | `messages context`, `messages search` |
 | `--threads` | `<n>` | threads in all | `min(8, cores)` | `conversations embed` |
 | `--timeout` | `<duration>` | give up on the whole command after this — 30s, 2m, 500ms |  | every command |
-| `--timezone` | `<zone>` | the IANA timezone for calendar date boundaries | `system IANA timezone` | `chats stats` (planned), `conversations search`, `messages search`, `messages stats`, `searches create` |
+| `--timezone` | `<zone>` | the IANA timezone for calendar date boundaries | `system IANA timezone` | `chats stats` (planned), `conversations search`, `messages search`, `messages stats`, `searches create`, `stats charts` (planned) |
 | `--title` | `<title>` | the new name — of a chat or a folder |  | `bot chats admins add`, `chats folders update`, `chats update` |
 | `--to` | `<chat>` | the chat to forward it to: an id, or part of a chat name. **the sentence says how to name a chat the messenger's way, so it differs on purpose (Help text rule 4)** |  | `messages forward`, `store export` |
 | `--topic` | `<id>` | address this forum topic: send to it, or mark only it read. **Telegram group forums only; MAX explicitly refuses this option before sending** |  | `chats mark-read` (planned), `messages send`, `polls create` |
