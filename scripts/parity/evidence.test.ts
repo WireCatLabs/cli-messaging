@@ -33,6 +33,33 @@ describe("isolated parity evidence capture", () => {
       { name: "fake_read", inputSchema: { type: "object", required: ["chat"] } },
     ])
   })
+  it("expands a server of three tools into its commands, as a list of one tool per command", async () => {
+    const root = directory()
+    const path = join(root, "surface.mjs")
+    const catalogue = {
+      "chats list": { description: "chats", writes: false, arguments: { type: "object" } },
+      "chats mark-read": { description: "mark", writes: true, arguments: { type: "object", required: ["chat"] } },
+    }
+    writeFileSync(
+      path,
+      `const catalogue=${JSON.stringify(catalogue)};const say=(id,result)=>process.stdout.write(JSON.stringify({jsonrpc:"2.0",id,result})+"\\n");const text=(id,value)=>say(id,{content:[{type:"text",text:JSON.stringify(value)}]});let buffer="";process.stdin.on("data",chunk=>{buffer+=chunk;let at;while((at=buffer.indexOf("\\n"))>=0){const message=JSON.parse(buffer.slice(0,at));buffer=buffer.slice(at+1);if(message.method==="initialize")say(1,{});else if(message.method==="tools/list")say(2,{tools:[{name:"fake_tools_search",inputSchema:{}},{name:"fake_read",inputSchema:{}}]});else if(message.method==="tools/call"){const query=message.params.arguments.query;if(query===undefined)text(message.id,{items:Object.keys(catalogue).map(command=>({command}))});else text(message.id,{items:[{command:query,...catalogue[query]}]});}}});`,
+    )
+
+    await expect(mcpSchemas(path, [], sandboxEnvironment(root))).resolves.toEqual([
+      {
+        name: "fake_chats_list",
+        description: "chats",
+        inputSchema: { type: "object" },
+        annotations: { readOnlyHint: true },
+      },
+      {
+        name: "fake_chats_mark_read",
+        description: "mark",
+        inputSchema: { type: "object", required: ["chat"] },
+        annotations: { readOnlyHint: false },
+      },
+    ])
+  })
   it("distinguishes a server error, early exit and malformed output from an empty tool list", async () => {
     for (const response of [
       'process.stdout.write(JSON.stringify({jsonrpc:"2.0",id:2,error:{message:"not configured"}})+"\\n");',
