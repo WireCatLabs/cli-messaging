@@ -28,6 +28,7 @@ export {
   personalMcpConfirmer,
   personalMcpToolKey,
   personalMcpTools,
+  registerPersonalMcpSurface,
   registerPersonalMcpTools,
   warmEmbedders,
 } from "../mcp/personal.js"

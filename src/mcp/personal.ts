@@ -24,6 +24,7 @@ export const personalMcpTools = (messenger: Messenger): Record<string, AnyTool> 
 
 export { warmEmbedders } from "../embeddings/embed.js"
 export { confirmer as personalMcpConfirmer } from "./confirm.js"
+export { registerSurface as registerPersonalMcpSurface } from "./surface.js"
 export {
   type AnyTool as PersonalMcpTool,
   answered as answerMcpTool,
