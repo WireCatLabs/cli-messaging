@@ -16,24 +16,13 @@ import { tasksStatsCommand } from "./tasks-command.js"
 
 export const statsCommand = (messenger: Messenger, loadRenderer = chartRenderer): Command => {
   const stats = new Command("stats").description("statistics about messages, chats and their authors")
-  stats.action(function (this: Command) {
-    this.outputHelp()
-  })
   stats.addCommand(
     new Command("messages")
       .description("message statistics from the local store")
-      .action(function (this: Command) {
-        this.outputHelp()
-      })
       .addCommand(messagesStatsCommand(messenger)),
   )
   stats.addCommand(
-    new Command("chats")
-      .description("statistics about one chat")
-      .action(function (this: Command) {
-        this.outputHelp()
-      })
-      .addCommand(chatStatsCommand(messenger)),
+    new Command("chats").description("statistics about one chat").addCommand(chatStatsCommand(messenger)),
   )
   stats.addCommand(new Command("tasks").description("task statistics").addCommand(tasksStatsCommand(messenger)))
   stats

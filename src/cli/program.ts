@@ -158,6 +158,8 @@ export const run = async (argv: string[], definition: ProgramDefinition, options
     const commandEnv = options.env ?? process.env
     const headless =
       machine || flags.input === false || Boolean(commandEnv.CI) || (options.tty ?? process.stdout.isTTY) !== true
+    if (flags.fields !== undefined && !machine && (options.tty ?? process.stdout.isTTY) === true)
+      throw new CliError("validation_error", "--fields requires machine output — add --json or --jsonl")
     control.configure({
       ...(flags.fields === undefined ? {} : { fields: flags.fields }),
       maxOutputBytes:
@@ -225,6 +227,7 @@ export const run = async (argv: string[], definition: ProgramDefinition, options
       throw new PreviewComplete()
     }
     await definition.prepare?.(program, environment)
+    if (control.signal.aborted) throw control.failure()
   })
   // Depth-first: a subcommand left with the default behaviour kills the process from inside a test.
   forEachCommand(program, (child) => child.exitOverride())

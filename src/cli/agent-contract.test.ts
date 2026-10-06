@@ -183,3 +183,10 @@ it("honors the whole-command timeout environment and explicit flag precedence", 
   )
   expect(overridden.result).toBe(6)
 })
+
+it("rejects projection of human output before preparation or writes", async () => {
+  const result = await invoke(["messages", "send", "synthetic", "--fields", "id"], { tty: true })
+  expect(result.result).toBe(2)
+  expect(result.performed).not.toHaveBeenCalled()
+  expect(result.prepare).not.toHaveBeenCalled()
+})

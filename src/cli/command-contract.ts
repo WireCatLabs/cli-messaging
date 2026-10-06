@@ -30,8 +30,30 @@ const pagedResult = (item: JsonSchema): JsonSchema => ({
   },
 })
 
-export const resultSchemaFor = (path: readonly string[]): { schema: JsonSchema; coverage: string } => {
+export const resultSchemaFor = (
+  path: readonly string[],
+  format: "json" | "jsonl" = "json",
+): { schema: JsonSchema; coverage: string } => {
   const words = path.join(" ")
+  if (format === "jsonl") {
+    if (words === "stats charts") return { schema: { not: {} }, coverage: "unsupported-format" }
+    if (path[0] === "messages" && ["list", "search", "between"].includes(path[1] ?? ""))
+      return { schema: messageResult, coverage: "declared-domain-fields" }
+    if (words === "stats messages show")
+      return {
+        schema: {
+          type: "object",
+          additionalProperties: true,
+          properties: {
+            key: { type: "string" },
+            name: { type: ["string", "null"] },
+            count: { type: "integer", minimum: 0 },
+          },
+        },
+        coverage: "declared-domain-fields",
+      }
+    if (path.at(-1) === "list") return { schema: objectResult, coverage: "open-collection-item" }
+  }
   if (words === "stats messages show")
     return {
       coverage: "declared",
@@ -44,7 +66,6 @@ export const resultSchemaFor = (path: readonly string[]): { schema: JsonSchema; 
             name: { type: ["string", "null"] },
             count: { type: "integer", minimum: 0 },
           },
-          required: ["key", "name", "count"],
         }),
         properties: {
           ...(pagedResult(objectResult).properties as Record<string, unknown>),
@@ -60,7 +81,6 @@ export const resultSchemaFor = (path: readonly string[]): { schema: JsonSchema; 
                 name: { type: ["string", "null"] },
                 count: { type: "integer", minimum: 0 },
               },
-              required: ["key", "name", "count"],
             },
           },
         },
@@ -182,6 +202,9 @@ export const commandContract = (command: Command) => {
     },
     outputSchema: { $schema: SCHEMA_DIALECT, ...output.schema },
     outputSchemaCoverage: output.coverage,
+    jsonlSchema: { $schema: SCHEMA_DIALECT, ...resultSchemaFor(path, "jsonl").schema },
+    jsonlSchemaCoverage: resultSchemaFor(path, "jsonl").coverage,
+    projection: "--fields may omit item/object members; present members retain their types and envelopes are preserved",
     validation: {
       syntax: "declared",
       semantic: "command-and-provider-validation",
