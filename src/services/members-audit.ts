@@ -1,5 +1,9 @@
+import type { BotCheck } from "../botcheck/check.js"
+import { type AuditReason, LINK, oddName, WEIGHTS } from "../botcheck/reasons.js"
 import type { GroupMember, Id, Message } from "../domain/models.js"
 import type { ChatCompleteness } from "../store/store.js"
+
+export type { AuditReason }
 
 export const AUDIT_PAGE = 200
 export const AUDIT_BUDGET = 10
@@ -11,33 +15,6 @@ const BURST_MINUTES = 10
 /** One person who is not an admin bringing in this many is worth a look. */
 const MASS_INVITES = 5
 
-export type AuditReason =
-  | "bot"
-  | "scam"
-  | "fake"
-  | "deleted"
-  | "no_photo"
-  | "no_username"
-  | "odd_name"
-  | "never_wrote"
-  | "link_first"
-  | "burst_join"
-  | "mass_invited"
-
-const WEIGHTS: Record<AuditReason, number> = {
-  bot: 3,
-  scam: 3,
-  fake: 3,
-  deleted: 1,
-  no_photo: 1,
-  no_username: 1,
-  odd_name: 1,
-  never_wrote: 1,
-  link_first: 2,
-  burst_join: 1,
-  mass_invited: 1,
-}
-
 export interface AuditedMember {
   id: Id
   name: string | null
@@ -46,6 +23,8 @@ export interface AuditedMember {
   reasons: AuditReason[]
   joinedAt?: string | null
   invitedBy?: Id | null
+  /** With `--deep`: the full person check, for the top members only. */
+  check?: Pick<BotCheck, "score" | "reasons" | "registries" | "unknown">
 }
 
 export interface MembersAudit {
@@ -63,9 +42,6 @@ export interface MembersAudit {
   /** Highest score first; only those at `minScore` or above. Owner and admins are never in it. */
   items: AuditedMember[]
 }
-
-const LINK = /https?:\/\/|t\.me\/|www\./i
-const DIGITS = /\d{5,}/
 
 /**
  * Scores each member from what the list and the store already hold. Never a verdict: real people
@@ -132,8 +108,6 @@ export const auditMembers = (
   ]
   return { items, unknown }
 }
-
-const oddName = (name: string | null) => !name?.trim() || DIGITS.test(name) || LINK.test(name)
 
 /** Members whose join falls in a run of `BURST_SIZE` or more, each within `BURST_MINUTES` of the next. */
 const burstJoins = (members: GroupMember[]): Set<Id> => {

@@ -153,6 +153,10 @@
       "value": "<n>",
       "meaning": "messages before and after each hit"
     },
+    "--deep": {
+      "value": "<n>",
+      "meaning": "also check the top n in full — profile, photos, everything they wrote, and the public ban lists, which are sent their ids — one person a second"
+    },
     "--defaults": {
       "meaning": "change what every profile gets, rather than this profile"
     },
@@ -338,6 +342,9 @@
     },
     "--no-record": {
       "meaning": "do not keep it, whatever the configuration says"
+    },
+    "--no-registries": {
+      "meaning": "do not ask the public ban lists; nothing about them leaves this machine"
     },
     "--no-serve": {
       "meaning": "do not start it; log in on this command's own connection unless one is running"
@@ -1172,6 +1179,10 @@
           "in": [],
           "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" }
         },
+        "--deep": {
+          "in": [],
+          "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" }
+        },
         "--min-score": {
           "in": [],
           "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" }
@@ -1407,6 +1418,16 @@
     },
     "contacts block": {
       "in": "all"
+    },
+    "contacts check": {
+      "in": [],
+      "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" },
+      "options": {
+        "--no-registries": {
+          "in": [],
+          "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" }
+        }
+      }
     },
     "contacts context": {
       "in": "all",

@@ -1,7 +1,9 @@
 import { CliError } from "@leemour/cli-core"
 import * as v from "valibot"
+import { REGISTRIES } from "../../botcheck/registries.js"
 import type { Messenger } from "../../cli/messenger/context.js"
 import type { MessengerAdapter } from "../../cli/messenger/port.js"
+import { casKey } from "../../cli/registry-keys.js"
 import type { SendGuard } from "../../sends/guard.js"
 import { onlineDeps, phoneOf, servicesFor, storedDeps } from "../../services/index.js"
 import { momentOf } from "../../services/moment.js"
@@ -111,6 +113,30 @@ export const contactsTools = (messenger: Messenger): Record<string, AnyTool> => 
           bytes: CONTEXT_BYTES,
           ...(args.since_time === undefined ? {} : { since: momentOf(args.since_time, "since_time") }),
         })
+      },
+    }),
+
+    contacts_check: tool({
+      title: "Does a person look like a bot",
+      description:
+        "Scores one person as a possible bot, fake or spammer: the messenger's own marks, their profile, what they " +
+        "wrote in the store, and the public ban lists " +
+        `${Object.values(REGISTRIES)
+          .map(({ title, docs }) => `${title} (${docs})`)
+          .join(", ")} — **the person's id is sent to each of them** unless registries is false. Returns { person, ` +
+        "score, reasons: [{ reason, weight, source, detail }], registries: [{ name, answer: listed|clean|unknown, " +
+        "checkedAt, detail }], unknown, notes }. A hint, never a verdict; changes nothing.",
+      input: v.object({
+        person: v.pipe(v.string(), v.minLength(1), v.description("person id, @username, or part of a name")),
+        registries: v.optional(
+          v.pipe(v.boolean(), v.description("false: ask no ban list; nothing leaves this machine")),
+        ),
+      }),
+      annotations: READ,
+      served: (services, args, defaults) => {
+        const registries = args.registries !== false
+        const key = registries ? casKey(messenger.app, defaults.env) : undefined
+        return services.botcheck.person(args.person, { registries, ...(key ? { registry: { casKey: key } } : {}) })
       },
     }),
   }
