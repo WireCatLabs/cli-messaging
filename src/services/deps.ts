@@ -1,4 +1,5 @@
 import { CliError } from "@leemour/cli-core"
+import type { AppIdentity } from "../cli/app.js"
 import type { Messenger } from "../cli/messenger/context.js"
 import type { MessengerAdapter } from "../cli/messenger/port.js"
 import type { WarmEmbedders } from "../embeddings/embed.js"
@@ -109,3 +110,29 @@ export const storeModeDeps = (
   account: AccountKey,
   guard: SendGuard,
 ): ServiceDeps => ({ ...storedDeps(messenger, store, account, guard), offline: false, reads: "store" })
+
+const NOT_A_MESSENGER = "this program keeps its sources in the store and has no messenger to connect to"
+
+/**
+ * For a program that is not a messenger but keeps its own sources in the store — `cli-memo`'s notes and
+ * mail: the services that read and build from the store alone (conversations, embeddings, person
+ * context). It has no connection and no settings to resolve, and its guard refuses every write.
+ */
+export const storeOnlyDeps = (
+  store: MessageStore,
+  account: AccountKey,
+  { app, env }: { app: AppIdentity; env?: NodeJS.ProcessEnv },
+): ServiceDeps => {
+  const refuse = (): never => {
+    throw new CliError("validation_error", NOT_A_MESSENGER)
+  }
+  const messenger: Messenger = {
+    app,
+    provider: account.provider,
+    chatArgument: "a stored chat, by its id or title",
+    resolveSettings: refuse,
+    connect: async () => refuse(),
+  }
+  const guard: SendGuard = { check: refuse, record: () => {} }
+  return { ...storedDeps(messenger, store, account, guard), ...(env === undefined ? {} : { env }) }
+}
