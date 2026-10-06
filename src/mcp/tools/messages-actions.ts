@@ -3,7 +3,7 @@ import type { Messenger } from "../../cli/messenger/context.js"
 import type { MessengerAdapter } from "../../cli/messenger/port.js"
 import type { SendGuard } from "../../sends/guard.js"
 import { onlineDeps, servicesFor } from "../../services/index.js"
-import { type AnyTool, APPROVE, chatOf, message, tool, WRITE } from "../tool.js"
+import { type AnyTool, chatOf, message, tool, WRITE } from "../tool.js"
 
 /** What changes a message others already have, offered with `--allow-send`, each behind its own `allow` permission. */
 export const messageActionTools = (messenger: Messenger): Record<string, AnyTool> => {
@@ -25,7 +25,6 @@ export const messageActionTools = (messenger: Messenger): Record<string, AnyTool
         ),
       }),
       annotations: WRITE,
-      _meta: APPROVE,
       permission: "edit",
       online: (adapter, args, { guard }) =>
         messages(adapter, guard).edit({
@@ -49,7 +48,6 @@ export const messageActionTools = (messenger: Messenger): Record<string, AnyTool
         send_id: v.optional(v.pipe(v.string(), v.minLength(1), v.description("from an earlier outcome_unknown"))),
       }),
       annotations: WRITE,
-      _meta: APPROVE,
       permission: "forward",
       online: (adapter, args, { guard }) =>
         messages(adapter, guard).forward({
@@ -71,7 +69,6 @@ export const messageActionTools = (messenger: Messenger): Record<string, AnyTool
         notify: v.optional(v.pipe(v.boolean(), v.description("tell the chat's members"))),
       }),
       annotations: WRITE,
-      _meta: APPROVE,
       permission: "pin",
       online: (adapter, args, { guard }) =>
         messages(adapter, guard).pin({ chat: args.chat, message: args.message, notify: args.notify === true }),
@@ -81,7 +78,6 @@ export const messageActionTools = (messenger: Messenger): Record<string, AnyTool
       description: "Unpin one message in a chat. Only when the owner asked for it.",
       input: v.object({ chat, message }),
       annotations: WRITE,
-      _meta: APPROVE,
       permission: "pin",
       online: (adapter, args, { guard }) => messages(adapter, guard).unpin({ chat: args.chat, message: args.message }),
     }),

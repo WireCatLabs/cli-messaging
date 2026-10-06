@@ -4,7 +4,7 @@ import type { MessengerAdapter } from "../../cli/messenger/port.js"
 import { ADMIN_RIGHTS, GROUP_SETTINGS } from "../../domain/models.js"
 import type { SendGuard } from "../../sends/guard.js"
 import { onlineDeps, servicesFor } from "../../services/index.js"
-import { type AnyTool, APPROVE, chatOf, READ, tool, WRITE } from "../tool.js"
+import { type AnyTool, chatOf, READ, tool, WRITE } from "../tool.js"
 
 /** Groups the owner makes, joins and leaves: other people see each one, so each is behind its permission level. */
 export const adminTools = (messenger: Messenger): Record<string, AnyTool> => {
@@ -22,7 +22,6 @@ export const adminTools = (messenger: Messenger): Record<string, AnyTool> => {
         channel: v.optional(v.pipe(v.boolean(), v.description("a channel people join by its link, not a group"))),
       }),
       annotations: WRITE,
-      _meta: APPROVE,
       permission: "groups",
       online: (adapter, args, { guard }) =>
         admin(adapter, guard).create({ title: args.title, people: args.people ?? [], channel: args.channel === true }),
@@ -33,7 +32,6 @@ export const adminTools = (messenger: Messenger): Record<string, AnyTool> => {
         "Join a group or channel by an invite or public link; the others in it see it. Only when the owner asked.",
       input: v.object({ link: v.pipe(v.string(), v.minLength(1)) }),
       annotations: WRITE,
-      _meta: APPROVE,
       permission: "groups",
       online: (adapter, args, { guard }) => admin(adapter, guard).join(args.link),
     }),
@@ -42,7 +40,6 @@ export const adminTools = (messenger: Messenger): Record<string, AnyTool> => {
       description: "Leave a group or channel; the others in it see it. Only when the owner asked to leave this chat.",
       input: v.object({ chat: chatOf(messenger) }),
       annotations: WRITE,
-      _meta: APPROVE,
       permission: "groups",
       online: (adapter, args, { guard }) => admin(adapter, guard).leave(args.chat),
     }),
@@ -67,7 +64,6 @@ export const adminTools = (messenger: Messenger): Record<string, AnyTool> => {
         ),
       }),
       annotations: WRITE,
-      _meta: APPROVE,
       permission: "groups",
       online: (adapter, args, { guard }) =>
         admin(adapter, guard).update(args.chat, {
@@ -90,7 +86,6 @@ export const adminTools = (messenger: Messenger): Record<string, AnyTool> => {
         "Only when the owner asked.",
       input: v.object({ chat: chatOf(messenger) }),
       annotations: WRITE,
-      _meta: APPROVE,
       permission: "groups",
       online: (adapter, args, { guard }) => admin(adapter, guard).resetLink(args.chat),
     }),
@@ -109,7 +104,6 @@ export const adminTools = (messenger: Messenger): Record<string, AnyTool> => {
         ),
       }),
       annotations: WRITE,
-      _meta: APPROVE,
       permission: "groups",
       online: (adapter, args, { guard }) =>
         admin(adapter, guard).addMembers(args.chat, args.people, args.history === true ? { history: true } : {}),
@@ -122,7 +116,6 @@ export const adminTools = (messenger: Messenger): Record<string, AnyTool> => {
         people: v.pipe(v.array(v.pipe(v.string(), v.minLength(1))), v.minLength(1)),
       }),
       annotations: WRITE,
-      _meta: APPROVE,
       permission: "groups",
       online: (adapter, args, { guard }) => admin(adapter, guard).removeMembers(args.chat, args.people),
     }),
@@ -135,7 +128,6 @@ export const adminTools = (messenger: Messenger): Record<string, AnyTool> => {
         rights: v.pipe(v.array(v.picklist(messenger.adminRights ?? ADMIN_RIGHTS)), v.minLength(1)),
       }),
       annotations: WRITE,
-      _meta: APPROVE,
       permission: "groups",
       online: (adapter, args, { guard }) => admin(adapter, guard).addAdmin(args.chat, args.person, args.rights),
     }),
@@ -144,7 +136,6 @@ export const adminTools = (messenger: Messenger): Record<string, AnyTool> => {
       description: "Take a group admin's rights back; they stay a member. Only when the owner asked.",
       input: v.object({ chat: chatOf(messenger), person: v.pipe(v.string(), v.minLength(1)) }),
       annotations: WRITE,
-      _meta: APPROVE,
       permission: "groups",
       online: (adapter, args, { guard }) => admin(adapter, guard).removeAdmin(args.chat, args.person),
     }),

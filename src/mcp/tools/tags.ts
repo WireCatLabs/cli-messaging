@@ -3,7 +3,7 @@ import type { Messenger } from "../../cli/messenger/context.js"
 import { listed } from "../../cli/paging.js"
 import { TAG_TYPES } from "../../domain/tags.js"
 import { servicesFor, storedDeps } from "../../services/index.js"
-import { type AnyTool, chatOf, READ, refuseAskedLocalWrite, tool } from "../tool.js"
+import { type AnyTool, chatOf, READ, tool } from "../tool.js"
 
 const LOCAL = { readOnlyHint: false, idempotentHint: true, openWorldHint: false }
 const TARGET =
@@ -11,7 +11,6 @@ const TARGET =
   "msg: locator alone. Writes only to the local store; nothing is sent."
 
 export const tagsTools = (messenger: Messenger): Record<string, AnyTool> => {
-  const command = messenger.app.command
   const input = v.object({
     tags: v.pipe(
       v.array(v.pipe(v.string(), v.maxLength(64))),
@@ -52,7 +51,6 @@ export const tagsTools = (messenger: Messenger): Record<string, AnyTool> => {
       input,
       annotations: { ...LOCAL, destructiveHint: false },
       stored: async (store, account, args, defaults) => {
-        refuseAskedLocalWrite(defaults, "tags.add", command)
         return servicesFor(storedDeps(messenger, store, account, defaults.guard)).tags.add(targetOf(args), args.tags)
       },
     }),
@@ -63,7 +61,6 @@ export const tagsTools = (messenger: Messenger): Record<string, AnyTool> => {
       input,
       annotations: { ...LOCAL, destructiveHint: true },
       stored: async (store, account, args, defaults) => {
-        refuseAskedLocalWrite(defaults, "tags.remove", command)
         return servicesFor(storedDeps(messenger, store, account, defaults.guard)).tags.remove(targetOf(args), args.tags)
       },
     }),

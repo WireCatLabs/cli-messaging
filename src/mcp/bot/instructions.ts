@@ -4,7 +4,6 @@ export const botInstructions = ({
   name,
   profile,
   writes,
-  confirmSend = false,
   skill,
 }: {
   command: string
@@ -13,7 +12,6 @@ export const botInstructions = ({
   profile: string
   /** The write tools this profile's permissions offer, by full name. */
   writes: readonly string[]
-  confirmSend?: boolean
   skill?: string
 }): string =>
   [
@@ -25,14 +23,7 @@ export const botInstructions = ({
     writes.length > 0
       ? "- Write only when the owner asked for this exact action in this exact chat. A refusal (permission level, chat not on the bot's recipient list) is final — do not work around it."
       : `- Writing is off: profile "${profile}" does not permit it. Say so if asked to write.`,
-    ...(writes.length > 0
-      ? [
-          confirmSend
-            ? "- Every write is shown to the owner in a form first."
-            : "- Some writes are shown to the owner in a form first, as the profile's permissions say.",
-          "- A write the owner declined is final: do not retry it. Delete only what the owner named; it cannot be undone.",
-        ]
-      : []),
+    ...(writes.length > 0 ? ["- Delete only what the owner named; it cannot be undone."] : []),
     `- The bot's recipient list, token, webhooks and command menu are the owner's to change, with the ${command} command — never from here.`,
     ...(skill ? [skill] : []),
   ].join("\n")

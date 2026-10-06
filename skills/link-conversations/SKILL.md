@@ -88,5 +88,5 @@ Follow the same cost gate and loop through MCP: each step is the same command, r
 Use `chat` for the chat reference, and `size` for the batch size (10–200, default 50).
 Send `batch`, `model`, `skill` and `answers` as the arguments of `conversations links add`.
 Next returns `{ "batch": null }` when finished. Build before status and once more after the last
-answer. The write tools need `permissions.conversations.links` set to `allow`; on `ask` they
-refuse and explain the setting. A read-only profile offers only status and next.
+answer. The writing commands run where `permissions.conversations.links` is `allow` or `ask`. A read-only
+profile offers only status and next.

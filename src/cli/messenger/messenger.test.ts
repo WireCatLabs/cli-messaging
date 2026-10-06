@@ -2992,11 +2992,13 @@ describe("the guard, account and mcp config commands", () => {
     expect(code).toBe(0)
     expect(json(stdout).mcpServers["chat-work"]).toMatchObject({
       command: mcp.execPath,
-      args: [mcp.scriptPath, "work", "mcp", "--confirm-send", "--allow-dangerous"],
+      args: [mcp.scriptPath, "work", "mcp"],
       env: { MESSAGING_STORE: env.MESSAGING_STORE },
     })
     expect(stderr.join("\n")).toContain("belongs to one Node version")
-    expect(stderr.join("\n")).toContain("--allow-send no longer decides anything: the profile's permissions do")
+    expect(stderr.join("\n")).toContain(
+      "--allow-send, --confirm-send, --allow-dangerous no longer decide anything: the profile's permissions do",
+    )
 
     const pretty = await call(["mcp", "config"], async () => fake, env, { mcp, tty: true })
     expect(JSON.parse(pretty.stdout.join("\n")).mcpServers.chat.args).toEqual([mcp.scriptPath, "mcp"])

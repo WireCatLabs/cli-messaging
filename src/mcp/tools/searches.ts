@@ -4,7 +4,7 @@ import { listed } from "../../cli/paging.js"
 import type { SendGuard } from "../../sends/guard.js"
 import { servicesFor, storedDeps } from "../../services/index.js"
 import type { AccountKey, MessageStore } from "../../store/store.js"
-import { type AnyTool, chatOf, limit, READ, refuseAskedLocalWrite, tool } from "../tool.js"
+import { type AnyTool, chatOf, limit, READ, tool } from "../tool.js"
 
 const LOCAL = { readOnlyHint: false, openWorldHint: false }
 const ROW = "{ id, name, command, params, language, version, fieldsVersion, createdAt, lastRunAt, runs }"
@@ -15,7 +15,6 @@ const reference = v.pipe(
 )
 
 export const searchesTools = (messenger: Messenger): Record<string, AnyTool> => {
-  const command = messenger.app.command
   const services = (store: MessageStore, account: AccountKey, guard: SendGuard) =>
     servicesFor(storedDeps(messenger, store, account, guard))
   return {
@@ -63,7 +62,6 @@ export const searchesTools = (messenger: Messenger): Record<string, AnyTool> => 
       }),
       annotations: { ...LOCAL, destructiveHint: false, idempotentHint: false },
       stored: async (store, account, { name, replace, ...params }, defaults) => {
-        refuseAskedLocalWrite(defaults, "searches.create", command)
         return services(store, account, defaults.guard).searches.create(name, params, { replace: replace === true })
       },
     }),
@@ -74,7 +72,6 @@ export const searchesTools = (messenger: Messenger): Record<string, AnyTool> => 
       input: v.object({ name: reference }),
       annotations: { ...LOCAL, destructiveHint: true, idempotentHint: false },
       stored: async (store, account, args, defaults) => {
-        refuseAskedLocalWrite(defaults, "searches.delete", command)
         return services(store, account, defaults.guard).searches.delete(args.name)
       },
     }),
@@ -86,7 +83,6 @@ export const searchesTools = (messenger: Messenger): Record<string, AnyTool> => 
       input: v.object({}),
       annotations: { ...LOCAL, destructiveHint: true, idempotentHint: true },
       stored: async (store, account, _args, defaults) => {
-        refuseAskedLocalWrite(defaults, "searches.clear", command)
         return services(store, account, defaults.guard).searches.clear()
       },
     }),

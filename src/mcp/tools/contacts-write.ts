@@ -3,7 +3,7 @@ import type { Messenger } from "../../cli/messenger/context.js"
 import type { MessengerAdapter } from "../../cli/messenger/port.js"
 import type { SendGuard } from "../../sends/guard.js"
 import { onlineDeps, servicesFor } from "../../services/index.js"
-import { type AnyTool, APPROVE, tool, WRITE } from "../tool.js"
+import { type AnyTool, tool, WRITE } from "../tool.js"
 
 const person = v.pipe(v.string(), v.minLength(1), v.description("person id, or part of a known name"))
 
@@ -17,7 +17,6 @@ export const contactWriteTools = (messenger: Messenger): Record<string, AnyTool>
       description: `${description} Only when the owner asked, for this person.`,
       input: v.object({ person }),
       annotations: WRITE,
-      _meta: APPROVE,
       permission: "contacts",
       online: (adapter, args, { guard }) => people(adapter, guard)[name](args.person),
     })
@@ -37,7 +36,6 @@ export const contactWriteTools = (messenger: Messenger): Record<string, AnyTool>
         description: v.optional(v.string()),
       }),
       annotations: WRITE,
-      _meta: APPROVE,
       permission: "profile",
       online: (adapter, args, { guard }) =>
         servicesFor(onlineDeps(messenger, adapter, guard)).account.update({
@@ -55,7 +53,6 @@ export const contactWriteTools = (messenger: Messenger): Record<string, AnyTool>
         last_name: v.optional(v.string()),
       }),
       annotations: WRITE,
-      _meta: APPROVE,
       permission: "contacts",
       online: (adapter, args, { guard }) => people(adapter, guard).rename(args.person, args.first_name, args.last_name),
     }),

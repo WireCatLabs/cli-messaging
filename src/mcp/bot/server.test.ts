@@ -68,22 +68,21 @@ const ECHO: BotTool = {
 const LEAVE: BotTool = {
   words: ["chats", "leave"],
   writes: "bot.chats.leave",
-  title: "Leave, after a form of its own",
+  title: "Leave, as more than one command",
   description: "A tool that is more than one command.",
   input: v.object({ chat: v.string() }),
-  handle: (args, kit, ctx) =>
-    kit.confirmed({ name: "leave", title: "Leave" }, kit.resolveChat, args, ctx, async (resolved) => ({
-      left: resolved.chat,
-      seen: await kit.invoke(["chats", "list"], { options: ["--offline"] }),
-    })),
+  handle: async (args, kit) => ({
+    left: args.chat,
+    seen: await kit.invoke(["chats", "list"], { options: ["--offline"] }),
+  }),
 }
 const PROMOTE: BotTool = {
   words: ["chats", "admins", "add"],
   writes: "bot.chats.admins.add",
-  title: "Says whether it must ask first",
+  title: "Says which flags answer the command's question",
   description: "A tool that is more than one command.",
   input: v.object({}),
-  handle: async (_args, kit) => ({ confirmFirst: kit.confirmFirst }),
+  handle: async (_args, kit) => ({ answerFlags: kit.answerFlags }),
 }
 const ABSENT: BotTool = { words: ["comments", "list"], title: "None", description: "Not mounted.", input: v.object({}) }
 
@@ -231,31 +230,11 @@ describe("bot mcp writes", () => {
     expect(calls).toEqual(["send -100 Hello"])
   })
 
-  it("**a deletion at level ask waits for the owner's form**, and a no deletes nothing", async () => {
-    const declined = await connect({}, { form: () => ({ action: "decline" }) })
-    expect((await call(declined.client, "chat_bot_messages_delete", { chat: "-100", message: "7" })).error?.code).toBe(
-      "confirmation_required",
-    )
-    expect(calls).toEqual([])
+  it("**deletes with no form**, where the level asks", async () => {
+    const { client } = await connect()
 
-    const accepted = await connect({}, { form: () => ({ action: "accept", content: {} }) })
-    const done = await call(accepted.client, "chat_bot_messages_delete", { chat: "-100", message: "7" })
-
-    expect(done.isError).toBe(false)
-    expect(accepted.forms[0]).toContain("Delete a message?")
+    expect((await call(client, "chat_bot_messages_delete", { chat: "-100", message: "7" })).isError).toBe(false)
     expect(calls).toEqual(["delete -100 7"])
-  })
-
-  it("**--allow-dangerous deletes with no form**; --confirm-send puts even a send at level allow through one", async () => {
-    const dangerous = await connect({ allowDangerous: true })
-    expect((await call(dangerous.client, "chat_bot_messages_delete", { chat: "-100", message: "7" })).isError).toBe(
-      false,
-    )
-    expect(calls).toEqual(["delete -100 7"])
-
-    const confirming = await connect({ confirmSend: true }, { form: () => ({ action: "accept", content: {} }) })
-    await call(confirming.client, "chat_bot_messages_send", { chat: "-100", text: "Hi" })
-    expect(confirming.forms).toHaveLength(1)
   })
 
   it("refuses a message id that would read as a flag, before running anything", async () => {
@@ -267,39 +246,33 @@ describe("bot mcp writes", () => {
     expect(calls).toEqual([])
   })
 
-  it("**a write at level ask answers the command's own question after the form**, with --yes", async () => {
+  it("**a write at level ask answers the command's own question**, with no form", async () => {
     configure({ bot: { profiles: { sales: { permissions: { "bot.messages.send": "ask" } } } } })
-    const { client, forms } = await connect({}, { form: () => ({ action: "accept", content: {} }) })
+    const { client } = await connect()
 
     const sent = await call(client, "chat_bot_messages_send", { chat: "-100", text: "Hi" })
 
     expect(sent.isError).toBe(false)
-    expect(forms).toHaveLength(1)
     expect(calls).toEqual(["send -100 Hi"])
   })
 })
 
-describe("a tool of the CLI's own with its own form", () => {
-  it("**hands the form request to the client, then answers with what it did**", async () => {
-    const { client, forms } = await connect({}, { form: () => ({ action: "accept", content: {} }) })
+describe("a tool of the CLI's own that is more than one command", () => {
+  it("**answers with what it did**", async () => {
+    const { client } = await connect()
 
     const done = await call(client, "chat_bot_chats_leave", { chat: "Team" })
 
-    expect(forms[0]).toContain('chat: "Team" (-100)')
-    expect(done.body).toMatchObject({ left: "-100", seen: { items: [{ id: "-100", title: "Team" }] } })
+    expect(done.body).toMatchObject({ left: "Team", seen: { items: [{ id: "-100", title: "Team" }] } })
   })
-})
 
-describe("a tool of the CLI's own and the form", () => {
-  it("**is told to ask first under --confirm-send or level ask**, and not otherwise", async () => {
-    const asked = async (options: Partial<BotServerOptions>) =>
-      (await call((await connect(options)).client, "chat_bot_chats_admins_add")).body.confirmFirst
+  it("**is handed the flag that answers its command's question at level ask**, and none otherwise", async () => {
+    const flags = async () =>
+      (await call((await connect()).client, "chat_bot_chats_admins_add")).body.answerFlags as string[]
 
-    expect(await asked({})).toBe(false)
-    expect(await asked({ confirmSend: true })).toBe(true)
+    expect(await flags()).toEqual([])
     configure({ bot: { profiles: { sales: { permissions: { "bot.chats.admins": "ask" } } } } })
-    expect(await asked({})).toBe(true)
-    expect(await asked({ yes: true })).toBe(false)
+    expect((await flags()).length).toBeGreaterThan(0)
   })
 })
 
@@ -310,47 +283,30 @@ describe("chat_bot_chats_moderate", () => {
     rules.set("-100", null, "consent.delete", consent)
   }
 
-  it("**shows the actions the rules put at ask in one form, and does exactly those**", async () => {
+  it("**leaves the actions the rules put at ask**, with no form", async () => {
     deleting("ask")
-    const { client, forms } = await connect({}, { form: () => ({ action: "accept", content: {} }) })
+    const { client } = await connect()
 
-    const done = await call(client, "chat_bot_chats_moderate", { chat: "Team" })
-
-    expect(forms).toHaveLength(1)
-    expect(forms[0]).toContain("delete message 2")
-    expect(done.body).toMatchObject({ chatId: "-100", rows: [{ action: "delete", outcome: "done" }] })
-    expect(calls).toEqual(["delete -100 2"])
+    expect((await call(client, "chat_bot_chats_moderate", { chat: "Team" })).isError).toBe(false)
+    expect(calls).toEqual([])
   })
 
-  it("**at level ask for the command itself, does what the accepted form showed**", async () => {
+  it("**acts at level ask for the command itself**, with no form", async () => {
     deleting("allow")
     configure({ bot: { profiles: { sales: { permissions: { "bot.chats.moderate": "ask" } } } } })
-    const { client, forms } = await connect({}, { form: () => ({ action: "accept", content: {} }) })
+    const { client } = await connect()
 
     const done = await call(client, "chat_bot_chats_moderate", { chat: "-100" })
 
-    expect(forms).toHaveLength(1)
     expect(done.body).toMatchObject({ rows: [{ action: "delete", outcome: "done" }] })
     expect(calls).toEqual(["delete -100 2"])
   })
 
-  it("deletes nothing when the owner declines", async () => {
-    deleting("ask")
-    const { client } = await connect({}, { form: () => ({ action: "decline" }) })
-
-    expect((await call(client, "chat_bot_chats_moderate", { chat: "-100" })).isError).toBe(true)
-    expect(calls).toEqual([])
-  })
-
-  it("acts at level allow with no form — and with one under --confirm-send", async () => {
+  it("acts at level allow", async () => {
     deleting("allow")
     expect((await call((await connect()).client, "chat_bot_chats_moderate", { chat: "-100" })).body).toMatchObject({
       rows: [{ outcome: "done" }],
     })
-
-    const confirming = await connect({ confirmSend: true }, { form: () => ({ action: "accept", content: {} }) })
-    await call(confirming.client, "chat_bot_chats_moderate", { chat: "-100", since_time: "2026-01-01T00:00:00Z" })
-    expect(confirming.forms).toHaveLength(1)
   })
 })
 
@@ -370,13 +326,13 @@ describe("bot mcp config", () => {
         "chat-bot-sales": {
           type: "stdio",
           command: "/usr/bin/node",
-          args: ["/opt/chat/cli.js", "sales", "bot", "mcp", "--confirm-send"],
+          args: ["/opt/chat/cli.js", "sales", "bot", "mcp"],
           env: { CHAT_CONFIG_DIR: env.CHAT_CONFIG_DIR, CHAT_STATE_DIR: env.CHAT_STATE_DIR },
         },
       },
     })
     expect(streams.stderr.join("\n")).toContain(
-      "--allow-send no longer decides anything: the bot profile's permissions do",
+      "--allow-send, --confirm-send no longer decide anything: the bot profile's permissions do",
     )
   })
 

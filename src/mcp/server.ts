@@ -4,13 +4,10 @@ import { McpServer } from "@modelcontextprotocol/server"
 import { serveStdio } from "@modelcontextprotocol/server/stdio"
 import * as v from "valibot"
 import { recalledAccount } from "../cli/messenger/accounts.js"
-import { skipFlagFor } from "../cli/messenger/ask.js"
 import { connected, type Messenger, type MessengerContext } from "../cli/messenger/context.js"
 import { warmEmbedders } from "../embeddings/embed.js"
 import { guardFor } from "../sends/guard.js"
 import { levelFor, readKeysForCommand } from "../sends/permissions.js"
-import { confirmer } from "./confirm.js"
-import { type HttpConfirmation, httpServerOptions } from "./http/policy.js"
 import type { HttpOptions } from "./http/serve.js"
 import { instructions } from "./instructions.js"
 import { personalMcpTools } from "./personal.js"
@@ -18,16 +15,9 @@ import { registerPrompts } from "./prompts.js"
 import { registerResources } from "./resources.js"
 import { MessengerSession, type SessionOptions } from "./session.js"
 import { commandOf, registerSurface } from "./surface.js"
-import { type AnyTool, READ, tool, toolKey } from "./tool.js"
+import { READ, tool, toolKey } from "./tool.js"
 
-export interface ServerOptions extends SessionOptions {
-  /** Every write through the form, whatever its level. */
-  confirmSend?: boolean
-  /** No form for a write at level `ask` — the owner's yes, given when the server was started. */
-  yes?: boolean
-  /** The same for a deletion. */
-  allowDangerous?: boolean
-}
+export type ServerOptions = SessionOptions
 
 type Invocation = Parameters<Messenger["connect"]>[0]
 
@@ -40,7 +30,7 @@ export const createServer = (
   command: Invocation,
   context: MessengerContext,
   messenger: Messenger,
-  { confirmSend = false, yes = false, allowDangerous = false, ...sessionOptions }: ServerOptions,
+  sessionOptions: ServerOptions,
 ) => {
   const { app, provider } = messenger
   const name = messenger.name ?? app.command
@@ -60,14 +50,7 @@ export const createServer = (
     }),
   )
   const writes = Object.fromEntries(Object.entries(offered).filter(([, one]) => one.permission !== undefined))
-  const confirms = (key: string, one: AnyTool) => {
-    if (confirmSend) return true
-    const toolPath = toolKey(key, one)
-    if (levelOf(toolPath) !== "ask") return false
-    return !(skipFlagFor(toolPath ?? "") === "--allow-dangerous" ? allowDangerous : yes)
-  }
-  const confirmed = confirmer()
-  // The form is the question here; the guard behind it has nothing left to ask.
+  // No one is at a terminal to answer the guard's question: over MCP a write at level `ask` goes ahead.
   const guard = messenger.guard
     ? context.guard
     : guardFor(app, settings, context.renderer.warn, context.env, async () => {})
@@ -89,7 +72,6 @@ export const createServer = (
       profile: settings.profile,
       account: recalledAccount(app, provider, settings.profile, context.env)?.account ?? null,
       writes: Object.keys(writes).map(commandOf),
-      confirmSend,
       permissions: settings.permissions,
       ...(messenger.diagnose ? { [messenger.provider]: await messenger.diagnose(command, context) } : {}),
     }),
@@ -105,7 +87,6 @@ export const createServer = (
           name,
           profile: settings.profile,
           writes: Object.keys(writes),
-          confirmSend,
           ...(skill ? { skill: skill.instruction } : {}),
         }),
       },
@@ -127,8 +108,6 @@ export const createServer = (
           embedders,
           history: settings.keepFailedRuns,
         },
-        confirmed,
-        confirms,
       },
     )
     // The prompts and resources show messages, so a profile that may not read them gets neither.
@@ -181,25 +160,15 @@ export const serveOverStdio = async (
   }
 }
 
-/**
- * By default HTTP writes go through the form whatever their level: an app's model talked into
- * sending by a message it read still has to get the owner's yes. It does not stop someone holding a
- * stolen token, whose own client answers the form — short-lived tokens, rotation and `--revoke` do.
- */
-export const OVER_HTTP = { confirmSend: true, yes: false, allowDangerous: false } as const
-
 /** The same server over HTTP, until Ctrl-C (CLI-58). */
 export const serveOverHttpUntilStopped = async (
   command: Invocation,
   context: MessengerContext,
   messenger: Messenger,
   options: ServerOptions,
-  http: Omit<HttpOptions, "onCode" | "onError" | "appName"> & { confirmation?: HttpConfirmation },
+  http: Omit<HttpOptions, "onCode" | "onError" | "appName">,
 ): Promise<void> => {
-  const { session, embedders, build } = createServer(command, context, messenger, {
-    ...options,
-    ...httpServerOptions(http.confirmation),
-  })
+  const { session, embedders, build } = createServer(command, context, messenger, options)
   const { serveOverHttp } = await import("./http/serve.js")
   const appName = messenger.app.command
   const listening = await serveOverHttp(build, {

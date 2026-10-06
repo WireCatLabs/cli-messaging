@@ -4,7 +4,7 @@ import type { Messenger } from "../../cli/messenger/context.js"
 import { sendTime } from "../../domain/send-time.js"
 import { readAttachments } from "../../sends/upload.js"
 import { onlineDeps, servicesFor } from "../../services/index.js"
-import { type AnyTool, APPROVE, chatOf, message, nameOf, tool, WRITE } from "../tool.js"
+import { type AnyTool, chatOf, message, nameOf, tool, WRITE } from "../tool.js"
 
 /**
  * The same guard as the command: profile permissions, recipients, hourly limits and the journal.
@@ -56,7 +56,6 @@ export const messageSendTools = (messenger: Messenger): Record<string, AnyTool> 
         ),
       }),
       annotations: WRITE,
-      _meta: APPROVE,
       permission: "send",
       online: async (adapter, args, { guard, env }) => {
         const at = args.at_time === undefined ? undefined : sendTime(args.at_time)
