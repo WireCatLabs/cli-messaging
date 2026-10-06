@@ -1541,19 +1541,9 @@
       "in": "all"
     },
     "contacts profile": {
-      "in": [],
-      "planned": {
-        "max": "max's next cli-messaging bump",
-        "tg": "tg's next cli-messaging bump"
-      },
+      "in": "all",
       "options": {
-        "--show-phone": {
-          "in": [],
-          "planned": {
-            "max": "max's next cli-messaging bump",
-            "tg": "tg's next cli-messaging bump"
-          }
-        }
+        "--show-phone": "all"
       }
     },
     "contacts remove": {
