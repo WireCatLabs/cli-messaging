@@ -12,6 +12,56 @@ or option name especially. Then the code follows. A difference between the two C
 where one messenger lacks the feature, and it is written down with its reason in the
 [parity manifest](#the-parity-manifest).
 
+## External references and our adoption profile
+
+We use external conventions as a baseline, with explicit project decisions below. This is not a
+claim of complete POSIX, GNU or agent-spec conformance. The [CLI compliance audit](CLI-COMPLIANCE.md)
+records implemented behaviour, gaps and follow-up work; the [architecture](ARCHITECTURE.md#cli-design-references)
+explains where these contracts are enforced.
+
+| Reference | Role here |
+|---|---|
+| [POSIX Utility Conventions, §12](https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/V1_chap12.html) | Established utility syntax, including the end-of-options delimiter. This is the formal standards reference; our modern long options and nested tree are a project profile, not strict POSIX utility conformance. |
+| [GNU Command-Line Interfaces](https://www.gnu.org/prep/standards/html_node/Command_002dLine-Interfaces) | Conventional long-option names, help and version behaviour. We do not copy GNU-specific branding or licensing text. |
+| [Command Line Interface Guidelines](https://clig.dev/) | Practical design baseline for command discovery, streams, scripting and compatibility. A guide, not a certification scheme. |
+| [MCP tools specification, 2025-11-25](https://modelcontextprotocol.io/specification/2025-11-25/server/tools) | The protocol contract for the MCP adapter; it does not define our shell grammar. Structured tool results and annotations are relevant; outputSchema is optional. |
+| [JSON Schema specification](https://json-schema.org/specification) | The schema language for machine contracts. A future CLI schema surface must declare its dialect; a TypeScript interface alone is not runtime schema discovery. |
+| [Agent Skills specification](https://agentskills.io/specification) | The portable SKILL.md packaging format and progressive loading of agent guidance. It does not prescribe CLI commands. |
+| [Anthropic: writing effective tools for agents](https://www.anthropic.com/engineering/writing-tools-for-agents) | Engineering guidance for distinct tool purposes, informative results and economical discovery. Evaluate these choices against representative tasks. |
+| [CLI Agent Spec](https://cli-agent-spec.github.io/) | Independent community requirements and conformance ideas to assess selectively. We do not adopt its exit-code table or response envelope wholesale, or claim a conformance level. |
+| [Google Workspace CLI agent context](https://github.com/googleworkspace/cli/blob/main/CONTEXT.md) | A concrete example of schema discovery, response projection and request previews. This is a project example, not a standard or an officially supported Google product. |
+
+[Agent Client Protocol](https://agentclientprotocol.com/get-started/introduction) addresses
+editor-to-coding-agent communication. MAX/TG are tools an agent invokes, not coding-agent
+implementations, so ACP does not add a compliance requirement to our CLI.
+
+Our additional contract is **agent determinism before presentation convenience**: machine results
+are stable data; actions are explicit; uncertain write outcomes are not instructions to retry.
+Names, messages and retrieved documents remain untrusted data. Local guards enforce permissions;
+MCP hints and agent instructions never substitute for enforcement.
+
+Explicit choices and gaps:
+
+- `stats` and its resource hierarchy are our policy; external references do not require that root.
+- Data goes to stdout; failures go to stderr as `{ error: { code, message, ... } }`. We retain
+  command-specific success shapes and our exit codes. Parser errors and explicit JSON with a TTY
+  currently have gaps documented in the audit; the desired contract does not prove implementation.
+- Explicit help/version requests retain conventional text on stdout. An agent discovering a
+  command uses `commands <path> --json`; help is not a JSON data response. The independent agent
+  spec's blanket non-TTY help-to-stderr rule is not adopted.
+- Machine output suppresses write-confirmation prompts, but credentials and setup need a broader
+  non-interactive contract. `--yes` grants confirmation; it is not a substitute for disabling input.
+- A read can have documented local effects such as ingestion, a stable device identity or a failed-run
+  record. Validation-before-remote-action does not promise zero local writes on every error.
+- General stdout-only envelopes, automatic retry of all writes, logging full tool payloads and
+  new output fields on every existing response are not adopted from agent examples.
+- [Command names](#command-names) currently require immediate removal of renamed paths and no
+  aliases. This differs from CLIG's deprecation guidance. Before the stats move, decide whether
+  to retain a time-bounded compatibility path; do not silently relax the current rule.
+
+New commands are reviewed against this profile and the audit. Existing gaps require explicit
+implementation work with tests; citing a reference alone does not close them.
+
 ## Command names
 
 A name a person reads once should say what the command does; a name an agent reads should be

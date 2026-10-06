@@ -9,6 +9,10 @@ or not applicable.
 
 A new command, option or output change starts here and merges before its code.
 
+Apply the [external adoption profile](STANDARD.md#external-references-and-our-adoption-profile)
+and [compliance audit](CLI-COMPLIANCE.md). Say whether a cited rule is a protocol requirement,
+design guidance or our policy; record justified deviations instead of claiming blanket compliance.
+
 1. **Names and placement.** Run [Before creating a command](STANDARD.md#before-creating-a-command):
    its namespace/resource/subresources explain the user task, statistics start with `stats`,
    and a new root is justified against existing groups. The leaf is an approved verb or noun view,
