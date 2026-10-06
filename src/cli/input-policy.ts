@@ -30,6 +30,10 @@ export const bufferedInput = (
   const maxBytes = options.maxBytes ?? policy.maxBytes ?? MAX_BUFFERED_INPUT
   const signals = [options.signal, policy.signal].filter((one): one is AbortSignal => one !== undefined)
   const signal = signals.length ? AbortSignal.any(signals) : undefined
+  const state = input as NodeJS.ReadableStream & { readableEnded?: boolean; destroyed?: boolean }
+  if (state.readableEnded) return Promise.resolve(Buffer.alloc(0))
+  if (state.destroyed)
+    return Promise.reject(new CliError("validation_error", "input closed before EOF", { reason: "input_closed" }))
   return new Promise((resolve, reject) => {
     const chunks: Buffer[] = []
     let bytes = 0

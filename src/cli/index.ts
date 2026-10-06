@@ -110,6 +110,7 @@ export {
   provide,
 } from "./context.js"
 export { type Closeable, withDeadline } from "./deadline.js"
+export { withAbort } from "./execution.js"
 export { isCliFailure, isCommanderFailure } from "./failures.js"
 export {
   bufferedInput,

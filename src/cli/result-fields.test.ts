@@ -50,3 +50,12 @@ describe("machine result projection", () => {
     expect(projectFields({ sender: null }, ["sender.id"])).toEqual({})
   })
 })
+
+it("accepts items.id consistently for paged rows, arrays and JSONL items", () => {
+  expect(projectFields({ items: [{ id: "synthetic", text: "synthetic" }], hasMore: true }, ["items.id"])).toEqual({
+    items: [{ id: "synthetic" }],
+    hasMore: true,
+  })
+  expect(projectFields([{ id: "synthetic" }], ["items.id"])).toEqual([{ id: "synthetic" }])
+  expect(projectFields({ id: "synthetic", text: "synthetic" }, ["items.id"])).toEqual({ id: "synthetic" })
+})

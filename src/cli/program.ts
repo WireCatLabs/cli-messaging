@@ -77,7 +77,7 @@ export const createProgram = (
     .option("--no-input", "never prompt or open interactive login; piped input remains available")
     .option("--max-input-bytes <bytes>", "maximum buffered input bytes (default: 16777216)")
     .option("--max-output-bytes <bytes>", "maximum machine output bytes (default: 4194304; 0 disables)")
-    .option("--fields <paths>", "comma-separated result fields; pagination and operation ids are preserved")
+    .option("--fields <paths>", "comma-separated item or object fields: id,text; preserve pagination and operation ids")
     .option("--dry-run", "preview parsed arguments and permissions before running the action")
     .option("--yes", "go ahead without the question an ask level puts before a write")
     .option("--record", "keep this run — ids and timings, never message content")
@@ -205,7 +205,10 @@ export const run = async (argv: string[], definition: ProgramDefinition, options
           : parseDuration(timeout, flags.timeout === undefined ? envName(definition.app, "TIMEOUT") : "--timeout"),
     )
     process.on("SIGINT", sigint).on("SIGTERM", sigterm)
-    if (!options.streams) process.stdout.on("error", pipeError)
+    if (!options.streams) {
+      process.stdout.on("error", pipeError)
+      process.stderr.on("error", pipeError)
+    }
     const cooperative = persistent || (path[0] === "store" && path[1] === "fetch")
     if (!cooperative) options.signal?.addEventListener("abort", externalAbort, { once: true })
     if (!cooperative && options.signal?.aborted) {
@@ -286,7 +289,10 @@ export const run = async (argv: string[], definition: ProgramDefinition, options
     restoreInput?.()
     options.signal?.removeEventListener("abort", externalAbort)
     process.off("SIGINT", sigint).off("SIGTERM", sigterm)
-    if (!options.streams) process.stdout.off("error", pipeError)
+    if (!options.streams) {
+      process.stdout.off("error", pipeError)
+      process.stderr.off("error", pipeError)
+    }
     await control.finish()
   }
 }

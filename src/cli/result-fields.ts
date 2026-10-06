@@ -20,7 +20,8 @@ export const fieldsOf = (value: string): string[] => {
 const object = (value: unknown): value is Record<string, unknown> =>
   value !== null && typeof value === "object" && !Array.isArray(value)
 
-const select = (value: unknown, fields: readonly string[]): unknown => {
+const select = (value: unknown, paths: readonly string[], item = false): unknown => {
+  const fields = item ? paths.map((path) => (path.startsWith("items.") ? path.slice(6) : path)) : paths
   if (!object(value)) return value
   const result: Record<string, unknown> = {}
   for (const path of fields.filter((one) => !fields.some((parent) => parent !== one && one.startsWith(`${parent}.`)))) {
@@ -46,12 +47,12 @@ const select = (value: unknown, fields: readonly string[]): unknown => {
 }
 
 export const projectFields = (value: unknown, fields: readonly string[]): unknown => {
-  if (Array.isArray(value)) return value.map((item) => select(item, fields))
+  if (Array.isArray(value)) return value.map((item) => select(item, fields, true))
   if (object(value) && Array.isArray(value.items)) {
     return {
       ...value,
-      items: value.items.map((item) => select(item, fields)),
+      items: value.items.map((item) => select(item, fields, true)),
     }
   }
-  return select(value, fields)
+  return select(value, fields, object(value) && !Object.hasOwn(value, "items"))
 }

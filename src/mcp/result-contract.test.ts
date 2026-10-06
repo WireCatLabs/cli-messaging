@@ -26,3 +26,13 @@ describe("MCP result contract", () => {
     ).toMatchObject({ error: { retryable: true, retryAfterMs: 1000 } })
   })
 })
+
+it("validates the serialized root and picture metadata, preserving nested ISO dates", () => {
+  expect(() => answered(new Date())).toThrow("serialized tool result must be an object")
+  expect(() => answered(new Picture(new Uint8Array(), "image/png", []))).toThrow(
+    "serialized tool result must be an object",
+  )
+  expect(answered({ at: new Date("2026-10-06T00:00:00.000Z") }).structuredContent).toEqual({
+    at: "2026-10-06T00:00:00.000Z",
+  })
+})
