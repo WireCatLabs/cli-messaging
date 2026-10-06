@@ -255,8 +255,14 @@ export interface ScheduledMessages {
 
 /** Who is in a group, who runs it, and who came and went. */
 export interface GroupModeration {
-  /** Everyone in a group, a page at a time; `limit` unset is every one the messenger will give. */
-  members(chat: string, window: { limit?: number; offset: number }): Promise<Page<GroupMember> & { chatId: Id }>
+  /**
+   * Everyone in a group, a page at a time; `limit` unset is every one the messenger will give.
+   * `participantsCount` is the group's own count when the same answer carries it, which the chat list may not.
+   */
+  members(
+    chat: string,
+    window: { limit?: number; offset: number },
+  ): Promise<Page<GroupMember> & { chatId: Id; participantsCount?: number | null }>
   /** A group's admins, whose answer counts as the group's in `review --unanswered`; `null` where the group hides them. */
   admins(chat: string): Promise<Id[] | null>
   /** Who joined, left, was added or removed since `since` (ms), from the chat's service messages. */

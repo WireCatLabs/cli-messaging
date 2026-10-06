@@ -83,6 +83,25 @@ describe("chats members fetch", () => {
     expect(cut).toMatchObject({ read: 400, more: true, complete: false, tracked: false })
   })
 
+  it("takes the group's count from the member list when the chat list does not carry it", async () => {
+    const store = await heldStore(null)
+    const counted = (everyone: GroupMember[], participantsCount: number) =>
+      ({
+        self: () => "500",
+        members: async () => ({ chatId: "7", items: everyone, hasMore: false, participantsCount }),
+      }) as unknown as MessengerAdapter
+    const first = await chatsService(online(store, counted([member("21"), member("22")], 2))).fetchMembers("7", {
+      pauseMs: 0,
+    })
+    expect(first).toMatchObject({ participants: 2, complete: true })
+
+    const second = await chatsService(online(store, counted([member("21")], 1))).fetchMembers("7", { pauseMs: 0 })
+    expect(second).toMatchObject({ participants: 1, complete: true, gone: ["22"] })
+
+    const capped = await chatsService(online(store, counted([member("21")], 9000))).fetchMembers("7", { pauseMs: 0 })
+    expect(capped).toMatchObject({ participants: 9000, complete: false, gone: [] })
+  })
+
   it("is refused offline", async () => {
     const deps = storedDeps(messenger, await heldStore(1), account, guard)
     await expect(chatsService(deps).fetchMembers("7", {})).rejects.toMatchObject({ code: "validation_error" })

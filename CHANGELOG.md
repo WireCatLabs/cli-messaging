@@ -15,6 +15,11 @@ Released early: MAX cannot adopt 0.160.0 — a timed-out Bot API write still rea
 - The unknown outcome of a write stopped by `--timeout` now reaches the output. 0.160.0 kept it inside
   the runner but still printed `timeout`, so the fix it announced did not show.
 
+- `chats members fetch` and `chats members audit` take the group's member count from the member list when
+  the messenger gives it there. A group whose count the chat list did not carry answered `participants: null`,
+  so nobody was ever recorded as gone and the tracked daily counts had no total. A messenger adds
+  `participantsCount` to its `members()` page.
+
 ## 0.160.0 — 07.10.2026
 
 Released early: MAX and Telegram cannot adopt 0.159.0 — a timed-out Bot API write reads as safe to repeat, and tg session start --qr-file is refused
