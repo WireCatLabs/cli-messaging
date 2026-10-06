@@ -1,7 +1,7 @@
 import { type ChildProcess, spawn } from "node:child_process"
-import { mkdtempSync, rmSync } from "node:fs"
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
-import { join } from "node:path"
+import { dirname, join } from "node:path"
 import { CliError, captureStreams } from "@leemour/cli-core"
 import { describe, expect, it, onTestFinished } from "vitest"
 import type { Message } from "../../domain/models.js"
@@ -388,6 +388,7 @@ describe("store fetch in the background", () => {
       "1ms",
       "--last",
       "250",
+      "--no-catch-up",
       "--json",
     ])
     expect(calls[0]?.env).toMatchObject({ CHAT_PROFILE: "default", CHAT_BACKFILL_JOB: job })
@@ -552,5 +553,46 @@ describe("store fetch --estimate", () => {
     const { answer, stderr } = await call(["store", "fetch", "8", "--estimate", "--json"], untouchable, env)
     expect(answer).toMatchObject({ held: 0, missing: null, requests: null })
     expect(stderr).toContain("--limit 100")
+  })
+})
+
+describe("post-fetch catch-up controls", () => {
+  it("honours a profile opt-in, explicit opt-out and all preparation budgets", async () => {
+    const base = setup()
+    const root = dirname(base.MESSAGING_STORE)
+    const config = join(root, "config")
+    mkdirSync(config)
+    writeFileSync(join(config, "config.json"), JSON.stringify({ profiles: { default: { searchCatchUp: true } } }))
+    const env = { ...base, CHAT_CONFIG_DIR: config, CLI_COMMON_CACHE_DIR: join(root, "empty-models") }
+    const state = { newest: 2, asked: [] as (string | undefined)[] }
+    const enabled = await call(["store", "fetch", "7", "--json", "--pause", "1ms"], chatOf(state), env)
+    expect(enabled.code).toBe(0)
+    expect(enabled.answer.prepared).toMatchObject({ prepared: { modelAvailable: false, built: [{ chat: "7" }] } })
+    state.newest = 3
+    expect(
+      (await call(["store", "fetch", "7", "--no-catch-up", "--json"], chatOf(state), env)).answer,
+    ).not.toHaveProperty("prepared")
+    const bounded = await call(
+      [
+        "store",
+        "fetch",
+        "7",
+        "--catch-up",
+        "--catch-up-messages",
+        "1",
+        "--catch-up-chunks",
+        "1",
+        "--catch-up-time",
+        "1s",
+        "--json",
+      ],
+      chatOf(state),
+      env,
+    )
+    expect(bounded.answer).toMatchObject({ prepared: { reason: "message_bound", complete: false } })
+    expect(
+      (await call(["store", "fetch", "7", "--catch-up", "--catch-up-chunks", "20001", "--json"], chatOf(state), env))
+        .code,
+    ).toBe(2)
   })
 })

@@ -16,6 +16,7 @@ import type { ServiceDeps } from "./deps.js"
 
 import { storedChatId } from "./messages.js"
 import { patiently } from "./patience.js"
+import { type CatchUpOptions, type CatchUpResult, catchUpSearch, validateCatchUp } from "./search-catchup.js"
 
 /** NEED-505 A: a messenger that pushes its history answers a request for older messages later, through `serve`. */
 const pushed = (deps: ServiceDeps, what: string) => {
@@ -44,6 +45,7 @@ export const keyOf =
     fetching.orderBy === "time" ? Date.parse(message.timestamp) : Number(message.id)
 
 export interface FetchOptions {
+  catchUp?: CatchUpOptions | false
   /** Messages in this run. */
   limit: number
   /** Messages per request. */
@@ -60,6 +62,7 @@ export interface FetchOptions {
 
 /** A type, not an interface: a job keeps it as a plain record. */
 export type Fetched = {
+  prepared?: CatchUpResult
   chat: Id | null
   fetched: number
   complete: boolean
@@ -184,6 +187,8 @@ export const archiveService = (deps: ServiceDeps): ArchiveService => {
     },
 
     fetch: async (chat, options) => {
+      const requested = options.catchUp ?? (deps.searchCatchUp ? {} : undefined)
+      if (requested) validateCatchUp(deps, requested)
       if (deps.withConnection && !deps.offline && deps.reads !== "store")
         return deps.withConnection((adapter) =>
           archiveService({ ...deps, withConnection: undefined, connection: async () => adapter }).fetch(chat, options),
@@ -197,13 +202,16 @@ export const archiveService = (deps: ServiceDeps): ArchiveService => {
       if (self !== (await deps.account()).account)
         throw new CliError("authentication_error", "the connection belongs to another account")
       if (options.stop.aborted) return { chat: null, fetched: 0, complete: false, ranges: [], stopped: true }
-      return fetchInto({
+      const result = await fetchInto({
         history: (window) => history(chat, { ...window, reactions: false }),
         store: await deps.store(),
         account: { provider: deps.messenger.provider, account: self },
         fetching: deps.messenger.fetching ?? FETCHING,
         ...options,
       })
+      return requested && result.chat
+        ? { ...result, prepared: await catchUpSearch(deps, result.chat, requested, options.stop) }
+        : result
     },
   }
 }

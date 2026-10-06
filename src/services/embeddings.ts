@@ -97,6 +97,8 @@ export interface EmbeddingsService {
 }
 
 export interface RefreshOptions {
+  maxMessages?: number
+  check?: () => void
   chat?: string
   /** A local model id; a remote model is only ever chosen per chat, with the owner's yes. */
   model?: string
@@ -365,9 +367,11 @@ export const embeddingsService = (deps: ServiceDeps): EmbeddingsService => {
       workers = 1,
       maxChunks = Number.POSITIVE_INFINITY,
       progress,
+      check,
     }: {
       workers?: number | undefined
       maxChunks?: number | undefined
+      check?: () => void
       progress?: ((done: number, left: number) => void) | undefined
     },
   ): Promise<Embedded> => {
@@ -378,6 +382,7 @@ export const embeddingsService = (deps: ServiceDeps): EmbeddingsService => {
     let left = (await store.vectorStatus(account, chatId, target.key)).chunks
     let after: string | undefined
     while (embedded + skipped < maxChunks) {
+      check?.()
       const batch = await store.chunksToEmbed(account, chatId, target.key, {
         limit: Math.min(target.perBatch(workers), maxChunks - embedded - skipped),
         ...(after ? { after } : {}),
@@ -393,6 +398,7 @@ export const embeddingsService = (deps: ServiceDeps): EmbeddingsService => {
         ready.map(({ text }) => text),
         "passage",
       )
+      check?.()
       await store.saveVectors(
         target.key,
         target.dims,
@@ -628,7 +634,10 @@ export const embeddingsService = (deps: ServiceDeps): EmbeddingsService => {
       workers,
       threads,
       progress,
+      maxMessages,
+      check,
     }) => {
+      check?.()
       const store = await deps.store()
       const account = await deps.account()
       const target = resolve(choice)
@@ -646,7 +655,8 @@ export const embeddingsService = (deps: ServiceDeps): EmbeddingsService => {
         const conversations = conversationsService(deps)
         for (const id of queue) {
           try {
-            const one = await conversations.build(id)
+            check?.()
+            const one = await conversations.build(id, { maxMessages, check })
             built.push(one)
             progress?.(`chat ${id}: ${one.messages} messages → ${one.conversations} conversations`)
           } catch (error) {
@@ -668,7 +678,8 @@ export const embeddingsService = (deps: ServiceDeps): EmbeddingsService => {
             let budget = maxChunks
             for (const { chat } of queue) {
               if (budget <= 0) break
-              const done = await embedInto(chat, target, embedder, { workers, maxChunks: budget })
+              check?.()
+              const done = await embedInto(chat, target, embedder, { workers, maxChunks: budget, check })
               budget -= done.embedded + done.skipped
               embedded.push(done)
               progress?.(`chat ${chat}: ${done.embedded} chunks embedded with ${target.id}`)

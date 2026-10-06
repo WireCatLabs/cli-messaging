@@ -8,11 +8,20 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Added
 
+- `searchCatchUp` and `store fetch --catch-up` prepare the fetched chat's graph and installed local
+  vectors within explicit message/chunk/time bounds, off by default. Background jobs keep the same
+  choice. Fetch results distinguish persisted history from incomplete preparation; models are never
+  downloaded and configured remote providers are not activated.
+
 - Attachment extraction is available over MCP, from an explicitly scoped nonrecursive directory,
   and directly after `messages download --extract`. Bounded MCP scans return a continuation cursor;
   output reports metadata without file text, and extraction preserves agent-written text.
 
 ### Fixed
+
+- Edits purge vectors of obsolete text while preserving genuinely shared current text hashes.
+  Successful rebuilds also clean affected abandoned hashes; bounded shared-use checks retain an
+  inconclusive hash rather than delete another account's valid cache.
 
 - File extraction compares content hashes so same-size file replacements refresh content search.
 

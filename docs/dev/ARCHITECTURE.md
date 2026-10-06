@@ -424,3 +424,17 @@ configured provider with consent; see [AI providers](../search/ai-providers.md).
 
 Consumer parity: planned for both CLIs on their next SDK adoption. Source-level shared schema and
 synthetic MCP proof are tested here; installed consumer parity is not claimed before publication.
+
+## Bounded preparation after history fetch
+
+Per-profile `searchCatchUp` defaults to false; store fetch can override it with --catch-up or
+--no-catch-up. The fetched chat alone is prepared with500chunks,10,000messages and30seconds by
+default. Explicit budgets have hard caps. Invalid permissions/bounds refuse before connection;
+missing local e5 keeps graph-only progress, without downloading a model or using a remote provider.
+Fetched history persists even when preparation stops; the result reports a separate prepared state.
+
+Cancellation checks run through input reads, linking, chunk cutting and staged publication. A
+failed staged build leaves the previous published generation available. Completed builds remain
+valid if later vector preparation stops. Edits and successful rebuilds prune affected vector hashes,
+verifying current text across shared users. Shared-use checks are bounded; an inconclusive hash is
+kept rather than removing another account's valid cache. Deletion safeguards remain in force.

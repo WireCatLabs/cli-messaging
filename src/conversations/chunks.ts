@@ -60,9 +60,10 @@ const breakBefore = (text: string, start: number, end: number): number => {
  * then a line, a sentence or a word where it can. Each piece after the first starts `overlap` before the
  * last one ended, at a word.
  */
-export const splitText = (text: string, room: number, overlap = CHUNK_OVERLAP): TextRange[] => {
+export const splitText = (text: string, room: number, overlap = CHUNK_OVERLAP, check?: () => void): TextRange[] => {
   const ranges: TextRange[] = []
   for (let start = 0; start < text.length; ) {
+    check?.()
     const end = start + room >= text.length ? text.length : breakBefore(text, start, start + room)
     ranges.push({ start, end })
     if (end >= text.length) break
@@ -81,7 +82,7 @@ export const chunkHash = (text: string): string => createHash("sha256").update(t
  * model reads all of a long note or mail rather than its beginning. Messages with no text add nothing,
  * and a conversation of only those has no chunk.
  */
-export const cutChunks = (members: ChunkLine[], limit = CHUNK_CHARS): Chunk[] => {
+export const cutChunks = (members: ChunkLine[], limit = CHUNK_CHARS, check?: () => void): Chunk[] => {
   const chunks: Chunk[] = []
   let open: ChunkLine[] = []
   let size = 0
@@ -95,12 +96,13 @@ export const cutChunks = (members: ChunkLine[], limit = CHUNK_CHARS): Chunk[] =>
     size = 0
   }
   for (const member of members) {
+    check?.()
     if (!member.text.trim()) continue
     const length = lineOf(member).length
     if (length > limit) {
       close()
       const room = Math.max(Math.floor(limit / 2), limit - (lineOf(member).length - member.text.length))
-      for (const range of splitText(member.text, room)) {
+      for (const range of splitText(member.text, room, CHUNK_OVERLAP, check)) {
         const text = chunkTextOf([member], range)
         if (text) chunks.push({ firstId: member.id, lastId: member.id, range, text, hash: chunkHash(text) })
       }

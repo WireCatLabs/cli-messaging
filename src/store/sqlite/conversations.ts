@@ -16,6 +16,7 @@ import {
   messages,
 } from "./schema.js"
 import { toIso } from "./values.js"
+import { purgeVectorHashes } from "./vectors.js"
 
 const position = (sentAt: number, pk: number) => `${sentAt}:${pk}`
 
@@ -133,10 +134,14 @@ const highestBuild = ({ orm }: StoreContext, chatKey: number): number =>
 export const replaceConversations = async (
   context: StoreContext,
   chatKey: number,
-  { startedAt, algorithmVersion, links, conversations: groups, chunks = [] }: ConversationBuild,
+  { startedAt, algorithmVersion, links, conversations: groups, chunks = [], check }: ConversationBuild,
   batch = 5_000,
 ): Promise<void> => {
   const { orm, now } = context
+  check?.()
+  const oldHashes = orm.all<{ hash: string }>(
+    sql`SELECT DISTINCT k.content_hash AS hash FROM conversation_chunks k JOIN conversations c ON c.pk = k.conversation_pk WHERE c.chat_pk = ${chatKey}`,
+  )
   const held = new Map(
     orm
       .select({ id: messages.nativeId, pk: messages.pk, sentAt: messages.sentAt })
@@ -191,6 +196,7 @@ export const replaceConversations = async (
     context,
     (function* () {
       for (const link of links) {
+        check?.()
         const message = held.get(link.messageId)
         const parent = held.get(link.parentId)
         if (!message || !parent) continue
@@ -198,6 +204,7 @@ export const replaceConversations = async (
         yield
       }
       for (const [index, ids] of groups.entries()) {
+        check?.()
         const members = ids.flatMap((id) => held.get(id) ?? [])
         const first = members[0]
         if (!first) continue
@@ -216,10 +223,12 @@ export const replaceConversations = async (
           .returning({ pk: conversations.pk })
           .get()
         for (const member of members) {
+          check?.()
           insertMember.run({ conversationPk: created.pk, messagePk: member.pk })
           yield
         }
         for (const [ordinal, chunk] of (chunks[index] ?? []).entries()) {
+          check?.()
           const from = held.get(chunk.firstId)
           const to = held.get(chunk.lastId)
           if (!from || !to) continue
@@ -244,6 +253,7 @@ export const replaceConversations = async (
   await inTurns(
     context,
     once(() => {
+      check?.()
       orm
         .update(messageLinks)
         .set({ staleAt: now() })
@@ -294,6 +304,10 @@ export const replaceConversations = async (
         yield
       }
     })(),
+  )
+  purgeVectorHashes(
+    context,
+    oldHashes.map(({ hash }) => hash),
   )
 }
 

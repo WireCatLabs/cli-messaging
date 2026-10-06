@@ -75,6 +75,7 @@ const SHARED_PROFILE_ENTRIES = {
   transcribeWith: v.optional(v.picklist(["auto", "messenger", "local"], plain("has to be auto, messenger or local"))),
   speechModel: v.optional(v.string(plain("has to be a model id from `models audio list`, in quotes"))),
   catchUpMarksRead: v.optional(flag),
+  searchCatchUp: v.optional(flag),
   ...AI_ENTRIES,
 }
 
@@ -161,6 +162,7 @@ export interface Settings extends AISettings {
   senderColors: boolean
   /** `inbox` and `review` mark each chat they show read, as `--mark-read` does; the other side sees it. Off unless set. */
   catchUpMarksRead: boolean
+  searchCatchUp?: boolean
   limit: number
   /** Which page, 1-based. Per invocation only — a page number in a file is a setting nobody wants twice. */
   page: number
@@ -341,6 +343,7 @@ export const settingsFor = (app: AppIdentity, extension: SettingsExtension = {})
     const color = fromLayers<boolean | undefined>("color", undefined)
     const senderColors = fromLayers("senderColors", false)
     const catchUpMarksRead = fromLayers("catchUpMarksRead", false)
+    const searchCatchUp = fromLayers("searchCatchUp", false)
     const keepRunsForDays = fromLayers("keepRunsForDays", DEFAULT_KEEP_RUNS_FOR_DAYS)
     const readOnly = fromLayers("readOnly", false)
     const allow = fromLayers<readonly Permission[] | undefined>("allow", undefined)
@@ -387,6 +390,7 @@ export const settingsFor = (app: AppIdentity, extension: SettingsExtension = {})
       color: color.value,
       senderColors: senderColors.value,
       catchUpMarksRead: catchUpMarksRead.value,
+      searchCatchUp: searchCatchUp.value,
       limit: limit.value,
       page: flags.page ?? 1,
       all: flags.all === true,
@@ -419,6 +423,7 @@ export const settingsFor = (app: AppIdentity, extension: SettingsExtension = {})
         color: color.from,
         senderColors: senderColors.from,
         catchUpMarksRead: catchUpMarksRead.from,
+        searchCatchUp: searchCatchUp.from,
         record: record.from,
         keepRunsForDays: keepRunsForDays.from,
         readOnly: readOnly.from,

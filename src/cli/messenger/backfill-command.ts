@@ -5,6 +5,7 @@ import { CliError } from "@leemour/cli-core"
 import { Command } from "commander"
 import { FETCHING } from "../../services/archive.js"
 import { momentOf } from "../../services/moment.js"
+import { validateCatchUpBounds } from "../../services/search-catchup.js"
 import { envName } from "../app.js"
 import { type BaseEnvironment, environmentOf } from "../context.js"
 import { isCliFailure } from "../failures.js"
@@ -21,7 +22,7 @@ import {
   stateOf,
   updateJob,
 } from "./backfill-jobs.js"
-import { type Messenger, type MessengerContext, messengerContext } from "./context.js"
+import { type Messenger, type MessengerContext, messengerContext, refuseLocalWrite } from "./context.js"
 import { stopOnSignal } from "./patience.js"
 
 /**
@@ -50,6 +51,11 @@ export const fetchCommand = (messenger: Messenger): Command => {
     )
     .option("--since-time <time>", "stop once it reaches messages older than this: ISO 8601, or 2h / 1d ago")
     .option("--last <n>", "stop once the newest n messages are held", wholeNumber)
+    .option("--catch-up", "prepare local search after fetch; overrides searchCatchUp")
+    .option("--no-catch-up", "skip local preparation after this fetch")
+    .option("--catch-up-chunks <n>", "at most this many local vector chunks", wholeNumber)
+    .option("--catch-up-messages <n>", "skip a graph rebuild larger than this many messages", wholeNumber)
+    .option("--catch-up-time <duration>", "local preparation time budget, 30s by default")
     .option("--background", "run as a job that outlives this command; `store jobs show` follows it")
     .option(
       "--estimate",
@@ -62,6 +68,10 @@ export const fetchCommand = (messenger: Messenger): Command => {
         last,
         background,
         estimate,
+        catchUp,
+        catchUpChunks,
+        catchUpMessages,
+        catchUpTime,
         ...sizes
       } = this.opts<{
         limit?: number
@@ -71,6 +81,10 @@ export const fetchCommand = (messenger: Messenger): Command => {
         last?: number
         background?: boolean
         estimate?: boolean
+        catchUp?: boolean
+        catchUpChunks?: number
+        catchUpMessages?: number
+        catchUpTime?: string
       }>()
       if (since !== undefined && last !== undefined) {
         throw new CliError("validation_error", "give --since-time or --last, not both: how far back the fetch goes")
@@ -87,6 +101,14 @@ export const fetchCommand = (messenger: Messenger): Command => {
       const pauseMs = parseDuration(pause, "--pause")
       const sinceMs = since === undefined ? undefined : momentOf(since, "--since-time")
       const context = messengerContext(this, messenger)
+      const prepare = catchUp ?? context.settings.searchCatchUp ?? false
+      const preparation = {
+        ...(catchUpChunks === undefined ? {} : { maxChunks: catchUpChunks }),
+        ...(catchUpMessages === undefined ? {} : { maxMessages: catchUpMessages }),
+        ...(catchUpTime === undefined ? {} : { timeMs: parseDuration(catchUpTime, "--catch-up-time") }),
+      }
+      if (!prepare && (catchUpChunks !== undefined || catchUpMessages !== undefined || catchUpTime !== undefined))
+        throw new CliError("validation_error", "catch-up budgets need --catch-up or searchCatchUp true")
       if (estimate) {
         if (since !== undefined || last !== undefined) {
           throw new CliError(
@@ -105,12 +127,21 @@ export const fetchCommand = (messenger: Messenger): Command => {
         } else if (answer.missing > 0) context.renderer.note("an estimate: provider waits (FloodWait) come on top")
         return
       }
+      if (prepare) {
+        validateCatchUpBounds(preparation)
+        refuseLocalWrite(context, messenger.app.command, "conversations.build")
+        refuseLocalWrite(context, messenger.app.command, "conversations.embed")
+      }
       if (background) {
         startJob(this, context, messenger, {
           chat,
           limit,
           pageSize,
           pause,
+          catchUp: prepare,
+          catchUpChunks,
+          catchUpMessages,
+          catchUpTime,
           ...(last === undefined ? {} : { last }),
           ...(sinceMs === undefined ? {} : { since: new Date(sinceMs).toISOString() }),
         })
@@ -125,6 +156,7 @@ export const fetchCommand = (messenger: Messenger): Command => {
             limit,
             pageSize,
             pauseMs,
+            catchUp: prepare ? preparation : false,
             ...(sinceMs === undefined ? {} : { sinceMs }),
             ...(last === undefined ? {} : { last }),
             note: context.renderer.note,
@@ -234,7 +266,22 @@ const startJob = (
     pause,
     since,
     last,
-  }: { chat: string; limit: number; pageSize: number; pause: string; since?: string; last?: number },
+    catchUp,
+    catchUpChunks,
+    catchUpMessages,
+    catchUpTime,
+  }: {
+    chat: string
+    limit: number
+    pageSize: number
+    pause: string
+    since?: string
+    last?: number
+    catchUp?: boolean
+    catchUpChunks?: number
+    catchUpMessages?: number
+    catchUpTime?: string
+  },
 ) => {
   const { app } = messenger
   const dir = jobsDir(app, context.env)
@@ -264,6 +311,10 @@ const startJob = (
     pause,
     ...(since === undefined ? [] : ["--since-time", since]),
     ...(last === undefined ? [] : ["--last", String(last)]),
+    ...(catchUp === undefined ? [] : [catchUp ? "--catch-up" : "--no-catch-up"]),
+    ...(catchUpChunks === undefined ? [] : ["--catch-up-chunks", String(catchUpChunks)]),
+    ...(catchUpMessages === undefined ? [] : ["--catch-up-messages", String(catchUpMessages)]),
+    ...(catchUpTime === undefined ? [] : ["--catch-up-time", catchUpTime]),
     "--json",
     ...(timeout ? ["--timeout", timeout] : []),
   ]

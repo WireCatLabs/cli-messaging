@@ -145,6 +145,13 @@ export {
   type ServerRestarts,
   upgradePackage,
 } from "./package-upgrade.js"
+export {
+  CATCH_UP_BOUNDS,
+  type CatchUpOptions,
+  type CatchUpResult,
+  catchUpSearch,
+  validateCatchUp,
+} from "./search-catchup.js"
 export type { SearchRefreshed, SyncOptions } from "./search-refresh.js"
 export { SYNC_BOUNDS, SYNC_KEY } from "./search-refresh.js"
 export type { ThreadContext, ThreadOptions } from "./thread-context.js"

@@ -35,7 +35,7 @@ export interface MessageLinks {
  * sender's messages in a row. Nothing is built on sync; a chat has conversations once `build` ran for it.
  */
 export interface ConversationsService {
-  build(chat: string): Promise<Built>
+  build(chat: string, options?: { maxMessages?: number; check?: () => void }): Promise<Built>
   list(chat: string, window: { limit: number; since?: string }): Promise<Page<ConversationSummary>>
   /** By the conversation's id, or as the conversation a message is in. */
   show(
@@ -80,13 +80,17 @@ export const conversationsService = (deps: ServiceDeps): ConversationsService =>
     )
 
   return {
-    build: async (chat) => {
+    build: async (chat, { maxMessages, check } = {}) => {
+      check?.()
       const { store, account, chatId } = await found(chat)
       const startedAt = Date.now()
       const inputs: LinkInput[] = []
       let after: string | undefined
       for (;;) {
+        check?.()
         const page = await store.linkInputs(account, chatId, { limit: READ_PAGE, ...(after ? { after } : {}) })
+        if (maxMessages !== undefined && inputs.length + page.items.length > maxMessages)
+          throw new CliError("validation_error", "the chat exceeds the catch-up message budget")
         inputs.push(...page.items)
         if (page.next === null) break
         after = page.next
@@ -94,7 +98,9 @@ export const conversationsService = (deps: ServiceDeps): ConversationsService =>
       if (inputs.length === 0) {
         throw new CliError("not_found", `the store holds no messages of chat ${chatId} — fetch them first`)
       }
+      check?.()
       const { links, conversations } = linkMessages(inputs, {
+        check,
         handles: await store.senderHandles(account, chatId),
         answers: await store.agentAnswers(account, chatId),
       })
@@ -105,9 +111,12 @@ export const conversationsService = (deps: ServiceDeps): ConversationsService =>
             const input = byId.get(id)
             return input ? [{ id, sender: input.senderName ?? null, text: input.text }] : []
           }),
+          undefined,
+          check,
         ).map(({ firstId, lastId, hash, range }) => ({ firstId, lastId, hash, ...(range ? { range } : {}) })),
       )
       await store.replaceConversations(account, chatId, {
+        check,
         startedAt,
         algorithmVersion: RULES_VERSION,
         links,
