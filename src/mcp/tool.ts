@@ -1,6 +1,7 @@
 import { CliError } from "@leemour/cli-core"
 import {
   type CallToolResult,
+  type InputRequiredResult,
   isInputRequiredResult,
   type McpServer,
   type ServerContext,
@@ -192,144 +193,157 @@ export interface Registration {
 export const toolKey = (name: string, definition: Pick<AnyTool, "key">): PermissionKey | null | undefined =>
   definition.key ?? keyForCommand(name.split("_"))
 
-/** Registers each tool as `<cli>_<name>`; a read tool's description ends with the warning about data. */
-export const registerTools = (
-  server: McpServer,
-  tools: Record<string, AnyTool>,
-  {
-    command,
-    messenger,
-    session,
-    withStore,
-    withServices,
-    defaults,
-    confirmed,
-    confirms = () => true,
-    around,
-    resolveChat,
-  }: Registration,
-): void => {
+/** The arguments an entry takes: without the sync options when the profile does not allow syncing first. */
+export const inputOf = (definition: AnyTool, syncAllowed: boolean): Input =>
+  syncAllowed || !("sync_first" in definition.input.entries)
+    ? definition.input
+    : v.strictObject(
+        Object.fromEntries(
+          Object.entries(definition.input.entries).filter(
+            ([name]) => !["sync_first", "sync_time", "max_chats", "max_messages"].includes(name),
+          ),
+        ),
+      )
+
+/** Runs one definition with arguments already checked against its input, as its tool would. */
+export type RunEntry = (
+  key: string,
+  definition: AnyTool,
+  args: Record<string, unknown>,
+  ctx: ServerContext,
+) => Promise<CallToolResult | InputRequiredResult>
+
+/** Whether a profile may sync before answering this entry. */
+export const syncAllowedFor = (key: string, defaults: Defaults): boolean => {
+  const permissions = defaults.settings.permissions ?? {}
+  const shared = defaults.syncAllowed ?? levelFor(permissions, "messages.sync-first").level === "allow"
+  return (
+    shared &&
+    (key !== "stats_messages_show" || levelFor(permissions, "stats.messages.show.sync-first").level === "allow")
+  )
+}
+
+export const entryRunner = ({
+  command,
+  messenger,
+  session,
+  withStore,
+  withServices,
+  defaults,
+  confirmed,
+  confirms = () => true,
+  around,
+  resolveChat,
+}: Registration): RunEntry => {
   const where = { profile: defaults.settings.profile, env: defaults.env }
-  const sharedSyncAllowed =
-    defaults.syncAllowed ?? levelFor(defaults.settings.permissions ?? {}, "messages.sync-first").level === "allow"
-  for (const [key, definition] of Object.entries(tools)) {
-    const syncAllowed =
-      sharedSyncAllowed &&
-      (key !== "stats_messages_show" ||
-        levelFor(defaults.settings.permissions ?? {}, "stats.messages.show.sync-first").level === "allow")
+  return async (key, definition, args, ctx) => {
+    const syncAllowed = syncAllowedFor(key, defaults)
     const name = `${command}_${key}`
     const run = `mcp ${key.replaceAll("_", " ")}`
     const reads = definition.annotations.readOnlyHint === true
+    try {
+      const execute = async () => {
+        assertStatsPermissionsCurrent(key.split("_"), defaults.settings.permissions ?? {})
+        for (const permission of readKeysForCommand(key.split("_"))) {
+          if (levelFor(defaults.settings.permissions ?? {}, permission).level === "deny")
+            throw new CliError("permission_error", `profile denies ${permission}`, { permission })
+        }
+        if (args.sync_first && !syncAllowed)
+          throw new CliError("permission_error", "messages.sync-first is not allowed by this profile")
+        const { online, stored: local, served, permission } = definition
+        const stored = local && (!definition.storedWhen || definition.storedWhen(args)) ? local : undefined
+        if (stored && !reads && confirmed && confirms(key, definition))
+          throw new CliError(
+            "confirmation_required",
+            "this local write requires confirmation; run the CLI command with the owner's approval",
+          )
+        const result = stored
+          ? await withStore(
+              (store, account) =>
+                stored(store, account, args, { ...defaults, signal: ctx.mcpReq.signal }, (work) =>
+                  session.use(run, work),
+                ),
+              {
+                name: run,
+              },
+            )
+          : served && withServices
+            ? await withServices((services, connect) => served(services, args, defaults, connect), { name: run })
+            : served && messenger.history === "store"
+              ? await withStore(
+                  (store, account) =>
+                    served(
+                      servicesFor({
+                        ...storeModeDeps(messenger, store, account, defaults.guard),
+                        ...where,
+                        embedders: defaults.embedders,
+                      }),
+                      args,
+                      defaults,
+                      (work) =>
+                        session.use(run, async (adapter, release) => {
+                          try {
+                            return await work(adapter)
+                          } finally {
+                            await release()
+                          }
+                        }),
+                    ),
+                  { name: run },
+                )
+              : served
+                ? await session.use(run, (adapter, release) =>
+                    served(servicesFor(onlineDeps(messenger, adapter, defaults.guard, where)), args, defaults, (work) =>
+                      (async () => {
+                        try {
+                          return await work(adapter)
+                        } finally {
+                          await release()
+                        }
+                      })(),
+                    ),
+                  )
+                : await session.use(run, (adapter, release) => {
+                    const act = (given: Record<string, unknown>) =>
+                      (online as NonNullable<typeof online>)(adapter, given, { ...defaults, release })
+                    return confirmed && permission && confirms(key, definition)
+                      ? confirmed(
+                          { name, title: definition.title },
+                          (reference) => (resolveChat ? resolveChat(adapter, reference) : adapter.resolve(reference)),
+                          args,
+                          ctx,
+                          act,
+                        )
+                      : act(args)
+                  })
+        return isInputRequiredResult(result) ? result : answered(result)
+      }
+      return around ? await around(key, definition, execute) : await execute()
+    } catch (error) {
+      return failed(error)
+    }
+  }
+}
+
+/** Registers each tool as `<cli>_<name>`; a read tool's description ends with the warning about data. */
+export const registerTools = (server: McpServer, tools: Record<string, AnyTool>, registration: Registration): void => {
+  const run = entryRunner(registration)
+  for (const [key, definition] of Object.entries(tools)) {
+    const syncAllowed = syncAllowedFor(key, registration.defaults)
+    const reads = definition.annotations.readOnlyHint === true
     server.registerTool(
-      name,
+      `${registration.command}_${key}`,
       {
         title: definition.title,
         description: reads ? `${definition.description} ${UNTRUSTED}` : definition.description,
-        inputSchema: toStandardJsonSchema(
-          syncAllowed || !("sync_first" in definition.input.entries)
-            ? definition.input
-            : v.strictObject(
-                Object.fromEntries(
-                  Object.entries(definition.input.entries).filter(
-                    ([name]) => !["sync_first", "sync_time", "max_chats", "max_messages"].includes(name),
-                  ),
-                ),
-              ),
-        ),
+        inputSchema: toStandardJsonSchema(inputOf(definition, syncAllowed)),
         annotations: {
           ...definition.annotations,
           ...("sync_first" in definition.input.entries ? { openWorldHint: syncAllowed } : {}),
         },
         ...(definition._meta ? { _meta: definition._meta } : {}),
       },
-      async (args: Record<string, unknown>, ctx: ServerContext) => {
-        try {
-          const execute = async () => {
-            assertStatsPermissionsCurrent(key.split("_"), defaults.settings.permissions ?? {})
-            for (const permission of readKeysForCommand(key.split("_"))) {
-              if (levelFor(defaults.settings.permissions ?? {}, permission).level === "deny")
-                throw new CliError("permission_error", `profile denies ${permission}`, { permission })
-            }
-            if (args.sync_first && !syncAllowed)
-              throw new CliError("permission_error", "messages.sync-first is not allowed by this profile")
-            const { online, stored: local, served, permission } = definition
-            const stored = local && (!definition.storedWhen || definition.storedWhen(args)) ? local : undefined
-            if (stored && !reads && confirmed && confirms(key, definition))
-              throw new CliError(
-                "confirmation_required",
-                "this local write requires confirmation; run the CLI command with the owner's approval",
-              )
-            const result = stored
-              ? await withStore(
-                  (store, account) =>
-                    stored(store, account, args, { ...defaults, signal: ctx.mcpReq.signal }, (work) =>
-                      session.use(run, work),
-                    ),
-                  {
-                    name: run,
-                  },
-                )
-              : served && withServices
-                ? await withServices((services, connect) => served(services, args, defaults, connect), { name: run })
-                : served && messenger.history === "store"
-                  ? await withStore(
-                      (store, account) =>
-                        served(
-                          servicesFor({
-                            ...storeModeDeps(messenger, store, account, defaults.guard),
-                            ...where,
-                            embedders: defaults.embedders,
-                          }),
-                          args,
-                          defaults,
-                          (work) =>
-                            session.use(run, async (adapter, release) => {
-                              try {
-                                return await work(adapter)
-                              } finally {
-                                await release()
-                              }
-                            }),
-                        ),
-                      { name: run },
-                    )
-                  : served
-                    ? await session.use(run, (adapter, release) =>
-                        served(
-                          servicesFor(onlineDeps(messenger, adapter, defaults.guard, where)),
-                          args,
-                          defaults,
-                          (work) =>
-                            (async () => {
-                              try {
-                                return await work(adapter)
-                              } finally {
-                                await release()
-                              }
-                            })(),
-                        ),
-                      )
-                    : await session.use(run, (adapter, release) => {
-                        const act = (given: Record<string, unknown>) =>
-                          (online as NonNullable<typeof online>)(adapter, given, { ...defaults, release })
-                        return confirmed && permission && confirms(key, definition)
-                          ? confirmed(
-                              { name, title: definition.title },
-                              (reference) =>
-                                resolveChat ? resolveChat(adapter, reference) : adapter.resolve(reference),
-                              args,
-                              ctx,
-                              act,
-                            )
-                          : act(args)
-                      })
-            return isInputRequiredResult(result) ? result : answered(result)
-          }
-          return around ? await around(key, definition, execute) : await execute()
-        } catch (error) {
-          return failed(error)
-        }
-      },
+      (args: Record<string, unknown>, ctx: ServerContext) => run(key, definition, args, ctx),
     )
   }
 }
