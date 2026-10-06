@@ -179,16 +179,17 @@ export const run = async (argv: string[], definition: ProgramDefinition, options
     const localPreview = action.options.some((option) => option.long === "--dry-run")
     if (flags.dryRun && localPreview) action.setOptionValue("dryRun", true)
     const path = commandPathOf(action)
+    // `setup` stays: it refuses on its own the steps that need a terminal, and a skill install or a
+    // piped token needs none.
     if (
       headless &&
-      (path[0] === "setup" ||
-        (path[0] === "session" &&
-          path[1] === "start" &&
-          action.processedArgs.some((arg) => ["qr", "qr-chrome", "sms"].includes(String(arg)))))
+      path[0] === "session" &&
+      path[1] === "start" &&
+      action.processedArgs.some((arg) => ["qr", "qr-chrome", "sms"].includes(String(arg)))
     )
       throw new CliError(
         "validation_error",
-        "interactive setup/login is disabled — use explicit configuration and piped credentials",
+        "interactive login is disabled — use explicit configuration and piped credentials",
         { reason: "input_required", retryable: false },
       )
     const persistent =
