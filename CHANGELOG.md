@@ -6,6 +6,10 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.158.0 — 07.10.2026
+
+Released early: MAX native server daily member fetching needs the public scheduler export
+
 - Export the daily member-fetch scheduler for MAX native server integration. Long rounds no longer overlap, and shutdown waits for the running round.
 
 ### Fixed
