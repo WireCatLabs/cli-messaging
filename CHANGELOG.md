@@ -6,6 +6,10 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.155.0 — 06.10.2026
+
+Released early: tg-cli and max-cli browser sends are blocked by unsupported server elicitation; explicit startup permission overrides are needed now
+
 ### Added
 
 - `mcp --http --http-confirmation permissions` follows the effective profile levels, so clients
