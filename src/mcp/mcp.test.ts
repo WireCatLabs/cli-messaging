@@ -767,7 +767,7 @@ describe("the MCP server", () => {
           name: "Olga",
           usernames: [],
           bio: null,
-          phone: "+34 600 000 123",
+          phone: "0123",
           flags: { scam: false },
           seen: "week",
           chats: [{ id: "7", title: "Book club", kind: "group", lastMessageAt: null }],
