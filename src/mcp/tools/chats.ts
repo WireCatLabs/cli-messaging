@@ -1,4 +1,5 @@
 import * as v from "valibot"
+import { registriesCover } from "../../botcheck/registries.js"
 import type { Messenger } from "../../cli/messenger/context.js"
 import type { MessengerAdapter } from "../../cli/messenger/port.js"
 import { listed } from "../../cli/paging.js"
@@ -101,9 +102,11 @@ export const chatsTools = (messenger: Messenger): Record<string, AnyTool> => {
         "Reasons: bot, scam, fake, deleted, no_photo, no_username, odd_name, never_wrote, link_first, burst_join, " +
         "mass_invited. A score is a hint, never a verdict; the owner and admins are left out. Reads the member list " +
         "a page at a time (budget pages); unknown names the signals the messenger gave nothing for; more says some " +
-        "members were not read. With deep, the top members also get the full contacts_check — and their ids are " +
-        "sent to the public ban lists — one person a second. Removes nobody — that is chats_moderate, with the " +
-        "owner's confirmation.",
+        "members were not read. With deep, the top members also get the full contacts_check, one person a second" +
+        (registriesCover(messenger.provider)
+          ? " — and their ids are sent to the public ban lists"
+          : "; the public ban lists cover Telegram only, so nothing is sent") +
+        ". Removes nobody — that is chats_moderate, with the owner's confirmation.",
       input: v.object({
         chat,
         budget: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1), v.description("pages of members to read"))),

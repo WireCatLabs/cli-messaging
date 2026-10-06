@@ -1,5 +1,6 @@
 import { annotate } from "@leemour/cli-core/commands"
 import { Command } from "commander"
+import { registriesCover } from "../../botcheck/registries.js"
 import { AUDIT_BUDGET, AUDIT_MIN_SCORE, AUDIT_PAGE } from "../../services/members-audit.js"
 import { momentOf } from "../../services/moment.js"
 import { listed, positiveCount, renderPage, window, withPaging } from "../paging.js"
@@ -42,8 +43,11 @@ export const membersCommand = (messenger: Messenger): Command => {
       )
       .option(
         "--deep <n>",
-        "also check the top n in full — profile, photos, everything they wrote, and the public ban lists, which are " +
-          "sent their ids — one person a second",
+        registriesCover(messenger.provider)
+          ? "also check the top n in full — profile, photos, everything they wrote, and the public ban lists, which " +
+              "are sent their ids — one person a second"
+          : "also check the top n in full — profile, photos and everything they wrote — one person a second; the " +
+              "public ban lists cover Telegram only, so nothing is sent",
         positiveCount("--deep"),
       )
       .action(async function (this: Command, chat: string) {
