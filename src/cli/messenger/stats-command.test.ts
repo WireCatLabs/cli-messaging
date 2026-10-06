@@ -235,3 +235,37 @@ describe("stats charts", () => {
     expect(load).not.toHaveBeenCalled()
   })
 })
+
+it("requires a statistics view in machine mode and prints help only when explicitly requested", async () => {
+  const connect = vi.fn(async () => {
+    throw new Error("no connection for discovery")
+  })
+  const messenger: Messenger = {
+    app,
+    provider: "chat",
+    chatArgument: "a chat",
+    connect,
+    resolveSettings: settingsFor(app).resolveSettings,
+  }
+  for (const group of [[], ["messages"], ["chats"], ["tasks"]]) {
+    const streams = captureStreams()
+    const code = await run(
+      ["stats", ...group, "--json", "--no-record"],
+      { app, commands: () => [statsCommand(messenger)] },
+      { streams, tty: false, env: process.env },
+    )
+    expect(code).toBe(2)
+    expect(streams.stdout).toEqual([])
+    expect(JSON.parse(streams.stderr[0] ?? "{}").error.code).toBe("validation_error")
+  }
+  const streams = captureStreams()
+  expect(
+    await run(
+      ["stats", "--help"],
+      { app, commands: () => [statsCommand(messenger)] },
+      { streams, tty: false, env: process.env },
+    ),
+  ).toBe(0)
+  expect(streams.stdout.join()).toContain("messages")
+  expect(connect).not.toHaveBeenCalled()
+})

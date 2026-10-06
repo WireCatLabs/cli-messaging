@@ -24,6 +24,7 @@ export {
   type PersonalMcpDefaults,
   type PersonalMcpRegistration,
   type PersonalMcpTool,
+  personalMcpCommand,
   personalMcpToolKey,
   personalMcpTools,
   registerPersonalMcpSurface,
@@ -98,6 +99,7 @@ export {
 export { botFiles, botsDirectory, ChatRegistry, registryProfiles, type SeenChat } from "./bot/registry.js"
 export { BotTokenStore, type BotTokenStoreOptions } from "./bot/token.js"
 export { PressLog, UpdatesCursor } from "./bot/updates.js"
+export { commandContract, type JsonSchema, resultSchemaFor, SCHEMA_DIALECT } from "./command-contract.js"
 export { CONTRACT, commandsCommand } from "./commands-command.js"
 export { configCommand, refuseUnknownKey } from "./config-command.js"
 export {
@@ -109,7 +111,16 @@ export {
   provide,
 } from "./context.js"
 export { type Closeable, withDeadline } from "./deadline.js"
+export { withAbort } from "./execution.js"
 export { isCliFailure, isCommanderFailure } from "./failures.js"
+export {
+  bufferedInput,
+  type InputPolicy,
+  inputPolicy,
+  MAX_BUFFERED_INPUT,
+  MAX_SECRET_INPUT,
+  provideInputPolicy,
+} from "./input-policy.js"
 export { accountCommand } from "./messenger/account-command.js"
 export { accountFileFor, rememberAccount } from "./messenger/accounts.js"
 export { storeCommand } from "./messenger/archive-commands.js"
@@ -209,6 +220,7 @@ export {
   usableProfileName,
 } from "./profile.js"
 export { createProgram, type ProgramDefinition, type ProgramOptions, type RunOptions, run } from "./program.js"
+export { fieldsOf, projectFields } from "./result-fields.js"
 export { runsCommand } from "./runs/command.js"
 export {
   type CacheEvent,

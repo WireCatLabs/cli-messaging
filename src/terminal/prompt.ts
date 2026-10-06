@@ -1,6 +1,7 @@
 import { createInterface } from "node:readline"
 import { Writable } from "node:stream"
 import { CliError } from "@leemour/cli-core"
+import { bufferedInput, inputPolicy, MAX_SECRET_INPUT } from "../cli/input-policy.js"
 
 export interface SecretInput {
   input?: NodeJS.ReadableStream & { isTTY?: boolean }
@@ -23,39 +24,26 @@ export interface SecretInput {
  */
 export const readSecret = async (
   prompt: string,
-  { input = process.stdin, output = process.stderr, echo = false, signal }: SecretInput = {},
+  { input = process.stdin, output = process.stderr, echo = false, signal: givenSignal }: SecretInput = {},
 ): Promise<string> => {
+  const policy = inputPolicy(input)
+  const signals = [givenSignal, policy.signal].filter((one): one is AbortSignal => one !== undefined)
+  const signal = signals.length ? AbortSignal.any(signals) : undefined
   const cancelled = () => new CliError("cancelled", "cancelled — nothing was stored")
   if (signal?.aborted) throw cancelled()
+  if (input.isTTY && policy.noInput)
+    throw new CliError("validation_error", "interactive input is disabled — provide the input through a pipe", {
+      reason: "input_required",
+    })
   if (!input.isTTY) {
-    if (signal) {
-      return new Promise<string>((resolve, reject) => {
-        const chunks: Buffer[] = []
-        const cleanup = () => {
-          input.off("data", data).off("end", end).off("error", error).off("close", abort)
-          signal.removeEventListener("abort", abort)
-        }
-        const data = (chunk: Buffer | string) => chunks.push(Buffer.from(chunk))
-        const end = () => {
-          cleanup()
-          resolve(Buffer.concat(chunks).toString("utf8").trim())
-        }
-        const error = (cause: Error) => {
-          cleanup()
-          reject(cause)
-        }
-        const abort = () => {
-          cleanup()
-          input.pause()
-          reject(cancelled())
-        }
-        input.on("data", data).once("end", end).once("error", error).once("close", abort)
-        signal.addEventListener("abort", abort, { once: true })
+    return (
+      await bufferedInput(input, {
+        maxBytes: Math.min(policy.maxBytes ?? MAX_SECRET_INPUT, MAX_SECRET_INPUT),
+        ...(signal ? { signal } : {}),
       })
-    }
-    const chunks: Buffer[] = []
-    for await (const chunk of input) chunks.push(Buffer.from(chunk))
-    return Buffer.concat(chunks).toString("utf8").trim()
+    )
+      .toString("utf8")
+      .trim()
   }
 
   let muted = false
@@ -68,11 +56,28 @@ export const readSecret = async (
 
   const reader = createInterface({ input, output: shim, terminal: true })
   const abort = () => reader.close()
+  let bytes = 0
+  let inputFailure: unknown
+  const data = (chunk: Buffer | string) => {
+    bytes += Buffer.byteLength(chunk)
+    if (bytes > Math.min(policy.maxBytes ?? MAX_SECRET_INPUT, MAX_SECRET_INPUT)) {
+      inputFailure = new CliError("validation_error", "secret input exceeds its byte limit", {
+        reason: "input_limit",
+        retryable: false,
+      })
+      reader.close()
+    }
+  }
+  const inputError = (error: unknown) => {
+    inputFailure = error
+    reader.close()
+  }
+  input.on("data", data).on("error", inputError)
   try {
     // Ctrl-C and a closed terminal would otherwise leave this waiting for ever, and Node exits
     // on the unsettled promise with a warning and a code nobody documents.
     const answer = await new Promise<string>((resolve, reject) => {
-      const cancel = () => reject(cancelled())
+      const cancel = () => reject(inputFailure ?? cancelled())
       reader.once("SIGINT", cancel)
       reader.once("close", cancel)
       signal?.addEventListener("abort", abort, { once: true })
@@ -81,6 +86,7 @@ export const readSecret = async (
     })
     return answer.trim()
   } finally {
+    input.off("data", data).off("error", inputError)
     signal?.removeEventListener("abort", abort)
     reader.close()
     output.write("\n")

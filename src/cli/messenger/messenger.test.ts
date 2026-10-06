@@ -1559,7 +1559,7 @@ describe("the shared read commands", () => {
         { signal: cancelled.signal },
         { provider },
       )
-      expect(aborted.code).toBe(2)
+      expect(aborted.code).toBe(130)
       expect(aborted.stdout).toEqual([])
       const deadline = await call(
         ["messages", "search", "--regex", "invoice", "--timeout", "1ms", "--json"],

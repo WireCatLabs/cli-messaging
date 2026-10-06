@@ -93,7 +93,8 @@
     "parity:seed": "tsc --build && node --experimental-strip-types scripts/parity-seed.ts",
     "parity:render": "node --experimental-strip-types scripts/parity-render.ts",
     "parity:audit": "tsc --build && node --experimental-strip-types scripts/parity-audit.ts",
-    "search:docs": "pnpm build && node scripts/search-docs.ts"
+    "search:docs": "pnpm build && node scripts/search-docs.ts",
+    "check:agent-process": "pnpm build && node --experimental-strip-types scripts/check-agent-process.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "0.131.0",

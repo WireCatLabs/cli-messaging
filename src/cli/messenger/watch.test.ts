@@ -69,7 +69,7 @@ const call = async (argv: string[], connect: Messenger["connect"], signal?: Abor
 }
 
 describe("watch", () => {
-  it("**a signal sent twice — as mtcute does after closing its storage — still ends the run normally**", async () => {
+  it("**a signal sent twice — as mtcute does after closing its storage — exits 143 and removes listeners**", async () => {
     const before = process.listenerCount("SIGTERM")
     let during = 0
     const connect = async () =>
@@ -86,7 +86,7 @@ describe("watch", () => {
       }) as unknown as MessengerAdapter
 
     const { code } = await call(["watch", "--jsonl"], connect)
-    expect(code).toBe(0)
+    expect(code).toBe(143)
     expect(during).toBeGreaterThan(before)
     expect(process.listenerCount("SIGTERM")).toBe(before)
   })

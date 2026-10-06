@@ -28,3 +28,10 @@ describe("the output mode", () => {
     expect(streams.stderr).toEqual(["no chat matches"])
   })
 })
+
+it("uses quiet terminal defaults in CI, TERM=dumb and NO_COLOR; machine mode never paints", () => {
+  for (const env of [{ CI: "1" }, { TERM: "dumb" }, { NO_COLOR: "1" }])
+    expect(resolveOutput({ tty: true, env }).color).toBe(false)
+  expect(resolveOutput({ tty: true, env: {}, color: true }).color).toBe(true)
+  expect(resolveOutput({ tty: true, env: { FORCE_COLOR: "1" }, json: true, color: true }).color).toBe(false)
+})

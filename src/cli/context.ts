@@ -4,6 +4,7 @@ import { resolveOutput } from "../output.js"
 import type { OpenRecognizer } from "../speech/transcribe.js"
 import type { AppIdentity } from "./app.js"
 import { type Closeable, withDeadline } from "./deadline.js"
+import { withAbort } from "./execution.js"
 import { rootOf } from "./profile.js"
 import type { EventSink } from "./runs/events.js"
 import { recorded } from "./runs/recording.js"
@@ -16,7 +17,9 @@ export interface BaseEnvironment {
   tty?: boolean
   env?: NodeJS.ProcessEnv
   /** Ends a long-running command — `watch` — in place of Ctrl-C; tests hand one in. */
+  commandSignal?: AbortSignal
   signal?: AbortSignal
+  trackCloseable?: (closeable: Closeable) => void
   /** Where a command reads text it was not given as an argument. */
   stdin?: NodeJS.ReadableStream & { isTTY?: boolean }
   /** The owner's answer to a question, or `null` with nobody at a terminal; tests hand one in. */
@@ -38,10 +41,11 @@ export const environmentOf = <E extends BaseEnvironment = BaseEnvironment>(comma
 
 /** For the commands that print but never need settings or a connection. */
 export const outputFor = (command: Command) => {
-  const { streams, tty } = environmentOf(command)
+  const { streams, tty, env } = environmentOf(command)
   return resolveOutput({
     ...command.optsWithGlobals(),
     ...(streams ? { streams } : {}),
+    ...(env ? { env } : {}),
     ...(tty === undefined ? {} : { tty }),
   })
 }
@@ -76,6 +80,10 @@ export const baseContext = (command: Command, resolveSettings: Resolve): BaseCon
   const settings = resolveSettings(command.optsWithGlobals<GlobalFlags>(), { env })
   const { renderer, format, color, streams } = resolveOutput({
     ...settings,
+    env,
+    ...(command.optsWithGlobals<{ fields?: string }>().fields
+      ? { fields: command.optsWithGlobals<{ fields?: string }>().fields }
+      : {}),
     ...(environment.streams ? { streams: environment.streams } : {}),
     ...(environment.tty === undefined ? {} : { tty: environment.tty }),
   })
@@ -104,11 +112,17 @@ export const baseContext = (command: Command, resolveSettings: Resolve): BaseCon
               streams,
               env,
             },
-            (events) => withDeadline(unbounded ? undefined : settings.commandTimeoutMs, closeables, () => body(events)),
+            (events) =>
+              withAbort(environment.commandSignal, () =>
+                withDeadline(unbounded ? undefined : settings.commandTimeoutMs, closeables, () => body(events)),
+              ),
           )
-        : withDeadline(unbounded ? undefined : settings.commandTimeoutMs, closeables, () => body(() => {})),
+        : withAbort(environment.commandSignal, () =>
+            withDeadline(unbounded ? undefined : settings.commandTimeoutMs, closeables, () => body(() => {})),
+          ),
     track: (closeable) => {
       closeables.push(closeable)
+      environment.trackCloseable?.(closeable)
     },
   }
 }

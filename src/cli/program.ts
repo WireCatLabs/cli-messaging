@@ -10,12 +10,16 @@ import {
 } from "@leemour/cli-core"
 import { skillHint } from "@leemour/cli-core/skill"
 import { Command } from "commander"
-import type { AppIdentity } from "./app.js"
-import { type BaseEnvironment, provide } from "./context.js"
+import { type AppIdentity, envName } from "./app.js"
+import { commandPathOf } from "./command-contract.js"
+import { type BaseEnvironment, outputFor, provide } from "./context.js"
+import { byteCount, DEFAULT_COMMAND_MS, DEFAULT_OUTPUT_BYTES, execution } from "./execution.js"
 import { isCliFailure, isCommanderFailure } from "./failures.js"
+import { MAX_BUFFERED_INPUT, provideInputPolicy } from "./input-policy.js"
+import { PreviewComplete, preview } from "./preview.js"
 import { commandWords, liftProfile } from "./profile.js"
 import { recorded, wasSettled } from "./runs/recording.js"
-import { type GlobalFlags, type ResolveOptions, type Settings, settingsFor } from "./settings.js"
+import { type GlobalFlags, parseDuration, type ResolveOptions, type Settings, settingsFor } from "./settings.js"
 
 export interface ProgramDefinition {
   app: AppIdentity
@@ -70,6 +74,11 @@ export const createProgram = (
     .option("--trace", "the connection's own log lines on stderr — never message content")
     .option("--timeout <duration>", "give up on the whole command after this — 30s, 2m, 500ms")
     .option("--offline", "answer from what was recorded and never connect; fails if nothing was")
+    .option("--no-input", "never prompt or open interactive login; piped input remains available")
+    .option("--max-input-bytes <bytes>", "maximum buffered input bytes (default: 16777216)")
+    .option("--max-output-bytes <bytes>", "maximum machine output bytes (default: 4194304; 0 disables)")
+    .option("--fields <paths>", "comma-separated item or object fields: id,text; preserve pagination and operation ids")
+    .option("--dry-run", "preview parsed arguments and permissions before running the action")
     .option("--yes", "go ahead without the question an ask level puts before a write")
     .option("--record", "keep this run — ids and timings, never message content")
     .option("--no-record", "do not keep it, whatever the configuration says")
@@ -106,14 +115,120 @@ export const run = async (argv: string[], definition: ProgramDefinition, options
     .slice(0, delimiter < 0 ? undefined : delimiter)
     .some((word) => word === "--json" || word === "--jsonl")
   const reporting = machine ? { ...options, tty: false } : options
+  const control = execution(streams, { maxOutputBytes: 0 })
+  let restoreInput: (() => void) | undefined
+  let signalExit: number | undefined
+  const interrupted = (signal: "SIGINT" | "SIGTERM") => {
+    signalExit = signal === "SIGINT" ? 130 : 143
+    control.abort(new CliError("cancelled", `command interrupted by ${signal}`, { reason: signal, retryable: false }))
+  }
+  const sigint = () => interrupted("SIGINT")
+  const sigterm = () => interrupted("SIGTERM")
+  const pipeError = (error: NodeJS.ErrnoException) => {
+    if (error.code === "EPIPE") {
+      signalExit = 0
+      control.abort(error)
+    }
+  }
+  const externalAbort = () => control.abort(new CliError("cancelled", "command cancelled", { retryable: false }))
   const { command } = definition.app
   const program = createProgram(definition, {
-    out: (text) => streams.data(text.replace(/\n$/, "")),
+    out: (text) => control.streams.data(text.replace(/\n$/, "")),
     err: () => {},
   })
-  const environment = { ...options, streams, app: definition.app }
+  const environment: RunOptions = {
+    ...options,
+    streams: control.streams,
+    signal: options.signal ? AbortSignal.any([control.signal, options.signal]) : control.signal,
+    commandSignal: control.signal,
+    trackCloseable: control.trackCloseable,
+    app: definition.app,
+  }
   provide(program, environment)
-  program.hook("preAction", async () => definition.prepare?.(program, environment))
+  program.hook("preAction", async (_root, action) => {
+    const flags = action.optsWithGlobals<
+      GlobalFlags & {
+        input?: boolean
+        maxInputBytes?: string
+        maxOutputBytes?: string
+        fields?: string
+        dryRun?: boolean
+      }
+    >()
+    const commandEnv = options.env ?? process.env
+    const headless =
+      machine || flags.input === false || Boolean(commandEnv.CI) || (options.tty ?? process.stdout.isTTY) !== true
+    if (flags.fields !== undefined && !machine && (options.tty ?? process.stdout.isTTY) === true)
+      throw new CliError("validation_error", "--fields requires machine output — add --json or --jsonl")
+    control.configure({
+      ...(flags.fields === undefined ? {} : { fields: flags.fields }),
+      maxOutputBytes:
+        flags.maxOutputBytes === undefined
+          ? machine || (options.tty ?? process.stdout.isTTY) !== true
+            ? DEFAULT_OUTPUT_BYTES
+            : 0
+          : byteCount(flags.maxOutputBytes, "--max-output-bytes", true),
+    })
+    restoreInput = provideInputPolicy(options.stdin ?? process.stdin, {
+      noInput: headless,
+      maxBytes:
+        flags.maxInputBytes === undefined ? MAX_BUFFERED_INPUT : byteCount(flags.maxInputBytes, "--max-input-bytes"),
+      signal: control.signal,
+    })
+    if (flags.input === false || (headless && !options.answer)) environment.answer = () => null
+    const localPreview = action.options.some((option) => option.long === "--dry-run")
+    if (flags.dryRun && localPreview) action.setOptionValue("dryRun", true)
+    const path = commandPathOf(action)
+    if (
+      headless &&
+      (path[0] === "setup" ||
+        (path[0] === "session" &&
+          path[1] === "start" &&
+          action.processedArgs.some((arg) => ["qr", "qr-chrome", "sms"].includes(String(arg)))))
+    )
+      throw new CliError(
+        "validation_error",
+        "interactive setup/login is disabled — use explicit configuration and piped credentials",
+        { reason: "input_required", retryable: false },
+      )
+    const persistent =
+      ["watch", "serve", "mcp"].includes(path[0] ?? "") ||
+      path.includes("mcp") ||
+      (path[0] === "bot" && path[1] === "watch")
+    const interactiveLogin = !headless && (path[0] === "setup" || (path[0] === "session" && path[1] === "start"))
+    const timeout = flags.timeout ?? (commandEnv[envName(definition.app, "TIMEOUT")]?.trim() || undefined)
+    control.start(
+      timeout === undefined
+        ? persistent || interactiveLogin
+          ? undefined
+          : DEFAULT_COMMAND_MS
+        : persistent
+          ? undefined
+          : parseDuration(timeout, flags.timeout === undefined ? envName(definition.app, "TIMEOUT") : "--timeout"),
+    )
+    process.on("SIGINT", sigint).on("SIGTERM", sigterm)
+    if (!options.streams) {
+      process.stdout.on("error", pipeError)
+      process.stderr.on("error", pipeError)
+    }
+    const cooperative = persistent || (path[0] === "store" && path[1] === "fetch")
+    if (!cooperative) options.signal?.addEventListener("abort", externalAbort, { once: true })
+    if (!cooperative && options.signal?.aborted) {
+      externalAbort()
+      throw control.failure()
+    }
+    if (flags.dryRun && !localPreview) {
+      const resolved = (definition.configuration ?? settingsFor(definition.app)).resolveSettings(flags, {
+        kind: path[0] === "bot" ? "bot" : "personal",
+        env: options.env ?? process.env,
+      })
+      const permissions = "permissions" in resolved ? (resolved.permissions as Settings["permissions"]) : {}
+      outputFor(action).renderer.result(preview(action, permissions))
+      throw new PreviewComplete()
+    }
+    await definition.prepare?.(program, environment)
+    if (control.signal.aborted) throw control.failure()
+  })
   // Depth-first: a subcommand left with the default behaviour kills the process from inside a test.
   forEachCommand(program, (child) => child.exitOverride())
 
@@ -135,12 +250,16 @@ export const run = async (argv: string[], definition: ProgramDefinition, options
   }
 
   try {
-    await program.parseAsync(rest, { from: "user" })
+    await control.race(() => program.parseAsync(rest, { from: "user" }))
     const code = process.exitCode === undefined ? 0 : Number(process.exitCode)
-    const hint = code === 0 && !rest.includes("--quiet") ? hintFor(definition, rest, options) : undefined
+    const hint =
+      code === 0 && rest[0] !== "commands" && !rest.includes("--quiet") ? hintFor(definition, rest, options) : undefined
     if (hint) streams.diagnostic(hint)
     return code
-  } catch (error) {
+  } catch (caught) {
+    const error = control.failure() ?? caught
+    if (error instanceof PreviewComplete) return 0
+    if (signalExit === 0) return 0
     if (isCommanderFailure(error)) {
       if (error.exitCode === 0) return 0
       let message = error.message.replace(/^error: /, "")
@@ -162,14 +281,23 @@ export const run = async (argv: string[], definition: ProgramDefinition, options
     const settled = await settleFailure(error, { definition, program, rest, profile, options })
     if (isCliFailure(error)) {
       report(streams, reporting, { code: error.code, message: error.message, ...error.details, ...settled })
-      return exitCodeFor(error.code)
+      return signalExit ?? exitCodeFor(error.code)
     }
     report(streams, reporting, {
       code: "generic_failure",
       message: error instanceof Error ? error.message : String(error),
       ...settled,
     })
-    return GENERIC_FAILURE
+    return signalExit ?? GENERIC_FAILURE
+  } finally {
+    restoreInput?.()
+    options.signal?.removeEventListener("abort", externalAbort)
+    process.off("SIGINT", sigint).off("SIGTERM", sigterm)
+    if (!options.streams) {
+      process.stdout.off("error", pipeError)
+      process.stderr.off("error", pipeError)
+    }
+    await control.finish()
   }
 }
 
@@ -195,14 +323,29 @@ interface Failed {
 }
 
 const settleFailure = async (failure: unknown, state: Failed): Promise<{ settlementFailed?: true }> => {
+  let timer: NodeJS.Timeout | undefined
   let settlementFailed: true | undefined
   try {
-    await state.definition.onFailure?.(failure, state.program)
+    const settle = (async () => {
+      try {
+        await state.definition.onFailure?.(failure, state.program)
+      } catch {
+        settlementFailed = true
+      }
+      await keepFailure(failure, state)
+    })()
+    await Promise.race([
+      settle,
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new Error("failure settlement deadline")), 1000)
+      }),
+    ])
+    return settlementFailed ? { settlementFailed } : {}
   } catch {
-    settlementFailed = true
+    return { settlementFailed: true }
+  } finally {
+    if (timer) clearTimeout(timer)
   }
-  await keepFailure(failure, state)
-  return settlementFailed ? { settlementFailed } : {}
 }
 
 /**
@@ -272,5 +415,7 @@ interface ReportedError {
  */
 const report = (streams: Streams, options: BaseEnvironment, error: ReportedError): void => {
   const interactive = options.tty ?? process.stdout.isTTY === true
-  streams.diagnostic(interactive ? `✗ ${visibleControls(error.message)}` : JSON.stringify({ error }))
+  streams.diagnostic(
+    interactive ? `✗ ${visibleControls(error.message)}` : JSON.stringify({ error: { retryable: false, ...error } }),
+  )
 }

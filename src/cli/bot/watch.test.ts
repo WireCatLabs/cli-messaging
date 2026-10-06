@@ -92,7 +92,11 @@ const botWith = (more: Partial<BotMessenger> = {}): BotMessenger => ({
 
 const call = async (argv: string[], bot = botWith(), tty = false) => {
   const streams = captureStreams()
-  const code = await run(argv, { app, commands: () => [botCommand(bot)] }, { streams, tty, env, signal: stop.signal })
+  const code = await run(
+    argv,
+    { app, commands: () => [botCommand(bot)] },
+    { streams, tty, env, ...(argv.includes("watch") ? { signal: stop.signal } : {}) },
+  )
   return { code, stdout: streams.stdout, stderr: streams.stderr.join("\n") }
 }
 

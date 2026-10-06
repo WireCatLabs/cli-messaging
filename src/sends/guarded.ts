@@ -30,6 +30,25 @@ export interface WriteInFlight {
  * cuts each into an unknown outcome. Per deadline, not per process: an MCP server runs many.
  */
 export const writesInFlight = new AsyncLocalStorage<Set<WriteInFlight>>()
+const parents = new WeakMap<Set<WriteInFlight>, Set<WriteInFlight>>()
+const stopped = new WeakMap<Set<WriteInFlight>, unknown>()
+const scopesFor = (scope = writesInFlight.getStore()): Set<WriteInFlight>[] => {
+  const result: Set<WriteInFlight>[] = []
+  for (let at = scope; at; at = parents.get(at)) result.push(at)
+  return result
+}
+export const withWriteScope = <T>(scope: Set<WriteInFlight>, body: () => T): T => {
+  const parent = writesInFlight.getStore()
+  if (parent && parent !== scope) parents.set(scope, parent)
+  return writesInFlight.run(scope, body)
+}
+export const stopWrites = (scope: Set<WriteInFlight>, reason: unknown): void => {
+  stopped.set(scope, reason)
+  for (const write of scope) write.cut()
+}
+const refuseStopped = (scopes: readonly Set<WriteInFlight>[]) => {
+  for (const scope of scopes) if (stopped.has(scope)) throw stopped.get(scope)
+}
 
 /** The write in progress, so the run events of the calls it makes name it without the port passing it along. */
 export const currentOperation = (): string | undefined => current.getStore()
@@ -46,8 +65,11 @@ export const guardedWrite = async <T>(
   settled: (done: T) => Partial<Attempt> = () => ({}),
   prepare?: () => Promise<void>,
 ): Promise<T> => {
+  const scopes = scopesFor()
+  refuseStopped(scopes)
   try {
     await guard.ask?.(attempt)
+    refuseStopped(scopes)
     guard.check(attempt)
   } catch (error) {
     guard.record({ ...attempt, outcome: "refused", errorCode: codeOf(error) })
@@ -72,8 +94,7 @@ export const guardedWrite = async <T>(
       })
     },
   }
-  const scope = writesInFlight.getStore()
-  scope?.add(flight)
+  for (const scope of scopes) scope.add(flight)
   try {
     if (prepare !== undefined) await prepare()
     if (cancelled) throw new CliError("timeout", "the command ended before sending; nothing was sent")
@@ -90,9 +111,15 @@ export const guardedWrite = async <T>(
   } catch (error) {
     const code = codeOf(error)
     once({ ...attempt, outcome: code === "outcome_unknown" ? "outcome_unknown" : "failed", errorCode: code })
+    if (code === "outcome_unknown" && error instanceof Error)
+      throw new CliError("outcome_unknown", error.message, {
+        ...(error as CliError).details,
+        operationId: attempt.operationId,
+        retryable: false,
+      })
     throw error
   } finally {
-    scope?.delete(flight)
+    for (const scope of scopes) scope.delete(flight)
   }
 }
 

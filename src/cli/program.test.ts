@@ -268,7 +268,9 @@ describe.each(["max", "tg"])("shared shell contract for %s", (name) => {
     streams.stdout.length = 0
     expect(await run(["messages", "list", "--offline", "--no-record"], provider, options)).toBe(6)
     expect(streams.stdout).toEqual([])
-    expect(JSON.parse(streams.stderr[0] ?? "")).toEqual({ error: { code: "not_found", message: "nothing recorded" } })
+    expect(JSON.parse(streams.stderr[0] ?? "")).toEqual({
+      error: { code: "not_found", message: "nothing recorded", retryable: false },
+    })
   })
 })
 
@@ -418,4 +420,26 @@ describe("machine failures", () => {
     expect(JSON.parse(streams.stderr[0] ?? "").error.code).toBe("permission_error")
     expect(action).not.toHaveBeenCalled()
   })
+})
+
+it("bounds an unresponsive failure handler while preserving the original error", async () => {
+  vi.useFakeTimers()
+  const streams = captureStreams()
+  try {
+    const pending = run(
+      ["chats", "list", "--json", "--no-record"],
+      {
+        ...definition(async () => {
+          throw new CliError("not_found", "synthetic failure")
+        }),
+        onFailure: async () => new Promise(() => {}),
+      },
+      { streams, tty: false, env: process.env },
+    )
+    await vi.advanceTimersByTimeAsync(1000)
+    expect(await pending).toBe(6)
+    expect(JSON.parse(streams.stderr[0] ?? "{}").error).toMatchObject({ code: "not_found", settlementFailed: true })
+  } finally {
+    vi.useRealTimers()
+  }
 })

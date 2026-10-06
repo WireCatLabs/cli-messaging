@@ -225,3 +225,24 @@ describe("permission configuration migration", () => {
     },
   )
 })
+
+it("moves descendant statistics permissions and bot-prefixed keys without broadening their scope", () => {
+  const before: Config = {
+    profiles: {},
+    defaults: {
+      permissions: {
+        "messages.stats.sync-first": "deny",
+        "bot.chats.stats": "readonly",
+        messages: "readonly",
+      },
+    },
+  }
+  const after = migratePermissionConfig(before)
+  expect(after.config.defaults?.permissions).toEqual({
+    "stats.messages.show.sync-first": "deny",
+    "bot.stats.chats.show": "readonly",
+    messages: "readonly",
+  })
+  expect(before.defaults?.permissions).toHaveProperty("messages.stats.sync-first", "deny")
+  expect(migratePermissionConfig(after.config).changed).toBe(false)
+})
