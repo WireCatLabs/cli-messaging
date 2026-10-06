@@ -90,7 +90,7 @@ export const tasksTools = (messenger: Messenger): Record<string, AnyTool> => {
       },
     }),
 
-    tasks_stats: tool({
+    stats_tasks_show: tool({
       title: "Task statistics",
       description:
         "Per chat: how many tasks are open, when the oldest open one was opened, and the median time to close. " +

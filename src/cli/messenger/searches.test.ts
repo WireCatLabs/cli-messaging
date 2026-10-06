@@ -12,6 +12,7 @@ import { storeCommand } from "./archive-commands.js"
 import type { Messenger } from "./context.js"
 import { messagesCommand } from "./messages-command.js"
 import { searchesCommand } from "./searches-command.js"
+import { statsCommand } from "./stats-command.js"
 
 const app = { command: "chat", appName: "chat-cli", envPrefix: "CHAT", description: "", version: "1.0.0" }
 const messenger: Messenger = {
@@ -48,7 +49,15 @@ const setup = async (config?: object) => {
       const streams = captureStreams()
       const code = await run(
         argv,
-        { app, commands: () => [searchesCommand(messenger), messagesCommand(messenger), storeCommand(messenger)] },
+        {
+          app,
+          commands: () => [
+            statsCommand(messenger),
+            searchesCommand(messenger),
+            messagesCommand(messenger),
+            storeCommand(messenger),
+          ],
+        },
         { streams, tty, env },
       )
       return { code, stdout: streams.stdout, stderr: streams.stderr.join("\n") }
@@ -75,7 +84,7 @@ describe("searches", () => {
     expect(
       ids(json(await call("messages", "search", "--saved", "invoices", "alpha", "--limit", "5", "--json"))),
     ).toEqual(["101", "106"])
-    const stats = json(await call("messages", "stats", "--saved", "invoices", "--by", "sender", "--json"))
+    const stats = json(await call("stats", "messages", "show", "--saved", "invoices", "--by", "sender", "--json"))
     expect(stats.total).toBe(3)
 
     const history = json(await call("searches", "history", "--json"))
@@ -123,7 +132,7 @@ describe("searches", () => {
       "cannot name a saved search",
     )
     await call("searches", "create", "pattern", "inv.ice", "--regex", "--json")
-    expect((await call("messages", "stats", "--saved", "pattern", "--json")).stderr).toContain("legacy")
+    expect((await call("stats", "messages", "show", "--saved", "pattern", "--json")).stderr).toContain("legacy")
     expect((await call("messages", "search", "--saved", "pattern", "--regex", "--json")).code).toBe(2)
     expect(ids(json(await call("messages", "search", "--saved", "pattern", "--json")))).toEqual(["101", "102", "106"])
     expect((await call("searches", "create", "pattern", "x", "--json")).stderr).toContain("--replace")

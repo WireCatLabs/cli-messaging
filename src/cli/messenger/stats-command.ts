@@ -9,10 +9,33 @@ import { chartRenderer } from "../../charts/render.js"
 import { timezoneOf } from "../../search/lucene/dates.js"
 import { EVENTS_DAYS } from "../../services/chats.js"
 import { momentOf } from "../../services/moment.js"
+import { statsCommand as chatStatsCommand } from "./chats-stats-command.js"
 import { type Messenger, messengerContext } from "./context.js"
+import { messagesStatsCommand } from "./messages-stats-command.js"
+import { tasksStatsCommand } from "./tasks-command.js"
 
 export const statsCommand = (messenger: Messenger, loadRenderer = chartRenderer): Command => {
-  const stats = new Command("stats").description("charts from the account's statistics")
+  const stats = new Command("stats").description("statistics about messages, chats and their authors")
+  stats.action(function (this: Command) {
+    this.outputHelp()
+  })
+  stats.addCommand(
+    new Command("messages")
+      .description("message statistics from the local store")
+      .action(function (this: Command) {
+        this.outputHelp()
+      })
+      .addCommand(messagesStatsCommand(messenger)),
+  )
+  stats.addCommand(
+    new Command("chats")
+      .description("statistics about one chat")
+      .action(function (this: Command) {
+        this.outputHelp()
+      })
+      .addCommand(chatStatsCommand(messenger)),
+  )
+  stats.addCommand(new Command("tasks").description("task statistics").addCommand(tasksStatsCommand(messenger)))
   stats
     .command("charts")
     .description("a chart's data from a chat's statistics, and optionally a dark SVG or PNG image")

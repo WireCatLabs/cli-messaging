@@ -8,7 +8,7 @@ import { type Messenger, messengerContext } from "./context.js"
 const PERIODS: StatsPeriod[] = ["day", "week"]
 
 export const statsCommand = (messenger: Messenger): Command =>
-  new Command("stats")
+  new Command("show")
     .description(
       "a group's or channel's numbers for a period: messages, active members, replies, reactions, questions answered, " +
         "joins and leaves — counted from the local store; joins and leaves are asked of the messenger",

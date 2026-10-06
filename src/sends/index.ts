@@ -27,6 +27,7 @@ export {
   sendsPathFor,
 } from "./journal.js"
 export {
+  assertStatsPermissionsCurrent,
   DEFAULT_PERMISSIONS,
   fromOldSettings,
   keyForCommand,
@@ -40,6 +41,7 @@ export {
   type PermissionKey,
   permissionFor,
   permissionOverrides,
+  readKeysForCommand,
   WRITE_KEYS,
 } from "./permissions.js"
 export { type Recipient, RecipientList, recipientsPathFor } from "./recipients.js"

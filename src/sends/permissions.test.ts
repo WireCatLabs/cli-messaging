@@ -1,7 +1,24 @@
 import { describe, expect, it } from "vitest"
-import { fromOldSettings, keyForCommand, layerPermissions, levelFor, permissionOverrides } from "./permissions.js"
+import {
+  assertStatsPermissionsCurrent,
+  fromOldSettings,
+  keyForCommand,
+  layerPermissions,
+  levelFor,
+  permissionOverrides,
+  readKeysForCommand,
+} from "./permissions.js"
 
 describe("the level of a command path", () => {
+  it("checks the canonical statistics path and underlying data resources", () => {
+    expect(keyForCommand(["stats", "messages", "show"])).toBe("stats.messages.show")
+    expect(readKeysForCommand(["stats", "messages", "show"])).toEqual(["stats.messages.show", "messages"])
+    expect(readKeysForCommand(["stats", "chats", "show"])).toEqual(["stats.chats.show", "messages", "chats"])
+    expect(readKeysForCommand(["bot", "stats", "messages", "show"])).toEqual([
+      "bot.stats.messages.show",
+      "bot.messages",
+    ])
+  })
   it("**takes the most specific key the owner set**, and allows a path nothing names", () => {
     const levels = { messages: "readonly", "messages.send": "allow" } as const
 
@@ -90,4 +107,14 @@ describe("startup permission overrides", () => {
   it("takes the last override for a repeated key", () => {
     expect(permissionOverrides(["messages.send=deny", "messages.send=allow"])).toEqual({ "messages.send": "allow" })
   })
+})
+
+it("refuses old statistics permission keys until they are explicitly migrated", () => {
+  expect(() => assertStatsPermissionsCurrent(["stats", "messages", "show"], { "messages.stats": "deny" })).toThrow(
+    "config migrate",
+  )
+  expect(() => assertStatsPermissionsCurrent(["stats", "tasks", "show"], { "tasks.stats": "readonly" })).toThrow(
+    "config migrate",
+  )
+  expect(() => assertStatsPermissionsCurrent(["messages", "list"], { "messages.stats": "deny" })).not.toThrow()
 })

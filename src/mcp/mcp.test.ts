@@ -481,7 +481,7 @@ describe("the MCP server", () => {
     expect(search.isError).toBe(false)
     expect(search.body).toMatchObject({ refreshed: { chats: ["7"], messages: 1, complete: true } })
     expect(search.body.items.map((hit: { id: string }) => hit.id).sort()).toEqual(["1", "2"])
-    const stats = await call("chat_messages_stats", { text: "chapter", chat: "7", sync_first: true })
+    const stats = await call("chat_stats_messages_show", { text: "chapter", chat: "7", sync_first: true })
     expect(stats.body.total).toBe(2)
     expect(stats.body.refreshed.complete).toBe(true)
     const saved = await call("chat_messages_search", { saved: "chapter-query", sync_first: true })
@@ -519,7 +519,7 @@ describe("the MCP server", () => {
       const backend = scripted()
       const { client, call } = await connect(backend, { root, config: levels({ "messages.sync-first": level }) })
       const { tools } = await client.listTools()
-      for (const name of ["chat_messages_search", "chat_messages_stats", "chat_conversations_search"]) {
+      for (const name of ["chat_messages_search", "chat_stats_messages_show", "chat_conversations_search"]) {
         const schema = tools.find((tool) => tool.name === name)?.inputSchema.properties
         expect(tools.find((tool) => tool.name === name)?.annotations?.openWorldHint).toBe(false)
         expect(schema).not.toHaveProperty("sync_first")
@@ -566,7 +566,6 @@ describe("the MCP server", () => {
       "chat_chats_members_history",
       "chat_chats_rules_show",
       "chat_chats_show",
-      "chat_chats_stats",
       "chat_chats_tracking_list",
       "chat_chats_tracking_show",
       "chat_contacts_check",
@@ -590,17 +589,18 @@ describe("the MCP server", () => {
       "chat_messages_photo",
       "chat_messages_scheduled",
       "chat_messages_search",
-      "chat_messages_stats",
       "chat_messages_transcribe",
       "chat_polls_show",
       "chat_review",
       "chat_searches_history",
       "chat_searches_list",
       "chat_stats_charts",
+      "chat_stats_chats_show",
+      "chat_stats_messages_show",
+      "chat_stats_tasks_show",
       "chat_status",
       "chat_tags_list",
       "chat_tasks_list",
-      "chat_tasks_stats",
       "chat_topics_list",
     ])
     expect(tools.every((one) => one.annotations?.readOnlyHint === true)).toBe(true)
@@ -1251,13 +1251,13 @@ describe("the MCP server", () => {
     })
     const closed = await call("chat_tasks_close", { task: added.body.id, as: "dismissed", reason: "no-reply-needed" })
     expect(closed.body).toMatchObject({ state: "dismissed", reason: "no-reply-needed", closedBy: "agent" })
-    expect((await call("chat_tasks_stats")).body).toMatchObject({ items: [{ group: "7", open: 0 }] })
+    expect((await call("chat_stats_tasks_show")).body).toMatchObject({ items: [{ group: "7", open: 0 }] })
     const foreign = await call("chat_tasks_add", { message: "msg:chat/999/7/101", type: "promise" })
     expect([foreign.isError, foreign.body.error.code]).toEqual([true, "validation_error"])
 
     const readOnly = await connect(scripted(), { config: levels({ tasks: "readonly" }) })
     const names = (await readOnly.client.listTools()).tools.map(({ name }) => name)
-    expect(names).toEqual(expect.arrayContaining(["chat_tasks_list", "chat_tasks_stats"]))
+    expect(names).toEqual(expect.arrayContaining(["chat_tasks_list", "chat_stats_tasks_show"]))
     expect(names).not.toContain("chat_tasks_add")
     expect(names).not.toContain("chat_tasks_close")
   })
@@ -1362,7 +1362,7 @@ describe("the MCP server", () => {
     await seedSearchRecipes(store, { provider: "chat", account: "500" })
     await store.close()
     const found = await call("chat_messages_search", { text: "invoice" })
-    const counted = await call("chat_messages_stats", { text: "invoice" })
+    const counted = await call("chat_stats_messages_show", { text: "invoice" })
     expect(found.isError).toBe(false)
     expect(counted.body).toMatchObject({ total: 3 })
     expect((await call("chat_searches_history")).body.items).toHaveLength(record ? 2 : 0)
@@ -1384,7 +1384,10 @@ describe("the MCP server", () => {
     })
     const found = await call("chat_messages_search", { saved: "invoices", text: "alpha", limit: 5 })
     expect(found.body.items.map(({ id }: { id: string }) => id).sort()).toEqual(["101", "106"])
-    expect((await call("chat_messages_stats", { saved: "invoices" })).body).toMatchObject({ by: "sender", total: 3 })
+    expect((await call("chat_stats_messages_show", { saved: "invoices" })).body).toMatchObject({
+      by: "sender",
+      total: 3,
+    })
     const ast = await call("chat_messages_search", { saved: "invoices", ast: parseLucene("alpha") })
     expect([ast.isError, ast.body.error.code]).toEqual([true, "validation_error"])
     expect((await call("chat_searches_list")).body).toMatchObject({ items: [{ name: "invoices", runs: 2 }] })

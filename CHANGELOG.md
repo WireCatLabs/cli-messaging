@@ -14,6 +14,12 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Changed — may break callers
 
+- Statistics reports now use `stats messages show`, `stats chats show` and `stats tasks show`;
+  the former resource-local `stats` leaves are removed without aliases. MCP names move with them.
+  `stats charts` remains available. Report shapes and saved searches retain their semantics.
+  Statistics check both their canonical permission and access to underlying data. Old statistics
+  permission keys require `config migrate`; conflicting old/new levels are refused before writing.
+
 - Invalid command paths, options, missing values and invalid choices now return exit 2 with a
   `validation_error`, instead of Commander's exit 1 and prose. JSON and JSONL failures remain one
   JSON object on stderr even when a terminal is attached. Help and version requests still succeed

@@ -14,6 +14,29 @@ const app = { command: "chat", appName: "chat-cli", envPrefix: "CHAT", descripti
 const configuration = settingsFor(app, {
   profile: { mcpTools: v.optional(v.array(v.string())), region: v.optional(v.string()) },
 })
+
+describe("statistics permission relocation", () => {
+  it("moves scoped permissions without changing their levels or the input", () => {
+    const input: Config = {
+      profiles: { work: { permissions: { "messages.stats": "deny", "chats.stats": "readonly" } } },
+    }
+    const result = migratePermissionConfig(input)
+    expect(result.changed).toBe(true)
+    expect(result.config.profiles.work?.permissions).toEqual({
+      "stats.messages.show": "deny",
+      "stats.chats.show": "readonly",
+    })
+    expect(input.profiles.work?.permissions).toHaveProperty("messages.stats", "deny")
+    expect(migratePermissionConfig(result.config).changed).toBe(false)
+  })
+
+  it("refuses a conflict instead of replacing a stronger restriction", () => {
+    const input: Config = {
+      profiles: { work: { permissions: { "messages.stats": "deny", "stats.messages.show": "allow" } } },
+    }
+    expect(() => migratePermissionConfig(input)).toThrow("conflicting")
+  })
+})
 const fresh = () => {
   const configDirectory = join(mkdtempSync(join(tmpdir(), "permission-migrate-")), "config")
   return { path: configFilePath(configDirectory), env: { CHAT_CONFIG_DIR: configDirectory } }

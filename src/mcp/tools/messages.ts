@@ -194,7 +194,7 @@ export const messagesTools = (messenger: Messenger): Record<string, AnyTool> => 
       },
     }),
 
-    messages_stats: tool({
+    stats_messages_show: tool({
       title: "Count messages",
       description: MESSAGES_STATS_DESCRIPTION,
       input: messagesStatsInput(messenger),

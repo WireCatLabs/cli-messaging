@@ -57,7 +57,7 @@ const effective = (config: Config, kind: ProfileKind, profile?: string): Levels 
 }
 
 /** Input is a schema-validated configuration; legacy fields are checked before any transformation. */
-export const migratePermissionConfig = (input: Config): PermissionMigration => {
+const migrateLegacyPermissionConfig = (input: Config): PermissionMigration => {
   const before = scopes(input)
   for (const [name, scope] of before) {
     if (scope.readOnly !== undefined && typeof scope.readOnly !== "boolean")
@@ -137,6 +137,36 @@ export const migratePermissionConfig = (input: Config): PermissionMigration => {
   return { config: next, changed: true, changes }
 }
 const invalid = (message: string) => new CliError("configuration_error", message)
+
+export const migratePermissionConfig = (input: Config): PermissionMigration => {
+  const renamed = structuredClone(input)
+  const changes: PermissionMigration["changes"] = []
+  const replacements = {
+    "messages.stats": "stats.messages.show",
+    "chats.stats": "stats.chats.show",
+    "tasks.stats": "stats.tasks.show",
+  }
+  for (const [name, scope] of scopes(renamed)) {
+    if (!scope.permissions || typeof scope.permissions !== "object" || Array.isArray(scope.permissions)) continue
+    const permissions = scope.permissions as Levels
+    let changed = false
+    for (const [old, next] of Object.entries(replacements)) {
+      if (!Object.hasOwn(permissions, old)) continue
+      if (Object.hasOwn(permissions, next) && permissions[next] !== permissions[old])
+        throw invalid(`${name}.permissions has conflicting ${old} and ${next} — keep one level before migrating`)
+      permissions[next] = permissions[old] as Level
+      delete permissions[old]
+      changed = true
+    }
+    if (changed) changes.push({ scope: name, removed: [], permissions: { ...permissions } })
+  }
+  const legacy = migrateLegacyPermissionConfig(renamed)
+  return {
+    config: legacy.config,
+    changed: changes.length > 0 || legacy.changed,
+    changes: [...changes, ...legacy.changes],
+  }
+}
 
 export const hasPermissionConfig = (input: Config): boolean =>
   [...scopes(input).values()].some((scope) => Object.hasOwn(scope, "permissions"))

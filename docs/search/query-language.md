@@ -360,22 +360,22 @@ Quoted timestamp должен содержать секунды и offset: `"202
 `date:7d` — относительная дата этого профиля (см. «Поля»), а не Lucene date math; legacy `after:7d`
 остаётся в legacy mode.
 
-## Подсчёт: messages stats
+## Подсчёт: stats messages show
 
-`messages stats` считает то же, что нашёл бы `messages search` с тем же запросом, каждое сообщение один
+`stats messages show` считает то же, что нашёл бы `messages search` с тем же запросом, каждое сообщение один
 раз: `--by chat` (по умолчанию) и `--by sender` — больше всего сверху, `--by day` и `--by hour` —
 календарные дни и часы в `--timezone`, по порядку. Без запроса считаются все сохранённые сообщения.
 
 ```sh
-tg messages stats invoice --by chat
-tg messages stats 'from:me date>=30d' --by day --timezone Europe/Madrid
+tg stats messages show invoice --by chat
+tg stats messages show 'from:me date>=30d' --by day --timezone Europe/Madrid
 ```
 
 Если чаты сохранены не целиком, числа — нижняя граница; stderr говорит, сколько таких чатов.
 
 ## Сохранённые поиски и история
 
-Каждый успешный запуск `messages search` и `messages stats` (команда или MCP) записывается в локальное
+Каждый успешный запуск `messages search` и `stats messages show` (команда или MCP) записывается в локальное
 хранилище: запрос и параметры, как их дали, — никогда не сообщения и не результаты. Тот же запуск ещё раз
 увеличивает счётчик своей строки. Хранятся 1000 последних запусков; отказанный запрос и запуск с
 `--no-record` не записываются.
@@ -383,7 +383,7 @@ tg messages stats 'from:me date>=30d' --by day --timezone Europe/Madrid
 ```sh
 tg searches create invoices 'invoice from:"Alice Synthetic"' --limit 20 --newest
 tg messages search --saved invoices 'date>=7d'
-tg messages stats --saved invoices --by day
+tg stats messages show --saved invoices --by day
 tg searches history --limit 10
 tg messages search --saved 42
 ```
