@@ -267,7 +267,11 @@
       "meaning": "the text is HTML: <b>, <i>, <a href>, <code>"
     },
     "--http": {
-      "meaning": "serve MCP over HTTP on 127.0.0.1 behind the owner's tunnel, with a one-owner login; every write asks first"
+      "meaning": "serve MCP over HTTP on 127.0.0.1 behind the owner's tunnel, with a one-owner login; every write asks first by default"
+    },
+    "--http-confirmation": {
+      "value": "<mode>",
+      "meaning": "required (default): every write needs a server form; permissions: follow the effective profile levels"
     },
     "--idle": {
       "value": "<duration>",
@@ -503,6 +507,10 @@
     "--per-person": {
       "meaning": "at most this many per person, such as 1/1d",
       "value": "<limit>"
+    },
+    "--permission": {
+      "value": "<key=level>",
+      "meaning": "override a permission for this MCP server only; repeat for more keys"
     },
     "--personal": {
       "meaning": "the personal account's section of the profile's settings"
@@ -1938,6 +1946,8 @@
         "--allow-send": "all",
         "--confirm-send": "all",
         "--http": "all",
+        "--http-confirmation": "all",
+        "--permission": "all",
         "--port": "all",
         "--public-url": "all",
         "--revoke": "all",
@@ -1971,6 +1981,7 @@
         },
         "--allow-send": "all",
         "--confirm-send": "all",
+        "--permission": "all",
         "--yes": {
           "in": [],
           "planned": {
@@ -2028,7 +2039,8 @@
             "max": "local MCP setup",
             "tg": "local MCP setup"
           }
-        }
+        },
+        "--permission": "all"
       }
     },
     "mcp setup": {
@@ -2086,7 +2098,8 @@
             "max": "local MCP setup",
             "tg": "local MCP setup"
           }
-        }
+        },
+        "--permission": "all"
       }
     },
     "messages": {

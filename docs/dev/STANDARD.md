@@ -319,7 +319,8 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--from` | `<who\|link>` | sender to match in bot messages search; starting message link in tg bot store fetch |  | `bot messages search`, `bot store fetch` (tg-only) |
 | `--history` |  | the people added also see the messages from before they came |  | `chats members add` (max-only) |
 | `--html` |  | the text is HTML: <b>, <i>, <a href>, <code> |  | `bot messages edit`, `bot messages send` |
-| `--http` |  | serve MCP over HTTP on 127.0.0.1 behind the owner's tunnel, with a one-owner login; every write asks first |  | `mcp` |
+| `--http` |  | serve MCP over HTTP on 127.0.0.1 behind the owner's tunnel, with a one-owner login; every write asks first by default |  | `mcp` |
+| `--http-confirmation` | `<mode>` | required (default): every write needs a server form; permissions: follow the effective profile levels |  | `mcp` |
 | `--idle` | `<duration>` | stop after this long with nobody using it — 15m, 1h |  | `serve` (max-only), `server restart` (max-only), `server start` (max-only) |
 | `--json` |  | machine-readable output: one JSON value on stdout, nothing else |  | every command |
 | `--jsonl` |  | machine-readable output: one JSON object per line, for streaming and jq |  | every command |
@@ -381,6 +382,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--people` | `<ids>` | only these sender ids, comma-separated; empty for any |  | `replies edit` (planned) |
 | `--per-chat` | `<limit>` | at most this many per chat, such as 1/12h |  | `replies edit` (planned) |
 | `--per-person` | `<limit>` | at most this many per person, such as 1/1d |  | `replies edit` (planned) |
+| `--permission` | `<key=level>` | override a permission for this MCP server only; repeat for more keys |  | `mcp`, `mcp config`, `mcp doctor`, `mcp setup` |
 | `--personal` |  | the personal account's section of the profile's settings |  | `config set` (planned), `config unset` (planned) |
 | `--photo` | `<file>` | an image file — a profile photo in `account update`, a photo to send in `messages send` |  | `account update`, `bot messages send`, `messages send` |
 | `--port` | `<port>` | the local port for --http |  | `mcp` |

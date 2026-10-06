@@ -31,6 +31,7 @@ import { servicesFor } from "../services/index.js"
 import { openStore } from "../store/store.js"
 import { freePort, mcpHttpClient as httpClient } from "../testing/mcp-http-client.js"
 import { searchRecipes, seedSearchRecipes } from "../testing/search-recipes.js"
+import { type HttpConfirmation, httpServerOptions } from "./http/policy.js"
 import { serveOverHttp } from "./http/serve.js"
 import { instructions } from "./instructions.js"
 import {
@@ -39,7 +40,7 @@ import {
   personalMcpTools,
   registerPersonalMcpTools,
 } from "./personal.js"
-import { createServer, OVER_HTTP, type ServerOptions } from "./server.js"
+import { createServer, type ServerOptions } from "./server.js"
 
 describe("public personal MCP mounting", () => {
   it("encloses online, stored and host-service reads in the host's permission scope", async () => {
@@ -316,6 +317,8 @@ interface Harness {
   root?: string
   /** Over `mcp --http` on 127.0.0.1, logged in through the owner login as a browser app would. */
   http?: boolean
+  confirmation?: HttpConfirmation
+  permission?: string[]
 }
 
 const connect = async (telegram: Scripted = scripted(), options: Partial<ServerOptions> & Harness = {}) => {
@@ -336,6 +339,8 @@ const connect = async (telegram: Scripted = scripted(), options: Partial<ServerO
     history,
     root: _root,
     http,
+    confirmation,
+    permission = [],
     ...serverOptions
   } = options
   if (config) {
@@ -357,16 +362,18 @@ const connect = async (telegram: Scripted = scripted(), options: Partial<ServerO
   const program = createProgram({
     app,
     commands: () => [
-      new Command("probe").action(function (this: Command) {
-        made = createServer(this, messengerContext(this, messenger), messenger, {
-          ...serverOptions,
-          ...(http ? OVER_HTTP : {}),
-        })
-      }),
+      new Command("probe")
+        .option("--permission <key=level>", "override", (value: string, previous: string[]) => [...previous, value], [])
+        .action(function (this: Command) {
+          made = createServer(this, messengerContext(this, messenger), messenger, {
+            ...serverOptions,
+            ...(http ? httpServerOptions(confirmation) : {}),
+          })
+        }),
     ],
   })
   provide(program, { streams, tty: false, env, app })
-  await program.parseAsync(["probe"], { from: "user" })
+  await program.parseAsync(["probe", ...permission.flatMap((entry) => ["--permission", entry])], { from: "user" })
   const { session, build } = made as ReturnType<typeof createServer>
 
   if (http) {
@@ -2267,6 +2274,73 @@ describe("sending over MCP", () => {
       expect(issued?.access_token).toBeTruthy()
       expect(printed).not.toContain(issued?.access_token)
       expect(printed).not.toContain(issued?.refresh_token)
+    })
+
+    it("allows a send without elicitation only in explicit permissions mode, with startup overrides", async () => {
+      const { telegram, sent } = sending()
+      const { call, client, forms } = await connect(telegram, {
+        http: true,
+        era,
+        confirmation: "permissions",
+        permission: ["messages.send=allow"],
+        config: { defaults: { readOnly: true, permissions: { "messages.send": "deny" } } },
+        yes: true,
+        allowDangerous: true,
+      })
+      expect((await client.listTools()).tools.map(({ name }) => name)).toContain("chat_messages_send")
+      expect((await call("chat_chats_list")).isError).toBe(false)
+      expect((await call("chat_messages_send", { chat: "7", text: "synthetic send" })).isError).toBe(false)
+      expect(sent).toHaveLength(1)
+      expect(forms).toEqual([])
+    })
+
+    it.each(["deny", "readonly"])("does not expose a send overridden to %s", async (level) => {
+      const { telegram, sent } = sending()
+      const { client } = await connect(telegram, {
+        http: true,
+        era,
+        confirmation: "permissions",
+        permission: [`messages.send=${level}`],
+      })
+      expect((await client.listTools()).tools.map(({ name }) => name)).not.toContain("chat_messages_send")
+      await client
+        .callTool({ name: "chat_messages_send", arguments: { chat: "7", text: "synthetic send" } })
+        .catch(() => undefined)
+      expect(sent).toEqual([])
+    })
+
+    it.each(["required", "permissions"] as const)(
+      "refuses without elicitation in %s mode when confirmation is required",
+      async (confirmation) => {
+        const { telegram, sent } = sending()
+        const { call } = await connect(telegram, {
+          http: true,
+          era,
+          confirmation,
+          permission: ["messages.send=ask"],
+          yes: true,
+          allowDangerous: true,
+        })
+        const result = await call("chat_messages_send", { chat: "7", text: "synthetic send" }).catch(() => undefined)
+        if (result) expect(result.isError).toBe(true)
+        expect(sent).toEqual([])
+      },
+    )
+
+    it.each(["accept", "decline"] as const)("keeps the server form for ask in permissions mode: %s", async (action) => {
+      const { telegram, sent } = sending()
+      const { call, forms } = await connect(telegram, {
+        http: true,
+        era,
+        confirmation: "permissions",
+        permission: ["messages.send=ask"],
+        form: () => ({ action, content: {} }),
+      })
+      expect((await call("chat_messages_send", { chat: "7", text: "synthetic send" })).isError).toBe(
+        action !== "accept",
+      )
+      expect(forms).toHaveLength(1)
+      expect(sent).toHaveLength(action === "accept" ? 1 : 0)
     })
 
     it("asks through the form before a send even where the level is allow, and sends once accepted", async () => {

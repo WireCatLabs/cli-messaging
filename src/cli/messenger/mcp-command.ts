@@ -5,6 +5,7 @@ import { CliError, resolvePaths, visibleControls } from "@leemour/cli-core"
 import { annotate } from "@leemour/cli-core/commands"
 import { installerOf } from "@leemour/cli-core/update"
 import { Command } from "commander"
+import { httpConfirmationOf } from "../../mcp/http/policy.js"
 import { type AppIdentity, envName } from "../app.js"
 import { type BaseEnvironment, environmentOf } from "../context.js"
 import { type Messenger, messengerContext } from "./context.js"
@@ -21,6 +22,8 @@ export interface McpFlags {
   allowSend?: boolean
   allowMarkRead?: boolean
   allowDelete?: boolean
+  permission?: string[]
+  httpConfirmation?: string
   http?: boolean
   port?: string
   publicUrl?: string
@@ -66,6 +69,11 @@ const RETIRED = ["allowSend", "allowMarkRead", "allowDelete"] as const
 
 const withFlags = (command: Command): Command =>
   command
+    .option(
+      "--permission <key=level>",
+      "override a permission for this server only; repeat for more keys",
+      (value: string, previous: string[] = []) => [...previous, value],
+    )
     .option("--confirm-send", "show the owner every write in a form from the server first")
     .option("--allow-dangerous", "no form before a deletion whose permission level is ask")
     .option("--allow-send", "no longer used — the profile's permissions decide; kept so an old setup still starts")
@@ -91,13 +99,18 @@ export const mcpCommand = (messenger: Messenger): Command => {
   )
     .option(
       "--http",
-      "serve over HTTP on 127.0.0.1 for ChatGPT and Claude in the browser, behind your tunnel; every write asks first",
+      "serve over HTTP on 127.0.0.1 for ChatGPT and Claude in the browser, behind your tunnel; every write asks first by default",
+    )
+    .option(
+      "--http-confirmation <mode>",
+      "required: every write needs a server form (default); permissions: follow the profile levels",
     )
     .option("--port <port>", `the local port for --http (default ${DEFAULT_PORT})`)
     .option("--public-url <url>", "the tunnel's https address the browser apps use, e.g. https://<name>.ts.net")
     .option("--revoke", "forget every login given to a browser app; each must log in again")
   command.action(async function (this: Command) {
     const flags = this.optsWithGlobals<McpFlags>()
+    const confirmation = httpConfirmationOf(flags)
     const context = messengerContext(this, messenger)
     const note = retiredNote(app, flags)
     if (note) context.renderer.warn(note)
@@ -115,7 +128,12 @@ export const mcpCommand = (messenger: Messenger): Command => {
         context,
         messenger,
         {},
-        { publicUrl, port: portOf(flags.port), tokenFile: httpTokenFile(app, context.settings.profile, context.env) },
+        {
+          publicUrl,
+          confirmation,
+          port: portOf(flags.port),
+          tokenFile: httpTokenFile(app, context.settings.profile, context.env),
+        },
       )
       return
     }
@@ -312,6 +330,7 @@ export const serverEntry = (
       scriptPath,
       ...(profile === "default" ? [] : [profile]),
       "mcp",
+      ...(flags.permission ?? []).flatMap((entry) => ["--permission", entry]),
       ...(flags.confirmSend ? ["--confirm-send"] : []),
       ...(flags.allowDangerous ? ["--allow-dangerous"] : []),
       ...(flags.yes ? ["--yes"] : []),

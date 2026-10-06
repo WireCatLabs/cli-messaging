@@ -16,6 +16,7 @@ export {
   withAcross,
 } from "../mcp/bot/tools.js"
 export { revokeAll } from "../mcp/http/oauth.js"
+export { type HttpConfirmation, httpConfirmationOf, httpServerOptions } from "../mcp/http/policy.js"
 export { type HttpOptions, MCP_PATH, serveOverHttp } from "../mcp/http/serve.js"
 export {
   answerMcpTool,

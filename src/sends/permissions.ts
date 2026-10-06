@@ -1,3 +1,4 @@
+import { CliError } from "@leemour/cli-core"
 import type { AccountAction, SendKind } from "./journal.js"
 
 /**
@@ -337,4 +338,20 @@ export const keyForCommand = (path: readonly string[]): PermissionKey | null | u
   if (SHOW_MESSAGES.has(top) || (top === "contacts" && next === "context")) return "messages"
   if ((RESOURCES as readonly string[]).includes(top)) return path.join(".")
   return undefined
+}
+
+/** Startup overrides are a nearer layer than the saved profile, and never write that profile. */
+export const permissionOverrides = (entries: readonly string[] = []): Record<PermissionKey, Level> => {
+  const levels: Record<PermissionKey, Level> = {}
+  const path = new RegExp(`^(${RESOURCES.join("|")})(\\.[a-z][a-z-]*)*$`)
+  for (const entry of entries) {
+    const [key = "", level = "", extra] = entry.split("=")
+    if (!path.test(key) || !(LEVELS as readonly string[]).includes(level) || extra !== undefined)
+      throw new CliError(
+        "validation_error",
+        "--permission takes a command path and level, e.g. messages.send=allow (deny, readonly, ask, allow)",
+      )
+    levels[key] = level as Level
+  }
+  return levels
 }
