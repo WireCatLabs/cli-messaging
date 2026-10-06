@@ -1,6 +1,6 @@
 import { CliError } from "@leemour/cli-core"
 import type { AppIdentity } from "../cli/app.js"
-import { embeddingKeys } from "../cli/embedding-keys.js"
+import { embeddingKeys, endpointKeyName } from "../cli/embedding-keys.js"
 import type { Chat, Message } from "../domain/models.js"
 import { type ModelSettings, type ModelTarget, modelGateway, modelTarget } from "../models/index.js"
 import { mayModelReply, replyConsentPathFor, replyModelIdentity } from "./consents.js"
@@ -34,7 +34,7 @@ export const replyRenderer =
           message.chatId,
         ),
       key: (provider, target) =>
-        embeddingKeys(app, env).read(target.baseUrl === undefined ? provider : new URL(target.baseUrl).host)?.key,
+        embeddingKeys(app, env).read(target.baseUrl === undefined ? provider : endpointKeyName(target.baseUrl))?.key,
     })
     if (options.signal?.aborted) throw new CliError("cancelled", "reply rendering cancelled")
     const result = await renderReplyTemplate(rule.reply, {

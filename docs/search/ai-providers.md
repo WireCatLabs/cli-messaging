@@ -26,6 +26,8 @@ temperature, top_p, top_k and stop_sequences. Callers cannot override the model,
 credentials or token bound through options. The caller supplies a key resolver and a consent
 check; consent is checked before keys or network calls. Tests inject fake adapters and fetch.
 Gateway callers may supply an AbortSignal, combined with each adapter's request timeout.
+Custom hosts literally named `openai` or `anthropic` use key names `endpoint:openai` and
+`endpoint:anthropic`; this keeps their credentials separate from public provider keys.
 Conversation analysis and AI reply previews register it with the CLI deadline; serve cancels reply
 requests on shutdown, so a timed-out one-shot does not leave an HTTP request holding it open.
 

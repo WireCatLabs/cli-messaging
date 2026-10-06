@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest"
 import { endpoint } from "../analysis/settings.js"
 import { analysisChoice } from "./analysis-choice.js"
 import { embeddingChoice } from "./embedding-choice.js"
-import { embeddingKeys } from "./embedding-keys.js"
+import { embeddingKeys, endpointKeyName } from "./embedding-keys.js"
 import { settingsFor } from "./settings.js"
 
 const app = { command: "app", appName: "app-cli", envPrefix: "APP", description: "", version: "1.0.0" }
@@ -25,6 +25,19 @@ const setup = () => {
   return { env, config, settings, root }
 }
 describe("AI settings and provider selection", () => {
+  it("custom hosts named like public providers do not inherit their public keys", () => {
+    const { settings, env } = setup()
+    env.APP_OPENAI_API_KEY = "synthetic-public-key"
+    env.APP_ANTHROPIC_API_KEY = "synthetic-anthropic-key"
+    for (const host of ["openai", "anthropic"]) {
+      const baseUrl = `http://${host}/v1`
+      expect(endpointKeyName(baseUrl)).toBe(`endpoint:${host}`)
+      expect(
+        analysisChoice({ provider: "openai", model: "test", baseUrl }, app, settings(), env).apiKey,
+      ).toBeUndefined()
+    }
+    expect(endpointKeyName("http://localhost:11434/v1")).toBe("localhost:11434")
+  })
   it("defaults locally, validates config values, and reports all sources", () => {
     const { config, settings, env, root } = setup()
     expect(embeddingChoice({}, app, settings(), env)).toBe("e5-small")

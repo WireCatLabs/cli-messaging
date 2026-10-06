@@ -2,7 +2,7 @@ import { CliError } from "@leemour/cli-core"
 import type { AnalysisProvider } from "../analysis/provider.js"
 import { endpoint } from "../analysis/settings.js"
 import type { AppIdentity } from "./app.js"
-import { embeddingKeys } from "./embedding-keys.js"
+import { embeddingKeys, endpointKeyName } from "./embedding-keys.js"
 import type { Settings } from "./settings.js"
 
 export interface AnalysisOptions {
@@ -47,7 +47,7 @@ export const analysisChoice = (
   const baseUrl = customUrl ?? (provider === "anthropic" ? "https://api.anthropic.com" : "https://api.openai.com/v1")
   if (!endpoint(baseUrl))
     throw new CliError("validation_error", "use an HTTP/S analysis endpoint without credentials, query or fragment")
-  const keyName = customUrl === undefined ? provider : new URL(baseUrl).host
+  const keyName = customUrl === undefined ? provider : endpointKeyName(baseUrl)
   const apiKey = embeddingKeys(app, env).read(keyName)?.key
   if (!apiKey && customUrl === undefined)
     throw new CliError("authentication_error", `no ${provider} key — use models text key set ${provider}`)
