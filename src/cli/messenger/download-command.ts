@@ -1,29 +1,21 @@
-import { createWriteStream, existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs"
-import { link, rm } from "node:fs/promises"
-import { basename, join, resolve } from "node:path"
-import { Readable, Transform } from "node:stream"
-import { pipeline } from "node:stream/promises"
+import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs"
+import { join } from "node:path"
 import { setTimeout as sleep } from "node:timers/promises"
 import { CliError } from "@leemour/cli-core"
 import type { Command } from "commander"
 import { NOT_FILES } from "../../domain/attachments.js"
 import type { Id } from "../../domain/models.js"
 import { FETCHING, keyOf } from "../../services/archive.js"
+import { recordPaths, type Saved, save } from "../../services/file-download.js"
+
+export { downloadMessage, type Saved, safeName, save } from "../../services/file-download.js"
+
 import { OFFLINE } from "../../services/deps.js"
 import type { MessagesService } from "../../services/messages.js"
 import { patiently } from "../../services/patience.js"
 import { parseDuration } from "../settings.js"
-import { type Fetching, type Messenger, type MessengerContext, messengerContext } from "./context.js"
+import { type Fetching, type Messenger, type MessengerContext, messengerContext, refuseLocalWrite } from "./context.js"
 import { stopOnSignal } from "./patience.js"
-import type { RemoteFile } from "./port.js"
-
-export interface Saved {
-  kind: string
-  path: string
-  bytes: number
-  /** Only with `--all`: the file was already there from an earlier run, and was left as it was. */
-  existing?: true
-}
 
 /** `messages download`: every file of one message, or with `--all` of a whole chat, never over a file already there. */
 export const downloadSubcommand = (messages: Command, messenger: Messenger): Command =>
@@ -39,19 +31,26 @@ export const downloadSubcommand = (messages: Command, messenger: Messenger): Com
       "with --all, a pause between pages, to stay under the provider's limits",
       messenger.fetching?.pause ?? FETCHING.pause,
     )
+    .option("--extract", "read text layers from the files this download maps into the local content index")
     .action(async function (this: Command, chat: string, messageId: string | undefined) {
       const context = messengerContext(this, messenger)
-      const { outputDir: output, all, pause } = this.opts<{ outputDir: string; all?: boolean; pause: string }>()
+      const {
+        outputDir: output,
+        all,
+        pause,
+        extract,
+      } = this.opts<{ outputDir: string; all?: boolean; pause: string; extract?: boolean }>()
+      if (extract) refuseLocalWrite(context, messenger.app.command, "attachments.extract")
       if (all && messageId !== undefined) {
         throw new CliError("validation_error", "--all saves the whole chat; leave out the message id")
       }
       if (all) {
-        await downloadChat(this, context, messenger, chat, output, parseDuration(pause, "--pause"))
+        await downloadChat(this, context, messenger, chat, output, parseDuration(pause, "--pause"), extract)
         return
       }
       if (messageId === undefined) throw new CliError("validation_error", "name a message id, or use --all")
       const id = messageId.trim()
-      const saved = await context.withServices(async (services) => {
+      const result = await context.withServices(async (services) => {
         const { files, skipped } = await services.messages.download(chat, id)
         if (skipped.length > 0) context.renderer.note(`not a file, not downloaded: ${skipped.join(", ")}`)
         if (files.length === 0) throw new CliError("not_found", `message ${id} has no file to download`)
@@ -59,58 +58,18 @@ export const downloadSubcommand = (messages: Command, messenger: Messenger): Com
         const done: Saved[] = []
         for (const [index, file] of files.entries()) done.push(await save(file, output, `${id}-${index + 1}`))
         await recordPaths(services.messages, chat, id, files, done, context.renderer.warn)
-        return done
+        const extraction = extract
+          ? await services.attachments.extract({ chat, message: id, paths: done.map((file) => file.path) })
+          : undefined
+        return { saved: done, extraction }
       })
+      const { saved, extraction } = result
+      if (extraction && context.format !== "json")
+        context.renderer.note(`${extraction.extracted} extracted, ${extraction.failed} unreadable`)
       if (context.format === "pretty") context.streams.data(`${saved.map((one) => one.path).join("\n")}\n`)
       else if (context.format === "jsonl") context.renderer.stream(saved)
-      else context.renderer.result({ items: saved })
+      else context.renderer.result({ items: saved, ...(extraction ? { extraction } : {}) })
     })
-
-/**
- * The files are saved whatever happens here: a store that cannot take the paths costs only the later
- * `attachments extract`, so it warns and never fails the download.
- */
-const recordPaths = async (
-  messages: Pick<MessagesService, "keepDownloaded">,
-  chat: string,
-  message: Id,
-  files: readonly RemoteFile[],
-  saved: readonly Saved[],
-  warn: (message: string) => void,
-): Promise<number> => {
-  const downloaded = saved.map((one, index) => ({
-    kind: one.kind,
-    path: one.path,
-    ...(files[index]?.name === undefined ? {} : { name: files[index]?.name }),
-    ...(files[index]?.position === undefined ? {} : { position: files[index]?.position }),
-  }))
-  try {
-    return await messages.keepDownloaded(chat, message, downloaded)
-  } catch (error) {
-    warn(`not recorded in the local store where message ${message}'s files went: ${(error as Error).message}`)
-    return 0
-  }
-}
-
-/**
- * Every file of one message, as `--all` saves them — a taken name gets the message's prefix, never
- * overwrites — and where they went recorded in the store. For `attachments extract --download`.
- */
-export const downloadMessage = async (
-  messages: Pick<MessagesService, "download" | "keepDownloaded">,
-  chat: string,
-  message: Id,
-  output: string,
-  warn: (message: string) => void,
-): Promise<Saved[]> => {
-  const { files } = await messages.download(chat, message)
-  mkdirSync(output, { recursive: true })
-  const done: Saved[] = []
-  for (const [index, file] of files.entries())
-    done.push(await save(file, output, `${message}-${index + 1}`, { unique: true }))
-  await recordPaths(messages, chat, message, files, done, warn)
-  return done
-}
 
 /** The most messages a provider hands out per history request — Telegram's cap. */
 const PAGE = 100
@@ -160,9 +119,11 @@ const downloadChat = async (
   chat: string,
   output: string,
   pauseMs: number,
+  extract = false,
 ) => {
   if (context.settings.offline) throw new CliError("validation_error", OFFLINE)
   const items: Saved[] = []
+  const extraction = { extracted: 0, failed: 0, needsAgent: 0, complete: true }
   const onSaved = (one: Saved) => {
     if (context.format === "pretty") context.streams.data(`${one.path}\n`)
     else if (context.format === "jsonl") context.renderer.stream([one])
@@ -181,10 +142,29 @@ const downloadChat = async (
         note: context.renderer.note,
         warn: context.renderer.warn,
         onSaved,
+        ...(extract
+          ? {
+              onDownloaded: async (id: string, paths: string[]) => {
+                try {
+                  const run = await services.attachments.extract({ chat, message: id, paths, signal: stop.signal })
+                  extraction.extracted += run.extracted
+                  extraction.failed += run.failed
+                  extraction.needsAgent += run.needsAgent
+                  extraction.complete &&= run.complete
+                } catch {
+                  extraction.failed += 1
+                  extraction.complete = false
+                }
+              },
+            }
+          : {}),
       }),
     )
-    if (context.format === "json") context.renderer.result({ items, ...result })
-    else context.renderer.note(summary(result))
+    if (context.format === "json") context.renderer.result({ items, ...result, ...(extract ? { extraction } : {}) })
+    else {
+      context.renderer.note(summary(result))
+      if (extract) context.renderer.note(`${extraction.extracted} extracted, ${extraction.failed} unreadable`)
+    }
   } finally {
     stop.release()
   }
@@ -203,6 +183,7 @@ interface ChatWalk {
   note: (message: string) => void
   warn: (message: string) => void
   onSaved: (one: Saved) => void
+  onDownloaded?: (message: Id, paths: string[]) => Promise<void>
 }
 
 /** Both stretches as one, keeping by time the messages walked at its two ends. */
@@ -234,7 +215,7 @@ const joined = (a: Stretch, b: Stretch): Stretch => {
 const walkChat = async (
   messages: Pick<MessagesService, "list" | "download" | "keepDownloaded">,
   chat: string,
-  { output, pauseMs, fetching, fromStore, stop, note, warn, onSaved }: ChatWalk,
+  { output, pauseMs, fetching, fromStore, stop, note, warn, onSaved, onDownloaded }: ChatWalk,
 ) => {
   const by: KeyedBy = fetching.orderBy ?? "id"
   const keyed = keyOf(fetching)
@@ -317,6 +298,10 @@ const walkChat = async (
           onSaved(one)
         }
         await recordPaths(messages, message.chatId, message.id, files, done, warn)
+        await onDownloaded?.(
+          message.id,
+          done.map((file) => file.path),
+        )
         run = run ? joined(run, point(key, message.id)) : point(key, message.id)
         remember()
       } else run = run ? joined(run, point(key, message.id)) : point(key, message.id)
@@ -337,85 +322,4 @@ const walkChat = async (
   }
   remember()
   return { chat: chatId ?? null, saved, existing, complete, ...(stop.aborted ? { stopped: true } : {}) }
-}
-
-const EXTENSIONS: Record<string, string> = {
-  "image/jpeg": "jpg",
-  "image/png": "png",
-  "image/webp": "webp",
-  "image/gif": "gif",
-  "video/mp4": "mp4",
-  "video/webm": "webm",
-  "audio/mpeg": "mp3",
-  "audio/ogg": "ogg",
-  "audio/mp4": "m4a",
-  "application/pdf": "pdf",
-}
-
-/** Telegram sends a photo with no name and no type; it is always a JPEG. */
-const BY_KIND: Record<string, string> = { photo: "jpg" }
-
-/**
- * A name another person chose cannot climb out of the folder, cannot be a dot file we would then
- * hide, and carries no control or direction character to rewrite the terminal or disguise its extension.
- */
-export const safeName = (name: string | undefined): string | undefined => {
-  const plain =
-    name === undefined
-      ? ""
-      : basename(name.replaceAll("\\", "/"))
-          .replace(/[\p{Cc}​-‏‪-‮⁦-⁩]/gu, "")
-          .replace(/^\.+/, "")
-  return plain === "" ? undefined : plain
-}
-
-/**
- * The bytes go to a temporary name first and are then hard-linked to the real one, which fails if the
- * name is taken — so an existing file survives, and an interrupted download leaves no half file under
- * the name somebody will open.
- *
- * `unique` is for a whole chat, where two messages often carry the same file name: a taken name gets the
- * message's own prefix, and when that is taken too the file was saved by an earlier run and is `existing`.
- */
-export const save = async (
-  file: RemoteFile,
-  directory: string,
-  fallbackName: string,
-  { unique = false }: { unique?: boolean } = {},
-): Promise<Saved> => {
-  const own = safeName(file.name)
-  const fileName = () => {
-    const extension = EXTENSIONS[file.mime ?? ""] ?? BY_KIND[file.kind]
-    return own ?? (extension ? `${fallbackName}.${extension}` : fallbackName)
-  }
-  const partial = join(directory, `.${fileName()}.${process.pid}.part`)
-  let bytes = 0
-  const counting = new Transform({
-    transform(chunk: Uint8Array, _encoding, done) {
-      bytes += chunk.length
-      done(null, chunk)
-    },
-  })
-  try {
-    await pipeline(Readable.from(file.bytes()), counting, createWriteStream(partial, { flags: "wx", mode: 0o600 }))
-    // Lazy HTTP downloads learn MIME while reading bytes.
-    const name = fileName()
-    const names = unique && own ? [name, `${fallbackName}-${own}`] : [name]
-    for (const candidate of names) {
-      const path = resolve(join(directory, candidate))
-      const taken = await link(partial, path).then(
-        () => false,
-        (error: NodeJS.ErrnoException) => {
-          if (error.code === "EEXIST") return true
-          throw error
-        },
-      )
-      if (!taken) return { kind: file.kind, path, bytes }
-    }
-    const path = resolve(join(directory, names.at(-1) ?? name))
-    if (unique) return { kind: file.kind, path, bytes, existing: true }
-    throw new CliError("validation_error", `${path} already exists — nothing was overwritten; choose --output-dir`)
-  } finally {
-    await rm(partial, { force: true })
-  }
 }

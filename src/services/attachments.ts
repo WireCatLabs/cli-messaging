@@ -1,6 +1,8 @@
 import { createHash } from "node:crypto"
-import { readFile, stat } from "node:fs/promises"
+import { constants } from "node:fs"
+import { open, readFile, stat } from "node:fs/promises"
 import { CliError } from "@leemour/cli-core"
+import { directoryPaths } from "../attachments/directory.js"
 import {
   classify,
   type Engine,
@@ -37,7 +39,7 @@ export interface ExtractRun {
   extracted: number
   needsAgent: number
   failed: number
-  /** Read before, and the same size now. */
+  /** Read before, and the same content now. */
   unchanged: number
   /** No saved file, and no `--download`. */
   notDownloaded: number
@@ -47,10 +49,16 @@ export interface ExtractRun {
   complete: boolean
   /** Packages a format needed and this machine lacks; those files are read on a later run. */
   enginesMissing: Engine[]
+  cursor?: string
 }
 
 export interface ExtractOptions {
   chat?: string
+  message?: string
+  paths?: readonly string[]
+  fromDir?: string
+  cursor?: string
+  scanLimit?: number
   /** At most this many files read. */
   limit?: number
   /** Saves a message's files where none were saved, through `messages download`'s own code. */
@@ -95,6 +103,8 @@ const outcome = async (
   file: FileAttachment,
   path: string,
   load: LoadEngine,
+  signal?: AbortSignal,
+  noFollow = false,
 ): Promise<{
   status: ExtractStatus | "unchanged" | "unsupported"
   extraction?: Extraction
@@ -106,17 +116,24 @@ const outcome = async (
     () => undefined,
   )
   if (size === undefined) return { status: "missing" }
-  if (file.read?.origin === "extracted" && file.read.bytes === size) return { status: "unchanged" }
   const hint = { kind: file.kind, name: file.name, mime: file.mime, path }
   const known = classify(hint)
   if (known === "unsupported") return { status: "unsupported" }
-  // Kept with no text, so a later run passes over it and --needs-text still offers it to an agent.
-  if (known === "image")
-    return { status: "needs-agent", extraction: { status: "needs-agent", extractor: "none" }, bytes: size }
   if (size > MAX_FILE_BYTES) return { status: "too-large" }
-  const bytes = new Uint8Array(await readFile(path))
-  const extraction = await extractText(bytes, hint, load)
+  const handle = await open(path, constants.O_RDONLY | (noFollow ? constants.O_NOFOLLOW : 0))
+  let bytes: Uint8Array
+  try {
+    const opened = await handle.stat()
+    if (!opened.isFile() || opened.size > MAX_FILE_BYTES) return { status: "too-large" }
+    bytes = new Uint8Array(await readFile(handle, { signal }))
+  } finally {
+    await handle.close()
+  }
   const sha = createHash("sha256").update(bytes).digest("hex")
+  if (file.read?.origin === "extracted" && file.read.contentSha256 === sha) return { status: "unchanged" }
+  if (known === "image")
+    return { status: "needs-agent", extraction: { status: "needs-agent", extractor: "none" }, bytes: size, sha }
+  const extraction = await extractText(bytes, hint, load)
   return { status: extraction.status, extraction, bytes: size, sha }
 }
 
@@ -172,10 +189,32 @@ const messageOf = async (
 }
 
 export const attachmentsService = (deps: ServiceDeps): AttachmentsService => ({
-  extract: async ({ chat, limit, download, onItem, signal, load = importEngine } = {}) => {
+  extract: async ({
+    chat,
+    message: onlyMessage,
+    paths,
+    fromDir,
+    cursor,
+    scanLimit,
+    limit,
+    download,
+    onItem,
+    signal,
+    load = importEngine,
+  } = {}) => {
+    if (fromDir !== undefined && (chat === undefined || download))
+      throw new CliError("validation_error", "--from-dir needs --chat and cannot be combined with --download")
+    if (onlyMessage !== undefined && chat === undefined)
+      throw new CliError("validation_error", "message extraction needs a chat")
+    if (cursor !== undefined && (!/^[1-9][0-9]*$/.test(cursor) || !Number.isSafeInteger(Number(cursor))))
+      throw new CliError("validation_error", "invalid extraction cursor")
+    deps.guard.check({ chatId: null, key: "attachments.extract" }, { reserve: false })
     const store = await deps.store()
     const account: AccountKey = await deps.account()
     const chatId = chat === undefined ? undefined : await storedChatId(deps.messenger, chat, store, account)
+    const directory =
+      fromDir === undefined ? undefined : await directoryPaths(store, account, chatId as string, fromDir)
+    const selected = paths === undefined ? undefined : new Set(paths)
     const run: ExtractRun = {
       items: [],
       extracted: 0,
@@ -189,20 +228,33 @@ export const attachmentsService = (deps: ServiceDeps): AttachmentsService => ({
     }
     const fetched = new Set<string>()
     let read = 0
-    let beforePk: number | undefined
+    let beforePk = cursor === undefined ? undefined : Number(cursor)
+    let scanned = 0
     walk: for (;;) {
       const page = await store.fileAttachments(account, {
         ...(chatId === undefined ? {} : { chatId }),
+        ...(onlyMessage === undefined ? {} : { messageId: onlyMessage }),
         ...(beforePk === undefined ? {} : { beforePk }),
         limit: PAGE,
       })
       for (const file of page) {
-        if (signal?.aborted || (limit !== undefined && read >= limit)) {
+        if (
+          signal?.aborted ||
+          (limit !== undefined && read >= limit) ||
+          (scanLimit !== undefined && scanned >= scanLimit)
+        ) {
           run.complete = false
+          if (beforePk !== undefined) run.cursor = String(beforePk)
           break walk
         }
         beforePk = file.pk
-        let path = file.localPath
+        scanned += 1
+        let path = directory === undefined ? file.localPath : (directory.get(file.pk) ?? null)
+        if (directory && path)
+          await store.keepDownloads(account, file.chatId, file.messageId, [
+            { kind: file.kind, position: file.position, path },
+          ])
+        if (selected && (path === null || !selected.has(path))) continue
         const message = `${file.chatId}/${file.messageId}`
         if (path === null && download && !fetched.has(message)) {
           fetched.add(message)
@@ -213,7 +265,7 @@ export const attachmentsService = (deps: ServiceDeps): AttachmentsService => ({
           run.notDownloaded += 1
           continue
         }
-        const { status, extraction, bytes, sha } = await outcome(file, path, load)
+        const { status, extraction, bytes, sha } = await outcome(file, path, load, signal, fromDir !== undefined)
         if (status === "unchanged") {
           run.unchanged += 1
           continue

@@ -522,3 +522,12 @@ A conversation is eligible when **any of its current, undeleted messages matches
 Search uses the active account by default. `--source personal|bots|all` (or a stored provider) explicitly widens it, with the same account rules as message search, including `in:`. Hits include `source` and a qualified message `locator`; readiness covers only eligible chats and reports separate account scopes when widened. Vectors of different embedding models never mix. A missing local model falls back to words under the same filter.
 
 MCP `conversations_search` accepts `filter`, `source`, and `timezone` with the same semantics. `--refresh` cannot yet be combined with `--filter` or `--source`; build and embed the chosen chats separately. These SDK options reach each CLI at its next dependency bump.
+
+## Attachment extraction surfaces
+
+`attachments extract --chat <chat> --from-dir <dir>` matches files in one nonrecursive directory,
+refusing ambiguous names and symlinks. `messages download --extract` indexes only files mapped
+by that download. MCP `attachments_extract` uses the same service, defaults to100files and limits
+each scan to500attachment rows. A partial scan returns `cursor`; pass it to continue. Text remains
+in the local content index; extraction answers only metadata. Only explicit `--download`/`download`
+connects, requires an output directory, and cannot be combined with a directory source.

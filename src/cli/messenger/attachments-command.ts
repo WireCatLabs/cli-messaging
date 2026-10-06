@@ -3,9 +3,9 @@ import { CliError } from "@leemour/cli-core"
 import { Command } from "commander"
 import { engineHint } from "../../attachments/extract.js"
 import type { AttachmentItem, ExtractItem, ExtractRun } from "../../services/attachments.js"
+import { downloadMessage } from "../../services/file-download.js"
 import { renderPage, window, withPaging } from "../paging.js"
 import { type Messenger, messengerContext, refuseLocalWrite } from "./context.js"
-import { downloadMessage } from "./download-command.js"
 import { stopOnSignal } from "./patience.js"
 import { readAll } from "./stdin.js"
 
@@ -36,18 +36,27 @@ const extractCommand = (messenger: Messenger): Command =>
       "read the text of downloaded files — plain text, Word, PDF with a text layer — into the local store, for content: in a search",
     )
     .option("--chat <chat>", `only this chat's files; ${messenger.chatArgument}`)
+    .option("--from-dir <dir>", "match files in this nonrecursive directory; needs --chat")
+    .option("--cursor <cursor>", "continue from the cursor returned by a bounded extraction")
     .option("--download", "first save the files no download saved yet, from the messenger, into --output-dir")
     .option("--output-dir <dir>", "with --download, where to save them; created if missing")
     .option("--limit <n>", "read at most this many files; run it again to continue", count)
     .action(async function (this: Command) {
       const context = messengerContext(this, messenger)
       refuseLocalWrite(context, messenger.app.command, "attachments.extract")
-      const { chat, download, outputDir, limit } = this.opts<{
+      const { chat, download, outputDir, fromDir, cursor, limit } = this.opts<{
         chat?: string
         download?: boolean
         outputDir?: string
+        fromDir?: string
+        cursor?: string
         limit?: number
       }>()
+      if (fromDir !== undefined && (chat === undefined || download || outputDir !== undefined))
+        throw new CliError(
+          "validation_error",
+          "--from-dir needs --chat and cannot be combined with --download or --output-dir",
+        )
       if (download && outputDir === undefined)
         throw new CliError("validation_error", "--download saves the files first: name the folder with --output-dir")
       if (outputDir !== undefined && !download)
@@ -58,6 +67,8 @@ const extractCommand = (messenger: Messenger): Command =>
           services.attachments.extract({
             ...(chat === undefined ? {} : { chat }),
             ...(limit === undefined ? {} : { limit }),
+            ...(fromDir === undefined ? {} : { fromDir }),
+            ...(cursor === undefined ? {} : { cursor }),
             ...(download && outputDir !== undefined
               ? {
                   download: async (chatId, messageId) => {

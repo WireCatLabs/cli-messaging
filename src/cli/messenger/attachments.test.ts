@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs"
+import { existsSync, mkdirSync, mkdtempSync, symlinkSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { Readable } from "node:stream"
@@ -46,11 +46,11 @@ const message = (id: string, attachments: Attachment[]): Message => ({
   reactions: null,
 })
 
-const adapter = (bytes: Uint8Array): MessengerAdapter => ({
+const adapter = (bytes: Uint8Array, history: Message[] = []): MessengerAdapter => ({
   self: () => "500",
   me: async () => ({ id: "500", name: "Owner", username: null }),
   chats: async () => ({ items: [chat], hasMore: false }),
-  history: async () => ({ items: [], hasMore: false }),
+  history: async () => ({ items: history, hasMore: false }),
   resolve: async () => chat,
   chat: async () => ({ ...chat, members: [] }),
   send: async () => {
@@ -76,7 +76,7 @@ const adapter = (bytes: Uint8Array): MessengerAdapter => ({
  * Chat 7: message 1 with notes.txt, 2 with deal.docx, 3 with scan.pdf (a text layer), 4 with an empty PDF,
  * 5 with a photo, 6 with a voice note, 7 with a file nobody downloaded.
  */
-const setup = async ({ config, load }: { config?: object; load?: LoadEngine } = {}) => {
+const setup = async ({ config, load, history }: { config?: object; load?: LoadEngine; history?: Message[] } = {}) => {
   const root = mkdtempSync(join(tmpdir(), "attachments-cli-"))
   const env = {
     ...process.env,
@@ -121,7 +121,7 @@ const setup = async ({ config, load }: { config?: object; load?: LoadEngine } = 
     app,
     provider: "chat",
     resolveSettings: settingsFor(app).resolveSettings,
-    connect: async () => adapter(new TextEncoder().encode("fetched invoice text")),
+    connect: async () => adapter(new TextEncoder().encode("fetched invoice text"), history),
     chatArgument: "a chat",
     ...(load
       ? {
@@ -321,6 +321,90 @@ describe("attachments extract", () => {
     await call("attachments", "extract")
     expect(json(await call("store", "reindex", "--json"))).toMatchObject({ fileTexts: 3 })
     expect(await hits(call, "content:invoice")).toEqual(["1"])
+  })
+})
+
+describe("extraction follow-ups", () => {
+  it("continues extraction from its cursor and supports --all extraction", async () => {
+    const { call, root } = await setup({ history: [message("7", [{ kind: "file", name: "later.txt" }])] })
+    const first = json(await call("attachments", "extract", "--limit", "1", "--json"))
+    expect(first).toMatchObject({ complete: false, cursor: expect.any(String) })
+    const resumed = json(await call("attachments", "extract", "--cursor", first.cursor, "--json"))
+    expect(resumed).toMatchObject({ complete: true, extracted: 3 })
+    expect((await call("attachments", "extract", "--cursor", "invalid")).code).toBe(2)
+    const all = await call(
+      "messages",
+      "download",
+      "7",
+      "--all",
+      "--extract",
+      "--output-dir",
+      join(root, "all"),
+      "--json",
+    )
+    expect(all.code).toBe(0)
+    expect(json(all)).toMatchObject({ extraction: { extracted: 1, complete: true } })
+    expect(await hits(call, "content:fetched")).toEqual(["7"])
+  })
+
+  it("hashes a same-size replacement and replaces content hits", async () => {
+    const { call, files } = await setup()
+    await call("attachments", "extract", "--json")
+    writeFileSync(join(files, "notes.txt"), "Updated estimate for March!")
+    expect(json(await call("attachments", "extract", "--json"))).toMatchObject({ extracted: 1 })
+    expect(await hits(call, "content:estimate")).toEqual(["1"])
+    expect(await hits(call, "content:invoice")).toEqual([])
+  })
+
+  it("matches one scoped directory and refuses symlinks before extraction", async () => {
+    const { call, files, root } = await setup()
+    expect(json(await call("attachments", "extract", "--chat", "7", "--from-dir", files, "--json"))).toMatchObject({
+      extracted: 3,
+    })
+    expect((await call("attachments", "extract", "--from-dir", files)).code).toBe(2)
+    expect((await call("attachments", "extract", "--chat", "7", "--from-dir", files, "--download")).code).toBe(2)
+    const outside = join(root, "outside.txt")
+    writeFileSync(outside, "synthetic outside text")
+    symlinkSync(outside, join(files, "escape.txt"))
+    expect((await call("attachments", "extract", "--chat", "7", "--from-dir", files)).stderr).toContain(
+      "symbolic links",
+    )
+  })
+
+  it("extracts just the downloaded message, retaining all other files untouched", async () => {
+    const { call, root } = await setup()
+    const result = await call(
+      "messages",
+      "download",
+      "7",
+      "7",
+      "--extract",
+      "--output-dir",
+      join(root, "download"),
+      "--json",
+    )
+    expect(result.code).toBe(0)
+    expect(json(result)).toMatchObject({ extraction: { extracted: 1, complete: true } })
+    expect(await hits(call, "content:fetched")).toEqual(["7"])
+    expect(await hits(call, "content:Quarterly")).toEqual([])
+  })
+
+  it("denies extraction before downloading, while ordinary download still works", async () => {
+    const { call, root } = await setup({
+      config: { profiles: { default: { permissions: { "attachments.extract": "deny" } } } },
+    })
+    const result = await call(
+      "messages",
+      "download",
+      "7",
+      "7",
+      "--extract",
+      "--output-dir",
+      join(root, "refused"),
+      "--json",
+    )
+    expect(result.code).toBe(5)
+    expect(existsSync(join(root, "refused"))).toBe(false)
   })
 })
 
