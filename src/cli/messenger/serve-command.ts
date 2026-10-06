@@ -13,6 +13,7 @@ import { servicesFor } from "../../services/index.js"
 import { recalledAccount } from "./accounts.js"
 import { type Messenger, type MessengerContext, messengerContext } from "./context.js"
 import type { MessengerAdapter } from "./port.js"
+import { memberFetches } from "./serve-members.js"
 import { listenUntilStopped } from "./watch-command.js"
 
 export { type Lock, lockPath, readLock, servingProfiles } from "../../background/lock.js"
@@ -52,14 +53,33 @@ export const serveCommand = (messenger: Messenger): Command => {
       counts[event.event] = (counts[event.event] ?? 0) + 1
       if (event.event === "message") rules.arrived(event.message)
     }
+    let connection: MessengerAdapter | undefined
+    const members = memberFetches({
+      withStore: (work) => context.withStore(work, { name: "serve members" }),
+      fetch: (store, account, chatId) =>
+        servicesFor({
+          ...onlineDeps(messenger, connection as MessengerAdapter, context.guard, {
+            profile: context.profile,
+            env: context.env,
+          }),
+          store: async () => store,
+          account: async () => account,
+        }).chats.fetchMembers(chatId, {}),
+      warn: (text) => context.renderer.warn(text),
+    })
     try {
       await listenUntilStopped(this, context, messenger, count, {
         stop: new AbortController(),
         catchUp: true,
         onReady,
-        connected: rules.connected,
+        connected: (open) => {
+          connection = open
+          rules.connected(open)
+          members.start()
+        },
       })
     } finally {
+      await members.stop()
       await rules.settled()
       releaseLock(path)
     }
@@ -69,6 +89,7 @@ export const serveCommand = (messenger: Messenger): Command => {
       stoppedAt: new Date().toISOString(),
       kept: counts,
       ...rules.summary(),
+      ...(members.summary().fetched + members.summary().failed > 0 ? { members: members.summary() } : {}),
     })
   })
 

@@ -6,6 +6,13 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- `serve` fetches every tracked chat's member list once a day (`chats tracking`), one chat after another, starting
+  a minute after it connects so catch-up goes first. A chat already fetched that day is skipped, so a restart does
+  not fetch it twice; a chat that fails is named on stderr and the rest go on. Its answer adds
+  `members: { fetched, failed }` when it fetched any. The timer ends with `serve`.
+
 ## 0.149.0 — 06.10.2026
 
 ### Added
