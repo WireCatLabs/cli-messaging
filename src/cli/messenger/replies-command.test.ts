@@ -119,6 +119,14 @@ describe("replies test", () => {
     expect(modeled.code).toBe(0)
     expect(JSON.parse(modeled.stdout.join("")).rules[0].would[0].text).toBe("Hello Ana")
     expect(fetcher).toHaveBeenCalledTimes(1)
+    const configPath = join(env.CHAT_CONFIG_DIR, "config.json")
+    const config = JSON.parse(readFileSync(configPath, "utf8"))
+    config.profiles.default.permissions = { messages: "deny" }
+    writeFileSync(configPath, JSON.stringify(config))
+    expect((await replies(["replies", "test", "--ai", "--json"], env)).code).not.toBe(0)
+    expect(fetcher).toHaveBeenCalledTimes(1)
+    delete config.profiles.default.permissions
+    writeFileSync(configPath, JSON.stringify(config))
     expect((await replies(["replies", "test", "--ai", "--offline", "--json"], env)).code).toBe(2)
     expect(fetcher).toHaveBeenCalledTimes(1)
     expect((await replies(["replies", "consents", "deny", "11", "--json"], env)).code).toBe(0)

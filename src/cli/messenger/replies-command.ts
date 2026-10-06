@@ -38,6 +38,11 @@ export const repliesCommand = (messenger: Messenger): Command => {
       context.track({ close: async () => controller.abort() })
       if (ai && settings.offline)
         throw new CliError("validation_error", "--ai calls a model and cannot be combined with --offline")
+      if (ai && levelFor(settings.permissions, "messages.list").level === "deny")
+        throw new CliError(
+          "permission_error",
+          "this profile denies reading messages — no stored data was sent to a reply model",
+        )
       const since = momentOf(sinceTime ?? `${DRY_RUN_DAYS}d`, "--since-time")
       const path = repliesPathFor(messenger.app, settings.profile, env)
       const { rules, testers, audience } = readReplies(path)

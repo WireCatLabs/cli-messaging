@@ -88,6 +88,7 @@ after async rendering. Templates still pass through tester, audience and send-pe
 into sending stored message data to the consented model; it never sends a messenger reply or writes
 reply history, and cannot be combined with `--offline`. No model field is needed in new rules.
 The command's timeout and stopping serve abort in-flight model requests before shutdown completes.
+AI previews also require the profile to permit reading messages.
 Old `{firstName}` / `{name}` and `may-reword` files remain readable with warnings; `may-reword`
 becomes a whole-template AI block with the original filled text as fallback, so unconfigured files
 still produce the same reply.
