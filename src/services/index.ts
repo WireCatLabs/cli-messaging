@@ -2,6 +2,7 @@ import { type BotCheckService, botCheckService } from "../botcheck/service.js"
 import { type AccountService, accountService } from "./account.js"
 import { type AdminService, adminService } from "./admin.js"
 import { type ArchiveService, archiveService } from "./archive.js"
+import { gapsService } from "./archive-gaps.js"
 import { type AttachmentsService, attachmentsService } from "./attachments.js"
 import { type ChatsService, chatsService } from "./chats.js"
 import { type ConversationsService, conversationsService } from "./conversations.js"
@@ -89,6 +90,7 @@ export interface Services {
   people: PeopleService
   inbox: InboxService
   archive: ArchiveService
+  gaps: ReturnType<typeof gapsService>
   admin: AdminService
   folders: FoldersService
   account: AccountService
@@ -117,6 +119,7 @@ export const servicesFor = (deps: ServiceDeps): Services => {
     people: peopleService(deps),
     inbox: inboxService(deps),
     archive: archiveService(deps),
+    gaps: gapsService(deps),
     admin: adminService(deps),
     folders: foldersService(deps),
     account: accountService(deps),
@@ -136,8 +139,8 @@ export { migrateLegacyQuery, type QueryMigration, type SavedQuery } from "../sea
 export { parseLucene } from "../search/lucene/parser.js"
 export { FIELD_VERSION, QUERY_FIELDS, QUERY_OPERATORS, validateAst } from "../search/lucene/registry.js"
 export { type Predicate, QUERY_LIMITS, QUERY_VERSION, type QueryAst, type QueryNode } from "../search/lucene/types.js"
+export { GAP_BOUNDS, type GapPlan, type GapRepair, gapsService, type RepairOptions } from "./archive-gaps.js"
 export type { QueryMetadata, SearchCoverage } from "./messages-search.js"
-
 export {
   type PackageUpgradeOutcome,
   type PackageUpgradePorts,

@@ -14,6 +14,7 @@ import { renderList } from "../paging.js"
 import { fetchCommand, jobsCommand } from "./backfill-command.js"
 import { type Messenger, messengerContext } from "./context.js"
 import { admitPassword, linesOf, openFolder, runFileFor, saveManifest, sealRun, writeChanges } from "./export-folder.js"
+import { gapsCommand } from "./gaps-command.js"
 import { ENCRYPT_OPTION, passwordOf } from "./password.js"
 import { storeMaintenanceCommands } from "./store-maintenance-command.js"
 
@@ -23,6 +24,7 @@ export const storeCommand = (messenger: Messenger): Command => {
     .description("the local store of messages")
     .addCommand(statusCommand(messenger))
     .addCommand(fetchCommand(messenger))
+    .addCommand(gapsCommand(messenger))
     .addCommand(jobsCommand(messenger))
     .addCommand(exportCommand(messenger))
     .addCommand(clearCommand(messenger))

@@ -22,6 +22,7 @@ import { reactionTools } from "./tools/reactions.js"
 import { reviewTools } from "./tools/review.js"
 import { searchesTools } from "./tools/searches.js"
 import { statsTools } from "./tools/stats.js"
+import { storeTools } from "./tools/store.js"
 import { tagsTools } from "./tools/tags.js"
 import { tasksTools } from "./tools/tasks.js"
 import { topicsTools, topicWriteTools } from "./tools/topics.js"
@@ -37,6 +38,7 @@ export const readTools = (messenger: Messenger): Record<string, AnyTool> => ({
   ...accountTools(messenger),
   ...chatsTools(messenger),
   ...statsTools(messenger),
+  ...storeTools(messenger),
   ...contactsTools(messenger),
   ...messagesTools(messenger),
   ...conversationsTools(messenger),

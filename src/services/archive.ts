@@ -46,6 +46,8 @@ export const keyOf =
 
 export interface FetchOptions {
   catchUp?: CatchUpOptions | false
+  onRequest?: () => void
+  window?: { from: number; to: number }
   /** Messages in this run. */
   limit: number
   /** Messages per request. */
@@ -63,6 +65,8 @@ export interface FetchOptions {
 /** A type, not an interface: a job keeps it as a plain record. */
 export type Fetched = {
   prepared?: CatchUpResult
+  windowComplete?: boolean
+  requests?: number
   chat: Id | null
   fetched: number
   complete: boolean
@@ -230,6 +234,20 @@ export interface FetchInto extends FetchOptions {
 }
 
 /** The fetch loop, over any history and store: the personal account's service and a bot's command share it. */
+export const abortable = async <T>(read: () => Promise<T>, signal: AbortSignal): Promise<T> => {
+  signal.throwIfAborted()
+  let listener: () => void = () => {}
+  const interrupted = new Promise<never>((_resolve, reject) => {
+    listener = () => reject(signal.reason ?? new DOMException("history read aborted", "AbortError"))
+    signal.addEventListener("abort", listener, { once: true })
+  })
+  try {
+    return await Promise.race([read(), interrupted])
+  } finally {
+    signal.removeEventListener("abort", listener)
+  }
+}
+
 export const fetchInto = async ({
   history,
   store,
@@ -243,10 +261,21 @@ export const fetchInto = async ({
   note,
   stop,
   onPage,
+  window,
+  onRequest,
 }: FetchInto): Promise<Fetched> => {
+  if (window && (!Number.isSafeInteger(window.from) || !Number.isSafeInteger(window.to + 1) || window.from > window.to))
+    throw new CliError("validation_error", "invalid history window")
   const byTime = fetching.orderBy === "time"
   const keyed = keyOf(fetching)
-  let before: string | undefined
+  let before =
+    window === undefined
+      ? undefined
+      : byTime
+        ? new Date(window.to + (fetching.beforeInclusive ? 0 : 1)).toISOString()
+        : String(window.to + 1)
+  let requests = 0
+  let windowComplete = false
   let chatId: Id | undefined
   let top: number | undefined
   let fetched = 0
@@ -259,17 +288,19 @@ export const fetchInto = async ({
 
   while (fetched < limit && !stop.aborted) {
     const page = await patiently(
-      () =>
-        history({
-          limit: Math.min(pageSize, limit - fetched),
-          ...(before ? { before } : {}),
-        }),
+      () => {
+        requests += 1
+        onRequest?.()
+        const read = () => history({ limit: Math.min(pageSize, limit - fetched), ...(before ? { before } : {}) })
+        return window ? abortable(read, stop) : read()
+      },
       note,
       stop,
     )
+    if ((page as { partial?: boolean }).partial) break
     const first = page.items[0]
     if (!first) {
-      reachedStart = true
+      if (window === undefined) reachedStart = true
       break
     }
     chatId ??= first.chatId
@@ -281,20 +312,27 @@ export const fetchInto = async ({
       )
     }
     const low = Math.min(...keys)
-    top ??= Math.max(...keys)
+    top ??= window?.to ?? Math.max(...keys)
     const fresh = page.items.filter((message) => !seen.has(message.id)).length
     for (const message of page.items) seen.add(message.id)
     fetched += fresh
     // This run's pages are contiguous, so everything from `low` to its first message is held.
-    const held = await store.markRange(account, chatId, low, top)
-    if (before === undefined) await store.setSyncState(account, fetchedKey(chatId), String(top))
+    const coveredFrom = window === undefined ? low : Math.max(window.from, low + (byTime && page.hasMore ? 1 : 0))
+    const held = coveredFrom <= top ? await store.markRange(account, chatId, coveredFrom, top) : { from: low, to: top }
+    if (window !== undefined && (low < window.from || (!byTime && low === window.from))) {
+      await store.markRange(account, chatId, window.from, window.to)
+      windowComplete = true
+      onPage({ fetched, chatId, oldest: window.from })
+      break
+    }
+    if (window === undefined && before === undefined) await store.setSyncState(account, fetchedKey(chatId), String(top))
     onPage({ fetched, chatId, oldest: held.from })
     // Nothing new: by id the messenger ignored `before`; by time a second such page did after the step past.
     // Repeats do not count towards the limit, so without this the run would never end.
     idle = fresh === 0 ? idle + 1 : 0
-    if (idle > (byTime ? 1 : 0)) break
+    if (idle > (byTime ? 1 : 0) || (window !== undefined && byTime && fresh === 0)) break
     if (!page.hasMore) {
-      reachedStart = true
+      if (window === undefined) reachedStart = true
       break
     }
     if (sinceMs !== undefined && page.items.some((message) => Date.parse(message.timestamp) < sinceMs)) {
@@ -312,7 +350,10 @@ export const fetchInto = async ({
     }
     // Two messages can share a millisecond, and the page may have ended between them: ask up to and including
     // it. A page with nothing new means that moment holds a whole page, so step past it rather than loop.
-    before = byTime ? new Date(held.from + (fresh > 0 ? 1 : 0)).toISOString() : String(held.from)
+    const boundary = window === undefined ? held.from : low
+    before = byTime
+      ? new Date(boundary + (fresh > 0 && !(window && fetching.beforeInclusive) ? 1 : 0)).toISOString()
+      : String(boundary)
     note(`${fetched} messages so far, back to ${held.from}`)
     const wait = fetching.jitter ? pauseMs * (1 + Math.random()) : pauseMs
     await sleep(wait, undefined, { signal: stop }).catch(() => {})
@@ -328,6 +369,7 @@ export const fetchInto = async ({
     fetched,
     complete: reachedStart && ranges.length === 1,
     ranges,
+    ...(window === undefined ? {} : { windowComplete, requests }),
     ...(reachedSince ? { reachedSince: true as const } : {}),
     ...(reachedLast ? { reachedLast: true as const } : {}),
     ...(stop.aborted ? { stopped: true as const } : {}),

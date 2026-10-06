@@ -438,3 +438,24 @@ failed staged build leaves the previous published generation available. Complete
 valid if later vector preparation stops. Edits and successful rebuilds prune affected vector hashes,
 verifying current text across shared users. Shared-use checks are bounded; an inconclusive hash is
 kept rather than removing another account's valid cache. Deletion safeguards remain in force.
+
+## Interior archive gap repair
+
+`store gaps plan <chat>` uses recorded inclusive coverage ranges, with versioned account/chat/order
+identity and a fingerprint. Unknown archive edges remain separate from interior gaps; message-id
+holes and quiet periods alone do not establish missing history. Planning is local.
+
+`store gaps repair <chat>` explicitly fetches up to five gaps and500messages within30seconds by
+default. `--max-gaps`, `--limit`, `--repair-time`, `--page-size` and `--pause` set bounds. Optional
+`--fingerprint` refuses a stale plan before connecting. A per-account/chat lease prevents concurrent
+repairs, while every page persists through the existing ingestion path. Repeated timestamp pages,
+partial responses and inaccessible history stay pending; nothing is deleted by absence. Re-running
+plans the remaining ranges. `--background` uses `store jobs show/list/cancel` and captures the plan's
+fingerprint. MCP offers matching plan/repair and profile-scoped job metadata tools.
+
+Repair requires `store.gaps.repair` write permission and message read access. The optional
+`Fetching.beforeInclusive` adapter declaration describes native timestamp cursors; it does not
+change regular fetch behavior.
+
+Repair accepts the same catch-up overrides and budgets as fetch. One preparation follows the repair,
+within its remaining overall time budget; history completeness and preparation progress stay separate.
