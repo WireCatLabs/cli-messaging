@@ -2,7 +2,7 @@ import * as v from "valibot"
 import type { Messenger } from "../../cli/messenger/context.js"
 import { onlineDeps, servicesFor } from "../../services/index.js"
 import { momentOf } from "../../services/moment.js"
-import { type AnyTool, APPROVE, chatOf, READ, tool, WRITE } from "../tool.js"
+import { type AnyTool, chatOf, READ, tool, WRITE } from "../tool.js"
 
 /**
  * A group's rules, and the run that acts on them. Over MCP nobody can answer a question per action,
@@ -30,7 +30,6 @@ export const moderationTools = (messenger: Messenger): Record<string, AnyTool> =
       dry_run: v.optional(v.pipe(v.boolean(), v.description("judge and plan; do nothing"))),
     }),
     annotations: WRITE,
-    _meta: APPROVE,
     permission: "groups",
     online: (adapter, args, { guard, settings, env }) =>
       servicesFor(onlineDeps(messenger, adapter, guard, { profile: settings.profile, env })).moderation.moderate(

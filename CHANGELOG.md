@@ -16,6 +16,13 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   command `status`) are gone, and so are allow-rules that name them. Prompts and server instructions
   name the new flow. The tool list is under 5 KB, the same on both protocol versions, with or without
   forms. The bot servers are unchanged.
+- **MCP writes show no form**, on the personal and bot servers, over stdio and HTTP: the profile's
+  permissions decide alone, and a level of `ask` goes ahead over MCP. With the built-in defaults this
+  includes deleting the owner's own messages. Moderation still leaves the actions a group's rules put
+  at `ask`. `--confirm-send`, `--allow-dangerous` and `--http-confirmation` on `mcp` and `bot mcp`
+  decide nothing and warn, so an existing setup still starts; `mcp config` no longer writes them.
+  `personalMcpConfirmer`, `httpConfirmationOf`, `httpServerOptions` and `OVER_HTTP` are no longer
+  exported.
 
 ## 0.156.0 — 06.10.2026
 

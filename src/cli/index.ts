@@ -16,7 +16,6 @@ export {
   withAcross,
 } from "../mcp/bot/tools.js"
 export { revokeAll } from "../mcp/http/oauth.js"
-export { type HttpConfirmation, httpConfirmationOf, httpServerOptions } from "../mcp/http/policy.js"
 export { type HttpOptions, MCP_PATH, serveOverHttp } from "../mcp/http/serve.js"
 export {
   answerMcpTool,
@@ -25,7 +24,6 @@ export {
   type PersonalMcpDefaults,
   type PersonalMcpRegistration,
   type PersonalMcpTool,
-  personalMcpConfirmer,
   personalMcpToolKey,
   personalMcpTools,
   registerPersonalMcpSurface,
@@ -33,7 +31,6 @@ export {
   warmEmbedders,
 } from "../mcp/personal.js"
 export { registerLinkConversationsPrompt } from "../mcp/prompts.js"
-export { OVER_HTTP } from "../mcp/server.js"
 export {
   answerMessagesSearch,
   MESSAGES_SEARCH_DESCRIPTION,

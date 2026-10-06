@@ -2,7 +2,7 @@ import * as v from "valibot"
 import { MAX_TEXT_CHARS } from "../../attachments/extract.js"
 import type { Messenger } from "../../cli/messenger/context.js"
 import { servicesFor, storedDeps } from "../../services/index.js"
-import { type AnyTool, chatOf, paging, READ, refuseAskedLocalWrite, tool } from "../tool.js"
+import { type AnyTool, chatOf, paging, READ, tool } from "../tool.js"
 
 const ITEM = "{ locator, attachment, kind, name, localPath, text: { origin, extractor, chars, error } | null }"
 
@@ -51,7 +51,6 @@ export const attachmentsTools = (messenger: Messenger): Record<string, AnyTool> 
       }),
       annotations: { readOnlyHint: false, idempotentHint: true, openWorldHint: false, destructiveHint: false },
       stored: async (store, account, args, defaults) => {
-        refuseAskedLocalWrite(defaults, "attachments.text.set", command)
         const located = args.chat === undefined
         return servicesFor(storedDeps(messenger, store, account, defaults.guard)).attachments.setText({
           chat: located ? args.message : (args.chat as string),

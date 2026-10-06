@@ -2,7 +2,7 @@ import * as v from "valibot"
 import type { Messenger } from "../../cli/messenger/context.js"
 import { capability } from "../../cli/messenger/port.js"
 import { guardedClose, guardedCreatePoll, guardedVote } from "../../sends/polls.js"
-import { type AnyTool, APPROVE, chatOf, message, READ, tool, WRITE } from "../tool.js"
+import { type AnyTool, chatOf, message, READ, tool, WRITE } from "../tool.js"
 
 const answerId = v.pipe(v.string(), v.minLength(1), v.description("an answer id, as polls_show gives it"))
 
@@ -30,7 +30,6 @@ export const pollWriteTools = (messenger: Messenger): Record<string, AnyTool> =>
         "unless the poll is anonymous. Only when the owner asked for this vote.",
       input: v.object({ chat, message, answers: v.array(answerId) }),
       annotations: WRITE,
-      _meta: APPROVE,
       permission: "reaction",
       online: (adapter, args, { guard }) =>
         guardedVote(guard, adapter, { chat: args.chat, message: args.message, answers: args.answers }),
@@ -40,7 +39,6 @@ export const pollWriteTools = (messenger: Messenger): Record<string, AnyTool> =>
       description: "Close the owner's own poll; it cannot be reopened. Only when the owner asked for it.",
       input: v.object({ chat, message }),
       annotations: WRITE,
-      _meta: APPROVE,
       permission: "edit",
       online: (adapter, args, { guard }) => guardedClose(guard, adapter, { chat: args.chat, message: args.message }),
     }),
@@ -62,7 +60,6 @@ export const pollWriteTools = (messenger: Messenger): Record<string, AnyTool> =>
         send_id: v.optional(v.pipe(v.string(), v.minLength(1), v.description("from an earlier outcome_unknown"))),
       }),
       annotations: WRITE,
-      _meta: APPROVE,
       permission: "send",
       online: async (adapter, args, { guard }) => {
         const sent = await guardedCreatePoll(guard, adapter, {

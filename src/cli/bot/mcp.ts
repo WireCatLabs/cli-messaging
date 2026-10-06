@@ -9,19 +9,18 @@ import type { BotMessenger } from "./port.js"
 interface Flags {
   confirmSend?: boolean
   allowDangerous?: boolean
-  yes?: boolean
   allowSend?: boolean
   allowDelete?: boolean
   allowModerate?: boolean
 }
 
-/** They decided which tools were offered; the profile's permissions do now. Kept so a configured agent still starts. */
-const RETIRED = ["allowSend", "allowDelete", "allowModerate"] as const
+/** They decided which tools were offered or which writes showed a form; the profile's permissions do now. Kept so a configured agent still starts. */
+const RETIRED = ["allowSend", "allowDelete", "allowModerate", "confirmSend", "allowDangerous"] as const
 
 const withFlags = (command: Command): Command =>
   command
-    .option("--confirm-send", "show the owner every write in a form from the server first")
-    .option("--allow-dangerous", "no form before a deletion whose permission level is ask")
+    .option("--confirm-send", "no longer used — writes show no form; the profile's permissions decide")
+    .option("--allow-dangerous", "no longer used — writes show no form; the profile's permissions decide")
     .option("--allow-send", "no longer used — the profile's permissions decide; kept so an old setup still starts")
     .option("--allow-delete", "no longer used — the profile's permissions decide")
     .option("--allow-moderate", "no longer used — the profile's permissions decide")
@@ -79,9 +78,6 @@ export const botMcpCommand = (bot: BotMessenger): Command => {
         run,
         ...(mcp.tools ? { tools: mcp.tools } : {}),
         ...(mcp.skill ? { skill: mcp.skill } : {}),
-        confirmSend: flags.confirmSend === true,
-        yes: flags.yes === true,
-        allowDangerous: flags.allowDangerous === true,
       },
       context.streams.diagnostic,
     )
@@ -98,11 +94,6 @@ export const botMcpCommand = (bot: BotMessenger): Command => {
       const given = environmentOf<McpEnvironment>(this).mcp ?? {}
       const entry = serverEntry(app, {
         profile: settings.profile,
-        flags: {
-          ...(flags.confirmSend ? { confirmSend: true } : {}),
-          ...(flags.allowDangerous ? { allowDangerous: true } : {}),
-          ...(flags.yes ? { yes: true } : {}),
-        },
         execPath: given.execPath ?? process.execPath,
         scriptPath: given.scriptPath ?? realpathSync(process.argv[1] ?? ""),
         env,

@@ -1,10 +1,8 @@
-import type { InputRequiredResult, ServerContext } from "@modelcontextprotocol/server"
+import type { ServerContext } from "@modelcontextprotocol/server"
 import * as v from "valibot"
 import { BOT_ACTIONS } from "../../cli/bot/port.js"
-import { type CheckRow, describe } from "../../moderation/check.js"
-import type { GroupRules } from "../../moderation/rules.js"
+import type { CheckRow } from "../../moderation/check.js"
 import type { PermissionKey } from "../../sends/permissions.js"
-import type { ResolveChat } from "../confirm.js"
 
 /** One run of a bot command: options as single `--name=value` tokens, then `--` and the positionals. */
 export interface Invocation {
@@ -20,17 +18,7 @@ export interface BotToolKit {
     invocation: Invocation,
     answer?: (question: string) => string | null,
   ) => Promise<unknown>
-  confirmed: (
-    tool: { name: string; title: string },
-    resolveChat: ResolveChat,
-    args: Record<string, unknown>,
-    ctx: ServerContext,
-    act: (resolved: Record<string, unknown>) => Promise<object>,
-  ) => Promise<object | InputRequiredResult>
-  resolveChat: ResolveChat
-  /** The owner must see this call in a form before anything is written: `--confirm-send`, or level `ask`. */
-  confirmFirst: boolean
-  /** The flag that answers the command's own question at level `ask` (`--yes`), for the run the owner agreed to. */
+  /** The flag that answers the command's own question at level `ask` (`--yes`): over MCP, `ask` goes ahead. */
   answerFlags: string[]
 }
 
@@ -49,7 +37,7 @@ export interface BotTool {
   across?: boolean
   invocation?: (args: Record<string, unknown>) => Invocation
   /** In place of `invocation`: a tool that is more than one command, with its own form. */
-  handle?: (args: Record<string, unknown>, kit: BotToolKit, ctx: ServerContext) => Promise<object | InputRequiredResult>
+  handle?: (args: Record<string, unknown>, kit: BotToolKit, ctx: ServerContext) => Promise<object>
 }
 
 /** A value never reaches commander as its own token, so no argument can become a flag. */
@@ -104,10 +92,8 @@ const MODERATE = "Moderate a group by its rules, as the bot"
 const time = v.pipe(v.string(), v.regex(/^\d{4}-\d{2}-\d{2}T[\d:.]+(Z|[+-]\d{2}:?\d{2})$/, "an ISO 8601 time"))
 
 /**
- * `bot chats moderate`. Actions the rules put at `ask` wait for one sealed form listing them all: a
- * dry run finds them, the owner sees them, and the real run is answered yes for exactly those — a
- * judgement that changed in between is answered no. Under `--confirm-send` or level `ask` the form
- * lists every action.
+ * `bot chats moderate`. Over MCP nobody answers the command's questions, so actions the rules put at
+ * `ask` are left for the owner, as the personal account's moderation leaves them.
  */
 const moderate: BotTool = {
   words: ["chats", "moderate"],
@@ -123,33 +109,12 @@ const moderate: BotTool = {
     since_time: v.optional(v.pipe(time, v.description("judge what came after this time; the saved point stays"))),
     dry_run: v.optional(v.pipe(v.boolean(), v.description("judge and plan; do nothing"))),
   }),
-  handle: async (args, { invoke, confirmed, resolveChat, confirmFirst, answerFlags }, ctx) => {
-    const words = ["chats", "moderate"]
-    const positionals = [String(args.chat)]
-    const run = async (dry: boolean, answer?: (question: string) => string | null) =>
-      (await invoke(
-        words,
-        {
-          options: [...option("since-time", args.since_time), ...(dry ? ["--dry-run"] : answerFlags)],
-          positionals,
-        },
-        answer,
-      )) as { chatId: string; rows: CheckRow[] }
-    if (args.dry_run === true) return run(true)
-
-    const { chatId, rules } = (await invoke(["chats", "rules", "show"], { positionals })) as {
-      chatId: string
-      rules: GroupRules
-    }
-    const acting = (await run(true)).rows.filter((row) => row.action !== "report" && row.outcome === "planned")
-    const asked = confirmFirst
-      ? acting
-      : acting.filter((row) => rules.consent[row.action as "delete" | "remove"] === "ask")
-    const actions = asked.map(describe)
-    if (actions.length === 0) return run(false)
-    return confirmed({ name: "bot_chats_moderate", title: MODERATE }, resolveChat, { chat: chatId, actions }, ctx, () =>
-      run(false, (question) => (actions.includes(question.replace(/\? \[y\/N\] $/, "")) ? "y" : "n")),
-    )
+  handle: async (args, { invoke, answerFlags }) => {
+    const dry = args.dry_run === true
+    return (await invoke(["chats", "moderate"], {
+      options: [...option("since-time", args.since_time), ...(dry ? ["--dry-run"] : answerFlags)],
+      positionals: [String(args.chat)],
+    })) as { chatId: string; rows: CheckRow[] }
   },
 }
 

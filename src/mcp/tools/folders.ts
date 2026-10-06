@@ -4,7 +4,7 @@ import type { MessengerAdapter } from "../../cli/messenger/port.js"
 import { listed } from "../../cli/paging.js"
 import type { SendGuard } from "../../sends/guard.js"
 import { onlineDeps, servicesFor } from "../../services/index.js"
-import { type AnyTool, APPROVE, READ, tool, WRITE } from "../tool.js"
+import { type AnyTool, READ, tool, WRITE } from "../tool.js"
 
 const folderRef = v.pipe(v.string(), v.minLength(1), v.description("folder id, or its title exactly"))
 const chatList = v.optional(v.array(v.pipe(v.string(), v.minLength(1))))
@@ -28,7 +28,6 @@ export const folderTools = (messenger: Messenger): Record<string, AnyTool> => {
       description: "Create a chat folder with these chats in it. Only when the owner asked.",
       input: v.object({ title: v.pipe(v.string(), v.minLength(1)), chats: chatList }),
       annotations: WRITE,
-      _meta: APPROVE,
       permission: "folders",
       online: (adapter, args, { guard }) => folders(adapter, guard).create(args.title, args.chats ?? []),
     }),
@@ -42,7 +41,6 @@ export const folderTools = (messenger: Messenger): Record<string, AnyTool> => {
         remove: chatList,
       }),
       annotations: WRITE,
-      _meta: APPROVE,
       permission: "folders",
       online: (adapter, args, { guard }) =>
         folders(adapter, guard).update(args.folder, {
@@ -56,7 +54,6 @@ export const folderTools = (messenger: Messenger): Record<string, AnyTool> => {
       description: "Delete a chat folder; the chats in it stay. Only when the owner asked.",
       input: v.object({ folder: folderRef }),
       annotations: WRITE,
-      _meta: APPROVE,
       permission: "folders",
       online: (adapter, args, { guard }) => folders(adapter, guard).delete(args.folder),
     }),

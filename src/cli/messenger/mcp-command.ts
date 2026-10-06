@@ -5,7 +5,6 @@ import { CliError, resolvePaths, visibleControls } from "@leemour/cli-core"
 import { annotate } from "@leemour/cli-core/commands"
 import { installerOf } from "@leemour/cli-core/update"
 import { Command } from "commander"
-import { httpConfirmationOf } from "../../mcp/http/policy.js"
 import { type AppIdentity, envName } from "../app.js"
 import { type BaseEnvironment, environmentOf } from "../context.js"
 import { type Messenger, messengerContext } from "./context.js"
@@ -18,7 +17,6 @@ export interface McpEnvironment extends BaseEnvironment {
 export interface McpFlags {
   confirmSend?: boolean
   allowDangerous?: boolean
-  yes?: boolean
   allowSend?: boolean
   allowMarkRead?: boolean
   allowDelete?: boolean
@@ -64,8 +62,15 @@ const portOf = (given: string | undefined): number => {
   return port
 }
 
-/** They decided which tools were offered; the profile's permissions do now. Kept so a configured agent still starts. */
-const RETIRED = ["allowSend", "allowMarkRead", "allowDelete"] as const
+/** They decided which tools were offered or which writes showed a form; the profile's permissions do now. Kept so a configured agent still starts. */
+const RETIRED = [
+  "allowSend",
+  "allowMarkRead",
+  "allowDelete",
+  "confirmSend",
+  "allowDangerous",
+  "httpConfirmation",
+] as const
 
 const withFlags = (command: Command): Command =>
   command
@@ -74,14 +79,14 @@ const withFlags = (command: Command): Command =>
       "override a permission for this server only; repeat for more keys",
       (value: string, previous: string[] = []) => [...previous, value],
     )
-    .option("--confirm-send", "show the owner every write in a form from the server first")
-    .option("--allow-dangerous", "no form before a deletion whose permission level is ask")
+    .option("--confirm-send", "no longer used — writes show no form; the profile's permissions decide")
+    .option("--allow-dangerous", "no longer used — writes show no form; the profile's permissions decide")
     .option("--allow-send", "no longer used — the profile's permissions decide; kept so an old setup still starts")
     .option("--allow-mark-read", "no longer used — the profile's permissions decide")
     .option("--allow-delete", "no longer used — the profile's permissions decide")
 
 const retiredNote = (app: AppIdentity, flags: McpFlags): string | undefined => {
-  const given = RETIRED.filter((flag) => flags[flag] === true)
+  const given = RETIRED.filter((flag) => flags[flag] !== undefined && flags[flag] !== false)
   if (given.length === 0) return undefined
   const names = given.map((flag) => `--${flag.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)}`)
   return (
@@ -97,20 +102,13 @@ export const mcpCommand = (messenger: Messenger): Command => {
       `serve this profile to an agent over MCP, on stdin and stdout — \`claude mcp add ${app.command} -- ${app.command} mcp\``,
     ),
   )
-    .option(
-      "--http",
-      "serve over HTTP on 127.0.0.1 for ChatGPT and Claude in the browser, behind your tunnel; every write asks first by default",
-    )
-    .option(
-      "--http-confirmation <mode>",
-      "required: every write needs a server form (default); permissions: follow the profile levels",
-    )
+    .option("--http", "serve over HTTP on 127.0.0.1 for ChatGPT and Claude in the browser, behind your tunnel")
+    .option("--http-confirmation <mode>", "no longer used — writes show no form; the profile's permissions decide")
     .option("--port <port>", `the local port for --http (default ${DEFAULT_PORT})`)
     .option("--public-url <url>", "the tunnel's https address the browser apps use, e.g. https://<name>.ts.net")
     .option("--revoke", "forget every login given to a browser app; each must log in again")
   command.action(async function (this: Command) {
     const flags = this.optsWithGlobals<McpFlags>()
-    const confirmation = httpConfirmationOf(flags)
     const context = messengerContext(this, messenger)
     const note = retiredNote(app, flags)
     if (note) context.renderer.warn(note)
@@ -130,7 +128,6 @@ export const mcpCommand = (messenger: Messenger): Command => {
         {},
         {
           publicUrl,
-          confirmation,
           port: portOf(flags.port),
           tokenFile: httpTokenFile(app, context.settings.profile, context.env),
         },
@@ -139,11 +136,7 @@ export const mcpCommand = (messenger: Messenger): Command => {
     }
     // Loaded here, not at the top: every other command would otherwise pay for the SDK.
     const { serveOverStdio } = await import("../../mcp/server.js")
-    await serveOverStdio(this, context, messenger, {
-      confirmSend: flags.confirmSend === true,
-      yes: flags.yes === true,
-      allowDangerous: flags.allowDangerous === true,
-    })
+    await serveOverStdio(this, context, messenger, {})
   })
 
   command.addCommand(
@@ -310,7 +303,6 @@ export const serverEntry = (
     env,
   }: { profile: string; flags?: McpFlags; execPath: string; scriptPath: string; env: NodeJS.ProcessEnv },
 ): { config: { mcpServers: Record<string, object> }; warning?: string } => {
-  httpConfirmationOf({ ...flags, http: false })
   if (installerOf(scriptPath) === "npx") {
     throw new CliError(
       "validation_error",
@@ -332,9 +324,6 @@ export const serverEntry = (
       ...(profile === "default" ? [] : [profile]),
       "mcp",
       ...(flags.permission ?? []).flatMap((entry) => ["--permission", entry]),
-      ...(flags.confirmSend ? ["--confirm-send"] : []),
-      ...(flags.allowDangerous ? ["--allow-dangerous"] : []),
-      ...(flags.yes ? ["--yes"] : []),
     ],
     ...(Object.keys(directories).length > 0 ? { env: directories } : {}),
   }

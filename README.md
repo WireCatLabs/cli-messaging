@@ -214,16 +214,14 @@ choose a dialect. New adapters must implement the capability to support `--md`. 
 
 ## MCP from browser clients
 
-HTTP requires a server confirmation form for every write by default. To use a client that cannot
-show elicitation forms, start with `--http-confirmation permissions`: effective `allow` tools run
-without a server form, `ask` tools still need one, and `deny`/`readonly` restrict access. An app's
-permission prompt is separate and cannot be verified by the server; its “always allow” setting
-may permit later calls without another prompt. HTTP ignores `--yes` and `--allow-dangerous`.
+Writes over MCP show no form, over stdio or HTTP: the profile's permissions decide, and a level of
+`ask` goes ahead, since nobody is at a terminal to answer it. An app's own permission prompt is
+separate and cannot be verified by the server; its “always allow” setting may permit later calls
+without another prompt.
 
 Repeat `--permission key=level` to override profile permissions only for the server process.
 For example, `--permission messages.send=allow` enables sending even in a read-only profile.
-A broader key overrides saved descendant keys; built-in defaults still tighten broader grants,
-so deletion needs the explicit `--permission messages.delete=allow` to avoid its default question.
+A broader key overrides saved descendant keys; built-in defaults still tighten broader grants.
 Recipient restrictions and hourly limits remain in effect; no saved configuration is changed.
 
 The browser connector uses the tunnel's HTTPS URL ending in `/mcp`, with the owner OAuth login.

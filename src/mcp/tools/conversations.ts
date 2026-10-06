@@ -8,7 +8,7 @@ import { REFRESH_BOUNDS } from "../../services/embeddings.js"
 import { servicesFor, storedDeps } from "../../services/index.js"
 import { momentOf } from "../../services/moment.js"
 import { searchServices, syncInputs } from "../search-sync.js"
-import { type AnyTool, chatOf, limit, message, READ, refuseAskedLocalWrite, tool } from "../tool.js"
+import { type AnyTool, chatOf, limit, message, READ, tool } from "../tool.js"
 import { syncArgs } from "./search.js"
 
 /** An MCP client gives up on a call long before 2,000 chunks are embedded. */
@@ -70,7 +70,6 @@ export const conversationsTools = (messenger: Messenger): Record<string, AnyTool
       annotations: local,
       key: "conversations.links",
       stored: async (store, account, { batch, ...answer }, defaults) => {
-        refuseAskedLocalWrite(defaults, "conversations.links", command)
         return servicesFor(storedDeps(messenger, store, account, defaults.guard)).conversations.addAnswers(
           batch,
           answer,
@@ -86,7 +85,6 @@ export const conversationsTools = (messenger: Messenger): Record<string, AnyTool
       annotations: { ...local, destructiveHint: true },
       key: "conversations.links",
       stored: async (store, account, args, defaults) => {
-        refuseAskedLocalWrite(defaults, "conversations.links", command)
         return servicesFor(storedDeps(messenger, store, account, defaults.guard)).conversations.clearAnswers(
           args.chat,
           args.model,
@@ -102,7 +100,6 @@ export const conversationsTools = (messenger: Messenger): Record<string, AnyTool
       annotations: local,
       key: "conversations.links",
       stored: async (store, account, args, defaults) => {
-        refuseAskedLocalWrite(defaults, "conversations.links", command)
         return servicesFor(storedDeps(messenger, store, account, defaults.guard)).conversations.build(args.chat)
       },
     }),
@@ -271,7 +268,6 @@ export const conversationsTools = (messenger: Messenger): Record<string, AnyTool
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
       key: "conversations.embed",
       stored: async (store, account, args, defaults) => {
-        refuseAskedLocalWrite(defaults, "conversations.embed", command)
         const deps = {
           ...storedDeps(messenger, store, account, defaults.guard),
           env: defaults.env,

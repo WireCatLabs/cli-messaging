@@ -3,7 +3,7 @@ import type { Messenger } from "../../cli/messenger/context.js"
 import type { MessengerAdapter } from "../../cli/messenger/port.js"
 import type { SendGuard } from "../../sends/guard.js"
 import { onlineDeps, servicesFor } from "../../services/index.js"
-import { type AnyTool, APPROVE, chatOf, message, tool, WRITE } from "../tool.js"
+import { type AnyTool, chatOf, message, tool, WRITE } from "../tool.js"
 
 /** Offered with `--allow-send`, under the `reaction` permission. */
 export const reactionTools = (messenger: Messenger): Record<string, AnyTool> => {
@@ -22,7 +22,6 @@ export const reactionTools = (messenger: Messenger): Record<string, AnyTool> => 
         emoji: v.pipe(v.string(), v.minLength(1), v.description("one emoji, for example 👍")),
       }),
       annotations: WRITE,
-      _meta: APPROVE,
       permission: "reaction",
       online: (adapter, args, { guard }) =>
         messages(adapter, guard).react({ chat: args.chat, message: args.message, emoji: args.emoji }),
@@ -32,7 +31,6 @@ export const reactionTools = (messenger: Messenger): Record<string, AnyTool> => 
       description: "Take the owner's reaction off one message. Only when the owner asked for it.",
       input: v.object({ chat, message }),
       annotations: WRITE,
-      _meta: APPROVE,
       permission: "reaction",
       online: (adapter, args, { guard }) =>
         messages(adapter, guard).react({ chat: args.chat, message: args.message, emoji: null }),

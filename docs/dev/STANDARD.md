@@ -328,7 +328,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--chats` | `<ids>` | only these chat ids, comma-separated; empty for any |  | `replies edit` (planned) |
 | `--check` |  | say whether a newer version exists, and install nothing |  | `bot list`, `upgrade` |
 | `--concurrency` | `<n>` | remote: requests at once (default: 4) |  | `conversations embed` |
-| `--confirm-send` |  | show the owner every write the MCP server offers, in a form to approve. **MAX retains its native wrapper wording; confirmation semantics already follow profile permissions in both CLIs** |  | `bot mcp`, `bot mcp config`, `mcp`, `mcp config`, `mcp doctor` (planned), `mcp setup` (planned) |
+| `--confirm-send` |  | no longer used: MCP writes show no form; the profile's permissions decide. **retired: accepted with a warning so an old setup still starts** |  | `bot mcp`, `bot mcp config`, `mcp`, `mcp config`, `mcp doctor` (planned), `mcp setup` (planned) |
 | `--contact` | `<person>` | the person to tag or untag: their id, @username or name, as the local store knows them |  | `tags add`, `tags remove` |
 | `--contacts-only` |  | match only contacts |  | `replies edit` (planned) |
 | `--context` | `<n>` | messages before and after each hit |  | `messages search`, `searches create` |
@@ -356,7 +356,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--history` |  | the people added also see the messages from before they came |  | `chats members add` (max-only) |
 | `--html` |  | the text is HTML: <b>, <i>, <a href>, <code> |  | `bot messages edit`, `bot messages send` |
 | `--http` |  | serve MCP over HTTP on 127.0.0.1 behind the owner's tunnel, with a one-owner login; every write asks first by default. **MAX wording catches up with Telegram’s explicit “by default” at the next shared SDK adoption; both HTTP servers confirm writes by default** |  | `mcp` |
-| `--http-confirmation` | `<mode>` | required (default): every write needs a server form; permissions: follow the effective profile levels |  | `mcp` |
+| `--http-confirmation` | `<mode>` | no longer used: MCP writes show no form; the profile's permissions decide. **retired: accepted with a warning so an old setup still starts** |  | `mcp` |
 | `--idle` | `<duration>` | stop after this long with nobody using it — 15m, 1h |  | `serve` (max-only), `server restart` (max-only), `server start` (max-only) |
 | `--json` |  | machine-readable output: one JSON value on stdout, nothing else |  | every command |
 | `--jsonl` |  | machine-readable output: one JSON object per line, for streaming and jq |  | every command |
@@ -616,21 +616,20 @@ The stored-only `stats_charts` tool accepts optional `format: json|png` (default
 PNG adds `image/png` content and JSON text `{ chart, image: { format, width, height } }`;
 it writes no file and uses the same `messages` read permission.
 
-1. **A tool follows its full command path, joined by underscores after `<tool>_`**:
-   `max_store_export`, `tg_chats_members_list`, `max_stats_messages_top`;
-   a bot's path includes `bot`: `tg_bot_messages_send`.
-   A tool with no command (`<tool>_status`) is named after what it answers. `<tool>_conversations_refresh` runs what
-   `conversations search --refresh` runs before it searches (NEED-551 A).
+1. **Three tools, not one per command** (NEED-766): `<tool>_tools_search` finds commands by words
+   and gives each one's arguments; `<tool>_read` runs a command that only reads and `<tool>_write`
+   one that changes something, as `{ "command": "messages list", "arguments": { … } }`. A command
+   is its CLI path; a bot's includes `bot`. `status` answers what the server is, never connecting.
+   `conversations refresh` runs what `conversations search --refresh` runs before it searches
+   (NEED-551 A). The list never changes during a connection.
 2. **Arguments are the command's options in snake_case**, with the option's name: `--send-id` is
    `send_id`, `--since-time` is `since_time`, `--before-n` is `before_n`.
-3. **Every tool that only reads says `readOnlyHint: true`**; every tool that writes says what it
-   destroys with `destructiveHint`.
-4. **A tool is offered by its command's [permission](#permissions)**, never by a flag of its own:
-   `deny` hides it, `readonly` hides the writing ones, `ask` shows the owner a form before it acts
-   unless `mcp` was started with the command's skip flag, `allow` acts. `--confirm-send`
-   puts every write through the form, whatever its level. `--allow-send`, `--allow-mark-read` and
-   `--allow-delete` decide nothing any more: they are accepted with a warning, so an agent set up
-   with them still starts, and go in a later release.
+3. **Every command says whether it writes**; `read` refuses a writing one and `write` a reading one.
+4. **A command is found and run by its [permission](#permissions)**, never by a flag of its own:
+   `deny` hides it, `readonly` hides the writing ones, `ask` and `allow` act — no form, since nobody
+   is at a terminal to answer (NEED-772, NEED-773). `--confirm-send`, `--allow-dangerous`,
+   `--http-confirmation`, `--allow-send`, `--allow-mark-read` and `--allow-delete` decide nothing any
+   more: they are accepted with a warning, so an agent set up with them still starts.
 5. **Unknown arguments are refused before execution.** A retired schedule field must never turn
    a scheduled write into an immediate one. Consumers retaining their own session use the public
    personal MCP catalogue and registration seam, filtering only unsupported capabilities.

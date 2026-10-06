@@ -35,7 +35,7 @@ const cli = async (argv: string[]) => {
 }
 
 describe("HTTP MCP startup", () => {
-  it("passes the explicit mode and effective overrides without saving the profile", async () => {
+  it("passes the effective overrides without saving the profile, and starts with a retired confirmation mode", async () => {
     const { code, streams } = await cli([
       "mcp",
       "--http",
@@ -59,7 +59,7 @@ describe("HTTP MCP startup", () => {
       }),
       expect.anything(),
       {},
-      expect.objectContaining({ confirmation: "permissions" }),
+      expect.not.objectContaining({ confirmation: expect.anything() }),
     )
   })
   it("preserves parent permission overrides in a generated stdio configuration", async () => {
@@ -68,18 +68,12 @@ describe("HTTP MCP startup", () => {
     const entry = JSON.parse(streams.stdout.join(""))
     expect(entry.mcpServers.chat.args).toEqual(expect.arrayContaining(["--permission", "messages.send=allow"]))
   })
-  it("rejects HTTP confirmation mode when generating a stdio config", async () => {
-    const { code } = await cli(["mcp", "--http-confirmation", "permissions", "config", "--json"])
-    expect(code).not.toBe(0)
-  })
-  it.each([
-    ["--http-confirmation", "permissions"],
-    ["--http", "--http-confirmation", "automatic"],
-    ["--http", "--http-confirmation", "permissions", "--confirm-send"],
-    ["--http", "--permission", "messages.send=yes"],
-  ])("rejects invalid options before starting: %j", async (...args) => {
-    const { code } = await cli(["mcp", ...args, "--json"])
-    expect(code).not.toBe(0)
-    expect(serveOverHttpUntilStopped).not.toHaveBeenCalled()
-  })
+  it.each([["--http", "--permission", "messages.send=yes"]])(
+    "rejects invalid options before starting: %j",
+    async (...args) => {
+      const { code } = await cli(["mcp", ...args, "--json"])
+      expect(code).not.toBe(0)
+      expect(serveOverHttpUntilStopped).not.toHaveBeenCalled()
+    },
+  )
 })

@@ -6,7 +6,7 @@ import type { SendGuard } from "../../sends/guard.js"
 import { servicesFor, storedDeps } from "../../services/index.js"
 import { momentOf } from "../../services/moment.js"
 import type { AccountKey, MessageStore } from "../../store/store.js"
-import { type AnyTool, chatOf, limit, READ, refuseAskedLocalWrite, tool } from "../tool.js"
+import { type AnyTool, chatOf, limit, READ, tool } from "../tool.js"
 
 const LOCAL = { readOnlyHint: false, openWorldHint: false }
 const ROW =
@@ -15,7 +15,6 @@ const ROW =
 const type = v.picklist(TASK_KINDS)
 
 export const tasksTools = (messenger: Messenger): Record<string, AnyTool> => {
-  const command = messenger.app.command
   const tasks = (store: MessageStore, account: AccountKey, guard: SendGuard) =>
     servicesFor(storedDeps(messenger, store, account, guard)).tasks
   return {
@@ -63,7 +62,6 @@ export const tasksTools = (messenger: Messenger): Record<string, AnyTool> => {
       }),
       annotations: { ...LOCAL, destructiveHint: false, idempotentHint: true },
       stored: async (store, account, args, defaults) => {
-        refuseAskedLocalWrite(defaults, "tasks.add", command)
         const { task, created } = await tasks(store, account, defaults.guard).add(args.message, args.type, "agent")
         return { ...task, created }
       },
@@ -81,7 +79,6 @@ export const tasksTools = (messenger: Messenger): Record<string, AnyTool> => {
       }),
       annotations: { ...LOCAL, destructiveHint: false, idempotentHint: false },
       stored: async (store, account, args, defaults) => {
-        refuseAskedLocalWrite(defaults, "tasks.close", command)
         return tasks(store, account, defaults.guard).close(args.task, {
           as: args.as,
           by: "agent",
