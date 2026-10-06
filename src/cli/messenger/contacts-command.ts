@@ -2,6 +2,7 @@ import { CliError } from "@leemour/cli-core"
 import { Command } from "commander"
 import { phoneOf } from "../../services/index.js"
 import { momentOf } from "../../services/moment.js"
+import { maskedAccount } from "../../services/people.js"
 import { CHAT_MESSAGES, CONTEXT_BYTES, CONTEXT_MESSAGES } from "../../services/person-context.js"
 import { readSecret } from "../../terminal/prompt.js"
 import { positiveCount, renderPage, window, withPaging } from "../paging.js"
@@ -38,6 +39,24 @@ export const contactsCommand = (messenger: Messenger): Command => {
     .action(async function (this: Command, person: string) {
       const context = messengerContext(this, messenger)
       context.renderer.result(await context.withServices((services) => services.people.show(person)))
+    })
+
+  contacts
+    .command("profile")
+    .description(
+      "everything the messenger says about one person — handles, flags, last seen, when they registered — and " +
+        "how many of their messages the store holds in each chat you share, the first and the last",
+    )
+    .argument("<person>", "their id, @username, or part of their name")
+    .option("--show-phone", "print the whole phone number")
+    .action(async function (this: Command, person: string) {
+      const whole = this.opts<{ showPhone?: boolean }>().showPhone === true
+      const context = messengerContext(this, messenger)
+      const found = await context.withServices((services) => services.people.profile(person))
+      if (found.chats.some(({ complete }) => !complete)) {
+        context.renderer.note("a count is a floor where the chat is not stored whole (`complete: false`)")
+      }
+      context.renderer.result(whole ? found : maskedAccount(found))
     })
 
   contacts

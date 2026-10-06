@@ -1442,6 +1442,16 @@
     "contacts lookup": {
       "in": "all"
     },
+    "contacts profile": {
+      "in": [],
+      "planned": { "max": "max's next cli-messaging bump", "tg": "tg's next cli-messaging bump" },
+      "options": {
+        "--show-phone": {
+          "in": [],
+          "planned": { "max": "max's next cli-messaging bump", "tg": "tg's next cli-messaging bump" }
+        }
+      }
+    },
     "contacts remove": {
       "in": "all"
     },

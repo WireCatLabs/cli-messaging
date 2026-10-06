@@ -1666,6 +1666,126 @@ describe("the shared read commands", () => {
     expect(lonely.code).toBe(2)
   })
 
+  it("contacts profile adds their stored activity per shared chat, and shows a phone's last four digits", async () => {
+    const root = mkdtempSync(join(tmpdir(), "person-profile-"))
+    const env = {
+      CHAT_STATE_DIR: join(root, "state"),
+      CHAT_CONFIG_DIR: join(root, "config"),
+      MESSAGING_STORE: join(root, "m.db"),
+    }
+    rememberAccount(app, "default", "500", env)
+    const store = await openStore({ path: env.MESSAGING_STORE })
+    const tg = { provider: "telegram", account: "500" }
+    const said = (id: string, chatId: string, timestamp: string) => ({
+      id,
+      chatId,
+      senderId: "11",
+      senderName: null,
+      timestamp,
+      editedAt: null,
+      text: "hello",
+      outgoing: false,
+      attachments: [],
+      replyTo: null,
+      forwardedFrom: null,
+      reactions: null,
+    })
+    const chat = { unreadCount: 0, lastMessageAt: "2026-09-03T10:00:00.000Z", participantsCount: null }
+    await store.saveChats(tg, [
+      { ...chat, id: "11", title: "Ana", kind: "dialog" },
+      { ...chat, id: "-70", title: "Club", kind: "group" },
+    ])
+    await store.saveMessages(tg, "11", [said("1", "11", "2026-09-01T10:00:00.000Z")], { via: "test" })
+    await store.saveMessages(
+      tg,
+      "-70",
+      [said("5", "-70", "2026-09-02T10:00:00.000Z"), said("6", "-70", "2026-09-03T10:00:00.000Z")],
+      { via: "test" },
+    )
+    await store.close()
+    const described: MessengerAdapter = {
+      ...fake,
+      profile: async () => ({
+        id: "11",
+        name: "Ana",
+        usernames: ["ana"],
+        bio: null,
+        phone: "+34 600 000 123",
+        flags: { bot: false },
+        seen: "recently",
+        registered: { at: "2020-05-01T00:00:00.000Z", source: "estimate", precision: "month" },
+        chats: [{ id: "11", title: "Ana", kind: "dialog", lastMessageAt: "2026-09-01T10:00:00.000Z" }],
+      }),
+    }
+
+    const masked = await call(
+      ["contacts", "profile", "11", "--json"],
+      async () => described,
+      env,
+      {},
+      { provider: "telegram" },
+    )
+    const whole = await call(
+      ["contacts", "profile", "11", "--show-phone", "--json"],
+      async () => described,
+      env,
+      {},
+      { provider: "telegram" },
+    )
+
+    expect(masked.code).toBe(0)
+    const answer = JSON.parse(masked.stdout[0] ?? "null")
+    expect(answer).toMatchObject({ seen: "recently", phone: "***0123", registered: { source: "estimate" } })
+    expect(answer.chats).toEqual([
+      {
+        id: "11",
+        title: "Ana",
+        kind: "dialog",
+        theirMessages: 1,
+        firstAt: "2026-09-01T10:00:00.000Z",
+        lastAt: "2026-09-01T10:00:00.000Z",
+        complete: false,
+      },
+      {
+        id: "-70",
+        title: "Club",
+        kind: "group",
+        theirMessages: 2,
+        firstAt: "2026-09-02T10:00:00.000Z",
+        lastAt: "2026-09-03T10:00:00.000Z",
+        complete: false,
+      },
+    ])
+    expect(JSON.parse(whole.stdout[0] ?? "null").phone).toBe("+34 600 000 123")
+  })
+
+  it("contacts profile --offline describes them from the store and never connects", async () => {
+    const root = mkdtempSync(join(tmpdir(), "person-profile-"))
+    const env = { CHAT_STATE_DIR: join(root, "state"), MESSAGING_STORE: join(root, "m.db") }
+    rememberAccount(app, "default", "500", env)
+    const store = await openStore({ path: env.MESSAGING_STORE })
+    const tg = { provider: "telegram", account: "500" }
+    await store.saveChats(tg, [
+      { id: "11", title: "Ana", kind: "dialog", unreadCount: 0, lastMessageAt: null, participantsCount: null },
+    ])
+    await store.saveMembers(tg, "11", ["11", "500"])
+    await store.close()
+    const never = async (): Promise<MessengerAdapter> => {
+      throw new Error("--offline must never connect")
+    }
+
+    const found = await call(
+      ["contacts", "profile", "11", "--offline", "--json"],
+      never,
+      env,
+      {},
+      { provider: "telegram" },
+    )
+
+    expect(found.code).toBe(0)
+    expect(JSON.parse(found.stdout[0] ?? "null")).toMatchObject({ id: "11", flags: {}, chats: [{ id: "11" }] })
+  })
+
   it("**builds a chat's conversations** and explains a message's place in one, without connecting", async () => {
     const root = mkdtempSync(join(tmpdir(), "messenger-"))
     const env = {

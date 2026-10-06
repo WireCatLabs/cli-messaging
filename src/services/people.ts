@@ -1,12 +1,14 @@
 import { CliError } from "@leemour/cli-core"
 import { capability } from "../cli/messenger/port.js"
-import type { Account, Chat, Contact, Id, Member, Page, PersonCard, PhoneBookEntry } from "../domain/models.js"
+import type { Chat, Contact, Id, Member, Page, PersonCard, PersonProfile, PhoneBookEntry } from "../domain/models.js"
 import { pickPerson } from "../resolve.js"
 import { guardedWrite, type Operated } from "../sends/guarded.js"
 import { newOperationId } from "../sends/send-id.js"
 import type { AccountKey, MessageStore, PersonRecord } from "../store/store.js"
 import type { PageWindow } from "./chats.js"
 import { fromStore, type ServiceDeps, storeIfOpen } from "./deps.js"
+
+
 import { storedChatId } from "./messages.js"
 import {
   CHAT_MESSAGES,
@@ -18,6 +20,8 @@ import {
   personContext,
   personMessages,
 } from "./person-context.js"
+import { personProfile } from "./person-profile.js"
+
 
 export interface ContactSync {
   added: number
@@ -33,6 +37,8 @@ export interface ContactSync {
 export interface PeopleService {
   list(options: { order: "recent" | "name"; search?: string } & PageWindow): Promise<Page<Contact>>
   show(person: string): Promise<PersonCard>
+  /** What the messenger says about them, and their stored activity in each shared chat. */
+  profile(person: string): Promise<PersonProfile>
   /** `phone` as digits, parsed by the caller (`phoneOf`). */
   lookup(phone: string): Promise<Member>
   /** The whole contact list from the messenger into the store: what was new, what changed. */
@@ -110,6 +116,8 @@ export const peopleService = (deps: ServiceDeps): PeopleService => {
       const held = await storeIfOpen(deps)
       return held ? { ...card, chats: await sharedChats(held.store, held.account, card.id) } : card
     },
+
+    profile: (person) => personProfile(deps, person),
 
     context: async (person, options) => personContext(await deps.store(), await deps.account(), person, options),
 
@@ -307,5 +315,5 @@ const byRecency = (a: Contact, b: Contact) => (b.lastMessagedAt ?? "").localeCom
 const byName = (a: Contact, b: Contact) => (a.name ?? "").localeCompare(b.name ?? "")
 
 /** The phone cut to its last four digits: enough to tell two accounts apart. */
-export const maskedAccount = (account: Account): Account =>
+export const maskedAccount = <T extends { phone?: string | null }>(account: T): T =>
   account.phone ? { ...account, phone: `***${account.phone.replace(/\D/g, "").slice(-4)}` } : account

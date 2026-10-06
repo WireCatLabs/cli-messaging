@@ -565,6 +565,7 @@ describe("the MCP server", () => {
       "chat_contacts_context",
       "chat_contacts_list",
       "chat_contacts_lookup",
+      "chat_contacts_profile",
       "chat_contacts_show",
       "chat_conversations_batches_next",
       "chat_conversations_batches_status",

@@ -5,6 +5,7 @@ import type { MessengerAdapter } from "../../cli/messenger/port.js"
 import type { SendGuard } from "../../sends/guard.js"
 import { onlineDeps, phoneOf, servicesFor, storedDeps } from "../../services/index.js"
 import { momentOf } from "../../services/moment.js"
+import { maskedAccount } from "../../services/people.js"
 import { CONTEXT_BYTES, CONTEXT_MESSAGES } from "../../services/person-context.js"
 import { type AnyTool, envelope, limit, page, paging, READ, tool } from "../tool.js"
 
@@ -51,6 +52,21 @@ export const contactsTools = (messenger: Messenger): Record<string, AnyTool> => 
       }),
       annotations: READ,
       served: (services, args) => services.people.show(args.person),
+    }),
+
+    contacts_profile: tool({
+      title: "Profile of a person",
+      description:
+        "What the messenger says about one person — { id, name, usernames, bio, birthday?, phone? (last four " +
+        "digits), flags { bot, verified, premium, scam, fake, restricted, deleted, support }, seen (online, recently, " +
+        "week, month, hidden or a time), contact?, mutualContact?, commonChatsCount?, registered? { at, source: " +
+        "telegram | max | estimate, precision }, hasPhoto? } — and chats: for each chat shared with them, " +
+        "theirMessages stored, firstAt, lastAt and complete (false: the count is a floor). Reading tells them nothing.",
+      input: v.object({
+        person: v.pipe(v.string(), v.minLength(1), v.description("person id, @username, or part of a name")),
+      }),
+      annotations: READ,
+      served: async (services, args) => maskedAccount(await services.people.profile(args.person)),
     }),
 
     contacts_context: tool({
