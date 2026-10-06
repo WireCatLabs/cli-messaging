@@ -12,6 +12,15 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   tasks with `review` `new`, lists the open ones, sums them up per chat, oldest first, and closes one only after
   the owner approves. It sends nothing.
 
+### Changed — may break callers
+
+- Invalid command paths, options, missing values and invalid choices now return exit 2 with a
+  `validation_error`, instead of Commander's exit 1 and prose. JSON and JSONL failures remain one
+  JSON object on stderr even when a terminal is attached. Help and version requests still succeed
+  with text on stdout. Callers can branch on the error code instead of parsing terminal output.
+- If a consumer failure handler cannot finish, the original error includes `settlementFailed: true`
+  instead of an additional text diagnostic, so the machine error stream remains parseable.
+
 ## 0.155.0 — 06.10.2026
 
 Released early: tg-cli and max-cli browser sends are blocked by unsupported server elicitation; explicit startup permission overrides are needed now

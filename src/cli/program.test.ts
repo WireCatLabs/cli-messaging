@@ -2,7 +2,7 @@ import { mkdtempSync, readdirSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { CliError, captureStreams } from "@leemour/cli-core"
-import { Command } from "commander"
+import { Command, Option } from "commander"
 import { describe, expect, it, vi } from "vitest"
 import { baseContext, environmentOf } from "./context.js"
 import { createProgram, type ProgramDefinition, run } from "./program.js"
@@ -74,8 +74,8 @@ describe("running a messenger CLI", () => {
   it("says which word was read as a profile when the command after it is unknown", async () => {
     const { code, stderr } = await call(["chat", "list"])
 
-    expect(code).toBe(1)
-    expect(stderr.join("\n")).toContain('"chat" is not a command')
+    expect(code).toBe(2)
+    expect(JSON.parse(stderr[0] ?? "").error.message).toContain('"chat" is not a command')
   })
 
   it("**closes what the command tracked when --timeout expires**, then reports a timeout", async () => {
@@ -228,8 +228,8 @@ describe("consumer lifecycle in the shared shell", () => {
     })
     expect(result.code).toBe(6)
     expect(result.stdout).toEqual([])
-    expect(result.stderr[0]).toBe("could not finish the command's failure handler")
-    expect(JSON.parse(result.stderr[1] ?? "").error.code).toBe("not_found")
+    expect(result.stderr).toHaveLength(1)
+    expect(JSON.parse(result.stderr[0] ?? "").error).toMatchObject({ code: "not_found", settlementFailed: true })
     expect(result.stderr.join("\n")).not.toContain("private handler content")
   })
 
@@ -314,7 +314,103 @@ describe("the runner's configuration seam", () => {
 
 it("does not blame a profile when a known resource has an unknown subcommand", async () => {
   const result = await call(["work", "chats", "missing"])
-  expect(result.code).toBe(1)
+  expect(result.code).toBe(2)
   expect(result.stderr.join("\n")).toContain("unknown command 'missing'")
   expect(result.stderr.join("\n")).not.toContain("read as a profile name")
+})
+
+describe("machine failures", () => {
+  const cases = [
+    ["unknown root", ["missing", "operation"]],
+    ["unknown child", ["items", "missing"]],
+    ["unknown option", ["items", "show", "synthetic", "--missing"]],
+    ["missing operand", ["items", "show"]],
+    ["missing option value", ["items", "show", "synthetic", "--mode"]],
+    ["invalid choice", ["items", "show", "synthetic", "--mode", "missing"]],
+    ["missing command", []],
+  ] as const
+
+  it.each(cases)("returns one JSON validation failure for %s without running the action", async (_, words) => {
+    for (const tty of [true, false]) {
+      for (const format of ["--json", "--jsonl"]) {
+        const action = vi.fn()
+        const streams = captureStreams()
+        const code = await run(
+          [...words, format, "--no-record"],
+          {
+            app,
+            commands: () => [
+              new Command("items").addCommand(
+                new Command("show")
+                  .argument("<name>")
+                  .addOption(new Option("--mode <mode>").choices(["compact", "full"]))
+                  .action(action),
+              ),
+            ],
+          },
+          { streams, tty, env: process.env },
+        )
+        expect(code).toBe(2)
+        expect(streams.stdout).toEqual([])
+        expect(streams.stderr).toHaveLength(1)
+        expect(JSON.parse(streams.stderr[0] ?? "").error).toMatchObject({ code: "validation_error" })
+        expect(action).not.toHaveBeenCalled()
+      }
+    }
+  })
+
+  it.each(["--json", "--jsonl"])("keeps an explicit %s error structured with a TTY", async (format) => {
+    const streams = captureStreams()
+    const code = await run(
+      ["chats", "list", format, "--no-record"],
+      definition(async () => {
+        throw new CliError("not_found", "synthetic missing item", { candidates: [{ id: "7" }] })
+      }),
+      { streams, tty: true, env: process.env },
+    )
+    expect(code).toBe(6)
+    expect(streams.stdout).toEqual([])
+    expect(streams.stderr).toHaveLength(1)
+    expect(JSON.parse(streams.stderr[0] ?? "").error).toMatchObject({
+      code: "not_found",
+      candidates: [{ id: "7" }],
+    })
+  })
+
+  it("does not treat a literal --json after the delimiter as an output flag", async () => {
+    const streams = captureStreams()
+    const code = await run(
+      ["item", "--no-record", "--", "--json"],
+      {
+        app,
+        commands: () => [
+          new Command("item").argument("<name>").action(() => {
+            throw new CliError("not_found", "synthetic missing item")
+          }),
+        ],
+      },
+      { streams, tty: true, env: process.env },
+    )
+    expect(code).toBe(6)
+    expect(streams.stderr).toEqual(["✗ synthetic missing item"])
+  })
+
+  it("uses JSON for a preparation failure before command options have been parsed", async () => {
+    const streams = captureStreams()
+    const action = vi.fn()
+    const code = await run(
+      ["chats", "list", "--json", "--no-record"],
+      {
+        ...definition(action),
+        prepare: () => {
+          throw new CliError("permission_error", "synthetic refusal")
+        },
+      },
+      { streams, tty: true, env: process.env },
+    )
+    expect(code).toBe(5)
+    expect(streams.stderr).toHaveLength(1)
+    expect(JSON.parse(streams.stderr[0] ?? "").error.code).toBe("permission_error")
+    expect(action).not.toHaveBeenCalled()
+  })
 })

@@ -122,6 +122,6 @@ describe("bot store fetch", () => {
     expect(fetched.code).toBe(0)
     expect(connecting?.history).toEqual({ from: "https://example.org/10", pauseMs: 1 })
     expect(connecting?.stop).toBeInstanceOf(AbortSignal)
-    expect((await call(["store", "fetch", "-100", "--from", "https://example.org/10"])).code).toBe(1)
+    expect((await call(["store", "fetch", "-100", "--from", "https://example.org/10"])).code).toBe(2)
   })
 })
