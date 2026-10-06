@@ -6,6 +6,10 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.161.0 — 07.10.2026
+
+Released early: MAX cannot adopt 0.160.0 — a timed-out Bot API write still reads as safe to repeat
+
 ### Fixed
 
 - The unknown outcome of a write stopped by `--timeout` now reaches the output. 0.160.0 kept it inside
