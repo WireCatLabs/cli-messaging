@@ -18,6 +18,7 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   `validation_error`, instead of Commander's exit 1 and prose. JSON and JSONL failures remain one
   JSON object on stderr even when a terminal is attached. Help and version requests still succeed
   with text on stdout. Callers can branch on the error code instead of parsing terminal output.
+  Consumer preparation now runs only after parser validation and never for help/version requests.
 - If a consumer failure handler cannot finish, the original error includes `settlementFailed: true`
   instead of an additional text diagnostic, so the machine error stream remains parseable.
 

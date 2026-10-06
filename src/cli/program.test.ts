@@ -158,10 +158,12 @@ describe("consumer lifecycle in the shared shell", () => {
 
   it.each(["--help", "--version"])("does not settle a failure for %s", async (flag) => {
     const onFailure = vi.fn()
-    const result = await execute([flag], { onFailure })
+    const prepare = vi.fn()
+    const result = await execute([flag], { onFailure, prepare })
     expect(result.code).toBe(0)
     expect(result.stdout.length).toBeGreaterThan(0)
     expect(onFailure).not.toHaveBeenCalled()
+    expect(prepare).not.toHaveBeenCalled()
   })
 
   it("reports a preparation failure without executing the command", async () => {
@@ -334,11 +336,13 @@ describe("machine failures", () => {
     for (const tty of [true, false]) {
       for (const format of ["--json", "--jsonl"]) {
         const action = vi.fn()
+        const prepare = vi.fn()
         const streams = captureStreams()
         const code = await run(
           [...words, format, "--no-record"],
           {
             app,
+            prepare,
             commands: () => [
               new Command("items").addCommand(
                 new Command("show")
@@ -355,6 +359,7 @@ describe("machine failures", () => {
         expect(streams.stderr).toHaveLength(1)
         expect(JSON.parse(streams.stderr[0] ?? "").error).toMatchObject({ code: "validation_error" })
         expect(action).not.toHaveBeenCalled()
+        expect(prepare).not.toHaveBeenCalled()
       }
     }
   })

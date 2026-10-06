@@ -113,6 +113,7 @@ export const run = async (argv: string[], definition: ProgramDefinition, options
   })
   const environment = { ...options, streams, app: definition.app }
   provide(program, environment)
+  program.hook("preAction", async () => definition.prepare?.(program, environment))
   // Depth-first: a subcommand left with the default behaviour kills the process from inside a test.
   forEachCommand(program, (child) => child.exitOverride())
 
@@ -134,7 +135,6 @@ export const run = async (argv: string[], definition: ProgramDefinition, options
   }
 
   try {
-    await definition.prepare?.(program, environment)
     await program.parseAsync(rest, { from: "user" })
     const code = process.exitCode === undefined ? 0 : Number(process.exitCode)
     const hint = code === 0 && !rest.includes("--quiet") ? hintFor(definition, rest, options) : undefined
