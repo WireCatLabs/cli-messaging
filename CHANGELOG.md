@@ -46,6 +46,16 @@ Released early: MAX native server daily member fetching needs the public schedul
   step, rather than counting every mail thread as an incomplete messenger chat and suggesting
   `store fetch`. JSON completeness still reports missing or unknown history.
 
+## 0.157.0 — 07.10.2026
+
+Released early: MAX and Telegram CLI audit adoption needs the published execution, schema, skill-validation and MCP host APIs
+
+### Fixed
+
+- Person context includes private dialogs named by the person's id when no members are recorded,
+  restoring direct messages and the last message each way in existing Telegram stores. Recorded
+  membership remains authoritative; groups, left chats and other accounts are not inferred.
+
 ### Added
 
 - `skill-validation` checks portable YAML frontmatter, local references, emitted version and
@@ -59,27 +69,6 @@ Released early: MAX native server daily member fetching needs the public schedul
 - Agent execution flags: `--no-input`, `--max-input-bytes`, `--max-output-bytes`, `--fields`
   and a general `--dry-run` preview before preparation or action. Specialized previews retain
   their existing behavior. Previews exclude payload content and leave remote targets unresolved.
-
-### Changed — may break callers
-
-- One-shot commands default to a 30-second deadline; explicit `--timeout` overrides it. Persistent
-  watch/serve/MCP and interactive login have their own lifecycles. Buffered input defaults to
-  16 MiB, secret input to 64 KiB, and machine output to 4 MiB. Exceeding output limits fails visibly;
-  JSONL errors identify already-emitted rows. `--max-output-bytes 0` disables the output cap.
-- JSON/JSONL and nonterminal execution cannot prompt or launch interactive login. Explicit piped
-  input remains available. SIGINT exits 130, SIGTERM 143, and a closed output pipe ends quietly.
-  Errors expose conservative retry guidance; interrupted writes retain unknown-outcome correlation.
-  Timed-out work cannot reserve another write after its scope has ended.
-
-## 0.157.0 — 07.10.2026
-
-Released early: MAX and Telegram CLI audit adoption needs the published execution, schema, skill-validation and MCP host APIs
-
-### Fixed
-
-- Person context includes private dialogs named by the person's id when no members are recorded,
-  restoring direct messages and the last message each way in existing Telegram stores. Recorded
-  membership remains authoritative; groups, left chats and other accounts are not inferred.
 
 ### Changed — may break callers
 
@@ -99,6 +88,15 @@ Released early: MAX and Telegram CLI audit adoption needs the published executio
   decide nothing and warn, so an existing setup still starts; `mcp config` no longer writes them.
   `personalMcpConfirmer`, `httpConfirmationOf`, `httpServerOptions` and `OVER_HTTP` are no longer
   exported.
+
+- One-shot commands default to a 30-second deadline; explicit `--timeout` overrides it. Persistent
+  watch/serve/MCP and interactive login have their own lifecycles. Buffered input defaults to
+  16 MiB, secret input to 64 KiB, and machine output to 4 MiB. Exceeding output limits fails visibly;
+  JSONL errors identify already-emitted rows. `--max-output-bytes 0` disables the output cap.
+- JSON/JSONL and nonterminal execution cannot prompt or launch interactive login. Explicit piped
+  input remains available. SIGINT exits 130, SIGTERM 143, and a closed output pipe ends quietly.
+  Errors expose conservative retry guidance; interrupted writes retain unknown-outcome correlation.
+  Timed-out work cannot reserve another write after its scope has ended.
 
 ## 0.156.0 — 06.10.2026
 
