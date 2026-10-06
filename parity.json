@@ -189,7 +189,8 @@
     },
     "--deep": {
       "value": "<n>",
-      "meaning": "also check the top n in full — profile, photos, everything they wrote, and the public ban lists, which are sent their ids — one person a second"
+      "meaning": "also check the top n in full — profile, photos, everything they wrote, and the public ban lists, which are sent their ids — one person a second",
+      "note": "max-cli main still uses the older SDK help; current tg-cli names the bounded Telegram audit. Align after both adopt the HTTP confirmation SDK release."
     },
     "--defaults": {
       "meaning": "change what every profile gets, rather than this profile"
@@ -267,7 +268,11 @@
       "meaning": "the text is HTML: <b>, <i>, <a href>, <code>"
     },
     "--http": {
-      "meaning": "serve MCP over HTTP on 127.0.0.1 behind the owner's tunnel, with a one-owner login; every write asks first"
+      "meaning": "serve MCP over HTTP on 127.0.0.1 behind the owner's tunnel, with a one-owner login; every write asks first by default"
+    },
+    "--http-confirmation": {
+      "value": "<mode>",
+      "meaning": "required (default): every write needs a server form; permissions: follow the effective profile levels"
     },
     "--idle": {
       "value": "<duration>",
@@ -415,7 +420,8 @@
       "meaning": "do not keep it, whatever the configuration says"
     },
     "--no-registries": {
-      "meaning": "do not ask the public ban lists; nothing about them leaves this machine"
+      "meaning": "do not ask the public ban lists; nothing about them leaves this machine",
+      "note": "max-cli main still uses the older SDK help; current tg-cli distinguishes public registries from Telegram profile reads. Align after both adopt the HTTP confirmation SDK release."
     },
     "--no-serve": {
       "meaning": "do not start it; log in on this command's own connection unless one is running"
@@ -503,6 +509,10 @@
     "--per-person": {
       "meaning": "at most this many per person, such as 1/1d",
       "value": "<limit>"
+    },
+    "--permission": {
+      "value": "<key=level>",
+      "meaning": "override a permission for this MCP server only; repeat for more keys"
     },
     "--personal": {
       "meaning": "the personal account's section of the profile's settings"
@@ -1938,6 +1948,20 @@
         "--allow-send": "all",
         "--confirm-send": "all",
         "--http": "all",
+        "--http-confirmation": {
+          "in": [],
+          "planned": {
+            "max": "HTTP confirmation compatibility",
+            "tg": "HTTP confirmation compatibility"
+          }
+        },
+        "--permission": {
+          "in": [],
+          "planned": {
+            "max": "HTTP confirmation compatibility",
+            "tg": "HTTP confirmation compatibility"
+          }
+        },
         "--port": "all",
         "--public-url": "all",
         "--revoke": "all",
@@ -1971,6 +1995,13 @@
         },
         "--allow-send": "all",
         "--confirm-send": "all",
+        "--permission": {
+          "in": [],
+          "planned": {
+            "max": "HTTP confirmation compatibility",
+            "tg": "HTTP confirmation compatibility"
+          }
+        },
         "--yes": {
           "in": [],
           "planned": {
@@ -2027,6 +2058,13 @@
           "planned": {
             "max": "local MCP setup",
             "tg": "local MCP setup"
+          }
+        },
+        "--permission": {
+          "in": [],
+          "planned": {
+            "max": "HTTP confirmation compatibility",
+            "tg": "HTTP confirmation compatibility"
           }
         }
       }
@@ -2085,6 +2123,13 @@
           "planned": {
             "max": "local MCP setup",
             "tg": "local MCP setup"
+          }
+        },
+        "--permission": {
+          "in": [],
+          "planned": {
+            "max": "HTTP confirmation compatibility",
+            "tg": "HTTP confirmation compatibility"
           }
         }
       }

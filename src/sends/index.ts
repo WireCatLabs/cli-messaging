@@ -39,6 +39,7 @@ export {
   type Permission,
   type PermissionKey,
   permissionFor,
+  permissionOverrides,
   WRITE_KEYS,
 } from "./permissions.js"
 export { type Recipient, RecipientList, recipientsPathFor } from "./recipients.js"

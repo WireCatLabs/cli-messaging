@@ -10,6 +10,7 @@ import {
   PERMISSIONS,
   type Permission,
   type PermissionKey,
+  permissionOverrides,
   RESOURCES,
 } from "../sends/permissions.js"
 import { type AppIdentity, envName } from "./app.js"
@@ -127,6 +128,7 @@ export interface Config {
 
 /** Whatever the command line carried. Everything is optional: absent means "not given here". */
 export interface GlobalFlags {
+  permission?: string[]
   profile?: string
   json?: boolean
   jsonl?: boolean
@@ -355,12 +357,13 @@ export const settingsFor = (app: AppIdentity, extension: SettingsExtension = {})
     // The old settings sit in the layer they were written in, under that layer's own `permissions`.
     const old = readOnly.value ? { label: "readOnly", from: readOnly.from } : { label: "allow", from: allow.from }
     const oldLevels = fromOldSettings(readOnly.value, allow.value, { bot: kind === "bot" })
-    const permissions = layerPermissions(
-      layers.flatMap(([from, scope]): [Source, Record<PermissionKey, Level> | undefined][] => [
+    const permissions = layerPermissions([
+      ["flag", permissionOverrides(flags.permission)],
+      ...layers.flatMap(([from, scope]): [Source, Record<PermissionKey, Level> | undefined][] => [
         [from, scope?.permissions as Record<PermissionKey, Level> | undefined],
         ...(from === old.from ? [[old.label, oldLevels] as [Source, Record<PermissionKey, Level>]] : []),
       ]),
-    )
+    ])
     const updateCheck = first([["config defaults", shared.updateCheck as boolean | undefined]], true)
     const skillHint = first([["config defaults", shared.skillHint as boolean | undefined]], true)
     const timeout = first<string | undefined>(

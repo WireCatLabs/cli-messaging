@@ -6,6 +6,14 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- `mcp --http --http-confirmation permissions` follows the effective profile levels, so clients
+  without elicitation can execute tools at level `allow`. Mandatory server forms remain the HTTP
+  default; `ask` still requires a form, and `--yes`/`--allow-dangerous` cannot bypass it over HTTP.
+  `mcp --permission key=level` overrides permissions for this process only; repeat it for more keys.
+  Overrides reach tool discovery and execution, and are preserved by `mcp config|setup|doctor`.
+
 ## 0.154.0 — 06.10.2026
 
 Released early: max-cli needs PNG chart files and MCP image output for the owner-requested immediate adoption

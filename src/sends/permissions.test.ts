@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { fromOldSettings, keyForCommand, levelFor } from "./permissions.js"
+import { fromOldSettings, keyForCommand, layerPermissions, levelFor, permissionOverrides } from "./permissions.js"
 
 describe("the level of a command path", () => {
   it("**takes the most specific key the owner set**, and allows a path nothing names", () => {
@@ -67,4 +67,27 @@ it("preserves old pin permission for unpin and keeps an explicit unpin override"
   expect(levelFor(personal, "messages.unpin").level).toBe("allow")
   expect(levelFor(bot, "bot.messages.unpin").level).toBe("allow")
   expect(levelFor({ ...personal, "messages.unpin": "deny" }, "messages.unpin").level).toBe("deny")
+})
+
+describe("startup permission overrides", () => {
+  it("overrides saved descendants as a nearer layer, without changing the saved map", () => {
+    const saved = { "messages.send": "deny", "messages.delete": "deny" } as const
+    const { levels } = layerPermissions([
+      ["flag", permissionOverrides(["messages=allow", "messages.send=ask"])],
+      ["file", saved],
+    ])
+    expect(levelFor(levels, "messages.send").level).toBe("ask")
+    expect(levelFor(levels, "messages.delete").level).toBe("ask")
+    expect(saved["messages.send"]).toBe("deny")
+    expect(levelFor(permissionOverrides(["messages.delete=allow"]), "messages.delete").level).toBe("allow")
+  })
+  it.each(["send=allow", "messages.send=yes", "messages.send=allow=deny", "messages.*=allow", "=allow"])(
+    "rejects %s",
+    (entry) => {
+      expect(() => permissionOverrides([entry])).toThrow("--permission")
+    },
+  )
+  it("takes the last override for a repeated key", () => {
+    expect(permissionOverrides(["messages.send=deny", "messages.send=allow"])).toEqual({ "messages.send": "allow" })
+  })
 })

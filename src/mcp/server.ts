@@ -11,6 +11,7 @@ import { warmEmbedders } from "../embeddings/embed.js"
 import { guardFor } from "../sends/guard.js"
 import { levelFor } from "../sends/permissions.js"
 import { confirmer } from "./confirm.js"
+import { type HttpConfirmation, httpServerOptions } from "./http/policy.js"
 import type { HttpOptions } from "./http/serve.js"
 import { instructions } from "./instructions.js"
 import { personalMcpTools } from "./personal.js"
@@ -182,7 +183,7 @@ export const serveOverStdio = async (
 }
 
 /**
- * Over HTTP every write goes through the form whatever its level (NEED-593): an app's model talked into
+ * By default HTTP writes go through the form whatever their level: an app's model talked into
  * sending by a message it read still has to get the owner's yes. It does not stop someone holding a
  * stolen token, whose own client answers the form — short-lived tokens, rotation and `--revoke` do.
  */
@@ -194,9 +195,12 @@ export const serveOverHttpUntilStopped = async (
   context: MessengerContext,
   messenger: Messenger,
   options: ServerOptions,
-  http: Omit<HttpOptions, "onCode" | "onError" | "appName">,
+  http: Omit<HttpOptions, "onCode" | "onError" | "appName"> & { confirmation?: HttpConfirmation },
 ): Promise<void> => {
-  const { session, embedders, build } = createServer(command, context, messenger, { ...options, ...OVER_HTTP })
+  const { session, embedders, build } = createServer(command, context, messenger, {
+    ...options,
+    ...httpServerOptions(http.confirmation),
+  })
   const { serveOverHttp } = await import("./http/serve.js")
   const appName = messenger.app.command
   const listening = await serveOverHttp(build, {
