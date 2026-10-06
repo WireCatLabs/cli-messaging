@@ -83,23 +83,48 @@ export const chunkFreshness = (
  * Drops every vector of a chunk that held this just-deleted message, of every model, unless a current chunk
  * with no deleted message still uses its text — in any chat or account, since vectors are keyed by text alone.
  */
-export const purgeVectorsOf = ({ orm }: StoreContext, messagePk: number): void => {
-  orm.run(
-    sql`DELETE FROM chunk_vectors
-      WHERE content_hash IN (SELECT k.content_hash FROM conversation_messages cm
-          JOIN messages m ON m.pk = cm.message_pk
-          JOIN conversation_chunks k ON k.conversation_pk = cm.conversation_pk
-          JOIN messages f ON f.pk = k.first_message_pk JOIN messages l ON l.pk = k.last_message_pk
-          WHERE cm.message_pk = ${messagePk}
-            AND (m.sent_at, m.pk) >= (f.sent_at, f.pk) AND (m.sent_at, m.pk) <= (l.sent_at, l.pk))
-        AND NOT EXISTS (SELECT 1 FROM conversation_chunks o
-          JOIN conversations c ON c.pk = o.conversation_pk
-          JOIN conversation_state s ON s.chat_pk = c.chat_pk AND s.current_build = c.build
-          JOIN messages f ON f.pk = o.first_message_pk JOIN messages l ON l.pk = o.last_message_pk
-          WHERE o.content_hash = chunk_vectors.content_hash
-            AND NOT EXISTS (SELECT 1 FROM conversation_messages om JOIN messages d ON d.pk = om.message_pk
-              WHERE om.conversation_pk = o.conversation_pk AND d.deleted_at IS NOT NULL
-                AND (d.sent_at, d.pk) >= (f.sent_at, f.pk) AND (d.sent_at, d.pk) <= (l.sent_at, l.pk)))`,
+export const purgeVectorHashes = (context: StoreContext, hashes: readonly string[]): void => {
+  const { orm } = context
+  for (const hash of new Set(hashes)) {
+    let offset = 0
+    let valid = false
+    for (;;) {
+      const candidates = orm.all<{
+        conversation: number
+        first: number
+        last: number
+        start: number | null
+        end: number | null
+      }>(sql`SELECT k.conversation_pk AS conversation, k.first_message_pk AS first,
+        k.last_message_pk AS last, k.text_start AS start, k.text_end AS end
+        FROM conversation_chunks k JOIN conversations c ON c.pk = k.conversation_pk
+        JOIN conversation_state s ON s.chat_pk = c.chat_pk AND s.current_build = c.build
+        WHERE k.content_hash = ${hash} ORDER BY k.conversation_pk, k.ordinal LIMIT 100 OFFSET ${offset}`)
+      valid = candidates.some(({ conversation, first, last, start, end }) => {
+        const lines = chunkLines(orm, conversation, first, last)
+        return !lines.some(({ deleted }) => deleted) && chunkHash(chunkTextOf(lines, rangeOf(start, end))) === hash
+      })
+      if (valid || candidates.length < 100) break
+      offset += candidates.length
+      if (offset >= 1000) {
+        valid = true
+        break
+      }
+    }
+    if (!valid) orm.run(sql`DELETE FROM chunk_vectors WHERE content_hash = ${hash}`)
+  }
+}
+
+export const purgeVectorsOf = (context: StoreContext, messagePk: number): void => {
+  const hashes = context.orm.all<{ hash: string }>(sql`SELECT DISTINCT k.content_hash AS hash
+    FROM conversation_messages cm JOIN messages m ON m.pk = cm.message_pk
+    JOIN conversation_chunks k ON k.conversation_pk = cm.conversation_pk
+    JOIN messages f ON f.pk = k.first_message_pk JOIN messages l ON l.pk = k.last_message_pk
+    WHERE cm.message_pk = ${messagePk}
+      AND (m.sent_at, m.pk) >= (f.sent_at, f.pk) AND (m.sent_at, m.pk) <= (l.sent_at, l.pk)`)
+  purgeVectorHashes(
+    context,
+    hashes.map(({ hash }) => hash),
   )
 }
 

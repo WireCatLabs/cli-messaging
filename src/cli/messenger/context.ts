@@ -342,6 +342,7 @@ export const messengerContext = (command: Command, messenger: Messenger): Messen
             reads: messenger.history ?? "server",
             // Turning recording off by name (--no-record, or record: false) keeps no search history either.
             history: base.settings.keepFailedRuns,
+            searchCatchUp: base.settings.searchCatchUp,
             guard,
             connection: async () => {
               if (base.settings.offline) throw new CliError("validation_error", OFFLINE)

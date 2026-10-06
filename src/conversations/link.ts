@@ -34,6 +34,7 @@ export interface Linked {
 }
 
 export interface LinkOptions {
+  check?: () => void
   /** A handle as people type it, without `@` and lowercased, to the sender it names. */
   handles?: ReadonlyMap<string, Id>
   /**
@@ -49,7 +50,7 @@ export interface LinkOptions {
  */
 export const linkMessages = (
   messages: Iterable<LinkInput>,
-  { handles = new Map(), answers = new Map() }: LinkOptions = {},
+  { handles = new Map(), answers = new Map(), check }: LinkOptions = {},
 ): Linked => {
   const links: Link[] = []
   const parents = new Map<Id, Id | null>()
@@ -58,6 +59,7 @@ export const linkMessages = (
   const window: LinkInput[] = []
 
   for (const message of messages) {
+    check?.()
     const found = [
       ...replyLink(message, conversationOf),
       ...mentionLinks(message, window, handles),

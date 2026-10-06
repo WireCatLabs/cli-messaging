@@ -30,6 +30,7 @@ export interface ServiceDeps {
   embedders?: WarmEmbedders
   /** `false` keeps no search history: recording was turned off by name. Kept when unset. */
   history?: boolean
+  searchCatchUp?: boolean
 }
 
 /**

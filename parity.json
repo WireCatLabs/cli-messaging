@@ -147,6 +147,21 @@
       "meaning": "what they may do, comma-separated: read, members, admins, info, pin, link, post, edit, delete",
       "note": "lists the rights each messenger has — MAX has `read`, Telegram does not — so it differs on purpose (Help text rule 4)"
     },
+    "--catch-up": {
+      "meaning": "prepare local search after this fetch"
+    },
+    "--catch-up-chunks": {
+      "meaning": "at most this many local vector chunks",
+      "value": "<n>"
+    },
+    "--catch-up-messages": {
+      "meaning": "skip a graph rebuild above this message budget",
+      "value": "<n>"
+    },
+    "--catch-up-time": {
+      "meaning": "time budget for local preparation",
+      "value": "<duration>"
+    },
     "--channel": {
       "meaning": "a private channel instead of a group; people join it by its link"
     },
@@ -428,6 +443,9 @@
     },
     "--no-ban": {
       "meaning": "remove without banning; by default a removed person cannot come back by the link"
+    },
+    "--no-catch-up": {
+      "meaning": "skip local preparation after this fetch"
     },
     "--no-contacts-only": {
       "meaning": "do not require a contact"
@@ -3053,9 +3071,44 @@
       "in": "all",
       "options": {
         "--background": "all",
+        "--catch-up": {
+          "in": [],
+          "planned": {
+            "max": "search catch-up SDK adoption",
+            "tg": "search catch-up SDK adoption"
+          }
+        },
+        "--catch-up-chunks": {
+          "in": [],
+          "planned": {
+            "max": "search catch-up SDK adoption",
+            "tg": "search catch-up SDK adoption"
+          }
+        },
+        "--catch-up-messages": {
+          "in": [],
+          "planned": {
+            "max": "search catch-up SDK adoption",
+            "tg": "search catch-up SDK adoption"
+          }
+        },
+        "--catch-up-time": {
+          "in": [],
+          "planned": {
+            "max": "search catch-up SDK adoption",
+            "tg": "search catch-up SDK adoption"
+          }
+        },
         "--estimate": "all",
         "--last": "all",
         "--limit": "all",
+        "--no-catch-up": {
+          "in": [],
+          "planned": {
+            "max": "search catch-up SDK adoption",
+            "tg": "search catch-up SDK adoption"
+          }
+        },
         "--page-size": "all",
         "--pause": "all",
         "--since-time": "all"

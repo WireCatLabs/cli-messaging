@@ -156,6 +156,7 @@ export const upsertMessage = (
         .values({ messagePk: pk, text: found.text, editedAt: found.editedAt, capturedAt: now() })
         .run()
       orm.update(messages).set({ text: message.text }).where(eq(messages.pk, pk)).run()
+      purgeVectorsOf(context, pk)
     }
     if (revived) orm.update(messages).set({ deletedAt: null, text: message.text }).where(eq(messages.pk, pk)).run()
   }

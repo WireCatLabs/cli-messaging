@@ -299,15 +299,14 @@ describe("derived index freshness", () => {
     editedAt: "2026-10-05T00:00:00.000Z",
   })
 
-  it("returns a hit whose text was edited away as stale, and counts the edit as pending", async () => {
-    const { store, embeddings, conversations } = await setUp()
+  it("purges edited-away meaning hits and still counts the edit as pending", async () => {
+    const { store, embeddings, conversations, path } = await setUp()
     await embeddings.embed("9", { model: "tiny", threads: 1 })
     await store.saveMessages(account, "9", [edited("40", "zebra")], { via: "live" })
 
     const found = await embeddings.search("fish", { model: "tiny", limit: 3 })
-    expect(found.hits[0]).toMatchObject({ summary: { firstMessageId: "40" }, by: ["meaning"], stale: true })
-    expect(found.hits[0]?.score).toBeCloseTo(1)
-    expect(found.hits).toHaveLength(1)
+    expect(found.hits).toEqual([])
+    expect(await vectorRows(path, chunkHash("fish"))).toBe(0)
     expect(found.readiness).toMatchObject({ searchedByMeaning: ["9"], stale: ["9"], partial: [] })
     expect((await embeddings.readiness({ chat: "9", model: "tiny" })).chats).toMatchObject([
       {
@@ -321,6 +320,21 @@ describe("derived index freshness", () => {
     expect((await embeddings.readiness({ chat: "9", model: "tiny" })).chats).toMatchObject([
       { state: "partial", pending: { edited: 0 }, vectors: { chunks: 3, current: 2, stale: 0, missing: 1 } },
     ])
+    await store.close()
+  })
+
+  it("keeps a shared hash only while another current chat still uses its actual text", async () => {
+    const { store, embeddings, path } = await setUp()
+    await embeddings.embed("9", { model: "tiny", threads: 1 })
+    const other = { provider: "test", account: "other" }
+    await store.saveMessages(other, "9", [message("40", "fish")], { via: "history" })
+    await conversationsService(
+      storedDeps({ provider: "test", app: { command: "chat" } } as Messenger, store, other, {} as SendGuard),
+    ).build("9")
+    await store.saveMessages(account, "9", [edited("40", "zebra")], { via: "live" })
+    expect(await vectorRows(path, chunkHash("fish"))).toBe(1)
+    await store.saveMessages(other, "9", [edited("40", "dog")], { via: "live" })
+    expect(await vectorRows(path, chunkHash("fish"))).toBe(0)
     await store.close()
   })
 

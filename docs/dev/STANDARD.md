@@ -324,6 +324,10 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--budget` | `<pages>` | at most this many pages of a list, with a pause between them |  | `chats members audit`, `chats members fetch` (planned) |
 | `--by` | `<grouping>` | what to count by. **each command names its own groupings — stats messages show chat, sender, day or hour, and searches create the same for stats messages show --saved; stats chats show day or week, as a series beside its totals — so it differs on purpose (Help text rule 4)** |  | `searches create`, `stats charts` (planned), `stats chats show` (planned), `stats messages show` (planned) |
 | `--can` | `<rights>` | what they may do, comma-separated: read, members, admins, info, pin, link, post, edit, delete. **lists the rights each messenger has — MAX has `read`, Telegram does not — so it differs on purpose (Help text rule 4)** |  | `bot chats admins add`, `chats admins add` |
+| `--catch-up` |  | prepare local search after this fetch |  | `store fetch` (planned) |
+| `--catch-up-chunks` | `<n>` | at most this many local vector chunks |  | `store fetch` (planned) |
+| `--catch-up-messages` | `<n>` | skip a graph rebuild above this message budget |  | `store fetch` (planned) |
+| `--catch-up-time` | `<duration>` | time budget for local preparation |  | `store fetch` (planned) |
 | `--channel` |  | a private channel instead of a group; people join it by its link |  | `chats create` |
 | `--chart-kind` | `<messages\|active\|membership>` | what to draw: messages, active authors, or joins and leaves | `messages` | `stats charts` (planned) |
 | `--chat` | `<chat>` | a chat, by id or name; repeat it for more. **chat addressing follows each messenger's supported names, usernames and Saved Messages aliases, so it differs on purpose (Help text rule 4); both message searches resolve stored names without networking** |  | `attachments extract`, `attachments list`, `chats folders create`, `contacts context`, `conversations batches next`, `conversations batches status`, `conversations build`, `conversations consents revoke`, `conversations embed`, `conversations embed clear`, `conversations embed status`, `conversations links clear`, `conversations list`, `conversations search`, `conversations status`, `messages search`, `review`, `searches create`, `stats messages show` (planned), `stats tasks show` (planned), `tags add`, `tags remove`, `tasks list` |
@@ -396,6 +400,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--newest` |  | newest first instead of best first |  | `bot messages search`, `messages search`, `searches create` |
 | `--no-as-reply` |  | send without linking to the matched message |  | `replies edit` |
 | `--no-ban` |  | remove without banning; by default a removed person cannot come back by the link |  | `bot chats moderate` |
+| `--no-catch-up` |  | skip local preparation after this fetch |  | `store fetch` (planned) |
 | `--no-contacts-only` |  | do not require a contact |  | `replies edit` |
 | `--no-hours` |  | clear the working window |  | `replies edit` |
 | `--no-input` |  | never prompt or open an interactive login; piped input remains available |  | every command (planned) |

@@ -504,6 +504,7 @@ export interface ChatStats {
 
 /** One build of a chat's conversations, by message id; phase 3 plan C3. */
 export interface ConversationBuild {
+  check?: () => void
   /** When the build started reading: a change after it is not in the build. */
   startedAt: number
   algorithmVersion: number
