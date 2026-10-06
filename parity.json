@@ -910,13 +910,21 @@
           "in": "all"
         },
         "--cursor": {
-          "in": "all"
+          "in": [],
+          "planned": {
+            "max": "search follow-up SDK adoption",
+            "tg": "search follow-up SDK adoption"
+          }
         },
         "--download": {
           "in": "all"
         },
         "--from-dir": {
-          "in": "all"
+          "in": [],
+          "planned": {
+            "max": "search follow-up SDK adoption",
+            "tg": "search follow-up SDK adoption"
+          }
         },
         "--limit": {
           "in": "all"
@@ -2203,7 +2211,11 @@
           "in": "all"
         },
         "--extract": {
-          "in": "all"
+          "in": [],
+          "planned": {
+            "max": "search follow-up SDK adoption",
+            "tg": "search follow-up SDK adoption"
+          }
         },
         "--output": {
           "in": ["max"],
