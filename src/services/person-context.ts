@@ -200,3 +200,79 @@ export const identityIn = async (store: MessageStore, asked: AccountKey, referen
   const people = await store.people(provider, provider === asked.provider ? { account: asked.account } : {})
   return { provider, id: pickPerson(typed, people).id }
 }
+
+export const CHAT_MESSAGES = 20
+
+/** `0` what an agent summarises — when and what; `1` adds ids, the locator and who and what it answers; `2` all of it. */
+export type Detail = 0 | 1 | 2
+
+export type LeanMessage = { at: string; text: string; transcript?: string } & Record<string, unknown>
+
+export interface PersonChatMessages {
+  chat: { id: Id; title: string | null; kind: ChatKind }
+  /** Their newest `limit` in this chat, oldest first. */
+  messages: LeanMessage[]
+  /** The store holds the whole chat, so no older message of theirs is missing. */
+  complete: boolean
+  /** They wrote more here than `limit`. */
+  more: boolean
+}
+
+export interface PersonMessages {
+  person: { uid: string; provider: Provider; id: Id; name: string | null }
+  chats: PersonChatMessages[]
+  limits: { messages: number }
+}
+
+const heardText = (message: Message): string | undefined =>
+  "transcript" in message && typeof message.transcript === "string" ? message.transcript : undefined
+
+const lean = (key: AccountKey, message: Message, detail: Detail): LeanMessage => {
+  const transcript = heardText(message)
+  const short = { at: message.timestamp, text: message.text, ...(transcript ? { transcript } : {}) }
+  const locator = formatLocator({ ...key, chat: message.chatId, message: message.id })
+  if (detail === 0) return short
+  if (detail === 2) return { ...message, ...short, locator }
+  return {
+    ...short,
+    id: message.id,
+    locator,
+    senderId: message.senderId,
+    replyTo: message.replyTo?.id ?? message.replyToId ?? null,
+  }
+}
+
+/**
+ * One person's newest messages in each chat named, from the store, oldest first in each — what an
+ * agent reads to summarise them. Short by default: metadata only at a higher `detail`.
+ */
+export const personMessages = async (
+  store: MessageStore,
+  asked: AccountKey,
+  reference: string,
+  { chats, limit = CHAT_MESSAGES, detail = 0 }: { chats: Id[]; limit?: number; detail?: Detail },
+): Promise<PersonMessages> => {
+  const found = pickPerson(reference, await store.people(asked.provider, { account: asked.account }))
+  const record = await store.personOf({ provider: asked.provider, id: found.id })
+  if (!record) throw new CliError("not_found", `no person ${found.id} in the store`)
+  const stored = (await store.chats(asked, {})).items
+  const held = new Map((await store.chatCompleteness(asked, chats)).map((one) => [one.chatId, one.state]))
+  const answer: PersonChatMessages[] = []
+  for (const chatId of chats) {
+    const chat = stored.find((one) => one.id === chatId)
+    const page = await store.find({ account: asked, senders: [found.id], chatId, limit })
+    answer.push({
+      chat: { id: chatId, title: chat?.title ?? null, kind: chat?.kind ?? "unknown" },
+      messages: page.items
+        .toSorted((a, b) => Date.parse(a.timestamp) - Date.parse(b.timestamp))
+        .map((message) => lean(asked, message, detail)),
+      complete: held.get(chatId) === "complete",
+      more: page.hasMore,
+    })
+  }
+  return {
+    person: { uid: record.uid, provider: asked.provider, id: found.id, name: found.name ?? record.name },
+    chats: answer,
+    limits: { messages: limit },
+  }
+}

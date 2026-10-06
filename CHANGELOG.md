@@ -6,6 +6,14 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- `contacts context <person> --chat <chat>` (repeat it for more): their newest messages in each chat named,
+  oldest first, `{ at, text }` each — short for an agent to summarise; `-v` adds ids, locators, the sender and what
+  it answers, `-vv` everything. `--limit` is per chat (20). `--refresh` reads them from the messenger first: by
+  sender where the adapter offers `historyFrom` (new optional `SenderSearch`), the newest page of the chat where it
+  does not. MCP `contacts_context` takes `chats` and `detail`. Without `--chat`, the answer is as before.
+
 ## 0.150.0 — 06.10.2026
 
 ### Added

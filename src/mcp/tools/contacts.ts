@@ -1,3 +1,4 @@
+import { CliError } from "@leemour/cli-core"
 import * as v from "valibot"
 import type { Messenger } from "../../cli/messenger/context.js"
 import type { MessengerAdapter } from "../../cli/messenger/port.js"
@@ -58,21 +59,43 @@ export const contactsTools = (messenger: Messenger): Record<string, AnyTool> => 
         "Everything the local store holds about one person, in every messenger linked to them: person { uid, " +
         "identities }, shared chats, last { fromThem, fromMe, fromThemAnywhere }, recent { direct, groups }, " +
         "mentions — each message with a locator. complete is false when a shared chat is not stored whole; notRead " +
-        "names it and why. Reads the store only; marks nothing read. Never assumes two people with one name are one.",
+        "names it and why. Reads the store only; marks nothing read. Never assumes two people with one name are one. " +
+        "With chats: instead, { person, chats: [{ chat, messages, complete, more }] } — their newest messages in each " +
+        "chat named, oldest first, as { at, text } unless detail asks for ids and locators (1) or everything (2).",
       input: v.object({
         person: v.pipe(v.string(), v.minLength(1), v.description("person id, @username, or part of a name")),
         limit: v.optional(
           v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(100), v.description("at most this many per list")),
         ),
         since_time: v.optional(v.pipe(v.string(), v.description("an ISO 8601 time, or 2h / 1d ago"))),
+        chats: v.optional(
+          v.pipe(
+            v.array(v.pipe(v.string(), v.minLength(1))),
+            v.minLength(1),
+            v.description("chats by id or name: their newest messages in each"),
+          ),
+        ),
+        detail: v.optional(
+          v.pipe(v.picklist([0, 1, 2]), v.description("with chats: 1 adds ids and locators, 2 everything")),
+        ),
       }),
       annotations: { ...READ, openWorldHint: false },
-      stored: (store, account, args, defaults) =>
-        servicesFor(storedDeps(messenger, store, account, defaults.guard)).people.context(args.person, {
+      stored: (store, account, args, defaults) => {
+        const people = servicesFor(storedDeps(messenger, store, account, defaults.guard)).people
+        if (args.chats !== undefined) {
+          if (args.since_time !== undefined) throw new CliError("validation_error", "since_time is not used with chats")
+          return people.messagesIn(args.person, {
+            chats: args.chats,
+            ...(args.limit === undefined ? {} : { limit: args.limit }),
+            ...(args.detail === undefined ? {} : { detail: args.detail }),
+          })
+        }
+        return people.context(args.person, {
           messages: args.limit ?? CONTEXT_MESSAGES,
           bytes: CONTEXT_BYTES,
           ...(args.since_time === undefined ? {} : { since: momentOf(args.since_time, "since_time") }),
-        }),
+        })
+      },
     }),
   }
 }

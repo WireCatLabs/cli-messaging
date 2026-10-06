@@ -137,6 +137,12 @@ export interface ChatReading {
   inspect(link: string): Promise<LinkTarget>
 }
 
+/** A messenger that can search a chat by who wrote. */
+export interface SenderSearch {
+  /** One person's newest `limit` messages in a chat, oldest first — a search by sender, not a walk of the history. */
+  historyFrom(chat: string, person: Id, window: { limit: number }): Promise<Page<Message>>
+}
+
 /** Changing a message already sent, or passing it on. */
 export interface MessageEditing {
   /**
@@ -375,6 +381,7 @@ export interface MessengerAdapter
     Partial<MarkdownFormatting>,
     Partial<ServerReads>,
     Partial<ChatReading>,
+    Partial<SenderSearch>,
     Partial<MessageEditing>,
     Partial<MessagePins>,
     Partial<MessageReactions>,

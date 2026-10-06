@@ -1635,6 +1635,35 @@ describe("the shared read commands", () => {
     const answer = JSON.parse(found.stdout[0] ?? "null")
     expect(answer.person.identities.map((one: { provider: string }) => one.provider)).toEqual(["max", "telegram"])
     expect(answer.recent.direct).toHaveLength(2)
+
+    const inChat = await call(
+      ["contacts", "context", "11", "--chat", "11", "--offline", "--json"],
+      never,
+      env,
+      {},
+      { provider: "telegram" },
+    )
+    expect(JSON.parse(inChat.stdout[0] ?? "null").chats).toEqual([
+      expect.objectContaining({ chat: { id: "11", title: "Ana", kind: "dialog" }, messages: [{ at, text: "hello" }] }),
+    ])
+    const detailed = await call(
+      ["contacts", "context", "11", "--chat", "11", "-v", "--offline", "--json"],
+      never,
+      env,
+      {},
+      { provider: "telegram" },
+    )
+    expect(JSON.parse(detailed.stdout[0] ?? "null").chats[0].messages[0].locator).toBe("msg:telegram/500/11/1")
+    const lonely = await call(
+      ["contacts", "context", "11", "--refresh", "--offline", "--json"],
+      never,
+      env,
+      {},
+      {
+        provider: "telegram",
+      },
+    )
+    expect(lonely.code).toBe(2)
   })
 
   it("**builds a chat's conversations** and explains a message's place in one, without connecting", async () => {

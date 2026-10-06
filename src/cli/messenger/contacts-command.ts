@@ -2,13 +2,15 @@ import { CliError } from "@leemour/cli-core"
 import { Command } from "commander"
 import { phoneOf } from "../../services/index.js"
 import { momentOf } from "../../services/moment.js"
-import { CONTEXT_BYTES, CONTEXT_MESSAGES } from "../../services/person-context.js"
+import { CHAT_MESSAGES, CONTEXT_BYTES, CONTEXT_MESSAGES } from "../../services/person-context.js"
 import { readSecret } from "../../terminal/prompt.js"
 import { positiveCount, renderPage, window, withPaging } from "../paging.js"
 import { contactWriteCommands } from "./admin-contacts-command.js"
 import { type Messenger, messengerContext } from "./context.js"
 
 /** People this account has a one-to-one chat with, as the people service counts them. */
+const collect = (value: string, previous: string[] = []) => [...previous, value]
+
 export const contactsCommand = (messenger: Messenger): Command => {
   const contacts = new Command("contacts").description("people this account has a one-to-one chat with")
 
@@ -51,9 +53,42 @@ export const contactsCommand = (messenger: Messenger): Command => {
       positiveCount("--limit"),
     )
     .option("--since-time <time>", "nothing older than this ISO 8601 time, or 2h / 1d ago")
+    .option(
+      "--chat <chat>",
+      `a chat, by id or name; repeat it for more — then their newest messages in each, ${CHAT_MESSAGES} unless --limit, short unless -v`,
+      collect,
+    )
+    .option("--refresh", "with --chat, read their newest messages in each from the messenger first")
     .action(async function (this: Command, person: string) {
-      const { limit, sinceTime } = this.opts<{ limit?: number; sinceTime?: string }>()
+      const { limit, sinceTime, chat, refresh } = this.opts<{
+        limit?: number
+        sinceTime?: string
+        chat?: string[]
+        refresh?: boolean
+      }>()
       const context = messengerContext(this, messenger)
+      if (chat === undefined) {
+        if (refresh) throw new CliError("validation_error", "--refresh reads the chats named with --chat")
+      } else {
+        if (sinceTime !== undefined) throw new CliError("validation_error", "--since-time is not used with --chat")
+        const found = await context.withServices((services) =>
+          services.people.messagesIn(person, {
+            chats: chat,
+            ...(limit === undefined ? {} : { limit }),
+            detail: context.settings.detail,
+            fetch: refresh === true,
+          }),
+        )
+        for (const one of found.chats) {
+          if (!one.complete)
+            context.renderer.note(
+              `${one.chat.title ?? one.chat.id}: not stored whole, so older messages of theirs may be missing — ` +
+                `\`${messenger.app.command} store fetch ${one.chat.id}\``,
+            )
+        }
+        context.renderer.result(found)
+        return
+      }
       const found = await context.withServices((services) =>
         services.people.context(person, {
           messages: limit ?? CONTEXT_MESSAGES,
