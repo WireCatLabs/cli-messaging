@@ -44,7 +44,7 @@ or through their official indexed content. Sources were consulted on the audit d
 | Colour and terminal effects | MAX `src/output.ts:29`, shared renderer in core; MAX `src/session/qr-terminal.ts:5` | Ordinary output selects JSON off-TTY and honours NO_COLOR for pretty output. QR intentionally forces contrast; keep that opt-in presentation exception explicit. No blanket ANSI-free claim for help/QR/trace. CI/TERM=dumb/forced-colour precedence needs targeted checks. |
 | Input/output composition | `src/cli/messenger/stdin.ts:2`, `src/cli/bot/api.ts`, archive commands | Stdin and JSONL exist. readAll accumulates unrestricted input, without its own abort/byte budget. Add byte bounds/cancellation for buffered inputs; retain streaming for large exports. `-` is a command-specific convention, not supported by every operand. |
 | Time bounds and cleanup | `src/cli/settings.ts:366`, `src/cli/messenger/patience.ts:4`, shared lifecycle tests; MAX `src/deadline.ts:37` | Whole-command timeout is optional: no default when not supplied. Existing tracked cleanup and signal paths are useful, but uniform SIGINT/SIGTERM/EPIPE behaviour and child cleanup need focused process checks. Bound stdin and setup too. Do not cap intended watch/serve sessions with a generic short deadline. |
-| Backward compatibility | `docs/dev/STANDARD.md`, MAX no-alias regression tests | **Policy divergence:** immediate removal of renamed paths. CLIG recommends a documented deprecation process. Decide the transition policy before stats relocation; versioned breaking notes alone are not a deprecation window. |
+| Backward compatibility | `docs/dev/STANDARD.md`, MAX no-alias regression tests | **Intentional policy divergence:** the owner approved immediate removal of renamed paths without aliases or a deprecation window. Describe the new paths in user docs and breaking release notes; do not claim CLIG deprecation conformance. |
 
 ### Agent-facing contracts
 
@@ -133,9 +133,9 @@ Existing shared/consumer tests corroborate the same parsing and lifecycle bounda
 2. **Headless and execution bounds.** Naming/contract for explicit no-input, password/auth/setup
    alternatives, buffered stdin budgets and finite one-shot deadlines. Test synthetic PTY/pipe,
    open stdin, abort, SIGINT/SIGTERM and EPIPE. Interactive login/watch/serve need documented exceptions.
-3. **Stats compatibility decision.** Choose immediate breaking relocation or a deprecation window
-   with explicit compatibility routes and permissions. Include the newly planned tasks stats
-   path and keep the existing stats charts view discoverable. Do not implement contradictory rules.
+3. **Stats relocation — decision approved.** Remove old paths immediately with no aliases or
+   compatibility window. Include tasks statistics and preserve the stats charts view. Coordinate
+   CLI/MCP/permission/saved-record paths and user documentation; preserve result semantics.
 4. **Schema and effect discovery.** Extend the shared command contract with input/result schemas,
    conditional arguments, read/local/network effects and retry policy; reuse for CLI discovery/MCP.
    Preserve existing response shapes; version discovery independently where necessary.

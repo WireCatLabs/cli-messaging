@@ -56,8 +56,9 @@ Explicit choices and gaps:
 - General stdout-only envelopes, automatic retry of all writes, logging full tool payloads and
   new output fields on every existing response are not adopted from agent examples.
 - [Command names](#command-names) currently require immediate removal of renamed paths and no
-  aliases. This differs from CLIG's deprecation guidance. Before the stats move, decide whether
-  to retain a time-bounded compatibility path; do not silently relax the current rule.
+  aliases. This differs from CLIG's deprecation guidance. The owner explicitly chose immediate
+  relocation without a compatibility window. Old paths stop working at adoption; the release
+  notes and user docs give the new paths.
 
 New commands are reviewed against this profile and the audit. Existing gaps require explicit
 implementation work with tests; citing a reference alone does not close them.
