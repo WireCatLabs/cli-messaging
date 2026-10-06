@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.150.0 — 06.10.2026
+
 ### Added
 
 - `contacts profile <person> [--show-phone]` and read-only MCP `contacts_profile`: what the messenger says about
@@ -29,19 +31,6 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 - `chats members audit --deep <n>` (MCP `deep`): the top n flagged members also get the full check, one a second.
 - `MessengerAdapter` takes an optional `photos(person)` (`ProfilePhotos`): how many profile photos they show and the
   oldest one's time.
-
-### Changed — may break callers
-
-- `MessageStore` has a new required method, `senderStats`: one person's stored messages per chat. A store
-  written by hand — a test fake — adds it; `openStore` already does.
-- `Services` has a new required member, `botcheck`. A `Services` object written by hand — a test fake — adds it;
-  `servicesFor` already does. The audit's reasons and weights moved to `src/botcheck/reasons.ts`; `AuditReason` is
-  still exported from the same place.
-
-## 0.150.0 — 06.10.2026
-
-### Added
-
 - `contacts context <person> --chat <chat>` (repeat it for more): their newest messages in each chat named,
   oldest first, `{ at, text }` each — short for an agent to summarise; `-v` adds ids, locators, the sender and what
   it answers, `-vv` everything. `--limit` is per chat (20). `--refresh` reads them from the messenger first: by
@@ -58,6 +47,14 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   whose profile changed (with what it was before), oldest first, from what `chats members fetch` recorded — never
   asks the messenger. `chats stats` adds `memberCounts`, the recorded count per day in its period, and
   `chats members list --offline` answers from the store.
+
+### Changed — may break callers
+
+- `MessageStore` has a new required method, `senderStats`: one person's stored messages per chat. A store
+  written by hand — a test fake — adds it; `openStore` already does.
+- `Services` has a new required member, `botcheck`. A `Services` object written by hand — a test fake — adds it;
+  `servicesFor` already does. The audit's reasons and weights moved to `src/botcheck/reasons.ts`; `AuditReason` is
+  still exported from the same place.
 
 ## 0.149.0 — 06.10.2026
 
