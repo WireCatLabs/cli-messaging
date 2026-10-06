@@ -192,6 +192,13 @@ describe("contacts context in named chats", () => {
     ])
   })
 
+  it("calls a chat named by the person's own id their dialog when the store has no such chat", async () => {
+    await store.saveMessages(tg, "13", [message("13", "40", "13", "hello")], { via: "test" })
+    const found = await people().messagesIn("13", { chats: ["13"] })
+
+    expect(found.chats[0]?.chat.kind).toBe("dialog")
+  })
+
   it("reads each chat from the messenger first with refresh, by sender, once per chat", async () => {
     const asked: string[] = []
     const fresh = message("-7", "9", "11", "fresh from the messenger", { timestamp: "2026-09-04T10:00:00.000Z" })

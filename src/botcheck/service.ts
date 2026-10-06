@@ -3,7 +3,7 @@ import { pickPerson } from "../resolve.js"
 import type { ServiceDeps } from "../services/deps.js"
 import { storeIfOpen } from "../services/deps.js"
 import { type BotCheck, type BotSubject, type PhotoFacts, type StoredActivity, scorePerson } from "./check.js"
-import { askRegistries, notCovered, type RegistryAnswer, type RegistryOptions } from "./registries.js"
+import { askRegistries, notCovered, type RegistryAnswer, type RegistryOptions, registriesCover } from "./registries.js"
 
 /** Their stored messages read at most; enough for a first message and repeats, not a whole history. */
 const ACTIVITY_MESSAGES = 1000
@@ -20,7 +20,6 @@ export interface BotCheckService {
 }
 
 /** The registries list Telegram accounts; a bot of another messenger is not in them. */
-const TELEGRAM = "telegram"
 
 export const botCheckService = (deps: ServiceDeps): BotCheckService => {
   const subjectOf = async (reference: string): Promise<{ subject: BotSubject; photos?: PhotoFacts }> => {
@@ -88,7 +87,7 @@ export const botCheckService = (deps: ServiceDeps): BotCheckService => {
       let answers: RegistryAnswer[] = []
       if (!registries) notes.push("the ban lists were not asked")
       else if (deps.offline) notes.push("offline: the ban lists were not asked")
-      else answers = provider === TELEGRAM ? await askRegistries(subject.id, registry) : notCovered(provider)
+      else answers = registriesCover(provider) ? await askRegistries(subject.id, registry) : notCovered(provider)
       const activity = await activityOf(subject.id)
       if (!activity) notes.push("no local store: what they wrote was not judged")
       return {

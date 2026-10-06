@@ -1,6 +1,6 @@
 import { CliError } from "@leemour/cli-core"
 import { Command } from "commander"
-import { REGISTRIES } from "../../botcheck/registries.js"
+import { REGISTRIES, registriesCover } from "../../botcheck/registries.js"
 import { phoneOf } from "../../services/index.js"
 import { momentOf } from "../../services/moment.js"
 import { maskedAccount } from "../../services/people.js"
@@ -130,10 +130,13 @@ export const contactsCommand = (messenger: Messenger): Command => {
   contacts
     .command("check")
     .description(
-      "whether one person looks like a bot, a fake or a spammer: their profile, what they wrote in the store, " +
-        `and the public ban lists (${Object.values(REGISTRIES)
-          .map(({ title }) => title)
-          .join(", ")}), which are sent their id — a hint, never a verdict`,
+      registriesCover(messenger.provider)
+        ? "whether one person looks like a bot, a fake or a spammer: their profile, what they wrote in the store, " +
+            `and the public ban lists (${Object.values(REGISTRIES)
+              .map(({ title }) => title)
+              .join(", ")}), which are sent their id — a hint, never a verdict`
+        : "whether one person looks like a bot, a fake or a spammer: their profile and what they wrote in the " +
+            "store — a hint, never a verdict; the public ban lists cover Telegram only, so nothing is sent",
     )
     .argument("<person>", "their id, @username, or part of their name")
     .option("--no-registries", "do not ask the public ban lists; nothing about them leaves this machine")
