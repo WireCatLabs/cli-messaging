@@ -310,6 +310,7 @@ export const serverEntry = (
     env,
   }: { profile: string; flags?: McpFlags; execPath: string; scriptPath: string; env: NodeJS.ProcessEnv },
 ): { config: { mcpServers: Record<string, object> }; warning?: string } => {
+  httpConfirmationOf({ ...flags, http: false })
   if (installerOf(scriptPath) === "npx") {
     throw new CliError(
       "validation_error",

@@ -68,6 +68,10 @@ describe("HTTP MCP startup", () => {
     const entry = JSON.parse(streams.stdout.join(""))
     expect(entry.mcpServers.chat.args).toEqual(expect.arrayContaining(["--permission", "messages.send=allow"]))
   })
+  it("rejects HTTP confirmation mode when generating a stdio config", async () => {
+    const { code } = await cli(["mcp", "--http-confirmation", "permissions", "config", "--json"])
+    expect(code).not.toBe(0)
+  })
   it.each([
     ["--http-confirmation", "permissions"],
     ["--http", "--http-confirmation", "automatic"],

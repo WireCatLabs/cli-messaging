@@ -19,7 +19,7 @@ export const httpConfirmationOf = (flags: {
 
 /** HTTP never inherits the stdio flags that bypass questions at level ask. */
 export const httpServerOptions = (mode: HttpConfirmation = "required") => ({
-  confirmSend: mode === "required",
+  confirmSend: httpConfirmationOf({ http: true, httpConfirmation: mode }) === "required",
   yes: false,
   allowDangerous: false,
 })

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { httpConfirmationOf, httpServerOptions } from "./policy.js"
+import { type HttpConfirmation, httpConfirmationOf, httpServerOptions } from "./policy.js"
 
 describe("HTTP confirmation policy", () => {
   it.each([
@@ -8,6 +8,9 @@ describe("HTTP confirmation policy", () => {
     [{ http: true, httpConfirmation: "permissions", confirmSend: true }, "conflicts"],
   ])("rejects invalid startup options %j", (flags, message) => {
     expect(() => httpConfirmationOf(flags)).toThrow(message)
+  })
+  it("refuses an unknown mode supplied by a JavaScript SDK caller", () => {
+    expect(() => httpServerOptions("automatic" as HttpConfirmation)).toThrow("required or permissions")
   })
   it("defaults to required and drops the stdio bypasses in both modes", () => {
     expect(httpServerOptions(httpConfirmationOf({ http: true }))).toEqual({
