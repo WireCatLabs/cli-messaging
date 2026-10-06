@@ -45,6 +45,17 @@ const leaves = (command: Command, path: string[] = []): string[][] =>
   command.commands.length === 0 ? [path] : command.commands.flatMap((sub) => leaves(sub, [...path, sub.name()]))
 
 describe("the permission key of a command", () => {
+  it("offers daily roster tracking only when the CLI's background service implements it", () => {
+    const fetchOf = (picked: Messenger) =>
+      chatsCommand(picked)
+        .commands.find((one) => one.name() === "members")
+        ?.commands.find((one) => one.name() === "fetch")
+    expect(fetchOf(messenger)?.options.map((one) => one.long)).toContain("--track")
+    const native = fetchOf({ ...messenger, tracksMembers: false })
+    expect(native?.options.map((one) => one.long)).not.toContain("--track")
+    expect(native?.options.map((one) => one.long)).toContain("--budget")
+  })
+
   it("**names every shared command**, so a level cannot be walked around", () => {
     const commands = [
       accountCommand(messenger),

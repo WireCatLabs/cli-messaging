@@ -127,14 +127,18 @@ export const membersCommand = (messenger: Messenger): Command => {
       }),
   )
 
+  const fetch = new Command("fetch")
+    .description(
+      "read a group's whole member list into the local store's member history: who joined, who left, daily " +
+        "counts and profile changes; someone is recorded as gone only when every member was read",
+    )
+    .argument("<chat>", messenger.chatArgument)
+
+  if (messenger.tracksMembers !== false) {
+    fetch.option("--track", "also fetch it daily while serve runs; chats tracking lists and edits those chats")
+  }
   members.addCommand(
-    new Command("fetch")
-      .description(
-        "read a group's whole member list into the local store's member history: who joined, who left, daily " +
-          "counts and profile changes; someone is recorded as gone only when every member was read",
-      )
-      .argument("<chat>", messenger.chatArgument)
-      .option("--track", "also fetch it daily while serve runs; chats tracking lists and edits those chats")
+    fetch
       .option(
         "--budget <pages>",
         `at most this many pages of ${AUDIT_PAGE} members, a pause between them (default: ${AUDIT_BUDGET})`,
