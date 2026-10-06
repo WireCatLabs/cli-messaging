@@ -1356,6 +1356,47 @@ describe("the shared read commands", () => {
     expect((await json("chapter", "--context", "1", "--limit", "1")).answer.items[0].context).toHaveLength(2)
   })
 
+  it.each(["lucene", "legacy"])(
+    "gives imported mail one source-level coverage notice in %s search",
+    async (language) => {
+      const root = mkdtempSync(join(tmpdir(), "mail-search-"))
+      const env = { CHAT_STATE_DIR: join(root, "state"), MESSAGING_STORE: join(root, "m.db") }
+      await call(["messages", "context", "Book", "2", "--json"], async () => fake, env)
+      const store = await openStore({ path: env.MESSAGING_STORE })
+      const email = { provider: "email", account: "owner@example.test" }
+      for (const id of ["9001", "9002"]) {
+        await store.saveChats(email, [{ ...chat, id, title: "Synthetic mail" }])
+        await store.saveMessages(email, id, [{ ...thread[0], id, chatId: id, text: "chapter in mail" } as Message], {
+          via: "himalaya",
+        })
+      }
+      await store.fillSearchIndex()
+      await store.close()
+      const never = vi.fn(async (): Promise<MessengerAdapter> => {
+        throw new Error("search must never connect")
+      })
+      const args = ["messages", "search", "chapter", "--language", language, "--json"]
+      const mail = await call([...args, "--source", "email"], never, env)
+      expect(mail.code).toBe(0)
+      expect(mail.stderr.join("\n")).not.toContain("store fetch")
+      expect(mail.stderr.join("\n")).not.toContain("chats searched are not held in full")
+      expect(mail.stderr.join("\n").match(/mail search covers imported messages only/g)).toHaveLength(1)
+      expect(mail.stderr.join("\n")).toContain("memo mail import --since <date>")
+      const answer = JSON.parse(mail.stdout[0] ?? "")
+      expect(answer.items).toHaveLength(2)
+      expect(answer.completeness).toHaveLength(2)
+      expect(answer.completeness.every(({ state }: { state: string }) => state === "unknown")).toBe(true)
+
+      const mixed = await call([...args, "--source", "all"], never, env)
+      expect(mixed.stderr.join("\n")).toContain("1 of the chats searched are not held in full")
+      expect(mixed.stderr.join("\n")).not.toContain("3 of the chats searched")
+      expect(mixed.stderr.join("\n")).toContain("mail search covers imported messages only")
+      const own = await call(args, never, env)
+      expect(own.stderr.join("\n")).not.toContain("mail search")
+      expect(never).not.toHaveBeenCalled()
+    },
+  )
+
   it("**searches other accounts and messengers** held in the file only when asked, naming each hit's messenger", async () => {
     const root = mkdtempSync(join(tmpdir(), "messenger-"))
     const env = { CHAT_STATE_DIR: join(root, "state"), MESSAGING_STORE: join(root, "m.db") }

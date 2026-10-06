@@ -6,6 +6,12 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Fixed
+
+- Searches report imported mail coverage once, with `memo mail import --since <date>` as the next
+  step, rather than counting every mail thread as an incomplete messenger chat and suggesting
+  `store fetch`. JSON completeness still reports missing or unknown history.
+
 ### Added
 
 - `skill-validation` checks portable YAML frontmatter, local references, emitted version and

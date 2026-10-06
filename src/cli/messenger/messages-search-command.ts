@@ -123,10 +123,16 @@ export const messagesSearchCommand = (messenger: Messenger): Command =>
             : `the word index is still being built, so a search by words reads pieces of words until \`${command} store migrate\` finishes it`,
         )
       }
-      const incomplete = found.completeness.filter((chat) => chat.state !== "complete").length
-      if (incomplete > 0) {
+      const incomplete = found.completeness.filter((chat) => chat.state !== "complete")
+      const chats = incomplete.filter((chat) => chat.provider !== "email").length
+      if (chats > 0) {
         context.renderer.note(
-          `${incomplete} of the chats searched are not held in full — \`${command} store fetch <chat>\` fetches one`,
+          `${chats} of the chats searched are not held in full — \`${command} store fetch <chat>\` fetches one`,
+        )
+      }
+      if (incomplete.some((chat) => chat.provider === "email")) {
+        context.renderer.note(
+          "mail search covers imported messages only; older or unimported mail may be missing — `memo mail import --since <date>` imports more",
         )
       }
       if (context.format === "pretty") {
