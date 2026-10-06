@@ -556,6 +556,7 @@ describe("the MCP server", () => {
       "chat_chats_list",
       "chat_chats_members",
       "chat_chats_members_audit",
+      "chat_chats_members_history",
       "chat_chats_rules_show",
       "chat_chats_show",
       "chat_chats_stats",
@@ -847,6 +848,19 @@ describe("the MCP server", () => {
     const { client } = await connect(telegram, { config: levels({ messages: "deny" }) })
     expect((await client.listTools()).tools.map(({ name }) => name)).not.toContain("chat_messages_evidence")
     expect(telegram.opened()).toBe(0)
+  })
+
+  it("answers member history and the tracking list from the store, empty before any fetch", async () => {
+    const { call } = await connect(scripted())
+    await call("chat_messages_list", { chat: "7" })
+
+    expect((await call("chat_chats_members_history", { chat: "7" })).body).toEqual({ chatId: "7", items: [] })
+    expect((await call("chat_chats_tracking_list")).body).toEqual({ items: [] })
+    expect((await call("chat_chats_tracking_show", { chat: "7" })).body).toEqual({
+      chatId: "7",
+      trackedAt: null,
+      counts: [],
+    })
   })
 
   it("offline ordinary context reads stored messages without another connection", async () => {

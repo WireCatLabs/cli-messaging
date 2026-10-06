@@ -1,7 +1,8 @@
 import { annotate } from "@leemour/cli-core/commands"
 import { Command } from "commander"
 import { AUDIT_BUDGET, AUDIT_MIN_SCORE, AUDIT_PAGE } from "../../services/members-audit.js"
-import { positiveCount, renderPage, window, withPaging } from "../paging.js"
+import { momentOf } from "../../services/moment.js"
+import { listed, positiveCount, renderPage, window, withPaging } from "../paging.js"
 import { type Messenger, messengerContext } from "./context.js"
 
 /** `chats members …`; a subcommand that changes membership belongs here too. */
@@ -66,6 +67,42 @@ export const membersCommand = (messenger: Messenger): Command => {
             name: name ?? "",
             username: username ?? "",
             reasons: reasons.join(", "),
+          })),
+        )
+      }),
+  )
+
+  members.addCommand(
+    new Command("history")
+      .description(
+        "who joined, who left and whose profile changed, oldest first — what chats members fetch recorded in the " +
+          "local store; never asks the messenger",
+      )
+      .argument("<chat>", messenger.chatArgument)
+      .option("--since-time <time>", "ISO 8601, or 2h / 1d ago; everything recorded if not given")
+      .action(async function (this: Command, chat: string) {
+        const context = messengerContext(this, messenger)
+        const { sinceTime } = this.opts<{ sinceTime?: string }>()
+        const found = await context.withServices((services) =>
+          services.chats.memberHistory(
+            chat,
+            sinceTime === undefined ? {} : { since: momentOf(sinceTime, "--since-time") },
+          ),
+        )
+        if (found.events.length === 0) {
+          context.renderer.note(
+            `nothing recorded — \`${messenger.app.command} chats members fetch ${found.chatId} --track\` starts it`,
+          )
+        }
+        if (context.format === "jsonl") return context.renderer.stream(found.events)
+        if (context.format !== "pretty")
+          return context.renderer.result({ ...listed(found.events), hasMore: false, chatId: found.chatId })
+        context.renderer.stream(
+          found.events.map(({ at, event, id, name, username, before }) => ({
+            time: at,
+            event,
+            person: [name, username ? `@${username}` : null, `(${id})`].filter(Boolean).join(" "),
+            was: before ? [before.name, before.username ? `@${before.username}` : null].filter(Boolean).join(" ") : "",
           })),
         )
       }),
