@@ -254,6 +254,27 @@ describe("mcp --http and its owner login", () => {
     expect(page.headers.get("x-frame-options")).toBe("DENY")
   })
 
+  it("lets the consent form post from the tunnel's own origin, as a browser sends it", async () => {
+    const { at, register, pkce, codes, base } = await start()
+    const { body: client } = await register()
+    const query = new URLSearchParams({
+      response_type: "code",
+      client_id: client.client_id ?? "",
+      redirect_uri: REDIRECT,
+      code_challenge: pkce().challenge,
+      code_challenge_method: "S256",
+    })
+    const page = await fetch(at(`/authorize?${query}`))
+    expect(page.headers.get("referrer-policy")).toBe("same-origin")
+    const posted = await fetch(at("/authorize"), {
+      method: "POST",
+      redirect: "manual",
+      headers: { origin: base.origin, "content-type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ ...Object.fromEntries(query), login_code: codes.at(-1) ?? "" }),
+    })
+    expect(posted.status).toBe(302)
+  })
+
   it("refuses a request that carries a foreign Origin", async () => {
     const { at } = await start()
     const response = await fetch(at("/register"), {
