@@ -408,6 +408,72 @@ export interface PersonCard extends Contact {
 }
 
 /**
+ * When they were last seen: a time, or the bucket their privacy leaves — `hidden` only when the
+ * messenger says nothing at all. Telegram answers `recently`, `week` or `month` instead of a time.
+ */
+export type Seen = "online" | "recently" | "week" | "month" | "hidden" | (string & {})
+
+export type PersonFlag = "bot" | "verified" | "premium" | "scam" | "fake" | "restricted" | "deleted" | "support"
+
+/**
+ * When the account was made, and how that is known: `telegram` — Telegram's own month, sent only
+ * when they first write to the owner; `max` — MAX's own time; `estimate` — guessed from the id,
+ * weak. Never shown without its source.
+ */
+export interface Registered {
+  at: string
+  source: "telegram" | "max" | "estimate"
+  /** How fine `at` is: Telegram tells a month, an estimate a month at best. */
+  precision: "day" | "month"
+}
+
+/** Everything the messenger itself says about one person, as `contacts profile` reads it. */
+export interface ProfileFacts {
+  id: Id
+  name: string | null
+  /** Every public handle, without `@`, the main one first. */
+  usernames: string[]
+  bio: string | null
+  /** `DD.MM` or `DD.MM.YYYY`, where they show it. */
+  birthday?: string | null
+  /** Only where the messenger shows it to the owner. */
+  phone?: string | null
+  /** Only the flags the messenger answered; a missing one is not known. */
+  flags: Partial<Record<PersonFlag, boolean>>
+  /** Absent where the messenger does not say. */
+  seen?: Seen
+  /** In the owner's address book. */
+  contact?: boolean
+  /** And the owner in theirs. */
+  mutualContact?: boolean
+  /** The messenger's own count of groups shared with them. */
+  commonChatsCount?: number | null
+  registered?: Registered | null
+  /** A photo of their own; one the owner set for them does not count. */
+  hasPhoto?: boolean
+  /** The chats shared with them, as the messenger lists them, newest first. */
+  chats: Pick<Chat, "id" | "title" | "kind" | "lastMessageAt">[]
+}
+
+/** One chat shared with a person, and what the store holds of their messages there. */
+export interface SharedChatActivity {
+  id: Id
+  title: string | null
+  kind: ChatKind
+  /** Their messages stored; a floor unless `complete`. */
+  theirMessages: number
+  firstAt: string | null
+  lastAt: string | null
+  /** The store holds the whole chat, so the count is the real one. */
+  complete: boolean
+}
+
+/** `contacts profile`: the person, and their activity in every chat shared with them. */
+export interface PersonProfile extends Omit<ProfileFacts, "chats"> {
+  chats: SharedChatActivity[]
+}
+
+/**
  * One page of a listing, and **the same shape whether it came from the provider or from the
  * store** — where rows come from is the exit code's business and the diagnostics', never the
  * answer's. `hasMore` rather than a total: counting rows nobody has fetched is a second cost.

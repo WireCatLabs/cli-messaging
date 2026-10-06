@@ -23,6 +23,7 @@ import type {
   PersonCard,
   PhoneBookEntry,
   Poll,
+  ProfileFacts,
   Topic,
   WindowedMessage,
 } from "../../domain/models.js"
@@ -272,6 +273,12 @@ export interface AccountTools {
   addressBook(): Promise<Member[]>
 }
 
+/** Everything the messenger says about one person — what `contacts profile` shows. */
+export interface PersonProfiles {
+  /** Reading it tells them nothing. A chat that is not a person is refused. */
+  profile(person: string): Promise<ProfileFacts>
+}
+
 /** Making, joining and leaving groups. Everything here is seen by other people. */
 export interface GroupAdmin {
   /** The person ids these references name — an id, a handle, a name — in the order given; one that is not a person is refused. */
@@ -380,6 +387,7 @@ export interface MessengerAdapter
   extends MessengerCore,
     Partial<MarkdownFormatting>,
     Partial<ServerReads>,
+    Partial<PersonProfiles>,
     Partial<ChatReading>,
     Partial<SenderSearch>,
     Partial<MessageEditing>,

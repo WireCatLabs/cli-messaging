@@ -5,6 +5,7 @@ import type { Link, LinkInput } from "../conversations/link.js"
 import type { DownloadedFile } from "../domain/attachments.js"
 import type {
   Chat,
+  ChatKind,
   Contact,
   Id,
   Member,
@@ -449,6 +450,8 @@ export interface MessageStore {
   markRange(key: AccountKey, chatId: Id, from: number, to: number): Promise<Range>
   /** Per chat that has messages: how many, the oldest and newest, and when the last one was stored. */
   chatStats(key: AccountKey, chatId?: Id): Promise<ChatStats[]>
+  /** One person's stored messages per chat of this account, newest first. */
+  senderStats(key: AccountKey, senderId: Id): Promise<SenderChatStats[]>
   /** The stretches held completely, oldest first. */
   ranges(key: AccountKey, chatId: Id): Promise<Range[]>
   /** Labels one stored chat, person or message; answers the tags it did not have. `not_found` for one not held. */
@@ -470,6 +473,16 @@ export interface MessageStore {
   /** Drops the unnamed runs; answers how many. */
   clearSearchHistory(): Promise<number>
   close(): Promise<void>
+}
+
+/** One sender's stored messages in one chat. */
+export interface SenderChatStats {
+  chatId: Id
+  title: string | null
+  kind: ChatKind
+  messages: number
+  firstAt: string | null
+  lastAt: string | null
 }
 
 export interface ChatStats {
@@ -1233,6 +1246,11 @@ const storeOver = (context: StoreContext): MessageStore => {
         merged = ranges.markRange(context, chatPkFor(accountPk(key), chatId), from, to)
       })
       return merged
+    },
+
+    senderStats: async (key, senderId) => {
+      const accountKey = findAccountPk(key)
+      return accountKey === undefined ? [] : reads.senderStats(context, accountKey, key.provider, senderId)
     },
 
     chatStats: async (key, chatId) => {

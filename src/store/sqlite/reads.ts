@@ -1,6 +1,6 @@
 import { CliError } from "@leemour/cli-core"
-import type { Attachment, Id, Message, Page, WindowedMessage } from "../../domain/models.js"
-import type { ChatStats } from "../store.js"
+import type { Attachment, ChatKind, Id, Message, Page, WindowedMessage } from "../../domain/models.js"
+import type { ChatStats, SenderChatStats } from "../store.js"
 import { and, asc, desc, eq, gt, gte, inArray, isNull, lte, or, type SQL, sql } from "./drizzle/core.js"
 import type { StoreContext } from "./open.js"
 import { attachments, chats, identities, messageRevisions, messages } from "./schema.js"
@@ -247,6 +247,47 @@ export const chatStats = ({ orm }: StoreContext, accountKey: number, chatId: Id 
       oldestAt: toIso(row.oldest),
       newestAt: toIso(row.newest),
       lastStoredAt: toIso(row.stored),
+    }))
+}
+
+/** One sender's stored messages per chat — count, first and last — in one grouped read. */
+export const senderStats = (
+  { orm }: StoreContext,
+  accountKey: number,
+  provider: string,
+  senderId: Id,
+): SenderChatStats[] => {
+  const newest = sql<number | null>`max(${messages.sentAt})`
+  return orm
+    .select({
+      chatId: chats.nativeId,
+      title: chats.title,
+      kind: chats.kind,
+      messages: sql<number>`count(${messages.pk})`,
+      oldest: sql<number | null>`min(${messages.sentAt})`,
+      newest,
+    })
+    .from(messages)
+    .innerJoin(chats, eq(chats.pk, messages.chatPk))
+    .innerJoin(identities, eq(identities.pk, messages.senderIdentityPk))
+    .where(
+      and(
+        eq(chats.accountPk, accountKey),
+        isNull(messages.deletedAt),
+        eq(identities.provider, provider),
+        eq(identities.nativeId, senderId),
+      ),
+    )
+    .groupBy(chats.pk)
+    .orderBy(desc(newest))
+    .all()
+    .map((row) => ({
+      chatId: row.chatId,
+      title: row.title,
+      kind: row.kind as ChatKind,
+      messages: Number(row.messages),
+      firstAt: toIso(row.oldest),
+      lastAt: toIso(row.newest),
     }))
 }
 

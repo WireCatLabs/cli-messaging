@@ -158,6 +158,7 @@ export type {
   MessengerAdapter,
   MessengerCore,
   NewPoll,
+  PersonProfiles,
   PushedHistory,
   ReadState,
   RemoteFile,

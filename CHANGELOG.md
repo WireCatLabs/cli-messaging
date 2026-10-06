@@ -6,6 +6,22 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- `contacts profile <person> [--show-phone]` and read-only MCP `contacts_profile`: what the messenger says about
+  one person — every handle, bio, birthday, phone where shown (last four digits unless `--show-phone`), its own
+  flags (`bot`, `verified`, `premium`, `scam`, `fake`, `restricted`, `deleted`, `support`), `seen` (`online`,
+  `recently`, `week`, `month`, `hidden` or a time), `contact`, `mutualContact`, `commonChatsCount`, `registered`
+  (`at`, `source`: `telegram` | `max` | `estimate`, `precision`) and `hasPhoto` — and for each chat shared with
+  them, how many of their messages the store holds, the first and the last, and whether the chat is stored whole.
+  `--offline` describes them from the store. An adapter gives the facts through the optional
+  `PersonProfiles.profile`; without it the store answers.
+
+### Changed — may break callers
+
+- `MessageStore` has a new required method, `senderStats`: one person's stored messages per chat. A store
+  written by hand — a test fake — adds it; `openStore` already does.
+
 ## 0.150.0 — 06.10.2026
 
 ### Added
