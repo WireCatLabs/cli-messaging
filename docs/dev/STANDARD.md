@@ -17,7 +17,11 @@ where one messenger lacks the feature, and it is written down with its reason in
 A name a person reads once should say what the command does; a name an agent reads should be
 guessable from the others.
 
-1. **`<tool> [profile] <resource> <verb> [arguments]`.** The resource is a noun: **plural** for a
+1. **`<tool> [profile] [namespace] <resource> [subresource ...] <verb-or-view> [arguments]`.**
+   A namespace groups one cross-resource purpose; `stats` groups statistics. Subresources are
+   allowed when they identify a part of the resource (`chats members list`), not an implementation
+   detail. A group without a leaf command shows help, never runs a hidden default action.
+   The resource is a noun: **plural** for a
    collection (`chats`, `contacts`, `messages`, `polls`, `reactions`, `recipients`, `replies`, `sends`,
    `runs`, `topics`, `models`, `tags`, `searches`, `copies`, `attachments`, `tasks`), **singular** for what a profile has exactly
    one of (`session`, `account`, `config`, `server`, `store`, `skill`, `cache`, `flood`). A group is never
@@ -29,16 +33,13 @@ guessable from the others.
    `tasks close <task> --as done|dismissed [--reason <text>]`. The owner chose these on 2026-10-06.
    `attachments` are the files of stored messages: their text, read or written back, is kept in the
    local store for `content:` in a search and never sent; `attachments.extract` is a local write.
-   `stats charts` is the statistics view across chart sources; it returns a neutral chart description
-   and optionally writes an SVG. The first source is a chat's statistics. The owner chose this
-   command on 2026-10-06. `--chart-kind` selects messages, active authors or joins and leaves;
-   `--output` names the image file. Charts default to a dark theme and their JSON is independent
-   of the rendering library. `--by` takes day or week here.
    `chats tracking` is the one collection named by what it does rather than a plural: the chats whose
    member lists `serve` fetches daily into the local store — owner's wording, 2026-10-05.
 2. **Top-level words** only for what spans every chat or is the tool itself: `inbox`, `review`,
-   `watch`, `serve`, `stats`, `doctor`, `upgrade`, `commands`, `complete`, `mcp`, `bot`. A new one needs a
-   reason in its pull request.
+   `watch`, `serve`, `doctor`, `upgrade`, `commands`, `complete`, `mcp`, `bot`, `stats`. Prefer an
+   existing resource or namespace before adding another root word. A new root needs a reason in
+   its naming pull request: what existing group cannot express, which related commands it groups,
+   and why the same hierarchy works for both CLIs. One new report never justifies its own root.
 3. **Verbs come from this list, each with one meaning.** A verb not on it is added here first.
    - `list` many · `show` one · `search` find by text — the description says where it looks
    - `related` what is nearest in meaning to one thing, without a query (`conversations related`)
@@ -72,8 +73,14 @@ guessable from the others.
      working), `moderate` (apply a chat's rules: delete what breaks them, act on who broke them)
    - A **noun as the last word** names a view and shows it: `server logs`, `chats events`,
      `messages scheduled`, `messages context`, `runs path`, `mcp config`, `searches history`.
-4. **One action, one command.** A variant is an option, never a sibling command, and no command
-   both shows and changes.
+     `top` is a ranked view under `stats`, for example `stats messages top`.
+4. **One action or report, one leaf command.** A different action or independently useful report
+   belongs in a nested command. Options choose the scope, measure, order or format of that action;
+   they do not switch a search, send or list into another report. For example, ranking is
+   `stats messages top`, not a ranking mode added to `messages search`. Views, reactions and
+   replies are measures of the same ranking, so they stay options, not sibling commands.
+   No command both shows and changes, except an explicitly documented preparatory fetch such as
+   `--sync-first`, which retains its own permissions and reports its outcome.
 5. **Options are plain words, never a wire field** (`--send-id`, not `--cid`). One meaning, one
    name, in every command of both tools. **A length of time is a `<duration>`** (`500ms`,
    `30s`, `2m`, `4h`, `1d`) — a number and a unit, never a bare number — parsed as `--timeout`
@@ -107,6 +114,58 @@ guessable from the others.
     bot has, as `bot watch --types` does.
 
 `bot api` is exempt: its names mirror each messenger's official Bot API operations.
+
+### Statistics hierarchy
+
+**Every command whose primary result is statistics lives under `stats`, then its resource.**
+Use the same resource words as elsewhere: `messages`, `chats`, `contacts`, not another word for
+the same thing such as `users` or `people`. `show` displays an aggregate report; `top` displays a
+ranking. Nest a subresource only when the user selects a distinct subject, as with chat members;
+do not add a level for an algorithm, provider or output format. All filters follow the leaf.
+
+The canonical paths for the statistics migration and rankings are:
+
+| Path | Purpose | Status |
+|---|---|---|
+| `stats messages show [query...]` | Count matching stored messages, with the existing groupings | Planned relocation of `messages stats` |
+| `stats chats show <chat>` | A chat's aggregate numbers for a period | Planned relocation of `chats stats` |
+| `stats messages top [query...]` | Rank matching messages by a measure or score | Planned |
+| `stats contacts top [query...]` | Rank the authors of matching messages by a measure or score | Planned |
+
+These paths specify the command hierarchy, not implemented availability. Existing commands stay
+registered until the coordinated migration; no additional statistics commands may be added
+outside `stats`. A normal entity card may contain counts (`contacts profile`, `store info`);
+that does not make it a statistics command. Its main purpose remains describing the entity.
+For bot-account statistics the account namespace comes first: `bot stats <resource> ...`, with
+the same meanings wherever the provider supports them; this rule does not add Bot API features.
+
+**Relocations are coordinated changes, not aliases.** Move CLI paths, command discovery/help,
+completion, generated docs, skills, MCP names, permission keys and saved-run command metadata
+together. Preserve existing output semantics during the move. If a permission or stored record
+contains an old path, give it an explicit migration; never broaden permissions or silently reuse
+an old key for a different action. The release notes name the old and new paths under “may break
+scripts”. Old paths stop working in the release that adopts the new tree. Consumers adopt the
+same shared implementation and manifest; a provider-specific difference needs a reason.
+
+### Before creating a command
+
+The naming pull request answers these questions before implementation:
+
+1. What does the user want to do or learn, and which existing resource or namespace owns it?
+   If the answer is a statistical report, its path starts with `stats`.
+2. Is this a new action/report or a scope/measure/format variant of an existing leaf? Put the
+   former in the command tree and the latter in options. Show the proposed parent help so the
+   new command can be found without knowing its flags.
+3. Are every resource word, leaf verb/view, argument and option consistent with both CLIs?
+   A nested path must explain each level. Do not abbreviate or invent another word for an
+   existing subject. Check the option catalogue before proposing a new option.
+4. What result, coverage and permission contract does the leaf have, and how does its full path
+   map to its MCP name? Record planned paths/options in the parity manifest before code.
+5. Does it move or replace an existing command? List callers, generated pages, saved records and
+   configuration that need migration; describe the breaking change before shipping it.
+
+The owner approves new wording in this naming pull request. The review checklist applies these
+questions to every subsequent command addition; they are not specific to rankings.
 
 Generated `bot api` commands use cli-core's generators and one command assembler in cli-messaging.
 Only the source-specification adapter, transport and provider capabilities stay in the consumer.
@@ -170,11 +229,11 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--bot` |  | the bot section of the profile's settings, rather than the personal account's |  | `config set` (planned), `config show` (planned), `config unset` (planned) |
 | `--bots` | `<profiles>` | also read these bots' copies, comma separated — each allowed by readOtherBots |  | `bot contacts show`, `bot messages between`, `bot messages search` |
 | `--budget` | `<pages>` | at most this many pages of a list, with a pause between them |  | `chats members audit`, `chats members fetch` (planned) |
-| `--by` | `<grouping>` | what to count by. **each command names its own groupings — messages stats chat, sender, day or hour, and searches create the same for messages stats --saved; chats stats day or week, as a series beside its totals — so it differs on purpose (Help text rule 4)** |  | `chats stats` (planned), `messages stats`, `searches create`, `stats charts` (planned) |
+| `--by` | `<grouping>` | what to count by. **each command names its own groupings — messages stats chat, sender, day or hour, and searches create the same for messages stats --saved; chats stats day or week, as a series beside its totals — so it differs on purpose (Help text rule 4)** |  | `chats stats` (planned), `messages stats`, `searches create`, `stats charts` (planned), `stats chats show` (planned), `stats messages show` (planned) |
 | `--can` | `<rights>` | what they may do, comma-separated: read, members, admins, info, pin, link, post, edit, delete. **lists the rights each messenger has — MAX has `read`, Telegram does not — so it differs on purpose (Help text rule 4)** |  | `bot chats admins add`, `chats admins add` |
 | `--channel` |  | a private channel instead of a group; people join it by its link |  | `chats create` |
 | `--chart-kind` | `<messages\|active\|membership>` | what to draw: messages, active authors, or joins and leaves | `messages` | `stats charts` (planned) |
-| `--chat` | `<chat>` | a chat, by id or name; repeat it for more. **chat addressing follows each messenger's supported names, usernames and Saved Messages aliases, so it differs on purpose (Help text rule 4); both message searches resolve stored names without networking** |  | `attachments extract`, `attachments list`, `chats folders create`, `contacts context`, `conversations batches next`, `conversations batches status`, `conversations build`, `conversations consents revoke`, `conversations embed`, `conversations embed clear`, `conversations embed status`, `conversations links clear`, `conversations list`, `conversations search`, `conversations status`, `messages search`, `messages stats`, `review`, `searches create`, `tags add`, `tags remove`, `tasks list` (planned), `tasks stats` (planned) |
+| `--chat` | `<chat>` | a chat, by id or name; repeat it for more. **chat addressing follows each messenger's supported names, usernames and Saved Messages aliases, so it differs on purpose (Help text rule 4); both message searches resolve stored names without networking** |  | `attachments extract`, `attachments list`, `chats folders create`, `contacts context`, `conversations batches next`, `conversations batches status`, `conversations build`, `conversations consents revoke`, `conversations embed`, `conversations embed clear`, `conversations embed status`, `conversations links clear`, `conversations list`, `conversations search`, `conversations status`, `messages search`, `messages stats`, `review`, `searches create`, `stats messages show` (planned), `tags add`, `tags remove`, `tasks list` (planned), `tasks stats` (planned) |
 | `--check` |  | say whether a newer version exists, and install nothing |  | `bot list`, `upgrade` |
 | `--concurrency` | `<n>` | remote: requests at once (default: 4) |  | `conversations embed` |
 | `--confirm-send` |  | show the owner every write the MCP server offers, in a form to approve. **MAX retains its native wrapper wording; confirmation semantics already follow profile permissions in both CLIs** |  | `bot mcp`, `bot mcp config`, `mcp`, `mcp config`, `mcp doctor` (planned), `mcp setup` (planned) |
@@ -207,15 +266,15 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--last` | `<n>` | stop once the newest n messages are held; not with --since. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | `bot store fetch`, `store fetch` |
 | `--last-name` | `<name>` | your last name |  | `account update` |
 | `--left` |  | only the chats this account has left |  | `store clear` |
-| `--limit` | `<n>` | how many: rows to show, or messages one run fetches. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | `attachments extract`, `attachments list`, `bot chats members list` (max-only), `bot contacts show`, `bot messages between`, `bot messages list`, `bot messages search`, `bot store fetch`, `chats list`, `chats members list` (planned), `contacts context`, `contacts list`, `conversations list`, `conversations related`, `conversations search`, `inbox`, `messages evidence`, `messages list`, `messages search`, `messages stats`, `runs list`, `searches create`, `searches history`, `sends list`, `store fetch`, `tasks list` (planned) |
+| `--limit` | `<n>` | how many: rows to show, or messages one run fetches. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | `attachments extract`, `attachments list`, `bot chats members list` (max-only), `bot contacts show`, `bot messages between`, `bot messages list`, `bot messages search`, `bot store fetch`, `chats list`, `chats members list` (planned), `contacts context`, `contacts list`, `conversations list`, `conversations related`, `conversations search`, `inbox`, `messages evidence`, `messages list`, `messages search`, `messages stats`, `runs list`, `searches create`, `searches history`, `sends list`, `stats messages show` (planned), `store fetch`, `tasks list` (planned) |
 | `--lines` | `<n>` | how many lines | `50` | `server logs` |
 | `--local` |  | use the model on this machine, never the messenger |  | `messages transcribe` (tg-only) |
 | `--mark-read` |  | also mark the chat read up to the newest message shown; the other person sees it |  | `inbox`, `messages list`, `review` |
 | `--marker` | `<value>` | Marker |  | `bot chats members list` (max-only) |
 | `--max-actions` | `<n>` | at most this many actions in one run | `10` | `bot chats moderate`, `chats moderate` (planned) |
-| `--max-chats` | `<n>` | at most this many chats in one run. **local graph work defaults to 20; opt-in --sync-first network refresh defaults to 5, so help distinguishes the two uses** | `20` | `conversations build`, `conversations embed`, `conversations search`, `messages search`, `messages stats` |
+| `--max-chats` | `<n>` | at most this many chats in one run. **local graph work defaults to 20; opt-in --sync-first network refresh defaults to 5, so help distinguishes the two uses** | `20` | `conversations build`, `conversations embed`, `conversations search`, `messages search`, `messages stats`, `stats messages show` (planned) |
 | `--max-chunks` | `<n>` | at most this many chunks embedded in one run | `2000` | `conversations embed`, `conversations search` |
-| `--max-messages` | `<n>` | fetch at most this many messages total (default: 500) |  | `conversations search`, `messages search`, `messages stats` |
+| `--max-messages` | `<n>` | fetch at most this many messages total (default: 500) |  | `conversations search`, `messages search`, `messages stats`, `stats messages show` (planned) |
 | `--max-tokens` | `<n>` | remote embeddings: bound input tokens; analysis: reserve input and output tokens across this run |  | `conversations build`, `conversations embed` |
 | `--md` |  | read this messenger's Markdown; see its formatting guide for supported syntax |  | `bot messages edit`, `bot messages send`, `messages edit`, `messages send` |
 | `--members-see-link` | `<on\|off>` | members may see the invite link |  | `chats update` (max-only) |
@@ -265,7 +324,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--revoke` |  | forget every login given to a browser app over --http |  | `mcp` |
 | `--revote` |  | people may change their vote |  | `polls create` |
 | `--run` | `<id>` | the run the report is about; the newest failed one if not given |  | `doctor report create` |
-| `--saved` | `<name\|id>` | run a saved search, or an earlier run by its id; options typed with it replace its own, more words are AND-ed |  | `messages search`, `messages stats` |
+| `--saved` | `<name\|id>` | run a saved search, or an earlier run by its id; options typed with it replace its own, more words are AND-ed |  | `messages search`, `messages stats`, `stats messages show` (planned) |
 | `--search` | `<text>` | only chats whose name contains this; at least 3 characters |  | `chats list`, `contacts list` |
 | `--secret-stdin` |  | a secret MAX sends back in X-Max-Bot-Api-Secret — asked for, or read from a pipe |  | `bot webhooks set` |
 | `--send-id` | `<id>` | identify a send or creation attempt; message/poll retries reuse it, while an unknown topic creation must never be repeated |  | `messages forward`, `messages send`, `polls create`, `topics create` (tg-only) |
@@ -273,13 +332,13 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--show-phone` |  | print the whole phone number |  | `account show`, `contacts profile` |
 | `--silent` |  | deliver without a notification |  | `bot messages send`, `messages forward`, `messages send`, `polls create` |
 | `--since` | `<id-or-time>` | from this message id, an ISO 8601 time, or 2h / 1d ago; each command says its default. **becomes `--since-time` everywhere — NEED-485** |  | `inbox` (planned), `review` (planned) |
-| `--since-time` | `<time>` | from this ISO 8601 time, or 2h / 1d ago; each command says its default |  | `bot chats moderate`, `bot store fetch`, `chats events` (planned), `chats members history` (planned), `chats moderate` (planned), `chats stats` (planned), `contacts context`, `conversations list`, `conversations search`, `inbox` (planned), `replies test`, `review` (planned), `stats charts` (planned), `store export`, `store fetch` |
+| `--since-time` | `<time>` | from this ISO 8601 time, or 2h / 1d ago; each command says its default |  | `bot chats moderate`, `bot store fetch`, `chats events` (planned), `chats members history` (planned), `chats moderate` (planned), `chats stats` (planned), `contacts context`, `conversations list`, `conversations search`, `inbox` (planned), `replies test`, `review` (planned), `stats charts` (planned), `stats chats show` (planned), `store export`, `store fetch` |
 | `--size` | `<n>` | messages to answer per batch, 10–200; 50 by default |  | `conversations batches next`, `conversations batches status`, `conversations build` |
-| `--source` | `<messenger>` | every account of this messenger held in the store; personal, bots or all — the same as in: in the query |  | `conversations search`, `messages search`, `messages stats`, `searches create` |
+| `--source` | `<messenger>` | every account of this messenger held in the store; personal, bots or all — the same as in: in the query |  | `conversations search`, `messages search`, `messages stats`, `searches create`, `stats messages show` (planned) |
 | `--state` | `<state>` | only tasks in this state: open, done or dismissed |  | `tasks list` (planned) |
 | `--store-token` | `<profile>` | keep a returned authentication token only in this bot profile's OS keyring; never print it |  | `bot api` |
-| `--sync-first` |  | first fetch new messages within the chat, time and message bounds |  | `conversations search`, `messages search`, `messages stats` |
-| `--sync-time` | `<duration>` | stop fetching after this long (default: 30s) |  | `conversations search`, `messages search`, `messages stats` |
+| `--sync-first` |  | first fetch new messages within the chat, time and message bounds |  | `conversations search`, `messages search`, `messages stats`, `stats messages show` (planned) |
+| `--sync-time` | `<duration>` | stop fetching after this long (default: 30s) |  | `conversations search`, `messages search`, `messages stats`, `stats messages show` (planned) |
 | `--tag` | `<tag>` | only this tag |  | `tags list` |
 | `--text` | `<text>` | the message's new text; - reads stdin |  | `bot callbacks answer` |
 | `--text-file` | `<path>` | read the text from this file; - or none reads stdin |  | `attachments text set` |
@@ -290,7 +349,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--thread-within` | `<duration>` | messages within this long either side of the hit (default: 1d) |  | `messages context`, `messages search` |
 | `--threads` | `<n>` | threads in all | `min(8, cores)` | `conversations embed` |
 | `--timeout` | `<duration>` | give up on the whole command after this — 30s, 2m, 500ms |  | every command |
-| `--timezone` | `<zone>` | the IANA timezone for calendar date boundaries | `system IANA timezone` | `chats stats` (planned), `conversations search`, `messages search`, `messages stats`, `searches create`, `stats charts` (planned) |
+| `--timezone` | `<zone>` | the IANA timezone for calendar date boundaries | `system IANA timezone` | `chats stats` (planned), `conversations search`, `messages search`, `messages stats`, `searches create`, `stats charts` (planned), `stats chats show` (planned), `stats messages show` (planned) |
 | `--title` | `<title>` | the new name — of a chat or a folder |  | `bot chats admins add`, `chats folders update`, `chats update` |
 | `--to` | `<chat>` | the chat to forward it to: an id, or part of a chat name. **the sentence says how to name a chat the messenger's way, so it differs on purpose (Help text rule 4)** |  | `messages forward`, `store export` |
 | `--topic` | `<id>` | address this forum topic: send to it, or mark only it read. **Telegram group forums only; MAX explicitly refuses this option before sending** |  | `chats mark-read` (planned), `messages send`, `polls create` |
@@ -432,8 +491,10 @@ many), `--allow-any-file` (which files).
 
 ## MCP
 
-1. **A tool is named `<tool>_<resource>_<verb>`** after its command: `max_store_export`,
-   `tg_chats_list`; a bot's, `<tool>_bot_<resource>_<verb>`: `tg_bot_messages_send`. A tool with no command (`<tool>_status`) is named after what it answers. `<tool>_conversations_refresh` runs what
+1. **A tool follows its full command path, joined by underscores after `<tool>_`**:
+   `max_store_export`, `tg_chats_members_list`, `max_stats_messages_top`;
+   a bot's path includes `bot`: `tg_bot_messages_send`.
+   A tool with no command (`<tool>_status`) is named after what it answers. `<tool>_conversations_refresh` runs what
    `conversations search --refresh` runs before it searches (NEED-551 A).
 2. **Arguments are the command's options in snake_case**, with the option's name: `--send-id` is
    `send_id`, `--since-time` is `since_time`, `--before-n` is `before_n`.

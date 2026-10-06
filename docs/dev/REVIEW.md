@@ -9,9 +9,11 @@ or not applicable.
 
 A new command, option or output change starts here and merges before its code.
 
-1. **Names.** The command is `<resource> <verb>` with a verb from the list, the arguments have the
-   fixed names, and nothing is an alias ([Command names](STANDARD.md#command-names)). A new verb or
-   option name also has the owner's yes in the pull request.
+1. **Names and placement.** Run [Before creating a command](STANDARD.md#before-creating-a-command):
+   its namespace/resource/subresources explain the user task, statistics start with `stats`,
+   and a new root is justified against existing groups. The leaf is an approved verb or noun view,
+   arguments have the fixed names, and nothing is an alias. A different report is a nested leaf;
+   filters and measures are options. The naming wording has the owner's yes in the pull request.
 2. **Options.** Each option is in the [catalogue](STANDARD.md#option-catalogue) with one meaning; a
    new one is added to `parity.json` with its value, meaning and default, and `pnpm parity:render`
    was run.
@@ -22,6 +24,9 @@ A new command, option or output change starts here and merges before its code.
 5. **Both CLIs' pages.** The user page of each CLI says the same thing at the same depth, max's in
    Russian and tg's in English ([Documents](STANDARD.md#documents)).
 6. **Manifest row.** `parity.json` has the command and its options as `planned`, with who builds them.
+7. **Relocations.** The plan lists affected CLI/MCP paths, permissions, saved records, completion,
+   skills and generated pages. It preserves output semantics, migrates stored paths explicitly,
+   and names the old/new paths in breaking release notes.
 
 ## B. A code pull request
 
@@ -39,3 +44,6 @@ A new command, option or output change starts here and merges before its code.
 6. **Safety.** Nothing sends, marks read or deletes unless the command asked for it; in machine
    mode stdout carries data alone; the process exits on every path; no message, token or phone
    number reaches a log, a fixture or a document.
+7. **Command tree.** The implemented hierarchy matches the approved naming PR. Parent commands
+   show help, the leaf is discoverable in both CLIs, and a relocated path/MCP name is removed in
+   the same adoption release with its configuration and saved-record migrations.
