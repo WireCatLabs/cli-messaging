@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.150.0 — 06.10.2026
+
 ### Added
 
 - `contacts context <person> --chat <chat>` (repeat it for more): their newest messages in each chat named,
@@ -13,11 +15,6 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   it answers, `-vv` everything. `--limit` is per chat (20). `--refresh` reads them from the messenger first: by
   sender where the adapter offers `historyFrom` (new optional `SenderSearch`), the newest page of the chat where it
   does not. MCP `contacts_context` takes `chats` and `detail`. Without `--chat`, the answer is as before.
-
-## 0.150.0 — 06.10.2026
-
-### Added
-
 - `./cli` exports the reply step a CLI with its own server calls per arriving message — `replyTo` with its
   `Replier` dependencies, `Replied`, `NO_RULES`, `NOT_ALLOWED` — and `repliesPathFor`, `repliesStatePathFor` and
   `senderFacts`, so max's `serve` answers by the same rules as tg's.
