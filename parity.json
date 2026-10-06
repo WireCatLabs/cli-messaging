@@ -1411,7 +1411,15 @@
     "contacts context": {
       "in": "all",
       "options": {
+        "--chat": {
+          "in": [],
+          "planned": { "max": "max's next cli-messaging bump", "tg": "tg's next cli-messaging bump" }
+        },
         "--limit": "all",
+        "--refresh": {
+          "in": [],
+          "planned": { "max": "max's next cli-messaging bump", "tg": "tg's next cli-messaging bump" }
+        },
         "--since-time": "all"
       }
     },

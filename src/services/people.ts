@@ -7,7 +7,17 @@ import { newOperationId } from "../sends/send-id.js"
 import type { AccountKey, MessageStore, PersonRecord } from "../store/store.js"
 import type { PageWindow } from "./chats.js"
 import { fromStore, type ServiceDeps, storeIfOpen } from "./deps.js"
-import { type ContextOptions, identityIn, type PersonContext, personContext } from "./person-context.js"
+import { storedChatId } from "./messages.js"
+import {
+  CHAT_MESSAGES,
+  type ContextOptions,
+  type Detail,
+  identityIn,
+  type PersonContext,
+  type PersonMessages,
+  personContext,
+  personMessages,
+} from "./person-context.js"
 
 export interface ContactSync {
   added: number
@@ -34,6 +44,14 @@ export interface PeopleService {
   rename(person: string, firstName: string, lastName?: string): Promise<Operated<{ person: Member }>>
   /** What the store holds about them, across every messenger linked to them; never connects. */
   context(person: string, options?: ContextOptions): Promise<PersonContext>
+  /**
+   * Their newest messages in each chat named, from the store; `fetch` reads them from the messenger
+   * first — by sender where it can search so, the newest page of the chat where it cannot.
+   */
+  messagesIn(
+    person: string,
+    options: { chats: string[]; limit?: number; detail?: Detail; fetch?: boolean },
+  ): Promise<PersonMessages>
   /** `other` may name another messenger of the store: `max:Ana`. */
   link(person: string, other: string, method?: string): Promise<PersonRecord>
   unlink(person: string): Promise<PersonRecord>
@@ -94,6 +112,36 @@ export const peopleService = (deps: ServiceDeps): PeopleService => {
     },
 
     context: async (person, options) => personContext(await deps.store(), await deps.account(), person, options),
+
+    messagesIn: async (person, { chats, limit, detail, fetch = false }) => {
+      const store = await deps.store()
+      const account = await deps.account()
+      if (!fetch) {
+        const ids = await Promise.all(chats.map((chat) => storedChatId(deps.messenger, chat, store, account)))
+        return personMessages(store, account, person, {
+          chats: ids,
+          ...(limit ? { limit } : {}),
+          ...(detail ? { detail } : {}),
+        })
+      }
+      if (deps.offline) throw new CliError("validation_error", "--fetch asks the messenger; not with --offline")
+      const connection = await deps.connection()
+      const sender = pickPerson(person, await store.people(account.provider, { account: account.account })).id
+      const ids: Id[] = []
+      for (const chat of chats) {
+        const { id } = await connection.resolve(chat)
+        ids.push(id)
+        const page = connection.historyFrom
+          ? await connection.historyFrom(id, sender, { limit: limit ?? CHAT_MESSAGES })
+          : await capability(connection, "history", "read a chat's history")(id, { limit: 100 })
+        if (page.items.length > 0) await store.saveMessages(account, id, page.items, { via: "history" })
+      }
+      return personMessages(store, account, person, {
+        chats: ids,
+        ...(limit ? { limit } : {}),
+        ...(detail ? { detail } : {}),
+      })
+    },
 
     link: async (person, other, method = "manual") => {
       const store = await deps.store()

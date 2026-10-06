@@ -6,7 +6,7 @@ import type { Messenger } from "../cli/messenger/context.js"
 import type { Chat, Message } from "../domain/models.js"
 import type { SendGuard } from "../sends/guard.js"
 import { historyStartKey, type MessageStore, openStore } from "../store/store.js"
-import { storedDeps } from "./deps.js"
+import { type ServiceDeps, storedDeps } from "./deps.js"
 import { peopleService } from "./people.js"
 
 const tg = { provider: "telegram", account: "500" }
@@ -146,3 +146,73 @@ describe("contacts context", () => {
     expect(texts(after.recent.direct)).toEqual(texts(before.recent.direct))
   })
 })
+
+describe("contacts context in named chats", () => {
+  beforeEach(async () => {
+    await store.saveMessages(
+      tg,
+      "-7",
+      [
+        message("-7", "5", "11", "fifth"),
+        message("-7", "6", "11", "sixth", { replyTo: null }),
+        message("-7", "7", "11", "seventh"),
+      ],
+      { via: "test" },
+    )
+  })
+
+  it("gives their newest in each chat, oldest first, as when and what only", async () => {
+    const found = await people().messagesIn("11", { chats: ["-7", "11"], limit: 2 })
+
+    expect(found.person).toMatchObject({ provider: "telegram", id: "11" })
+    expect(found.chats.map((one) => [one.chat.id, one.messages, one.more])).toEqual([
+      [
+        "-7",
+        [
+          { at: "2026-09-02T10:06:00.000Z", text: "sixth" },
+          { at: "2026-09-02T10:07:00.000Z", text: "seventh" },
+        ],
+        true,
+      ],
+      ["11", [{ at: "2026-09-02T10:01:00.000Z", text: "from the first Ana" }], false],
+    ])
+  })
+
+  it("adds ids and locators only when asked", async () => {
+    const found = await people().messagesIn("11", { chats: ["11"], detail: 1 })
+
+    expect(found.chats[0]?.messages[0]).toMatchObject({ id: "1", locator: "msg:telegram/500/11/1", senderId: "11" })
+  })
+
+  it("answers a chat they never wrote in empty, saying whether it is held whole", async () => {
+    const found = await people().messagesIn("11", { chats: ["12"] })
+
+    expect(found.chats).toEqual([
+      { chat: { id: "12", title: "Ana", kind: "dialog" }, messages: [], complete: true, more: false },
+    ])
+  })
+
+  it("reads each chat from the messenger first with refresh, by sender, once per chat", async () => {
+    const asked: string[] = []
+    const fresh = message("-7", "9", "11", "fresh from the messenger", { timestamp: "2026-09-04T10:00:00.000Z" })
+    const service = peopleService({
+      ...storedDeps(messenger, store, tg, {} as SendGuard),
+      offline: false,
+      connection: async () =>
+        ({
+          resolve: async (chat: string) => ({ ...chat_("-7"), id: chat }),
+          historyFrom: async (chat: string, person: string) => {
+            asked.push(`${chat}:${person}`)
+            return { items: chat === "-7" ? [fresh] : [], hasMore: false }
+          },
+        }) as unknown as Awaited<ReturnType<ServiceDeps["connection"]>>,
+    })
+
+    const found = await service.messagesIn("11", { chats: ["-7", "11"], limit: 1, fetch: true })
+
+    expect(asked).toEqual(["-7:11", "11:11"])
+    expect(found.chats[0]?.messages).toEqual([{ at: "2026-09-04T10:00:00.000Z", text: "fresh from the messenger" }])
+  })
+})
+
+const chat_ = (id: string) => chat(id, "group", "Club")

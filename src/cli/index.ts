@@ -162,6 +162,7 @@ export type {
   ReadState,
   RemoteFile,
   ScheduledMessages,
+  SenderSearch,
   SendOptions,
   Sent,
   ServerReads,
