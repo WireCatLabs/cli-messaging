@@ -39,6 +39,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## 0.157.0 — 07.10.2026
 
+Released early: MAX and Telegram CLI audit adoption needs the published execution, schema, skill-validation and MCP host APIs
+
 ### Fixed
 
 - Person context includes private dialogs named by the person's id when no members are recorded,
