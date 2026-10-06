@@ -2421,6 +2421,17 @@ describe("catching up with `new` over MCP", () => {
 })
 
 describe("MCP prompts and resources", () => {
+  it("builds open-tasks: refresh with review, list the open tasks, close only what the owner approves", async () => {
+    const { client } = await connect(scripted())
+    const { messages } = await client.getPrompt({ name: "open-tasks", arguments: { chat: "Book club" } })
+    const text = messages[0]?.content.type === "text" ? messages[0].content.text : ""
+
+    expect(text).toContain("chat_review once with new true")
+    expect(text).toContain('chat_tasks_list with state open and chat "Book club"')
+    expect(text).toContain("Only after I approve, close each with chat_tasks_close")
+    expect(text).not.toContain("messages_send")
+  })
+
   it("lists the prompts, and builds one naming only tools and the owner's argument, as data", async () => {
     const telegram = scripted()
     const { client } = await connect(telegram)
@@ -2429,6 +2440,7 @@ describe("MCP prompts and resources", () => {
       "catch-up",
       "find",
       "link-conversations",
+      "open-tasks",
       "reply",
       "review",
     ])

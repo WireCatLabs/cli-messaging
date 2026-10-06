@@ -6,6 +6,12 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- **MCP prompt `open-tasks`** (`chat` optional): a digest of what waits on the owner. The agent refreshes the
+  tasks with `review` `new`, lists the open ones, sums them up per chat, oldest first, and closes one only after
+  the owner approves. It sends nothing.
+
 ## 0.155.0 — 06.10.2026
 
 Released early: tg-cli and max-cli browser sends are blocked by unsupported server elicitation; explicit startup permission overrides are needed now
