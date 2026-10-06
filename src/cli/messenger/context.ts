@@ -91,6 +91,8 @@ export interface Messenger {
    * `serve` keeps filled, and never connect; writes still do. `server` when unset.
    */
   history?: "server" | "store"
+  /** Whether this CLI's background service fetches tracked rosters daily; true when unset. */
+  tracksMembers?: boolean
   /** Speech model ids, most suitable first, for `messages transcribe --local`; the first is the default. */
   speechModels?: readonly string[]
   /** Replaces shared use cases for this messenger; its commands and MCP tools both get the replacement. */

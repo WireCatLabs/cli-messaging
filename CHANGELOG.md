@@ -6,6 +6,12 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Fixed
+
+- `Messenger.tracksMembers: false` omits `chats members fetch --track` for a CLI whose own
+  background service does not fetch rosters daily. The default keeps the shared service's option;
+  an explicit fetch and stored member history remain available to both kinds of consumer.
+
 ## 0.150.0 — 06.10.2026
 
 ### Added
@@ -75,6 +81,7 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 - `Services` has a new required member, `botcheck`. A `Services` object written by hand — a test fake — adds it;
   `servicesFor` already does. The audit's reasons and weights moved to `src/botcheck/reasons.ts`; `AuditReason` is
   still exported from the same place.
+
 
 ## 0.149.0 — 06.10.2026
 
