@@ -53,7 +53,7 @@ export interface AroundWindow {
 export interface SearchQuery {
   thread?: ThreadOptions
   syncFirst?: SyncOptions
-  /** The query language of the phase 2 plan, §4: words, "phrases", -word, OR, and filters. */
+  /** Strict Lucene by default; legacy discovery is explicit through language or a RegExp pattern. */
   text?: string
   language?: "lucene" | "legacy"
   timezone?: string
@@ -156,7 +156,7 @@ type Saved = Partial<Pick<Messenger, "savedChatId" | "app">>
 /** Every write goes through the guard: asked before it goes, told after, on every outcome. */
 export interface MessagesService {
   list(chat: string, window: ListWindow): Promise<Page<Message>>
-  around(chat: string, message: string, window: AroundWindow): Promise<WindowedMessage[]>
+  around(chat: string, message: string | undefined, window: AroundWindow): Promise<WindowedMessage[]>
   thread(chat: string, message?: Id, options?: ThreadOptions): Promise<ThreadContext>
   link(chat: string, message?: string): Promise<MessageLink>
   /** The files of one message. Always from the messenger, whatever its history is read from. */
@@ -249,13 +249,23 @@ export const messagesService = (deps: ServiceDeps): MessagesService => {
       return capability(await deps.connection(), "history", "read a chat's history")(chat, window)
     },
 
-    around: async (chat, message, window) => {
+    around: async (reference, message, window) => {
+      const target = messageLinkTarget(reference, message, deps.messenger.provider)
+      if (target.account !== undefined) {
+        const account = await deps.account()
+        if (account.provider !== deps.messenger.provider || target.account !== account.account)
+          throw new CliError("validation_error", "that locator belongs to another account; select its profile first")
+      }
       if (fromStore(deps)) {
         return inStore(async (store, account) =>
-          store.around(account, await readChatId(deps, chat, store, account), message, window),
+          store.around(account, await readChatId(deps, target.chat, store, account), target.message, window),
         )
       }
-      return capability(await deps.connection(), "around", "read the messages around one")(chat, message, window)
+      return capability(await deps.connection(), "around", "read the messages around one")(
+        target.chat,
+        target.message,
+        window,
+      )
     },
 
     thread: (reference, message, options) =>
@@ -326,22 +336,29 @@ export const messagesService = (deps: ServiceDeps): MessagesService => {
         return store.keepDownloads(account, chatId, message, files)
       }),
 
-    search: (query) =>
-      inStore(async (store, account) => {
+    search: (request) => {
+      const query: SearchQuery = { ...request, language: request.language ?? (request.pattern ? "legacy" : "lucene") }
+      return inStore(async (store, account) => {
         if (query.thread) threadBounds(query.thread)
         const refreshed = await refreshSearch(deps, query)
         const found = await searchStore(store, account, query, deps.messenger)
         await remember(store, "search", query)
         return withRefresh(found, refreshed)
-      }),
+      })
+    },
 
-    stats: (query) =>
-      inStore(async (store, account) => {
+    stats: (request) => {
+      const query: SearchQuery & { by: StatsGrouping } = {
+        ...request,
+        language: request.language ?? (request.pattern ? "legacy" : "lucene"),
+      }
+      return inStore(async (store, account) => {
         const refreshed = await refreshSearch(deps, query)
         const stats = await statsStore(store, account, query, deps.messenger)
         await remember(store, "stats", query)
         return withRefresh(stats, refreshed)
-      }),
+      })
+    },
 
     send: async ({
       chat,

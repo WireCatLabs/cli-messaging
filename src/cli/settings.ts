@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs"
 import { CliError, configFilePath, loadConfigFile, resolvePaths, saveConfigFile } from "@leemour/cli-core"
 import * as v from "valibot"
-import { AI_DEFAULTS, AI_ENTRIES, type AISettings } from "../analysis/settings.js"
+import { AI_ENTRIES, type AISettings, resolveAISettings } from "../analysis/settings.js"
 import {
   fromOldSettings,
   LEVELS,
@@ -371,24 +371,9 @@ export const settingsFor = (app: AppIdentity, extension: SettingsExtension = {})
       undefined,
     )
 
-    const ai = Object.fromEntries(
-      Object.entries(AI_ENTRIES).map(([key, schema]) => {
-        const variable = envName(app, key.replace(/[A-Z]/g, (letter) => `_${letter}`).toUpperCase())
-        const raw = given(env[variable])
-        const value = first<unknown>(
-          [
-            [variable, raw === undefined ? undefined : key === "embeddingDims" ? Number(raw) : raw],
-            ...layers.map(([from, scope]): [Source, unknown] => [from, scope?.[key]]),
-          ],
-          AI_DEFAULTS[key as keyof AISettings],
-        )
-        const checked = v.safeParse(schema, value.value)
-        if (!checked.success) throw new CliError("configuration_error", `${key} from ${value.from} is invalid`)
-        return [key, { value: checked.output, from: value.from }]
-      }),
-    )
+    const ai = resolveAISettings(app.envPrefix, layers, env)
     const settings: Settings = {
-      ...Object.fromEntries(Object.entries(ai).map(([key, item]) => [key, item.value])),
+      ...ai.values,
       profile: usableProfileName(profile.value),
       json: flags.json === true,
       jsonl: flags.jsonl === true,
@@ -423,7 +408,7 @@ export const settingsFor = (app: AppIdentity, extension: SettingsExtension = {})
       configFound: existsSync(configPath),
       configuredProfiles: namedProfiles(config),
       sources: {
-        ...Object.fromEntries(Object.entries(ai).map(([key, item]) => [key, item.from])),
+        ...ai.sources,
         profile: profile.from,
         limit: limit.from,
         timeoutMs: timeoutMs.from,

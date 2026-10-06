@@ -4,6 +4,7 @@ import { listStart } from "../../cli/messenger/after.js"
 import type { Messenger } from "../../cli/messenger/context.js"
 import { capability } from "../../cli/messenger/port.js"
 import { listed } from "../../cli/paging.js"
+import { isLocator } from "../../domain/locator.js"
 import { readEvidencePacket } from "../../services/index.js"
 import { heard, hearForTool, modelWith } from "../../speech/hearing.js"
 import { searchServices } from "../search-sync.js"
@@ -126,9 +127,10 @@ export const messagesTools = (messenger: Messenger): Record<string, AnyTool> => 
         "carries anchor: true; `before_n` and `after_n` say how many either side. Returns { items, page, limit, hasMore }. " +
         "With thread=true, reads the stored parent chain and replies without connecting: returns locator, mode, items, links with provenance/stale labels, chain, stale, stopped and bounds. " +
         "thread_hops (8), thread_messages (50), thread_bytes (65536) and thread_within (1d) bound it; no graph gives a labelled local time fallback. " +
-        "A locator in chat needs no message argument with thread.",
+        "A msg: locator in chat needs no message argument; it must belong to the active account. offline=true reads ordinary context from this account's local store without connecting.",
       input: v.object({
         ...threadInputs,
+        offline: v.optional(v.boolean()),
         chat,
         message: v.optional(message),
         before_n: v.optional(v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(100))),
@@ -136,21 +138,30 @@ export const messagesTools = (messenger: Messenger): Record<string, AnyTool> => 
       }),
       annotations: READ,
       storedWhen: (args) => {
-        if (args.thread) return true
-        if (args.message === undefined)
-          throw new CliError("validation_error", "give a message id; a locator alone requires thread")
+        if (args.thread || args.offline) return true
+        if (args.message === undefined && !isLocator(args.chat))
+          throw new CliError("validation_error", "give a message id, or a msg: locator")
         return false
       },
-      stored: (store, account, args, defaults) =>
-        searchServices(messenger, store, account, defaults).messages.thread(args.chat, args.message, {
+      stored: async (store, account, args, defaults) => {
+        const services = searchServices(messenger, store, account, defaults)
+        if (!args.thread)
+          return listed(
+            await services.messages.around(args.chat, args.message, {
+              before: args.before_n ?? 0,
+              after: args.after_n ?? 0,
+            }),
+          )
+        return services.messages.thread(args.chat, args.message, {
           ...threadArgs(args).thread,
           before: args.before_n ?? 5,
           after: args.after_n ?? 5,
           signal: defaults.signal,
-        }),
+        })
+      },
       served: async (services, args) => {
-        if (args.message === undefined)
-          throw new CliError("validation_error", "give a message id; a locator alone requires thread")
+        if (args.message === undefined && !isLocator(args.chat))
+          throw new CliError("validation_error", "give a message id, or a msg: locator")
         return listed(
           await services.messages.around(args.chat, args.message, {
             before: args.before_n ?? 0,

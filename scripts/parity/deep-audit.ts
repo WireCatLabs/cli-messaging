@@ -38,6 +38,9 @@ export interface ToolCapture {
 }
 export interface FixtureResult {
   cli: string
+  runtime?: string
+  temp?: string
+  checks?: { name: string; pass: boolean }[]
   results: { query: string; code: number; ids?: string[]; reason?: string; metadataKeys?: string[] }[]
   reads: { argv: string[]; code: number; answer: unknown }[]
   networkAttempts: number
@@ -58,6 +61,7 @@ export interface DeepSide {
   mounts: MountEvidence[]
   tests: TestEvidence
   fixture?: FixtureResult
+  bunFixture?: FixtureResult
   fixtureError?: string
   searchProfile?: unknown
   searchProfileError?: string
@@ -234,6 +238,9 @@ const fixtureComparison = (left?: FixtureResult, right?: FixtureResult): string[
   if (JSON.stringify(left.results) !== JSON.stringify(right.results))
     differences.push("search ids/errors/metadata keys differ")
   if (left.networkAttempts || right.networkAttempts) differences.push("fixture attempted a connection")
+  if (JSON.stringify(left.checks) !== JSON.stringify(right.checks)) differences.push("scenario checks differ")
+  if ([...(left.checks ?? []), ...(right.checks ?? [])].some((one) => !one.pass))
+    differences.push("scenario check failed")
   const normalize = (answer: unknown, argv: string[]): unknown => {
     if (argv.join(" ") !== "store check") return answer
     const data = JSON.parse(JSON.stringify(answer)) as {
@@ -312,26 +319,32 @@ export const runDeepAudit = async (options: {
     )
     if (profile.exit === 0) side.searchProfile = readJson(profile.log)
     else side.searchProfileError = "pinned search exports could not be captured"
-    const result = await check(
-      options.root,
-      `${cli}-consumer-fixture`,
-      [
-        "node",
-        join(options.root, "scripts/parity/consumer-fixture.mjs"),
-        cli,
-        side.root,
-        join(options.root, "docs/search/recipes.json"),
-      ],
-      join(output, `${cli}-fixture.log`),
-      sandboxEnvironment(home),
-    )
-    if (result.exit === 0) {
-      try {
-        side.fixture = readJson<FixtureResult>(result.log)
-      } catch (error) {
-        side.fixtureError = `invalid fixture JSON: ${error instanceof Error ? error.message : String(error)}`
-      }
-    } else side.fixtureError = `consumer fixture failed; see ${relative(output, result.log)}`
+    for (const runtime of ["node", "bun"] as const) {
+      const result = await check(
+        options.root,
+        `${cli}-${runtime}-consumer-fixture`,
+        [
+          runtime,
+          join(options.root, "scripts/parity/consumer-fixture.mjs"),
+          cli,
+          side.root,
+          join(options.root, "docs/search/recipes.json"),
+        ],
+        join(output, `${cli}-${runtime}-fixture.log`),
+        sandboxEnvironment(home),
+      )
+      if (result.exit === 0) {
+        try {
+          const fixture = readJson<FixtureResult>(result.log)
+          if (fixture.runtime !== runtime) throw new Error(`expected ${runtime} runtime`)
+          if (runtime === "node") side.fixture = fixture
+          else side.bunFixture = fixture
+          if (fixture.temp) retainedPaths.push(fixture.temp)
+        } catch (error) {
+          side.fixtureError = `invalid ${runtime} fixture JSON: ${error instanceof Error ? error.message : String(error)}`
+        }
+      } else side.fixtureError = `${runtime} consumer fixture failed; see ${relative(output, result.log)}`
+    }
     try {
       const remote = git(side.root, "ls-remote", "origin", "refs/heads/main").split(/\s/)[0]
       if (remote && remote !== side.snapshot.commit) side.movedTo = remote
@@ -350,7 +363,12 @@ export const runDeepAudit = async (options: {
     const two = right.mcp.find((capture) => capture.mode === mode)
     if (one?.tools && two?.tools) tools[mode] = compareTools({ cli: a, tools: one.tools }, { cli: b, tools: two.tools })
   }
-  const fixtureDifferences = fixtureComparison(left.fixture, right.fixture)
+  const fixtureDifferences = [
+    ...fixtureComparison(left.fixture, right.fixture).map((one) => `Node consumers: ${one}`),
+    ...fixtureComparison(left.bunFixture, right.bunFixture).map((one) => `Bun consumers: ${one}`),
+    ...fixtureComparison(left.fixture, left.bunFixture).map((one) => `${a} Node/Bun: ${one}`),
+    ...fixtureComparison(right.fixture, right.bunFixture).map((one) => `${b} Node/Bun: ${one}`),
+  ]
   const complete =
     !fixtureDifferences.length &&
     sharedTests.state === "ran" &&

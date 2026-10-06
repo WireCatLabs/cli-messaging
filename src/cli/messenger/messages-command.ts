@@ -110,7 +110,11 @@ export const messagesCommand = (messenger: Messenger): Command => {
     const context = messengerContext(command, messenger)
     const target = targetOf(messenger, chat, message)
     const found = await context.withServices((services) =>
-      services.messages.around(target.chat, target.message, window),
+      services.messages.around(
+        isLocator(chat) ? chat : target.chat,
+        isLocator(chat) ? undefined : target.message,
+        window,
+      ),
     )
     if (context.format === "pretty") {
       context.streams.data(

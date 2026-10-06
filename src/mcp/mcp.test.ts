@@ -847,6 +847,39 @@ describe("the MCP server", () => {
     expect(telegram.opened()).toBe(0)
   })
 
+  it("offline ordinary context reads stored messages without another connection", async () => {
+    const backend = scripted()
+    const { call } = await connect(backend)
+    await call("chat_messages_list", { chat: "7" })
+    const opened = backend.opened()
+    expect((await call("chat_messages_context", { chat: "msg:chat/500/7/1", offline: true })).body.items).toMatchObject(
+      [{ id: "1", anchor: true }],
+    )
+    expect((await call("chat_messages_context", { chat: "msg:chat/501/7/1", offline: true })).body.error.code).toBe(
+      "validation_error",
+    )
+    expect(backend.opened()).toBe(opened)
+  })
+
+  it("ordinary context accepts only active-account locators, through the same service as CLI", async () => {
+    let reads = 0
+    const { call } = await connect(
+      scripted({
+        around: async () => {
+          reads++
+          return [{ ...message, anchor: true }]
+        },
+      }),
+    )
+    await call("chat_messages_list", { chat: "7" })
+    expect((await call("chat_messages_context", { chat: "msg:chat/501/7/1" })).body.error.code).toBe("validation_error")
+    expect(reads).toBe(0)
+    expect((await call("chat_messages_context", { chat: "msg:chat/500/7/1" })).body.items).toMatchObject([
+      { id: "1", anchor: true },
+    ])
+    expect(reads).toBe(1)
+  })
+
   it("lists and shows a built chat's conversations from the store, and names the build command before that", async () => {
     const telegram = scripted()
     const { call, env } = await connect(telegram)

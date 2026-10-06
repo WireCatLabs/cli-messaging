@@ -13,7 +13,10 @@ const asked = (text: string): GetPromptResult => ({ messages: [{ role: "user", c
  * is the tools' job, so no message text is ever part of a prompt. The owner's own argument goes in
  * quoted, as data.
  */
-export const registerPrompts = (server: McpServer, { command, name }: { command: string; name: string }): void => {
+export const registerLinkConversationsPrompt = (
+  server: McpServer,
+  { command, name }: { command: string; name: string },
+): void => {
   server.registerPrompt(
     "link-conversations",
     {
@@ -28,6 +31,10 @@ export const registerPrompts = (server: McpServer, { command, name }: { command:
           .replaceAll("{{command}}", command),
       ),
   )
+}
+
+export const registerPrompts = (server: McpServer, { command, name }: { command: string; name: string }): void => {
+  registerLinkConversationsPrompt(server, { command, name })
 
   server.registerPrompt(
     "catch-up",

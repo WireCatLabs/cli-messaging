@@ -6,6 +6,7 @@ import type { Id } from "../domain/models.js"
 import { defaultThreads, type Embedder, isTextModelInstalled, textModelsDirectory } from "../embeddings/embed.js"
 import { DEFAULT_TEXT_MODEL, type TextModel, textModel } from "../embeddings/models.js"
 import { type RemoteModel, remoteKey } from "../embeddings/remote.js"
+import { QUERY_LIMITS, queryError } from "../search/lucene/types.js"
 import type { AccountKey, ConversationHit, ConversationSummary, StoredReadiness } from "../store/store.js"
 import { type Built, conversationsService } from "./conversations.js"
 import type { ServiceDeps } from "./deps.js"
@@ -437,6 +438,9 @@ export const embeddingsService = (deps: ServiceDeps): EmbeddingsService => {
       query,
       { chat, model: choice, since, limit, filter, source, timezone, syncFirst, signal, refresh },
     ) => {
+      if (!query.trim()) queryError("invalid_syntax", { start: 0, end: query.length }, "give words to search for")
+      if (new TextEncoder().encode(query).length > QUERY_LIMITS.bytes)
+        queryError("query_limit", { start: 0, end: query.length }, "query is longer than 8 KiB")
       const refreshed = await refreshSearch(deps, {
         chat,
         limit,

@@ -226,6 +226,23 @@ describe("a messenger whose history is read from the store", () => {
     expect(connects).toEqual([])
   })
 
+  it("show and ordinary time context refuse foreign account locators without connecting", async () => {
+    const env = await filled()
+    const { connects, connect } = pushing()
+    for (const name of ["show", "context"]) {
+      const refused = await call(["messages", name, "msg:chat/501/7/2", "--json"], env, connect, "store")
+      expect(refused.code).toBe(2)
+      expect(refused.stdout).toBe("")
+      expect(refused.stderr).toContain("another account")
+      const accepted = await call(["messages", name, "msg:chat/500/7/2", "--json"], env, connect, "store")
+      expect(accepted.code).toBe(0)
+      const result = JSON.parse(accepted.stdout)
+      const items: Message[] = name === "show" ? [result] : result.items
+      expect(items.some((one) => one.id === "2")).toBe(true)
+    }
+    expect(connects).toEqual([])
+  })
+
   it("**says how to fill an empty store**: `serve` or `watch`, not --offline", async () => {
     const { connects, connect } = pushing()
     const { code, stderr } = await call(["messages", "list", "Book", "--json"], sandbox(), connect, "store")

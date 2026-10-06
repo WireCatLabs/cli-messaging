@@ -153,7 +153,7 @@ export const conversationsTools = (messenger: Messenger): Record<string, AnyTool
         "and incomplete refreshes label coverage stale. Uses the profile embedding provider/model settings; remote providers receive query text.",
       input: v.object({
         ...syncInputs,
-        query: v.pipe(v.string(), v.minLength(1), v.description("what to look for, in your own words")),
+        query: v.pipe(v.string(), v.description("what to look for, in your own words")),
         filter: v.optional(v.pipe(v.string(), v.minLength(1))),
         source: v.optional(v.pipe(v.string(), v.minLength(1))),
         timezone: v.optional(v.pipe(v.string(), v.minLength(1))),

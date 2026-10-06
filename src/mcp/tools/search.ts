@@ -15,9 +15,7 @@ export const messagesSearchInput = (messenger: Messenger) =>
   v.object({
     ...threadInputs,
     ...syncInputs,
-    text: v.optional(
-      v.pipe(v.string(), v.minLength(1), v.description("the query: Lucene text or explicit legacy syntax")),
-    ),
+    text: v.optional(v.pipe(v.string(), v.description("the query: Lucene text or explicit legacy syntax"))),
     ast: v.optional(v.unknown()),
     language: v.optional(v.picklist(["lucene", "legacy"])),
     timezone: v.optional(v.string()),
