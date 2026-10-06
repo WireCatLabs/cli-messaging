@@ -1710,7 +1710,7 @@ describe("the shared read commands", () => {
         name: "Ana",
         usernames: ["ana"],
         bio: null,
-        phone: "+34 600 000 123",
+        phone: "0123",
         flags: { bot: false },
         seen: "recently",
         registered: { at: "2020-05-01T00:00:00.000Z", source: "estimate", precision: "month" },
@@ -1756,7 +1756,7 @@ describe("the shared read commands", () => {
         complete: false,
       },
     ])
-    expect(JSON.parse(whole.stdout[0] ?? "null").phone).toBe("+34 600 000 123")
+    expect(JSON.parse(whole.stdout[0] ?? "null").phone).toBe("0123")
   })
 
   it("contacts profile --offline describes them from the store and never connects", async () => {
