@@ -6,6 +6,17 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Changed — may break callers
+
+- **The personal MCP server lists three tools instead of one per command**: `<cli>_tools_search`
+  finds a command by words and gives its arguments; `<cli>_read` runs a command that only reads and
+  `<cli>_write` one that changes something, as `{ command: "messages list", arguments: { … } }`. A
+  command takes the same arguments and answers the same result as its old tool, and runs the same
+  checks. The old tool names (`tg_messages_list`, `max_chats_mark_read`, …) and `<cli>_status` (now the
+  command `status`) are gone, and so are allow-rules that name them. Prompts and server instructions
+  name the new flow. The tool list is under 5 KB, the same on both protocol versions, with or without
+  forms. The bot servers are unchanged.
+
 ## 0.156.0 — 06.10.2026
 
 Released early: MAX and Telegram reply-model adoption cannot build without the new published replyRenderer API
