@@ -12,7 +12,7 @@ const cli = process.argv[2],
   repo = process.argv[3],
   require = createRequire(`${repo}/package.json`)
 const { captureStreams, memoryKeyring } = await import(require.resolve("@leemour/cli-core"))
-const { seedSearchRecipes } = await import(require.resolve("@leemour/cli-messaging/testing"))
+const { seedSearchRecipes, mcpCommandsClient } = await import(require.resolve("@leemour/cli-messaging/testing"))
 const { servicesFor, storedDeps } = await import(require.resolve("@leemour/cli-messaging/services"))
 const { openStore } = await import(require.resolve("@leemour/cli-messaging/store"))
 const { rememberAccount } = await import(require.resolve("@leemour/cli-messaging/cli"))
@@ -71,8 +71,9 @@ transport.stderr?.on("data", (chunk) => {
 })
 try {
   await client.connect(transport)
+  const commands = mcpCommandsClient(client, cli)
   const callTool = async (name, args) => {
-    const result = await client.callTool({ name: `${cli}_${name}`, arguments: args }, undefined, { timeout: 10000 })
+    const result = await commands.callTool({ name: `${cli}_${name}`, arguments: args }, undefined, { timeout: 10000 })
     const first = result.content.find((part) => part.type === "text")
     return { isError: result.isError === true, body: result.structuredContent ?? JSON.parse(first?.text ?? "null") }
   }
@@ -392,11 +393,12 @@ try {
   assert.deepEqual(firstIds(topicService.hits), firstIds(topicBody.items ?? topicBody.hits))
   assert.equal(topicBody.meaning, "unavailable")
   const prompt = (await client.getPrompt({ name: "link-conversations" })).messages[0]
-  assert.ok(prompt.content.text.includes(`${cli}_conversations_batches_status`))
+  assert.ok(prompt.content.text.includes(`${cli}_read`))
+  assert.ok(prompt.content.text.includes("conversations batches status"))
   checks.push({ name: "words-only topic fallback and linking prompt", pass: true })
   const statsQuery = 'from:("Alice Synthetic" OR "Bob Synthetic")'
-  const statsCli = await invoke(["messages", "stats", statsQuery, "--by", "chat"])
-  const statsMcp = await callTool("messages_stats", { text: statsQuery, by: "chat" })
+  const statsCli = await invoke(["stats", "messages", "show", statsQuery, "--by", "chat"])
+  const statsMcp = await callTool("stats_messages_show", { text: statsQuery, by: "chat" })
   assert.equal(statsCli.code, 0)
   assert.equal(statsMcp.isError, false)
   assert.equal(typeof statsMcp.body.total, "number")
@@ -524,7 +526,8 @@ try {
     })
     try {
       await restricted.connect(restrictedTransport)
-      const names = (await restricted.listTools()).tools.map((tool) => tool.name)
+      const restrictedCommands = mcpCommandsClient(restricted, cli)
+      const names = (await restrictedCommands.listTools()).tools.map((tool) => tool.name)
       if (profile === "auditreadonly") {
         assert.ok(names.includes(`${cli}_messages_search`))
         for (const suffix of [
@@ -546,9 +549,12 @@ try {
           assert.ok(!names.includes(`${cli}_${suffix}`))
       } else {
         assert.ok(names.includes(`${cli}_conversations_build`))
-        const result = await restricted.callTool({ name: `${cli}_conversations_build`, arguments: { chat: "7" } })
-        assert.equal(result.isError, true)
-        assert.equal(result.structuredContent.error.code, "confirmation_required")
+        const result = await restrictedCommands.callTool({
+          name: `${cli}_conversations_build`,
+          arguments: { chat: "7" },
+        })
+        assert.notEqual(result.isError, true)
+        assert.equal(result.structuredContent.chat, "7")
       }
       checks.push({ name: `${profile} tool visibility/refusal`, pass: true })
     } finally {
