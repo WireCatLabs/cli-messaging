@@ -6,6 +6,11 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Fixed
+
+- Wording parity skips absent planned commands while continuing to report missing required
+  commands and differences between available shared options.
+
 ## 0.174.0 — 07.10.2026
 
 ### Fixed
@@ -27,21 +32,9 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 - Account-scoped private contact aliases and notes with offline CLI/MCP authoring, safe text input, revision-checked edits and explicit notes search. Contact refresh and identity linking preserve local metadata.
 - Cached group/channel metadata and bounded deterministic automatic tags. Generated claims preserve manual labels and expose provenance; dry-run is local, and messenger refresh is explicit.
-- `chats requests list <chat>` shows who asked to join a group or channel that needs an admin's approval, newest
-  first, and `chats requests accept|decline <chat> <person>` answers one; MCP `chats_requests_list`,
-  `chats_requests_accept` and `chats_requests_decline` do the same. Answers go through the guard as
-  `chats.requests.accept` / `chats.requests.decline`; the recipient list checks the group only, and an accepted
-  request counts toward the hourly limit like an added member. Adapters implement the new optional
-  `JoinRequests` group; one without it refuses.
-
-### Fixed
-
-- `messages search --backend` tops up the word and stem indexes before the server step, as the archive search
-  does, so `both` no longer fails with `index_not_ready` where `archive` would answer. An explicit
-  `--backend server` on a profile whose `messages.server-search` is `ask` is refused instead of going ahead over
-  MCP: the server search needs `allow`, like `--sync-first`.
-
-
+- `Messenger.serverSearch` may be `"chat"`: the messenger's server searches one chat at a time, so only a query
+  that names one chat (`chat:` or `--chat`) asks it; others answer from the archive, or report
+  `server.skipped: "needs_chat"` when `--backend` was typed. For MAX's opcode 73.
 
 ### Changed — may break callers
 
@@ -54,15 +47,31 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Added
 
-- `Messenger.serverSearch` may be `"chat"`: the messenger's server searches one chat at a time, so only a query
-  that names one chat (`chat:` or `--chat`) asks it; others answer from the archive, or report
-  `server.skipped: "needs_chat"` when `--backend` was typed. For MAX's opcode 73.
-
 - **One request pace per profile, shared by every process that uses it.** Two commands at once, background
   `store fetch` jobs, `mcp` and `serve` now draw on one allowance: a burst goes at once, then one call per
   interval. Defaults to 60 a minute after a burst of 20 unless the messenger sets its own (`Messenger.pace`);
   `requestsPerMinute` in the config or `<APP>_REQUESTS_PER_MINUTE` changes it, 0 turns it off. `flood clear`
   also resets it.
+- `stats messages top` and `stats contacts top` rank held messages and their human authors by
+  metrics or weighted scores, with full-population normalization, explicit data quality and
+  structured drilldowns. Their `evidence` views page through contributing messages and answer
+  pairs with bounded output and change-detecting cursors. CLI and MCP use the same services.
+- `searches create --selection` saves a resolved ranking drilldown for repeatable
+  `stats messages top --saved` / `stats contacts top --saved` queries.
+- `chats folders order <folder...>` puts folders in that order, the ones not named after them in their old order;
+  `chats folders join <link>` adds a folder someone shared by a `t.me/addlist/` link, which joins every chat in it.
+  MCP `chats_folders_order` and `chats_folders_join` do the same. Both go through the guard as account actions
+  `folder-order` / `folder-join` (keys `chats.folders.order` / `chats.folders.join`). Adapters implement the new
+  `ChatFolders.orderFolders` and `ChatFolders.joinFolder`.
+- `messages send --html` and `messages edit --html` read the text as HTML (`<b>`, `<i>`, `<u>`, `<s>`, `<a href>`,
+  `<code>`, `<pre>`, `<blockquote>`), not together with `--md`; MCP `messages_send` and `messages_edit` take `html`.
+  Offered where `Messenger.html` is set; the adapter implements the new optional `HtmlFormatting.formatHtml`.
+- `messages send --filename <name>` gives the `--file` the name others see, instead of its name on disk; MCP
+  `messages_send` takes `filename`. Offered where `Messenger.mediaOptions` lists the new `fileName`.
+- `messages list --topic <id>` reads one forum topic, back from its newest message or `--before-id`; MCP
+  `messages_list` takes `topic`. Online it uses the new optional `TopicHistory.topicHistory`; `--offline` and a
+  store-mode messenger filter the store by the message's topic, and `Store.messages` takes `threadId`. The General
+  topic (`1`) is refused: its messages carry no topic id. Not with `--after-*`, `--before-time` or `--mark-read`.
 
 ### Changed — may break callers
 
@@ -83,18 +92,9 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## 0.170.0 — 07.10.2026
 
-Released early: MAX and Telegram rankings adoption requires the new top/evidence services and command exports
-
 Released early: tg-cli join requests and join approval are merged here and wait for this release to land
 
 ### Added
-
-- `stats messages top` and `stats contacts top` rank held messages and their human authors by
-  metrics or weighted scores, with full-population normalization, explicit data quality and
-  structured drilldowns. Their `evidence` views page through contributing messages and answer
-  pairs with bounded output and change-detecting cursors. CLI and MCP use the same services.
-- `searches create --selection` saves a resolved ranking drilldown for repeatable
-  `stats messages top --saved` / `stats contacts top --saved` queries.
 
 - `chats link create <chat> [--approval] [--expire-time <time>] [--max-uses <n>]` makes an additional invite
   link — one that needs an admin's approval, stops working at a time, or takes at most n people; MCP
@@ -103,20 +103,6 @@ Released early: tg-cli join requests and join approval are merged here and wait 
 - `chats update --join-approval on|off` where the messenger lists `joinApproval` in `groupSettings`: people ask
   to join and an admin lets them in. `GroupSettings.joinApproval` is optional, so adapters that do not set it
   compile unchanged.
-- `chats folders order <folder...>` puts folders in that order, the ones not named after them in their old order;
-  `chats folders join <link>` adds a folder someone shared by a `t.me/addlist/` link, which joins every chat in it.
-  MCP `chats_folders_order` and `chats_folders_join` do the same. Both go through the guard as account actions
-  `folder-order` / `folder-join` (keys `chats.folders.order` / `chats.folders.join`). Adapters implement the new
-  `ChatFolders.orderFolders` and `ChatFolders.joinFolder`.
-- `messages send --html` and `messages edit --html` read the text as HTML (`<b>`, `<i>`, `<u>`, `<s>`, `<a href>`,
-  `<code>`, `<pre>`, `<blockquote>`), not together with `--md`; MCP `messages_send` and `messages_edit` take `html`.
-  Offered where `Messenger.html` is set; the adapter implements the new optional `HtmlFormatting.formatHtml`.
-- `messages send --filename <name>` gives the `--file` the name others see, instead of its name on disk; MCP
-  `messages_send` takes `filename`. Offered where `Messenger.mediaOptions` lists the new `fileName`.
-- `messages list --topic <id>` reads one forum topic, back from its newest message or `--before-id`; MCP
-  `messages_list` takes `topic`. Online it uses the new optional `TopicHistory.topicHistory`; `--offline` and a
-  store-mode messenger filter the store by the message's topic, and `Store.messages` takes `threadId`. The General
-  topic (`1`) is refused: its messages carry no topic id. Not with `--after-*`, `--before-time` or `--mark-read`.
 - `chats requests list <chat>` shows who asked to join a group or channel that needs an admin's approval, newest
   first, and `chats requests accept|decline <chat> <person>` answers one; MCP `chats_requests_list`,
   `chats_requests_accept` and `chats_requests_decline` do the same. Answers go through the guard as

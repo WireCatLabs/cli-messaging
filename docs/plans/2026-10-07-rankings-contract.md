@@ -2,10 +2,12 @@
 
 Status 2026-10-07: the owner approved the ranking plan, the `stats → resource → view` hierarchy,
 and the exact evidence views/options in naming PR671. The naming contract is merged.
-Shared SQL selection, metrics, CLI/MCP services and bounded evidence are implemented. Consumer
-SDK adoption is pending; see the [user guide](../rankings.md). The command paths remain planned
-in the consumer parity manifest until that adoption ships. Further approval of these
-names is not required.
+Shared SQL selection, metrics, CLI/MCP services and bounded evidence are shipped in SDK0.173.0.
+Consumer adoption is merged in [MAX #461](https://github.com/leemour/max-cli/pull/461) and
+[Telegram #339](https://github.com/leemour/tg-cli/pull/339), with native graph metadata and user guides.
+See the [guide](../rankings.md) and [validation report](../dev/evaluations/2026-10-07-rankings-validation.md).
+The parity manifest now records the runtime paths/options in both consumers. Further naming
+approval is not required.
 
 ## Surface
 

@@ -31,6 +31,17 @@ export const wordingProblems = (manifest: Manifest, programs: readonly CommandsJ
     ),
   ]
   const said = new Map(programs.map((program) => [program.cli, descriptions(program)]))
+  const available = new Map(
+    programs.map((program) => {
+      const paths = new Set<string>()
+      const walk = (command: CommandInfo) => {
+        paths.add(command.path.join(" "))
+        command.commands.forEach(walk)
+      }
+      program.commands.forEach(walk)
+      return [program.cli, paths] as const
+    }),
+  )
   return rows.flatMap(([path, name, entry]) => {
     if (manifest.options[name]?.note) return []
     const where = `${path} ${name}`
@@ -38,7 +49,9 @@ export const wordingProblems = (manifest: Manifest, programs: readonly CommandsJ
       (cli) =>
         said.has(cli) &&
         (path === "(global)" ||
-          expected(manifest.commands[path] as NonNullable<Manifest["commands"][string]>, cli) !== false),
+          ((available.get(cli)?.has(path) === true ||
+            expected(manifest.commands[path] as NonNullable<Manifest["commands"][string]>, cli) === true) &&
+            expected(manifest.commands[path] as NonNullable<Manifest["commands"][string]>, cli) !== false)),
     )
     if (clis.length < 2) return []
     const sentences = clis.map((cli) => said.get(cli)?.get(where))
