@@ -28,6 +28,10 @@ export interface MarkdownFormatting {
   formatMarkdown(text: string): Promise<FormattedText>
 }
 
+export interface HtmlFormatting {
+  formatHtml(text: string): Promise<FormattedText>
+}
+
 const invalid = () => new CliError("validation_error", "the messenger formatter returned invalid text spans")
 
 export const validateFormattedText = (formatted: FormattedText): FormattedText => {

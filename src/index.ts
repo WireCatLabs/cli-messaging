@@ -1,5 +1,6 @@
 export {
   type FormattedText,
+  type HtmlFormatting,
   type MarkdownFormatting,
   type TextSpan,
   validateFormattedText,

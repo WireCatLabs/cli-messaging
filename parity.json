@@ -295,6 +295,10 @@
       "value": "<file>",
       "meaning": "attach a file; images go as a photo, videos as a video. Repeat it for more"
     },
+    "--filename": {
+      "value": "<name>",
+      "meaning": "the name others see for the --file, instead of its name on disk"
+    },
     "--filter": {
       "value": "query",
       "meaning": "Strict Lucene filter: any message in the conversation must match; the meaning query stays unchanged"
@@ -2344,6 +2348,11 @@
     "messages edit": {
       "in": "all",
       "options": {
+        "--html": {
+          "in": [],
+          "reason": "MAX formats a personal message with Markdown only",
+          "planned": { "tg": "feat/send-html-filename" }
+        },
         "--md": "all"
       }
     },
@@ -2458,6 +2467,16 @@
           "reason": "MAX personal accounts have no channel comments"
         },
         "--file": "all",
+        "--filename": {
+          "in": [],
+          "reason": "MAX names an upload by its path",
+          "planned": { "tg": "feat/send-html-filename" }
+        },
+        "--html": {
+          "in": [],
+          "reason": "MAX formats a personal message with Markdown only",
+          "planned": { "tg": "feat/send-html-filename" }
+        },
         "--md": "all",
         "--no-preview": "all",
         "--photo": "all",

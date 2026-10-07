@@ -4,7 +4,7 @@ import { isCliFailure } from "../failures.js"
 import { providerErrorKey } from "../runs/events.js"
 import { type AccountStanding, type MessengerAdapter, throughWrapper } from "./port.js"
 
-const LONG_LIVED = new Set(["watch", "feed", "self", "newSendId", "close", "formatMarkdown"])
+const LONG_LIVED = new Set(["watch", "feed", "self", "newSendId", "close", "formatMarkdown", "formatHtml"])
 const BLOCKING = new Set<AccountStanding["state"]>(["frozen", "limited"])
 
 const chatOf = (args: unknown[]): string | undefined =>

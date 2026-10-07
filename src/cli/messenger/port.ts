@@ -1,5 +1,5 @@
 import { CliError } from "@leemour/cli-core"
-import type { MarkdownFormatting, TextSpan } from "../../domain/formatting.js"
+import type { HtmlFormatting, MarkdownFormatting, TextSpan } from "../../domain/formatting.js"
 import type { Markup } from "../../domain/markdown.js"
 import type { MessagePermalink } from "../../domain/message-link.js"
 import type {
@@ -491,6 +491,7 @@ export interface AccountHealth {
 export interface MessengerAdapter
   extends MessengerCore,
     Partial<MarkdownFormatting>,
+    Partial<HtmlFormatting>,
     Partial<ServerReads>,
     Partial<PersonProfiles>,
     Partial<ChatReading>,

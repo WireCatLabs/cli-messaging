@@ -6,6 +6,8 @@ import { readAttachments } from "../../sends/upload.js"
 import { onlineDeps, servicesFor } from "../../services/index.js"
 import { type AnyTool, chatOf, message, nameOf, tool, WRITE } from "../tool.js"
 
+export const HTML_TOOL_HELP = "the text is HTML: <b>, <i>, <u>, <s>, <a href>, <code>, <pre>; not with md"
+
 /**
  * The same guard as the command: profile permissions, recipients, hourly limits and the journal.
  */
@@ -35,6 +37,9 @@ export const messageSendTools = (messenger: Messenger): Record<string, AnyTool> 
         as_file: v.optional(
           v.pipe(v.boolean(), v.description("send the file as a file to download, a video included")),
         ),
+        filename: v.optional(
+          v.pipe(v.string(), v.minLength(1), v.description("the name others see for the file, instead of its own")),
+        ),
         spoiler: v.optional(v.pipe(v.boolean(), v.description("hide the photo or video behind a spoiler"))),
         caption_above: v.optional(v.pipe(v.boolean(), v.description("show the text above the photo or file"))),
         voice: v.optional(
@@ -62,6 +67,7 @@ export const messageSendTools = (messenger: Messenger): Record<string, AnyTool> 
         md: v.optional(
           v.pipe(v.boolean(), v.description("read **bold**, _italic_, ~~struck~~ and `code`; \\ keeps a mark literal")),
         ),
+        html: v.optional(v.pipe(v.boolean(), v.description(HTML_TOOL_HELP))),
         at_time: v.optional(
           v.pipe(
             v.string(),
@@ -75,6 +81,8 @@ export const messageSendTools = (messenger: Messenger): Record<string, AnyTool> 
         const at = args.at_time === undefined ? undefined : sendTime(args.at_time)
         // Never anyFile here: a path an agent was talked into is how a key would leave the machine.
         const read = { app: messenger.app, env }
+        if (args.filename !== undefined && !messenger.mediaOptions?.includes("fileName"))
+          throw new CliError("validation_error", "this messenger has no --filename")
         const attachments = await readAttachments(
           {
             ...(args.photo === undefined ? {} : { photo: args.photo }),
@@ -82,6 +90,7 @@ export const messageSendTools = (messenger: Messenger): Record<string, AnyTool> 
             ...(args.voice === undefined ? {} : { voice: args.voice }),
             ...(args.text === undefined ? {} : { text: args.text }),
             asFile: args.as_file === true,
+            ...(args.filename === undefined ? {} : { filename: args.filename }),
           },
           read,
         )
@@ -102,6 +111,7 @@ export const messageSendTools = (messenger: Messenger): Record<string, AnyTool> 
           ...(args.silent === true ? { silent: true } : {}),
           ...(args.no_preview === true ? { noPreview: true } : {}),
           ...(args.md === true ? { markdown: true } : {}),
+          ...(args.html === true ? { html: true } : {}),
           ...(at === undefined ? {} : { at }),
         })
         return {

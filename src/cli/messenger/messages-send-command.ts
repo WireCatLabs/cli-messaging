@@ -12,6 +12,8 @@ import { threadIdOf } from "./thread.js"
  * **Asked before it goes, told after, on every outcome** — the guard's journal is the only record
  * of what this profile tried to send, and it never holds the text.
  */
+export const HTML_HELP = "the text is HTML: <b>, <i>, <a href>, <code>"
+
 export const sendCommand = (messenger: Messenger): Command => {
   const send = annotate(new Command("send"), { mutates: true })
     .description("send a text message; without [text], the text is read from stdin")
@@ -45,6 +47,9 @@ export const sendCommand = (messenger: Messenger): Command => {
     send.option("--spoiler", "hide the --photo or video behind a spoiler until tapped")
   if (messenger.mediaOptions?.includes("captionAbove"))
     send.option("--caption-above", "show the text above the --photo or --file, not below it")
+  if (messenger.mediaOptions?.includes("fileName"))
+    send.option("--filename <name>", "the name others see for the --file, instead of its name on disk")
+  if (messenger.html) send.option("--html", HTML_HELP)
   return send
 }
 
@@ -59,11 +64,13 @@ const sendText = async (command: Command, messenger: Messenger, chat: string, te
     silent,
     preview,
     md: markdown,
+    html,
     atTime: at,
     file,
     photo,
     voice,
     asFile,
+    filename,
     allowAnyFile,
     spoiler,
     captionAbove,
@@ -76,11 +83,13 @@ const sendText = async (command: Command, messenger: Messenger, chat: string, te
     silent?: boolean
     preview?: boolean
     md?: boolean
+    html?: boolean
     atTime?: string
     file?: string
     photo?: string
     voice?: string
     asFile?: boolean
+    filename?: string
     allowAnyFile?: boolean
     spoiler?: boolean
     captionAbove?: boolean
@@ -100,6 +109,7 @@ const sendText = async (command: Command, messenger: Messenger, chat: string, te
       ...(voice === undefined ? {} : { voice }),
       ...(text === undefined ? {} : { text }),
       asFile: asFile === true,
+      ...(filename === undefined ? {} : { filename }),
     },
     read,
   )
@@ -119,6 +129,7 @@ const sendText = async (command: Command, messenger: Messenger, chat: string, te
       ...(silent === true ? { silent } : {}),
       ...(preview === false ? { noPreview: true } : {}),
       ...(markdown === true ? { markdown } : {}),
+      ...(html === true ? { html } : {}),
       ...(scheduledFor === undefined ? {} : { at: scheduledFor }),
       ...(attachments.length > 0 ? { attachments } : {}),
       ...(spoiler === true ? { spoiler } : {}),

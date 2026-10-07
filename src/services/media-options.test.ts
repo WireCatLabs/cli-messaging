@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest"
 import type { MediaOption, Messenger } from "../cli/messenger/context.js"
+import { editCommand } from "../cli/messenger/messages-edit-command.js"
 import { sendCommand } from "../cli/messenger/messages-send-command.js"
 import type { MessengerAdapter } from "../cli/messenger/port.js"
 import type { SendGuard } from "../sends/guard.js"
@@ -61,5 +62,17 @@ describe("the send command's media flags", () => {
     expect(flags()).toEqual([])
     expect(flags(["spoiler"])).toEqual(["--spoiler"])
     expect(flags(["spoiler", "captionAbove"])).toEqual(["--spoiler", "--caption-above"])
+  })
+
+  it("offers --filename and --html only where the messenger has them, --html on edit too", () => {
+    const offered = (messenger: Partial<Messenger>, command = sendCommand) =>
+      command({ provider: "test", chatArgument: "a chat", ...messenger } as Messenger)
+        .options.map(({ long }) => long)
+        .filter((flag) => flag === "--filename" || flag === "--html")
+
+    expect(offered({})).toEqual([])
+    expect(offered({ mediaOptions: ["fileName"], html: true })).toEqual(["--filename", "--html"])
+    expect(offered({}, editCommand)).toEqual([])
+    expect(offered({ html: true }, editCommand)).toEqual(["--html"])
   })
 })
