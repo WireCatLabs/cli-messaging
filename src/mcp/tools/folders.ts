@@ -13,7 +13,7 @@ const chatList = v.optional(v.array(v.pipe(v.string(), v.minLength(1))))
 export const folderTools = (messenger: Messenger): Record<string, AnyTool> => {
   const folders = (adapter: MessengerAdapter, guard: SendGuard) =>
     servicesFor(onlineDeps(messenger, adapter, guard)).folders
-  return {
+  const definitions: Record<string, AnyTool> = {
     chats_folders_list: tool({
       title: "Chat folders",
       description:
@@ -78,4 +78,7 @@ export const folderTools = (messenger: Messenger): Record<string, AnyTool> => {
       online: (adapter, args, { guard }) => folders(adapter, guard).join(args.link),
     }),
   }
+  if (messenger.folderOrder === false) delete definitions.chats_folders_order
+  if (messenger.folderJoin === false) delete definitions.chats_folders_join
+  return definitions
 }

@@ -5,9 +5,9 @@ The commands read the local store and do not connect by default. Fetch the relev
 first; a ranking describes held data, not all activity in the messenger.
 
 ```sh
-app stats messages top 'chat:room date:[2026-10-01 TO 2026-10-08}' --measure reactions --limit 10 --format json
-app stats contacts top 'chat:room date:[2026-10-01 TO 2026-10-08}' --score helpful --min-messages 3 --format json
-app stats contacts top --weights '{"messages":0.4,"active-days":0.6}' --timezone Europe/Madrid --format json
+app stats messages top 'chat:room date:[2026-10-01 TO 2026-10-08}' --measure reactions --limit 10 --json
+app stats contacts top 'chat:room date:[2026-10-01 TO 2026-10-08}' --score helpful --min-messages 3 --json
+app stats contacts top --weights '{"messages":0.4,"active-days":0.6}' --timezone Europe/Madrid --json
 ```
 
 ## Measures and scores
@@ -58,8 +58,8 @@ Each row returns `drilldown.selection` and exact `drilldown.evidence.arguments` 
 command. Pass that selection as JSON, with the emitted message locator or native person id:
 
 ```sh
-app stats messages evidence msg:tg/fixture/room/101 --selection "$selection" --component replies --limit 20 --format json
-app stats contacts evidence 42 --selection "$selection" --component answers --limit 20 --format json
+app stats messages evidence msg:tg/fixture/room/101 --selection "$selection" --component replies --limit 20 --json
+app stats contacts evidence 42 --selection "$selection" --component answers --limit 20 --json
 ```
 
 Replies include their parent; answers include the question and credited answer. Snapshot metrics
@@ -77,7 +77,7 @@ narrow chat/date scope when the query exceeds a budget. Selection JSON is capped
 
 ```sh
 app searches create weekly --selection "$selection"
-app stats contacts top --saved weekly --limit 20 --format json
+app stats contacts top --saved weekly --limit 20 --json
 ```
 
 Use the matching message/contacts target. Resolved ids and date boundaries stay pinned;

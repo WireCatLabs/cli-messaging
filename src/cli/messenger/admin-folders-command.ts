@@ -48,23 +48,27 @@ export const foldersCommand = (messenger: Messenger): Command => {
         context.renderer.result(await context.withServices((services) => services.folders.delete(folder)))
       }),
   )
-  folders.addCommand(
-    annotate(new Command("order"), { mutates: true })
-      .description("put folders in this order; the ones not named keep theirs after them")
-      .argument("<folders...>", "folder ids, or titles exactly, first one first")
-      .action(async function (this: Command, typed: string[]) {
-        const context = messengerContext(this, messenger)
-        context.renderer.result(await context.withServices((services) => services.folders.order(typed)))
-      }),
-  )
-  folders.addCommand(
-    annotate(new Command("join"), { mutates: true })
-      .description("add a folder someone shared by a link; joins every chat in it, and the others there see you joined")
-      .argument("<link>", "the folder's link, as t.me/addlist/…")
-      .action(async function (this: Command, link: string) {
-        const context = messengerContext(this, messenger)
-        context.renderer.result(await context.withServices((services) => services.folders.join(link)))
-      }),
-  )
+  if (messenger.folderOrder !== false)
+    folders.addCommand(
+      annotate(new Command("order"), { mutates: true })
+        .description("put folders in this order; the ones not named keep theirs after them")
+        .argument("<folders...>", "folder ids, or titles exactly, first one first")
+        .action(async function (this: Command, typed: string[]) {
+          const context = messengerContext(this, messenger)
+          context.renderer.result(await context.withServices((services) => services.folders.order(typed)))
+        }),
+    )
+  if (messenger.folderJoin !== false)
+    folders.addCommand(
+      annotate(new Command("join"), { mutates: true })
+        .description(
+          "add a folder someone shared by a link; joins every chat in it, and the others there see you joined",
+        )
+        .argument("<link>", "the folder's link, as t.me/addlist/…")
+        .action(async function (this: Command, link: string) {
+          const context = messengerContext(this, messenger)
+          context.renderer.result(await context.withServices((services) => services.folders.join(link)))
+        }),
+    )
   return folders
 }

@@ -82,6 +82,10 @@ export interface Messenger {
   mediaOptions?: readonly MediaOption[]
   /** Whether the messenger reads HTML in `--html`; no when unset. */
   html?: boolean
+  /** Whether folder ordering is available; yes when unset. */
+  folderOrder?: boolean
+  /** Whether shared folders can be joined; yes when unset. */
+  folderJoin?: boolean
   /** Whether the messenger says when an account was made — the moderation rule `newAccount`; yes when unset. */
   knowsAccountAge?: boolean
   /**

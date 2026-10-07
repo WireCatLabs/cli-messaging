@@ -7,6 +7,7 @@ import { type MessageStore, openStore } from "../store/store.js"
 import { storedDeps } from "./deps.js"
 import { rankingsService } from "./rankings.js"
 import { readRankingSelection } from "./rankings-selection.js"
+import { searchesService } from "./searches.js"
 
 const account = { provider: "fixture", account: "owner" }
 const live: MessageStore[] = []
@@ -327,5 +328,31 @@ describe("ranking services and drilldown selection", () => {
     await expect(
       service.evidence("contacts", row.id, row.drilldown.selection, { component: "messages", limit: 1 }),
     ).rejects.toThrow("fingerprint budget")
+  })
+  it("preserves exclusive date flags through saved selection serialization and replay", async () => {
+    const { service, deps } = await setup()
+    const original = await service.top("messages", {
+      text: "date:[2026-10-07 TO 2026-10-08}",
+      measure: "views",
+      timezone: "UTC",
+      limit: 1,
+    })
+    const selection = original.items[0]?.drilldown.selection
+    if (!selection) throw new Error("fixture selection missing")
+    const searches = searchesService(deps)
+    await searches.create("exclusive-date", {
+      selection,
+      target: "messages",
+      ...selection.options,
+      timezone: "UTC",
+      language: "lucene",
+    })
+    const saved = (await searches.resolve("exclusive-date", {})).params
+    const replay = await service.top("messages", { ...saved, weights: { reactions: 1 }, measure: undefined, limit: 3 })
+    expect(replay.items.map(({ id }) => id)).toEqual(["3", "2", "1"])
+    expect(replay.items[0]?.drilldown.selection.execution.root).toMatchObject({
+      upperInclusive: false,
+      resolution: { date: { upperInclusive: false } },
+    })
   })
 })
