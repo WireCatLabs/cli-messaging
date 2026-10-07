@@ -118,6 +118,11 @@ export const ocrPdf = async (
             .join("")
             .trim()
           if (!text) {
+            if (
+              typeof unpdf.createIsomorphicCanvasFactory !== "function" ||
+              typeof unpdf.renderPageAsImage !== "function"
+            )
+              return { status: "engine-missing", engine: "unpdf" }
             if (canvas === undefined) {
               try {
                 canvas = await load("@napi-rs/canvas")

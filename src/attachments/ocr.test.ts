@@ -45,6 +45,21 @@ const fakePdf = (
 }
 
 describe("bounded attachment OCR", () => {
+  it("reads text with an older engine but requests an upgrade before scanned-PDF OCR", async () => {
+    for (const [text, status] of [
+      ["local text", "extracted"],
+      ["", "engine-missing"],
+    ] as const) {
+      const fixture = fakePdf([text])
+      const load: LoadEngine = async (name) => {
+        const engine = (await fixture.load(name)) as Record<string, unknown>
+        return { ...engine, createIsomorphicCanvasFactory: undefined, renderPageAsImage: undefined }
+      }
+      const model = pipeline()
+      expect(await ocrPdf(pdf(), model, load)).toMatchObject({ status })
+      expect(model.transcribe).not.toHaveBeenCalled()
+    }
+  })
   it("transcribes a local PNG and preserves literal returned text", async () => {
     const model = pipeline("Счёт 42\nTotal 10")
     const result = await ocrImage(image(), model)

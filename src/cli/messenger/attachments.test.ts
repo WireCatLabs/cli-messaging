@@ -166,15 +166,21 @@ describe("attachments extract", () => {
     })
     writeFileSync(join(files, "5-1.jpg"), PNG.sync.write(new PNG({ width: 2, height: 2 })))
     let signal: AbortSignal | null | undefined
+    let started = () => {}
+    const began = new Promise<void>((resolve) => {
+      started = resolve
+    })
     const fetcher = vi.spyOn(globalThis, "fetch").mockImplementation(
       async (_url, init) =>
         new Promise<Response>((_resolve, reject) => {
           signal = init?.signal
           signal?.addEventListener("abort", () => reject(new Error("fixture abort")), { once: true })
+          started()
         }),
     )
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] })
     try {
-      const result = await call(
+      const pending = call(
         "attachments",
         "extract",
         "--ocr",
@@ -186,12 +192,22 @@ describe("attachments extract", () => {
         "100ms",
         "--json",
       )
+      await Promise.race([
+        began,
+        pending.then(() => {
+          throw new Error("OCR command ended before starting the request")
+        }),
+      ])
+      await vi.advanceTimersByTimeAsync(100)
+      const result = await pending
       expect(result.code).toBe(9)
       expect(signal?.aborted).toBe(true)
       expect(fetcher).toHaveBeenCalledTimes(1)
       expect(result.stdout).toBe("")
+      vi.useRealTimers()
       expect(await hits(call, "content:lateinvoice")).toEqual([])
     } finally {
+      vi.useRealTimers()
       fetcher.mockRestore()
     }
   })
