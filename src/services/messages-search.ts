@@ -244,7 +244,7 @@ const indexNotReady = async (store: MessageStore, command: string | undefined): 
     { reason: "index_not_ready" },
   )
 }
-const coverageOf = async (
+export const coverageOf = async (
   store: MessageStore,
   { scopeAccounts, selectedChat }: Prepared,
 ): Promise<{ completeness: (ChatCompleteness & AccountKey)[]; coverage: SearchCoverage }> => {

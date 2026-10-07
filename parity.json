@@ -1427,19 +1427,31 @@
     },
     "chats link create": {
       "in": [],
-      "planned": { "max": "each CLI's next cli-messaging bump", "tg": "G2 feat/join-approval" },
+      "planned": {
+        "max": "each CLI's next cli-messaging bump",
+        "tg": "G2 feat/join-approval"
+      },
       "options": {
         "--approval": {
           "in": [],
-          "planned": { "max": "each CLI's next cli-messaging bump", "tg": "G2 feat/join-approval" }
+          "planned": {
+            "max": "each CLI's next cli-messaging bump",
+            "tg": "G2 feat/join-approval"
+          }
         },
         "--expire-time": {
           "in": [],
-          "planned": { "max": "each CLI's next cli-messaging bump", "tg": "G2 feat/join-approval" }
+          "planned": {
+            "max": "each CLI's next cli-messaging bump",
+            "tg": "G2 feat/join-approval"
+          }
         },
         "--max-uses": {
           "in": [],
-          "planned": { "max": "each CLI's next cli-messaging bump", "tg": "G2 feat/join-approval" }
+          "planned": {
+            "max": "each CLI's next cli-messaging bump",
+            "tg": "G2 feat/join-approval"
+          }
         }
       }
     },
@@ -1587,7 +1599,9 @@
     "chats requests": {
       "in": [],
       "reason": "MAX groups have no join approval",
-      "planned": { "tg": "G2 feat/join-requests" },
+      "planned": {
+        "tg": "G2 feat/join-requests"
+      },
       "subtree": true
     },
     "chats rules": {
@@ -1652,7 +1666,9 @@
         "--join-approval": {
           "in": [],
           "reason": "MAX groups have no join approval",
-          "planned": { "tg": "G2 feat/join-approval" }
+          "planned": {
+            "tg": "G2 feat/join-approval"
+          }
         },
         "--members-see-link": {
           "in": ["max"],
@@ -2736,6 +2752,13 @@
         "--replace": {
           "in": "all"
         },
+        "--selection": {
+          "in": [],
+          "planned": {
+            "max": "feat/rankings-adoption: shared implemented; SDK adoption pending",
+            "tg": "feat/rankings-adoption: shared implemented; SDK adoption pending"
+          }
+        },
         "--source": {
           "in": "all"
         },
@@ -2943,43 +2966,43 @@
     "stats contacts": {
       "in": [],
       "planned": {
-        "max": "feat/stats-rankings-contract: approved ranking plan; implementation pending",
-        "tg": "feat/stats-rankings-contract: approved ranking plan; implementation pending"
+        "max": "feat/rankings-adoption: shared CLI/MCP implemented; consumer SDK adoption pending",
+        "tg": "feat/rankings-adoption: shared CLI/MCP implemented; consumer SDK adoption pending"
       }
     },
     "stats contacts evidence": {
       "in": [],
       "planned": {
-        "max": "feat/stats-rankings-contract: evidence naming review, then implementation",
-        "tg": "feat/stats-rankings-contract: evidence naming review, then implementation"
+        "max": "feat/rankings-adoption: approved evidence implemented; consumer SDK adoption pending",
+        "tg": "feat/rankings-adoption: approved evidence implemented; consumer SDK adoption pending"
       },
       "options": {
         "--component": {
           "in": [],
           "planned": {
-            "max": "feat/stats-rankings-contract: evidence naming review, then implementation",
-            "tg": "feat/stats-rankings-contract: evidence naming review, then implementation"
+            "max": "feat/rankings-adoption: approved evidence implemented; consumer SDK adoption pending",
+            "tg": "feat/rankings-adoption: approved evidence implemented; consumer SDK adoption pending"
           }
         },
         "--cursor": {
           "in": [],
           "planned": {
-            "max": "feat/stats-rankings-contract: evidence naming review, then implementation",
-            "tg": "feat/stats-rankings-contract: evidence naming review, then implementation"
+            "max": "feat/rankings-adoption: approved evidence implemented; consumer SDK adoption pending",
+            "tg": "feat/rankings-adoption: approved evidence implemented; consumer SDK adoption pending"
           }
         },
         "--limit": {
           "in": [],
           "planned": {
-            "max": "feat/stats-rankings-contract: evidence naming review, then implementation",
-            "tg": "feat/stats-rankings-contract: evidence naming review, then implementation"
+            "max": "feat/rankings-adoption: approved evidence implemented; consumer SDK adoption pending",
+            "tg": "feat/rankings-adoption: approved evidence implemented; consumer SDK adoption pending"
           }
         },
         "--selection": {
           "in": [],
           "planned": {
-            "max": "feat/stats-rankings-contract: evidence naming review, then implementation",
-            "tg": "feat/stats-rankings-contract: evidence naming review, then implementation"
+            "max": "feat/rankings-adoption: approved evidence implemented; consumer SDK adoption pending",
+            "tg": "feat/rankings-adoption: approved evidence implemented; consumer SDK adoption pending"
           }
         }
       }
@@ -2987,113 +3010,113 @@
     "stats contacts top": {
       "in": [],
       "planned": {
-        "max": "feat/stats-rankings-contract: approved ranking plan; implementation pending",
-        "tg": "feat/stats-rankings-contract: approved ranking plan; implementation pending"
+        "max": "feat/rankings-adoption: shared CLI/MCP implemented; consumer SDK adoption pending",
+        "tg": "feat/rankings-adoption: shared CLI/MCP implemented; consumer SDK adoption pending"
       },
       "options": {
         "--chat": {
           "in": [],
           "planned": {
-            "max": "feat/stats-rankings-contract: approved ranking plan; implementation pending",
-            "tg": "feat/stats-rankings-contract: approved ranking plan; implementation pending"
+            "max": "feat/rankings-adoption: shared CLI/MCP implemented; consumer SDK adoption pending",
+            "tg": "feat/rankings-adoption: shared CLI/MCP implemented; consumer SDK adoption pending"
           }
         },
         "--exact": {
           "in": [],
           "planned": {
-            "max": "feat/stats-rankings-contract: approved ranking plan; implementation pending",
-            "tg": "feat/stats-rankings-contract: approved ranking plan; implementation pending"
+            "max": "feat/rankings-adoption: shared CLI/MCP implemented; consumer SDK adoption pending",
+            "tg": "feat/rankings-adoption: shared CLI/MCP implemented; consumer SDK adoption pending"
           }
         },
         "--limit": {
           "in": [],
           "planned": {
-            "max": "feat/stats-rankings-contract: approved ranking plan; implementation pending",
-            "tg": "feat/stats-rankings-contract: approved ranking plan; implementation pending"
+            "max": "feat/rankings-adoption: shared CLI/MCP implemented; consumer SDK adoption pending",
+            "tg": "feat/rankings-adoption: shared CLI/MCP implemented; consumer SDK adoption pending"
           }
         },
         "--max-chats": {
           "in": [],
           "planned": {
-            "max": "feat/stats-rankings-contract: approved ranking plan; implementation pending",
-            "tg": "feat/stats-rankings-contract: approved ranking plan; implementation pending"
+            "max": "feat/rankings-adoption: shared CLI/MCP implemented; consumer SDK adoption pending",
+            "tg": "feat/rankings-adoption: shared CLI/MCP implemented; consumer SDK adoption pending"
           }
         },
         "--max-messages": {
           "in": [],
           "planned": {
-            "max": "feat/stats-rankings-contract: approved ranking plan; implementation pending",
-            "tg": "feat/stats-rankings-contract: approved ranking plan; implementation pending"
+            "max": "feat/rankings-adoption: shared CLI/MCP implemented; consumer SDK adoption pending",
+            "tg": "feat/rankings-adoption: shared CLI/MCP implemented; consumer SDK adoption pending"
           }
         },
         "--measure": {
           "in": [],
           "planned": {
-            "max": "feat/stats-rankings-contract: approved ranking plan; implementation pending",
-            "tg": "feat/stats-rankings-contract: approved ranking plan; implementation pending"
+            "max": "feat/rankings-adoption: shared CLI/MCP implemented; consumer SDK adoption pending",
+            "tg": "feat/rankings-adoption: shared CLI/MCP implemented; consumer SDK adoption pending"
           }
         },
         "--message-kind": {
           "in": [],
           "planned": {
-            "max": "feat/stats-rankings-contract: approved ranking plan; implementation pending",
-            "tg": "feat/stats-rankings-contract: approved ranking plan; implementation pending"
+            "max": "feat/rankings-adoption: shared CLI/MCP implemented; consumer SDK adoption pending",
+            "tg": "feat/rankings-adoption: shared CLI/MCP implemented; consumer SDK adoption pending"
           }
         },
         "--min-messages": {
           "in": [],
           "planned": {
-            "max": "feat/stats-rankings-contract: approved ranking plan; implementation pending",
-            "tg": "feat/stats-rankings-contract: approved ranking plan; implementation pending"
+            "max": "feat/rankings-adoption: shared CLI/MCP implemented; consumer SDK adoption pending",
+            "tg": "feat/rankings-adoption: shared CLI/MCP implemented; consumer SDK adoption pending"
           }
         },
         "--saved": {
           "in": [],
           "planned": {
-            "max": "feat/stats-rankings-contract: approved ranking plan; implementation pending",
-            "tg": "feat/stats-rankings-contract: approved ranking plan; implementation pending"
+            "max": "feat/rankings-adoption: shared CLI/MCP implemented; consumer SDK adoption pending",
+            "tg": "feat/rankings-adoption: shared CLI/MCP implemented; consumer SDK adoption pending"
           }
         },
         "--score": {
           "in": [],
           "planned": {
-            "max": "feat/stats-rankings-contract: approved ranking plan; implementation pending",
-            "tg": "feat/stats-rankings-contract: approved ranking plan; implementation pending"
+            "max": "feat/rankings-adoption: shared CLI/MCP implemented; consumer SDK adoption pending",
+            "tg": "feat/rankings-adoption: shared CLI/MCP implemented; consumer SDK adoption pending"
           }
         },
         "--source": {
           "in": [],
           "planned": {
-            "max": "feat/stats-rankings-contract: approved ranking plan; implementation pending",
-            "tg": "feat/stats-rankings-contract: approved ranking plan; implementation pending"
+            "max": "feat/rankings-adoption: shared CLI/MCP implemented; consumer SDK adoption pending",
+            "tg": "feat/rankings-adoption: shared CLI/MCP implemented; consumer SDK adoption pending"
           }
         },
         "--sync-first": {
           "in": [],
           "planned": {
-            "max": "feat/stats-rankings-contract: approved ranking plan; implementation pending",
-            "tg": "feat/stats-rankings-contract: approved ranking plan; implementation pending"
+            "max": "feat/rankings-adoption: shared CLI/MCP implemented; consumer SDK adoption pending",
+            "tg": "feat/rankings-adoption: shared CLI/MCP implemented; consumer SDK adoption pending"
           }
         },
         "--sync-time": {
           "in": [],
           "planned": {
-            "max": "feat/stats-rankings-contract: approved ranking plan; implementation pending",
-            "tg": "feat/stats-rankings-contract: approved ranking plan; implementation pending"
+            "max": "feat/rankings-adoption: shared CLI/MCP implemented; consumer SDK adoption pending",
+            "tg": "feat/rankings-adoption: shared CLI/MCP implemented; consumer SDK adoption pending"
           }
         },
         "--timezone": {
           "in": [],
           "planned": {
-            "max": "feat/stats-rankings-contract: approved ranking plan; implementation pending",
-            "tg": "feat/stats-rankings-contract: approved ranking plan; implementation pending"
+            "max": "feat/rankings-adoption: shared CLI/MCP implemented; consumer SDK adoption pending",
+            "tg": "feat/rankings-adoption: shared CLI/MCP implemented; consumer SDK adoption pending"
           }
         },
         "--weights": {
           "in": [],
           "planned": {
-            "max": "feat/stats-rankings-contract: approved ranking plan; implementation pending",
-            "tg": "feat/stats-rankings-contract: approved ranking plan; implementation pending"
+            "max": "feat/rankings-adoption: shared CLI/MCP implemented; consumer SDK adoption pending",
+            "tg": "feat/rankings-adoption: shared CLI/MCP implemented; consumer SDK adoption pending"
           }
         }
       }
@@ -3104,36 +3127,36 @@
     "stats messages evidence": {
       "in": [],
       "planned": {
-        "max": "feat/stats-rankings-contract: evidence naming review, then implementation",
-        "tg": "feat/stats-rankings-contract: evidence naming review, then implementation"
+        "max": "feat/rankings-adoption: approved evidence implemented; consumer SDK adoption pending",
+        "tg": "feat/rankings-adoption: approved evidence implemented; consumer SDK adoption pending"
       },
       "options": {
         "--component": {
           "in": [],
           "planned": {
-            "max": "feat/stats-rankings-contract: evidence naming review, then implementation",
-            "tg": "feat/stats-rankings-contract: evidence naming review, then implementation"
+            "max": "feat/rankings-adoption: approved evidence implemented; consumer SDK adoption pending",
+            "tg": "feat/rankings-adoption: approved evidence implemented; consumer SDK adoption pending"
           }
         },
         "--cursor": {
           "in": [],
           "planned": {
-            "max": "feat/stats-rankings-contract: evidence naming review, then implementation",
-            "tg": "feat/stats-rankings-contract: evidence naming review, then implementation"
+            "max": "feat/rankings-adoption: approved evidence implemented; consumer SDK adoption pending",
+            "tg": "feat/rankings-adoption: approved evidence implemented; consumer SDK adoption pending"
           }
         },
         "--limit": {
           "in": [],
           "planned": {
-            "max": "feat/stats-rankings-contract: evidence naming review, then implementation",
-            "tg": "feat/stats-rankings-contract: evidence naming review, then implementation"
+            "max": "feat/rankings-adoption: approved evidence implemented; consumer SDK adoption pending",
+            "tg": "feat/rankings-adoption: approved evidence implemented; consumer SDK adoption pending"
           }
         },
         "--selection": {
           "in": [],
           "planned": {
-            "max": "feat/stats-rankings-contract: evidence naming review, then implementation",
-            "tg": "feat/stats-rankings-contract: evidence naming review, then implementation"
+            "max": "feat/rankings-adoption: approved evidence implemented; consumer SDK adoption pending",
+            "tg": "feat/rankings-adoption: approved evidence implemented; consumer SDK adoption pending"
           }
         }
       }
@@ -3177,106 +3200,106 @@
     "stats messages top": {
       "in": [],
       "planned": {
-        "max": "feat/stats-rankings-contract: approved ranking plan; implementation pending",
-        "tg": "feat/stats-rankings-contract: approved ranking plan; implementation pending"
+        "max": "feat/rankings-adoption: shared CLI/MCP implemented; consumer SDK adoption pending",
+        "tg": "feat/rankings-adoption: shared CLI/MCP implemented; consumer SDK adoption pending"
       },
       "options": {
         "--chat": {
           "in": [],
           "planned": {
-            "max": "feat/stats-rankings-contract: approved ranking plan; implementation pending",
-            "tg": "feat/stats-rankings-contract: approved ranking plan; implementation pending"
+            "max": "feat/rankings-adoption: shared CLI/MCP implemented; consumer SDK adoption pending",
+            "tg": "feat/rankings-adoption: shared CLI/MCP implemented; consumer SDK adoption pending"
           }
         },
         "--exact": {
           "in": [],
           "planned": {
-            "max": "feat/stats-rankings-contract: approved ranking plan; implementation pending",
-            "tg": "feat/stats-rankings-contract: approved ranking plan; implementation pending"
+            "max": "feat/rankings-adoption: shared CLI/MCP implemented; consumer SDK adoption pending",
+            "tg": "feat/rankings-adoption: shared CLI/MCP implemented; consumer SDK adoption pending"
           }
         },
         "--limit": {
           "in": [],
           "planned": {
-            "max": "feat/stats-rankings-contract: approved ranking plan; implementation pending",
-            "tg": "feat/stats-rankings-contract: approved ranking plan; implementation pending"
+            "max": "feat/rankings-adoption: shared CLI/MCP implemented; consumer SDK adoption pending",
+            "tg": "feat/rankings-adoption: shared CLI/MCP implemented; consumer SDK adoption pending"
           }
         },
         "--max-chats": {
           "in": [],
           "planned": {
-            "max": "feat/stats-rankings-contract: approved ranking plan; implementation pending",
-            "tg": "feat/stats-rankings-contract: approved ranking plan; implementation pending"
+            "max": "feat/rankings-adoption: shared CLI/MCP implemented; consumer SDK adoption pending",
+            "tg": "feat/rankings-adoption: shared CLI/MCP implemented; consumer SDK adoption pending"
           }
         },
         "--max-messages": {
           "in": [],
           "planned": {
-            "max": "feat/stats-rankings-contract: approved ranking plan; implementation pending",
-            "tg": "feat/stats-rankings-contract: approved ranking plan; implementation pending"
+            "max": "feat/rankings-adoption: shared CLI/MCP implemented; consumer SDK adoption pending",
+            "tg": "feat/rankings-adoption: shared CLI/MCP implemented; consumer SDK adoption pending"
           }
         },
         "--measure": {
           "in": [],
           "planned": {
-            "max": "feat/stats-rankings-contract: approved ranking plan; implementation pending",
-            "tg": "feat/stats-rankings-contract: approved ranking plan; implementation pending"
+            "max": "feat/rankings-adoption: shared CLI/MCP implemented; consumer SDK adoption pending",
+            "tg": "feat/rankings-adoption: shared CLI/MCP implemented; consumer SDK adoption pending"
           }
         },
         "--message-kind": {
           "in": [],
           "planned": {
-            "max": "feat/stats-rankings-contract: approved ranking plan; implementation pending",
-            "tg": "feat/stats-rankings-contract: approved ranking plan; implementation pending"
+            "max": "feat/rankings-adoption: shared CLI/MCP implemented; consumer SDK adoption pending",
+            "tg": "feat/rankings-adoption: shared CLI/MCP implemented; consumer SDK adoption pending"
           }
         },
         "--saved": {
           "in": [],
           "planned": {
-            "max": "feat/stats-rankings-contract: approved ranking plan; implementation pending",
-            "tg": "feat/stats-rankings-contract: approved ranking plan; implementation pending"
+            "max": "feat/rankings-adoption: shared CLI/MCP implemented; consumer SDK adoption pending",
+            "tg": "feat/rankings-adoption: shared CLI/MCP implemented; consumer SDK adoption pending"
           }
         },
         "--score": {
           "in": [],
           "planned": {
-            "max": "feat/stats-rankings-contract: approved ranking plan; implementation pending",
-            "tg": "feat/stats-rankings-contract: approved ranking plan; implementation pending"
+            "max": "feat/rankings-adoption: shared CLI/MCP implemented; consumer SDK adoption pending",
+            "tg": "feat/rankings-adoption: shared CLI/MCP implemented; consumer SDK adoption pending"
           }
         },
         "--source": {
           "in": [],
           "planned": {
-            "max": "feat/stats-rankings-contract: approved ranking plan; implementation pending",
-            "tg": "feat/stats-rankings-contract: approved ranking plan; implementation pending"
+            "max": "feat/rankings-adoption: shared CLI/MCP implemented; consumer SDK adoption pending",
+            "tg": "feat/rankings-adoption: shared CLI/MCP implemented; consumer SDK adoption pending"
           }
         },
         "--sync-first": {
           "in": [],
           "planned": {
-            "max": "feat/stats-rankings-contract: approved ranking plan; implementation pending",
-            "tg": "feat/stats-rankings-contract: approved ranking plan; implementation pending"
+            "max": "feat/rankings-adoption: shared CLI/MCP implemented; consumer SDK adoption pending",
+            "tg": "feat/rankings-adoption: shared CLI/MCP implemented; consumer SDK adoption pending"
           }
         },
         "--sync-time": {
           "in": [],
           "planned": {
-            "max": "feat/stats-rankings-contract: approved ranking plan; implementation pending",
-            "tg": "feat/stats-rankings-contract: approved ranking plan; implementation pending"
+            "max": "feat/rankings-adoption: shared CLI/MCP implemented; consumer SDK adoption pending",
+            "tg": "feat/rankings-adoption: shared CLI/MCP implemented; consumer SDK adoption pending"
           }
         },
         "--timezone": {
           "in": [],
           "planned": {
-            "max": "feat/stats-rankings-contract: approved ranking plan; implementation pending",
-            "tg": "feat/stats-rankings-contract: approved ranking plan; implementation pending"
+            "max": "feat/rankings-adoption: shared CLI/MCP implemented; consumer SDK adoption pending",
+            "tg": "feat/rankings-adoption: shared CLI/MCP implemented; consumer SDK adoption pending"
           }
         },
         "--weights": {
           "in": [],
           "planned": {
-            "max": "feat/stats-rankings-contract: approved ranking plan; implementation pending",
-            "tg": "feat/stats-rankings-contract: approved ranking plan; implementation pending"
+            "max": "feat/rankings-adoption: shared CLI/MCP implemented; consumer SDK adoption pending",
+            "tg": "feat/rankings-adoption: shared CLI/MCP implemented; consumer SDK adoption pending"
           }
         }
       }

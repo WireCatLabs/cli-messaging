@@ -245,6 +245,8 @@ const NAMED_WRITE_KEYS = [
   "messages.sync-first",
   "messages.server-search",
   "stats.messages.show.sync-first",
+  "stats.messages.top.sync-first",
+  "stats.contacts.top.sync-first",
   "account.sessions.list",
   "attachments.extract",
   "attachments.text.set",

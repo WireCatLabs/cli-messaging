@@ -13,6 +13,7 @@ import { type InboxService, inboxService } from "./inbox.js"
 import { type MessagesService, messagesService } from "./messages.js"
 import { type ModerationService, moderationService } from "./moderation.js"
 import { type PeopleService, peopleService } from "./people.js"
+import { type RankingsService, rankingsService } from "./rankings.js"
 import { type SearchesService, searchesService } from "./searches.js"
 import { type TagsService, tagsService } from "./tags.js"
 import { type TasksService, tasksService } from "./tasks.js"
@@ -75,6 +76,8 @@ export type {
   SharedChat,
 } from "./person-context.js"
 export { CONTEXT_BYTES, CONTEXT_MESSAGES, identityIn, personContext } from "./person-context.js"
+export type { RankedRow, RankingFound, RankingQuery, RankingsService } from "./rankings.js"
+export { rankingsService } from "./rankings.js"
 export type { ResolvedSearch, SearchesService, SearchParams } from "./searches.js"
 export { searchesService, searchRecordOf } from "./searches.js"
 export type { TagsAdded, TagsRemoved, TagsService, TagTargetInput, TagTargetView } from "./tags.js"
@@ -84,6 +87,7 @@ export { tasksService } from "./tasks.js"
 export { type TopicsService, topicsService } from "./topics.js"
 
 export interface Services {
+  rankings: RankingsService
   topics: TopicsService
   messages: MessagesService
   chats: ChatsService
@@ -113,6 +117,7 @@ export type Override = (base: Services, deps: ServiceDeps) => Partial<Services>
 /** The shared services, with the messenger's `services` override applied — commands and MCP tools alike. */
 export const servicesFor = (deps: ServiceDeps): Services => {
   const base: Services = {
+    rankings: rankingsService(deps),
     topics: topicsService(deps),
     messages: messagesService(deps),
     chats: chatsService(deps),

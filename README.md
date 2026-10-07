@@ -248,3 +248,6 @@ Recipient restrictions and hourly limits remain in effect; no saved configuratio
 The browser connector uses the tunnel's HTTPS URL ending in `/mcp`, with the owner OAuth login.
 Both legacy session-based and modern HTTP MCP clients are supported. Web clients can use tools
 without prompts or resources; neither is required for reading and sending.
+
+Message and author rankings are mounted by `statsCommand`: see the [ranking guide](docs/rankings.md)
+for metrics, scores, saved selections, evidence paging and data-quality limits.

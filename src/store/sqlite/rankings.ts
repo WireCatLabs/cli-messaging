@@ -60,7 +60,7 @@ const finite = (value: unknown): number | null =>
   typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : null
 const metadata = (alias: string) =>
   `CASE WHEN json_valid(${alias}.provider_metadata) THEN ${alias}.provider_metadata ELSE '{}' END`
-const counter = (alias: string, field: string, reactions = false) => {
+export const rankingCounter = (alias: string, field: string, reactions = false) => {
   const source = reactions
     ? `CASE WHEN json_valid(${alias}.reactions) THEN ${alias}.reactions ELSE '{}' END`
     : metadata(alias)
@@ -191,6 +191,22 @@ const graphIn = (context: StoreContext, execution: QueryExecution, request: Rank
   const update = database.prepare(
     "UPDATE ranking_derived SET kind=?,replies=?,others=?,descendants=?,thread=?,answer_for=?,delay=? WHERE pk=?",
   )
+  const insertGraph = database.prepare(
+    "INSERT INTO ranking_graph(pk,parent,kind,event,answer_for,delay,sender,sender_chat) VALUES (?,?,?,?,?,?,?,?)",
+  )
+  for (const node of nodes) {
+    const row = found.rows.get(node.pk)
+    insertGraph.run(
+      node.pk,
+      found.parents.get(node.pk) ?? null,
+      row?.kind ?? null,
+      node.event ? 1 : 0,
+      row?.answerFor ?? null,
+      row?.answerDelay ?? null,
+      node.sender,
+      node.senderIsChat ? 1 : 0,
+    )
+  }
   for (const [pk, row] of found.rows) {
     check()
     update.run(row.kind, row.replies, row.otherReplies, row.descendants, row.thread, row.answerFor, row.answerDelay, pk)
@@ -199,10 +215,18 @@ const graphIn = (context: StoreContext, execution: QueryExecution, request: Rank
 }
 
 /** Aggregate and normalize the whole population, returning only a bounded page. */
+export interface RankingSnapshot {
+  prefix: string
+  params: SqlValue[]
+  filtered: string
+  found: RankedStoreFound
+  check: () => void
+}
 export const rankQuery = (
   context: StoreContext,
   execution: QueryExecution,
   request: RankingRequest,
+  inspect?: (snapshot: RankingSnapshot) => void,
 ): RankedStoreFound => {
   if (!Number.isSafeInteger(execution.limit) || execution.limit < 1 || execution.limit > 100)
     throw new CliError("validation_error", "ranking limit must be 1–100")
@@ -211,7 +235,7 @@ export const rankQuery = (
     const { options } = request
     const componentNames = options.components
     database.exec(
-      "CREATE TEMP TABLE ranking_selected(pk INTEGER PRIMARY KEY); CREATE TEMP TABLE ranking_derived(pk INTEGER PRIMARY KEY,words INTEGER,day TEXT,kind TEXT,replies INTEGER,others INTEGER,descendants INTEGER,thread INTEGER,answer_for INTEGER,delay REAL); CREATE TEMP TABLE ranking_quality(account_pk INTEGER PRIMARY KEY,complete INTEGER)",
+      "CREATE TEMP TABLE ranking_selected(pk INTEGER PRIMARY KEY); CREATE TEMP TABLE ranking_derived(pk INTEGER PRIMARY KEY,words INTEGER,day TEXT,kind TEXT,replies INTEGER,others INTEGER,descendants INTEGER,thread INTEGER,answer_for INTEGER,delay REAL); CREATE TEMP TABLE ranking_quality(account_pk INTEGER PRIMARY KEY,complete INTEGER); CREATE TEMP TABLE ranking_graph(pk INTEGER PRIMARY KEY,parent INTEGER,kind TEXT,event INTEGER,answer_for INTEGER,delay REAL,sender TEXT,sender_chat INTEGER); CREATE INDEX ranking_graph_parent ON ranking_graph(parent)",
     )
     try {
       database.prepare(`INSERT INTO ranking_selected ${selection.sql}`).run(...selection.params)
@@ -285,16 +309,16 @@ export const rankQuery = (
       const kind = graph
         ? "d.kind"
         : `CASE WHEN c.kind='channel' THEN 'posts' WHEN c.kind='group' AND json_extract(${graphMeta},'$.graph.version')=1 AND json_type(${graphMeta},'$.graph.discussionSource')='object' THEN 'bridge' WHEN c.kind='group' AND json_extract(${graphMeta},'$.graph.version')=1 AND json_type(${graphMeta},'$.graph.reply')='null' THEN 'posts' WHEN c.kind NOT IN ('channel','group') THEN 'other' END`
-      const reaction = counter("m", "reactions", true)
+      const reaction = rankingCounter("m", "reactions", true)
       const nonself =
         options.weights !== null ? "CASE WHEN q.complete=1 THEN coalesce(d.others,0) END" : "coalesce(d.others,0)"
       const local = (value: string) =>
         options.weights !== null ? `CASE WHEN q.complete=1 THEN coalesce(${value},0) END` : `coalesce(${value},0)`
       const messageColumns: Record<string, string> = {
-        views: counter("m", "views"),
+        views: rankingCounter("m", "views"),
         reactions: reaction,
-        forwards: counter("m", "forwards"),
-        comments: counter("m", "comments"),
+        forwards: rankingCounter("m", "forwards"),
+        comments: rankingCounter("m", "comments"),
         replies: local("d.replies"),
         "replies-from-others": nonself,
         "thread-size": local("d.descendants"),
@@ -413,7 +437,7 @@ export const rankQuery = (
                 .get()?.n ?? 0,
             )
           : 0
-      return {
+      const found: RankedStoreFound = {
         total,
         population,
         eligible,
@@ -426,8 +450,12 @@ export const rankQuery = (
         hasMore: rows.length > execution.limit,
         ...(graph ? { graphQuality: graph } : {}),
       }
+      inspect?.({ prefix, params, filtered, found, check })
+      return found
     } finally {
-      database.exec("DROP TABLE ranking_quality; DROP TABLE ranking_derived; DROP TABLE ranking_selected")
+      database.exec(
+        "DROP TABLE ranking_graph; DROP TABLE ranking_quality; DROP TABLE ranking_derived; DROP TABLE ranking_selected",
+      )
     }
   })
 }

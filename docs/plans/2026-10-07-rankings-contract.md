@@ -2,8 +2,9 @@
 
 Status 2026-10-07: the owner approved the ranking plan, the `stats → resource → view` hierarchy,
 and the exact evidence views/options in naming PR671. The naming contract is merged.
-Implementation is in progress, starting with the shared compiled SQL selection. The command
-paths remain planned until their runtime implementation is shipped. Further approval of these
+Shared SQL selection, metrics, CLI/MCP services and bounded evidence are implemented. Consumer
+SDK adoption is pending; see the [user guide](../rankings.md). The command paths remain planned
+in the consumer parity manifest until that adoption ships. Further approval of these
 names is not required.
 
 ## Surface

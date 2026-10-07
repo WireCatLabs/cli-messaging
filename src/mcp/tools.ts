@@ -18,6 +18,7 @@ import { messageSendTools } from "./tools/messages-send.js"
 import { messagesTranscribeTools } from "./tools/messages-transcribe.js"
 import { moderationTools } from "./tools/moderation.js"
 import { pollReadTools, pollWriteTools } from "./tools/polls.js"
+import { rankingTools } from "./tools/rankings.js"
 import { reactionTools } from "./tools/reactions.js"
 import { reviewTools } from "./tools/review.js"
 import { searchesTools } from "./tools/searches.js"
@@ -41,6 +42,7 @@ export const readTools = (messenger: Messenger): Record<string, AnyTool> => ({
   ...storeTools(messenger),
   ...contactsTools(messenger),
   ...messagesTools(messenger),
+  ...rankingTools(messenger),
   ...conversationsTools(messenger),
   ...pollReadTools(messenger),
   ...messagesPhotoTools(messenger),

@@ -262,6 +262,7 @@ export const rankReplyGraph = (nodes: readonly RankingGraphNode[], check: () => 
     quality.complete =
       quality.unknownLinks === 0 && quality.unknownAuthors === 0 && quality.missingParents === 0 && quality.cycles === 0
   return {
+    parents,
     accounts: [...accountQuality.values()],
     rows: result,
     quality: {

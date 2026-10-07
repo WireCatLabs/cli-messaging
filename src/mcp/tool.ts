@@ -194,7 +194,7 @@ export const syncAllowedFor = (key: string, defaults: Defaults): boolean => {
   const shared = defaults.syncAllowed ?? levelFor(permissions, "messages.sync-first").level === "allow"
   return (
     shared &&
-    (key !== "stats_messages_show" || levelFor(permissions, "stats.messages.show.sync-first").level === "allow")
+    (!key.startsWith("stats_") || levelFor(permissions, `${key.replaceAll("_", ".")}.sync-first`).level === "allow")
   )
 }
 

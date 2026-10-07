@@ -476,6 +476,31 @@ const sending = () => {
 }
 
 describe("the MCP server", () => {
+  it("ranks and pages evidence over the actual three-tool MCP surface without connecting", async () => {
+    const root = await filledRoot()
+    const connectSpy = vi.fn(async () => {
+      throw new Error("local ranking connected")
+    })
+    const { call, raw } = await connect(scripted(), { root, connect: connectSpy })
+    const top = await call("chat_stats_contacts_top", { measure: "messages", limit: 10 })
+    expect(top.isError, JSON.stringify(top.body)).toBe(false)
+    const row = top.body.items[0]
+    const evidence = await call("chat_stats_contacts_evidence", {
+      person: row.id,
+      selection: row.drilldown.selection,
+      component: "messages",
+      limit: 1,
+    })
+    expect(evidence.isError, JSON.stringify(evidence.body)).toBe(false)
+    expect(evidence.body).toMatchObject({ included: 1, total: 1 })
+    expect((await raw.listTools()).tools.map(({ name }) => name).sort()).toEqual([
+      "chat_read",
+      "chat_tools_search",
+      "chat_write",
+    ])
+    expect(connectSpy).not.toHaveBeenCalled()
+  })
+
   it("refreshes local search and stats over a held session without marking read", async () => {
     const root = await filledRoot()
     const markRead = vi.fn(async () => {})
@@ -651,7 +676,11 @@ describe("the MCP server", () => {
       "chat_searches_list",
       "chat_stats_charts",
       "chat_stats_chats_show",
+      "chat_stats_contacts_evidence",
+      "chat_stats_contacts_top",
+      "chat_stats_messages_evidence",
       "chat_stats_messages_show",
+      "chat_stats_messages_top",
       "chat_stats_tasks_show",
       "chat_status",
       "chat_store_gaps_plan",
