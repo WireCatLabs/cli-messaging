@@ -1493,27 +1493,37 @@
         "--emoji": {
           "in": [],
           "reason": "max-cli folders hold only the chats named in them",
-          "planned": { "tg": "feat/folder-rules" }
+          "planned": {
+            "tg": "feat/folder-rules"
+          }
         },
         "--exclude-chat": {
           "in": [],
           "reason": "max-cli folders hold only the chats named in them",
-          "planned": { "tg": "feat/folder-rules" }
+          "planned": {
+            "tg": "feat/folder-rules"
+          }
         },
         "--include": {
           "in": [],
           "reason": "max-cli folders hold only the chats named in them",
-          "planned": { "tg": "feat/folder-rules" }
+          "planned": {
+            "tg": "feat/folder-rules"
+          }
         },
         "--pin": {
           "in": [],
           "reason": "max-cli folders hold only the chats named in them",
-          "planned": { "tg": "feat/folder-rules" }
+          "planned": {
+            "tg": "feat/folder-rules"
+          }
         },
         "--skip": {
           "in": [],
           "reason": "max-cli folders hold only the chats named in them",
-          "planned": { "tg": "feat/folder-rules" }
+          "planned": {
+            "tg": "feat/folder-rules"
+          }
         }
       }
     },
@@ -1543,28 +1553,38 @@
         "--emoji": {
           "in": [],
           "reason": "max-cli folders hold only the chats named in them",
-          "planned": { "tg": "feat/folder-rules" }
+          "planned": {
+            "tg": "feat/folder-rules"
+          }
         },
         "--exclude-chat": {
           "in": [],
           "reason": "max-cli folders hold only the chats named in them",
-          "planned": { "tg": "feat/folder-rules" }
+          "planned": {
+            "tg": "feat/folder-rules"
+          }
         },
         "--include": {
           "in": [],
           "reason": "max-cli folders hold only the chats named in them",
-          "planned": { "tg": "feat/folder-rules" }
+          "planned": {
+            "tg": "feat/folder-rules"
+          }
         },
         "--pin": {
           "in": [],
           "reason": "max-cli folders hold only the chats named in them",
-          "planned": { "tg": "feat/folder-rules" }
+          "planned": {
+            "tg": "feat/folder-rules"
+          }
         },
         "--remove": "all",
         "--skip": {
           "in": [],
           "reason": "max-cli folders hold only the chats named in them",
-          "planned": { "tg": "feat/folder-rules" }
+          "planned": {
+            "tg": "feat/folder-rules"
+          }
         },
         "--title": "all"
       }
@@ -3213,11 +3233,7 @@
       "in": "all"
     },
     "stats chats newcomers": {
-      "in": [],
-      "planned": {
-        "max": "Admin statistics adoption",
-        "tg": "Admin statistics adoption"
-      },
+      "in": "all",
       "options": {
         "--answerer": "all",
         "--limit": "all",
@@ -3259,11 +3275,7 @@
       }
     },
     "stats contacts responses": {
-      "in": [],
-      "planned": {
-        "max": "Admin statistics adoption",
-        "tg": "Admin statistics adoption"
-      },
+      "in": "all",
       "options": {
         "--answerer": "all",
         "--chat": "all",
@@ -3298,11 +3310,7 @@
       "in": "all"
     },
     "stats messages discussion": {
-      "in": [],
-      "planned": {
-        "max": "Admin statistics adoption",
-        "tg": "Admin statistics adoption"
-      },
+      "in": "all",
       "options": {
         "--chat": "all",
         "--exact": "all",
@@ -3379,11 +3387,7 @@
       }
     },
     "stats messages unanswered": {
-      "in": [],
-      "planned": {
-        "max": "Admin statistics adoption",
-        "tg": "Admin statistics adoption"
-      },
+      "in": "all",
       "options": {
         "--answerer": "all",
         "--chat": "all",

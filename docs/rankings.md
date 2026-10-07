@@ -103,7 +103,7 @@ join. `--until-time` ends the join cohort. First-seen-only identities are counte
 `summary.unknownJoin`, not assigned a joining date. A rejoin is a separate stay. Pending help windows
 and incomplete member history are reported; no saved question does not mean no help was needed.
 
-`discussion` compares known cumulative views with observed direct discussion replies. Provider
+`discussion` examines stored channel posts. It compares known cumulative views with observed direct discussion replies. Provider
 comment snapshots remain separate; their freshness is unknown. Linked discussion needs stored
 link metadata and its group's history. Missing counters or graph links are not zero.
 

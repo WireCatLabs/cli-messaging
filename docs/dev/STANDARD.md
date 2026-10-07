@@ -668,7 +668,7 @@ many), `--allow-any-file` (which files).
 
 The owner approved the four stored-data report views and option meanings in the
 [admin statistics contract](../plans/2026-10-08-admin-statistics-contract.md) on 2026-10-08.
-They remain planned until implementation. Reports use explicit reply evidence and preserve
+They are implemented by the shared stats service. Reports use explicit reply evidence and preserve
 unknown history and join times. They share the existing stats namespace and MCP frontend.
 
 ## Planned ranking contract
