@@ -26,6 +26,11 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   `rate_limited` and nothing sent. Bulk work that ran unpaced in parallel now takes longer. Tests that build
   their own environment and make more than 20 calls set `<APP>_REQUESTS_PER_MINUTE=0`.
 
+### Fixed
+
+- `chats update --join-approval` no longer says it works in a public group only: Telegram turns it on in a
+  private supergroup too (measured).
+
 ## 0.170.0 — 07.10.2026
 
 Released early: MAX and Telegram rankings adoption requires the new top/evidence services and command exports
