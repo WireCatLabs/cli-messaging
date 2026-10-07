@@ -1,4 +1,5 @@
 import { CliError } from "@leemour/cli-core"
+import { annotate } from "@leemour/cli-core/commands"
 import { Command } from "commander"
 import { positiveCount } from "../paging.js"
 import { type Messenger, messengerContext, refuseLocalWrite } from "./context.js"
@@ -13,8 +14,7 @@ export const metadataCommand = (messenger: Messenger): Command => {
       const { chat } = this.opts<{ chat: string }>()
       context.renderer.result(await context.withServices((services) => services.metadata.get(chat)))
     })
-  command
-    .command("refresh")
+  annotate(command.command("refresh"), { mutates: true, local: true })
     .requiredOption(
       "--chat <chat>",
       "stored group/channel; repeat for several",

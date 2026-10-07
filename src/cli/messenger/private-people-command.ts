@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises"
 import { CliError } from "@leemour/cli-core"
+import { annotate } from "@leemour/cli-core/commands"
 import { Command } from "commander"
 import { listed } from "../paging.js"
 import { type Messenger, messengerContext, refuseLocalWrite } from "./context.js"
@@ -7,8 +8,7 @@ import { readAll } from "./stdin.js"
 
 export const privatePeopleCommands = (messenger: Messenger): Command[] => {
   const alias = new Command("alias").description("a private local display name in the selected account")
-  alias
-    .command("set")
+  annotate(alias.command("set"), { mutates: true, local: true })
     .argument("<person>")
     .argument("<alias>")
     .action(async function (this: Command, person: string, value: string) {
@@ -16,8 +16,7 @@ export const privatePeopleCommands = (messenger: Messenger): Command[] => {
       refuseLocalWrite(context, messenger.app.command, "contacts.alias.set")
       context.renderer.result(await context.withServices((services) => services.privatePeople.alias(person, value)))
     })
-  alias
-    .command("rm")
+  annotate(alias.command("rm"), { mutates: true, local: true })
     .argument("<person>")
     .action(async function (this: Command, person: string) {
       const context = messengerContext(this, messenger)
@@ -43,8 +42,7 @@ export const privatePeopleCommands = (messenger: Messenger): Command[] => {
       context.renderer.result(await context.withServices((services) => services.privatePeople.note(person, id)))
     })
   for (const name of ["add", "edit"] as const) {
-    const command = notes
-      .command(name)
+    const command = annotate(notes.command(name), { mutates: true, local: true })
       .argument("<person>")
       .option("--file <path>", "read note text from a file; omitted or - reads stdin")
     if (name === "edit")
@@ -66,8 +64,7 @@ export const privatePeopleCommands = (messenger: Messenger): Command[] => {
       )
     })
   }
-  notes
-    .command("remove")
+  annotate(notes.command("remove"), { mutates: true, local: true })
     .argument("<person>")
     .argument("<id>")
     .action(async function (this: Command, person: string, id: string) {
