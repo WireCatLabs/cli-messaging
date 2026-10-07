@@ -1786,25 +1786,13 @@
       "in": "all"
     },
     "contacts alias": {
-      "in": [],
-      "planned": {
-        "max": "private metadata SDK adoption",
-        "tg": "private metadata SDK adoption"
-      }
+      "in": "all"
     },
     "contacts alias rm": {
-      "in": [],
-      "planned": {
-        "max": "private metadata SDK adoption",
-        "tg": "private metadata SDK adoption"
-      }
+      "in": "all"
     },
     "contacts alias set": {
-      "in": [],
-      "planned": {
-        "max": "private metadata SDK adoption",
-        "tg": "private metadata SDK adoption"
-      }
+      "in": "all"
     },
     "contacts block": {
       "in": "all"
@@ -1839,11 +1827,7 @@
         "--page": "all",
         "--search": "all",
         "--search-notes": {
-          "in": [],
-          "planned": {
-            "max": "private metadata SDK adoption",
-            "tg": "private metadata SDK adoption"
-          }
+          "in": "all"
         }
       }
     },
@@ -1851,53 +1835,29 @@
       "in": "all"
     },
     "contacts notes": {
-      "in": [],
-      "planned": {
-        "max": "private metadata SDK adoption",
-        "tg": "private metadata SDK adoption"
-      }
+      "in": "all"
     },
     "contacts notes add": {
-      "in": [],
+      "in": "all",
       "options": {
         "--file": "all"
-      },
-      "planned": {
-        "max": "private metadata SDK adoption",
-        "tg": "private metadata SDK adoption"
       }
     },
     "contacts notes edit": {
-      "in": [],
+      "in": "all",
       "options": {
         "--file": "all",
         "--revision": "all"
-      },
-      "planned": {
-        "max": "private metadata SDK adoption",
-        "tg": "private metadata SDK adoption"
       }
     },
     "contacts notes list": {
-      "in": [],
-      "planned": {
-        "max": "private metadata SDK adoption",
-        "tg": "private metadata SDK adoption"
-      }
+      "in": "all"
     },
     "contacts notes remove": {
-      "in": [],
-      "planned": {
-        "max": "private metadata SDK adoption",
-        "tg": "private metadata SDK adoption"
-      }
+      "in": "all"
     },
     "contacts notes show": {
-      "in": [],
-      "planned": {
-        "max": "private metadata SDK adoption",
-        "tg": "private metadata SDK adoption"
-      }
+      "in": "all"
     },
     "contacts profile": {
       "in": "all",
@@ -1915,11 +1875,7 @@
       "in": "all",
       "options": {
         "--with-notes": {
-          "in": [],
-          "planned": {
-            "max": "private metadata SDK adoption",
-            "tg": "private metadata SDK adoption"
-          }
+          "in": "all"
         }
       }
     },
@@ -2522,10 +2478,7 @@
       "in": "all",
       "options": {
         "--backend": {
-          "in": ["tg"],
-          "planned": {
-            "max": "feat/max-server-search: opcode 73 searches one chat (server-search plan section 9)"
-          }
+          "in": "all"
         },
         "--chat": "all",
         "--context": "all",
@@ -2544,10 +2497,7 @@
           "in": "all"
         },
         "--server-time": {
-          "in": ["tg"],
-          "planned": {
-            "max": "feat/max-server-search: opcode 73 searches one chat (server-search plan section 9)"
-          }
+          "in": "all"
         },
         "--source": "all",
         "--sync-first": {
@@ -2635,31 +2585,19 @@
       "in": "all"
     },
     "metadata": {
-      "in": [],
-      "planned": {
-        "max": "private metadata SDK adoption",
-        "tg": "private metadata SDK adoption"
-      }
+      "in": "all"
     },
     "metadata get": {
-      "in": [],
+      "in": "all",
       "options": {
         "--chat": "all"
-      },
-      "planned": {
-        "max": "private metadata SDK adoption",
-        "tg": "private metadata SDK adoption"
       }
     },
     "metadata refresh": {
-      "in": [],
+      "in": "all",
       "options": {
         "--chat": "all",
         "--limit": "all"
-      },
-      "planned": {
-        "max": "private metadata SDK adoption",
-        "tg": "private metadata SDK adoption"
       }
     },
     "models": {
@@ -3288,11 +3226,7 @@
       "in": "all",
       "options": {
         "--all": {
-          "in": [],
-          "planned": {
-            "max": "feat/search-readiness: shared store fetch --all, on the next cli-messaging bump",
-            "tg": "feat/search-readiness: shared store fetch --all, on the next cli-messaging bump"
-          }
+          "in": "all"
         },
         "--background": "all",
         "--catch-up": "all",
@@ -3385,27 +3319,19 @@
       }
     },
     "tags auto": {
-      "in": [],
+      "in": "all",
       "options": {
         "--chat": "all",
         "--dry-run": "all",
         "--limit": "all",
         "--refresh-metadata": "all"
-      },
-      "planned": {
-        "max": "private metadata SDK adoption",
-        "tg": "private metadata SDK adoption"
       }
     },
     "tags list": {
       "in": "all",
       "options": {
         "--source": {
-          "in": [],
-          "planned": {
-            "max": "private metadata SDK adoption",
-            "tg": "private metadata SDK adoption"
-          }
+          "in": "all"
         },
         "--tag": {
           "in": "all"
@@ -3428,11 +3354,7 @@
           "in": "all"
         },
         "--source": {
-          "in": [],
-          "planned": {
-            "max": "private metadata SDK adoption",
-            "tg": "private metadata SDK adoption"
-          }
+          "in": "all"
         }
       }
     },
