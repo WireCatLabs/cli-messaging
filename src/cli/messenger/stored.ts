@@ -94,7 +94,17 @@ export const stored = (
           const chats = (await opened.chatsWith(scoped, person.id)).filter((chat) => chat.kind === "dialog")
           if (chats.length !== 1 || !chats[0])
             throw new CliError("validation_error", "the alias has no unique stored direct chat; use a chat id")
-          return messenger.resolve(chats[0].id)
+          let remote: Awaited<ReturnType<MessengerAdapter["resolve"]>> | undefined
+          try {
+            remote = await messenger.resolve(reference)
+          } catch (error) {
+            if (!(error instanceof CliError) || error.code !== "not_found") throw error
+          }
+          if (remote && remote.id !== chats[0].id)
+            throw new CliError("validation_error", "the local alias also names another messenger chat; use a chat id", {
+              candidates: [{ id: chats[0].id }, { id: remote.id }],
+            })
+          return remote ?? messenger.resolve(chats[0].id)
         }
       }
       return messenger.resolve(reference)
