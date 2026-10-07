@@ -831,43 +831,13 @@
     }
   },
   "globalOptions": {
-    "--dry-run": {
-      "in": [],
-      "planned": {
-        "max": "full CLI audit remediation",
-        "tg": "full CLI audit remediation"
-      }
-    },
-    "--fields": {
-      "in": [],
-      "planned": {
-        "max": "full CLI audit remediation",
-        "tg": "full CLI audit remediation"
-      }
-    },
+    "--dry-run": "all",
+    "--fields": "all",
     "--json": "all",
     "--jsonl": "all",
-    "--max-input-bytes": {
-      "in": [],
-      "planned": {
-        "max": "full CLI audit remediation",
-        "tg": "full CLI audit remediation"
-      }
-    },
-    "--max-output-bytes": {
-      "in": [],
-      "planned": {
-        "max": "full CLI audit remediation",
-        "tg": "full CLI audit remediation"
-      }
-    },
-    "--no-input": {
-      "in": [],
-      "planned": {
-        "max": "full CLI audit remediation",
-        "tg": "full CLI audit remediation"
-      }
-    },
+    "--max-input-bytes": "all",
+    "--max-output-bytes": "all",
+    "--no-input": "all",
     "--no-record": "all",
     "--no-serve": {
       "in": [],
@@ -1538,14 +1508,6 @@
     "chats show": {
       "in": "all"
     },
-    "chats stats": {
-      "in": [],
-      "planned": {
-        "max": "retire this path at exact shared SDK adoption; no runtime alias",
-        "tg": "retire this path at exact shared SDK adoption; no runtime alias"
-      },
-      "subtree": true
-    },
     "chats tracking": {
       "in": [],
       "planned": {
@@ -1606,11 +1568,7 @@
       "in": "all"
     },
     "commands schema": {
-      "in": [],
-      "planned": {
-        "max": "full CLI audit remediation",
-        "tg": "full CLI audit remediation"
-      }
+      "in": "all"
     },
     "complete": {
       "in": "all"
@@ -2371,14 +2329,6 @@
     "messages show": {
       "in": "all"
     },
-    "messages stats": {
-      "in": [],
-      "subtree": true,
-      "planned": {
-        "max": "retire this path at exact shared SDK adoption; no runtime alias",
-        "tg": "retire this path at exact shared SDK adoption; no runtime alias"
-      }
-    },
     "messages transcribe": {
       "in": "all",
       "options": {
@@ -2808,55 +2758,30 @@
       "in": "all"
     },
     "stats": {
-      "in": ["max"],
-      "planned": {
-        "tg": "stats charts adoption"
-      }
+      "in": "all"
     },
     "stats charts": {
-      "in": ["max"],
-      "planned": {
-        "tg": "stats charts adoption"
-      },
+      "in": "all",
       "options": {
         "--by": {
-          "in": ["max"],
-          "planned": {
-            "tg": "stats charts adoption"
-          }
+          "in": "all"
         },
         "--chart-kind": {
-          "in": ["max"],
-          "planned": {
-            "tg": "stats charts adoption"
-          }
+          "in": "all"
         },
         "--output": {
-          "in": ["max"],
-          "planned": {
-            "tg": "stats charts adoption"
-          }
+          "in": "all"
         },
         "--since-time": {
-          "in": ["max"],
-          "planned": {
-            "tg": "stats charts adoption"
-          }
+          "in": "all"
         },
         "--timezone": {
-          "in": ["max"],
-          "planned": {
-            "tg": "stats charts adoption"
-          }
+          "in": "all"
         }
       }
     },
     "stats chats": {
-      "in": [],
-      "planned": {
-        "max": "stats hierarchy migration and rankings after naming approval",
-        "tg": "stats hierarchy migration and rankings after naming approval"
-      }
+      "in": "all"
     },
     "stats chats official": {
       "in": [],
@@ -2866,32 +2791,16 @@
       "reason": "MAX has no statistics request of its own for a chat"
     },
     "stats chats show": {
-      "in": [],
-      "planned": {
-        "max": "statistics relocation in the next shared adoption",
-        "tg": "statistics relocation in the next shared adoption"
-      },
+      "in": "all",
       "options": {
         "--by": {
-          "in": [],
-          "planned": {
-            "max": "statistics relocation in the next shared adoption",
-            "tg": "statistics relocation in the next shared adoption"
-          }
+          "in": "all"
         },
         "--since-time": {
-          "in": [],
-          "planned": {
-            "max": "statistics relocation in the next shared adoption",
-            "tg": "statistics relocation in the next shared adoption"
-          }
+          "in": "all"
         },
         "--timezone": {
-          "in": [],
-          "planned": {
-            "max": "statistics relocation in the next shared adoption",
-            "tg": "statistics relocation in the next shared adoption"
-          }
+          "in": "all"
         }
       }
     },
@@ -2910,88 +2819,40 @@
       }
     },
     "stats messages": {
-      "in": [],
-      "planned": {
-        "max": "stats hierarchy migration and rankings after naming approval",
-        "tg": "stats hierarchy migration and rankings after naming approval"
-      }
+      "in": "all"
     },
     "stats messages show": {
-      "in": [],
-      "planned": {
-        "max": "statistics relocation in the next shared adoption",
-        "tg": "statistics relocation in the next shared adoption"
-      },
+      "in": "all",
       "options": {
         "--by": {
-          "in": [],
-          "planned": {
-            "max": "statistics relocation in the next shared adoption",
-            "tg": "statistics relocation in the next shared adoption"
-          }
+          "in": "all"
         },
         "--chat": {
-          "in": [],
-          "planned": {
-            "max": "statistics relocation in the next shared adoption",
-            "tg": "statistics relocation in the next shared adoption"
-          }
+          "in": "all"
         },
         "--limit": {
-          "in": [],
-          "planned": {
-            "max": "statistics relocation in the next shared adoption",
-            "tg": "statistics relocation in the next shared adoption"
-          }
+          "in": "all"
         },
         "--max-chats": {
-          "in": [],
-          "planned": {
-            "max": "statistics relocation in the next shared adoption",
-            "tg": "statistics relocation in the next shared adoption"
-          }
+          "in": "all"
         },
         "--max-messages": {
-          "in": [],
-          "planned": {
-            "max": "statistics relocation in the next shared adoption",
-            "tg": "statistics relocation in the next shared adoption"
-          }
+          "in": "all"
         },
         "--saved": {
-          "in": [],
-          "planned": {
-            "max": "statistics relocation in the next shared adoption",
-            "tg": "statistics relocation in the next shared adoption"
-          }
+          "in": "all"
         },
         "--source": {
-          "in": [],
-          "planned": {
-            "max": "statistics relocation in the next shared adoption",
-            "tg": "statistics relocation in the next shared adoption"
-          }
+          "in": "all"
         },
         "--sync-first": {
-          "in": [],
-          "planned": {
-            "max": "statistics relocation in the next shared adoption",
-            "tg": "statistics relocation in the next shared adoption"
-          }
+          "in": "all"
         },
         "--sync-time": {
-          "in": [],
-          "planned": {
-            "max": "statistics relocation in the next shared adoption",
-            "tg": "statistics relocation in the next shared adoption"
-          }
+          "in": "all"
         },
         "--timezone": {
-          "in": [],
-          "planned": {
-            "max": "statistics relocation in the next shared adoption",
-            "tg": "statistics relocation in the next shared adoption"
-          }
+          "in": "all"
         }
       }
     },
@@ -3003,32 +2864,16 @@
       }
     },
     "stats tasks": {
-      "in": [],
-      "planned": {
-        "max": "statistics relocation in the next shared adoption",
-        "tg": "statistics relocation in the next shared adoption"
-      }
+      "in": "all"
     },
     "stats tasks show": {
-      "in": [],
-      "planned": {
-        "max": "statistics relocation in the next shared adoption",
-        "tg": "statistics relocation in the next shared adoption"
-      },
+      "in": "all",
       "options": {
         "--chat": {
-          "in": [],
-          "planned": {
-            "max": "statistics relocation in the next shared adoption",
-            "tg": "statistics relocation in the next shared adoption"
-          }
+          "in": "all"
         },
         "--type": {
-          "in": [],
-          "planned": {
-            "max": "statistics relocation in the next shared adoption",
-            "tg": "statistics relocation in the next shared adoption"
-          }
+          "in": "all"
         }
       }
     },
@@ -3352,14 +3197,6 @@
           "in": "all"
         }
       }
-    },
-    "tasks stats": {
-      "in": [],
-      "planned": {
-        "max": "retire this path at exact shared SDK adoption; no runtime alias",
-        "tg": "retire this path at exact shared SDK adoption; no runtime alias"
-      },
-      "subtree": true
     },
     "topics": {
       "in": ["tg"],

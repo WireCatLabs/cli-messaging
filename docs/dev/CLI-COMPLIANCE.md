@@ -1,11 +1,10 @@
 # CLI conventions and agent compatibility audit
 
-**Correction 2026-10-07: the shared remediation queue is implemented; consumer adoption is in progress.**
+**Correction 2026-10-07: the shared remediation queue and consumer source adoption are complete.**
 This replaces the initial 2026-10-06 snapshot at `a60391a`, which found parser/TTY error bugs,
 missing execution bounds and incomplete agent discovery. Shared PRs 620, 630, 631 and 637
-implemented the selected controls; PR647 adds a headless setup regression. MAX and Telegram
-are adopting the published SDK in separate worktrees. A shared merge does not update a released
-consumer binary. This page does not claim third-party certification or full POSIX conformance.
+implemented the selected controls; PR647 adds a headless setup regression. MAX and Telegram adopted the published SDK through the consumer PRs below. Source adoption
+does not update a previously released consumer binary. This page does not claim third-party certification or full POSIX conformance.
 
 No real session, keyring, messenger, browser login or account data was used by the audit,
 regression suite or agent evaluations. Tests use isolated synthetic fixtures.
@@ -60,12 +59,29 @@ measures six representative tasks, not every provider command or every model.
 
 ## Queue status
 
-1. Machine error consistency: implemented and published; consumer integration under validation.
-2. Headless execution and bounds: implemented; native consumer login seams under validation.
+1. Machine error consistency: implemented and published; consumer integration verified.
+2. Headless execution and bounds: implemented; native consumer login seams verified.
 3. Statistics relocation: implemented without aliases; consumer docs and generated references updated.
 4. Schema/effect discovery: implemented with explicit result coverage and separately versioned discovery.
 5. Bounded output and previews: implemented; consumer integration tests cover the exposed controls.
 6. Guidance and evaluations: implemented; portable consumer skills pass validation and the independent report is public.
 
-Consumer PRs, adopted SDK pins and final verification evidence will be recorded here when their
-adoption checks complete. Live account checks and consumer binary publication are outside this audit.
+## Consumer source adoption
+
+| Consumer | Adopted runtime | Validation |
+|---|---|---|
+| [MAX PR438](https://github.com/leemour/max-cli/pull/438), [PR441](https://github.com/leemour/max-cli/pull/441) | SDK 0.161.0, core 0.17.2 | 1,473 tests passed, 2 skipped; 92.15% line coverage; matrix 700 tested / 100 justified / 0 missing. |
+| [Telegram PR309](https://github.com/leemour/tg-cli/pull/309) | SDK 0.161.0, core 0.17.2 | 1,158 tests passed, 1 skipped; 95.05% line coverage; matrix 2,086 tested / 51 justified / 0 missing. |
+
+Both consumer changes passed lint/typecheck, generated references, parity, public docs and
+skill/configuration-reference checks. Exact PR-head CI includes Linux, macOS, Windows,
+Bun and package checks. Native MAX cancellation tracks and closes its connection; its bot
+transport reports in-flight writes to the shared execution scope. Native Telegram login and
+optional setup questions respect the input policy, including explicit QR-file login.
+
+User documentation now separates the short configuration guide from the complete key/type/
+default/scope/environment reference, and links a public CLI contract from navigation. Their
+architecture pages link the shared standards profile. The parity manifest marks the adopted
+controls and canonical statistics paths as implemented; the separate rankings feature remains planned.
+
+Live account checks and consumer binary publication are outside this audit.
