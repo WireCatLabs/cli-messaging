@@ -1,6 +1,6 @@
 import { CliError } from "@leemour/cli-core"
 import { capability } from "../cli/messenger/port.js"
-import type { AdminRight, GroupCard, GroupChange, Id } from "../domain/models.js"
+import type { AdminRight, GroupCard, GroupChange, Id, JoinRequest, Page } from "../domain/models.js"
 import { guardedWrite, type Operated } from "../sends/guarded.js"
 import { newOperationId } from "../sends/send-id.js"
 import type { ServiceDeps } from "./deps.js"
@@ -21,6 +21,13 @@ export interface AdminService {
   /** The invite link, or `not_found` when the owner may not see it. */
   link(chat: string): Promise<{ chatId: Id; title: string | null; link: string }>
   resetLink(chat: string): Promise<Operated<{ chat: GroupCard }>>
+  /** Who asked to join, newest first; only the group's admins see them. */
+  requests(chat: string, window: { limit: number }): Promise<Page<JoinRequest> & { chatId: Id }>
+  answerRequest(
+    chat: string,
+    person: string,
+    accept: boolean,
+  ): Promise<Operated<{ chatId: Id; personId: Id; accepted: boolean; already: boolean }>>
   addMembers(
     chat: string,
     people: string[],
@@ -118,6 +125,30 @@ export const adminService = (deps: ServiceDeps): AdminService => {
         reset(chatId),
       )
       return { operationId, chat: card }
+    },
+
+    requests: async (chat, window) => {
+      if (deps.offline)
+        throw new CliError("validation_error", "join requests are read from the messenger; not with --offline")
+      const connection = await deps.connection()
+      const list = capability(connection, "joinRequests", "read join requests")
+      const { id: chatId } = await connection.resolve(chat)
+      return { chatId, ...(await list(chatId, window)) }
+    },
+
+    answerRequest: async (chat, person, accept) => {
+      const connection = await online(`chats requests ${accept ? "accept" : "decline"}`)
+      const answer = capability(connection, "answerJoinRequest", "answer join requests")
+      const [personId] = await capability(connection, "people", "find people")([person])
+      const { id: chatId } = await connection.resolve(chat)
+      const operationId = newOperationId()
+      // The recipient list names the group only: whoever asked to join cannot be on it in advance.
+      const { already } = await guardedWrite(
+        deps.guard,
+        { operationId, chatId, kind: "chat", action: accept ? "requests.accept" : "requests.decline", people: 1 },
+        () => answer(chatId, personId as Id, accept),
+      )
+      return { operationId, chatId, personId: personId as Id, accepted: accept, already }
     },
 
     addMembers: async (chat, people, options) => {

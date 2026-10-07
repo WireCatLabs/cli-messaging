@@ -123,6 +123,16 @@ describe("two senders at once", () => {
       guard("g-people", 2).check({ chatId: "111", kind: "chat", action: "members.add", personIds: ["1", "2", "3"] }),
     ).toThrow("3 at once is more than the hourly limit")
   })
+
+  it("counts an accepted join request, as a person added, and not a declined one", () => {
+    const decline = { chatId: "111", kind: "chat" as const, action: "requests.decline" as const }
+    guard("g-requests", 1).check(decline)
+    expect(() => guard("g-requests", 1).check(decline)).not.toThrow()
+
+    const accept = { chatId: "111", kind: "chat" as const, action: "requests.accept" as const, people: 1 }
+    guard("g-requests", 1).check(accept)
+    expect(() => guard("g-requests", 1).check(accept)).toThrow("the next send is possible")
+  })
 })
 
 describe("a reaction", () => {

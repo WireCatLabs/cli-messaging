@@ -171,6 +171,7 @@ export type {
   ForumState,
   GroupModeration,
   HistoryBatch,
+  JoinRequests,
   LiveUpdates,
   MessageEditing,
   MessageMedia,

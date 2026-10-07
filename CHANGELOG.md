@@ -6,6 +6,15 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- `chats requests list <chat>` shows who asked to join a group or channel that needs an admin's approval, newest
+  first, and `chats requests accept|decline <chat> <person>` answers one; MCP `chats_requests_list`,
+  `chats_requests_accept` and `chats_requests_decline` do the same. Answers go through the guard as
+  `chats.requests.accept` / `chats.requests.decline`; the recipient list checks the group only, and an accepted
+  request counts toward the hourly limit like an added member. Adapters implement the new optional
+  `JoinRequests` group; one without it refuses.
+
 ## 0.169.0 — 07.10.2026
 
 ### Added

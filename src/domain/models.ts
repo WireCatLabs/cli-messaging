@@ -372,6 +372,15 @@ export interface TopicChange {
   hidden?: boolean
 }
 
+/** Someone who asked to join a group or channel that needs an admin's approval. */
+export interface JoinRequest {
+  person: Member
+  /** When they asked; ISO 8601. */
+  requestedAt: string
+  /** The note they sent with the request, when they wrote one. */
+  about?: string
+}
+
 /** Where a channel post's comments are: its copy in the linked discussion group, which they reply to. */
 export interface Discussion {
   chatId: Id

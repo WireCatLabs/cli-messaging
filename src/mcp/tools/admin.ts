@@ -4,7 +4,7 @@ import type { MessengerAdapter } from "../../cli/messenger/port.js"
 import { ADMIN_RIGHTS, GROUP_SETTINGS } from "../../domain/models.js"
 import type { SendGuard } from "../../sends/guard.js"
 import { onlineDeps, servicesFor } from "../../services/index.js"
-import { type AnyTool, chatOf, READ, tool, WRITE } from "../tool.js"
+import { type AnyTool, chatOf, limit, READ, tool, WRITE } from "../tool.js"
 
 /** Groups the owner makes, joins and leaves: other people see each one, so each is behind its permission level. */
 export const adminTools = (messenger: Messenger): Record<string, AnyTool> => {
@@ -88,6 +88,32 @@ export const adminTools = (messenger: Messenger): Record<string, AnyTool> => {
       annotations: WRITE,
       permission: "groups",
       online: (adapter, args, { guard }) => admin(adapter, guard).resetLink(args.chat),
+    }),
+    chats_requests_list: tool({
+      title: "Requests to join a group",
+      description:
+        "Who asked to join a group or channel that needs an admin's approval, newest first: { chatId, items: " +
+        "[{ person, requestedAt, about }], hasMore }. Only admins see them. Reading tells nobody.",
+      input: v.object({ chat: chatOf(messenger), limit }),
+      annotations: READ,
+      online: (adapter, args, defaults) =>
+        admin(adapter, defaults.guard).requests(args.chat, { limit: args.limit ?? defaults.limit }),
+    }),
+    chats_requests_accept: tool({
+      title: "Accept a request to join",
+      description: "Let one person who asked to join into the group. Only the person and group the owner named.",
+      input: v.object({ chat: chatOf(messenger), person: v.pipe(v.string(), v.minLength(1)) }),
+      annotations: WRITE,
+      permission: "groups",
+      online: (adapter, args, { guard }) => admin(adapter, guard).answerRequest(args.chat, args.person, true),
+    }),
+    chats_requests_decline: tool({
+      title: "Decline a request to join",
+      description: "Turn away one person who asked to join the group. Only the person and group the owner named.",
+      input: v.object({ chat: chatOf(messenger), person: v.pipe(v.string(), v.minLength(1)) }),
+      annotations: WRITE,
+      permission: "groups",
+      online: (adapter, args, { guard }) => admin(adapter, guard).answerRequest(args.chat, args.person, false),
     }),
     chats_members_add: tool({
       title: "Add people to a group",

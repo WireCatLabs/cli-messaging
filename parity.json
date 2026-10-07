@@ -1551,6 +1551,12 @@
         }
       }
     },
+    "chats requests": {
+      "in": [],
+      "reason": "MAX groups have no join approval",
+      "planned": { "tg": "G2 feat/join-requests" },
+      "subtree": true
+    },
     "chats rules": {
       "in": "all"
     },
