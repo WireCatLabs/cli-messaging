@@ -93,7 +93,7 @@ type Counted = Pick<SendEntry, "kind" | "action" | "notify" | "count" | "people"
  * What puts something in front of somebody (max-cli `NEED-168`, widened by `NEED-282`). A message, a
  * forward, an edit, a pin that notifies, a new group and people added to one all do. A reaction,
  * a quiet pin or a change of title wakes nobody. A deletion wakes nobody either, but many at once
- * is what a ban for automation looks like.
+ * is what a ban for automation looks like. An accepted join request adds a person, as `members.add` does.
  */
 const countsTowardLimit = ({ kind = "message", action, notify }: Counted) =>
   kind === "message" ||
@@ -102,7 +102,8 @@ const countsTowardLimit = ({ kind = "message", action, notify }: Counted) =>
   kind === "delete" ||
   (kind === "pin" && notify === true) ||
   action === "create" ||
-  action === "members.add"
+  action === "members.add" ||
+  action === "requests.accept"
 
 /** Each deleted message, and each person added to a group, counts as one. */
 const weightOf = ({ kind, action, count, people }: Counted): number =>

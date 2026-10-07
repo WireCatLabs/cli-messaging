@@ -16,6 +16,7 @@ import type {
   GroupChange,
   GroupMember,
   Id,
+  JoinRequest,
   LinkTarget,
   Member,
   Message,
@@ -303,6 +304,17 @@ export interface SenderIdentities {
   savedSender(chatId: Id): Promise<Id | null>
 }
 
+/** Requests to join a group or channel that needs approval; only its admins see them. */
+export interface JoinRequests {
+  /** Newest first. Reading them tells nobody. */
+  joinRequests(chatId: Id, window: { limit: number }): Promise<Page<JoinRequest>>
+  /**
+   * Lets them in, or turns them away. `already` when they were a member before the answer; a request
+   * that is gone — answered elsewhere or withdrawn — is `not_found`.
+   */
+  answerJoinRequest(chatId: Id, personId: Id, accept: boolean): Promise<{ already: boolean }>
+}
+
 /** Comments under a channel post, which live in the channel's linked discussion group. */
 export interface ChannelComments {
   /** The post's copy in the discussion group; a post that takes no comments is `not_found`. */
@@ -490,6 +502,7 @@ export interface MessengerAdapter
     Partial<AccountTools>,
     Partial<ProfilePhotos>,
     Partial<GroupAdmin>,
+    Partial<JoinRequests>,
     Partial<ChatFolders>,
     Partial<ContactBook>,
     Partial<AccountEditing>,

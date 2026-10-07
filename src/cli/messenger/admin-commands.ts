@@ -2,6 +2,7 @@ import { CliError } from "@leemour/cli-core"
 import { annotate } from "@leemour/cli-core/commands"
 import { Command } from "commander"
 import { ADMIN_RIGHTS, type AdminRight, GROUP_SETTINGS, type GroupSettings } from "../../domain/models.js"
+import { positiveCount } from "../paging.js"
 import { type Messenger, messengerContext } from "./context.js"
 
 const SETTING_FLAGS: Record<keyof GroupSettings, [flag: string, help: string]> = {
@@ -121,6 +122,41 @@ export const rightsOf = (offered: readonly AdminRight[], typed: string): AdminRi
   return rights as AdminRight[]
 }
 
+const requestsCommand = (messenger: Messenger): Command => {
+  const requests = new Command("requests").description("requests to join a group that needs an admin's approval")
+  requests
+    .command("list")
+    .description("who asked to join, newest first; only admins see them, and reading tells nobody")
+    .argument("<chat>", messenger.chatArgument)
+    .option("--limit <n>", "how many", positiveCount("--limit"))
+    .action(async function (this: Command, chat: string) {
+      const context = messengerContext(this, messenger)
+      const { limit } = context.settings
+      const found = await context.withServices((services) => services.admin.requests(chat, { limit }))
+      if (context.format === "json") context.renderer.result(found)
+      else context.renderer.stream(found.items)
+      if (found.hasMore) context.renderer.note(`more requests: raise --limit above ${limit}`)
+    })
+  for (const [verb, accept, help] of [
+    ["accept", true, "let them in; the group sees them join"],
+    ["decline", false, "turn the request away"],
+  ] as const) {
+    requests.addCommand(
+      annotate(new Command(verb), { mutates: true })
+        .description(help)
+        .argument("<chat>", messenger.chatArgument)
+        .argument("<person>", "who asked: an id from `chats requests list`")
+        .action(async function (this: Command, chat: string, person: string) {
+          const context = messengerContext(this, messenger)
+          context.renderer.result(
+            await context.withServices((services) => services.admin.answerRequest(chat, person, accept)),
+          )
+        }),
+    )
+  }
+  return requests
+}
+
 /** `chats create`, `join`, `leave`, `update` and `link`: the help text is max-cli's, the one both tools say (standard, help rule 2). */
 export const groupCommands = (messenger: Messenger): Command[] => [
   annotate(new Command("create"), { mutates: true })
@@ -154,5 +190,6 @@ export const groupCommands = (messenger: Messenger): Command[] => [
 
   updateCommand(messenger),
   linkCommand(messenger),
+  requestsCommand(messenger),
   adminsCommand(messenger),
 ]

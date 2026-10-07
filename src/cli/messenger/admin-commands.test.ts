@@ -225,6 +225,41 @@ describe("chats create, join and leave", () => {
     ])
   })
 
+  it("**lists join requests and answers one**, journaling each answer", async () => {
+    const env = sandbox()
+    const request = {
+      person: { id: "91", name: "Synthetic Person", username: null },
+      requestedAt: "2026-10-07T18:00:00.000Z",
+    }
+    const answered: unknown[] = []
+    const adapter: MessengerAdapter = {
+      ...base,
+      people: async (references) => references,
+      joinRequests: async () => ({ items: [request], hasMore: true }),
+      answerJoinRequest: async (chatId, personId, accept) => {
+        answered.push([chatId, personId, accept])
+        return { already: false }
+      },
+    }
+
+    const listed = await call(["chats", "requests", "list", "Book club", "--limit", "1", "--json"], adapter, env)
+    const accepted = await call(["chats", "requests", "accept", "Book club", "91", "--json"], adapter, env)
+    const declined = await call(["chats", "requests", "decline", "Book club", "92", "--json"], adapter, env)
+
+    expect(JSON.parse(listed.stdout[0] ?? "")).toEqual({ chatId: "7", items: [request], hasMore: true })
+    expect(listed.stderr.join("")).toContain("raise --limit above 1")
+    expect(JSON.parse(accepted.stdout[0] ?? "")).toMatchObject({ personId: "91", accepted: true, already: false })
+    expect(JSON.parse(declined.stdout[0] ?? "")).toMatchObject({ personId: "92", accepted: false })
+    expect(answered).toEqual([
+      ["7", "91", true],
+      ["7", "92", false],
+    ])
+    expect(new SendJournal(sendsPathFor(app, "default", env)).entries()).toMatchObject([
+      { kind: "chat", action: "requests.accept", chatId: "7", outcome: "sent" },
+      { kind: "chat", action: "requests.decline", chatId: "7", outcome: "sent" },
+    ])
+  })
+
   it("**adds and removes people through the guard**, naming who could not be added", async () => {
     const env = sandbox()
     const done: unknown[] = []
