@@ -188,18 +188,13 @@ the next patch otherwise — and publish that. They run every check, and tag `v<
 shows it. The token is never printed and never
 written to a file.
 
-Both also refuse within 2 hours of the last version npm shows, and say when the next one may go. A
-consumer blocked right now is the exception (below): `bin/release --blocked "<consumer and reason>"`
-writes `Released early: <reason>` under the version's changelog heading, commits it to `main` and
-publishes. Name the consumer and what it cannot do, in plain words — `pnpm docs:check` refuses an
-internal id. When npm cannot be asked, they refuse rather than skip the check. The GitHub form publishes from the job in the `npm` environment, which is what
+The GitHub form publishes from the job in the `npm` environment, which is what
 npm's trusted publisher names: `leemour` / `cli-messaging` / `release.yml` / environment `npm`.
 
 ### How often, and what may break
 
-**At most one release every 2 hours.** Changes wait under `## Unreleased` and ship together, so what
-lands in one sitting goes out as one version. The one exception is a fix a consumer is blocked on
-right now: it ships alone, and the changelog says which consumer and why.
+**Release when a consumer needs it.** Changes wait under `## Unreleased` until then; there is no
+gap to keep between releases — tg-cli and max-cli pace their own.
 
 **These exports are stable.** A change that breaks them waits for a **breaking release**, at most one
 a week, whose changelog section says what to change in a consumer; tg-cli and max-cli move to it

@@ -4,7 +4,6 @@
 #
 #   bin/release           # publishes from GitHub Actions (.github/workflows/release.yml)
 #   bin/release --local   # publishes from this machine: NPM_TOKEN if exported, else the keyring
-#   bin/release --blocked "<consumer and reason>"   # within 2 hours of the last release, see README
 #
 # The npm token is never printed and never written to a file — not on success, not in an error.
 set -eu
@@ -13,27 +12,18 @@ cd "$(dirname "$0")/.."
 package=@leemour/cli-messaging
 
 mode=ci
-blocked=""
-usage() { echo 'usage: bin/release [--local] [--blocked "<consumer and reason>"]' >&2; exit 2; }
+usage() { echo 'usage: bin/release [--local]' >&2; exit 2; }
 # A function, so the arguments survive for the exec after the merge below.
 parse() {
   while [ $# -gt 0 ]; do
     case "$1" in
       --local) mode=local ;;
-      --blocked) [ -n "${2:-}" ] || usage; blocked=$2; shift ;;
       *) usage ;;
     esac
     shift
   done
 }
 parse "$@"
-# The reason lands in CHANGELOG.md, which docs:check refuses an internal id in; caught here, before
-# the commit to main that 0.98.0 made and its release run then failed on.
-if printf '%s' "$blocked" | grep -Eq '\b(CLI|MAX|OPS|CORE|NEED|BUG|FIND|SEC|PERF|UX|IDEA|DEBT|RISK|ASK|TASK)-[0-9]+\b'; then
-  echo "--blocked: say who is blocked and why in plain words, not an internal id" >&2
-  exit 2
-fi
-
 git fetch -q origin
 [ "$(git branch --show-current)" = "main" ] || { echo "not on main" >&2; exit 1; }
 [ -z "$(git status --porcelain --untracked-files=no)" ] || { echo "uncommitted changes" >&2; exit 1; }
@@ -43,30 +33,6 @@ git merge -q --ff-only origin/main
 [ "$(git rev-parse HEAD)" = "$before" ] || exec "$0" "$@"
 # The workflow publishes origin/main, so a local commit not pushed yet would silently not ship.
 [ "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)" ] || { echo "main is ahead of origin/main — push first" >&2; exit 1; }
-
-# The rule in README alone did not hold: twelve releases followed the day it merged (2026-10-01).
-# One a day proved too few the same evening; two hours apart still batches what lands together.
-times=$(npm view "$package" time --json --prefer-online 2>/dev/null) || {
-  echo "npm did not answer when $package was last published — not releasing" >&2
-  exit 1
-}
-early=$(node -e 'const times = JSON.parse(process.argv[1])
-  const [version, at] = Object.entries(times).filter(([key]) => key !== "created" && key !== "modified")
-    .map(([key, value]) => [key, new Date(value)]).sort((a, b) => b[1] - a[1])[0] ?? []
-  if (!at || Number.isNaN(at.getTime())) throw new Error("npm answered with no publish time")
-  const next = new Date(at.getTime() + 2 * 3600 * 1000)
-  const utc = (date) => `${date.toISOString().slice(0, 16).replace("T", " ")} UTC`
-  if (next > new Date()) console.log(`${version} was published ${utc(at)}; the next release may go at ${utc(next)}`)' \
-  "$times") || { echo "npm's publish times did not parse — not releasing" >&2; exit 1; }
-if [ -n "$early" ] && [ -z "$blocked" ]; then
-  echo "at most one release every 2 hours: $early." >&2
-  echo "a consumer blocked right now may go now: bin/release --blocked \"<consumer and reason>\" (README, Releasing)" >&2
-  exit 1
-fi
-if [ -z "$early" ] && [ -n "$blocked" ]; then
-  echo "no release in the last 2 hours — --blocked is not needed, releasing as usual"
-  blocked=""
-fi
 
 version=$(node -p 'require("./package.json").version')
 # `npm view` rather than the registry document, which a CDN serves stale for minutes.
@@ -95,23 +61,6 @@ if [ "$next" != "$version" ]; then
   subject="chore: release $next"
   body="bin/release: $why."
   version=$next
-fi
-if [ -n "$blocked" ]; then
-  # A rerun after a failed publish finds the line already there and adds no second one.
-  node -e 'const fs = require("fs"); const [version, reason] = process.argv.slice(1)
-    const text = fs.readFileSync("CHANGELOG.md", "utf8")
-    const start = text.indexOf(`\n## ${version} — `)
-    if (start < 0) process.exit(1)
-    const end = text.indexOf("\n", start + 1) + 1
-    const line = `Released early: ${reason}`
-    if (!text.slice(end).split("\n## ")[0].includes(line))
-      fs.writeFileSync("CHANGELOG.md", `${text.slice(0, end)}\n${line}\n${text.slice(end)}`)' "$version" "$blocked" || {
-    git checkout -q -- package.json CHANGELOG.md
-    echo "CHANGELOG.md has no \"## $version — \" section to name the blocked consumer in" >&2
-    exit 1
-  }
-  subject=${subject:-"chore: release $version early"}
-  body="${body:+$body }Released early: $blocked"
 fi
 if [ -n "$(git status --porcelain --untracked-files=no)" ]; then
   git commit -q -am "$subject" -m "$body"
