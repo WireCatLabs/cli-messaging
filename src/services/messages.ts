@@ -35,6 +35,15 @@ import {
 } from "./messages-search.js"
 import { refreshSearch, type SearchRefreshed, type SyncOptions, withRefresh } from "./search-refresh.js"
 import { type SearchParams, searchRecordOf } from "./searches.js"
+import {
+  type Backend,
+  type HitSource,
+  type ServerOptions,
+  type ServerSearched,
+  type ServerStep,
+  searchServer,
+  sourceKey,
+} from "./server-search.js"
 import { readThreadContext, type ThreadContext, type ThreadOptions, threadBounds } from "./thread-context.js"
 
 export interface ListWindow {
@@ -54,6 +63,11 @@ export interface AroundWindow {
 export interface SearchQuery {
   thread?: ThreadOptions
   syncFirst?: SyncOptions
+  /** Where to search: the local archive (default), the messenger's server, or both. */
+  backend?: Backend
+  server?: ServerOptions
+  /** Only these messages of the account it runs as — `--backend server` searches what the server returned. */
+  only?: { chatId: Id; id: Id }[]
   /** Strict Lucene by default; legacy discovery is explicit through language or a RegExp pattern. */
   text?: string
   language?: "lucene" | "legacy"
@@ -83,12 +97,14 @@ export type FoundMessage = StoredHit & {
   match?: Match
   score?: number | null
   exact?: boolean
+  source?: HitSource
   context?: WindowedMessage[]
   thread?: ThreadContext
 }
 
 export interface SearchFound extends Page<FoundMessage> {
   refreshed?: SearchRefreshed
+  server?: ServerSearched
   query?: QueryMetadata
   coverage?: SearchCoverage
   corrections: { from: string; to: string[] }[]
@@ -372,9 +388,17 @@ export const messagesService = (deps: ServiceDeps): MessagesService => {
       return inStore(async (store, account) => {
         if (query.thread) threadBounds(query.thread)
         const refreshed = await refreshSearch(deps, query)
-        const found = await searchStore(store, account, query, deps.messenger)
+        const server = await searchServer(deps, query)
+        const only =
+          query.backend === "server" && server
+            ? [...server.sources.keys()].map((key) => {
+                const [chatId, id] = JSON.parse(key) as [Id, Id]
+                return { chatId, id }
+              })
+            : undefined
+        const found = await searchStore(store, account, only ? { ...query, only } : query, deps.messenger)
         await remember(store, "search", query)
-        return withRefresh(found, refreshed)
+        return withServer(withRefresh(found, refreshed), server)
       })
     },
 
@@ -575,6 +599,18 @@ const withThreads = async (store: MessageStore, found: SearchFound, request: Sea
     })
   return { ...found, items }
 }
+
+const withServer = <T extends SearchFound>(found: T, server?: ServerStep): T =>
+  server
+    ? {
+        ...found,
+        server: server.report,
+        items: found.items.map((hit) => ({
+          ...hit,
+          source: server.sources.get(sourceKey(hit.chatId, hit.id)) ?? "archive",
+        })),
+      }
+    : found
 
 export const validateSearchDialect = (request: SearchQuery): void => {
   const { pattern } = request

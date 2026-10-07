@@ -236,6 +236,15 @@ written by nobody and rebuilt only by `store migrate` or `store reindex`, never 
 tools with different settings or Snowball versions cannot rebuild each other's index in turn; a row a
 newer Snowball built is refused with "upgrade this tool".
 
+**Server search beside the archive.** `messages.search` with `backend: both|server` first runs
+`searchServer` (`src/services/server-search.ts`): it turns the resolved query into at most three
+server queries (required words, one chat, one sender, dates), calls the optional `MessageSearch`
+capability under a time bound, looks up which hits the store already held, and saves the rest with
+`via: "search"` — never `markRange`, so ranges and coverage stay what `store fetch` proved. The strict
+local query then runs once over everything; `server` restricts it to the returned messages
+(`QueryExecution.only`). A page that arrives after the bound is dropped unsaved. The step is not wrapped
+by `stored`, because it must look before it saves.
+
 **Drizzle is bundled, not installed.** `drizzle-orm` is a development dependency. `pnpm build` runs
 `scripts/bundle-drizzle.ts`, which writes the Drizzle modules the store uses into
 `dist/store/sqlite/drizzle/`: loaded from `node_modules`, Drizzle costs Node about 200 ms per

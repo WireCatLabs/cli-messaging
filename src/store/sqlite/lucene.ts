@@ -409,6 +409,18 @@ const compileQuery = (context: StoreContext, execution: QueryExecution, boundedA
       "AND",
     )
   }
+  if (execution.only)
+    where = combine(
+      [
+        where,
+        {
+          sql: "EXISTS (SELECT 1 FROM json_each(?) j WHERE json_extract(j.value,'$.chatId')=c.native_id AND json_extract(j.value,'$.id')=m.native_id)",
+          params: [JSON.stringify(execution.only)],
+          exact: true,
+        },
+      ],
+      "AND",
+    )
   const joinedFrom =
     "FROM messages m JOIN chats c ON c.pk=m.chat_pk JOIN accounts ac ON ac.pk=m.account_pk LEFT JOIN identities i ON i.pk=m.sender_identity_pk"
   let baseFrom = joinedFrom

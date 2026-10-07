@@ -99,6 +99,10 @@
       "value": "<n>",
       "meaning": "which file of the message, from 1; needed when it has more than one"
     },
+    "--backend": {
+      "value": "<archive|server|both>",
+      "meaning": "where to search: the local archive, the messenger's server, or both (default: archive)"
+    },
     "--background": {
       "meaning": "run as a job that outlives this command; `store jobs show` follows it"
     },
@@ -723,6 +727,10 @@
     },
     "--serve": {
       "meaning": "start `serve` in the background if it is not running (the default)"
+    },
+    "--server-time": {
+      "value": "<duration>",
+      "meaning": "stop waiting for the server after this long (default: 5s)"
     },
     "--show-phone": {
       "meaning": "print the whole phone number"
@@ -2350,6 +2358,13 @@
     "messages search": {
       "in": "all",
       "options": {
+        "--backend": {
+          "in": [],
+          "planned": {
+            "tg": "feat/server-search: Telegram searchMessages adapter (docs/plans/2026-10-07-server-search.md)"
+          },
+          "reason": "MAX has no verified server message search: opcode 73 is unprobed (server-search plan section 0)"
+        },
         "--chat": "all",
         "--context": "all",
         "--exact": "all",
@@ -2365,6 +2380,13 @@
         "--regex": "all",
         "--saved": {
           "in": "all"
+        },
+        "--server-time": {
+          "in": [],
+          "planned": {
+            "tg": "feat/server-search: Telegram searchMessages adapter (docs/plans/2026-10-07-server-search.md)"
+          },
+          "reason": "MAX has no verified server message search: opcode 73 is unprobed (server-search plan section 0)"
         },
         "--source": "all",
         "--sync-first": {

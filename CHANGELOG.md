@@ -6,6 +6,13 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- `messages search --backend archive|server|both` and `--server-time` (MCP `backend`, `server_time`), offered
+  where the messenger sets `serverSearch` and its adapter has the new optional `MessageSearch.searchMessages`.
+  The server's hits are saved and re-checked by the same strict query; each hit gets `source` and the answer a
+  `server` block. Default `archive`, unchanged. Permission key `messages.server-search`; `stats` stays local.
+
 ## 0.168.0 — 07.10.2026
 
 Released early: MAX and Telegram attachment OCR adoption cannot compile against the published SDK: ModelImage and explicit bulk OCR are missing
