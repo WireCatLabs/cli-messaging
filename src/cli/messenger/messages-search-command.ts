@@ -187,7 +187,11 @@ Search guide: https://github.com/leemour/cli-messaging/blob/main/docs/search/que
           )
         }
         if (found.items.length === 0)
-          context.renderer.note("nothing found — only what is in the local store is searched")
+          context.renderer.note(
+            found.server && !found.server.skipped
+              ? "nothing found in the local store or on the messenger's server"
+              : "nothing found — only what is in the local store is searched",
+          )
         return
       }
       if (context.format === "jsonl") context.renderer.stream(found.items)

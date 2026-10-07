@@ -6,6 +6,12 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Fixed
+
+- An empty `messages search` that asked the messenger's server says «nothing found in the local store or on the
+  messenger's server», not that only the local store was searched. The search docs and the MCP description say
+  the server is asked by default where it can search.
+
 ## 0.175.0 — 08.10.2026
 
 ### Added
