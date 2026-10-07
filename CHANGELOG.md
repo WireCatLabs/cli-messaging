@@ -8,6 +8,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## 0.163.0 — 07.10.2026
 
+Released early: tg-cli and max-cli adopt stemmed search today, at the owner's request
+
 ### Added
 
 - `chats send-as <chat>` and the read-only MCP tool `chats_send_as` list the identities the account may post
