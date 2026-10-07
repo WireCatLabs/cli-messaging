@@ -292,6 +292,7 @@ describe("store fetch", () => {
     expect(state.asked).toHaveLength(asked)
 
     rmSync(join(env.CHAT_STATE_DIR, "flood"), { recursive: true })
+    rmSync(join(env.CHAT_STATE_DIR, "pace"), { recursive: true })
     const resumed = await call(["store", "fetch", "7", "--pause", "1ms", "--json"], chatOf(state), env)
     expect(resumed.answer).toMatchObject({ complete: true, ranges: [{ from: 1, to: 250 }] })
   })

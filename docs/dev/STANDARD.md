@@ -151,7 +151,8 @@ guessable from the others.
    both tools share; max's per-profile **cache** is a different thing until it is replaced, and
    keeps its name until then. `session` is this tool's login; `account sessions` are the other
    devices. **`flood`** is what the messenger told this profile to hold off on — the waits it asked
-   for and a hold on writes — kept on this machine; `flood clear` is the owner's and has no MCP tool.
+   for and a hold on writes — kept on this machine; `flood clear` is the owner's and has no MCP tool. The
+   **pace** is how fast one profile may ask its messenger, counted across every process (`requestsPerMinute`).
 8. **An MCP tool is named after its command** — see [MCP](#mcp).
 9. **No aliases.** A renamed command's old name stops working, and the release notes say so under
    "may break scripts".

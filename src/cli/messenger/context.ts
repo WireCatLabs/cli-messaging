@@ -4,6 +4,7 @@ import { servingProfiles } from "../../background/lock.js"
 import type { AdminRight, Chat, GroupSettings, Id, Provider } from "../../domain/models.js"
 import { FloodMemory, floodPathFor } from "../../sends/flood.js"
 import { guardFor, type SendGuard } from "../../sends/guard.js"
+import { DEFAULT_PACE, type PaceRate, Pacer, pacePathFor } from "../../sends/pace.js"
 import {
   assertStatsPermissionsCurrent,
   levelFor,
@@ -62,6 +63,8 @@ export interface Messenger {
   provider: Provider
   /** The messenger's own name, as its users write it — `Telegram`, `MAX`. Defaults to the command. */
   name?: string
+  /** How fast one profile may ask the messenger, across processes, unless `requestsPerMinute` says otherwise. */
+  pace?: PaceRate
   resolveSettings: (flags: GlobalFlags, options?: ResolveOptions) => Settings
   /**
    * Opens a connection for the command's profile, or throws a typed error saying how to log in.
@@ -180,14 +183,29 @@ const settled = async (pending: Set<Promise<void>>, ms: number): Promise<boolean
  */
 export const connected = (
   connection: MessengerAdapter,
-  { app, provider, name, deletedWithoutChat }: Pick<Messenger, "app" | "provider" | "name" | "deletedWithoutChat">,
+  {
+    app,
+    provider,
+    name,
+    deletedWithoutChat,
+    pace,
+  }: Pick<Messenger, "app" | "provider" | "name" | "deletedWithoutChat" | "pace">,
   { settings, env, renderer }: Pick<BaseContext, "settings" | "env" | "renderer">,
   events: EventSink,
 ): { adapter: MessengerAdapter; close: () => Promise<void> } => {
   const self = connection.self()
   if (self !== null) rememberAccount(app, settings.profile, self, env)
   const memory = new FloodMemory(floodPathFor(app, settings.profile, env))
-  const adapter = observed(flooded(connection, memory, { name: name ?? app.command, warn: renderer.warn }), events)
+  const rate = {
+    ...DEFAULT_PACE,
+    ...pace,
+    ...(settings.requestsPerMinute === undefined ? {} : { perMinute: settings.requestsPerMinute }),
+  }
+  const pacer = new Pacer(pacePathFor(app, settings.profile, env), rate)
+  const adapter = observed(
+    flooded(connection, memory, { name: name ?? app.command, warn: renderer.warn, pacer }),
+    events,
+  )
   let store: Promise<MessageStore | undefined> | undefined
   const pending = new Set<Promise<void>>()
   return {
