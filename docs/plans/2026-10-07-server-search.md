@@ -1,8 +1,9 @@
 # Server search beside the archive — `--backend archive|server|both`
 
 Plan, 2026-10-07 (max-cli journal TASK-456, handoff [2026-10-07-server-search-handoff.md](2026-10-07-server-search-handoff.md)).
-Read at cli-messaging `a1dedb5`, tg-cli `7b00153`, max-cli `adca306`. **§9 is open: the default stays `archive`
-until the owner answers NEED-809.** Everything else below is decided here.
+Read at cli-messaging `a1dedb5`, tg-cli `7b00153`, max-cli `adca306`. **§9 answered 2026-10-07: default `both`
+(NEED-809 A), MAX searches one chat (NEED-810), Telegram probed (NEED-811).** Shipped: cli-messaging 0.169.0–0.174.0,
+tg-cli #332/#334/#340, max-cli #462/#463.
 
 Evidence labels as in [the stemmed-search plan](2026-10-04-stemmed-search.md): **verified** has a `path:line`;
 **docs say** names the source; **inferred** is reasoning.

@@ -1231,6 +1231,26 @@ describe("the shared read commands", () => {
     expect(without.stderr.join("\n")).toContain("--backend")
   })
 
+  it("**an empty search that asked the server** says both were searched", async () => {
+    const root = mkdtempSync(join(tmpdir(), "messenger-"))
+    const env = {
+      ...process.env,
+      CHAT_STATE_DIR: join(root, "state"),
+      CHAT_CONFIG_DIR: join(root, "config"),
+      MESSAGING_STORE: join(root, "m.db"),
+    }
+    await call(["messages", "context", "Book", "2", "--json"], async () => fake, env)
+    const searchMessages = vi.fn(async () => ({ items: [], hasMore: false, chats: [] }))
+    const answer = await call(
+      ["messages", "search", "zqxwnothing"],
+      async () => ({ ...fake, searchMessages }),
+      env,
+      { tty: true },
+      { serverSearch: true },
+    )
+    expect(answer.stderr.join("\n")).toContain("nothing found in the local store or on the messenger's server")
+  })
+
   it("**--backend both** on a read-only profile answers from the archive and never asks the server", async () => {
     const root = mkdtempSync(join(tmpdir(), "messenger-"))
     const env = {
