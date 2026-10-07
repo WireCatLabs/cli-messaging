@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.177.0 — 08.10.2026
+
 ### Added
 
 - `Poll` gains optional `quiz`, `revote` and `creator`, so `polls show` can say a poll has one correct answer,
