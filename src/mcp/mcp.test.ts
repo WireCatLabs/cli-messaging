@@ -651,6 +651,8 @@ describe("the MCP server", () => {
       "chat_contacts_context",
       "chat_contacts_list",
       "chat_contacts_lookup",
+      "chat_contacts_notes_list",
+      "chat_contacts_notes_show",
       "chat_contacts_profile",
       "chat_contacts_show",
       "chat_conversations_batches_next",
@@ -670,6 +672,7 @@ describe("the MCP server", () => {
       "chat_messages_scheduled",
       "chat_messages_search",
       "chat_messages_transcribe",
+      "chat_metadata_get",
       "chat_polls_show",
       "chat_review",
       "chat_searches_history",
@@ -1336,6 +1339,45 @@ describe("the MCP server", () => {
     expect(names).toEqual(expect.arrayContaining(["chat_tasks_list", "chat_stats_tasks_show"]))
     expect(names).not.toContain("chat_tasks_add")
     expect(names).not.toContain("chat_tasks_close")
+  })
+
+  it("keeps private contact metadata local through MCP and offers only its reads on a readonly profile", async () => {
+    const { call, env } = await connect(scripted())
+    await call("chat_chats_list")
+    const store = await openStore({ path: env.MESSAGING_STORE })
+    await seedSearchRecipes(store, { provider: "chat", account: "500" })
+    await store.saveChatMetadata(
+      { provider: "chat", account: "500" },
+      { chatId: "7", title: "AI news", username: null, description: null },
+    )
+    await store.close()
+    expect((await call("chat_contacts_alias_set", { person: "10", alias: "Local" })).body).toMatchObject({
+      alias: "Local",
+    })
+    const added = await call("chat_contacts_notes_add", { person: "Local", text: "Own note" })
+    expect(added.body).toMatchObject({ revision: 1, text: "Own note" })
+    const id = added.body.id
+    expect((await call("chat_contacts_notes_list", { person: "10" })).body).toMatchObject({ items: [{ id }] })
+    expect((await call("chat_contacts_notes_show", { person: "10", id })).body).toMatchObject({ text: "Own note" })
+    expect(
+      (await call("chat_contacts_notes_edit", { person: "10", id, text: "Edited", revision: 1 })).body,
+    ).toMatchObject({ revision: 2 })
+    expect((await call("chat_contacts_notes_remove", { person: "10", id })).body).toMatchObject({ removed: true })
+    expect((await call("chat_contacts_alias_rm", { person: "10" })).body).toMatchObject({ alias: null })
+    expect((await call("chat_metadata_get", { chat: "7" })).body).toMatchObject({ metadata: { title: "AI news" } })
+    expect((await call("chat_tags_auto", { chats: ["7"], dry_run: true })).body).toMatchObject({
+      dryRun: true,
+      items: [{ chatId: "7" }],
+    })
+    const readonly = await connect(scripted(), {
+      config: levels({ contacts: "readonly", metadata: "readonly", tags: "readonly" }),
+    })
+    const names = (await readonly.client.listTools()).tools.map(({ name }) => name)
+    expect(names).toContain("chat_contacts_notes_list")
+    expect(names).not.toContain("chat_contacts_alias_set")
+    expect(names).not.toContain("chat_contacts_notes_add")
+    expect(names).not.toContain("chat_tags_auto")
+    expect(names).not.toContain("chat_metadata_refresh")
   })
 
   it("**tags through MCP as the command does**, hides the writes where tags are read-only, and goes ahead at ask", async () => {

@@ -204,5 +204,35 @@ export const GENERATED: { name: string; statements: string[] }[] = [
       "ALTER TABLE `conversation_chunks` ADD `text_start` integer;",
       "ALTER TABLE `conversation_chunks` ADD `text_end` integer;"
     ]
+  },
+  {
+    "name": "20261007192852_version-22-private-metadata",
+    "statements": [
+      "CREATE TABLE `annotations` (\n\t`uid` text PRIMARY KEY,\n\t`account_pk` integer NOT NULL,\n\t`target_type` text NOT NULL,\n\t`target_pk` integer NOT NULL,\n\t`text` text NOT NULL,\n\t`revision` integer DEFAULT 1 NOT NULL,\n\t`created_at` integer NOT NULL,\n\t`updated_at` integer NOT NULL,\n\t`authored_by` text NOT NULL,\n\tCONSTRAINT `fk_annotations_account_pk_accounts_pk_fk` FOREIGN KEY (`account_pk`) REFERENCES `accounts`(`pk`)\n);",
+      "CREATE TABLE `auto_tag_claims` (\n\t`chat_pk` integer NOT NULL,\n\t`tag` text NOT NULL,\n\t`algorithm` text NOT NULL,\n\t`score` real NOT NULL,\n\t`fields` text NOT NULL,\n\t`created_at` integer NOT NULL,\n\tCONSTRAINT `auto_tag_claims_pk` PRIMARY KEY(`chat_pk`, `tag`),\n\tCONSTRAINT `fk_auto_tag_claims_chat_pk_chats_pk_fk` FOREIGN KEY (`chat_pk`) REFERENCES `chats`(`pk`)\n);",
+      "CREATE TABLE `chat_metadata` (\n\t`chat_pk` integer PRIMARY KEY,\n\t`title` text,\n\t`username` text,\n\t`description` text,\n\t`fetched_at` integer NOT NULL,\n\tCONSTRAINT `fk_chat_metadata_chat_pk_chats_pk_fk` FOREIGN KEY (`chat_pk`) REFERENCES `chats`(`pk`)\n);",
+      "CREATE TABLE `contact_aliases` (\n\t`account_pk` integer NOT NULL,\n\t`identity_pk` integer NOT NULL,\n\t`alias` text,\n\t`updated_at` integer NOT NULL,\n\tCONSTRAINT `contact_aliases_pk` PRIMARY KEY(`account_pk`, `identity_pk`),\n\tCONSTRAINT `fk_contact_aliases_account_pk_accounts_pk_fk` FOREIGN KEY (`account_pk`) REFERENCES `accounts`(`pk`),\n\tCONSTRAINT `fk_contact_aliases_identity_pk_identities_pk_fk` FOREIGN KEY (`identity_pk`) REFERENCES `identities`(`pk`)\n);",
+      "CREATE INDEX `annotations_by_target` ON `annotations` (`account_pk`,`target_type`,`target_pk`);"
+    ]
+  },
+  {
+    "name": "20261007193040_version-22-tag-provenance",
+    "statements": [
+      "ALTER TABLE `tags` ADD `manual` integer DEFAULT 1 NOT NULL;"
+    ]
+  },
+  {
+    "name": "20261007193701_version-22-alias-folding",
+    "statements": [
+      "ALTER TABLE `contact_aliases` ADD `alias_folded` text;"
+    ]
+  },
+  {
+    "name": "20261007194652_version-22-metadata-cleanup",
+    "statements": [
+      "CREATE TRIGGER private_metadata_chat_delete BEFORE DELETE ON chats BEGIN\n  DELETE FROM chat_metadata WHERE chat_pk=old.pk;\n  DELETE FROM auto_tag_claims WHERE chat_pk=old.pk;\n  DELETE FROM annotations WHERE target_type='chat' AND target_pk=old.pk;\nEND;",
+      "CREATE TRIGGER private_metadata_identity_delete BEFORE DELETE ON identities BEGIN\n  DELETE FROM contact_aliases WHERE identity_pk=old.pk;\n  DELETE FROM annotations WHERE target_type='contact' AND target_pk=old.pk;\nEND;",
+      "CREATE TRIGGER private_metadata_account_delete BEFORE DELETE ON accounts BEGIN\n  DELETE FROM contact_aliases WHERE account_pk=old.pk;\n  DELETE FROM annotations WHERE account_pk=old.pk;\nEND;"
+    ]
   }
 ]

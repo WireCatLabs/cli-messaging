@@ -5,6 +5,7 @@ import type { Messenger } from "../../cli/messenger/context.js"
 import type { MessengerAdapter } from "../../cli/messenger/port.js"
 import { casKey } from "../../cli/registry-keys.js"
 import type { SendGuard } from "../../sends/guard.js"
+import { levelFor } from "../../sends/permissions.js"
 import { onlineDeps, phoneOf, servicesFor, storedDeps } from "../../services/index.js"
 import { momentOf } from "../../services/moment.js"
 import { maskedAccount } from "../../services/people.js"
@@ -50,9 +51,18 @@ export const contactsTools = (messenger: Messenger): Record<string, AnyTool> => 
       title: "Show a person",
       description: "One person and the chats shared with them.",
       input: v.object({
+        with_notes: v.optional(v.boolean()),
         person: v.pipe(v.string(), v.minLength(1), v.description("person id, @username, or part of a name")),
       }),
       annotations: READ,
+      storedWhen: (args) => args.with_notes === true,
+      stored: async (store, account, args, defaults) => {
+        if (levelFor(defaults.settings.permissions ?? {}, "contacts.notes.list").level === "deny")
+          throw new CliError("permission_error", "profile denies contacts.notes.list")
+        return servicesFor(storedDeps(messenger, store, account, defaults.guard)).people.show(args.person, {
+          notes: true,
+        })
+      },
       served: (services, args) => services.people.show(args.person),
     }),
 

@@ -1,6 +1,7 @@
 import { CliError } from "@leemour/cli-core"
 import { Command } from "commander"
 import { REGISTRIES, registriesCover } from "../../botcheck/registries.js"
+import { levelFor } from "../../sends/permissions.js"
 import { phoneOf } from "../../services/index.js"
 import { momentOf } from "../../services/moment.js"
 import { maskedAccount } from "../../services/people.js"
@@ -10,6 +11,7 @@ import { positiveCount, renderPage, window, withPaging } from "../paging.js"
 import { casKey } from "../registry-keys.js"
 import { contactWriteCommands } from "./admin-contacts-command.js"
 import { type Messenger, messengerContext } from "./context.js"
+import { privatePeopleCommands } from "./private-people-command.js"
 
 /** People this account has a one-to-one chat with, as the people service counts them. */
 const collect = (value: string, previous: string[] = []) => [...previous, value]
@@ -20,15 +22,21 @@ export const contactsCommand = (messenger: Messenger): Command => {
   contacts.addCommand(
     withPaging(new Command("list").description("people you have a one-to-one chat with"))
       .option("--order <recent|name>", "newest conversation first, or alphabetical", "recent")
-      .option("--search <text>", "only people whose name or @username contains this")
+      .option("--search <text>", "only people whose name, local alias or @username contains this")
+      .option("--search-notes <text>", "only people whose private notes contain this text")
       .action(async function (this: Command) {
-        const { order, search } = this.opts<{ order: string; search?: string }>()
+        const { order, search, searchNotes } = this.opts<{ order: string; search?: string; searchNotes?: string }>()
         if (order !== "recent" && order !== "name") {
           throw new CliError("validation_error", `--order is recent or name, not "${order}"`)
         }
         const context = messengerContext(this, messenger)
         const found = await context.withServices((services) =>
-          services.people.list({ order, ...(search ? { search } : {}), ...window(context.settings) }),
+          services.people.list({
+            order,
+            ...(search ? { search } : {}),
+            ...(searchNotes === undefined ? {} : { notesSearch: searchNotes }),
+            ...window(context.settings),
+          }),
         )
         renderPage(context, found)
       }),
@@ -38,9 +46,15 @@ export const contactsCommand = (messenger: Messenger): Command => {
     .command("show")
     .description("one person and the chats you share with them")
     .argument("<person>", "their id, @username, or part of their name")
+    .option("--with-notes", "include your private notes, subject to contacts.notes.list permission")
     .action(async function (this: Command, person: string) {
       const context = messengerContext(this, messenger)
-      context.renderer.result(await context.withServices((services) => services.people.show(person)))
+      const { withNotes } = this.opts<{ withNotes?: boolean }>()
+      if (withNotes && levelFor(context.settings.permissions, "contacts.notes.list").level === "deny")
+        throw new CliError("permission_error", "profile denies contacts.notes.list")
+      context.renderer.result(
+        await context.withServices((services) => services.people.show(person, { notes: withNotes })),
+      )
     })
 
   contacts
@@ -210,6 +224,7 @@ export const contactsCommand = (messenger: Messenger): Command => {
       context.renderer.success(`${summary.added} new, ${summary.changed} changed, ${summary.known} people known`)
     })
 
+  for (const command of privatePeopleCommands(messenger)) contacts.addCommand(command)
   for (const command of contactWriteCommands(messenger)) contacts.addCommand(command)
   return contacts
 }

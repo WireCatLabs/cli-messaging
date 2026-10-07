@@ -39,6 +39,7 @@ export const tagsTools = (messenger: Messenger): Record<string, AnyTool> => {
       input: v.object({
         tag: v.optional(v.pipe(v.string(), v.minLength(1), v.description("only this tag"))),
         type: v.optional(v.picklist(TAG_TYPES)),
+        source: v.optional(v.picklist(["manual", "auto"])),
       }),
       annotations: { ...READ, openWorldHint: false },
       stored: async (store, account, args, defaults) =>
@@ -58,10 +59,14 @@ export const tagsTools = (messenger: Messenger): Record<string, AnyTool> => {
     tags_remove: tool({
       title: "Untag a chat, person or message",
       description: `Takes tags off one chat, person or message. ${TARGET} Returns { target, removed, unchanged }.`,
-      input,
+      input: v.object({ ...input.entries, source: v.optional(v.picklist(["manual", "auto"])) }),
       annotations: { ...LOCAL, destructiveHint: true },
       stored: async (store, account, args, defaults) => {
-        return servicesFor(storedDeps(messenger, store, account, defaults.guard)).tags.remove(targetOf(args), args.tags)
+        return servicesFor(storedDeps(messenger, store, account, defaults.guard)).tags.remove(
+          targetOf(args),
+          args.tags,
+          args.source,
+        )
       },
     }),
   }

@@ -18,6 +18,7 @@ import { messageSendTools } from "./tools/messages-send.js"
 import { messagesTranscribeTools } from "./tools/messages-transcribe.js"
 import { moderationTools } from "./tools/moderation.js"
 import { pollReadTools, pollWriteTools } from "./tools/polls.js"
+import { privatePeopleTools } from "./tools/private-people.js"
 import { rankingTools } from "./tools/rankings.js"
 import { reactionTools } from "./tools/reactions.js"
 import { reviewTools } from "./tools/review.js"
@@ -70,6 +71,7 @@ export const sendTools = (messenger: Messenger): Record<string, AnyTool> => ({
 
 /** The owner's own records in the local store — tags, saved searches, files' text — read and written; never sent. */
 export const localTools = (messenger: Messenger): Record<string, AnyTool> => ({
+  ...privatePeopleTools(messenger),
   ...tagsTools(messenger),
   ...searchesTools(messenger),
   ...tasksTools(messenger),

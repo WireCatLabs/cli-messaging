@@ -37,6 +37,10 @@ export const MANIFEST: ManifestEntry[] = [
   { name: "20261005142357_version-19-attachment-words", version: 19, minCompatible: 6 },
   { name: "20261005215529_version-20-tasks", version: 20, minCompatible: 6 },
   { name: "20261006182644_version-21-chunk-ranges", version: 21, minCompatible: 6 },
+  { name: "20261007192852_version-22-private-metadata", version: 22, minCompatible: 6 },
+  { name: "20261007193040_version-22-tag-provenance", version: 22, minCompatible: 6 },
+  { name: "20261007193701_version-22-alias-folding", version: 22, minCompatible: 6 },
+  { name: "20261007194652_version-22-metadata-cleanup", version: 22, minCompatible: 6 },
 ]
 
 export const generatedMigrations = (

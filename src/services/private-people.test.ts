@@ -1,0 +1,224 @@
+import { mkdtempSync, writeFileSync } from "node:fs"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
+import { captureStreams } from "@leemour/cli-core"
+import { afterEach, describe, expect, it } from "vitest"
+import { rememberAccount } from "../cli/messenger/accounts.js"
+import { contactsCommand } from "../cli/messenger/contacts-command.js"
+import type { Messenger } from "../cli/messenger/context.js"
+import { metadataCommand } from "../cli/messenger/metadata-command.js"
+import { tagsCommand } from "../cli/messenger/tags-command.js"
+import { run } from "../cli/program.js"
+import { settingsFor } from "../cli/settings.js"
+import { classifyChannel } from "../domain/channel-tags.js"
+import { pickPerson } from "../resolve.js"
+import { type MessageStore, openStore } from "../store/store.js"
+import { seedSearchRecipes } from "../testing/search-recipes.js"
+import { storedDeps } from "./deps.js"
+import { servicesFor } from "./index.js"
+
+const app = { command: "chat", appName: "chat-cli", envPrefix: "CHAT", description: "", version: "1.0.0" }
+const messenger: Messenger = {
+  app,
+  provider: "chat",
+  chatArgument: "a chat",
+  resolveSettings: settingsFor(app).resolveSettings,
+  connect: async () => {
+    throw new Error("local metadata must never connect")
+  },
+}
+const key = { provider: "chat", account: "500" }
+const opened: MessageStore[] = []
+afterEach(async () => {
+  for (const store of opened.splice(0)) await store.close()
+})
+const setup = async () => {
+  const root = mkdtempSync(join(tmpdir(), "private-people-"))
+  const path = join(root, "messages.db")
+  const store = await openStore({ path })
+  opened.push(store)
+  await seedSearchRecipes(store, key)
+  await store.saveChats(key, [
+    { id: "10", title: "Alice Synthetic", kind: "dialog", unreadCount: 0, lastMessageAt: null, participantsCount: 2 },
+  ])
+  await store.saveMembers(key, "10", ["10", "500"])
+  const deps = storedDeps(messenger, store, key, { check: () => {}, record: () => {} })
+  const services = servicesFor(deps)
+  const env = {
+    ...process.env,
+    CHAT_STATE_DIR: join(root, "state"),
+    CHAT_CONFIG_DIR: join(root, "config"),
+    MESSAGING_STORE: path,
+  }
+  rememberAccount(app, "default", key.account, env)
+  const call = async (...argv: string[]) => {
+    const streams = captureStreams()
+    const code = await run(
+      argv,
+      { app, commands: () => [contactsCommand(messenger), metadataCommand(messenger), tagsCommand(messenger)] },
+      { streams, tty: false, env },
+    )
+    return { code, result: JSON.parse(streams.stdout.join("") || "null"), stderr: streams.stderr.join("") }
+  }
+  return { root, path, store, services, call, deps }
+}
+
+describe("private people metadata", () => {
+  it("keeps aliases and multiple notes private to an account and separate from remote names", async () => {
+    const f = await setup()
+    const other = { ...key, account: "501" }
+    await f.store.savePeople(other, [{ id: "10", name: "Alice Synthetic" }])
+    await f.services.privatePeople.alias("10", "Local label")
+    const first = await f.services.privatePeople.add("Local label", "Own assessment")
+    const second = await f.services.privatePeople.add("10", "Follow up Tuesday")
+    expect(first.id).not.toBe(second.id)
+    expect(await f.store.privateContact(other, "10")).toEqual({ personId: "10", alias: null, notes: [] })
+    expect(await f.services.people.show("Local label", { notes: true })).toMatchObject({
+      id: "10",
+      name: "Alice Synthetic",
+      alias: "Local label",
+      notes: [{ text: "Own assessment" }, { text: "Follow up Tuesday" }],
+    })
+    await f.store.savePeople(key, [{ id: "10", name: "Refreshed name" }])
+    expect((await f.services.privatePeople.show("10")).notes).toHaveLength(2)
+    expect((await f.services.people.show("10")).name).toBe("Refreshed name")
+    await expect(f.store.privateContact({ provider: "max", account: "500" }, "10")).rejects.toMatchObject({
+      code: "not_found",
+    })
+  })
+
+  it("resolves aliases without guessing duplicates and supports Unicode contact search", async () => {
+    const f = await setup()
+    await f.services.privatePeople.alias("10", "ЛИЧНЫЙ ПСЕВДОНИМ")
+    expect(
+      (await f.services.people.list({ order: "name", search: "личный", offset: 0 })).items.map((person) => person.id),
+    ).toEqual(["10"])
+    await f.services.privatePeople.alias("11", "ЛИЧНЫЙ ПСЕВДОНИМ")
+    const lookup = await f.store.people(key.provider, { account: key.account })
+    expect(() => pickPerson("личный псевдоним", lookup)).toThrow("matches 2 people")
+    expect(pickPerson("10", lookup).id).toBe("10")
+    await f.services.privatePeople.alias("10", null)
+    expect((await f.store.people(key.provider, { account: key.account })).get("10")?.alias).toBeUndefined()
+    await expect(f.services.privatePeople.alias("11", " ")).rejects.toMatchObject({ code: "validation_error" })
+  })
+
+  it("guards stale edits and removes note text, with explicit notes search", async () => {
+    const f = await setup()
+    const note = await f.services.privatePeople.add("10", "Initial assessment")
+    const changed = await f.services.privatePeople.edit("10", note.id, "New assessment", 1)
+    expect(changed.revision).toBe(2)
+    await expect(f.services.privatePeople.edit("10", note.id, "Stale edit", 1)).rejects.toThrow("note changed")
+    expect(
+      (await f.services.people.list({ order: "name", notesSearch: "new assessment", offset: 0 })).items.map(
+        (one) => one.id,
+      ),
+    ).toEqual(["10"])
+    await expect(f.services.privatePeople.note("11", note.id)).rejects.toMatchObject({ code: "not_found" })
+    await f.services.privatePeople.remove("10", note.id)
+    await expect(f.services.privatePeople.note("10", note.id)).rejects.toMatchObject({ code: "not_found" })
+    await expect(f.services.privatePeople.add("10", " ")).rejects.toMatchObject({ code: "validation_error" })
+  })
+
+  it("retains private identity scopes across linking and store reopening", async () => {
+    const f = await setup()
+    await f.store.savePeople({ provider: "max", account: "500" }, [{ id: "10", name: "Other provider" }])
+    await f.services.privatePeople.alias("10", "Private alias")
+    await f.services.privatePeople.add("10", "Retained own note")
+    await f.store.linkIdentities(
+      { provider: "chat", id: "10" },
+      { provider: "max", id: "10" },
+      { method: "manual", by: "owner" },
+    )
+    expect((await f.store.privateContact({ provider: "max", account: "500" }, "10")).notes).toEqual([])
+    await f.store.unlinkIdentity({ provider: "max", id: "10" }, { method: "manual", by: "owner" })
+    const reopened = await openStore({ path: f.path })
+    opened.push(reopened)
+    expect(await reopened.privateContact(key, "10")).toMatchObject({
+      alias: "Private alias",
+      notes: [{ text: "Retained own note" }],
+    })
+  })
+
+  it("offers offline CLI CRUD, blocks local writes by profile and never transmits notes", async () => {
+    const f = await setup()
+    expect((await f.call("--offline", "contacts", "alias", "set", "10", "Local", "--json")).code).toBe(0)
+    const file = join(f.root, "own-note.txt")
+    writeFileSync(file, "Own confidential fixture")
+    const added = await f.call("--offline", "contacts", "notes", "add", "Local", "--file", file, "--json")
+    expect(added.code).toBe(0)
+    const id = added.result.id
+    expect((await f.call("contacts", "notes", "list", "10", "--json")).result.items).toHaveLength(1)
+    expect((await f.call("contacts", "notes", "show", "10", id, "--json")).result.text).toBe("Own confidential fixture")
+    expect(
+      (await f.call("contacts", "notes", "edit", "10", id, "--revision", "1", "--file", file, "--json")).result
+        .revision,
+    ).toBe(2)
+    expect((await f.call("contacts", "notes", "remove", "10", id, "--json")).result.removed).toBe(true)
+    expect((await f.call("contacts", "alias", "rm", "10", "--json")).result.alias).toBeNull()
+    expect(
+      (await f.call("--permission", "contacts=readonly", "contacts", "alias", "set", "10", "Blocked", "--json")).code,
+    ).not.toBe(0)
+  })
+})
+
+describe("cached metadata and automatic tags", () => {
+  it("classifies actual metadata fields with deterministic scores", () => {
+    expect(classifyChannel({ title: "AI news", username: "work", description: "Новости о нейросетях" })).toEqual([
+      { tag: "ai", score: 2 / 3, fields: ["title", "description"] },
+      { tag: "news", score: 2 / 3, fields: ["title", "description"] },
+    ])
+    expect(classifyChannel({ title: null, username: null, description: null })).toEqual([])
+  })
+
+  it("preserves manual tags when auto tags overlap, disappear or are promoted to manual", async () => {
+    const f = await setup()
+    await f.store.saveChatMetadata(key, { chatId: "7", title: "AI news", username: null, description: null })
+    await f.store.addTags(key, { type: "chat", chatId: "7" }, ["news", "personal"])
+    await f.services.metadata.auto({ chats: ["7"] })
+    expect((await f.store.tags(key)).filter((one) => one.chatId === "7").map((one) => one.tag)).toEqual(
+      expect.arrayContaining(["ai", "news", "personal"]),
+    )
+    expect(
+      (await f.store.tags(key, { tag: "news", source: "auto" })).find((entry) => entry.chatId === "7")?.sources,
+    ).toEqual(["manual", "auto"])
+    await f.store.removeTags(key, { type: "chat", chatId: "7" }, ["news"], "auto")
+    expect((await f.store.tags(key, { tag: "news" })).find((entry) => entry.chatId === "7")).toBeDefined()
+    await f.store.removeTags(key, { type: "chat", chatId: "7" }, ["personal"], "manual")
+    expect((await f.store.tags(key, { tag: "personal" })).find((entry) => entry.chatId === "7")).toBeUndefined()
+    await f.store.addTags(key, { type: "chat", chatId: "7" }, ["personal"])
+    await f.store.addTags(key, { type: "chat", chatId: "7" }, ["ai"])
+    await f.store.saveChatMetadata(key, { chatId: "7", title: "No known topic", username: null, description: null })
+    await f.services.metadata.auto({ chats: ["7"] })
+    expect((await f.store.tags(key)).filter((one) => one.chatId === "7").map((one) => one.tag)).toEqual(
+      expect.arrayContaining(["ai", "news", "personal"]),
+    )
+    await f.store.removeTags(key, { type: "chat", chatId: "7" }, ["ai"])
+    expect((await f.store.tags(key)).some((one) => one.chatId === "7" && one.tag === "ai")).toBe(false)
+  })
+
+  it("bounds work, separates account metadata and keeps dry-run and failed refresh unchanged", async () => {
+    const f = await setup()
+    expect((await f.services.metadata.get("7")).metadata).toBeNull()
+    await f.store.saveChatMetadata(key, { chatId: "7", title: "Crypto news", username: null, description: null })
+    const before = await f.store.tags(key)
+    expect(await f.services.metadata.auto({ chats: ["7", "8"], limit: 1, dryRun: true })).toMatchObject({
+      hasMore: true,
+      dryRun: true,
+    })
+    expect(await f.store.tags(key)).toEqual(before)
+    const failed = await f.services.metadata.auto({ chats: ["7"], refresh: true })
+    expect(failed.items[0]).toHaveProperty("error")
+    expect((await f.services.metadata.get("7")).metadata?.title).toBe("Crypto news")
+    await expect(f.services.metadata.auto({ limit: 501 })).rejects.toMatchObject({ code: "validation_error" })
+    await expect(f.services.metadata.auto({ dryRun: true, refresh: true })).rejects.toMatchObject({
+      code: "validation_error",
+    })
+    expect((await f.call("metadata", "get", "--chat", "7", "--json")).result.metadata.title).toBe("Crypto news")
+    expect(
+      (await f.call("--offline", "metadata", "refresh", "--chat", "7", "--limit", "1", "--json")).result.items[0],
+    ).toHaveProperty("error")
+    expect((await f.call("metadata", "refresh", "--chat", "7", "--limit", "501", "--json")).code).not.toBe(0)
+    const preview = await f.call("tags", "auto", "--chat", "7", "--dry-run", "--json")
+    expect(preview, preview.stderr).toMatchObject({ code: 0, result: { dryRun: true } })
+  })
+})

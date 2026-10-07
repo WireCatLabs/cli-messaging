@@ -11,8 +11,10 @@ import { type EmbeddingsService, embeddingsService } from "./embeddings.js"
 import { type FoldersService, foldersService } from "./folders.js"
 import { type InboxService, inboxService } from "./inbox.js"
 import { type MessagesService, messagesService } from "./messages.js"
+import { metadataService } from "./metadata.js"
 import { type ModerationService, moderationService } from "./moderation.js"
 import { type PeopleService, peopleService } from "./people.js"
+import { privatePeopleService } from "./private-people.js"
 import { type RankingsService, rankingsService } from "./rankings.js"
 import { type SearchesService, searchesService } from "./searches.js"
 import { type TagsService, tagsService } from "./tags.js"
@@ -87,6 +89,8 @@ export { tasksService } from "./tasks.js"
 export { type TopicsService, topicsService } from "./topics.js"
 
 export interface Services {
+  metadata: ReturnType<typeof metadataService>
+  privatePeople: ReturnType<typeof privatePeopleService>
   rankings: RankingsService
   topics: TopicsService
   messages: MessagesService
@@ -117,6 +121,8 @@ export type Override = (base: Services, deps: ServiceDeps) => Partial<Services>
 /** The shared services, with the messenger's `services` override applied — commands and MCP tools alike. */
 export const servicesFor = (deps: ServiceDeps): Services => {
   const base: Services = {
+    metadata: metadataService(deps),
+    privatePeople: privatePeopleService(deps),
     rankings: rankingsService(deps),
     topics: topicsService(deps),
     messages: messagesService(deps),
@@ -146,6 +152,7 @@ export { FIELD_VERSION, QUERY_FIELDS, QUERY_OPERATORS, validateAst } from "../se
 export { type Predicate, QUERY_LIMITS, QUERY_VERSION, type QueryAst, type QueryNode } from "../search/lucene/types.js"
 export { GAP_BOUNDS, type GapPlan, type GapRepair, gapsService, type RepairOptions } from "./archive-gaps.js"
 export type { QueryMetadata, SearchCoverage } from "./messages-search.js"
+export { metadataService } from "./metadata.js"
 export {
   type PackageUpgradeOutcome,
   type PackageUpgradePorts,
@@ -153,6 +160,7 @@ export {
   type ServerRestarts,
   upgradePackage,
 } from "./package-upgrade.js"
+export { privatePeopleService } from "./private-people.js"
 export {
   CATCH_UP_BOUNDS,
   type CatchUpOptions,

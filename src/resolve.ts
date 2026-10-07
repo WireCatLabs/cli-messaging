@@ -43,7 +43,8 @@ export const pickPerson = (reference: string, people: PeopleLookup): Contact => 
 
   const wanted = trimmed.replace(/^@/, "").toLowerCase()
   const everyone = people.all().toSorted((a, b) => (a.name ?? "").localeCompare(b.name ?? ""))
-  const fields = (person: Contact) => [person.name, person.username].filter(isPresent).map((one) => one.toLowerCase())
+  const fields = (person: Contact) =>
+    [person.alias, person.name, person.username].filter(isPresent).map((one) => one.toLowerCase())
 
   const exact = everyone.filter((person) => fields(person).includes(wanted))
   const matches =

@@ -335,6 +335,8 @@ export interface ChatEvents {
 }
 
 export interface Contact {
+  alias?: string | null
+  displayName?: string | null
   id: Id
   name: string | null
   /** The public handle, without `@`, when they have one. */
@@ -456,6 +458,7 @@ export interface ChatCard extends Chat {
 
 /** One person and the chats this account shares with them, newest first. */
 export interface PersonCard extends Contact {
+  notes?: { id: string; personId: string; text: string; revision: number; createdAt: string; updatedAt: string }[]
   chats: Pick<Chat, "id" | "title" | "kind" | "lastMessageAt">[]
 }
 
