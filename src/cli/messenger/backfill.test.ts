@@ -557,6 +557,39 @@ describe("store fetch --estimate", () => {
 })
 
 describe("post-fetch catch-up controls", () => {
+  it("honors the existing links permission before fetching or queueing preparation", async () => {
+    const base = setup()
+    const root = dirname(base.MESSAGING_STORE)
+    const config = join(root, "config")
+    mkdirSync(config)
+    writeFileSync(
+      join(config, "config.json"),
+      JSON.stringify({
+        profiles: {
+          default: {
+            searchCatchUp: true,
+            permissions: { "conversations.links": "readonly", "conversations.embed": "allow" },
+          },
+        },
+      }),
+    )
+    const env = { ...base, CHAT_CONFIG_DIR: config }
+    const state = { newest: 2, asked: [] as (string | undefined)[] }
+    for (const background of [false, true]) {
+      const result = await call(
+        ["store", "fetch", "7", "--catch-up", "--json", ...(background ? ["--background"] : [])],
+        chatOf(state),
+        env,
+      )
+      expect(result.code).toBe(5)
+      expect(state.asked).toEqual([])
+    }
+    expect(
+      (await call(["store", "fetch", "7", "--no-catch-up", "--pause", "1ms", "--json"], chatOf(state), env)).code,
+    ).toBe(0)
+    expect(state.asked.length).toBeGreaterThan(0)
+  })
+
   it("honours a profile opt-in, explicit opt-out and all preparation budgets", async () => {
     const base = setup()
     const root = dirname(base.MESSAGING_STORE)

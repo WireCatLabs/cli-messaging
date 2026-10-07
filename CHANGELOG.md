@@ -6,6 +6,12 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Fixed
+
+- Local post-fetch and gap-repair search preparation honors the existing `conversations.links`
+  permission for graph builds. Read-only or denied links refuse before fetching or queueing a job,
+  including MCP repair requests; explicit preparation opt-out still permits authorized history reads.
+
 ## 0.165.0 — 07.10.2026
 
 Released early: max-cli cannot adopt stemmed search: its parity check fails on --spoiler and --caption-above, which MAX refuses

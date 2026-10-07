@@ -86,7 +86,7 @@ export const gapsCommand = (messenger: Messenger) => {
         throw new CliError("validation_error", "catch-up budgets need --catch-up or searchCatchUp true")
       if (prepare) {
         validateCatchUpBounds(preparation)
-        refuseLocalWrite(context, messenger.app.command, "conversations.build")
+        refuseLocalWrite(context, messenger.app.command, "conversations.links")
         refuseLocalWrite(context, messenger.app.command, "conversations.embed")
       }
       if (args.background) {
