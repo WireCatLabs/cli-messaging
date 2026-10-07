@@ -15,8 +15,8 @@ StandardSyntaxParser и PrecedenceQueryParser, default AND, default field `text`
 Этот профиль — для `messages search` и `messages_search` MCP. `bot messages search`
 сохраняет legacy discovery; строгий поиск общего архива выбирает bot accounts через `in:bots`.
 
-Поиск читает только локальную БД, без сети и отметок о прочтении. Пустой ответ означает
-«не найдено в выбранном архиве». Проверяйте `coverage`, `completeness` и готовность индекса.
+Поиск читает только локальную БД, без сети и отметок о прочтении, если не попросить сервер
+(«Поиск на сервере мессенджера»). Пустой ответ означает «не найдено в выбранном архиве». Проверяйте `coverage`, `completeness` и готовность индекса.
 Если word index не готов, выполните `store migrate`: строгий поиск не переходит на substring.
 
 ## Быстрый старт
@@ -553,7 +553,8 @@ language/version и разбираются заново при каждом за
 
 ## Машинный контракт и охват
 
-CLI/MCP возвращают `{ items, page, limit, hasMore, corrections, completeness, wordsReady, query, coverage }`.
+CLI/MCP возвращают `{ items, page, limit, hasMore, corrections, completeness, wordsReady, query, coverage }`,
+с `backend` — ещё `server` и `source` у каждого hit.
 Strict `corrections` пуст; version/fieldsVersion/presetVersion/timezone/order описывают execution.
 `coverage` сообщает accounts/chat/coveredChats, complete/partial/unknown, lastSyncedAt и inventoryComplete.
 Полнота explicit chat выводится из существующих ranges/history-start markers, даже при hits=0.
@@ -575,8 +576,48 @@ AST: `{version:1,language:"lucene-v1",root:...}`; Boolean clauses имеют mus
 Raw SQL, regexp flags или authority allow-list в AST не принимаются как executable instructions.
 Low-level `searchStore` и `MessagesService.search` без language сохраняют старую discovery semantics
 для существующих callers; CLI и MCP явно выбирают standard default. Для scripted stable contract указывайте language явно.
-Remote Telegram/MAX search не реализуется этим профилем: B получает AST/registry contract;
-remote unsupported operators требуют явного отказа или bounded local postfilter с видимым охватом.
+Серверный поиск (`backend`) — bounded local postfilter: сервер даёт кандидатов, строгий запрос
+решает, `server` и `source` показывают, что сделал сервер (см. «Поиск на сервере мессенджера»).
+
+## Поиск на сервере мессенджера
+
+`--backend archive|server|both` (MCP: `backend`) выбирает, где искать. По умолчанию `archive`:
+только локальная БД, как раньше. Флаг есть там, где сервер мессенджера умеет искать сообщения:
+в tg да, в MAX нет (opcode 73 не проверен на тестовом аккаунте).
+
+- `both` — сервер и архив за один запуск. Сервер возвращает **кандидатов**: они сохраняются в
+  архив, и тот же строгий запрос выполняется один раз по архиву вместе с ними. Поэтому
+  `exact:`, `-слово`, фразы, `has:` и ранжирование значат то же, что и без сервера, а дубликатов нет:
+  одно сообщение — одна строка. Кандидат, которого строгий запрос не принял, не показывается
+  (но остаётся в архиве). Правила совпадения на сервере Telegram не документированы.
+- `server` — только то, что вернул сервер, тем же строгим запросом.
+
+На сервер уходят только части, которые сужают кандидатов: обязательные слова и фразы `text`/`exact`,
+`chat:` (поиск в одном чате, иначе по всем), `from:` вместе с одним чатом, диапазон `date:`.
+Верхний OR — отдельный вызов на ветку, не больше 3. Отрицания, шаблоны, regex, `has:`, `tag:`,
+`kind:`, presets — только локальные фильтры. Запрос без слов сервер не спрашивает. Другие аккаунты
+(`in:`, `--source`) ищутся только в архиве.
+
+Границы: 5 с (`--server-time`, MCP `server_time`, не больше 60 с), 100 сообщений на вызов, 3 вызова.
+Ответ сервера после границы отбрасывается и не сохраняется; ответ — архив и пометка. Ничего не
+отмечается прочитанным; найденное сохраняется с `via: "search"` и не меняет ranges, `fetchedAt`,
+`completeness` и `coverage`.
+
+`both` не падает из-за сервера: при `--offline`, без сессии MCP, в MAX, без разрешения, на legacy
+или без слов ответ — архив и `server.skipped`. `server` в этих случаях отказывает. Разрешение —
+`messages.server-search`; `readonly` и `ask` дают ответ из архива. `stats messages show` сервер не
+спрашивает: Telegram считает по своим правилам, а не по строгому запросу. Сохранённый поиск не
+хранит `--backend`, как и `--sync-first`.
+
+```jsonc
+"server": { "backend": "both", "skipped": null, "calls": 1, "returned": 87, "new": 12,
+            "failed": [{ "chat": null, "reason": "rate_limited" }], "complete": false }
+```
+
+`skipped`: `legacy`, `unsupported`, `pushed_history`, `offline`, `not_allowed`, `other_accounts`,
+`no_words`. `failed[].reason`: `rate_limited`, `search_failed`, `time_or_abort_bound`. Каждый hit
+получает `source`: `archive` (только архив), `server` (новое с сервера), `both` (сервер вернул уже
+хранимое). План: [2026-10-07-server-search.md](../plans/2026-10-07-server-search.md).
 
 [Техническая спецификация](query-language-spec.md)
 

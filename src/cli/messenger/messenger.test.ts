@@ -1200,6 +1200,37 @@ describe("the shared read commands", () => {
     expect(never).not.toHaveBeenCalled()
   })
 
+  it("**--backend both** adds the server's hits with their source, and is offered only where the server searches", async () => {
+    const root = mkdtempSync(join(tmpdir(), "messenger-"))
+    const env = {
+      ...process.env,
+      CHAT_STATE_DIR: join(root, "state"),
+      CHAT_CONFIG_DIR: join(root, "config"),
+      MESSAGING_STORE: join(root, "m.db"),
+    }
+    await call(["messages", "context", "Book", "2", "--json"], async () => fake, env)
+    const searchMessages = vi.fn(async () => ({
+      items: [{ ...message, id: "40", text: "chapter four", chatTitle: "Book club" }],
+      hasMore: false,
+      chats: [],
+    }))
+    const result = await call(
+      ["messages", "search", "chapter", "--backend", "both", "--server-time", "2s", "--json"],
+      async () => ({ ...fake, searchMessages }),
+      env,
+      {},
+      { serverSearch: true },
+    )
+    expect(result.code).toBe(0)
+    const answer = JSON.parse(result.stdout[0] ?? "")
+    expect(answer.server).toMatchObject({ backend: "both", calls: 1, new: 1, complete: true })
+    expect(answer.items.find(({ id }: { id: string }) => id === "40")).toMatchObject({ source: "server" })
+    expect(searchMessages).toHaveBeenCalledWith({ text: "chapter" }, expect.objectContaining({ limit: 100 }))
+    const without = await call(["messages", "search", "chapter", "--backend", "both"], async () => fake, env)
+    expect(without.code).not.toBe(0)
+    expect(without.stderr.join("\n")).toContain("--backend")
+  })
+
   it("**thread context** follows stored replies by locator and keeps JSON/JSONL data pure", async () => {
     const root = mkdtempSync(join(tmpdir(), "thread-cli-"))
     const env = {

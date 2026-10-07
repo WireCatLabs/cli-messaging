@@ -170,6 +170,7 @@ export const prepareLucene = async (
     ...(request.signal ? { signal: request.signal } : {}),
     newest: request.newest,
     ...(stemmer ? { stemmer } : {}),
+    ...(request.only ? { only: request.only } : {}),
   }
   return {
     execution,

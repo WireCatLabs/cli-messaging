@@ -32,3 +32,10 @@ it is rebuilt. Saved searches do not save network consent: add `--sync-first` ex
 CLI refresh permission is `messages.sync-first`. MCP exposes `sync_first`, `max_chats`, `sync_time` and
 `max_messages` only when that key resolves to `allow`; readonly/deny/ask hides the arguments and rejects
 attempts, while ordinary local reads remain available. The same service executes CLI and MCP refreshes.
+
+**Server search is a different step.** `--sync-first` reads each chat's newest history into the store;
+`--backend both|server` asks the messenger's own search for matches anywhere in time
+([query language: «Поиск на сервере мессенджера»](query-language.md#поиск-на-сервере-мессенджера)).
+Both write only to the store and mark nothing read. With both flags the refresh runs first, then the
+server step, then one local search. The server step has its own key, `messages.server-search`, its own
+5-second bound and its own `server` block; it never changes `coverage`.

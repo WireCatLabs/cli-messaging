@@ -243,6 +243,7 @@ export const keyForWrite = (kind: SendKind, action?: string): PermissionKey => {
 const NAMED_WRITE_KEYS = [
   "store.gaps.repair",
   "messages.sync-first",
+  "messages.server-search",
   "stats.messages.show.sync-first",
   "account.sessions.list",
   "attachments.extract",

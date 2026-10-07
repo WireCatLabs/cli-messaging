@@ -6,11 +6,12 @@ import { renderThreadLinks } from "../../render/thread-context.js"
 import { environmentOf } from "../context.js"
 import { positiveCount } from "../paging.js"
 import { type Messenger, messengerContext } from "./context.js"
+import { backendOptions, backendRequest, noteServer } from "./search-backend-options.js"
 import { syncOptions, syncRequest } from "./search-sync-options.js"
 import { threadOptions, threadRequest } from "./thread-options.js"
 
 export const messagesSearchCommand = (messenger: Messenger): Command =>
-  threadOptions(syncOptions(new Command("search")))
+  backendOptions(threadOptions(syncOptions(new Command("search"))), messenger)
     .description(
       "search the local store — what was read, fetched or kept by serve; optionally fetches new messages with --sync-first",
     )
@@ -87,6 +88,7 @@ export const messagesSearchCommand = (messenger: Messenger): Command =>
           const pattern = regex ? patternOf(words.join(" ")) : undefined
           return services.messages.search({
             ...syncRequest(this, context),
+            ...backendRequest(this),
             ...threadRequest(this),
             ...typed,
             ...(pattern ? { pattern } : { text: words.join(" ") }),
@@ -101,6 +103,7 @@ export const messagesSearchCommand = (messenger: Messenger): Command =>
         limit = params.limit ?? limit
         return services.messages.search({
           ...syncRequest(this, context),
+          ...backendRequest(this),
           ...threadRequest(this),
           ...(pattern ? { pattern } : params.text === undefined ? {} : { text: params.text }),
           ...(params.ast === undefined ? {} : { ast: params.ast }),
@@ -122,6 +125,7 @@ export const messagesSearchCommand = (messenger: Messenger): Command =>
         if (hit.thread?.stopped.length)
           context.renderer.note(`thread context stopped: ${hit.thread.stopped.join(", ")}`)
       }
+      noteServer(context, found.server)
       const { command } = messenger.app
       for (const { from, to } of found.corrections) context.renderer.note(`${from} → ${to.join(", ")}`)
       const forms = (found.query?.stemming?.terms ?? []).filter(({ stemmer }) => stemmer !== "none")

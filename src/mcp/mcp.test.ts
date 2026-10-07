@@ -314,6 +314,7 @@ interface Harness {
   config?: object
   skill?: URL
   history?: Messenger["history"]
+  serverSearch?: boolean
   /** Another server's files, to read what it stored. */
   root?: string
   /** Over `mcp --http` on 127.0.0.1, logged in through the owner login as a browser app would. */
@@ -337,6 +338,7 @@ const connect = async (telegram: Scripted = scripted(), options: Partial<ServerO
     config,
     skill,
     history,
+    serverSearch,
     root: _root,
     http,
     permission = [],
@@ -355,6 +357,7 @@ const connect = async (telegram: Scripted = scripted(), options: Partial<ServerO
     chatArgument: "a chat",
     ...(skill ? { skill } : {}),
     ...(history ? { history } : {}),
+    ...(serverSearch ? { serverSearch } : {}),
   }
   const streams = captureStreams()
   let made: ReturnType<typeof createServer> | undefined
@@ -499,6 +502,30 @@ describe("the MCP server", () => {
     expect(history).toHaveBeenCalledTimes(3)
     expect(backend.opened()).toBe(1)
     expect(markRead).not.toHaveBeenCalled()
+  })
+
+  it("asks the server beside the archive only where it searches, and marks each hit's source", async () => {
+    const root = await filledRoot()
+    const searchMessages = vi.fn(async () => ({
+      items: [{ ...message, id: "30", text: "chapter thirty", chatTitle: "Book club" }],
+      hasMore: false,
+      chats: [],
+    }))
+    const backend = scripted({ searchMessages })
+    const { client, call } = await connect(backend, { root, serverSearch: true })
+    const found = await call("chat_messages_search", { text: "chapter", backend: "both", server_time: "2s" })
+    expect(found.body).toMatchObject({ server: { backend: "both", new: 1, complete: true } })
+    expect(found.body.items.map(({ id, source }: { id: string; source: string }) => [id, source]).sort()).toEqual([
+      ["1", "archive"],
+      ["30", "server"],
+    ])
+    const { tools } = await client.listTools()
+    expect(tools.find((tool) => tool.name === "chat_messages_search")?.inputSchema.properties).toHaveProperty("backend")
+    const plain = await connect(scripted(), { root })
+    const listed = await plain.client.listTools()
+    expect(
+      listed.tools.find((tool) => tool.name === "chat_messages_search")?.inputSchema.properties,
+    ).not.toHaveProperty("backend")
   })
 
   it("keeps hits when a refresh connection fails", async () => {

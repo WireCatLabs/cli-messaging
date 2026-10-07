@@ -157,5 +157,12 @@ export {
 } from "./search-catchup.js"
 export type { SearchRefreshed, SyncOptions } from "./search-refresh.js"
 export { SYNC_BOUNDS, SYNC_KEY } from "./search-refresh.js"
+export {
+  type Backend,
+  type HitSource,
+  SERVER_BOUNDS,
+  SERVER_SEARCH_KEY,
+  type ServerSearched,
+} from "./server-search.js"
 export type { ThreadContext, ThreadOptions } from "./thread-context.js"
 export { readThreadContext, THREAD_BOUNDS } from "./thread-context.js"

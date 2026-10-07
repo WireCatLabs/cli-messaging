@@ -11,10 +11,31 @@ import { chatOf, limit } from "../tool.js"
 const EXACT = "bare words and quotes match their exact form only, as exact:word does; not with an AST"
 
 export const MESSAGES_SEARCH_DESCRIPTION =
-  "Search the local store using the Lucene 9.12.3 profile, default AND, with strict Boolean matching. Legacy discovery is explicit with language=legacy. Text or a versioned AST, account-scoped filters, calendar timezone, term/body regex and candidate presets use one service. Empty hits still report archive coverage. `saved` runs a saved search (searches_list) or an earlier run (searches_history). With sync_first, first fetch new messages within max_chats (5), sync_time (30s), max_messages (500), under messages.sync-first permission. A failed or bounded refresh keeps local results with stale coverage and refreshed details. thread=true attaches each hit's bounded parent/reply graph, with provenance and stale-edge labels; thread_hops, thread_messages, thread_bytes, thread_within set its separate bounds. Guide: https://github.com/leemour/cli-messaging/blob/main/docs/search/query-language.md. Text words and quoted phrases match every form of their words (Snowball stems, exact forms ranked first, query.stemming says how); exact:word, or exact=true, matches the exact form only. Returns { items, page, limit, hasMore, corrections, completeness, wordsReady, stemsReady, query, coverage }."
+  "Search the local store using the Lucene 9.12.3 profile, default AND, with strict Boolean matching. Legacy discovery is explicit with language=legacy. Text or a versioned AST, account-scoped filters, calendar timezone, term/body regex and candidate presets use one service. Empty hits still report archive coverage. `saved` runs a saved search (searches_list) or an earlier run (searches_history). With sync_first, first fetch new messages within max_chats (5), sync_time (30s), max_messages (500), under messages.sync-first permission. A failed or bounded refresh keeps local results with stale coverage and refreshed details. thread=true attaches each hit's bounded parent/reply graph, with provenance and stale-edge labels; thread_hops, thread_messages, thread_bytes, thread_within set its separate bounds. Guide: https://github.com/leemour/cli-messaging/blob/main/docs/search/query-language.md. Text words and quoted phrases match every form of their words (Snowball stems, exact forms ranked first, query.stemming says how); exact:word, or exact=true, matches the exact form only. Where the messenger's server can search, backend=both or server also asks it within server_time (5s), under messages.server-search: its hits are saved and re-checked by the same strict query, each hit says its source (archive, server, both), and server says what the server step did. Returns { items, page, limit, hasMore, corrections, completeness, wordsReady, stemsReady, query, coverage, server? }."
+
+const backendInputs = {
+  backend: v.optional(
+    v.pipe(
+      v.picklist(["archive", "server", "both"]),
+      v.description(
+        "archive (default), the messenger's server, or both; server hits are saved and re-checked by the same strict query, each hit says its source; needs messages.server-search",
+      ),
+    ),
+  ),
+  server_time: v.optional(
+    v.pipe(v.string(), v.description("how long to wait for the server, default 5s, at most 60s")),
+  ),
+}
+
+export const backendArgs = (args: { backend?: "archive" | "server" | "both"; server_time?: string }) => ({
+  ...(args.backend === undefined ? {} : { backend: args.backend }),
+  ...(args.server_time === undefined ? {} : { server: { timeMs: parseDuration(args.server_time, "server_time") } }),
+})
 
 export const messagesSearchInput = (messenger: Messenger) =>
   v.object({
+    // Typed as present so the answer code reads them; offered only where the server can search.
+    ...((messenger.serverSearch ? backendInputs : {}) as typeof backendInputs),
     ...threadInputs,
     ...syncInputs,
     text: v.optional(v.pipe(v.string(), v.description("the query: Lucene text or explicit legacy syntax"))),
@@ -94,6 +115,7 @@ export const answerMessagesSearch = async (
     const size = params.limit ?? defaults.limit
     const found = await messages.search({
       ...syncArgs(args),
+      ...backendArgs(args),
       ...threadArgs(args),
       ...(pattern ? { pattern } : params.text === undefined ? {} : { text: params.text }),
       ...(params.ast === undefined ? {} : { ast: params.ast }),
@@ -115,6 +137,7 @@ export const answerMessagesSearch = async (
   const size = args.limit ?? defaults.limit
   const found = await messages.search({
     ...syncArgs(args),
+    ...backendArgs(args),
     ...threadArgs(args),
     ...(args.text === undefined ? {} : { text: args.text }),
     ...(args.ast === undefined ? {} : { ast: args.ast }),

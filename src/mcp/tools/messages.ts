@@ -209,7 +209,8 @@ export const messagesTools = (messenger: Messenger): Record<string, AnyTool> => 
       input: messagesSearchInput(messenger),
       annotations: { ...READ, openWorldHint: false },
       stored: (store, account, args, defaults, connect) => {
-        const services = searchServices(messenger, store, account, defaults, args.sync_first ? connect : undefined)
+        const network = args.sync_first || (args.backend !== undefined && args.backend !== "archive")
+        const services = searchServices(messenger, store, account, defaults, network ? connect : undefined)
         return answerMessagesSearch(services.messages, args, defaults, services.searches)
       },
     }),

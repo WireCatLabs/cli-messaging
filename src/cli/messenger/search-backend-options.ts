@@ -1,0 +1,40 @@
+import { CliError } from "@leemour/cli-core"
+import type { Command } from "commander"
+import type { Backend, ServerOptions, ServerSearched } from "../../services/server-search.js"
+import { parseDuration } from "../settings.js"
+import type { Messenger, MessengerContext } from "./context.js"
+
+const backendOf = (value: string): Backend => {
+  if (value !== "archive" && value !== "server" && value !== "both")
+    throw new CliError("validation_error", "--backend takes archive, server or both")
+  return value
+}
+
+/** Mounted only where the messenger's server can search messages. */
+export const backendOptions = (command: Command, messenger: Messenger): Command =>
+  messenger.serverSearch
+    ? command
+        .option(
+          "--backend <archive|server|both>",
+          "where to search: the local archive, the messenger's server, or both (default: archive)",
+          backendOf,
+        )
+        .option("--server-time <duration>", "stop waiting for the server after this long (default: 5s)")
+    : command
+
+export const backendRequest = (command: Command): { backend?: Backend; server?: ServerOptions } => {
+  const { backend, serverTime } = command.opts<{ backend?: Backend; serverTime?: string }>()
+  return {
+    ...(backend === undefined ? {} : { backend }),
+    ...(serverTime === undefined ? {} : { server: { timeMs: parseDuration(serverTime, "--server-time") } }),
+  }
+}
+
+export const noteServer = (context: MessengerContext, server: ServerSearched | undefined): void => {
+  if (!server) return
+  if (server.skipped) context.renderer.note(`server search skipped: ${server.skipped} — the answer is the archive's`)
+  else if (!server.complete)
+    context.renderer.note(
+      `server search incomplete${server.failed.length ? `: ${[...new Set(server.failed.map(({ reason }) => reason))].join(", ")}` : ""}`,
+    )
+}

@@ -94,6 +94,9 @@ A query with no positive words skips the server (`server.skipped: "no_words"`). 
   `refuseLocalWrite`, like sync-first. Read-only and `ask` profiles get the archive answer under `both`.
 - MCP shows `backend: "server"` only when the key is `allow`; `both` on a profile without it answers
   from the archive with `server.skipped: "not_allowed"`.
+  **Correction 2026-10-07 (implementation):** MCP offers `backend` wherever the messenger's server can
+  search, at every level; the guard refuses `server` and turns `both` into `not_allowed`, the same check
+  for CLI and MCP.
 - Server hits are saved with `via: "search"`. They never call `markRange`, so ranges, `fetchedAt`,
   completeness and `store gaps` are unchanged (§2, verified). The stems queue and word index grow; the
   write drain already handles that.
@@ -107,6 +110,8 @@ A query with no positive words skips the server (`server.skipped: "no_words"`). 
 - **What is parallel:** the server calls run concurrently with the store preparation (index top-up,
   `prepareLucene`, resolving `chat:` and `from:`). The strict query runs **after** the save, because it
   must see the fresh rows. It is not two lists merged.
+  **Correction 2026-10-07 (implementation):** the translation needs the resolved query, so `prepareLucene`
+  runs before the calls; what runs in parallel is the server calls with each other (one per OR branch).
 - **At the bound:** the in-flight call is abandoned, its result is **dropped, never saved**, and the answer is
   the archive's plus `server.complete: false`. Nothing writes after the answer, so a late reply cannot write
   into a closed store. The connection's close cancels the request.

@@ -20,6 +20,7 @@ import type {
   Member,
   Message,
   MessageEvent,
+  MessageHit,
   OfficialChatStats,
   Page,
   PersonCard,
@@ -152,6 +153,27 @@ export interface ChatReading {
 export interface SenderSearch {
   /** One person's newest `limit` messages in a chat, oldest first — a search by sender, not a walk of the history. */
   historyFrom(chat: string, person: Id, window: { limit: number }): Promise<Page<Message>>
+}
+
+/** What a server search is asked: words as the server reads them, and the filters it takes. */
+export interface ServerQuery {
+  text: string
+  /** One chat; every chat of the account when unset. */
+  chat?: string
+  /** One sender, honoured only with `chat`. */
+  from?: Id
+  /** Epoch milliseconds, inclusive. */
+  minDate?: number
+  maxDate?: number
+}
+
+/** A messenger whose server searches message text. Its matching is its own: the results are candidates. */
+export interface MessageSearch {
+  /** The newest `limit` matches, newest first; `chats` are the chats they came from. */
+  searchMessages(
+    query: ServerQuery,
+    window: { limit: number; signal?: AbortSignal },
+  ): Promise<Page<MessageHit> & { chats: Chat[] }>
 }
 
 /** Changing a message already sent, or passing it on. */
@@ -448,6 +470,7 @@ export interface MessengerAdapter
     Partial<PersonProfiles>,
     Partial<ChatReading>,
     Partial<SenderSearch>,
+    Partial<MessageSearch>,
     Partial<MessageEditing>,
     Partial<MessagePins>,
     Partial<MessageReactions>,
