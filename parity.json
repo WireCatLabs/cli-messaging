@@ -2838,10 +2838,7 @@
       "in": "all"
     },
     "stats chats official": {
-      "in": [],
-      "planned": {
-        "tg": "tg's next cli-messaging bump"
-      },
+      "in": ["tg"],
       "reason": "MAX has no statistics request of its own for a chat"
     },
     "stats chats show": {
