@@ -6,6 +6,10 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- The parity manifest lists `chats folders order` in tg, and planned for max (max-cli `feat/client-gaps-a`).
+
 ### Fixed
 
 - An empty `messages search` that asked the messenger's server says «nothing found in the local store or on the

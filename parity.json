@@ -1458,10 +1458,9 @@
       "in": "all"
     },
     "chats folders order": {
-      "in": [],
-      "reason": "max-cli does not map folder order yet",
+      "in": ["tg"],
       "planned": {
-        "tg": "feat/folders-order-join"
+        "max": "feat/client-gaps-a"
       }
     },
     "chats folders update": {
