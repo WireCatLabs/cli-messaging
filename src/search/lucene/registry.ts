@@ -10,12 +10,22 @@ import {
   walkQuery,
 } from "./types.js"
 
-export const FIELD_VERSION = 1
+export const FIELD_VERSION = 2
 const terms: Operator[] = ["term", "phrase"]
 export const QUERY_FIELDS = [
   {
     name: "text",
     example: "invoice",
+    index: "message_stems ∪ message_words; wildcard and regex: message_words",
+    aliases: [],
+    type: "tokens",
+    operators: ["term", "phrase", "wildcard", "regex"],
+    normalization: "Snowball 3.1.1 by script (Cyrillic, Latin; the store's searchStemmers), then v1",
+    support: "A1",
+  },
+  {
+    name: "exact",
+    example: "exact:invoice",
     index: "message_words",
     aliases: [],
     type: "tokens",
@@ -219,7 +229,7 @@ export const validatePredicate = (node: Predicate): void => {
   if (!field) queryError("unknown_field", node.span, "use a field from the search field reference")
   if (!(field.operators as readonly string[]).includes(node.operator))
     queryError("unsupported_operator", node.span, `${field.name} takes ${field.operators.join(", ")}`)
-  if (node.value === "" && !["text", "body"].includes(node.field)) queryError("missing_value", node.span)
+  if (node.value === "" && !["text", "exact", "body"].includes(node.field)) queryError("missing_value", node.span)
   if ("values" in field && !field.values.includes(node.value.toLowerCase() as never))
     queryError("unknown_value", node.span, `${field.name} takes ${field.values.join(", ")}`)
   if (field.name === "size")
@@ -312,9 +322,13 @@ export const QUERY_OPERATORS = [
   {
     name: "term",
     example: "invoice",
-    semantics: "Точное совпадение анализированного текста; без автоматического prefix",
+    semantics: "Любая форма слова: text сравнивает основы Snowball; точная форма — exact:invoice или --exact",
   },
-  { name: "phrase", example: '"invoice paid"', semantics: "Последовательность анализированных слов" },
+  {
+    name: "phrase",
+    example: '"invoice paid"',
+    semantics: 'Слова подряд, в любой форме; кавычки не делают поиск точным — точная фраза: exact:"invoice paid"',
+  },
   {
     name: "implicit AND",
     example: "invoice paid",

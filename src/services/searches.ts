@@ -18,6 +18,8 @@ export interface SearchParams {
   timezone?: string
   limit?: number
   newest?: boolean
+  /** Bare words and quotes match their exact form only (`--exact`). */
+  exact?: boolean
   context?: number
   by?: StatsGrouping
 }
@@ -99,7 +101,8 @@ const checked = (params: SearchParams): SearchParams => {
     patternOf(params.text)
   } else if (languageOf(params) === "lucene") {
     if (params.ast !== undefined) validateAst(params.ast)
-    else if (params.text !== undefined) validateFields(parseLucene(params.text))
+    else if (params.text !== undefined)
+      validateFields(parseLucene(params.text, { defaultField: params.exact ? "exact" : "text" }))
   }
   return params
 }

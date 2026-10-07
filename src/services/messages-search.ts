@@ -5,9 +5,11 @@ import { dateRange, timezoneOf } from "../search/lucene/dates.js"
 import { parseLucene } from "../search/lucene/parser.js"
 import { PRESET_VERSION } from "../search/lucene/presets.js"
 import { FIELD_VERSION, validateAst, validateFields } from "../search/lucene/registry.js"
-import { hasText, type QueryExecution, type ResolvedNode } from "../search/lucene/resolved.js"
+import { hasStems, hasText, isStemmed, type QueryExecution, type ResolvedNode } from "../search/lucene/resolved.js"
 import { type QueryAst, type QueryNode, queryError, walkQuery } from "../search/lucene/types.js"
 import { inSource, sourceOf } from "../search/query.js"
+import { createStemmer, DEFAULT_STEMMERS, type Stemmer } from "../search/stem.js"
+import type { StemsState } from "../store/sqlite/stems.js"
 import { type AccountKey, CHAT_LIST_KEY, type ChatCompleteness, type MessageStore } from "../store/store.js"
 import { chatAmong, type SearchFound, type SearchQuery, senderAmong } from "./messages.js"
 import type { SearchRefreshed } from "./search-refresh.js"
@@ -19,6 +21,13 @@ export interface QueryMetadata {
   presetVersion: number
   timezone: string
   order: "newest" | "relevance"
+  /** Present when a `text` term or phrase was stemmed: which stemmer, and each word's stem. */
+  stemming?: QueryStemming
+}
+export interface QueryStemming {
+  applied: true
+  analyzer: string
+  terms: { word: string; stem: string; stemmer: string }[]
 }
 export interface SearchCoverage {
   state: "complete" | "partial" | "unknown" | "stale"
@@ -38,6 +47,8 @@ const positiveSources = (node: QueryNode): string[] =>
     : node.clauses.filter(({ occur }) => occur !== "mustNot").flatMap(({ node }) => positiveSources(node))
 export interface Prepared {
   wordsReady: boolean
+  stemsReady: boolean
+  stemming?: QueryStemming
   execution: QueryExecution
   timezone: string
   scopeAccounts: AccountKey[]
@@ -58,6 +69,8 @@ export const prepareLucene = async (
     queryError("invalid_context", { start: 0, end: 0 }, "use 0–20 surrounding messages")
   if (request.ast !== undefined && request.text !== undefined)
     queryError("query_conflict", { start: 0, end: 0 }, "give text or AST, not both")
+  if (request.ast !== undefined && request.exact)
+    queryError("query_conflict", { start: 0, end: 0 }, "an AST names its fields — use field exact instead of exact")
   const ast: QueryAst =
     request.ast !== undefined
       ? validateAst(request.ast)
@@ -76,7 +89,7 @@ export const prepareLucene = async (
               span: { start: 0, end: 0 },
             },
           }
-        : validateFields(parseLucene(request.text))
+        : validateFields(parseLucene(request.text, { defaultField: request.exact ? "exact" : "text" }))
   const timezone = timezoneOf(request.timezone)
   const held = await store.accounts()
   const providers = [...new Set([account.provider, ...held.map(({ provider }) => provider)])]
@@ -140,6 +153,14 @@ export const prepareLucene = async (
   }
   const wordsReady = (await store.searchIndexState())?.ready === true
   if (hasText(ast.root) && !wordsReady) await indexNotReady(store, messenger.app?.command)
+  const stems = await store.stemsState()
+  const stemsReady = stems?.ready === true
+  let stemmer: Stemmer | undefined
+  if (hasStems(ast.root)) {
+    if (!stems?.ready) stemsNotReady(stems, messenger.app?.command)
+    // Ready means the setting is one this build knows, so `null` cannot reach here.
+    stemmer = createStemmer((await store.stemmers()) ?? DEFAULT_STEMMERS)
+  }
   const execution: QueryExecution = {
     root,
     accounts: scopeAccounts,
@@ -148,8 +169,65 @@ export const prepareLucene = async (
     ...(selectedChat ? { chat: selectedChat } : {}),
     ...(request.signal ? { signal: request.signal } : {}),
     newest: request.newest,
+    ...(stemmer ? { stemmer } : {}),
   }
-  return { execution, timezone, wordsReady, scopeAccounts, ...(selectedChat ? { selectedChat } : {}) }
+  return {
+    execution,
+    timezone,
+    wordsReady,
+    stemsReady,
+    ...(stemmer ? { stemming: stemmingOf(ast.root, stemmer) } : {}),
+    scopeAccounts,
+    ...(selectedChat ? { selectedChat } : {}),
+  }
+}
+const stemmingOf = (root: QueryNode, stemmer: Stemmer): QueryStemming => ({
+  applied: true,
+  analyzer: stemmer.identity,
+  terms: walkQuery(root)
+    .filter(isStemmed)
+    .flatMap(({ value }) => stemmer.explain(value)),
+})
+const stemsNotReady = (state: StemsState | undefined, command: string | undefined): never => {
+  const cli = command ? `${command} ` : ""
+  const exact = "search exact forms with --exact or exact:"
+  if (!state)
+    throw new CliError(
+      "validation_error",
+      `this store has no stems yet — \`${cli}store migrate\` builds them, or ${exact}`,
+      {
+        reason: "index_not_ready",
+        index: "message_stems",
+      },
+    )
+  const details = {
+    reason: "index_not_ready",
+    index: "message_stems",
+    cause: state.cause,
+    done: state.filledThrough,
+    total: state.watermark,
+    pending: state.pending,
+    built: state.built,
+    wanted: state.wanted,
+  }
+  if (state.cause === "stemmer_changed")
+    throw new CliError(
+      "validation_error",
+      `the stems were built by ${state.built}, and the store now asks for ${state.wanted} — run \`${cli}store reindex\` (or \`${cli}store migrate\`), or ${exact}`,
+      details,
+    )
+  if (state.cause === "stemmer_unknown")
+    throw new CliError(
+      "validation_error",
+      `the store asks for stemmers this tool does not know — upgrade this tool, or ${exact}`,
+      details,
+    )
+  const percent = Math.floor((Math.min(state.filledThrough, state.watermark) / Math.max(state.watermark, 1)) * 100)
+  throw new CliError(
+    "validation_error",
+    `stems are ${percent}% built${state.pending > 0 ? `, ${state.pending} messages queued` : ""} — run \`${cli}store migrate\`, or ${exact}`,
+    details,
+  )
 }
 const indexNotReady = async (store: MessageStore, command: string | undefined): Promise<never> => {
   const state = await store.searchIndexState()
@@ -198,13 +276,14 @@ const coverageOf = async (
     },
   }
 }
-const queryOf = (timezone: string, newest?: boolean): QueryMetadata => ({
+const queryOf = (timezone: string, newest?: boolean, stemming?: QueryStemming): QueryMetadata => ({
   language: "lucene-v1",
   version: 1,
   fieldsVersion: FIELD_VERSION,
   presetVersion: PRESET_VERSION,
   timezone,
   order: newest ? "newest" : "relevance",
+  ...(stemming ? { stemming } : {}),
 })
 export const searchLucene = async (
   store: MessageStore,
@@ -236,8 +315,9 @@ export const searchLucene = async (
     items,
     corrections: [],
     wordsReady: prepared.wordsReady,
+    stemsReady: prepared.stemsReady,
     completeness,
-    query: queryOf(prepared.timezone, request.newest),
+    query: queryOf(prepared.timezone, request.newest, prepared.stemming),
     coverage,
   }
 }
@@ -318,7 +398,7 @@ export const statsLucene = async (
     items: rows.slice(0, request.limit),
     total: groups.reduce((sum, { count }) => sum + count, 0),
     hasMore: rows.length > request.limit,
-    query: queryOf(prepared.timezone, request.newest),
+    query: queryOf(prepared.timezone, request.newest, prepared.stemming),
     coverage,
     completeness,
   }

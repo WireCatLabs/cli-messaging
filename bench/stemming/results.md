@@ -62,6 +62,10 @@ through the store is the "S via store" row in each treebank section.
 - **Miss: query p95 43.3 ms (≤ 30).** Today's exact query over the same words is already 26.5 ms p95, so the
   target sits just above today's search. Stemmed search costs about 1.6× today's, in line with its larger
   result sets [run].
+- **Through the compiler (work item 5, 2026-10-07):** the owner replaced the 30 ms target with "at most 2×
+  today's exact search". At 1M a stemmed search takes 39.5 ms p95 against 51.3 ms for `exact:` on the same
+  words, and words in over 3 % of messages 347 ms against 351 ms: exact forms fill the first page, so the
+  stems are read only when they run out (it was 770 ms before) [run].
 - **For the compiler:** the stems set and its bm25 must be computed once. Joined row by row, the same query
   took 420 ms p95 at 100k; materialized, 5 ms [run].
 
@@ -360,79 +364,83 @@ Store row: exact hits the stems alone miss 0 of 5764 (the OR with the word index
 
 ### N = 100,000 [run]
 
-- Databases on `tmpfs` (RAM); 7472 MB available RAM at query time; node v24.19.0.
-- Peak RSS of this process 327 MB.
+- Databases on `tmpfs` (RAM); 11465 MB available RAM at query time; node v24.19.0.
+- Peak RSS of this process 323 MB.
 
 | index | build | disk | notes |
 |---|---|---|---|
-| message_words (Exact, today) | 1.62 s | 22 MB | product DDL, optimize included |
-| T1 vocabulary (search_terms + trigrams, today) | 2.11 s | 34 MB | 143,516 terms |
-| S: message_stems | 4.34 s | 15 MB | of which Snowball in JS 2.97 s |
-| T2: message_trigrams (normalized, contentless) | 3.42 s | 58 MB | |
+| message_words (Exact, today) | 1.38 s | 22 MB | product DDL, optimize included |
+| T1 vocabulary (search_terms + trigrams, today) | 1.53 s | 34 MB | 143,516 terms |
+| S: message_stems | 3.55 s | 15 MB | of which Snowball in JS 2.49 s |
+| T2: message_trigrams (normalized, contentless) | 3.09 s | 58 MB | |
 
 | query | words | p50 ms | p95 ms | avg rows (LIMIT 20) |
 |---|---|---|---|---|
-| Exact (today) | ~1% df (0.3–3%) | 0.94 | 3.42 | 20.0 |
-| S | ~1% df (0.3–3%) | 0.41 | 1.74 | 20.0 |
-| T1 (correction + search) | ~1% df (0.3–3%) | 4.29 | 9.08 | 20.0 |
-| T2 | ~1% df (0.3–3%) | 1.06 | 2.54 | 20.0 |
-| Exact (today) | rare (0.01–0.1% df) | 0.03 | 0.10 | 15.5 |
-| S | rare (0.01–0.1% df) | 0.04 | 0.10 | 15.8 |
-| T1 (correction + search) | rare (0.01–0.1% df) | 3.21 | 28.14 | 18.0 |
-| T2 | rare (0.01–0.1% df) | 0.31 | 1.07 | 16.0 |
+| Exact (today) | ~1% df (0.3–3%) | 0.30 | 1.13 | 20.0 |
+| S | ~1% df (0.3–3%) | 0.35 | 1.11 | 20.0 |
+| T1 (correction + search) | ~1% df (0.3–3%) | 2.91 | 5.41 | 20.0 |
+| T2 | ~1% df (0.3–3%) | 0.85 | 1.71 | 20.0 |
+| Exact (today) | rare (0.01–0.1% df) | 0.02 | 0.06 | 15.5 |
+| S | rare (0.01–0.1% df) | 0.04 | 0.09 | 15.8 |
+| T1 (correction + search) | rare (0.01–0.1% df) | 2.43 | 22.61 | 18.0 |
+| T2 | rare (0.01–0.1% df) | 0.25 | 0.82 | 16.0 |
 
 ### N = 1,000,000 [run]
 
-- Databases on `tmpfs` (RAM); 12607 MB available RAM at query time; node v24.19.0.
-- Peak RSS of this process 846 MB.
+- Databases on `tmpfs` (RAM); 9356 MB available RAM at query time; node v24.19.0.
+- Peak RSS of this process 1036 MB.
 
 | index | build | disk | notes |
 |---|---|---|---|
-| message_words (Exact, today) | 30.53 s | 170 MB | product DDL, optimize included |
-| T1 vocabulary (search_terms + trigrams, today) | 47.59 s | 203 MB | 522,924 terms |
-| S: message_stems | 44.88 s | 97 MB | of which Snowball in JS 29.95 s |
-| T2: message_trigrams (normalized, contentless) | 109.72 s | 538 MB | |
+| message_words (Exact, today) | 15.78 s | 170 MB | product DDL, optimize included |
+| T1 vocabulary (search_terms + trigrams, today) | 11.09 s | 203 MB | 522,924 terms |
+| S: message_stems | 37.11 s | 97 MB | of which Snowball in JS 25.12 s |
+| T2: message_trigrams (normalized, contentless) | 40.42 s | 538 MB | |
 
 | query | words | p50 ms | p95 ms | avg rows (LIMIT 20) |
 |---|---|---|---|---|
-| Exact (today) | ~1% df (0.3–3%) | 5.82 | 16.96 | 20.0 |
-| S | ~1% df (0.3–3%) | 6.56 | 35.64 | 20.0 |
-| T1 (correction + search) | ~1% df (0.3–3%) | 13.16 | 31.22 | 20.0 |
-| T2 | ~1% df (0.3–3%) | 13.18 | 22.69 | 20.0 |
-| Exact (today) | rare (0.01–0.1% df) | 0.24 | 1.11 | 20.0 |
-| S | rare (0.01–0.1% df) | 0.65 | 1.27 | 20.0 |
-| T1 (correction + search) | rare (0.01–0.1% df) | 6.97 | 10.36 | 20.0 |
-| T2 | rare (0.01–0.1% df) | 2.94 | 8.51 | 20.0 |
+| Exact (today) | ~1% df (0.3–3%) | 5.05 | 30.90 | 20.0 |
+| S | ~1% df (0.3–3%) | 4.62 | 13.73 | 20.0 |
+| T1 (correction + search) | ~1% df (0.3–3%) | 9.90 | 26.30 | 20.0 |
+| T2 | ~1% df (0.3–3%) | 8.75 | 25.86 | 20.0 |
+| Exact (today) | rare (0.01–0.1% df) | 0.23 | 1.00 | 20.0 |
+| S | rare (0.01–0.1% df) | 0.19 | 0.73 | 20.0 |
+| T1 (correction + search) | rare (0.01–0.1% df) | 5.23 | 8.64 | 20.0 |
+| T2 | rare (0.01–0.1% df) | 1.66 | 4.50 | 20.0 |
 
 ## Gate §S12 — through the store code (gate.ts) [run]
 
 ### N = 100,000 [run]
 
-- Store on `tmpfs` (RAM); 11423 MB available RAM; node v24.19.0; peak RSS 324 MB.
-- Archive written at version 14 in 12.2 s (messages, word and trigram triggers), then migrated to snowball-3.1.1 cyrillic=russian latin=spanish.
+- Store on `tmpfs` (RAM); 10868 MB available RAM; node v24.19.0; peak RSS 337 MB.
+- Archive written at version 14 in 11.5 s (messages, word and trigram triggers), then migrated to snowball-3.1.1 cyrillic=russian latin=spanish.
 
 | metric | target | measured | verdict |
 |---|---|---|---|
 | stem fill (`fillStems`, batches of 5,000) | ≤ 75 s | 2.0 s | pass |
 | of which Snowball with the cache (one stemmer over every text, timed apart) | ≤ 25 s | 0.9 s | pass |
 | disk, `message_stems` | ≤ 140 MB | 12 MB (dbstat); file grew 12 MB | pass |
-| query p95, ~1% df word, page 20, exact tier first (§S7–S8 as SQL; the compiler is work item 5) | ≤ 30 ms | 4.6 ms (p50 1.3, 20.0 rows) | pass |
-| ingest of 5,000 messages via `saveMessages`, pages of 100, drain on vs off, median of 5 rounds | ≤ +25 % | +22 % (rounds: +22 %, +25 %, +25 %, +16 %, +11 %; first round 0.8 s vs 0.6 s) | pass |
-| for scale, not gated: today's exact query, same words, page 20 | — | p95 2.6 ms (p50 0.8) | — |
+| query p95, ~1% df word, page 20, exact tier first (§S7–S8 as hand-written SQL) | ≤ 30 ms, replaced 2026-10-06 by ≤ 2× exact (the compiler row) | 4.9 ms (p50 1.2, 20.0 rows) | — |
+| ingest of 5,000 messages via `saveMessages`, pages of 100, drain on vs off, median of 5 rounds | ≤ +25 % | +21 % (rounds: +21 %, +28 %, +24 %, +12 %, +8 %; first round 0.8 s vs 0.7 s) | pass |
+| through the compiler (`prepareLucene` + `matchQuery`): p95, ~1% df, stemmed text vs exact: | ≤ 2× exact (owner, 2026-10-06) | 4.8 ms vs 4.3 ms, 1.10× (p50 2.0 vs 1.9) | pass |
+| for scale, not gated: through the compiler, words above 3% df | — | p95 36.2 ms vs 33.9 ms exact | — |
+| for scale, not gated: today's exact query, same words, page 20 | — | p95 2.9 ms (p50 0.7) | — |
 | exact hits the stems alone miss, 20 query words | 0 with the §S7 OR | 0 of 14790 | pass |
 
 ### N = 1,000,000 [run]
 
-- Store on `tmpfs` (RAM); 12637 MB available RAM; node v24.19.0; peak RSS 385 MB.
-- Archive written at version 14 in 138.4 s (messages, word and trigram triggers), then migrated to snowball-3.1.1 cyrillic=russian latin=spanish.
+- Store on `tmpfs` (RAM); 9628 MB available RAM; node v24.19.0; peak RSS 419 MB.
+- Archive written at version 14 in 152.8 s (messages, word and trigram triggers), then migrated to snowball-3.1.1 cyrillic=russian latin=spanish.
 
 | metric | target | measured | verdict |
 |---|---|---|---|
-| stem fill (`fillStems`, batches of 5,000) | ≤ 75 s | 28.0 s | pass |
-| of which Snowball with the cache (one stemmer over every text, timed apart) | ≤ 25 s | 7.6 s | pass |
+| stem fill (`fillStems`, batches of 5,000) | ≤ 75 s | 23.7 s | pass |
+| of which Snowball with the cache (one stemmer over every text, timed apart) | ≤ 25 s | 8.8 s | pass |
 | disk, `message_stems` | ≤ 140 MB | 101 MB (dbstat); file grew 101 MB | pass |
-| query p95, ~1% df word, page 20, exact tier first (§S7–S8 as SQL; the compiler is work item 5) | ≤ 30 ms | 43.3 ms (p50 12.1, 20.0 rows) | **miss** |
-| ingest of 5,000 messages via `saveMessages`, pages of 100, drain on vs off, median of 5 rounds | ≤ +25 % | +22 % (rounds: +30 %, +22 %, +23 %, +18 %, +9 %; first round 0.9 s vs 0.7 s) | pass |
-| for scale, not gated: today's exact query, same words, page 20 | — | p95 26.5 ms (p50 6.3) | — |
+| query p95, ~1% df word, page 20, exact tier first (§S7–S8 as hand-written SQL) | ≤ 30 ms, replaced 2026-10-06 by ≤ 2× exact (the compiler row) | 47.8 ms (p50 14.6, 20.0 rows) | — |
+| ingest of 5,000 messages via `saveMessages`, pages of 100, drain on vs off, median of 5 rounds | ≤ +25 % | +21 % (rounds: +24 %, +21 %, +26 %, +17 %, +9 %; first round 0.8 s vs 0.7 s) | pass |
+| through the compiler (`prepareLucene` + `matchQuery`): p95, ~1% df, stemmed text vs exact: | ≤ 2× exact (owner, 2026-10-06) | 39.5 ms vs 51.3 ms, 0.77× (p50 11.0 vs 10.6) | pass |
+| for scale, not gated: through the compiler, words above 3% df | — | p95 347.4 ms vs 350.7 ms exact | — |
+| for scale, not gated: today's exact query, same words, page 20 | — | p95 29.6 ms (p50 8.2) | — |
 | exact hits the stems alone miss, 20 query words | 0 with the §S7 OR | 0 of 136181 | pass |
 

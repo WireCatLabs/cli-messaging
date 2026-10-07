@@ -136,12 +136,49 @@ db.close()
 const { openStore } = (await import(join(BENCH_DIR, "../../dist/store/store.js"))) as {
   openStore: (o: { path: string }) => Promise<{
     saveMessages: (key: object, chat: string, messages: object[], o: { via: string }) => Promise<void>
+    matchQuery: (execution: unknown) => Promise<{ items: unknown[] }>
     close: () => Promise<void>
   }>
 }
 const store = await openStore({ path })
 const side = await product.openCache(path)
 const KEY = { provider: "telegram", account: "1" }
+
+// ---- the product compiler: a stemmed text search against exact: on the same words (owner: ≤ 2× exact)
+const { prepareLucene } = (await import(join(BENCH_DIR, "../../dist/services/messages-search.js"))) as {
+  prepareLucene: (store: object, account: object, request: object, messenger: object) => Promise<{ execution: unknown }>
+}
+const compiled = async (text: string) => {
+  const { execution } = await prepareLucene(store, KEY, { text, language: "lucene", limit: LIMIT }, {})
+  const t = performance.now()
+  await store.matchQuery(execution)
+  return performance.now() - t
+}
+const timedWords = async (words: string[]) => {
+  const stemmedMs: number[] = []
+  const exactMs: number[] = []
+  for (const [i, word] of words.entries()) {
+    const spelled = original.get(word) ?? word
+    const stemmedOne = await compiled(spelled)
+    const exactOne = await compiled(`exact:${spelled}`)
+    if (i < WARM) continue
+    stemmedMs.push(stemmedOne)
+    exactMs.push(exactOne)
+  }
+  return { stemmedMs, exactMs }
+}
+const banded = await timedWords(picked)
+const common = (() => {
+  const pool = side
+    .prepare(
+      `SELECT term FROM message_words_vocab WHERE col = 'normalized_text' AND length(term) >= 4
+         AND term GLOB '*[^0-9]*' AND doc > ?`,
+    )
+    .all(0.03 * N)
+    .map((r) => String(r.term))
+  return Array.from({ length: RUNS + WARM }, () => pool[Math.floor(rand() * pool.length)] as string)
+})()
+const commonTimes = await timedWords(common)
 const message = (id: number, text: string) => ({
   id: String(id),
   chatId: "1",
@@ -213,10 +250,17 @@ out(
   `| disk, \`message_stems\` | ≤ 140 MB | ${dbstat === undefined ? `${mb(stemsDisk)} (file growth)` : `${mb(dbstat)} (dbstat); file grew ${mb(stemsDisk)}`} | ${verdict((dbstat ?? stemsDisk) <= 140 * 1048576)} |`,
 )
 out(
-  `| query p95, ~1% df word, page ${LIMIT}, exact tier first (§S7–S8 as SQL; the compiler is work item 5) | ≤ 30 ms | ${p95.toFixed(1)} ms (p50 ${pctl(times, 50).toFixed(1)}, ${(returned / RUNS).toFixed(1)} rows) | ${verdict(p95 <= 30)} |`,
+  `| query p95, ~1% df word, page ${LIMIT}, exact tier first (§S7–S8 as hand-written SQL) | ≤ 30 ms, replaced 2026-10-06 by ≤ 2× exact (the compiler row) | ${p95.toFixed(1)} ms (p50 ${pctl(times, 50).toFixed(1)}, ${(returned / RUNS).toFixed(1)} rows) | — |`,
 )
 out(
   `| ingest of ${INGEST.toLocaleString("en")} messages via \`saveMessages\`, pages of ${PAGE}, drain on vs off, median of ${ROUNDS} rounds | ≤ +25 % | ${pct(overhead)} (rounds: ${overheads.map(pct).join(", ")}; first round ${sec(rounds[0]?.on ?? 0)} vs ${sec(rounds[0]?.off ?? 0)}) | ${verdict(overhead <= 25)} |`,
+)
+const ratio = pctl(banded.stemmedMs, 95) / pctl(banded.exactMs, 95)
+out(
+  `| through the compiler (\`prepareLucene\` + \`matchQuery\`): p95, ~1% df, stemmed text vs exact: | ≤ 2× exact (owner, 2026-10-06) | ${pctl(banded.stemmedMs, 95).toFixed(1)} ms vs ${pctl(banded.exactMs, 95).toFixed(1)} ms, ${ratio.toFixed(2)}× (p50 ${pctl(banded.stemmedMs, 50).toFixed(1)} vs ${pctl(banded.exactMs, 50).toFixed(1)}) | ${verdict(ratio <= 2)} |`,
+)
+out(
+  `| for scale, not gated: through the compiler, words above 3% df | — | p95 ${pctl(commonTimes.stemmedMs, 95).toFixed(1)} ms vs ${pctl(commonTimes.exactMs, 95).toFixed(1)} ms exact | — |`,
 )
 out(
   `| for scale, not gated: today's exact query, same words, page ${LIMIT} | — | p95 ${pctl(todayTimes, 95).toFixed(1)} ms (p50 ${pctl(todayTimes, 50).toFixed(1)}) | — |`,

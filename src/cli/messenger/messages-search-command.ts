@@ -25,6 +25,10 @@ export const messagesSearchCommand = (messenger: Messenger): Command =>
     )
     .option("--limit <n>", "how many", positiveCount("--limit"))
     .option("--newest", "newest first instead of best first")
+    .option(
+      "--exact",
+      "bare words and quotes match their exact form only, as exact:word does; text: still matches every form",
+    )
     .option("--context <n>", "messages before and after each hit; 2 in the terminal, 0 otherwise", wholeCount)
     .option("--language <lucene|legacy>", "the query language: strict Lucene or legacy discovery", languageOf)
     .option("--timezone <zone>", "the IANA timezone for calendar date boundaries")
@@ -43,6 +47,7 @@ export const messagesSearchCommand = (messenger: Messenger): Command =>
         language,
         timezone,
         newest,
+        exact,
         context: around,
         limit: typedLimit,
         saved,
@@ -53,6 +58,7 @@ export const messagesSearchCommand = (messenger: Messenger): Command =>
         language?: "lucene" | "legacy"
         timezone?: string
         newest?: boolean
+        exact?: boolean
         context?: number
         limit?: number
         saved?: string
@@ -71,6 +77,7 @@ export const messagesSearchCommand = (messenger: Messenger): Command =>
         ...(language === undefined ? {} : { language }),
         ...(timezone === undefined ? {} : { timezone }),
         ...(newest ? { newest: true } : {}),
+        ...(exact ? { exact: true } : {}),
         ...(around === undefined ? {} : { context: around }),
         ...(typedLimit === undefined ? {} : { limit: typedLimit }),
       }
@@ -104,6 +111,7 @@ export const messagesSearchCommand = (messenger: Messenger): Command =>
           signal,
           language: params.language ?? (pattern ? "legacy" : "lucene"),
           newest: params.newest === true,
+          ...(params.exact ? { exact: true } : {}),
           context: params.context ?? (context.format === "pretty" ? 2 : 0),
           saved: id,
         })
@@ -116,6 +124,11 @@ export const messagesSearchCommand = (messenger: Messenger): Command =>
       }
       const { command } = messenger.app
       for (const { from, to } of found.corrections) context.renderer.note(`${from} → ${to.join(", ")}`)
+      const forms = (found.query?.stemming?.terms ?? []).filter(({ stemmer }) => stemmer !== "none")
+      if (forms.length > 0)
+        context.renderer.note(
+          `also found other forms: ${forms.map(({ word, stem, stemmer }) => `${word} → ${stem}* (${stemmer})`).join(", ")} — --exact for the exact words only`,
+        )
       if (!found.wordsReady) {
         context.renderer.note(
           found.query

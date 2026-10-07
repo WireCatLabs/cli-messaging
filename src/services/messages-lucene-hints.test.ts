@@ -79,8 +79,8 @@ describe("strict search hints", () => {
 
   it("finds one exact word that the index merges with another, through a body: regex", async () => {
     const store = await open({ "1": ["это мой дом", "Мой кот", "мои книги", "моих"] })
-    expect(await ids(store, "мой")).toEqual([1, 2, 3])
-    expect(await ids(store, "мой AND body:/(.*[^а-яёА-ЯЁ])?[Мм]ой([^а-яёА-ЯЁ].*)?/")).toEqual([1, 2])
+    expect(await ids(store, "exact:мой")).toEqual([1, 2, 3])
+    expect(await ids(store, "exact:мой AND body:/(.*[^а-яёА-ЯЁ])?[Мм]ой([^а-яёА-ЯЁ].*)?/")).toEqual([1, 2])
   })
 
   it("explains that ~ is not strict search and where fuzzy matching is", async () => {

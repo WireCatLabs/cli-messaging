@@ -70,6 +70,14 @@
       "senderId": "11",
       "senderName": "Bob Synthetic",
       "attachments": [{ "kind": "file", "name": "Отчёт.PDF", "size": 524288 }]
+    },
+    {
+      "id": "109",
+      "chatId": "7",
+      "text": "квартиру сдали",
+      "timestamp": "2026-01-28T10:00:00.000Z",
+      "senderId": "10",
+      "senderName": "Alice Synthetic"
     }
   ],
   "tags": [
@@ -79,7 +87,10 @@
   ],
   "fileTexts": [{ "chat": "7", "message": "105", "attachment": 1, "text": "Накладная № 17, оплата до 31 января" }],
   "recipes": [
-    { "title": "Точное слово", "query": "invoice", "ids": ["101", "102", "106"] },
+    { "title": "Слово", "query": "invoice", "ids": ["101", "102", "106"] },
+    { "title": "Другие формы слова", "query": "квартира", "ids": ["109"] },
+    { "title": "Фраза в кавычках — тоже в любой форме", "query": "\"квартира\"", "ids": ["109"] },
+    { "title": "Только точная форма", "query": "exact:квартира", "ids": [] },
     { "title": "Фраза", "query": "\"invoice paid\"", "ids": ["101", "106"] },
     {
       "title": "Группа авторов",

@@ -8,8 +8,10 @@ import { syncInputs } from "../search-sync.js"
 import { threadArgs, threadInputs } from "../thread-options.js"
 import { chatOf, limit } from "../tool.js"
 
+const EXACT = "bare words and quotes match their exact form only, as exact:word does; not with an AST"
+
 export const MESSAGES_SEARCH_DESCRIPTION =
-  "Search the local store using the Lucene 9.12.3 profile, default AND, with strict Boolean matching. Legacy discovery is explicit with language=legacy. Text or a versioned AST, account-scoped filters, calendar timezone, term/body regex and candidate presets use one service. Empty hits still report archive coverage. `saved` runs a saved search (searches_list) or an earlier run (searches_history). With sync_first, first fetch new messages within max_chats (5), sync_time (30s), max_messages (500), under messages.sync-first permission. A failed or bounded refresh keeps local results with stale coverage and refreshed details. thread=true attaches each hit's bounded parent/reply graph, with provenance and stale-edge labels; thread_hops, thread_messages, thread_bytes, thread_within set its separate bounds. Guide: https://github.com/leemour/cli-messaging/blob/main/docs/search/query-language.md. Returns { items, page, limit, hasMore, corrections, completeness, wordsReady, query, coverage }."
+  "Search the local store using the Lucene 9.12.3 profile, default AND, with strict Boolean matching. Legacy discovery is explicit with language=legacy. Text or a versioned AST, account-scoped filters, calendar timezone, term/body regex and candidate presets use one service. Empty hits still report archive coverage. `saved` runs a saved search (searches_list) or an earlier run (searches_history). With sync_first, first fetch new messages within max_chats (5), sync_time (30s), max_messages (500), under messages.sync-first permission. A failed or bounded refresh keeps local results with stale coverage and refreshed details. thread=true attaches each hit's bounded parent/reply graph, with provenance and stale-edge labels; thread_hops, thread_messages, thread_bytes, thread_within set its separate bounds. Guide: https://github.com/leemour/cli-messaging/blob/main/docs/search/query-language.md. Text words and quoted phrases match every form of their words (Snowball stems, exact forms ranked first, query.stemming says how); exact:word, or exact=true, matches the exact form only. Returns { items, page, limit, hasMore, corrections, completeness, wordsReady, stemsReady, query, coverage }."
 
 export const messagesSearchInput = (messenger: Messenger) =>
   v.object({
@@ -28,6 +30,7 @@ export const messagesSearchInput = (messenger: Messenger) =>
       ),
     ),
     newest: v.optional(v.pipe(v.boolean(), v.description("newest first instead of best first"))),
+    exact: v.optional(v.pipe(v.boolean(), v.description(EXACT))),
     context: v.optional(
       v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(20), v.description("messages around each hit")),
     ),
@@ -63,7 +66,7 @@ export type MessagesSearchArgs = v.InferOutput<ReturnType<typeof messagesSearchI
 
 const typedOf = (args: Record<string, unknown>): SearchParams =>
   Object.fromEntries(
-    ["text", "language", "timezone", "chat", "source", "newest", "context", "limit", "by"].flatMap((key) =>
+    ["text", "language", "timezone", "chat", "source", "newest", "exact", "context", "limit", "by"].flatMap((key) =>
       args[key] === undefined ? [] : [[key, args[key]]],
     ),
   )
@@ -99,6 +102,7 @@ export const answerMessagesSearch = async (
       ...(params.timezone === undefined ? {} : { timezone: params.timezone }),
       limit: size,
       newest: params.newest === true,
+      ...(params.exact ? { exact: true } : {}),
       context: params.context ?? 0,
       ...(params.chat === undefined ? {} : { chat: params.chat }),
       ...(params.source === undefined ? {} : { source: params.source }),
@@ -119,6 +123,7 @@ export const answerMessagesSearch = async (
     ...(args.timezone === undefined ? {} : { timezone: args.timezone }),
     limit: size,
     newest: args.newest === true,
+    ...(args.exact ? { exact: true } : {}),
     context: args.context ?? 0,
     ...(args.chat === undefined ? {} : { chat: args.chat }),
     ...(args.source === undefined ? {} : { source: args.source }),
@@ -127,13 +132,14 @@ export const answerMessagesSearch = async (
 }
 
 export const MESSAGES_STATS_DESCRIPTION =
-  "Count what a strict Lucene query matches in the local store, by chat, sender, calendar day or hour (in the timezone). Each message is counted once; no text means every stored message. Counts are lower bounds where coverage is not complete. sync_first optionally refreshes within max_chats, sync_time and max_messages; failed refreshes keep counts with stale coverage and refreshed details. Returns { by, items: [{ key, name, account?, count }], total, hasMore, page, limit, query, coverage, completeness }."
+  "Count what a strict Lucene query matches in the local store, by chat, sender, calendar day or hour (in the timezone). Each message is counted once; no text means every stored message. Words match every form, as in messages_search; exact=true counts exact forms only. Counts are lower bounds where coverage is not complete. sync_first optionally refreshes within max_chats, sync_time and max_messages; failed refreshes keep counts with stale coverage and refreshed details. Returns { by, items: [{ key, name, account?, count }], total, hasMore, page, limit, query, coverage, completeness }."
 
 export const messagesStatsInput = (messenger: Messenger) =>
   v.object({
     ...syncInputs,
     text: v.optional(v.pipe(v.string(), v.minLength(1), v.description("a strict Lucene query; omit to count all"))),
     ast: v.optional(v.unknown()),
+    exact: v.optional(v.pipe(v.boolean(), v.description(EXACT))),
     by: v.optional(v.picklist(["chat", "sender", "day", "hour"])),
     timezone: v.optional(v.string()),
     chat: v.optional(chatOf(messenger)),
@@ -176,6 +182,7 @@ export const answerMessagesStats = async (
     ...(params.ast === undefined ? {} : { ast: params.ast }),
     by: params.by ?? "chat",
     language: "lucene",
+    ...(params.exact ? { exact: true } : {}),
     signal: defaults.signal,
     ...(params.timezone === undefined ? {} : { timezone: params.timezone }),
     limit: size,

@@ -1,4 +1,5 @@
 import type { AccountKey } from "../../store/store.js"
+import type { Stemmer } from "../stem.js"
 import type { DateRange } from "./dates.js"
 import type { Predicate, QueryNode, Span } from "./types.js"
 
@@ -25,6 +26,16 @@ export interface QueryExecution {
   /** Internal conversation eligibility, applied before lexical ranking. */
   conversationIds?: string[]
   conversationSince?: number
+  /** The store's stemmer, set when a leaf is stemmed: queries stem with the choices that built the index. */
+  stemmer?: Stemmer
 }
+/** A leaf that reads the word index: every `text` and `exact` leaf, stemmed or not. */
 export const hasText = (node: QueryNode): boolean =>
-  node.kind === "predicate" ? node.field === "text" : node.clauses.some(({ node }) => hasText(node))
+  node.kind === "predicate"
+    ? node.field === "text" || node.field === "exact"
+    : node.clauses.some(({ node }) => hasText(node))
+/** A leaf that reads the stems: `text` terms and phrases. Patterns never stem. */
+export const isStemmed = (node: Predicate): boolean =>
+  node.field === "text" && (node.operator === "term" || node.operator === "phrase") && node.value !== ""
+export const hasStems = (node: QueryNode): boolean =>
+  node.kind === "predicate" ? isStemmed(node) : node.clauses.some(({ node }) => hasStems(node))

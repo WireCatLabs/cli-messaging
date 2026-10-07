@@ -11,6 +11,7 @@ import {
 import { PRESETS } from "../../search/lucene/presets.js"
 import { parseBytes } from "../../search/lucene/registry.js"
 import type { QueryExecution, ResolvedNode, ResolvedPredicate } from "../../search/lucene/resolved.js"
+import { isStemmed } from "../../search/lucene/resolved.js"
 import { exhausted, QUERY_LIMITS, queryError } from "../../search/lucene/types.js"
 import { inSource } from "../../search/query.js"
 import type { SqlValue } from "../driver.js"
@@ -24,6 +25,8 @@ interface Fragment {
   params: SqlValue[]
   exact: boolean
   fts?: string
+  /** The leaf as a phrase of stems, for ranking a stemmed search by `message_stems`. */
+  stems?: string
 }
 interface Leaf {
   node: ResolvedPredicate
@@ -130,12 +133,31 @@ const runQuery = async (
     let fragment: Fragment
     let test: Leaf["test"]
     const bound = (sql: string, ...params: SqlValue[]): Fragment => ({ sql, params, exact: true })
-    if (field === "text" && value === "") fragment = bound("0")
+    const stemsOf = (text: string) => {
+      const stems = execution.stemmer?.stemTokens(text) ?? []
+      return stems.length ? quoted(stems.join(" ")) : undefined
+    }
+    if ((field === "text" || field === "exact") && value === "") fragment = bound("0")
     else if (field === "body" && value === "") fragment = bound("m.text = ?", "")
-    else if (field === "text") {
+    else if (isStemmed(node)) {
+      if (!execution.stemmer) throw new Error("a stemmed leaf reached the compiler without the store's stemmer")
+      const text = normalize(value)
+      const stems = stemsOf(value)
+      // Words OR stems: two spellings can fold one word to different stems, and every exact hit must stay.
+      fragment = /[\p{L}\p{N}]/u.test(text)
+        ? {
+            sql: `m.pk IN (SELECT rowid FROM message_words WHERE message_words MATCH ?)${stems ? " OR m.pk IN (SELECT rowid FROM message_stems WHERE message_stems MATCH ?)" : ""}`,
+            params: [`normalized_text : (${quoted(text)})`, ...(stems ? [`stems : (${stems})`] : [])],
+            exact: true,
+            fts: quoted(text),
+            ...(stems ? { stems } : {}),
+          }
+        : bound("0")
+    } else if (field === "text" || field === "exact") {
       if (operator === "term" || operator === "phrase") {
         const text = normalize(value)
-        fragment = /[\p{L}\p{N}]/u.test(text) ? wordMatch(quoted(text)) : bound("0")
+        const stems = stemsOf(value)
+        fragment = /[\p{L}\p{N}]/u.test(text) ? { ...wordMatch(quoted(text)), ...(stems ? { stems } : {}) } : bound("0")
       } else {
         const pattern = operator === "wildcard" ? wildcardPattern(normalize(value)) : foldRegex(value, node.span)
         const automaton = patternOf(pattern, node)
@@ -376,26 +398,60 @@ const runQuery = async (
   const joinedFrom =
     "FROM messages m JOIN chats c ON c.pk=m.chat_pk JOIN accounts ac ON ac.pk=m.account_pk LEFT JOIN identities i ON i.pk=m.sender_identity_pk"
   let baseFrom = joinedFrom
-  const requiredText = (node: ResolvedNode): string | undefined => {
-    if (node.kind === "predicate") return fragments.get(node)?.fragment.fts
+  const requiredText = (node: ResolvedNode, index: "fts" | "stems" = "fts"): string | undefined => {
+    if (node.kind === "predicate") return fragments.get(node)?.fragment[index]
     const required = node.clauses.filter(({ occur }) => occur === "must")
     const optional = node.clauses.filter(({ occur }) => occur === "should")
     if (required.length) {
-      const parts = required.flatMap(({ node }) => requiredText(node) ?? [])
+      const parts = required.flatMap(({ node }) => requiredText(node, index) ?? [])
       return parts.length ? parts.map((part) => `(${part})`).join(" AND ") : undefined
     }
-    const parts = optional.map(({ node }) => requiredText(node))
+    const parts = optional.map(({ node }) => requiredText(node, index))
     return parts.length && parts.every((part) => part !== undefined)
       ? parts.map((part) => `(${part})`).join(" OR ")
       : undefined
   }
-  const rankMatch = requiredText(execution.root)
-  if (execution.chat && !rankMatch) {
+  const stemmed = [...fragments.keys()].some(isStemmed)
+  const rankMatch = stemmed ? undefined : requiredText(execution.root)
+  if (execution.chat && !rankMatch && !stemmed) {
     baseFrom =
       "FROM chats c JOIN accounts ac ON ac.pk=c.account_pk CROSS JOIN messages m LEFT JOIN identities i ON i.pk=m.sender_identity_pk"
     where = combine([{ sql: "m.chat_pk=c.pk", params: [], exact: true }, where], "AND")
   }
-  const from = rankMatch ? baseFrom.replace("FROM messages m", "FROM message_words f CROSS JOIN messages m") : baseFrom
+  // A stemmed search starts from the messages its indexes name, read by key; without it SQLite walks every
+  // message of the account and tests each against the index sets.
+  const driverOf = (node: ResolvedNode): { sql: string; params: SqlValue[] } | undefined => {
+    if (node.kind === "predicate") {
+      const { fts, stems } = fragments.get(node)?.fragment ?? {}
+      if (fts === undefined) return undefined
+      const words = "SELECT rowid AS pk FROM message_words WHERE message_words MATCH ?"
+      return isStemmed(node) && stems
+        ? {
+            sql: `${words} UNION SELECT rowid FROM message_stems WHERE message_stems MATCH ?`,
+            params: [`normalized_text : (${fts})`, `stems : (${stems})`],
+          }
+        : { sql: words, params: [`normalized_text : (${fts})`] }
+    }
+    const required = node.clauses.filter(({ occur }) => occur === "must")
+    const optional = node.clauses.filter(({ occur }) => occur === "should")
+    const parts = required.length
+      ? required.flatMap(({ node }) => driverOf(node) ?? [])
+      : optional.map(({ node }) => driverOf(node))
+    if (!parts.length || parts.some((part) => part === undefined)) return undefined
+    const sets = parts as { sql: string; params: SqlValue[] }[]
+    return {
+      sql: sets.map(({ sql }) => `SELECT pk FROM (${sql})`).join(required.length ? " INTERSECT " : " UNION "),
+      params: sets.flatMap(({ params }) => params),
+    }
+  }
+  const driver = stemmed ? driverOf(execution.root) : undefined
+  const filtered = where
+  if (driver) where = combine([{ sql: "m.pk=d.pk", params: [], exact: true }, where], "AND")
+  const from = rankMatch
+    ? baseFrom.replace("FROM messages m", "FROM message_words f CROSS JOIN messages m")
+    : driver
+      ? baseFrom.replace("FROM messages m", "FROM d CROSS JOIN messages m")
+      : baseFrom
   if (rankMatch)
     where = combine(
       [
@@ -408,8 +464,33 @@ const runQuery = async (
       ],
       "AND",
     )
-  const relevance = rankMatch ? "f.rank" : "NULL"
-  const order = `${rankMatch && !execution.newest ? "f.rank," : ""}m.sent_at DESC, ac.provider, ac.native_id, c.native_id, m.native_id DESC`
+  // A stemmed search ranks by stems but must not filter by them, so its ranking is a set computed once and
+  // joined LEFT; joined row by row, the same query took 420 ms instead of 5 at 100k (stemming gate).
+  const ranking = stemmed ? requiredText(execution.root, "stems") : undefined
+  const exactTier = stemmed ? requiredText(execution.root) : undefined
+  const ranked: { sql: string[]; params: SqlValue[] } = driver
+    ? { sql: [`d(pk) AS MATERIALIZED (${driver.sql})`], params: [...driver.params] }
+    : { sql: [], params: [] }
+  if (ranking && !execution.newest) {
+    ranked.sql.push(
+      "f(pk, rank) AS MATERIALIZED (SELECT rowid, bm25(message_stems, 1.0, 0.0) FROM message_stems WHERE message_stems MATCH ?)",
+    )
+    ranked.params.push(`stems : (${ranking})`)
+  }
+  if (exactTier) {
+    ranked.sql.push("x(pk) AS MATERIALIZED (SELECT rowid FROM message_words WHERE message_words MATCH ?)")
+    ranked.params.push(`normalized_text : (${exactTier})`)
+  }
+  const withRanking = ranked.sql.length ? `WITH ${ranked.sql.join(", ")} ` : ""
+  const rankedFrom = ranking && !execution.newest ? `${from} LEFT JOIN f ON f.pk=m.pk` : from
+  const exactColumn = exactTier ? ", m.pk IN (SELECT pk FROM x) AS exact" : ""
+  const relevance = rankMatch ? "f.rank" : ranking && !execution.newest ? "f.rank" : "NULL"
+  const tiers = execution.newest
+    ? ""
+    : rankMatch
+      ? "f.rank,"
+      : `${exactTier ? "exact DESC," : ""}${ranking ? "f.rank IS NULL, f.rank," : ""}`
+  const order = `${tiers}m.sent_at DESC, ac.provider, ac.native_id, c.native_id, m.native_id DESC`
   const leaves = [...fragments.values()]
   const exact = leaves.filter(({ test }) => test === undefined)
   const projection = exact.map(({ fragment }, index) => `coalesce(${fragment.sql},0) AS q${index}`).join(",")
@@ -429,10 +510,10 @@ const runQuery = async (
       not.every(({ node }) => !evaluate(node, row, text, attachments))
     )
   }
-  const grouped = (sql: string, params: SqlValue[], source: string): QueryGroup[] => {
+  const grouped = (sql: string, params: SqlValue[], source: string, prefix = ""): QueryGroup[] => {
     const group = GROUPS[by as QueryGrouping]
     return database
-      .prepare(`SELECT ${group.select}, count(*) AS count ${source} WHERE ${sql} GROUP BY ${group.key}`)
+      .prepare(`${prefix}SELECT ${group.select}, count(*) AS count ${source} WHERE ${sql} GROUP BY ${group.key}`)
       .all(...params)
       .map((row) => ({
         ...(row.provider == null ? {} : { provider: String(row.provider), account: String(row.account) }),
@@ -443,16 +524,58 @@ const runQuery = async (
       }))
   }
   if (by === "pks" && leaves.every(({ test }) => !test)) {
-    const rows = database.prepare(`SELECT m.pk AS pk ${from} WHERE ${where.sql}`).all(...where.params)
+    const rows = database
+      .prepare(`${withRanking}SELECT m.pk AS pk ${from} WHERE ${where.sql}`)
+      .all(...ranked.params, ...where.params)
     await new Promise<void>((resolve) => setImmediate(resolve))
     check()
     return rows.map(({ pk }) => Number(pk))
   }
-  if (by && by !== "pks" && leaves.every(({ test }) => !test)) return grouped(where.sql, where.params, from)
+  if (by && by !== "pks" && leaves.every(({ test }) => !test))
+    return grouped(where.sql, [...ranked.params, ...where.params], from, withRanking)
+  // Exact forms come first, so a page they fill needs neither the stems nor their bm25: for a word in a few
+  // percent of messages that was most of the cost (PERF-9). The exact tier is ranked as exact search ranks it.
+  if (stemmed && exactTier && driver && !execution.newest && leaves.every(({ test }) => !test)) {
+    const exactRows = database
+      .prepare(
+        `SELECT m.pk AS pk, w.rank AS relevance ${baseFrom.replace("FROM messages m", "FROM message_words w CROSS JOIN messages m")} WHERE message_words MATCH ? AND w.rank MATCH 'bm25(1.0, 0.0)' AND m.pk=w.rowid AND ${filtered.sql} ORDER BY w.rank, m.sent_at DESC, ac.provider, ac.native_id, c.native_id, m.native_id DESC LIMIT ?`,
+      )
+      .all(`normalized_text : (${exactTier})`, ...filtered.params, execution.limit + 1)
+    await new Promise<void>((resolve) => setImmediate(resolve))
+    check()
+    const room = execution.limit + 1 - exactRows.length
+    const otherRows =
+      room > 0
+        ? database
+            .prepare(
+              `${withRanking}SELECT m.pk AS pk, ${relevance} AS relevance ${rankedFrom} WHERE ${where.sql} AND m.pk NOT IN (SELECT pk FROM x) ORDER BY ${ranking ? "f.rank IS NULL, f.rank," : ""}m.sent_at DESC, ac.provider, ac.native_id, c.native_id, m.native_id DESC LIMIT ?`,
+            )
+            .all(...ranked.params, ...where.params, room)
+        : []
+    await new Promise<void>((resolve) => setImmediate(resolve))
+    check()
+    const rows = [
+      ...exactRows.map(({ pk, relevance }) => ({ pk, relevance, exact: true })),
+      ...otherRows.map(({ pk, relevance }) => ({ pk, relevance, exact: false })),
+    ]
+    return {
+      items: hitsByPk(
+        context,
+        rows.slice(0, execution.limit).map(({ pk }) => Number(pk)),
+      ).map((hit, index) => ({
+        ...hit,
+        score: rows[index]?.relevance == null ? null : -Number(rows[index]?.relevance),
+        exact: rows[index]?.exact === true,
+      })),
+      hasMore: rows.length > execution.limit,
+    }
+  }
   if (leaves.every(({ test }) => !test)) {
     const rows = database
-      .prepare(`SELECT m.pk AS pk, ${relevance} AS relevance ${from} WHERE ${where.sql} ORDER BY ${order} LIMIT ?`)
-      .all(...where.params, execution.limit + 1)
+      .prepare(
+        `${withRanking}SELECT m.pk AS pk, ${relevance} AS relevance${exactColumn} ${rankedFrom} WHERE ${where.sql} ORDER BY ${order} LIMIT ?`,
+      )
+      .all(...ranked.params, ...where.params, execution.limit + 1)
     await new Promise<void>((resolve) => setImmediate(resolve))
     check()
     return {
@@ -462,15 +585,16 @@ const runQuery = async (
       ).map((hit, index) => ({
         ...hit,
         score: rows[index]?.relevance == null ? null : -Number(rows[index]?.relevance),
+        ...(exactColumn ? { exact: Number(rows[index]?.exact) === 1 } : {}),
       })),
       hasMore: rows.length > execution.limit,
     }
   }
   const candidates = database
     .prepare(
-      `SELECT m.pk AS pk, ${relevance} AS relevance, length(cast(m.text AS BLOB)) AS bytes ${from} WHERE ${where.sql} ORDER BY ${order} LIMIT ?`,
+      `${withRanking}SELECT m.pk AS pk, ${relevance} AS relevance${exactColumn}, length(cast(m.text AS BLOB)) AS bytes ${rankedFrom} WHERE ${where.sql} ORDER BY ${order} LIMIT ?`,
     )
-    .all(...where.params, QUERY_LIMITS.candidates + 1)
+    .all(...ranked.params, ...where.params, QUERY_LIMITS.candidates + 1)
   await new Promise<void>((resolve) => setImmediate(resolve))
   check()
   if (candidates.length > QUERY_LIMITS.candidates) exhausted("candidate rows")
@@ -479,6 +603,7 @@ const runQuery = async (
   const scores = new Map(
     candidates.map((row) => [Number(row.pk), row.relevance == null ? null : -Number(row.relevance)]),
   )
+  const exactness = new Map(candidates.map((row) => [Number(row.pk), Number(row.exact) === 1]))
   for (let offset = 0; offset < candidates.length; offset += 500) {
     if (offset > 0) await new Promise<void>((resolve) => setImmediate(resolve))
     check()
@@ -505,6 +630,7 @@ const runQuery = async (
     items: hitsByPk(context, found.slice(0, execution.limit)).map((hit, index) => ({
       ...hit,
       score: scores.get(found[index] as number) ?? null,
+      ...(exactColumn ? { exact: exactness.get(found[index] as number) === true } : {}),
     })),
     hasMore: found.length > execution.limit,
   }
