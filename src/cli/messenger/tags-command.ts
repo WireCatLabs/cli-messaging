@@ -1,4 +1,5 @@
 import { CliError } from "@leemour/cli-core"
+import { annotate } from "@leemour/cli-core/commands"
 import { Command } from "commander"
 import { TAG_TYPES, type TagType } from "../../domain/tags.js"
 import type { TagTargetInput, TagTargetView } from "../../services/tags.js"
@@ -47,8 +48,7 @@ export const tagsCommand = (messenger: Messenger): Command => {
     "your own labels on chats, people and messages, kept in the local store and never sent; tag: in a search finds them",
   )
 
-  tags
-    .command("auto")
+  annotate(tags.command("auto"), { mutates: true, local: true })
     .description("derive local group/channel tags from cached metadata using keyword rules")
     .option(
       "--chat <chat>",
@@ -75,19 +75,29 @@ export const tagsCommand = (messenger: Messenger): Command => {
       )
     })
 
-  targetOptions(tags.command("add").description("put tags on one chat, person or message"), messenger, "tag").action(
-    async function (this: Command, given: string[]) {
-      const context = messengerContext(this, messenger)
-      refuseLocalWrite(context, messenger.app.command, "tags.add")
-      const target = this.opts<TagTargetInput>()
-      const done = await context.withServices((services) => services.tags.add(target, given))
-      if (context.format !== "pretty") return context.renderer.result(done)
-      if (done.added.length) context.streams.data(`${describe(done.target)}: ${done.added.join(", ")}\n`)
-      if (done.unchanged.length) context.renderer.note(`already there: ${done.unchanged.join(", ")}`)
-    },
-  )
+  targetOptions(
+    annotate(tags.command("add"), { mutates: true, local: true }).description(
+      "put tags on one chat, person or message",
+    ),
+    messenger,
+    "tag",
+  ).action(async function (this: Command, given: string[]) {
+    const context = messengerContext(this, messenger)
+    refuseLocalWrite(context, messenger.app.command, "tags.add")
+    const target = this.opts<TagTargetInput>()
+    const done = await context.withServices((services) => services.tags.add(target, given))
+    if (context.format !== "pretty") return context.renderer.result(done)
+    if (done.added.length) context.streams.data(`${describe(done.target)}: ${done.added.join(", ")}\n`)
+    if (done.unchanged.length) context.renderer.note(`already there: ${done.unchanged.join(", ")}`)
+  })
 
-  targetOptions(tags.command("remove").description("take tags off one chat, person or message"), messenger, "untag")
+  targetOptions(
+    annotate(tags.command("remove"), { mutates: true, local: true }).description(
+      "take tags off one chat, person or message",
+    ),
+    messenger,
+    "untag",
+  )
     .option("--source <manual|auto>", "remove only this ownership claim", sourceOf)
     .action(async function (this: Command, given: string[]) {
       const context = messengerContext(this, messenger)
