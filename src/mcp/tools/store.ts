@@ -2,6 +2,7 @@ import { CliError } from "@leemour/cli-core"
 import * as v from "valibot"
 import type { Messenger } from "../../cli/messenger/context.js"
 import { parseDuration } from "../../cli/settings.js"
+import { levelFor } from "../../sends/permissions.js"
 import { FETCHING } from "../../services/archive.js"
 import { GAP_BOUNDS, gapsService, validateRepair } from "../../services/archive-gaps.js"
 import { jobsDir, listJobs, readJob, startArchiveJob, stateOf } from "../../services/backfill-jobs.js"
@@ -71,7 +72,14 @@ export const storeTools = (messenger: Messenger): Record<string, AnyTool> => ({
         (args.catch_up_chunks !== undefined || args.catch_up_messages !== undefined || args.catch_up_time !== undefined)
       )
         throw new CliError("validation_error", "catch-up budgets need catch_up or searchCatchUp true")
-      if (prepare) validateCatchUp(deps, preparation)
+      if (prepare) {
+        for (const key of ["conversations.build", "conversations.embed"]) {
+          const level = levelFor(defaults.settings.permissions ?? {}, key).level
+          if (level === "deny" || level === "readonly")
+            throw new CliError("permission_error", `profile does not let ${key} prepare search`, { permission: key })
+        }
+        validateCatchUp(deps, preparation)
+      }
       validateRepair(messenger, options)
       defaults.guard.check({ chatId: null, key: "store.gaps.repair" }, { reserve: false })
       const service = gapsService(deps)

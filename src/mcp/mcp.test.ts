@@ -1396,6 +1396,19 @@ describe("the MCP server", () => {
     expect((await readonly.client.listTools()).tools.map(({ name }) => name)).not.toContain("chat_store_gaps_repair")
   })
 
+  it("refuses secondary search preparation permission before repairing through MCP", async () => {
+    const root = await filledRoot()
+    const backend = scripted()
+    const { call } = await connect(backend, { root, config: levels({ store: "allow", conversations: "readonly" }) })
+    const result = await call("chat_store_gaps_repair", { chat: "7", catch_up: true })
+    expect(result.isError).toBe(true)
+    expect(result.body.error).toMatchObject({
+      code: "permission_error",
+      permission: "conversations.build",
+    })
+    expect(backend.opened()).toBe(0)
+  })
+
   it("queues a fingerprinted gap repair without opening a connection and filters job metadata by profile", async () => {
     const root = await filledRoot()
     const backend = scripted()
