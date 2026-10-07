@@ -117,7 +117,10 @@ interface Clause {
   node: QueryNode
   modifier?: "must" | "mustNot"
 }
-export const parseLucene = (text: string): QueryAst => {
+export const parseLucene = (
+  text: string,
+  { defaultField = "text" }: { defaultField?: "text" | "exact" } = {},
+): QueryAst => {
   if (text.length > QUERY_LIMITS.bytes || new TextEncoder().encode(text).length > QUERY_LIMITS.bytes)
     queryError("query_limit", { start: 0, end: text.length })
   const tokens = tokensOf(text)
@@ -255,7 +258,7 @@ export const parseLucene = (text: string): QueryAst => {
       queryError("unsupported_operator", peek().span, "boost and minimum-should-match are not supported")
     return { node, ...(modifier ? { modifier } : {}) }
   }
-  const root = query("text")
+  const root = query(defaultField)
   expect("EOF")
   return { version: 1, language: "lucene-v1", root }
 }

@@ -140,7 +140,7 @@ describe("saved searches", () => {
       params: { language: "lucene", limit: 3, text: "invoice" },
       language: "lucene-v1",
       version: 1,
-      fieldsVersion: 1,
+      fieldsVersion: 2,
       runs: 0,
       lastRunAt: null,
     })

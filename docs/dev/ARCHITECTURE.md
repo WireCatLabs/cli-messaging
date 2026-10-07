@@ -206,8 +206,12 @@ scenarios (`docs/storage/search-indexes.md`).
 
 **Stems (version 15).** `message_stems` holds the Snowball stems of `messages.text` — stemmed before
 folding, by `createStemmer` (`src/search/stem.ts`) — in the same shape as `message_words`: contentless
-with delete, the same tokenizer, the same `scope` tokens. Queries do not read it yet (stemmed-search
-plan, #524). SQL cannot stem, so the triggers only queue the message in `message_stems_pending`, and JS
+with delete, the same tokenizer, the same `scope` tokens. A `text` term or phrase matches the word index
+OR the stems (`src/store/sqlite/lucene.ts`), so no exact hit is lost to a different fold; `exact:` reads
+the words only. A stemmed query is driven by a materialized set of the messages its indexes name, read by
+key, and ranked by a materialized stems bm25 joined LEFT, exact forms first — joining the stems as the
+ranked table would drop exact-only hits, and joining it row by row was 80× slower (`bench/stemming`).
+Search and stats refuse a stemmed query with `index_not_ready` until the stems are ready. SQL cannot stem, so the triggers only queue the message in `message_stems_pending`, and JS
 writes the stems (`src/store/sqlite/stems.ts`): every store write empties up to 500 queued messages
 before its `COMMIT`, and `fillStems` stems the messages up to the watermark and then the queue — on
 open for a small file, in `store migrate`, `store reindex`, and inside the same 200 ms before a search.

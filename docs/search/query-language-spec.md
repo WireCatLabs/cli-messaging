@@ -140,7 +140,7 @@ Presets — versioned candidate detectors, с bounded expressions/work и false-
 ## Проверки
 
 Checked-in query и regex fixtures с development Java harness: baseline config и synthetic 16-message
-corpus. Analyzer reference: Whitespace для text, Keyword для body/from/kind; typed dates/normalization
+corpus. Analyzer reference: Whitespace, then Snowball 3.1.1 stems by script, для text (Whitespace без стемов для exact), Keyword для body/from/kind; typed dates/normalization
 и SQLite semantics проверяются отдельно. Это не заявляет эквивалентность Lucene StandardAnalyzer.
 
 Проверки: parser acceptance, Boolean ids на двух providers, term/body regex, empty/media-only,

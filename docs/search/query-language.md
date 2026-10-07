@@ -8,7 +8,8 @@
 
 Lucene profile v1 доступен через shared services, CLI и MCP; потребителям нужна
 версия cli-messaging с этим профилем. Синтаксис основан на Apache Lucene 9.12.3
-StandardSyntaxParser и PrecedenceQueryParser, default AND, default field `text`.
+StandardSyntaxParser и PrecedenceQueryParser, default AND, default field `text` (слова в любой форме,
+см. «Формы слов»; `--exact` делает полем по умолчанию `exact`).
 Это ограниченный профиль языка, а не полный Lucene search engine.
 
 Этот профиль — для `messages search` и `messages_search` MCP. `bot messages search`
@@ -26,13 +27,37 @@ StandardSyntaxParser и PrecedenceQueryParser, default AND, default field `text`
 
 <!-- recipes: generated -->
 
-### Точное слово
+### Слово
 
 ```sh
 tg messages search 'invoice' --timezone UTC
 ```
 
 На synthetic fixture: ids 101, 102, 106. В MAX замените первый аргумент `tg` на `max`.
+
+### Другие формы слова
+
+```sh
+tg messages search 'квартира' --timezone UTC
+```
+
+На synthetic fixture: ids 109. В MAX замените первый аргумент `tg` на `max`.
+
+### Фраза в кавычках — тоже в любой форме
+
+```sh
+tg messages search '"квартира"' --timezone UTC
+```
+
+На synthetic fixture: ids 109. В MAX замените первый аргумент `tg` на `max`.
+
+### Только точная форма
+
+```sh
+tg messages search 'exact:квартира' --timezone UTC
+```
+
+На synthetic fixture: ничего. В MAX замените первый аргумент `tg` на `max`.
 
 ### Фраза
 
@@ -210,8 +235,8 @@ tg messages search 'content:"оплата до" NOT text:оплата' --timezon
 
 | Оператор | Пример | Семантика / поддержка |
 |---|---|---|
-| term | `invoice` | Точное совпадение анализированного текста; без автоматического prefix |
-| phrase | `"invoice paid"` | Последовательность анализированных слов |
+| term | `invoice` | Любая форма слова: text сравнивает основы Snowball; точная форма — exact:invoice или --exact |
+| phrase | `"invoice paid"` | Слова подряд, в любой форме; кавычки не делают поиск точным — точная фраза: exact:"invoice paid" |
 | implicit AND | `invoice paid` | Оба clauses обязательны; adjacency группируется по upstream grammar |
 | AND / && | `alpha AND beta` | Оба условия обязательны |
 | OR / \|\| | `alpha OR beta` | Любой optional clause, если нет required clause |
@@ -234,9 +259,40 @@ tg messages search 'content:"оплата до" NOT text:оплата' --timezon
 Нижний регистр `and/or/not` — обычный текст. Pure-negative query не даёт совпадений;
 для исключения укажите положительное условие, например `kind:group NOT preset:secret`.
 
-Ranking не меняет Boolean множество. Когда все ветви требуют text, используется BM25
-по обязательному word-index кандидату; иначе — стабильный newest order. `--newest`
+Ranking не меняет Boolean множество. Когда в запросе есть слово или фраза в `text`, сначала идут
+сообщения с точными формами, затем остальные по BM25 по основам; когда все ветви требуют только
+`exact:`, используется BM25 по word index; иначе — стабильный newest order. `--newest`
 всегда сортирует по времени. Равные scores/time разрешаются account-qualified ids.
+
+## Формы слов
+
+Слово и фраза в `text` (поле по умолчанию) находят любые формы слов: `квартира` находит `квартиру`
+и `квартиры`, `canción` — `canciones`. Слова сравниваются по основам Snowball 3.1.1: кириллица —
+русским стеммером, латиница — испанским; потом основа приводится как в word index (ё→е, й→и,
+без ударений). Кавычки не делают поиск точным: `"оплатил счёт"` — эти слова подряд, в любой форме.
+Каждое точное совпадение остаётся в ответе и идёт первым.
+
+| Нужно | Запрос |
+|---|---|
+| Любая форма | `квартира`, `"оплатил счёт"`, `text:квартира` |
+| Только точная форма | `exact:квартира`, `exact:"оплатил счёт"`, или `--exact` (MCP: `exact: true`) для всех слов без поля |
+| Шаблон | `text:кварт*` и `text:/…/` — всегда по словам, без основ |
+| Исключить все формы | `-квартира`; только точную — `-exact:квартира` |
+
+Ответ показывает, что основы применялись: `query.stemming` (`analyzer` и для каждого слова
+`word`, `stem`, `stemmer`), `stemsReady` рядом с `wordsReady`, у каждого найденного `exact`
+(`false` — найдено только по другой форме). CLI пишет одну строку в stderr:
+«also found other forms: квартира → квартир* (russian)».
+
+Стеммеры выбираются для всего хранилища — каждого профиля, tg и MAX:
+`<cli> config set searchStemmers.cyrillic russian|none`,
+`<cli> config set searchStemmers.latin spanish|english|none`. Архиву в основном на английском
+лучше `english` (F1 0.794 против 0.711 на английском тексте). После смены поиск по словам ждёт
+`<cli> store reindex`.
+
+Известные склейки (разные слова с одной основой): `часть`/`часто` (`част`), `потому`/`потом` (`пот`),
+`caso`/`casa` (`cas`), `partido`/`parte` (`part`), `plazo`/`plaza` (`plaz`); английский через
+испанский стеммер — `car`/`care`. Выход — `exact:` или `--exact`.
 
 ## Поля
 
@@ -248,7 +304,8 @@ enum или unsupported сочетание дают ошибку, а не пус
 
 | Поле | Тип | Значения / нормализация | Пример | Поддержка |
 |---|---|---|---|---|
-| `text` | tokens | NFKD/marks/NFC/lowercase v1 | `invoice` | term, phrase, wildcard, regex |
+| `text` | tokens | Snowball 3.1.1 by script (Cyrillic, Latin; the store's searchStemmers), then v1 | `invoice` | term, phrase, wildcard, regex |
+| `exact` | tokens | NFKD/marks/NFC/lowercase v1 | `exact:invoice` | term, phrase, wildcard, regex |
 | `body` | keyword | raw, case-sensitive | `body:/.*invoice.*/` | term, phrase, wildcard, regex |
 | `from` | person | account-scoped resolution | `from:"Alice Synthetic"` | term, phrase |
 | `chat` | chat | account-scoped resolution | `chat:"Work fixture"` | term, phrase |
@@ -466,6 +523,10 @@ CLI печатает позицию с единицы. `~` после слова
 `index_not_ready` говорит, насколько построен word index (процент или сколько сообщений ждут
 нормализации), и точную команду: `<cli> store migrate` достраивает его сразу; каждый поиск тоже
 строит понемногу. Запросы без слов (`has:`, `kind:`, `date:`) работают и до этого.
+Для слов в `text` нужен ещё индекс основ: пока он не готов, ответ — `index_not_ready` с
+`index: "message_stems"`, `cause` (`building`, `stemmer_changed` после смены стеммеров,
+`stemmer_unknown` — стеммеры знает только более новая версия), `done`/`total` и командой
+(`store migrate` или `store reindex`). Подмены точным поиском нет; `exact:` и `--exact` работают и до этого.
 `unsupported_field` отличается от `unknown_field`; incomplete archive — состояние охвата, не syntax error.
 
 ## Миграция legacy
@@ -482,6 +543,7 @@ Legacy regex теперь также имеет row/byte/time budgets; преж�
 | `before:2026-02-01` | `date:[* TO 2026-02-01}` |
 | `after:7d` | Exact quoted timestamp range; preview фиксирует старый instant |
 | Prefix/discovery автоматически | `text:invo*` явно; typo — `--language legacy` |
+| Точное слово (до полей v2: `invoice`, `"invoice"`) | `exact:invoice`, `exact:"invoice"` или `--exact` |
 | `--regex 'invoice\\s+\\d+'` | Не alias term regex; keep legacy либо отдельно проверяйте body pattern |
 
 Shared `migrateLegacyQuery` — pure preview, без записи saved query и без новой команды.

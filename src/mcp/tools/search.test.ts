@@ -46,6 +46,13 @@ describe.each(["max", "tg"])("the shared MCP search bridge for %s", (command) =>
     expect(result.query?.fieldsVersion).toBe(1)
   })
 
+  it("**forwards exact**, so bare words match their exact form only", async () => {
+    const args = v.parse(messagesSearchInput(messenger), { text: "квартира", exact: true })
+    const search = vi.fn(async () => found)
+    await answerMessagesSearch({ search }, args, { limit: 20 })
+    expect(search).toHaveBeenCalledWith(expect.objectContaining({ text: "квартира", exact: true }))
+  })
+
   it("forwards AST/migration/timezone/scopes and cancellation without a second parser", async () => {
     const ast = parseLucene("x")
     const signal = new AbortController().signal

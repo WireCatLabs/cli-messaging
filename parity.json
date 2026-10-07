@@ -258,6 +258,9 @@
       "meaning": "also print edits, deletions and reactions; every line then names its event",
       "note": "watch updates use this flag independently of the group event --type filter"
     },
+    "--exact": {
+      "meaning": "bare words and quotes match their exact form only, as exact:word does; text: still matches every form"
+    },
     "--extract": {
       "meaning": "extract text from files mapped by this download"
     },
@@ -2277,6 +2280,13 @@
       "options": {
         "--chat": "all",
         "--context": "all",
+        "--exact": {
+          "in": [],
+          "planned": {
+            "max": "each CLI's next cli-messaging bump",
+            "tg": "each CLI's next cli-messaging bump"
+          }
+        },
         "--language": "all",
         "--limit": "all",
         "--max-chats": {
@@ -2598,6 +2608,13 @@
         "--context": {
           "in": "all"
         },
+        "--exact": {
+          "in": [],
+          "planned": {
+            "max": "each CLI's next cli-messaging bump",
+            "tg": "each CLI's next cli-messaging bump"
+          }
+        },
         "--language": {
           "in": "all"
         },
@@ -2845,6 +2862,13 @@
         },
         "--chat": {
           "in": "all"
+        },
+        "--exact": {
+          "in": [],
+          "planned": {
+            "max": "each CLI's next cli-messaging bump",
+            "tg": "each CLI's next cli-messaging bump"
+          }
         },
         "--limit": {
           "in": "all"

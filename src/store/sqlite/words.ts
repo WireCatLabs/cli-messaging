@@ -53,7 +53,8 @@ export interface WordOptions {
 }
 
 /** A hit with its relevance — bm25 turned round so higher is better; `null` from steps that do not rank. */
-export type ScoredHit = StoredHit & { score: number | null }
+/** `exact: false`: a stemmed search found it only through another form of the words. */
+export type ScoredHit = StoredHit & { score: number | null; exact?: boolean }
 
 interface Resolved {
   accountPks: number[]

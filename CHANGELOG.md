@@ -11,6 +11,24 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 - `messages send --spoiler` and `--caption-above` (send tool `spoiler`, `caption_above`) for a photo, video or
   file, where the messenger lists them in the new `Messenger.mediaOptions`; elsewhere they are refused before
   connecting.
+- Strict search finds other forms of a word: `квартира` finds `квартиру`, `canción` finds `canciones`, by
+  Snowball 3.1.1 stems chosen by script (store-wide `searchStemmers`). Exact forms come first. `exact:word`,
+  `exact:"…"`, `--exact` on `messages search`, `stats messages show` and `searches create`, and `exact: true`
+  on MCP `messages_search` and `messages_stats` keep today's exact matching. Answers carry `stemsReady`,
+  `query.stemming` (the analyzer and each word's stem) and `exact` per hit; the CLI notes the forms in
+  stderr. Through the store at 1M, a stemmed search costs about what an exact one does (`bench/stemming`).
+
+### Changed — may break callers
+
+- Strict `text` search stems (fields version 2). Bare words **and quoted phrases** now match other forms,
+  so result sets and `stats messages show` counts grow and the order changes (exact forms first): `"квартира"`
+  finds `квартиру`. For the old sets use `exact:` or `--exact`; an MCP AST with `field: "text"` now stems,
+  send `field: "exact"` for exact matching. `-word` excludes every form; `-exact:word` only the exact one.
+  Saved searches run with the new meaning. A stemmed search answers `index_not_ready` (`index:
+  "message_stems"`, `cause`) until `store migrate` has built the stems, and again after the stemmer
+  setting changes, until `store reindex`; exact searches keep working. Known false merges: `часть`/`часто`,
+  `потому`/`потом`, `caso`/`casa`, `partido`/`parte`, `plazo`/`plaza`; English through the Spanish stemmer
+  (`car`/`care`) unless `searchStemmers.latin` is `english`.
 
 ## 0.162.0 — 07.10.2026
 

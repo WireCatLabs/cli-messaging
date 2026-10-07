@@ -60,6 +60,8 @@ export type Stemmer = {
   stemToken(token: string): string
   /** `stemToken` over every word of a text, split as `unicode61` splits it; tokens that fold to nothing are dropped. */
   stemTokens(text: string): string[]
+  /** Each word of a text with its stem and the stemmer its script chose — what a search answer shows. */
+  explain(text: string): { word: string; stem: string; stemmer: CyrillicStemmer | LatinStemmer }[]
 }
 
 /**
@@ -99,5 +101,12 @@ export const createStemmer = (
     identity: analyzerIdentity(valid),
     stemToken,
     stemTokens: (text) => (text.normalize("NFC").toLowerCase().match(TOKEN) ?? []).map(stemToken).filter(Boolean),
+    explain: (text) =>
+      (text.normalize("NFC").toLowerCase().match(TOKEN) ?? []).flatMap((word) => {
+        const stem = stemToken(word)
+        if (!stem) return []
+        const bare = word.replace(MARKS, "")
+        return [{ word, stem, stemmer: CYRILLIC.test(bare) ? valid.cyrillic : LATIN.test(bare) ? valid.latin : "none" }]
+      }),
   }
 }

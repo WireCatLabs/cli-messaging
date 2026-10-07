@@ -70,6 +70,8 @@ export interface SearchQuery {
   limit: number
   /** Newest first instead of best first. */
   newest?: boolean
+  /** Bare words and quotes match their exact form only: the default field becomes `exact`. */
+  exact?: boolean
   /** Messages before and after each hit, from the store. */
   context?: number
   /** The saved search this run came from (`--saved`), by id: its row counts the run too. */
@@ -79,6 +81,7 @@ export interface SearchQuery {
 export type FoundMessage = StoredHit & {
   match?: Match
   score?: number | null
+  exact?: boolean
   context?: WindowedMessage[]
   thread?: ThreadContext
 }
@@ -92,6 +95,8 @@ export interface SearchFound extends Page<FoundMessage> {
   completeness: (ChatCompleteness & AccountKey)[]
   /** `false` while the word index is being built: the answer came from the substring index. */
   wordsReady: boolean
+  /** The same for the stems, in strict search: `false` until a stemmed search may run. */
+  stemsReady?: boolean
 }
 
 export interface SendRequest {

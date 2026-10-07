@@ -34,6 +34,10 @@ export const searchesCommand = (messenger: Messenger): Command => {
     )
     .option("--limit <n>", "how many", positiveCount("--limit"))
     .option("--newest", "newest first instead of best first")
+    .option(
+      "--exact",
+      "bare words and quotes match their exact form only, as exact:word does; text: still matches every form",
+    )
     .option("--context <n>", "messages before and after each hit", wholeCount)
     .option("--language <lucene|legacy>", "the query language: strict Lucene or legacy discovery", languageOf)
     .option("--timezone <zone>", "the IANA timezone for calendar date boundaries")

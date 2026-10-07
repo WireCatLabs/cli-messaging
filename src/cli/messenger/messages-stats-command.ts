@@ -25,6 +25,10 @@ export const messagesStatsCommand = (messenger: Messenger): Command =>
     .option("--limit <n>", "how many rows", positiveCount("--limit"))
     .option("--timezone <zone>", "the IANA timezone for calendar days and hours")
     .option(
+      "--exact",
+      "bare words and quotes match their exact form only, as exact:word does; text: still matches every form",
+    )
+    .option(
       "--saved <name|id>",
       "count what a saved search or an earlier run matches; options typed here replace its own",
     )
@@ -39,6 +43,7 @@ export const messagesStatsCommand = (messenger: Messenger): Command =>
         chat,
         source,
         timezone,
+        exact,
         limit: typedLimit,
         saved,
       } = this.opts<{
@@ -46,6 +51,7 @@ export const messagesStatsCommand = (messenger: Messenger): Command =>
         chat?: string
         source?: string
         timezone?: string
+        exact?: boolean
         limit?: number
         saved?: string
       }>()
@@ -55,6 +61,7 @@ export const messagesStatsCommand = (messenger: Messenger): Command =>
         ...(chat === undefined ? {} : { chat }),
         ...(source === undefined ? {} : { source }),
         ...(timezone === undefined ? {} : { timezone }),
+        ...(exact ? { exact: true } : {}),
         ...(typedLimit === undefined ? {} : { limit: typedLimit }),
       }
       let limit = context.settings.limit
@@ -82,6 +89,7 @@ export const messagesStatsCommand = (messenger: Messenger): Command =>
           ...(params.chat === undefined ? {} : { chat: params.chat }),
           ...(params.source === undefined ? {} : { source: params.source }),
           ...(params.timezone === undefined ? {} : { timezone: params.timezone }),
+          ...(params.exact ? { exact: true } : {}),
           by: params.by ?? "chat",
           limit,
           language: "lucene",

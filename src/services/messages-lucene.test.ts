@@ -357,7 +357,7 @@ describe.each(["max", "telegram"])("strict store profile (%s)", (provider) => {
       inventoryComplete: false,
       coveredChats: 2,
     })
-    expect(none.query).toMatchObject({ language: "lucene-v1", version: 1, fieldsVersion: 1, order: "relevance" })
+    expect(none.query).toMatchObject({ language: "lucene-v1", version: 1, fieldsVersion: 2, order: "relevance" })
     await expect(searchStore(store, account, { language: "lucene", pattern: /a/, limit: 1 })).rejects.toThrow(
       "--regex is legacy",
     )
