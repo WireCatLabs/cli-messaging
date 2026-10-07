@@ -6,6 +6,10 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.164.0 — 07.10.2026
+
+Released early: max-cli and tg-cli need first-run configuration files for the approved setup documentation
+
 ## 0.163.0 — 07.10.2026
 
 Released early: tg-cli and max-cli adopt stemmed search today, at the owner's request
