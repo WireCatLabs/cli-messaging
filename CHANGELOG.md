@@ -16,6 +16,11 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Added
 
+- The store's optional `rankQuery` aggregates message/author metrics and full-population scores
+  in a read snapshot, with bounded text/graph calculations and explicit missing-data exclusions.
+  `rankingOptions` validates metrics/presets/weights; versioned linkage distinguishes discussion
+  copies, replies and unknown old rows. Public CLI/MCP ranking views remain planned until wired.
+
 - `contacts profile` answers `aliases`: the earlier names and usernames the store saw a person with, oldest
   first — `{ name?, username?, link?, firstSeenAt, lastSeenAt, source }`. `profile`: the store now writes a
   revision whenever a saved message or contacts sync brings a new name or username, not only on member-list

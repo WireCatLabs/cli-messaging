@@ -8,6 +8,17 @@ export { formatLocator, isLocator, type MessageLocator, parseLocator } from "./d
 export { type Markup, parseMarkdown } from "./domain/markdown.js"
 export type { MessageLink, MessagePermalink } from "./domain/message-link.js"
 export type * from "./domain/models.js"
+export type { RankingGraphEvidence, RankingGraphLink } from "./domain/rankings-graph.js"
+export type {
+  RankingComponent,
+  RankingInput,
+  RankingMeasure,
+  RankingOptions,
+  RankingTarget,
+  RankingWeights,
+  ScorePreset,
+} from "./domain/rankings-options.js"
+export { rankingOptions } from "./domain/rankings-options.js"
 export { normalizeTag, TAG_TYPES, type TagType } from "./domain/tags.js"
 export type { CheckRow, Finding, Moderator } from "./moderation/check.js"
 export { act, judge } from "./moderation/check.js"

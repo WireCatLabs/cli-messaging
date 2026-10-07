@@ -8,11 +8,13 @@ import { mkdtempSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { listRuns, readEvents, recorded, settingsFor } from "../src/cli/index.js"
+import { rankingOptions } from "../src/domain/rankings-options.js"
 import { formatLocator, parseLocator, renderMessages } from "../src/index.js"
 import { migrate, openCache, openStore } from "../src/store/index.js"
 import { normalize } from "../src/store/normalize.js"
 import { withQuerySelection } from "../src/store/sqlite/lucene.js"
 import { openSqlite } from "../src/store/sqlite/open.js"
+import { rankQuery } from "../src/store/sqlite/rankings.js"
 import { accounts } from "../src/store/sqlite/schema.js"
 
 const runtime = typeof (globalThis as { Bun?: unknown }).Bun === "undefined" ? "node" : "bun"
@@ -108,6 +110,26 @@ check(
     (selection) =>
       sqlite.database.prepare(`SELECT count(*) AS total FROM (${selection.sql})`).get(...selection.params)?.total,
   ) === 1,
+)
+sqlite.database.exec(`UPDATE messages SET provider_metadata='{"views":3}'`)
+check(
+  "ranking aggregation runs under both SQLite runtimes",
+  rankQuery(
+    { ...sqlite, now: () => 0 },
+    {
+      root: {
+        kind: "predicate",
+        field: "date",
+        operator: "range",
+        value: "*",
+        span: { start: 0, end: 0 },
+        resolution: { date: { lowerInclusive: true, upperInclusive: true } },
+      },
+      accounts: [{ provider: "telegram", account: "1" }],
+      limit: 1,
+    },
+    { options: rankingOptions("messages", { measure: "views" }), timezone: "UTC" },
+  ).items[0]?.value === 3,
 )
 sqlite.database.close()
 const tasksFile = join(mkdtempSync(join(tmpdir(), "cli-messaging-smoke-")), "messages.db")
