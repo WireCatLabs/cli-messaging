@@ -360,6 +360,25 @@ describe("store fetch in the background", () => {
     }
   }
 
+  it("**--all** fetches every chat in a job, the last 90 days unless told, and needs a chat or --all", async () => {
+    const env = setup()
+    const { calls, spawnJob } = spawned(4242)
+
+    const started = await call(["store", "fetch", "--all", "--pause", "1ms", "--background", "--json"], idle, env, {
+      spawnJob,
+    })
+    const neither = await call(["store", "fetch", "--json"], idle, env)
+    const both = await call(["store", "fetch", "7", "--all", "--json"], idle, env)
+
+    expect(started.answer).toMatchObject({ pid: 4242, chat: "--all" })
+    expect(calls[0]?.argv.slice(0, 3)).toEqual(["store", "fetch", "--all"])
+    const since = calls[0]?.argv[calls[0].argv.indexOf("--since-time") + 1] ?? ""
+    expect(Date.now() - Date.parse(since)).toBeGreaterThan(89 * 86_400_000)
+    expect(Date.now() - Date.parse(since)).toBeLessThan(91 * 86_400_000)
+    expect([neither.code, both.code]).toEqual([2, 2])
+    expect(neither.stderr).toContain("name a chat, or --all for every chat")
+  })
+
   it("**starts a job that runs the same fetch apart, pinned to the profile, with no shell timeout**", async () => {
     const env = { ...setup(), CHAT_TIMEOUT: "30s" }
     const { calls, spawnJob, children, stop } = sleeping()

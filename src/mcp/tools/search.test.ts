@@ -19,6 +19,10 @@ const found: SearchFound = {
     inventoryComplete: false,
     accounts: [{ provider: "max", account: "synthetic" }],
     coveredChats: 0,
+    messages: 0,
+    chats: { complete: 0, partial: 0, neverFetched: 0, behind: 0, withGaps: 0 },
+    attention: [],
+    next: null,
   },
 }
 

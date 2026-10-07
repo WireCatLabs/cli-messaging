@@ -5,6 +5,7 @@ import { renderMessages } from "../../render/messages.js"
 import { renderThreadLinks } from "../../render/thread-context.js"
 import { environmentOf } from "../context.js"
 import { positiveCount } from "../paging.js"
+import { archiveSummary } from "./archive-summary.js"
 import { type Messenger, messengerContext } from "./context.js"
 import { backendOptions, backendRequest, noteServer } from "./search-backend-options.js"
 import { syncOptions, syncRequest } from "./search-sync-options.js"
@@ -37,7 +38,10 @@ export const messagesSearchCommand = (messenger: Messenger): Command =>
     .option("--timezone <zone>", "the IANA timezone for calendar date boundaries")
     .addHelpText(
       "after",
-      "Search guide: https://github.com/leemour/cli-messaging/blob/main/docs/search/query-language.md",
+      `Search reads the local archive: a chat never fetched is not searched. Prepare it once with
+\`${messenger.app.command} store fetch --all --background\` (the last 90 days of every chat); the answer's
+coverage says what was searched and coverage.next what would improve it.
+Search guide: https://github.com/leemour/cli-messaging/blob/main/docs/search/query-language.md`,
     )
     .option("--regex", "the words are one regular expression, case-insensitive, tested against every stored text")
     .option("--saved <name|id>", "run a saved search or an earlier run; options typed here replace its own")
@@ -144,7 +148,9 @@ export const messagesSearchCommand = (messenger: Messenger): Command =>
       }
       const incomplete = found.completeness.filter((chat) => chat.state !== "complete")
       const chats = incomplete.filter((chat) => chat.provider !== "email").length
-      if (chats > 0) {
+      const summary = found.coverage ? archiveSummary(found.coverage, found.items.length) : undefined
+      if (summary) context.renderer.note(summary)
+      else if (!found.coverage && chats > 0) {
         context.renderer.note(
           `${chats} of the chats searched are not held in full — \`${command} store fetch <chat>\` fetches one`,
         )

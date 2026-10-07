@@ -2,7 +2,7 @@ import { setTimeout as sleep } from "node:timers/promises"
 import { CliError } from "@leemour/cli-core"
 import type { Fetching } from "../cli/messenger/context.js"
 import { capability } from "../cli/messenger/port.js"
-import type { ChatKind, Id, Message } from "../domain/models.js"
+import type { Chat, ChatKind, Id, Message } from "../domain/models.js"
 import {
   type AccountKey,
   type ChatStats,
@@ -76,6 +76,17 @@ export type Fetched = {
   stopped?: true
 }
 
+const done = (one: { complete: boolean; error?: string; stopped?: true }) => one.complete && !one.error && !one.stopped
+
+export type FetchedAll = {
+  chats: number
+  fetched: number
+  /** Every chat reached the window or its start, and the run was not stopped. */
+  complete: boolean
+  stopped?: true
+  items: { chat: Id; title: string | null; fetched: number; complete: boolean; stopped?: true; error?: string }[]
+}
+
 /** The local store of messages: what it holds, filling it from the messenger, and reading it out. */
 export interface ArchiveService {
   /** Per chat, or for one: what is stored, and the stretches held completely. From the store alone. */
@@ -107,6 +118,11 @@ export interface ArchiveService {
    * by `keyOf`: whole-number ids, or send times where the messenger orders by time.
    */
   fetch(chat: string, options: FetchOptions): Promise<Fetched>
+  /**
+   * Every chat of the account, most recently active first, each as `fetch` would — the run that
+   * prepares the archive for search. A chat that fails is counted and the run goes on.
+   */
+  fetchAll(options: FetchOptions): Promise<FetchedAll>
   /** The chats this account has left, with their messages; `clear` deletes them. From the store alone. */
   left(options?: { clear?: boolean }): Promise<{ chats: number; messages: number }>
 }
@@ -216,6 +232,54 @@ export const archiveService = (deps: ServiceDeps): ArchiveService => {
       return requested && result.chat
         ? { ...result, prepared: await catchUpSearch(deps, result.chat, requested, options.stop) }
         : result
+    },
+
+    fetchAll: async (options) => {
+      if (deps.withConnection && !deps.offline && deps.reads !== "store")
+        return deps.withConnection((adapter) =>
+          archiveService({ ...deps, withConnection: undefined, connection: async () => adapter }).fetchAll(options),
+        )
+      pushed(deps, "`store fetch --all`")
+      const connection = await deps.connection()
+      const list = capability(connection, "chats", "list its chats")
+      const chats: Chat[] = []
+      for (let offset = 0; ; ) {
+        const page = await list({ offset, limit: 100 })
+        chats.push(...page.items)
+        offset += page.items.length
+        if (!page.hasMore || page.items.length === 0) break
+      }
+      chats.sort((one, other) => (other.lastMessageAt ?? "").localeCompare(one.lastMessageAt ?? ""))
+      const own = archiveService({ ...deps, withConnection: undefined, connection: async () => connection })
+      const answer: FetchedAll = { chats: chats.length, fetched: 0, complete: false, items: [] }
+      for (const chat of chats) {
+        if (options.stop.aborted) {
+          answer.stopped = true
+          break
+        }
+        try {
+          const one = await own.fetch(chat.id, options)
+          answer.fetched += one.fetched
+          answer.items.push({
+            chat: chat.id,
+            title: chat.title,
+            fetched: one.fetched,
+            // Reaching the window is what --all asked for; older history was not.
+            complete: one.complete || one.reachedSince === true || one.reachedLast === true,
+            ...(one.stopped ? { stopped: true as const } : {}),
+          })
+        } catch (error) {
+          // The stop is the run's, not this chat's: it ends the walk instead of being counted as a failure.
+          if (options.stop.aborted) {
+            answer.stopped = true
+            break
+          }
+          const code = error instanceof CliError ? error.code : "fetch_failed"
+          answer.items.push({ chat: chat.id, title: chat.title, fetched: 0, complete: false, error: code })
+        }
+      }
+      answer.complete = !answer.stopped && answer.items.length === chats.length && answer.items.every(done)
+      return answer
     },
   }
 }

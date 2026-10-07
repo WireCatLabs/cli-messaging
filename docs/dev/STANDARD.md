@@ -293,7 +293,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--after-time` | `<time>` | read what came after this ISO 8601 time, or 2h / 1d ago; not with --after-id or the --before pair |  | `messages list` |
 | `--agent` | `<agent>` | install the skill for this agent; asks at a terminal, otherwise none |  | `setup` (planned) |
 | `--ai` |  | call the configured reply model with stored message data; requires reply consent, otherwise uses fallback |  | `replies test` |
-| `--all` |  | every row, no paging |  | `attachments list`, `chats list`, `chats members list` (planned), `contacts list`, `inbox` (planned), `messages download`, `review` (planned), `store export` |
+| `--all` |  | every row, no paging |  | `attachments list`, `chats list`, `chats members list` (planned), `contacts list`, `inbox` (planned), `messages download`, `review` (planned), `store export`, `store fetch` (planned) |
 | `--all-bots` |  | also read every other bot's copy on this machine that readOtherBots allows |  | `bot contacts show`, `bot messages between`, `bot messages search` |
 | `--all-can-pin` | `<on\|off>` | every member may pin messages |  | `chats update` |
 | `--allow-any-file` |  | send a --file even from a hidden folder, ~/.ssh or the tool's own folders |  | `bot messages send`, `messages send` |

@@ -1455,8 +1455,11 @@ describe("the shared read commands", () => {
       expect(answer.completeness.every(({ state }: { state: string }) => state === "unknown")).toBe(true)
 
       const mixed = await call([...args, "--source", "all"], never, env)
-      expect(mixed.stderr.join("\n")).toContain("1 of the chats searched are not held in full")
-      expect(mixed.stderr.join("\n")).not.toContain("3 of the chats searched")
+      expect(mixed.stderr.join("\n")).toContain(
+        language === "lucene"
+          ? "in 3 chats — 1 never fetched; `chat store fetch --all --background`"
+          : "1 of the chats searched are not held in full",
+      )
       expect(mixed.stderr.join("\n")).toContain("mail search covers imported messages only")
       const own = await call(args, never, env)
       expect(own.stderr.join("\n")).not.toContain("mail search")
