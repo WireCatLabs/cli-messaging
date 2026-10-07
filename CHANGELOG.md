@@ -6,6 +6,10 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.168.0 — 07.10.2026
+
+Released early: MAX and Telegram attachment OCR adoption cannot compile against the published SDK: ModelImage and explicit bulk OCR are missing
+
 ## 0.167.0 — 07.10.2026
 
 ### Changed — may break callers
