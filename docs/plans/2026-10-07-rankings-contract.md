@@ -152,6 +152,9 @@ ANDs an exact sender constraint with the entire original Boolean AST and retains
 2. Extract a shared compiled selection from the Lucene matcher. Exact queries stay SQL CTEs;
    detector candidates stay bounded and budget exhaustion is an incomplete error, never a partial
    leaderboard. No unbounded queryMessagePks array or account-wide body materialization.
+   The existing filename/mime compiler also collects matching attachment message keys in JS;
+   the ranking path must bound or replace that intermediate selection, not merely remove the
+   final queryMessagePks call. Preserve existing search behavior and its index drivers.
 3. Build SQL aggregation and bounded calculators in one read snapshot; hydrate only result/evidence
    pages. Preserve search/count behavior, exact/stemmed/index drivers and permission scope.
 4. Add graph/discussion evidence and the provider mapper. Announce any required migration number
