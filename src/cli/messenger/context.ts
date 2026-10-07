@@ -54,6 +54,9 @@ export interface Fetching {
 }
 
 /** What one messenger CLI hands the shared commands. Everything else about it stays in its own code. */
+/** `messages send --spoiler` and `--caption-above`. */
+export type MediaOption = "spoiler" | "captionAbove"
+
 export interface Messenger {
   app: AppIdentity
   provider: Provider
@@ -69,6 +72,11 @@ export interface Messenger {
   chatArgument: string
   /** The group settings this messenger has, as `chats update` offers them; every one when unset. */
   groupSettings?: readonly (keyof GroupSettings)[]
+  /**
+   * The send options for attachments this messenger honours; none when unset, so an adapter that does not
+   * know a newer option is never handed one to drop.
+   */
+  mediaOptions?: readonly MediaOption[]
   /** Whether the messenger says when an account was made — the moderation rule `newAccount`; yes when unset. */
   knowsAccountAge?: boolean
   /**

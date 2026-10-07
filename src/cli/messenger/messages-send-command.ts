@@ -25,6 +25,8 @@ export const sendCommand = (messenger: Messenger): Command =>
     .option("--file <file>", "attach a file; the text becomes its caption")
     .option("--photo <file>", "attach a .jpg, .png or .webp as a photo; the text becomes its caption")
     .option("--as-file", "send the --file as a file to download, a video included")
+    .option("--spoiler", "hide the --photo or video behind a spoiler until tapped")
+    .option("--caption-above", "show the text above the --photo or --file, not below it")
     .option("--voice <file>", "send an Ogg Opus file as a voice message, alone, with no text")
     .option("--allow-any-file", "send a file even from a hidden folder, ~/.ssh or this CLI's own folders")
     .option(
@@ -50,6 +52,8 @@ const sendText = async (command: Command, messenger: Messenger, chat: string, te
     voice,
     asFile,
     allowAnyFile,
+    spoiler,
+    captionAbove,
   } = command.opts<{
     topic?: string
     replyTo?: string
@@ -63,6 +67,8 @@ const sendText = async (command: Command, messenger: Messenger, chat: string, te
     voice?: string
     asFile?: boolean
     allowAnyFile?: boolean
+    spoiler?: boolean
+    captionAbove?: boolean
   }>()
   const threadId = threadIdOf(topic)
   const scheduledFor = at === undefined ? undefined : sendTime(at)
@@ -95,6 +101,8 @@ const sendText = async (command: Command, messenger: Messenger, chat: string, te
       ...(markdown === true ? { markdown } : {}),
       ...(scheduledFor === undefined ? {} : { at: scheduledFor }),
       ...(attachments.length > 0 ? { attachments } : {}),
+      ...(spoiler === true ? { spoiler } : {}),
+      ...(captionAbove === true ? { captionAbove } : {}),
     }),
   )
   if (scheduledFor !== undefined) {

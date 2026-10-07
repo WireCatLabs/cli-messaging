@@ -64,6 +64,10 @@ export interface SendOptions {
   at?: string
   /** Sent in one message, `text` as the caption. More than one is an album. */
   attachments?: Upload[]
+  /** The photo or video hidden until tapped. Only where `Messenger.mediaOptions` has it. */
+  spoiler?: boolean
+  /** The caption shown above the attachment. Only where `Messenger.mediaOptions` has it. */
+  captionAbove?: boolean
 }
 
 /** A voice message as text. `pending`: the messenger was still working on it when it answered. */

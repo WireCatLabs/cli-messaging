@@ -1,5 +1,5 @@
 import { CliError, singleLine } from "@leemour/cli-core"
-import type { Messenger } from "../cli/messenger/context.js"
+import type { MediaOption, Messenger } from "../cli/messenger/context.js"
 import { type After, capability, type Download, type Sent } from "../cli/messenger/port.js"
 import { threadIdOf } from "../cli/messenger/thread.js"
 import type { DownloadedFile } from "../domain/attachments.js"
@@ -111,6 +111,8 @@ export interface SendRequest {
   key?: PermissionKey
   /** Who sent it, in the send journal: `rule:<id>`. */
   origin?: string
+  spoiler?: boolean
+  captionAbove?: boolean
 }
 
 /** One message in a chat, as typed. */
@@ -373,7 +375,11 @@ export const messagesService = (deps: ServiceDeps): MessagesService => {
       attachments = [],
       key,
       origin,
+      spoiler,
+      captionAbove,
     }) => {
+      const media = { ...(spoiler ? { spoiler } : {}), ...(captionAbove ? { captionAbove } : {}) }
+      checkMediaOptions(deps.messenger, Object.keys(media) as MediaOption[], attachments.length)
       const connection = await deps.connection()
       if (at !== undefined && sendId !== undefined) {
         throw new CliError(
@@ -421,6 +427,7 @@ export const messagesService = (deps: ServiceDeps): MessagesService => {
               ...(spans.length > 0 ? { formatting: spans } : {}),
               ...(at === undefined ? {} : { at }),
               ...(attachments.length === 0 ? {} : { attachments }),
+              ...media,
             }),
           (sent) => ({ messageId: sent.message.id }),
           validate === undefined || threadId === undefined
@@ -832,3 +839,12 @@ const paramsOf = (command: SearchCommand, query: SearchQuery & { by?: StatsGroup
     ? { newest: query.newest === true, ...(query.context === undefined ? {} : { context: query.context }) }
     : { by: query.by }),
 })
+const MEDIA_FLAGS: Record<MediaOption, string> = { spoiler: "--spoiler", captionAbove: "--caption-above" }
+
+const checkMediaOptions = (messenger: Messenger, asked: MediaOption[], attachments: number): void => {
+  const [first] = asked
+  if (first === undefined) return
+  const missing = asked.find((one) => !messenger.mediaOptions?.includes(one))
+  if (missing) throw new CliError("validation_error", `this messenger has no ${MEDIA_FLAGS[missing]}`)
+  if (attachments === 0) throw new CliError("validation_error", `${MEDIA_FLAGS[first]} needs a --photo or --file`)
+}
