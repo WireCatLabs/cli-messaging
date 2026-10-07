@@ -601,9 +601,9 @@ is published on npm like this package, once backfill and search exist; `tg updat
 
 **Markdown — B1b.** Shared provider-formatting capability shipped in #466 (0.132.0); Telegram adopted in tg-cli #242. MAX adapter/consumer adoption is in max-cli #361. Commands delegate to CLI-owned grammars for personal and bot send/edit; neutral formatting fields are additive, with no store schema change.
 
-### Attachment OCR — claimed2026-10-07
+### Attachment OCR — completed2026-10-07
 
-🚧 `feat/attachment-ocr-runtime` (naming merged PR677): owner approved agent self-OCR by default and explicitly
-selected common-gateway API OCR for bulk speed. [Contract](2026-10-07-attachment-ocr.md)
-comes first; implementation follows. Reuse attachment text/index and model gateway;
-no bundled OCR model or automatic API fallback. Both consumers adopt after release.
+Shared runtime PR682 published as SDK0.168.0; MAX451 and TG328 adopted with green CI.
+[Contract](2026-10-07-attachment-ocr.md): agents transcribe by default, with explicit
+common-gateway API OCR for bulk speed. Reuses attachment text/index and model gateway;
+no bundled OCR model or automatic API fallback. Consumer binary releases remain separate.

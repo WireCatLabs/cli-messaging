@@ -972,11 +972,7 @@
           "in": "all"
         },
         "--concurrency": {
-          "in": [],
-          "planned": {
-            "max": "OCR",
-            "tg": "OCR"
-          }
+          "in": "all"
         },
         "--cursor": "all",
         "--download": {
@@ -987,11 +983,7 @@
           "in": "all"
         },
         "--ocr": {
-          "in": [],
-          "planned": {
-            "max": "OCR",
-            "tg": "OCR"
-          }
+          "in": "all"
         },
         "--output-dir": {
           "in": "all"

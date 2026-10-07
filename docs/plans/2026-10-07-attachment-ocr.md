@@ -1,8 +1,12 @@
 # Attachment OCR contract
 
-Owner approved2026-10-07. Naming contract merged in PR677; default-agent instructions
-merged in MAX449/TG323. Runtime implemented by `feat/attachment-ocr-runtime`, with
-synthetic gateway/renderer/SQLite tests; publication and consumer adoption follow.
+Completed2026-10-07. Owner approved agent self-OCR by default. Naming contract
+merged in [PR677](https://github.com/leemour/cli-messaging/pull/677); runtime merged in
+[PR682](https://github.com/leemour/cli-messaging/pull/682) and published as SDK0.168.0.
+Default-agent instructions merged in MAX449/TG323. Exact SDK adoption merged in
+[MAX451](https://github.com/leemour/max-cli/pull/451) and
+[TG328](https://github.com/leemour/tg-cli/pull/328), with all platform checks green.
+Consumer npm/binary publication and remote-agent artifact transport remain separate.
 
 ## Default agent path
 
