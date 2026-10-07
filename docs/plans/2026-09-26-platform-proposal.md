@@ -600,3 +600,10 @@ is published on npm like this package, once backfill and search exist; `tg updat
   lower entry barrier over one shared id carrying every user's behaviour.
 
 **Markdown — B1b.** Shared provider-formatting capability shipped in #466 (0.132.0); Telegram adopted in tg-cli #242. MAX adapter/consumer adoption is in max-cli #361. Commands delegate to CLI-owned grammars for personal and bot send/edit; neutral formatting fields are additive, with no store schema change.
+
+### Attachment OCR — claimed2026-10-07
+
+🚧 `feat/attachment-ocr`: owner approved agent self-OCR by default and explicitly
+selected common-gateway API OCR for bulk speed. [Contract](2026-10-07-attachment-ocr.md)
+comes first; implementation follows. Reuse attachment text/index and model gateway;
+no bundled OCR model or automatic API fallback. Both consumers adopt after release.

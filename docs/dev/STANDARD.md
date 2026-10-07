@@ -337,7 +337,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--closed` | `<on\|off>` | on closes a forum topic to new messages, off reopens it |  | `topics edit` (planned) |
 | `--comment-to` | `<post>` | comment on this channel post; the comment goes to the post's discussion group |  | `messages send` (planned) |
 | `--component` | `<name>` | the ranking component whose contributing messages or answer pairs to read |  | `stats contacts evidence` (planned), `stats messages evidence` (planned) |
-| `--concurrency` | `<n>` | remote: requests at once (default: 4) |  | `conversations embed` |
+| `--concurrency` | `<n>` | remote: requests at once (default: 4) |  | `attachments extract` (planned), `conversations embed` |
 | `--confirm-send` |  | no longer used: MCP writes show no form; the profile's permissions decide. **retired: accepted with a warning so an old setup still starts** |  | `bot mcp`, `bot mcp config`, `mcp`, `mcp config`, `mcp doctor` (planned), `mcp setup` (planned) |
 | `--contact` | `<person>` | the person to tag or untag: their id, @username or name, as the local store knows them |  | `tags add`, `tags remove` |
 | `--contacts-only` |  | match only contacts |  | `replies edit` |
@@ -426,6 +426,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--not-people` | `<ids>` | leave these sender ids out, comma-separated; empty clears |  | `replies edit` |
 | `--notification` | `<text>` | a note only the person who pressed sees |  | `bot callbacks answer` |
 | `--notify` |  | tell the chat's members about the pin |  | `bot messages pin`, `messages pin` |
+| `--ocr` |  | explicitly call models.ocr for bulk image and scanned-PDF text extraction; agents normally transcribe files themselves |  | `attachments extract` (planned) |
 | `--offline` |  | answer from what was recorded and never connect; fails if nothing was |  | every command |
 | `--online` |  | also log in once, read one chat and start the MCP server; sends nothing. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | `doctor` |
 | `--only-admins-add` | `<on\|off>` | only admins may add members |  | `chats update` |
@@ -809,3 +810,13 @@ Approved2026-10-07. These additive shared surfaces are implemented in the search
   `store_gaps_repair`; options use underscores. Defaults are5gaps,500messages and30seconds.
 - Local extraction/preparation require their write permissions. Gap repair requires permission for
   its explicit fetch. A dry plan is read-only; gaps never authorize deletion or weaker rate limits.
+
+## Attachment OCR
+
+Approved2026-10-07. [Contract](../plans/2026-10-07-attachment-ocr.md): agent self-OCR
+and `attachments text set` are the default. Planned `attachments extract --ocr`
+explicitly selects gateway API OCR for bulk extraction using models.ocr;
+`--concurrency` retains its remote-request meaning, default4, range1–8 here, and
+requires --ocr. Existing local extraction without --ocr never invokes a model.
+MCP uses the same service and explicit selection. Local paths do not transfer
+files to remote agents; binary/artifact transport remains separate.

@@ -537,6 +537,9 @@
     "--notify": {
       "meaning": "tell the chat's members about the pin"
     },
+    "--ocr": {
+      "meaning": "explicitly call models.ocr for bulk image and scanned-PDF text extraction; agents normally transcribe files themselves"
+    },
     "--offline": {
       "meaning": "answer from what was recorded and never connect; fails if nothing was"
     },
@@ -968,6 +971,13 @@
         "--chat": {
           "in": "all"
         },
+        "--concurrency": {
+          "in": [],
+          "planned": {
+            "max": "OCR",
+            "tg": "OCR"
+          }
+        },
         "--cursor": "all",
         "--download": {
           "in": "all"
@@ -975,6 +985,13 @@
         "--from-dir": "all",
         "--limit": {
           "in": "all"
+        },
+        "--ocr": {
+          "in": [],
+          "planned": {
+            "max": "OCR",
+            "tg": "OCR"
+          }
         },
         "--output-dir": {
           "in": "all"
