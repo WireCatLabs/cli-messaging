@@ -129,7 +129,7 @@ export const fetchCommand = (messenger: Messenger): Command => {
       }
       if (prepare) {
         validateCatchUpBounds(preparation)
-        refuseLocalWrite(context, messenger.app.command, "conversations.build")
+        refuseLocalWrite(context, messenger.app.command, "conversations.links")
         refuseLocalWrite(context, messenger.app.command, "conversations.embed")
       }
       if (background) {

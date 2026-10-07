@@ -73,7 +73,7 @@ export const storeTools = (messenger: Messenger): Record<string, AnyTool> => ({
       )
         throw new CliError("validation_error", "catch-up budgets need catch_up or searchCatchUp true")
       if (prepare) {
-        for (const key of ["conversations.build", "conversations.embed"]) {
+        for (const key of ["conversations.links", "conversations.embed"]) {
           const level = levelFor(defaults.settings.permissions ?? {}, key).level
           if (level === "deny" || level === "readonly")
             throw new CliError("permission_error", `profile does not let ${key} prepare search`, { permission: key })

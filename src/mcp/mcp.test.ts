@@ -1400,12 +1400,15 @@ describe("the MCP server", () => {
   it("refuses secondary search preparation permission before repairing through MCP", async () => {
     const root = await filledRoot()
     const backend = scripted()
-    const { call } = await connect(backend, { root, config: levels({ store: "allow", conversations: "readonly" }) })
+    const { call } = await connect(backend, {
+      root,
+      config: levels({ store: "allow", "conversations.links": "readonly", "conversations.embed": "allow" }),
+    })
     const result = await call("chat_store_gaps_repair", { chat: "7", catch_up: true })
     expect(result.isError).toBe(true)
     expect(result.body.error).toMatchObject({
       code: "permission_error",
-      permission: "conversations.build",
+      permission: "conversations.links",
     })
     expect(backend.opened()).toBe(0)
   })
