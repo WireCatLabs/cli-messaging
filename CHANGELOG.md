@@ -6,6 +6,14 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Changed — may break callers
+
+- `messages search` asks the messenger's server too by default (`--backend both`, MCP `backend`), where the
+  messenger offers server search: Telegram today. Hits the archive did not hold are saved and appear, each with
+  `source`, and the answer gains `server`. `--backend archive` (MCP `backend: "archive"`) keeps the old answer.
+  Unasked, a search the server cannot take — offline, MAX, no permission, no words — is the archive's, with no
+  `server` block.
+
 ## 0.170.0 — 07.10.2026
 
 Released early: MAX and Telegram rankings adoption requires the new top/evidence services and command exports

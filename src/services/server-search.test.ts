@@ -199,11 +199,16 @@ describe("server search beside the archive", () => {
     expect(JSON.stringify(found)).not.toContain("private provider detail")
   })
 
-  it("leaves archive search untouched without a backend", async () => {
+  it("asks the server by default, and stays quiet where it cannot", async () => {
     const one = await setup()
     const found = await one.search({ text: "invoice" })
-    expect(found.server).toBeUndefined()
-    expect(found.items[0]).not.toHaveProperty("source")
-    expect(one.connection).not.toHaveBeenCalled()
+    expect(found.server).toMatchObject({ backend: "both", calls: 1, new: 2 })
+    const local = servicesFor({ ...one.deps, offline: true })
+    const offline = await local.messages.search({ language: "lucene", limit: 20, text: "invoice" })
+    expect(offline.server).toBeUndefined()
+    expect(offline.items[0]).not.toHaveProperty("source")
+    const archive = await one.search({ text: "invoice", backend: "archive" })
+    expect(archive.server).toBeUndefined()
+    expect(one.asked).toHaveLength(1)
   })
 })

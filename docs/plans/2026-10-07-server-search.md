@@ -20,6 +20,9 @@ Evidence labels as in [the stemmed-search plan](2026-10-04-stemmed-search.md): *
 | Telegram, topics | Without `threadId` the chat search covers every topic | docs say: TDLib searchChatMessages |
 | MAX | Opcode 73 (`MSG_SEARCH`) is named in PyMax, tsmax (a port) and one community doc: per chat, `{chatId, query, count}`. **Nobody calls it**: no PyMax method, no output saved, not in our captures. Opcode 60 is probably a public-chat search | docs say: PyMax `53103f0` `src/pymax/protocol/enums.py:60-72`; [max-api-docs](https://github.com/pr0bel1230/max-api-docs) `protocol/messaging.md:946-1041`; verified absent: max-cli `docs_ai/captures/2026-09-25-*.jsonl` (FIND-906) |
 
+**Correction 2026-10-07 (probes, §9):** Telegram matches whole words and Russian word forms, not beginnings;
+MAX's opcode 73 answers in one chat only, matching beginnings, not forms.
+
 **Conclusion.** Telegram gets the capability now. MAX stays archive-only until a probe on a test account
 (NEED-810) shows opcode 73's real answer; an explicit `--backend server` on MAX is refused with a capability
 error, and the default never is.
@@ -210,14 +213,22 @@ for held/new/archive-only hits; a server hit the strict query rejects is saved b
 MAX server search (after NEED-810), server search in `conversations search` and bots, server counts,
 `channels.searchPosts` (public channels not joined; paid quota).
 
-## 9. Questions for the owner
+## 9. Questions for the owner — answered 2026-10-07
 
 1. **NEED-809 · Should every `messages search` ask Telegram's server too (`--backend both` by default),
    with a 5 s limit and the permission on by default?** "Both" means a network call and a store write on
    each search, MCP included, and a flood-limit risk. A: yes, as R3–R5 · B: `both` by default only in the CLI,
    MCP stays `archive` · C: keep `archive` as default.
    Recommended: **B** — an agent over MCP searches often and in bursts, the shortest way to flood waits.
+   **Answer: A** — `both` by default in the CLI and MCP. Flipped after the tg adapter stopped at the bound
+   (tg-cli#334). Unasked, a search the server cannot take is the archive's with no `server` block.
 2. **NEED-810 · Which test account may receive the MAX opcode-73 probe?** Without one, MAX stays
    archive-only.
+   **Answer:** a second MAX profile. Probed 2026-10-07 (max-cli#458): opcode 73 searches **one chat**
+   (`chatId` required), answers `{ result: [{ message, highlights }], total }`, matches word beginnings, not
+   Russian forms. MAX can take a chat-scoped server search; a query without one chat stays local.
 3. **NEED-811 · Which Telegram test account may receive the four matching probes** (prefix `прив`, word form
    `книгу`, quotes, minus)? Not blocking: they decide what the docs say about server recall.
+   **Answer: A** on a test profile. Telegram matches whole words and Russian forms (`книгу`, `книги` find
+   «книга»), not beginnings (`прив`), ignores case, and quotes do not keep order (`"bar foo"` found «foo bar»;
+   the local query then rejected it). Minus was not probed: it is never sent.

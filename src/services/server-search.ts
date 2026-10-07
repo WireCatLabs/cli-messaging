@@ -9,6 +9,7 @@ import { prepareLucene } from "./messages-search.js"
 
 export const SERVER_SEARCH_KEY = "messages.server-search"
 export const SERVER_BOUNDS = { timeMs: 5_000, perCall: 100, maxCalls: 3 }
+export const DEFAULT_BACKEND = "both"
 export type Backend = "archive" | "server" | "both"
 export interface ServerOptions {
   timeMs?: number
@@ -111,18 +112,22 @@ const BOUND = Symbol("bound")
 
 /**
  * Asks the messenger's server for candidates and saves them, so the strict local query that runs
- * next sees them. `both` falls back to the archive with a reason; only an explicit `server` refuses.
+ * next sees them. `both`, the default, falls back to the archive with a reason — silently when it was
+ * not typed; only an explicit `server` refuses.
  * A reply that comes after the time bound is dropped unsaved, so nothing writes after the answer.
  */
 export const searchServer = async (deps: ServiceDeps, request: SearchQuery): Promise<ServerStep | undefined> => {
-  const backend = request.backend ?? "archive"
+  const backend = request.backend ?? DEFAULT_BACKEND
   if (backend === "archive") return undefined
+  // Unasked, a search the server cannot take is just the archive's, with nothing to report.
+  const quiet = request.backend === undefined
   const timeMs = request.server?.timeMs ?? SERVER_BOUNDS.timeMs
   if (!Number.isSafeInteger(timeMs) || timeMs < 1 || timeMs > 60_000)
     throw new CliError("validation_error", "the server time takes a whole number of milliseconds from 1 to 60000")
   const report: ServerSearched = { backend, skipped: null, calls: 0, returned: 0, new: 0, failed: [], complete: true }
   const sources = new Map<string, "server" | "both">()
-  const skip = (reason: ServerSkip): ServerStep => {
+  const skip = (reason: ServerSkip): ServerStep | undefined => {
+    if (quiet) return undefined
     if (backend === "server")
       throw new CliError(reason === "not_allowed" ? "permission_error" : "validation_error", refusal[reason], {
         reason,
