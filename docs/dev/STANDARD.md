@@ -293,7 +293,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--after-time` | `<time>` | read what came after this ISO 8601 time, or 2h / 1d ago; not with --after-id or the --before pair |  | `messages list` |
 | `--agent` | `<agent>` | install the skill for this agent; asks at a terminal, otherwise none |  | `setup` (planned) |
 | `--ai` |  | call the configured reply model with stored message data; requires reply consent, otherwise uses fallback |  | `replies test` |
-| `--all` |  | every row, no paging |  | `attachments list`, `chats list`, `chats members list` (planned), `contacts list`, `inbox` (planned), `messages download`, `review` (planned), `store export`, `store fetch` (planned) |
+| `--all` |  | every row, no paging |  | `attachments list`, `chats list`, `chats members list` (planned), `contacts list`, `inbox` (planned), `messages download`, `review` (planned), `store export`, `store fetch` |
 | `--all-bots` |  | also read every other bot's copy on this machine that readOtherBots allows |  | `bot contacts show`, `bot messages between`, `bot messages search` |
 | `--all-can-pin` | `<on\|off>` | every member may pin messages |  | `chats update` |
 | `--allow-any-file` |  | send a --file even from a hidden folder, ~/.ssh or the tool's own folders |  | `bot messages send`, `messages send` |
@@ -314,7 +314,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--as-reply` |  | send as a reply to the matched message |  | `replies edit` |
 | `--at-time` | `<time>` | let the messenger send it later, even with this machine off: a local time like 2026-09-25T09:00, or 30m |  | `messages send` |
 | `--attachment` | `<n>` | which file of the message, from 1; needed when it has more than one |  | `attachments text set` |
-| `--backend` | `<archive\|server\|both>` | where to search: the local archive, the messenger's server, or both (default: both) |  | `messages search` (planned) |
+| `--backend` | `<archive\|server\|both>` | where to search: the local archive, the messenger's server, or both (default: both) |  | `messages search` |
 | `--background` |  | run as a job that outlives this command; `store jobs show` follows it |  | `store fetch`, `store gaps repair` |
 | `--base-url` | `<url>` | a server with OpenAI's /v1/embeddings: Gemini, Jina, or Ollama and LM Studio on this machine |  | `conversations build`, `conversations embed`, `conversations embed clear`, `conversations embed status`, `conversations related`, `conversations search`, `conversations status` |
 | `--batch` | `<id>` | the batch id `conversations batches next` printed |  | `conversations links add` |
@@ -478,19 +478,19 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--saved` | `<name\|id>` | run a saved search, or an earlier run by its id; options typed with it replace its own, more words are AND-ed |  | `messages search`, `stats contacts top`, `stats messages show`, `stats messages top` |
 | `--score` | `<helpful\|active\|engaging>` | the named ranking score preset; not with an explicit --measure |  | `stats contacts top`, `stats messages top` |
 | `--search` | `<text>` | only chats whose name contains this; at least 3 characters |  | `chats list`, `contacts list` |
-| `--search-notes` | `<text>` | only people whose private notes contain this text |  | `contacts list` (planned) |
+| `--search-notes` | `<text>` | only people whose private notes contain this text |  | `contacts list` |
 | `--secret-stdin` |  | a secret MAX sends back in X-Max-Bot-Api-Secret — asked for, or read from a pipe |  | `bot webhooks set` |
 | `--selection` | `<json>` | the versioned resolved ranking selection returned by drilldown; authorisation is checked again |  | `searches create`, `stats contacts evidence`, `stats messages evidence` |
 | `--send-as` | `<id>` | send as one of the identities `chats send-as` lists for the chat; required where the chat posts as someone else by default, refused where the messenger has none |  | `messages forward`, `messages send`, `polls create` |
 | `--send-id` | `<id>` | identify a send or creation attempt; message/poll retries reuse it, while an unknown topic creation must never be repeated |  | `messages forward`, `messages send`, `polls create`, `topics create` (tg-only) |
 | `--serve` |  | start `serve` in the background if it is not running (the default) |  | every command (planned) |
-| `--server-time` | `<duration>` | stop waiting for the server after this long (default: 5s) |  | `messages search` (planned) |
+| `--server-time` | `<duration>` | stop waiting for the server after this long (default: 5s) |  | `messages search` |
 | `--show-phone` |  | print the whole phone number |  | `account show`, `contacts profile` |
 | `--silent` |  | deliver without a notification |  | `bot messages send`, `messages forward`, `messages send`, `polls create` |
 | `--since` | `<id-or-time>` | from this message id, an ISO 8601 time, or 2h / 1d ago; each command says its default. **becomes `--since-time` everywhere — NEED-485** |  | `inbox` (planned), `review` (planned) |
 | `--since-time` | `<time>` | from this ISO 8601 time, or 2h / 1d ago; each command says its default |  | `bot chats moderate`, `bot store fetch`, `chats events` (planned), `chats members history` (planned), `chats moderate` (planned), `contacts context`, `conversations list`, `conversations search`, `inbox` (planned), `replies test`, `review` (planned), `stats charts`, `stats chats show`, `store export`, `store fetch` |
 | `--size` | `<n>` | messages to answer per batch, 10–200; 50 by default |  | `conversations batches next`, `conversations batches status`, `conversations build` |
-| `--source` | `<messenger>` | every account of this messenger held in the store; personal, bots or all — the same as in: in the query |  | `conversations search`, `messages search`, `searches create`, `stats contacts top`, `stats messages show`, `stats messages top`, `tags list` (planned), `tags remove` (planned) |
+| `--source` | `<messenger>` | every account of this messenger held in the store; personal, bots or all — the same as in: in the query |  | `conversations search`, `messages search`, `searches create`, `stats contacts top`, `stats messages show`, `stats messages top`, `tags list`, `tags remove` |
 | `--spoiler` |  | hide the --photo or video behind a spoiler until tapped |  | `messages send` (tg-only) |
 | `--state` | `<state>` | only tasks in this state: open, done or dismissed |  | `tasks list` |
 | `--store-token` | `<profile>` | keep a returned authentication token only in this bot profile's OS keyring; never print it |  | `bot api` |
@@ -524,7 +524,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--version` |  | print the version number |  | every command |
 | `--voice` | `<file>` | send an Ogg Opus file as a voice message, alone, with no text |  | `bot messages send`, `messages send` |
 | `--weights` | `<json>` | the complete ranking component weights; replaces preset weights when --score is given |  | `stats contacts top`, `stats messages top` |
-| `--with-notes` |  | include your private notes, subject to contacts.notes.list permission |  | `contacts show` (planned) |
+| `--with-notes` |  | include your private notes, subject to contacts.notes.list permission |  | `contacts show` |
 | `--words` | `<words>` | match any of these whole words, comma-separated; empty clears |  | `replies edit` |
 | `--workers` | `<n>` | sessions in parallel, each with its own copy of the model |  | `conversations embed` |
 | `--yes` |  | go ahead without the question an ask level puts before a write |  | every command, `account sessions end` (planned), `mcp` (planned), `mcp config` (planned) |
