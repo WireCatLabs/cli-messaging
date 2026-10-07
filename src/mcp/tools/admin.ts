@@ -29,7 +29,8 @@ export const adminTools = (messenger: Messenger): Record<string, AnyTool> => {
     chats_join: tool({
       title: "Join a group by its link",
       description:
-        "Join a group or channel by an invite or public link; the others in it see it. Only when the owner asked.",
+        "Join a group or channel by an invite or public link; the others in it see it. Where its admins approve " +
+        "who joins, the answer is { requested: true }: the request is sent. Only when the owner asked.",
       input: v.object({ link: v.pipe(v.string(), v.minLength(1)) }),
       annotations: WRITE,
       permission: "groups",

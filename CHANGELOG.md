@@ -6,6 +6,13 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Changed — may break callers
+
+- `chats join` (MCP `chats_join`) answers `{ operationId, requested: true }` where the group's admins approve
+  who joins, instead of the adapter's error. `GroupAdmin.join` may return `{ requested: true }`; an adapter that
+  only returns a group still compiles. A caller reading `chat` must check `requested` first; tg-cli and max-cli
+  only implement `join`, so neither needs a change.
+
 ## 0.171.0 — 07.10.2026
 
 ### Added

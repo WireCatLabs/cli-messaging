@@ -386,8 +386,11 @@ export interface GroupAdmin {
   people(references: string[]): Promise<Id[]>
   /** A group, or a channel with `channel`, with these people in it; they are told they were added. */
   createGroup(title: string, people: Id[], options: { channel: boolean }): Promise<GroupCard>
-  /** By an invite or public link; the others in it see that the owner joined. */
-  join(link: string): Promise<GroupCard>
+  /**
+   * By an invite or public link; the others in it see that the owner joined. `requested` where the
+   * group's admins approve who joins: the request is sent, and the owner is not in it yet.
+   */
+  join(link: string): Promise<GroupCard | { requested: true }>
   /** The others see that the owner left. */
   leave(chat: string): Promise<{ chatId: Id }>
   /** A group's description, invite link and settings. Reading changes nothing. */
