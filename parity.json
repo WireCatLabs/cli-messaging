@@ -964,23 +964,11 @@
         "--chat": {
           "in": "all"
         },
-        "--cursor": {
-          "in": [],
-          "planned": {
-            "max": "search follow-up SDK adoption",
-            "tg": "search follow-up SDK adoption"
-          }
-        },
+        "--cursor": "all",
         "--download": {
           "in": "all"
         },
-        "--from-dir": {
-          "in": [],
-          "planned": {
-            "max": "search follow-up SDK adoption",
-            "tg": "search follow-up SDK adoption"
-          }
-        },
+        "--from-dir": "all",
         "--limit": {
           "in": "all"
         },
@@ -2260,13 +2248,7 @@
         "--all": {
           "in": "all"
         },
-        "--extract": {
-          "in": [],
-          "planned": {
-            "max": "search follow-up SDK adoption",
-            "tg": "search follow-up SDK adoption"
-          }
-        },
+        "--extract": "all",
         "--output": {
           "in": ["max"],
           "reason": "MAX retains --output as a compatibility alias for --output-dir after shared adoption"
@@ -3324,154 +3306,40 @@
       "in": "all",
       "options": {
         "--background": "all",
-        "--catch-up": {
-          "in": [],
-          "planned": {
-            "max": "search catch-up SDK adoption",
-            "tg": "search catch-up SDK adoption"
-          }
-        },
-        "--catch-up-chunks": {
-          "in": [],
-          "planned": {
-            "max": "search catch-up SDK adoption",
-            "tg": "search catch-up SDK adoption"
-          }
-        },
-        "--catch-up-messages": {
-          "in": [],
-          "planned": {
-            "max": "search catch-up SDK adoption",
-            "tg": "search catch-up SDK adoption"
-          }
-        },
-        "--catch-up-time": {
-          "in": [],
-          "planned": {
-            "max": "search catch-up SDK adoption",
-            "tg": "search catch-up SDK adoption"
-          }
-        },
+        "--catch-up": "all",
+        "--catch-up-chunks": "all",
+        "--catch-up-messages": "all",
+        "--catch-up-time": "all",
         "--estimate": "all",
         "--last": "all",
         "--limit": "all",
-        "--no-catch-up": {
-          "in": [],
-          "planned": {
-            "max": "search catch-up SDK adoption",
-            "tg": "search catch-up SDK adoption"
-          }
-        },
+        "--no-catch-up": "all",
         "--page-size": "all",
         "--pause": "all",
         "--since-time": "all"
       }
     },
     "store gaps": {
-      "in": [],
-      "planned": {
-        "max": "search follow-ups: SDK adoption",
-        "tg": "search follow-ups: SDK adoption"
-      }
+      "in": "all"
     },
     "store gaps plan": {
-      "in": [],
-      "planned": {
-        "max": "search follow-ups: SDK adoption",
-        "tg": "search follow-ups: SDK adoption"
-      }
+      "in": "all"
     },
     "store gaps repair": {
-      "in": [],
-      "planned": {
-        "max": "search follow-ups: SDK adoption",
-        "tg": "search follow-ups: SDK adoption"
-      },
+      "in": "all",
       "options": {
-        "--background": {
-          "in": [],
-          "planned": {
-            "max": "search follow-ups: SDK adoption",
-            "tg": "search follow-ups: SDK adoption"
-          }
-        },
-        "--catch-up": {
-          "in": [],
-          "planned": {
-            "max": "search follow-ups: SDK adoption",
-            "tg": "search follow-ups: SDK adoption"
-          }
-        },
-        "--catch-up-chunks": {
-          "in": [],
-          "planned": {
-            "max": "search follow-ups: SDK adoption",
-            "tg": "search follow-ups: SDK adoption"
-          }
-        },
-        "--catch-up-messages": {
-          "in": [],
-          "planned": {
-            "max": "search follow-ups: SDK adoption",
-            "tg": "search follow-ups: SDK adoption"
-          }
-        },
-        "--catch-up-time": {
-          "in": [],
-          "planned": {
-            "max": "search follow-ups: SDK adoption",
-            "tg": "search follow-ups: SDK adoption"
-          }
-        },
-        "--fingerprint": {
-          "in": [],
-          "planned": {
-            "max": "search follow-ups: SDK adoption",
-            "tg": "search follow-ups: SDK adoption"
-          }
-        },
-        "--limit": {
-          "in": [],
-          "planned": {
-            "max": "search follow-ups: SDK adoption",
-            "tg": "search follow-ups: SDK adoption"
-          }
-        },
-        "--max-gaps": {
-          "in": [],
-          "planned": {
-            "max": "search follow-ups: SDK adoption",
-            "tg": "search follow-ups: SDK adoption"
-          }
-        },
-        "--no-catch-up": {
-          "in": [],
-          "planned": {
-            "max": "search follow-ups: SDK adoption",
-            "tg": "search follow-ups: SDK adoption"
-          }
-        },
-        "--page-size": {
-          "in": [],
-          "planned": {
-            "max": "search follow-ups: SDK adoption",
-            "tg": "search follow-ups: SDK adoption"
-          }
-        },
-        "--pause": {
-          "in": [],
-          "planned": {
-            "max": "search follow-ups: SDK adoption",
-            "tg": "search follow-ups: SDK adoption"
-          }
-        },
-        "--repair-time": {
-          "in": [],
-          "planned": {
-            "max": "search follow-ups: SDK adoption",
-            "tg": "search follow-ups: SDK adoption"
-          }
-        }
+        "--background": "all",
+        "--catch-up": "all",
+        "--catch-up-chunks": "all",
+        "--catch-up-messages": "all",
+        "--catch-up-time": "all",
+        "--fingerprint": "all",
+        "--limit": "all",
+        "--max-gaps": "all",
+        "--no-catch-up": "all",
+        "--page-size": "all",
+        "--pause": "all",
+        "--repair-time": "all"
       }
     },
     "store info": {
