@@ -413,6 +413,13 @@ describe("chats create, join and leave", () => {
       deleteFolder: async (id) => {
         done.push(["delete", id])
       },
+      orderFolders: async (ids) => {
+        done.push(["order", ids])
+      },
+      joinFolder: async (link) => {
+        done.push(["join", link])
+        return { id: "12", title: "Shared", chatIds: ["7"] }
+      },
     }
 
     const listed = await call(["chats", "folders", "list", "--json"], adapter, env)
@@ -426,19 +433,28 @@ describe("chats create, join and leave", () => {
     const missing = await call(["chats", "folders", "delete", "Nope"], adapter, env)
     const empty = await call(["chats", "folders", "update", "Work"], adapter, env)
     const deleted = await call(["chats", "folders", "delete", "6", "--json"], adapter, env)
+    const ordered = await call(["chats", "folders", "order", "6", "Work", "--json"], adapter, env)
+    const twice = await call(["chats", "folders", "order", "Work", "4"], adapter, env)
+    const joined = await call(["chats", "folders", "join", "https://t.me/addlist/abc", "--json"], adapter, env)
 
     expect(JSON.parse(listed.stdout[0] ?? "").items).toHaveLength(3)
     expect(JSON.parse(made.stdout[0] ?? "")).toMatchObject({ folder: { id: "9", chatIds: ["7"] } })
-    expect([renamed.code, unclear.code, missing.code, empty.code, deleted.code]).toEqual([0, 2, 6, 2, 0])
+    expect([renamed.code, unclear.code, missing.code, empty.code, deleted.code, twice.code]).toEqual([0, 2, 6, 2, 0, 2])
+    expect(JSON.parse(ordered.stdout[0] ?? "").folders.map((one: { id: string }) => one.id)).toEqual(["6", "4", "5"])
+    expect(JSON.parse(joined.stdout[0] ?? "")).toMatchObject({ folder: { id: "12" } })
     expect(done).toEqual([
       ["create", "Home", ["7"]],
       ["update", "4", { title: "Job", add: ["7"] }],
       ["delete", "6"],
+      ["order", ["6", "4", "5"]],
+      ["join", "https://t.me/addlist/abc"],
     ])
     expect(new SendJournal(sendsPathFor(app, "default", env)).entries().map((one) => one.action)).toEqual([
       "folder-create",
       "folder-update",
       "folder-delete",
+      "folder-order",
+      "folder-join",
     ])
   })
 

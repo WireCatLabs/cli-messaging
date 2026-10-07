@@ -19,6 +19,10 @@ export interface FoldersService {
   /** `folder` is its id, or its title exactly. */
   update(folder: string, edit: FolderEdit): Promise<Operated<{ folder: Folder }>>
   delete(folder: string): Promise<Operated<{ folderId: string }>>
+  /** The folders named go first, in this order; the others keep theirs after them. */
+  order(folders: string[]): Promise<Operated<{ folders: Folder[] }>>
+  /** A folder shared by a link: every chat in it is joined. */
+  join(link: string): Promise<Operated<{ folder: Folder }>>
 }
 
 export const foldersService = (deps: ServiceDeps): FoldersService => {
@@ -90,6 +94,39 @@ export const foldersService = (deps: ServiceDeps): FoldersService => {
         remove(id),
       )
       return { operationId, folderId: id }
+    },
+
+    order: async (typed) => {
+      if (typed.length === 0) throw new CliError("validation_error", "name the folders in the order you want them")
+      const connection = await online("chats folders order")
+      const reorder = capability(connection, "orderFolders", "order folders")
+      const named: Folder[] = []
+      for (const one of typed) {
+        const folder = await folderOf(connection, one)
+        if (named.some((seen) => seen.id === folder.id))
+          throw new CliError("validation_error", `"${one}" is named twice`)
+        named.push(folder)
+      }
+      const all = await capability(connection, "folders", "list its folders")()
+      const folders = [...named, ...all.filter((one) => !named.some((seen) => seen.id === one.id))]
+      const operationId = newOperationId()
+      await guardedWrite(deps.guard, { operationId, chatId: null, kind: "account", action: "folder-order" }, () =>
+        reorder(folders.map((one) => one.id)),
+      )
+      return { operationId, folders }
+    },
+
+    join: async (link) => {
+      if (link.trim() === "") throw new CliError("validation_error", "give the folder's link")
+      const connection = await online("chats folders join")
+      const join = capability(connection, "joinFolder", "join a shared folder")
+      const operationId = newOperationId()
+      const folder = await guardedWrite(
+        deps.guard,
+        { operationId, chatId: null, kind: "account", action: "folder-join" },
+        () => join(link.trim()),
+      )
+      return { operationId, folder }
     },
   }
 }

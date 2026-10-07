@@ -440,6 +440,10 @@ export interface ChatFolders {
   updateFolder(folderId: string, change: FolderChange): Promise<Folder>
   /** The chats in it stay. */
   deleteFolder(folderId: string): Promise<void>
+  /** Every folder's id, in the new order. */
+  orderFolders(folderIds: string[]): Promise<void>
+  /** A folder someone shared by a link: joins every chat in it, and the others there see that the owner joined. */
+  joinFolder(link: string): Promise<Folder>
 }
 
 /** What the messenger computes for a group or channel and shows only its admins. Reads only. */

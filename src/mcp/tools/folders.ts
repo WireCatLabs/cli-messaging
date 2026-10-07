@@ -57,5 +57,25 @@ export const folderTools = (messenger: Messenger): Record<string, AnyTool> => {
       permission: "folders",
       online: (adapter, args, { guard }) => folders(adapter, guard).delete(args.folder),
     }),
+    chats_folders_order: tool({
+      title: "Order chat folders",
+      description:
+        "Put chat folders in this order, first one first; the ones not named keep their order after them. " +
+        "Only when the owner asked.",
+      input: v.object({ folders: v.pipe(v.array(folderRef), v.minLength(1)) }),
+      annotations: WRITE,
+      permission: "folders",
+      online: (adapter, args, { guard }) => folders(adapter, guard).order(args.folders),
+    }),
+    chats_folders_join: tool({
+      title: "Join a shared chat folder",
+      description:
+        "Add a folder someone shared by a t.me/addlist/ link. This joins every chat in it, and the others there " +
+        "see that the owner joined. Only when the owner asked for this exact link.",
+      input: v.object({ link: v.pipe(v.string(), v.minLength(1)) }),
+      annotations: WRITE,
+      permission: "folders",
+      online: (adapter, args, { guard }) => folders(adapter, guard).join(args.link),
+    }),
   }
 }

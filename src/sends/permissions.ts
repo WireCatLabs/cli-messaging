@@ -35,6 +35,8 @@ const ACCOUNT: Record<AccountAction, Permission> = {
   "folder-create": "folders",
   "folder-update": "folders",
   "folder-delete": "folders",
+  "folder-order": "folders",
+  "folder-join": "folders",
   "sessions-end": "sessions",
 }
 
@@ -215,6 +217,8 @@ const ACCOUNT_KEYS: Record<AccountAction, PermissionKey> = {
   "folder-create": "chats.folders.create",
   "folder-update": "chats.folders.update",
   "folder-delete": "chats.folders.delete",
+  "folder-order": "chats.folders.order",
+  "folder-join": "chats.folders.join",
   "sessions-end": "account.sessions.end",
 }
 
