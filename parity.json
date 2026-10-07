@@ -2405,7 +2405,10 @@
           "in": ["tg"],
           "reason": "MAX has no spoilers or caption placement"
         },
-        "--comment-to": "all",
+        "--comment-to": {
+          "in": ["tg"],
+          "reason": "MAX personal accounts have no channel comments"
+        },
         "--file": "all",
         "--md": "all",
         "--no-preview": "all",
