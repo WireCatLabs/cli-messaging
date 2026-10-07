@@ -668,6 +668,10 @@
     "--secret-stdin": {
       "meaning": "a secret MAX sends back in X-Max-Bot-Api-Secret \u2014 asked for, or read from a pipe"
     },
+    "--send-as": {
+      "value": "<id>",
+      "meaning": "send as one of the identities `chats send-as` lists for the chat; refused where the messenger has none"
+    },
     "--send-id": {
       "value": "<id>",
       "meaning": "identify a send or creation attempt; message/poll retries reuse it, while an unknown topic creation must never be repeated"
@@ -1514,6 +1518,11 @@
     "chats rules unset": {
       "in": "all"
     },
+    "chats send-as": {
+      "in": [],
+      "reason": "MAX has no identities to post as other than the account itself",
+      "planned": { "tg": "G1 feat/send-as-identities" }
+    },
     "chats show": {
       "in": "all"
     },
@@ -2242,6 +2251,10 @@
     "messages forward": {
       "in": "all",
       "options": {
+        "--send-as": {
+          "in": [],
+          "planned": { "max": "G1 feat/send-as-identities", "tg": "G1 feat/send-as-identities" }
+        },
         "--send-id": "all",
         "--silent": "all",
         "--to": "all"
@@ -2341,6 +2354,10 @@
         "--no-preview": "all",
         "--photo": "all",
         "--reply-to": "all",
+        "--send-as": {
+          "in": [],
+          "planned": { "max": "G1 feat/send-as-identities", "tg": "G1 feat/send-as-identities" }
+        },
         "--send-id": "all",
         "--silent": "all",
         "--spoiler": {
@@ -2413,6 +2430,10 @@
         "--anonymous": "all",
         "--multiple": "all",
         "--revote": "all",
+        "--send-as": {
+          "in": [],
+          "planned": { "max": "G1 feat/send-as-identities", "tg": "G1 feat/send-as-identities" }
+        },
         "--send-id": "all",
         "--silent": "all",
         "--topic": "all"

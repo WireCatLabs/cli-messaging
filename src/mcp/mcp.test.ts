@@ -571,6 +571,7 @@ describe("the MCP server", () => {
       "chat_chats_members_audit",
       "chat_chats_members_history",
       "chat_chats_rules_show",
+      "chat_chats_send_as",
       "chat_chats_show",
       "chat_chats_tracking_list",
       "chat_chats_tracking_show",
@@ -1880,6 +1881,28 @@ describe("sending over MCP", () => {
       ["7", "hi", { threadId: "12", replyTo: "14", sendId: "42" }],
       ["7", { question: "Friday?" }, { threadId: "12", sendId: "43" }],
     ])
+  })
+
+  it("lists sender identities read-only and sends as one through the same check", async () => {
+    const identities = [
+      { id: "500", title: "Owner", kind: "self" as const, premiumRequired: false, default: true },
+      { id: "-1002", title: "Synthetic channel", kind: "channel" as const, premiumRequired: false, default: false },
+    ]
+    const sends: unknown[] = []
+    const telegram = scripted({
+      sendAsIdentities: async () => identities,
+      send: async (chatId, text, options) => {
+        sends.push([chatId, text, options])
+        return { message, sendId: options.sendId }
+      },
+    })
+    const { call, client } = await connect(telegram, {})
+    const offered = (await client.listTools()).tools.find((one) => one.name === "chat_chats_send_as")
+    expect(offered?.annotations?.readOnlyHint).toBe(true)
+    expect((await call("chat_chats_send_as", { chat: "7" })).body.items).toEqual(identities)
+    expect((await call("chat_messages_send", { chat: "7", text: "hi", send_as: "-1002" })).isError).toBe(false)
+    expect((await call("chat_messages_send", { chat: "7", text: "hi", send_as: "-1099" })).isError).toBe(true)
+    expect(sends).toMatchObject([["7", "hi", { sendAs: "-1002" }]])
   })
 
   it("repeats the send_id it was given, so the messenger can drop a duplicate", async () => {

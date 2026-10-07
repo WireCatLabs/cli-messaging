@@ -3456,3 +3456,35 @@ describe("message link command", () => {
     expect(close).toHaveBeenCalledTimes(3)
   })
 })
+
+describe("sender identity commands", () => {
+  it("lists identities as one envelope and sends text as one of them", async () => {
+    const root = mkdtempSync(join(tmpdir(), "send-as-cli-"))
+    const env = {
+      CHAT_STATE_DIR: join(root, "state"),
+      CHAT_CONFIG_DIR: join(root, "config"),
+      MESSAGING_STORE: join(root, "m.db"),
+    }
+    const identities = [
+      { id: "500", title: "Owner", kind: "self" as const, premiumRequired: false, default: true },
+      { id: "-1002", title: "Synthetic channel", kind: "channel" as const, premiumRequired: true, default: false },
+    ]
+    const send = vi.fn(async (chatId: string, text: string, options: { sendId: string }) => ({
+      sendId: options.sendId,
+      message: { ...message, id: "4", chatId, text },
+    }))
+    const connect = vi.fn(async () => ({ ...fake, sendAsIdentities: async () => identities, send }))
+
+    const listed = await call(["chats", "send-as", "7", "--json"], connect, env)
+    expect(listed.code).toBe(0)
+    expect(JSON.parse(listed.stdout.join(""))).toEqual({ items: identities, page: 1, limit: 2, hasMore: false })
+
+    const sent = await call(["messages", "send", "7", "hi", "--send-as", "-1002", "--json"], connect, env)
+    expect(sent.code).toBe(0)
+    expect(send).toHaveBeenCalledWith("7", "hi", expect.objectContaining({ sendAs: "-1002" }))
+
+    const blank = await call(["messages", "send", "7", "hi", "--send-as", " ", "--json"], connect, env)
+    expect(blank.code).not.toBe(0)
+    expect(send).toHaveBeenCalledOnce()
+  })
+})

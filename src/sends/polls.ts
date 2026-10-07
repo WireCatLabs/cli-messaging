@@ -5,6 +5,7 @@ import { threadIdOf } from "../cli/messenger/thread.js"
 import type { Id, Poll } from "../domain/models.js"
 import type { SendGuard } from "./guard.js"
 import { guardedWrite, type Operated } from "./guarded.js"
+import { sendAsCheck } from "./send-as.js"
 import { newOperationId, newSendId } from "./send-id.js"
 
 /** A vote is shown to the others like a reaction, and counts toward nothing. */
@@ -51,14 +52,17 @@ export const guardedCreatePoll = async (
     silent,
     sendId,
     threadId: typedThread,
-  }: { chat: string; poll: NewPoll; silent: boolean; sendId?: string; threadId?: Id },
+    sendAs,
+  }: { chat: string; poll: NewPoll; silent: boolean; sendId?: string; threadId?: Id; sendAs?: Id },
 ): Promise<Operated<Sent>> => {
   if (poll.answers.length < 2) throw new CliError("validation_error", "a poll needs two answers or more")
   const threadId = threadIdOf(typedThread)
   const validate =
     threadId === undefined ? undefined : capability(connection, "validateThread", "send to a forum topic")
   const create = capability(connection, "createPoll", "create a poll")
+  const checkSendAs = sendAsCheck(connection, sendAs)
   const { id: chatId } = await connection.resolve(chat)
+  await checkSendAs(chatId)
   const id = sendId ?? connection.newSendId?.() ?? newSendId()
   const sent = await guardedWrite(
     guard,
@@ -70,12 +74,14 @@ export const guardedCreatePoll = async (
       length: poll.question.length,
       key: "polls.create",
       ...(threadId === undefined ? {} : { threadId }),
+      ...(sendAs === undefined ? {} : { sendAs }),
     },
     () =>
       create(chatId, poll, {
         sendId: id,
         ...(silent ? { silent } : {}),
         ...(threadId === undefined ? {} : { threadId }),
+        ...(sendAs === undefined ? {} : { sendAs }),
       }),
     (done) => ({ messageId: done.message.id }),
     validate === undefined || threadId === undefined ? undefined : () => validate(chatId, threadId, {}),

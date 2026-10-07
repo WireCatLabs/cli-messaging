@@ -188,6 +188,19 @@ describe("a retry of a send whose outcome was unknown", () => {
     expect(() => guard("g-retry").check({ chatId: "-1001", sendId: "-42" })).not.toThrow()
     expect(() => guard("g-retry").check({ chatId: "-1001", sendId: "-43" })).toThrow("the next send is possible")
   })
+
+  it("refuses a retry of an unknown send under another identity", () => {
+    const first = guard("g-retry-as")
+    first.check({ chatId: "-1001", sendId: "-42", sendAs: "-1002" })
+    first.record({ chatId: "-1001", outcome: "outcome_unknown", sendId: "-42", sendAs: "-1002" })
+
+    for (const sendAs of [undefined, "-1003"]) {
+      expect(() =>
+        guard("g-retry-as").check({ chatId: "-1001", sendId: "-42", ...(sendAs ? { sendAs } : {}) }),
+      ).toThrow("under another identity")
+    }
+    expect(() => guard("g-retry-as").check({ chatId: "-1001", sendId: "-42", sendAs: "-1002" })).not.toThrow()
+  })
 })
 
 describe("an allow-list refusal", () => {

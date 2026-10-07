@@ -44,6 +44,7 @@ export const messageSendTools = (messenger: Messenger): Record<string, AnyTool> 
         topic: v.optional(
           v.pipe(v.string(), v.minLength(1), v.description("the forum topic id; unsupported without topics")),
         ),
+        send_as: v.optional(v.pipe(v.string(), v.minLength(1), v.description("an id from chats_send_as to post as"))),
         send_id: v.optional(v.pipe(v.string(), v.minLength(1), v.description("from an earlier outcome_unknown"))),
         silent: v.optional(v.pipe(v.boolean(), v.description("deliver without a notification"))),
         no_preview: v.optional(v.pipe(v.boolean(), v.description("no preview card for a link in the text"))),
@@ -84,6 +85,7 @@ export const messageSendTools = (messenger: Messenger): Record<string, AnyTool> 
           ...(args.caption_above === true ? { captionAbove: true } : {}),
           ...(args.send_id === undefined ? {} : { sendId: args.send_id }),
           ...(args.topic === undefined ? {} : { threadId: args.topic }),
+          ...(args.send_as === undefined ? {} : { sendAs: args.send_as }),
           ...(args.reply_to === undefined ? {} : { replyTo: args.reply_to }),
           ...(args.silent === true ? { silent: true } : {}),
           ...(args.no_preview === true ? { noPreview: true } : {}),

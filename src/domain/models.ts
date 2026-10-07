@@ -350,6 +350,17 @@ export interface Topic {
   createdAt: string | null
 }
 
+/** Who the account may post as in one chat. `self` is the account itself, always offered. */
+export interface SenderIdentity {
+  id: Id
+  title: string
+  kind: "self" | "channel" | "group"
+  /** The messenger asks for a paid account to post as this one. */
+  premiumRequired: boolean
+  /** The chat's saved choice; `self` when the chat has none. */
+  default: boolean
+}
+
 /** What a link leads to, read without joining. */
 export interface LinkTarget {
   kind: ChatKind

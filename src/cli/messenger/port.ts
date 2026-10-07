@@ -25,6 +25,7 @@ import type {
   PhoneBookEntry,
   Poll,
   ProfileFacts,
+  SenderIdentity,
   Topic,
   WindowedMessage,
 } from "../../domain/models.js"
@@ -68,6 +69,8 @@ export interface SendOptions {
   spoiler?: boolean
   /** The caption shown above the attachment. Only where `Messenger.mediaOptions` has it. */
   captionAbove?: boolean
+  /** One of `sendAsIdentities`' ids, already checked against them. */
+  sendAs?: Id
 }
 
 /** A voice message as text. `pending`: the messenger was still working on it when it answered. */
@@ -165,7 +168,12 @@ export interface MessageEditing {
    * One message into another chat; the answer is the copy there. `silent` delivers it without a
    * notification. A repeat with the same `sendId` must leave one copy, as a send does.
    */
-  forward(fromChatId: Id, messageId: Id, toChatId: Id, options: { sendId: string; silent?: boolean }): Promise<Message>
+  forward(
+    fromChatId: Id,
+    messageId: Id,
+    toChatId: Id,
+    options: { sendId: string; silent?: boolean; sendAs?: Id },
+  ): Promise<Message>
   /** For the owner only, unless `forEveryone`; neither can be undone. */
   delete(chatId: Id, messageIds: Id[], options: { forEveryone: boolean }): Promise<void>
 }
@@ -215,7 +223,11 @@ export interface MessagePolls {
   vote(chatId: Id, messageId: Id, answerIds: Id[]): Promise<Poll>
   /** Only the owner's own poll; it cannot be reopened. */
   closePoll(chatId: Id, messageId: Id): Promise<Poll>
-  createPoll(chatId: Id, poll: NewPoll, options: { sendId: string; silent?: boolean; threadId?: Id }): Promise<Sent>
+  createPoll(
+    chatId: Id,
+    poll: NewPoll,
+    options: { sendId: string; silent?: boolean; threadId?: Id; sendAs?: Id },
+  ): Promise<Sent>
 }
 
 export interface LiveUpdates {
@@ -251,6 +263,11 @@ export interface MessageMedia {
 export interface MessagePermalinks {
   /** Validates the exact target before returning its permalink or unsupported-chat result. */
   permalink(chatId: Id, messageId: Id): Promise<MessagePermalink>
+}
+
+export interface SenderIdentities {
+  /** Who the account may post as in this chat, itself included. Reading changes no saved choice. */
+  sendAsIdentities(chatId: Id): Promise<SenderIdentity[]>
 }
 
 export interface ScheduledMessages {
@@ -424,6 +441,7 @@ export interface MessengerAdapter
     Partial<MessageMedia>,
     Partial<ScheduledMessages>,
     Partial<MessagePermalinks>,
+    Partial<SenderIdentities>,
     Partial<GroupModeration>,
     Partial<AccountTools>,
     Partial<ProfilePhotos>,

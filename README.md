@@ -56,6 +56,17 @@ where it is unset the service refuses them before connecting, so an adapter that
 receives one to drop. Both need an attachment. Per-message forward protection is left out: Telegram grants it
 to bots only, and a personal account protects a whole chat instead.
 
+## Sender identities
+
+`chats send-as <chat>` lists who the account may post as in a chat: `{ id, title, kind, premiumRequired,
+default }`, `kind` being `self`, `channel` or `group`. The personal identity is always in the list, and
+`default` marks the chat's saved choice. Reading it changes nothing — the saved choice stays as it is.
+`messages send`, `messages forward` and `polls create` take `--send-as <id>` (their tools `send_as`): the
+service lists the identities of the chat the message lands in, in the same connection, and refuses an id
+that is not there. An adapter without the optional `sendAsIdentities` refuses the option — it is never
+dropped, and never falls back to the personal identity. The journal records the identity, and a retry of an
+unknown send under the same send id must name the same identity.
+
 ## Message permalinks
 
 The personal `messages link <chat> <message>` command also accepts a `msg:` locator.

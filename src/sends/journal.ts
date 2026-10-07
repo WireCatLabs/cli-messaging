@@ -71,6 +71,8 @@ export interface SendEntry {
   /** The message a reply answers. */
   replyTo?: Id
   threadId?: Id
+  /** The identity a message was sent as, when not the account itself by default. */
+  sendAs?: Id
   resultChatId?: Id
   length?: number
   /** What was attached, by kind and size — never a file name. */

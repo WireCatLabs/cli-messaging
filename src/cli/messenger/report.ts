@@ -79,6 +79,7 @@ export const SEND_ID_FIELDS = [
   "messageId",
   "replyTo",
   "threadId",
+  "sendAs",
   "resultChatId",
   "sendId",
   "operationId",

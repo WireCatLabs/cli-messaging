@@ -8,6 +8,12 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Added
 
+- `chats send-as <chat>` and the read-only MCP tool `chats_send_as` list the identities the account may post
+  as in a chat, through the optional adapter group `SenderIdentities`. `messages send`, `messages forward` and
+  `polls create` take `--send-as <id>` (their tools `send_as`), with or without attachments; an id not in the
+  chat's list and a messenger without the capability are refused. The journal records `sendAs`, and a retry
+  under the same send id with another identity is refused.
+
 - `messages send --spoiler` and `--caption-above` (send tool `spoiler`, `caption_above`) for a photo, video or
   file, where the messenger lists them in the new `Messenger.mediaOptions`; elsewhere they are refused before
   connecting.
