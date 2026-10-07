@@ -27,6 +27,7 @@ import type {
   ProfileFacts,
   SenderIdentity,
   Topic,
+  TopicChange,
   WindowedMessage,
 } from "../../domain/models.js"
 import type { Upload } from "../../sends/upload.js"
@@ -210,6 +211,13 @@ export interface ForumControl {
   upgradeForum(chatId: Id): Promise<ForumState>
   enableForum(chatId: Id): Promise<ForumState>
   createTopic(chatId: Id, title: string, options: { sendId: string }): Promise<Topic>
+}
+
+export interface TopicEditing {
+  /** Renames, closes or reopens one topic; the answer is the topic as it now stands. A repeat changes nothing. */
+  editTopic(chatId: Id, topicId: Id, change: TopicChange): Promise<Topic>
+  /** Puts the pinned topics in this order; a topic that is not pinned stays unpinned. */
+  orderPinnedTopics(chatId: Id, topicIds: Id[]): Promise<void>
 }
 
 export interface ThreadAddressing {
@@ -436,6 +444,7 @@ export interface MessengerAdapter
     Partial<MessagePolls>,
     Partial<ThreadAddressing>,
     Partial<ForumControl>,
+    Partial<TopicEditing>,
     Partial<LiveUpdates>,
     Partial<PushedHistory>,
     Partial<MessageMedia>,

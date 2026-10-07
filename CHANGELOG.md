@@ -12,6 +12,12 @@ Released early: tg-cli and max-cli adopt stemmed search today, at the owner's re
 
 ### Added
 
+- `topics edit <chat> <topic> [--title <t>] [--closed on|off] [--pinned on|off] [--hidden on|off]` and the MCP
+  tool `topics_edit` rename, close, reopen, pin or unpin a forum topic, or hide its General topic;
+  `topics order <chat> <topic...>` and `topics_order` put the pinned topics in order, pinning nothing. Through the
+  optional adapter group `TopicEditing`; journaled as `topic-edit`, `-close`, `-reopen`, `-pin`, `-unpin`,
+  `-hide`, `-unhide` or `-order` with the topic id, under the permission key `topics.edit`.
+
 - `chats send-as <chat>` and the read-only MCP tool `chats_send_as` list the identities the account may post
   as in a chat, through the optional adapter group `SenderIdentities`. `messages send`, `messages forward` and
   `polls create` take `--send-as <id>` (their tools `send_as`), with or without attachments; an id not in the

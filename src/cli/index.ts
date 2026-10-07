@@ -190,6 +190,7 @@ export type {
   Sent,
   ServerReads,
   ThreadAddressing,
+  TopicEditing,
   Transcript,
 } from "./messenger/port.js"
 export { type ModeProblem, type PrivateFiles, privateFiles, withSqliteSidecars } from "./messenger/private-files.js"

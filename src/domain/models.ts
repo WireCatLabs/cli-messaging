@@ -344,6 +344,8 @@ export interface Topic {
   title: string
   closed: boolean
   pinned: boolean
+  /** The General topic only, when the messenger says. */
+  hidden?: boolean
   unreadCount: number | null
   /** ISO 8601. */
   lastMessageAt: string | null
@@ -359,6 +361,15 @@ export interface SenderIdentity {
   premiumRequired: boolean
   /** The chat's saved choice; `self` when the chat has none. */
   default: boolean
+}
+
+/** What `topics edit` changes; a field left out stays. */
+export interface TopicChange {
+  title?: string
+  closed?: boolean
+  pinned?: boolean
+  /** Only a forum's General topic can be hidden from the topic list. */
+  hidden?: boolean
 }
 
 /** What a link leads to, read without joining. */

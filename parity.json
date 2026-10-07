@@ -185,6 +185,10 @@
     "--check": {
       "meaning": "say whether a newer version exists, and install nothing"
     },
+    "--closed": {
+      "value": "<on|off>",
+      "meaning": "on closes a forum topic to new messages, off reopens it"
+    },
     "--concurrency": {
       "value": "<n>",
       "meaning": "remote: requests at once (default: 4)"
@@ -304,6 +308,10 @@
     "--from-dir": {
       "value": "<dir>",
       "meaning": "read nonrecursive files from this directory for one explicit chat"
+    },
+    "--hidden": {
+      "value": "<on|off>",
+      "meaning": "on hides a forum's General topic from the topic list, off shows it"
     },
     "--history": {
       "meaning": "the people added also see the messages from before they came"
@@ -587,6 +595,10 @@
       "value": "<file>",
       "meaning": "an image file \u2014 a profile photo in `account update`, a photo to send in `messages send`"
     },
+    "--pinned": {
+      "value": "<on|off>",
+      "meaning": "on pins a forum topic at the top of the list, off unpins it"
+    },
     "--port": {
       "value": "<port>",
       "meaning": "the local port for --http"
@@ -772,7 +784,7 @@
     },
     "--title": {
       "value": "<title>",
-      "meaning": "the new name \u2014 of a chat or a folder"
+      "meaning": "the new name — of a chat, a folder or a forum topic"
     },
     "--to": {
       "value": "<chat>",
@@ -3271,6 +3283,17 @@
           "in": ["tg"],
           "reason": "MAX has no forum topics"
         }
+      }
+    },
+    "topics edit": {
+      "in": [],
+      "reason": "MAX has no forum topics",
+      "planned": { "tg": "G2 feat/topic-edit" },
+      "options": {
+        "--closed": { "in": [], "reason": "MAX has no forum topics", "planned": { "tg": "G2 feat/topic-edit" } },
+        "--hidden": { "in": [], "reason": "MAX has no forum topics", "planned": { "tg": "G2 feat/topic-edit" } },
+        "--pinned": { "in": [], "reason": "MAX has no forum topics", "planned": { "tg": "G2 feat/topic-edit" } },
+        "--title": { "in": [], "reason": "MAX has no forum topics", "planned": { "tg": "G2 feat/topic-edit" } }
       }
     },
     "topics enable": {

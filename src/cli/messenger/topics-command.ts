@@ -61,5 +61,50 @@ export const topicsCommand = (messenger: Messenger): Command => {
         await context.withServices((services) => services.topics.create(chat, title, this.opts<{ sendId?: string }>())),
       )
     })
+  annotate(topics.command("edit"), { mutates: true })
+    .description("rename, close or reopen a forum topic")
+    .argument("<chat>", messenger.chatArgument)
+    .argument("<topic>", "the topic id, from `topics list`")
+    .option("--title <title>", "the new title, at most 128 UTF-8 bytes")
+    .option("--closed <on|off>", "on closes the topic to new messages, off reopens it")
+    .option("--pinned <on|off>", "on pins the topic at the top of the list, off unpins it")
+    .option("--hidden <on|off>", "on hides the General topic from the topic list, off shows it")
+    .action(async function (this: Command, chat: string, topic: string) {
+      const context = messengerContext(this, messenger)
+      const { title, closed, pinned, hidden } = this.opts<{
+        title?: string
+        closed?: string
+        pinned?: string
+        hidden?: string
+      }>()
+      const closes = onOff("--closed", closed)
+      const pins = onOff("--pinned", pinned)
+      const hides = onOff("--hidden", hidden)
+      context.renderer.result(
+        await context.withServices((services) =>
+          services.topics.edit(chat, topic, {
+            ...(title === undefined ? {} : { title }),
+            ...(closes === undefined ? {} : { closed: closes }),
+            ...(pins === undefined ? {} : { pinned: pins }),
+            ...(hides === undefined ? {} : { hidden: hides }),
+          }),
+        ),
+      )
+    })
+  annotate(topics.command("order"), { mutates: true })
+    .description("put the pinned topics in this order; it pins and unpins nothing")
+    .argument("<chat>", messenger.chatArgument)
+    .argument("<topic...>", "the pinned topics' ids, first to last")
+    .action(async function (this: Command, chat: string, order: string[]) {
+      const context = messengerContext(this, messenger)
+      context.renderer.result(await context.withServices((services) => services.topics.order(chat, order)))
+    })
   return topics
+}
+
+const onOff = (flag: string, value: string | undefined): boolean | undefined => {
+  if (value === undefined) return undefined
+  if (value !== "on" && value !== "off")
+    throw new CliError("validation_error", `${flag} takes on or off, not "${value}"`)
+  return value === "on"
 }
