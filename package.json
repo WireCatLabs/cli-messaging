@@ -110,7 +110,11 @@
     "@modelcontextprotocol/server": "2.1.0",
     "@resvg/resvg-js": "2.6.2",
     "@valibot/to-json-schema": "1.8.0",
+    "@xmldom/xmldom": "0.9.12",
+    "chardet": "2.2.0",
     "echarts": "6.1.0",
+    "fflate": "0.8.3",
+    "iconv-lite": "0.7.3",
     "image-size": "2.0.4",
     "liquidjs": "10.30.0",
     "lossless-json": "4.3.0",
@@ -149,8 +153,8 @@
     "access": "public"
   },
   "peerDependencies": {
-    "@napi-rs/canvas": ">=0.1.69 <2",
     "@leemour/cli-core": ">=0.16.0 <0.18.0",
+    "@napi-rs/canvas": ">=0.1.69 <2",
     "commander": ">=15",
     "mammoth": ">=1.8.0 <2",
     "unpdf": ">=1.0.0 <2"

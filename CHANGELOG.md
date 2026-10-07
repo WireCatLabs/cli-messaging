@@ -6,6 +6,25 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- Local attachment readers for ODT, ODS, XLSX, PPTX and EPUB. Preserve sheet/slide/chapter order
+  and saved cell values, without calling a model or adding an office application. Structured
+  inputs are bounded and incomplete results are never stored as complete text.
+- BOM-marked UTF-16 and high-confidence legacy text decoding, with portable Node/Bun support.
+  Ambiguous encodings remain unreadable for an agent to inspect or convert.
+
+### Fixed
+
+- Failed same-hash local extractions can retry, reader identities invalidate obsolete caches,
+  and failed writes preserve previously good indexed text atomically. Agent text stays protected.
+
+### Changed — may break callers
+
+- Local extraction can now succeed for previously unsupported formats and encodings.
+  Non-UTF8 provenance uses `plain:v2:<encoding>`; uncertain or malformed encoding reasons
+  are `encoding_ambiguous`, `invalid_encoding` or `unsupported_encoding` instead of `not_utf8`.
+
 ## 0.178.0 — 08.10.2026
 
 ## 0.177.0 — 08.10.2026

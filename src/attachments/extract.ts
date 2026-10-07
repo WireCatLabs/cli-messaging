@@ -1,17 +1,17 @@
 import { readFileSync } from "node:fs"
 import { dirname, extname, join } from "node:path"
 import { fileURLToPath } from "node:url"
+import { documentKind, readDocument } from "./documents.js"
+import { decodeText } from "./encoding.js"
+import { MAX_FILE_BYTES, MAX_TEXT_CHARS } from "./limits.js"
+
+export { MAX_FILE_BYTES, MAX_TEXT_CHARS } from "./limits.js"
 
 /** The optional packages that read formats; none is installed with this package (owner, NEED-629 A). */
 export type Engine = "unpdf" | "mammoth" | "@napi-rs/canvas"
 
 /** Loads an optional package; a test hands in its own to play a machine without it. */
 export type LoadEngine = (name: Engine) => Promise<unknown>
-
-/** Bigger files are left for an agent: a 50 MB text layer is not a document anyone searches. */
-export const MAX_FILE_BYTES = 50 * 1024 * 1024
-/** What is kept of one file's text. */
-export const MAX_TEXT_CHARS = 2_000_000
 
 export type Extraction =
   | { status: "extracted"; text: string; extractor: string; pages?: number; ocrPages?: number }
@@ -64,12 +64,12 @@ const extensionOf = ({ name, path }: FileHint) => extname(name ?? path).toLowerC
 const capped = (text: string) => (text.length > MAX_TEXT_CHARS ? text.slice(0, MAX_TEXT_CHARS) : text)
 
 const plain = (bytes: Uint8Array): Extraction => {
-  try {
-    const text = new TextDecoder("utf-8", { fatal: true }).decode(bytes)
-    if (text.includes("\u0000")) return { status: "unreadable", extractor: "plain", error: "binary" }
-    return { status: "extracted", text: capped(text), extractor: "plain" }
-  } catch {
-    return { status: "unreadable", extractor: "plain", error: "not_utf8" }
+  const result = decodeText(bytes)
+  if ("error" in result) return { status: "unreadable", extractor: "plain:v2", error: result.error }
+  return {
+    status: "extracted",
+    text: capped(result.text),
+    extractor: result.encoding === "utf-8" ? "plain" : `plain:v2:${result.encoding}`,
   }
 }
 
@@ -112,8 +112,15 @@ const withEngine = async <T>(
  * Only an exact text layer: plain text, a Word document, a PDF that carries its text. A photo, a scan
  * or a PDF of pictures is an agent's to read (owner, NEED-546: no OCR in the tool).
  */
-export const extractText = async (bytes: Uint8Array, hint: FileHint, load: LoadEngine): Promise<Extraction> => {
+export const extractText = async (
+  bytes: Uint8Array,
+  hint: FileHint,
+  load: LoadEngine,
+  signal?: AbortSignal,
+): Promise<Extraction> => {
   const extension = extensionOf(hint)
+  const kind = documentKind(hint)
+  if (kind) return readDocument(bytes, kind, signal)
   if (startsWith(bytes, "%PDF-")) {
     return withEngine<Unpdf>(load, "unpdf", async (unpdf, extractor) => {
       const pdf = await unpdf.getDocumentProxy(new Uint8Array(bytes))

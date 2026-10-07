@@ -3,6 +3,7 @@ import { constants } from "node:fs"
 import { open, readFile, stat } from "node:fs/promises"
 import { CliError } from "@leemour/cli-core"
 import { directoryPaths } from "../attachments/directory.js"
+import { documentExtractor, documentKind } from "../attachments/documents.js"
 import {
   classify,
   type Engine,
@@ -140,9 +141,12 @@ const outcome = async (
   const sha = createHash("sha256").update(bytes).digest("hex")
   const isPdf = Buffer.from(bytes.subarray(0, 5)).toString() === "%PDF-"
   const ocrCandidate = ocr !== undefined && (known === "image" || isPdf)
+  const localKind = documentKind(hint)
   if (
     file.read?.origin === "extracted" &&
     file.read.contentSha256 === sha &&
+    (!localKind || file.read.extractor === documentExtractor(localKind)) &&
+    (file.read.error === null || (!ocrCandidate && file.read.error === "no_text")) &&
     (!ocrCandidate || (file.read.extractor === ocr?.extractor && file.read.error === null))
   )
     return { status: "unchanged" }
@@ -152,7 +156,7 @@ const outcome = async (
   }
   if (known === "image")
     return { status: "needs-agent", extraction: { status: "needs-agent", extractor: "none" }, bytes: size, sha }
-  const extraction = await extractText(bytes, hint, load)
+  const extraction = await extractText(bytes, hint, load, signal)
   return { status: extraction.status, extraction, bytes: size, sha }
 }
 
@@ -274,7 +278,12 @@ export const attachmentsService = (deps: ServiceDeps): AttachmentsService => ({
         run.complete = false
         return
       }
-      if (extraction && bytes !== undefined && (!ocr || status === "extracted")) {
+      if (
+        extraction &&
+        bytes !== undefined &&
+        (!ocr || status === "extracted") &&
+        (status === "extracted" || file.read?.error !== null)
+      ) {
         if ((await keep(store, file, extraction, bytes, sha)) === false) {
           run.unchanged += 1
           read += 1
