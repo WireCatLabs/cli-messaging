@@ -26,6 +26,15 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   revision whenever a saved message or contacts sync brings a new name or username, not only on member-list
   reads; `messages`: names on their stored messages that no revision holds, approximate. Telegram usernames get
   their `t.me` link. Kept per identity, so two people who once shared a name stay apart. No store migration.
+- Explicit bulk attachment OCR through `attachments extract --ocr`, with bounded
+  `--concurrency`, `models.ocr` and the standard model credentials/gateway. Images
+  and scanned PDF pages enter the existing content index; ordinary extraction
+  never calls a model. Agents remain the default readers through their own vision
+  tools and `attachments text set`.
+- Optional scanned-PDF rendering through `unpdf` and `@napi-rs/canvas`, bounded
+  by page count, pixels/bytes and output length. Completed OCR is cached by file
+  hash and pipeline/model identity; agent text and existing good text survive
+  failed or incomplete provider responses. Needs-agent results expose localPath.
 
 - `messages comments <channel> <post>` and the read-only MCP tool `messages_comments` read the comments under a
   channel post, a page at a time, with where they live (`discussion: { chatId, messageId }`).
@@ -36,6 +45,12 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 - A compiled Lucene selection seam for bounded SQL analytics, using the same matcher as search
   inside one synchronous read snapshot. Exact populations stay in SQL; detector and attachment
   key budgets fail closed. The planned ranking commands are not exposed yet.
+
+### Fixed
+
+- Attachment extraction honors denied message-read permissions before reading
+  files or calling a model. A bulk OCR pipeline stops further API calls after a
+  provider rate limit and returns sanitized per-file errors without retrying.
 
 ## 0.166.0 — 07.10.2026
 

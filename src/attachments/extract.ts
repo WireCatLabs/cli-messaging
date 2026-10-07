@@ -2,8 +2,8 @@ import { readFileSync } from "node:fs"
 import { dirname, extname, join } from "node:path"
 import { fileURLToPath } from "node:url"
 
-/** The optional packages that read formats; neither is installed with this package (owner, NEED-629 A). */
-export type Engine = "unpdf" | "mammoth"
+/** The optional packages that read formats; none is installed with this package (owner, NEED-629 A). */
+export type Engine = "unpdf" | "mammoth" | "@napi-rs/canvas"
 
 /** Loads an optional package; a test hands in its own to play a machine without it. */
 export type LoadEngine = (name: Engine) => Promise<unknown>
@@ -14,12 +14,13 @@ export const MAX_FILE_BYTES = 50 * 1024 * 1024
 export const MAX_TEXT_CHARS = 2_000_000
 
 export type Extraction =
-  | { status: "extracted"; text: string; extractor: string }
+  | { status: "extracted"; text: string; extractor: string; pages?: number; ocrPages?: number }
   /** No text layer: a scan, a photo. An agent reads it and writes the text back. */
   | { status: "needs-agent"; extractor?: string }
   | { status: "unreadable"; extractor: string; error: string }
   | { status: "unsupported" }
   | { status: "engine-missing"; engine: Engine }
+  | { status: "too-large" }
 
 export interface FileHint {
   kind: string
@@ -162,7 +163,7 @@ export const classify = (hint: FileHint): "image" | "unsupported" | undefined =>
 
 /** The one note a run gives for a format it skipped, naming what to install. */
 export const engineHint = (engine: Engine, command: string): string =>
-  `${engine === "unpdf" ? "PDF" : "Word"} files need the optional package ${engine}, installed where ${command} is ` +
+  `${engine === "unpdf" ? "PDF" : engine === "mammoth" ? "Word" : "Scanned PDF OCR"} files need the optional package ${engine}, installed where ${command} is ` +
   `(for a global npm install: npm install -g ${engine}); they are read on the next run`
 
 export const tooLarge = (bytes: number): boolean => bytes > MAX_FILE_BYTES

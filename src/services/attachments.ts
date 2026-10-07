@@ -13,6 +13,7 @@ import {
   MAX_FILE_BYTES,
   MAX_TEXT_CHARS,
 } from "../attachments/extract.js"
+import { type OcrPipeline, ocrImage, ocrPdf } from "../attachments/ocr.js"
 import { NOT_FILES } from "../domain/attachments.js"
 import { formatLocator, isLocator, parseLocator } from "../domain/locator.js"
 import type { Id } from "../domain/models.js"
@@ -32,6 +33,10 @@ export interface ExtractItem {
   status: ExtractStatus
   extractor?: string
   chars?: number
+  localPath?: string
+  pages?: number
+  ocrPages?: number
+  error?: string
 }
 
 export interface ExtractRun {
@@ -39,7 +44,7 @@ export interface ExtractRun {
   extracted: number
   needsAgent: number
   failed: number
-  /** Read before, and the same content now. */
+  /** Kept text was not replaced: an unchanged source or protected agent text. */
   unchanged: number
   /** No saved file, and no `--download`. */
   notDownloaded: number
@@ -66,6 +71,8 @@ export interface ExtractOptions {
   onItem?: (item: ExtractItem) => void
   signal?: AbortSignal
   load?: LoadEngine
+  ocr?: OcrPipeline
+  concurrency?: number
 }
 
 /** One file attachment as `attachments list` shows it; never its text. */
@@ -105,6 +112,7 @@ const outcome = async (
   load: LoadEngine,
   signal?: AbortSignal,
   noFollow = false,
+  ocr?: OcrPipeline,
 ): Promise<{
   status: ExtractStatus | "unchanged" | "unsupported"
   extraction?: Extraction
@@ -130,7 +138,18 @@ const outcome = async (
     await handle.close()
   }
   const sha = createHash("sha256").update(bytes).digest("hex")
-  if (file.read?.origin === "extracted" && file.read.contentSha256 === sha) return { status: "unchanged" }
+  const isPdf = Buffer.from(bytes.subarray(0, 5)).toString() === "%PDF-"
+  const ocrCandidate = ocr !== undefined && (known === "image" || isPdf)
+  if (
+    file.read?.origin === "extracted" &&
+    file.read.contentSha256 === sha &&
+    (!ocrCandidate || (file.read.extractor === ocr?.extractor && file.read.error === null))
+  )
+    return { status: "unchanged" }
+  if (ocr && ocrCandidate) {
+    const extraction = known === "image" ? await ocrImage(bytes, ocr, signal) : await ocrPdf(bytes, ocr, load, signal)
+    return { status: extraction.status, extraction, bytes: size, sha }
+  }
   if (known === "image")
     return { status: "needs-agent", extraction: { status: "needs-agent", extractor: "none" }, bytes: size, sha }
   const extraction = await extractText(bytes, hint, load)
@@ -146,9 +165,9 @@ const keep = async (
 ) => {
   const base = { origin: "extracted" as const, contentSha256: sha, bytes }
   if (extraction.status === "extracted") {
-    await store.keepAttachmentText(file.pk, { ...base, text: extraction.text, extractor: extraction.extractor })
+    return store.keepAttachmentText(file.pk, { ...base, text: extraction.text, extractor: extraction.extractor })
   } else if (extraction.status === "unreadable") {
-    await store.keepAttachmentText(file.pk, {
+    return store.keepAttachmentText(file.pk, {
       ...base,
       text: "",
       extractor: extraction.extractor,
@@ -156,7 +175,7 @@ const keep = async (
     })
   } else if (extraction.status === "needs-agent" && extraction.extractor) {
     // Kept, so the next run does not parse the same scan again; an agent's text replaces it.
-    await store.keepAttachmentText(file.pk, { ...base, text: "", extractor: extraction.extractor, error: "no_text" })
+    return store.keepAttachmentText(file.pk, { ...base, text: "", extractor: extraction.extractor, error: "no_text" })
   }
 }
 
@@ -195,13 +214,21 @@ export const attachmentsService = (deps: ServiceDeps): AttachmentsService => ({
     paths,
     fromDir,
     cursor,
-    scanLimit,
-    limit,
+    scanLimit: requestedScanLimit,
+    limit: requestedLimit,
     download,
     onItem,
     signal,
     load = importEngine,
+    ocr,
+    concurrency = 1,
   } = {}) => {
+    if (!Number.isInteger(concurrency) || concurrency < 1 || concurrency > 8 || (concurrency !== 1 && !ocr))
+      throw new CliError("validation_error", "API OCR concurrency must be between 1 and 8 and needs OCR")
+    const limit = requestedLimit ?? (ocr ? 100 : undefined)
+    const scanLimit = requestedScanLimit ?? (ocr ? 500 : undefined)
+    if (ocr && (limit === undefined || !Number.isSafeInteger(limit) || limit < 1 || limit > 500))
+      throw new CliError("validation_error", "API OCR file limit must be between 1 and 500")
     if (fromDir !== undefined && (chat === undefined || download))
       throw new CliError("validation_error", "--from-dir needs --chat and cannot be combined with --download")
     if (onlyMessage !== undefined && chat === undefined)
@@ -230,73 +257,107 @@ export const attachmentsService = (deps: ServiceDeps): AttachmentsService => ({
     let read = 0
     let beforePk = cursor === undefined ? undefined : Number(cursor)
     let scanned = 0
-    walk: for (;;) {
-      const page = await store.fileAttachments(account, {
-        ...(chatId === undefined ? {} : { chatId }),
-        ...(onlyMessage === undefined ? {} : { messageId: onlyMessage }),
-        ...(beforePk === undefined ? {} : { beforePk }),
-        limit: PAGE,
-      })
-      for (const file of page) {
-        if (
-          signal?.aborted ||
-          (limit !== undefined && read >= limit) ||
-          (scanLimit !== undefined && scanned >= scanLimit)
-        ) {
-          run.complete = false
-          if (beforePk !== undefined) run.cursor = String(beforePk)
-          break walk
-        }
-        beforePk = file.pk
-        scanned += 1
-        let path = directory === undefined ? file.localPath : (directory.get(file.pk) ?? null)
-        if (directory && path)
-          await store.keepDownloads(account, file.chatId, file.messageId, [
-            { kind: file.kind, position: file.position, path },
-          ])
-        if (selected && (path === null || !selected.has(path))) continue
-        const message = `${file.chatId}/${file.messageId}`
-        if (path === null && download && !fetched.has(message)) {
-          fetched.add(message)
-          await download(file.chatId, file.messageId)
-          path = await store.localPathOf(file.pk)
-        }
-        if (path === null) {
-          run.notDownloaded += 1
-          continue
-        }
-        const { status, extraction, bytes, sha } = await outcome(file, path, load, signal, fromDir !== undefined)
-        if (status === "unchanged") {
-          run.unchanged += 1
-          continue
-        }
-        if (status === "unsupported") {
-          run.unsupported += 1
-          continue
-        }
-        if (extraction && bytes !== undefined) await keep(store, file, extraction, bytes, sha)
-        if (status !== "missing" && status !== "too-large" && status !== "engine-missing") read += 1
-        if (extraction?.status === "engine-missing" && !run.enginesMissing.includes(extraction.engine))
-          run.enginesMissing.push(extraction.engine)
-        if (status === "extracted") run.extracted += 1
-        else if (status === "needs-agent") run.needsAgent += 1
-        else if (status === "unreadable") run.failed += 1
-        const item: ExtractItem = {
-          locator: formatLocator({ ...account, chat: file.chatId, message: file.messageId }),
-          attachment: file.position + 1,
-          kind: file.kind,
-          name: file.name,
-          status,
-          ...(extraction && "extractor" in extraction && extraction.extractor
-            ? { extractor: extraction.extractor }
-            : {}),
-          ...(extraction?.status === "extracted" ? { chars: extraction.text.length } : {}),
-        }
-        run.items.push(item)
-        onItem?.(item)
+    const pending: Promise<void>[] = []
+    const finished = new Map<number, ExtractItem>()
+    const processFile = async (file: FileAttachment, path: string) => {
+      deps.guard.check({ chatId: file.chatId, key: "attachments.extract" }, { reserve: false })
+      const { status, extraction, bytes, sha } = await outcome(file, path, load, signal, fromDir !== undefined, ocr)
+      if (status === "unchanged") {
+        run.unchanged += 1
+        return
       }
-      if (page.length < PAGE) break
+      if (status === "unsupported") {
+        run.unsupported += 1
+        return
+      }
+      if (signal?.aborted) {
+        run.complete = false
+        return
+      }
+      if (extraction && bytes !== undefined && (!ocr || status === "extracted")) {
+        if ((await keep(store, file, extraction, bytes, sha)) === false) {
+          run.unchanged += 1
+          read += 1
+          return
+        }
+      }
+      if (status !== "missing" && status !== "too-large" && status !== "engine-missing") read += 1
+      if (extraction?.status === "engine-missing" && !run.enginesMissing.includes(extraction.engine))
+        run.enginesMissing.push(extraction.engine)
+      if (status === "extracted") run.extracted += 1
+      else if (status === "needs-agent") run.needsAgent += 1
+      else if (status === "unreadable") run.failed += 1
+      const item: ExtractItem = {
+        locator: formatLocator({ ...account, chat: file.chatId, message: file.messageId }),
+        attachment: file.position + 1,
+        kind: file.kind,
+        name: file.name,
+        status,
+        ...(status === "needs-agent" ? { localPath: path } : {}),
+        ...(ocr && extraction?.status === "unreadable" ? { error: extraction.error } : {}),
+        ...(extraction && "extractor" in extraction && extraction.extractor ? { extractor: extraction.extractor } : {}),
+        ...(extraction?.status === "extracted"
+          ? {
+              chars: extraction.text.length,
+              ...(extraction.pages === undefined ? {} : { pages: extraction.pages, ocrPages: extraction.ocrPages }),
+            }
+          : {}),
+      }
+      finished.set(file.pk, item)
+      onItem?.(item)
     }
+    try {
+      walk: for (;;) {
+        const page = await store.fileAttachments(account, {
+          ...(chatId === undefined ? {} : { chatId }),
+          ...(onlyMessage === undefined ? {} : { messageId: onlyMessage }),
+          ...(beforePk === undefined ? {} : { beforePk }),
+          limit: PAGE,
+        })
+        for (const file of page) {
+          while (
+            pending.length &&
+            (pending.length >= concurrency || (limit !== undefined && read + pending.length >= limit))
+          )
+            await pending.shift()
+          if (
+            signal?.aborted ||
+            (limit !== undefined && read >= limit) ||
+            (scanLimit !== undefined && scanned >= scanLimit)
+          ) {
+            run.complete = false
+            if (beforePk !== undefined) run.cursor = String(beforePk)
+            break walk
+          }
+          beforePk = file.pk
+          scanned += 1
+          let path = directory === undefined ? file.localPath : (directory.get(file.pk) ?? null)
+          if (directory && path)
+            await store.keepDownloads(account, file.chatId, file.messageId, [
+              { kind: file.kind, position: file.position, path },
+            ])
+          if (selected && (path === null || !selected.has(path))) continue
+          const message = `${file.chatId}/${file.messageId}`
+          if (path === null && download && !fetched.has(message)) {
+            fetched.add(message)
+            await download(file.chatId, file.messageId)
+            path = await store.localPathOf(file.pk)
+          }
+          if (path === null) {
+            run.notDownloaded += 1
+            continue
+          }
+          const task = processFile(file, path)
+          void task.catch(() => {})
+          pending.push(task)
+        }
+        if (page.length < PAGE) break
+      }
+      await Promise.all(pending)
+    } finally {
+      await Promise.allSettled(pending)
+    }
+    run.items = [...finished.entries()].sort(([a], [b]) => b - a).map(([, item]) => item)
     return run
   },
 

@@ -2,8 +2,10 @@ import { readFileSync } from "node:fs"
 import { CliError } from "@leemour/cli-core"
 import { Command } from "commander"
 import { engineHint } from "../../attachments/extract.js"
+import { gatewayOcr } from "../../attachments/gateway-ocr.js"
 import type { AttachmentItem, ExtractItem, ExtractRun } from "../../services/attachments.js"
 import { downloadMessage } from "../../services/file-download.js"
+import { environmentOf } from "../context.js"
 import { renderPage, window, withPaging } from "../paging.js"
 import { type Messenger, messengerContext, refuseLocalWrite } from "./context.js"
 import { stopOnSignal } from "./patience.js"
@@ -41,17 +43,29 @@ const extractCommand = (messenger: Messenger): Command =>
     .option("--download", "first save the files no download saved yet, from the messenger, into --output-dir")
     .option("--output-dir <dir>", "with --download, where to save them; created if missing")
     .option("--limit <n>", "read at most this many files; run it again to continue", count)
+    .option("--ocr", "explicitly call models.ocr for bulk image and scanned-PDF text extraction")
+    .option("--concurrency <n>", "remote: requests at once (default: 4)", count)
     .action(async function (this: Command) {
       const context = messengerContext(this, messenger)
       refuseLocalWrite(context, messenger.app.command, "attachments.extract")
-      const { chat, download, outputDir, fromDir, cursor, limit } = this.opts<{
+      const { chat, download, outputDir, fromDir, cursor, limit, ocr, concurrency } = this.opts<{
         chat?: string
         download?: boolean
         outputDir?: string
         fromDir?: string
         cursor?: string
         limit?: number
+        ocr?: boolean
+        concurrency?: number
       }>()
+      if (
+        (concurrency !== undefined && (!ocr || concurrency > 8)) ||
+        (ocr && (context.settings.offline || (limit !== undefined && limit > 500)))
+      )
+        throw new CliError(
+          "validation_error",
+          "API OCR needs online mode, concurrency1–8 and limit1–500; concurrency requires --ocr",
+        )
       if (fromDir !== undefined && (chat === undefined || download || outputDir !== undefined))
         throw new CliError(
           "validation_error",
@@ -62,7 +76,18 @@ const extractCommand = (messenger: Messenger): Command =>
       if (outputDir !== undefined && !download)
         throw new CliError("validation_error", "--output-dir is where --download saves; add --download")
       const stop = stopOnSignal(this)
+      const deadline = new AbortController()
+      context.track({ close: async () => deadline.abort() })
+      const environment = environmentOf(this)
+      const signal = AbortSignal.any([
+        stop.signal,
+        deadline.signal,
+        ...[environment.signal, environment.commandSignal].filter((one): one is AbortSignal => one !== undefined),
+      ])
       try {
+        const pipeline = ocr
+          ? gatewayOcr({ app: messenger.app, settings: context.settings, env: context.env, enabled: true, signal })
+          : undefined
         const run = await context.withServices((services) =>
           services.attachments.extract({
             ...(chat === undefined ? {} : { chat }),
@@ -76,7 +101,8 @@ const extractCommand = (messenger: Messenger): Command =>
                   },
                 }
               : {}),
-            signal: stop.signal,
+            signal,
+            ...(pipeline === undefined ? {} : { ocr: pipeline, concurrency: concurrency ?? 4 }),
             onItem: (item) => {
               if (context.format === "pretty") context.streams.data(`${line(item)}\n`)
               else if (context.format === "jsonl") context.renderer.stream([item])

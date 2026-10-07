@@ -8,6 +8,7 @@ import { Client, type ElicitResult } from "@modelcontextprotocol/client"
 import { InMemoryTransport, McpServer } from "@modelcontextprotocol/server"
 import { serveStdio } from "@modelcontextprotocol/server/stdio"
 import { Command } from "commander"
+import { PNG } from "pngjs"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { provide } from "../cli/context.js"
 import { type Messenger, messengerContext } from "../cli/messenger/context.js"
@@ -1368,6 +1369,49 @@ describe("the MCP server", () => {
     expect(backend.opened()).toBe(0)
     const readonly = await connect(scripted(), { root, config: levels({ attachments: "readonly" }) })
     expect((await readonly.client.listTools()).tools.map(({ name }) => name)).not.toContain("chat_attachments_extract")
+  })
+
+  it("explicitly OCRs a local image through the shared gateway and indexes it through MCP", async () => {
+    const root = await filledRoot()
+    const { call, env } = await connect(scripted(), {
+      root,
+      config: {
+        defaults: {
+          models: { ocr: { provider: "openai", model: "vision-fixture", baseUrl: "https://example.test/v1" } },
+        },
+      },
+    })
+    const store = await openStore({ path: env.MESSAGING_STORE })
+    const path = join(root, "mcp-ocr.png")
+    writeFileSync(path, PNG.sync.write(new PNG({ width: 2, height: 2 })))
+    await store.saveMessages(
+      { provider: "chat", account: "500" },
+      "7",
+      [{ ...message, id: "901", attachments: [{ kind: "photo", name: "mcp-ocr.png" }] }],
+      { via: "history" },
+    )
+    await store.keepDownloads({ provider: "chat", account: "500" }, "7", "901", [{ kind: "photo", position: 0, path }])
+    await store.close()
+    const fetcher = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      Response.json({
+        choices: [{ finish_reason: "stop", message: { content: "mcpocrneedle" } }],
+        usage: { total_tokens: 10 },
+      }),
+    )
+    try {
+      const answer = await call("chat_attachments_extract", { chat: "7", ocr: true, concurrency: 2, limit: 1 })
+      expect(answer.isError).toBe(false)
+      expect(answer.body).toMatchObject({ extracted: 1 })
+      expect(JSON.stringify(answer.body)).not.toContain("mcpocrneedle")
+      expect(
+        (await call("chat_messages_search", { text: "content:mcpocrneedle" })).body.items.map(
+          ({ id }: { id: string }) => id,
+        ),
+      ).toEqual(["901"])
+      expect(fetcher).toHaveBeenCalledTimes(1)
+    } finally {
+      fetcher.mockRestore()
+    }
   })
 
   it("plans gaps locally and repairs them through the retained session", async () => {
