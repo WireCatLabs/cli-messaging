@@ -372,6 +372,12 @@ export interface TopicChange {
   hidden?: boolean
 }
 
+/** Where a channel post's comments are: its copy in the linked discussion group, which they reply to. */
+export interface Discussion {
+  chatId: Id
+  messageId: Id
+}
+
 /** What a link leads to, read without joining. */
 export interface LinkTarget {
   kind: ChatKind

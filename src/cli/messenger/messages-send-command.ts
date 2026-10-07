@@ -19,6 +19,7 @@ export const sendCommand = (messenger: Messenger): Command => {
     .argument("[text]", "the message")
     .option("--topic <id>", "send to this forum topic; unsupported by messengers without topics")
     .option("--reply-to <message>", "answer this message, by its id in the same chat")
+    .option("--comment-to <post>", "comment on this post of the channel; it goes to the post's discussion group")
     .option("--send-as <id>", "post as one of the identities `chats send-as` lists")
     .option("--send-id <id>", "repeat a send whose outcome was unknown, without risking a second copy")
     .option("--silent", "deliver without a notification")
@@ -49,6 +50,7 @@ const sendText = async (command: Command, messenger: Messenger, chat: string, te
   const {
     topic,
     replyTo: typedReplyTo,
+    commentTo: typedCommentTo,
     sendAs: givenSendAs,
     sendId,
     silent,
@@ -65,6 +67,7 @@ const sendText = async (command: Command, messenger: Messenger, chat: string, te
   } = command.opts<{
     topic?: string
     replyTo?: string
+    commentTo?: string
     sendAs?: string
     sendId?: string
     silent?: boolean
@@ -84,6 +87,8 @@ const sendText = async (command: Command, messenger: Messenger, chat: string, te
   const replyTo = typedReplyTo?.trim()
   if (replyTo === "") throw new CliError("validation_error", "--reply-to needs the id of the message to answer")
   const sendAs = typedSendAs(givenSendAs)
+  const commentTo = typedCommentTo?.trim()
+  if (commentTo === "") throw new CliError("validation_error", "--comment-to needs the post's message id")
   const read = { app: messenger.app, env: context.env, anyFile: allowAnyFile === true }
   const attachments = await readAttachments(
     {
@@ -105,6 +110,7 @@ const sendText = async (command: Command, messenger: Messenger, chat: string, te
       text: body,
       ...(sendId === undefined ? {} : { sendId }),
       ...(replyTo === undefined ? {} : { replyTo }),
+      ...(commentTo === undefined ? {} : { commentTo }),
       ...(threadId === undefined ? {} : { threadId }),
       ...(sendAs === undefined ? {} : { sendAs }),
       ...(silent === true ? { silent } : {}),

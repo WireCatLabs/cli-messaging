@@ -8,6 +8,12 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Added
 
+- `messages comments <channel> <post>` and the read-only MCP tool `messages_comments` read the comments under a
+  channel post, a page at a time, with where they live (`discussion: { chatId, messageId }`).
+  `messages send --comment-to <post>` (tool `comment_to`) comments: the service finds the post's discussion and
+  sends a reply there, so the guard, the recipient list and the journal see the discussion group. Through the
+  optional adapter group `ChannelComments`; a post that takes no comments is `not_found`.
+
 - A compiled Lucene selection seam for bounded SQL analytics, using the same matcher as search
   inside one synchronous read snapshot. Exact populations stay in SQL; detector and attachment
   key budgets fail closed. The planned ranking commands are not exposed yet.

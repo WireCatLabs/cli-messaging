@@ -17,6 +17,7 @@ import {
   spokenItems,
   TRANSCRIBE_OPTION,
 } from "./hearing-command.js"
+import { commentsCommand } from "./messages-comments-command.js"
 import { deleteCommand } from "./messages-delete-command.js"
 import { editCommand } from "./messages-edit-command.js"
 import { evidenceCommand } from "./messages-evidence-command.js"
@@ -195,6 +196,7 @@ export const messagesCommand = (messenger: Messenger): Command => {
   messages.addCommand(unpinCommand(messenger))
   messages.addCommand(scheduledCommand(messenger))
   messages.addCommand(messageLinkCommand(messenger))
+  messages.addCommand(commentsCommand(messenger))
   messages.addCommand(linksCommand(messenger))
   return messages
 }

@@ -589,6 +589,7 @@ describe("the MCP server", () => {
       "chat_conversations_show",
       "chat_conversations_status",
       "chat_inbox",
+      "chat_messages_comments",
       "chat_messages_context",
       "chat_messages_evidence",
       "chat_messages_link",

@@ -6,7 +6,7 @@ import type { DownloadedFile } from "../domain/attachments.js"
 import { validateFormattedText } from "../domain/formatting.js"
 import { formatLocator, parseLocator } from "../domain/locator.js"
 import { type MessageLink, messageLinkTarget, validatePermalink } from "../domain/message-link.js"
-import type { Chat, Deletion, Id, Message, Page, Provider, WindowedMessage } from "../domain/models.js"
+import type { Chat, Deletion, Discussion, Id, Message, Page, Provider, WindowedMessage } from "../domain/models.js"
 import { isId, pickChat, pickPerson } from "../resolve.js"
 import { inSource, parseQuery, sourceOf } from "../search/query.js"
 import { type Match, search } from "../search/search.js"
@@ -121,6 +121,8 @@ export interface SendRequest {
   captionAbove?: boolean
   /** One of the ids `chats.sendAs` lists for this chat. */
   sendAs?: Id
+  /** A post of `chat`, a channel: the message goes to the post's discussion as a reply to it. */
+  commentTo?: Id
 }
 
 /** One message in a chat, as typed. */
@@ -169,6 +171,12 @@ export interface MessagesService {
   around(chat: string, message: string | undefined, window: AroundWindow): Promise<WindowedMessage[]>
   thread(chat: string, message?: Id, options?: ThreadOptions): Promise<ThreadContext>
   link(chat: string, message?: string): Promise<MessageLink>
+  /** A channel post's comments, from the messenger; `discussion` says where they live. */
+  comments(
+    chat: string,
+    post: string,
+    window: { limit: number; before?: string },
+  ): Promise<Page<Message> & { discussion: Discussion }>
   /** The files of one message. Always from the messenger, whatever its history is read from. */
   download(chat: string, message: Id): Promise<Download>
   /**
@@ -295,6 +303,19 @@ export const messagesService = (deps: ServiceDeps): MessagesService => {
         )
       }),
 
+    comments: async (chat, typedPost, window) => {
+      const post = typedPost.trim()
+      if (post === "") throw new CliError("validation_error", "which post? give its message id in the channel")
+      if (deps.offline)
+        throw new CliError("validation_error", "comments are read from the messenger; not with --offline")
+      const connection = await deps.connection()
+      const discussionOf = capability(connection, "discussionOf", "read comments on a channel post")
+      const comments = capability(connection, "comments", "read comments on a channel post")
+      const { id: channelId } = await connection.resolve(chat)
+      const discussion = await discussionOf(channelId, post)
+      return { discussion, ...(await comments(channelId, post, window)) }
+    },
+
     link: async (reference, message) => {
       const target = messageLinkTarget(reference, message, deps.messenger.provider)
       const account = await deps.account()
@@ -374,7 +395,7 @@ export const messagesService = (deps: ServiceDeps): MessagesService => {
       chat,
       text: typed,
       sendId,
-      replyTo,
+      replyTo: typedReplyTo,
       threadId: typedThread,
       silent,
       noPreview,
@@ -386,7 +407,10 @@ export const messagesService = (deps: ServiceDeps): MessagesService => {
       spoiler,
       captionAbove,
       sendAs,
+      commentTo,
     }) => {
+      if (commentTo !== undefined && (typedReplyTo !== undefined || typedThread !== undefined))
+        throw new CliError("validation_error", "a comment answers the post itself; not with --reply-to or --topic")
       const media = { ...(spoiler ? { spoiler } : {}), ...(captionAbove ? { captionAbove } : {}) }
       checkMediaOptions(deps.messenger, Object.keys(media) as MediaOption[], attachments.length)
       const connection = await deps.connection()
@@ -406,7 +430,12 @@ export const messagesService = (deps: ServiceDeps): MessagesService => {
       const validate =
         threadId === undefined ? undefined : capability(connection, "validateThread", "send to a forum topic")
       const checkSendAs = sendAsCheck(connection, sendAs)
-      const { id: chatId } = await connection.resolve(chat)
+      const discussionOf =
+        commentTo === undefined ? undefined : capability(connection, "discussionOf", "comment on a channel post")
+      const { id: resolved } = await connection.resolve(chat)
+      const discussion = discussionOf && commentTo !== undefined ? await discussionOf(resolved, commentTo) : undefined
+      const chatId = discussion?.chatId ?? resolved
+      const replyTo = discussion?.messageId ?? typedReplyTo
       await checkSendAs(chatId)
       const id = sendId ?? connection.newSendId?.() ?? newSendId()
       const attempt = {

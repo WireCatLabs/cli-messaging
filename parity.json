@@ -189,6 +189,10 @@
       "value": "<on|off>",
       "meaning": "on closes a forum topic to new messages, off reopens it"
     },
+    "--comment-to": {
+      "value": "<post>",
+      "meaning": "comment on this channel post; the comment goes to the post's discussion group"
+    },
     "--component": {
       "value": "<name>",
       "meaning": "the ranking component whose contributing messages or answer pairs to read"
@@ -2213,6 +2217,23 @@
     "messages": {
       "in": "all"
     },
+    "messages comments": {
+      "in": [],
+      "reason": "MAX personal accounts have no channel comments; MAX's comments are a Bot API path",
+      "planned": { "tg": "G2 feat/channel-comments" },
+      "options": {
+        "--before-id": {
+          "in": [],
+          "reason": "MAX personal accounts have no channel comments",
+          "planned": { "tg": "G2 feat/channel-comments" }
+        },
+        "--limit": {
+          "in": [],
+          "reason": "MAX personal accounts have no channel comments",
+          "planned": { "tg": "G2 feat/channel-comments" }
+        }
+      }
+    },
     "messages context": {
       "in": "all",
       "options": {
@@ -2379,6 +2400,10 @@
           "planned": {
             "tg": "G1 feat/media-options"
           }
+        },
+        "--comment-to": {
+          "in": [],
+          "planned": { "max": "G2 feat/channel-comments", "tg": "G2 feat/channel-comments" }
         },
         "--file": "all",
         "--md": "all",
