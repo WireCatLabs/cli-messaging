@@ -471,7 +471,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--search` | `<text>` | only chats whose name contains this; at least 3 characters |  | `chats list`, `contacts list` |
 | `--secret-stdin` |  | a secret MAX sends back in X-Max-Bot-Api-Secret — asked for, or read from a pipe |  | `bot webhooks set` |
 | `--selection` | `<json>` | the versioned resolved ranking selection returned by drilldown; authorisation is checked again |  | `stats contacts evidence` (planned), `stats messages evidence` (planned) |
-| `--send-as` | `<id>` | send as one of the identities `chats send-as` lists for the chat; refused where the messenger has none |  | `messages forward` (planned), `messages send` (planned), `polls create` (planned) |
+| `--send-as` | `<id>` | send as one of the identities `chats send-as` lists for the chat; required where the chat posts as someone else by default, refused where the messenger has none |  | `messages forward` (planned), `messages send` (planned), `polls create` (planned) |
 | `--send-id` | `<id>` | identify a send or creation attempt; message/poll retries reuse it, while an unknown topic creation must never be repeated |  | `messages forward`, `messages send`, `polls create`, `topics create` (tg-only) |
 | `--serve` |  | start `serve` in the background if it is not running (the default) |  | every command (planned) |
 | `--show-phone` |  | print the whole phone number |  | `account show`, `contacts profile` |

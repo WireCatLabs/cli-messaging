@@ -20,7 +20,10 @@ export const sendCommand = (messenger: Messenger): Command => {
     .option("--topic <id>", "send to this forum topic; unsupported by messengers without topics")
     .option("--reply-to <message>", "answer this message, by its id in the same chat")
     .option("--comment-to <post>", "comment on this post of the channel; it goes to the post's discussion group")
-    .option("--send-as <id>", "post as one of the identities `chats send-as` lists")
+    .option(
+      "--send-as <id>",
+      "post as one of the identities `chats send-as` lists; required where the chat posts as someone else by default",
+    )
     .option("--send-id <id>", "repeat a send whose outcome was unknown, without risking a second copy")
     .option("--silent", "deliver without a notification")
     .option("--no-preview", "no preview card for a link in the text")

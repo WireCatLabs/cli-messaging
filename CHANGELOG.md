@@ -6,6 +6,12 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Changed — may break callers
+
+- A send, forward or poll with no `--send-as` (`send_as`) to a chat whose saved sender is not the account is
+  refused before sending, naming the `--send-as` that posts as the owner and the one that posts as the saved
+  sender. Adapters tell it through the new optional `SenderIdentities.savedSender`; one without it is unchanged.
+
 ### Added
 
 - `contacts profile` answers `aliases`: the earlier names and usernames the store saw a person with, oldest
