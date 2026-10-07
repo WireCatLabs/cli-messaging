@@ -262,6 +262,7 @@ const NAMED_WRITE_KEYS = [
   "bot.messages.unpin",
   "chats.admins.add",
   "chats.admins.remove",
+  "chats.link.create",
   "chats.link.reset",
   "chats.members.add",
   "chats.members.remove",

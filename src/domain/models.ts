@@ -48,6 +48,8 @@ export interface GroupSettings {
   onlyAdminsCall: boolean | null
   onlyOwnerEditsInfo: boolean | null
   membersSeeLink: boolean | null
+  /** People ask to join and an admin lets them in. Only where the messenger lists it in `groupSettings`. */
+  joinApproval?: boolean | null
 }
 
 /** What `chats update` changes; a field left out stays as it is. */
@@ -90,6 +92,17 @@ export interface FolderChange {
 export const ADMIN_RIGHTS = ["read", "members", "admins", "info", "pin", "link", "post", "edit", "delete"] as const
 
 export type AdminRight = (typeof ADMIN_RIGHTS)[number]
+
+/** An additional invite link; the group's own link is `GroupCard.link`. */
+export interface InviteLink {
+  link: string
+  /** Who joins by it asks first, and an admin lets them in. */
+  approval: boolean
+  /** ISO 8601; `null` when it never expires. */
+  expiresAt: string | null
+  /** How many people may join by it; `null` for no limit. */
+  maxUses: number | null
+}
 
 /** A group or channel as the commands that change one answer it. */
 export interface GroupCard extends Chat {

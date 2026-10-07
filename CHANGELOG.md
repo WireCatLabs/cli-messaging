@@ -8,6 +8,13 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Added
 
+- `chats link create <chat> [--approval] [--expire-time <time>] [--max-uses <n>]` makes an additional invite
+  link — one that needs an admin's approval, stops working at a time, or takes at most n people; MCP
+  `chats_link_create`. Through the guard as `chats.link.create`; nobody is told, so it is not counted toward the
+  hourly limit. Adapters implement the new optional `InviteLinks` group.
+- `chats update --join-approval on|off` where the messenger lists `joinApproval` in `groupSettings`: people ask
+  to join and an admin lets them in. `GroupSettings.joinApproval` is optional, so adapters that do not set it
+  compile unchanged.
 - `chats requests list <chat>` shows who asked to join a group or channel that needs an admin's approval, newest
   first, and `chats requests accept|decline <chat> <person>` answers one; MCP `chats_requests_list`,
   `chats_requests_accept` and `chats_requests_decline` do the same. Answers go through the guard as
