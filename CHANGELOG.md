@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.172.0 — 07.10.2026
+
 ### Added
 
 - Account-scoped private contact aliases and notes with offline CLI/MCP authoring, safe text input, revision-checked edits and explicit notes search. Contact refresh and identity linking preserve local metadata.
