@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.176.0 — 08.10.2026
+
 ### Added
 
 - `chats update --photo <file>` sets a group's photo where the messenger declares `groupPhoto: true`; the
