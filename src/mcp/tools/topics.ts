@@ -74,7 +74,6 @@ export const topicWriteTools = (messenger: Messenger): Record<string, AnyTool> =
       hidden: v.optional(v.pipe(v.boolean(), v.description("the General topic only"))),
     }),
     annotations: WRITE,
-    _meta: APPROVE,
     permission: "groups",
     online: (adapter, args, { guard }) =>
       servicesFor(onlineDeps(messenger, adapter, guard)).topics.edit(args.chat, args.topic, {
@@ -94,7 +93,6 @@ export const topicWriteTools = (messenger: Messenger): Record<string, AnyTool> =
       topics: v.pipe(v.array(v.pipe(v.string(), v.minLength(1))), v.minLength(1)),
     }),
     annotations: WRITE,
-    _meta: APPROVE,
     permission: "groups",
     online: (adapter, args, { guard }) =>
       servicesFor(onlineDeps(messenger, adapter, guard)).topics.order(args.chat, args.topics),
