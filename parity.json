@@ -1786,13 +1786,25 @@
       "in": "all"
     },
     "contacts alias": {
-      "in": "all"
+      "in": [],
+      "planned": {
+        "max": "private metadata SDK adoption",
+        "tg": "private metadata SDK adoption"
+      }
     },
     "contacts alias rm": {
-      "in": "all"
+      "in": [],
+      "planned": {
+        "max": "private metadata SDK adoption",
+        "tg": "private metadata SDK adoption"
+      }
     },
     "contacts alias set": {
-      "in": "all"
+      "in": [],
+      "planned": {
+        "max": "private metadata SDK adoption",
+        "tg": "private metadata SDK adoption"
+      }
     },
     "contacts block": {
       "in": "all"
@@ -1826,36 +1838,66 @@
         "--order": "all",
         "--page": "all",
         "--search": "all",
-        "--search-notes": "all"
+        "--search-notes": {
+          "in": [],
+          "planned": {
+            "max": "private metadata SDK adoption",
+            "tg": "private metadata SDK adoption"
+          }
+        }
       }
     },
     "contacts lookup": {
       "in": "all"
     },
     "contacts notes": {
-      "in": "all"
+      "in": [],
+      "planned": {
+        "max": "private metadata SDK adoption",
+        "tg": "private metadata SDK adoption"
+      }
     },
     "contacts notes add": {
-      "in": "all",
+      "in": [],
       "options": {
         "--file": "all"
+      },
+      "planned": {
+        "max": "private metadata SDK adoption",
+        "tg": "private metadata SDK adoption"
       }
     },
     "contacts notes edit": {
-      "in": "all",
+      "in": [],
       "options": {
         "--file": "all",
         "--revision": "all"
+      },
+      "planned": {
+        "max": "private metadata SDK adoption",
+        "tg": "private metadata SDK adoption"
       }
     },
     "contacts notes list": {
-      "in": "all"
+      "in": [],
+      "planned": {
+        "max": "private metadata SDK adoption",
+        "tg": "private metadata SDK adoption"
+      }
     },
     "contacts notes remove": {
-      "in": "all"
+      "in": [],
+      "planned": {
+        "max": "private metadata SDK adoption",
+        "tg": "private metadata SDK adoption"
+      }
     },
     "contacts notes show": {
-      "in": "all"
+      "in": [],
+      "planned": {
+        "max": "private metadata SDK adoption",
+        "tg": "private metadata SDK adoption"
+      }
     },
     "contacts profile": {
       "in": "all",
@@ -1872,7 +1914,13 @@
     "contacts show": {
       "in": "all",
       "options": {
-        "--with-notes": "all"
+        "--with-notes": {
+          "in": [],
+          "planned": {
+            "max": "private metadata SDK adoption",
+            "tg": "private metadata SDK adoption"
+          }
+        }
       }
     },
     "contacts sync": {
@@ -2587,19 +2635,31 @@
       "in": "all"
     },
     "metadata": {
-      "in": "all"
+      "in": [],
+      "planned": {
+        "max": "private metadata SDK adoption",
+        "tg": "private metadata SDK adoption"
+      }
     },
     "metadata get": {
-      "in": "all",
+      "in": [],
       "options": {
         "--chat": "all"
+      },
+      "planned": {
+        "max": "private metadata SDK adoption",
+        "tg": "private metadata SDK adoption"
       }
     },
     "metadata refresh": {
-      "in": "all",
+      "in": [],
       "options": {
         "--chat": "all",
         "--limit": "all"
+      },
+      "planned": {
+        "max": "private metadata SDK adoption",
+        "tg": "private metadata SDK adoption"
       }
     },
     "models": {
@@ -3566,18 +3626,28 @@
       }
     },
     "tags auto": {
-      "in": "all",
+      "in": [],
       "options": {
         "--chat": "all",
         "--dry-run": "all",
         "--limit": "all",
         "--refresh-metadata": "all"
+      },
+      "planned": {
+        "max": "private metadata SDK adoption",
+        "tg": "private metadata SDK adoption"
       }
     },
     "tags list": {
       "in": "all",
       "options": {
-        "--source": "all",
+        "--source": {
+          "in": [],
+          "planned": {
+            "max": "private metadata SDK adoption",
+            "tg": "private metadata SDK adoption"
+          }
+        },
         "--tag": {
           "in": "all"
         },
@@ -3598,7 +3668,13 @@
         "--message": {
           "in": "all"
         },
-        "--source": "all"
+        "--source": {
+          "in": [],
+          "planned": {
+            "max": "private metadata SDK adoption",
+            "tg": "private metadata SDK adoption"
+          }
+        }
       }
     },
     "tasks": {
