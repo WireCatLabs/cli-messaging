@@ -80,6 +80,8 @@ export interface Messenger {
    * know a newer option is never handed one to drop.
    */
   mediaOptions?: readonly MediaOption[]
+  /** Whether folders take kinds of chat, skip muted, read or archived ones, exclude and pin chats; no when unset. */
+  folderRules?: boolean
   /** Whether the messenger reads HTML in `--html`; no when unset. */
   html?: boolean
   /** Whether folder ordering is available; yes when unset. */

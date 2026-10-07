@@ -82,10 +82,31 @@ export interface Folder {
   title: string
   /** Chats added to it by hand; a folder that selects chats by a rule of its own lists none. */
   chatIds: Id[]
+  emoji?: string
+  /** Kinds of chat it takes by itself, beside `chatIds`. */
+  include?: FolderKind[]
+  /** Chats it leaves out even when a kind takes them. */
+  skip?: FolderSkip[]
+  excludedChatIds?: Id[]
+  pinnedChatIds?: Id[]
 }
 
-/** What `chats folders update` changes; chats by id. */
-export interface FolderChange {
+export const FOLDER_KINDS = ["contacts", "non-contacts", "groups", "channels", "bots"] as const
+export type FolderKind = (typeof FOLDER_KINDS)[number]
+export const FOLDER_SKIPS = ["muted", "read", "archived"] as const
+export type FolderSkip = (typeof FOLDER_SKIPS)[number]
+
+/** A folder's rules beside its chats; `include` and `skip` replace what it had, the chat lists add to it. */
+export interface FolderRules {
+  emoji?: string
+  include?: FolderKind[]
+  skip?: FolderSkip[]
+  exclude?: Id[]
+  pin?: Id[]
+}
+
+/** What `chats folders update` changes; chats by id. `remove` takes a chat off every list it is on. */
+export interface FolderChange extends FolderRules {
   title?: string
   add?: Id[]
   remove?: Id[]

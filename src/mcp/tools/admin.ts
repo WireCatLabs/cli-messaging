@@ -158,10 +158,25 @@ export const adminTools = (messenger: Messenger): Record<string, AnyTool> => {
       description:
         "Who asked to join a group or channel that needs an admin's approval, newest first: { chatId, items: " +
         "[{ person, requestedAt, about }], hasMore }. Only admins see them. Reading tells nobody.",
-      input: v.object({ chat: chatOf(messenger), limit }),
+      input: v.object({
+        chat: chatOf(messenger),
+        limit,
+        search: v.optional(v.pipe(v.string(), v.minLength(1), v.description("only names or @usernames with this"))),
+        link: v.optional(
+          v.pipe(
+            v.string(),
+            v.minLength(1),
+            v.description("only those who asked through this invite link; not with search"),
+          ),
+        ),
+      }),
       annotations: READ,
       online: (adapter, args, defaults) =>
-        admin(adapter, defaults.guard).requests(args.chat, { limit: args.limit ?? defaults.limit }),
+        admin(adapter, defaults.guard).requests(args.chat, {
+          limit: args.limit ?? defaults.limit,
+          ...(args.search === undefined ? {} : { search: args.search }),
+          ...(args.link === undefined ? {} : { link: args.link }),
+        }),
     }),
     chats_requests_accept: tool({
       title: "Accept a request to join",

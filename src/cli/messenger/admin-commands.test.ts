@@ -397,6 +397,82 @@ describe("chats create, join and leave", () => {
     ])
   })
 
+  it("narrows join requests by name or by invite link, never both", async () => {
+    const env = sandbox()
+    const asked: unknown[] = []
+    const adapter: MessengerAdapter = {
+      ...base,
+      joinRequests: async (_chatId, window) => {
+        asked.push(window)
+        return { items: [], hasMore: false }
+      },
+    }
+
+    const named = await call(["chats", "requests", "list", "Book club", "--search", "ana", "--json"], adapter, env)
+    const linked = await call(["chats", "requests", "list", "Book club", "--link", "https://t.me/+x"], adapter, env)
+    const both = await call(["chats", "requests", "list", "Book club", "--search", "a", "--link", "l"], adapter, env)
+
+    expect([named.code, linked.code, both.code]).toEqual([0, 0, 2])
+    expect(asked).toEqual([
+      { limit: 20, search: "ana" },
+      { limit: 20, link: "https://t.me/+x" },
+    ])
+  })
+
+  it("**gives a folder its rules where the messenger has them**, and refuses them where it does not", async () => {
+    const env = sandbox()
+    const done: unknown[] = []
+    const adapter: MessengerAdapter = {
+      ...base,
+      folders: async () => [{ id: "4", title: "Work", chatIds: [] }],
+      createFolder: async (title, chatIds, rules) => {
+        done.push(["create", title, chatIds, rules])
+        return { id: "9", title, chatIds }
+      },
+      updateFolder: async (id, change) => {
+        done.push(["update", id, change])
+        return { id, title: "Work", chatIds: [] }
+      },
+    }
+    const rules = { folderRules: true }
+
+    const made = await call(
+      [
+        "chats",
+        "folders",
+        "create",
+        "Inbox",
+        "--include",
+        "contacts,groups",
+        "--skip",
+        "muted,archived",
+        "--exclude-chat",
+        "Book club",
+        "--pin",
+        "Book club",
+        "--emoji",
+        "📥",
+      ],
+      adapter,
+      env,
+      rules,
+    )
+    const cleared = await call(["chats", "folders", "update", "Work", "--include", "none"], adapter, env, rules)
+    const wrong = await call(["chats", "folders", "update", "Work", "--skip", "loud"], adapter, env, rules)
+    const unoffered = await call(["chats", "folders", "create", "X", "--include", "bots"], adapter, env)
+
+    expect([made.code, cleared.code, wrong.code, unoffered.code]).toEqual([0, 0, 2, 2])
+    expect(done).toEqual([
+      [
+        "create",
+        "Inbox",
+        [],
+        { include: ["contacts", "groups"], skip: ["muted", "archived"], exclude: ["7"], pin: ["7"], emoji: "📥" },
+      ],
+      ["update", "4", { include: [] }],
+    ])
+  })
+
   it("**adds and removes people through the guard**, naming who could not be added", async () => {
     const env = sandbox()
     const done: unknown[] = []

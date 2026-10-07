@@ -2,12 +2,36 @@ import * as v from "valibot"
 import type { Messenger } from "../../cli/messenger/context.js"
 import type { MessengerAdapter } from "../../cli/messenger/port.js"
 import { listed } from "../../cli/paging.js"
+import { FOLDER_KINDS, FOLDER_SKIPS, type FolderKind, type FolderSkip } from "../../domain/models.js"
 import type { SendGuard } from "../../sends/guard.js"
+import type { FolderRulesEdit } from "../../services/folders.js"
 import { onlineDeps, servicesFor } from "../../services/index.js"
 import { type AnyTool, READ, tool, WRITE } from "../tool.js"
 
 const folderRef = v.pipe(v.string(), v.minLength(1), v.description("folder id, or its title exactly"))
 const chatList = v.optional(v.array(v.pipe(v.string(), v.minLength(1))))
+const rules = {
+  include: v.optional(
+    v.pipe(v.array(v.picklist(FOLDER_KINDS)), v.description("every chat of these kinds; [] clears on update")),
+  ),
+  skip: v.optional(v.pipe(v.array(v.picklist(FOLDER_SKIPS)), v.description("leave out chats that are these"))),
+  exclude_chats: v.optional(v.pipe(v.array(v.pipe(v.string(), v.minLength(1))), v.description("never in it"))),
+  pin: v.optional(v.pipe(v.array(v.pipe(v.string(), v.minLength(1))), v.description("pinned at its top"))),
+  emoji: v.optional(v.pipe(v.string(), v.minLength(1), v.description("the folder's icon"))),
+}
+const rulesOf = (args: {
+  include?: FolderKind[] | undefined
+  skip?: FolderSkip[] | undefined
+  exclude_chats?: string[] | undefined
+  pin?: string[] | undefined
+  emoji?: string | undefined
+}): FolderRulesEdit => ({
+  ...(args.include === undefined ? {} : { include: args.include }),
+  ...(args.skip === undefined ? {} : { skip: args.skip }),
+  ...(args.exclude_chats === undefined ? {} : { exclude: args.exclude_chats }),
+  ...(args.pin === undefined ? {} : { pin: args.pin }),
+  ...(args.emoji === undefined ? {} : { emoji: args.emoji }),
+})
 
 /** The owner's chat folders: only the owner sees them, but each change is the owner's app changing. */
 export const folderTools = (messenger: Messenger): Record<string, AnyTool> => {
@@ -26,10 +50,10 @@ export const folderTools = (messenger: Messenger): Record<string, AnyTool> => {
     chats_folders_create: tool({
       title: "Create a chat folder",
       description: "Create a chat folder with these chats in it. Only when the owner asked.",
-      input: v.object({ title: v.pipe(v.string(), v.minLength(1)), chats: chatList }),
+      input: v.object({ title: v.pipe(v.string(), v.minLength(1)), chats: chatList, ...rules }),
       annotations: WRITE,
       permission: "folders",
-      online: (adapter, args, { guard }) => folders(adapter, guard).create(args.title, args.chats ?? []),
+      online: (adapter, args, { guard }) => folders(adapter, guard).create(args.title, args.chats ?? [], rulesOf(args)),
     }),
     chats_folders_update: tool({
       title: "Change a chat folder",
@@ -39,6 +63,7 @@ export const folderTools = (messenger: Messenger): Record<string, AnyTool> => {
         title: v.optional(v.pipe(v.string(), v.minLength(1))),
         add: chatList,
         remove: chatList,
+        ...rules,
       }),
       annotations: WRITE,
       permission: "folders",
@@ -47,6 +72,7 @@ export const folderTools = (messenger: Messenger): Record<string, AnyTool> => {
           ...(args.title === undefined ? {} : { title: args.title }),
           ...(args.add ? { add: args.add } : {}),
           ...(args.remove ? { remove: args.remove } : {}),
+          ...rulesOf(args),
         }),
     }),
     chats_folders_delete: tool({

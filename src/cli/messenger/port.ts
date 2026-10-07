@@ -12,6 +12,7 @@ import type {
   Discussion,
   Folder,
   FolderChange,
+  FolderRules,
   GroupCard,
   GroupChange,
   GroupMember,
@@ -324,8 +325,11 @@ export interface InviteLinks {
 
 /** Requests to join a group or channel that needs approval; only its admins see them. */
 export interface JoinRequests {
-  /** Newest first. Reading them tells nobody. */
-  joinRequests(chatId: Id, window: { limit: number; link?: string }): Promise<Page<JoinRequest> & { total?: number }>
+  /** Newest first. Reading them tells nobody. `search` matches their names; `link` keeps those who came by it. */
+  joinRequests(
+    chatId: Id,
+    window: { limit: number; search?: string; link?: string },
+  ): Promise<Page<JoinRequest> & { total?: number }>
   /**
    * Lets them in, or turns them away. `already` when they were a member before the answer; a request
    * that is gone — answered elsewhere or withdrawn — is `not_found`.
@@ -450,7 +454,8 @@ export interface ContactBook {
 export interface ChatFolders {
   /** In the order the messenger's app shows them. */
   folders(): Promise<Folder[]>
-  createFolder(title: string, chatIds: Id[]): Promise<Folder>
+  /** `rules` only where `Messenger.folderRules` is set. */
+  createFolder(title: string, chatIds: Id[], rules?: FolderRules): Promise<Folder>
   updateFolder(folderId: string, change: FolderChange): Promise<Folder>
   /** The chats in it stay. */
   deleteFolder(folderId: string): Promise<void>

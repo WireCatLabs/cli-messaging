@@ -28,7 +28,10 @@ export interface AdminService {
     options: { approval: boolean; expires?: string; maxUses?: number },
   ): Promise<Operated<{ chatId: Id } & InviteLink>>
   /** Who asked to join, newest first; only the group's admins see them. */
-  requests(chat: string, window: { limit: number }): Promise<Page<JoinRequest> & { chatId: Id }>
+  requests(
+    chat: string,
+    window: { limit: number; search?: string; link?: string },
+  ): Promise<Page<JoinRequest> & { chatId: Id }>
   answerRequest(
     chat: string,
     person: string,
@@ -163,6 +166,11 @@ export const adminService = (deps: ServiceDeps): AdminService => {
     requests: async (chat, window) => {
       if (deps.offline)
         throw new CliError("validation_error", "join requests are read from the messenger; not with --offline")
+      // Telegram searches the whole pending list or one link's, never both (mtcute getInviteLinkMembers).
+      if (window.search !== undefined && window.link !== undefined)
+        throw new CliError("validation_error", "--search and --link narrow the list two ways; use one")
+      if (window.search?.trim() === "" || window.link?.trim() === "")
+        throw new CliError("validation_error", "--search and --link need a value")
       const connection = await deps.connection()
       const list = capability(connection, "joinRequests", "read join requests")
       const { id: chatId } = await connection.resolve(chat)
