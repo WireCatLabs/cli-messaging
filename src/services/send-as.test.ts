@@ -23,7 +23,7 @@ const identities: SenderIdentity[] = [
   { id: "-1002", title: "Synthetic channel", kind: "channel", premiumRequired: false, default: true },
 ]
 
-const setup = (options: { capable?: boolean } = {}) => {
+const setup = (options: { capable?: boolean; saved?: string | null } = {}) => {
   const journal: Omit<SendEntry, "at" | "profile">[] = []
   const checked: GuardRequest[] = []
   const guard = {
@@ -48,7 +48,7 @@ const setup = (options: { capable?: boolean } = {}) => {
     forward,
     createPoll,
     validateThread: async () => {},
-    ...(options.capable === false ? {} : { sendAsIdentities }),
+    ...(options.capable === false ? {} : { sendAsIdentities, savedSender: async () => options.saved ?? null }),
   } as unknown as MessengerAdapter
   const deps = onlineDeps(messenger, adapter, guard)
   return { deps, adapter, guard, journal, checked, sendAsIdentities, resolve, send, forward, createPoll }
@@ -153,5 +153,38 @@ describe("forwarding and polls as an identity", () => {
     ).rejects.toThrow("cannot send as another identity")
     expect(forward).not.toHaveBeenCalled()
     expect(createPoll).not.toHaveBeenCalled()
+  })
+})
+
+describe("a chat that posts as someone else by default", () => {
+  const poll = { question: "Friday?", answers: ["yes", "no"], multiple: false, anonymous: false }
+
+  it("refuses a send, a forward and a poll with no identity named, before the guard, naming both ids", async () => {
+    const { deps, adapter, guard, send, forward, createPoll, checked } = setup({ saved: "-1002" })
+    const service = messagesService(deps)
+    const refused = { code: "validation_error", message: expect.stringContaining("--send-as 500 to post as yourself") }
+    await expect(service.send({ chat: "x", text: "hello" })).rejects.toMatchObject(refused)
+    await expect(service.forward({ chat: "from", message: "3", to: "to", silent: false })).rejects.toMatchObject(
+      refused,
+    )
+    await expect(guardedCreatePoll(guard, adapter, { chat: "x", poll, silent: false })).rejects.toMatchObject(refused)
+    await expect(service.send({ chat: "x", text: "hello" })).rejects.toThrow("--send-as -1002 to post as it")
+    expect([send, forward, createPoll].map((one) => one.mock.calls.length)).toEqual([0, 0, 0])
+    expect(checked).toEqual([])
+  })
+
+  it("lets a send through that names an identity, the account's own included", async () => {
+    const { deps, send } = setup({ saved: "-1002" })
+    await messagesService(deps).send({ chat: "x", text: "hello", sendAs: "500" })
+    await messagesService(deps).send({ chat: "x", text: "hello", sendAs: "-1002" })
+    expect(send).toHaveBeenCalledTimes(2)
+  })
+
+  it("changes nothing where the saved sender is the account, or the messenger cannot say", async () => {
+    for (const options of [{ saved: null }, { capable: false }]) {
+      const { deps, send } = setup(options)
+      await messagesService(deps).send({ chat: "x", text: "hello" })
+      expect(send).toHaveBeenCalledOnce()
+    }
   })
 })

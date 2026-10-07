@@ -81,7 +81,10 @@ export const pollsCommand = (messenger: Messenger): Command => {
     .option("--anonymous", "nobody sees who voted for what")
     .option("--revote", "people may change their vote")
     .option("--silent", "send without a notification")
-    .option("--send-as <id>", "post as one of the identities `chats send-as` lists")
+    .option(
+      "--send-as <id>",
+      "post as one of the identities `chats send-as` lists; required where the chat posts as someone else by default",
+    )
     .option("--send-id <id>", "repeat a create whose outcome was unknown, without risking a second poll")
     .action(async function (this: Command, chat: string, question: string, answers: string[]) {
       const context = messengerContext(this, messenger)

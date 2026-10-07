@@ -6,6 +6,12 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Changed — may break callers
+
+- A send, forward or poll with no `--send-as` (`send_as`) to a chat whose saved sender is not the account is
+  refused before sending, naming the `--send-as` that posts as the owner and the one that posts as the saved
+  sender. Adapters tell it through the new optional `SenderIdentities.savedSender`; one without it is unchanged.
+
 ### Added
 
 - `messages comments <channel> <post>` and the read-only MCP tool `messages_comments` read the comments under a

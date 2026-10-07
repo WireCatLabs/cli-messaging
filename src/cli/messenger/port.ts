@@ -277,6 +277,8 @@ export interface MessagePermalinks {
 export interface SenderIdentities {
   /** Who the account may post as in this chat, itself included. Reading changes no saved choice. */
   sendAsIdentities(chatId: Id): Promise<SenderIdentity[]>
+  /** Who the chat posts a message as when none is named — `null` when that is the account itself. */
+  savedSender(chatId: Id): Promise<Id | null>
 }
 
 /** Comments under a channel post, which live in the channel's linked discussion group. */

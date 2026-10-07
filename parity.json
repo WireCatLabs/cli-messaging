@@ -715,7 +715,7 @@
     },
     "--send-as": {
       "value": "<id>",
-      "meaning": "send as one of the identities `chats send-as` lists for the chat; refused where the messenger has none"
+      "meaning": "send as one of the identities `chats send-as` lists for the chat; required where the chat posts as someone else by default, refused where the messenger has none"
     },
     "--send-id": {
       "value": "<id>",

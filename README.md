@@ -64,7 +64,9 @@ default }`, `kind` being `self`, `channel` or `group`. The personal identity is 
 `messages send`, `messages forward` and `polls create` take `--send-as <id>` (their tools `send_as`): the
 service lists the identities of the chat the message lands in, in the same connection, and refuses an id
 that is not there. An adapter without the optional `sendAsIdentities` refuses the option — it is never
-dropped, and never falls back to the personal identity. The journal records the identity, and a retry of an
+dropped, and never falls back to the personal identity. Without `--send-as`, a chat whose saved sender is not
+the account (the adapter's `savedSender`, say a group that posts as a linked channel) is refused before
+sending: the messenger would post as that sender, and nothing typed said so. The refusal names both ids. The journal records the identity, and a retry of an
 unknown send under the same send id must name the same identity.
 
 ## Message permalinks

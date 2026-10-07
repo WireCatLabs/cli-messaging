@@ -10,7 +10,10 @@ export const forwardCommand = (messenger: Messenger): Command =>
     .argument("<message>", "the message id")
     .requiredOption("--to <chat>", `where it goes: ${messenger.chatArgument}`)
     .option("--silent", "deliver it without a notification")
-    .option("--send-as <id>", "post as one of the identities `chats send-as` lists for the --to chat")
+    .option(
+      "--send-as <id>",
+      "post as one of the identities `chats send-as` lists for the --to chat; required where the chat posts as someone else by default",
+    )
     .option("--send-id <id>", "repeat a forward whose outcome was unknown, without risking a second copy")
     .action(async function (this: Command, chat: string, message: string) {
       const context = messengerContext(this, messenger)
