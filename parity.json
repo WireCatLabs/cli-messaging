@@ -2237,23 +2237,17 @@
     "messages comments": {
       "in": [],
       "reason": "MAX personal accounts have no channel comments; MAX's comments are a Bot API path",
-      "planned": {
-        "tg": "G2 feat/channel-comments"
-      },
+      "planned": { "tg": "G2 feat/channel-comments" },
       "options": {
         "--before-id": {
           "in": [],
           "reason": "MAX personal accounts have no channel comments",
-          "planned": {
-            "tg": "G2 feat/channel-comments"
-          }
+          "planned": { "tg": "G2 feat/channel-comments" }
         },
         "--limit": {
           "in": [],
           "reason": "MAX personal accounts have no channel comments",
-          "planned": {
-            "tg": "G2 feat/channel-comments"
-          }
+          "planned": { "tg": "G2 feat/channel-comments" }
         }
       }
     },
@@ -2426,10 +2420,7 @@
         },
         "--comment-to": {
           "in": [],
-          "planned": {
-            "max": "G2 feat/channel-comments",
-            "tg": "G2 feat/channel-comments"
-          }
+          "planned": { "max": "G2 feat/channel-comments", "tg": "G2 feat/channel-comments" }
         },
         "--file": "all",
         "--md": "all",
@@ -3530,38 +3521,12 @@
     "topics edit": {
       "in": [],
       "reason": "MAX has no forum topics",
-      "planned": {
-        "tg": "G2 feat/topic-edit"
-      },
+      "planned": { "tg": "G2 feat/topic-edit" },
       "options": {
-        "--closed": {
-          "in": [],
-          "reason": "MAX has no forum topics",
-          "planned": {
-            "tg": "G2 feat/topic-edit"
-          }
-        },
-        "--hidden": {
-          "in": [],
-          "reason": "MAX has no forum topics",
-          "planned": {
-            "tg": "G2 feat/topic-edit"
-          }
-        },
-        "--pinned": {
-          "in": [],
-          "reason": "MAX has no forum topics",
-          "planned": {
-            "tg": "G2 feat/topic-edit"
-          }
-        },
-        "--title": {
-          "in": [],
-          "reason": "MAX has no forum topics",
-          "planned": {
-            "tg": "G2 feat/topic-edit"
-          }
-        }
+        "--closed": { "in": [], "reason": "MAX has no forum topics", "planned": { "tg": "G2 feat/topic-edit" } },
+        "--hidden": { "in": [], "reason": "MAX has no forum topics", "planned": { "tg": "G2 feat/topic-edit" } },
+        "--pinned": { "in": [], "reason": "MAX has no forum topics", "planned": { "tg": "G2 feat/topic-edit" } },
+        "--title": { "in": [], "reason": "MAX has no forum topics", "planned": { "tg": "G2 feat/topic-edit" } }
       }
     },
     "topics enable": {
