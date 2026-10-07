@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.162.0 — 07.10.2026
+
 ### Added
 
 - `store gaps plan` and MCP `store_gaps_plan` inspect interior gaps in recorded coverage locally.
@@ -20,24 +22,6 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 - Attachment extraction is available over MCP, from an explicitly scoped nonrecursive directory,
   and directly after `messages download --extract`. Bounded MCP scans return a continuation cursor;
   output reports metadata without file text, and extraction preserves agent-written text.
-
-### Fixed
-
-- Edits purge vectors of obsolete text while preserving genuinely shared current text hashes.
-  Successful rebuilds also clean affected abandoned hashes; bounded shared-use checks retain an
-  inconclusive hash rather than delete another account's valid cache.
-
-- File extraction compares content hashes so same-size file replacements refresh content search.
-
-### Changed — may break callers
-
-- `watch`, `bot watch`, `serve` and `mcp` end with exit 0 on SIGTERM (`kill`, `server stop`), as on Ctrl-C:
-  being stopped is how they end. Other commands keep 143.
-
-## 0.162.0 — 07.10.2026
-
-### Added
-
 - `stats chats official <chat>`: what the messenger itself computed for a group or channel it shows its admins —
   its own period, totals against the previous period, top posters, admins and inviters (groups), recent posts and
   notification share (channels), and every graph as JSON series. One object with `kind` `group` or `channel`;
@@ -47,10 +31,20 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Fixed
 
+- Edits purge vectors of obsolete text while preserving genuinely shared current text hashes.
+  Successful rebuilds also clean affected abandoned hashes; bounded shared-use checks retain an
+  inconclusive hash rather than delete another account's valid cache.
+
+- File extraction compares content hashes so same-size file replacements refresh content search.
 - `chats members fetch` and `chats members audit` take the group's member count from the member list when
   the messenger gives it there. A group whose count the chat list did not carry answered `participants: null`,
   so nobody was ever recorded as gone and the tracked daily counts had no total. A messenger adds
   `participantsCount` to its `members()` page.
+
+### Changed — may break callers
+
+- `watch`, `bot watch`, `serve` and `mcp` end with exit 0 on SIGTERM (`kill`, `server stop`), as on Ctrl-C:
+  being stopped is how they end. Other commands keep 143.
 
 ## 0.161.0 — 07.10.2026
 
