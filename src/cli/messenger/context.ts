@@ -112,8 +112,11 @@ export interface Messenger {
   history?: "server" | "store"
   /** Whether the messenger computes a chat's statistics for its admins — `stats chats official`; no when unset. */
   officialStats?: boolean
-  /** Whether `messages search --backend` is offered: the adapter has `searchMessages`; no when unset. */
-  serverSearch?: boolean
+  /**
+   * Whether `messages search --backend` is offered: the adapter has `searchMessages`. `chat` when its server
+   * searches one chat at a time, so only a query that names one chat asks it. No when unset.
+   */
+  serverSearch?: boolean | "chat"
   /** Whether this CLI's background service fetches tracked rosters daily; true when unset. */
   tracksMembers?: boolean
   /** Speech model ids, most suitable first, for `messages transcribe --local`; the first is the default. */

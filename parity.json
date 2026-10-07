@@ -2419,7 +2419,9 @@
       "options": {
         "--backend": {
           "in": ["tg"],
-          "reason": "MAX has no verified server message search: opcode 73 is unprobed (server-search plan section 0)"
+          "planned": {
+            "max": "feat/max-server-search: opcode 73 searches one chat (server-search plan section 9)"
+          }
         },
         "--chat": "all",
         "--context": "all",
@@ -2439,7 +2441,9 @@
         },
         "--server-time": {
           "in": ["tg"],
-          "reason": "MAX has no verified server message search: opcode 73 is unprobed (server-search plan section 0)"
+          "planned": {
+            "max": "feat/max-server-search: opcode 73 searches one chat (server-search plan section 9)"
+          }
         },
         "--source": "all",
         "--sync-first": {

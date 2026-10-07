@@ -8,6 +8,10 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Added
 
+- `Messenger.serverSearch` may be `"chat"`: the messenger's server searches one chat at a time, so only a query
+  that names one chat (`chat:` or `--chat`) asks it; others answer from the archive, or report
+  `server.skipped: "needs_chat"` when `--backend` was typed. For MAX's opcode 73.
+
 - **One request pace per profile, shared by every process that uses it.** Two commands at once, background
   `store fetch` jobs, `mcp` and `serve` now draw on one allowance: a burst goes at once, then one call per
   interval. Defaults to 60 a minute after a burst of 20 unless the messenger sets its own (`Messenger.pace`);

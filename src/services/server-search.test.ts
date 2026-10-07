@@ -152,6 +152,19 @@ describe("server search beside the archive", () => {
     ).rejects.toMatchObject({ code: "validation_error", details: { reason: name } })
   })
 
+  it("asks a one-chat server only for a query that names one chat", async () => {
+    const one = await setup()
+    const services = servicesFor({ ...one.deps, messenger: { ...messenger, serverSearch: "chat" } })
+    const search = (query: Partial<SearchQuery>) =>
+      services.messages.search({ language: "lucene", limit: 20, text: "invoice", ...query })
+    expect((await search({ backend: "both" })).server).toMatchObject({ skipped: "needs_chat" })
+    expect((await search({})).server).toBeUndefined()
+    await expect(search({ backend: "server" })).rejects.toMatchObject({ details: { reason: "needs_chat" } })
+    expect(one.asked).toEqual([])
+    expect((await search({ chat: "7" })).server).toMatchObject({ calls: 1, skipped: null })
+    expect(one.asked).toEqual([{ text: "invoice", chat: "7" }])
+  })
+
   it("answers from the archive when the profile does not allow the server search", async () => {
     const one = await setup()
     one.guard.check.mockImplementation(() => {
