@@ -11,7 +11,7 @@ const SETTING_FLAGS: Record<keyof GroupSettings, [flag: string, help: string]> =
   onlyAdminsCall: ["only-admins-call", "only admins may start a call"],
   onlyOwnerEditsInfo: ["only-owner-edits-info", "only the owner may change the name and photo"],
   membersSeeLink: ["members-see-link", "members may see the invite link"],
-  joinApproval: ["join-approval", "people ask to join, and an admin lets them in; a public group only"],
+  joinApproval: ["join-approval", "people ask to join, and an admin lets them in"],
 }
 
 const settingsOf = (

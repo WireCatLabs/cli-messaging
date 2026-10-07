@@ -14,6 +14,11 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   Unasked, a search the server cannot take — offline, MAX, no permission, no words — is the archive's, with no
   `server` block.
 
+### Fixed
+
+- `chats update --join-approval` no longer says it works in a public group only: Telegram turns it on in a
+  private supergroup too (measured).
+
 ## 0.170.0 — 07.10.2026
 
 Released early: MAX and Telegram rankings adoption requires the new top/evidence services and command exports

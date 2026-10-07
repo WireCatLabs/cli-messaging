@@ -357,7 +357,7 @@
     },
     "--join-approval": {
       "value": "<on|off>",
-      "meaning": "people ask to join, and an admin lets them in; a public group only"
+      "meaning": "people ask to join, and an admin lets them in"
     },
     "--json": {
       "meaning": "machine-readable output: one JSON value on stdout, nothing else"
