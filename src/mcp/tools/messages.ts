@@ -111,6 +111,26 @@ export const messagesTools = (messenger: Messenger): Record<string, AnyTool> => 
       },
     }),
 
+    messages_comments: tool({
+      title: "Comments under a channel post",
+      description:
+        "The comments under one channel post, oldest to newest, read from the messenger: { discussion: { chatId, " +
+        "messageId }, items, hasMore }. They live in the channel's discussion group; before_id pages back. A post " +
+        "that takes no comments is not_found. Does not mark read.",
+      input: v.object({
+        chat,
+        post: v.pipe(message, v.description("the post's message id in the channel")),
+        limit,
+        before_id: v.optional(v.pipe(message, v.description("only comments older than this one"))),
+      }),
+      annotations: READ,
+      served: async (services, args, defaults) =>
+        services.messages.comments(args.chat, args.post, {
+          limit: args.limit ?? defaults.limit,
+          ...(args.before_id === undefined ? {} : { before: args.before_id }),
+        }),
+    }),
+
     messages_link: tool({
       title: "Get a message link",
       description:

@@ -41,6 +41,9 @@ export const messageSendTools = (messenger: Messenger): Record<string, AnyTool> 
           v.pipe(v.string(), v.minLength(1), v.description("an Ogg Opus file to send as a voice message, alone")),
         ),
         reply_to: v.optional(v.pipe(message, v.description("the message this answers, in the same chat"))),
+        comment_to: v.optional(
+          v.pipe(message, v.description("a post of this channel to comment on; the comment goes to its discussion")),
+        ),
         topic: v.optional(
           v.pipe(v.string(), v.minLength(1), v.description("the forum topic id; unsupported without topics")),
         ),
@@ -87,6 +90,7 @@ export const messageSendTools = (messenger: Messenger): Record<string, AnyTool> 
           ...(args.topic === undefined ? {} : { threadId: args.topic }),
           ...(args.send_as === undefined ? {} : { sendAs: args.send_as }),
           ...(args.reply_to === undefined ? {} : { replyTo: args.reply_to }),
+          ...(args.comment_to === undefined ? {} : { commentTo: args.comment_to }),
           ...(args.silent === true ? { silent: true } : {}),
           ...(args.no_preview === true ? { noPreview: true } : {}),
           ...(args.md === true ? { markdown: true } : {}),

@@ -164,6 +164,7 @@ export type {
   AccountStanding,
   AccountTools,
   After,
+  ChannelComments,
   ChatReading,
   Download,
   ForumControl,

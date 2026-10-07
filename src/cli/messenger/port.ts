@@ -9,6 +9,7 @@ import type {
   Chat,
   ChatCard,
   ChatEvents,
+  Discussion,
   Folder,
   FolderChange,
   GroupCard,
@@ -278,6 +279,14 @@ export interface SenderIdentities {
   sendAsIdentities(chatId: Id): Promise<SenderIdentity[]>
 }
 
+/** Comments under a channel post, which live in the channel's linked discussion group. */
+export interface ChannelComments {
+  /** The post's copy in the discussion group; a post that takes no comments is `not_found`. */
+  discussionOf(channelId: Id, postId: Id): Promise<Discussion>
+  /** Oldest to newest, a page at a time; `before` a comment id. */
+  comments(channelId: Id, postId: Id, window: { limit: number; before?: string }): Promise<Page<Message>>
+}
+
 export interface ScheduledMessages {
   /** Messages waiting to be sent later in a chat, soonest first, each with `scheduledFor`. */
   scheduled(chat: string): Promise<Message[]>
@@ -449,6 +458,7 @@ export interface MessengerAdapter
     Partial<PushedHistory>,
     Partial<MessageMedia>,
     Partial<ScheduledMessages>,
+    Partial<ChannelComments>,
     Partial<MessagePermalinks>,
     Partial<SenderIdentities>,
     Partial<GroupModeration>,
