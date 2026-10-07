@@ -5,6 +5,7 @@ import type { TaskStore } from "@leemour/cli-tasks"
 import type { TextRange } from "../conversations/chunks.js"
 import type { Link, LinkInput } from "../conversations/link.js"
 import type { DownloadedFile } from "../domain/attachments.js"
+import type { ChannelTagMatch } from "../domain/channel-tags.js"
 import type {
   Chat,
   ChatKind,
@@ -31,6 +32,8 @@ import * as attachmentTexts from "./sqlite/attachment-texts.js"
 import * as attachmentRows from "./sqlite/attachments.js"
 import { backfillNormalized, pendingNormalization } from "./sqlite/backfill.js"
 import * as batches from "./sqlite/batches.js"
+import type { ChatMetadata } from "./sqlite/chat-metadata.js"
+import * as metadataQueries from "./sqlite/chat-metadata.js"
 import * as chatQueries from "./sqlite/chats.js"
 import type { ChatCompleteness } from "./sqlite/completeness.js"
 import * as completeness from "./sqlite/completeness.js"
@@ -43,6 +46,8 @@ import * as lucene from "./sqlite/lucene.js"
 import * as messageWrites from "./sqlite/messages.js"
 import { openSqlite, type StoreContext } from "./sqlite/open.js"
 import * as personLinks from "./sqlite/person-links.js"
+import type { PrivateContact, PrivateContactNote } from "./sqlite/private-people.js"
+import * as privatePeople from "./sqlite/private-people.js"
 import * as ranges from "./sqlite/ranges.js"
 import { type RankedEvidence, type RankingEvidenceRequest, rankingEvidence } from "./sqlite/ranking-evidence.js"
 import { type RankedStoreFound, type RankingRequest, rankQuery } from "./sqlite/rankings.js"
@@ -474,9 +479,24 @@ export interface MessageStore {
   /** The stretches held completely, oldest first. */
   ranges(key: AccountKey, chatId: Id): Promise<Range[]>
   /** Labels one stored chat, person or message; answers the tags it did not have. `not_found` for one not held. */
+  chatMetadata(key: AccountKey, chatId: Id): Promise<ChatMetadata | undefined>
+  saveChatMetadata(key: AccountKey, entry: Omit<ChatMetadata, "fetchedAt">): Promise<ChatMetadata>
+  replaceAutoTags(key: AccountKey, chatId: Id, algorithm: string, tags: ChannelTagMatch[]): Promise<void>
+  privateContact(key: AccountKey, personId: Id): Promise<PrivateContact>
+  setContactAlias(key: AccountKey, personId: Id, alias: string | null): Promise<{ personId: Id; alias: string | null }>
+  addContactNote(key: AccountKey, personId: Id, text: string): Promise<PrivateContactNote>
+  contactNote(key: AccountKey, personId: Id, id: string): Promise<PrivateContactNote>
+  editContactNote(
+    key: AccountKey,
+    personId: Id,
+    id: string,
+    text: string,
+    revision: number,
+  ): Promise<PrivateContactNote>
+  removeContactNote(key: AccountKey, personId: Id, id: string): Promise<{ id: string; personId: Id; removed: boolean }>
   addTags(key: AccountKey, target: TagTarget, tags: string[]): Promise<string[]>
   /** Answers the tags it had. */
-  removeTags(key: AccountKey, target: TagTarget, tags: string[]): Promise<string[]>
+  removeTags(key: AccountKey, target: TagTarget, tags: string[], source?: "manual" | "auto"): Promise<string[]>
   /** The account's tagged chats and messages, and its messenger's tagged people. */
   tags(key: AccountKey, filter?: TagFilter): Promise<StoredTag[]>
   /** One run of a search or stats; the same unnamed run again counts on its row. `saved` is the saved search it ran. */
@@ -1303,6 +1323,18 @@ const storeOver = (context: StoreContext): MessageStore => {
       return chatKey === undefined ? [] : ranges.ranges(context, chatKey)
     },
 
+    chatMetadata: async (key, chatId) => metadataQueries.metadata(context, key, chatId),
+    saveChatMetadata: async (key, entry) => metadataQueries.saveMetadata(context, key, entry),
+    replaceAutoTags: async (key, chatId, algorithm, matches) =>
+      inTransaction(() => metadataQueries.replaceAutoTags(context, key, chatId, algorithm, matches)),
+    privateContact: async (key, person) => privatePeople.privateContact(context, key, person),
+    setContactAlias: async (key, person, alias) => privatePeople.setAlias(context, key, person, alias),
+    addContactNote: async (key, person, text) => privatePeople.addNote(context, key, person, text),
+    contactNote: async (key, person, id) => privatePeople.note(context, key, person, id),
+    editContactNote: async (key, person, id, text, revision) =>
+      privatePeople.editNote(context, key, person, id, text, revision),
+    removeContactNote: async (key, person, id) => privatePeople.removeNote(context, key, person, id),
+
     addTags: async (key, target, list) => {
       let added: string[] = []
       inTransaction(() => {
@@ -1311,10 +1343,10 @@ const storeOver = (context: StoreContext): MessageStore => {
       return added
     },
 
-    removeTags: async (key, target, list) => {
+    removeTags: async (key, target, list, source) => {
       let removed: string[] = []
       inTransaction(() => {
-        removed = tagQueries.removeTags(context, tagQueries.targetPk(context, key, target), target.type, list)
+        removed = tagQueries.removeTags(context, tagQueries.targetPk(context, key, target), target.type, list, source)
       })
       return removed
     },

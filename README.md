@@ -246,3 +246,33 @@ without prompts or resources; neither is required for reading and sending.
 
 Message and author rankings are mounted by `statsCommand`: see the [ranking guide](docs/rankings.md)
 for metrics, scores, saved selections, evidence paging and data-quality limits.
+
+### Private contact metadata and automatic tags
+
+Both messenger consumers can keep account-scoped private contact aliases and multiple notes.
+`contacts alias set <person> <alias>` and `contacts alias rm <person>` affect local display and
+resolution only. `contacts rename` continues to change the messenger address book. Show/list
+retain the messenger name; a local alias adds `alias` and `displayName`. Duplicate aliases require
+an explicit id. Stored direct-chat resolution supports aliases; it never invents a chat id from
+an identity id. `contacts show --with-notes` includes private notes explicitly; the notes read permission still applies. Local metadata survives profile refresh and stays on its original identity/account
+when identities are linked or unlinked.
+
+`contacts notes add <person> --file <path>` (or stdin) creates a stable note id. Use `list`,
+`show`, `edit --revision <number>` and `remove` for that person's notes. Notes are independent of
+public bios, imported documents and source messages. `contacts list --search-notes <text>` is an
+explicit substring search over the selected account's own notes; embeddings are not added here.
+
+`metadata get --chat <chat>` reads the cached group/channel description and fetched time.
+`metadata refresh --chat <chat>` reads it from the messenger, without changing the remote chat.
+The refresh command accepts repeated chats and a bounded `--limit` (1–500).
+`tags auto [--chat <chat>] [--limit 50]` classifies cached title, username and description with
+versioned keyword rules. It works offline and uses only stored group/channel titles when there is
+no full metadata snapshot. `--refresh-metadata` explicitly fetches descriptions; `--dry-run`
+previews cached results without writes. These flags cannot be combined. Results identify matched
+fields and a rule score, not a topic probability. No model or message text is used.
+
+Automatic tag claims are distinct from manual labels. Rerunning removes obsolete automatic tags
+and preserves manual tags. Adding a label already generated promotes it to manual ownership;
+listing generated tags includes `sources`. Use `tags list|remove --source manual|auto` to select one ownership source. Removing a tag without a source removes its claims; a later explicit
+automatic run can regenerate it. Upgrade consumers together before relying on manual promotion:
+older builds cannot record manual ownership of an already generated label.

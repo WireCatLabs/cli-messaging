@@ -92,6 +92,7 @@ export const RESOURCES = [
   "attachments",
   "stats",
   "store",
+  "metadata",
 ] as const
 
 const OLD_WORDS: Record<Permission, PermissionKey[]> = {
@@ -281,6 +282,13 @@ const NAMED_WRITE_KEYS = [
   "searches.clear",
   "searches.create",
   "searches.delete",
+  "contacts.alias.set",
+  "contacts.alias.rm",
+  "contacts.notes.add",
+  "contacts.notes.edit",
+  "contacts.notes.remove",
+  "tags.auto",
+  "metadata.refresh",
   "tags.add",
   "tags.remove",
   "tasks.add",

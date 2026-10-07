@@ -33,8 +33,10 @@ export interface ContactSync {
  * chat, it answers; otherwise the dialogs themselves do, offline from the stored chats.
  */
 export interface PeopleService {
-  list(options: { order: "recent" | "name"; search?: string } & PageWindow): Promise<Page<Contact>>
-  show(person: string): Promise<PersonCard>
+  list(
+    options: { order: "recent" | "name"; search?: string; notesSearch?: string } & PageWindow,
+  ): Promise<Page<Contact>>
+  show(person: string, options?: { notes?: boolean }): Promise<PersonCard>
   /** What the messenger says about them, and their stored activity in each shared chat. */
   profile(person: string): Promise<PersonProfile>
   /** `phone` as digits, parsed by the caller (`phoneOf`). */
@@ -66,6 +68,26 @@ export interface PeopleService {
 type ContactAction = "contact-add" | "contact-remove" | "contact-block" | "contact-unblock" | "contact-rename"
 
 export const peopleService = (deps: ServiceDeps): PeopleService => {
+  const localCard = async (card: PersonCard, includeNotes = false): Promise<PersonCard> => {
+    const held = await storeIfOpen(deps)
+    if (!held || !(await held.store.people(held.account.provider, { account: held.account.account })).get(card.id))
+      return card
+    const local = await held.store.privateContact(held.account, card.id)
+    return {
+      ...card,
+      ...(local.alias === null ? {} : { alias: local.alias, displayName: local.alias }),
+      ...(!includeNotes || local.notes.length === 0 ? {} : { notes: local.notes }),
+    }
+  }
+  const referenceOf = async (reference: string) => {
+    const held = await storeIfOpen(deps)
+    if (!held) return reference
+    const lookup = await held.store.people(held.account.provider, { account: held.account.account })
+    const wanted = reference.trim().toLowerCase()
+    return lookup.all().some((person) => person.alias?.toLowerCase().includes(wanted))
+      ? pickPerson(reference, lookup).id
+      : reference
+  }
   const online = async (command: string) => {
     if (deps.offline)
       throw new CliError("validation_error", `\`${command}\` changes the address book; not with --offline`)
@@ -77,7 +99,7 @@ export const peopleService = (deps: ServiceDeps): PeopleService => {
     act: (connection: Awaited<ReturnType<ServiceDeps["connection"]>>, personId: Id) => Promise<T>,
   ): Promise<{ operationId: string; personId: Id; done: T }> => {
     const connection = await online(`contacts ${action.slice("contact-".length)}`)
-    const [personId] = await capability(connection, "people", "find people")([person])
+    const [personId] = await capability(connection, "people", "find people")([await referenceOf(person)])
     const operationId = newOperationId()
     const done = await guardedWrite(deps.guard, { operationId, chatId: null, kind: "account", action }, () =>
       act(connection, personId as Id),
@@ -93,6 +115,22 @@ export const peopleService = (deps: ServiceDeps): PeopleService => {
         ? undefined
         : (await capability(await deps.connection(), "chats", "list chats")({ offset: 0 })).items
       const held = stored ? { store: await deps.store(), account: await deps.account() } : await storeIfOpen(deps)
+      if (held && options.notesSearch !== undefined) {
+        const query = options.notesSearch.trim().toLowerCase()
+        if (!query) throw new CliError("validation_error", "--search-notes takes nonempty text")
+        const all = await held.store.contacts(held.account, {
+          order: options.order,
+          ...(options.search ? { query: options.search } : {}),
+          limit: await held.store.countContacts(held.account),
+        })
+        const matches: Contact[] = []
+        for (const person of all.items) {
+          const local = await held.store.privateContact(held.account, person.id)
+          if (local.notes.some((note) => note.text.toLowerCase().includes(query))) matches.push(person)
+        }
+        const end = options.limit === undefined ? matches.length : options.offset + options.limit
+        return { items: matches.slice(options.offset, end), hasMore: matches.length > end }
+      }
       if (held && (await held.store.countContacts(held.account)) > 0)
         return storedContacts(held.store, held.account, options)
       return contactsIn(
@@ -102,17 +140,17 @@ export const peopleService = (deps: ServiceDeps): PeopleService => {
       )
     },
 
-    show: async (person) => {
+    show: async (person, { notes = false } = {}) => {
       if (fromStore(deps)) {
         const store = await deps.store()
         const account = await deps.account()
         const found = pickPerson(person, await store.people(account.provider, { account: account.account }))
-        return { ...found, chats: await sharedChats(store, account, found.id) }
+        return localCard({ ...found, chats: await sharedChats(store, account, found.id) }, notes)
       }
-      const card = await capability(await deps.connection(), "contact", "show a person")(person)
-      if (card.chats.length > 0) return card
+      const card = await capability(await deps.connection(), "contact", "show a person")(await referenceOf(person))
+      if (card.chats.length > 0) return localCard(card, notes)
       const held = await storeIfOpen(deps)
-      return held ? { ...card, chats: await sharedChats(held.store, held.account, card.id) } : card
+      return localCard(held ? { ...card, chats: await sharedChats(held.store, held.account, card.id) } : card, notes)
     },
 
     profile: (person) => personProfile(deps, person),

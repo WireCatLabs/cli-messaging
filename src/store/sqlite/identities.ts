@@ -10,6 +10,7 @@ import {
   accounts,
   chatMembers,
   chats,
+  contactAliases,
   identities,
   identityLinkEvents,
   identityLinks,
@@ -224,7 +225,7 @@ export const seenIdentity = (
 }
 
 export const people = (
-  { orm }: StoreContext,
+  { orm, database }: StoreContext,
   provider: Provider,
   { account, accounts: native }: { account?: Id; accounts?: Id[] },
 ): PeopleLookup => {
@@ -242,6 +243,20 @@ export const people = (
     .where(and(eq(identities.provider, provider), seenBy ? inArray(identities.pk, seenBy) : undefined))
     .all()
     .map((row) => ({ ...row, description: null, lastMessagedAt: null }))
+  if (account !== undefined) {
+    const aliases = database
+      .prepare(
+        "SELECT i.native_id AS id, ca.alias FROM contact_aliases ca JOIN identities i ON i.pk=ca.identity_pk JOIN accounts a ON a.pk=ca.account_pk WHERE a.provider=? AND a.native_id=?",
+      )
+      .all(provider, account)
+    for (const row of aliases) {
+      const person = everyone.find((one) => one.id === row.id)
+      if (person && row.alias != null) {
+        person.alias = String(row.alias)
+        person.displayName = person.alias
+      }
+    }
+  }
   const byId = new Map(everyone.map((person) => [person.id, person]))
   return { get: (id) => byId.get(id), all: () => everyone }
 }
@@ -259,7 +274,7 @@ const contactsWhere = (accountKey: number, key: AccountKey, query: string | unde
                   AND ${chats.kind} = 'dialog')`,
     query === undefined
       ? undefined
-      : sql`${identities.pk} IN (SELECT rowid FROM identities_fts WHERE identities_fts MATCH ${`"${query.trim().replaceAll('"', '""')}"`})`,
+      : sql`(${identities.pk} IN (SELECT rowid FROM identities_fts WHERE identities_fts MATCH ${`"${query.trim().replaceAll('"', '""')}"`}) OR EXISTS (SELECT 1 FROM contact_aliases ca WHERE ca.account_pk=${accountKey} AND ca.identity_pk=${identities.pk} AND instr(ca.alias_folded, ${query.trim().toLowerCase()}) > 0))`,
   )
 }
 
@@ -269,9 +284,14 @@ export const contacts = (
   key: AccountKey,
   { order, query, limit, offset = 0 }: { order: "recent" | "name"; query?: string; limit: number; offset?: number },
 ): Page<Contact> => {
-  const byName = [sql`${identities.name} IS NULL`, identities.name, identities.nativeId]
+  const byName = [
+    sql`coalesce(${contactAliases.alias}, ${identities.name}) IS NULL`,
+    sql`coalesce(${contactAliases.alias}, ${identities.name})`,
+    identities.nativeId,
+  ]
   const rows = orm
     .select({
+      alias: contactAliases.alias,
       id: identities.nativeId,
       name: identities.name,
       username: identities.username,
@@ -280,13 +300,23 @@ export const contacts = (
     })
     .from(accountIdentities)
     .innerJoin(identities, eq(identities.pk, accountIdentities.identityPk))
+    .leftJoin(
+      contactAliases,
+      and(eq(contactAliases.identityPk, identities.pk), eq(contactAliases.accountPk, accountKey)),
+    )
     .where(contactsWhere(accountKey, key, query))
     .orderBy(...(order === "recent" ? [sql`${accountIdentities.lastMessagedAt} DESC NULLS LAST`] : []), ...byName)
     .limit(limit + 1)
     .offset(offset)
     .all()
   return {
-    items: rows.slice(0, limit).map((row) => ({ ...row, lastMessagedAt: toIso(row.lastMessagedAt) })),
+    items: rows.slice(0, limit).map((row) =>
+      (({ alias, ...rest }) => ({
+        ...rest,
+        lastMessagedAt: toIso(rest.lastMessagedAt),
+        ...(alias === null ? {} : { alias, displayName: alias }),
+      }))(row),
+    ),
     hasMore: rows.length > limit,
   }
 }

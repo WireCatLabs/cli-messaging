@@ -6,6 +6,26 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- Account-scoped private contact aliases and notes with offline CLI/MCP authoring, safe text input, revision-checked edits and explicit notes search. Contact refresh and identity linking preserve local metadata.
+- Cached group/channel metadata and bounded deterministic automatic tags. Generated claims preserve manual labels and expose provenance; dry-run is local, and messenger refresh is explicit.
+- `chats requests list <chat>` shows who asked to join a group or channel that needs an admin's approval, newest
+  first, and `chats requests accept|decline <chat> <person>` answers one; MCP `chats_requests_list`,
+  `chats_requests_accept` and `chats_requests_decline` do the same. Answers go through the guard as
+  `chats.requests.accept` / `chats.requests.decline`; the recipient list checks the group only, and an accepted
+  request counts toward the hourly limit like an added member. Adapters implement the new optional
+  `JoinRequests` group; one without it refuses.
+
+### Fixed
+
+- `messages search --backend` tops up the word and stem indexes before the server step, as the archive search
+  does, so `both` no longer fails with `index_not_ready` where `archive` would answer. An explicit
+  `--backend server` on a profile whose `messages.server-search` is `ask` is refused instead of going ahead over
+  MCP: the server search needs `allow`, like `--sync-first`.
+
+
+
 ### Changed — may break callers
 
 - `chats join` (MCP `chats_join`) answers `{ operationId, requested: true }` where the group's admins approve

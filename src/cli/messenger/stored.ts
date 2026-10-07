@@ -1,4 +1,6 @@
+import { CliError } from "@leemour/cli-core"
 import type { Message, MessageEvent } from "../../domain/models.js"
+import { isId, pickPerson } from "../../resolve.js"
 import type { AccountKey, DeletionScope, MessageStore } from "../../store/store.js"
 import type { EventSink } from "../runs/events.js"
 import { capability, type HistoryBatch, type MessengerAdapter, throughWrapper } from "./port.js"
@@ -74,7 +76,22 @@ export const stored = (
         }
       : {}),
     self: () => messenger.self(),
-    resolve: (reference) => messenger.resolve(reference),
+    resolve: async (reference) => {
+      if (isId(reference)) return messenger.resolve(reference)
+      const opened = await store().catch(() => undefined)
+      if (opened) {
+        const people = await opened.people(account.provider, { account: account.account })
+        const wanted = reference.trim().toLowerCase()
+        if (people.all().some((person) => person.alias?.toLowerCase().includes(wanted))) {
+          const person = pickPerson(reference, people)
+          const chats = (await opened.chatsWith(account, person.id)).filter((chat) => chat.kind === "dialog")
+          if (chats.length !== 1 || !chats[0])
+            throw new CliError("validation_error", "the alias has no unique stored direct chat; use a chat id")
+          return messenger.resolve(chats[0].id)
+        }
+      }
+      return messenger.resolve(reference)
+    },
     chat: (reference) => messenger.chat(reference),
     logout: () => messenger.logout(),
     close: () => messenger.close(),

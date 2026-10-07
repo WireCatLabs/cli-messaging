@@ -30,7 +30,7 @@ export const contactWriteCommands = (messenger: Messenger): Command[] => {
   )
 
   const rename = annotate(new Command("rename"), { mutates: true })
-    .description("give a person a name of your own — they do not see it")
+    .description("rename the contact in the messenger address book; use contacts alias for a private local name")
     .argument("<person>", PERSON)
     .argument("<first-name>", "the name you want to see for them")
     .argument("[last-name]")

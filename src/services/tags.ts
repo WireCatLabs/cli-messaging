@@ -39,8 +39,8 @@ export interface TagsRemoved {
 /** The owner's labels in the local store; never sent to the messenger. */
 export interface TagsService {
   add(target: TagTargetInput, tags: string[]): Promise<TagsAdded>
-  remove(target: TagTargetInput, tags: string[]): Promise<TagsRemoved>
-  list(filter?: { tag?: string; type?: TagType }): Promise<StoredTag[]>
+  remove(target: TagTargetInput, tags: string[], source?: "manual" | "auto"): Promise<TagsRemoved>
+  list(filter?: { tag?: string; type?: TagType; source?: "manual" | "auto" }): Promise<StoredTag[]>
 }
 
 const ONE_TARGET =
@@ -92,17 +92,18 @@ export const tagsService = (deps: ServiceDeps): TagsService => {
         return { target: viewOf(account, target), added, unchanged: tags.filter((tag) => !added.includes(tag)) }
       }),
 
-    remove: (given, list) =>
+    remove: (given, list, source) =>
       inStore(async (store, account) => {
         const tags = tagsOf(list)
         const target = await targetOf(deps, store, account, given)
-        const removed = await store.removeTags(account, target, tags)
+        const removed = await store.removeTags(account, target, tags, source)
         return { target: viewOf(account, target), removed, unchanged: tags.filter((tag) => !removed.includes(tag)) }
       }),
 
     list: (filter = {}) =>
       inStore((store, account) =>
         store.tags(account, {
+          ...(filter.source === undefined ? {} : { source: filter.source }),
           ...(filter.tag === undefined ? {} : { tag: normalizeTag(filter.tag) }),
           ...(filter.type === undefined ? {} : { type: filter.type }),
         }),

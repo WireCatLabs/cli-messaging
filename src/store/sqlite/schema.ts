@@ -476,6 +476,7 @@ export const tags = sqliteTable(
     taggablePk: integer("taggable_pk").notNull(),
     tag: text("tag").notNull(),
     createdAt: integer("created_at").notNull(),
+    manual: integer("manual").notNull().default(1),
   },
   (table) => [
     unique().on(table.taggableType, table.taggablePk, table.tag),
@@ -619,4 +620,63 @@ export const tasks = sqliteTable(
     index("tasks_by_source").on(table.account, table.source),
     index("tasks_by_state").on(table.account, table.state, table.groupKey),
   ],
+)
+
+export const contactAliases = sqliteTable(
+  "contact_aliases",
+  {
+    accountPk: integer("account_pk")
+      .notNull()
+      .references(() => accounts.pk),
+    identityPk: integer("identity_pk")
+      .notNull()
+      .references(() => identities.pk),
+    alias: text("alias"),
+    aliasFolded: text("alias_folded"),
+    updatedAt: integer("updated_at").notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.accountPk, table.identityPk] })],
+)
+
+export const annotations = sqliteTable(
+  "annotations",
+  {
+    uid: text("uid").primaryKey(),
+    accountPk: integer("account_pk")
+      .notNull()
+      .references(() => accounts.pk),
+    targetType: text("target_type").notNull(),
+    targetPk: integer("target_pk").notNull(),
+    text: text("text").notNull(),
+    revision: integer("revision").notNull().default(1),
+    createdAt: integer("created_at").notNull(),
+    updatedAt: integer("updated_at").notNull(),
+    authoredBy: text("authored_by").notNull(),
+  },
+  (table) => [index("annotations_by_target").on(table.accountPk, table.targetType, table.targetPk)],
+)
+
+export const chatMetadata = sqliteTable("chat_metadata", {
+  chatPk: integer("chat_pk")
+    .primaryKey()
+    .references(() => chats.pk),
+  title: text("title"),
+  username: text("username"),
+  description: text("description"),
+  fetchedAt: integer("fetched_at").notNull(),
+})
+
+export const autoTagClaims = sqliteTable(
+  "auto_tag_claims",
+  {
+    chatPk: integer("chat_pk")
+      .notNull()
+      .references(() => chats.pk),
+    tag: text("tag").notNull(),
+    algorithm: text("algorithm").notNull(),
+    score: real("score").notNull(),
+    fields: text("fields").notNull(),
+    createdAt: integer("created_at").notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.chatPk, table.tag] })],
 )

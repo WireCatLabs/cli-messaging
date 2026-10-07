@@ -22,10 +22,12 @@ export interface StoredTag {
   name?: string | null
   messageId?: Id
   locator?: string
+  sources?: ("manual" | "auto")[]
   createdAt: string
 }
 
 export interface TagFilter {
+  source?: "manual" | "auto"
   tag?: string
   type?: TagType
 }
@@ -66,13 +68,48 @@ export const addTags = (context: StoreContext, pk: number, type: TagType, tags: 
     "INSERT INTO tags (taggable_type, taggable_pk, tag, created_at) VALUES (?, ?, ?, ?) ON CONFLICT DO NOTHING",
   )
   const at = context.now()
-  return tags.filter((tag) => insert.run(type, pk, tag, at).changes > 0)
+  return tags.filter((tag) => {
+    const added = insert.run(type, pk, tag, at).changes > 0
+    context.database
+      .prepare("UPDATE tags SET manual=1 WHERE taggable_type=? AND taggable_pk=? AND tag=? AND manual=0")
+      .run(type, pk, tag)
+    return added
+  })
 }
 
 /** The tags it had, in the order given. */
-export const removeTags = ({ database }: StoreContext, pk: number, type: TagType, tags: string[]): string[] => {
+export const removeTags = (
+  { database }: StoreContext,
+  pk: number,
+  type: TagType,
+  tags: string[],
+  source?: "manual" | "auto",
+): string[] => {
   const remove = database.prepare("DELETE FROM tags WHERE taggable_type=? AND taggable_pk=? AND tag=?")
-  return tags.filter((tag) => remove.run(type, pk, tag).changes > 0)
+  return tags.filter((tag) => {
+    const row = database
+      .prepare("SELECT manual FROM tags WHERE taggable_type=? AND taggable_pk=? AND tag=?")
+      .get(type, pk, tag)
+    const automatic =
+      type === "chat" &&
+      database.prepare("SELECT 1 AS held FROM auto_tag_claims WHERE chat_pk=? AND tag=?").get(pk, tag)
+    if (source === "manual") {
+      if (!row || !Number(row.manual)) return false
+      if (automatic)
+        database
+          .prepare("UPDATE tags SET manual=0 WHERE taggable_type=? AND taggable_pk=? AND tag=?")
+          .run(type, pk, tag)
+      else remove.run(type, pk, tag)
+      return true
+    }
+    if (type === "chat") database.prepare("DELETE FROM auto_tag_claims WHERE chat_pk=? AND tag=?").run(pk, tag)
+    if (source === "auto") {
+      if (!automatic) return false
+      if (!Number(row?.manual)) remove.run(type, pk, tag)
+      return true
+    }
+    return remove.run(type, pk, tag).changes > 0
+  })
 }
 
 export const tagsOf = ({ database }: StoreContext, key: AccountKey, filter: TagFilter): StoredTag[] => {
@@ -82,7 +119,7 @@ export const tagsOf = ({ database }: StoreContext, key: AccountKey, filter: TagF
       type: "chat",
       sql:
         "SELECT t.tag, t.taggable_type AS type, t.created_at, c.native_id AS chat_id, c.title AS chat_title, " +
-        "NULL AS person_id, NULL AS name, NULL AS message_id FROM tags t JOIN chats c ON c.pk=t.taggable_pk " +
+        "NULL AS person_id, NULL AS name, NULL AS message_id, t.manual, t.taggable_pk AS target_pk FROM tags t JOIN chats c ON c.pk=t.taggable_pk " +
         "JOIN accounts a ON a.pk=c.account_pk WHERE t.taggable_type='chat' AND a.provider=? AND a.native_id=?",
       params: [key.provider, key.account],
     },
@@ -90,7 +127,7 @@ export const tagsOf = ({ database }: StoreContext, key: AccountKey, filter: TagF
       type: "contact",
       sql:
         "SELECT t.tag, t.taggable_type AS type, t.created_at, NULL AS chat_id, NULL AS chat_title, " +
-        "i.native_id AS person_id, i.name AS name, NULL AS message_id " +
+        "i.native_id AS person_id, i.name AS name, NULL AS message_id, t.manual, t.taggable_pk AS target_pk " +
         "FROM tags t JOIN identities i ON i.pk=t.taggable_pk WHERE t.taggable_type='contact' AND i.provider=?",
       params: [key.provider],
     },
@@ -98,7 +135,7 @@ export const tagsOf = ({ database }: StoreContext, key: AccountKey, filter: TagF
       type: "message",
       sql:
         "SELECT t.tag, t.taggable_type AS type, t.created_at, c.native_id AS chat_id, c.title AS chat_title, " +
-        "NULL AS person_id, NULL AS name, m.native_id AS message_id " +
+        "NULL AS person_id, NULL AS name, m.native_id AS message_id, t.manual, t.taggable_pk AS target_pk " +
         "FROM tags t JOIN messages m ON m.pk=t.taggable_pk JOIN chats c ON c.pk=m.chat_pk " +
         "JOIN accounts a ON a.pk=c.account_pk WHERE t.taggable_type='message' AND a.provider=? AND a.native_id=?",
       params: [key.provider, key.account],
@@ -108,11 +145,17 @@ export const tagsOf = ({ database }: StoreContext, key: AccountKey, filter: TagF
   const rows = database
     .prepare(`${chosen.map(({ sql }) => sql + tagged).join(" UNION ALL ")} ORDER BY 1, 2, 3, 4, 6, 8`)
     .all(...chosen.flatMap(({ params }) => (filter.tag === undefined ? params : [...params, filter.tag])))
-  return rows.map((row) => {
+  const result = rows.map((row): StoredTag => {
     const type = String(row.type) as TagType
     const chatId = row.chat_id == null ? undefined : String(row.chat_id)
     const messageId = row.message_id == null ? undefined : String(row.message_id)
+    const automatic =
+      type === "chat" &&
+      database
+        .prepare("SELECT 1 AS held FROM auto_tag_claims WHERE chat_pk=? AND tag=?")
+        .get(Number(row.target_pk), String(row.tag))
     return {
+      ...(automatic ? { sources: (Number(row.manual) ? ["manual", "auto"] : ["auto"]) as ("manual" | "auto")[] } : {}),
       tag: String(row.tag),
       type,
       ...(type === "contact"
@@ -124,4 +167,7 @@ export const tagsOf = ({ database }: StoreContext, key: AccountKey, filter: TagF
       createdAt: toIso(Number(row.created_at)) as string,
     }
   })
+  return filter.source === undefined
+    ? result
+    : result.filter((entry) => (entry.sources ?? ["manual"]).includes(filter.source as "manual" | "auto"))
 }

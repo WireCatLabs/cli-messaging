@@ -5,6 +5,8 @@ export { openCache } from "./open.js"
 export { storePath } from "./path.js"
 export { resetAttachmentWords } from "./sqlite/attachment-texts.js"
 export { backfillNormalized, pendingNormalization } from "./sqlite/backfill.js"
+export type { ChatMetadata } from "./sqlite/chat-metadata.js"
+export type { PrivateContact, PrivateContactNote } from "./sqlite/private-people.js"
 export {
   fillSearchIndex,
   resetSearchIndex,

@@ -1,5 +1,8 @@
 {
-  "clis": ["max", "tg"],
+  "clis": [
+    "max",
+    "tg"
+  ],
   "options": {
     "--accept-terms": {
       "meaning": "accept the model's licence terms, for a model that has its own"
@@ -682,6 +685,9 @@
       "meaning": "read the private chat with them from MAX first \u2014 one request",
       "note": "one idea, two sources: bring what the answer is read from up to date first. `bot contacts show` reads the private chat again from the messenger; `conversations search` builds and embeds, on this machine, the chats that changed (NEED-551 A, awaiting the owner's wording)"
     },
+    "--refresh-metadata": {
+      "meaning": "read current descriptions from the messenger before classifying"
+    },
     "--regex": {
       "meaning": "the words are one regular expression, case-insensitive, tested against every stored text"
     },
@@ -707,6 +713,10 @@
     "--retract": {
       "meaning": "take your vote back, where the poll allows it"
     },
+    "--revision": {
+      "value": "<number>",
+      "meaning": "the revision you read before editing"
+    },
     "--revoke": {
       "meaning": "forget every login given to a browser app over --http"
     },
@@ -728,6 +738,10 @@
     "--search": {
       "value": "<text>",
       "meaning": "only chats whose name contains this; at least 3 characters"
+    },
+    "--search-notes": {
+      "value": "<text>",
+      "meaning": "only people whose private notes contain this text"
     },
     "--secret-stdin": {
       "meaning": "a secret MAX sends back in X-Max-Bot-Api-Secret \u2014 asked for, or read from a pipe"
@@ -906,6 +920,9 @@
     "--weights": {
       "value": "<json>",
       "meaning": "the complete ranking component weights; replaces preset weights when --score is given"
+    },
+    "--with-notes": {
+      "meaning": "include your private notes, subject to contacts.notes.list permission"
     },
     "--words": {
       "meaning": "match any of these whole words, comma-separated; empty clears",
@@ -1116,18 +1133,26 @@
       "in": "all"
     },
     "bot chats members add": {
-      "in": ["max"],
+      "in": [
+        "max"
+      ],
       "reason": "a Telegram bot cannot add people to a chat"
     },
     "bot chats members list": {
-      "in": ["max"],
+      "in": [
+        "max"
+      ],
       "options": {
         "--limit": {
-          "in": ["max"],
+          "in": [
+            "max"
+          ],
           "reason": "Telegram's Bot API cannot list a chat's members, only its admins and a count"
         },
         "--marker": {
-          "in": ["max"],
+          "in": [
+            "max"
+          ],
           "reason": "Telegram's Bot API cannot list a chat's members, only its admins and a count"
         }
       },
@@ -1177,7 +1202,9 @@
       "in": "all"
     },
     "bot comments": {
-      "in": ["max"],
+      "in": [
+        "max"
+      ],
       "reason": "a Telegram channel's comments are messages in a separate discussion group, reached by ids only an update gives"
     },
     "bot contacts": {
@@ -1315,7 +1342,9 @@
       "in": "all",
       "options": {
         "--from": {
-          "in": ["tg"],
+          "in": [
+            "tg"
+          ],
           "reason": "Telegram bots read message numbers and need a starting link when none is known; MAX pages chat history directly"
         },
         "--last": "all",
@@ -1326,7 +1355,9 @@
       }
     },
     "bot uploads": {
-      "in": ["max"],
+      "in": [
+        "max"
+      ],
       "reason": "Telegram has no upload-only step: a file goes up with the message that carries it"
     },
     "bot watch": {
@@ -1349,7 +1380,9 @@
       "in": "all",
       "options": {
         "--add": {
-          "in": ["max"],
+          "in": [
+            "max"
+          ],
           "reason": "a Telegram bot holds one webhook address"
         },
         "--secret-stdin": "all",
@@ -1381,13 +1414,17 @@
       "in": "all",
       "options": {
         "--since-time": {
-          "in": ["max"],
+          "in": [
+            "max"
+          ],
           "planned": {
             "tg": "T6"
           }
         },
         "--type": {
-          "in": ["max"],
+          "in": [
+            "max"
+          ],
           "planned": {
             "tg": "T6"
           }
@@ -1409,7 +1446,9 @@
     "chats folders join": {
       "in": [],
       "reason": "max-cli does not map folders shared by a link yet",
-      "planned": { "tg": "feat/folders-order-join" }
+      "planned": {
+        "tg": "feat/folders-order-join"
+      }
     },
     "chats folders list": {
       "in": "all"
@@ -1417,7 +1456,9 @@
     "chats folders order": {
       "in": [],
       "reason": "max-cli does not map folder order yet",
-      "planned": { "tg": "feat/folders-order-join" }
+      "planned": {
+        "tg": "feat/folders-order-join"
+      }
     },
     "chats folders update": {
       "in": "all",
@@ -1440,25 +1481,33 @@
       "in": "all"
     },
     "chats link create": {
-      "in": ["tg"],
+      "in": [
+        "tg"
+      ],
       "planned": {
         "max": "max's next cli-messaging bump"
       },
       "options": {
         "--approval": {
-          "in": ["tg"],
+          "in": [
+            "tg"
+          ],
           "planned": {
             "max": "max's next cli-messaging bump"
           }
         },
         "--expire-time": {
-          "in": ["tg"],
+          "in": [
+            "tg"
+          ],
           "planned": {
             "max": "max's next cli-messaging bump"
           }
         },
         "--max-uses": {
-          "in": ["tg"],
+          "in": [
+            "tg"
+          ],
           "planned": {
             "max": "max's next cli-messaging bump"
           }
@@ -1496,7 +1545,9 @@
       "in": "all",
       "options": {
         "--history": {
-          "in": ["max"],
+          "in": [
+            "max"
+          ],
           "reason": "Telegram shows history to new members only in legacy groups, and P2 makes supergroups"
         }
       }
@@ -1552,19 +1603,25 @@
       "in": "all",
       "options": {
         "--all": {
-          "in": ["max"],
+          "in": [
+            "max"
+          ],
           "planned": {
             "tg": "T6"
           }
         },
         "--limit": {
-          "in": ["max"],
+          "in": [
+            "max"
+          ],
           "planned": {
             "tg": "T6"
           }
         },
         "--page": {
-          "in": ["max"],
+          "in": [
+            "max"
+          ],
           "planned": {
             "tg": "T6"
           }
@@ -1575,31 +1632,41 @@
       "in": "all"
     },
     "chats moderate": {
-      "in": ["max"],
+      "in": [
+        "max"
+      ],
       "planned": {
         "tg": "P2"
       },
       "options": {
         "--allow-dangerous": {
-          "in": ["max"],
+          "in": [
+            "max"
+          ],
           "planned": {
             "tg": "P2"
           }
         },
         "--dry-run": {
-          "in": ["max"],
+          "in": [
+            "max"
+          ],
           "planned": {
             "tg": "P2"
           }
         },
         "--max-actions": {
-          "in": ["max"],
+          "in": [
+            "max"
+          ],
           "planned": {
             "tg": "P2"
           }
         },
         "--since-time": {
-          "in": ["max"],
+          "in": [
+            "max"
+          ],
           "planned": {
             "tg": "P2"
           }
@@ -1607,7 +1674,9 @@
       }
     },
     "chats requests": {
-      "in": ["tg"],
+      "in": [
+        "tg"
+      ],
       "reason": "MAX groups have no join approval"
     },
     "chats rules": {
@@ -1623,7 +1692,9 @@
       "in": "all"
     },
     "chats send-as": {
-      "in": ["tg"],
+      "in": [
+        "tg"
+      ],
       "reason": "MAX has no identities to post as other than the account itself"
     },
     "chats show": {
@@ -1670,20 +1741,28 @@
         "--all-can-pin": "all",
         "--description": "all",
         "--join-approval": {
-          "in": ["tg"],
+          "in": [
+            "tg"
+          ],
           "reason": "MAX groups have no join approval"
         },
         "--members-see-link": {
-          "in": ["max"],
+          "in": [
+            "max"
+          ],
           "reason": "Telegram shows a group's invite link to whoever may invite, not by a setting of its own"
         },
         "--only-admins-add": "all",
         "--only-admins-call": {
-          "in": ["max"],
+          "in": [
+            "max"
+          ],
           "reason": "Telegram has no setting for who may start a call"
         },
         "--only-owner-edits-info": {
-          "in": ["max"],
+          "in": [
+            "max"
+          ],
           "reason": "Telegram lets admins with the right change the info, never only the owner; a different meaning gets a different name"
         },
         "--title": "all"
@@ -1767,6 +1846,15 @@
     "contacts add": {
       "in": "all"
     },
+    "contacts alias": {
+      "in": "all"
+    },
+    "contacts alias rm": {
+      "in": "all"
+    },
+    "contacts alias set": {
+      "in": "all"
+    },
     "contacts block": {
       "in": "all"
     },
@@ -1798,10 +1886,36 @@
         "--limit": "all",
         "--order": "all",
         "--page": "all",
-        "--search": "all"
+        "--search": "all",
+        "--search-notes": "all"
       }
     },
     "contacts lookup": {
+      "in": "all"
+    },
+    "contacts notes": {
+      "in": "all"
+    },
+    "contacts notes add": {
+      "in": "all",
+      "options": {
+        "--file": "all"
+      }
+    },
+    "contacts notes edit": {
+      "in": "all",
+      "options": {
+        "--file": "all",
+        "--revision": "all"
+      }
+    },
+    "contacts notes list": {
+      "in": "all"
+    },
+    "contacts notes remove": {
+      "in": "all"
+    },
+    "contacts notes show": {
       "in": "all"
     },
     "contacts profile": {
@@ -1817,7 +1931,10 @@
       "in": "all"
     },
     "contacts show": {
-      "in": "all"
+      "in": "all",
+      "options": {
+        "--with-notes": "all"
+      }
     },
     "contacts sync": {
       "in": "all"
@@ -2289,15 +2406,21 @@
       "in": "all"
     },
     "messages comments": {
-      "in": ["tg"],
+      "in": [
+        "tg"
+      ],
       "reason": "MAX personal accounts have no channel comments; MAX's comments are a Bot API path",
       "options": {
         "--before-id": {
-          "in": ["tg"],
+          "in": [
+            "tg"
+          ],
           "reason": "MAX personal accounts have no channel comments"
         },
         "--limit": {
-          "in": ["tg"],
+          "in": [
+            "tg"
+          ],
           "reason": "MAX personal accounts have no channel comments"
         }
       }
@@ -2339,7 +2462,9 @@
         },
         "--extract": "all",
         "--output": {
-          "in": ["max"],
+          "in": [
+            "max"
+          ],
           "reason": "MAX retains --output as a compatibility alias for --output-dir after shared adoption"
         },
         "--output-dir": {
@@ -2418,7 +2543,9 @@
       "in": "all",
       "options": {
         "--backend": {
-          "in": ["tg"],
+          "in": [
+            "tg"
+          ],
           "planned": {
             "max": "feat/max-server-search: opcode 73 searches one chat (server-search plan section 9)"
           }
@@ -2440,7 +2567,9 @@
           "in": "all"
         },
         "--server-time": {
-          "in": ["tg"],
+          "in": [
+            "tg"
+          ],
           "planned": {
             "max": "feat/max-server-search: opcode 73 searches one chat (server-search plan section 9)"
           }
@@ -2477,11 +2606,15 @@
         "--as-file": "all",
         "--at-time": "all",
         "--caption-above": {
-          "in": ["tg"],
+          "in": [
+            "tg"
+          ],
           "reason": "MAX has no spoilers or caption placement"
         },
         "--comment-to": {
-          "in": ["tg"],
+          "in": [
+            "tg"
+          ],
           "reason": "MAX personal accounts have no channel comments"
         },
         "--file": "all",
@@ -2507,7 +2640,9 @@
         "--send-id": "all",
         "--silent": "all",
         "--spoiler": {
-          "in": ["tg"],
+          "in": [
+            "tg"
+          ],
           "reason": "MAX has no spoilers or caption placement"
         },
         "--topic": "all",
@@ -2521,7 +2656,9 @@
       "in": "all",
       "options": {
         "--local": {
-          "in": ["tg"],
+          "in": [
+            "tg"
+          ],
           "reason": "Telegram can transcribe on its side; MAX cannot, so max always uses the local model"
         },
         "--model": "all"
@@ -2529,6 +2666,22 @@
     },
     "messages unpin": {
       "in": "all"
+    },
+    "metadata": {
+      "in": "all"
+    },
+    "metadata get": {
+      "in": "all",
+      "options": {
+        "--chat": "all"
+      }
+    },
+    "metadata refresh": {
+      "in": "all",
+      "options": {
+        "--chat": "all",
+        "--limit": "all"
+      }
     },
     "models": {
       "in": "all"
@@ -2832,7 +2985,9 @@
       "in": "all",
       "options": {
         "--idle": {
-          "in": ["max"],
+          "in": [
+            "max"
+          ],
           "reason": "max's server stops when no command has used it for this long; tg's serve has no commands connected to it (NEED-495 A)"
         }
       }
@@ -2853,7 +3008,9 @@
       "in": "all",
       "options": {
         "--idle": {
-          "in": ["max"],
+          "in": [
+            "max"
+          ],
           "reason": "max's server stops when no command has used it for this long; tg's serve has no commands connected to it (NEED-495 A)"
         }
       }
@@ -2862,7 +3019,9 @@
       "in": "all",
       "options": {
         "--idle": {
-          "in": ["max"],
+          "in": [
+            "max"
+          ],
           "reason": "max's server stops when no command has used it for this long; tg's serve has no commands connected to it (NEED-495 A)"
         }
       }
@@ -2886,11 +3045,15 @@
       "in": "all",
       "options": {
         "--app": {
-          "in": ["tg"],
+          "in": [
+            "tg"
+          ],
           "reason": "Telegram asks each client for its own app from my.telegram.org; MAX has no such step"
         },
         "--qr-file": {
-          "in": ["tg"],
+          "in": [
+            "tg"
+          ],
           "reason": "ruled tg-only with the app registration it belongs to"
         }
       }
@@ -2981,7 +3144,9 @@
       "in": "all"
     },
     "stats chats official": {
-      "in": ["tg"],
+      "in": [
+        "tg"
+      ],
       "reason": "MAX has no statistics request of its own for a chat"
     },
     "stats chats show": {
@@ -3459,7 +3624,9 @@
       "in": "all"
     },
     "store reindex": {
-      "in": ["max"],
+      "in": [
+        "max"
+      ],
       "planned": {
         "tg": "tg: cli-messaging 0.97.0 bump"
       }
@@ -3493,9 +3660,19 @@
         }
       }
     },
+    "tags auto": {
+      "in": "all",
+      "options": {
+        "--chat": "all",
+        "--dry-run": "all",
+        "--limit": "all",
+        "--refresh-metadata": "all"
+      }
+    },
     "tags list": {
       "in": "all",
       "options": {
+        "--source": "all",
         "--tag": {
           "in": "all"
         },
@@ -3515,7 +3692,8 @@
         },
         "--message": {
           "in": "all"
-        }
+        },
+        "--source": "all"
       }
     },
     "tasks": {
@@ -3561,47 +3739,67 @@
       }
     },
     "topics": {
-      "in": ["tg"],
+      "in": [
+        "tg"
+      ],
       "reason": "MAX has no forum topics"
     },
     "topics create": {
-      "in": ["tg"],
+      "in": [
+        "tg"
+      ],
       "reason": "MAX has no forum topics",
       "options": {
         "--send-id": {
-          "in": ["tg"],
+          "in": [
+            "tg"
+          ],
           "reason": "MAX has no forum topics"
         }
       }
     },
     "topics edit": {
-      "in": ["tg"],
+      "in": [
+        "tg"
+      ],
       "reason": "MAX has no forum topics",
       "options": {
         "--closed": {
-          "in": ["tg"],
+          "in": [
+            "tg"
+          ],
           "reason": "MAX has no forum topics"
         },
         "--hidden": {
-          "in": ["tg"],
+          "in": [
+            "tg"
+          ],
           "reason": "MAX has no forum topics"
         },
         "--pinned": {
-          "in": ["tg"],
+          "in": [
+            "tg"
+          ],
           "reason": "MAX has no forum topics"
         },
         "--title": {
-          "in": ["tg"],
+          "in": [
+            "tg"
+          ],
           "reason": "MAX has no forum topics"
         }
       }
     },
     "topics enable": {
-      "in": ["tg"],
+      "in": [
+        "tg"
+      ],
       "reason": "MAX has no forum topics",
       "options": {
         "--upgrade": {
-          "in": ["tg"],
+          "in": [
+            "tg"
+          ],
           "reason": "MAX has no forum topics"
         }
       }
