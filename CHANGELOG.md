@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.169.0 — 07.10.2026
+
 ### Added
 
 - `messages search --backend archive|server|both` and `--server-time` (MCP `backend`, `server_time`), offered
