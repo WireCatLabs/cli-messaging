@@ -11,6 +11,7 @@ const SETTING_FLAGS: Record<keyof GroupSettings, [flag: string, help: string]> =
   onlyAdminsCall: ["only-admins-call", "only admins may start a call"],
   onlyOwnerEditsInfo: ["only-owner-edits-info", "only the owner may change the name and photo"],
   membersSeeLink: ["members-see-link", "members may see the invite link"],
+  joinApproval: ["join-approval", "people ask to join, and an admin lets them in; a public group only"],
 }
 
 const settingsOf = (
@@ -63,6 +64,31 @@ const linkCommand = (messenger: Messenger): Command => {
       const context = messengerContext(this, messenger)
       context.renderer.result(await context.withServices((services) => services.admin.link(chat)))
     })
+  link.addCommand(
+    annotate(new Command("create"), { mutates: true })
+      .description("make another invite link; nobody is told until you share it")
+      .argument("<chat>", messenger.chatArgument)
+      .option("--approval", "who joins by it asks first, and an admin lets them in")
+      .option("--expire-time <time>", "it stops working then: 2026-09-25T09:00 (local time), or 30m, 2h, 7d from now")
+      .option("--max-uses <n>", "at most this many people join by it, 1 to 99999", positiveCount("--max-uses"))
+      .action(async function (this: Command, chat: string) {
+        const context = messengerContext(this, messenger)
+        const { approval, expireTime, maxUses } = this.opts<{
+          approval?: boolean
+          expireTime?: string
+          maxUses?: number
+        }>()
+        context.renderer.result(
+          await context.withServices((services) =>
+            services.admin.createLink(chat, {
+              approval: approval === true,
+              ...(expireTime === undefined ? {} : { expires: expireTime }),
+              ...(maxUses === undefined ? {} : { maxUses }),
+            }),
+          ),
+        )
+      }),
+  )
   link.addCommand(
     annotate(new Command("reset"), { mutates: true })
       .description("replace the invite link; the old one stops working")

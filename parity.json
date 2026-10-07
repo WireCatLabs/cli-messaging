@@ -81,6 +81,9 @@
       "meaning": "the first time only: how to get this profile's app from my.telegram.org",
       "default": "browser"
     },
+    "--approval": {
+      "meaning": "who joins by it asks first, and an admin lets them in"
+    },
     "--as": {
       "value": "<state>",
       "meaning": "how a task is closed: done, or dismissed \u2014 it needs no answer"
@@ -277,6 +280,10 @@
     "--exact": {
       "meaning": "bare words and quotes match their exact form only, as exact:word does; text: still matches every form"
     },
+    "--expire-time": {
+      "value": "<time>",
+      "meaning": "it stops working then: 2026-09-25T09:00 (local time), or 30m, 2h, 7d from now"
+    },
     "--extract": {
       "meaning": "extract text from files mapped by this download"
     },
@@ -343,6 +350,10 @@
     "--idle": {
       "value": "<duration>",
       "meaning": "stop after this long with nobody using it \u2014 15m, 1h"
+    },
+    "--join-approval": {
+      "value": "<on|off>",
+      "meaning": "people ask to join, and an admin lets them in; a public group only"
     },
     "--json": {
       "meaning": "machine-readable output: one JSON value on stdout, nothing else"
@@ -432,6 +443,10 @@
     "--max-tokens": {
       "value": "<n>",
       "meaning": "remote embeddings: bound input tokens; analysis: reserve input and output tokens across this run"
+    },
+    "--max-uses": {
+      "value": "<n>",
+      "meaning": "at most this many people join by it, 1 to 99999"
     },
     "--md": {
       "meaning": "read this messenger's Markdown; see its formatting guide for supported syntax"
@@ -1410,6 +1425,24 @@
     "chats link": {
       "in": "all"
     },
+    "chats link create": {
+      "in": [],
+      "planned": { "max": "each CLI's next cli-messaging bump", "tg": "G2 feat/join-approval" },
+      "options": {
+        "--approval": {
+          "in": [],
+          "planned": { "max": "each CLI's next cli-messaging bump", "tg": "G2 feat/join-approval" }
+        },
+        "--expire-time": {
+          "in": [],
+          "planned": { "max": "each CLI's next cli-messaging bump", "tg": "G2 feat/join-approval" }
+        },
+        "--max-uses": {
+          "in": [],
+          "planned": { "max": "each CLI's next cli-messaging bump", "tg": "G2 feat/join-approval" }
+        }
+      }
+    },
     "chats link reset": {
       "in": "all"
     },
@@ -1616,6 +1649,11 @@
       "options": {
         "--all-can-pin": "all",
         "--description": "all",
+        "--join-approval": {
+          "in": [],
+          "reason": "MAX groups have no join approval",
+          "planned": { "tg": "G2 feat/join-approval" }
+        },
         "--members-see-link": {
           "in": ["max"],
           "reason": "Telegram shows a group's invite link to whoever may invite, not by a setting of its own"

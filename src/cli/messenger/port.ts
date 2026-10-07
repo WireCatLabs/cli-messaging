@@ -16,6 +16,7 @@ import type {
   GroupChange,
   GroupMember,
   Id,
+  InviteLink,
   JoinRequest,
   LinkTarget,
   Member,
@@ -304,6 +305,14 @@ export interface SenderIdentities {
   savedSender(chatId: Id): Promise<Id | null>
 }
 
+/** Invite links beyond the group's own one; making one tells nobody until it is shared. */
+export interface InviteLinks {
+  createInviteLink(
+    chatId: Id,
+    options: { approval: boolean; expiresAt?: string; maxUses?: number },
+  ): Promise<InviteLink>
+}
+
 /** Requests to join a group or channel that needs approval; only its admins see them. */
 export interface JoinRequests {
   /** Newest first. Reading them tells nobody. */
@@ -503,6 +512,7 @@ export interface MessengerAdapter
     Partial<ProfilePhotos>,
     Partial<GroupAdmin>,
     Partial<JoinRequests>,
+    Partial<InviteLinks>,
     Partial<ChatFolders>,
     Partial<ContactBook>,
     Partial<AccountEditing>,

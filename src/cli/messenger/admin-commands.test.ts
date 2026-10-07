@@ -198,6 +198,60 @@ describe("chats create, join and leave", () => {
     ])
   })
 
+  it("**turns join approval on only where the messenger lists it**", async () => {
+    const env = sandbox()
+    const changes: unknown[] = []
+    const adapter: MessengerAdapter = {
+      ...base,
+      updateGroup: async (chatId, change) => {
+        changes.push(change)
+        return card(chatId, "Book club")
+      },
+    }
+    const telegram = { groupSettings: ["allCanPin", "onlyAdminsAdd", "joinApproval"] as const }
+
+    const on = await call(["chats", "update", "Book club", "--join-approval", "on", "--json"], adapter, env, telegram)
+    const elsewhere = await call(["chats", "update", "Book club", "--join-approval", "on"], adapter, env)
+
+    expect(on.code).toBe(0)
+    expect(changes).toEqual([{ settings: { joinApproval: true } }])
+    expect(elsewhere.stderr.join("\n")).toContain("unknown option '--join-approval'")
+  })
+
+  it("**makes another invite link** with approval, an expiry and a use limit, through the guard", async () => {
+    const env = sandbox()
+    const asked: unknown[] = []
+    const adapter: MessengerAdapter = {
+      ...base,
+      createInviteLink: async (chatId, options) => {
+        asked.push([chatId, options])
+        return { link: "https://t.me/+synthetic", approval: options.approval, expiresAt: null, maxUses: null }
+      },
+    }
+
+    const made = await call(
+      ["chats", "link", "create", "Book club", "--approval", "--expire-time", "7d", "--max-uses", "5", "--json"],
+      adapter,
+      env,
+    )
+    const plain = await call(["chats", "link", "create", "Book club", "--json"], adapter, env)
+
+    expect(JSON.parse(made.stdout[0] ?? "")).toMatchObject({
+      chatId: "7",
+      link: "https://t.me/+synthetic",
+      approval: true,
+    })
+    expect(asked).toEqual([
+      ["7", { approval: true, expiresAt: expect.any(String), maxUses: 5 }],
+      ["7", { approval: false }],
+    ])
+    expect(plain.code).toBe(0)
+    expect(new SendJournal(sendsPathFor(app, "default", env)).entries().map((one) => one.action)).toEqual([
+      "link.create",
+      "link.create",
+    ])
+  })
+
   it("**shows the invite link, or says it is hidden**, and journals a reset", async () => {
     const env = sandbox()
     let link: string | null = null

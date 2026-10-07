@@ -89,6 +89,30 @@ export const adminTools = (messenger: Messenger): Record<string, AnyTool> => {
       permission: "groups",
       online: (adapter, args, { guard }) => admin(adapter, guard).resetLink(args.chat),
     }),
+    chats_link_create: tool({
+      title: "Make another invite link",
+      description:
+        "Make an additional invite link for a group or channel: { chatId, link, approval, expiresAt, maxUses }. " +
+        "Nobody is told until the link is shared. Only when the owner asked.",
+      input: v.object({
+        chat: chatOf(messenger),
+        approval: v.optional(
+          v.pipe(v.boolean(), v.description("who joins by it asks first, and an admin lets them in")),
+        ),
+        expire_time: v.optional(
+          v.pipe(v.string(), v.description("it stops working then: 2026-09-25T09:00 (local time), or 30m, 2h, 7d")),
+        ),
+        max_uses: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(99_999))),
+      }),
+      annotations: WRITE,
+      permission: "groups",
+      online: (adapter, args, { guard }) =>
+        admin(adapter, guard).createLink(args.chat, {
+          approval: args.approval === true,
+          ...(args.expire_time === undefined ? {} : { expires: args.expire_time }),
+          ...(args.max_uses === undefined ? {} : { maxUses: args.max_uses }),
+        }),
+    }),
     chats_requests_list: tool({
       title: "Requests to join a group",
       description:

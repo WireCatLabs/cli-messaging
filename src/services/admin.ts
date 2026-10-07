@@ -1,6 +1,7 @@
 import { CliError } from "@leemour/cli-core"
 import { capability } from "../cli/messenger/port.js"
-import type { AdminRight, GroupCard, GroupChange, Id, JoinRequest, Page } from "../domain/models.js"
+import type { AdminRight, GroupCard, GroupChange, Id, InviteLink, JoinRequest, Page } from "../domain/models.js"
+import { sendTime } from "../domain/send-time.js"
 import { guardedWrite, type Operated } from "../sends/guarded.js"
 import { newOperationId } from "../sends/send-id.js"
 import type { ServiceDeps } from "./deps.js"
@@ -21,6 +22,11 @@ export interface AdminService {
   /** The invite link, or `not_found` when the owner may not see it. */
   link(chat: string): Promise<{ chatId: Id; title: string | null; link: string }>
   resetLink(chat: string): Promise<Operated<{ chat: GroupCard }>>
+  /** `expires` as typed: a time, or a delay like `7d`. */
+  createLink(
+    chat: string,
+    options: { approval: boolean; expires?: string; maxUses?: number },
+  ): Promise<Operated<{ chatId: Id } & InviteLink>>
   /** Who asked to join, newest first; only the group's admins see them. */
   requests(chat: string, window: { limit: number }): Promise<Page<JoinRequest> & { chatId: Id }>
   answerRequest(
@@ -125,6 +131,24 @@ export const adminService = (deps: ServiceDeps): AdminService => {
         reset(chatId),
       )
       return { operationId, chat: card }
+    },
+
+    createLink: async (chat, { approval, expires, maxUses }) => {
+      if (maxUses !== undefined && (!Number.isInteger(maxUses) || maxUses < 1 || maxUses > 99_999))
+        throw new CliError("validation_error", "--max-uses takes a whole number from 1 to 99999")
+      const expiresAt = expires === undefined ? undefined : sendTime(expires, Date.now(), "--expire-time")
+      const connection = await online("chats link create")
+      const create = capability(connection, "createInviteLink", "make another invite link")
+      const { id: chatId } = await connection.resolve(chat)
+      const operationId = newOperationId()
+      const made = await guardedWrite(deps.guard, { operationId, chatId, kind: "chat", action: "link.create" }, () =>
+        create(chatId, {
+          approval,
+          ...(expiresAt === undefined ? {} : { expiresAt }),
+          ...(maxUses === undefined ? {} : { maxUses }),
+        }),
+      )
+      return { operationId, chatId, ...made }
     },
 
     requests: async (chat, window) => {
