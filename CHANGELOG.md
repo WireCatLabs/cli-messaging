@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.180.0 — 08.10.2026
+
 ### Added
 
 - Reads only a messenger's server answers, each behind its own switch so a messenger shows only what it has:
