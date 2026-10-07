@@ -8,6 +8,10 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Added
 
+- `store gaps plan` and MCP `store_gaps_plan` inspect interior gaps in recorded coverage locally.
+  Explicit bounded repair rechecks coverage, preserves unknown edges and uncertain timestamp pages,
+  and supports fingerprinted background jobs through CLI and MCP. Job metadata is available over MCP.
+
 - `searchCatchUp` and `store fetch --catch-up` prepare the fetched chat's graph and installed local
   vectors within explicit message/chunk/time bounds, off by default. Background jobs keep the same
   choice. Fetch results distinguish persisted history from incomplete preparation; models are never

@@ -89,6 +89,7 @@ export const RESOURCES = [
   "replies",
   "attachments",
   "stats",
+  "store",
 ] as const
 
 const OLD_WORDS: Record<Permission, PermissionKey[]> = {
@@ -239,6 +240,7 @@ export const keyForWrite = (kind: SendKind, action?: string): PermissionKey => {
 
 /** Write keys written out where a write is checked; `permission-keys.test.ts` keeps this list whole. */
 const NAMED_WRITE_KEYS = [
+  "store.gaps.repair",
   "messages.sync-first",
   "stats.messages.show.sync-first",
   "account.sessions.list",
@@ -339,6 +341,7 @@ export const readKeysForCommand = (path: readonly string[]): PermissionKey[] => 
   if (path[0] === "bot") return readKeysForCommand(path.slice(1)).map((key) => `bot.${key}`)
   const key = keyForCommand(path)
   if (!key) return []
+  if (path[0] === "store" && path[1] === "gaps" && path[2] === "repair") return [key, "messages"]
   if (path[0] !== "stats") return [key]
   const resource = path[1] === "charts" ? "chats" : path[1]
   return [
@@ -369,6 +372,7 @@ export const keyForCommand = (path: readonly string[]): PermissionKey | null | u
   if (top === "conversations" && next === "embed") return "conversations.embed"
   // Which files a message has, and where they are saved, tells as much as a message does.
   if (top === "attachments" && next === "list") return "messages"
+  if (top === "store" && (next === "gaps" || next === "jobs")) return path.join(".")
   if (SHOW_MESSAGES.has(top) || (top === "contacts" && next === "context")) return "messages"
   if ((RESOURCES as readonly string[]).includes(top)) return path.join(".")
   return undefined

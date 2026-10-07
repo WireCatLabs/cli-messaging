@@ -605,6 +605,9 @@ describe("the MCP server", () => {
       "chat_stats_messages_show",
       "chat_stats_tasks_show",
       "chat_status",
+      "chat_store_gaps_plan",
+      "chat_store_jobs_list",
+      "chat_store_jobs_show",
       "chat_tags_list",
       "chat_tasks_list",
       "chat_topics_list",
@@ -1363,6 +1366,69 @@ describe("the MCP server", () => {
     expect(backend.opened()).toBe(0)
     const readonly = await connect(scripted(), { root, config: levels({ attachments: "readonly" }) })
     expect((await readonly.client.listTools()).tools.map(({ name }) => name)).not.toContain("chat_attachments_extract")
+  })
+
+  it("plans gaps locally and repairs them through the retained session", async () => {
+    const root = await filledRoot()
+    const backend = scripted()
+    const { call, env } = await connect(backend, { root })
+    const store = await openStore({ path: env.MESSAGING_STORE })
+    await store.markRange({ provider: "chat", account: "500" }, "7", 100, 101)
+    await store.markRange({ provider: "chat", account: "500" }, "7", 103, 104)
+    await store.close()
+    const plan = await call("chat_store_gaps_plan", { chat: "7" })
+    expect(plan.body.gaps).toEqual([{ from: 102, to: 102 }])
+    expect(backend.opened()).toBe(0)
+    const repaired = await call("chat_store_gaps_repair", {
+      chat: "7",
+      fingerprint: plan.body.fingerprint,
+      limit: 3,
+      max_gaps: 1,
+      page_size: 3,
+      pause: "1ms",
+      repair_time: "1s",
+    })
+    expect(repaired.isError, JSON.stringify(repaired.body)).toBe(false)
+    expect(repaired.body).toHaveProperty("scope", "interior")
+    expect((await call("chat_store_jobs_list", {})).body).toMatchObject({ items: [], page: 1 })
+    expect((await call("chat_store_jobs_show", { job: "missing" })).isError).toBe(true)
+    const readonly = await connect(scripted(), { root, config: READ_ONLY })
+    expect((await readonly.client.listTools()).tools.map(({ name }) => name)).not.toContain("chat_store_gaps_repair")
+  })
+
+  it("refuses secondary search preparation permission before repairing through MCP", async () => {
+    const root = await filledRoot()
+    const backend = scripted()
+    const { call } = await connect(backend, { root, config: levels({ store: "allow", conversations: "readonly" }) })
+    const result = await call("chat_store_gaps_repair", { chat: "7", catch_up: true })
+    expect(result.isError).toBe(true)
+    expect(result.body.error).toMatchObject({
+      code: "permission_error",
+      permission: "conversations.build",
+    })
+    expect(backend.opened()).toBe(0)
+  })
+
+  it("queues a fingerprinted gap repair without opening a connection and filters job metadata by profile", async () => {
+    const root = await filledRoot()
+    const backend = scripted()
+    const spawnJob = vi.fn((_argv: string[], _env: NodeJS.ProcessEnv, _log: string) => 999999)
+    const { call } = await connect(backend, { root, spawnJob })
+    const queued = await call("chat_store_gaps_repair", {
+      chat: "7",
+      background: true,
+      repair_time: "1s",
+      pause: "1ms",
+    })
+    expect(queued.isError, JSON.stringify(queued.body)).toBe(false)
+    expect(spawnJob.mock.calls[0]?.[0]).toEqual(expect.arrayContaining(["--fingerprint", "--repair-time", "1s"]))
+    expect(backend.opened()).toBe(0)
+    expect((await call("chat_store_jobs_show", { job: queued.body.job })).body).toMatchObject({
+      profile: "default",
+      chat: "7",
+      pid: 999999,
+    })
+    expect((await call("chat_store_jobs_list", { limit: 1, page: 1 })).body.items).toHaveLength(1)
   })
 
   it("checks one person without the ban lists when asked, and says a non-Telegram account is not in them", async () => {

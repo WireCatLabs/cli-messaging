@@ -35,6 +35,7 @@ export interface ConnectOptions {
 }
 
 export interface Fetching {
+  beforeInclusive?: boolean
   /** Messages per history request. */
   page: number
   /** The most one history request returns, where the messenger is known to cap it; a larger `--page-size` is refused. */
@@ -349,6 +350,10 @@ export const messengerContext = (command: Command, messenger: Messenger): Messen
               if (released) throw new CliError("validation_error", "the read connection has already been released")
               if (!held) {
                 const connection = await messenger.connect(command, base, { events })
+                if (released) {
+                  await connection.close()
+                  throw new CliError("validation_error", "the read connection has already been released")
+                }
                 base.track(connection)
                 held = connected(connection, messenger, base, events)
               }

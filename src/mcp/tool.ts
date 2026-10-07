@@ -55,6 +55,7 @@ export type Connect = <T>(work: (adapter: MessengerAdapter) => Promise<T>) => Pr
 
 /** What a tool may need beyond its arguments. */
 export interface Defaults {
+  spawnJob?: import("../services/backfill-jobs.js").SpawnJob
   syncAllowed?: boolean
   signal?: AbortSignal
   /** Drop a held connection before synchronous local inference. */
@@ -62,7 +63,9 @@ export interface Defaults {
   limit: number
   guard: SendGuard
   /** The profile's own entries, for a tool reading a setting of its own — `transcribeWith`. */
-  settings: Pick<Settings, "configured" | "shared" | "profile"> & Partial<Pick<Settings, "permissions">> & AISettings
+  settings: Pick<Settings, "configured" | "shared" | "profile"> &
+    Partial<Pick<Settings, "permissions" | "searchCatchUp">> &
+    AISettings
   env: NodeJS.ProcessEnv
   /** The server's open models, kept between `conversations_search` calls. */
   embedders?: WarmEmbedders

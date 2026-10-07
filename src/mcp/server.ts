@@ -17,7 +17,7 @@ import { MessengerSession, type SessionOptions } from "./session.js"
 import { commandOf, registerSurface } from "./surface.js"
 import { READ, tool, toolKey } from "./tool.js"
 
-export type ServerOptions = SessionOptions
+export type ServerOptions = SessionOptions & { spawnJob?: import("../services/backfill-jobs.js").SpawnJob }
 
 type Invocation = Parameters<Messenger["connect"]>[0]
 
@@ -100,6 +100,7 @@ export const createServer = (
         session,
         withStore: context.withStore,
         defaults: {
+          spawnJob: sessionOptions.spawnJob,
           limit: settings.limit,
           syncAllowed,
           guard,
