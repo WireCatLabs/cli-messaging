@@ -1,6 +1,7 @@
 import { mkdtempSync, readFileSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
+import * as v from "valibot"
 import { beforeEach, describe, expect, it } from "vitest"
 import { levelFor } from "../sends/permissions.js"
 import { settingsFor } from "./settings.js"
@@ -454,5 +455,118 @@ describe("a bot's settings", () => {
     changeSetting(path, { profile: "sales", setting: "sendsPerHour", value: undefined, kind: "bot" })
     changeSetting(path, { profile: undefined, setting: "readOtherBots", value: undefined, kind: "bot" })
     expect(JSON.parse(readFileSync(path, "utf8"))).toEqual({ profiles: {} })
+  })
+})
+
+describe("settings extensions", () => {
+  const app = { command: "app", appName: "app-cli", envPrefix: "APP", description: "", version: "0.0.0" }
+  const adapted = settingsFor(app, {
+    profile: { autoStart: v.optional(v.boolean()) },
+    defaults: { audioModel: v.optional(v.string()) },
+    sourcePaths: true,
+    resolve: ({ fromLayers, settings }) => {
+      const autoStart = fromLayers("autoStart", true)
+      return {
+        values: { autoStart: autoStart.value, audioModel: settings.shared.audioModel ?? "small" },
+        sources: { autoStart: autoStart.from },
+      }
+    },
+  })
+
+  it("resolves adapter fields from every kind/profile layer and keeps their provenance", () => {
+    withConfig(
+      JSON.stringify({
+        defaultProfile: "work",
+        defaults: { autoStart: false, audioModel: "large" },
+        profiles: { work: { autoStart: true } },
+        personal: { defaults: { autoStart: false }, profiles: { work: { autoStart: false } } },
+      }),
+    )
+    const result = adapted.resolveSettings({}, { env: {}, configDir })
+    expect(result).toMatchObject({
+      autoStart: false,
+      audioModel: "large",
+      sources: {
+        autoStart: "config file: personal.profiles.work",
+        profile: "config file: defaultProfile",
+      },
+    })
+    expect(adapted.resolveSettings({}, { env: {}, configDir, kind: "bot" }).autoStart).toBe(true)
+    expect(adapted.resolveSettings({}, { env: {}, configDir, kind: "bot" }).sources.autoStart).toBe(
+      "config file: profiles.work",
+    )
+    withConfig(JSON.stringify({ defaults: { autoStart: false } }))
+    expect(adapted.resolveSettings({}, { env: {}, configDir })).toMatchObject({
+      autoStart: false,
+      sources: { autoStart: "config file: defaults" },
+    })
+    withConfig("{}")
+    expect(adapted.resolveSettings({}, { env: {}, configDir })).toMatchObject({
+      autoStart: true,
+      sources: { autoStart: "default" },
+    })
+  })
+
+  it("preserves detailed shared/AI and legacy permission sources without changing default callers", () => {
+    withConfig(
+      JSON.stringify({
+        defaults: { limit: 7, updateCheck: false, skillHint: false },
+        profiles: { work: { allow: ["send"], embeddingModel: "test-model" } },
+      }),
+    )
+    const result = adapted.resolveSettings({ profile: "work" }, { env: {}, configDir })
+    expect(result.sources).toMatchObject({
+      limit: "config file: defaults",
+      updateCheck: "config file: defaults",
+      skillHint: "config file: defaults",
+      embeddingModel: "config file: profiles.work",
+    })
+    expect(Object.values(result.permissionSources)).toContain("config file: profiles.work")
+    expect(settings({ profile: "work" }).sources.limit).toBe("config defaults")
+    expect(Object.values(settings({ profile: "work" }).permissionSources)).toContain("allow")
+  })
+
+  it("uses an adapter schema for reads and accepts an adapter duration parser", () => {
+    const resolve = settingsFor(app, {
+      schema: v.object({
+        profiles: v.optional(v.record(v.string(), v.object({})), {}),
+        marker: v.optional(v.literal("valid")),
+      }),
+      parseDuration: (value, source) => {
+        expect(source).toBe("APP_TIMEOUT")
+        return value === "one-tick" ? 1 : 2
+      },
+    }).resolveSettings
+    withConfig('{"marker":"valid"}')
+    expect(resolve({}, { env: { APP_TIMEOUT: "one-tick" }, configDir }).commandTimeoutMs).toBe(1)
+    withConfig('{"marker":"invalid"}')
+    expect(() => resolve({}, { env: {}, configDir })).toThrowError(
+      expect.objectContaining({ code: "configuration_error" }),
+    )
+  })
+  it("uses the compatibility schema for config writes as well as reads", () => {
+    const adapter = settingsFor(app, {
+      profile: { autoStart: v.optional(v.boolean()) },
+      schema: v.strictObject({
+        profiles: v.optional(v.record(v.string(), v.object({})), {}),
+        defaults: v.optional(v.strictObject({ autoStart: v.optional(v.literal(true, "autoStart must be true")) })),
+      }),
+    })
+    withConfig("{}")
+    expect(() =>
+      adapter.changeSetting(join(configDir, "config.json"), {
+        profile: undefined,
+        setting: "autoStart",
+        value: "false",
+      }),
+    ).toThrow("autoStart must be true")
+    expect(
+      adapter.changeSetting(join(configDir, "config.json"), {
+        profile: undefined,
+        setting: "autoStart",
+        value: "true",
+      }),
+    ).toBe(true)
+    expect(adapter.resolveSettings({}, { env: {}, configDir }).shared.autoStart).toBe(true)
   })
 })

@@ -15,6 +15,7 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 - `chats link list <chat> [--revoked] [--limit]` and `chats link revoke <chat> <link>`, MCP `chats_link_list` and
   `chats_link_revoke`; `InviteLink` gains optional `primary`, `revoked`, `pending` and `joined`. Revoking the
   group's own link answers with the new one. Through `InviteLinks.inviteLinks` and `revokeInviteLink`.
+- Settings adapters can resolve extra fields from all personal/bot layers, retain detailed source paths, and supply a compatibility schema and duration parser. Existing consumers keep their resolver behavior; MAX can adopt the common resolver without changing its settings contract.
 
 ### Fixed
 

@@ -113,10 +113,21 @@ const SHARED_DEFAULTS_ONLY = {
  * **What one messenger adds to the file**, merged into the one strict schema — a field an adapter
  * reads but the schema did not know would be refused as unknown. Each entry must be optional.
  */
-export interface SettingsExtension {
+export interface SettingsExtension<T extends object = Record<never, never>> {
+  schema?: v.GenericSchema
+  sourcePaths?: boolean
+  parseDuration?: (value: string, source: string) => number
+  resolve?: (context: SettingsExtensionContext) => { values: T; sources: Record<string, Source> }
   profile?: v.ObjectEntries
   /** For the whole program only, never per profile. */
   defaults?: v.ObjectEntries
+}
+
+export interface SettingsExtensionContext {
+  flags: GlobalFlags
+  settings: Settings
+  layers: [Source, Scope | undefined][]
+  fromLayers: <T>(key: string, fallback: T) => { value: T; from: Source }
 }
 
 type Scope = Record<string, unknown>
@@ -249,7 +260,10 @@ export const fromFile = <T>(settings: Pick<Settings, "configured" | "shared">, k
  * its extension. **Flag → environment → config file → built-in default**, decided here and only
  * here; a command that re-derived the order would disagree with the others.
  */
-export const settingsFor = (app: AppIdentity, extension: SettingsExtension = {}) => {
+export const settingsFor = <T extends object = Record<never, never>>(
+  app: AppIdentity,
+  extension: SettingsExtension<T> = {},
+) => {
   const profileEntries = { ...SHARED_PROFILE_ENTRIES, ...extension.profile }
   const defaultsOnly = { ...SHARED_DEFAULTS_ONLY, ...extension.defaults }
   const defaultsEntries = { ...profileEntries, ...defaultsOnly }
@@ -291,7 +305,7 @@ export const settingsFor = (app: AppIdentity, extension: SettingsExtension = {})
 
   const readConfig = (path: string): Config => {
     try {
-      return loadConfigFile(path, schema, () => ({ profiles: {} })) as Config
+      return loadConfigFile(path, extension.schema ?? schema, () => ({ profiles: {} })) as Config
     } catch (error) {
       throw new CliError("configuration_error", error instanceof Error ? error.message : String(error))
     }
@@ -315,7 +329,7 @@ export const settingsFor = (app: AppIdentity, extension: SettingsExtension = {})
     return { value: lock, from: PROFILE_LOCK }
   }
 
-  const resolveSettings = (flags: GlobalFlags = {}, options: ResolveOptions = {}): Settings => {
+  const resolveSettings = (flags: GlobalFlags = {}, options: ResolveOptions = {}): Settings & T => {
     const env = options.env ?? process.env
     const configPath = configPathFor(options)
     try {
@@ -330,7 +344,7 @@ export const settingsFor = (app: AppIdentity, extension: SettingsExtension = {})
         [
           ["first word", flags.profile],
           [PROFILE, given(env[PROFILE])],
-          ["config file", config.defaultProfile],
+          [extension.sourcePaths ? "config file: defaultProfile" : "config file", config.defaultProfile],
         ],
         DEFAULT_PROFILE,
       ),
@@ -345,9 +359,9 @@ export const settingsFor = (app: AppIdentity, extension: SettingsExtension = {})
     // personal account or every bot, everyone. Naming one account says more than naming them all.
     const layers: [Source, Scope | undefined][] = [
       [`config file: ${kind}.profiles.${name}`, section?.profiles?.[name]],
-      ["config file", configured],
+      [extension.sourcePaths ? `config file: profiles.${name}` : "config file", configured],
       [`config file: ${kind}.defaults`, section?.defaults],
-      ["config defaults", shared],
+      [extension.sourcePaths ? "config file: defaults" : "config defaults", shared],
     ]
     const fromLayers = <T>(key: string, fallback: T, only = layers) =>
       first<T>(
@@ -388,11 +402,24 @@ export const settingsFor = (app: AppIdentity, extension: SettingsExtension = {})
       ["flag", permissionOverrides(flags.permission)],
       ...layers.flatMap(([from, scope]): [Source, Record<PermissionKey, Level> | undefined][] => [
         [from, scope?.permissions as Record<PermissionKey, Level> | undefined],
-        ...(from === old.from ? [[old.label, oldLevels] as [Source, Record<PermissionKey, Level>]] : []),
+        ...(from === old.from
+          ? [[extension.sourcePaths ? old.from : old.label, oldLevels] as [Source, Record<PermissionKey, Level>]]
+          : []),
       ]),
     ])
-    const updateCheck = first([["config defaults", shared.updateCheck as boolean | undefined]], true)
-    const skillHint = first([["config defaults", shared.skillHint as boolean | undefined]], true)
+    const updateCheck = first(
+      [
+        [
+          extension.sourcePaths ? "config file: defaults" : "config defaults",
+          shared.updateCheck as boolean | undefined,
+        ],
+      ],
+      true,
+    )
+    const skillHint = first(
+      [[extension.sourcePaths ? "config file: defaults" : "config defaults", shared.skillHint as boolean | undefined]],
+      true,
+    )
     const timeout = first<string | undefined>(
       [
         ["flag", flags.timeout],
@@ -422,7 +449,7 @@ export const settingsFor = (app: AppIdentity, extension: SettingsExtension = {})
       commandTimeoutMs:
         timeout.value === undefined
           ? undefined
-          : parseDuration(timeout.value, timeout.from === TIMEOUT ? TIMEOUT : "--timeout"),
+          : (extension.parseDuration ?? parseDuration)(timeout.value, timeout.from === TIMEOUT ? TIMEOUT : "--timeout"),
       record: record.value,
       keepFailedRuns: record.value || record.from === "default",
       keepRunsForDays: keepRunsForDays.value,
@@ -475,7 +502,8 @@ export const settingsFor = (app: AppIdentity, extension: SettingsExtension = {})
     if (settings.all && flags.page !== undefined) {
       throw new CliError("validation_error", "--all and --page ask for different things; use one or the other")
     }
-    return settings
+    const extra = extension.resolve?.({ flags, settings, layers, fromLayers })
+    return { ...settings, ...extra?.values, sources: { ...settings.sources, ...extra?.sources } } as Settings & T
   }
 
   const configuredProfiles = (options: ResolveOptions = {}): string[] =>
@@ -562,7 +590,7 @@ export const settingsFor = (app: AppIdentity, extension: SettingsExtension = {})
       if (Object.keys(next).length === 0) delete changed[kind]
     }
 
-    const checked = v.safeParse(schema, changed)
+    const checked = v.safeParse(extension.schema ?? schema, changed)
     if (!checked.success) {
       throw new CliError(
         "validation_error",

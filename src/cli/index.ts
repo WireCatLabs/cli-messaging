@@ -283,6 +283,7 @@ export {
   type ResolveOptions,
   type Settings,
   type SettingsExtension,
+  type SettingsExtensionContext,
   type Source,
   settingsFor,
 } from "./settings.js"
