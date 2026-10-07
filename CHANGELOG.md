@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.175.0 — 08.10.2026
+
 ### Added
 
 - `chats requests accept|decline <chat> --all [--link <link>]` answers every pending request, or those by one
