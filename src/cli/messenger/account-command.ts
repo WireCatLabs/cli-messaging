@@ -4,9 +4,10 @@ import { readUpload } from "../../sends/upload.js"
 import { maskedAccount } from "../../services/people.js"
 import { accountSessionsCommand } from "./account-sessions-command.js"
 import { type Messenger, messengerContext } from "./context.js"
+import { privacyCommand } from "./records-command.js"
 
-export const accountCommand = (messenger: Messenger): Command =>
-  new Command("account")
+export const accountCommand = (messenger: Messenger): Command => {
+  const account = new Command("account")
     .description("the logged-in account")
     .addCommand(
       new Command("show")
@@ -49,3 +50,6 @@ export const accountCommand = (messenger: Messenger): Command =>
         }),
     )
     .addCommand(accountSessionsCommand(messenger))
+  if (messenger.privacy === true) account.addCommand(privacyCommand(messenger))
+  return account
+}

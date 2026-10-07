@@ -1016,6 +1016,20 @@
     "account": {
       "in": "all"
     },
+    "account privacy": {
+      "in": [],
+      "planned": {
+        "max": "feat/client-gaps-b",
+        "tg": "tg-cli backlog: server reads (calls, chat media, privacy)"
+      }
+    },
+    "account privacy show": {
+      "in": [],
+      "planned": {
+        "max": "feat/client-gaps-b",
+        "tg": "tg-cli backlog: server reads (calls, chat media, privacy)"
+      }
+    },
     "account sessions": {
       "in": "all"
     },
@@ -1417,6 +1431,20 @@
         "--types": "all"
       }
     },
+    "calls": {
+      "in": [],
+      "planned": {
+        "max": "feat/client-gaps-b",
+        "tg": "tg-cli backlog: server reads (calls, chat media, privacy)"
+      }
+    },
+    "calls list": {
+      "in": [],
+      "planned": {
+        "max": "feat/client-gaps-b",
+        "tg": "tg-cli backlog: server reads (calls, chat media, privacy)"
+      }
+    },
     "chats": {
       "in": "all"
     },
@@ -1631,6 +1659,13 @@
       "options": {
         "--topic": "all",
         "--until": "all"
+      }
+    },
+    "chats media": {
+      "in": [],
+      "planned": {
+        "max": "feat/client-gaps-b",
+        "tg": "tg-cli backlog: server reads (calls, chat media, privacy)"
       }
     },
     "chats members": {

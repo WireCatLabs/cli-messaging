@@ -88,6 +88,10 @@ export interface Messenger {
   folderOrder?: boolean
   /** Whether `chats update --photo` sets a group's photo; no when unset. */
   groupPhoto?: boolean
+  /** Whether `chats media` lists a chat's media from the server; no when unset. */
+  chatMedia?: boolean
+  /** Whether `account privacy show` reads the account's privacy; no when unset. */
+  privacy?: boolean
   /** Whether shared folders can be joined; yes when unset. */
   folderJoin?: boolean
   /** Whether invite links can be listed; yes when unset. */

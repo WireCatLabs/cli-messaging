@@ -6,6 +6,7 @@ import type {
   Account,
   AccountSession,
   AdminRight,
+  CallRecord,
   Chat,
   ChatCard,
   ChatEvents,
@@ -20,6 +21,7 @@ import type {
   InviteLink,
   JoinRequest,
   LinkTarget,
+  MediaKind,
   Member,
   Message,
   MessageEvent,
@@ -29,6 +31,7 @@ import type {
   PersonCard,
   PhoneBookEntry,
   Poll,
+  PrivacySettings,
   ProfileFacts,
   SenderIdentity,
   Topic,
@@ -435,6 +438,15 @@ export interface AccountEditing {
   endOtherSessions(): Promise<AccountSession[]>
 }
 
+/** Reads of the account and its chats that only the messenger's server answers; reading changes nothing. */
+export interface AccountRecords {
+  /** Newest first. */
+  calls(window: { limit: number }): Promise<Page<CallRecord>>
+  privacy(): Promise<PrivacySettings>
+  /** A chat's messages that carry these kinds of attachment, oldest first; `before` is a message id. */
+  media(chatId: Id, window: { kinds: MediaKind[]; limit: number; before?: Id }): Promise<Page<Message>>
+}
+
 /** The owner's address book. A person by id: `GroupAdmin.people` finds them. */
 export interface ContactBook {
   /** Under the name they show, until the owner gives one. */
@@ -541,6 +553,7 @@ export interface MessengerAdapter
     Partial<ChatFolders>,
     Partial<ContactBook>,
     Partial<AccountEditing>,
+    Partial<AccountRecords>,
     Partial<AccountHealth>,
     Partial<OfficialStats> {}
 

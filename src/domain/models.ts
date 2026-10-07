@@ -455,6 +455,44 @@ export interface LinkTarget {
 }
 
 /** Somewhere this account is logged in — a device, a browser, this tool. */
+/** One call in the account's call history. */
+export interface CallRecord {
+  id: Id
+  /** The dialog or group the call belongs to. */
+  chatId: Id | null
+  /** Who started it; the owner for an outgoing call. */
+  callerId: Id | null
+  direction: "incoming" | "outgoing"
+  /** `missed`: not picked up; `declined`: turned down or called off; `answered`: talked. */
+  outcome: "answered" | "missed" | "declined"
+  kind: "audio" | "video"
+  /** ISO 8601. */
+  at: string
+  /** Null when nobody talked. */
+  durationSeconds: number | null
+}
+
+/** Who may do something to the owner: everyone, only contacts, or nobody. */
+export type Audience = "everyone" | "contacts" | "nobody"
+
+/** The account's privacy, as the messenger reports it; a setting it does not have is left out. */
+export interface PrivacySettings {
+  /** Who finds the account by its phone number. */
+  findByPhone?: Audience
+  /** Who sees the phone number. */
+  phoneNumber?: Audience
+  /** Who may call. */
+  calls?: Audience
+  /** Who may add the account to groups and channels. */
+  chatInvites?: Audience
+  /** Whether online status and last seen are hidden. */
+  hideOnline?: boolean
+}
+
+/** Kinds of attachment `chats media` filters by. */
+export const MEDIA_KINDS = ["photo", "video", "file", "audio", "link"] as const
+export type MediaKind = (typeof MEDIA_KINDS)[number]
+
 export interface AccountSession {
   /** The session this tool is using. */
   current: boolean
