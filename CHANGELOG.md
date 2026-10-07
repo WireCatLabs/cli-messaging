@@ -8,6 +8,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## 0.170.0 — 07.10.2026
 
+Released early: MAX and Telegram rankings adoption requires the new top/evidence services and command exports
+
 Released early: tg-cli join requests and join approval are merged here and wait for this release to land
 
 ### Added
