@@ -53,7 +53,6 @@ An import timer does not authorize outbound reminder delivery.
 ## Document extraction
 
 `./documents` exposes `extractText`, `importEngine`, limits and extraction types. Markdown/TXT/CSV/TSV
-use UTF-8 text. PDF and DOCX reuse the optional `unpdf` and `mammoth` engines; XLSX uses optional
-ExcelJS and preserves sheet/cell addresses. PDF results expose page spans. Missing engines,
+use UTF-8 text. PDF and DOCX reuse the optional `unpdf` and `mammoth` engines; XLSX and other modern office formats use the existing bounded built-in readers and preserve sheet/cell addresses. PDF results expose page spans. Missing engines,
 unreadable files, scans requiring an agent, unsupported formats and oversized inputs are distinct.
 Legacy DOC/XLS and automatic OCR are not advertised as supported formats.
