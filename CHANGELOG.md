@@ -6,6 +6,13 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Fixed
+
+- Saved ranking selections and search ASTs retain nested false values, including exclusive
+  date boundaries, instead of failing validation when replayed.
+- `Messenger.folderOrder` / `folderJoin` can disable unavailable operations consistently in
+  CLI and MCP discovery. Ranking guide examples use the supported `--json` flag.
+
 ## 0.172.0 — 07.10.2026
 
 ### Added

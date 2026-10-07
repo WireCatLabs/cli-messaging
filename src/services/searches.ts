@@ -63,15 +63,15 @@ const nameOf = (value: string): string => {
   return name
 }
 
-const canonical = (value: unknown): unknown =>
+const canonical = (value: unknown, nested = false): unknown =>
   Array.isArray(value)
-    ? value.map(canonical)
+    ? value.map((one) => canonical(one, true))
     : value !== null && typeof value === "object"
       ? Object.fromEntries(
           Object.entries(value)
-            .filter(([, one]) => one !== undefined && one !== false)
+            .filter(([, one]) => one !== undefined && (nested || one !== false))
             .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
-            .map(([key, one]) => [key, canonical(one)]),
+            .map(([key, one]) => [key, canonical(one, true)]),
         )
       : value
 
