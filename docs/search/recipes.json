@@ -97,6 +97,7 @@
     { "title": "Сообщение только с файлом", "query": "has:file", "ids": ["105", "108"] },
     { "title": "Файл по имени", "query": "filename:*.pdf", "ids": ["105", "108"] },
     { "title": "Имя файла без учёта регистра и ё", "query": "filename:отчет.pdf", "ids": ["108"] },
+    { "title": "Regex по имени файла", "query": "filename:/Отчёт\\..*/", "ids": ["108"] },
     { "title": "Файл больше 1 МБ", "query": "size>1MB", "ids": ["105"] },
     { "title": "Ссылка на сайт", "query": "has:link AND \"example.org\"", "ids": ["107"] },
     { "title": "Метка на сообщении или авторе", "query": "tag:work invoice", "ids": ["102", "106"] },

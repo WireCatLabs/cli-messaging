@@ -166,6 +166,25 @@ describe.each(["max", "telegram"])("strict store profile (%s)", (provider) => {
     expect(ids(await run(store, account, "has:file AND NOT filename:*.pdf"))).toEqual([1])
     await expect(run(store, account, "size:big")).rejects.toThrow("invalid_size")
   })
+  it("folds a file-name regex like the names it is compared with", async () => {
+    const store = await open()
+    await store.saveChats(account, [chat("1")])
+    await store.saveMessages(
+      account,
+      "1",
+      [
+        message("1", "1", "", { attachments: [{ kind: "file", name: "invoice.pdf" }] }),
+        message("2", "1", "", { attachments: [{ kind: "file", name: "Счет.pdf" }] }),
+      ],
+      { via: "history" },
+    )
+    expect(ids(await run(store, account, "filename:/Invoice.*/"))).toEqual([1])
+    expect(ids(await run(store, account, "filename:/счёт.*/"))).toEqual([2])
+    expect(ids(await run(store, account, "filename:/[А-Я]+\\.PDF/"))).toEqual([2])
+    expect(ids(await run(store, account, "filename:СЧЁТ.pdf"))).toEqual([2])
+    expect(ids(await run(store, account, "filename:INVOICE*"))).toEqual([1])
+    await expect(run(store, account, "filename:/[ﬁ]/")).rejects.toThrow("unsupported_regex")
+  })
   it("counts a link preview without a typed URL as a link", async () => {
     const store = await open()
     await store.saveChats(account, [chat("1")])
