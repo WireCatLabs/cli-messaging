@@ -1,9 +1,10 @@
 # Message and author rankings: command contract
 
-Status: the owner approved the ranking plan and the `stats → resource → view` hierarchy.
-This PR records its command options before implementation. The proposed evidence views
-and `--selection` / `--component` names require the naming review specified by
-[STANDARD.md](../dev/STANDARD.md). None of these planned commands is implemented by this PR.
+Status 2026-10-07: the owner approved the ranking plan, the `stats → resource → view` hierarchy,
+and the exact evidence views/options in naming PR671. The naming contract is merged.
+Implementation is in progress, starting with the shared compiled SQL selection. The command
+paths remain planned until their runtime implementation is shipped. Further approval of these
+names is not required.
 
 ## Surface
 
@@ -11,8 +12,8 @@ and `--selection` / `--component` names require the naming review specified by
 |---|---|
 | `stats messages top [query...]` | Rank distinct matching stored messages. |
 | `stats contacts top [query...]` | Rank the human authors of matching stored messages, separately per provider/account/identity. |
-| `stats messages evidence <message>` | Proposed: page through the messages contributing to one message's metric. |
-| `stats contacts evidence <person>` | Proposed: page through the messages or question/answer pairs contributing to one author's metric. |
+| `stats messages evidence <message>` | page through the messages contributing to one message's metric. |
+| `stats contacts evidence <person>` | page through the messages or question/answer pairs contributing to one author's metric. |
 
 All are local reads. `top` optionally accepts the existing guarded `--sync-first` preparation;
 evidence never fetches. No ranking sends, marks read or moderates. Ordinary message search,
@@ -40,7 +41,7 @@ weight keys and target-inappropriate options fail. A score preset with explicit 
 exactly those weights; a zero weight removes that component's completeness requirement.
 No custom score component accepts answer-time in v1.
 
-### Evidence options proposed for review
+### Approved evidence options
 
 Both evidence views require `--selection <json>` and `--component <name>`, and accept
 `--limit <n>` (1–100, default 20) and `--cursor <cursor>`. Message arguments are canonical
@@ -67,7 +68,7 @@ fails with a restart instruction instead of silently mixing snapshots. Each resp
 total, included, hasMore and nextCursor. Byte limits retain complete rows and return continuation;
 they never silently omit evidence. Raw evidence is not logged or saved as search history.
 
-Example proposed continuation, with synthetic ids and abbreviated selection:
+Example continuation, with synthetic ids and abbreviated selection:
 
 ```text
 stats messages evidence msg:tg/fixture/channel/101 --component replies --selection '{...}' --limit 20
@@ -148,7 +149,7 @@ ANDs an exact sender constraint with the entire original Boolean AST and retains
 
 ## Implementation and acceptance
 
-1. Merge the naming contract before command code; evidence wording awaits owner review.
+1. Naming contract PR671 is merged and approved before command code.
 2. Extract a shared compiled selection from the Lucene matcher. Exact queries stay SQL CTEs;
    detector candidates stay bounded and budget exhaustion is an incomplete error, never a partial
    leaderboard. No unbounded queryMessagePks array or account-wide body materialization.

@@ -11,6 +11,7 @@ import { listRuns, readEvents, recorded, settingsFor } from "../src/cli/index.js
 import { formatLocator, parseLocator, renderMessages } from "../src/index.js"
 import { migrate, openCache, openStore } from "../src/store/index.js"
 import { normalize } from "../src/store/normalize.js"
+import { withQuerySelection } from "../src/store/sqlite/lucene.js"
 import { openSqlite } from "../src/store/sqlite/open.js"
 import { accounts } from "../src/store/sqlite/schema.js"
 
@@ -83,6 +84,31 @@ const sqlite = await openSqlite(join(mkdtempSync(join(tmpdir(), "cli-messaging-s
 migrate(sqlite.database)
 sqlite.database.prepare("INSERT INTO accounts (provider, native_id, created_at) VALUES ('telegram', '1', 0)").run()
 check("Drizzle reads the row the seam wrote", (await sqlite.orm.select().from(accounts))[0]?.nativeId === "1")
+sqlite.database.exec(`
+  INSERT INTO chats (pk,account_pk,native_id,kind,updated_at) VALUES (1,1,'fixture','group',0);
+  INSERT INTO messages (chat_pk,account_pk,native_id,sent_at,text,ingested_at,ingested_via)
+    VALUES (1,1,'fixture',0,'synthetic',0,'history');
+`)
+check(
+  "compiled selection aggregates stored rows in one read transaction",
+  withQuerySelection(
+    { ...sqlite, now: () => 0 },
+    {
+      root: {
+        kind: "predicate",
+        field: "date",
+        operator: "range",
+        value: "*",
+        span: { start: 0, end: 0 },
+        resolution: { date: { lowerInclusive: true, upperInclusive: true } },
+      },
+      accounts: [{ provider: "telegram", account: "1" }],
+      limit: 1,
+    },
+    (selection) =>
+      sqlite.database.prepare(`SELECT count(*) AS total FROM (${selection.sql})`).get(...selection.params)?.total,
+  ) === 1,
+)
 sqlite.database.close()
 const tasksFile = join(mkdtempSync(join(tmpdir(), "cli-messaging-smoke-")), "messages.db")
 const withTasks = await openStore({ path: tasksFile })
