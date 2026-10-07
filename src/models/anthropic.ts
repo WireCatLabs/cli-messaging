@@ -11,6 +11,7 @@ const options = v.strictObject({
 })
 
 export const anthropic: ModelAdapter = {
+  images: true,
   baseUrl: "https://api.anthropic.com",
   validate: (given) => checkedOptions("anthropic", options, given),
   complete: async (target, request, checked, apiKey, fetcher) => {
@@ -28,7 +29,20 @@ export const anthropic: ModelAdapter = {
         ...checked,
         model: target.model,
         system: systemFor(request),
-        messages: messagesFor(request),
+        messages: [
+          ...messagesFor(request),
+          ...(request.images === undefined
+            ? []
+            : [
+                {
+                  role: "user" as const,
+                  content: request.images.map((image) => ({
+                    type: "image" as const,
+                    source: { type: "base64" as const, media_type: image.mimeType, data: image.data },
+                  })),
+                },
+              ]),
+        ],
         max_tokens: request.maxTokens,
       })
       .finalMessage()

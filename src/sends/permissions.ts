@@ -343,6 +343,7 @@ export const readKeysForCommand = (path: readonly string[]): PermissionKey[] => 
   if (path[0] === "bot") return readKeysForCommand(path.slice(1)).map((key) => `bot.${key}`)
   const key = keyForCommand(path)
   if (!key) return []
+  if (path[0] === "attachments" && path[1] === "extract") return [key, "messages"]
   if (path[0] === "store" && path[1] === "gaps" && path[2] === "repair") return [key, "messages"]
   if (path[0] !== "stats") return [key]
   const resource = path[1] === "charts" ? "chats" : path[1]

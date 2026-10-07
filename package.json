@@ -111,6 +111,7 @@
     "@resvg/resvg-js": "2.6.2",
     "@valibot/to-json-schema": "1.8.0",
     "echarts": "6.1.0",
+    "image-size": "2.0.4",
     "liquidjs": "10.30.0",
     "lossless-json": "4.3.0",
     "ogg-opus-decoder": "1.7.5",
@@ -125,6 +126,7 @@
     "@biomejs/biome": "^2.3.14",
     "@leemour/cli-core": "0.17.0",
     "@modelcontextprotocol/client": "2.1.0",
+    "@napi-rs/canvas": "1.0.10",
     "@types/node": "^22.20.4",
     "@types/pngjs": "6.0.5",
     "@vitest/coverage-v8": "^5.0.2",
@@ -147,6 +149,7 @@
     "access": "public"
   },
   "peerDependencies": {
+    "@napi-rs/canvas": ">=0.1.69 <2",
     "@leemour/cli-core": ">=0.16.0 <0.18.0",
     "commander": ">=15",
     "mammoth": ">=1.8.0 <2",
@@ -156,6 +159,9 @@
     "cli-messaging-parity": "dist/parity/bin.js"
   },
   "peerDependenciesMeta": {
+    "@napi-rs/canvas": {
+      "optional": true
+    },
     "mammoth": {
       "optional": true
     },

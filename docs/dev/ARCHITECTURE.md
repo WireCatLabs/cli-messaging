@@ -41,7 +41,7 @@ conformance or imply that planned command paths are already implemented.
 | `./sends` | `src/sends/` | the send guard: read-only, the allow-list, the recipient list, the hourly limit, the journal (never the text), the send id |
 | `./speech` | `src/speech/` | the pinned catalogue, shared model directories and verified installer, without loading the recognizer |
 | `./charts` | `src/charts/` | neutral chart data and a replaceable renderer interface; SVG rendering loads ECharts only on demand; a separate lazy PNG encoder uses resvg and bundled fonts |
-| `./models` | `src/models/` | purpose-specific text generation, OpenAI-compatible and Anthropic adapters, strict adapter options, injected key and consent resolvers; no configured provider means no call |
+| `./models` | `src/models/` | purpose-specific text generation with typed image inputs, OpenAI-compatible and Anthropic adapters, strict options, injected key/consent resolvers; no configured provider means no call |
 | `./services` | `src/services/` | the use cases, once each, that commands and MCP tools call — see [Services](#services) |
 | `./background` | `src/background/` | what any background process needs and no messenger: the lock per app and profile, whether a PID is alive and ours, the machine seam tests replace, systemd and launchd units — `serve` and `server` are built on it, each CLI's server stays its own (NEED-492 C) |
 | `./cli` | `src/cli/`, `src/mcp/` | the command skeleton, the shared commands and the MCP server |
@@ -157,6 +157,18 @@ foreign key, so the purges of older builds still work; triggers erase the text w
 or deleted, or its attachment deleted (NEED-393 A, tested against 0.49.0). `store reindex` rebuilds the index.
 `attachments list --needs-text` and `attachments text set` (MCP `attachments_list`, `attachments_text_set`) are
 how an agent finds a scan, reads it itself and writes the text back, all through `services.attachments`.
+
+Agents perform self-OCR by default. Explicit `attachments extract --ocr` selects the
+`models.ocr` gateway for bulk extraction; without it no model is called. Its typed
+image parts are local validated base64, never a URL to fetch. Scanned PDFs use the
+optional `unpdf`/`@napi-rs/canvas` renderer, at most20pages and bounded image bytes/
+pixels; mixed PDFs keep text-layer pages local. The worker caps concurrency1–8,
+keeps page order, and writes complete text atomically to the same table/index.
+Extractor identity records OCR version/provider/model/endpoint hash; cache reuse
+requires that identity plus the file hash. Failed or cancelled OCR never overwrites
+good text. A provider rate limit stops later requests in the run, without retries.
+Needs-agent items include localPath; it is a filesystem reference, not remote
+artifact transport. [OCR contract](../plans/2026-10-07-attachment-ocr.md).
 
 **Searches** (version 17) are one table, `searches`: every successful `messages search` and `stats messages show`
 run records its parameters as canonical JSON (`searchRecordOf`, `src/services/searches.ts`) — never a

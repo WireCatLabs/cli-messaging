@@ -603,7 +603,7 @@ is published on npm like this package, once backfill and search exist; `tg updat
 
 ### Attachment OCR — claimed2026-10-07
 
-🚧 `feat/attachment-ocr`: owner approved agent self-OCR by default and explicitly
+🚧 `feat/attachment-ocr-runtime` (naming merged PR677): owner approved agent self-OCR by default and explicitly
 selected common-gateway API OCR for bulk speed. [Contract](2026-10-07-attachment-ocr.md)
 comes first; implementation follows. Reuse attachment text/index and model gateway;
 no bundled OCR model or automatic API fallback. Both consumers adopt after release.

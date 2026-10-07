@@ -1,11 +1,11 @@
 import { CliError } from "@leemour/cli-core"
 import { endpoint } from "./endpoint.js"
 import { openai } from "./openai.js"
-import type { ModelAdapter, ModelAnswer, ModelRequest, ModelTarget } from "./types.js"
+import { type ModelAdapter, type ModelAnswer, type ModelRequest, type ModelTarget, validateImages } from "./types.js"
 
 export type { ModelSettings } from "./settings.js"
 export { modelTarget } from "./settings.js"
-export type { ModelAdapter, ModelAnswer, ModelRequest, ModelTarget } from "./types.js"
+export type { ModelAdapter, ModelAnswer, ModelImage, ModelRequest, ModelTarget } from "./types.js"
 
 export interface GatewayDeps {
   resolve: (purpose: string) => ModelTarget | undefined
@@ -32,10 +32,13 @@ export const modelGateway = (deps: GatewayDeps) => ({
       typeof request.prompt !== "string"
     )
       throw new CliError("validation_error", "a model request needs a purpose, prompt and positive whole maxTokens")
+    validateImages(request.images)
     let adapter = deps.adapters?.[target.provider]
     if (!adapter && target.provider === "openai") adapter = openai
     if (!adapter && target.provider === "anthropic") adapter = (await import("./anthropic.js")).anthropic
     if (!adapter) throw new CliError("validation_error", `no model adapter for ${target.provider}`)
+    if (request.images !== undefined && adapter.images !== true)
+      throw new CliError("validation_error", "the model adapter does not support image inputs")
     const options = adapter.validate(request.options ?? {})
     const baseUrl = target.baseUrl ?? adapter.baseUrl
     if (!target.model.trim() || !endpoint(baseUrl))
@@ -48,12 +51,15 @@ export const modelGateway = (deps: GatewayDeps) => ({
     const apiKey = await deps.key?.(target.provider, target)
     if (deps.signal?.aborted) throw new CliError("cancelled", "model request cancelled")
     const fetcher = deps.fetch ?? fetch
-    const cancellable: typeof fetch = (input, init) => {
+    let limited = false
+    const cancellable: typeof fetch = async (input, init) => {
       const signal = init?.signal ?? (input instanceof Request ? input.signal : undefined)
-      return fetcher(input, {
+      const response = await fetcher(input, {
         ...init,
         signal: deps.signal ? AbortSignal.any([deps.signal, ...(signal ? [signal] : [])]) : signal,
       })
+      if (response.status === 429) limited = true
+      return response
     }
     try {
       const answer = await adapter.complete({ ...target, baseUrl }, request, options, apiKey, cancellable)
@@ -62,6 +68,8 @@ export const modelGateway = (deps: GatewayDeps) => ({
         throw new Error("incomplete")
       return { ...answer, provider: target.provider, model: target.model }
     } catch {
+      if (limited)
+        throw new CliError("rate_limited", `${request.purpose} provider rate limit reached; no result was stored`)
       throw new CliError(
         "invalid_response",
         `${request.purpose} provider failed or returned an incomplete response; no result was stored`,

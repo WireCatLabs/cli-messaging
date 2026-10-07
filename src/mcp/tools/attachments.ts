@@ -1,6 +1,7 @@
 import { CliError } from "@leemour/cli-core"
 import * as v from "valibot"
 import { MAX_TEXT_CHARS } from "../../attachments/extract.js"
+import { gatewayOcr } from "../../attachments/gateway-ocr.js"
 import type { Messenger } from "../../cli/messenger/context.js"
 import { levelFor } from "../../sends/permissions.js"
 import { onlineDeps } from "../../services/deps.js"
@@ -16,12 +17,14 @@ export const attachmentsTools = (messenger: Messenger): Record<string, AnyTool> 
     attachments_extract: tool({
       title: "Extract text from saved files",
       description:
-        "Keep plain text, DOCX or PDF text layers in the local content index; returns counts and statuses, never text. from_dir needs chat. Only explicit download connects and needs output_dir. Pass cursor to continue a bounded scan.",
+        "Keep file text in the local content index. Agents normally transcribe scans themselves and use attachments_text_set. Explicit ocr calls models.ocr for bulk images/scanned PDFs; concurrency1–8 (default4). from_dir needs chat; download needs output_dir. Returns statuses/paths/cursor, never text.",
       key: "attachments.extract",
       input: v.object({
         chat: v.optional(chatOf(messenger)),
         from_dir: v.optional(v.pipe(v.string(), v.minLength(1))),
         download: v.optional(v.boolean()),
+        ocr: v.optional(v.boolean()),
+        concurrency: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(8))),
         output_dir: v.optional(v.pipe(v.string(), v.minLength(1))),
         limit: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(500))),
         cursor: v.optional(v.pipe(v.string(), v.regex(/^[1-9][0-9]*$/))),
@@ -41,6 +44,18 @@ export const attachmentsTools = (messenger: Messenger): Record<string, AnyTool> 
           (args.download && levelFor(defaults.settings.permissions ?? {}, "messages.download").level === "deny")
         )
           throw new CliError("permission_error", "this profile does not allow reading these message files")
+        if (args.concurrency !== undefined && !args.ocr)
+          throw new CliError("validation_error", "concurrency requires explicit OCR")
+        if (args.ocr && defaults.settings.offline) throw new CliError("validation_error", "API OCR cannot run offline")
+        const pipeline = args.ocr
+          ? gatewayOcr({
+              app: messenger.app,
+              settings: defaults.settings,
+              env: defaults.env,
+              enabled: true,
+              ...(defaults.signal === undefined ? {} : { signal: defaults.signal }),
+            })
+          : undefined
         return servicesFor(storedDeps(messenger, store, account, defaults.guard)).attachments.extract({
           ...(args.chat === undefined ? {} : { chat: args.chat }),
           ...(args.from_dir === undefined ? {} : { fromDir: args.from_dir }),
@@ -48,6 +63,7 @@ export const attachmentsTools = (messenger: Messenger): Record<string, AnyTool> 
           limit: args.limit ?? 100,
           scanLimit: 500,
           signal: defaults.signal,
+          ...(pipeline === undefined ? {} : { ocr: pipeline, concurrency: args.concurrency ?? 4 }),
           ...(args.download
             ? {
                 download: async (chatId: string, messageId: string) => {

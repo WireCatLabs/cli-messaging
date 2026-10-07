@@ -20,7 +20,13 @@ export interface FileAttachment {
   size: number | null
   localPath: string | null
   /** What an earlier run left, when it read this file. */
-  read: { origin: TextOrigin; bytes: number | null; error: string | null; contentSha256?: string | null } | null
+  read: {
+    origin: TextOrigin
+    bytes: number | null
+    error: string | null
+    contentSha256?: string | null
+    extractor?: string
+  } | null
 }
 
 export interface AttachmentTextEntry {
@@ -46,7 +52,7 @@ export const fileAttachments = (
   database
     .prepare(
       `SELECT att.pk, c.native_id AS chat_id, m.native_id AS message_id, att.position, att.kind, att.name, att.mime,
-         att.size, att.local_path, t.origin, t.bytes AS read_bytes, t.error, t.content_sha256
+         att.size, att.local_path, t.origin, t.bytes AS read_bytes, t.error, t.content_sha256, t.extractor
        FROM attachments att
        JOIN messages m ON m.pk = att.message_pk
        JOIN chats c ON c.pk = m.chat_pk
@@ -81,6 +87,7 @@ export const fileAttachments = (
               bytes: row.read_bytes == null ? null : Number(row.read_bytes),
               contentSha256: row.content_sha256 == null ? null : String(row.content_sha256),
               error: row.error == null ? null : String(row.error),
+              extractor: String(row.extractor),
             },
     }))
 

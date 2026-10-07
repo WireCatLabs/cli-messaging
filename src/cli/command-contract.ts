@@ -216,7 +216,7 @@ export const commandContract = (command: Command) => {
       mutation: writes ? "declared-write" : "no-write-declared",
       local: meta.local === true ? "declared" : "possible",
       conditional: [...options.keys()].filter((name) =>
-        ["mark-read", "sync-first", "output", "encrypt"].includes(name),
+        ["mark-read", "sync-first", "output", "encrypt", "ocr"].includes(name),
       ),
     },
     permission: permission ?? null,

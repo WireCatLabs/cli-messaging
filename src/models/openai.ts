@@ -13,6 +13,7 @@ const options = v.strictObject({
 })
 
 export const openai: ModelAdapter = {
+  images: true,
   baseUrl: "https://api.openai.com/v1",
   validate: (given) => checkedOptions("openai", options, given),
   complete: async (target, request, checked, apiKey, fetcher) => {
@@ -22,7 +23,21 @@ export const openai: ModelAdapter = {
       body: JSON.stringify({
         ...checked,
         model: target.model,
-        messages: [{ role: "system", content: systemFor(request) }, ...messagesFor(request)],
+        messages: [
+          { role: "system", content: systemFor(request) },
+          ...messagesFor(request),
+          ...(request.images === undefined
+            ? []
+            : [
+                {
+                  role: "user",
+                  content: request.images.map((image) => ({
+                    type: "image_url",
+                    image_url: { url: `data:${image.mimeType};base64,${image.data}`, detail: "high" },
+                  })),
+                },
+              ]),
+        ],
         ...(new URL(target.baseUrl).hostname === "api.openai.com"
           ? { max_completion_tokens: request.maxTokens }
           : { max_tokens: request.maxTokens }),

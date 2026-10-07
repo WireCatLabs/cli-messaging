@@ -60,15 +60,23 @@ export const docx = (paragraphs: string[]): Uint8Array =>
   })
 
 /** A one-page PDF; with `text`, a text layer in Helvetica (Latin only), without it a page with nothing on it. */
-export const pdf = (text?: string): Uint8Array => {
-  const stream = text === undefined ? "" : `BT /F1 12 Tf 72 712 Td (${text.replace(/[()\\]/g, "\\$&")}) Tj ET`
+export const pdf = (text?: string, image = false): Uint8Array => {
+  const stream = image
+    ? "q 144 0 0 144 72 500 cm /Im1 Do Q"
+    : text === undefined
+      ? ""
+      : `BT /F1 12 Tf 72 712 Td (${text.replace(/[()\\]/g, "\\$&")}) Tj ET`
   const objects = [
     "<< /Type /Catalog /Pages 2 0 R >>",
     "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
-    "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>",
+    `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> ${image ? "/XObject << /Im1 6 0 R >>" : ""} >> >>`,
     `<< /Length ${stream.length} >>\nstream\n${stream}\nendstream`,
     "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
   ]
+  if (image)
+    objects.push(
+      "<< /Type /XObject /Subtype /Image /Width 1 /Height 1 /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /ASCIIHexDecode /Length 7 >>\nstream\nff0000>\nendstream",
+    )
   let body = "%PDF-1.4\n"
   const offsets: number[] = []
   objects.forEach((object, index) => {

@@ -3,7 +3,8 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { Readable } from "node:stream"
 import { captureStreams } from "@leemour/cli-core"
-import { describe, expect, it } from "vitest"
+import { PNG } from "pngjs"
+import { describe, expect, it, vi } from "vitest"
 import type { LoadEngine } from "../../attachments/extract.js"
 import { importEngine } from "../../attachments/extract.js"
 import type { Attachment, Chat, Message } from "../../domain/models.js"
@@ -157,6 +158,126 @@ const hits = async (call: (...argv: string[]) => Promise<{ stdout: string }>, qu
   )
 
 describe("attachments extract", () => {
+  it("aborts a bulk OCR request at the command deadline and leaves no indexed answer", async () => {
+    const { call, files } = await setup({
+      config: {
+        defaults: { models: { ocr: { provider: "openai", model: "fixture", baseUrl: "https://example.test/v1" } } },
+      },
+    })
+    writeFileSync(join(files, "5-1.jpg"), PNG.sync.write(new PNG({ width: 2, height: 2 })))
+    let signal: AbortSignal | null | undefined
+    let started = () => {}
+    const began = new Promise<void>((resolve) => {
+      started = resolve
+    })
+    const fetcher = vi.spyOn(globalThis, "fetch").mockImplementation(
+      async (_url, init) =>
+        new Promise<Response>((_resolve, reject) => {
+          signal = init?.signal
+          signal?.addEventListener("abort", () => reject(new Error("fixture abort")), { once: true })
+          started()
+        }),
+    )
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] })
+    try {
+      const pending = call(
+        "attachments",
+        "extract",
+        "--ocr",
+        "--concurrency",
+        "1",
+        "--limit",
+        "1",
+        "--timeout",
+        "100ms",
+        "--json",
+      )
+      await Promise.race([
+        began,
+        pending.then(() => {
+          throw new Error("OCR command ended before starting the request")
+        }),
+      ])
+      await vi.advanceTimersByTimeAsync(100)
+      const result = await pending
+      expect(result.code).toBe(9)
+      expect(signal?.aborted).toBe(true)
+      expect(fetcher).toHaveBeenCalledTimes(1)
+      expect(result.stdout).toBe("")
+      vi.useRealTimers()
+      expect(await hits(call, "content:lateinvoice")).toEqual([])
+    } finally {
+      vi.useRealTimers()
+      fetcher.mockRestore()
+    }
+  })
+  it("validates OCR selection and offline/concurrency conflicts before any API call", async () => {
+    const { call } = await setup()
+    const fetcher = vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("no network allowed"))
+    try {
+      for (const flags of [
+        ["--concurrency", "2"],
+        ["--ocr", "--concurrency", "9"],
+        ["--ocr", "--limit", "501"],
+        ["--ocr", "--offline"],
+      ]) {
+        const result = await call("attachments", "extract", ...flags, "--json")
+        expect(result.code).toBe(2)
+        expect(result.stdout).toBe("")
+      }
+      const unconfigured = await call("attachments", "extract", "--ocr", "--json")
+      expect(unconfigured.code).not.toBe(0)
+      expect(unconfigured.stderr).toContain("models.ocr")
+      expect(fetcher).not.toHaveBeenCalled()
+      const denied = await setup({
+        config: {
+          defaults: {
+            permissions: { messages: "deny", "attachments.extract": "allow" },
+            models: { ocr: { provider: "openai", model: "fixture" } },
+          },
+        },
+      })
+      expect((await denied.call("attachments", "extract", "--ocr", "--json")).code).not.toBe(0)
+      expect(fetcher).not.toHaveBeenCalled()
+    } finally {
+      fetcher.mockRestore()
+    }
+  })
+
+  it("executes the selected OCR gateway from CLI and indexes its answer without printing it", async () => {
+    const { call, env, files } = await setup({
+      config: {
+        defaults: {
+          models: { ocr: { provider: "openai", model: "vision-fixture", baseUrl: "https://example.test/v1" } },
+        },
+      },
+    })
+    const store = await openStore({ path: env.MESSAGING_STORE })
+    await store.saveMessages(OWNER, "7", [message("8", [{ kind: "photo", name: "8.png" }])], { via: "history" })
+    const path = join(files, "8.png")
+    writeFileSync(path, PNG.sync.write(new PNG({ width: 2, height: 2 })))
+    await store.keepDownloads(OWNER, "7", "8", [{ kind: "photo", name: "8.png", path }])
+    await store.close()
+    const fetcher = vi.spyOn(globalThis, "fetch").mockImplementation(async (_url, init) => {
+      const body = JSON.parse(String(init?.body))
+      expect(body.messages.at(-1).content[0].type).toBe("image_url")
+      expect(body.model).toBe("vision-fixture")
+      return Response.json({
+        choices: [{ finish_reason: "stop", message: { content: "bulkocrinvoice 42" } }],
+        usage: { total_tokens: 12 },
+      })
+    })
+    try {
+      const result = await call("attachments", "extract", "--ocr", "--concurrency", "2", "--limit", "1", "--json")
+      expect(result.code).toBe(0)
+      expect(json(result)).toMatchObject({ extracted: 1, items: [{ locator: "msg:chat/500/7/8", ocrPages: 1 }] })
+      expect(result.stdout + result.stderr).not.toContain("bulkocrinvoice")
+      expect(await hits(call, "content:bulkocrinvoice")).toEqual(["8"])
+      expect(fetcher).toHaveBeenCalledTimes(1)
+    } finally {
+      fetcher.mockRestore()
+    }
+  })
   it("**reads every saved file's text layer into the store, answering what it did and never the text**", async () => {
     const { call } = await setup()
     const done = await call("attachments", "extract", "--json")
@@ -181,6 +302,7 @@ describe("attachments extract", () => {
         name: "5-1.jpg",
         status: "needs-agent",
         extractor: "none",
+        localPath: expect.stringMatching(/files[/\\]5-1\.jpg$/),
       },
       expect.objectContaining({
         locator: "msg:chat/500/7/4",

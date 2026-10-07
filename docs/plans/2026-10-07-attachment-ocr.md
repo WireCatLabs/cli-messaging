@@ -1,7 +1,8 @@
 # Attachment OCR contract
 
-Owner approved2026-10-07. Claimed by `feat/attachment-ocr`; naming/agent handoff
-first, runtime after this contract merges. Both MAX and Telegram use shared code.
+Owner approved2026-10-07. Naming contract merged in PR677; default-agent instructions
+merged in MAX449/TG323. Runtime implemented by `feat/attachment-ocr-runtime`, with
+synthetic gateway/renderer/SQLite tests; publication and consumer adoption follow.
 
 ## Default agent path
 
@@ -20,6 +21,9 @@ DOCX and useful PDF text layers remain local first. `--concurrency <n>` reuses t
 existing meaning: simultaneous remote requests, default4, accepted1–8; without
 `--ocr`, this option is rejected. Neither flag is added automatically by agents.
 Existing chat/from-dir/download/output-dir/limit/cursor scope remains applicable.
+API runs default to100files and500candidates per scan; --limit accepts1–500.
+Use cursor for continuation; failed files remain unindexed and can be retried on
+a later pass, while completed files reuse their hash/target cache.
 `--offline --ocr` is rejected before downloads or model calls.
 
 MCP execution uses the same command service, with `ocr` and `concurrency` inputs;
@@ -57,6 +61,9 @@ bounded page rendering, concurrent requests, ordering, resume/hash/target invali
 agent text protection, failure preserving good text and account isolation. Both
 agent write-back and API OCR must yield content: search hits in real SQLite.
 No paid API evaluation or real-account request is needed for ordinary tests.
+Image/PDF quality is not measured by these synthetic tests. JSON items retain
+attachment order; JSONL reports file completions as they arrive. On provider429,
+later API calls in that run stop without retry; per-file errors are sanitized.
 
 References checked2026-10-07: [OpenAI image inputs](https://developers.openai.com/api/docs/guides/images-vision),
 [Anthropic vision](https://platform.claude.com/docs/en/build-with-claude/vision),
