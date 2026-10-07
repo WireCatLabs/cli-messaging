@@ -144,7 +144,7 @@ export const messagesWindow = (
 export const messagePage = (
   context: StoreContext,
   chatKey: number,
-  { limit, before: anchorId, since }: { limit: number; before?: Id; since?: string },
+  { limit, before: anchorId, since, threadId }: { limit: number; before?: Id; since?: string; threadId?: Id },
 ): Page<Message> => {
   const anchor =
     anchorId === undefined
@@ -163,6 +163,7 @@ export const messagePage = (
         chatKey,
         anchor ? before(anchor.sentAt, anchor.pk) : undefined,
         since === undefined ? undefined : gte(messages.sentAt, toMs(since) as number),
+        threadId === undefined ? undefined : eq(messages.threadNativeId, threadId),
       ),
     )
     .orderBy(...newestFirst)

@@ -46,6 +46,10 @@ Released early: tg-cli join requests and join approval are merged here and wait 
   Offered where `Messenger.html` is set; the adapter implements the new optional `HtmlFormatting.formatHtml`.
 - `messages send --filename <name>` gives the `--file` the name others see, instead of its name on disk; MCP
   `messages_send` takes `filename`. Offered where `Messenger.mediaOptions` lists the new `fileName`.
+- `messages list --topic <id>` reads one forum topic, back from its newest message or `--before-id`; MCP
+  `messages_list` takes `topic`. Online it uses the new optional `TopicHistory.topicHistory`; `--offline` and a
+  store-mode messenger filter the store by the message's topic, and `Store.messages` takes `threadId`. The General
+  topic (`1`) is refused: its messages carry no topic id. Not with `--after-*`, `--before-time` or `--mark-read`.
 - `chats requests list <chat>` shows who asked to join a group or channel that needs an admin's approval, newest
   first, and `chats requests accept|decline <chat> <person>` answers one; MCP `chats_requests_list`,
   `chats_requests_accept` and `chats_requests_decline` do the same. Answers go through the guard as

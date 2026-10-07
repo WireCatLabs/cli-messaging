@@ -334,6 +334,19 @@ describe("the messages service's writes", () => {
     expect(send).toHaveBeenCalledOnce()
   })
 
+  it("reads one forum topic through the adapter, and refuses General, a time or reading forward", async () => {
+    const topicHistory = vi.fn(async () => ({ items: [], hasMore: false }))
+    const service = messagesService(onlineDeps(messenger, { ...writer, topicHistory }, guarding(false)))
+
+    await service.list("Book", { limit: 5, before: "30", threadId: " 12 " })
+    expect(topicHistory).toHaveBeenCalledWith("Book", "12", { limit: 5, before: "30" })
+    await expect(service.list("Book", { limit: 5, threadId: "1" })).rejects.toThrow("General")
+    await expect(service.list("Book", { limit: 5, threadId: "12", after: { id: "3" } })).rejects.toThrow("--before-id")
+    await expect(service.list("Book", { limit: 5, threadId: "12", beforeTime: 1 })).rejects.toThrow("--before-id")
+    const without = messagesService(onlineDeps(messenger, writer, guarding(false)))
+    await expect(without.list("Book", { limit: 5, threadId: "12" })).rejects.toThrow("read one forum topic")
+  })
+
   it("refuses invalid formatting before sending an attachment", async () => {
     const provider = {
       ...writer,
