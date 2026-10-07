@@ -18,10 +18,11 @@ the one page that covers what you are about to touch:
    pushing, and announce a migration number in
    [the lanes plan](docs/plans/2026-09-29-parity-lanes.md#4-releases-while-lanes-run) before writing it.
 4. **A change reaches tg-cli and max-cli only through a release.** Both pin an exact version.
-5. **At most one release every 2 hours, and a breaking change to a stable export at most once a week** —
-   [README, "How often, and what may break"](README.md#how-often-and-what-may-break). A consumer
-   blocked right now is the one exception, and the changelog names it. `bin/release` enforces it:
-   it refuses within 2 hours of the last publish unless given `--blocked "<consumer and reason>"`.
+5. **Release when a consumer needs the merged code; there is no fixed gap between releases** —
+   [README, "How often, and what may break"](README.md#how-often-and-what-may-break).
+   Correction 2026-10-07: release cadence and `--blocked` were removed in PR702.
+   `bin/release` publishes the next free version through GitHub; stable-export breaks still
+   follow the README policy.
 
 ## Comments
 

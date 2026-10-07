@@ -426,12 +426,13 @@ actually checks are added; the full list grows in Phase 4 when MAX fills it too.
 
 ## 8. Phases — small, independently shippable pull requests
 
-- **Stored message/author rankings** · 🚧 `feat/stats-ranking-services` · Owner-approved
-  naming PR671, compiled selection PR675 and SQL metrics PR681 are merged. Shared top/evidence
-  CLI and MCP services, bounded cursors, named selections and the [user guide](../rankings.md)
-  are implemented; consumer SDK adoption is pending. The
-  [command contract](2026-10-07-rankings-contract.md) records scores and missing-data rules.
-
+- **Stored message/author rankings** · **Done** · Naming PR671, compiled selection PR675,
+  metrics PR681, CLI/MCP services/evidence PR696 and integration fixes PR701/706 are merged.
+  SDK0.173.0 is published and adopted in [MAX #461](https://github.com/leemour/max-cli/pull/461)
+  and [Telegram #339](https://github.com/leemour/tg-cli/pull/339). The [guide](../rankings.md),
+  [contract](2026-10-07-rankings-contract.md) and
+  [validation report](../dev/evaluations/2026-10-07-rankings-validation.md) describe metrics,
+  scores, evidence, bounds and missing-data limits.
 
 - **Search A1** · **Done** · Lucene 9.12.3 query profile, strict shared search, bounded patterns, legacy migration and executable documentation: shared [#454](https://github.com/leemour/cli-messaging/pull/454), release 0.127.0; consumers [max #355](https://github.com/leemour/max-cli/pull/355) and [tg #238](https://github.com/leemour/tg-cli/pull/238). Media/tag repositories, analytics and archive repair remain subsequent work.
 
