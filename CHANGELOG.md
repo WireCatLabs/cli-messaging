@@ -38,6 +38,17 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   unchanged.
 - The send journal keeps the `key` a write names — `polls.create`, `polls.vote`, `polls.close` and the others —
   so a poll is told from a message in `sends list` and in a report. An additive field; older lines read as before.
+- `chats folders create|update` take a folder's rules where `Messenger.folderRules` is set: `--include` kinds of
+  chat (contacts, non-contacts, groups, channels, bots), `--skip` muted, read or archived chats, `--exclude-chat`,
+  `--pin` and `--emoji`; on `update`, `--include` and `--skip` replace the set and `none` clears it, and `--remove`
+  also takes a chat off the excluded and pinned lists. MCP `chats_folders_create|update` take the same.
+  `ChatFolders.createFolder` takes optional `rules`, `FolderChange` the same fields, and `Folder` reports them.
+- `chats requests list --search <text>` or `--link <link>` narrows join requests by name or by the invite link
+  used, not both; MCP `chats_requests_list` takes `search` and `link`, and `JoinRequests.joinRequests` its window.
+
+### Changed — may break callers
+
+- `chats folders order` answers each folder's `id` and `title` only, not its chats.
 
 ## 0.176.0 — 08.10.2026
 
@@ -68,18 +79,6 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   `chats_link_revoke`; `InviteLink` gains optional `primary`, `revoked`, `pending` and `joined`. Revoking the
   group's own link answers with the new one. Through `InviteLinks.inviteLinks` and `revokeInviteLink`.
 - Settings adapters can resolve extra fields from all personal/bot layers, retain detailed source paths, and supply a compatibility schema and duration parser. Existing consumers keep their resolver behavior; MAX can adopt the common resolver without changing its settings contract.
-- `chats folders create|update` take a folder's rules where `Messenger.folderRules` is set: `--include` kinds of
-  chat (contacts, non-contacts, groups, channels, bots), `--skip` muted, read or archived chats, `--exclude-chat`,
-  `--pin` and `--emoji`; on `update`, `--include` and `--skip` replace the set and `none` clears it, and `--remove`
-  also takes a chat off the excluded and pinned lists. MCP `chats_folders_create|update` take the same.
-  `ChatFolders.createFolder` takes optional `rules`, `FolderChange` the same fields, and `Folder` reports them.
-- `chats requests list --search <text>` or `--link <link>` narrows join requests by name or by the invite link
-  used, not both; MCP `chats_requests_list` takes `search` and `link`, and `JoinRequests.joinRequests` its window.
-
-### Changed — may break callers
-
-- `chats folders order` answers each folder's `id` and `title` only, not its chats.
-
 ### Fixed
 
 - Wording parity skips absent planned commands while continuing to report missing required
