@@ -5,7 +5,7 @@ import { toIso } from "./values.js"
 /** Unnamed runs kept, newest first; a saved search is never pruned. */
 export const HISTORY_KEPT = 1000
 
-export type SearchCommand = "search" | "stats" | "message-top" | "author-top"
+export type SearchCommand = "search" | "stats" | "message-top" | "author-top" | "admin-statistics"
 
 /** What one run or one saved search is: `params` as canonical JSON, so the same run is the same text. */
 export interface SearchRecord {

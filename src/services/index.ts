@@ -1,6 +1,7 @@
 import { type BotCheckService, botCheckService } from "../botcheck/service.js"
 import { type AccountService, accountService } from "./account.js"
 import { type AdminService, adminService } from "./admin.js"
+import { type AdminStatisticsService, adminStatisticsService } from "./admin-statistics.js"
 import { type ArchiveService, archiveService } from "./archive.js"
 import { gapsService } from "./archive-gaps.js"
 import { type AttachmentsService, attachmentsService } from "./attachments.js"
@@ -91,6 +92,7 @@ export { type TopicsService, topicsService } from "./topics.js"
 export interface Services {
   metadata: ReturnType<typeof metadataService>
   privatePeople: ReturnType<typeof privatePeopleService>
+  adminStatistics: AdminStatisticsService
   rankings: RankingsService
   topics: TopicsService
   messages: MessagesService
@@ -123,6 +125,7 @@ export const servicesFor = (deps: ServiceDeps): Services => {
   const base: Services = {
     metadata: metadataService(deps),
     privatePeople: privatePeopleService(deps),
+    adminStatistics: adminStatisticsService(deps),
     rankings: rankingsService(deps),
     topics: topicsService(deps),
     messages: messagesService(deps),
@@ -150,6 +153,8 @@ export { migrateLegacyQuery, type QueryMigration, type SavedQuery } from "../sea
 export { parseLucene } from "../search/lucene/parser.js"
 export { FIELD_VERSION, QUERY_FIELDS, QUERY_OPERATORS, validateAst } from "../search/lucene/registry.js"
 export { type Predicate, QUERY_LIMITS, QUERY_VERSION, type QueryAst, type QueryNode } from "../search/lucene/types.js"
+export type { AdminFound, AdminQuery, AdminSelection, AdminStatisticsService } from "./admin-statistics.js"
+export { adminStatisticsService } from "./admin-statistics.js"
 export { GAP_BOUNDS, type GapPlan, type GapRepair, gapsService, type RepairOptions } from "./archive-gaps.js"
 export type { QueryMetadata, SearchCoverage } from "./messages-search.js"
 export { metadataService } from "./metadata.js"

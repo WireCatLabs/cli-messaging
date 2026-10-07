@@ -27,6 +27,7 @@ import { migrate } from "./migrations.js"
 import { storeCapable } from "./open.js"
 import { storePath } from "./path.js"
 import * as accounts from "./sqlite/accounts.js"
+import { type AdminStoreRequest, type AdminStoreResult, adminStatisticsQuery } from "./sqlite/admin-statistics.js"
 import type { AttachmentTextEntry, AttachmentView, FileAttachment } from "./sqlite/attachment-texts.js"
 import * as attachmentTexts from "./sqlite/attachment-texts.js"
 import * as attachmentRows from "./sqlite/attachments.js"
@@ -401,6 +402,7 @@ export interface MessageStore {
    */
   rankingDiscussionChats?(account: AccountKey, chatId: string): Promise<string[]>
   rankingEvidence?(execution: QueryExecution, request: RankingEvidenceRequest): Promise<RankedEvidence>
+  adminStatisticsQuery?(execution: QueryExecution, request: AdminStoreRequest): Promise<AdminStoreResult>
   rankQuery?(execution: QueryExecution, request: RankingRequest): Promise<RankedStoreFound>
   matchQuery?(execution: QueryExecution): Promise<Page<ScoredHit>>
   conversationEligibility?(execution: QueryExecution): Promise<ConversationEligibility>
@@ -1223,6 +1225,7 @@ const storeOver = (context: StoreContext): MessageStore => {
       return rows.map(({ id }) => String(id))
     },
     rankingEvidence: async (execution, request) => rankingEvidence(context, execution, request),
+    adminStatisticsQuery: async (execution, request) => adminStatisticsQuery(context, execution, request),
     rankQuery: async (execution, request) => rankQuery(context, execution, request),
     matchQuery: async (execution) => lucene.matchQuery(context, execution),
     conversationEligibility: async (execution) => conversationEligibility(context, execution),
@@ -1391,6 +1394,7 @@ const storeOver = (context: StoreContext): MessageStore => {
   }
 }
 
+export type { AdminStoreRequest, AdminStoreResult } from "./sqlite/admin-statistics.js"
 export type { AttachmentTextEntry, AttachmentView, FileAttachment, TextOrigin } from "./sqlite/attachment-texts.js"
 export { CHAT_LIST_KEY, type ChatCompleteness, fetchedKey, historyStartKey } from "./sqlite/completeness.js"
 export type { RankedEvidence, RankingEvidenceItem, RankingEvidenceRequest } from "./sqlite/ranking-evidence.js"

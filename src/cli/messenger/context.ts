@@ -90,6 +90,10 @@ export interface Messenger {
   groupPhoto?: boolean
   /** Whether shared folders can be joined; yes when unset. */
   folderJoin?: boolean
+  /** Whether invite links can be listed; yes when unset. */
+  inviteLinkList?: boolean
+  /** Whether one invite link can be revoked; yes when unset. */
+  inviteLinkRevoke?: boolean
   /** Whether the messenger says when an account was made — the moderation rule `newAccount`; yes when unset. */
   knowsAccountAge?: boolean
   /**

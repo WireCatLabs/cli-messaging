@@ -94,33 +94,35 @@ const linkCommand = (messenger: Messenger): Command => {
         )
       }),
   )
-  link
-    .command("list")
-    .description("your invite links, newest first, with how many joined and how many wait")
-    .argument("<chat>", messenger.chatArgument)
-    .option("--revoked", "the links you stopped, instead")
-    .option("--limit <n>", "how many", positiveCount("--limit"))
-    .action(async function (this: Command, chat: string) {
-      const context = messengerContext(this, messenger)
-      const { revoked } = this.opts<{ revoked?: boolean }>()
-      const { limit } = context.settings
-      const found = await context.withServices((services) =>
-        services.admin.links(chat, { limit, revoked: revoked === true }),
-      )
-      if (context.format === "json") context.renderer.result(found)
-      else context.renderer.stream(found.items)
-      if (found.hasMore) context.renderer.note(`more links: raise --limit above ${limit}`)
-    })
-  link.addCommand(
-    annotate(new Command("revoke"), { mutates: true })
-      .description("stop one link; for the group's own link, the answer is the new one")
+  if (messenger.inviteLinkList !== false)
+    link
+      .command("list")
+      .description("your invite links, newest first, with how many joined and how many wait")
       .argument("<chat>", messenger.chatArgument)
-      .argument("<link>", "the link, as `chats link list` shows it")
-      .action(async function (this: Command, chat: string, link: string) {
+      .option("--revoked", "the links you stopped, instead")
+      .option("--limit <n>", "how many", positiveCount("--limit"))
+      .action(async function (this: Command, chat: string) {
         const context = messengerContext(this, messenger)
-        context.renderer.result(await context.withServices((services) => services.admin.revokeLink(chat, link)))
-      }),
-  )
+        const { revoked } = this.opts<{ revoked?: boolean }>()
+        const { limit } = context.settings
+        const found = await context.withServices((services) =>
+          services.admin.links(chat, { limit, revoked: revoked === true }),
+        )
+        if (context.format === "json") context.renderer.result(found)
+        else context.renderer.stream(found.items)
+        if (found.hasMore) context.renderer.note(`more links: raise --limit above ${limit}`)
+      })
+  if (messenger.inviteLinkRevoke !== false)
+    link.addCommand(
+      annotate(new Command("revoke"), { mutates: true })
+        .description("stop one link; for the group's own link, the answer is the new one")
+        .argument("<chat>", messenger.chatArgument)
+        .argument("<link>", "the link, as `chats link list` shows it")
+        .action(async function (this: Command, chat: string, link: string) {
+          const context = messengerContext(this, messenger)
+          context.renderer.result(await context.withServices((services) => services.admin.revokeLink(chat, link)))
+        }),
+    )
   link.addCommand(
     annotate(new Command("reset"), { mutates: true })
       .description("replace the invite link; the old one stops working")

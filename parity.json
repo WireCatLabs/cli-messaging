@@ -3186,6 +3186,7 @@
       "options": {
         "--answerer": "all",
         "--limit": "all",
+        "--saved": "all",
         "--since-time": "all",
         "--timezone": "all",
         "--until-time": "all",
@@ -3233,6 +3234,7 @@
         "--chat": "all",
         "--exact": "all",
         "--limit": "all",
+        "--saved": "all",
         "--source": "all",
         "--timezone": "all"
       }
@@ -3272,6 +3274,7 @@
         "--limit": "all",
         "--max-replies": "all",
         "--min-views": "all",
+        "--saved": "all",
         "--source": "all",
         "--timezone": "all"
       }
@@ -3352,6 +3355,7 @@
         "--exact": "all",
         "--limit": "all",
         "--older-than": "all",
+        "--saved": "all",
         "--source": "all",
         "--timezone": "all"
       }

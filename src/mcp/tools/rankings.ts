@@ -2,6 +2,7 @@ import { CliError } from "@leemour/cli-core"
 import * as v from "valibot"
 import type { Messenger } from "../../cli/messenger/context.js"
 import { AUTHOR_MEASURES, MESSAGE_MEASURES, type RankingTarget } from "../../domain/rankings-options.js"
+import { isAdminSelection } from "../../services/admin-statistics.js"
 import type { SearchParams } from "../../services/searches.js"
 import { searchServices, syncInputs } from "../search-sync.js"
 import { type AnyTool, READ, tool } from "../tool.js"
@@ -104,12 +105,17 @@ export const rankingTools = (messenger: Messenger): Record<string, AnyTool> => {
         const reference = "message" in args ? args.message : args.person
         if (reference === undefined)
           throw new CliError("validation_error", "ranking evidence needs its exact message or person reference")
-        return services.rankings.evidence(target as RankingTarget, reference, args.selection, {
-          component: args.component,
-          limit: args.limit ?? 20,
-          ...(args.cursor ? { cursor: args.cursor } : {}),
-          signal: defaults.signal,
-        })
+        return (isAdminSelection(args.selection) ? services.adminStatistics : services.rankings).evidence(
+          target as RankingTarget,
+          reference,
+          args.selection,
+          {
+            component: args.component,
+            limit: args.limit ?? 20,
+            ...(args.cursor ? { cursor: args.cursor } : {}),
+            signal: defaults.signal,
+          },
+        )
       },
     })
   }
