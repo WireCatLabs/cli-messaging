@@ -12,6 +12,11 @@ Released early: tg-cli and max-cli adopt stemmed search today, at the owner's re
 
 ### Added
 
+- First-run settings resolution creates a starter `config.json` with common defaults. Existing files
+  are preserved, concurrent runs publish complete files, and flags/environment values are never saved.
+  Successful-run recording remains opt-in.
+
+
 - `topics edit <chat> <topic> [--title <t>] [--closed on|off] [--pinned on|off] [--hidden on|off]` and the MCP
   tool `topics_edit` rename, close, reopen, pin or unpin a forum topic, or hide its General topic;
   `topics order <chat> <topic...>` and `topics_order` put the pinned topics in order, pinning nothing. Through the
