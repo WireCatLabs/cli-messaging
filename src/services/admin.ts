@@ -34,6 +34,14 @@ export interface AdminService {
     person: string,
     accept: boolean,
   ): Promise<Operated<{ chatId: Id; personId: Id; accepted: boolean; already: boolean }>>
+  /** Counted first, so an accept the hourly limit cannot take is refused before anyone is answered. */
+  answerAllRequests(
+    chat: string,
+    accept: boolean,
+    options: { link?: string },
+  ): Promise<{ chatId: Id; accepted: boolean; counted: number; operationId?: string }>
+  links(chat: string, window: { limit: number; revoked: boolean }): Promise<Page<InviteLink> & { chatId: Id }>
+  revokeLink(chat: string, link: string): Promise<Operated<{ chatId: Id } & InviteLink>>
   addMembers(
     chat: string,
     people: string[],
@@ -173,6 +181,54 @@ export const adminService = (deps: ServiceDeps): AdminService => {
         () => answer(chatId, personId as Id, accept),
       )
       return { operationId, chatId, personId: personId as Id, accepted: accept, already }
+    },
+
+    answerAllRequests: async (chat, accept, { link }) => {
+      const connection = await online(`chats requests ${accept ? "accept" : "decline"} --all`)
+      const list = capability(connection, "joinRequests", "read join requests")
+      const answerAll = capability(connection, "answerAllJoinRequests", "answer every join request at once")
+      const { id: chatId } = await connection.resolve(chat)
+      const page = await list(chatId, { limit: 100, ...(link === undefined ? {} : { link }) })
+      const counted = page.total ?? page.items.length
+      if (page.total === undefined && page.hasMore)
+        throw new CliError("validation_error", "too many requests to count; answer them by person, or by --link")
+      if (counted === 0) return { chatId, accepted: accept, counted }
+      const operationId = newOperationId()
+      await guardedWrite(
+        deps.guard,
+        {
+          operationId,
+          chatId,
+          kind: "chat",
+          action: accept ? "requests.accept" : "requests.decline",
+          count: counted,
+          people: counted,
+        },
+        () => answerAll(chatId, accept, link),
+      )
+      return { operationId, chatId, accepted: accept, counted }
+    },
+
+    links: async (chat, window) => {
+      if (deps.offline)
+        throw new CliError("validation_error", "invite links are read from the messenger; not with --offline")
+      const connection = await deps.connection()
+      const list = capability(connection, "inviteLinks", "list invite links")
+      const { id: chatId } = await connection.resolve(chat)
+      return { chatId, ...(await list(chatId, window)) }
+    },
+
+    revokeLink: async (chat, link) => {
+      if (link.trim() === "")
+        throw new CliError("validation_error", "which link? give it as `chats link list` shows it")
+      const connection = await online("chats link revoke")
+      const revoke = capability(connection, "revokeInviteLink", "revoke an invite link")
+      const { id: chatId } = await connection.resolve(chat)
+      const operationId = newOperationId()
+      const answer = await guardedWrite(deps.guard, { operationId, chatId, kind: "chat", action: "link.revoke" }, () =>
+        revoke(chatId, link.trim()),
+      )
+      return { operationId, chatId, ...answer }
     },
 
     addMembers: async (chat, people, options) => {

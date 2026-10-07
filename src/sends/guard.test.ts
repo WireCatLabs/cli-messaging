@@ -133,6 +133,12 @@ describe("two senders at once", () => {
     guard("g-requests", 1).check(accept)
     expect(() => guard("g-requests", 1).check(accept)).toThrow("the next send is possible")
   })
+
+  it("weighs accepting every request by how many were counted", () => {
+    expect(() =>
+      guard("g-requests-all", 2).check({ chatId: "111", kind: "chat", action: "requests.accept", count: 3 }),
+    ).toThrow("3 at once is more than the hourly limit")
+  })
 })
 
 describe("a reaction", () => {

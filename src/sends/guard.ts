@@ -105,11 +105,11 @@ const countsTowardLimit = ({ kind = "message", action, notify }: Counted) =>
   action === "members.add" ||
   action === "requests.accept"
 
-/** Each deleted message, and each person added to a group, counts as one. */
+/** Each deleted message, and each person added to a group or let in by a request, counts as one. */
 const weightOf = ({ kind, action, count, people }: Counted): number =>
   kind === "delete"
     ? (count ?? 1)
-    : action === "create" || action === "members.add"
+    : action === "create" || action === "members.add" || action === "requests.accept"
       ? Math.max(1, people ?? count ?? 1)
       : 1
 

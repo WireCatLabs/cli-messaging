@@ -84,3 +84,44 @@ describe("join requests", () => {
     expect(f.records).toEqual([])
   })
 })
+
+describe("answering every join request", () => {
+  const many = (total: number | undefined, items = 2) => {
+    const f = fixture()
+    const answerAllJoinRequests = vi.fn(async () => {})
+    const adapter = {
+      resolve: async () => chat,
+      joinRequests: vi.fn(async () => ({ items: Array(items).fill(request), hasMore: false, total })),
+      answerAllJoinRequests,
+    } as unknown as MessengerAdapter
+    return {
+      ...f,
+      service: adminService(onlineDeps({ provider: "test" } as Messenger, adapter, f.deps.guard)),
+      adapter,
+      answerAllJoinRequests,
+    }
+  }
+
+  it("counts them first, then answers all in one guarded write weighted by that count", async () => {
+    const f = many(3)
+    expect(await f.service.answerAllRequests("synthetic group", true, { link: "https://t.me/+one" })).toMatchObject({
+      chatId: "-1007",
+      accepted: true,
+      counted: 3,
+    })
+    expect(f.adapter.joinRequests).toHaveBeenCalledWith("-1007", { limit: 100, link: "https://t.me/+one" })
+    expect(f.answerAllJoinRequests).toHaveBeenCalledWith("-1007", true, "https://t.me/+one")
+    expect(f.checked).toEqual([expect.objectContaining({ action: "requests.accept", count: 3 })])
+  })
+
+  it("writes nothing when none are pending", async () => {
+    const f = many(0, 0)
+    expect(await f.service.answerAllRequests("synthetic group", false, {})).toEqual({
+      chatId: "-1007",
+      accepted: false,
+      counted: 0,
+    })
+    expect(f.answerAllJoinRequests).not.toHaveBeenCalled()
+    expect(f.checked).toEqual([])
+  })
+})
