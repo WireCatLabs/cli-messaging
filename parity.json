@@ -1440,31 +1440,27 @@
       "in": "all"
     },
     "chats link create": {
-      "in": [],
+      "in": ["tg"],
       "planned": {
-        "max": "each CLI's next cli-messaging bump",
-        "tg": "G2 feat/join-approval"
+        "max": "max's next cli-messaging bump"
       },
       "options": {
         "--approval": {
-          "in": [],
+          "in": ["tg"],
           "planned": {
-            "max": "each CLI's next cli-messaging bump",
-            "tg": "G2 feat/join-approval"
+            "max": "max's next cli-messaging bump"
           }
         },
         "--expire-time": {
-          "in": [],
+          "in": ["tg"],
           "planned": {
-            "max": "each CLI's next cli-messaging bump",
-            "tg": "G2 feat/join-approval"
+            "max": "max's next cli-messaging bump"
           }
         },
         "--max-uses": {
-          "in": [],
+          "in": ["tg"],
           "planned": {
-            "max": "each CLI's next cli-messaging bump",
-            "tg": "G2 feat/join-approval"
+            "max": "max's next cli-messaging bump"
           }
         }
       }
@@ -1611,12 +1607,8 @@
       }
     },
     "chats requests": {
-      "in": [],
-      "reason": "MAX groups have no join approval",
-      "planned": {
-        "tg": "G2 feat/join-requests"
-      },
-      "subtree": true
+      "in": ["tg"],
+      "reason": "MAX groups have no join approval"
     },
     "chats rules": {
       "in": "all"
@@ -1678,11 +1670,8 @@
         "--all-can-pin": "all",
         "--description": "all",
         "--join-approval": {
-          "in": [],
-          "reason": "MAX groups have no join approval",
-          "planned": {
-            "tg": "G2 feat/join-approval"
-          }
+          "in": ["tg"],
+          "reason": "MAX groups have no join approval"
         },
         "--members-see-link": {
           "in": ["max"],
@@ -2367,7 +2356,9 @@
         "--html": {
           "in": [],
           "reason": "MAX formats a personal message with Markdown only",
-          "planned": { "tg": "feat/send-html-filename" }
+          "planned": {
+            "tg": "feat/send-html-filename"
+          }
         },
         "--md": "all"
       }
@@ -2486,12 +2477,16 @@
         "--filename": {
           "in": [],
           "reason": "MAX names an upload by its path",
-          "planned": { "tg": "feat/send-html-filename" }
+          "planned": {
+            "tg": "feat/send-html-filename"
+          }
         },
         "--html": {
           "in": [],
           "reason": "MAX formats a personal message with Markdown only",
-          "planned": { "tg": "feat/send-html-filename" }
+          "planned": {
+            "tg": "feat/send-html-filename"
+          }
         },
         "--md": "all",
         "--no-preview": "all",
