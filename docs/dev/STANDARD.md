@@ -456,7 +456,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--per-person` | `<limit>` | at most this many per person, such as 1/1d |  | `replies edit` |
 | `--permission` | `<key=level>` | override a permission for this MCP server only; repeat for more keys |  | `mcp`, `mcp config`, `mcp doctor`, `mcp setup` |
 | `--personal` |  | the personal account's section of the profile's settings |  | `config set` (planned), `config unset` (planned) |
-| `--photo` | `<file>` | an image file — a profile photo in `account update`, a photo to send in `messages send` |  | `account update`, `bot messages send`, `messages send` |
+| `--photo` | `<file>` | an image file — a profile photo in `account update`, a group's photo in `chats update`, a photo to send in `messages send` |  | `account update`, `bot messages send`, `chats update` (planned), `messages send` |
 | `--pinned` | `<on\|off>` | on pins a forum topic at the top of the list, off unpins it |  | `topics edit` (tg-only) |
 | `--port` | `<port>` | the local port for --http |  | `mcp` |
 | `--provider` | `<provider>` | embedding provider: local or openai; analysis: agent, openai or anthropic; consents revoke: exact provider identity from the list |  | `conversations build`, `conversations consents revoke`, `conversations embed`, `conversations embed clear`, `conversations embed status`, `conversations related`, `conversations search`, `conversations status` |

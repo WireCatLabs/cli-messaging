@@ -84,6 +84,8 @@ export interface Messenger {
   html?: boolean
   /** Whether folder ordering is available; yes when unset. */
   folderOrder?: boolean
+  /** Whether `chats update --photo` sets a group's photo; no when unset. */
+  groupPhoto?: boolean
   /** Whether shared folders can be joined; yes when unset. */
   folderJoin?: boolean
   /** Whether the messenger says when an account was made — the moderation rule `newAccount`; yes when unset. */

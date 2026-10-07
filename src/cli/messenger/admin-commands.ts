@@ -2,6 +2,7 @@ import { CliError } from "@leemour/cli-core"
 import { annotate } from "@leemour/cli-core/commands"
 import { Command } from "commander"
 import { ADMIN_RIGHTS, type AdminRight, GROUP_SETTINGS, type GroupSettings } from "../../domain/models.js"
+import { readUpload } from "../../sends/upload.js"
 import { positiveCount } from "../paging.js"
 import { type Messenger, messengerContext } from "./context.js"
 
@@ -37,17 +38,21 @@ const updateCommand = (messenger: Messenger): Command => {
     .argument("<chat>", messenger.chatArgument)
     .option("--title <title>", "the new name")
     .option("--description <text>", "the new description")
+  if (messenger.groupPhoto === true) update.option("--photo <file>", "a new photo for it — an image file")
   for (const key of keys) update.option(`--${SETTING_FLAGS[key][0]} <on|off>`, SETTING_FLAGS[key][1])
   return update.action(async function (this: Command, chat: string) {
     const context = messengerContext(this, messenger)
-    const { title, description, ...rest } = this.opts<{ title?: string; description?: string }>()
+    const { title, description, photo, ...rest } = this.opts<{ title?: string; description?: string; photo?: string }>()
     const settings = settingsOf(keys, rest)
+    const upload =
+      photo === undefined ? undefined : await readUpload("photo", photo, { app: messenger.app, env: context.env })
     context.renderer.result(
       await context.withServices((services) =>
         services.admin.update(chat, {
           ...(title === undefined ? {} : { title }),
           ...(description === undefined ? {} : { description }),
           ...(Object.keys(settings).length > 0 ? { settings } : {}),
+          ...(upload === undefined ? {} : { photo: upload }),
         }),
       ),
     )
