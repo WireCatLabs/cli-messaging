@@ -484,3 +484,15 @@ change regular fetch behavior.
 
 Repair accepts the same catch-up overrides and budgets as fetch. One preparation follows the repair,
 within its remaining overall time budget; history completeness and preparation progress stay separate.
+
+
+### Adapter settings compatibility
+
+`settingsFor(app, extension)` owns common settings resolution. An optional `resolve` hook receives
+resolved common settings, ordered personal/bot/profile/default layers and `fromLayers`; it returns
+adapter values and their sources without rereading configuration. `profile` and `defaults` extend
+the generated strict schema. An optional `schema` validates both reads and writes when an existing
+consumer needs stricter scope rules or unchanged errors; it must produce the common configuration
+shape, including `profiles`. `sourcePaths` opts into full configuration paths, including legacy
+permission provenance. `parseDuration` preserves a consumer's duration syntax and diagnostics.
+Without these hooks, existing source labels, validation and duration parsing stay unchanged.
