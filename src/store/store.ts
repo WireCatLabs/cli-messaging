@@ -44,6 +44,7 @@ import * as messageWrites from "./sqlite/messages.js"
 import { openSqlite, type StoreContext } from "./sqlite/open.js"
 import * as personLinks from "./sqlite/person-links.js"
 import * as ranges from "./sqlite/ranges.js"
+import { type RankedEvidence, type RankingEvidenceRequest, rankingEvidence } from "./sqlite/ranking-evidence.js"
 import { type RankedStoreFound, type RankingRequest, rankQuery } from "./sqlite/rankings.js"
 import * as reads from "./sqlite/reads.js"
 import type {
@@ -388,6 +389,8 @@ export interface MessageStore {
    * The word index, ranked by bm25, ties newest first (phase 2 plan S4 steps 1, 2 and 4). Chats marked
    * not searchable are left out unless the scope names the chat.
    */
+  rankingDiscussionChats?(account: AccountKey, chatId: string): Promise<string[]>
+  rankingEvidence?(execution: QueryExecution, request: RankingEvidenceRequest): Promise<RankedEvidence>
   rankQuery?(execution: QueryExecution, request: RankingRequest): Promise<RankedStoreFound>
   matchQuery?(execution: QueryExecution): Promise<Page<ScoredHit>>
   conversationEligibility?(execution: QueryExecution): Promise<ConversationEligibility>
@@ -1184,6 +1187,17 @@ const storeOver = (context: StoreContext): MessageStore => {
 
     find: async (filter) => (filter.pattern ? findRegex(context, filter) : search.find(context, filter)),
 
+    rankingDiscussionChats: async (account, chatId) => {
+      const rows = database
+        .prepare(
+          "SELECT DISTINCT json_extract(CASE WHEN json_valid(m.provider_metadata) THEN m.provider_metadata ELSE '{}' END,'$.graph.discussionChatId') AS id FROM messages m JOIN chats c ON c.pk=m.chat_pk JOIN accounts ac ON ac.pk=m.account_pk WHERE ac.provider=? AND ac.native_id=? AND c.native_id=? AND c.kind='channel' AND m.deleted_at IS NULL AND json_extract(CASE WHEN json_valid(m.provider_metadata) THEN m.provider_metadata ELSE '{}' END,'$.graph.version')=1 AND json_type(CASE WHEN json_valid(m.provider_metadata) THEN m.provider_metadata ELSE '{}' END,'$.graph.discussionChatId')='text' LIMIT 101",
+        )
+        .all(account.provider, account.account, chatId)
+      if (rows.length > 100)
+        throw new CliError("validation_error", "too many linked discussion groups — narrow the channel scope")
+      return rows.map(({ id }) => String(id))
+    },
+    rankingEvidence: async (execution, request) => rankingEvidence(context, execution, request),
     rankQuery: async (execution, request) => rankQuery(context, execution, request),
     matchQuery: async (execution) => lucene.matchQuery(context, execution),
     conversationEligibility: async (execution) => conversationEligibility(context, execution),
@@ -1342,6 +1356,7 @@ const storeOver = (context: StoreContext): MessageStore => {
 
 export type { AttachmentTextEntry, AttachmentView, FileAttachment, TextOrigin } from "./sqlite/attachment-texts.js"
 export { CHAT_LIST_KEY, type ChatCompleteness, fetchedKey, historyStartKey } from "./sqlite/completeness.js"
+export type { RankedEvidence, RankingEvidenceItem, RankingEvidenceRequest } from "./sqlite/ranking-evidence.js"
 export type { RankedStoreFound, RankedStoreRow, RankingRequest } from "./sqlite/rankings.js"
 export type {
   MemberCount,

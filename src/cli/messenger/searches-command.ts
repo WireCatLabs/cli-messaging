@@ -1,4 +1,6 @@
+import { CliError } from "@leemour/cli-core"
 import { Command } from "commander"
+import { readRankingSelection } from "../../services/rankings-selection.js"
 import type { SearchParams } from "../../services/searches.js"
 import type { StoredSearch } from "../../store/store.js"
 import { listed, positiveCount } from "../paging.js"
@@ -43,14 +45,30 @@ export const searchesCommand = (messenger: Messenger): Command => {
     .option("--timezone <zone>", "the IANA timezone for calendar date boundaries")
     .option("--regex", "the words are one regular expression, case-insensitive, tested against every stored text")
     .option("--by <chat|sender|day|hour>", "what stats messages show --saved counts by", groupingOf)
+    .option("--selection <json>", "save the resolved parent ranking query and options from a drilldown")
     .option("--replace", "overwrite a saved search of the same name")
     .action(async function (this: Command, name: string, words: string[]) {
       const context = messengerContext(this, messenger)
       refuseLocalWrite(context, messenger.app.command, "searches.create")
       const { replace, ...options } = this.opts<Omit<SearchParams, "text" | "ast"> & { replace?: boolean }>()
-      const params: SearchParams = {
+      let params: SearchParams = {
         ...Object.fromEntries(Object.entries(options).filter(([, one]) => one !== undefined)),
         ...(words.length ? { text: words.join(" ") } : {}),
+      }
+      if (params.selection !== undefined) {
+        if (words.length || Object.entries(options).some(([key, value]) => key !== "selection" && value !== undefined))
+          throw new CliError(
+            "validation_error",
+            "with --selection, save the resolved ranking query without additional search options",
+          )
+        const selection = await context.withStore((store) => readRankingSelection(store, params.selection))
+        params = {
+          selection,
+          target: selection.target,
+          ...selection.options,
+          timezone: selection.timezone,
+          language: "lucene",
+        }
       }
       const saved = await context.withServices((services) =>
         services.searches.create(name, params, { replace: replace === true }),

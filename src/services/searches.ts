@@ -1,4 +1,5 @@
 import { CliError, singleLine } from "@leemour/cli-core"
+import type { RankingInput, RankingTarget } from "../domain/rankings-options.js"
 import { parseLucene } from "../search/lucene/parser.js"
 import { FIELD_VERSION, validateAst, validateFields } from "../search/lucene/registry.js"
 import { QUERY_VERSION, type QueryAst } from "../search/lucene/types.js"
@@ -7,7 +8,9 @@ import type { ServiceDeps } from "./deps.js"
 import type { StatsGrouping } from "./messages-search.js"
 
 /** What a run or a saved search keeps: the query and options as given, never a message or a result. */
-export interface SearchParams {
+export interface SearchParams extends RankingInput {
+  selection?: unknown
+  target?: RankingTarget
   text?: string
   ast?: unknown
   language?: "lucene" | "legacy"
@@ -141,9 +144,22 @@ export const searchesService = (deps: ServiceDeps): SearchesService => {
   return {
     create: (name, params, { replace = false } = {}) =>
       inStore((store) =>
-        store.saveSearch(nameOf(name), searchRecordOf(params.by === undefined ? "search" : "stats", checked(params)), {
-          replace,
-        }),
+        store.saveSearch(
+          nameOf(name),
+          searchRecordOf(
+            params.target
+              ? params.target === "messages"
+                ? "message-top"
+                : "author-top"
+              : params.by === undefined
+                ? "search"
+                : "stats",
+            checked(params),
+          ),
+          {
+            replace,
+          },
+        ),
       ),
 
     show: (reference) => inStore((store) => found(store, reference)),
@@ -164,8 +180,16 @@ export const searchesService = (deps: ServiceDeps): SearchesService => {
       inStore(async (store) => {
         const search = await found(store, reference)
         const stored = search.params as SearchParams
+        const inherited = { ...stored }
+        if (stored.target !== undefined) {
+          if (typed.measure !== undefined) {
+            delete inherited.score
+            delete inherited.weights
+          }
+          if (typed.score !== undefined || typed.weights !== undefined) delete inherited.measure
+        }
         const params: SearchParams = {
-          ...stored,
+          ...inherited,
           ...Object.fromEntries(Object.entries(typed).filter(([, one]) => one !== undefined)),
         }
         const language = languageOf(params)

@@ -1,8 +1,10 @@
+import { CliError } from "@leemour/cli-core"
 import * as v from "valibot"
 import type { Messenger } from "../../cli/messenger/context.js"
 import { listed } from "../../cli/paging.js"
 import type { SendGuard } from "../../sends/guard.js"
 import { servicesFor, storedDeps } from "../../services/index.js"
+import { readRankingSelection } from "../../services/rankings-selection.js"
 import type { AccountKey, MessageStore } from "../../store/store.js"
 import { type AnyTool, chatOf, limit, READ, tool } from "../tool.js"
 
@@ -58,10 +60,30 @@ export const searchesTools = (messenger: Messenger): Record<string, AnyTool> => 
         context: v.optional(v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(20))),
         limit,
         by: v.optional(v.picklist(["chat", "sender", "day", "hour"])),
+        selection: v.optional(v.union([v.string(), v.record(v.string(), v.unknown())])),
         replace: v.optional(v.pipe(v.boolean(), v.description("overwrite a saved search of the same name"))),
       }),
       annotations: { ...LOCAL, destructiveHint: false, idempotentHint: false },
       stored: async (store, account, { name, replace, ...params }, defaults) => {
+        if (params.selection !== undefined) {
+          if (Object.entries(params).some(([key, value]) => key !== "selection" && value !== undefined))
+            throw new CliError(
+              "validation_error",
+              "with selection, save the resolved ranking query without additional options",
+            )
+          const selection = await readRankingSelection(store, params.selection)
+          return services(store, account, defaults.guard).searches.create(
+            name,
+            {
+              selection,
+              target: selection.target,
+              ...selection.options,
+              timezone: selection.timezone,
+              language: "lucene",
+            },
+            { replace: replace === true },
+          )
+        }
         return services(store, account, defaults.guard).searches.create(name, params, { replace: replace === true })
       },
     }),

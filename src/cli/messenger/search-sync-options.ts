@@ -29,7 +29,7 @@ export const syncRequest = (
   while (root.parent) root = root.parent
   refuseLocalWrite(context, root.name(), "messages.sync-first")
   if (command.parent?.parent?.name() === "stats")
-    refuseLocalWrite(context, root.name(), "stats.messages.show.sync-first")
+    refuseLocalWrite(context, root.name(), `stats.${command.parent?.name()}.${command.name()}.sync-first`)
   return {
     signal: environmentOf(command).signal,
     syncFirst: {

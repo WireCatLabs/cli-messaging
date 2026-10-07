@@ -13,6 +13,7 @@ import { statsCommand as chatStatsCommand } from "./chats-stats-command.js"
 import { type Messenger, messengerContext } from "./context.js"
 import { messagesStatsCommand } from "./messages-stats-command.js"
 import { officialStatsCommand } from "./official-stats-command.js"
+import { rankingEvidenceCommand, rankingsTopCommand } from "./rankings-command.js"
 import { tasksStatsCommand } from "./tasks-command.js"
 
 export const statsCommand = (messenger: Messenger, loadRenderer = chartRenderer): Command => {
@@ -20,7 +21,15 @@ export const statsCommand = (messenger: Messenger, loadRenderer = chartRenderer)
   stats.addCommand(
     new Command("messages")
       .description("message statistics from the local store")
-      .addCommand(messagesStatsCommand(messenger)),
+      .addCommand(messagesStatsCommand(messenger))
+      .addCommand(rankingsTopCommand(messenger, "messages"))
+      .addCommand(rankingEvidenceCommand(messenger, "messages")),
+  )
+  stats.addCommand(
+    new Command("contacts")
+      .description("statistics about human authors")
+      .addCommand(rankingsTopCommand(messenger, "contacts"))
+      .addCommand(rankingEvidenceCommand(messenger, "contacts")),
   )
   const chats = new Command("chats").description("statistics about one chat").addCommand(chatStatsCommand(messenger))
   if (messenger.officialStats === true) chats.addCommand(officialStatsCommand(messenger))

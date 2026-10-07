@@ -426,11 +426,12 @@ actually checks are added; the full list grows in Phase 4 when MAX fills it too.
 
 ## 8. Phases — small, independently shippable pull requests
 
-- **Stored message/author rankings** · 🚧 `feat/stats-ranking-metrics` · The owner-approved
-  `stats messages top` / `stats contacts top` plan follows the completed CLI audit. The
-  [command contract](2026-10-07-rankings-contract.md) records options, scores and missing-data
-  rules before implementation; naming PR671 and its evidence views are owner-approved, selection PR675 is merged; SQL metrics are being built. No ranking
-  command is implemented yet.
+- **Stored message/author rankings** · 🚧 `feat/stats-ranking-services` · Owner-approved
+  naming PR671, compiled selection PR675 and SQL metrics PR681 are merged. Shared top/evidence
+  CLI and MCP services, bounded cursors, named selections and the [user guide](../rankings.md)
+  are implemented; consumer SDK adoption is pending. The
+  [command contract](2026-10-07-rankings-contract.md) records scores and missing-data rules.
+
 
 - **Search A1** · **Done** · Lucene 9.12.3 query profile, strict shared search, bounded patterns, legacy migration and executable documentation: shared [#454](https://github.com/leemour/cli-messaging/pull/454), release 0.127.0; consumers [max #355](https://github.com/leemour/max-cli/pull/355) and [tg #238](https://github.com/leemour/tg-cli/pull/238). Media/tag repositories, analytics and archive repair remain subsequent work.
 

@@ -12,6 +12,13 @@ Released early: tg-cli join requests and join approval are merged here and wait 
 
 ### Added
 
+- `stats messages top` and `stats contacts top` rank held messages and their human authors by
+  metrics or weighted scores, with full-population normalization, explicit data quality and
+  structured drilldowns. Their `evidence` views page through contributing messages and answer
+  pairs with bounded output and change-detecting cursors. CLI and MCP use the same services.
+- `searches create --selection` saves a resolved ranking drilldown for repeatable
+  `stats messages top --saved` / `stats contacts top --saved` queries.
+
 - `chats link create <chat> [--approval] [--expire-time <time>] [--max-uses <n>]` makes an additional invite
   link — one that needs an admin's approval, stops working at a time, or takes at most n people; MCP
   `chats_link_create`. Through the guard as `chats.link.create`; nobody is told, so it is not counted toward the
