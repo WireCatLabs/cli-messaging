@@ -356,7 +356,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--encrypt` |  | compress and encrypt with a password, typed at a hidden prompt or piped on stdin; never kept |  | `store backup`, `store export` |
 | `--estimate` |  | only say what the fetch would cost, from this machine's copy; nothing is sent. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | `store fetch` |
 | `--events` |  | also print edits, deletions and reactions; every line then names its event. **watch updates use this flag independently of the group event --type filter** |  | `bot watch`, `watch` |
-| `--exact` |  | bare words and quotes match their exact form only, as exact:word does; text: still matches every form |  | `messages search` (planned), `searches create` (planned), `stats contacts top` (planned), `stats messages show` (planned), `stats messages top` (planned) |
+| `--exact` |  | bare words and quotes match their exact form only, as exact:word does; text: still matches every form |  | `messages search`, `searches create`, `stats contacts top` (planned), `stats messages show`, `stats messages top` (planned) |
 | `--extract` |  | extract text from files mapped by this download |  | `messages download` |
 | `--fields` | `<paths>` | only these comma-separated fields of machine result items; preserves list metadata |  | every command |
 | `--file` | `<file>` | attach a file; images go as a photo, videos as a video. Repeat it for more |  | `bot messages send`, `messages send` |

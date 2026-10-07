@@ -2360,13 +2360,7 @@
       "options": {
         "--chat": "all",
         "--context": "all",
-        "--exact": {
-          "in": [],
-          "planned": {
-            "max": "each CLI's next cli-messaging bump",
-            "tg": "each CLI's next cli-messaging bump"
-          }
-        },
+        "--exact": "all",
         "--language": "all",
         "--limit": "all",
         "--max-chats": {
@@ -2710,13 +2704,7 @@
         "--context": {
           "in": "all"
         },
-        "--exact": {
-          "in": [],
-          "planned": {
-            "max": "each CLI's next cli-messaging bump",
-            "tg": "each CLI's next cli-messaging bump"
-          }
-        },
+        "--exact": "all",
         "--language": {
           "in": "all"
         },
@@ -3143,13 +3131,7 @@
         "--chat": {
           "in": "all"
         },
-        "--exact": {
-          "in": [],
-          "planned": {
-            "max": "each CLI's next cli-messaging bump",
-            "tg": "each CLI's next cli-messaging bump"
-          }
-        },
+        "--exact": "all",
         "--limit": {
           "in": "all"
         },
