@@ -10,7 +10,13 @@ import { type QueryAst, type QueryNode, queryError, walkQuery } from "../search/
 import { inSource, sourceOf } from "../search/query.js"
 import { createStemmer, DEFAULT_STEMMERS, type Stemmer } from "../search/stem.js"
 import type { StemsState } from "../store/sqlite/stems.js"
-import { type AccountKey, CHAT_LIST_KEY, type ChatCompleteness, type MessageStore } from "../store/store.js"
+import {
+  type AccountKey,
+  CHAT_LIST_KEY,
+  type ChatCompleteness,
+  type ChatStats,
+  type MessageStore,
+} from "../store/store.js"
 import { chatAmong, type SearchFound, type SearchQuery, senderAmong } from "./messages.js"
 import type { SearchRefreshed } from "./search-refresh.js"
 
@@ -38,6 +44,20 @@ export interface SearchCoverage {
   accounts: AccountKey[]
   chat?: string
   coveredChats: number
+  /** Stored messages in the chats searched. */
+  messages: number
+  /** The chats searched, by what the store holds of them; `behind` misses messages newer than it holds. */
+  chats: { complete: number; partial: number; neverFetched: number; behind: number; withGaps: number }
+  /** Up to ten chats a fetch would improve, most recently active first. */
+  attention: {
+    chatId: string
+    title: string | null
+    state: ChatCompleteness["state"]
+    gaps: boolean
+    behind: boolean
+  }[]
+  /** The one command that would most improve this answer; `null` when the archive holds what it can. */
+  next: string | null
 }
 const positiveSources = (node: QueryNode): string[] =>
   node.kind === "predicate"
@@ -247,18 +267,57 @@ const indexNotReady = async (store: MessageStore, command: string | undefined): 
 export const coverageOf = async (
   store: MessageStore,
   { scopeAccounts, selectedChat }: Prepared,
+  messenger: Partial<Pick<Messenger, "app" | "history" | "provider">> = {},
 ): Promise<{ completeness: (ChatCompleteness & AccountKey)[]; coverage: SearchCoverage }> => {
   const completeness: (ChatCompleteness & AccountKey)[] = []
+  const stats = new Map<string, ChatStats>()
   let inventoryComplete = scopeAccounts.length > 0
+  let ownInventory = true
   for (const selected of scopeAccounts) {
-    if (!(await store.syncState(selected, CHAT_LIST_KEY))) inventoryComplete = false
+    if (!(await store.syncState(selected, CHAT_LIST_KEY))) {
+      inventoryComplete = false
+      if (messenger.provider === undefined || selected.provider === messenger.provider) ownInventory = false
+    }
     const chatIds = selectedChat
       ? selected.provider === selectedChat.account.provider && selected.account === selectedChat.account.account
         ? [selectedChat.chatId]
         : []
       : (await store.chats(selected, {})).items.map(({ id }) => id)
     completeness.push(...(await store.chatCompleteness(selected, chatIds)).map((chat) => ({ ...chat, ...selected })))
+    const wanted = new Set(chatIds)
+    for (const one of await store.chatStats(selected))
+      if (wanted.has(one.chatId)) stats.set(statKey(selected, one.chatId), one)
   }
+  // Only this messenger's chats can be fetched by its command; another source's say nothing about it.
+  const own = completeness.filter(({ provider }) => messenger.provider === undefined || provider === messenger.provider)
+  const behind = (chat: ChatCompleteness) => chat.upToDate === false
+  const needs = (chat: ChatCompleteness) => chat.state !== "complete" || chat.gaps || behind(chat)
+  const recent = (chat: ChatCompleteness & AccountKey) => stats.get(statKey(chat, chat.chatId))?.newestAt ?? ""
+  const attention = own
+    .filter(needs)
+    .sort((one, other) => recent(other).localeCompare(recent(one)))
+    .slice(0, 10)
+    .map((chat) => ({
+      chatId: chat.chatId,
+      title: stats.get(statKey(chat, chat.chatId))?.title ?? null,
+      state: chat.state,
+      gaps: chat.gaps,
+      behind: behind(chat),
+    }))
+  const neverFetched = own.filter(({ state }) => state === "unknown").length
+  const behindCount = own.filter(behind).length
+  // A chat held back to a window stays partial for good, so only what a fetch would change is advised.
+  const command = messenger.history === "store" ? undefined : messenger.app?.command
+  const next =
+    command === undefined
+      ? null
+      : selectedChat
+        ? neverFetched || behindCount
+          ? `${command} store fetch ${selectedChat.chatId}`
+          : null
+        : neverFetched || behindCount || !ownInventory
+          ? `${command} store fetch --all --background`
+          : null
   const state =
     selectedChat && completeness.length > 0 && completeness.every(({ state }) => state === "complete")
       ? "complete"
@@ -274,9 +333,20 @@ export const coverageOf = async (
       accounts: scopeAccounts,
       ...(selectedChat ? { chat: selectedChat.chatId } : {}),
       coveredChats: completeness.length,
+      messages: [...stats.values()].reduce((sum, one) => sum + one.messages, 0),
+      chats: {
+        complete: own.filter(({ state }) => state === "complete").length,
+        partial: own.filter(({ state }) => state === "partial").length,
+        neverFetched,
+        behind: behindCount,
+        withGaps: own.filter(({ gaps }) => gaps).length,
+      },
+      attention,
+      next,
     },
   }
 }
+const statKey = (account: AccountKey, chatId: string) => JSON.stringify([account.provider, account.account, chatId])
 const queryOf = (timezone: string, newest?: boolean, stemming?: QueryStemming): QueryMetadata => ({
   language: "lucene-v1",
   version: 1,
@@ -290,14 +360,14 @@ export const searchLucene = async (
   store: MessageStore,
   account: AccountKey,
   request: SearchQuery,
-  messenger: Partial<Pick<Messenger, "savedChatId" | "app">> = {},
+  messenger: Partial<Pick<Messenger, "savedChatId" | "app" | "history" | "provider">> = {},
 ): Promise<SearchFound> => {
   const prepared = await prepareLucene(store, account, request, messenger)
   const execute = store.matchQuery
   if (!execute)
     throw new CliError("validation_error", "this store does not support the Lucene profile — upgrade cli-messaging")
   const found = prepared.scopeAccounts.length ? await execute(prepared.execution) : { items: [], hasMore: false }
-  const { completeness, coverage } = await coverageOf(store, prepared)
+  const { completeness, coverage } = await coverageOf(store, prepared, messenger)
   const items = await Promise.all(
     found.items.map(async (hit) => {
       if (!request.context) return hit
@@ -366,7 +436,7 @@ export const statsLucene = async (
   store: MessageStore,
   account: AccountKey,
   request: SearchQuery & { by: StatsGrouping },
-  messenger: Partial<Pick<Messenger, "savedChatId" | "app">> = {},
+  messenger: Partial<Pick<Messenger, "savedChatId" | "app" | "history" | "provider">> = {},
 ): Promise<MessageStats> => {
   const prepared = await prepareLucene(store, account, request, messenger)
   const count = store.countQuery
@@ -393,7 +463,7 @@ export const statsLucene = async (
         count,
       }))
       .sort((a, b) => b.count - a.count || a.key.localeCompare(b.key))
-  const { completeness, coverage } = await coverageOf(store, prepared)
+  const { completeness, coverage } = await coverageOf(store, prepared, messenger)
   return {
     by,
     items: rows.slice(0, request.limit),

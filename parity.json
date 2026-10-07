@@ -3535,6 +3535,13 @@
     "store fetch": {
       "in": "all",
       "options": {
+        "--all": {
+          "in": [],
+          "planned": {
+            "max": "feat/search-readiness: shared store fetch --all, on the next cli-messaging bump",
+            "tg": "feat/search-readiness: shared store fetch --all, on the next cli-messaging bump"
+          }
+        },
         "--background": "all",
         "--catch-up": "all",
         "--catch-up-chunks": "all",

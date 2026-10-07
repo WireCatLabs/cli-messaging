@@ -3,7 +3,7 @@ import { mkdirSync } from "node:fs"
 import { join } from "node:path"
 import { CliError } from "@leemour/cli-core"
 import { Command } from "commander"
-import { FETCHING } from "../../services/archive.js"
+import { FETCHING, type Fetched, type FetchedAll } from "../../services/archive.js"
 import { momentOf } from "../../services/moment.js"
 import { validateCatchUpBounds } from "../../services/search-catchup.js"
 import { envName } from "../app.js"
@@ -31,14 +31,25 @@ import { stopOnSignal } from "./patience.js"
  * nothing, and the next run jumps over what is already held. Needs numeric message ids, which order
  * the chat.
  */
+/** How far back `store fetch --all` goes unless told: enough for most searches, bounded for big chats. */
+const ALL_SINCE = "90d"
+/** What a background `--all` job is listed under; no chat argument is spelled like it. */
+const ALL_CHATS = "--all"
+
 export const fetchCommand = (messenger: Messenger): Command => {
   const fetching = messenger.fetching ?? FETCHING
   return new Command("fetch")
-    .description("fetch a chat's history into the local store, newest first; run it again to continue")
-    .argument("<chat>", messenger.chatArgument)
+    .description(
+      "fetch a chat's history into the local store, newest first; run it again to continue; --all fetches every chat",
+    )
+    .argument("[chat]", messenger.chatArgument)
+    .option(
+      "--all",
+      `every chat, most recently active first — what search needs; the last ${ALL_SINCE} unless --since-time or --last`,
+    )
     .option(
       "--limit <n>",
-      `at most this many messages in this run; ${fetching.maxPages * fetching.page} if not given`,
+      `at most this many messages in this run, per chat with --all; ${fetching.maxPages * fetching.page} if not given`,
       wholeNumber,
     )
     .option("--page-size <n>", `how many messages one request asks for; ${fetching.page} if not given`, wholeNumber)
@@ -61,8 +72,9 @@ export const fetchCommand = (messenger: Messenger): Command => {
       "--estimate",
       "only estimate how many messages, requests and minutes a full fetch would still take — from the store, no request",
     )
-    .action(async function (this: Command, chat: string) {
+    .action(async function (this: Command, chat: string | undefined) {
       const {
+        all,
         pause,
         sinceTime: since,
         last,
@@ -74,6 +86,7 @@ export const fetchCommand = (messenger: Messenger): Command => {
         catchUpTime,
         ...sizes
       } = this.opts<{
+        all?: boolean
         limit?: number
         pageSize?: number
         pause: string
@@ -86,6 +99,9 @@ export const fetchCommand = (messenger: Messenger): Command => {
         catchUpMessages?: number
         catchUpTime?: string
       }>()
+      if ((chat === undefined) === (all !== true))
+        throw new CliError("validation_error", "name a chat, or --all for every chat")
+      if (all && estimate) throw new CliError("validation_error", "--estimate prices one chat; not with --all")
       if (since !== undefined && last !== undefined) {
         throw new CliError("validation_error", "give --since-time or --last, not both: how far back the fetch goes")
       }
@@ -99,7 +115,8 @@ export const fetchCommand = (messenger: Messenger): Command => {
       }
       const limit = sizes.limit ?? fetching.maxPages * fetching.page
       const pauseMs = parseDuration(pause, "--pause")
-      const sinceMs = since === undefined ? undefined : momentOf(since, "--since-time")
+      const window = since ?? (all && last === undefined ? ALL_SINCE : undefined)
+      const sinceMs = window === undefined ? undefined : momentOf(window, "--since-time")
       const context = messengerContext(this, messenger)
       const prepare = catchUp ?? context.settings.searchCatchUp ?? false
       const preparation = {
@@ -116,8 +133,9 @@ export const fetchCommand = (messenger: Messenger): Command => {
             "--estimate prices a full fetch; --since-time and --last do not narrow it",
           )
         }
+        const named = chat as string
         const answer = await context.withServices((services) =>
-          services.archive.estimate(chat, { limit, pageSize, pauseMs }),
+          services.archive.estimate(named, { limit, pageSize, pauseMs }),
         )
         context.renderer.result(answer)
         if (answer.missing === null) {
@@ -134,7 +152,7 @@ export const fetchCommand = (messenger: Messenger): Command => {
       }
       if (background) {
         startJob(this, context, messenger, {
-          chat,
+          chat: chat ?? ALL_CHATS,
           limit,
           pageSize,
           pause,
@@ -151,20 +169,22 @@ export const fetchCommand = (messenger: Messenger): Command => {
       const jobId = context.env[envName(messenger.app, "BACKFILL_JOB")]
       const stop = stopOnSignal(this)
       try {
-        const result = await context.withServices((services) =>
-          services.archive.fetch(chat, {
-            limit,
-            pageSize,
-            pauseMs,
-            catchUp: prepare ? preparation : false,
-            ...(sinceMs === undefined ? {} : { sinceMs }),
-            ...(last === undefined ? {} : { last }),
-            note: context.renderer.note,
-            stop: stop.signal,
-            onPage: (progress) => {
-              if (jobId) updateJob(jobs, jobId, { progress })
-            },
-          }),
+        const options = {
+          limit,
+          pageSize,
+          pauseMs,
+          catchUp: prepare ? preparation : (false as const),
+          ...(sinceMs === undefined ? {} : { sinceMs }),
+          ...(last === undefined ? {} : { last }),
+          note: context.renderer.note,
+          stop: stop.signal,
+          onPage: (progress: { fetched: number; chatId: string; oldest: number }) => {
+            if (jobId) updateJob(jobs, jobId, { progress })
+          },
+        }
+        const result = await context.withServices(
+          (services): Promise<Fetched | FetchedAll> =>
+            chat === undefined ? services.archive.fetchAll(options) : services.archive.fetch(chat, options),
         )
         if (jobId) updateJob(jobs, jobId, { finishedAt: new Date().toISOString(), result })
         context.renderer.result(result)
