@@ -53,6 +53,8 @@ export interface ListWindow {
   beforeTime?: number
   /** Read forward from this message or moment, parsed by the caller in its own words (`afterOf`). */
   after?: After
+  /** Only this forum topic. */
+  threadId?: string
 }
 
 export interface AroundWindow {
@@ -262,8 +264,31 @@ export const messagesService = (deps: ServiceDeps): MessagesService => {
     return { operationId, chatId, messageId: message, pinned }
   }
 
+  const topicPage = async (
+    chat: string,
+    threadId: string,
+    { limit, before, beforeTime, after }: ListWindow,
+  ): Promise<Page<Message>> => {
+    if (beforeTime !== undefined || after !== undefined)
+      throw new CliError("validation_error", "a topic is read back from its newest message, or from --before-id")
+    if (threadId === "1")
+      throw new CliError(
+        "validation_error",
+        "the General topic's messages carry no topic id — read the whole chat without --topic",
+      )
+    const window = { limit, ...(before === undefined ? {} : { before }) }
+    if (fromStore(deps)) {
+      return inStore(async (store, account) =>
+        store.messages(account, await readChatId(deps, chat, store, account), { ...window, threadId }),
+      )
+    }
+    return capability(await deps.connection(), "topicHistory", "read one forum topic")(chat, threadId, window)
+  }
+
   return {
-    list: async (chat, { limit, before, beforeTime, after }) => {
+    list: async (chat, { limit, before, beforeTime, after, threadId: typedThread }) => {
+      const threadId = threadIdOf(typedThread)
+      if (threadId !== undefined) return topicPage(chat, threadId, { limit, before, beforeTime, after })
       if (beforeTime !== undefined) {
         if (deps.offline)
           throw new CliError("validation_error", "reading back from a time asks the messenger; not with --offline")

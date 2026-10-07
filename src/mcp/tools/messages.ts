@@ -68,6 +68,13 @@ export const messagesTools = (messenger: Messenger): Record<string, AnyTool> => 
         after_time: v.optional(
           v.pipe(v.string(), v.description("only messages newer than this ISO 8601 time, or 2h / 1d ago")),
         ),
+        topic: v.optional(
+          v.pipe(
+            v.string(),
+            v.minLength(1),
+            v.description("only this forum topic, read back from its newest message or before_id"),
+          ),
+        ),
         transcribe: v.optional(
           v.pipe(v.boolean(), v.description("turn voice messages not heard yet into text; can take minutes")),
         ),
@@ -91,7 +98,11 @@ export const messagesTools = (messenger: Messenger): Record<string, AnyTool> => 
           },
           snakeOf,
         )
-        const found = await services.messages.list(args.chat, { limit: size, ...start })
+        const found = await services.messages.list(args.chat, {
+          limit: size,
+          ...start,
+          ...(args.topic === undefined ? {} : { threadId: args.topic }),
+        })
         const hearing = await hearForTool(
           messenger,
           connect,

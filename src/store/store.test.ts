@@ -174,6 +174,26 @@ describe("the message store", () => {
     await store.close()
   })
 
+  it("keeps one forum topic's messages, paging back within it", async () => {
+    const store = await openStore({ path: fresh() })
+    const at = (minute: number) => `2026-09-26T10:0${minute}:00.000Z`
+    await store.saveMessages(
+      ME,
+      chat.id,
+      [1, 2, 3, 4].map((n) => message({ id: String(n), timestamp: at(n), threadId: n % 2 === 0 ? "7" : "9" })),
+      { via: "history" },
+    )
+
+    expect((await store.messages(ME, chat.id, { limit: 5, threadId: "7" })).items.map((one) => one.id)).toEqual([
+      "2",
+      "4",
+    ])
+    expect(
+      (await store.messages(ME, chat.id, { limit: 5, threadId: "7", before: "4" })).items.map((one) => one.id),
+    ).toEqual(["2"])
+    await store.close()
+  })
+
   it("finds one message by its id, and asks for the chat when two chats share the id", async () => {
     const store = await openStore({ path: fresh() })
     await store.saveMessages(ME, chat.id, [message()], { via: "history" })

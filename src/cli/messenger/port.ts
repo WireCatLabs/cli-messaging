@@ -249,6 +249,11 @@ export interface ThreadAddressing {
   validateThread(chatId: Id, threadId: Id, options: { replyTo?: Id }): Promise<void>
 }
 
+export interface TopicHistory {
+  /** One forum topic's messages, oldest to newest; `before` a message id. */
+  topicHistory(chat: string, threadId: Id, window: { limit: number; before?: string }): Promise<Page<Message>>
+}
+
 export interface MessagePolls {
   /** The poll one message carries; a message without one is `not_found`. */
   poll(chatId: Id, messageId: Id): Promise<Poll>
@@ -503,6 +508,7 @@ export interface MessengerAdapter
     Partial<ReadState>,
     Partial<MessagePolls>,
     Partial<ThreadAddressing>,
+    Partial<TopicHistory>,
     Partial<ForumControl>,
     Partial<TopicEditing>,
     Partial<LiveUpdates>,

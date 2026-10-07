@@ -331,7 +331,12 @@ export interface MessageStore {
     chatId: Id,
   ): Promise<{ enabledAt: string; builtAt: string | null; algorithmVersion: number | null } | undefined>
   /** Oldest to newest, like a provider's history page. */
-  messages(key: AccountKey, chatId: Id, window: { limit: number; before?: Id; since?: string }): Promise<Page<Message>>
+  /** `threadId` keeps one forum topic's. */
+  messages(
+    key: AccountKey,
+    chatId: Id,
+    window: { limit: number; before?: Id; since?: string; threadId?: Id },
+  ): Promise<Page<Message>>
   /** How many stored messages the chat has, sent at `since` or later when it is given. */
   countMessages(key: AccountKey, chatId: Id, options?: { since?: string }): Promise<number>
   /** Saved or edited after `at` (ISO, this machine's clock), oldest first, and the ids deleted after it. */

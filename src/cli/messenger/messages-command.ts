@@ -44,28 +44,40 @@ export const messagesCommand = (messenger: Messenger): Command => {
     .option("--before-time <time>", "only messages older than this ISO 8601 time, or 2h / 1d ago")
     .option("--after-id <id>", "only messages newer than this message id")
     .option("--after-time <time>", "only messages newer than this ISO 8601 time, or 2h / 1d ago")
+    .option("--topic <id>", "only this forum topic; read back from its newest message or --before-id")
     .option(...TRANSCRIBE_OPTION)
     .option(...MODEL_OPTION)
     .option("--mark-read", "also mark the chat read up to the newest message shown; the other person sees it")
     .action(async function (this: Command, chat: string) {
       const context = messengerContext(this, messenger)
-      const { beforeId, beforeTime, afterId, afterTime, transcribe, model, markRead } = this.opts<{
+      const { beforeId, beforeTime, afterId, afterTime, topic, transcribe, model, markRead } = this.opts<{
         beforeId?: string
         beforeTime?: string
         afterId?: string
         afterTime?: string
+        topic?: string
         transcribe?: boolean
         model?: string
         markRead?: boolean
       }>()
       const start = listStart({ beforeId, beforeTime, afterId, afterTime })
       const hearWith = modelWith(transcribe, model)
+      if (markRead && topic !== undefined) {
+        throw new CliError(
+          "validation_error",
+          "--mark-read marks the whole chat; use `chats mark-read --topic` for one",
+        )
+      }
       if (markRead && context.settings.offline) {
         throw new CliError("validation_error", "--mark-read tells the messenger; not with --offline")
       }
       const { limit } = context.settings
       const { page, hearing, marked } = await context.withServices(async (services, connect) => {
-        const page = await services.messages.list(chat, { limit, ...start })
+        const page = await services.messages.list(chat, {
+          limit,
+          ...start,
+          ...(topic === undefined ? {} : { threadId: topic }),
+        })
         const newest = page.items.at(-1)
         const marked = markRead && newest ? await services.chats.markRead({ chat, until: newest.id }) : undefined
         const hearing = await hearForCommand(context, messenger, page.items, transcribe === true, hearWith, connect)
