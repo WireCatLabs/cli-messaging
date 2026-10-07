@@ -12,8 +12,8 @@ import { threadIdOf } from "./thread.js"
  * **Asked before it goes, told after, on every outcome** — the guard's journal is the only record
  * of what this profile tried to send, and it never holds the text.
  */
-export const sendCommand = (messenger: Messenger): Command =>
-  annotate(new Command("send"), { mutates: true })
+export const sendCommand = (messenger: Messenger): Command => {
+  const send = annotate(new Command("send"), { mutates: true })
     .description("send a text message; without [text], the text is read from stdin")
     .argument("<chat>", messenger.chatArgument)
     .argument("[text]", "the message")
@@ -27,8 +27,6 @@ export const sendCommand = (messenger: Messenger): Command =>
     .option("--file <file>", "attach a file; the text becomes its caption")
     .option("--photo <file>", "attach a .jpg, .png or .webp as a photo; the text becomes its caption")
     .option("--as-file", "send the --file as a file to download, a video included")
-    .option("--spoiler", "hide the --photo or video behind a spoiler until tapped")
-    .option("--caption-above", "show the text above the --photo or --file, not below it")
     .option("--voice <file>", "send an Ogg Opus file as a voice message, alone, with no text")
     .option("--allow-any-file", "send a file even from a hidden folder, ~/.ssh or this CLI's own folders")
     .option(
@@ -38,6 +36,13 @@ export const sendCommand = (messenger: Messenger): Command =>
     .action(async function (this: Command, chat: string, text: string | undefined) {
       await sendText(this, messenger, chat, text)
     })
+  // Offered only where the messenger lists them, so a CLI never shows a flag it would refuse.
+  if (messenger.mediaOptions?.includes("spoiler"))
+    send.option("--spoiler", "hide the --photo or video behind a spoiler until tapped")
+  if (messenger.mediaOptions?.includes("captionAbove"))
+    send.option("--caption-above", "show the text above the --photo or --file, not below it")
+  return send
+}
 
 const sendText = async (command: Command, messenger: Messenger, chat: string, text: string | undefined) => {
   const context = messengerContext(command, messenger)
