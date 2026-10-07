@@ -112,13 +112,26 @@ export const rankingEvidence = (
     if (total > 50_000 || Number(size?.bytes ?? 0) > FINGERPRINT_BYTES)
       fail("evidence exceeds its fingerprint budget — narrow chat/date scope", "query_limit")
     const ordered = `${rows} ORDER BY m.sent_at,ac.provider,ac.native_id,c.native_id,m.native_id`
-    const hash = createHash("sha256").update(
-      JSON.stringify([execution.root, execution.accounts, request.options, target, component, request.timezone]),
-    )
+    const seed = JSON.stringify([
+      execution.root,
+      execution.accounts,
+      request.options,
+      target,
+      component,
+      request.timezone,
+    ])
+    let fingerprintBytes = Buffer.byteLength(seed)
+    const hash = createHash("sha256").update(seed)
     const page = database.prepare(`${ordered} LIMIT 500 OFFSET ?`)
     for (let offset = 0; offset < total; offset += 500) {
       check()
-      for (const row of page.all(...targetParams, offset)) hash.update(JSON.stringify(row)).update("\n")
+      for (const row of page.all(...targetParams, offset)) {
+        const serialized = JSON.stringify(row)
+        fingerprintBytes += Buffer.byteLength(serialized) + 1
+        if (fingerprintBytes > FINGERPRINT_BYTES)
+          fail("evidence exceeds its fingerprint budget — narrow chat/date scope", "query_limit")
+        hash.update(serialized).update("\n")
+      }
     }
     const fingerprint = hash.digest("hex")
     let offset = 0

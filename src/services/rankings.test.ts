@@ -311,4 +311,21 @@ describe("ranking services and drilldown selection", () => {
     const replay = await service.top("messages", { selection: found.items[0]?.drilldown.selection, limit: 10 })
     expect(replay.items.map(({ id }) => id)).toEqual(["comment"])
   })
+  it("bounds serialized fingerprint bytes including JSON escaping", async () => {
+    const { service, store } = await setup()
+    const messages = (await store.messages(account, "room", { limit: 10 })).items.filter(
+      ({ senderId }) => senderId === "alice",
+    )
+    await store.saveMessages(
+      account,
+      "room",
+      messages.map((message) => ({ ...message, text: "\u0000".repeat(710_000) })),
+      { via: "history" },
+    )
+    const row = (await service.top("contacts", { measure: "messages", limit: 10 })).items[0]
+    if (!row) throw new Error("fixture row missing")
+    await expect(
+      service.evidence("contacts", row.id, row.drilldown.selection, { component: "messages", limit: 1 }),
+    ).rejects.toThrow("fingerprint budget")
+  })
 })
