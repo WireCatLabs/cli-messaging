@@ -357,10 +357,12 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--do` | `<actions>` | actions: reply, task, or both, comma-separated |  | `replies edit` |
 | `--download` |  | first save, from the messenger, the files no download saved yet |  | `attachments extract` |
 | `--dry-run` |  | judge and plan; do nothing. **A command-specific dry run keeps its richer plan; otherwise the shared shell previews arguments and permissions without running the action. Targets remain unresolved unless that command provides a preview.** |  | every command, `bot chats moderate`, `chats moderate` (planned), `config migrate`, `store repair`, `tags auto` |
+| `--emoji` | `<emoji>` | the folder's icon |  | `chats folders create` (planned), `chats folders update` (planned) |
 | `--encrypt` |  | compress and encrypt with a password, typed at a hidden prompt or piped on stdin; never kept |  | `store backup`, `store export` |
 | `--estimate` |  | only say what the fetch would cost, from this machine's copy; nothing is sent. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | `store fetch` |
 | `--events` |  | also print edits, deletions and reactions; every line then names its event. **watch updates use this flag independently of the group event --type filter** |  | `bot watch`, `watch` |
 | `--exact` |  | bare words and quotes match their exact form only, as exact:word does; text: still matches every form |  | `messages search`, `searches create`, `stats contacts responses`, `stats contacts top`, `stats messages discussion`, `stats messages show`, `stats messages top`, `stats messages unanswered` |
+| `--exclude-chat` | `<chat>` | never show this chat in the folder; repeat it for more |  | `chats folders create` (planned), `chats folders update` (planned) |
 | `--expire-time` | `<time>` | it stops working then: 2026-09-25T09:00 (local time), or 30m, 2h, 7d from now |  | `chats link create` (planned) |
 | `--extract` |  | extract text from files mapped by this download |  | `messages download` |
 | `--fields` | `<paths>` | only these comma-separated fields of machine result items; preserves list metadata |  | every command |
@@ -380,6 +382,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--http` |  | serve MCP over HTTP on 127.0.0.1 behind the owner's tunnel, with a one-owner login; every write asks first by default. **MAX wording catches up with Telegram’s explicit “by default” at the next shared SDK adoption; both HTTP servers confirm writes by default** |  | `mcp` |
 | `--http-confirmation` | `<mode>` | no longer used: MCP writes show no form; the profile's permissions decide. **retired: accepted with a warning so an old setup still starts** |  | `mcp` |
 | `--idle` | `<duration>` | stop after this long with nobody using it — 15m, 1h |  | `serve` (max-only), `server restart` (max-only), `server start` (max-only) |
+| `--include` | `<kinds>` | a folder takes every chat of these kinds: contacts, non-contacts, groups, channels, bots |  | `chats folders create` (planned), `chats folders update` (planned) |
 | `--join-approval` | `<on\|off>` | people ask to join, and an admin lets them in |  | `chats update` (tg-only) |
 | `--json` |  | machine-readable output: one JSON value on stdout, nothing else |  | every command |
 | `--jsonl` |  | machine-readable output: one JSON object per line, for streaming and jq |  | every command |
@@ -457,6 +460,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--permission` | `<key=level>` | override a permission for this MCP server only; repeat for more keys |  | `mcp`, `mcp config`, `mcp doctor`, `mcp setup` |
 | `--personal` |  | the personal account's section of the profile's settings |  | `config set` (planned), `config unset` (planned) |
 | `--photo` | `<file>` | an image file — a profile photo in `account update`, a group's photo in `chats update`, a photo to send in `messages send` |  | `account update`, `bot messages send`, `chats update` (planned), `messages send` |
+| `--pin` | `<chat>` | pin this chat at the top of the folder; repeat it for more |  | `chats folders create` (planned), `chats folders update` (planned) |
 | `--pinned` | `<on\|off>` | on pins a forum topic at the top of the list, off unpins it |  | `topics edit` (tg-only) |
 | `--port` | `<port>` | the local port for --http |  | `mcp` |
 | `--provider` | `<provider>` | embedding provider: local or openai; analysis: agent, openai or anthropic; consents revoke: exact provider identity from the list |  | `conversations build`, `conversations consents revoke`, `conversations embed`, `conversations embed clear`, `conversations embed status`, `conversations related`, `conversations search`, `conversations status` |
@@ -495,6 +499,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--since` | `<id-or-time>` | from this message id, an ISO 8601 time, or 2h / 1d ago; each command says its default. **becomes `--since-time` everywhere — NEED-485** |  | `inbox` (planned), `review` (planned) |
 | `--since-time` | `<time>` | from this ISO 8601 time, or 2h / 1d ago; each command says its default |  | `bot chats moderate`, `bot store fetch`, `chats events` (planned), `chats members history` (planned), `chats moderate` (planned), `contacts context`, `conversations list`, `conversations search`, `inbox` (planned), `replies test`, `review` (planned), `stats charts`, `stats chats newcomers`, `stats chats show`, `store export`, `store fetch` |
 | `--size` | `<n>` | messages to answer per batch, 10–200; 50 by default |  | `conversations batches next`, `conversations batches status`, `conversations build` |
+| `--skip` | `<which>` | a folder leaves out chats that are muted, read or archived |  | `chats folders create` (planned), `chats folders update` (planned) |
 | `--source` | `<messenger>` | every account of this messenger held in the store; personal, bots or all — the same as in: in the query |  | `conversations search`, `messages search`, `searches create`, `stats contacts responses`, `stats contacts top`, `stats messages discussion`, `stats messages show`, `stats messages top`, `stats messages unanswered`, `tags list`, `tags remove` |
 | `--spoiler` |  | hide the --photo or video behind a spoiler until tapped |  | `messages send` (tg-only) |
 | `--state` | `<state>` | only tasks in this state: open, done or dismissed |  | `tasks list` |
