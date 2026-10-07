@@ -63,7 +63,9 @@ export const contactsTools = (messenger: Messenger): Record<string, AnyTool> => 
         "digits), flags { bot, verified, premium, scam, fake, restricted, deleted, support }, seen (online, recently, " +
         "week, month, hidden or a time), contact?, mutualContact?, commonChatsCount?, registered? { at, source: " +
         "telegram | max | estimate, precision }, hasPhoto? } — and chats: for each chat shared with them, " +
-        "theirMessages stored, firstAt, lastAt and complete (false: the count is a floor). Reading tells them nothing.",
+        "theirMessages stored, firstAt, lastAt and complete (false: the count is a floor); aliases: earlier names " +
+        "and usernames the store saw — { name?, username?, link?, firstSeenAt, lastSeenAt, source: profile | " +
+        "messages (approximate) }. Reading tells them nothing.",
       input: v.object({
         person: v.pipe(v.string(), v.minLength(1), v.description("person id, @username, or part of a name")),
       }),

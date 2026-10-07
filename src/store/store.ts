@@ -14,6 +14,7 @@ import type {
   Message,
   MessageHit,
   Page,
+  PersonAlias,
   Provider,
   Reactions,
   WindowedMessage,
@@ -458,6 +459,8 @@ export interface MessageStore {
   chatStats(key: AccountKey, chatId?: Id): Promise<ChatStats[]>
   /** One person's stored messages per chat of this account, newest first. */
   senderStats(key: AccountKey, senderId: Id): Promise<SenderChatStats[]>
+  /** Every name and username this account's store recorded for one person, the current ones included. */
+  personNames(key: AccountKey, personId: Id): Promise<PersonAlias[]>
   /** The stretches held completely, oldest first. */
   ranges(key: AccountKey, chatId: Id): Promise<Range[]>
   /** Labels one stored chat, person or message; answers the tags it did not have. `not_found` for one not held. */
@@ -1260,6 +1263,11 @@ const storeOver = (context: StoreContext): MessageStore => {
     senderStats: async (key, senderId) => {
       const accountKey = findAccountPk(key)
       return accountKey === undefined ? [] : reads.senderStats(context, accountKey, key.provider, senderId)
+    },
+
+    personNames: async (key, personId) => {
+      const accountKey = findAccountPk(key)
+      return accountKey === undefined ? [] : identities.namesOf(context, accountKey, key.provider, personId)
     },
 
     chatStats: async (key, chatId) => {

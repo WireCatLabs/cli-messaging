@@ -1,6 +1,6 @@
 import type { GroupMember, Id, Provider } from "../../domain/models.js"
-import { and, asc, desc, eq, gte, inArray, isNotNull, isNull, or, sql } from "./drizzle/core.js"
-import { identityPk } from "./identities.js"
+import { and, asc, eq, gte, inArray, isNotNull, isNull, or, sql } from "./drizzle/core.js"
+import { identityPk, seenIdentity } from "./identities.js"
 import type { StoreContext } from "./open.js"
 import { chatMembers, chats, identities, identityRevisions, memberCounts, memberStays } from "./schema.js"
 
@@ -78,12 +78,13 @@ export const saveRoster = (
   const present = new Set<number>()
 
   for (const member of members) {
-    const person = identityPk(context, accountKey, provider, member.id, member.name, {
+    const { pk: person, revised } = seenIdentity(context, accountKey, provider, member.id, member.name, {
       username: member.username,
       ...(member.isBot === undefined ? {} : { isBot: member.isBot }),
+      marks: marksOf(member),
     })
     present.add(person)
-    if (reviseProfile(context, person, member, at)) change.changed.push(member.id)
+    if (revised) change.changed.push(member.id)
 
     const open = orm
       .select({ pk: memberStays.pk, joinedAt: memberStays.joinedAt })
@@ -139,25 +140,6 @@ export const saveRoster = (
     .onConflictDoUpdate({ target: [memberCounts.chatPk, memberCounts.day], set: count })
     .run()
   return change
-}
-
-/** Writes a revision when the profile differs from the last one written, the first sight included. */
-const reviseProfile = ({ orm }: StoreContext, person: number, member: GroupMember, at: number): boolean => {
-  const marks = JSON.stringify(marksOf(member))
-  const last = orm
-    .select({ name: identityRevisions.name, username: identityRevisions.username, marks: identityRevisions.marks })
-    .from(identityRevisions)
-    .where(eq(identityRevisions.identityPk, person))
-    .orderBy(desc(identityRevisions.capturedAt), desc(identityRevisions.pk))
-    .get()
-  if (last && last.name === member.name && last.username === (member.username ?? null) && last.marks === marks) {
-    return false
-  }
-  orm
-    .insert(identityRevisions)
-    .values({ identityPk: person, name: member.name, username: member.username ?? null, marks, capturedAt: at })
-    .run()
-  return last !== undefined
 }
 
 /** Every stay that was open at `since` or began after it, oldest first; all of them without `since`. */

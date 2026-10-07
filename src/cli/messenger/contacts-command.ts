@@ -47,7 +47,8 @@ export const contactsCommand = (messenger: Messenger): Command => {
     .command("profile")
     .description(
       "everything the messenger says about one person — handles, flags, last seen, when they registered — and " +
-        "how many of their messages the store holds in each chat you share, the first and the last",
+        "how many of their messages the store holds in each chat you share, the first and the last, and the " +
+        "earlier names and usernames the store saw them with",
     )
     .argument("<person>", "their id, @username, or part of their name")
     .option("--show-phone", "print the whole phone number")
