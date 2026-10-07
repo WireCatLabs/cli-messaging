@@ -16,7 +16,7 @@ export const backendOptions = (command: Command, messenger: Messenger): Command 
     ? command
         .option(
           "--backend <archive|server|both>",
-          "where to search: the local archive, the messenger's server, or both (default: archive)",
+          "where to search: the local archive, the messenger's server, or both (default: both)",
           backendOf,
         )
         .option("--server-time <duration>", "stop waiting for the server after this long (default: 5s)")

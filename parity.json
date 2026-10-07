@@ -104,7 +104,7 @@
     },
     "--backend": {
       "value": "<archive|server|both>",
-      "meaning": "where to search: the local archive, the messenger's server, or both (default: archive)"
+      "meaning": "where to search: the local archive, the messenger's server, or both (default: both)"
     },
     "--background": {
       "meaning": "run as a job that outlives this command; `store jobs show` follows it"

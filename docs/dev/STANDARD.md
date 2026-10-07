@@ -313,7 +313,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--as-reply` |  | send as a reply to the matched message |  | `replies edit` |
 | `--at-time` | `<time>` | let the messenger send it later, even with this machine off: a local time like 2026-09-25T09:00, or 30m |  | `messages send` |
 | `--attachment` | `<n>` | which file of the message, from 1; needed when it has more than one |  | `attachments text set` |
-| `--backend` | `<archive\|server\|both>` | where to search: the local archive, the messenger's server, or both (default: archive) |  | `messages search` (tg-only) |
+| `--backend` | `<archive\|server\|both>` | where to search: the local archive, the messenger's server, or both (default: both) |  | `messages search` (tg-only) |
 | `--background` |  | run as a job that outlives this command; `store jobs show` follows it |  | `store fetch`, `store gaps repair` |
 | `--base-url` | `<url>` | a server with OpenAI's /v1/embeddings: Gemini, Jina, or Ollama and LM Studio on this machine |  | `conversations build`, `conversations embed`, `conversations embed clear`, `conversations embed status`, `conversations related`, `conversations search`, `conversations status` |
 | `--batch` | `<id>` | the batch id `conversations batches next` printed |  | `conversations links add` |

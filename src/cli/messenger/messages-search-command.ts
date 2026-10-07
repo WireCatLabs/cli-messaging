@@ -13,7 +13,9 @@ import { threadOptions, threadRequest } from "./thread-options.js"
 export const messagesSearchCommand = (messenger: Messenger): Command =>
   backendOptions(threadOptions(syncOptions(new Command("search"))), messenger)
     .description(
-      "search the local store — what was read, fetched or kept by serve; optionally fetches new messages with --sync-first",
+      messenger.serverSearch
+        ? "search the local store and the messenger's server (--backend); optionally fetches new messages with --sync-first"
+        : "search the local store — what was read, fetched or kept by serve; optionally fetches new messages with --sync-first",
     )
     .argument(
       "[query...]",
