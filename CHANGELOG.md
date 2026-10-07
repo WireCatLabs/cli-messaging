@@ -6,6 +6,10 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.166.0 — 07.10.2026
+
+Released early: MAX and Telegram search catch-up in 0.162.0 through 0.165.0 can bypass readonly graph-link permissions; consumers need the corrected guard
+
 ### Fixed
 
 - Local post-fetch and gap-repair search preparation honors the existing `conversations.links`
