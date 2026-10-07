@@ -118,6 +118,10 @@ A query with no positive words skips the server (`server.skipped: "no_words"`). 
 - Flood waits: the tg adapter makes the call with `floodSleepThreshold` at or below the time bound (raw
   `client.call` if mtcute's high-level method does not pass it), so mtcute does not sleep past the bound.
   A refused flood wait is `server.failed: "rate_limited"`.
+  **Correction 2026-10-07 (implementation):** not done in tg 0.169-era code. The adapter calls mtcute's
+  high-level search, which takes neither `floodSleepThreshold` nor the `signal`. The answer still comes at the
+  bound, but the call goes on: over MCP it holds the session's connection while mtcute sleeps (up to about
+  5 × 10 s), so the next tool call waits. Needed before NEED-809 flips the default.
 
 ### R6. What the answer reports
 

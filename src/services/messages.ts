@@ -388,6 +388,8 @@ export const messagesService = (deps: ServiceDeps): MessagesService => {
       return inStore(async (store, account) => {
         if (query.thread) threadBounds(query.thread)
         const refreshed = await refreshSearch(deps, query)
+        // The server step reads the indexes to translate the query, so they are topped up first.
+        if (query.backend !== undefined && query.backend !== "archive") await topUp(store)
         const server = await searchServer(deps, query)
         const only =
           query.backend === "server" && server
@@ -632,6 +634,13 @@ export const validateSearchDialect = (request: SearchQuery): void => {
  * `messages search` over a store, from the account given — or from `query.accounts`, which a caller such
  * as a bot's search passes after checking it may read them.
  */
+// A large file builds its word index a slice per search as well as in `store migrate` (NEED-453 A).
+const topUp = async (store: MessageStore) => {
+  const stop = Date.now() + SEARCH_FILL_MS
+  await store.fillSearchIndex({ until: () => Date.now() >= stop })
+  await store.fillStems({ until: () => Date.now() >= stop })
+}
+
 export const searchStore = async (
   store: MessageStore,
   account: AccountKey,
@@ -643,10 +652,7 @@ export const searchStore = async (
     throw new CliError("validation_error", "search was aborted", { reason: "query_aborted", complete: false })
   validateSearchDialect(request)
   if (request.thread) threadBounds(request.thread)
-  // A large file builds its word index a slice per search as well as in `store migrate` (NEED-453 A).
-  const stop = Date.now() + SEARCH_FILL_MS
-  await store.fillSearchIndex({ until: () => Date.now() >= stop })
-  await store.fillStems({ until: () => Date.now() >= stop })
+  await topUp(store)
   if (!pattern && (request.language === "lucene" || request.ast !== undefined))
     return withThreads(store, await searchLucene(store, account, request, messenger), request)
   const found = pattern

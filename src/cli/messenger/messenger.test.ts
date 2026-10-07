@@ -1231,6 +1231,42 @@ describe("the shared read commands", () => {
     expect(without.stderr.join("\n")).toContain("--backend")
   })
 
+  it("**--backend both** on a read-only profile answers from the archive and never asks the server", async () => {
+    const root = mkdtempSync(join(tmpdir(), "messenger-"))
+    const env = {
+      ...process.env,
+      CHAT_STATE_DIR: join(root, "state"),
+      CHAT_CONFIG_DIR: join(root, "config"),
+      MESSAGING_STORE: join(root, "m.db"),
+    }
+    await call(["messages", "context", "Book", "2", "--json"], async () => fake, env)
+    mkdirSync(env.CHAT_CONFIG_DIR, { recursive: true })
+    writeFileSync(
+      join(env.CHAT_CONFIG_DIR, "config.json"),
+      JSON.stringify({ profiles: { default: { permissions: { messages: "readonly" } } } }),
+    )
+    const searchMessages = vi.fn()
+    const connection = { ...fake, searchMessages }
+    const both = await call(
+      ["messages", "search", "chapter", "--backend", "both", "--json"],
+      async () => connection,
+      env,
+      {},
+      { serverSearch: true },
+    )
+    expect(both.code).toBe(0)
+    expect(JSON.parse(both.stdout[0] ?? "").server).toMatchObject({ skipped: "not_allowed" })
+    const server = await call(
+      ["messages", "search", "chapter", "--backend", "server", "--json"],
+      async () => connection,
+      env,
+      {},
+      { serverSearch: true },
+    )
+    expect(server.code).toBe(5)
+    expect(searchMessages).not.toHaveBeenCalled()
+  })
+
   it("**thread context** follows stored replies by locator and keeps JSON/JSONL data pure", async () => {
     const root = mkdtempSync(join(tmpdir(), "thread-cli-"))
     const env = {
