@@ -7,6 +7,9 @@
 import { mkdtempSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
+import iconv from "iconv-lite"
+import { decodeText } from "../src/attachments/encoding.js"
+import { extractText, importEngine } from "../src/attachments/extract.js"
 import { listRuns, readEvents, recorded, settingsFor } from "../src/cli/index.js"
 import { rankingOptions } from "../src/domain/rankings-options.js"
 import { formatLocator, parseLocator, renderMessages } from "../src/index.js"
@@ -16,6 +19,7 @@ import { withQuerySelection } from "../src/store/sqlite/lucene.js"
 import { openSqlite } from "../src/store/sqlite/open.js"
 import { rankQuery } from "../src/store/sqlite/rankings.js"
 import { accounts } from "../src/store/sqlite/schema.js"
+import { officeFixture } from "../src/testing/office-files.js"
 
 const runtime = typeof (globalThis as { Bun?: unknown }).Bun === "undefined" ? "node" : "bun"
 const failures: string[] = []
@@ -153,6 +157,24 @@ check(
   "the normalizer folds accents, ё and й as under Node",
   normalize("Ёжик ﬁnds\tЙогурт в València") === "ежик finds иогурт в valencia",
 )
+
+for (const encoding of ["windows-1251", "koi8-r", "windows-1252"]) {
+  const text = (
+    encoding === "windows-1252"
+      ? "Café français, déjà reçu. Une facture pour la coopération et les élèves. "
+      : "Договор поставки оборудования. Получатель подтверждает получение документов и согласование условий оплаты. "
+  ).repeat(20)
+  const result = decodeText(iconv.encode(text, encoding))
+  check(`legacy text ${encoding} decodes under ${runtime}`, "text" in result && result.text === text)
+}
+for (const kind of ["odt", "ods", "xlsx", "pptx", "epub"] as const) {
+  const result = await extractText(
+    officeFixture(kind),
+    { kind: "file", name: `fixture.${kind}`, mime: null, path: `/fixture.${kind}` },
+    importEngine,
+  )
+  check(`local ${kind} text reads under ${runtime}`, result.status === "extracted")
+}
 
 if (failures.length > 0) {
   console.error(`smoke failed under ${runtime}:\n${failures.map((one) => `  - ${one}`).join("\n")}`)

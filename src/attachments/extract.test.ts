@@ -33,11 +33,11 @@ describe("reading the text layer of a file", () => {
     })
   })
 
-  it("refuses text that is not UTF-8 or carries NUL bytes, naming only the reason", async () => {
+  it("refuses malformed BOM text and binary text, naming only the reason", async () => {
     expect(await extractText(new Uint8Array([0xff, 0xfe, 0x41]), hint("a.txt"), importEngine)).toEqual({
       status: "unreadable",
-      extractor: "plain",
-      error: "not_utf8",
+      extractor: "plain:v2",
+      error: "invalid_encoding",
     })
     expect(await extractText(text("a\u0000b"), hint("a.log"), importEngine)).toMatchObject({ error: "binary" })
   })

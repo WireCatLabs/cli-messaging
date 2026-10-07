@@ -97,7 +97,7 @@ export const localPathOf = ({ database }: StoreContext, attachmentPk: number): s
   return row?.local_path == null ? null : String(row.local_path)
 }
 
-/** An extraction never replaces what an agent wrote; an agent replaces anything. */
+/** Failed extraction cannot erase good text; agent text wins over every automated write. */
 export const keepText = (
   { database, now }: StoreContext,
   attachmentPk: number,
@@ -111,7 +111,7 @@ export const keepText = (
        ON CONFLICT (attachment_pk) DO UPDATE SET text = excluded.text, normalized_text = excluded.normalized_text,
          origin = excluded.origin, extractor = excluded.extractor, content_sha256 = excluded.content_sha256,
          bytes = excluded.bytes, error = excluded.error, written_at = excluded.written_at
-       ${entry.origin === "agent" ? "" : "WHERE attachment_texts.origin <> 'agent'"}`,
+       ${entry.origin === "agent" ? "" : "WHERE attachment_texts.origin <> 'agent' AND (excluded.error IS NULL OR attachment_texts.error IS NOT NULL OR attachment_texts.text = '')"}`,
     )
     .run(
       attachmentPk,

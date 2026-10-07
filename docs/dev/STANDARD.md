@@ -851,3 +851,12 @@ explicitly selects gateway API OCR for bulk extraction using models.ocr;
 requires --ocr. Existing local extraction without --ocr never invokes a model.
 MCP uses the same service and explicit selection. Local paths do not transfer
 files to remote agents; binary/artifact transport remains separate.
+
+## Local attachment document readers
+
+[Reader contract](../plans/2026-10-08-attachment-readers.md): UTF-8/BOM and bounded
+high-confidence legacy decoding; ODT/ODS/XLSX/PPTX/EPUB digital text, using the existing
+extract/text/index commands. No remote model call for locally readable files, including
+an explicit --ocr run. Generic archives, legacy Office and RTF remain external conversion.
+Agent text and previous good text survive automated failures; no partial structured text
+is indexed as a complete result. Existing PDF/Word optional packages remain optional.
