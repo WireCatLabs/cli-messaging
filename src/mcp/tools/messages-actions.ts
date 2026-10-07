@@ -4,6 +4,7 @@ import type { MessengerAdapter } from "../../cli/messenger/port.js"
 import type { SendGuard } from "../../sends/guard.js"
 import { onlineDeps, servicesFor } from "../../services/index.js"
 import { type AnyTool, chatOf, message, tool, WRITE } from "../tool.js"
+import { HTML_TOOL_HELP } from "./messages-send.js"
 
 /** What changes a message others already have, offered with `--allow-send`, each behind its own `allow` permission. */
 export const messageActionTools = (messenger: Messenger): Record<string, AnyTool> => {
@@ -23,6 +24,7 @@ export const messageActionTools = (messenger: Messenger): Record<string, AnyTool
         md: v.optional(
           v.pipe(v.boolean(), v.description("read **bold**, _italic_, ~~struck~~ and `code`; \\ keeps a mark literal")),
         ),
+        html: v.optional(v.pipe(v.boolean(), v.description(HTML_TOOL_HELP))),
       }),
       annotations: WRITE,
       permission: "edit",
@@ -32,6 +34,7 @@ export const messageActionTools = (messenger: Messenger): Record<string, AnyTool
           message: args.message,
           text: args.text,
           markdown: args.md === true,
+          ...(args.html === true ? { html: true } : {}),
         }),
     }),
     messages_forward: tool({

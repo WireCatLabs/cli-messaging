@@ -77,25 +77,39 @@ export const readUpload = async (
  * What a send attaches, as `messages send` and its tool take it. A voice message goes alone, as the
  * messengers' own apps send one.
  */
+const checkFilename = (filename: string, file: string | undefined): void => {
+  if (file === undefined) throw new CliError("validation_error", "--filename names a --file; give one")
+  if (filename.trim() === "" || /[/\\\0]/.test(filename) || filename.length > 255)
+    throw new CliError("validation_error", "--filename is a name, not a path: no / or \\, at most 255 characters")
+}
+
 export const readAttachments = async (
   {
     photo,
     file,
     voice,
     asFile,
+    filename,
     text,
-  }: { photo?: string; file?: string; voice?: string; asFile?: boolean; text?: string },
+  }: { photo?: string; file?: string; voice?: string; asFile?: boolean; filename?: string; text?: string },
   read: { app: AppIdentity; env?: NodeJS.ProcessEnv; anyFile?: boolean },
 ): Promise<Upload[]> => {
   if (voice !== undefined && (photo !== undefined || file !== undefined || (text ?? "").trim() !== "")) {
     throw new CliError("validation_error", "a voice message goes alone — no text, no file, no photo beside it")
   }
   if (asFile && file === undefined) throw new CliError("validation_error", "--as-file is about a --file; give one")
+  if (filename !== undefined) checkFilename(filename, file)
   return [
     ...(photo === undefined ? [] : [await readUpload("photo", photo, read)]),
     ...(file === undefined
       ? []
-      : [{ ...(await readUpload("file", file, read)), ...(asFile ? { asFile: true as const } : {}) }]),
+      : [
+          {
+            ...(await readUpload("file", file, read)),
+            ...(filename === undefined ? {} : { name: filename }),
+            ...(asFile ? { asFile: true as const } : {}),
+          },
+        ]),
     ...(voice === undefined ? [] : [await readUpload("voice", voice, read)]),
   ]
 }

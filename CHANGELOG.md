@@ -41,6 +41,11 @@ Released early: tg-cli join requests and join approval are merged here and wait 
   MCP `chats_folders_order` and `chats_folders_join` do the same. Both go through the guard as account actions
   `folder-order` / `folder-join` (keys `chats.folders.order` / `chats.folders.join`). Adapters implement the new
   `ChatFolders.orderFolders` and `ChatFolders.joinFolder`.
+- `messages send --html` and `messages edit --html` read the text as HTML (`<b>`, `<i>`, `<u>`, `<s>`, `<a href>`,
+  `<code>`, `<pre>`, `<blockquote>`), not together with `--md`; MCP `messages_send` and `messages_edit` take `html`.
+  Offered where `Messenger.html` is set; the adapter implements the new optional `HtmlFormatting.formatHtml`.
+- `messages send --filename <name>` gives the `--file` the name others see, instead of its name on disk; MCP
+  `messages_send` takes `filename`. Offered where `Messenger.mediaOptions` lists the new `fileName`.
 - `chats requests list <chat>` shows who asked to join a group or channel that needs an admin's approval, newest
   first, and `chats requests accept|decline <chat> <person>` answers one; MCP `chats_requests_list`,
   `chats_requests_accept` and `chats_requests_decline` do the same. Answers go through the guard as

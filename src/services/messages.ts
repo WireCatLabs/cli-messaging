@@ -1,9 +1,9 @@
 import { CliError, singleLine } from "@leemour/cli-core"
 import type { MediaOption, Messenger } from "../cli/messenger/context.js"
-import { type After, capability, type Download, type Sent } from "../cli/messenger/port.js"
+import { type After, capability, type Download, type MessengerAdapter, type Sent } from "../cli/messenger/port.js"
 import { threadIdOf } from "../cli/messenger/thread.js"
 import type { DownloadedFile } from "../domain/attachments.js"
-import { validateFormattedText } from "../domain/formatting.js"
+import { type FormattedText, validateFormattedText } from "../domain/formatting.js"
 import { formatLocator, parseLocator } from "../domain/locator.js"
 import { type MessageLink, messageLinkTarget, validatePermalink } from "../domain/message-link.js"
 import type { Chat, Deletion, Discussion, Id, Message, Page, Provider, WindowedMessage } from "../domain/models.js"
@@ -126,6 +126,8 @@ export interface SendRequest {
   silent?: boolean
   noPreview?: boolean
   markdown?: boolean
+  /** The text is HTML; not with `markdown`. */
+  html?: boolean
   /** ISO time to send it at; refused together with `sendId`. */
   at?: string
   attachments?: Upload[]
@@ -206,8 +208,10 @@ export interface MessagesService {
   stats(query: SearchQuery & { by: StatsGrouping }): Promise<MessageStats>
   /** A reply is a send with `replyTo`. */
   send(request: SendRequest): Promise<Operated<Sent>>
-  /** With `markdown`, the marks are taken out as a send takes them. */
-  edit(target: MessageTarget & { text: string; markdown?: boolean }): Promise<Operated<{ message: Message }>>
+  /** With `markdown` or `html`, the marks are taken out as a send takes them. */
+  edit(
+    target: MessageTarget & { text: string; markdown?: boolean; html?: boolean },
+  ): Promise<Operated<{ message: Message }>>
   /** Each message counts toward the hourly limit. */
   delete(request: { chat: string; messages: string[]; forEveryone: boolean }): Promise<Operated<Deletion>>
   /** Guarded against the chat it goes to: that is where somebody new reads it. */
@@ -426,6 +430,7 @@ export const messagesService = (deps: ServiceDeps): MessagesService => {
       silent,
       noPreview,
       markdown,
+      html,
       at,
       attachments = [],
       key,
@@ -446,9 +451,7 @@ export const messagesService = (deps: ServiceDeps): MessagesService => {
           "a scheduled send is never repeated: it would be scheduled twice — look in `messages scheduled` instead",
         )
       }
-      const { text, spans } = markdown
-        ? validateFormattedText(await capability(connection, "formatMarkdown", "format Markdown")(typed))
-        : { text: typed, spans: [] }
+      const { text, spans } = await formatted(connection, typed, { markdown, html })
       if (text.trim() === "" && attachments.length === 0) {
         throw new CliError("validation_error", "nothing to send — the marks leave no text")
       }
@@ -516,12 +519,10 @@ export const messagesService = (deps: ServiceDeps): MessagesService => {
       }
     },
 
-    edit: async ({ chat, message, text: typed, markdown }) => {
+    edit: async ({ chat, message, text: typed, markdown, html }) => {
       const connection = await deps.connection()
       const edit = capability(connection, "edit", "edit a message")
-      const { text, spans } = markdown
-        ? validateFormattedText(await capability(connection, "formatMarkdown", "format Markdown")(typed))
-        : { text: typed, spans: [] }
+      const { text, spans } = await formatted(connection, typed, { markdown, html })
       if (text.trim() === "") throw new CliError("validation_error", "no new text — the marks leave nothing")
       const { id: chatId } = await connection.resolve(chat)
       const operationId = newOperationId()
@@ -930,7 +931,22 @@ const paramsOf = (command: SearchCommand, query: SearchQuery & { by?: StatsGroup
     ? { newest: query.newest === true, ...(query.context === undefined ? {} : { context: query.context }) }
     : { by: query.by }),
 })
-const MEDIA_FLAGS: Record<MediaOption, string> = { spoiler: "--spoiler", captionAbove: "--caption-above" }
+const formatted = async (
+  connection: MessengerAdapter,
+  typed: string,
+  { markdown, html }: { markdown?: boolean | undefined; html?: boolean | undefined },
+): Promise<FormattedText> => {
+  if (markdown && html) throw new CliError("validation_error", "--md and --html mark up the text two ways; use one")
+  if (markdown) return validateFormattedText(await capability(connection, "formatMarkdown", "format Markdown")(typed))
+  if (html) return validateFormattedText(await capability(connection, "formatHtml", "format HTML")(typed))
+  return { text: typed, spans: [] }
+}
+
+const MEDIA_FLAGS: Record<MediaOption, string> = {
+  spoiler: "--spoiler",
+  captionAbove: "--caption-above",
+  fileName: "--filename",
+}
 
 const checkMediaOptions = (messenger: Messenger, asked: MediaOption[], attachments: number): void => {
   const [first] = asked

@@ -310,6 +310,30 @@ describe("the messages service's writes", () => {
     expect(writes).toEqual(["send 7 __source__"])
   })
 
+  it("formats HTML with the provider's formatter, and refuses it beside Markdown or without one", async () => {
+    const formatHtml = vi.fn(async () => ({ text: "bold", spans: [{ type: "bold" as const, from: 0, length: 4 }] }))
+    const send = vi.fn(writer.send)
+    const service = messagesService(onlineDeps(messenger, { ...writer, formatHtml, send }, guarding(false)))
+
+    await service.send({ chat: "Book", text: "<b>bold</b>", html: true })
+    expect(formatHtml).toHaveBeenCalledWith("<b>bold</b>")
+    expect(send).toHaveBeenCalledWith(
+      "7",
+      "bold",
+      expect.objectContaining({ formatting: [{ type: "bold", from: 0, length: 4 }] }),
+    )
+
+    await expect(service.send({ chat: "Book", text: "<b>x</b>", html: true, markdown: true })).rejects.toThrow(
+      "two ways",
+    )
+    const plain = messagesService(onlineDeps(messenger, writer, guarding(false)))
+    await expect(plain.send({ chat: "Book", text: "<b>x</b>", html: true })).rejects.toThrow("format HTML")
+    await expect(plain.edit({ chat: "Book", message: "4", text: "<b>x</b>", html: true })).rejects.toThrow(
+      /format HTML|edit a message/,
+    )
+    expect(send).toHaveBeenCalledOnce()
+  })
+
   it("refuses invalid formatting before sending an attachment", async () => {
     const provider = {
       ...writer,

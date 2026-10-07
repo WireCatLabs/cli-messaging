@@ -55,7 +55,7 @@ export interface Fetching {
 
 /** What one messenger CLI hands the shared commands. Everything else about it stays in its own code. */
 /** `messages send --spoiler` and `--caption-above`. */
-export type MediaOption = "spoiler" | "captionAbove"
+export type MediaOption = "spoiler" | "captionAbove" | "fileName"
 
 export interface Messenger {
   app: AppIdentity
@@ -77,6 +77,8 @@ export interface Messenger {
    * know a newer option is never handed one to drop.
    */
   mediaOptions?: readonly MediaOption[]
+  /** Whether the messenger reads HTML in `--html`; no when unset. */
+  html?: boolean
   /** Whether the messenger says when an account was made — the moderation rule `newAccount`; yes when unset. */
   knowsAccountAge?: boolean
   /**

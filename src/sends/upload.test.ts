@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, symlinkSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { describe, expect, it } from "vitest"
-import { readUpload } from "./upload.js"
+import { readAttachments, readUpload } from "./upload.js"
 
 const app = { command: "chat", appName: "chat-cli", envPrefix: "CHAT", description: "", version: "1.0.0" }
 
@@ -48,5 +48,22 @@ describe("readUpload", () => {
 
     await expect(readUpload("file", join(root, "missing.pdf"), { app, env })).rejects.toThrow(/no such file/)
     await expect(readUpload("file", root, { app, env })).rejects.toThrow(/a folder/)
+  })
+})
+
+describe("readAttachments", () => {
+  it("gives the --file the --filename, and refuses one without a file or with a path in it", async () => {
+    const { env, put } = setUp()
+    const file = put("exports/a1b2c3.pdf")
+
+    expect(await readAttachments({ file, filename: "Report Q3.pdf" }, { app, env })).toMatchObject([
+      { kind: "file", name: "Report Q3.pdf" },
+    ])
+    await expect(readAttachments({ photo: put("cat.jpg"), filename: "x.jpg" }, { app, env })).rejects.toThrow(
+      "--filename names a --file",
+    )
+    for (const filename of ["../x.pdf", "a\\b.pdf", " "]) {
+      await expect(readAttachments({ file, filename }, { app, env })).rejects.toThrow("not a path")
+    }
   })
 })
