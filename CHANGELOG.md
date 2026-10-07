@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.163.0 — 07.10.2026
+
 ### Added
 
 - `messages send --spoiler` and `--caption-above` (send tool `spoiler`, `caption_above`) for a photo, video or
