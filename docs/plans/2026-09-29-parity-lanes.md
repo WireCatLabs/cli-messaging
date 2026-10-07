@@ -121,3 +121,5 @@ Open: whether agents' shell commands run in the sandbox, which needs a root chan
 machine (NEED-22, tg-cli `docs/dev/agents.md`).
 
 MAX P7 follow-up: `fix/p7-unpin-parity` owns the legacy pin/unpin permission translation and shared unpin guard correction; no database migration.
+
+Server search (2026-10-07): [`2026-10-07-server-search.md`](2026-10-07-server-search.md) owns `--backend archive|server|both`, the optional `MessageSearch` adapter capability and `src/services/server-search.ts`; no store migration.
