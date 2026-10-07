@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.179.0 — 08.10.2026
+
 ### Added
 
 - Local attachment readers for ODT, ODS, XLSX, PPTX and EPUB. Preserve sheet/slide/chapter order
