@@ -6,6 +6,13 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- Reads only a messenger's server answers, each behind its own switch so a messenger shows only what it has:
+  `chats media <chat> [--type photo,video,file,audio,link] [--before-id]` (`chatMedia`), `account privacy show`
+  (`privacy`), and a `calls list` group a CLI adds itself. Adapters implement `AccountRecords` (`media`,
+  `privacy`, `calls`); domain types `CallRecord`, `PrivacySettings`, `Audience`, `MediaKind`. Planned for tg.
+
 ## 0.179.0 — 08.10.2026
 
 ### Added

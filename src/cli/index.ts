@@ -202,6 +202,7 @@ export type {
 } from "./messenger/port.js"
 export { type ModeProblem, type PrivateFiles, privateFiles, withSqliteSidecars } from "./messenger/private-files.js"
 export { reactionsCommand } from "./messenger/reactions-command.js"
+export { callsCommand } from "./messenger/records-command.js"
 export { repliesCommand } from "./messenger/replies-command.js"
 export { reviewCommand } from "./messenger/review.js"
 export { searchesCommand } from "./messenger/searches-command.js"
