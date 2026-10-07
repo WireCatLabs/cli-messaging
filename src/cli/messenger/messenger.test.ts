@@ -3529,3 +3529,35 @@ describe("topics edit", () => {
     expect(editTopic).toHaveBeenCalledTimes(3)
   })
 })
+
+describe("messages comments", () => {
+  it("prints the discussion and the comments in each format, with a note for more", async () => {
+    const root = mkdtempSync(join(tmpdir(), "comments-cli-"))
+    const env = {
+      CHAT_STATE_DIR: join(root, "state"),
+      CHAT_CONFIG_DIR: join(root, "config"),
+      MESSAGING_STORE: join(root, "m.db"),
+    }
+    const discussion = { chatId: "-1002", messageId: "900" }
+    const comment = { ...message, id: "901", chatId: "-1002", text: "synthetic comment" }
+    const comments = vi.fn(async () => ({ items: [comment], hasMore: true }))
+    const connect = vi.fn(async () => ({ ...fake, discussionOf: async () => discussion, comments }))
+
+    const json = await call(
+      ["messages", "comments", "7", "42", "--limit", "5", "--before-id", "950", "--json"],
+      connect,
+      env,
+    )
+    expect(json.code).toBe(0)
+    expect(JSON.parse(json.stdout.join(""))).toEqual({ discussion, items: [comment], hasMore: true })
+    expect(json.stderr.join("")).toContain("--before-id 901")
+    expect(comments).toHaveBeenCalledWith("7", "42", { limit: 5, before: "950" })
+
+    const jsonl = await call(["messages", "comments", "7", "42", "--jsonl"], connect, env)
+    expect(JSON.parse(jsonl.stdout.join("").trim())).toMatchObject({ id: "901" })
+
+    const pretty = await call(["messages", "comments", "7", "42"], connect, env)
+    expect(pretty.code).toBe(0)
+    expect(pretty.stdout.join("")).toContain("synthetic comment")
+  })
+})
