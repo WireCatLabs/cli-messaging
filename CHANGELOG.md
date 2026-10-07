@@ -6,6 +6,10 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Fixed
+
+- Local contact aliases cannot silently override a different chat that the messenger resolves under the same name. Ambiguous references require an explicit chat id.
+
 ## 0.173.0 — 07.10.2026
 
 ### Fixed

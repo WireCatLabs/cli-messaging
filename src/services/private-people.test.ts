@@ -127,6 +127,7 @@ describe("private people metadata", () => {
     const remote: string[] = []
     const adapter = {
       resolve: async (reference: string) => {
+        if (reference === "Local alias") throw new CliError("not_found", "no remote chat named by this local alias")
         remote.push(reference)
         return {
           id: reference,
@@ -150,6 +151,29 @@ describe("private people metadata", () => {
     const early = stored(adapter, { account: unknown, store: async () => f.store, warn: () => {}, events: () => {} })
     expect((await early.resolve("Remote name")).id).toBe("Remote name")
     expect(remote).toEqual(["10", "Remote name"])
+    const collision = stored(
+      {
+        ...adapter,
+        resolve: async () => ({
+          id: "other-group",
+          title: "Local alias",
+          kind: "group",
+          unreadCount: 0,
+          lastMessageAt: null,
+          participantsCount: null,
+        }),
+      } as MessengerAdapter,
+      {
+        account: key,
+        store: async () => f.store,
+        warn: () => {},
+        events: () => {},
+      },
+    )
+    await expect(collision.resolve("Local alias")).rejects.toMatchObject({
+      code: "validation_error",
+      details: { candidates: [{ id: "10" }, { id: "other-group" }] },
+    })
   })
 
   it("retains private identity scopes across linking and store reopening", async () => {
