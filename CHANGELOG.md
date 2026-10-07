@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.167.0 — 07.10.2026
+
 ### Changed — may break callers
 
 - A send, forward or poll with no `--send-as` (`send_as`) to a chat whose saved sender is not the account is
