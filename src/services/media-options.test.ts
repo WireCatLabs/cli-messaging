@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest"
 import type { MediaOption, Messenger } from "../cli/messenger/context.js"
+import { sendCommand } from "../cli/messenger/messages-send-command.js"
 import type { MessengerAdapter } from "../cli/messenger/port.js"
 import type { SendGuard } from "../sends/guard.js"
 import { onlineDeps } from "./deps.js"
@@ -47,5 +48,18 @@ describe("media options on a send", () => {
     await service.send({ chat: "7", text: "look", attachments: photo })
     expect(send.mock.calls[0]?.[2]).not.toHaveProperty("spoiler")
     expect(send.mock.calls[0]?.[2]).not.toHaveProperty("captionAbove")
+  })
+})
+
+describe("the send command's media flags", () => {
+  const flags = (mediaOptions?: readonly MediaOption[]) =>
+    sendCommand({ provider: "test", chatArgument: "a chat", ...(mediaOptions ? { mediaOptions } : {}) } as Messenger)
+      .options.map(({ long }) => long)
+      .filter((flag) => flag === "--spoiler" || flag === "--caption-above")
+
+  it("**shows only the flags the messenger lists**, so the parity check sees what each CLI can do", () => {
+    expect(flags()).toEqual([])
+    expect(flags(["spoiler"])).toEqual(["--spoiler"])
+    expect(flags(["spoiler", "captionAbove"])).toEqual(["--spoiler", "--caption-above"])
   })
 })

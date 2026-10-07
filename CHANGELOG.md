@@ -6,6 +6,11 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Fixed
+
+- `messages send` offers `--spoiler` and `--caption-above` only where the messenger lists them, as 0.163.0
+  said; it showed them everywhere and refused them on use, so max-cli's parity check failed on adopting it.
+
 ## 0.164.0 — 07.10.2026
 
 Released early: max-cli and tg-cli need first-run configuration files for the approved setup documentation
