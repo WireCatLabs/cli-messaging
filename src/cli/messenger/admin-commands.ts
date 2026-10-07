@@ -187,10 +187,14 @@ const requestsCommand = (messenger: Messenger): Command => {
     .description("who asked to join, newest first; only admins see them, and reading tells nobody")
     .argument("<chat>", messenger.chatArgument)
     .option("--limit <n>", "how many", positiveCount("--limit"))
+    .option("--search <text>", "only people whose name or @username has this")
+    .option("--link <link>", "only people who asked through this invite link; not with --search")
     .action(async function (this: Command, chat: string) {
       const context = messengerContext(this, messenger)
       const { limit } = context.settings
-      const found = await context.withServices((services) => services.admin.requests(chat, { limit }))
+      const { search, link } = this.opts<{ search?: string; link?: string }>()
+      const window = { limit, ...(search === undefined ? {} : { search }), ...(link === undefined ? {} : { link }) }
+      const found = await context.withServices((services) => services.admin.requests(chat, window))
       if (context.format === "json") context.renderer.result(found)
       else context.renderer.stream(found.items)
       if (found.hasMore) context.renderer.note(`more requests: raise --limit above ${limit}`)

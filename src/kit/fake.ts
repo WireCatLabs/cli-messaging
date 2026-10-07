@@ -27,6 +27,7 @@ import type {
   Chat,
   Contact,
   Folder,
+  FolderRules,
   GroupCard,
   GroupMember,
   GroupSettings,
@@ -93,6 +94,14 @@ const missing = (what: string): CliError => new CliError("not_found", `the fake 
  * With `{ feed: true }` it also pushes its history, as a messenger with `history: "store"` does:
  * the chats and people in one batch, then each chat's messages in a batch of their own.
  */
+const withRules = (folder: Folder, { emoji, include, skip, exclude, pin }: FolderRules): void => {
+  if (emoji !== undefined) folder.emoji = emoji
+  if (include !== undefined) folder.include = include
+  if (skip !== undefined) folder.skip = skip
+  if (exclude?.length) folder.excludedChatIds = [...new Set([...(folder.excludedChatIds ?? []), ...exclude])]
+  if (pin?.length) folder.pinnedChatIds = [...new Set([...(folder.pinnedChatIds ?? []), ...pin])]
+}
+
 export const fakeAdapter = (seed: Seed = contractSeed(), options: { feed?: boolean } = {}): FakeAdapter => {
   const state = structuredClone(seed)
   let account: Account | null = state.account
@@ -475,17 +484,20 @@ export const fakeAdapter = (seed: Seed = contractSeed(), options: { feed?: boole
     },
 
     folders: async () => structuredClone(folders),
-    createFolder: async (title, chatIds) => {
-      const folder = { id: nextId("folder"), title, chatIds: [...chatIds] }
+    createFolder: async (title, chatIds, rules = {}) => {
+      const folder: Folder = { id: nextId("folder"), title, chatIds: [...chatIds] }
+      withRules(folder, rules)
       folders.push(folder)
       return { ...folder }
     },
     updateFolder: async (folderId, change) => {
       const folder = folderOf(folderId)
       if (change.title !== undefined) folder.title = change.title
-      folder.chatIds = [...new Set([...folder.chatIds, ...(change.add ?? [])])].filter(
-        (id) => !change.remove?.includes(id),
-      )
+      const kept = (ids: Id[] = []) => ids.filter((id) => !change.remove?.includes(id))
+      folder.chatIds = kept([...new Set([...folder.chatIds, ...(change.add ?? [])])])
+      withRules(folder, change)
+      if (folder.excludedChatIds) folder.excludedChatIds = kept(folder.excludedChatIds)
+      if (folder.pinnedChatIds) folder.pinnedChatIds = kept(folder.pinnedChatIds)
       return { ...folder }
     },
     deleteFolder: async (folderId) => {

@@ -1,13 +1,21 @@
 import { CliError } from "@leemour/cli-core"
 import { capability, type MessengerAdapter } from "../cli/messenger/port.js"
-import type { Folder, Id } from "../domain/models.js"
+import type { Folder, FolderKind, FolderRules, FolderSkip, Id } from "../domain/models.js"
 import { guardedWrite, type Operated } from "../sends/guarded.js"
 import { newOperationId } from "../sends/send-id.js"
 import type { ServiceDeps } from "./deps.js"
 
-export interface FolderEdit {
+/** Chats as typed; `include` and `skip` replace what the folder had. */
+export interface FolderRulesEdit {
+  emoji?: string
+  include?: FolderKind[]
+  skip?: FolderSkip[]
+  exclude?: string[]
+  pin?: string[]
+}
+
+export interface FolderEdit extends FolderRulesEdit {
   title?: string
-  /** Chats as typed. */
   add?: string[]
   remove?: string[]
 }
@@ -15,12 +23,12 @@ export interface FolderEdit {
 /** The owner's chat folders. Nobody else sees them, but they change the owner's own app, so each change is guarded. */
 export interface FoldersService {
   list(): Promise<Folder[]>
-  create(title: string, chats: string[]): Promise<Operated<{ folder: Folder }>>
+  create(title: string, chats: string[], rules?: FolderRulesEdit): Promise<Operated<{ folder: Folder }>>
   /** `folder` is its id, or its title exactly. */
   update(folder: string, edit: FolderEdit): Promise<Operated<{ folder: Folder }>>
   delete(folder: string): Promise<Operated<{ folderId: string }>>
   /** The folders named go first, in this order; the others keep theirs after them. */
-  order(folders: string[]): Promise<Operated<{ folders: Folder[] }>>
+  order(folders: string[]): Promise<Operated<{ folders: Pick<Folder, "id" | "title">[] }>>
   /** A folder shared by a link: every chat in it is joined. */
   join(link: string): Promise<Operated<{ folder: Folder }>>
 }
@@ -47,27 +55,51 @@ export const foldersService = (deps: ServiceDeps): FoldersService => {
         : `${found.length} folders are called "${typed}" — name one by its id`,
     )
   }
+  const rulesOf = async (connection: MessengerAdapter, edit: FolderRulesEdit): Promise<FolderRules> => {
+    const asked = [edit.emoji, edit.include, edit.skip, edit.exclude?.length, edit.pin?.length].some(
+      (one) => one !== undefined && one !== 0,
+    )
+    if (asked && !deps.messenger.folderRules)
+      throw new CliError("validation_error", "this messenger's folders hold only the chats named in them")
+    return {
+      ...(edit.emoji === undefined ? {} : { emoji: edit.emoji }),
+      ...(edit.include === undefined ? {} : { include: edit.include }),
+      ...(edit.skip === undefined ? {} : { skip: edit.skip }),
+      ...(edit.exclude?.length ? { exclude: await ids(connection, edit.exclude) } : {}),
+      ...(edit.pin?.length ? { pin: await ids(connection, edit.pin) } : {}),
+    }
+  }
+  const changes = (edit: FolderEdit) =>
+    [
+      edit.title,
+      edit.add?.length,
+      edit.remove?.length,
+      edit.emoji,
+      edit.include,
+      edit.skip,
+      edit.exclude?.length,
+      edit.pin?.length,
+    ].some((one) => one !== undefined && one !== 0)
   return {
     list: async () => capability(await online("chats folders list"), "folders", "list its folders")(),
 
-    create: async (title, chats) => {
+    create: async (title, chats, edit = {}) => {
       if (title.trim() === "") throw new CliError("validation_error", "a folder needs a name")
       const connection = await online("chats folders create")
       const create = capability(connection, "createFolder", "create a folder")
       const chatIds = await ids(connection, chats)
+      const rules = await rulesOf(connection, edit)
       const operationId = newOperationId()
       const folder = await guardedWrite(
         deps.guard,
         { operationId, chatId: null, kind: "account", action: "folder-create" },
-        () => create(title.trim(), chatIds),
+        () => (Object.keys(rules).length > 0 ? create(title.trim(), chatIds, rules) : create(title.trim(), chatIds)),
       )
       return { operationId, folder }
     },
 
     update: async (folder, edit) => {
-      if (edit.title === undefined && !edit.add?.length && !edit.remove?.length) {
-        throw new CliError("validation_error", "nothing to change — give --title, --add or --remove")
-      }
+      if (!changes(edit)) throw new CliError("validation_error", "nothing to change — give --title, --add or --remove")
       const connection = await online("chats folders update")
       const update = capability(connection, "updateFolder", "change a folder")
       const { id } = await folderOf(connection, folder)
@@ -75,6 +107,7 @@ export const foldersService = (deps: ServiceDeps): FoldersService => {
         ...(edit.title === undefined ? {} : { title: edit.title }),
         ...(edit.add?.length ? { add: await ids(connection, edit.add) } : {}),
         ...(edit.remove?.length ? { remove: await ids(connection, edit.remove) } : {}),
+        ...(await rulesOf(connection, edit)),
       }
       const operationId = newOperationId()
       const changed = await guardedWrite(
@@ -113,7 +146,7 @@ export const foldersService = (deps: ServiceDeps): FoldersService => {
       await guardedWrite(deps.guard, { operationId, chatId: null, kind: "account", action: "folder-order" }, () =>
         reorder(folders.map((one) => one.id)),
       )
-      return { operationId, folders }
+      return { operationId, folders: folders.map(({ id, title }) => ({ id, title })) }
     },
 
     join: async (link) => {

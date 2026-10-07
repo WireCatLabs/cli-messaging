@@ -270,6 +270,10 @@
       "meaning": "judge and plan; do nothing",
       "note": "A command-specific dry run keeps its richer plan; otherwise the shared shell previews arguments and permissions without running the action. Targets remain unresolved unless that command provides a preview."
     },
+    "--emoji": {
+      "value": "<emoji>",
+      "meaning": "the folder's icon"
+    },
     "--encrypt": {
       "meaning": "compress and encrypt with a password, typed at a hidden prompt or piped on stdin; never kept"
     },
@@ -283,6 +287,10 @@
     },
     "--exact": {
       "meaning": "bare words and quotes match their exact form only, as exact:word does; text: still matches every form"
+    },
+    "--exclude-chat": {
+      "value": "<chat>",
+      "meaning": "never show this chat in the folder; repeat it for more"
     },
     "--expire-time": {
       "value": "<time>",
@@ -358,6 +366,10 @@
     "--idle": {
       "value": "<duration>",
       "meaning": "stop after this long with nobody using it — 15m, 1h"
+    },
+    "--include": {
+      "value": "<kinds>",
+      "meaning": "a folder takes every chat of these kinds: contacts, non-contacts, groups, channels, bots"
     },
     "--join-approval": {
       "value": "<on|off>",
@@ -659,6 +671,10 @@
       "value": "<file>",
       "meaning": "an image file — a profile photo in `account update`, a group's photo in `chats update`, a photo to send in `messages send`"
     },
+    "--pin": {
+      "value": "<chat>",
+      "meaning": "pin this chat at the top of the folder; repeat it for more"
+    },
     "--pinned": {
       "value": "<on|off>",
       "meaning": "on pins a forum topic at the top of the list, off unpins it"
@@ -799,6 +815,10 @@
     "--size": {
       "value": "<n>",
       "meaning": "messages to answer per batch, 10–200; 50 by default"
+    },
+    "--skip": {
+      "value": "<which>",
+      "meaning": "a folder leaves out chats that are muted, read or archived"
     },
     "--source": {
       "value": "<messenger>",
@@ -1441,7 +1461,32 @@
     "chats folders create": {
       "in": "all",
       "options": {
-        "--chat": "all"
+        "--chat": "all",
+        "--emoji": {
+          "in": [],
+          "reason": "max-cli folders hold only the chats named in them",
+          "planned": { "tg": "feat/folder-rules" }
+        },
+        "--exclude-chat": {
+          "in": [],
+          "reason": "max-cli folders hold only the chats named in them",
+          "planned": { "tg": "feat/folder-rules" }
+        },
+        "--include": {
+          "in": [],
+          "reason": "max-cli folders hold only the chats named in them",
+          "planned": { "tg": "feat/folder-rules" }
+        },
+        "--pin": {
+          "in": [],
+          "reason": "max-cli folders hold only the chats named in them",
+          "planned": { "tg": "feat/folder-rules" }
+        },
+        "--skip": {
+          "in": [],
+          "reason": "max-cli folders hold only the chats named in them",
+          "planned": { "tg": "feat/folder-rules" }
+        }
       }
     },
     "chats folders delete": {
@@ -1467,7 +1512,32 @@
       "in": "all",
       "options": {
         "--add": "all",
+        "--emoji": {
+          "in": [],
+          "reason": "max-cli folders hold only the chats named in them",
+          "planned": { "tg": "feat/folder-rules" }
+        },
+        "--exclude-chat": {
+          "in": [],
+          "reason": "max-cli folders hold only the chats named in them",
+          "planned": { "tg": "feat/folder-rules" }
+        },
+        "--include": {
+          "in": [],
+          "reason": "max-cli folders hold only the chats named in them",
+          "planned": { "tg": "feat/folder-rules" }
+        },
+        "--pin": {
+          "in": [],
+          "reason": "max-cli folders hold only the chats named in them",
+          "planned": { "tg": "feat/folder-rules" }
+        },
         "--remove": "all",
+        "--skip": {
+          "in": [],
+          "reason": "max-cli folders hold only the chats named in them",
+          "planned": { "tg": "feat/folder-rules" }
+        },
         "--title": "all"
       }
     },
