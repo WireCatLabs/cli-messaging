@@ -336,8 +336,8 @@ lives in `src/mcp/tools/<resource>.ts` and answers what the command's `--json` p
 owner's tunnel. `oauth.ts` is a one-owner OAuth server — a token needs the code printed in the terminal, and
 only token hashes reach the disk; `serve.ts` checks the Host, answers the login routes, requires a bearer
 token for `/mcp`, and sends 2025-era requests to per-session servers bound to their OAuth client, because a
-stateless server forgets the form capability a client declared in `initialize`. Every write goes through
-the form over HTTP (`OVER_HTTP`, NEED-593).
+stateless server forgets the form capability a client declared in `initialize`. Writes over HTTP follow the
+profile's permissions exactly as over stdio; no form is forced (NEED-774, which replaced NEED-593).
 
 ## Services
 
