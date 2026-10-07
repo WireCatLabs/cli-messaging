@@ -338,7 +338,7 @@ export const sendGuard = ({
     // After a send, a failure to write here must not become the command's answer: the message is
     // already with a person, and an error would invite the caller to send it again.
     record: (entry) => {
-      const { personIds: _, key: __, ...kept } = entry as typeof entry & { personIds?: Id[]; key?: PermissionKey }
+      const { personIds: _, ...kept } = entry as typeof entry & { personIds?: Id[] }
       const settles = entry.outcome === "refused" ? undefined : reservation
       reservation = undefined
       try {

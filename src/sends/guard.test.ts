@@ -89,6 +89,15 @@ describe("two senders at once", () => {
     expect(new SendJournal(sendsPathFor("g-race")).entries()).toMatchObject([{ chatId: "111", outcome: "sent" }])
   })
 
+  it("journals the command a write names, so a poll is told from a message, and never the people", () => {
+    const one = guard("g-key", 5)
+    one.check({ chatId: "111", key: "polls.create" })
+    one.record({ chatId: "111", outcome: "sent", key: "polls.create", personIds: ["9"] } as never)
+    const [entry] = new SendJournal(sendsPathFor("g-key")).entries()
+    expect(entry).toMatchObject({ chatId: "111", key: "polls.create" })
+    expect(entry).not.toHaveProperty("personIds")
+  })
+
   it("gives the place back when the send failed", () => {
     const first = guard("g-race-failed", 1)
     first.check({ chatId: "111" })

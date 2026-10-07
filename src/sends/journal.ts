@@ -67,6 +67,8 @@ export interface SendEntry {
   /** How many people a `chat` entry added or removed. */
   people?: number
   messageId?: Id
+  /** The command a write belongs to, where it named one: `polls.create` sets a poll apart from a message. */
+  key?: string
   /** How many messages a `delete` entry named — each one counts toward the hourly limit. */
   count?: number
   forEveryone?: boolean

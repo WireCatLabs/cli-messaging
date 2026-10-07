@@ -203,6 +203,12 @@ export interface Poll {
   /** Nobody sees who voted for what. */
   anonymous: boolean
   voters: number | null
+  /** Has one correct answer. Absent where the messenger does not say. */
+  quiz?: boolean
+  /** A voter may change or retract their vote. */
+  revote?: boolean
+  /** This account made it, so only it may close it. */
+  creator?: boolean
 }
 
 /** A chat marked read up to `messageId`, inclusive. `unread` is what the provider says is left, or `null`. */

@@ -6,6 +6,14 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- `Poll` gains optional `quiz`, `revote` and `creator`, so `polls show` can say a poll has one correct answer,
+  whether a vote may change, and whether this account may close it; an adapter that does not set them is
+  unchanged.
+- The send journal keeps the `key` a write names — `polls.create`, `polls.vote`, `polls.close` and the others —
+  so a poll is told from a message in `sends list` and in a report. An additive field; older lines read as before.
+
 ## 0.176.0 — 08.10.2026
 
 ### Added
