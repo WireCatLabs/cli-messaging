@@ -6,6 +6,12 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- A compiled Lucene selection seam for bounded SQL analytics, using the same matcher as search
+  inside one synchronous read snapshot. Exact populations stay in SQL; detector and attachment
+  key budgets fail closed. The planned ranking commands are not exposed yet.
+
 ## 0.166.0 — 07.10.2026
 
 Released early: MAX and Telegram search catch-up in 0.162.0 through 0.165.0 can bypass readonly graph-link permissions; consumers need the corrected guard

@@ -100,11 +100,7 @@ export const countQuery = (
 /** All matching message keys, without materializing message bodies or imposing a hit-page limit. */
 export const queryMessagePks = (context: StoreContext, execution: QueryExecution): Promise<number[]> =>
   runQuery(context, execution, "pks") as Promise<number[]>
-const runQuery = async (
-  context: StoreContext,
-  execution: QueryExecution,
-  by?: QueryGrouping | "pks",
-): Promise<Page<ScoredHit> | QueryGroup[] | number[]> => {
+const compileQuery = (context: StoreContext, execution: QueryExecution, boundedAttachments = false) => {
   const { database } = context
   const started = context.now()
   const budget: MatchBudget = { work: 0 }
@@ -206,17 +202,35 @@ const runQuery = async (
         if (automaton) return automaton.test(name, budget)
         return name === wanted || (column === "mime" && !wanted.includes("/") && name.startsWith(`${wanted}/`))
       }
-      const scope = combine(
+      let scope = combine(
         execution.accounts.map(({ provider, account }) => bound("ac.provider=? AND ac.native_id=?", provider, account)),
         "OR",
       )
+      if (boundedAttachments && execution.chat) {
+        const chat = execution.chat
+        scope = combine(
+          [
+            scope,
+            bound(
+              "ac.provider=? AND ac.native_id=? AND m.chat_pk IN (SELECT pk FROM chats WHERE account_pk=ac.pk AND native_id=?)",
+              chat.account.provider,
+              chat.account.account,
+              chat.chatId,
+            ),
+          ],
+          "AND",
+        )
+      }
       const page = database.prepare(
         `SELECT att.pk AS pk, att.message_pk AS message, att.${column} AS value FROM attachments att JOIN messages m ON m.pk=att.message_pk JOIN accounts ac ON ac.pk=m.account_pk WHERE att.pk > ? AND att.${column} IS NOT NULL AND m.deleted_at IS NULL AND ${scope.sql} ORDER BY att.pk LIMIT 5000`,
       )
       const messages = new Set<number>()
       for (let rows = page.all(0, ...scope.params); rows.length > 0; ) {
         check()
-        for (const row of rows) if (fits(String(row.value))) messages.add(Number(row.message))
+        for (const row of rows) {
+          if (fits(String(row.value))) messages.add(Number(row.message))
+          if (boundedAttachments && messages.size > QUERY_LIMITS.candidates) exhausted("attachment message keys")
+        }
         rows = page.all(Number(rows.at(-1)?.pk), ...scope.params)
       }
       fragment = bound("m.pk IN (SELECT value FROM json_each(?))", JSON.stringify([...messages]))
@@ -510,8 +524,8 @@ const runQuery = async (
       not.every(({ node }) => !evaluate(node, row, text, attachments))
     )
   }
-  const grouped = (sql: string, params: SqlValue[], source: string, prefix = ""): QueryGroup[] => {
-    const group = GROUPS[by as QueryGrouping]
+  const grouped = (by: QueryGrouping, sql: string, params: SqlValue[], source: string, prefix = ""): QueryGroup[] => {
+    const group = GROUPS[by]
     return database
       .prepare(`${prefix}SELECT ${group.select}, count(*) AS count ${source} WHERE ${sql} GROUP BY ${group.key}`)
       .all(...params)
@@ -523,6 +537,135 @@ const runQuery = async (
         count: Number(row.count),
       }))
   }
+  return {
+    database,
+    check,
+    grouped,
+    where,
+    from,
+    withRanking,
+    ranked,
+    leaves,
+    stemmed,
+    exactTier,
+    driver,
+    baseFrom,
+    filtered,
+    ranking,
+    relevance,
+    rankedFrom,
+    exactColumn,
+    order,
+    projection,
+    projectionParams,
+    joinedFrom,
+    evaluate,
+  }
+}
+
+interface QuerySelection {
+  sql: string
+  params: SqlValue[]
+}
+
+/** The matcher and its consumer run synchronously in one read snapshot; exact keys stay in SQL. */
+export const withQuerySelection = <T>(
+  context: StoreContext,
+  execution: QueryExecution,
+  consume: (selection: QuerySelection, check: () => void) => T,
+): T => {
+  const { database } = context
+  database.exec("BEGIN")
+  try {
+    const query = compileQuery(context, execution, true)
+    const { check, leaves, where, from, withRanking, ranked } = query
+    check()
+    let selection: QuerySelection
+    if (leaves.every(({ test }) => !test)) {
+      selection = {
+        sql: `${withRanking}SELECT DISTINCT m.pk AS pk ${from} WHERE ${where.sql}`,
+        params: [...ranked.params, ...where.params],
+      }
+    } else {
+      const candidates = database
+        .prepare(
+          `${withRanking}SELECT m.pk AS pk, length(cast(m.text AS BLOB)) AS bytes ${from} WHERE ${where.sql} ORDER BY m.pk LIMIT ?`,
+        )
+        .all(...ranked.params, ...where.params, QUERY_LIMITS.candidates + 1)
+      check()
+      if (candidates.length > QUERY_LIMITS.candidates) exhausted("candidate rows")
+      if (candidates.reduce((sum, row) => sum + Number(row.bytes), 0) > QUERY_LIMITS.bodyBytes) exhausted("body bytes")
+      const matched: number[] = []
+      for (let offset = 0; offset < candidates.length; offset += 500) {
+        check()
+        const pks = candidates.slice(offset, offset + 500).map(({ pk }) => Number(pk))
+        const rows = database
+          .prepare(
+            `SELECT m.pk AS pk, m.text AS body${query.projection ? `,${query.projection}` : ""},(SELECT json_group_array(att.kind) FROM attachments att WHERE att.message_pk=m.pk) AS attachment_kinds ${query.joinedFrom} WHERE m.pk IN (${pks.map(() => "?").join(",")})`,
+          )
+          .all(...query.projectionParams, ...pks)
+        for (const row of rows) {
+          check()
+          const attachments: unknown = JSON.parse(String(row.attachment_kinds))
+          if (
+            query.evaluate(
+              execution.root,
+              row,
+              String(row.body),
+              Array.isArray(attachments) ? attachments.map(String) : [],
+            )
+          )
+            matched.push(Number(row.pk))
+        }
+      }
+      selection = { sql: "SELECT value AS pk FROM json_each(?)", params: [JSON.stringify(matched)] }
+    }
+    const result = consume(selection, check)
+    if (
+      result !== null &&
+      (typeof result === "object" || typeof result === "function") &&
+      "then" in result &&
+      typeof result.then === "function"
+    )
+      throw new Error("query selection consumers must run synchronously")
+    check()
+    database.exec("COMMIT")
+    return result
+  } catch (error) {
+    database.exec("ROLLBACK")
+    throw error
+  }
+}
+
+const runQuery = async (
+  context: StoreContext,
+  execution: QueryExecution,
+  by?: QueryGrouping | "pks",
+): Promise<Page<ScoredHit> | QueryGroup[] | number[]> => {
+  const {
+    database,
+    check,
+    grouped,
+    where,
+    from,
+    withRanking,
+    ranked,
+    leaves,
+    stemmed,
+    exactTier,
+    driver,
+    baseFrom,
+    filtered,
+    ranking,
+    relevance,
+    rankedFrom,
+    exactColumn,
+    order,
+    projection,
+    projectionParams,
+    joinedFrom,
+    evaluate,
+  } = compileQuery(context, execution)
   if (by === "pks" && leaves.every(({ test }) => !test)) {
     const rows = database
       .prepare(`${withRanking}SELECT m.pk AS pk ${from} WHERE ${where.sql}`)
@@ -532,7 +675,7 @@ const runQuery = async (
     return rows.map(({ pk }) => Number(pk))
   }
   if (by && by !== "pks" && leaves.every(({ test }) => !test))
-    return grouped(where.sql, [...ranked.params, ...where.params], from, withRanking)
+    return grouped(by, where.sql, [...ranked.params, ...where.params], from, withRanking)
   // Exact forms come first, so a page they fill needs neither the stems nor their bm25: for a word in a few
   // percent of messages that was most of the cost (PERF-9). The exact tier is ranked as exact search ranks it.
   if (stemmed && exactTier && driver && !execution.newest && leaves.every(({ test }) => !test)) {
@@ -625,7 +768,7 @@ const runQuery = async (
     if (!by && found.length > execution.limit) break
   }
   if (by === "pks") return found
-  if (by) return grouped("m.pk IN (SELECT value FROM json_each(?))", [JSON.stringify(found)], joinedFrom)
+  if (by) return grouped(by, "m.pk IN (SELECT value FROM json_each(?))", [JSON.stringify(found)], joinedFrom)
   return {
     items: hitsByPk(context, found.slice(0, execution.limit)).map((hit, index) => ({
       ...hit,

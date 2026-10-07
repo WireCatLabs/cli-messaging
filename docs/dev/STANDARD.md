@@ -643,9 +643,9 @@ many), `--allow-any-file` (which files).
 The owner-approved ranking views and their options are recorded in the
 [ranking command contract](../plans/2026-10-07-rankings-contract.md). Rankings operate on
 stored messages under `stats messages top` and their human authors under `stats contacts top`;
-ordinary search does not gain ranking modes. The contract also proposes `stats messages evidence`
-and `stats contacts evidence` for bounded component drilldown. Those evidence names await owner
-review; the manifest labels all feature paths and options as planned, not implemented.
+ordinary search does not gain ranking modes. The owner also approved `stats messages evidence`
+and `stats contacts evidence` for bounded component drilldown on 2026-10-07. The manifest
+labels all feature paths and options as planned until implementation.
 
 ## MCP
 
