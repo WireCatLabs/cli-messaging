@@ -44,6 +44,7 @@ import * as messageWrites from "./sqlite/messages.js"
 import { openSqlite, type StoreContext } from "./sqlite/open.js"
 import * as personLinks from "./sqlite/person-links.js"
 import * as ranges from "./sqlite/ranges.js"
+import { type RankedStoreFound, type RankingRequest, rankQuery } from "./sqlite/rankings.js"
 import * as reads from "./sqlite/reads.js"
 import type {
   MemberCount,
@@ -387,6 +388,7 @@ export interface MessageStore {
    * The word index, ranked by bm25, ties newest first (phase 2 plan S4 steps 1, 2 and 4). Chats marked
    * not searchable are left out unless the scope names the chat.
    */
+  rankQuery?(execution: QueryExecution, request: RankingRequest): Promise<RankedStoreFound>
   matchQuery?(execution: QueryExecution): Promise<Page<ScoredHit>>
   conversationEligibility?(execution: QueryExecution): Promise<ConversationEligibility>
   /** The same matches as `matchQuery`, each counted once, grouped by chat, sender or quarter hour. */
@@ -1182,6 +1184,7 @@ const storeOver = (context: StoreContext): MessageStore => {
 
     find: async (filter) => (filter.pattern ? findRegex(context, filter) : search.find(context, filter)),
 
+    rankQuery: async (execution, request) => rankQuery(context, execution, request),
     matchQuery: async (execution) => lucene.matchQuery(context, execution),
     conversationEligibility: async (execution) => conversationEligibility(context, execution),
     countQuery: async (execution, by) => lucene.countQuery(context, execution, by),
@@ -1339,6 +1342,7 @@ const storeOver = (context: StoreContext): MessageStore => {
 
 export type { AttachmentTextEntry, AttachmentView, FileAttachment, TextOrigin } from "./sqlite/attachment-texts.js"
 export { CHAT_LIST_KEY, type ChatCompleteness, fetchedKey, historyStartKey } from "./sqlite/completeness.js"
+export type { RankedStoreFound, RankedStoreRow, RankingRequest } from "./sqlite/rankings.js"
 export type {
   MemberCount,
   MemberStay,
