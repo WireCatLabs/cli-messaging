@@ -717,6 +717,9 @@
     "--revoke": {
       "meaning": "forget every login given to a browser app over --http"
     },
+    "--revoked": {
+      "meaning": "the links you stopped, instead"
+    },
     "--revote": {
       "meaning": "people may change their vote"
     },
@@ -1483,8 +1486,38 @@
         }
       }
     },
+    "chats link list": {
+      "in": [],
+      "planned": {
+        "max": "max's next cli-messaging bump",
+        "tg": "G2 feat/join-bulk-links"
+      },
+      "options": {
+        "--limit": {
+          "in": [],
+          "planned": {
+            "max": "max's next cli-messaging bump",
+            "tg": "G2 feat/join-bulk-links"
+          }
+        },
+        "--revoked": {
+          "in": [],
+          "planned": {
+            "max": "max's next cli-messaging bump",
+            "tg": "G2 feat/join-bulk-links"
+          }
+        }
+      }
+    },
     "chats link reset": {
       "in": "all"
+    },
+    "chats link revoke": {
+      "in": [],
+      "planned": {
+        "max": "max's next cli-messaging bump",
+        "tg": "G2 feat/join-bulk-links"
+      }
     },
     "chats link show": {
       "in": "all"

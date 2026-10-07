@@ -316,17 +316,23 @@ export interface InviteLinks {
     chatId: Id,
     options: { approval: boolean; expiresAt?: string; maxUses?: number },
   ): Promise<InviteLink>
+  /** The owner's own links, newest first; `revoked` lists the stopped ones instead. */
+  inviteLinks?(chatId: Id, window: { limit: number; revoked: boolean }): Promise<Page<InviteLink>>
+  /** Stops a link; for the group's own link the answer is the new one the messenger made. */
+  revokeInviteLink?(chatId: Id, link: string): Promise<InviteLink>
 }
 
 /** Requests to join a group or channel that needs approval; only its admins see them. */
 export interface JoinRequests {
   /** Newest first. Reading them tells nobody. */
-  joinRequests(chatId: Id, window: { limit: number }): Promise<Page<JoinRequest>>
+  joinRequests(chatId: Id, window: { limit: number; link?: string }): Promise<Page<JoinRequest> & { total?: number }>
   /**
    * Lets them in, or turns them away. `already` when they were a member before the answer; a request
    * that is gone — answered elsewhere or withdrawn — is `not_found`.
    */
   answerJoinRequest(chatId: Id, personId: Id, accept: boolean): Promise<{ already: boolean }>
+  /** Every pending request, or those by `link`; one that arrives meanwhile is answered too. */
+  answerAllJoinRequests?(chatId: Id, accept: boolean, link?: string): Promise<void>
 }
 
 /** Comments under a channel post, which live in the channel's linked discussion group. */

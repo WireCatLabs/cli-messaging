@@ -102,6 +102,13 @@ export interface InviteLink {
   expiresAt: string | null
   /** How many people may join by it; `null` for no limit. */
   maxUses: number | null
+  /** The group's own link; revoking it makes the messenger issue a new one. */
+  primary?: boolean
+  revoked?: boolean
+  /** Requests by it waiting for an answer. */
+  pending?: number
+  /** People who joined by it. */
+  joined?: number
 }
 
 /** A group or channel as the commands that change one answer it. */

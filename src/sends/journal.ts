@@ -26,6 +26,7 @@ export type ChatAction =
   | "requests.decline"
   | "link.reset"
   | "link.create"
+  | "link.revoke"
   | "forum-upgrade"
   | "forum-enable"
   | "topic-create"

@@ -327,6 +327,51 @@ describe("chats create, join and leave", () => {
     ])
   })
 
+  it("**answers every request with --all, by one link, and lists and revokes links**", async () => {
+    const env = sandbox()
+    const done: unknown[] = []
+    const link = { link: "https://t.me/+synthetic", approval: true, expiresAt: null, maxUses: null, pending: 2 }
+    const adapter: MessengerAdapter = {
+      ...base,
+      joinRequests: async () => ({ items: [], hasMore: false, total: 2 }),
+      answerJoinRequest: async () => ({ already: false }),
+      answerAllJoinRequests: async (chatId, accept, by) => {
+        done.push([chatId, accept, by])
+      },
+      inviteLinks: async () => ({ items: [link], hasMore: false }),
+      revokeInviteLink: async () => ({ ...link, revoked: true }),
+    }
+
+    const all = await call(
+      ["chats", "requests", "decline", "Book club", "--all", "--link", "https://t.me/+synthetic", "--json"],
+      adapter,
+      env,
+    )
+    const neither = await call(["chats", "requests", "accept", "Book club"], adapter, env)
+    const both = await call(["chats", "requests", "accept", "Book club", "91", "--all"], adapter, env)
+    const stray = await call(["chats", "requests", "accept", "Book club", "91", "--link", "x"], adapter, env)
+    const listed = await call(
+      ["chats", "link", "list", "Book club", "--revoked", "--limit", "5", "--json"],
+      adapter,
+      env,
+    )
+    const revoked = await call(
+      ["chats", "link", "revoke", "Book club", "https://t.me/+synthetic", "--json"],
+      adapter,
+      env,
+    )
+
+    expect(JSON.parse(all.stdout[0] ?? "")).toMatchObject({ chatId: "7", accepted: false, counted: 2 })
+    expect(done).toEqual([["7", false, "https://t.me/+synthetic"]])
+    expect([neither.code, both.code, stray.code]).toEqual([2, 2, 2])
+    expect(JSON.parse(listed.stdout[0] ?? "")).toMatchObject({ chatId: "7", items: [link] })
+    expect(JSON.parse(revoked.stdout[0] ?? "")).toMatchObject({ chatId: "7", revoked: true })
+    expect(new SendJournal(sendsPathFor(app, "default", env)).entries().map((one) => one.action)).toEqual([
+      "requests.decline",
+      "link.revoke",
+    ])
+  })
+
   it("**adds and removes people through the guard**, naming who could not be added", async () => {
     const env = sandbox()
     const done: unknown[] = []

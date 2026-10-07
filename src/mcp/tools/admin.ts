@@ -1,3 +1,4 @@
+import { CliError } from "@leemour/cli-core"
 import * as v from "valibot"
 import type { Messenger } from "../../cli/messenger/context.js"
 import type { MessengerAdapter } from "../../cli/messenger/port.js"
@@ -5,6 +6,17 @@ import { ADMIN_RIGHTS, GROUP_SETTINGS } from "../../domain/models.js"
 import type { SendGuard } from "../../sends/guard.js"
 import { onlineDeps, servicesFor } from "../../services/index.js"
 import { type AnyTool, chatOf, limit, READ, tool, WRITE } from "../tool.js"
+
+type Answering = { chat: string; person?: string; all?: boolean; link?: string }
+
+const answer = (service: ReturnType<typeof servicesFor>["admin"], args: Answering, accept: boolean) => {
+  if ((args.person === undefined) === (args.all !== true))
+    throw new CliError("validation_error", "give one person, or all — not both, not neither")
+  if (args.link !== undefined && args.all !== true) throw new CliError("validation_error", "link goes with all")
+  return args.person === undefined
+    ? service.answerAllRequests(args.chat, accept, args.link === undefined ? {} : { link: args.link })
+    : service.answerRequest(args.chat, args.person, accept)
+}
 
 /** Groups the owner makes, joins and leaves: other people see each one, so each is behind its permission level. */
 export const adminTools = (messenger: Messenger): Record<string, AnyTool> => {
@@ -114,6 +126,33 @@ export const adminTools = (messenger: Messenger): Record<string, AnyTool> => {
           ...(args.max_uses === undefined ? {} : { maxUses: args.max_uses }),
         }),
     }),
+    chats_link_list: tool({
+      title: "A group's invite links",
+      description:
+        "The owner's own invite links of a group, newest first: { chatId, items: [{ link, approval, expiresAt, " +
+        "maxUses, primary, revoked, pending, joined }], hasMore }. revoked lists the stopped ones. Reading changes nothing.",
+      input: v.object({
+        chat: chatOf(messenger),
+        revoked: v.optional(v.pipe(v.boolean(), v.description("the stopped links instead"))),
+        limit,
+      }),
+      annotations: READ,
+      online: (adapter, args, defaults) =>
+        admin(adapter, defaults.guard).links(args.chat, {
+          limit: args.limit ?? defaults.limit,
+          revoked: args.revoked === true,
+        }),
+    }),
+    chats_link_revoke: tool({
+      title: "Revoke an invite link",
+      description:
+        "Stop one invite link; for the group's own link the answer is the new one the messenger made. " +
+        "Only the link the owner named.",
+      input: v.object({ chat: chatOf(messenger), link: v.pipe(v.string(), v.minLength(1)) }),
+      annotations: WRITE,
+      permission: "groups",
+      online: (adapter, args, { guard }) => admin(adapter, guard).revokeLink(args.chat, args.link),
+    }),
     chats_requests_list: tool({
       title: "Requests to join a group",
       description:
@@ -127,18 +166,28 @@ export const adminTools = (messenger: Messenger): Record<string, AnyTool> => {
     chats_requests_accept: tool({
       title: "Accept a request to join",
       description: "Let one person who asked to join into the group. Only the person and group the owner named.",
-      input: v.object({ chat: chatOf(messenger), person: v.pipe(v.string(), v.minLength(1)) }),
+      input: v.object({
+        chat: chatOf(messenger),
+        person: v.optional(v.pipe(v.string(), v.minLength(1))),
+        all: v.optional(v.pipe(v.boolean(), v.description("every pending request instead of one person"))),
+        link: v.optional(v.pipe(v.string(), v.minLength(1), v.description("with all: only requests by this link"))),
+      }),
       annotations: WRITE,
       permission: "groups",
-      online: (adapter, args, { guard }) => admin(adapter, guard).answerRequest(args.chat, args.person, true),
+      online: (adapter, args, { guard }) => answer(admin(adapter, guard), args, true),
     }),
     chats_requests_decline: tool({
       title: "Decline a request to join",
       description: "Turn away one person who asked to join the group. Only the person and group the owner named.",
-      input: v.object({ chat: chatOf(messenger), person: v.pipe(v.string(), v.minLength(1)) }),
+      input: v.object({
+        chat: chatOf(messenger),
+        person: v.optional(v.pipe(v.string(), v.minLength(1))),
+        all: v.optional(v.pipe(v.boolean(), v.description("every pending request instead of one person"))),
+        link: v.optional(v.pipe(v.string(), v.minLength(1), v.description("with all: only requests by this link"))),
+      }),
       annotations: WRITE,
       permission: "groups",
-      online: (adapter, args, { guard }) => admin(adapter, guard).answerRequest(args.chat, args.person, false),
+      online: (adapter, args, { guard }) => answer(admin(adapter, guard), args, false),
     }),
     chats_members_add: tool({
       title: "Add people to a group",

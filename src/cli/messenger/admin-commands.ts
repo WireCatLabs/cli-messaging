@@ -89,6 +89,33 @@ const linkCommand = (messenger: Messenger): Command => {
         )
       }),
   )
+  link
+    .command("list")
+    .description("your invite links, newest first, with how many joined and how many wait")
+    .argument("<chat>", messenger.chatArgument)
+    .option("--revoked", "the links you stopped, instead")
+    .option("--limit <n>", "how many", positiveCount("--limit"))
+    .action(async function (this: Command, chat: string) {
+      const context = messengerContext(this, messenger)
+      const { revoked } = this.opts<{ revoked?: boolean }>()
+      const { limit } = context.settings
+      const found = await context.withServices((services) =>
+        services.admin.links(chat, { limit, revoked: revoked === true }),
+      )
+      if (context.format === "json") context.renderer.result(found)
+      else context.renderer.stream(found.items)
+      if (found.hasMore) context.renderer.note(`more links: raise --limit above ${limit}`)
+    })
+  link.addCommand(
+    annotate(new Command("revoke"), { mutates: true })
+      .description("stop one link; for the group's own link, the answer is the new one")
+      .argument("<chat>", messenger.chatArgument)
+      .argument("<link>", "the link, as `chats link list` shows it")
+      .action(async function (this: Command, chat: string, link: string) {
+        const context = messengerContext(this, messenger)
+        context.renderer.result(await context.withServices((services) => services.admin.revokeLink(chat, link)))
+      }),
+  )
   link.addCommand(
     annotate(new Command("reset"), { mutates: true })
       .description("replace the invite link; the old one stops working")
@@ -171,11 +198,22 @@ const requestsCommand = (messenger: Messenger): Command => {
       annotate(new Command(verb), { mutates: true })
         .description(help)
         .argument("<chat>", messenger.chatArgument)
-        .argument("<person>", "who asked: an id from `chats requests list`")
-        .action(async function (this: Command, chat: string, person: string) {
+        .argument("[person]", "who asked: an id from `chats requests list`")
+        .option("--all", "every pending request, counted against the hourly limit first")
+        .option("--link <link>", "with --all: only the requests made by this invite link")
+        .action(async function (this: Command, chat: string, person: string | undefined) {
           const context = messengerContext(this, messenger)
+          const { all, link } = this.opts<{ all?: boolean; link?: string }>()
+          if ((person === undefined) === (all !== true))
+            throw new CliError("validation_error", "give one person, or --all — not both, not neither")
+          if (link !== undefined && all !== true) throw new CliError("validation_error", "--link goes with --all")
           context.renderer.result(
-            await context.withServices((services) => services.admin.answerRequest(chat, person, accept)),
+            await context.withServices(
+              (services): Promise<object> =>
+                person === undefined
+                  ? services.admin.answerAllRequests(chat, accept, link === undefined ? {} : { link })
+                  : services.admin.answerRequest(chat, person, accept),
+            ),
           )
         }),
     )

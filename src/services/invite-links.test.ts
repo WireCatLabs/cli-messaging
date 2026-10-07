@@ -70,3 +70,34 @@ describe("another invite link", () => {
     expect(f.records).toEqual([])
   })
 })
+
+describe("listing and revoking invite links", () => {
+  const link = { link: "https://t.me/+synthetic", approval: false, expiresAt: null, maxUses: null, pending: 1 }
+
+  it("lists the owner's links, and revokes one through the guard", async () => {
+    const f = fixture()
+    const inviteLinks = vi.fn(async () => ({ items: [link], hasMore: false }))
+    const revokeInviteLink = vi.fn(async () => ({ ...link, revoked: true }))
+    const adapter = { resolve: async () => chat, inviteLinks, revokeInviteLink } as unknown as MessengerAdapter
+    const service = adminService(onlineDeps({ provider: "test" } as Messenger, adapter, f.deps.guard))
+
+    expect(await service.links("synthetic group", { limit: 5, revoked: true })).toEqual({
+      chatId: "-1007",
+      items: [link],
+      hasMore: false,
+    })
+    expect(inviteLinks).toHaveBeenCalledWith("-1007", { limit: 5, revoked: true })
+    expect(await service.revokeLink("synthetic group", " https://t.me/+synthetic ")).toMatchObject({ revoked: true })
+    expect(revokeInviteLink).toHaveBeenCalledWith("-1007", "https://t.me/+synthetic")
+    expect(f.records).toMatchObject([{ action: "link.revoke", outcome: "sent" }])
+  })
+
+  it("refuses a blank link, and a messenger that cannot list or revoke", async () => {
+    const f = fixture()
+    await expect(f.service.revokeLink("synthetic group", " ")).rejects.toThrow("which link")
+    await expect(f.service.links("synthetic group", { limit: 5, revoked: false })).rejects.toThrow(
+      "cannot list invite links",
+    )
+    await expect(f.service.revokeLink("synthetic group", "https://t.me/+x")).rejects.toThrow("cannot revoke")
+  })
+})

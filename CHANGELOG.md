@@ -6,6 +6,16 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- `chats requests accept|decline <chat> --all [--link <link>]` answers every pending request, or those by one
+  link. The requests are counted first; an accept is weighed by that count against the hourly limit, so one the
+  limit cannot take is refused before anyone is answered. Adapters add `JoinRequests.answerAllJoinRequests`, and
+  `joinRequests` may report `total` and take `link`.
+- `chats link list <chat> [--revoked] [--limit]` and `chats link revoke <chat> <link>`, MCP `chats_link_list` and
+  `chats_link_revoke`; `InviteLink` gains optional `primary`, `revoked`, `pending` and `joined`. Revoking the
+  group's own link answers with the new one. Through `InviteLinks.inviteLinks` and `revokeInviteLink`.
+
 ### Fixed
 
 - Wording parity skips absent planned commands while continuing to report missing required

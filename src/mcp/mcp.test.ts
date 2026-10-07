@@ -636,6 +636,7 @@ describe("the MCP server", () => {
       "chat_chats_events",
       "chat_chats_folders_list",
       "chat_chats_inspect",
+      "chat_chats_link_list",
       "chat_chats_link_show",
       "chat_chats_list",
       "chat_chats_members",
