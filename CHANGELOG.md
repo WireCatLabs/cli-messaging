@@ -6,6 +6,10 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.165.0 — 07.10.2026
+
+Released early: max-cli cannot adopt stemmed search: its parity check fails on --spoiler and --caption-above, which MAX refuses
+
 ### Fixed
 
 - `messages send` offers `--spoiler` and `--caption-above` only where the messenger lists them, as 0.163.0
