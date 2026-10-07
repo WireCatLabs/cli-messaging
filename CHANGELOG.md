@@ -8,6 +8,12 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Added
 
+- `contacts profile` answers `aliases`: the earlier names and usernames the store saw a person with, oldest
+  first — `{ name?, username?, link?, firstSeenAt, lastSeenAt, source }`. `profile`: the store now writes a
+  revision whenever a saved message or contacts sync brings a new name or username, not only on member-list
+  reads; `messages`: names on their stored messages that no revision holds, approximate. Telegram usernames get
+  their `t.me` link. Kept per identity, so two people who once shared a name stay apart. No store migration.
+
 - `messages comments <channel> <post>` and the read-only MCP tool `messages_comments` read the comments under a
   channel post, a page at a time, with where they live (`discussion: { chatId, messageId }`).
   `messages send --comment-to <post>` (tool `comment_to`) comments: the service finds the post's discussion and

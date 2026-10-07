@@ -1,4 +1,4 @@
-import type { Id, PersonProfile, ProfileFacts, SharedChatActivity } from "../domain/models.js"
+import type { Id, PersonAlias, PersonProfile, ProfileFacts, Provider, SharedChatActivity } from "../domain/models.js"
 import { pickPerson } from "../resolve.js"
 import type { AccountKey, MessageStore } from "../store/store.js"
 import { type ServiceDeps, storeIfOpen } from "./deps.js"
@@ -15,8 +15,25 @@ export const personProfile = async (deps: ServiceDeps, person: string): Promise<
   const facts = online?.profile
     ? await online.profile(person)
     : await storedFacts(held ?? { store: await deps.store(), account: await deps.account() }, person)
-  return { ...facts, chats: held ? await activityIn(held.store, held.account, facts) : quiet(facts) }
+  if (!held) return { ...facts, chats: quiet(facts), aliases: [] }
+  return {
+    ...facts,
+    chats: await activityIn(held.store, held.account, facts),
+    aliases: pastOf(facts, await held.store.personNames(held.account, facts.id), held.account.provider),
+  }
 }
+
+/** What the store recorded, less the name and usernames they have now. */
+const pastOf = (facts: ProfileFacts, recorded: PersonAlias[], provider: Provider): PersonAlias[] =>
+  recorded
+    .filter(
+      ({ name, username }) =>
+        (name ?? null) !== facts.name || (username !== undefined && !facts.usernames.includes(username)),
+    )
+    .map((alias) =>
+      alias.username && provider === "telegram" ? { ...alias, link: `https://t.me/${alias.username}` } : alias,
+    )
+    .sort((a, b) => a.firstSeenAt.localeCompare(b.firstSeenAt))
 
 const storedFacts = async (
   { store, account }: { store: MessageStore; account: AccountKey },

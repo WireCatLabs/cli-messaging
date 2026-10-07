@@ -498,9 +498,26 @@ export interface SharedChatActivity {
   complete: boolean
 }
 
+/**
+ * A name or username the store saw a person with. `profile` — their profile changed while the store watched;
+ * `messages` — the name on their stored messages, approximate, since a message fetched again carries the newest.
+ */
+export interface PersonAlias {
+  name?: string
+  username?: string
+  /** Their profile address under that username, where the messenger has one. */
+  link?: string
+  /** ISO 8601: the first and the last time the store recorded it. */
+  firstSeenAt: string
+  lastSeenAt: string
+  source: "profile" | "messages"
+}
+
 /** `contacts profile`: the person, and their activity in every chat shared with them. */
 export interface PersonProfile extends Omit<ProfileFacts, "chats"> {
   chats: SharedChatActivity[]
+  /** Earlier names and usernames, oldest first; the current ones are not repeated. */
+  aliases: PersonAlias[]
 }
 
 /**
