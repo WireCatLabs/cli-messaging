@@ -528,6 +528,24 @@ describe("the MCP server", () => {
     ).not.toHaveProperty("backend")
   })
 
+  it.each(["readonly", "ask", "deny"])(
+    "answers from the archive under messages.server-search %s and never asks the server",
+    async (level) => {
+      const root = await filledRoot()
+      const searchMessages = vi.fn()
+      const { call } = await connect(scripted({ searchMessages }), {
+        root,
+        serverSearch: true,
+        config: levels({ "messages.server-search": level }),
+      })
+      const found = await call("chat_messages_search", { text: "chapter", backend: "both" })
+      expect(found.body).toMatchObject({ server: { skipped: "not_allowed" }, items: [{ id: "1", source: "archive" }] })
+      const strict = await call("chat_messages_search", { text: "chapter", backend: "server" })
+      expect(strict.isError).toBe(true)
+      expect(searchMessages).not.toHaveBeenCalled()
+    },
+  )
+
   it("keeps hits when a refresh connection fails", async () => {
     const root = await filledRoot()
     const backend = scripted()

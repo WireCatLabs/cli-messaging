@@ -15,6 +15,13 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   request counts toward the hourly limit like an added member. Adapters implement the new optional
   `JoinRequests` group; one without it refuses.
 
+### Fixed
+
+- `messages search --backend` tops up the word and stem indexes before the server step, as the archive search
+  does, so `both` no longer fails with `index_not_ready` where `archive` would answer. An explicit
+  `--backend server` on a profile whose `messages.server-search` is `ask` is refused instead of going ahead over
+  MCP: the server search needs `allow`, like `--sync-first`.
+
 ## 0.169.0 — 07.10.2026
 
 ### Added
