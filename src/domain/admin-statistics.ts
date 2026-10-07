@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto"
 import { CliError } from "@leemour/cli-core"
 import { formatLocator } from "./locator.js"
 import { RANKING_GRAPH_LIMITS, type RankingGraphNode, rankReplyGraph } from "./rankings-graph.js"
@@ -37,6 +38,7 @@ export interface AdminRow {
   id: string
   account: { provider: string; account: string }
   chatId?: string
+  personId?: string
   message?: string
   questions?: number
   answered?: number
@@ -232,7 +234,10 @@ export const calculateAdminStatistics = (
       const delays = contributions.flatMap((one) => (one.contribution === null ? [] : [one.contribution]))
       put(
         {
-          id: `${stay.id}@${stay.joinedAt}`,
+          id: `stay:${createHash("sha256")
+            .update(JSON.stringify([stay.account, stay.chatId, stay.id, stay.joinedAt, stay.firstSeenAt]))
+            .digest("hex")}`,
+          personId: stay.id,
           account: stay.account,
           chatId: stay.chatId,
           joinedAt: new Date(stay.joinedAt).toISOString(),

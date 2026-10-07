@@ -38,6 +38,10 @@ export interface AdminFound extends AdminStoreResult {
     }
   })[]
 }
+export interface AdminEvidenceFound extends Omit<AdminStoreResult, "items" | "evidence"> {
+  items: NonNullable<AdminStoreResult["evidence"]>
+  component: "report"
+}
 export interface AdminStatisticsService {
   report(report: AdminReport, query: AdminQuery): Promise<AdminFound>
   evidence(
@@ -45,7 +49,7 @@ export interface AdminStatisticsService {
     reference: string,
     selection: unknown,
     options: { component: string; limit: number; cursor?: string; signal?: AbortSignal },
-  ): Promise<AdminStoreResult>
+  ): Promise<AdminEvidenceFound>
 }
 function invalid(message: string): never {
   throw new CliError("validation_error", message)
@@ -338,9 +342,11 @@ export const adminStatisticsService = (deps: ServiceDeps): AdminStatisticsServic
       ...(request.signal ? { signal: request.signal } : {}),
     }
     if (hasStems(execution.root)) execution.stemmer = createStemmer((await store.stemmers()) ?? DEFAULT_STEMMERS)
-    return requireStore(store)(execution, {
+    const result = await requireStore(store)(execution, {
       options: o,
       evidence: { entity, ...(request.cursor ? { cursor: request.cursor } : {}) },
     })
+    const { evidence, ...found } = result
+    return { ...found, items: evidence ?? [], component: "report" }
   },
 })

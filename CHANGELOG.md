@@ -10,15 +10,14 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 - The parity manifest lists `chats folders order` in tg, and planned for max (max-cli `feat/client-gaps-a`).
 
+- Add stored reports for unanswered questions, selected responders, known-join newcomer help and viewed posts with little discussion, shared by CLI and MCP with bounded evidence and repeatable saved runs.
+
 ### Fixed
 
 - An empty `messages search` that asked the messenger's server says «nothing found in the local store or on the
   messenger's server», not that only the local store was searched. The search docs and the MCP description say
   the server is asked by default where it can search.
 
-### Administrator reports
-
-- Add stored reports for unanswered questions, selected responders, known-join newcomer help and viewed posts with little discussion, shared by CLI and MCP with bounded evidence and repeatable saved runs.
 
 ## 0.175.0 — 08.10.2026
 

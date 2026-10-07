@@ -22,7 +22,7 @@ const answer = (service: ReturnType<typeof servicesFor>["admin"], args: Answerin
 export const adminTools = (messenger: Messenger): Record<string, AnyTool> => {
   const admin = (adapter: MessengerAdapter, guard: SendGuard) =>
     servicesFor(onlineDeps(messenger, adapter, guard)).admin
-  return {
+  const definitions: Record<string, AnyTool> = {
     chats_create: tool({
       title: "Create a group",
       description:
@@ -240,4 +240,7 @@ export const adminTools = (messenger: Messenger): Record<string, AnyTool> => {
       online: (adapter, args, { guard }) => admin(adapter, guard).removeAdmin(args.chat, args.person),
     }),
   }
+  if (messenger.inviteLinkList === false) delete definitions.chats_link_list
+  if (messenger.inviteLinkRevoke === false) delete definitions.chats_link_revoke
+  return definitions
 }

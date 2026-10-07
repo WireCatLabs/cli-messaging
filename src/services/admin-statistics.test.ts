@@ -121,12 +121,12 @@ describe("administrator stored reports", () => {
       limit: 1,
     })
     expect(first).toMatchObject({ total: 2, included: 1, hasMore: true })
-    expect(first.evidence?.[0]).toMatchObject({
+    expect(first.items?.[0]).toMatchObject({
       message: { id: "a" },
       related: { id: "q" },
       contribution: 2 * 86_400_000,
     })
-    expect(Buffer.byteLength(JSON.stringify(first.evidence))).toBeLessThanOrEqual(65536)
+    expect(Buffer.byteLength(JSON.stringify(first.items))).toBeLessThanOrEqual(65536)
     const next = await service.evidence("contacts", row.id, JSON.stringify(row.drilldown.arguments.selection), {
       component: "report",
       limit: 1,
@@ -173,7 +173,7 @@ describe("administrator stored reports", () => {
     expect(found.summary.unknownJoin).toBe(1)
     expect(found.items).toHaveLength(1)
     expect(found.items[0]).toMatchObject({
-      id: `member@${Date.parse("2026-10-01T00:00:00Z")}`,
+      personId: "member",
       questions: 2,
       answered: 1,
       pending: false,
@@ -185,7 +185,7 @@ describe("administrator stored reports", () => {
       component: "report",
       limit: 20,
     })
-    expect(evidence.evidence).toHaveLength(2)
+    expect(evidence.items).toHaveLength(2)
   })
   it("returns viewed posts without adding comment snapshots to stored discussion counts", async () => {
     const { store, service } = await setup()
@@ -208,7 +208,7 @@ describe("administrator stored reports", () => {
           component: "report",
           limit: 20,
         })
-      ).evidence?.[0]?.message.id,
+      ).items?.[0]?.message.id,
     ).toBe("post")
     await save(store, "room", [
       {

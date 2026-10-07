@@ -4,10 +4,12 @@ import { join } from "node:path"
 import { captureStreams } from "@leemour/cli-core"
 import { describe, expect, it } from "vitest"
 import type { Chat, GroupCard } from "../../domain/models.js"
+import { adminTools } from "../../mcp/tools/admin.js"
 import { SendJournal, sendsPathFor } from "../../sends/journal.js"
 import { run } from "../program.js"
 import { settingsFor } from "../settings.js"
 import { accountCommand } from "./account-command.js"
+import { groupCommands } from "./admin-commands.js"
 import { chatsCommand } from "./chats-command.js"
 import { contactsCommand } from "./contacts-command.js"
 import type { Messenger } from "./context.js"
@@ -84,6 +86,16 @@ const base: MessengerAdapter = {
   logout: async () => {},
   close: async () => {},
 }
+
+it("omits unsupported invite link list/revoke in CLI and MCP discovery", () => {
+  const messenger = { inviteLinkList: false, inviteLinkRevoke: false, chatArgument: "stored chat" } as Messenger
+  const link = groupCommands(messenger).find((command) => command.name() === "link")
+  expect(link?.commands.map((command) => command.name())).not.toContain("list")
+  expect(link?.commands.map((command) => command.name())).not.toContain("revoke")
+  expect(link?.commands.map((command) => command.name())).toContain("reset")
+  expect(adminTools(messenger)).not.toHaveProperty("chats_link_list")
+  expect(adminTools(messenger)).not.toHaveProperty("chats_link_revoke")
+})
 
 describe("chats create, join and leave", () => {
   it("**creates a group with the people resolved to ids**, through the guard, and journals no title", async () => {
