@@ -189,6 +189,10 @@
       "value": "<on|off>",
       "meaning": "on closes a forum topic to new messages, off reopens it"
     },
+    "--component": {
+      "value": "<name>",
+      "meaning": "the ranking component whose contributing messages or answer pairs to read"
+    },
     "--concurrency": {
       "value": "<n>",
       "meaning": "remote: requests at once (default: 4)"
@@ -210,7 +214,7 @@
     },
     "--cursor": {
       "value": "<cursor>",
-      "meaning": "continue from the extraction cursor"
+      "meaning": "continue from the extraction or ranking-evidence cursor"
     },
     "--days": {
       "meaning": "days of the working window, such as mon-fri or sat,sun",
@@ -424,6 +428,10 @@
     "--md": {
       "meaning": "read this messenger's Markdown; see its formatting guide for supported syntax"
     },
+    "--measure": {
+      "value": "<name>",
+      "meaning": "the metric used to order a ranking; not with --score or --weights"
+    },
     "--members-see-link": {
       "value": "<on|off>",
       "meaning": "members may see the invite link"
@@ -435,9 +443,19 @@
       "value": "<message>",
       "meaning": "the message to tag or untag: its id in --chat, or a msg: locator alone"
     },
+    "--message-kind": {
+      "value": "<all|posts|comments>",
+      "meaning": "the proven kind of messages selected before ranking",
+      "default": "all"
+    },
     "--method": {
       "value": "<method>",
       "meaning": "how to log in when there is no session"
+    },
+    "--min-messages": {
+      "value": "<n>",
+      "meaning": "minimum selected messages for a ranked author",
+      "default": "1; 5 for engaging unless explicitly set"
     },
     "--min-score": {
       "value": "<n>",
@@ -673,12 +691,20 @@
       "value": "<name|id>",
       "meaning": "run a saved search, or an earlier run by its id; options typed with it replace its own, more words are AND-ed"
     },
+    "--score": {
+      "value": "<helpful|active|engaging>",
+      "meaning": "the named ranking score preset; not with an explicit --measure"
+    },
     "--search": {
       "value": "<text>",
       "meaning": "only chats whose name contains this; at least 3 characters"
     },
     "--secret-stdin": {
       "meaning": "a secret MAX sends back in X-Max-Bot-Api-Secret \u2014 asked for, or read from a pipe"
+    },
+    "--selection": {
+      "value": "<json>",
+      "meaning": "the versioned resolved ranking selection returned by drilldown; authorisation is checked again"
     },
     "--send-as": {
       "value": "<id>",
@@ -784,7 +810,7 @@
     },
     "--title": {
       "value": "<title>",
-      "meaning": "the new name — of a chat, a folder or a forum topic"
+      "meaning": "the new name \u2014 of a chat, a folder or a forum topic"
     },
     "--to": {
       "value": "<chat>",
@@ -842,6 +868,10 @@
     "--voice": {
       "value": "<file>",
       "meaning": "send an Ogg Opus file as a voice message, alone, with no text"
+    },
+    "--weights": {
+      "value": "<json>",
+      "meaning": "the complete ranking component weights; replaces preset weights when --score is given"
     },
     "--words": {
       "meaning": "match any of these whole words, comma-separated; empty clears",
@@ -1533,7 +1563,9 @@
     "chats send-as": {
       "in": [],
       "reason": "MAX has no identities to post as other than the account itself",
-      "planned": { "tg": "G1 feat/send-as-identities" }
+      "planned": {
+        "tg": "G1 feat/send-as-identities"
+      }
     },
     "chats show": {
       "in": "all"
@@ -2265,7 +2297,10 @@
       "options": {
         "--send-as": {
           "in": [],
-          "planned": { "max": "G1 feat/send-as-identities", "tg": "G1 feat/send-as-identities" }
+          "planned": {
+            "max": "G1 feat/send-as-identities",
+            "tg": "G1 feat/send-as-identities"
+          }
         },
         "--send-id": "all",
         "--silent": "all",
@@ -2359,7 +2394,9 @@
         "--caption-above": {
           "in": [],
           "reason": "MAX has no spoilers or caption placement",
-          "planned": { "tg": "G1 feat/media-options" }
+          "planned": {
+            "tg": "G1 feat/media-options"
+          }
         },
         "--file": "all",
         "--md": "all",
@@ -2368,14 +2405,19 @@
         "--reply-to": "all",
         "--send-as": {
           "in": [],
-          "planned": { "max": "G1 feat/send-as-identities", "tg": "G1 feat/send-as-identities" }
+          "planned": {
+            "max": "G1 feat/send-as-identities",
+            "tg": "G1 feat/send-as-identities"
+          }
         },
         "--send-id": "all",
         "--silent": "all",
         "--spoiler": {
           "in": [],
           "reason": "MAX has no spoilers or caption placement",
-          "planned": { "tg": "G1 feat/media-options" }
+          "planned": {
+            "tg": "G1 feat/media-options"
+          }
         },
         "--topic": "all",
         "--voice": "all"
@@ -2444,7 +2486,10 @@
         "--revote": "all",
         "--send-as": {
           "in": [],
-          "planned": { "max": "G1 feat/send-as-identities", "tg": "G1 feat/send-as-identities" }
+          "planned": {
+            "max": "G1 feat/send-as-identities",
+            "tg": "G1 feat/send-as-identities"
+          }
         },
         "--send-id": "all",
         "--silent": "all",
@@ -2870,19 +2915,200 @@
     "stats contacts": {
       "in": [],
       "planned": {
-        "max": "stats hierarchy migration and rankings after naming approval",
-        "tg": "stats hierarchy migration and rankings after naming approval"
+        "max": "feat/stats-rankings-contract: approved ranking plan; implementation pending",
+        "tg": "feat/stats-rankings-contract: approved ranking plan; implementation pending"
+      }
+    },
+    "stats contacts evidence": {
+      "in": [],
+      "planned": {
+        "max": "feat/stats-rankings-contract: evidence naming review, then implementation",
+        "tg": "feat/stats-rankings-contract: evidence naming review, then implementation"
+      },
+      "options": {
+        "--component": {
+          "in": [],
+          "planned": {
+            "max": "feat/stats-rankings-contract: evidence naming review, then implementation",
+            "tg": "feat/stats-rankings-contract: evidence naming review, then implementation"
+          }
+        },
+        "--cursor": {
+          "in": [],
+          "planned": {
+            "max": "feat/stats-rankings-contract: evidence naming review, then implementation",
+            "tg": "feat/stats-rankings-contract: evidence naming review, then implementation"
+          }
+        },
+        "--limit": {
+          "in": [],
+          "planned": {
+            "max": "feat/stats-rankings-contract: evidence naming review, then implementation",
+            "tg": "feat/stats-rankings-contract: evidence naming review, then implementation"
+          }
+        },
+        "--selection": {
+          "in": [],
+          "planned": {
+            "max": "feat/stats-rankings-contract: evidence naming review, then implementation",
+            "tg": "feat/stats-rankings-contract: evidence naming review, then implementation"
+          }
+        }
       }
     },
     "stats contacts top": {
       "in": [],
       "planned": {
-        "max": "stats hierarchy migration and rankings after naming approval",
-        "tg": "stats hierarchy migration and rankings after naming approval"
+        "max": "feat/stats-rankings-contract: approved ranking plan; implementation pending",
+        "tg": "feat/stats-rankings-contract: approved ranking plan; implementation pending"
+      },
+      "options": {
+        "--chat": {
+          "in": [],
+          "planned": {
+            "max": "feat/stats-rankings-contract: approved ranking plan; implementation pending",
+            "tg": "feat/stats-rankings-contract: approved ranking plan; implementation pending"
+          }
+        },
+        "--exact": {
+          "in": [],
+          "planned": {
+            "max": "feat/stats-rankings-contract: approved ranking plan; implementation pending",
+            "tg": "feat/stats-rankings-contract: approved ranking plan; implementation pending"
+          }
+        },
+        "--limit": {
+          "in": [],
+          "planned": {
+            "max": "feat/stats-rankings-contract: approved ranking plan; implementation pending",
+            "tg": "feat/stats-rankings-contract: approved ranking plan; implementation pending"
+          }
+        },
+        "--max-chats": {
+          "in": [],
+          "planned": {
+            "max": "feat/stats-rankings-contract: approved ranking plan; implementation pending",
+            "tg": "feat/stats-rankings-contract: approved ranking plan; implementation pending"
+          }
+        },
+        "--max-messages": {
+          "in": [],
+          "planned": {
+            "max": "feat/stats-rankings-contract: approved ranking plan; implementation pending",
+            "tg": "feat/stats-rankings-contract: approved ranking plan; implementation pending"
+          }
+        },
+        "--measure": {
+          "in": [],
+          "planned": {
+            "max": "feat/stats-rankings-contract: approved ranking plan; implementation pending",
+            "tg": "feat/stats-rankings-contract: approved ranking plan; implementation pending"
+          }
+        },
+        "--message-kind": {
+          "in": [],
+          "planned": {
+            "max": "feat/stats-rankings-contract: approved ranking plan; implementation pending",
+            "tg": "feat/stats-rankings-contract: approved ranking plan; implementation pending"
+          }
+        },
+        "--min-messages": {
+          "in": [],
+          "planned": {
+            "max": "feat/stats-rankings-contract: approved ranking plan; implementation pending",
+            "tg": "feat/stats-rankings-contract: approved ranking plan; implementation pending"
+          }
+        },
+        "--saved": {
+          "in": [],
+          "planned": {
+            "max": "feat/stats-rankings-contract: approved ranking plan; implementation pending",
+            "tg": "feat/stats-rankings-contract: approved ranking plan; implementation pending"
+          }
+        },
+        "--score": {
+          "in": [],
+          "planned": {
+            "max": "feat/stats-rankings-contract: approved ranking plan; implementation pending",
+            "tg": "feat/stats-rankings-contract: approved ranking plan; implementation pending"
+          }
+        },
+        "--source": {
+          "in": [],
+          "planned": {
+            "max": "feat/stats-rankings-contract: approved ranking plan; implementation pending",
+            "tg": "feat/stats-rankings-contract: approved ranking plan; implementation pending"
+          }
+        },
+        "--sync-first": {
+          "in": [],
+          "planned": {
+            "max": "feat/stats-rankings-contract: approved ranking plan; implementation pending",
+            "tg": "feat/stats-rankings-contract: approved ranking plan; implementation pending"
+          }
+        },
+        "--sync-time": {
+          "in": [],
+          "planned": {
+            "max": "feat/stats-rankings-contract: approved ranking plan; implementation pending",
+            "tg": "feat/stats-rankings-contract: approved ranking plan; implementation pending"
+          }
+        },
+        "--timezone": {
+          "in": [],
+          "planned": {
+            "max": "feat/stats-rankings-contract: approved ranking plan; implementation pending",
+            "tg": "feat/stats-rankings-contract: approved ranking plan; implementation pending"
+          }
+        },
+        "--weights": {
+          "in": [],
+          "planned": {
+            "max": "feat/stats-rankings-contract: approved ranking plan; implementation pending",
+            "tg": "feat/stats-rankings-contract: approved ranking plan; implementation pending"
+          }
+        }
       }
     },
     "stats messages": {
       "in": "all"
+    },
+    "stats messages evidence": {
+      "in": [],
+      "planned": {
+        "max": "feat/stats-rankings-contract: evidence naming review, then implementation",
+        "tg": "feat/stats-rankings-contract: evidence naming review, then implementation"
+      },
+      "options": {
+        "--component": {
+          "in": [],
+          "planned": {
+            "max": "feat/stats-rankings-contract: evidence naming review, then implementation",
+            "tg": "feat/stats-rankings-contract: evidence naming review, then implementation"
+          }
+        },
+        "--cursor": {
+          "in": [],
+          "planned": {
+            "max": "feat/stats-rankings-contract: evidence naming review, then implementation",
+            "tg": "feat/stats-rankings-contract: evidence naming review, then implementation"
+          }
+        },
+        "--limit": {
+          "in": [],
+          "planned": {
+            "max": "feat/stats-rankings-contract: evidence naming review, then implementation",
+            "tg": "feat/stats-rankings-contract: evidence naming review, then implementation"
+          }
+        },
+        "--selection": {
+          "in": [],
+          "planned": {
+            "max": "feat/stats-rankings-contract: evidence naming review, then implementation",
+            "tg": "feat/stats-rankings-contract: evidence naming review, then implementation"
+          }
+        }
+      }
     },
     "stats messages show": {
       "in": "all",
@@ -2929,8 +3155,108 @@
     "stats messages top": {
       "in": [],
       "planned": {
-        "max": "stats hierarchy migration and rankings after naming approval",
-        "tg": "stats hierarchy migration and rankings after naming approval"
+        "max": "feat/stats-rankings-contract: approved ranking plan; implementation pending",
+        "tg": "feat/stats-rankings-contract: approved ranking plan; implementation pending"
+      },
+      "options": {
+        "--chat": {
+          "in": [],
+          "planned": {
+            "max": "feat/stats-rankings-contract: approved ranking plan; implementation pending",
+            "tg": "feat/stats-rankings-contract: approved ranking plan; implementation pending"
+          }
+        },
+        "--exact": {
+          "in": [],
+          "planned": {
+            "max": "feat/stats-rankings-contract: approved ranking plan; implementation pending",
+            "tg": "feat/stats-rankings-contract: approved ranking plan; implementation pending"
+          }
+        },
+        "--limit": {
+          "in": [],
+          "planned": {
+            "max": "feat/stats-rankings-contract: approved ranking plan; implementation pending",
+            "tg": "feat/stats-rankings-contract: approved ranking plan; implementation pending"
+          }
+        },
+        "--max-chats": {
+          "in": [],
+          "planned": {
+            "max": "feat/stats-rankings-contract: approved ranking plan; implementation pending",
+            "tg": "feat/stats-rankings-contract: approved ranking plan; implementation pending"
+          }
+        },
+        "--max-messages": {
+          "in": [],
+          "planned": {
+            "max": "feat/stats-rankings-contract: approved ranking plan; implementation pending",
+            "tg": "feat/stats-rankings-contract: approved ranking plan; implementation pending"
+          }
+        },
+        "--measure": {
+          "in": [],
+          "planned": {
+            "max": "feat/stats-rankings-contract: approved ranking plan; implementation pending",
+            "tg": "feat/stats-rankings-contract: approved ranking plan; implementation pending"
+          }
+        },
+        "--message-kind": {
+          "in": [],
+          "planned": {
+            "max": "feat/stats-rankings-contract: approved ranking plan; implementation pending",
+            "tg": "feat/stats-rankings-contract: approved ranking plan; implementation pending"
+          }
+        },
+        "--saved": {
+          "in": [],
+          "planned": {
+            "max": "feat/stats-rankings-contract: approved ranking plan; implementation pending",
+            "tg": "feat/stats-rankings-contract: approved ranking plan; implementation pending"
+          }
+        },
+        "--score": {
+          "in": [],
+          "planned": {
+            "max": "feat/stats-rankings-contract: approved ranking plan; implementation pending",
+            "tg": "feat/stats-rankings-contract: approved ranking plan; implementation pending"
+          }
+        },
+        "--source": {
+          "in": [],
+          "planned": {
+            "max": "feat/stats-rankings-contract: approved ranking plan; implementation pending",
+            "tg": "feat/stats-rankings-contract: approved ranking plan; implementation pending"
+          }
+        },
+        "--sync-first": {
+          "in": [],
+          "planned": {
+            "max": "feat/stats-rankings-contract: approved ranking plan; implementation pending",
+            "tg": "feat/stats-rankings-contract: approved ranking plan; implementation pending"
+          }
+        },
+        "--sync-time": {
+          "in": [],
+          "planned": {
+            "max": "feat/stats-rankings-contract: approved ranking plan; implementation pending",
+            "tg": "feat/stats-rankings-contract: approved ranking plan; implementation pending"
+          }
+        },
+        "--timezone": {
+          "in": [],
+          "planned": {
+            "max": "feat/stats-rankings-contract: approved ranking plan; implementation pending",
+            "tg": "feat/stats-rankings-contract: approved ranking plan; implementation pending"
+          }
+        },
+        "--weights": {
+          "in": [],
+          "planned": {
+            "max": "feat/stats-rankings-contract: approved ranking plan; implementation pending",
+            "tg": "feat/stats-rankings-contract: approved ranking plan; implementation pending"
+          }
+        }
       }
     },
     "stats tasks": {
