@@ -1402,8 +1402,18 @@
     "chats folders delete": {
       "in": "all"
     },
+    "chats folders join": {
+      "in": [],
+      "reason": "max-cli does not map folders shared by a link yet",
+      "planned": { "tg": "feat/folders-order-join" }
+    },
     "chats folders list": {
       "in": "all"
+    },
+    "chats folders order": {
+      "in": [],
+      "reason": "max-cli does not map folder order yet",
+      "planned": { "tg": "feat/folders-order-join" }
     },
     "chats folders update": {
       "in": "all",

@@ -491,6 +491,15 @@ export const fakeAdapter = (seed: Seed = contractSeed(), options: { feed?: boole
     deleteFolder: async (folderId) => {
       folders.splice(folders.indexOf(folderOf(folderId)), 1)
     },
+    orderFolders: async (folderIds) => {
+      const ordered = folderIds.map(folderOf)
+      folders.splice(0, folders.length, ...ordered)
+    },
+    joinFolder: async (link) => {
+      const folder = { id: nextId("folder"), title: link.split("/").pop() ?? link, chatIds: [] }
+      folders.push(folder)
+      return { ...folder }
+    },
 
     addContact: async (personId) => {
       const person = personOf(personId)

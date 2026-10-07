@@ -15,6 +15,11 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 - `chats update --join-approval on|off` where the messenger lists `joinApproval` in `groupSettings`: people ask
   to join and an admin lets them in. `GroupSettings.joinApproval` is optional, so adapters that do not set it
   compile unchanged.
+- `chats folders order <folder...>` puts folders in that order, the ones not named after them in their old order;
+  `chats folders join <link>` adds a folder someone shared by a `t.me/addlist/` link, which joins every chat in it.
+  MCP `chats_folders_order` and `chats_folders_join` do the same. Both go through the guard as account actions
+  `folder-order` / `folder-join` (keys `chats.folders.order` / `chats.folders.join`). Adapters implement the new
+  `ChatFolders.orderFolders` and `ChatFolders.joinFolder`.
 - `chats requests list <chat>` shows who asked to join a group or channel that needs an admin's approval, newest
   first, and `chats requests accept|decline <chat> <person>` answers one; MCP `chats_requests_list`,
   `chats_requests_accept` and `chats_requests_decline` do the same. Answers go through the guard as

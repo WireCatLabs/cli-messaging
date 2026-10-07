@@ -49,6 +49,8 @@ export type AccountAction =
   | "folder-create"
   | "folder-update"
   | "folder-delete"
+  | "folder-order"
+  | "folder-join"
   | "sessions-end"
 
 /** One attempt to send. **Never the text** — only its length. */
