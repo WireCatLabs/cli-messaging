@@ -1,11 +1,16 @@
 import { CliError } from "@leemour/cli-core"
 import type { FloodMemory } from "../../sends/flood.js"
+import type { Pacer } from "../../sends/pace.js"
 import { isCliFailure } from "../failures.js"
 import { providerErrorKey } from "../runs/events.js"
 import { type AccountStanding, type MessengerAdapter, throughWrapper } from "./port.js"
 
 const LONG_LIVED = new Set(["watch", "feed", "self", "newSendId", "close", "formatMarkdown", "formatHtml"])
 const BLOCKING = new Set<AccountStanding["state"]>(["frozen", "limited"])
+/** Shorter waits for the pace pass unannounced; a person at a terminal would not notice them. */
+const ANNOUNCE_WAIT_MS = 5_000
+/** Longer than this the pace refuses instead of waiting, as a run already ends at a wait this long. */
+const LONGEST_PACE_WAIT_MS = 5 * 60_000
 
 const chatOf = (args: unknown[]): string | undefined =>
   typeof args[0] === "string" && /^-?\d+$/.test(args[0]) ? args[0] : undefined
@@ -13,12 +18,13 @@ const chatOf = (args: unknown[]): string | undefined =>
 /**
  * The adapter, refusing a call the messenger already said to hold off on, before it is asked again;
  * remembering each new "wait" it answers; and stopping writes once it says the account may not write.
- * Never repeats a call: a send is the caller's to repeat, with its own send id.
+ * Never repeats a call: a send is the caller's to repeat, with its own send id. With a `pacer`, every call also
+ * waits for its turn in the profile's pace, and a wait the messenger asks for holds the whole profile.
  */
 export const flooded = (
   messenger: MessengerAdapter,
   memory: FloodMemory,
-  { name, warn }: { name: string; warn: (message: string) => void },
+  { name, warn, pacer }: { name: string; warn: (message: string) => void; pacer?: Pacer },
 ): MessengerAdapter => {
   const kept = (what: () => void) => {
     try {
@@ -55,6 +61,27 @@ export const flooded = (
       })
       warn(`${name} asked to wait before ${operation} again — until ${deadline.until}`)
     })
+    if (pacer) kept(() => pacer.holdFor(waitMs))
+  }
+
+  const turn = async () => {
+    if (!pacer) return
+    let at = Date.now()
+    kept(() => {
+      at = pacer.reserve()
+    })
+    const waitMs = at - Date.now()
+    if (waitMs <= 0) return
+    if (waitMs > LONGEST_PACE_WAIT_MS) {
+      throw new CliError(
+        "rate_limited",
+        `${name} asked this profile to wait, ${Math.ceil(waitMs / 1000)} s are left — nothing was sent to ${name}`,
+        { retryAfterMs: waitMs, retryAt: new Date(at).toISOString(), remembered: true },
+      )
+    }
+    if (waitMs >= ANNOUNCE_WAIT_MS)
+      warn(`waiting ${Math.ceil(waitMs / 1000)} s to keep this profile's pace with ${name}`)
+    await new Promise((resolve) => setTimeout(resolve, waitMs))
   }
 
   return throughWrapper(messenger, {} as MessengerAdapter, (operation, call) => {
@@ -75,6 +102,7 @@ export const flooded = (
           },
         )
       }
+      await turn()
       try {
         return await call(...args)
       } catch (error) {

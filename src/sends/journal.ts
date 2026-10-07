@@ -1,8 +1,9 @@
-import { appendFileSync, closeSync, mkdirSync, openSync, readFileSync, statSync, unlinkSync } from "node:fs"
+import { appendFileSync, mkdirSync, readFileSync } from "node:fs"
 import { dirname, join } from "node:path"
 import { resolvePaths } from "@leemour/cli-core"
 import type { AppIdentity } from "../cli/app.js"
 import type { Id } from "../domain/models.js"
+import { withFileLock } from "./file-lock.js"
 
 /** `reserved` holds a place under the hourly limit while the write is on its way; its outcome follows. */
 export type SendOutcome = "sent" | "outcome_unknown" | "refused" | "failed" | "reserved"
@@ -106,11 +107,6 @@ export interface SendEntry {
 export const sendsPathFor = (app: AppIdentity, profile: string, env: NodeJS.ProcessEnv = process.env): string =>
   join(resolvePaths({ appName: app.appName, prefix: app.envPrefix, env }).state, "sends", `${profile}.jsonl`)
 
-const LOCK_WAIT_MS = 5_000
-/** Longer than any check and append takes; a lock this old was left by a process that died holding it. */
-const LOCK_STALE_MS = 30_000
-const pause = new Int32Array(new SharedArrayBuffer(4))
-
 export class SendJournal {
   constructor(readonly path: string) {}
 
@@ -119,33 +115,7 @@ export class SendJournal {
    * read "one left". A lock file opened with `wx`, because `flock` is not there on Windows.
    */
   locked<T>(body: () => T): T {
-    mkdirSync(dirname(this.path), { recursive: true, mode: 0o700 })
-    const lock = `${this.path}.lock`
-    const deadline = Date.now() + LOCK_WAIT_MS
-    for (;;) {
-      try {
-        closeSync(openSync(lock, "wx", 0o600))
-        break
-      } catch (error) {
-        if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error
-        if (Date.now() - lockTime(lock) > LOCK_STALE_MS) {
-          try {
-            unlinkSync(lock)
-          } catch {}
-          continue
-        }
-        if (Date.now() > deadline)
-          throw new Error(`the send journal stayed locked for ${LOCK_WAIT_MS / 1000}s (${lock})`)
-        Atomics.wait(pause, 0, 0, 20)
-      }
-    }
-    try {
-      return body()
-    } finally {
-      try {
-        unlinkSync(lock)
-      } catch {}
-    }
+    return withFileLock(this.path, "the send journal", body)
   }
 
   append(entry: SendEntry): void {
@@ -190,12 +160,4 @@ export class SendJournal {
 const withSendId = (entry: SendEntry & { cid?: number }): SendEntry => {
   const { cid, ...rest } = entry
   return cid === undefined || rest.sendId !== undefined ? rest : { ...rest, sendId: String(cid) }
-}
-
-const lockTime = (lock: string): number => {
-  try {
-    return statSync(lock).mtimeMs
-  } catch {
-    return Date.now()
-  }
 }

@@ -6,6 +6,14 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- **One request pace per profile, shared by every process that uses it.** Two commands at once, background
+  `store fetch` jobs, `mcp` and `serve` now draw on one allowance: a burst goes at once, then one call per
+  interval. Defaults to 60 a minute after a burst of 20 unless the messenger sets its own (`Messenger.pace`);
+  `requestsPerMinute` in the config or `<APP>_REQUESTS_PER_MINUTE` changes it, 0 turns it off. `flood clear`
+  also resets it.
+
 ### Changed — may break callers
 
 - `messages search` asks the messenger's server too by default (`--backend both`, MCP `backend`), where the
@@ -13,6 +21,10 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   `source`, and the answer gains `server`. `--backend archive` (MCP `backend: "archive"`) keeps the old answer.
   Unasked, a search the server cannot take — offline, MAX, no permission, no words — is the archive's, with no
   `server` block.
+- **A wait the messenger asks for now holds the whole profile**, not only that call in that chat: every
+  process's next call waits past it, and one that would wait more than 5 minutes is refused at once with
+  `rate_limited` and nothing sent. Bulk work that ran unpaced in parallel now takes longer. Tests that build
+  their own environment and make more than 20 calls set `<APP>_REQUESTS_PER_MINUTE=0`.
 
 ## 0.170.0 — 07.10.2026
 

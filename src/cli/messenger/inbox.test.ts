@@ -310,6 +310,7 @@ describe("inbox --new", () => {
       CHAT_STATE_DIR: join(root, "state"),
       CHAT_CONFIG_DIR: join(root, "config"),
       MESSAGING_STORE: join(root, "m.db"),
+      CHAT_REQUESTS_PER_MINUTE: "0",
     }
     const scripted = messengerWith(chats, histories)
     let failing = false

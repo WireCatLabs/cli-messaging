@@ -28,7 +28,16 @@ export const plain =
     `${rule}, not ${issue.received}`
 const wholeNumber = plain("has to be a whole number, 1 or more")
 export const count = v.pipe(v.number(wholeNumber), v.integer(wholeNumber), v.minValue(1, wholeNumber))
+const zeroOrMore = plain("has to be a whole number, 0 or more")
+const countOrZero = v.pipe(v.number(zeroOrMore), v.integer(zeroOrMore), v.minValue(0, zeroOrMore))
 export const flag = v.boolean(plain("has to be true or false"))
+
+const wholeOrZero = (text: string, name: string): number => {
+  const value = Number(text)
+  if (!Number.isInteger(value) || value < 0)
+    throw new CliError("validation_error", `${name} has to be a whole number, 0 or more`)
+  return value
+}
 const permissionList = v.array(
   v.picklist(PERMISSIONS, (issue) => `has to be one of ${PERMISSIONS.join(", ")}, not ${issue.received}`),
   plain("has to be a list of actions, like send,reaction"),
@@ -73,6 +82,7 @@ const SHARED_PROFILE_ENTRIES = {
   allow: v.optional(permissionList),
   permissions: v.optional(permissionLevels),
   sendsPerHour: v.optional(count),
+  requestsPerMinute: v.optional(countOrZero),
   transcribeWith: v.optional(v.picklist(["auto", "messenger", "local"], plain("has to be auto, messenger or local"))),
   speechModel: v.optional(v.string(plain("has to be a model id from `models audio list`, in quotes"))),
   catchUpMarksRead: v.optional(flag),
@@ -191,6 +201,8 @@ export interface Settings extends AISettings {
   /** Where each key of `permissions` came from. */
   permissionSources: Readonly<Record<PermissionKey, Source>>
   sendsPerHour: number
+  /** Calls a minute this profile may make, across every process; 0 is no pace. Unset: the messenger's own default. */
+  requestsPerMinute?: number
   /** The side these settings are for. */
   kind: ProfileKind
   /** A bot only: which other bots' local copy it may read when a command asks. Always `false` for the account. */
@@ -272,6 +284,7 @@ export const settingsFor = (app: AppIdentity, extension: SettingsExtension = {})
   const PROFILE = envName(app, "PROFILE")
   const PROFILE_LOCK = envName(app, "PROFILE_LOCK")
   const TIMEOUT = envName(app, "TIMEOUT")
+  const REQUESTS_PER_MINUTE = envName(app, "REQUESTS_PER_MINUTE")
 
   const configPathFor = ({ env = process.env, configDir }: ResolveOptions) =>
     configFilePath(configDir ?? resolvePaths({ appName: app.appName, prefix: app.envPrefix, env }).config)
@@ -359,6 +372,11 @@ export const settingsFor = (app: AppIdentity, extension: SettingsExtension = {})
       kind === "bot"
         ? fromLayers("sendsPerHour", Number.POSITIVE_INFINITY, kindLayers)
         : fromLayers("sendsPerHour", DEFAULT_SENDS_PER_HOUR)
+    const paceFromEnv = given(env[REQUESTS_PER_MINUTE])
+    const requestsPerMinute =
+      paceFromEnv === undefined
+        ? fromLayers<number | undefined>("requestsPerMinute", undefined)
+        : { value: wholeOrZero(paceFromEnv, REQUESTS_PER_MINUTE), from: REQUESTS_PER_MINUTE }
     const readOtherBots =
       kind === "bot"
         ? fromLayers<boolean | readonly string[]>("readOtherBots", false, kindLayers)
@@ -413,6 +431,7 @@ export const settingsFor = (app: AppIdentity, extension: SettingsExtension = {})
       permissions: permissions.levels,
       permissionSources: permissions.sources,
       sendsPerHour: sendsPerHour.value,
+      ...(requestsPerMinute.value === undefined ? {} : { requestsPerMinute: requestsPerMinute.value }),
       kind,
       readOtherBots: readOtherBots.value,
       updateCheck: updateCheck.value,
@@ -435,6 +454,7 @@ export const settingsFor = (app: AppIdentity, extension: SettingsExtension = {})
         readOnly: readOnly.from,
         allow: allow.from,
         sendsPerHour: sendsPerHour.from,
+        requestsPerMinute: requestsPerMinute.from,
         readOtherBots: readOtherBots.from,
         updateCheck: updateCheck.from,
         skillHint: skillHint.from,

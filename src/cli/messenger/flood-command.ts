@@ -1,5 +1,6 @@
 import { Command } from "commander"
 import { FloodMemory, floodPathFor } from "../../sends/flood.js"
+import { DEFAULT_PACE, Pacer, pacePathFor } from "../../sends/pace.js"
 import { type Messenger, messengerContext } from "./context.js"
 
 /**
@@ -13,11 +14,14 @@ export const floodCommand = (messenger: Messenger): Command => {
     .description(`the waits ${name} asked this profile to keep, and a hold on its writes`)
     .addCommand(
       new Command("clear")
-        .description(`forget them and lift the hold, once ${name} no longer limits the account; changes nothing there`)
+        .description(
+          `forget them, lift the hold and the profile's pace, once ${name} no longer limits the account; changes nothing there`,
+        )
         .action(function (this: Command) {
           const context = messengerContext(this, messenger)
           const { profile } = context
           const { deadlines, sendBlock } = new FloodMemory(floodPathFor(app, profile, context.env)).clear()
+          new Pacer(pacePathFor(app, profile, context.env), DEFAULT_PACE).reset()
           const value = { profile, cleared: { deadlines, sendBlock: sendBlock ?? null } }
           if (context.format !== "pretty") {
             context.renderer.result(value)
