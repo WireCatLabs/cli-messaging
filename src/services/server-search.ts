@@ -22,6 +22,7 @@ export type ServerSkip =
   | "not_allowed"
   | "other_accounts"
   | "no_words"
+  | "needs_chat"
 export interface ServerSearched {
   backend: "server" | "both"
   skipped: ServerSkip | null
@@ -106,6 +107,7 @@ const refusal: Record<ServerSkip, string> = {
   not_allowed: "the server search is not allowed by this profile",
   other_accounts: "the server searches only the account this runs as",
   no_words: "--backend server needs words to send to the server",
+  needs_chat: "this messenger's server searches one chat at a time — name it with chat: or --chat",
 }
 
 const BOUND = Symbol("bound")
@@ -161,6 +163,7 @@ export const searchServer = async (deps: ServiceDeps, request: SearchQuery): Pro
     ...new Map(all.filter(({ words }) => words.length).map((branch) => [JSON.stringify(branch), branch])).values(),
   ]
   if (!unique.length) return skip("no_words")
+  if (deps.messenger.serverSearch === "chat" && unique.some(({ chat }) => chat === undefined)) return skip("needs_chat")
   if (unique.length > SERVER_BOUNDS.maxCalls) report.complete = false
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), timeMs)

@@ -583,7 +583,8 @@ Low-level `searchStore` и `MessagesService.search` без language сохран
 
 `--backend archive|server|both` (MCP: `backend`) выбирает, где искать. По умолчанию `both`: архив и
 сервер. `archive` — только локальная БД, как раньше. Флаг есть там, где сервер мессенджера умеет искать
-сообщения: в tg да, в MAX пока нет (opcode 73 ищет только в одном чате, без форм слов).
+сообщения: в tg — по всем чатам; в MAX — только в одном чате (opcode 73): запрос без одного `chat:`
+или `--chat` сервер MAX не спрашивает (`server.skipped: "needs_chat"`).
 
 - `both` — сервер и архив за один запуск. Сервер возвращает **кандидатов**: они сохраняются в
   архив, и тот же строгий запрос выполняется один раз по архиву вместе с ними. Поэтому
@@ -616,7 +617,7 @@ Low-level `searchStore` и `MessagesService.search` без language сохран
 ```
 
 `skipped`: `legacy`, `unsupported`, `pushed_history`, `offline`, `not_allowed`, `other_accounts`,
-`no_words`. `failed[].reason`: `rate_limited`, `search_failed`, `time_or_abort_bound`. Каждый hit
+`no_words`, `needs_chat`. `failed[].reason`: `rate_limited`, `search_failed`, `time_or_abort_bound`. Каждый hit
 получает `source`: `archive` (только архив), `server` (новое с сервера), `both` (сервер вернул уже
 хранимое). План: [2026-10-07-server-search.md](../plans/2026-10-07-server-search.md).
 
