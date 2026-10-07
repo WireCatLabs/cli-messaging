@@ -7,6 +7,8 @@ import { rememberAccount } from "../cli/messenger/accounts.js"
 import { contactsCommand } from "../cli/messenger/contacts-command.js"
 import type { Messenger } from "../cli/messenger/context.js"
 import { metadataCommand } from "../cli/messenger/metadata-command.js"
+import type { MessengerAdapter } from "../cli/messenger/port.js"
+import { stored } from "../cli/messenger/stored.js"
 import { tagsCommand } from "../cli/messenger/tags-command.js"
 import { run } from "../cli/program.js"
 import { settingsFor } from "../cli/settings.js"
@@ -16,6 +18,7 @@ import { type MessageStore, openStore } from "../store/store.js"
 import { seedSearchRecipes } from "../testing/search-recipes.js"
 import { storedDeps } from "./deps.js"
 import { servicesFor } from "./index.js"
+import { searchStore } from "./messages.js"
 
 const app = { command: "chat", appName: "chat-cli", envPrefix: "CHAT", description: "", version: "1.0.0" }
 const messenger: Messenger = {
@@ -119,6 +122,36 @@ describe("private people metadata", () => {
     await expect(f.services.privatePeople.add("10", " ")).rejects.toMatchObject({ code: "validation_error" })
   })
 
+  it("resolves a local alias to the stored direct-chat id and preserves remote resolution before login", async () => {
+    const f = await setup()
+    const remote: string[] = []
+    const adapter = {
+      resolve: async (reference: string) => {
+        remote.push(reference)
+        return {
+          id: reference,
+          title: null,
+          kind: "dialog",
+          unreadCount: null,
+          lastMessageAt: null,
+          participantsCount: null,
+        }
+      },
+    } as unknown as MessengerAdapter
+    await f.services.privatePeople.alias("10", "Local alias")
+    const wrapped = stored(adapter, { account: key, store: async () => f.store, warn: () => {}, events: () => {} })
+    expect((await wrapped.resolve("Local alias")).id).toBe("10")
+    const unknown = {
+      provider: "chat",
+      get account(): string {
+        throw new Error("account not known before login")
+      },
+    }
+    const early = stored(adapter, { account: unknown, store: async () => f.store, warn: () => {}, events: () => {} })
+    expect((await early.resolve("Remote name")).id).toBe("Remote name")
+    expect(remote).toEqual(["10", "Remote name"])
+  })
+
   it("retains private identity scopes across linking and store reopening", async () => {
     const f = await setup()
     await f.store.savePeople({ provider: "max", account: "500" }, [{ id: "10", name: "Other provider" }])
@@ -186,6 +219,11 @@ describe("cached metadata and automatic tags", () => {
     await f.store.removeTags(key, { type: "chat", chatId: "7" }, ["personal"], "manual")
     expect((await f.store.tags(key, { tag: "personal" })).find((entry) => entry.chatId === "7")).toBeUndefined()
     await f.store.addTags(key, { type: "chat", chatId: "7" }, ["personal"])
+    expect(
+      (await searchStore(f.store, key, { text: "tag:ai", language: "lucene", limit: 100 })).items
+        .map((hit) => hit.id)
+        .sort(),
+    ).toEqual(["101", "102", "105", "106", "107", "109"])
     await f.store.addTags(key, { type: "chat", chatId: "7" }, ["ai"])
     await f.store.saveChatMetadata(key, { chatId: "7", title: "No known topic", username: null, description: null })
     await f.services.metadata.auto({ chats: ["7"] })
