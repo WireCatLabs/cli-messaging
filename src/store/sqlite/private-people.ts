@@ -47,9 +47,9 @@ export const privateContact = (context: StoreContext, key: AccountKey, personId:
     .get(account, identity)?.alias
   const notes = context.database
     .prepare(
-      "SELECT * FROM annotations WHERE account_pk=? AND target_type='contact' AND target_pk=? ORDER BY created_at, uid",
+      "SELECT * FROM annotations WHERE account_pk=? AND ((target_type='contact' AND target_pk=?) OR (target_type='source' AND target_pk IN (SELECT pk FROM knowledge_targets WHERE account_pk=? AND type='contact' AND reference=?))) ORDER BY created_at, uid",
     )
-    .all(account, identity)
+    .all(account, identity, account, personId)
     .map((row) => noteOf(row, personId))
   return { personId, alias: alias == null ? null : String(alias), notes }
 }
@@ -106,9 +106,9 @@ export const editNote = (
   const changed = context.database
     .prepare(
       "UPDATE annotations SET text=?, updated_at=?, revision=revision+1 " +
-        "WHERE uid=? AND account_pk=? AND target_type='contact' AND target_pk=? AND revision=?",
+        "WHERE uid=? AND account_pk=? AND ((target_type='contact' AND target_pk=?) OR (target_type='source' AND target_pk IN (SELECT pk FROM knowledge_targets WHERE account_pk=? AND type='contact' AND reference=?))) AND revision=?",
     )
-    .run(noteText(text), context.now(), id, account, identity, revision).changes
+    .run(noteText(text), context.now(), id, account, identity, account, personId, revision).changes
   if (!changed) throw new CliError("validation_error", "the note changed; read its current revision before editing")
   return note(context, key, personId, id)
 }
@@ -117,7 +117,9 @@ export const removeNote = (context: StoreContext, key: AccountKey, personId: str
   const { account, identity } = required(context, key, personId)
   note(context, key, personId, id)
   context.database
-    .prepare("DELETE FROM annotations WHERE uid=? AND account_pk=? AND target_type='contact' AND target_pk=?")
-    .run(id, account, identity)
+    .prepare(
+      "DELETE FROM annotations WHERE uid=? AND account_pk=? AND ((target_type='contact' AND target_pk=?) OR (target_type='source' AND target_pk IN (SELECT pk FROM knowledge_targets WHERE account_pk=? AND type='contact' AND reference=?)))",
+    )
+    .run(id, account, identity, account, personId)
   return { id, personId, removed: true }
 }

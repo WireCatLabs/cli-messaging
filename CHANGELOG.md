@@ -6,6 +6,15 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- `MessageStore.knowledge` provides account-scoped source annotations, explicit person/task/entity labels,
+  manual and weak proposed relationships, and durable local reminder leases/receipts.
+  Annotations retain owner-authored text when their source disappears, expose source availability, and reject stale edits.
+  Migration 23 is additive and remains compatible with store version 6 writers.
+- The `./documents` export reuses shared document extraction for ingestion; CSV row/column ranges and PDF page
+  spans retain source provenance. Existing built-in office readers remain available through this export.
+
 ## 0.181.0 — 08.10.2026
 
 ### Added

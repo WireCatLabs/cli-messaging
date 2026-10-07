@@ -111,7 +111,7 @@ export const tasksService = (deps: ServiceDeps): TasksService => {
           throw new CliError("validation_error", "that locator belongs to another account; select its profile first")
         const { task, created } = await service(store).add({
           source: message.trim(),
-          sourceKind: "message",
+          sourceKind: account.provider === "notes" ? "note" : account.provider === "email" ? "email" : "message",
           account: taskAccount(account),
           group: locator.chat,
           kind: type,
