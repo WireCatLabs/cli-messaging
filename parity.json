@@ -1458,7 +1458,10 @@
       "in": "all"
     },
     "chats folders order": {
-      "in": "all"
+      "in": ["tg"],
+      "planned": {
+        "max": "feat/client-gaps-a"
+      }
     },
     "chats folders update": {
       "in": "all",

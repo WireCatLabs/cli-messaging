@@ -8,7 +8,7 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Added
 
-- The parity manifest lists `chats folders order` in tg and max: max-cli now orders MAX folders.
+- The parity manifest lists `chats folders order` in tg, and planned for max (max-cli `feat/client-gaps-a`).
 
 ### Fixed
 
