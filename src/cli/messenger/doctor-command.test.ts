@@ -381,6 +381,7 @@ describe("doctor report", () => {
       notify: false,
       origin: "rule:away",
       errorCode: "none",
+      key: "polls.create",
       ...raw,
     }
     mkdirSync(join(root, "state", "sends"), { recursive: true })
