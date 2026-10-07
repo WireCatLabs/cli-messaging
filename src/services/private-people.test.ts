@@ -1,7 +1,7 @@
 import { mkdtempSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { captureStreams } from "@leemour/cli-core"
+import { CliError, captureStreams } from "@leemour/cli-core"
 import { afterEach, describe, expect, it } from "vitest"
 import { rememberAccount } from "../cli/messenger/accounts.js"
 import { contactsCommand } from "../cli/messenger/contacts-command.js"
@@ -232,6 +232,33 @@ describe("cached metadata and automatic tags", () => {
     )
     await f.store.removeTags(key, { type: "chat", chatId: "7" }, ["ai"])
     expect((await f.store.tags(key)).some((one) => one.chatId === "7" && one.tag === "ai")).toBe(false)
+  })
+
+  it("refreshes supported metadata through a read capability and retains the snapshot after provider failure", async () => {
+    const f = await setup()
+    let fail = false
+    const adapter = {
+      group: async (chatId: string) => {
+        if (fail) throw new CliError("provider_error", "synthetic read failure")
+        return {
+          id: chatId,
+          title: "Crypto news",
+          kind: "channel",
+          description: "Public synthetic description",
+          providerMetadata: { username: "fixture" },
+        }
+      },
+    } as unknown as MessengerAdapter
+    const services = servicesFor({ ...f.deps, offline: false, connection: async () => adapter })
+    expect(await services.metadata.refresh("7")).toMatchObject({
+      title: "Crypto news",
+      description: "Public synthetic description",
+      username: "fixture",
+    })
+    const before = await f.store.chatMetadata(key, "7")
+    fail = true
+    expect((await services.metadata.auto({ chats: ["7"], refresh: true })).items[0]).toHaveProperty("error")
+    expect(await f.store.chatMetadata(key, "7")).toEqual(before)
   })
 
   it("bounds work, separates account metadata and keeps dry-run and failed refresh unchanged", async () => {
