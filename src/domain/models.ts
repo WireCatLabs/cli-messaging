@@ -1,3 +1,5 @@
+import type { Upload } from "../sends/upload.js"
+
 /**
  * What every messenger CLI built on this package promises. **Raw provider objects never reach
  * output**: wire shapes change without notice and carry fields whose meaning nobody knows. An
@@ -57,6 +59,7 @@ export interface GroupChange {
   title?: string
   description?: string
   settings?: Partial<GroupSettings>
+  photo?: Upload
 }
 
 export const GROUP_SETTINGS = [

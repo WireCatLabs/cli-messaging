@@ -8,6 +8,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Added
 
+- `chats update --photo <file>` sets a group's photo where the messenger declares `groupPhoto: true`; the
+  adapter receives it as `GroupChange.photo`. The parity manifest plans it for max and tg.
 - The parity manifest lists `chats folders order` in tg, and planned for max (max-cli `feat/client-gaps-a`).
 
 ### Fixed

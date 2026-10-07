@@ -102,8 +102,9 @@ export const adminService = (deps: ServiceDeps): AdminService => {
 
     update: async (chat, change) => {
       const settings = Object.keys(change.settings ?? {}).length
-      if (change.title === undefined && change.description === undefined && settings === 0) {
-        throw new CliError("validation_error", "nothing to change — give a title, a description or a setting")
+      const profile = change.title !== undefined || change.description !== undefined || change.photo !== undefined
+      if (!profile && settings === 0) {
+        throw new CliError("validation_error", "nothing to change — give a title, a description, a photo or a setting")
       }
       if (change.title !== undefined && change.title.trim() === "") {
         throw new CliError("validation_error", "a group needs a title")
@@ -112,7 +113,7 @@ export const adminService = (deps: ServiceDeps): AdminService => {
       const update = capability(connection, "updateGroup", "change a group")
       const { id: chatId } = await connection.resolve(chat)
       const operationId = newOperationId()
-      const action = change.title === undefined && change.description === undefined ? "settings" : "update"
+      const action = profile ? "update" : "settings"
       const card = await guardedWrite(deps.guard, { operationId, chatId, kind: "chat", action }, () =>
         update(chatId, change),
       )

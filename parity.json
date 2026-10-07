@@ -657,7 +657,7 @@
     },
     "--photo": {
       "value": "<file>",
-      "meaning": "an image file — a profile photo in `account update`, a photo to send in `messages send`"
+      "meaning": "an image file — a profile photo in `account update`, a group's photo in `chats update`, a photo to send in `messages send`"
     },
     "--pinned": {
       "value": "<on|off>",
@@ -1759,6 +1759,13 @@
         "--only-owner-edits-info": {
           "in": ["max"],
           "reason": "Telegram lets admins with the right change the info, never only the owner; a different meaning gets a different name"
+        },
+        "--photo": {
+          "in": [],
+          "planned": {
+            "max": "feat/client-gaps-photo",
+            "tg": "tg-cli backlog: chats update --photo"
+          }
         },
         "--title": "all"
       }

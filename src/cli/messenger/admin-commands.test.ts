@@ -231,6 +231,31 @@ describe("chats create, join and leave", () => {
     expect(elsewhere.stderr.join("\n")).toContain("unknown option '--join-approval'")
   })
 
+  it("**sets a group's photo only where the messenger offers it**, journaled as an update", async () => {
+    const env = sandbox()
+    const root = mkdtempSync(join(tmpdir(), "photo-"))
+    const photo = join(root, "group.jpg")
+    writeFileSync(photo, new Uint8Array([0xff, 0xd8, 0xff]))
+    const changes: unknown[] = []
+    const adapter: MessengerAdapter = {
+      ...base,
+      updateGroup: async (chatId, change) => {
+        changes.push({ ...change, photo: change.photo?.name })
+        return card(chatId, "Book club")
+      },
+    }
+
+    const set = await call(["chats", "update", "Book club", "--photo", photo, "--json"], adapter, env, {
+      groupPhoto: true,
+    })
+    const elsewhere = await call(["chats", "update", "Book club", "--photo", photo], adapter, env)
+
+    expect(set.code).toBe(0)
+    expect(changes).toEqual([{ photo: "group.jpg" }])
+    expect(elsewhere.stderr.join("\n")).toContain("unknown option '--photo'")
+    expect(new SendJournal(sendsPathFor(app, "default", env)).entries().map((one) => one.action)).toEqual(["update"])
+  })
+
   it("**makes another invite link** with approval, an expiry and a use limit, through the guard", async () => {
     const env = sandbox()
     const asked: unknown[] = []
