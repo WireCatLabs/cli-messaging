@@ -167,12 +167,12 @@ describe("permission configuration migration", () => {
     expect(readFileSync(path, "utf8")).toBe(written)
   })
 
-  it("refuses locked writes while allowing a preview, and does not create a missing file", async () => {
+  it("initializes a missing file and refuses locked writes while allowing a preview", async () => {
     const { path, env } = fresh()
     const empty = await call(["config", "migrate", "--json"], env)
     expect(empty.code, empty.error).toBe(0)
     expect(empty.data.changed).toBe(false)
-    expect(existsSync(path)).toBe(false)
+    expect(existsSync(path)).toBe(true)
     saveConfigFile(path, { profiles: {}, defaults: { readOnly: true } })
     const original = readFileSync(path, "utf8")
     const locked = { ...env, CHAT_PROFILE_LOCK: "alice" }

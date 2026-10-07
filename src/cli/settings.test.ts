@@ -305,10 +305,10 @@ describe("what a flag is checked for", () => {
 })
 
 describe("where each setting came from", () => {
-  it("says default for everything when nothing is configured, and that no file was found", () => {
+  it("creates the starter file and identifies its values as configuration defaults", () => {
     const resolved = settings()
-    expect(resolved.configFound).toBe(false)
-    expect(Object.values(resolved.sources).every((from) => from === "default")).toBe(true)
+    expect(resolved.configFound).toBe(true)
+    expect(resolved.sources).toMatchObject({ limit: "config defaults", record: "default", profile: "default" })
   })
 
   it("tells a flag from the file from the built-in value", () => {

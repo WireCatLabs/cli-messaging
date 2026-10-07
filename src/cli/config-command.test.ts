@@ -41,7 +41,7 @@ describe("config", () => {
       ]),
     )
     await call(["work", "config", "unset", "limit"], env)
-    expect(await setting("limit")).toMatchObject({ from: "default" })
+    expect(await setting("limit")).toMatchObject({ value: 20, from: "config defaults" })
   })
 
   it("**shows the permissions in force**, from every section, not only the profile's own", async () => {

@@ -14,12 +14,13 @@ import {
   RESOURCES,
 } from "../sends/permissions.js"
 import { type AppIdentity, envName } from "./app.js"
+import { DEFAULT_CONFIG, ensureDefaultConfig } from "./default-config.js"
 import { DEFAULT_PROFILE, usableProfileName } from "./profile.js"
 
-const DEFAULT_LIMIT = 20
-const DEFAULT_KEEP_RUNS_FOR_DAYS = 30
+const DEFAULT_LIMIT = DEFAULT_CONFIG.defaults.limit
+const DEFAULT_KEEP_RUNS_FOR_DAYS = DEFAULT_CONFIG.defaults.keepRunsForDays
 /** On by default: a limit that is off protects nobody from a loop. */
-const DEFAULT_SENDS_PER_HOUR = 30
+const DEFAULT_SENDS_PER_HOUR = DEFAULT_CONFIG.defaults.sendsPerHour
 
 export const plain =
   (rule: string) =>
@@ -304,6 +305,11 @@ export const settingsFor = (app: AppIdentity, extension: SettingsExtension = {})
   const resolveSettings = (flags: GlobalFlags = {}, options: ResolveOptions = {}): Settings => {
     const env = options.env ?? process.env
     const configPath = configPathFor(options)
+    try {
+      ensureDefaultConfig(configPath)
+    } catch (error) {
+      throw new CliError("configuration_error", error instanceof Error ? error.message : String(error))
+    }
     const config = readConfig(configPath)
 
     const profile = locked(

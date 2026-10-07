@@ -118,6 +118,7 @@ export {
   provide,
 } from "./context.js"
 export { type Closeable, withDeadline } from "./deadline.js"
+export { DEFAULT_CONFIG, ensureDefaultConfig } from "./default-config.js"
 export { withAbort } from "./execution.js"
 export { isCliFailure, isCommanderFailure } from "./failures.js"
 export {
