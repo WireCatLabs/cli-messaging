@@ -118,10 +118,10 @@ export const run = async (argv: string[], definition: ProgramDefinition, options
   const control = execution(streams, { maxOutputBytes: 0 })
   let restoreInput: (() => void) | undefined
   let signalExit: number | undefined
-  // Ctrl-C is how a command that listens until stopped ends: still aborted, but exit 0, not 130.
+  // Ctrl-C or `kill` is how a command that listens until stopped ends: still aborted, but exit 0.
   let listens = false
   const interrupted = (signal: "SIGINT" | "SIGTERM") => {
-    signalExit = signal === "SIGINT" ? (listens ? 0 : 130) : 143
+    signalExit = listens ? 0 : signal === "SIGINT" ? 130 : 143
     control.abort(new CliError("cancelled", `command interrupted by ${signal}`, { reason: signal, retryable: false }))
   }
   const sigint = () => interrupted("SIGINT")

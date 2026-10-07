@@ -29,6 +29,11 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 - File extraction compares content hashes so same-size file replacements refresh content search.
 
+### Changed — may break callers
+
+- `watch`, `bot watch`, `serve` and `mcp` end with exit 0 on SIGTERM (`kill`, `server stop`), as on Ctrl-C:
+  being stopped is how they end. Other commands keep 143.
+
 ## 0.162.0 — 07.10.2026
 
 ### Added

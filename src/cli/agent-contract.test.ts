@@ -55,9 +55,9 @@ const invoke = async (
         new Command("session").addCommand(
           new Command("start").argument("[method]").option("--qr-file <path>").action(performed),
         ),
-        new Command("watch").action(async function (this: Command) {
+        new Command("watch").option("--term").action(async function (this: Command) {
           const stopped = environmentOf(this).signal
-          setImmediate(() => process.emit("SIGINT"))
+          setImmediate(() => process.emit(this.opts<{ term?: boolean }>().term ? "SIGTERM" : "SIGINT"))
           await new Promise((resolve) => stopped?.addEventListener("abort", resolve, { once: true }))
         }),
         new Command("post").action(async function (this: Command) {
@@ -70,8 +70,8 @@ const invoke = async (
             ),
           )
         }),
-        new Command("wait").action(async () => {
-          setImmediate(() => process.emit("SIGINT"))
+        new Command("wait").option("--term").action(async function (this: Command) {
+          setImmediate(() => process.emit(this.opts<{ term?: boolean }>().term ? "SIGTERM" : "SIGINT"))
           await new Promise(() => {})
         }),
         commandsCommand(app),
@@ -110,6 +110,13 @@ describe("agent CLI contract", () => {
   it("ends a listening command on Ctrl-C with 0, and any other with 130", async () => {
     expect((await invoke(["watch", "--json"])).result).toBe(0)
     expect((await invoke(["wait", "--json"])).result).toBe(130)
+  })
+
+  it("ends a listening command on SIGTERM with 0 and nothing on stderr, and any other with 143", async () => {
+    const listening = await invoke(["watch", "--term", "--json"])
+    expect(listening.result).toBe(0)
+    expect(listening.stderr).toEqual([])
+    expect((await invoke(["wait", "--term", "--json"])).result).toBe(143)
   })
 
   it("allows an explicit QR artifact while keeping headless prompts disabled", async () => {
