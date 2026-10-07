@@ -1,14 +1,17 @@
 import { CliError, singleLine } from "@leemour/cli-core"
+import type { AdminReport } from "../domain/admin-statistics.js"
 import type { RankingInput, RankingTarget } from "../domain/rankings-options.js"
 import { parseLucene } from "../search/lucene/parser.js"
 import { FIELD_VERSION, validateAst, validateFields } from "../search/lucene/registry.js"
 import { QUERY_VERSION, type QueryAst } from "../search/lucene/types.js"
 import type { MessageStore, SearchCommand, SearchRecord, StoredSearch } from "../store/store.js"
+import { isAdminSelection, readAdminSelection } from "./admin-statistics.js"
 import type { ServiceDeps } from "./deps.js"
 import type { StatsGrouping } from "./messages-search.js"
 
 /** What a run or a saved search keeps: the query and options as given, never a message or a result. */
 export interface SearchParams extends RankingInput {
+  adminReport?: AdminReport
   selection?: unknown
   target?: RankingTarget
   text?: string
@@ -143,8 +146,22 @@ export const searchesService = (deps: ServiceDeps): SearchesService => {
 
   return {
     create: (name, params, { replace = false } = {}) =>
-      inStore((store) =>
-        store.saveSearch(
+      inStore(async (store) => {
+        if (isAdminSelection(params.selection)) {
+          const selected = await readAdminSelection(store, params.selection)
+          const normalized = typeof params.selection === "string" ? JSON.parse(params.selection) : params.selection
+          return store.saveSearch(
+            nameOf(name),
+            searchRecordOf("admin-statistics", {
+              adminReport: selected.options.report,
+              selection: normalized,
+              language: "lucene",
+              timezone: selected.base.timezone,
+            }),
+            { replace },
+          )
+        }
+        return store.saveSearch(
           nameOf(name),
           searchRecordOf(
             params.target
@@ -159,8 +176,8 @@ export const searchesService = (deps: ServiceDeps): SearchesService => {
           {
             replace,
           },
-        ),
-      ),
+        )
+      }),
 
     show: (reference) => inStore((store) => found(store, reference)),
 

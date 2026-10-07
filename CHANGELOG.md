@@ -16,6 +16,10 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   messenger's server», not that only the local store was searched. The search docs and the MCP description say
   the server is asked by default where it can search.
 
+### Administrator reports
+
+- Add stored reports for unanswered questions, selected responders, known-join newcomer help and viewed posts with little discussion, shared by CLI and MCP with bounded evidence and repeatable saved runs.
+
 ## 0.175.0 — 08.10.2026
 
 ### Added

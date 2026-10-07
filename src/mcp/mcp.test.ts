@@ -501,6 +501,26 @@ describe("the MCP server", () => {
     expect(connectSpy).not.toHaveBeenCalled()
   })
 
+  it("executes all administrator report schemas over the three-tool surface without connecting", async () => {
+    const root = await filledRoot()
+    const connectSpy = vi.fn(async () => {
+      throw Error("report connected")
+    })
+    const { call, raw } = await connect(scripted(), { root, connect: connectSpy })
+    for (const [name, args] of [
+      ["chat_stats_messages_unanswered", { chat: "7", older_than: "1h" }],
+      ["chat_stats_contacts_responses", { chat: "7", answerer: ["9"] }],
+      ["chat_stats_chats_newcomers", { chat: "7", within: "3d" }],
+      ["chat_stats_messages_discussion", { chat: "7", max_replies: 2 }],
+    ] as const) {
+      const found = await call(name, args)
+      expect(found.isError, JSON.stringify(found.body)).toBe(false)
+      expect(found.body.quality).toMatchObject({ counterFreshness: "unknown" })
+    }
+    expect((await raw.listTools()).tools).toHaveLength(3)
+    expect(connectSpy).not.toHaveBeenCalled()
+  })
+
   it("refreshes local search and stats over a held session without marking read", async () => {
     const root = await filledRoot()
     const markRead = vi.fn(async () => {})
@@ -679,12 +699,16 @@ describe("the MCP server", () => {
       "chat_searches_history",
       "chat_searches_list",
       "chat_stats_charts",
+      "chat_stats_chats_newcomers",
       "chat_stats_chats_show",
       "chat_stats_contacts_evidence",
+      "chat_stats_contacts_responses",
       "chat_stats_contacts_top",
+      "chat_stats_messages_discussion",
       "chat_stats_messages_evidence",
       "chat_stats_messages_show",
       "chat_stats_messages_top",
+      "chat_stats_messages_unanswered",
       "chat_stats_tasks_show",
       "chat_status",
       "chat_store_gaps_plan",

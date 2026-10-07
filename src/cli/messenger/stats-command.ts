@@ -9,6 +9,7 @@ import { chartRenderer } from "../../charts/render.js"
 import { timezoneOf } from "../../search/lucene/dates.js"
 import { EVENTS_DAYS } from "../../services/chats.js"
 import { momentOf } from "../../services/moment.js"
+import { adminStatisticsCommand } from "./admin-statistics-command.js"
 import { statsCommand as chatStatsCommand } from "./chats-stats-command.js"
 import { type Messenger, messengerContext } from "./context.js"
 import { messagesStatsCommand } from "./messages-stats-command.js"
@@ -22,16 +23,20 @@ export const statsCommand = (messenger: Messenger, loadRenderer = chartRenderer)
     new Command("messages")
       .description("message statistics from the local store")
       .addCommand(messagesStatsCommand(messenger))
+      .addCommand(adminStatisticsCommand(messenger, "unanswered"))
+      .addCommand(adminStatisticsCommand(messenger, "discussion"))
       .addCommand(rankingsTopCommand(messenger, "messages"))
       .addCommand(rankingEvidenceCommand(messenger, "messages")),
   )
   stats.addCommand(
     new Command("contacts")
       .description("statistics about human authors")
+      .addCommand(adminStatisticsCommand(messenger, "responses"))
       .addCommand(rankingsTopCommand(messenger, "contacts"))
       .addCommand(rankingEvidenceCommand(messenger, "contacts")),
   )
   const chats = new Command("chats").description("statistics about one chat").addCommand(chatStatsCommand(messenger))
+  chats.addCommand(adminStatisticsCommand(messenger, "newcomers"))
   if (messenger.officialStats === true) chats.addCommand(officialStatsCommand(messenger))
   stats.addCommand(chats)
   stats.addCommand(new Command("tasks").description("task statistics").addCommand(tasksStatsCommand(messenger)))

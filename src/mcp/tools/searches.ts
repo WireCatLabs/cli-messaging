@@ -3,6 +3,7 @@ import * as v from "valibot"
 import type { Messenger } from "../../cli/messenger/context.js"
 import { listed } from "../../cli/paging.js"
 import type { SendGuard } from "../../sends/guard.js"
+import { isAdminSelection } from "../../services/admin-statistics.js"
 import { servicesFor, storedDeps } from "../../services/index.js"
 import { readRankingSelection } from "../../services/rankings-selection.js"
 import type { AccountKey, MessageStore } from "../../store/store.js"
@@ -71,6 +72,8 @@ export const searchesTools = (messenger: Messenger): Record<string, AnyTool> => 
               "validation_error",
               "with selection, save the resolved ranking query without additional options",
             )
+          if (isAdminSelection(params.selection))
+            return services(store, account, defaults.guard).searches.create(name, params, { replace: replace === true })
           const selection = await readRankingSelection(store, params.selection)
           return services(store, account, defaults.guard).searches.create(
             name,

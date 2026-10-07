@@ -73,6 +73,53 @@ Each page retains complete rows within a 64 KiB items budget. An oversized singl
 you to `messages show`. Fingerprinting is bounded to 50,000 rows and 8 MiB of stored inputs;
 narrow chat/date scope when the query exceeds a budget. Selection JSON is capped at 64 KiB.
 
+## Find questions and posts that need attention
+
+After loading the relevant history, you can ask your agent: “Show questions in the club that have
+waited more than a day, and open the original messages.” These reports read the stored archive;
+an empty report cannot prove that nobody asked a question when history is missing.
+
+```sh
+app stats messages unanswered --chat Club --older-than 24h --json
+app stats contacts responses --chat Club --answerer 42 --answerer 73 --json
+app stats chats newcomers Club --since-time 2026-10-01T00:00:00Z --within 7d --json
+app stats messages discussion --chat News --min-views 100 --max-replies 0 --json
+```
+
+`unanswered` orders detected questions by age. A question contains `?` outside URLs; this is a
+heuristic. Only a direct explicit reply from another identifiable human qualifies. A later reply
+can answer a question even when its date/text does not match the question query. Replies to oneself
+and the next speaker without a reply link do not qualify. `no-observed-answer` describes saved
+history, rather than proof that no answer exists in the messenger.
+
+`responses` requires the identities to measure with repeated `--answerer`. They are user-selected
+people, not verified past administrator roles. It shows response count, median and p90 latency in
+milliseconds; no response gives null timings. P90 uses the nearest rank, rounded up. Without
+`--answerer`, unanswered and newcomer reports accept any other identifiable human. Bare ids need
+one scoped account; use `person:<provider>/<account>/<id>` for multiple accounts.
+
+`newcomers` defaults to joins in the last 30 days and questions within seven days after a known
+join. `--until-time` ends the join cohort. First-seen-only identities are counted separately in
+`summary.unknownJoin`, not assigned a joining date. A rejoin is a separate stay. Pending help windows
+and incomplete member history are reported; no saved question does not mean no help was needed.
+
+`discussion` compares known cumulative views with observed direct discussion replies. Provider
+comment snapshots remain separate; their freshness is unknown. Linked discussion needs stored
+link metadata and its group's history. Missing counters or graph links are not zero.
+
+Each row provides `drilldown.command` and exact arguments. Run its existing messages/contacts
+`evidence` command with `--component report` and the returned selection. Follow `nextCursor` with
+the same arguments. The captured cutoff remains fixed; changed evidence requires a fresh report.
+Evidence items fit within 64 KiB. Narrow the chat/date scope if the 50,000-node or 8 MiB budget is
+exceeded. Look at `quality.archives` and `quality.graph` before drawing conclusions, then open the
+returned message locator with `messages show` to check the original context.
+
+You can save a report's returned selection with `searches create waiting --selection "$selection"`
+and rerun the matching view with `--saved waiting`. Resolved accounts, chat, root dates and answerers
+remain pinned; typed report options replace inherited values. Each new run captures a fresh observation
+cutoff for replies. A saved report cannot run as a different report kind or an ordinary ranking.
+Report history stores parameters and resolved selections, never result messages. Evidence is not recorded.
+
 ## Save a resolved ranking
 
 ```sh

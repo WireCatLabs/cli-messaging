@@ -1,5 +1,6 @@
 import { CliError } from "@leemour/cli-core"
 import { Command } from "commander"
+import { isAdminSelection } from "../../services/admin-statistics.js"
 import { readRankingSelection } from "../../services/rankings-selection.js"
 import type { SearchParams } from "../../services/searches.js"
 import type { StoredSearch } from "../../store/store.js"
@@ -61,13 +62,15 @@ export const searchesCommand = (messenger: Messenger): Command => {
             "validation_error",
             "with --selection, save the resolved ranking query without additional search options",
           )
-        const selection = await context.withStore((store) => readRankingSelection(store, params.selection))
-        params = {
-          selection,
-          target: selection.target,
-          ...selection.options,
-          timezone: selection.timezone,
-          language: "lucene",
+        if (!isAdminSelection(params.selection)) {
+          const selection = await context.withStore((store) => readRankingSelection(store, params.selection))
+          params = {
+            selection,
+            target: selection.target,
+            ...selection.options,
+            timezone: selection.timezone,
+            language: "lucene",
+          }
         }
       }
       const saved = await context.withServices((services) =>

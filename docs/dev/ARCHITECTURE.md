@@ -496,3 +496,12 @@ consumer needs stricter scope rules or unchanged errors; it must produce the com
 shape, including `profiles`. `sourcePaths` opts into full configuration paths, including legacy
 permission provenance. `parseDuration` preserves a consumer's duration syntax and diagnostics.
 Without these hooks, existing source labels, validation and duration parsing stay unchanged.
+
+## Administrator statistics
+
+The shared `adminStatistics` service implements unanswered, selected-identity response times,
+known-join newcomer help and stored discussion reports. `admin-statistics.ts` in the SQLite seam
+uses compiled query selection and bounded context within one read snapshot. Question selection is
+separate from reply context through a captured cutoff. Membership stays distinguish joinedAt and
+firstSeenAt. Reports and their saved runs reuse existing CLI/MCP discovery and evidence paths; a
+separate versioned selection binds query, options and cutoff. See the [user guide](../rankings.md).

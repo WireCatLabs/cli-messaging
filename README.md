@@ -276,3 +276,8 @@ and preserves manual tags. Adding a label already generated promotes it to manua
 listing generated tags includes `sources`. Use `tags list|remove --source manual|auto` to select one ownership source. Removing a tag without a source removes its claims; a later explicit
 automatic run can regenerate it. Upgrade consumers together before relying on manual promotion:
 older builds cannot record manual ownership of an already generated label.
+
+Administrator reports are mounted by the same `statsCommand`: `stats messages unanswered`,
+`stats contacts responses`, `stats chats newcomers` and `stats messages discussion`. They read
+held data only; [the guide](docs/rankings.md#find-questions-and-posts-that-need-attention) explains
+explicit reply attribution, selected answerers, unknown joining dates and bounded evidence.

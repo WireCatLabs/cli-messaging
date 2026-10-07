@@ -2,6 +2,7 @@ import type { Messenger } from "../cli/messenger/context.js"
 import type { AnyTool } from "./tool.js"
 import { accountTools } from "./tools/account.js"
 import { adminTools } from "./tools/admin.js"
+import { adminStatisticsTools } from "./tools/admin-statistics.js"
 import { attachmentsTools } from "./tools/attachments.js"
 import { chatsTools } from "./tools/chats.js"
 import { chatsReadTools } from "./tools/chats-read.js"
@@ -44,6 +45,7 @@ export const readTools = (messenger: Messenger): Record<string, AnyTool> => ({
   ...contactsTools(messenger),
   ...messagesTools(messenger),
   ...rankingTools(messenger),
+  ...adminStatisticsTools(messenger),
   ...conversationsTools(messenger),
   ...pollReadTools(messenger),
   ...messagesPhotoTools(messenger),

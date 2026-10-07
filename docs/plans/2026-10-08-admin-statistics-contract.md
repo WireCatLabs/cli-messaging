@@ -30,3 +30,7 @@ join window. Missing graph/history/counters are unknown or partial, never fabric
 post reports separate stored reply counts from provider comment snapshots and report freshness
 unknown. Evidence stays bounded to 64 KiB pages, binds query/options/cutoff and requires restart
 when stored evidence changes. No moderation or automatic task creation.
+
+The existing `--saved` option runs a saved report of the same kind. Typed report options replace
+inherited values; root accounts/chat/date resolution remains pinned, and a fresh observation cutoff
+is captured. `searches create --selection` accepts report selections without executing the report.

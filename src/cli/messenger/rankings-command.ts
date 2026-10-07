@@ -7,8 +7,10 @@ import {
   type RankingTarget,
   rankingOptions,
 } from "../../domain/rankings-options.js"
+import { isAdminSelection } from "../../services/admin-statistics.js"
 import { RANKING_SELECTION_BYTES } from "../../services/rankings-selection.js"
 import type { SearchParams } from "../../services/searches.js"
+import type { AdminStoreResult, RankedEvidence } from "../../store/store.js"
 import { environmentOf } from "../context.js"
 import { positiveCount } from "../paging.js"
 import { type Messenger, messengerContext } from "./context.js"
@@ -135,14 +137,20 @@ export const rankingEvidenceCommand = (messenger: Messenger, target: RankingTarg
     .action(async function (this: Command, reference: string) {
       const context = messengerContext(this, messenger)
       const options = this.opts<{ selection: unknown; component: string; limit?: number; cursor?: string }>()
-      const found = await context.withServices((services) =>
-        services.rankings.evidence(target, reference, options.selection, {
-          component: options.component,
-          limit: options.limit ?? 20,
-          ...(options.cursor ? { cursor: options.cursor } : {}),
-          signal: environmentOf(this).commandSignal ?? environmentOf(this).signal,
-        }),
+      const found = await context.withServices<AdminStoreResult | RankedEvidence>((services) =>
+        (isAdminSelection(options.selection) ? services.adminStatistics : services.rankings).evidence(
+          target,
+          reference,
+          options.selection,
+          {
+            component: options.component,
+            limit: options.limit ?? 20,
+            ...(options.cursor ? { cursor: options.cursor } : {}),
+            signal: environmentOf(this).commandSignal ?? environmentOf(this).signal,
+          },
+        ),
       )
-      if (context.format === "jsonl") context.renderer.stream(found.items)
+      if (context.format === "jsonl")
+        context.renderer.stream("evidence" in found ? (found.evidence ?? found.items) : found.items)
       else context.renderer.result(found)
     })
