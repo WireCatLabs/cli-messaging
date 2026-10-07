@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.173.0 — 07.10.2026
+
 ### Fixed
 
 - Saved ranking selections and search ASTs retain nested false values, including exclusive
