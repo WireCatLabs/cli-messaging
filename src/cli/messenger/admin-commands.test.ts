@@ -152,6 +152,19 @@ describe("chats create, join and leave", () => {
     expect(left).toEqual(["7"])
   })
 
+  it("**answers a join that needs approval as requested**, exit 0, journaled with no chat", async () => {
+    const env = sandbox()
+    const adapter: MessengerAdapter = { ...base, join: async () => ({ requested: true }) }
+
+    const asked = await call(["chats", "join", "https://t.me/+abc", "--json"], adapter, env)
+
+    expect(asked.code).toBe(0)
+    expect(JSON.parse(asked.stdout[0] ?? "")).toEqual({ operationId: expect.any(String), requested: true })
+    expect(new SendJournal(sendsPathFor(app, "default", env)).entries()).toMatchObject([
+      { kind: "chat", action: "join", chatId: null, outcome: "sent" },
+    ])
+  })
+
   it("**says plainly when the messenger cannot do it**", async () => {
     const refused = await call(["chats", "leave", "Book club"], base, sandbox())
 

@@ -16,7 +16,7 @@ export interface NewGroup {
 /** Groups the owner makes, joins and leaves — each a write others see, through the guard. */
 export interface AdminService {
   create(group: NewGroup): Promise<Operated<{ chat: GroupCard }>>
-  join(link: string): Promise<Operated<{ chat: GroupCard }>>
+  join(link: string): Promise<Operated<{ chat: GroupCard } | { requested: true }>>
   leave(chat: string): Promise<Operated<{ chatId: Id }>>
   update(chat: string, change: GroupChange): Promise<Operated<{ chat: GroupCard }>>
   /** The invite link, or `not_found` when the owner may not see it. */
@@ -74,13 +74,13 @@ export const adminService = (deps: ServiceDeps): AdminService => {
       const connection = await online("chats join")
       const join = capability(connection, "join", "join a chat by its link")
       const operationId = newOperationId()
-      const chat = await guardedWrite(
+      const joined = await guardedWrite(
         deps.guard,
         { operationId, chatId: null, kind: "chat", action: "join" },
         () => join(link.trim()),
-        (joined) => ({ chatId: joined.id }),
+        (answer) => ("requested" in answer ? {} : { chatId: answer.id }),
       )
-      return { operationId, chat }
+      return "requested" in joined ? { operationId, requested: true } : { operationId, chat: joined }
     },
 
     leave: async (chat) => {
