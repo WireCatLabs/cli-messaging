@@ -154,19 +154,18 @@ describe("the messages service", () => {
 
   it("**builds a slice of the word index first**, bounded in time", async () => {
     const store = await keptStore()
-    const slices: { until?: () => boolean }[] = []
+    const spentAtStart: (boolean | undefined)[] = []
     const watched: MessageStore = {
       ...store,
       fillSearchIndex: async (options) => {
-        slices.push(options ?? {})
+        spentAtStart.push(options?.until?.())
         return store.fillSearchIndex(options)
       },
     }
 
     await messagesService(storedDeps(messenger, watched, account, guard)).search({ text: "chapter", limit: 10 })
 
-    expect(slices).toHaveLength(1)
-    expect(slices[0]?.until?.()).toBe(false)
+    expect(spentAtStart).toEqual([false])
   })
 })
 
