@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.199.0 — 08.10.2026
+
 ### Fixed
 
 - A store whose stems an older tool built with its default (`latin=spanish`), with no stemmers ever chosen,
