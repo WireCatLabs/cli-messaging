@@ -3196,11 +3196,8 @@
       "options": {
         "--anonymous": "all",
         "--close-time": {
-          "in": [],
-          "reason": "max-cli does not close a poll by itself",
-          "planned": {
-            "tg": "G2 feat/polls-close-time"
-          }
+          "in": ["tg"],
+          "reason": "max-cli does not close a poll by itself"
         },
         "--correct": {
           "in": ["tg"],
@@ -3232,25 +3229,16 @@
       }
     },
     "polls voters": {
-      "in": [],
+      "in": ["tg"],
       "reason": "max-cli does not list who voted in a poll",
-      "planned": {
-        "tg": "G2 feat/polls-voters"
-      },
       "options": {
         "--answer": {
-          "in": [],
-          "reason": "max-cli does not list who voted in a poll",
-          "planned": {
-            "tg": "G2 feat/polls-voters"
-          }
+          "in": ["tg"],
+          "reason": "max-cli does not list who voted in a poll"
         },
         "--limit": {
-          "in": [],
-          "reason": "max-cli does not list who voted in a poll",
-          "planned": {
-            "tg": "G2 feat/polls-voters"
-          }
+          "in": ["tg"],
+          "reason": "max-cli does not list who voted in a poll"
         }
       }
     },
