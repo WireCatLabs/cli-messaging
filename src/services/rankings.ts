@@ -1,4 +1,5 @@
 import { CliError } from "@leemour/cli-core"
+import { counterFreshness } from "../domain/counters.js"
 import { formatLocator, parseLocator } from "../domain/locator.js"
 import {
   RANKING_TOKENIZER_VERSION,
@@ -25,7 +26,7 @@ export interface RankedRow extends Omit<RankedStoreRow, "provider" | "account" |
   quality: {
     reactions: "known" | "partial" | "unknown"
     graph: "complete" | "partial" | "not_used"
-    counterFreshness: "unknown"
+    counterFreshness: "fresh" | "stale" | "partial" | "unknown"
   }
   drilldown: {
     selection: RankingSelection
@@ -61,7 +62,7 @@ export interface RankingFound extends Omit<RankedStoreFound, "items"> {
     messageKind: string
     normalizationVersion: 1
     tokenizerVersion: number
-    counterFreshness: "unknown"
+    counterFreshness: "fresh" | "stale" | "partial" | "unknown"
     counters: "cumulative_snapshots"
     replies: "stored_events_in_query_period"
   }
@@ -282,7 +283,11 @@ export const rankingsService = (deps: ServiceDeps): RankingsService => ({
         quality: {
           reactions: row.knownReactions === 0 ? "unknown" : row.unknownReactions > 0 ? "partial" : "known",
           graph: graphComplete === undefined ? "not_used" : graphComplete ? "complete" : "partial",
-          counterFreshness: "unknown",
+          counterFreshness: counterFreshness(
+            (row.counterObservations ?? []).filter((one) =>
+              options.components.some((component) => component.startsWith(one.counter)),
+            ),
+          ),
         },
         drilldown: {
           selection,
@@ -336,7 +341,13 @@ export const rankingsService = (deps: ServiceDeps): RankingsService => ({
         messageKind: options.messageKind,
         normalizationVersion: 1,
         tokenizerVersion: RANKING_TOKENIZER_VERSION,
-        counterFreshness: "unknown",
+        counterFreshness: counterFreshness(
+          items.flatMap((row) =>
+            (row.counterObservations ?? []).filter((one) =>
+              options.components.some((component) => component.startsWith(one.counter)),
+            ),
+          ),
+        ),
         counters: "cumulative_snapshots",
         replies: "stored_events_in_query_period",
       },

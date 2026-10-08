@@ -1,4 +1,5 @@
 import { CliError } from "@leemour/cli-core"
+import type { CounterField, CounterObservations } from "../../domain/counters.js"
 import type { HtmlFormatting, MarkdownFormatting, TextSpan } from "../../domain/formatting.js"
 import type { Markup } from "../../domain/markdown.js"
 import type { MessagePermalink } from "../../domain/message-link.js"
@@ -146,6 +147,12 @@ export interface ServerReads {
   /** One person and the chats this account shares with them, newest first. A chat that is not a person is refused. */
   contact(person: string): Promise<PersonCard>
   /** One message and up to `before` and `after` either side, oldest first; the one asked for carries `anchor`. */
+  fetchCounters?(
+    chat: string,
+    messageId: Id,
+    fields: readonly CounterField[],
+    signal?: AbortSignal,
+  ): Promise<CounterObservations>
   around(chat: string, messageId: Id, window: { before: number; after: number }): Promise<WindowedMessage[]>
 }
 

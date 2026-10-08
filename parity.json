@@ -3356,10 +3356,6 @@
     },
     "stats chats retention": {
       "in": [],
-      "planned": {
-        "max": "Retention/freshness adoption",
-        "tg": "Retention/freshness adoption"
-      },
       "options": {
         "--by": "all",
         "--checkpoints": "all",
@@ -3368,6 +3364,10 @@
         "--timezone": "all",
         "--until-time": "all",
         "--within": "all"
+      },
+      "planned": {
+        "max": "Retention/freshness SDK adoption",
+        "tg": "Retention/freshness SDK adoption"
       }
     },
     "stats chats show": {
@@ -3434,19 +3434,16 @@
     "stats messages counters": {
       "in": [],
       "planned": {
-        "max": "Retention/freshness adoption",
-        "tg": "Retention/freshness adoption"
+        "max": "Retention/freshness SDK adoption",
+        "tg": "Retention/freshness SDK adoption"
       }
     },
     "stats messages counters refresh": {
       "in": [],
-      "planned": {
-        "max": "Retention/freshness adoption",
-        "tg": "Retention/freshness adoption"
-      },
       "options": {
         "--chat": "all",
         "--counters": "all",
+        "--dry-run": "all",
         "--exact": "all",
         "--limit": "all",
         "--max-messages": "all",
@@ -3454,22 +3451,27 @@
         "--source": "all",
         "--sync-time": "all",
         "--timezone": "all"
+      },
+      "planned": {
+        "max": "Retention/freshness SDK adoption",
+        "tg": "Retention/freshness SDK adoption"
       }
     },
     "stats messages counters show": {
       "in": [],
-      "planned": {
-        "max": "Retention/freshness adoption",
-        "tg": "Retention/freshness adoption"
-      },
       "options": {
         "--chat": "all",
         "--counters": "all",
         "--exact": "all",
         "--limit": "all",
         "--max-age": "all",
+        "--selection": "all",
         "--source": "all",
         "--timezone": "all"
+      },
+      "planned": {
+        "max": "Retention/freshness SDK adoption",
+        "tg": "Retention/freshness SDK adoption"
       }
     },
     "stats messages discussion": {

@@ -274,6 +274,12 @@ const keep = async (
       )
       return
     case "reaction":
-      await store.saveReactions(account, event.chatId, event.messageId, event.reactions)
+      await store.saveReactions(
+        account,
+        event.chatId,
+        event.messageId,
+        event.reactions,
+        event.counterObservation ? { observation: event.counterObservation } : {},
+      )
   }
 }

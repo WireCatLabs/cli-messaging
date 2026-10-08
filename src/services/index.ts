@@ -7,6 +7,7 @@ import { gapsService } from "./archive-gaps.js"
 import { type AttachmentsService, attachmentsService } from "./attachments.js"
 import { type ChatsService, chatsService } from "./chats.js"
 import { type ConversationsService, conversationsService } from "./conversations.js"
+import { type CountersService, countersService } from "./counters.js"
 import type { ServiceDeps } from "./deps.js"
 import { type EmbeddingsService, embeddingsService } from "./embeddings.js"
 import { type FoldersService, foldersService } from "./folders.js"
@@ -17,6 +18,7 @@ import { type ModerationService, moderationService } from "./moderation.js"
 import { type PeopleService, peopleService } from "./people.js"
 import { privatePeopleService } from "./private-people.js"
 import { type RankingsService, rankingsService } from "./rankings.js"
+import { type RetentionService, retentionService } from "./retention.js"
 import { type SearchesService, searchesService } from "./searches.js"
 import { type TagsService, tagsService } from "./tags.js"
 import { type TasksService, tasksService } from "./tasks.js"
@@ -93,6 +95,8 @@ export interface Services {
   metadata: ReturnType<typeof metadataService>
   privatePeople: ReturnType<typeof privatePeopleService>
   adminStatistics: AdminStatisticsService
+  counters: CountersService
+  retention: RetentionService
   rankings: RankingsService
   topics: TopicsService
   messages: MessagesService
@@ -126,6 +130,8 @@ export const servicesFor = (deps: ServiceDeps): Services => {
     metadata: metadataService(deps),
     privatePeople: privatePeopleService(deps),
     adminStatistics: adminStatisticsService(deps),
+    counters: countersService(deps),
+    retention: retentionService(deps),
     rankings: rankingsService(deps),
     topics: topicsService(deps),
     messages: messagesService(deps),
@@ -156,6 +162,8 @@ export { type Predicate, QUERY_LIMITS, QUERY_VERSION, type QueryAst, type QueryN
 export type { AdminFound, AdminQuery, AdminSelection, AdminStatisticsService } from "./admin-statistics.js"
 export { adminStatisticsService } from "./admin-statistics.js"
 export { GAP_BOUNDS, type GapPlan, type GapRepair, gapsService, type RepairOptions } from "./archive-gaps.js"
+export type { CounterQuery, CountersService } from "./counters.js"
+export { countersService } from "./counters.js"
 export type { QueryMetadata, SearchCoverage } from "./messages-search.js"
 export { metadataService } from "./metadata.js"
 export {
@@ -166,6 +174,8 @@ export {
   upgradePackage,
 } from "./package-upgrade.js"
 export { privatePeopleService } from "./private-people.js"
+export type { RetentionQuery, RetentionService } from "./retention.js"
+export { retentionService } from "./retention.js"
 export {
   CATCH_UP_BOUNDS,
   type CatchUpOptions,

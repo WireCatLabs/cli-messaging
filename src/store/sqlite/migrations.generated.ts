@@ -260,5 +260,15 @@ export const GENERATED: { name: string; statements: string[] }[] = [
       "ALTER TABLE `knowledge_relations` ADD `confirmed` integer DEFAULT 1 NOT NULL;",
       "ALTER TABLE `knowledge_relations` ADD `provenance` text;"
     ]
+  },
+  {
+    "name": "20261008010235_retention-counter-observations",
+    "statements": [
+      "CREATE TABLE `membership_batch_members` (\n\t`batch_pk` integer NOT NULL,\n\t`identity_pk` integer NOT NULL,\n\t`stay_pk` integer NOT NULL,\n\tCONSTRAINT `membership_batch_members_pk` PRIMARY KEY(`batch_pk`, `identity_pk`),\n\tCONSTRAINT `fk_membership_batch_members_batch_pk_membership_batches_pk_fk` FOREIGN KEY (`batch_pk`) REFERENCES `membership_batches`(`pk`) ON DELETE CASCADE,\n\tCONSTRAINT `fk_membership_batch_members_identity_pk_identities_pk_fk` FOREIGN KEY (`identity_pk`) REFERENCES `identities`(`pk`) ON DELETE CASCADE,\n\tCONSTRAINT `fk_membership_batch_members_stay_pk_member_stays_pk_fk` FOREIGN KEY (`stay_pk`) REFERENCES `member_stays`(`pk`) ON DELETE CASCADE\n);",
+      "CREATE TABLE `membership_batches` (\n\t`pk` integer PRIMARY KEY,\n\t`chat_pk` integer NOT NULL,\n\t`observed_at` integer NOT NULL,\n\t`started_at` integer,\n\t`complete` integer NOT NULL,\n\t`participants` integer,\n\t`listed` integer NOT NULL,\n\t`source` text NOT NULL,\n\tCONSTRAINT `fk_membership_batches_chat_pk_chats_pk_fk` FOREIGN KEY (`chat_pk`) REFERENCES `chats`(`pk`) ON DELETE CASCADE\n);",
+      "CREATE TABLE `message_counter_observations` (\n\t`message_pk` integer NOT NULL,\n\t`counter` text NOT NULL,\n\t`value` real NOT NULL,\n\t`observed_at` integer NOT NULL,\n\t`source` text NOT NULL,\n\tCONSTRAINT `message_counter_observations_pk` PRIMARY KEY(`message_pk`, `counter`),\n\tCONSTRAINT `fk_message_counter_observations_message_pk_messages_pk_fk` FOREIGN KEY (`message_pk`) REFERENCES `messages`(`pk`) ON DELETE CASCADE\n);",
+      "CREATE INDEX `membership_members_by_stay` ON `membership_batch_members` (`stay_pk`,`batch_pk`);",
+      "CREATE INDEX `membership_batches_by_chat_time` ON `membership_batches` (`chat_pk`,`observed_at`);"
+    ]
   }
 ]

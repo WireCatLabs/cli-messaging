@@ -505,3 +505,27 @@ uses compiled query selection and bounded context within one read snapshot. Ques
 separate from reply context through a captured cutoff. Membership stays distinguish joinedAt and
 firstSeenAt. Reports and their saved runs reuse existing CLI/MCP discovery and evidence paths; a
 separate versioned selection binds query, options and cutoff. See the [user guide](../rankings.md).
+
+## Retention and counter observations
+
+Migration 24 adds `membership_batches`, `membership_batch_members` and
+`message_counter_observations`. Only explicit remote reads/updates record observations.
+Legacy rows are not backfilled with observation times. Batch membership points to identities and
+separate stays; partial lists cannot close stays. Definite known rejoining dates split stays.
+Invalid, duplicate and out-of-order roster observations are rejected atomically.
+
+Retention uses SQL lookup of the first batch within a checkpoint's 24-hour tolerance, then bounded
+cohort aggregation (10,000 stays, ten checkpoints, 8 MiB fingerprint, 64 KiB evidence).
+One read transaction pins membership and activity. Cohort selections freeze cutoff and options;
+existing message-evidence CLI/MCP paths page through member evidence.
+
+Counter timestamps are independent by field and tied to the exact observed value. A legacy writer
+can still use schema 6 statements; differing legacy values have unknown freshness. Counter-only
+updates preserve other message fields and ignore tombstones. An older response cannot replace a
+newer authoritative observation. Rankings/evidence expose these states and fingerprint observation changes.
+
+The optional adapter `fetchCounters` returns explicit counter observations; `Messenger.counterFields`
+declares static support for a connection-free preview. The shared service resolves a bounded query or
+exact locator selection before connecting and guards `stats.messages.counters.refresh` as a local write.
+It closes stalled connections on abort and records partial results without message actions.
+CLI commands and the existing three-tool MCP frontend share this service. See [statistics guide](../rankings.md).

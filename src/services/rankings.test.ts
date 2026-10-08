@@ -77,6 +77,35 @@ describe("ranking services and drilldown selection", () => {
       ranking: { normalizationVersion: 1, counters: "cumulative_snapshots" },
     })
   })
+  it("discloses field freshness and invalidates a cursor when only observation time changes", async () => {
+    const { store, service } = await setup()
+    const before = Date.now() - 2000
+    await store.updateCounterObservations?.(account, "room", "3", {
+      views: { value: 3, observedAt: new Date(before).toISOString(), source: "remote_fetch" },
+    })
+    const ranked = await service.top("messages", { measure: "views", limit: 1 })
+    expect(ranked.items[0]).toMatchObject({
+      quality: { counterFreshness: "fresh" },
+      counterObservations: expect.arrayContaining([
+        expect.objectContaining({ counter: "views", value: 3, observedAt: new Date(before).toISOString() }),
+      ]),
+    })
+    const authors = await service.top("contacts", { measure: "reactions", limit: 3 })
+    const alice = authors.items.find((row) => row.id === "alice")
+    const options = { component: "reactions", limit: 1 }
+    const page = await service.evidence("contacts", "alice", alice?.drilldown.selection, options)
+    expect(page.nextCursor).toBeTruthy()
+    await store.updateCounterObservations?.(account, "room", "2", {
+      reactions: { value: 2, observedAt: new Date(Date.now() - 1000).toISOString(), source: "remote_fetch" },
+    })
+    await expect(
+      service.evidence("contacts", "alice", alice?.drilldown.selection, {
+        ...options,
+        cursor: page.nextCursor ?? undefined,
+      }),
+    ).rejects.toMatchObject({ details: { reason: "evidence_changed" } })
+  })
+
   it("records repeatable ranking parameters rather than results", async () => {
     const { store, service } = await setup()
     const result = await service.top("contacts", { weights: { messages: 1, words: 0 }, minMessages: 2, limit: 10 })

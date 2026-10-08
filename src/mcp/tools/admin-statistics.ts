@@ -1,6 +1,7 @@
 import * as v from "valibot"
 import type { Messenger } from "../../cli/messenger/context.js"
 import type { AdminQuery } from "../../services/admin-statistics.js"
+import type { CounterQuery } from "../../services/counters.js"
 import { searchServices } from "../search-sync.js"
 import { type AnyTool, READ, tool } from "../tool.js"
 
@@ -77,6 +78,98 @@ export const adminStatisticsTools = (messenger: Messenger): Record<string, AnyTo
           untilTime: values.until_time,
           minViews: values.min_views,
           maxReplies: values.max_replies,
+        })
+      },
+    })
+  }
+  definitions.stats_chats_retention = tool({
+    title: "Observed retention cohorts",
+    description:
+      "Known joining cohorts, observed checkpoint membership, activity and interval departures from saved roster batches. Partial absences and missing joins remain unknown. Rates expose observed denominators. No connection or message actions.",
+    input: v.object({
+      chat: v.string(),
+      since_time: v.optional(v.string()),
+      until_time: v.optional(v.string()),
+      checkpoints: v.optional(v.string()),
+      within: v.optional(v.string()),
+      by: v.optional(v.picklist(["day", "week"])),
+      timezone: v.optional(v.string()),
+      limit: common.limit,
+    }),
+    annotations: { ...READ, openWorldHint: false },
+    stored: (store, account, args, defaults) =>
+      searchServices(messenger, store, account, defaults).retention.report(args.chat, {
+        sinceTime: args.since_time,
+        untilTime: args.until_time,
+        checkpoints: args.checkpoints,
+        within: args.within,
+        by: args.by,
+        timezone: args.timezone,
+        limit: args.limit,
+      }),
+  })
+  for (const operation of ["show", "refresh"] as const) {
+    const entries: v.ObjectEntries = {
+      text: query.text,
+      ast: query.ast,
+      chat: query.chat,
+      source: query.source,
+      exact: query.exact,
+      timezone: query.timezone,
+      limit: common.limit,
+      selection: v.optional(v.unknown()),
+      counters: v.optional(v.string()),
+      ...(operation === "show" ? { max_age: v.optional(v.string()) } : {}),
+      ...(operation === "refresh"
+        ? {
+            max_messages: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(100))),
+            sync_time: v.optional(v.string()),
+            dry_run: v.optional(v.boolean()),
+          }
+        : {}),
+    }
+    definitions[`stats_messages_counters_${operation}`] = tool({
+      title: `Counter observations ${operation}`,
+      description:
+        operation === "show"
+          ? "Bounded stored counter values with explicit per-field observation freshness and pinned exact locators."
+          : "Bounded remote counter read and local observation write. Requires explicit chat or pinned selection. No send, mark-read or view increment. Dry run resolves targets and capabilities without connecting.",
+      input: v.object(entries),
+      annotations: {
+        ...READ,
+        readOnlyHint: operation === "show",
+        destructiveHint: false,
+        openWorldHint: operation === "refresh",
+      },
+      key: `stats.messages.counters.${operation}`,
+      stored: (store, account, args, defaults, connect) => {
+        const values = args as Partial<CounterQuery> & {
+          max_age?: string
+          max_messages?: number
+          sync_time?: string
+          dry_run?: boolean
+        }
+        return searchServices(
+          messenger,
+          store,
+          account,
+          defaults,
+          operation === "refresh" && values.dry_run !== true ? connect : undefined,
+        ).counters[operation]({
+          text: values.text,
+          ast: values.ast,
+          chat: values.chat,
+          source: values.source,
+          exact: values.exact,
+          timezone: values.timezone,
+          selection: values.selection,
+          counters: values.counters,
+          maxAge: values.max_age,
+          limit: values.limit ?? 20,
+          maxMessages: values.max_messages,
+          syncTime: values.sync_time,
+          dryRun: values.dry_run,
+          signal: defaults.signal,
         })
       },
     })

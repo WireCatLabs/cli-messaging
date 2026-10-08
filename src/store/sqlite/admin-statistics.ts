@@ -8,11 +8,13 @@ import {
   adminEntityKey,
   calculateAdminStatistics,
 } from "../../domain/admin-statistics.js"
+import { type CounterState, counterFreshness } from "../../domain/counters.js"
 import { RANKING_GRAPH_LIMITS, rankingGraphEvidence } from "../../domain/rankings-graph.js"
 import type { QueryExecution } from "../../search/lucene/resolved.js"
 import type { SqlValue } from "../driver.js"
 import type { StoredHit } from "../store.js"
 import { chatCompleteness } from "./completeness.js"
+import { counterStates } from "./counters.js"
 import { withQuerySelection } from "./lucene.js"
 import type { StoreContext } from "./open.js"
 import { rankingCounter } from "./rankings.js"
@@ -26,6 +28,7 @@ export interface AdminEvidenceItem {
   message: StoredHit
   related?: StoredHit
   contribution: number | null
+  counters?: CounterState[]
 }
 export interface AdminStoreResult {
   items: AdminRow[]
@@ -44,7 +47,7 @@ export interface AdminStoreResult {
     }[]
     membership: "observed_stays_only" | "not_used"
     archivesTotal: number
-    counterFreshness: "unknown"
+    counterFreshness: "fresh" | "stale" | "partial" | "unknown"
     answererRoles: "user_selected_identities"
   }
   evidence?: AdminEvidenceItem[]
@@ -58,7 +61,7 @@ function fail(message: string, reason = "query_limit"): never {
 const joined =
   "FROM messages m JOIN chats c ON c.pk=m.chat_pk JOIN accounts ac ON ac.pk=m.account_pk LEFT JOIN identities i ON i.pk=m.sender_identity_pk"
 const attachmentSnapshot = `(SELECT json_group_array(json_object('position',position,'kind',kind,'mime',mime,'name',name,'title',title,'url',url,'size',size,'width',width,'height',height,'duration',duration,'providerRef',provider_ref,'localPath',local_path)) FROM attachments WHERE message_pk=m.pk)`
-const snapshot = `json_object('edited',m.edited_at,'senderName',m.sender_name,'reply',m.reply_to,'forward',m.forward,'reactions',m.reactions,'outgoing',m.outgoing,'thread',m.thread_native_id,'attachments',${attachmentSnapshot})`
+const snapshot = `json_object('edited',m.edited_at,'senderName',m.sender_name,'reply',m.reply_to,'forward',m.forward,'reactions',m.reactions,'outgoing',m.outgoing,'thread',m.thread_native_id,'attachments',${attachmentSnapshot},'counterObservations',(SELECT json_group_array(json_object('counter',counter,'value',value,'at',observed_at,'source',source)) FROM message_counter_observations WHERE message_pk=m.pk))`
 
 export const adminStatisticsQuery = (
   context: StoreContext,
@@ -181,8 +184,16 @@ export const adminStatisticsQuery = (
         fetchedAt: complete?.fetchedAt ?? null,
       })
     }
+    const reportItems = calculated.items.slice(0, execution.limit).map((item) => {
+      const node = nodes.find(
+        (one) =>
+          item.message ===
+          `msg:${[one.account.provider, one.account.account, one.chatId, one.id].map(encodeURIComponent).join("/")}`,
+      )
+      return node ? { ...item, counterObservations: counterStates(context, node.pk, context.now(), 86_400_000) } : item
+    })
     const result: AdminStoreResult = {
-      items: calculated.items.slice(0, execution.limit),
+      items: reportItems,
       total: calculated.items.length,
       included: Math.min(execution.limit, calculated.items.length),
       hasMore: calculated.items.length > execution.limit,
@@ -193,7 +204,16 @@ export const adminStatisticsQuery = (
         archives,
         archivesTotal: seen.size,
         membership: options.report === "newcomers" ? "observed_stays_only" : "not_used",
-        counterFreshness: "unknown",
+        counterFreshness:
+          options.report === "discussion"
+            ? counterFreshness(
+                reportItems.flatMap((item) =>
+                  (item.counterObservations ?? []).filter(
+                    (state) => state.counter === "views" || state.counter === "comments",
+                  ),
+                ),
+              )
+            : "unknown",
         answererRoles: "user_selected_identities",
       },
       fingerprint,
@@ -235,6 +255,7 @@ export const adminStatisticsQuery = (
         if (!message) fail("report evidence changed — rerun its report", "selection_changed")
         const item = {
           message,
+          counters: counterStates(context, row.pk, context.now(), 86_400_000),
           ...(row.related === undefined ? {} : { related: hits[1] }),
           contribution: row.contribution,
         }

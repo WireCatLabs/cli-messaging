@@ -1,3 +1,5 @@
+export type { CounterField, CounterObservation, CounterObservations, CounterState } from "./domain/counters.js"
+export { COUNTER_FIELDS, counterValue, observedCounters } from "./domain/counters.js"
 export {
   type FormattedText,
   type HtmlFormatting,

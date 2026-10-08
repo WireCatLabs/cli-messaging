@@ -556,6 +556,56 @@ export const memberCounts = sqliteTable(
   (table) => [primaryKey({ columns: [table.chatPk, table.day] })],
 )
 
+export const membershipBatches = sqliteTable(
+  "membership_batches",
+  {
+    pk: integer("pk").primaryKey(),
+    chatPk: integer("chat_pk")
+      .notNull()
+      .references(() => chats.pk, { onDelete: "cascade" }),
+    observedAt: integer("observed_at").notNull(),
+    startedAt: integer("started_at"),
+    complete: integer("complete").notNull(),
+    participants: integer("participants"),
+    listed: integer("listed").notNull(),
+    source: text("source").notNull(),
+  },
+  (table) => [index("membership_batches_by_chat_time").on(table.chatPk, table.observedAt)],
+)
+
+export const membershipBatchMembers = sqliteTable(
+  "membership_batch_members",
+  {
+    batchPk: integer("batch_pk")
+      .notNull()
+      .references(() => membershipBatches.pk, { onDelete: "cascade" }),
+    identityPk: integer("identity_pk")
+      .notNull()
+      .references(() => identities.pk, { onDelete: "cascade" }),
+    stayPk: integer("stay_pk")
+      .notNull()
+      .references(() => memberStays.pk, { onDelete: "cascade" }),
+  },
+  (table) => [
+    primaryKey({ columns: [table.batchPk, table.identityPk] }),
+    index("membership_members_by_stay").on(table.stayPk, table.batchPk),
+  ],
+)
+
+export const messageCounterObservations = sqliteTable(
+  "message_counter_observations",
+  {
+    messagePk: integer("message_pk")
+      .notNull()
+      .references(() => messages.pk, { onDelete: "cascade" }),
+    counter: text("counter").notNull(),
+    value: real("value").notNull(),
+    observedAt: integer("observed_at").notNull(),
+    source: text("source").notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.messagePk, table.counter] })],
+)
+
 /** Each profile a person was seen with, a row when it differs from the one before; `identities` holds the latest. */
 export const identityRevisions = sqliteTable(
   "identity_revisions",

@@ -1,3 +1,4 @@
+import { CliError } from "@leemour/cli-core"
 import type { GroupMember, Id, Provider } from "../../domain/models.js"
 import { and, asc, eq, gte, inArray, isNotNull, isNull, or, sql } from "./drizzle/core.js"
 import { identityPk, seenIdentity } from "./identities.js"
@@ -5,6 +6,7 @@ import type { StoreContext } from "./open.js"
 import { chatMembers, chats, identities, identityRevisions, memberCounts, memberStays } from "./schema.js"
 
 export interface RosterRead {
+  observation?: { observedAt: string; startedAt?: string; source: "remote_fetch" | "remote_update" }
   members: GroupMember[]
   /** Every member was read: only then can someone missing be recorded as gone. */
   complete: boolean
@@ -70,10 +72,45 @@ export const saveRoster = (
   accountKey: number,
   provider: Provider,
   chatKey: number,
-  { members, complete, participants }: RosterRead,
+  { members, complete, participants, observation }: RosterRead,
 ): RosterChange => {
   const { orm, now } = context
   const at = now()
+  const observedAt = observation ? Date.parse(observation.observedAt) : at
+  const startedAt = observation?.startedAt ? Date.parse(observation.startedAt) : null
+  if (
+    observation &&
+    (!Number.isSafeInteger(observedAt) ||
+      observedAt < 0 ||
+      observedAt > at ||
+      (startedAt !== null && (!Number.isSafeInteger(startedAt) || startedAt < 0 || startedAt > observedAt)) ||
+      !["remote_fetch", "remote_update"].includes(observation.source))
+  )
+    throw new CliError("validation_error", "member observation requires a valid nonfuture timestamp and remote source")
+  const latest = context.database
+    .prepare("SELECT max(max(last_seen_at,coalesce(gone_at,last_seen_at))) AS at FROM member_stays WHERE chat_pk=?")
+    .get(chatKey)
+  if (observation && latest?.at !== null && latest?.at !== undefined && observedAt < Number(latest.at))
+    throw new CliError("validation_error", "member observation predates the latest saved roster")
+  if (new Set(members.map((member) => member.id)).size !== members.length)
+    throw new CliError("validation_error", "member roster contains duplicate identities")
+  const batch = observation
+    ? Number(
+        context.database
+          .prepare(
+            "INSERT INTO membership_batches(chat_pk,observed_at,started_at,complete,participants,listed,source) VALUES(?,?,?,?,?,?,?) RETURNING pk",
+          )
+          .get(chatKey, observedAt, startedAt, complete ? 1 : 0, participants, members.length, observation.source)?.pk,
+      )
+    : undefined
+  const recordMember = (person: number, stay: number) => {
+    if (batch !== undefined)
+      context.database
+        .prepare(
+          "INSERT INTO membership_batch_members(batch_pk,identity_pk,stay_pk) VALUES(?,?,?) ON CONFLICT DO NOTHING",
+        )
+        .run(batch, person, stay)
+  }
   const change: RosterChange = { joined: [], gone: [], changed: [] }
   const present = new Set<number>()
 
@@ -87,32 +124,39 @@ export const saveRoster = (
     if (revised) change.changed.push(member.id)
 
     const open = orm
-      .select({ pk: memberStays.pk, joinedAt: memberStays.joinedAt })
+      .select({ pk: memberStays.pk, joinedAt: memberStays.joinedAt, lastSeenAt: memberStays.lastSeenAt })
       .from(memberStays)
       .where(and(eq(memberStays.chatPk, chatKey), eq(memberStays.identityPk, person), isNull(memberStays.goneAt)))
       .get()
-    const joinedAt = member.joinedAt ? Date.parse(member.joinedAt) : null
-    if (open) {
+    const parsedJoin = member.joinedAt ? Date.parse(member.joinedAt) : Number.NaN
+    const joinedAt = Number.isSafeInteger(parsedJoin) && parsedJoin >= 0 && parsedJoin <= observedAt ? parsedJoin : null
+    const rejoined =
+      open && joinedAt !== null && open.joinedAt !== null && joinedAt !== open.joinedAt && joinedAt > open.lastSeenAt
+    if (rejoined) orm.update(memberStays).set({ goneAt: joinedAt }).where(eq(memberStays.pk, open.pk)).run()
+    if (open && !rejoined) {
       orm
         .update(memberStays)
-        .set({ lastSeenAt: at, role: member.role ?? null, joinedAt: open.joinedAt ?? joinedAt })
+        .set({ lastSeenAt: observedAt, role: member.role ?? null, joinedAt: joinedAt ?? open.joinedAt })
         .where(eq(memberStays.pk, open.pk))
         .run()
+      recordMember(person, open.pk)
       continue
     }
     const invitedBy = member.invitedBy ? identityPk(context, accountKey, provider, member.invitedBy, null) : null
-    orm
+    const inserted = orm
       .insert(memberStays)
       .values({
         chatPk: chatKey,
         identityPk: person,
-        firstSeenAt: at,
-        lastSeenAt: at,
+        firstSeenAt: observedAt,
+        lastSeenAt: observedAt,
         joinedAt,
         invitedByPk: invitedBy,
         role: member.role ?? null,
       })
-      .run()
+      .returning({ pk: memberStays.pk })
+      .get()
+    if (inserted) recordMember(person, inserted.pk)
     change.joined.push(member.id)
   }
 
@@ -125,7 +169,7 @@ export const saveRoster = (
       .all()
       .filter(({ person }) => !present.has(person))
     for (const { pk, id } of missing) {
-      orm.update(memberStays).set({ goneAt: at }).where(eq(memberStays.pk, pk)).run()
+      orm.update(memberStays).set({ goneAt: observedAt }).where(eq(memberStays.pk, pk)).run()
       change.gone.push(id)
     }
     orm.delete(chatMembers).where(eq(chatMembers.chatPk, chatKey)).run()
