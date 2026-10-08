@@ -73,7 +73,7 @@ const linkCommand = (messenger: Messenger): Command => {
     annotate(new Command("create"), { mutates: true })
       .description("make another invite link; nobody is told until you share it")
       .argument("<chat>", messenger.chatArgument)
-      .option("--approval", "who joins by it asks first, and an admin lets them in")
+      .option("--approval", "who joins by it asks first, and an admin lets them in; it then has no use limit")
       .option("--expire-time <time>", "it stops working then: 2026-09-25T09:00 (local time), or 30m, 2h, 7d from now")
       .option("--max-uses <n>", "at most this many people join by it, 1 to 99999", positiveCount("--max-uses"))
       .action(async function (this: Command, chat: string) {
@@ -129,7 +129,7 @@ const linkCommand = (messenger: Messenger): Command => {
         .description("change one of your invite links, the group's own one too")
         .argument("<chat>", messenger.chatArgument)
         .argument("<link>", "the link, as `chats link list` shows it")
-        .option("--approval", "who joins by it asks first, and an admin lets them in")
+        .option("--approval", "who joins by it asks first, and an admin lets them in; it then has no use limit")
         .option("--no-approval", "anyone with it joins at once")
         .option(
           "--expire-time <time>",

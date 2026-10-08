@@ -6,6 +6,12 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Changed — may break callers
+
+- `chats link create` and `chats link update` (and their MCP tools) refuse `--approval` with `--max-uses`:
+  Telegram dropped the use limit when a change turned approval on, without saying so (measured 2026-10-08),
+  and its Bot API documents the same for a new link.
+
 ## 0.202.0 — 08.10.2026
 
 ### Added

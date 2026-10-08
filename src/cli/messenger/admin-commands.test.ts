@@ -282,7 +282,7 @@ describe("chats create, join and leave", () => {
     expect(new SendJournal(sendsPathFor(app, "default", env)).entries().map((one) => one.action)).toEqual(["update"])
   })
 
-  it("**makes another invite link** with approval, an expiry and a use limit, through the guard", async () => {
+  it("**makes another invite link** with approval or a use limit, never both, and an expiry, through the guard", async () => {
     const env = sandbox()
     const asked: unknown[] = []
     const adapter: MessengerAdapter = {
@@ -294,11 +294,12 @@ describe("chats create, join and leave", () => {
     }
 
     const made = await call(
-      ["chats", "link", "create", "Book club", "--approval", "--expire-time", "7d", "--max-uses", "5", "--json"],
+      ["chats", "link", "create", "Book club", "--approval", "--expire-time", "7d", "--json"],
       adapter,
       env,
     )
-    const plain = await call(["chats", "link", "create", "Book club", "--json"], adapter, env)
+    const plain = await call(["chats", "link", "create", "Book club", "--max-uses", "5", "--json"], adapter, env)
+    const both = await call(["chats", "link", "create", "Book club", "--approval", "--max-uses", "5"], adapter, env)
 
     expect(JSON.parse(made.stdout[0] ?? "")).toMatchObject({
       chatId: "7",
@@ -306,10 +307,11 @@ describe("chats create, join and leave", () => {
       approval: true,
     })
     expect(asked).toEqual([
-      ["7", { approval: true, expiresAt: expect.any(String), maxUses: 5 }],
-      ["7", { approval: false }],
+      ["7", { approval: true, expiresAt: expect.any(String) }],
+      ["7", { approval: false, maxUses: 5 }],
     ])
-    expect(plain.code).toBe(0)
+    expect([plain.code, both.code]).toEqual([0, 2])
+    expect(both.stderr.join("\n")).toContain("no use limit")
     expect(new SendJournal(sendsPathFor(app, "default", env)).entries().map((one) => one.action)).toEqual([
       "link.create",
       "link.create",
@@ -423,7 +425,7 @@ describe("chats create, join and leave", () => {
     ])
   })
 
-  it("**changes an invite link with --approval, --no-approval and --max-uses**, and refuses no change", async () => {
+  it("**changes an invite link with --approval, --no-approval and --max-uses**, refusing no change and approval with a limit", async () => {
     const env = sandbox()
     const changes: unknown[] = []
     const adapter: MessengerAdapter = {
@@ -438,13 +440,14 @@ describe("chats create, join and leave", () => {
         inviteLinkUpdate: true,
       })
 
-    const on = await update("--approval", "--max-uses", "5")
-    const off = await update("--no-approval")
+    const on = await update("--approval")
+    const off = await update("--no-approval", "--max-uses", "5")
     const nothing = await update()
+    const both = await update("--approval", "--max-uses", "5")
 
-    expect(JSON.parse(on.stdout[0] ?? "")).toMatchObject({ chatId: "7", approval: true, maxUses: 5 })
-    expect(changes).toEqual([{ approval: true, maxUses: 5 }, { approval: false }])
-    expect([off.code, nothing.code]).toEqual([0, 2])
+    expect(JSON.parse(on.stdout[0] ?? "")).toMatchObject({ chatId: "7", approval: true })
+    expect(changes).toEqual([{ approval: true }, { approval: false, maxUses: 5 }])
+    expect([off.code, nothing.code, both.code]).toEqual([0, 2, 2])
     expect(new SendJournal(sendsPathFor(app, "default", env)).entries().map((one) => one.action)).toEqual([
       "link.update",
       "link.update",
