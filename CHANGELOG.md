@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.206.0 — 08.10.2026
+
 ### Added
 
 - Parity: `chats requests list|accept|decline` are in both CLIs — max ships them (max-cli #505).
