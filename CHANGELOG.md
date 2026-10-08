@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.181.0 — 08.10.2026
+
 ### Added
 
 - `topics delete <chat> <topic>` deletes a forum topic and every message in it, for everyone; MCP
