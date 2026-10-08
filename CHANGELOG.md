@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.210.0 — 09.10.2026
+
 ### Fixed
 
 - `search all` searches messages the way `search messages` does, asking the messenger's server too
