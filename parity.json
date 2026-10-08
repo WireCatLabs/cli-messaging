@@ -1604,10 +1604,9 @@
       }
     },
     "chats folders show": {
-      "in": [],
+      "in": ["tg"],
       "planned": {
-        "max": "each CLI's next cli-messaging bump",
-        "tg": "each CLI's next cli-messaging bump"
+        "max": "each CLI's next cli-messaging bump"
       }
     },
     "chats folders update": {
@@ -2872,10 +2871,9 @@
         "--chat": "all",
         "--limit": "all",
         "--only-missing": {
-          "in": [],
+          "in": ["tg"],
           "planned": {
-            "max": "each CLI's next cli-messaging bump",
-            "tg": "each CLI's next cli-messaging bump"
+            "max": "each CLI's next cli-messaging bump"
           }
         }
       }
@@ -3250,11 +3248,8 @@
           "reason": "ruled tg-only with the app registration it belongs to"
         },
         "--sms": {
-          "in": [],
-          "reason": "asks Telegram to resend its login code by SMS; MAX has no such choice",
-          "planned": {
-            "tg": "feat/session-start-sms"
-          }
+          "in": ["tg"],
+          "reason": "asks Telegram to resend its login code by SMS; MAX has no such choice"
         }
       }
     },
@@ -3695,20 +3690,18 @@
       "in": "all"
     },
     "store jobs clear": {
-      "in": [],
+      "in": ["tg"],
       "planned": {
-        "max": "each CLI's next cli-messaging bump",
-        "tg": "each CLI's next cli-messaging bump"
+        "max": "each CLI's next cli-messaging bump"
       }
     },
     "store jobs list": {
       "in": "all"
     },
     "store jobs retry": {
-      "in": [],
+      "in": ["tg"],
       "planned": {
-        "max": "each CLI's next cli-messaging bump",
-        "tg": "each CLI's next cli-messaging bump"
+        "max": "each CLI's next cli-messaging bump"
       },
       "options": {
         "--failed": "all"
