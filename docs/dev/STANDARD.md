@@ -314,7 +314,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--as-file` |  | send every --file as a plain file to download, a video included |  | `bot messages send`, `messages send` |
 | `--as-reply` |  | send as a reply to the matched message |  | `replies edit` |
 | `--at-time` | `<time>` | let the messenger send it later, even with this machine off: a local time like 2026-09-25T09:00, or 30m |  | `messages send` |
-| `--attachment` | `<n>` | which file of the message, from 1; needed when it has more than one |  | `attachments text set` |
+| `--attachment` | `<n>` | which file of the message, from 1; needed when it has more than one |  | `attachments show` (planned), `attachments text set` |
 | `--backend` | `<archive\|server\|both>` | where to search: the local archive, the messenger's server, or both (default: both) |  | `messages search` |
 | `--background` |  | run as a job that outlives this command; `store jobs show` follows it |  | `store fetch`, `store gaps repair` |
 | `--base-url` | `<url>` | a server with OpenAI's /v1/embeddings: Gemini, Jina, or Ollama and LM Studio on this machine |  | `conversations build`, `conversations embed`, `conversations embed clear`, `conversations embed status`, `conversations related`, `conversations search`, `conversations status` |
@@ -339,6 +339,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--chats` | `<ids>` | only these chat ids, comma-separated; empty for any |  | `replies edit` |
 | `--check` |  | say whether a newer version exists, and install nothing |  | `bot list`, `upgrade` |
 | `--checkpoints` | `<durations>` | elapsed joining ages to inspect, such as 1d,7d,30d |  | `stats chats retention` |
+| `--chunk-bytes` | `<n>` | maximum source bytes returned from a retained attachment; 1–1048576 | `524288` | `attachments show` (planned) |
 | `--closed` | `<on\|off>` | on closes a forum topic to new messages, off reopens it |  | `topics edit` (tg-only) |
 | `--comment-to` | `<post>` | comment on this channel post; the comment goes to the post's discussion group |  | `messages send` (tg-only) |
 | `--component` | `<name>` | the ranking component whose contributing messages or answer pairs to read |  | `stats contacts evidence`, `stats messages evidence` |
@@ -385,6 +386,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--http` |  | serve MCP over HTTP on 127.0.0.1 behind the owner's tunnel, with a one-owner login; every write asks first by default. **MAX wording catches up with Telegram’s explicit “by default” at the next shared SDK adoption; both HTTP servers confirm writes by default** |  | `mcp` |
 | `--http-confirmation` | `<mode>` | no longer used: MCP writes show no form; the profile's permissions decide. **retired: accepted with a warning so an old setup still starts** |  | `mcp` |
 | `--idle` | `<duration>` | stop after this long with nobody using it — 15m, 1h |  | `serve` (max-only), `server restart` (max-only), `server start` (max-only) |
+| `--if-sha256` | `<hash>` | require the whole retained file to match this previous SHA256 |  | `attachments show` (planned) |
 | `--include` | `<kinds>` | a folder takes every chat of these kinds: contacts, non-contacts, groups, channels, bots |  | `chats folders create` (planned), `chats folders update` (planned) |
 | `--join-approval` | `<on\|off>` | people ask to join, and an admin lets them in |  | `chats update` (tg-only) |
 | `--json` |  | machine-readable output: one JSON value on stdout, nothing else |  | every command |
@@ -445,6 +447,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--notify` |  | tell the chat's members about the pin |  | `bot messages pin`, `messages pin` |
 | `--ocr` |  | explicitly call models.ocr for bulk image and scanned-PDF text extraction; agents normally transcribe files themselves |  | `attachments extract` |
 | `--offline` |  | answer from what was recorded and never connect; fails if nothing was |  | every command |
+| `--offset-bytes` | `<n>` | start byte offset in a retained attachment | `0` | `attachments show` (planned) |
 | `--older-than` | `<duration>` | minimum age of a question without an observed qualifying answer |  | `stats messages unanswered` |
 | `--online` |  | also log in once, read one chat and start the MCP server; sends nothing. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | `doctor` |
 | `--only-admins-add` | `<on\|off>` | only admins may add members |  | `chats update` |
