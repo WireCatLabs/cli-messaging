@@ -2911,30 +2911,21 @@
       "options": {
         "--anonymous": "all",
         "--correct": {
-          "in": [],
-          "reason": "max-cli creates no quizzes",
-          "planned": {
-            "tg": "G2 feat/poll-quiz"
-          }
+          "in": ["tg"],
+          "reason": "max-cli creates no quizzes"
         },
         "--multiple": "all",
         "--quiz": {
-          "in": [],
-          "reason": "max-cli creates no quizzes",
-          "planned": {
-            "tg": "G2 feat/poll-quiz"
-          }
+          "in": ["tg"],
+          "reason": "max-cli creates no quizzes"
         },
         "--revote": "all",
         "--send-as": "all",
         "--send-id": "all",
         "--silent": "all",
         "--solution": {
-          "in": [],
-          "reason": "max-cli creates no quizzes",
-          "planned": {
-            "tg": "G2 feat/poll-quiz"
-          }
+          "in": ["tg"],
+          "reason": "max-cli creates no quizzes"
         },
         "--topic": "all"
       }
