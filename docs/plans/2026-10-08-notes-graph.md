@@ -1,6 +1,6 @@
 # Notes as their own records, linked as a graph
 
-**Status:** proposed 2026-10-08, waiting for the owner's review. Nothing here is built.
+**Status:** approved 2026-10-08 (owner: plan as written; search option A with full index parity). Nothing here is built.
 Spans this package (the store) and [cli-memo](https://github.com/leemour/cli-memo) (import, export, commands).
 
 ## 1. Goal
@@ -124,9 +124,41 @@ Notes leave the message tables, so they need their own indexes. Two ways:
   the existing vector table. Search code gains a second source and merges.
 - **B · One "document" layer** that both messages and notes feed, with the index keyed by document.
 
-I'd do **A**: B rewrites the search tg and max depend on daily, for a gain only memo sees. A costs one
-word index, one chunk path and a merge step, and B stays possible later. `tg messages search
-"in:notes …"` stops working; notes are searched with `memo notes search` and `memo search`.
+**A**, ruled 2026-10-08. Notes get everything messages have, not a lighter copy: the word index
+(`note_words`, FTS5), the stem index (`note_stems`, same analyzer and same `searchStemmers` setting, so
+`store reindex` rebuilds both), chunks into the existing vector table, and the same structured query
+language (`tag:`, `after:`, `AND`/`NOT`). A test runs one query set against a message and a note with
+the same text and expects the same hits.
+
+### 3.6.1 One search over everything
+
+An agent told to search messages will not think of notes, and a flag it has to remember is the same
+problem. So:
+
+- **`search`** becomes a top-level command in tg, max and memo, one shared implementation here. By
+  default it searches everything in the store — messages, mail, notes — and every hit says what it is
+  (`msg:` or `note:` reference, provider, account). `--only messages,mail,notes` narrows it.
+- The MCP surface gets one `search` tool described as the default way to look anything up. It is the
+  tool agents reach for first, so including notes there is what makes them not forgotten.
+- `messages search`, `conversations search` and `topics search` stay as they are — the narrow tools,
+  messages only — so no script or skill breaks. `in:notes` there answers with an error naming `search`.
+
+### 3.6.2 Stemming language
+
+Today a word is stemmed by its alphabet (`src/search/stem.ts:85`): Cyrillic with Russian, Latin with
+one store-wide choice, Spanish by default. An English and Russian mix already works, since the
+alphabets differ. What does not: English and Spanish (both Latin), Russian and Ukrainian (both
+Cyrillic) — one of each pair gets the wrong stemmer.
+
+- **Proposed:** stem a Latin word with every Latin stemmer the owner enables (English and Spanish) and
+  index each distinct stem; a query is expanded the same way. No detection, no new dependency, the
+  same answer for one-word messages as for long ones. Cost: more index rows and a few extra matches
+  where two languages' stems collide.
+- **Not now:** guessing the language per chat or per note with a statistical detector (no AI —
+  letter-sequence frequencies; libraries such as `franc` or `eld` do this; untested here). Reliable on
+  a paragraph, unreliable on a short message, so it would be decided per chat from a sample, and a chat
+  that mixes languages still needs the fallback above. Worth it only if the extra matches turn out
+  noisy.
 
 ### 3.7 Renames
 
@@ -151,7 +183,8 @@ rename: same id, links and tags kept. Today a move is a new identity. Small and 
 1. Announce the migration number (own PR).
 2. Store: `note_folders`, `notes`, `note_revisions`, `links`, tag target `note`, `account_pk` dropped
    from entities, the copying migration; store API and services; `contacts notes` over `notes`.
-3. Store: `note_words` and note chunks into the vector table (§3.6 A).
+3. Store: `note_words`, `note_stems`, note chunks into the vector table (§3.6), multi-stem for Latin
+   words (§3.6.2); the shared `search` service and command, and the MCP `search` tool (§3.6.1).
 4. Release cli-messaging.
 5. cli-memo: `folders add|attach|list`, config with ids, dialect interface with `obsidian` and
    `markdown`, import writing `notes`, `links` and file tags, rename detection.
@@ -175,8 +208,9 @@ rename: same id, links and tags kept. Today a move is a new identity. Small and 
 
 ## 6. Open questions
 
-- Should `mentions` (a person's full name found in a note) be stored as `name-match` links at import, or
-  stay computed at search time? Stored is faster and listable; computed never goes stale. I'd store
-  them, refreshed on each import of that note.
+- `mentions` links: the plan stores them at import (approved 2026-10-08 as the plan's "1 A";
+  the owner asked for an explanation before ruling on stored versus computed).
+- Multi-stem for Latin words (§3.6.2): which Latin languages to enable by default — English and
+  Spanish, matching the owner's chats?
 - `memo annotations` was never released on npm (cli-memo 0.1.2). Can it be replaced by `memo notes`
   outright, without a deprecation period? I'd say yes.
