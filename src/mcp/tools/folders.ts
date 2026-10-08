@@ -47,6 +47,15 @@ export const folderTools = (messenger: Messenger): Record<string, AnyTool> => {
       annotations: READ,
       online: async (adapter, _args, { guard }) => listed(await folders(adapter, guard).list()),
     }),
+    chats_folders_show: tool({
+      title: "One chat folder",
+      description:
+        "One of the owner's chat folders with the names of its chats. Returns { id, title, chats, pinned, " +
+        "excluded }, each chat { id, title, kind }; a chat that cannot be found has title and kind null.",
+      input: v.object({ folder: folderRef }),
+      annotations: READ,
+      online: (adapter, args, { guard }) => folders(adapter, guard).show(args.folder),
+    }),
     chats_folders_create: tool({
       title: "Create a chat folder",
       description: "Create a chat folder with these chats in it. Only when the owner asked.",

@@ -694,6 +694,7 @@ describe("the MCP server", () => {
       "chat_attachments_show",
       "chat_chats_events",
       "chat_chats_folders_list",
+      "chat_chats_folders_show",
       "chat_chats_inspect",
       "chat_chats_link_list",
       "chat_chats_link_show",
@@ -2567,7 +2568,7 @@ describe("sending over MCP", () => {
     ])
   })
 
-  it("**lists, creates, changes and deletes chat folders** over MCP", async () => {
+  it("**lists, shows, creates, changes and deletes chat folders** over MCP", async () => {
     const done: unknown[] = []
     const folder = { id: "4", title: "Work", chatIds: ["7"] }
     const telegram = scripted({
@@ -2587,11 +2588,13 @@ describe("sending over MCP", () => {
     const { call } = await connect(telegram, {})
 
     const listed = await call("chat_chats_folders_list", {})
+    const shown = await call("chat_chats_folders_show", { folder: "Work" })
     await call("chat_chats_folders_create", { title: "Home", chats: ["7"] })
     await call("chat_chats_folders_update", { folder: "Work", title: "Job", add: ["7"], remove: ["7"] })
     const deleted = await call("chat_chats_folders_delete", { folder: "4" })
 
     expect(listed.body).toEqual({ items: [folder], page: 1, limit: 1, hasMore: false })
+    expect(shown.body).toMatchObject({ id: "4", title: "Work", chats: [{ id: "7" }], pinned: [], excluded: [] })
     expect(deleted.body).toEqual({ operationId: expect.any(String), folderId: "4" })
     expect(done).toEqual([
       ["create", "Home", ["7"]],

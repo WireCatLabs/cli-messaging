@@ -28,6 +28,7 @@ describe("folder capability discovery", () => {
     ])
     expect(Object.keys(folderTools(messenger))).toEqual([
       "chats_folders_list",
+      "chats_folders_show",
       "chats_folders_create",
       "chats_folders_update",
       "chats_folders_delete",
