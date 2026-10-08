@@ -11,7 +11,7 @@ import { type AnyTool, chatOf, limit, READ, tool } from "../tool.js"
 const LOCAL = { readOnlyHint: false, openWorldHint: false }
 const ROW =
   "{ id, source, sourceKind, account, group, kind, state, reason?, origin, createdAt, dueAt?, closedAt?, closedBy?, " +
-  "message: { senderName, text, timestamp } | null }"
+  "message: { senderName, text, timestamp } | null, note?: { id, title, text, updatedAt } | null }"
 const type = v.picklist(TASK_KINDS)
 
 export const tasksTools = (messenger: Messenger): Record<string, AnyTool> => {
@@ -22,7 +22,7 @@ export const tasksTools = (messenger: Messenger): Record<string, AnyTool> => {
       title: "List tasks",
       description:
         "What waits on the owner — questions nobody answered, mentions, requests, promises — oldest first, each with " +
-        "the message it points at (`null` once the store no longer has it). review and serve open and close them. " +
+        "its current message or note preview (`null` when unavailable or deleted). review and serve open and close them. " +
         `Returns { items: [${ROW}], page, limit, hasMore }.`,
       input: v.object({
         state: v.optional(v.picklist(TASK_STATES)),
@@ -54,10 +54,10 @@ export const tasksTools = (messenger: Messenger): Record<string, AnyTool> => {
       title: "Add a task",
       description:
         'Adds a task for a message the rules cannot see — "I\'ll send it tomorrow" has no question mark. `message` ' +
-        "is a msg: locator, as review shows. A message that already has a task of this type keeps it (`created: " +
+        "accepts a msg: locator or note:<id> in the selected account. A source that already has a task of this type keeps it (`created: " +
         `false\`). Writes only to the local store; nothing is sent. Returns ${ROW} with created.`,
       input: v.object({
-        message: v.pipe(v.string(), v.minLength(1), v.description("a msg: locator")),
+        message: v.pipe(v.string(), v.minLength(1), v.description("a msg: locator or note:<id>")),
         type,
       }),
       annotations: { ...LOCAL, destructiveHint: false, idempotentHint: true },
