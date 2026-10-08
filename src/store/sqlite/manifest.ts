@@ -47,6 +47,8 @@ export const MANIFEST: ManifestEntry[] = [
   { name: "20261008010235_retention-counter-observations", version: 24, minCompatible: 6 },
   { name: "20261008175932_version-25-notes", version: 25, minCompatible: 6 },
   { name: "20261008175933_version-25-note-triggers", version: 25, minCompatible: 6 },
+  { name: "20261008182026_version-26-note-chunks", version: 26, minCompatible: 6 },
+  { name: "20261008182031_version-26-note-index", version: 26, minCompatible: 6 },
 ]
 
 export const generatedMigrations = (

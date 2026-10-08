@@ -17,6 +17,13 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 - On open, what a build before version 25 wrote — notes stored as `notes`-provider messages, annotations,
   relations, entities — is copied into the new tables, and again whenever an older build has written since.
   A notes folder's former path waits in `note_folders.pending_path` for `NotesStore.claimFolderPath`.
+- Store version 26: notes have the indexes messages have — words (`note_words`), stems (`note_stems`) and
+  chunks for vectors (`note_chunks`, sharing `chunk_vectors`). `NotesStore` gains `search` (the query
+  language messages use, over `text`, `exact`, `body`, `tag`, `date`, `in`), `indexState`, `chunksToEmbed`,
+  `nearest` and `renameFileNote` (a moved file keeps its id, links and tags); `searchNotesQuery` is the
+  service for a notes search. `store migrate` and `store reindex` index the notes too (`notesIndexed`).
+- `searchStemmers.latin` takes several stemmers joined by commas; a Latin word is indexed and searched in
+  every chosen stemmer's form.
 
 ### Changed — may break callers
 
@@ -24,6 +31,12 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   are the owner's, not one account's: a contact's notes show in every account that sees the contact, and
   `relations` and `entities` list everything. An annotation on a `msg:notes/…` locator is refused; name the
   note `note:<id>` (`KnowledgeTarget` gains `note`).
+- The default Latin stemmers are now `english,spanish` (were `spanish`). A store whose stems were built with
+  the old default answers a stemmed search with "the stems were built by … latin=spanish" until
+  `store reindex` (or `store migrate`) rebuilds them; `exact:` and `--exact` keep working meanwhile. The
+  stem index of a text with Latin words is about twice as large. Once rebuilt, the choices are saved in
+  the store, so a tg or max still on an older cli-messaging answers a stemmed search with "upgrade this
+  tool" instead of rebuilding the stems back. `Stemmers.latin` is a string of one or more stemmers.
 
 ## 0.197.0 — 08.10.2026
 

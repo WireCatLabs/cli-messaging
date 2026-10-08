@@ -24,8 +24,9 @@ import { storePath } from "../../store/path.js"
 import { deleteCopy, type RepairReport, repairStore } from "../../store/repair.js"
 import { resetAttachmentWords } from "../../store/sqlite/attachment-texts.js"
 import { pendingNormalization } from "../../store/sqlite/backfill.js"
+import { drainNoteIndex, noteIndexState, resetNoteIndex } from "../../store/sqlite/note-index.js"
 import { fillSearchIndex, resetSearchIndex, searchIndexState } from "../../store/sqlite/search-index.js"
-import { fillStems, resetStems, stemsState } from "../../store/sqlite/stems.js"
+import { fillStems, resetStems, stemmerCache, stemsState } from "../../store/sqlite/stems.js"
 import { environmentOf, outputFor } from "../context.js"
 import type { Messenger } from "./context.js"
 import { ENCRYPT_OPTION, passwordOf } from "./password.js"
@@ -397,7 +398,7 @@ const chatsBehind = (database: CacheDatabase) =>
 const migrateCommand = (messenger: Messenger): Command =>
   new Command("migrate")
     .description(
-      "bring the store up to this build's schema, then normalize, index and stem the messages stored before it",
+      "bring the store up to this build's schema, then normalize, index and stem the messages and notes stored before it",
     )
     .action(async function (this: Command) {
       const { renderer } = outputFor(this)
@@ -412,7 +413,18 @@ const migrateCommand = (messenger: Messenger): Command =>
         migrate(database)
         const { normalized, indexed, terms } = buildWordIndex(database, (note) => renderer.note(note))
         const stemmed = buildStems(database, (note) => renderer.note(note))
-        return { path, exists: true, from, to: schemaOf(database).version, normalized, indexed, terms, ...stemmed }
+        const notes = buildNoteIndex(database, (note) => renderer.note(note))
+        return {
+          path,
+          exists: true,
+          from,
+          to: schemaOf(database).version,
+          normalized,
+          indexed,
+          terms,
+          ...stemmed,
+          ...notes,
+        }
       })
       renderer.result(answer)
     })
@@ -444,10 +456,18 @@ const buildStems = (database: CacheDatabase, note: (text: string) => void, { for
   return { stemmed: stemmed + drained }
 }
 
+/** Indexes the notes written since — all of them after `store reindex` queued them again. */
+const buildNoteIndex = (database: CacheDatabase, note: (text: string) => void, { reset = false } = {}) => {
+  if (reset) resetNoteIndex(database)
+  const pending = noteIndexState(database)?.pending ?? 0
+  if (pending > 0) note(`indexing ${pending} notes`)
+  return { notesIndexed: drainNoteIndex(database, stemmerCache()) }
+}
+
 const reindexCommand = (messenger: Messenger): Command =>
   new Command("reindex")
     .description(
-      "rebuild the word index, its typo vocabulary, the stems and the files' word index from the stored messages; loses no message",
+      "rebuild the word index, its typo vocabulary, the stems, the files' word index and the notes' indexes from what is stored; loses nothing",
     )
     .action(async function (this: Command) {
       const { renderer } = outputFor(this)
@@ -472,6 +492,7 @@ const reindexCommand = (messenger: Messenger): Command =>
           ...words,
           fileTexts,
           ...buildStems(database, (note) => renderer.note(note), { force: true }),
+          ...buildNoteIndex(database, (note) => renderer.note(note), { reset: true }),
         }
       })
       renderer.result(answer)

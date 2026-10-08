@@ -49,6 +49,7 @@ import { findRegex } from "./sqlite/legacy-regex.js"
 import type { QueryGroup, QueryGrouping } from "./sqlite/lucene.js"
 import * as lucene from "./sqlite/lucene.js"
 import * as messageWrites from "./sqlite/messages.js"
+import { noteSearchOver } from "./sqlite/note-search.js"
 import { type NotesStore, notesStoreOver } from "./sqlite/notes.js"
 import { copyIntoNotes, notesToCopy } from "./sqlite/notes-copy.js"
 import { openSqlite, type StoreContext } from "./sqlite/open.js"
@@ -1498,7 +1499,7 @@ const storeOver = (context: StoreContext): MessageStore => {
 
     tasks: taskStoreOver(database),
     knowledge: knowledgeStoreOver(context),
-    notes: notesStoreOver(context),
+    notes: { ...notesStoreOver(context), ...noteSearchOver(context) },
 
     close: async () => database.close(),
   }

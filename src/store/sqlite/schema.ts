@@ -843,6 +843,24 @@ export const noteRevisions = sqliteTable(
 )
 
 /**
+ * A note cut into pieces for embedding, each by the stretch of its indexed text it holds. The text is
+ * never stored twice; `content_hash` finds the piece's vector in `chunk_vectors`, shared with conversations.
+ */
+export const noteChunks = sqliteTable(
+  "note_chunks",
+  {
+    notePk: integer("note_pk")
+      .notNull()
+      .references(() => notes.pk, { onDelete: "cascade" }),
+    seq: integer("seq").notNull(),
+    textStart: integer("text_start").notNull(),
+    textEnd: integer("text_end").notNull(),
+    contentHash: text("content_hash").notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.notePk, table.seq] }), index("note_chunks_by_hash").on(table.contentHash)],
+)
+
+/**
  * Every connection between two things, by typed reference. `to_ref` is null while a link names nobody
  * yet; `target_folded` is what a new person or alias is matched against to resolve it.
  */

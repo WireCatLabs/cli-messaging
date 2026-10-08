@@ -193,12 +193,21 @@ describe("store version 15, the stems", () => {
     await store.close()
   })
 
+  it("**claiming the stems saves the default choices**, so an older default refuses instead of rebuilding", async () => {
+    const store = await openStore({ path: fresh() })
+    expect(await store.stemmers()).toBeUndefined()
+    await store.saveChats(ME, [chat])
+    await store.saveMessages(ME, CHAT, [message("1", "houses")], { via: "history" })
+    expect(await store.stemmers()).toEqual(DEFAULT_STEMMERS)
+    await store.close()
+  })
+
   it("**a setting only a newer tool knows** leaves the store usable and the stems not ready", async () => {
     const path = await version14(1)
     await (await openStore({ path })).close()
     await withDatabase(path, (database) =>
       database.exec(
-        `INSERT INTO store_settings (key, value, at) VALUES ('searchStemmers', '{"cyrillic":"russian","latin":"portuguese"}', 0)`,
+        `INSERT OR REPLACE INTO store_settings (key, value, at) VALUES ('searchStemmers', '{"cyrillic":"russian","latin":"portuguese"}', 0)`,
       ),
     )
 

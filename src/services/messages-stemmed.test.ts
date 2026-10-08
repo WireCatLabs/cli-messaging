@@ -105,7 +105,7 @@ describe("stemmed strict search", () => {
     expect(found.stemsReady).toBe(true)
     expect(found.query?.stemming).toEqual({
       applied: true,
-      analyzer: "snowball-3.1.1 cyrillic=russian latin=spanish",
+      analyzer: "snowball-3.1.1 cyrillic=russian latin=english,spanish",
       terms: [{ word: "квартира", stem: "квартир", stemmer: "russian" }],
     })
     expect((await search(store, "exact:квартира")).query?.stemming).toBeUndefined()
@@ -152,7 +152,7 @@ describe("stemmed strict search", () => {
       reason: "index_not_ready",
       index: "message_stems",
       cause: "stemmer_changed",
-      built: "snowball-3.1.1 cyrillic=russian latin=spanish",
+      built: "snowball-3.1.1 cyrillic=russian latin=english,spanish",
       wanted: "snowball-3.1.1 cyrillic=russian latin=english",
     })
     expect(refused.message).toContain("store reindex")

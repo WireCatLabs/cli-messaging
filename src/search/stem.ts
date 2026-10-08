@@ -11,9 +11,16 @@ export const CYRILLIC_STEMMERS = ["russian", "none"] as const
 export const LATIN_STEMMERS = ["spanish", "english", "none"] as const
 export type CyrillicStemmer = (typeof CYRILLIC_STEMMERS)[number]
 export type LatinStemmer = (typeof LATIN_STEMMERS)[number]
-export type Stemmers = { cyrillic: CyrillicStemmer; latin: LatinStemmer }
+/** `latin` is one stemmer, `none`, or several joined by commas in alphabetical order (`english,spanish`). */
+export type Stemmers = { cyrillic: CyrillicStemmer; latin: string }
 
-export const DEFAULT_STEMMERS: Stemmers = { cyrillic: "russian", latin: "spanish" }
+export const DEFAULT_STEMMERS: Stemmers = { cyrillic: "russian", latin: "english,spanish" }
+
+/**
+ * Between the stem sequences of one text when several Latin stemmers give different ones, so a phrase
+ * never matches across two sequences. Letters and digits, so `unicode61` keeps it as one token.
+ */
+export const STEM_SEPARATOR = "0stemsep0"
 
 /** Clear-all rather than LRU: the 1M benchmark corpus holds 523k distinct words, and a Map stays cheap below this. */
 export const STEM_CACHE_LIMIT = 200_000
@@ -36,8 +43,25 @@ export const parseStemmers = (value: unknown): Stemmers => {
   }
   return {
     cyrillic: pick("cyrillic", CYRILLIC_STEMMERS, DEFAULT_STEMMERS.cyrillic),
-    latin: pick("latin", LATIN_STEMMERS, DEFAULT_STEMMERS.latin),
+    latin: latinOf(record.latin ?? DEFAULT_STEMMERS.latin),
   }
+}
+
+const latinOf = (value: unknown): string => {
+  const parts = Array.isArray(value)
+    ? value
+    : typeof value === "string"
+      ? value.split(",").map((part) => part.trim())
+      : [value]
+  const unknown = parts.find((part) => !LATIN_STEMMERS.includes(part as LatinStemmer))
+  const named = [...new Set(parts as LatinStemmer[])].filter((part) => part !== "none").sort()
+  if (unknown !== undefined || parts.length === 0 || (named.length > 0 && parts.includes("none")))
+    throw new CliError(
+      "validation_error",
+      `latin words cannot be stemmed with ${JSON.stringify(value)} — choose none, or one or more of english, spanish joined by commas`,
+      { reason: "invalid_stemmer", script: "latin", allowed: [...LATIN_STEMMERS] },
+    )
+  return named.length ? named.join(",") : "none"
 }
 
 /** What FTS5 `unicode61` keeps inside a token: letters, digits, private use, and combining marks. */
@@ -60,6 +84,12 @@ export type Stemmer = {
   stemToken(token: string): string
   /** `stemToken` over every word of a text, split as `unicode61` splits it; tokens that fold to nothing are dropped. */
   stemTokens(text: string): string[]
+  /** One stem sequence per Latin stemmer, the identical ones once; a text without Latin words has one. */
+  stemSequences(text: string): string[][]
+  /** What the stem index stores for a text: its sequences, apart by `STEM_SEPARATOR`. */
+  indexText(text: string): string
+  /** An FTS5 expression for a text as phrases of stems, one per sequence; `undefined` when no word stems. */
+  phrases(text: string): string | undefined
   /** Each word of a text with its stem and the stemmer its script chose — what a search answer shows. */
   explain(text: string): { word: string; stem: string; stemmer: CyrillicStemmer | LatinStemmer }[]
 }
@@ -76,37 +106,74 @@ export const createStemmer = (
 ): Stemmer => {
   const valid = parseStemmers(stemmers)
   const cyrillic = snowball[valid.cyrillic]()
-  const latin = snowball[valid.latin]()
+  const latinNames = valid.latin.split(",") as LatinStemmer[]
+  const latins = latinNames.map((name) => snowball[name]())
   const cache = new Map<string, string>()
 
-  const compute = (token: string): string => {
+  const compute = (token: string, variant: number): string => {
     // Stress marks survive NFC (кварти́ру) and would hide the suffix from Snowball; ё and й compose and stay.
     const word = token.normalize("NFC").toLowerCase().replace(MARKS, "")
-    const engine = CYRILLIC.test(word) ? cyrillic : LATIN.test(word) ? latin : null
+    const engine = CYRILLIC.test(word) ? cyrillic : LATIN.test(word) ? (latins[variant] ?? null) : null
     const stem = engine?.stemWord(word) || word
     return normalize(stem)
   }
 
-  const stemToken = (token: string): string => {
-    const cached = cache.get(token)
+  const stemOf = (token: string, variant: number): string => {
+    const key = variant === 0 ? token : `${variant}\u0000${token}`
+    const cached = cache.get(key)
     if (cached !== undefined) return cached
-    const stem = compute(token)
+    const stem = compute(token, variant)
     if (cache.size >= cacheLimit) cache.clear()
-    if (cacheLimit > 0) cache.set(token, stem)
+    if (cacheLimit > 0) cache.set(key, stem)
     return stem
+  }
+  const stemToken = (token: string): string => stemOf(token, 0)
+  const tokensOf = (text: string) => text.normalize("NFC").toLowerCase().match(TOKEN) ?? []
+
+  const stemSequences = (text: string): string[][] => {
+    const tokens = tokensOf(text)
+    const seen = new Set<string>()
+    return latins.flatMap((_, variant) => {
+      const sequence = tokens.map((token) => stemOf(token, variant)).filter(Boolean)
+      const key = sequence.join(" ")
+      if (seen.has(key)) return []
+      seen.add(key)
+      return [sequence]
+    })
   }
 
   return {
     stemmers: valid,
     identity: analyzerIdentity(valid),
     stemToken,
-    stemTokens: (text) => (text.normalize("NFC").toLowerCase().match(TOKEN) ?? []).map(stemToken).filter(Boolean),
+    stemTokens: (text) => tokensOf(text).map(stemToken).filter(Boolean),
+    stemSequences,
+    indexText: (text) =>
+      stemSequences(text)
+        .map((sequence) => sequence.join(" "))
+        .filter(Boolean)
+        .join(` ${STEM_SEPARATOR} `),
+    phrases: (text) => {
+      const phrases = stemSequences(text)
+        .filter((sequence) => sequence.length > 0)
+        .map((sequence) => `"${sequence.join(" ").replaceAll('"', '""')}"`)
+      return phrases.length ? phrases.join(" OR ") : undefined
+    },
     explain: (text) =>
-      (text.normalize("NFC").toLowerCase().match(TOKEN) ?? []).flatMap((word) => {
-        const stem = stemToken(word)
-        if (!stem) return []
+      tokensOf(text).flatMap((word) => {
         const bare = word.replace(MARKS, "")
-        return [{ word, stem, stemmer: CYRILLIC.test(bare) ? valid.cyrillic : LATIN.test(bare) ? valid.latin : "none" }]
+        const script = CYRILLIC.test(bare) ? "cyrillic" : LATIN.test(bare) ? "latin" : "none"
+        const variants =
+          script === "latin"
+            ? latinNames.map((name, variant) => ({ name, variant }))
+            : [{ name: script === "cyrillic" ? valid.cyrillic : "none", variant: 0 }]
+        const seen = new Set<string>()
+        return variants.flatMap(({ name, variant }) => {
+          const stem = stemOf(word, variant)
+          if (!stem || seen.has(stem)) return []
+          seen.add(stem)
+          return [{ word, stem, stemmer: name as CyrillicStemmer | LatinStemmer }]
+        })
       }),
   }
 }

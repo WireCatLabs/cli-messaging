@@ -224,7 +224,7 @@ export interface NearestChunk {
 /** Rows read per step of a search, so a chat of any size is scanned in bounded memory. */
 const SCAN_PAGE = 5_000
 
-const dot = (query: Float32Array, blob: Uint8Array): number => {
+export const dot = (query: Float32Array, blob: Uint8Array): number => {
   const vector = new Float32Array(blob.buffer.slice(blob.byteOffset, blob.byteOffset + blob.byteLength))
   let sum = 0
   for (let index = 0; index < query.length; index++) sum += (query[index] as number) * (vector[index] as number)

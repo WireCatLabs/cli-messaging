@@ -14,6 +14,15 @@ export type {
   KnowledgeTarget,
   Reminder,
 } from "./sqlite/knowledge.js"
+export type { NoteIndexState } from "./sqlite/note-index.js"
+export {
+  type NearestNote,
+  NOTE_FIELDS,
+  type NoteChunkToEmbed,
+  type NoteHit,
+  type NoteQuery,
+  type NoteSearch,
+} from "./sqlite/note-search.js"
 export type {
   Entity,
   FileNoteInput,
