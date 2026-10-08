@@ -1266,7 +1266,8 @@
         },
         "--offset-bytes": {
           "in": "all"
-        }
+        },
+        "--page": "all"
       }
     },
     "attachments text": {
