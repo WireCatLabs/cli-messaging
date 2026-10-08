@@ -40,6 +40,11 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 - A CLI mounts the new export `searchCommand(messenger)` — tg with `{ topics: true }`. `messagesCommand`,
   `conversationsCommand` and `topicsCommand` no longer carry a search leaf; `botCommand` mounts `bot search` itself.
 
+### Fixed
+
+- `parity.json`: tg has `messages forward --topic` (tg #387) and `attachments show --page`; MAX still plans
+  `--page`.
+
 ## 0.208.0 — 09.10.2026
 
 ### Fixed
