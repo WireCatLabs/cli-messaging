@@ -2061,7 +2061,9 @@
     },
     "chats requests": {
       "in": ["tg"],
-      "reason": "MAX groups have no join approval"
+      "planned": {
+        "max": "max-cli MAX-73: a MAX channel approves joins (measured 2026-10-08); MAX sends no request time"
+      }
     },
     "chats rules": {
       "in": "all"
@@ -3125,7 +3127,9 @@
         "--close-time": {
           "in": [],
           "reason": "max-cli does not close a poll by itself",
-          "planned": { "tg": "G2 feat/polls-close-time" }
+          "planned": {
+            "tg": "G2 feat/polls-close-time"
+          }
         },
         "--correct": {
           "in": ["tg"],
@@ -3159,17 +3163,23 @@
     "polls voters": {
       "in": [],
       "reason": "max-cli does not list who voted in a poll",
-      "planned": { "tg": "G2 feat/polls-voters" },
+      "planned": {
+        "tg": "G2 feat/polls-voters"
+      },
       "options": {
         "--answer": {
           "in": [],
           "reason": "max-cli does not list who voted in a poll",
-          "planned": { "tg": "G2 feat/polls-voters" }
+          "planned": {
+            "tg": "G2 feat/polls-voters"
+          }
         },
         "--limit": {
           "in": [],
           "reason": "max-cli does not list who voted in a poll",
-          "planned": { "tg": "G2 feat/polls-voters" }
+          "planned": {
+            "tg": "G2 feat/polls-voters"
+          }
         }
       }
     },
