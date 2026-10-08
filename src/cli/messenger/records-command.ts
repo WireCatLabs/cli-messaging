@@ -1,6 +1,8 @@
 import { CliError } from "@leemour/cli-core"
+import { annotate } from "@leemour/cli-core/commands"
 import { Command } from "commander"
-import { MEDIA_KINDS, type MediaKind } from "../../domain/models.js"
+import { type Audience, MEDIA_KINDS, type MediaKind, type PrivacySettings } from "../../domain/models.js"
+import { sendTime } from "../../domain/send-time.js"
 import { positiveCount, renderPage } from "../paging.js"
 import { type Messenger, messengerContext } from "./context.js"
 import { capability } from "./port.js"
@@ -63,6 +65,36 @@ export const callsCommand = (messenger: Messenger): Command => {
   return calls
 }
 
+/** `chats mute` and `unmute` — the owner's own notifications for one chat; nobody in it is told. */
+export const muteCommands = (messenger: Messenger): Command[] => [
+  annotate(new Command("mute"), { mutates: true })
+    .description("stop notifications from a chat, for good or until a time; nobody in it is told")
+    .argument("<chat>", messenger.chatArgument)
+    .option("--until <time>", "only until then: 2026-09-25T09:00 (local time), or 30m, 2h, 7d from now")
+    .action(async function (this: Command, chat: string) {
+      const context = messengerContext(this, messenger)
+      const { until } = this.opts<{ until?: string }>()
+      const when = until === undefined ? "forever" : sendTime(until, Date.now(), "--until")
+      context.renderer.result(await context.withServices((services) => services.account.mute(chat, when)))
+    }),
+  annotate(new Command("unmute"), { mutates: true })
+    .description("hear a muted chat again")
+    .argument("<chat>", messenger.chatArgument)
+    .action(async function (this: Command, chat: string) {
+      const context = messengerContext(this, messenger)
+      context.renderer.result(await context.withServices((services) => services.account.mute(chat, null)))
+    }),
+]
+
+const AUDIENCES: readonly Audience[] = ["everyone", "contacts", "nobody"]
+
+const audienceOf = (flag: string, value: string | undefined): Audience | undefined => {
+  if (value === undefined) return undefined
+  if (!(AUDIENCES as readonly string[]).includes(value))
+    throw new CliError("validation_error", `${flag} takes ${AUDIENCES.join(", ")}, not "${value}"`)
+  return value as Audience
+}
+
 /** `account privacy` — who may find, call or invite the account, as the messenger reports it. */
 export const privacyCommand = (messenger: Messenger): Command => {
   const privacy = new Command("privacy").description("who may find, call or add the account")
@@ -75,5 +107,36 @@ export const privacyCommand = (messenger: Messenger): Command => {
         await context.withMessenger((adapter) => capability(adapter, "privacy", "read privacy settings")()),
       )
     })
+  privacy.addCommand(
+    annotate(new Command("set"), { mutates: true })
+      .description("change who may find, call or add the account; the settings not named stay")
+      .option("--find-by-phone <who>", "who finds the account by its number: everyone, contacts or nobody")
+      .option("--phone-number <who>", "who sees the number: everyone, contacts or nobody")
+      .option("--calls <who>", "who may call: everyone, contacts or nobody")
+      .option("--chat-invites <who>", "who may add the account to groups and channels: everyone, contacts or nobody")
+      .option("--hide-online <on|off>", "hide online status and last seen")
+      .action(async function (this: Command) {
+        const context = messengerContext(this, messenger)
+        const typed = this.opts<{
+          findByPhone?: string
+          phoneNumber?: string
+          calls?: string
+          chatInvites?: string
+          hideOnline?: string
+        }>()
+        if (typed.hideOnline !== undefined && typed.hideOnline !== "on" && typed.hideOnline !== "off")
+          throw new CliError("validation_error", `--hide-online takes on or off, not "${typed.hideOnline}"`)
+        const change: PrivacySettings = Object.fromEntries(
+          Object.entries({
+            findByPhone: audienceOf("--find-by-phone", typed.findByPhone),
+            phoneNumber: audienceOf("--phone-number", typed.phoneNumber),
+            calls: audienceOf("--calls", typed.calls),
+            chatInvites: audienceOf("--chat-invites", typed.chatInvites),
+            hideOnline: typed.hideOnline === undefined ? undefined : typed.hideOnline === "on",
+          }).filter(([, value]) => value !== undefined),
+        )
+        context.renderer.result(await context.withServices((services) => services.account.updatePrivacy(change)))
+      }),
+  )
   return privacy
 }

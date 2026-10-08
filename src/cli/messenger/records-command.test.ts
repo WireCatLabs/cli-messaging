@@ -1,4 +1,4 @@
-import { mkdtempSync } from "node:fs"
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { captureStreams } from "@leemour/cli-core"
@@ -57,8 +57,12 @@ const base: MessengerAdapter = {
   close: async () => {},
 }
 
-const invoke = async (argv: string[], adapter: MessengerAdapter, own: Partial<Messenger> = {}) => {
+const invoke = async (argv: string[], adapter: MessengerAdapter, own: Partial<Messenger> = {}, config?: object) => {
   const root = mkdtempSync(join(tmpdir(), "records-"))
+  if (config) {
+    mkdirSync(join(root, "c"), { recursive: true })
+    writeFileSync(join(root, "c", "config.json"), JSON.stringify(config))
+  }
   const messenger: Messenger = {
     app,
     provider: "chat",
@@ -122,5 +126,60 @@ describe("reads only the server answers", () => {
 
     expect(JSON.parse(shown.stdout)).toEqual({ findByPhone: "contacts", hideOnline: false })
     expect(elsewhere.code).not.toBe(0)
+  })
+
+  it("`chats mute` mutes for good or until a time, `unmute` lifts it, each journaled as the owner's own change", async () => {
+    const muted: unknown[] = []
+    const adapter: MessengerAdapter = {
+      ...base,
+      mute: async (chatId, until) => {
+        muted.push([chatId, until])
+      },
+    }
+    const forever = await invoke(["chats", "mute", "Book club", "--json"], adapter, { chatMute: true })
+    const timed = await invoke(["chats", "mute", "Book club", "--until", "2h", "--json"], adapter, { chatMute: true })
+    const lifted = await invoke(["chats", "unmute", "Book club", "--json"], adapter, { chatMute: true })
+    const past = await invoke(["chats", "mute", "Book club", "--until", "2020-01-01T00:00"], adapter, {
+      chatMute: true,
+    })
+
+    expect(JSON.parse(forever.stdout)).toMatchObject({ chatId: "7", mutedUntil: "forever" })
+    expect(JSON.parse(lifted.stdout)).toMatchObject({ chatId: "7", mutedUntil: null })
+    expect(muted[0]).toEqual(["7", "forever"])
+    expect(Date.parse(String((muted[1] as unknown[])[1])) - Date.now()).toBeGreaterThan(7_000_000)
+    expect(muted[2]).toEqual(["7", null])
+    expect([timed.code, past.code]).toEqual([0, 2])
+    expect(muted).toHaveLength(3)
+  })
+
+  it("`account privacy set` sends only the settings named, and a read-only profile changes nothing", async () => {
+    const changes: unknown[] = []
+    const adapter: MessengerAdapter = {
+      ...base,
+      updatePrivacy: async (change) => {
+        changes.push(change)
+        return { findByPhone: "contacts", hideOnline: true }
+      },
+    }
+    const set = await invoke(
+      ["account", "privacy", "set", "--find-by-phone", "contacts", "--hide-online", "on", "--json"],
+      adapter,
+      { privacy: true },
+    )
+    const wrong = await invoke(["account", "privacy", "set", "--calls", "friends"], adapter, { privacy: true })
+    const empty = await invoke(["account", "privacy", "set"], adapter, { privacy: true })
+    const readOnly = await invoke(
+      ["account", "privacy", "set", "--calls", "nobody"],
+      adapter,
+      { privacy: true },
+      {
+        defaults: { readOnly: true },
+        profiles: {},
+      },
+    )
+
+    expect(JSON.parse(set.stdout)).toMatchObject({ privacy: { findByPhone: "contacts", hideOnline: true } })
+    expect(changes).toEqual([{ findByPhone: "contacts", hideOnline: true }])
+    expect([wrong.code, empty.code, readOnly.code]).toEqual([2, 2, 5])
   })
 })

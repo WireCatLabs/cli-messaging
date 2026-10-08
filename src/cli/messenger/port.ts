@@ -449,6 +449,14 @@ export interface AccountRecords {
   media(chatId: Id, window: { kinds: MediaKind[]; limit: number; before?: Id }): Promise<Page<Message>>
 }
 
+/** The owner's own settings; nobody else is told. */
+export interface AccountSettings {
+  /** `forever`, an ISO 8601 time, or null to hear the chat again. */
+  mute(chatId: Id, until: string | null): Promise<void>
+  /** Only the settings named change; answers them all as they now are. One the messenger lacks is refused. */
+  updatePrivacy(change: PrivacySettings): Promise<PrivacySettings>
+}
+
 /** The owner's address book. A person by id: `GroupAdmin.people` finds them. */
 export interface ContactBook {
   /** Under the name they show, until the owner gives one. */
@@ -556,6 +564,7 @@ export interface MessengerAdapter
     Partial<ContactBook>,
     Partial<AccountEditing>,
     Partial<AccountRecords>,
+    Partial<AccountSettings>,
     Partial<AccountHealth>,
     Partial<OfficialStats> {}
 

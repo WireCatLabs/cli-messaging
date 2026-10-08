@@ -55,6 +55,8 @@ export type AccountAction =
   | "folder-order"
   | "folder-join"
   | "sessions-end"
+  | "chat-mute"
+  | "privacy"
 
 /** One attempt to send. **Never the text** — only its length. */
 export interface SendEntry {

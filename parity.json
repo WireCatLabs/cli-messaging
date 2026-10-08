@@ -1023,6 +1023,13 @@
         "tg": "tg-cli backlog: server reads (calls, chat media, privacy)"
       }
     },
+    "account privacy set": {
+      "in": [],
+      "planned": {
+        "max": "feat/client-gaps-d",
+        "tg": "tg-cli backlog: settings writes (mute, privacy)"
+      }
+    },
     "account privacy show": {
       "in": [],
       "planned": {
@@ -1805,6 +1812,13 @@
         }
       }
     },
+    "chats mute": {
+      "in": [],
+      "planned": {
+        "max": "feat/client-gaps-d",
+        "tg": "tg-cli backlog: settings writes (mute, privacy)"
+      }
+    },
     "chats requests": {
       "in": ["tg"],
       "reason": "MAX groups have no join approval"
@@ -1861,6 +1875,13 @@
       "planned": {
         "max": "each CLI's next cli-messaging bump",
         "tg": "each CLI's next cli-messaging bump"
+      }
+    },
+    "chats unmute": {
+      "in": [],
+      "planned": {
+        "max": "feat/client-gaps-d",
+        "tg": "tg-cli backlog: settings writes (mute, privacy)"
       }
     },
     "chats update": {

@@ -1,6 +1,6 @@
 import { CliError } from "@leemour/cli-core"
 import { capability, type ProfileChange } from "../cli/messenger/port.js"
-import type { Account, AccountSession } from "../domain/models.js"
+import type { Account, AccountSession, Id, PrivacySettings } from "../domain/models.js"
 import { guardedWrite, type Operated } from "../sends/guarded.js"
 import { newOperationId } from "../sends/send-id.js"
 import type { ServiceDeps } from "./deps.js"
@@ -12,6 +12,9 @@ export interface AccountService {
   update(change: ProfileChange): Promise<Operated<{ account: Account }>>
   /** Logs the owner out of every other device, the phone included. */
   endOtherSessions(): Promise<Operated<{ sessions: AccountSession[] }>>
+  /** `until`: `forever`, an ISO 8601 time, or null to hear the chat again. */
+  mute(chat: string, until: string | null): Promise<Operated<{ chatId: Id; mutedUntil: string | null }>>
+  updatePrivacy(change: PrivacySettings): Promise<Operated<{ privacy: PrivacySettings }>>
 }
 
 export const accountService = (deps: ServiceDeps): AccountService => {
@@ -46,6 +49,31 @@ export const accountService = (deps: ServiceDeps): AccountService => {
         () => end(),
       )
       return { operationId, sessions }
+    },
+
+    mute: async (chat, until) => {
+      const connection = await online(until === null ? "chats unmute" : "chats mute")
+      const mute = capability(connection, "mute", "mute a chat")
+      const { id: chatId } = await connection.resolve(chat)
+      const operationId = newOperationId()
+      await guardedWrite(deps.guard, { operationId, chatId, kind: "account", action: "chat-mute" }, () =>
+        mute(chatId, until),
+      )
+      return { operationId, chatId, mutedUntil: until }
+    },
+
+    updatePrivacy: async (change) => {
+      if (Object.values(change).every((value) => value === undefined)) {
+        throw new CliError("validation_error", "nothing to change — name a setting")
+      }
+      const update = capability(await online("account privacy set"), "updatePrivacy", "change privacy settings")
+      const operationId = newOperationId()
+      const privacy = await guardedWrite(
+        deps.guard,
+        { operationId, chatId: null, kind: "account", action: "privacy" },
+        () => update(change),
+      )
+      return { operationId, privacy }
     },
   }
 }
