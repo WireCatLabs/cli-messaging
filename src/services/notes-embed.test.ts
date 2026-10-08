@@ -21,9 +21,14 @@ const tiny: TextModel = {
   files: [{ name: "onnx/model.onnx", url: "", sha256: "", bytes: 318 }],
 }
 
+const floor = { value: 0 }
 vi.mock("../embeddings/models.js", async (original) => {
   const real = await original<typeof import("../embeddings/models.js")>()
-  return { ...real, textModel: (id: string) => (id === "tiny" ? tiny : real.textModel(id)) }
+  return {
+    ...real,
+    textModel: (id: string) => (id === "tiny" ? tiny : real.textModel(id)),
+    meaningFloor: (key: string) => (key.includes(":tiny:") ? floor.value : real.meaningFloor(key)),
+  }
 })
 
 const live: MessageStore[] = []
@@ -37,6 +42,7 @@ beforeEach(() => {
   vi.stubEnv("CLI_COMMON_CACHE_DIR", cache)
 })
 afterEach(async () => {
+  floor.value = 0
   vi.unstubAllEnvs()
   for (const store of live.splice(0)) await store.close()
 })
@@ -58,6 +64,25 @@ describe("notes by meaning", () => {
 
     const [best] = await nearestNotes(store, "fish", { model: "tiny", limit: 1, threads: 1 })
     expect(best?.note.id).toBe(fish.id)
+  })
+
+  it("**drops a weak match below the model's floor** and keeps the near one", async () => {
+    const store = await open()
+    const fish = await store.notes.addNote({ text: "fish fish fish" })
+    await store.notes.addNote({ text: "fish cat dog" })
+    await embedNotes(store, { model: "tiny", threads: 1 })
+    const both = await nearestNotes(store, "fish", { model: "tiny", limit: 2, threads: 1 })
+    const [near, weak] = both.map(({ score }) => score) as [number, number]
+    expect(near).toBeGreaterThan(weak)
+
+    floor.value = (near + weak) / 2
+    const kept = await nearestNotes(store, "fish", { model: "tiny", limit: 2, threads: 1 })
+    expect(kept.map(({ note }) => note.id)).toEqual([fish.id])
+  })
+
+  it("keeps e5's measured floor, shared with conversations", async () => {
+    const { meaningFloor } = await vi.importActual<typeof import("../embeddings/models.js")>("../embeddings/models.js")
+    expect(meaningFloor("local:e5-small:384")).toBe(0.8)
   })
 
   it("stops at maxChunks and says chunks are left", async () => {

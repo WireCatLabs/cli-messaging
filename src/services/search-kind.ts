@@ -3,6 +3,8 @@ import type { AccountKey } from "../store/store.js"
 
 export type SearchKind = "messages" | "mail"
 
+export const NO_MAIL = "no_mail"
+
 const MAIL = "email"
 /** Notes stored as messages before store version 25: `search notes` reads their own table now. */
 const OLD_NOTES = "notes"
@@ -31,6 +33,8 @@ export const accountsOfKind = (
     )
   const mail = held.filter(({ provider }) => provider === MAIL)
   if (mail.length === 0)
-    throw new CliError("not_found", "no mail in the store yet — `memo mail import --since <date>` imports it")
+    throw new CliError("not_found", "no mail in the store yet — `memo mail import --since <date>` imports it", {
+      reason: NO_MAIL,
+    })
   return mail.map(({ provider, account }) => ({ provider, account }))
 }

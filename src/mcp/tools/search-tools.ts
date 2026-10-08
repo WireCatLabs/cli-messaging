@@ -1,7 +1,7 @@
 import * as v from "valibot"
 import type { Messenger } from "../../cli/messenger/context.js"
 import { searchNotes } from "../../services/notes-search.js"
-import { RESOURCES_SEARCHED, searchAll } from "../../services/search-all.js"
+import { RESOURCES_SEARCHED } from "../../services/search-all.js"
 import { searchServices } from "../search-sync.js"
 import { type AnyTool, limit, READ, tool } from "../tool.js"
 import {
@@ -42,21 +42,22 @@ export const searchTools = (messenger: Messenger): Record<string, AnyTool> => ({
       limit,
     }),
     annotations: { ...READ, openWorldHint: false },
-    stored: (store, account, args, defaults) =>
-      searchAll(
+    stored: (store, account, args, defaults, connect) =>
+      searchServices(
+        messenger,
         store,
         account,
-        {
-          text: args.text,
-          limit: args.limit ?? defaults.limit,
-          ...(args.only === undefined ? {} : { only: args.only }),
-          ...(args.exact ? { exact: true } : {}),
-          ...(args.timezone === undefined ? {} : { timezone: args.timezone }),
-          env: defaults.env,
-          ...(defaults.signal === undefined ? {} : { signal: defaults.signal }),
-        },
-        messenger,
-      ),
+        defaults,
+        messenger.serverSearch ? connect : undefined,
+      ).messages.searchAll({
+        text: args.text,
+        limit: args.limit ?? defaults.limit,
+        ...(args.only === undefined ? {} : { only: args.only }),
+        ...(args.exact ? { exact: true } : {}),
+        ...(args.timezone === undefined ? {} : { timezone: args.timezone }),
+        env: defaults.env,
+        ...(defaults.signal === undefined ? {} : { signal: defaults.signal }),
+      }),
   }),
 
   search_messages: tool({

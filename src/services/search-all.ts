@@ -2,8 +2,9 @@ import { CliError } from "@leemour/cli-core"
 import type { Messenger } from "../cli/messenger/context.js"
 import { parseLocator } from "../domain/locator.js"
 import type { AccountKey, MessageStore } from "../store/store.js"
-import { searchStore } from "./messages.js"
+import { type SearchFound, type SearchQuery, searchStore } from "./messages.js"
 import { RRF_K, searchNotes } from "./notes-search.js"
+import type { ServerSearched } from "./server-search.js"
 
 export const RESOURCES_SEARCHED = ["messages", "mail", "notes"] as const
 export type SearchedResource = (typeof RESOURCES_SEARCHED)[number]
@@ -30,6 +31,8 @@ export interface SearchAllFound {
   skipped: { resource: SearchedResource; reason: string }[]
   /** How the notes were searched, when they were. */
   notes?: { by: "words" | "words and meaning"; meaningSkipped?: string }
+  /** The messenger's server step for messages, as `search messages` reports it. */
+  server?: ServerSearched
 }
 
 export interface SearchAllRequest {
@@ -57,6 +60,8 @@ export const searchAll = async (
   account: AccountKey,
   request: SearchAllRequest,
   messenger: Partial<Pick<Messenger, "savedChatId" | "app">> = {},
+  searchMessages: (query: SearchQuery) => Promise<SearchFound> = (query) =>
+    searchStore(store, account, query, messenger),
 ): Promise<SearchAllFound> => {
   if (!request.text.trim()) throw new CliError("validation_error", "say what to find")
   const only = request.only ?? RESOURCES_SEARCHED
@@ -66,23 +71,23 @@ export const searchAll = async (
   const skipped: SearchAllFound["skipped"] = []
   let hasMore = false
   let notes: SearchAllFound["notes"]
+  let server: ServerSearched | undefined
 
   const messagesOf = async (kind: "messages" | "mail") => {
-    const found = await searchStore(
-      store,
-      account,
-      {
-        text: request.text,
-        language: "lucene",
-        kind,
-        ...(kind === "messages" ? { source: "all" } : {}),
-        limit: request.limit,
-        ...(request.exact ? { exact: true } : {}),
-        ...(request.timezone === undefined ? {} : { timezone: request.timezone }),
-        ...(request.signal === undefined ? {} : { signal: request.signal }),
-      },
-      messenger,
-    )
+    const query: SearchQuery = {
+      text: request.text,
+      language: "lucene",
+      kind,
+      ...(kind === "messages" ? { source: "all" } : {}),
+      limit: request.limit,
+      ...(request.exact ? { exact: true } : {}),
+      ...(request.timezone === undefined ? {} : { timezone: request.timezone }),
+      ...(request.signal === undefined ? {} : { signal: request.signal }),
+    }
+    // Messages go the way `search messages` goes, server included, so `search all` finds whatever it finds.
+    const found =
+      kind === "messages" ? await searchMessages(query) : await searchStore(store, account, query, messenger)
+    if (found.server) server = found.server
     hasMore ||= found.hasMore
     return found.items.map((hit): SearchAllItem => {
       const at = parseLocator(hit.locator)
@@ -147,5 +152,6 @@ export const searchAll = async (
     searched,
     skipped,
     ...(notes === undefined ? {} : { notes }),
+    ...(server === undefined ? {} : { server }),
   }
 }

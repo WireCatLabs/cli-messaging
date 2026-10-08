@@ -123,3 +123,6 @@ export const textModel = (id: string): TextModel => {
   }
   return found
 }
+
+/** The cosine a meaning hit must beat, measured in bench/search-quality; an unmeasured model keeps every hit. */
+export const meaningFloor = (key: string): number => (key === "local:e5-small:384" ? 0.8 : 0)
