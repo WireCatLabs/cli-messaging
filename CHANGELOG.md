@@ -8,6 +8,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Added
 
+- Parity: `chats link update`, `chats link list` and `chats link revoke` are shipped rows in tg (TG#364, TG#344);
+  max still plans list and revoke.
 - Parity: max's chat folder order, group photo, privacy, mute, media, calls, stickers and chat delete/clear
   are shipped rows now (max only, tg planned), with their options in the catalogue.
 - `skipFlagFor` from `@leemour/cli-messaging/sends`: the flag that skips a permission's question,
