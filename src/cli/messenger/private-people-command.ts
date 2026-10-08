@@ -23,7 +23,9 @@ export const privatePeopleCommands = (messenger: Messenger): Command[] => {
       refuseLocalWrite(context, messenger.app.command, "contacts.alias.rm")
       context.renderer.result(await context.withServices((services) => services.privatePeople.alias(person, null)))
     })
-  const notes = new Command("notes").description("your private notes on a stored contact, scoped to this account")
+  const notes = new Command("notes").description(
+    "your private notes on a stored contact, the same in every account that sees them",
+  )
   notes
     .command("list")
     .argument("<person>")

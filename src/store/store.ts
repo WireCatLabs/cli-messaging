@@ -49,6 +49,8 @@ import { findRegex } from "./sqlite/legacy-regex.js"
 import type { QueryGroup, QueryGrouping } from "./sqlite/lucene.js"
 import * as lucene from "./sqlite/lucene.js"
 import * as messageWrites from "./sqlite/messages.js"
+import { type NotesStore, notesStoreOver } from "./sqlite/notes.js"
+import { copyIntoNotes, notesToCopy } from "./sqlite/notes-copy.js"
 import { openSqlite, type StoreContext } from "./sqlite/open.js"
 import * as personLinks from "./sqlite/person-links.js"
 import type { PrivateContact, PrivateContactNote } from "./sqlite/private-people.js"
@@ -551,6 +553,8 @@ export interface MessageStore {
   /** Open tasks waiting on the owner, for `@leemour/cli-tasks`'s service. */
   readonly tasks: TaskStore
   readonly knowledge: KnowledgeStore
+  /** Notes, the links between anything and anything, and the owner's organisations and projects. */
+  readonly notes: NotesStore
   close(): Promise<void>
 }
 
@@ -691,6 +695,16 @@ export const openStore = async ({ path, env, now = Date.now }: StoreOptions = {}
   const { database, orm } = await openSqlite(file)
   try {
     migrate(database, { now })
+    if (notesToCopy(database)) {
+      database.exec("BEGIN IMMEDIATE")
+      try {
+        copyIntoNotes(database, now)
+        database.exec("COMMIT")
+      } catch (error) {
+        database.exec("ROLLBACK")
+        throw error
+      }
+    }
     // A small file is filled on the spot; a larger one waits for `db migrate`, since nothing reads the copy yet.
     const pending = pendingNormalization(database)
     if (pending > 0 && pending <= BACKFILL_ON_OPEN) backfillNormalized(database)
@@ -1415,10 +1429,21 @@ const storeOver = (context: StoreContext): MessageStore => {
       inTransaction(() => metadataQueries.replaceAutoTags(context, key, chatId, algorithm, matches)),
     privateContact: async (key, person) => privatePeople.privateContact(context, key, person),
     setContactAlias: async (key, person, alias) => privatePeople.setAlias(context, key, person, alias),
-    addContactNote: async (key, person, text) => privatePeople.addNote(context, key, person, text),
+    addContactNote: async (key, person, text) => {
+      let added: PrivateContactNote | undefined
+      inTransaction(() => {
+        added = privatePeople.addNote(context, key, person, text)
+      })
+      return added as PrivateContactNote
+    },
     contactNote: async (key, person, id) => privatePeople.note(context, key, person, id),
-    editContactNote: async (key, person, id, text, revision) =>
-      privatePeople.editNote(context, key, person, id, text, revision),
+    editContactNote: async (key, person, id, text, revision) => {
+      let edited: PrivateContactNote | undefined
+      inTransaction(() => {
+        edited = privatePeople.editNote(context, key, person, id, text, revision)
+      })
+      return edited as PrivateContactNote
+    },
     removeContactNote: async (key, person, id) => privatePeople.removeNote(context, key, person, id),
 
     addTags: async (key, target, list) => {
@@ -1473,6 +1498,7 @@ const storeOver = (context: StoreContext): MessageStore => {
 
     tasks: taskStoreOver(database),
     knowledge: knowledgeStoreOver(context),
+    notes: notesStoreOver(context),
 
     close: async () => database.close(),
   }

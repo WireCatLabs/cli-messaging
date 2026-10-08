@@ -22,6 +22,7 @@ export type {
   ScorePreset,
 } from "./domain/rankings-options.js"
 export { rankingOptions } from "./domain/rankings-options.js"
+export { canonicalReference, formatReference, parseReference, type Reference } from "./domain/references.js"
 export { normalizeTag, TAG_TYPES, type TagType } from "./domain/tags.js"
 export type { CheckRow, Finding, Moderator } from "./moderation/check.js"
 export { act, judge } from "./moderation/check.js"

@@ -57,6 +57,7 @@ Every end of a link, every tag target and every CLI argument naming a thing uses
 | entity | `entity:<uid>` | already in use |
 | task | `task:<id>` | already in use |
 | chat | `chat:<provider>/<account>/<chat>` | same reason as messages |
+| contact | `contact:<provider>/<id>` | one identity in one messenger (**added in the build, 2026-10-08**: contact notes and tags name an identity, not a person) |
 
 The prefix is what makes a wrong kind fail loudly instead of matching the wrong row. Notes also accept
 `note:<folder-id>/<path inside the folder>` on input, resolved to `note:<id>`.
@@ -66,6 +67,10 @@ The prefix is what makes a wrong kind fail loudly instead of matching the wrong 
 - `note_folders(id, name, format, created_at)` — `format` names the dialect (§3.4).
 - The path is in each computer's config only: `notes.folders: [{ "id": "fld_…", "path": "…" }]`.
   A path may appear once. The store holds no absolute path.
+  **Correction (build, 2026-10-08):** one exception, for the hand-over. A folder copied from a pre-25
+  `notes` account keeps that account in `note_folders.account_pk` and its old absolute path in
+  `pending_path`; `NotesStore.claimFolderPath(id)` answers the path once and clears it, and cli-memo
+  writes it into that computer's config. A folder created after 25 never has either.
 - `memo folders add <path> [--format obsidian|markdown]` creates the folder and prints its id.
   On a second computer using the same store, `memo folders attach <id> <path>` binds it. Importing a
   path that has no id is refused with both commands named — never a silent new folder, which would
@@ -81,7 +86,9 @@ The prefix is what makes a wrong kind fail loudly instead of matching the wrong 
 - **`links`** — `from_ref`, `to_ref`, `kind` (`links-to | about | member-of | related-to |
   assigned-to`), `anchor` (heading or block, nullable), `origin` (`file | owner`), `target_text`
   (what the file wrote, kept while unresolved), `confirmed`, `created_at`. One table replaces both
-  `annotations`' target columns and `knowledge_relations`.
+  `annotations`' target columns and `knowledge_relations`. **Correction (build, 2026-10-08):** it also
+  carries `role`, `evidence` and `provenance` from relations and `target_folded` (the matching key), and
+  `origin` has a third value, `suggested`, for a relation proposed by a rule and not yet confirmed.
 - **People in notes: direct entries only, at every import** (owner, 2026-10-08). A link in a file
   whose target is a person — `[[Rin Example]]` or `[[Rin]]` matching a person's name, local alias or
   username, or an explicit `person:<uid>` — becomes a link to `person:<uid>`. Full names in plain text
@@ -91,7 +98,9 @@ The prefix is what makes a wrong kind fail loudly instead of matching the wrong 
   background job.
 - **Tags** — `tags` gains the `note` target type. `#tag` and `tags:` from a file become tags with
   origin `file`, replaced on each import; tags the owner adds have origin `owner` and survive.
-- **Entities** — `knowledge_entities` loses `account_pk`.
+- **Entities** — ~~`knowledge_entities` loses `account_pk`~~ **Correction (build, 2026-10-08):** a new
+  `entities` table without it, since a forward-only migration may not rebuild a base table; the old rows
+  are copied with their ids.
 - The note about a person is a link `note:<id> --about--> person:<uid>`; `people-notes.json` is
   imported once and retired.
 
@@ -172,11 +181,20 @@ rename: same id, links and tags kept. Today a move is a new identity. Small and 
   knowledge targets pointing at `msg:notes/<path>/…` rewritten to `note:<id>`; notes-provider messages
   into `notes`. Old tables and the `notes` provider's rows are left in place and recorded for removal
   in a later migration (a deletion, so `CLEANUP.md`).
+  **Correction (build, 2026-10-08):** the copy is not inside the migration. Version 25 keeps
+  `minCompatible` 6 — raising it would lock every older tg, max and memo out of the file, which the store's
+  rules allow only for a major version — so an older build may keep writing annotations or notes-as-messages
+  after the upgrade. The copy (`src/store/sqlite/notes-copy.ts`) therefore runs on every open, behind one
+  cheap check, and adds only what is missing; removing a copied note or relation also removes its source row
+  so it is not copied back. Known gaps until every tool reads 25: an older build's *edit* or *removal* of a
+  row already copied is not carried over; tags on a whole notes subfolder (a `chat` tag) and
+  `knowledge_targets` tags on persons, tasks and entities stay where they were.
 - tg and max keep `contacts notes …` working over the new table; the services keep their signatures
   for one release. Removing `account_pk` from the API is the week's one breaking change, named in the
-  changelog.
-- Migration number: the next free one at build time (24 is held by another lane; announce it in
-  [the lanes plan](2026-09-29-parity-lanes.md#4-releases-while-lanes-run) first).
+  changelog. **Correction (build, 2026-10-08):** the signatures still take an account; what changed is
+  the scope — a contact's notes show in every account that sees the contact, `relations` and `entities`
+  list everything (ruling 2 A). The CLI help says so.
+- Migration number: 25, reserved in #763.
 
 ## 4. Work items, in order
 

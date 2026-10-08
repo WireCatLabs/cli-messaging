@@ -239,6 +239,16 @@ written by nobody and rebuilt only by `store migrate` or `store reindex`, never 
 tools with different settings or Snowball versions cannot rebuild each other's index in turn; a row a
 newer Snowball built is refused with "upgrade this tool".
 
+**Notes and links (version 25, [plan](../plans/2026-10-08-notes-graph.md)).** `MessageStore.notes`
+(`src/store/sqlite/notes.ts`) holds the owner's records, which belong to no account: `note_folders` (an
+id; the path is each computer's config), `notes` (from a file or written here) with `note_revisions`,
+`entities`, and `links` — every connection, both ends a typed reference (`src/domain/references.ts`). A
+link whose written target names no one yet keeps `target_folded`; creating, renaming or aliasing a person
+resolves it in the same write (`resolvePersonLinks`, called from `identities.ts`, `private-people.ts`,
+`person-links.ts`). `KnowledgeStore` and `contacts notes` read and write these tables. Builds before 25
+may still write the old ones, so `openStore` copies what is missing on every open
+(`src/store/sqlite/notes-copy.ts`, behind `notesToCopy`).
+
 **Server search beside the archive.** `messages.search` with `backend: both|server` first runs
 `searchServer` (`src/services/server-search.ts`): it turns the resolved query into at most three
 server queries (required words, one chat, one sender, dates), calls the optional `MessageSearch`

@@ -6,8 +6,8 @@ import { afterEach, describe, expect, it } from "vitest"
 import { formatLocator } from "../domain/locator.js"
 import { type MessageStore, openStore } from "./store.js"
 
-const key = { provider: "notes", account: "synthetic-vault" }
-const other = { ...key, account: "second-vault" }
+const key = { provider: "telegram", account: "500" }
+const other = { ...key, account: "501" }
 const opened: MessageStore[] = []
 afterEach(async () => {
   for (const store of opened.splice(0)) await store.close()
@@ -19,15 +19,15 @@ const fixture = async () => {
   opened.push(store)
   for (const account of [key, other]) {
     await store.saveChats(account, [
-      { id: ".", title: "Synthetic", kind: "saved", unreadCount: 0, lastMessageAt: null, participantsCount: null },
+      { id: "7", title: "Synthetic", kind: "group", unreadCount: 0, lastMessageAt: null, participantsCount: null },
     ])
     await store.saveMessages(
       account,
-      ".",
+      "7",
       [
         {
-          id: "plan.md",
-          chatId: ".",
+          id: "42",
+          chatId: "7",
           senderId: null,
           senderName: null,
           timestamp: new Date(clock).toISOString(),
@@ -43,15 +43,15 @@ const fixture = async () => {
       { via: "test" },
     )
   }
-  const locator = formatLocator({ ...key, chat: ".", message: "plan.md" })
+  const locator = formatLocator({ ...key, chat: "7", message: "42" })
   const target = { type: "message" as const, locator }
   const tasks = createTaskService({ store: store.tasks, now: () => new Date(clock) })
   const task = (
     await tasks.add({
       source: locator,
-      sourceKind: "note",
+      sourceKind: "message",
       account: `${key.provider}:${key.account}`,
-      group: ".",
+      group: "7",
       kind: "request",
       origin: "owner",
     })
@@ -106,7 +106,7 @@ describe("cross-source knowledge metadata", () => {
     await f.store.knowledge.addAnnotation(key, f.target, "Second independent note")
     expect((await f.store.knowledge.annotations(key, { search: "budget", limit: 1 })).items).toEqual([note])
     expect(await f.store.knowledge.annotations(key, { limit: 1 })).toMatchObject({ hasMore: true })
-    await expect(f.store.knowledge.annotation(other, note.id)).rejects.toMatchObject({ code: "not_found" })
+    expect(await f.store.knowledge.annotation(other, note.id)).toEqual(note)
     await expect(f.store.knowledge.addAnnotation(other, f.target, "Wrong account")).rejects.toMatchObject({
       code: "validation_error",
     })
@@ -116,12 +116,12 @@ describe("cross-source knowledge metadata", () => {
     await expect(f.store.knowledge.editAnnotation(key, note.id, "Stale", 1)).rejects.toMatchObject({
       code: "validation_error",
     })
-    await f.store.markDeleted(key, ["plan.md"], { chatId: "." })
+    await f.store.markDeleted(key, ["42"], { chatId: "7" })
     expect(await f.store.knowledge.annotation(key, note.id)).toMatchObject({
       text: "Updated owner assessment",
       targetState: "deleted",
     })
-    expect(await f.store.message(key, "plan.md", { chatId: "." })).toBeUndefined()
+    expect(await f.store.message(key, "42", { chatId: "7" })).toBeUndefined()
     const reopened = await openStore({ path: f.path })
     opened.push(reopened)
     expect(await reopened.knowledge.annotation(key, note.id)).toMatchObject({ targetState: "deleted", revision: 2 })
@@ -149,7 +149,7 @@ describe("cross-source knowledge metadata", () => {
     expect(await f.store.knowledge.relate(key, { from: relation.from, to: relation.to, kind: "member-of" })).toEqual(
       relation,
     )
-    expect(await f.store.knowledge.relations(other)).toEqual([])
+    expect(await f.store.knowledge.relations(other)).toEqual([relation])
     expect(await f.store.knowledge.relations(key, relation.from)).toEqual([relation])
     const proposal = await f.store.knowledge.relate(key, {
       from: relation.to,

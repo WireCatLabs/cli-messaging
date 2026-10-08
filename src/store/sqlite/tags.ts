@@ -63,7 +63,7 @@ export const targetPk = ({ database }: StoreContext, key: AccountKey, target: Ta
 }
 
 /** The tags it did not have before, in the order given. */
-export const addTags = (context: StoreContext, pk: number, type: TagType, tags: string[]): string[] => {
+export const addTags = (context: StoreContext, pk: number, type: TagType | "note", tags: string[]): string[] => {
   const insert = context.database.prepare(
     "INSERT INTO tags (taggable_type, taggable_pk, tag, created_at) VALUES (?, ?, ?, ?) ON CONFLICT DO NOTHING",
   )
@@ -81,7 +81,7 @@ export const addTags = (context: StoreContext, pk: number, type: TagType, tags: 
 export const removeTags = (
   { database }: StoreContext,
   pk: number,
-  type: TagType,
+  type: TagType | "note",
   tags: string[],
   source?: "manual" | "auto",
 ): string[] => {

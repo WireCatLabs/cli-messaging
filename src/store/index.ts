@@ -14,6 +14,15 @@ export type {
   KnowledgeTarget,
   Reminder,
 } from "./sqlite/knowledge.js"
+export type {
+  Entity,
+  FileNoteInput,
+  Link,
+  LinkInput,
+  Note,
+  NoteFolder,
+  NotesStore,
+} from "./sqlite/notes.js"
 export type { PrivateContact, PrivateContactNote } from "./sqlite/private-people.js"
 export {
   fillSearchIndex,

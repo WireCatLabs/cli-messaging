@@ -4,6 +4,7 @@ import type { PeopleLookup } from "../../resolve.js"
 import type { AccountKey, PersonFacts } from "../store.js"
 import { ulid } from "../ulid.js"
 import { and, asc, desc, eq, inArray, isNotNull, isNull, ne, sql } from "./drizzle/core.js"
+import { resolvePersonLinks } from "./notes.js"
 import type { Orm, StoreContext } from "./open.js"
 import {
   accountIdentities,
@@ -124,7 +125,7 @@ export const identityOf = (
 ): number => saveIdentity(context, provider, nativeId, name, facts).pk
 
 const saveIdentity = (
-  { orm, now }: StoreContext,
+  { orm, now, database }: StoreContext,
   provider: Provider,
   nativeId: Id,
   name: string | null,
@@ -153,6 +154,7 @@ const saveIdentity = (
         .run()
     }
     const renamed = changed.name !== found.name || changed.username !== found.username
+    if (renamed) resolvePersonLinks(database, [changed.name, changed.username])
     if (marks === undefined && !renamed) return { pk: found.pk, revised: false }
     const next = marks === undefined ? changed : { name, username: facts.username ?? null, marks }
     const before = renamed ? { name: found.name, username: found.username, at: found.updatedAt } : undefined
@@ -198,6 +200,7 @@ const saveIdentity = (
     .values({ identityPk: identity, fromPersonPk: null, toPersonPk: person, method: "initial", at, by: "ingest" })
     .run()
   if (marks !== undefined) revise(orm, identity, { name, username: facts.username ?? null, marks }, at)
+  resolvePersonLinks(database, [name, facts.username])
   return { pk: identity, revised: false }
 }
 
