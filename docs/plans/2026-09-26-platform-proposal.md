@@ -610,9 +610,9 @@ Shared runtime PR682 published as SDK0.168.0; MAX451 and TG328 adopted with gree
 common-gateway API OCR for bulk speed. Reuses attachment text/index and model gateway;
 no bundled OCR model or automatic API fallback. Consumer binary releases remain separate.
 
-### Lightweight attachment readers — claimed2026-10-08
+### Lightweight attachment readers — completed2026-10-08
 
-🚧 `feat/attachment-readers`: owner approved bounded encoding detection and local text
+Completed in PR724, published in `0.179.0` with provenance. Owner approved bounded encoding detection and local text
 readers for ODT/ODS/XLSX/PPTX/EPUB. Preserve the existing index and agent text, no migration
 or new command names. BOM/strict UTF-8 first; uncertain legacy encoding remains for the agent.
 Small pure-JS ZIP/XML dependencies, no office application or local OCR model. Generic ZIP,
