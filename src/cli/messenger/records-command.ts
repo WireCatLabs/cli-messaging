@@ -89,6 +89,26 @@ export const callsCommand = (messenger: Messenger): Command => {
   return calls
 }
 
+/** `chats delete` and `chats clear` — for this account only; at the default level they ask first. */
+export const chatDeletionCommands = (messenger: Messenger): Command[] => [
+  annotate(new Command("delete"), { mutates: true })
+    .description("delete a chat from this account; the others in it keep it and its messages")
+    .argument("<chat>", messenger.chatArgument)
+    .option("--allow-dangerous", "go ahead without the question an ask level puts before a deletion")
+    .action(async function (this: Command, chat: string) {
+      const context = messengerContext(this, messenger)
+      context.renderer.result(await context.withServices((services) => services.admin.deleteChat(chat)))
+    }),
+  annotate(new Command("clear"), { mutates: true })
+    .description("delete every message in a chat for this account; the others in it keep theirs")
+    .argument("<chat>", messenger.chatArgument)
+    .option("--allow-dangerous", "go ahead without the question an ask level puts before a deletion")
+    .action(async function (this: Command, chat: string) {
+      const context = messengerContext(this, messenger)
+      context.renderer.result(await context.withServices((services) => services.admin.clearHistory(chat)))
+    }),
+]
+
 /** `chats mute` and `unmute` — the owner's own notifications for one chat; nobody in it is told. */
 export const muteCommands = (messenger: Messenger): Command[] => [
   annotate(new Command("mute"), { mutates: true })

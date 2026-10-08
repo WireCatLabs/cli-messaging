@@ -6,6 +6,13 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- `chats delete <chat>` and `chats clear <chat>` remove a chat or every message in it for this account only, behind
+  `chatDeletion`. Adapters implement `ChatDeletion`; journal actions `delete` and `clear` (`chats.delete`,
+  `chats.clear`) ask first by default, `--allow-dangerous` skips the question, and both sit under the old `delete`
+  word. `skipFlagFor` moved to `sends/permissions` (still exported from the CLI helpers). Planned for max and tg.
+
 ## 0.185.0 — 08.10.2026
 
 ### Added
