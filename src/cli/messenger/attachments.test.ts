@@ -158,6 +158,29 @@ const hits = async (call: (...argv: string[]) => Promise<{ stdout: string }>, qu
   )
 
 describe("attachments extract", () => {
+  it("renders a retained PDF page as bounded PNG without connecting, extracting or storing text", async () => {
+    const fixture = await setup()
+    const done = await fixture.call("attachments", "show", "7", "3", "--page", "1", "--json")
+    expect(done.code).toBe(0)
+    const answer = json(done)
+    expect(answer).toMatchObject({ mimeType: "image/png", complete: true, pdf: { page: 1, pageCount: 1 } })
+    expect(answer.pdf.sourceSha256).not.toBe(answer.sha256)
+    expect(Buffer.from(answer.base64, "base64").subarray(0, 8)).toEqual(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]))
+    expect(
+      json(await fixture.call("attachments", "list", "--chat", "7", "--needs-text", "--json")).items.some(
+        (item: { locator: string }) => item.locator.endsWith("/3"),
+      ),
+    ).toBe(true)
+    for (const extra of [
+      ["--offset-bytes", "0"],
+      ["--chunk-bytes", "20"],
+      ["--if-sha256", "0".repeat(64)],
+    ]) {
+      expect((await fixture.call("attachments", "show", "7", "3", "--page", "1", ...extra, "--json")).code).not.toBe(0)
+    }
+    expect((await fixture.call("attachments", "show", "7", "1", "--page", "1", "--json")).code).not.toBe(0)
+  })
+
   it("transfers exact retained bytes as JSON", async () => {
     const fixture = await setup()
     const result = await fixture.call("attachments", "show", "7", "1", "--json", "--chunk-bytes", "8")
@@ -176,6 +199,9 @@ describe("attachments extract", () => {
       const result = await fixture.call("attachments", "show", "7", "1", "--json")
       expect(result.code).not.toBe(0)
       expect(result.stdout).not.toContain(Buffer.from(SECRET).toString("base64"))
+      const preview = await fixture.call("attachments", "show", "7", "3", "--page", "1", "--json")
+      expect(preview.code).not.toBe(0)
+      expect(preview.stdout).not.toContain('"mimeType":"image/png"')
     }
   })
 

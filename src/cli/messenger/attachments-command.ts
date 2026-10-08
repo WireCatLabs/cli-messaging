@@ -150,12 +150,19 @@ const showCommand = (messenger: Messenger): Command =>
     .argument("<chat>", `${messenger.chatArgument}; or a msg: locator alone`)
     .argument("[message]", "the message id")
     .option("--attachment <n>", "file position from 1; required for several files", count)
+    .option("--page <n>", "render one PDF page as PNG, from 1; optional unpdf/canvas, no OCR", Number)
     .option("--offset-bytes <n>", "byte offset from 0", Number)
     .option("--chunk-bytes <n>", "bytes to return, 1–1048576 (default524288)", Number)
     .option("--if-sha256 <hash>", "require the whole file SHA-256 from the preceding chunk")
     .action(async function (this: Command, chat: string, message: string | undefined) {
       const context = messengerContext(this, messenger)
-      const options = this.opts<{ attachment?: number; offsetBytes?: number; chunkBytes?: number; ifSha256?: string }>()
+      const options = this.opts<{
+        attachment?: number
+        page?: number
+        offsetBytes?: number
+        chunkBytes?: number
+        ifSha256?: string
+      }>()
       const stop = stopOnSignal(this)
       try {
         const done = await context.withServices((services) =>

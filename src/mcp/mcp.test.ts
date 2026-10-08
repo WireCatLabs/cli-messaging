@@ -30,6 +30,7 @@ import { storedDeps } from "../services/deps.js"
 import { embeddingsService } from "../services/embeddings.js"
 import { servicesFor } from "../services/index.js"
 import { openStore } from "../store/store.js"
+import { pdf } from "../testing/files.js"
 import { commandsClient } from "../testing/mcp-commands-client.js"
 import { freePort, mcpHttpClient as httpClient } from "../testing/mcp-http-client.js"
 import { searchRecipes, seedSearchRecipes } from "../testing/search-recipes.js"
@@ -1573,6 +1574,15 @@ describe("the MCP server", () => {
       nextOffsetBytes: 5,
       complete: false,
     })
+    writeFileSync(path, pdf("Synthetic page for an agent"))
+    const preview = await client.callTool({
+      name: "chat_attachments_show",
+      arguments: { message: "msg:chat/500/7/902", page: 1 },
+    })
+    expect(preview.isError).not.toBe(true)
+    expect(preview.content[0]).toMatchObject({ type: "image", mimeType: "image/png" })
+    expect(preview.structuredContent).toMatchObject({ pdf: { page: 1, pageCount: 1 }, complete: true })
+    expect(JSON.stringify(preview.structuredContent)).not.toContain("base64")
     const foreign = await client.callTool({
       name: "chat_attachments_show",
       arguments: { message: "msg:chat/600/7/902" },

@@ -61,3 +61,13 @@ it("handles empty files and cancellation without emitting bytes", async () => {
   controller.abort()
   await expect(retainedBytes(path, { signal: controller.signal })).rejects.toMatchObject({ code: "cancelled" })
 })
+
+it("captures a full bounded source for PDF rendering while leaving the byte window unchanged", async () => {
+  const { path, bytes } = await fixture()
+  const answer = await retainedBytes(path, { chunkBytes: 5 }, true)
+  expect(answer.capturedFile).toEqual(bytes)
+  expect(Buffer.from(answer.base64, "base64")).toEqual(bytes.subarray(0, 5))
+  await expect(retainedBytes(path, { ifSha256: "0".repeat(64) }, true)).rejects.toMatchObject({
+    code: "validation_error",
+  })
+})
