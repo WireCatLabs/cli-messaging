@@ -132,7 +132,15 @@ export const searchNotes = (context: StoreContext, query: NoteQuery): { items: N
     if (field === "tag") {
       const tag = tagOf(value)
       if (tag === undefined) queryError("invalid_tag", node.span)
-      return bound("n.pk IN (SELECT taggable_pk FROM tags WHERE tag = ? AND taggable_type = 'note')", tag)
+      // A label on a folder or subfolder labels every note under it, at any depth.
+      return bound(
+        "(n.pk IN (SELECT taggable_pk FROM tags WHERE tag = ? AND taggable_type = 'note') OR EXISTS (" +
+          "SELECT 1 FROM owner_targets o JOIN tags l ON l.taggable_type = 'owner' AND l.taggable_pk = o.pk " +
+          "WHERE l.tag = ? AND o.folder_id = n.folder_id " +
+          "AND (o.folder_path = '' OR substr(n.path, 1, length(o.folder_path) + 1) = o.folder_path || '/')))",
+        tag,
+        tag,
+      )
     }
     if (field === "date") {
       const range = node.resolution?.date

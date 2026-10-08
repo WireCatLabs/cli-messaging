@@ -70,6 +70,12 @@ const recordOf = ({ orm }: StoreContext, personPk: number): PersonRecord => {
   return { uid: person.uid, name: person.name, identities: identitiesOf }
 }
 
+/** A person by the uid a `person:` reference holds, with every identity linked to them. */
+export const personByUid = (context: StoreContext, uid: string): PersonRecord | undefined => {
+  const found = context.database.prepare("SELECT pk FROM persons WHERE uid = ?").get(uid)
+  return found ? recordOf(context, Number(found.pk)) : undefined
+}
+
 /** The person an identity belongs to, with every identity linked to them. */
 export const personOf = (context: StoreContext, ref: IdentityRef): PersonRecord | undefined => {
   const found = identityRow(context, ref)

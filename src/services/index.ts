@@ -166,7 +166,14 @@ export type { CounterQuery, CountersService } from "./counters.js"
 export { countersService } from "./counters.js"
 export type { QueryMetadata, SearchCoverage } from "./messages-search.js"
 export { metadataService } from "./metadata.js"
-export { type NotesSearchRequest, searchNotesQuery } from "./notes-search.js"
+export {
+  embedNotes,
+  type NotesEmbedded,
+  type NotesEmbedOptions,
+  type NotesSearchRequest,
+  nearestNotes,
+  searchNotesQuery,
+} from "./notes-search.js"
 export {
   type PackageUpgradeOutcome,
   type PackageUpgradePorts,

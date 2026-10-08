@@ -53,6 +53,7 @@ import { noteSearchOver } from "./sqlite/note-search.js"
 import { type NotesStore, notesStoreOver } from "./sqlite/notes.js"
 import { copyIntoNotes, notesToCopy } from "./sqlite/notes-copy.js"
 import { openSqlite, type StoreContext } from "./sqlite/open.js"
+import { copyIntoOwnerTargets, ownerTargetsToCopy } from "./sqlite/owner-targets-copy.js"
 import * as personLinks from "./sqlite/person-links.js"
 import type { PrivateContact, PrivateContactNote } from "./sqlite/private-people.js"
 import * as privatePeople from "./sqlite/private-people.js"
@@ -476,6 +477,8 @@ export interface MessageStore {
   /** Everyone this provider's accounts have seen; with `account`, only who that account has seen. */
   people(provider: Provider, options?: { account?: Id; accounts?: Id[] }): Promise<PeopleLookup>
   personOf(identity: IdentityRef): Promise<PersonRecord | undefined>
+  /** The person a `person:<uid>` reference names. */
+  personByUid(uid: string): Promise<PersonRecord | undefined>
   /** Records the decision in `identity_link_events`; `unlinkIdentity` undoes it. */
   linkIdentities(person: IdentityRef, other: IdentityRef, options: LinkOptions): Promise<PersonRecord>
   unlinkIdentity(identity: IdentityRef, options: LinkOptions): Promise<PersonRecord>
@@ -706,6 +709,17 @@ export const openStore = async ({ path, env, now = Date.now }: StoreOptions = {}
         throw error
       }
     }
+    if (ownerTargetsToCopy(database)) {
+      database.exec("BEGIN IMMEDIATE")
+      try {
+        // Another process may have copied between the check and the lock.
+        if (ownerTargetsToCopy(database)) copyIntoOwnerTargets(database, now)
+        database.exec("COMMIT")
+      } catch (error) {
+        database.exec("ROLLBACK")
+        throw error
+      }
+    }
     // A small file is filled on the spot; a larger one waits for `db migrate`, since nothing reads the copy yet.
     const pending = pendingNormalization(database)
     if (pending > 0 && pending <= BACKFILL_ON_OPEN) backfillNormalized(database)
@@ -838,6 +852,7 @@ const storeOver = (context: StoreContext): MessageStore => {
     },
 
     personOf: async (identity) => personLinks.personOf(context, identity),
+    personByUid: async (uid) => personLinks.personByUid(context, uid),
     linkIdentities: async (person, other, options) => {
       let linked: PersonRecord | undefined
       inTransaction(() => {

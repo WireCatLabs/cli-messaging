@@ -81,7 +81,7 @@ describe("version 25: notes as their own records", () => {
       createdAt: new Date(1000).toISOString(),
       updatedAt: new Date(2000).toISOString(),
     })
-    expect(await store.knowledge.tags(telegram, { type: "note", id: plan?.id as string })).toEqual(["budget"])
+    expect(await store.knowledge.tags(telegram, { type: "note", id: plan?.id as string })).toEqual(["budget", "review"])
 
     const about = await store.notes.links({ to: `note:${plan?.id}` })
     expect(about.map((link) => link.from)).toEqual(["note:A2"])

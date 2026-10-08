@@ -471,7 +471,7 @@ export const tags = sqliteTable(
   "tags",
   {
     pk: integer("pk").primaryKey(),
-    /** `chat`, `contact`, `message`, `knowledge` or `note`. */
+    /** `chat`, `contact`, `message`, `knowledge` (before version 27), `note` or `owner`. */
     taggableType: text("taggable_type").notNull(),
     taggablePk: integer("taggable_pk").notNull(),
     tag: text("tag").notNull(),
@@ -886,6 +886,23 @@ export const links = sqliteTable(
     index("links_to").on(table.toRef),
     index("links_unresolved").on(table.targetFolded).where(sql`to_ref IS NULL`),
   ],
+)
+
+/**
+ * What the owner labels that belongs to no account: a person, an entity, a task, a notes folder or one
+ * of its subfolders. Tags of type `owner` point here. A folder keeps its id and path apart as well, so a
+ * search can find every note under a labelled subfolder without decoding the reference.
+ */
+export const ownerTargets = sqliteTable(
+  "owner_targets",
+  {
+    pk: integer("pk").primaryKey(),
+    reference: text("reference").notNull().unique(),
+    folderId: text("folder_id"),
+    folderPath: text("folder_path"),
+    createdAt: integer("created_at").notNull(),
+  },
+  (table) => [index("owner_targets_by_folder").on(table.folderId, table.folderPath)],
 )
 
 export const entities = sqliteTable("entities", {

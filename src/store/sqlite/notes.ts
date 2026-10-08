@@ -1,5 +1,6 @@
 import { CliError } from "@leemour/cli-core"
 import { canonicalReference } from "../../domain/references.js"
+import { normalizeTag } from "../../domain/tags.js"
 import type { CacheDatabase, CacheStatement } from "../driver.js"
 import { fold } from "../normalize.js"
 import { ulid } from "../ulid.js"
@@ -109,10 +110,21 @@ export interface NotesStore extends NoteSearch {
   removeLink(id: string): Promise<{ id: string; removed: true }>
   /** The links a file states, replacing what its last import stated; links the owner added stay. */
   replaceFileLinks(noteId: string, links: Omit<LinkInput, "from" | "origin">[]): Promise<Link[]>
+  /**
+   * The tags a file states, replacing what its last import stated. A tag the owner added stays, even when
+   * the file stops stating it; a file tag the owner also added becomes the owner's.
+   */
+  replaceFileTags(noteId: string, tags: string[]): Promise<NoteTag[]>
+  noteTags(noteId: string): Promise<NoteTag[]>
   /** Tries every unresolved link against the people known now; answers how many it resolved. */
   resolveLinks(): Promise<number>
   addEntity(kind: Entity["kind"], name: string): Promise<Entity>
   entities(): Promise<Entity[]>
+}
+
+export interface NoteTag {
+  tag: string
+  origin: "file" | "owner"
 }
 
 type Row = Record<string, unknown>
@@ -246,6 +258,11 @@ export const notesStoreOver = ({ database, now }: StoreContext): Omit<NotesStore
     if (!row) throw new CliError("not_found", `no note ${id} in the local store`)
     return row
   }
+  const tagsOfNote = (pk: number): NoteTag[] =>
+    database
+      .prepare("SELECT tag, manual FROM tags WHERE taggable_type = 'note' AND taggable_pk = ? ORDER BY tag")
+      .all(pk)
+      .map((row) => ({ tag: String(row.tag), origin: Number(row.manual) === 1 ? "owner" : "file" }))
   const folderRow = (id: string) => {
     const row = database.prepare("SELECT * FROM note_folders WHERE id = ?").get(id)
     if (!row) throw new CliError("not_found", `no notes folder ${id} in the local store`)
@@ -466,6 +483,23 @@ export const notesStoreOver = ({ database, now }: StoreContext): Omit<NotesStore
         database.prepare("DELETE FROM links WHERE from_ref = ? AND origin = 'file'").run(from)
         return links.map((link) => insertLink({ ...link, from, origin: "file" }))
       }),
+    replaceFileTags: async (noteId, tags) =>
+      atomic(() => {
+        const pk = Number(noteRow(noteId).pk)
+        const stated = [...new Set(tags.map(normalizeTag))]
+        database
+          .prepare(
+            "DELETE FROM tags WHERE taggable_type = 'note' AND taggable_pk = ? AND manual = 0 AND tag NOT IN (SELECT value FROM json_each(?))",
+          )
+          .run(pk, JSON.stringify(stated))
+        const insert = database.prepare(
+          "INSERT INTO tags (taggable_type, taggable_pk, tag, created_at, manual) VALUES ('note', ?, ?, ?, 0) ON CONFLICT DO NOTHING",
+        )
+        const at = now()
+        for (const tag of stated) insert.run(pk, tag, at)
+        return tagsOfNote(pk)
+      }),
+    noteTags: async (noteId) => tagsOfNote(Number(noteRow(noteId).pk)),
     resolveLinks: async () =>
       atomic(() =>
         database
