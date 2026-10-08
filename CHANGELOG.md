@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.196.0 — 08.10.2026
+
 ### Added
 
 - `account list`: every profile on this computer — the current one, those in the config file and those logged in
