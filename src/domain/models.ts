@@ -478,8 +478,8 @@ export interface TopicChange {
 /** Someone who asked to join a group or channel that needs an admin's approval. */
 export interface JoinRequest {
   person: Member
-  /** When they asked; ISO 8601. */
-  requestedAt: string
+  /** When they asked; ISO 8601. `null` where the messenger does not say — MAX lists requests without a time. */
+  requestedAt: string | null
   /** The note they sent with the request, when they wrote one. */
   about?: string
 }
