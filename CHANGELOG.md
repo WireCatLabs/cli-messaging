@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.207.0 — 08.10.2026
+
 ### Added
 
 - `topics show <chat> <topic>` and MCP `topics_show`: one forum topic as `Topic` gives it, through the optional
