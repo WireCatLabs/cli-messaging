@@ -30,6 +30,8 @@ export interface QueryExecution {
   only?: { chatId: string; id: string }[]
   /** The store's stemmer, set when a leaf is stemmed: queries stem with the choices that built the index. */
   stemmer?: Stemmer
+  /** Stemmed leaves match their words only, because the stems are not ready to search. */
+  unstemmed?: boolean
 }
 /** A leaf that reads the word index: every `text` and `exact` leaf, stemmed or not. */
 export const hasText = (node: QueryNode): boolean =>

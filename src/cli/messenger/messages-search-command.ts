@@ -134,10 +134,17 @@ Search guide: https://github.com/leemour/cli-messaging/blob/main/docs/search/que
       noteServer(context, found.server)
       const { command } = messenger.app
       for (const { from, to } of found.corrections) context.renderer.note(`${from} → ${to.join(", ")}`)
-      const forms = (found.query?.stemming?.terms ?? []).filter(({ stemmer }) => stemmer !== "none")
+      const stemming = found.query?.stemming
+      const forms = (stemming?.applied ? stemming.terms : []).filter(({ stemmer }) => stemmer !== "none")
       if (forms.length > 0)
         context.renderer.note(
           `also found other forms: ${forms.map(({ word, stem, stemmer }) => `${word} → ${stem}* (${stemmer})`).join(", ")} — --exact for the exact words only`,
+        )
+      if (stemming?.applied === false)
+        context.renderer.note(
+          stemming.reason === "building"
+            ? `other forms of words are not searched yet: the stems are ${Math.floor((stemming.done / Math.max(stemming.total, 1)) * 100)}% built — \`${command} store migrate\` finishes them`
+            : "other forms of words are not searched: the store asks for stemmers this tool does not know — upgrade this tool",
         )
       if (!found.wordsReady) {
         context.renderer.note(

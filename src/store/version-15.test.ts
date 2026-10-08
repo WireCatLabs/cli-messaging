@@ -3,11 +3,11 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { describe, expect, it } from "vitest"
 import type { Chat, Message } from "../domain/models.js"
-import { analyzerIdentity, DEFAULT_STEMMERS } from "../search/stem.js"
+import { analyzerIdentity, DEFAULT_STEMMERS, DEFAULT_STEMMERS_VERSION } from "../search/stem.js"
 import type { CacheDatabase } from "./driver.js"
 import { MIGRATIONS, migrate } from "./migrations.js"
 import { openCache } from "./open.js"
-import { fillStems, resetStems, saveStoreStemmers, stemsState } from "./sqlite/stems.js"
+import { fillStems, resetStems, saveStoreStemmers, stemmersOrigin, stemsState } from "./sqlite/stems.js"
 import { type AccountKey, BACKFILL_ON_OPEN, openStore } from "./store.js"
 
 const fresh = () => join(mkdtempSync(join(tmpdir(), "v15-")), "messages.db")
@@ -202,6 +202,19 @@ describe("store version 15, the stems", () => {
     await store.close()
   })
 
+  it("**a saved default says it is one**, and which defaults; `config set` is the owner's", async () => {
+    const path = fresh()
+    const store = await openStore({ path })
+    await store.saveChats(ME, [chat])
+    await store.saveMessages(ME, CHAT, [message("1", "houses")], { via: "history" })
+    await store.close()
+    await withDatabase(path, (database) => {
+      expect(stemmersOrigin(database)).toEqual({ origin: "default", defaults: DEFAULT_STEMMERS_VERSION })
+      saveStoreStemmers(database, ENGLISH, 0)
+      expect(stemmersOrigin(database)).toEqual({ origin: "owner" })
+    })
+  })
+
   it("**a setting only a newer tool knows** leaves the store usable and the stems not ready", async () => {
     const path = await version14(1)
     await (await openStore({ path })).close()
@@ -249,6 +262,35 @@ describe("store version 15, the stems", () => {
       expect(await store.stemsState()).toMatchObject({ ready: false, cause: "building", filledThrough: 0 })
       await store.fillStems()
       expect(await store.stemsState()).toMatchObject({ ready: true, built: analyzerIdentity(DEFAULT_STEMMERS) })
+      await store.close()
+    })
+
+    it("**replaces a default older defaults saved**, as nobody chose it", async () => {
+      const path = await builtByOldDefault(2)
+      await withDatabase(path, (database) =>
+        database
+          .prepare("INSERT INTO store_settings (key, value, at) VALUES ('searchStemmers', ?, 0)")
+          .run(JSON.stringify({ ...SPANISH, origin: "default", defaults: DEFAULT_STEMMERS_VERSION - 1 })),
+      )
+      const store = await openStore({ path })
+      expect(await store.stemsState()).toMatchObject({ ready: true, built: analyzerIdentity(DEFAULT_STEMMERS) })
+      expect(await store.stemmers()).toEqual(DEFAULT_STEMMERS)
+      await store.close()
+      await withDatabase(path, (database) =>
+        expect(stemmersOrigin(database)).toEqual({ origin: "default", defaults: DEFAULT_STEMMERS_VERSION }),
+      )
+    })
+
+    it("**leaves a default newer defaults saved**, so two versions never rebuild each other's", async () => {
+      const path = await builtByOldDefault(2)
+      await withDatabase(path, (database) =>
+        database
+          .prepare("INSERT INTO store_settings (key, value, at) VALUES ('searchStemmers', ?, 0)")
+          .run(JSON.stringify({ ...SPANISH, origin: "default", defaults: DEFAULT_STEMMERS_VERSION + 1 })),
+      )
+      const store = await openStore({ path })
+      expect(await store.stemmers()).toEqual(SPANISH)
+      expect(await store.stemsState()).toMatchObject({ ready: true, built: analyzerIdentity(SPANISH) })
       await store.close()
     })
 

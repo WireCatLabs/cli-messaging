@@ -2,7 +2,7 @@ import { existsSync } from "node:fs"
 import { DEFAULT_STEMMERS, parseStemmers, type Stemmers } from "../search/stem.js"
 import { openCache } from "../store/open.js"
 import { storePath } from "../store/path.js"
-import { savedStemmers } from "../store/sqlite/stems.js"
+import { savedStemmers, stemmersOrigin } from "../store/sqlite/stems.js"
 import { openStore } from "../store/store.js"
 import type { AppIdentity } from "./app.js"
 
@@ -41,6 +41,7 @@ export const changeStoreSetting = async (
 export const storeSettings = async (env: NodeJS.ProcessEnv) => {
   const path = storePath(env)
   let saved: Stemmers | null | undefined
+  let byDefault = false
   let unreadable = false
   if (existsSync(path)) {
     try {
@@ -48,6 +49,7 @@ export const storeSettings = async (env: NodeJS.ProcessEnv) => {
       try {
         const table = database.prepare("SELECT 1 FROM sqlite_master WHERE name = 'store_settings'").get()
         saved = table ? savedStemmers(database) : undefined
+        byDefault = table ? stemmersOrigin(database)?.origin === "default" : false
       } finally {
         database.close()
       }
@@ -59,6 +61,11 @@ export const storeSettings = async (env: NodeJS.ProcessEnv) => {
     const script = SCRIPTS[setting] as keyof Stemmers
     if (unreadable) return { setting, value: null, from: "store unreadable", scope: "store" }
     if (saved === null) return { setting, value: null, from: "store, unknown to this build", scope: "store" }
-    return { setting, value: (saved ?? DEFAULT_STEMMERS)[script], from: saved ? "store" : "default", scope: "store" }
+    return {
+      setting,
+      value: (saved ?? DEFAULT_STEMMERS)[script],
+      from: saved && !byDefault ? "store" : "default",
+      scope: "store",
+    }
   })
 }

@@ -12,6 +12,21 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 - `store jobs list --state <running|done|failed|cancelled|died>` answers only the jobs in that state. `JOB_STATES`
   exported beside `JobState`. The catalogue meaning of `--state` now covers tasks and jobs. Planned for max and tg.
+- `serve` fills stems still building — after a default change on a large store — a 2-second slice every
+  30 seconds until they are ready (`stems.stemmed` in its summary). `stemFills` is exported for a CLI with
+  its own `serve`, beside `memberFetches`.
+
+### Changed — may break callers
+
+- A search with stemmed words no longer fails while the stems are building, or when a newer tool chose
+  stemmers this one does not know: it matches each word's own form through the word index, and
+  `query.stemming` is `{ applied: false, reason: "building" | "stemmer_unknown", done, total, pending }`,
+  with a note on stderr. `stats` rankings and admin statistics do the same. Stems waiting for
+  `store reindex` after the owner's own choice still refuse. `QueryStemming` is now a union on `applied`.
+- A default saved in the store says so (`origin: "default"`, with the defaults' version), and a later
+  build with newer defaults replaces it without a reindex; an older build never rebuilds a newer default
+  back. `config show` lists it as `default`. A setting saved by 0.198.0–0.199.0 has no origin and counts
+  as the owner's.
 
 ## 0.199.0 — 08.10.2026
 

@@ -133,7 +133,8 @@ const compileQuery = (context: StoreContext, execution: QueryExecution, boundedA
     if ((field === "text" || field === "exact") && value === "") fragment = bound("0")
     else if (field === "body" && value === "") fragment = bound("m.text = ?", "")
     else if (isStemmed(node)) {
-      if (!execution.stemmer) throw new Error("a stemmed leaf reached the compiler without the store's stemmer")
+      if (!execution.stemmer && !execution.unstemmed)
+        throw new Error("a stemmed leaf reached the compiler without the store's stemmer")
       const text = normalize(value)
       const stems = stemsOf(value)
       // Words OR stems: two spellings can fold one word to different stems, and every exact hit must stay.

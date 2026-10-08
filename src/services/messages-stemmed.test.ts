@@ -164,14 +164,22 @@ describe("stemmed strict search", () => {
     expect((await ids(store, "running")).sort()).toEqual([1, 2, 3])
   })
 
-  it("**refuses while the stems are still building**, with how far they are", async () => {
+  it("**matches each word's own form while the stems are still building**, and says how far they are", async () => {
     const { store, path } = await open(TEXTS)
     const database = await openCache(path)
     database.exec("UPDATE search_index_state SET filled_through = 0, watermark = 7 WHERE name = 'message_stems'")
     database.close()
     // Past the 200 ms fill a search runs first, which would finish seven rows.
+    const found = await searchLucene(store, account, { text: "квартира", language: "lucene", limit: 10 })
+    expect(found.items.map(({ id }) => Number(id))).toEqual([2])
+    expect(found.stemsReady).toBe(false)
+    expect(found.query?.stemming).toEqual({ applied: false, reason: "building", done: 0, total: 7, pending: 0 })
+  })
+
+  it("**still refuses stems the owner chose until store reindex**", async () => {
+    const { store } = await open(TEXTS)
+    await store.saveStemmers({ cyrillic: "none", latin: "english" })
     const refused = await failure(searchLucene(store, account, { text: "квартира", language: "lucene", limit: 10 }))
-    expect(refused.details).toMatchObject({ reason: "index_not_ready", cause: "building", done: 0, total: 7 })
-    expect(await ids(store, "exact:квартира")).toEqual([2])
+    expect(refused.details).toMatchObject({ reason: "index_not_ready", cause: "stemmer_changed" })
   })
 })

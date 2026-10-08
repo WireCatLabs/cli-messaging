@@ -3,6 +3,7 @@ import {
   analyzerIdentity,
   createStemmer,
   DEFAULT_STEMMERS,
+  DEFAULT_STEMMERS_VERSION,
   parseStemmers,
   SNOWBALL_VERSION,
   type Stemmer,
@@ -63,10 +64,40 @@ const storeStemmers = (database: CacheDatabase): Stemmers | null => {
 
 const UNKNOWN = "unknown to this build"
 
-export const saveStoreStemmers = (database: CacheDatabase, stemmers: Stemmers, now: number): void => {
+/**
+ * `default` is saved beside the defaults' version; older builds read only `cyrillic` and `latin`, and take
+ * any saved value as the owner's choice. A setting without `origin` is the owner's, or a default saved by
+ * 0.198–0.199, which cannot be told apart.
+ */
+export const saveStoreStemmers = (
+  database: CacheDatabase,
+  stemmers: Stemmers,
+  now: number,
+  origin: "owner" | "default" = "owner",
+): void => {
+  const value = {
+    ...parseStemmers(stemmers),
+    ...(origin === "default" ? { origin, defaults: DEFAULT_STEMMERS_VERSION } : {}),
+  }
   database
     .prepare("INSERT OR REPLACE INTO store_settings (key, value, at) VALUES (?, ?, ?)")
-    .run(SETTING, JSON.stringify(parseStemmers(stemmers)), now)
+    .run(SETTING, JSON.stringify(value), now)
+}
+
+/** Who saved the setting: `undefined` when nothing is saved; a default also says which defaults it was. */
+export const stemmersOrigin = (
+  database: CacheDatabase,
+): { origin: "owner" } | { origin: "default"; defaults: number } | undefined => {
+  const row = database.prepare("SELECT value FROM store_settings WHERE key = ?").get(SETTING)
+  if (!row) return undefined
+  try {
+    const value = JSON.parse(String(row.value)) as { origin?: unknown; defaults?: unknown }
+    return value.origin === "default"
+      ? { origin: "default", defaults: Number(value.defaults) || 0 }
+      : { origin: "owner" }
+  } catch {
+    return { origin: "owner" }
+  }
 }
 
 /** `undefined` on a file before version 15. */
@@ -102,7 +133,7 @@ const claim = (database: CacheDatabase, identity: string): boolean => {
   const built = indexRow(database, INDEX)?.analyzer
   if (built === undefined) return false
   if (built === null) {
-    if (savedStemmers(database) === undefined) saveStoreStemmers(database, DEFAULT_STEMMERS, Date.now())
+    if (savedStemmers(database) === undefined) saveStoreStemmers(database, DEFAULT_STEMMERS, Date.now(), "default")
     database.prepare("UPDATE search_index_state SET analyzer = ? WHERE name = ?").run(identity, INDEX)
     return true
   }
@@ -264,7 +295,7 @@ export const resetStems = (
   inBatch(database, () => {
     // Saved, not defaulted: an older tool with another default then refuses as "unknown" instead of
     // rebuilding the stems back to its own choice on its next reindex.
-    if (savedStemmers(database) === undefined) saveStoreStemmers(database, DEFAULT_STEMMERS, now())
+    if (savedStemmers(database) === undefined) saveStoreStemmers(database, DEFAULT_STEMMERS, now(), "default")
     database.exec(`INSERT INTO ${INDEX} (${INDEX}) VALUES ('delete-all')`)
     database.exec("DELETE FROM message_stems_pending")
     database
@@ -280,10 +311,18 @@ export const resetStems = (
 /**
  * Stems an older tool built with its own default, while nobody chose stemmers, start again with this
  * build's default: nobody chose the old one, so it waits for no `store reindex`. Like a first fill
- * from then on. A row a newer Snowball built is left for an upgrade.
+ * from then on. A saved default is replaced only by newer defaults, so two versions never rebuild each
+ * other's. A row a newer Snowball built is left for an upgrade.
  */
 export const followDefaultStemmers = (database: CacheDatabase, now: () => number = Date.now): boolean => {
-  if (savedStemmers(database) !== undefined) return false
+  const saved = stemmersOrigin(database)
+  if (saved?.origin === "owner") return false
+  if (saved?.origin === "default") {
+    if (saved.defaults >= DEFAULT_STEMMERS_VERSION || savedStemmers(database) === null) return false
+    const built = stemsState(database)?.built
+    if (built && newer(snowballOf(built), snowballOf(`snowball-${SNOWBALL_VERSION}`))) return false
+    saveStoreStemmers(database, DEFAULT_STEMMERS, now(), "default")
+  }
   const state = stemsState(database)
   if (state?.cause !== "stemmer_changed" || state.built === null) return false
   if (newer(snowballOf(state.built), snowballOf(`snowball-${SNOWBALL_VERSION}`))) return false
