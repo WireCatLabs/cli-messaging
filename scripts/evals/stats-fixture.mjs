@@ -7,6 +7,34 @@ const root = resolve(process.env.STATS_EVAL_ROOT ?? "/tmp/stats-agent-evaluation
 const provider = process.env.STATS_EVAL_PROVIDER ?? "max"
 const command = provider === "telegram" ? "tg" : "max"
 const subject = resolve(process.env.STATS_EVAL_SUBJECT ?? join(dirname(fileURLToPath(import.meta.url)), "../.."))
+const WallDate = Date
+const seedFile = join(root, "seed.json")
+const priorSeed = existsSync(seedFile) ? JSON.parse(readFileSync(seedFile, "utf8")) : undefined
+const requestedClock = process.env.STATS_EVAL_CLOCK
+const clock = requestedClock ? WallDate.parse(requestedClock) : (priorSeed?.clock ?? null)
+if (clock !== null && !Number.isFinite(clock)) throw new Error("STATS_EVAL_CLOCK must be an ISO date")
+if (priorSeed && requestedClock && priorSeed.clock !== clock)
+  throw new Error("fixture clock differs from existing seed")
+if (priorSeed && process.env.STATS_EVAL_SEED && priorSeed.seed !== process.env.STATS_EVAL_SEED)
+  throw new Error("fixture seed differs from existing seed")
+if (clock !== null) {
+  globalThis.Date = class extends WallDate {
+    constructor(...args) {
+      super(...(args.length ? args : [clock]))
+    }
+    static now() {
+      return clock
+    }
+  }
+}
+process.env.TZ = "UTC"
+if (
+  priorSeed &&
+  (priorSeed.provider !== provider || priorSeed.variant !== (process.env.STATS_EVAL_VARIANT ?? "primary"))
+)
+  throw new Error("fixture provider or variant differs from existing seed")
+if (priorSeed && priorSeed.version !== JSON.parse(readFileSync(join(subject, "package.json"))).version)
+  throw new Error("fixture SDK version changed after seeding")
 const require = createRequire(join(realpathSync(subject), "package.json"))
 const load = (path) => import(pathToFileURL(join(subject, "dist", path)).href)
 const { captureStreams } = require("@leemour/cli-core")
@@ -40,7 +68,10 @@ const env = {
 }
 for (const name of ["home", "tmp", "config"]) mkdirSync(join(root, name), { recursive: true })
 const log = (entry) =>
-  appendFileSync(join(root, "trace.jsonl"), `${JSON.stringify({ at: new Date().toISOString(), ...entry })}\n`)
+  appendFileSync(
+    join(root, "trace.jsonl"),
+    `${JSON.stringify({ at: new WallDate().toISOString(), fixtureClock: new Date().toISOString(), ...entry })}\n`,
+  )
 const account = { provider, account: "500" }
 const DAY = 86400000
 const iso = (at) => new Date(at).toISOString()
@@ -187,6 +218,9 @@ if (!existsSync(join(root, "seed.json"))) {
     JSON.stringify({
       cutoff,
       start,
+      clock,
+      seed: process.env.STATS_EVAL_SEED ?? "synthetic-v1",
+      variant: process.env.STATS_EVAL_VARIANT ?? "primary",
       provider,
       subject,
       version: JSON.parse(readFileSync(join(subject, "package.json"))).version,
@@ -260,15 +294,15 @@ if (args[0] === "__seed") {
   process.stdout.write(JSON.stringify({ ready: true, provider, command }))
   process.exit(0)
 }
-const started = Date.now()
+const started = performance.now()
 let result
-if (args[0] === "__mcp") {
+if (args[0] === "__mcp" || args[0] === "__serve") {
   const { createServer } = await load("mcp/server.js")
   const { Client } = await import("@modelcontextprotocol/client")
   const { InMemoryTransport } = await import(
     pathToFileURL(require.resolve("@modelcontextprotocol/server").replace(/\.cjs$/, ".mjs")).href
   )
-  const { serveStdio } = await import(
+  const { serveStdio, StdioServerTransport } = await import(
     pathToFileURL(require.resolve("@modelcontextprotocol/server/stdio").replace(/\.cjs$/, ".mjs")).href
   )
   let made
@@ -283,6 +317,59 @@ if (args[0] === "__mcp") {
   })
   provide(program, { streams, tty: false, env, app })
   await program.parseAsync(["probe"], { from: "user" })
+  if (args[0] === "__serve") {
+    const transport = new StdioServerTransport()
+    const pending = new Map()
+    let handler
+    Object.defineProperty(transport, "onmessage", {
+      configurable: true,
+      get: () => handler,
+      set: (next) => {
+        handler = (message, ...rest) => {
+          if (message.method === "tools/call")
+            pending.set(message.id, {
+              args: ["__mcp", message.params.name, JSON.stringify(message.params.arguments ?? {})],
+              started: performance.now(),
+            })
+          return next?.(message, ...rest)
+        }
+      },
+    })
+    const send = transport.send.bind(transport)
+    transport.send = async (message, ...rest) => {
+      const request = pending.get(message.id)
+      if (request && (message.result || message.error)) {
+        const result = message.result ?? {
+          isError: true,
+          content: [{ type: "text", text: JSON.stringify({ error: message.error }) }],
+        }
+        log({
+          kind: "call",
+          args: request.args,
+          result,
+          milliseconds: performance.now() - request.started,
+          bytes: Buffer.byteLength(JSON.stringify(result)),
+          transport: "native-stdio",
+        })
+        pending.delete(message.id)
+      }
+      return send(message, ...rest)
+    }
+    const served = serveStdio(made.build, { transport })
+    let closing = false
+    const close = async () => {
+      if (closing) return
+      closing = true
+      await served.close()
+      await made.session.close()
+      await made.embedders.close()
+      process.exit(0)
+    }
+    process.once("SIGTERM", () => void close())
+    process.once("SIGINT", () => void close())
+    process.stdin.once("end", () => void close())
+    await new Promise(() => {})
+  }
   const [serverSide, clientSide] = InMemoryTransport.createLinkedPair()
   const served = serveStdio(made.build, { transport: serverSide })
   const client = new Client(
@@ -318,6 +405,6 @@ log({
   kind: "call",
   args,
   result,
-  milliseconds: Date.now() - started,
+  milliseconds: performance.now() - started,
   bytes: Buffer.byteLength(JSON.stringify(result)),
 })

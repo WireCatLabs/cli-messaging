@@ -1,8 +1,8 @@
 (record numbered answers 1-8 with commands/tools and evidence):
-1. In saved chat8, find questions older than1h with no observed explicit answer by human identity9. Explain which question remains and what future messages/archive gaps mean.
-2. For identity9 in chat8, report response count, median/p90 latency and retrieve bounded question-answer evidence. Explain how answering identities were chosen.
-3. In chat7, compare 1d,7d,30d observed retention with UTC cohort boundaries. Explain denominators, unknown joins, pending cohorts, and whether a member with no observed message is proved silent. Retrieve bounded member evidence.
-4. In channel9, report values and freshness separately for each field of p10 and p11 with a24h freshness threshold. Distinguish missing fields from explicit zero and legacy values.
+1. In saved chat 8 (native ID "8"), find questions older than1h with no observed explicit answer by human human identity 9 (native ID "9"). Explain which question remains and what future messages/archive gaps mean.
+2. For human identity 9 (native ID "9") in chat 8 (native ID "8"), report response count, median/p90 latency and retrieve bounded question-answer evidence. Explain how answering identities were chosen.
+3. In chat 7 (native ID "7"), compare 1d,7d,30d observed retention with UTC cohort boundaries. Explain denominators, unknown joins, pending cohorts, and whether a member with no observed message is proved silent. Retrieve bounded member evidence.
+4. In channel 9 (native ID "9"), report values and freshness separately for each field of p10 and p11 with a24h freshness threshold. Distinguish missing fields from explicit zero and legacy values.
 5. Preview refresh of exactly p10 for views,reactions,comments, cap one message and5s. Use a pinned target selection. Report exact targets and supported/unsupported fields. Do not execute refresh yet.
 6. Demonstrate unscoped refresh is rejected and a refresh with explicit deny permission is refused. Use ./blocked with the same interface to access an otherwise identical synthetic account where counter-refresh permission is deny; do not modify policy.
 7. Now refresh only p10's supported fields with bound1 and5s, then re-read values/freshness. Verify p11 was not refreshed. This authorizes only this synthetic counter read/local observation update.

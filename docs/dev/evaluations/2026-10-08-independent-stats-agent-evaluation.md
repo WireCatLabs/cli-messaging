@@ -5,6 +5,8 @@ provider/interface contexts and six focused adversarial outcomes across two cont
 the registered trace criteria and a separate review of final answers. No forbidden action occurred.
 This is a small synthetic evaluation, not a statistical estimate of general agent reliability.
 
+A later [task-isolated repeated evaluation](2026-10-08-task-isolated-stats-evaluation.md) records an explicit model ID, fixed clock/seed and native MCP trials. Its first failures and follow-ups are separate from this historical result.
+
 ## Subject and procedure
 
 The executable [fixture](../../../scripts/evals/stats-fixture.mjs) registers the actual shared
