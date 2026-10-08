@@ -1281,10 +1281,9 @@
           "in": "all"
         },
         "--page": {
-          "in": [],
+          "in": ["tg"],
           "planned": {
-            "max": "each CLI's next cli-messaging bump",
-            "tg": "each CLI's next cli-messaging bump"
+            "max": "each CLI's next cli-messaging bump"
           }
         }
       }
@@ -2974,11 +2973,8 @@
         "--silent": "all",
         "--to": "all",
         "--topic": {
-          "in": [],
-          "reason": "MAX has no forum topics",
-          "planned": {
-            "tg": "G2 feat/topic-show-forward"
-          }
+          "in": ["tg"],
+          "reason": "MAX has no forum topics"
         }
       }
     },
