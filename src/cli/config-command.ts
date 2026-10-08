@@ -1,5 +1,3 @@
-import { existsSync, readdirSync } from "node:fs"
-import { join } from "node:path"
 import {
   CliError,
   configFilePath,
@@ -13,6 +11,7 @@ import { Command } from "commander"
 import * as v from "valibot"
 import { type AppIdentity, envName } from "./app.js"
 import { baseContext } from "./context.js"
+import { profilesWithAccounts } from "./messenger/accounts.js"
 import { knownBeside, knownPermissionKeys, type PermissionKeyOf } from "./permission-keys.js"
 import { hasPermissionConfig, migratePermissionConfig } from "./permission-migration.js"
 import { type Configuration, fromFile, type Settings } from "./settings.js"
@@ -234,12 +233,3 @@ const sourced = (settings: Settings, setting: string) => {
 
 /** Settings read where they are used rather than in `resolveSettings`, and what an unset one means there. */
 const UNLISTED_DEFAULTS: Record<string, unknown> = { transcribeWith: "auto" }
-
-/** Profiles somebody has logged in to, whether or not the configuration file names them. */
-const profilesWithAccounts = (app: AppIdentity, env: NodeJS.ProcessEnv): string[] => {
-  const dir = join(resolvePaths({ appName: app.appName, prefix: app.envPrefix, env }).state, "accounts")
-  if (!existsSync(dir)) return []
-  return readdirSync(dir)
-    .filter((name) => name.endsWith(".json"))
-    .map((name) => name.slice(0, -".json".length))
-}

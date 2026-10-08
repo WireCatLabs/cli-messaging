@@ -38,6 +38,13 @@ export const findAccountPk = ({ orm }: StoreContext, { provider, account }: Acco
     .where(and(eq(accounts.provider, provider), eq(accounts.nativeId, account)))
     .get()?.pk
 
+export const accountName = ({ orm }: StoreContext, { provider, account }: AccountKey): string | null =>
+  orm
+    .select({ name: accounts.name })
+    .from(accounts)
+    .where(and(eq(accounts.provider, provider), eq(accounts.nativeId, account)))
+    .get()?.name ?? null
+
 export const heldAccounts = ({ orm }: StoreContext): AccountKey[] =>
   orm
     .select({ provider: accounts.provider, account: accounts.nativeId })

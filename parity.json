@@ -1093,6 +1093,13 @@
     "account": {
       "in": "all"
     },
+    "account list": {
+      "in": [],
+      "planned": {
+        "max": "each CLI's next cli-messaging bump",
+        "tg": "each CLI's next cli-messaging bump"
+      }
+    },
     "account privacy": {
       "in": ["max"],
       "planned": {
