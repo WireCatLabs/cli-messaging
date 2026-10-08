@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.193.0 — 08.10.2026
+
 ### Added
 
 - Parity: `chats link update`, `chats link list` and `chats link revoke` are shipped rows in tg (TG#364, TG#344);
