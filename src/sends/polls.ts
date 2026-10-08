@@ -2,11 +2,27 @@ import { CliError } from "@leemour/cli-core"
 import type { MessengerAdapter, NewPoll, Sent } from "../cli/messenger/port.js"
 import { capability } from "../cli/messenger/port.js"
 import { threadIdOf } from "../cli/messenger/thread.js"
-import type { Id, Poll } from "../domain/models.js"
+import type { Id, Page, Poll, PollVote } from "../domain/models.js"
 import type { SendGuard } from "./guard.js"
 import { guardedWrite, type Operated } from "./guarded.js"
 import { sendAsCheck } from "./send-as.js"
 import { newOperationId, newSendId } from "./send-id.js"
+
+/** The poll is read first: nobody, the owner included, may see who voted in an anonymous one. */
+export const pollVoters = async (
+  connection: MessengerAdapter,
+  { chat, message, answer, limit }: { chat: string; message: string; answer?: Id; limit: number },
+): Promise<Page<PollVote> & { chatId: Id; messageId: Id; total: number }> => {
+  const voters = capability(connection, "pollVoters", "list who voted")
+  const read = capability(connection, "poll", "read a poll")
+  const { id: chatId } = await connection.resolve(chat)
+  const poll = await read(chatId, message)
+  if (poll.anonymous) throw new CliError("validation_error", "nobody can see who voted in an anonymous poll")
+  if (answer !== undefined && !poll.answers.some((one) => one.id === answer))
+    throw new CliError("validation_error", `the poll has no answer ${answer}; \`polls show\` prints their ids`)
+  const page = await voters(chatId, message, { limit, ...(answer === undefined ? {} : { answerId: answer }) })
+  return { chatId, messageId: message, ...page }
+}
 
 /** A vote is shown to the others like a reaction, and counts toward nothing. */
 export const guardedVote = async (

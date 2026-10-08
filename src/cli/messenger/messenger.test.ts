@@ -1212,6 +1212,53 @@ describe("the shared read commands", () => {
     ])
   })
 
+  it("**lists who voted for what**, after reading the poll, and refuses an anonymous one or an unknown answer", async () => {
+    const root = mkdtempSync(join(tmpdir(), "messenger-"))
+    const env = { CHAT_STATE_DIR: join(root, "state"), CHAT_CONFIG_DIR: join(root, "config") }
+    const poll = {
+      chatId: "7",
+      messageId: "3",
+      question: "Friday?",
+      answers: [
+        { id: "MA", text: "yes", voters: 1, chosen: false },
+        { id: "MQ", text: "no", voters: 0, chosen: false },
+      ],
+      closed: false,
+      multiple: false,
+      anonymous: false,
+      voters: 1,
+    }
+    const vote = {
+      person: { id: "91", name: "Ana", username: null },
+      answers: ["MA"],
+      votedAt: "2026-10-08T09:00:00.000Z",
+    }
+    const asked: unknown[] = []
+    let anonymous = false
+    const polling: MessengerAdapter = {
+      ...fake,
+      poll: async () => ({ ...poll, anonymous }),
+      pollVoters: async (_chatId, _messageId, window) => {
+        asked.push(window)
+        return { items: [vote], hasMore: false, total: 1 }
+      },
+    }
+    const voters = (...extra: string[]) =>
+      call(["polls", "voters", "Book", "3", ...extra], async () => polling, env, {}, { pollVoters: true })
+
+    const listed = await voters("--answer", "MA", "--limit", "5", "--json")
+    const unknown = await voters("--answer", "ZZ")
+    anonymous = true
+    const hidden = await voters()
+    const unlisted = await call(["polls", "voters", "Book", "3"], async () => polling, env)
+
+    expect(JSON.parse(listed.stdout[0] ?? "")).toMatchObject({ chatId: "7", messageId: "3", total: 1, items: [vote] })
+    expect(asked).toEqual([{ limit: 5, answerId: "MA" }])
+    expect([unknown.code, hidden.code]).toEqual([2, 2])
+    expect(hidden.stderr.join("\n")).toContain("anonymous")
+    expect(unlisted.code).not.toBe(0)
+  })
+
   it("**creates a quiz where the messenger makes them**, and refuses quiz options that do not go together", async () => {
     const root = mkdtempSync(join(tmpdir(), "messenger-"))
     const env = { CHAT_STATE_DIR: join(root, "state"), CHAT_CONFIG_DIR: join(root, "config") }

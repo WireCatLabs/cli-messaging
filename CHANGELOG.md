@@ -6,6 +6,13 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- `polls voters <chat> <message> [--answer <id>] [--limit]` and MCP `polls_voters`: who voted for what in a
+  poll that is not anonymous, newest first, with the total. The poll is read first; an anonymous one or an
+  unknown answer is refused. Through the optional `MessagePolls.pollVoters` and the new `PollVote`; listed only
+  where `Messenger.pollVoters` is true.
+
 ## 0.200.0 — 08.10.2026
 
 ### Added

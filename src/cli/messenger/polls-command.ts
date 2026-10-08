@@ -1,7 +1,7 @@
 import { CliError } from "@leemour/cli-core"
 import { annotate } from "@leemour/cli-core/commands"
 import { Command } from "commander"
-import { guardedClose, guardedCreatePoll, guardedVote, quizOf } from "../../sends/polls.js"
+import { guardedClose, guardedCreatePoll, guardedVote, pollVoters, quizOf } from "../../sends/polls.js"
 import { typedSendAs } from "../../sends/send-as.js"
 import { positiveCount } from "../paging.js"
 import { type Messenger, messengerContext } from "./context.js"
@@ -29,6 +29,31 @@ export const pollsCommand = (messenger: Messenger): Command => {
         }),
       )
     })
+
+  if (messenger.pollVoters)
+    polls
+      .command("voters")
+      .description("who voted for what, newest first; not in an anonymous poll")
+      .argument("<chat>", messenger.chatArgument)
+      .argument("<message>", "the id of the message that carries the poll")
+      .option("--answer <id>", "only those who chose this answer, as `polls show` prints it")
+      .option("--limit <n>", "how many", positiveCount("--limit"))
+      .action(async function (this: Command, chat: string, message: string) {
+        const context = messengerContext(this, messenger)
+        const { answer } = this.opts<{ answer?: string }>()
+        const { limit } = context.settings
+        const found = await context.withMessenger((connection) =>
+          pollVoters(connection, {
+            chat,
+            message: message.trim(),
+            limit,
+            ...(answer === undefined ? {} : { answer: answer.trim() }),
+          }),
+        )
+        if (context.format === "json") context.renderer.result(found)
+        else context.renderer.stream(found.items)
+        if (found.hasMore) context.renderer.note(`more voters: raise --limit above ${limit}`)
+      })
 
   annotate(polls.command("vote"), { mutates: true })
     .description("vote in a poll, or take your vote back; the others see it unless the poll is anonymous")

@@ -2,12 +2,31 @@ import { CliError } from "@leemour/cli-core"
 import * as v from "valibot"
 import type { Messenger } from "../../cli/messenger/context.js"
 import { capability } from "../../cli/messenger/port.js"
-import { guardedClose, guardedCreatePoll, guardedVote, quizOf } from "../../sends/polls.js"
-import { type AnyTool, chatOf, message, READ, tool, WRITE } from "../tool.js"
+import { guardedClose, guardedCreatePoll, guardedVote, pollVoters, quizOf } from "../../sends/polls.js"
+import { type AnyTool, chatOf, limit, message, READ, tool, WRITE } from "../tool.js"
 
 const answerId = v.pipe(v.string(), v.minLength(1), v.description("an answer id, as polls_show gives it"))
 
 export const pollReadTools = (messenger: Messenger): Record<string, AnyTool> => ({
+  ...(messenger.pollVoters
+    ? {
+        polls_voters: tool({
+          title: "Who voted in a poll",
+          description:
+            "Who voted for what in a poll that is not anonymous, newest first: { chatId, messageId, total, items: " +
+            "[{ person, answers, votedAt }], hasMore }. answer keeps those who chose it. Reading changes nothing.",
+          input: v.object({ chat: chatOf(messenger), message, answer: v.optional(answerId), limit }),
+          annotations: { ...READ, idempotentHint: true },
+          online: (adapter, args, defaults) =>
+            pollVoters(adapter, {
+              chat: args.chat,
+              message: args.message,
+              limit: args.limit ?? defaults.limit,
+              ...(args.answer === undefined ? {} : { answer: args.answer }),
+            }),
+        }),
+      }
+    : {}),
   polls_show: tool({
     title: "Show a poll",
     description: "A poll as the message carries it now: its question, and each answer with the id a vote names.",

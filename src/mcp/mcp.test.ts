@@ -316,6 +316,7 @@ interface Harness {
   history?: Messenger["history"]
   pollQuiz?: boolean
   inviteLinkUpdate?: boolean
+  pollVoters?: boolean
   counterFields?: Messenger["counterFields"]
   serverSearch?: boolean
   /** Another server's files, to read what it stored. */
@@ -344,6 +345,7 @@ const connect = async (telegram: Scripted = scripted(), options: Partial<ServerO
     serverSearch,
     pollQuiz,
     inviteLinkUpdate,
+    pollVoters,
     counterFields,
     root: _root,
     http,
@@ -366,6 +368,7 @@ const connect = async (telegram: Scripted = scripted(), options: Partial<ServerO
     ...(serverSearch ? { serverSearch } : {}),
     ...(pollQuiz ? { pollQuiz } : {}),
     ...(inviteLinkUpdate ? { inviteLinkUpdate } : {}),
+    ...(pollVoters ? { pollVoters } : {}),
     ...(counterFields ? { counterFields } : {}),
   }
   const streams = captureStreams()
@@ -2696,6 +2699,36 @@ describe("sending over MCP", () => {
 
     expect(rules.body).toMatchObject({ saved: false, rules: { consent: { delete: "ask" } } })
     expect(moderated.body).toMatchObject({ rows: [] })
+  })
+
+  it("lists who voted on a read-only profile, only where the messenger offers it", async () => {
+    const poll = {
+      chatId: "7",
+      messageId: "1",
+      question: "Friday?",
+      answers: [{ id: "MA", text: "yes", voters: 1, chosen: false }],
+      closed: false,
+      multiple: false,
+      anonymous: false,
+      voters: 1,
+    }
+    const vote = {
+      person: { id: "91", name: "Ana", username: null },
+      answers: ["MA"],
+      votedAt: "2026-10-08T09:00:00.000Z",
+    }
+    const telegram = scripted({
+      poll: async () => poll,
+      pollVoters: async () => ({ items: [vote], hasMore: false, total: 1 }),
+    })
+    const reading = await connect(telegram, { config: READ_ONLY, pollVoters: true })
+    const plain = await connect(telegram, {})
+
+    const listed = await reading.call("chat_polls_voters", { chat: "7", message: "1", answer: "MA" })
+    const plainTools = (await plain.client.listTools()).tools.map((one) => one.name)
+
+    expect(listed.body).toMatchObject({ chatId: "7", total: 1, items: [vote] })
+    expect(plainTools).not.toContain("chat_polls_voters")
   })
 
   it("reads a poll on a read-only profile, and votes by id where it may", async () => {
