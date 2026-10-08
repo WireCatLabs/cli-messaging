@@ -1,7 +1,8 @@
 # Administrator statistics command contract
 
 Owner approved on 2026-10-08. This names the shared MAX/Telegram reports; availability is
-tracked in parity.json. No new root commands or writes.
+tracked in parity.json. The shared implementation is complete; native adoption evidence accompanies
+the final validation report. No new root commands or remote writes.
 
 | Path | Purpose | Required input |
 |---|---|---|
