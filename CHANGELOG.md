@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.202.0 — 08.10.2026
+
 ### Added
 
 - Store version 27: `owner_targets`. A label on a person, entity, task or notes folder belongs to no account:
