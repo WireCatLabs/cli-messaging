@@ -6,6 +6,11 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Changed — may break callers
+
+- `JoinRequest.requestedAt` is `string | null`: MAX lists join requests without a time (measured in max-cli,
+  2026-10-08). Telegram still gives one.
+
 ### Added
 
 - Parity: `chats requests` is planned for max — a MAX channel does approve who joins (measured in max-cli, 2026-10-08);
