@@ -31,6 +31,7 @@ export type ChatAction =
   | "forum-enable"
   | "topic-create"
   | "topic-edit"
+  | "topic-delete"
   | "topic-close"
   | "topic-reopen"
   | "topic-pin"

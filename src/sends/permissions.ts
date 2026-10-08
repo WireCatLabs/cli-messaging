@@ -70,6 +70,7 @@ export const DEFAULT_PERMISSIONS: Readonly<Record<PermissionKey, Level>> = {
   "account.sessions.end": "ask",
   "bot.messages.delete": "ask",
   "topics.enable": "ask",
+  "topics.delete": "ask",
   // NEED-568: a rule writes to people with nobody typing a command; it waits for the owner's own allow.
   "replies.send": "deny",
 }
@@ -116,6 +117,7 @@ const OLD_WORDS: Record<Permission, PermissionKey[]> = {
     "topics.enable",
     "topics.create",
     "topics.edit",
+    "topics.delete",
   ],
   contacts: ["contacts"],
   profile: ["account.update"],

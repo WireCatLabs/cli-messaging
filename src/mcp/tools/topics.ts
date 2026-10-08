@@ -60,6 +60,21 @@ export const topicWriteTools = (messenger: Messenger): Record<string, AnyTool> =
         ...(args.send_id === undefined ? {} : { sendId: args.send_id }),
       }),
   }),
+  topics_delete: tool({
+    title: "Delete a forum topic",
+    description:
+      "Only when the owner asked to delete this topic. Deletes the topic and every message in it, for everyone; it " +
+      "cannot be undone, and asks first unless topics.delete is allow. The General topic (1) cannot be deleted. " +
+      "Returns { operationId, chatId, topicId }. On outcome_unknown, read topics_list: a topic that is gone was deleted.",
+    input: v.object({
+      chat: chatOf(messenger),
+      topic: v.pipe(v.string(), v.minLength(1), v.description("the topic id, from topics_list")),
+    }),
+    annotations: WRITE,
+    permission: "groups",
+    online: (adapter, args, { guard }) =>
+      servicesFor(onlineDeps(messenger, adapter, guard)).topics.delete(args.chat, args.topic),
+  }),
   topics_edit: tool({
     title: "Rename, close, reopen, pin or unpin a forum topic",
     description:
