@@ -8,6 +8,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Added
 
+- `chats start <bot>` also takes the bot's link, one the account never opened, and reads its `?start=` when
+  `--payload` is not given; through the new `BotChats.botByLink`.
 - Parity: `messages press`, `chats start` and `chats app` are shipped rows in max (max-cli #490), tg planned;
   `--payload` and `--start` join the option catalogue.
 

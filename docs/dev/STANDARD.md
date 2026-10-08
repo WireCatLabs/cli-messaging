@@ -468,7 +468,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--page` | `<n>` | which page, starting at 1 |  | `attachments list`, `chats list`, `chats members list` (planned), `contacts list` |
 | `--page-size` | `<n>` | how many items one request to the messenger asks for; the messenger's own if not given. **the default is each messenger's own page: 30 on MAX, 100 on Telegram** |  | `bot store fetch`, `store fetch`, `store gaps repair` |
 | `--pause` | `<duration>` | the least wait between pages, 5s or 500ms; each is up to twice that. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** | `5s` | `bot store fetch`, `messages download`, `store fetch`, `store gaps repair` |
-| `--payload` | `<text>` | the start parameter the bot reads, as a ?start= link carries it |  | `chats start` (planned) |
+| `--payload` | `<text>` | the start parameter the bot reads; a link's own ?start= when not given |  | `chats start` (planned) |
 | `--people` | `<ids>` | only these sender ids, comma-separated; empty for any |  | `replies edit` |
 | `--per-chat` | `<limit>` | at most this many per chat, such as 1/12h |  | `replies edit` |
 | `--per-person` | `<limit>` | at most this many per person, such as 1/1d |  | `replies edit` |

@@ -1187,6 +1187,31 @@ describe("the shared read commands", () => {
     expect(JSON.stringify(journal)).not.toContain("signed")
   })
 
+  it("**starts a bot by its link**, taking the link's start parameter unless --payload is given", async () => {
+    const root = mkdtempSync(join(tmpdir(), "messenger-"))
+    const env = { CHAT_STATE_DIR: join(root, "state"), CHAT_CONFIG_DIR: join(root, "config") }
+    const starts: unknown[] = []
+    const bot: MessengerAdapter = {
+      ...fake,
+      botByLink: async (reference) =>
+        reference.startsWith("https://") ? { chatId: "42", payload: "from-link" } : undefined,
+      startBot: async (chatId, options) => {
+        starts.push([chatId, options.payload])
+      },
+    }
+    const bots = { personalBots: true }
+
+    await call(["chats", "start", "https://bot.example/b?start=from-link"], async () => bot, env, {}, bots)
+    await call(["chats", "start", "https://bot.example/b", "--payload", "typed"], async () => bot, env, {}, bots)
+    await call(["chats", "start", "Book"], async () => bot, env, {}, bots)
+
+    expect(starts).toEqual([
+      ["42", "from-link"],
+      ["42", "typed"],
+      ["7", undefined],
+    ])
+  })
+
   it("**creates a quiz where the messenger makes them**, and refuses quiz options that do not go together", async () => {
     const root = mkdtempSync(join(tmpdir(), "messenger-"))
     const env = { CHAT_STATE_DIR: join(root, "state"), CHAT_CONFIG_DIR: join(root, "config") }

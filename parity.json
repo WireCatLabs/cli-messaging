@@ -705,7 +705,7 @@
     },
     "--payload": {
       "value": "<text>",
-      "meaning": "the start parameter the bot reads, as a ?start= link carries it"
+      "meaning": "the start parameter the bot reads; a link's own ?start= when not given"
     },
     "--people": {
       "meaning": "only these sender ids, comma-separated; empty for any",
