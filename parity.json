@@ -2065,75 +2065,28 @@
       }
     },
     "chats requests": {
-      "in": ["tg"],
-      "planned": {
-        "max": "max-cli MAX-73: a MAX channel approves joins (measured 2026-10-08); MAX sends no request time"
-      }
+      "in": "all"
     },
     "chats requests accept": {
-      "in": ["tg"],
-      "planned": {
-        "max": "max-cli MAX-73"
-      },
+      "in": "all",
       "options": {
-        "--all": {
-          "in": ["tg"],
-          "planned": {
-            "max": "max-cli MAX-73"
-          }
-        },
-        "--link": {
-          "in": ["tg"],
-          "planned": {
-            "max": "max-cli MAX-73"
-          }
-        }
+        "--all": "all",
+        "--link": "all"
       }
     },
     "chats requests decline": {
-      "in": ["tg"],
-      "planned": {
-        "max": "max-cli MAX-73"
-      },
+      "in": "all",
       "options": {
-        "--all": {
-          "in": ["tg"],
-          "planned": {
-            "max": "max-cli MAX-73"
-          }
-        },
-        "--link": {
-          "in": ["tg"],
-          "planned": {
-            "max": "max-cli MAX-73"
-          }
-        }
+        "--all": "all",
+        "--link": "all"
       }
     },
     "chats requests list": {
-      "in": ["tg"],
-      "planned": {
-        "max": "max-cli MAX-73"
-      },
+      "in": "all",
       "options": {
-        "--limit": {
-          "in": ["tg"],
-          "planned": {
-            "max": "max-cli MAX-73"
-          }
-        },
-        "--link": {
-          "in": ["tg"],
-          "planned": {
-            "max": "max-cli MAX-73"
-          }
-        },
-        "--search": {
-          "in": ["tg"],
-          "planned": {
-            "max": "max-cli MAX-73"
-          }
-        }
+        "--limit": "all",
+        "--link": "all",
+        "--search": "all"
       }
     },
     "chats rules": {
