@@ -288,6 +288,7 @@ const NAMED_WRITE_KEYS = [
   "chats.link.create",
   "chats.link.reset",
   "chats.link.revoke",
+  "chats.link.update",
   "chats.members.add",
   "chats.members.remove",
   "chats.moderate",

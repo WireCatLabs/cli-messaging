@@ -97,6 +97,19 @@ it("omits unsupported invite link list/revoke in CLI and MCP discovery", () => {
   expect(adminTools(messenger)).not.toHaveProperty("chats_link_revoke")
 })
 
+it("lists chats link update only for a messenger that says it can", () => {
+  const names = (messenger: Messenger) =>
+    groupCommands(messenger)
+      .find((command) => command.name() === "link")
+      ?.commands.map((command) => command.name())
+  const unset = { chatArgument: "stored chat" } as Messenger
+  const able = { ...unset, inviteLinkUpdate: true } as Messenger
+  expect(names(unset)).not.toContain("update")
+  expect(adminTools(unset)).not.toHaveProperty("chats_link_update")
+  expect(names(able)).toContain("update")
+  expect(adminTools(able)).toHaveProperty("chats_link_update")
+})
+
 describe("chats create, join and leave", () => {
   it("**creates a group with the people resolved to ids**, through the guard, and journals no title", async () => {
     const env = sandbox()
@@ -406,6 +419,34 @@ describe("chats create, join and leave", () => {
     expect(new SendJournal(sendsPathFor(app, "default", env)).entries().map((one) => one.action)).toEqual([
       "requests.decline",
       "link.revoke",
+    ])
+  })
+
+  it("**changes an invite link with --approval, --no-approval and --max-uses**, and refuses no change", async () => {
+    const env = sandbox()
+    const changes: unknown[] = []
+    const adapter: MessengerAdapter = {
+      ...base,
+      updateInviteLink: async (_chatId, link, change) => {
+        changes.push(change)
+        return { link, approval: change.approval ?? false, expiresAt: null, maxUses: change.maxUses ?? null }
+      },
+    }
+    const update = (...options: string[]) =>
+      call(["chats", "link", "update", "Book club", "https://t.me/+synthetic", ...options, "--json"], adapter, env, {
+        inviteLinkUpdate: true,
+      })
+
+    const on = await update("--approval", "--max-uses", "5")
+    const off = await update("--no-approval")
+    const nothing = await update()
+
+    expect(JSON.parse(on.stdout[0] ?? "")).toMatchObject({ chatId: "7", approval: true, maxUses: 5 })
+    expect(changes).toEqual([{ approval: true, maxUses: 5 }, { approval: false }])
+    expect([off.code, nothing.code]).toEqual([0, 2])
+    expect(new SendJournal(sendsPathFor(app, "default", env)).entries().map((one) => one.action)).toEqual([
+      "link.update",
+      "link.update",
     ])
   })
 

@@ -107,6 +107,8 @@ export interface Messenger {
   inviteLinkList?: boolean
   /** Whether one invite link can be revoked; yes when unset. */
   inviteLinkRevoke?: boolean
+  /** Whether one invite link can be changed — `chats link update`; no when unset. */
+  inviteLinkUpdate?: boolean
   /** Whether the messenger says when an account was made — the moderation rule `newAccount`; yes when unset. */
   knowsAccountAge?: boolean
   /**

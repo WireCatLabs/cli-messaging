@@ -101,3 +101,50 @@ describe("listing and revoking invite links", () => {
     await expect(f.service.revokeLink("synthetic group", "https://t.me/+x")).rejects.toThrow("cannot revoke")
   })
 })
+
+describe("changing an invite link", () => {
+  const link = { link: "https://t.me/+synthetic", approval: false, expiresAt: null, maxUses: null }
+  const fixtureWith = () => {
+    const f = fixture()
+    const updateInviteLink = vi.fn(async (_chatId: string, _link: string, change: object) => ({ ...link, ...change }))
+    const connection = vi.fn(
+      async () => ({ resolve: async () => chat, updateInviteLink }) as unknown as MessengerAdapter,
+    )
+    return { ...f, updateInviteLink, connection, service: adminService({ ...f.deps, connection }) }
+  }
+
+  it("sends only the fields given, through the guard", async () => {
+    const f = fixtureWith()
+    const changed = await f.service.updateLink("synthetic group", " https://t.me/+synthetic ", {
+      approval: false,
+      maxUses: 5,
+    })
+    expect(changed).toMatchObject({ chatId: "-1007", maxUses: 5, approval: false })
+    expect(f.updateInviteLink).toHaveBeenCalledWith("-1007", "https://t.me/+synthetic", { approval: false, maxUses: 5 })
+    expect(f.checked).toEqual([expect.objectContaining({ kind: "chat", action: "link.update" })])
+    expect(f.records).toMatchObject([{ action: "link.update", outcome: "sent" }])
+  })
+
+  it("turns an expiry into an ISO minute", async () => {
+    const f = fixtureWith()
+    await f.service.updateLink("synthetic group", "https://t.me/+synthetic", { expires: "7d" })
+    expect(f.updateInviteLink.mock.calls[0]?.[2]).toEqual({ expiresAt: expect.stringMatching(/:00\.000Z$/) })
+  })
+
+  it.each([
+    [{}, "nothing to change"],
+    [{ maxUses: 0 }, "--max-uses takes a whole number from 1 to 99999"],
+    [{ expires: "soon" }, "--expire-time takes a time like"],
+  ])("refuses %j before connecting", async (change, message) => {
+    const f = fixtureWith()
+    await expect(f.service.updateLink("synthetic group", "https://t.me/+synthetic", change)).rejects.toThrow(message)
+    await expect(f.service.updateLink("synthetic group", " ", { approval: true })).rejects.toThrow("which link")
+    expect(f.connection).not.toHaveBeenCalled()
+  })
+
+  it("is refused by a messenger that cannot change links", async () => {
+    await expect(
+      fixture().service.updateLink("synthetic group", "https://t.me/+x", { approval: true }),
+    ).rejects.toThrow("cannot change an invite link")
+  })
+})

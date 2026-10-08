@@ -309,7 +309,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--anonymous` |  | nobody sees who voted for what |  | `polls create` |
 | `--answerer` | `<id>` | a scoped human identity whose explicit reply qualifies; repeat it for more |  | `stats chats newcomers`, `stats contacts responses`, `stats messages unanswered` |
 | `--app` | `<how>` | the first time only: how to get this profile's app from my.telegram.org | `browser` | `session start` (tg-only), `setup` (planned) |
-| `--approval` |  | who joins by it asks first, and an admin lets them in |  | `chats link create` (planned) |
+| `--approval` |  | who joins by it asks first, and an admin lets them in |  | `chats link create` (planned), `chats link update` (planned) |
 | `--as` | `<state>` | how a task is closed: done, or dismissed — it needs no answer |  | `tasks close` |
 | `--as-file` |  | send every --file as a plain file to download, a video included |  | `bot messages send`, `messages send` |
 | `--as-reply` |  | send as a reply to the matched message |  | `replies edit` |
@@ -367,7 +367,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--events` |  | also print edits, deletions and reactions; every line then names its event. **watch updates use this flag independently of the group event --type filter** |  | `bot watch`, `watch` |
 | `--exact` |  | bare words and quotes match their exact form only, as exact:word does; text: still matches every form |  | `messages search`, `searches create`, `stats contacts responses`, `stats contacts top`, `stats messages counters refresh`, `stats messages counters show`, `stats messages discussion`, `stats messages show`, `stats messages top`, `stats messages unanswered` |
 | `--exclude-chat` | `<chat>` | never show this chat in the folder; repeat it for more |  | `chats folders create` (planned), `chats folders update` (planned) |
-| `--expire-time` | `<time>` | it stops working then: 2026-09-25T09:00 (local time), or 30m, 2h, 7d from now |  | `chats link create` (planned) |
+| `--expire-time` | `<time>` | it stops working then: 2026-09-25T09:00 (local time), or 30m, 2h, 7d from now |  | `chats link create` (planned), `chats link update` (planned) |
 | `--extract` |  | extract text from files mapped by this download |  | `messages download` |
 | `--failed` |  | every chat whose newest job failed or died |  | `store jobs retry` |
 | `--fields` | `<paths>` | only these comma-separated fields of machine result items; preserves list metadata |  | every command |
@@ -413,7 +413,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--max-output-bytes` | `<bytes>` | at most this many serialized bytes of machine data; 0 disables the bound | `4194304` | every command |
 | `--max-replies` | `<n>` | maximum observed discussion replies |  | `stats messages discussion` |
 | `--max-tokens` | `<n>` | remote embeddings: bound input tokens; analysis: reserve input and output tokens across this run |  | `conversations build`, `conversations embed` |
-| `--max-uses` | `<n>` | at most this many people join by it, 1 to 99999 |  | `chats link create` (planned) |
+| `--max-uses` | `<n>` | at most this many people join by it, 1 to 99999 |  | `chats link create` (planned), `chats link update` (planned) |
 | `--md` |  | read this messenger's Markdown; see its formatting guide for supported syntax |  | `bot messages edit`, `bot messages send`, `messages edit`, `messages send` |
 | `--measure` | `<name>` | the metric used to order a ranking; not with --score or --weights |  | `stats contacts top`, `stats messages top` |
 | `--members-see-link` | `<on\|off>` | members may see the invite link |  | `chats update` (max-only) |
@@ -429,6 +429,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--needs-text` |  | only files saved here whose text nobody has yet: what an agent reads and writes back |  | `attachments list` |
 | `--new` |  | what arrived since the last check, each message once — for scheduled runs |  | `inbox`, `review` |
 | `--newest` |  | newest first instead of best first |  | `bot messages search`, `messages search`, `searches create` |
+| `--no-approval` |  | anyone with it joins at once |  | `chats link update` (planned) |
 | `--no-as-reply` |  | send without linking to the matched message |  | `replies edit` |
 | `--no-ban` |  | remove without banning; by default a removed person cannot come back by the link |  | `bot chats moderate` |
 | `--no-catch-up` |  | skip local preparation after this fetch |  | `store fetch`, `store gaps repair` |

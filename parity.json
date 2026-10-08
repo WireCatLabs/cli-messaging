@@ -557,6 +557,9 @@
     "--newest": {
       "meaning": "newest first instead of best first"
     },
+    "--no-approval": {
+      "meaning": "anyone with it joins at once"
+    },
     "--no-as-reply": {
       "meaning": "send without linking to the matched message"
     },
@@ -1776,6 +1779,43 @@
     },
     "chats link show": {
       "in": "all"
+    },
+    "chats link update": {
+      "in": [],
+      "reason": "max-cli has no way to change an invite link",
+      "planned": {
+        "tg": "G2 feat/link-update"
+      },
+      "options": {
+        "--approval": {
+          "in": [],
+          "reason": "max-cli has no way to change an invite link",
+          "planned": {
+            "tg": "G2 feat/link-update"
+          }
+        },
+        "--expire-time": {
+          "in": [],
+          "reason": "max-cli has no way to change an invite link",
+          "planned": {
+            "tg": "G2 feat/link-update"
+          }
+        },
+        "--max-uses": {
+          "in": [],
+          "reason": "max-cli has no way to change an invite link",
+          "planned": {
+            "tg": "G2 feat/link-update"
+          }
+        },
+        "--no-approval": {
+          "in": [],
+          "reason": "max-cli has no way to change an invite link",
+          "planned": {
+            "tg": "G2 feat/link-update"
+          }
+        }
+      }
     },
     "chats list": {
       "in": "all",
