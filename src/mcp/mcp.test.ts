@@ -318,6 +318,8 @@ interface Harness {
   pollQuiz?: boolean
   inviteLinkUpdate?: boolean
   pollVoters?: boolean
+  topicShow?: boolean
+  forwardTopic?: boolean
   pollCloseSeconds?: readonly [number, number]
   counterFields?: Messenger["counterFields"]
   serverSearch?: boolean
@@ -348,6 +350,8 @@ const connect = async (telegram: Scripted = scripted(), options: Partial<ServerO
     pollQuiz,
     inviteLinkUpdate,
     pollVoters,
+    topicShow,
+    forwardTopic,
     pollCloseSeconds,
     counterFields,
     root: _root,
@@ -372,6 +376,8 @@ const connect = async (telegram: Scripted = scripted(), options: Partial<ServerO
     ...(pollQuiz ? { pollQuiz } : {}),
     ...(inviteLinkUpdate ? { inviteLinkUpdate } : {}),
     ...(pollVoters ? { pollVoters } : {}),
+    ...(topicShow ? { topicShow } : {}),
+    ...(forwardTopic ? { forwardTopic } : {}),
     ...(pollCloseSeconds ? { pollCloseSeconds } : {}),
     ...(counterFields ? { counterFields } : {}),
   }
@@ -2354,6 +2360,60 @@ describe("sending over MCP", () => {
     expect(forwards).toEqual([["7", "1", "7", { sendId: "9001" }]])
     const entries = new SendJournal(sendsPathFor(app, "default", env)).entries()
     expect(entries.at(-1)).toMatchObject({ kind: "forward", outcome: "sent", messageId: "51", sendId: "9001" })
+  })
+
+  it("forwards into a forum topic of the target chat, checked there first, only where the messenger can", async () => {
+    const checked: unknown[] = []
+    const forwards: unknown[] = []
+    const telegram = scripted({
+      validateThread: async (chatId, threadId, options) => {
+        checked.push([chatId, threadId, options])
+      },
+      forward: async (from, id, to, options) => {
+        forwards.push([from, id, to, options])
+        return { ...message, id: "51", chatId: to }
+      },
+    })
+    const { call, env } = await connect(telegram, { forwardTopic: true })
+    const plain = await connect(telegram, {})
+
+    const { isError } = await call("chat_messages_forward", { chat: "7", message: "1", to: "8", topic: "5" })
+    const plainTool = (await plain.client.listTools()).tools.find((one) => one.name === "chat_messages_forward")
+
+    expect(isError).toBe(false)
+    expect(checked).toEqual([["7", "5", {}]])
+    expect(forwards).toEqual([["7", "1", "7", { sendId: expect.any(String), threadId: "5" }]])
+    const entries = new SendJournal(sendsPathFor(app, "default", env)).entries()
+    expect(entries.at(-1)).toMatchObject({ kind: "forward", outcome: "sent", threadId: "5" })
+    expect(Object.keys(plainTool?.inputSchema.properties ?? {})).not.toContain("topic")
+  })
+
+  it("shows one forum topic, only where the messenger can", async () => {
+    const topic = {
+      id: "5",
+      title: "Pisos",
+      closed: false,
+      pinned: false,
+      unreadCount: 0,
+      lastMessageAt: null,
+      createdAt: null,
+    }
+    const asked: unknown[] = []
+    const telegram = scripted({
+      topic: async (chat, topicId) => {
+        asked.push([chat, topicId])
+        return topic
+      },
+    })
+    const reading = await connect(telegram, { config: READ_ONLY, topicShow: true })
+    const plain = await connect(telegram, {})
+
+    const shown = await reading.call("chat_topics_show", { chat: "Book club", topic: "5" })
+    const plainTools = (await plain.client.listTools()).tools.map((one) => one.name)
+
+    expect(shown.body).toEqual(topic)
+    expect(asked).toEqual([["Book club", "5"]])
+    expect(plainTools).not.toContain("chat_topics_show")
   })
 
   it("pins and unpins through the guard, quietly unless asked", async () => {

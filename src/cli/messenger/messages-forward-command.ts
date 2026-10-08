@@ -3,8 +3,8 @@ import { Command } from "commander"
 import { typedSendAs } from "../../sends/send-as.js"
 import { type Messenger, messengerContext } from "./context.js"
 
-export const forwardCommand = (messenger: Messenger): Command =>
-  annotate(new Command("forward"), { mutates: true })
+export const forwardCommand = (messenger: Messenger): Command => {
+  const forward = annotate(new Command("forward"), { mutates: true })
     .description("forward one message to another chat")
     .argument("<chat>", `the chat the message is in: ${messenger.chatArgument}`)
     .argument("<message>", "the message id")
@@ -15,30 +15,35 @@ export const forwardCommand = (messenger: Messenger): Command =>
       "post as one of the identities `chats send-as` lists for the --to chat; required where the chat posts as someone else by default",
     )
     .option("--send-id <id>", "repeat a forward whose outcome was unknown, without risking a second copy")
-    .action(async function (this: Command, chat: string, message: string) {
-      const context = messengerContext(this, messenger)
-      const {
-        to,
-        silent,
-        sendId,
-        sendAs: given,
-      } = this.opts<{
-        to: string
-        silent?: boolean
-        sendId?: string
-        sendAs?: string
-      }>()
-      const sendAs = typedSendAs(given)
-      context.renderer.result(
-        await context.withServices((services) =>
-          services.messages.forward({
-            chat,
-            message: message.trim(),
-            to,
-            silent: silent === true,
-            ...(sendId === undefined ? {} : { sendId }),
-            ...(sendAs === undefined ? {} : { sendAs }),
-          }),
-        ),
-      )
-    })
+  if (messenger.forwardTopic) forward.option("--topic <id>", "forward into this forum topic of the --to chat")
+  return forward.action(async function (this: Command, chat: string, message: string) {
+    const context = messengerContext(this, messenger)
+    const {
+      to,
+      silent,
+      sendId,
+      sendAs: given,
+      topic,
+    } = this.opts<{
+      to: string
+      silent?: boolean
+      sendId?: string
+      sendAs?: string
+      topic?: string
+    }>()
+    const sendAs = typedSendAs(given)
+    context.renderer.result(
+      await context.withServices((services) =>
+        services.messages.forward({
+          chat,
+          message: message.trim(),
+          to,
+          silent: silent === true,
+          ...(sendId === undefined ? {} : { sendId }),
+          ...(sendAs === undefined ? {} : { sendAs }),
+          ...(topic === undefined ? {} : { threadId: topic }),
+        }),
+      ),
+    )
+  })
+}

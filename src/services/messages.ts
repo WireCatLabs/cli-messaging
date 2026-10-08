@@ -220,7 +220,7 @@ export interface MessagesService {
   delete(request: { chat: string; messages: string[]; forEveryone: boolean }): Promise<Operated<Deletion>>
   /** Guarded against the chat it goes to: that is where somebody new reads it. */
   forward(
-    target: MessageTarget & { to: string; silent: boolean; sendId?: string; sendAs?: Id },
+    target: MessageTarget & { to: string; silent: boolean; sendId?: string; sendAs?: Id; threadId?: Id },
   ): Promise<Operated<{ sendId: string; message: Message }>>
   /** Counts toward the hourly limit only when it notifies. */
   pin(target: MessageTarget & { notify: boolean }): Promise<Operated<Pinned>>
@@ -579,9 +579,14 @@ export const messagesService = (deps: ServiceDeps): MessagesService => {
       return { operationId, chatId, deleted: messages, forEveryone }
     },
 
-    forward: async ({ chat, message, to, silent, sendId, sendAs }) => {
+    forward: async ({ chat, message, to, silent, sendId, sendAs, threadId: typedThread }) => {
       const connection = await deps.connection()
       const forward = capability(connection, "forward", "forward a message")
+      const threadId = threadIdOf(typedThread)
+      if (threadId !== undefined && deps.messenger.forwardTopic !== true)
+        throw new CliError("validation_error", "this messenger cannot forward to a forum topic")
+      const validate =
+        threadId === undefined ? undefined : capability(connection, "validateThread", "forward to a forum topic")
       const checkSendAs = sendAsCheck(connection, sendAs)
       const { id: fromChatId } = await connection.resolve(chat)
       const { id: toChatId } = await connection.resolve(to)
@@ -589,14 +594,23 @@ export const messagesService = (deps: ServiceDeps): MessagesService => {
       const id = sendId ?? connection.newSendId?.() ?? newSendId()
       const forwarded = await guardedWrite(
         guard,
-        { operationId: id, sendId: id, chatId: toChatId, kind: "forward", ...(sendAs === undefined ? {} : { sendAs }) },
+        {
+          operationId: id,
+          sendId: id,
+          chatId: toChatId,
+          kind: "forward",
+          ...(threadId === undefined ? {} : { threadId }),
+          ...(sendAs === undefined ? {} : { sendAs }),
+        },
         () =>
           forward(fromChatId, message, toChatId, {
             sendId: id,
             ...(silent ? { silent } : {}),
             ...(sendAs === undefined ? {} : { sendAs }),
+            ...(threadId === undefined ? {} : { threadId }),
           }),
         (done) => ({ messageId: done.id }),
+        validate === undefined || threadId === undefined ? undefined : () => validate(toChatId, threadId, {}),
       )
       return { operationId: id, sendId: id, message: forwarded }
     },

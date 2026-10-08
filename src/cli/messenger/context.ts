@@ -87,6 +87,10 @@ export interface Messenger {
   pollCloseSeconds?: readonly [min: number, max: number]
   /** Whether `polls voters` lists who voted for what; no when unset. */
   pollVoters?: boolean
+  /** Whether `topics show` reads one forum topic; no when unset. */
+  topicShow?: boolean
+  /** Whether `messages forward --topic` forwards into a forum topic; no when unset. */
+  forwardTopic?: boolean
   /** Whether folders take kinds of chat, skip muted, read or archived ones, exclude and pin chats; no when unset. */
   folderRules?: boolean
   /** Whether the messenger reads HTML in `--html`; no when unset. */

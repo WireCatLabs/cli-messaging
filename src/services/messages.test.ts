@@ -441,6 +441,25 @@ describe("the messages service's writes", () => {
     expect(writes).toEqual([])
   })
 
+  it("forwards into a topic only where the messenger can, checking it in the --to chat before the write", async () => {
+    const forward = vi.fn(async (_from: string, _id: string, to: string) => ({ ...thread[0], id: "9", chatId: to }))
+    const validateThread = vi.fn(async () => {
+      throw Object.assign(new Error("topic closed"), { code: "permission_error" })
+    })
+    const connection = { ...writer, forward, validateThread } as unknown as MessengerAdapter
+    const target = { chat: "Book", message: "3", to: "20", silent: false, threadId: "5" }
+
+    await expect(messagesService(onlineDeps(messenger, connection, guarding(false))).forward(target)).rejects.toThrow(
+      "cannot forward to a forum topic",
+    )
+    const topics = { ...messenger, forwardTopic: true }
+    await expect(messagesService(onlineDeps(topics, connection, guarding(false))).forward(target)).rejects.toThrow(
+      "topic closed",
+    )
+    expect(validateThread).toHaveBeenCalledWith("20", "5", {})
+    expect(forward).not.toHaveBeenCalled()
+  })
+
   it("checks permissions before reading the topic, and records preflight failure without sending", async () => {
     const validateThread = vi.fn(async () => {
       throw Object.assign(new Error("topic deleted"), { code: "not_found" })

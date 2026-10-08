@@ -7,6 +7,7 @@ import { newOperationId, newSendId } from "../sends/send-id.js"
 import type { ServiceDeps } from "./deps.js"
 
 export interface TopicsService {
+  show(chat: string, topic: string): Promise<Topic>
   enable(
     chat: string,
     options: { upgrade: boolean },
@@ -42,6 +43,12 @@ export const topicsService = (deps: ServiceDeps): TopicsService => {
     return deps.connection()
   }
   return {
+    show: async (chat, topic) => {
+      if (deps.offline) throw new CliError("validation_error", "`topics show` asks the messenger; not with --offline")
+      const id = topic.trim()
+      if (id === "") throw new CliError("validation_error", "which topic? give its id, from `topics list`")
+      return capability(await deps.connection(), "topic", "show a forum topic")(chat, id)
+    },
     enable: async (chat, { upgrade }) => {
       const connection = await online()
       const probe = capability(connection, "forumState", "configure forum topics")

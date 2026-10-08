@@ -1001,7 +1001,7 @@
     },
     "--topic": {
       "value": "<id>",
-      "meaning": "address this forum topic: send to it, read only it, or mark only it read",
+      "meaning": "address this forum topic: send or forward to it, read only it, or mark only it read",
       "note": "Telegram group forums only; MAX explicitly refuses this option before sending"
     },
     "--trace": {
@@ -2923,7 +2923,12 @@
         "--send-as": "all",
         "--send-id": "all",
         "--silent": "all",
-        "--to": "all"
+        "--to": "all",
+        "--topic": {
+          "in": [],
+          "reason": "MAX has no forum topics",
+          "planned": { "tg": "G2 feat/topic-show-forward" }
+        }
       }
     },
     "messages link": {
