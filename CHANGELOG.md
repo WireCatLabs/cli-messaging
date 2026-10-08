@@ -8,6 +8,7 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Added
 
+- Parity: `chats requests list|accept|decline` are in both CLIs — max ships them (max-cli #505).
 - Parity: `polls voters` and `polls create --close-time` are shipped rows in tg (TG#375, TG#378).
 
 ### Fixed
