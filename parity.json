@@ -3360,7 +3360,7 @@
       "reason": "MAX has no statistics request of its own for a chat"
     },
     "stats chats retention": {
-      "in": "all",
+      "in": [],
       "options": {
         "--by": "all",
         "--checkpoints": "all",
@@ -3369,6 +3369,10 @@
         "--timezone": "all",
         "--until-time": "all",
         "--within": "all"
+      },
+      "planned": {
+        "max": "Retention/freshness SDK adoption",
+        "tg": "Retention/freshness SDK adoption"
       }
     },
     "stats chats show": {
@@ -3433,10 +3437,14 @@
       "in": "all"
     },
     "stats messages counters": {
-      "in": "all"
+      "in": [],
+      "planned": {
+        "max": "Retention/freshness SDK adoption",
+        "tg": "Retention/freshness SDK adoption"
+      }
     },
     "stats messages counters refresh": {
-      "in": "all",
+      "in": [],
       "options": {
         "--chat": "all",
         "--counters": "all",
@@ -3448,10 +3456,14 @@
         "--source": "all",
         "--sync-time": "all",
         "--timezone": "all"
+      },
+      "planned": {
+        "max": "Retention/freshness SDK adoption",
+        "tg": "Retention/freshness SDK adoption"
       }
     },
     "stats messages counters show": {
-      "in": "all",
+      "in": [],
       "options": {
         "--chat": "all",
         "--counters": "all",
@@ -3461,6 +3473,10 @@
         "--selection": "all",
         "--source": "all",
         "--timezone": "all"
+      },
+      "planned": {
+        "max": "Retention/freshness SDK adoption",
+        "tg": "Retention/freshness SDK adoption"
       }
     },
     "stats messages discussion": {
