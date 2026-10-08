@@ -1795,24 +1795,21 @@
       }
     },
     "chats link list": {
-      "in": [],
+      "in": ["tg"],
       "planned": {
-        "max": "max's next cli-messaging bump",
-        "tg": "G2 feat/join-bulk-links"
+        "max": "max's next cli-messaging bump"
       },
       "options": {
         "--limit": {
-          "in": [],
+          "in": ["tg"],
           "planned": {
-            "max": "max's next cli-messaging bump",
-            "tg": "G2 feat/join-bulk-links"
+            "max": "max's next cli-messaging bump"
           }
         },
         "--revoked": {
-          "in": [],
+          "in": ["tg"],
           "planned": {
-            "max": "max's next cli-messaging bump",
-            "tg": "G2 feat/join-bulk-links"
+            "max": "max's next cli-messaging bump"
           }
         }
       }
@@ -1821,49 +1818,33 @@
       "in": "all"
     },
     "chats link revoke": {
-      "in": [],
+      "in": ["tg"],
       "planned": {
-        "max": "max's next cli-messaging bump",
-        "tg": "G2 feat/join-bulk-links"
+        "max": "max's next cli-messaging bump"
       }
     },
     "chats link show": {
       "in": "all"
     },
     "chats link update": {
-      "in": [],
+      "in": ["tg"],
       "reason": "max-cli has no way to change an invite link",
-      "planned": {
-        "tg": "G2 feat/link-update"
-      },
       "options": {
         "--approval": {
-          "in": [],
-          "reason": "max-cli has no way to change an invite link",
-          "planned": {
-            "tg": "G2 feat/link-update"
-          }
+          "in": ["tg"],
+          "reason": "max-cli has no way to change an invite link"
         },
         "--expire-time": {
-          "in": [],
-          "reason": "max-cli has no way to change an invite link",
-          "planned": {
-            "tg": "G2 feat/link-update"
-          }
+          "in": ["tg"],
+          "reason": "max-cli has no way to change an invite link"
         },
         "--max-uses": {
-          "in": [],
-          "reason": "max-cli has no way to change an invite link",
-          "planned": {
-            "tg": "G2 feat/link-update"
-          }
+          "in": ["tg"],
+          "reason": "max-cli has no way to change an invite link"
         },
         "--no-approval": {
-          "in": [],
-          "reason": "max-cli has no way to change an invite link",
-          "planned": {
-            "tg": "G2 feat/link-update"
-          }
+          "in": ["tg"],
+          "reason": "max-cli has no way to change an invite link"
         }
       }
     },
