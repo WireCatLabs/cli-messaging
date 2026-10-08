@@ -30,11 +30,13 @@ export interface QueryMetadata {
   /** Present when a `text` term or phrase was stemmed: which stemmer, and each word's stem. */
   stemming?: QueryStemming
 }
-export interface QueryStemming {
-  applied: true
-  analyzer: string
-  terms: { word: string; stem: string; stemmer: string }[]
-}
+export type QueryStemming =
+  | { applied: true; analyzer: string; terms: { word: string; stem: string; stemmer: string }[] }
+  /**
+   * The stems were not ready, so words matched their own forms only: `building` until the fill ends
+   * (`store migrate` finishes it now), `stemmer_unknown` when a newer tool chose stemmers this one lacks.
+   */
+  | { applied: false; reason: "building" | "stemmer_unknown"; done: number; total: number; pending: number }
 export interface SearchCoverage {
   state: "complete" | "partial" | "unknown" | "stale"
   /** The oldest `store fetch` of the chats in scope; `null` when one of them was never fetched. */
@@ -175,12 +177,7 @@ export const prepareLucene = async (
   if (hasText(ast.root) && !wordsReady) await indexNotReady(store, messenger.app?.command)
   const stems = await store.stemsState()
   const stemsReady = stems?.ready === true
-  let stemmer: Stemmer | undefined
-  if (hasStems(ast.root)) {
-    if (!stems?.ready) stemsNotReady(stems, messenger.app?.command)
-    // Ready means the setting is one this build knows, so `null` cannot reach here.
-    stemmer = createStemmer((await store.stemmers()) ?? DEFAULT_STEMMERS)
-  }
+  const { stemmer, unstemmed } = hasStems(ast.root) ? await searchStemming(store, messenger.app?.command) : {}
   const execution: QueryExecution = {
     root,
     accounts: scopeAccounts,
@@ -190,6 +187,7 @@ export const prepareLucene = async (
     ...(request.signal ? { signal: request.signal } : {}),
     newest: request.newest,
     ...(stemmer ? { stemmer } : {}),
+    ...(unstemmed ? { unstemmed: true } : {}),
     ...(request.only ? { only: request.only } : {}),
   }
   return {
@@ -197,10 +195,40 @@ export const prepareLucene = async (
     timezone,
     wordsReady,
     stemsReady,
-    ...(stemmer ? { stemming: stemmingOf(ast.root, stemmer) } : {}),
+    ...(stemmer ? { stemming: stemmingOf(ast.root, stemmer) } : unstemmed ? { stemming: unstemmed } : {}),
     scopeAccounts,
     ...(selectedChat ? { selectedChat } : {}),
   }
+}
+/**
+ * The stemmer a search with stemmed words runs with. While the stems are built, or chosen by a newer
+ * tool, none: a half-built stem index would silently drop matches, while the word index answers each
+ * word's own form. Stems waiting for the owner's `store reindex` still refuse.
+ */
+export const searchStemming = async (
+  store: MessageStore,
+  command?: string,
+): Promise<{ stemmer?: Stemmer; unstemmed?: QueryStemming }> => {
+  const stems = await store.stemsState()
+  // Ready means the setting is one this build knows, so `null` cannot reach here.
+  if (stems?.ready) return { stemmer: createStemmer((await store.stemmers()) ?? DEFAULT_STEMMERS) }
+  if (stems?.cause !== "building" && stems?.cause !== "stemmer_unknown") return stemsNotReady(stems, command)
+  return {
+    unstemmed: {
+      applied: false,
+      reason: stems.cause,
+      done: Math.min(stems.filledThrough, stems.watermark),
+      total: stems.watermark,
+      pending: stems.pending,
+    },
+  }
+}
+/** Sets the stemming `searchStemming` chose on an execution built without `prepareLucene`. */
+export const stemExecution = async (execution: QueryExecution, store: MessageStore): Promise<void> => {
+  if (!hasStems(execution.root)) return
+  const { stemmer, unstemmed } = await searchStemming(store)
+  if (stemmer) execution.stemmer = stemmer
+  if (unstemmed) execution.unstemmed = true
 }
 const stemmingOf = (root: QueryNode, stemmer: Stemmer): QueryStemming => ({
   applied: true,

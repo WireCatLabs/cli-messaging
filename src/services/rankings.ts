@@ -8,13 +8,11 @@ import {
   rankingOptions,
 } from "../domain/rankings-options.js"
 import { rankingContextRange } from "../domain/rankings-range.js"
-import type { ResolvedNode } from "../search/lucene/resolved.js"
-import { hasStems, type QueryExecution } from "../search/lucene/resolved.js"
-import { createStemmer, DEFAULT_STEMMERS } from "../search/stem.js"
+import type { QueryExecution, ResolvedNode } from "../search/lucene/resolved.js"
 import type { AccountKey, RankedEvidence, RankedStoreFound, RankedStoreRow } from "../store/store.js"
 import type { ServiceDeps } from "./deps.js"
 import type { SearchQuery } from "./messages.js"
-import { coverageOf, prepareLucene } from "./messages-search.js"
+import { coverageOf, prepareLucene, stemExecution } from "./messages-search.js"
 import { type RankingSelection, rankingSelection, readRankingSelection } from "./rankings-selection.js"
 import { refreshSearch, type SearchRefreshed } from "./search-refresh.js"
 import { searchRecordOf } from "./searches.js"
@@ -121,11 +119,7 @@ export const rankingsService = (deps: ServiceDeps): RankingsService => ({
         limit: request.limit,
         ...(request.signal ? { signal: request.signal } : {}),
       }
-      if (hasStems(execution.root)) {
-        if (!(await store.stemsState())?.ready)
-          throw new CliError("validation_error", "the stem index is not ready — run store migrate")
-        execution.stemmer = createStemmer((await store.stemmers()) ?? DEFAULT_STEMMERS)
-      }
+      await stemExecution(execution, store)
       if (request.text?.trim()) {
         const extra = await prepareLucene(
           store,
@@ -380,11 +374,7 @@ export const rankingsService = (deps: ServiceDeps): RankingsService => ({
       limit: 1,
       ...(options.signal ? { signal: options.signal } : {}),
     }
-    if (hasStems(execution.root)) {
-      if (!(await store.stemsState())?.ready)
-        throw new CliError("validation_error", "the stem index is not ready — run store migrate")
-      execution.stemmer = createStemmer((await store.stemmers()) ?? DEFAULT_STEMMERS)
-    }
+    await stemExecution(execution, store)
     return store.rankingEvidence(execution, {
       options: rankingOptions(target, selection.options),
       timezone: selection.timezone,

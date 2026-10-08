@@ -15,6 +15,11 @@ export type LatinStemmer = (typeof LATIN_STEMMERS)[number]
 export type Stemmers = { cyrillic: CyrillicStemmer; latin: string }
 
 export const DEFAULT_STEMMERS: Stemmers = { cyrillic: "russian", latin: "english,spanish" }
+/**
+ * Raised with every change to `DEFAULT_STEMMERS`. A default saved in the store carries it, so a newer build
+ * replaces an older default and an older build never rebuilds a newer one back.
+ */
+export const DEFAULT_STEMMERS_VERSION = 2
 
 /**
  * Between the stem sequences of one text when several Latin stemmers give different ones, so a phrase

@@ -1,12 +1,11 @@
 import { CliError } from "@leemour/cli-core"
 import type { AdminOptions, AdminReport, Answerer } from "../domain/admin-statistics.js"
 import { parseLocator } from "../domain/locator.js"
-import { hasStems, type QueryExecution } from "../search/lucene/resolved.js"
-import { createStemmer, DEFAULT_STEMMERS } from "../search/stem.js"
+import type { QueryExecution } from "../search/lucene/resolved.js"
 import type { AdminStoreResult, MessageStore } from "../store/store.js"
 import type { ServiceDeps } from "./deps.js"
 import type { SearchQuery } from "./messages.js"
-import { prepareLucene } from "./messages-search.js"
+import { prepareLucene, stemExecution } from "./messages-search.js"
 import { momentOf } from "./moment.js"
 import { type RankingSelection, rankingSelection, readRankingSelection } from "./rankings-selection.js"
 import { searchRecordOf } from "./searches.js"
@@ -183,8 +182,7 @@ export const adminStatisticsService = (deps: ServiceDeps): AdminStatisticsServic
           selectedChat: pinned.base.contextChat ?? pinned.base.execution.chat,
         }
       : await prepareLucene(store, account, { ...query, language: "lucene" }, deps.messenger)
-    if (pinned && hasStems(prepared.execution.root))
-      prepared.execution.stemmer = createStemmer((await store.stemmers()) ?? DEFAULT_STEMMERS)
+    if (pinned) await stemExecution(prepared.execution, store)
     if (pinned && query.text?.trim()) {
       const extra = await prepareLucene(
         store,
@@ -341,7 +339,7 @@ export const adminStatisticsService = (deps: ServiceDeps): AdminStatisticsServic
       limit: request.limit,
       ...(request.signal ? { signal: request.signal } : {}),
     }
-    if (hasStems(execution.root)) execution.stemmer = createStemmer((await store.stemmers()) ?? DEFAULT_STEMMERS)
+    await stemExecution(execution, store)
     const result = await requireStore(store)(execution, {
       options: o,
       evidence: { entity, ...(request.cursor ? { cursor: request.cursor } : {}) },

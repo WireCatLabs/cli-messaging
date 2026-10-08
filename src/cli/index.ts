@@ -212,6 +212,7 @@ export { reviewCommand } from "./messenger/review.js"
 export { searchesCommand } from "./messenger/searches-command.js"
 export { serveCommand, servingProfiles } from "./messenger/serve-command.js"
 export { DAY_MS, FIRST_FETCH_MS, type MemberFetches, memberFetches } from "./messenger/serve-members.js"
+export { STEMS_EVERY_MS, STEMS_SLICE_MS, type StemFills, stemFills } from "./messenger/serve-stems.js"
 export {
   type Running,
   type ServerOptions,
