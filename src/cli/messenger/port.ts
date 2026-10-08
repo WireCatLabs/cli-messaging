@@ -486,6 +486,11 @@ export interface ChatDeletion {
 export interface BotChats {
   /** Starts the bot, as its Start button does; the payload is what the bot reads as its start parameter. */
   startBot(chatId: Id, options: { sendId: string; payload?: string }): Promise<void>
+  /**
+   * A bot's link, as the messenger hands it out, to the one-to-one chat with that bot and the start
+   * parameter it carries; `undefined` for anything that is not such a link.
+   */
+  botByLink(reference: string): Promise<{ chatId: Id; payload?: string } | undefined>
   /** The address that opens the bot's mini app. It signs the owner in: a credential. */
   botApp(chatId: Id, options: { startParam?: string }): Promise<{ url: string }>
 }

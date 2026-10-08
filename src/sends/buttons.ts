@@ -70,12 +70,14 @@ export const guardedStart = async (
   { chat, payload, sendId }: { chat: string; payload?: string; sendId?: string },
 ): Promise<Operated<{ chatId: Id; started: true }>> => {
   const start = capability(connection, "startBot", "start a bot")
-  const { id: chatId } = await connection.resolve(chat)
+  const linked = await connection.botByLink?.(chat)
+  const chatId = linked?.chatId ?? (await connection.resolve(chat)).id
+  const given = payload ?? linked?.payload
   const id = sendId ?? connection.newSendId?.() ?? newSendId()
   await guardedWrite(
     guard,
-    { chatId, kind: "message", sendId: id, operationId: id, length: payload?.length ?? 0, key: "chats.start" },
-    () => start(chatId, { sendId: id, ...(payload === undefined ? {} : { payload }) }),
+    { chatId, kind: "message", sendId: id, operationId: id, length: given?.length ?? 0, key: "chats.start" },
+    () => start(chatId, { sendId: id, ...(given === undefined ? {} : { payload: given }) }),
   )
   return { operationId: id, chatId, started: true }
 }
