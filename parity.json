@@ -217,6 +217,10 @@
       "meaning": "maximum source bytes returned from a retained attachment; 1–1048576",
       "default": "524288"
     },
+    "--close-time": {
+      "value": "<delay>",
+      "meaning": "it closes by itself this long after sending, like 90s or 5m"
+    },
     "--closed": {
       "value": "<on|off>",
       "meaning": "on closes a forum topic to new messages, off reopens it"
@@ -3118,6 +3122,11 @@
       "in": "all",
       "options": {
         "--anonymous": "all",
+        "--close-time": {
+          "in": [],
+          "reason": "max-cli does not close a poll by itself",
+          "planned": { "tg": "G2 feat/polls-close-time" }
+        },
         "--correct": {
           "in": ["tg"],
           "reason": "max-cli creates no quizzes"

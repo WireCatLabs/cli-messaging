@@ -317,6 +317,7 @@ interface Harness {
   pollQuiz?: boolean
   inviteLinkUpdate?: boolean
   pollVoters?: boolean
+  pollCloseSeconds?: readonly [number, number]
   counterFields?: Messenger["counterFields"]
   serverSearch?: boolean
   /** Another server's files, to read what it stored. */
@@ -346,6 +347,7 @@ const connect = async (telegram: Scripted = scripted(), options: Partial<ServerO
     pollQuiz,
     inviteLinkUpdate,
     pollVoters,
+    pollCloseSeconds,
     counterFields,
     root: _root,
     http,
@@ -369,6 +371,7 @@ const connect = async (telegram: Scripted = scripted(), options: Partial<ServerO
     ...(pollQuiz ? { pollQuiz } : {}),
     ...(inviteLinkUpdate ? { inviteLinkUpdate } : {}),
     ...(pollVoters ? { pollVoters } : {}),
+    ...(pollCloseSeconds ? { pollCloseSeconds } : {}),
     ...(counterFields ? { counterFields } : {}),
   }
   const streams = captureStreams()
@@ -2699,6 +2702,25 @@ describe("sending over MCP", () => {
 
     expect(rules.body).toMatchObject({ saved: false, rules: { consent: { delete: "ask" } } })
     expect(moderated.body).toMatchObject({ rows: [] })
+  })
+
+  it("creates a poll that closes by itself, only where the messenger can", async () => {
+    const created: unknown[] = []
+    const telegram = scripted({
+      createPoll: async (_chatId, poll, { sendId }) => {
+        created.push(poll)
+        return { message: { id: "9", chatId: "7" } as never, sendId }
+      },
+    })
+    const able = await connect(telegram, { pollCloseSeconds: [5, 600] })
+    const plain = await connect(telegram, {})
+    const poll = { chat: "7", text: "Now?", answers: ["yes", "no"], close_time: "5m" }
+
+    await able.call("chat_polls_create", poll)
+    const refused = await plain.call("chat_polls_create", poll)
+
+    expect(created).toEqual([expect.objectContaining({ closeAfter: 300 })])
+    expect(refused.isError).toBe(true)
   })
 
   it("lists who voted on a read-only profile, only where the messenger offers it", async () => {

@@ -109,6 +109,8 @@ export interface NewPoll {
   revote?: boolean
   /** A quiz: `correct` is the right answer's index from 0, `solution` what is shown once someone answers. */
   quiz?: { correct: number; solution?: string }
+  /** Seconds after sending when it closes by itself. */
+  closeAfter?: number
 }
 
 export interface Sent {

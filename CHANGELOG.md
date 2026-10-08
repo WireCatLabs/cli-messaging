@@ -6,6 +6,13 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- `polls create --close-time <delay>` (MCP `close_time`): the poll closes by itself `90s` or `5m` after sending,
+  within the messenger's `Messenger.pollCloseSeconds`; outside it, or where it is unset, refused before
+  connecting. `NewPoll.closeAfter` carries the seconds.
+
+
 ## 0.203.0 — 08.10.2026
 
 ### Changed — may break callers

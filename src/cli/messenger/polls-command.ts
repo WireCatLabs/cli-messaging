@@ -1,7 +1,15 @@
 import { CliError } from "@leemour/cli-core"
 import { annotate } from "@leemour/cli-core/commands"
 import { Command } from "commander"
-import { guardedClose, guardedCreatePoll, guardedVote, pollVoters, quizOf } from "../../sends/polls.js"
+import {
+  closeAfterOf,
+  closeRange,
+  guardedClose,
+  guardedCreatePoll,
+  guardedVote,
+  pollVoters,
+  quizOf,
+} from "../../sends/polls.js"
 import { typedSendAs } from "../../sends/send-as.js"
 import { positiveCount } from "../paging.js"
 import { type Messenger, messengerContext } from "./context.js"
@@ -117,6 +125,11 @@ export const pollsCommand = (messenger: Messenger): Command => {
       .option("--quiz", "a quiz: one answer is right, and a vote is final")
       .option("--correct <n>", "with --quiz: the right answer's position, from 1", positiveCount("--correct"))
       .option("--solution <text>", "with --quiz: what people see once they answered")
+  if (messenger.pollCloseSeconds)
+    create.option(
+      "--close-time <delay>",
+      `it closes by itself this long after sending: ${closeRange(messenger.pollCloseSeconds)}, like 90s or 5m`,
+    )
   create.action(async function (this: Command, chat: string, question: string, answers: string[]) {
     const context = messengerContext(this, messenger)
     const {
@@ -130,7 +143,9 @@ export const pollsCommand = (messenger: Messenger): Command => {
       quiz,
       correct,
       solution,
+      closeTime,
     } = this.opts<{
+      closeTime?: string
       quiz?: boolean
       correct?: number
       solution?: string
@@ -145,6 +160,7 @@ export const pollsCommand = (messenger: Messenger): Command => {
     const threadId = threadIdOf(topic)
     const sendAs = typedSendAs(given)
     const asQuiz = quizOf({ quiz, correct, solution })
+    const closeAfter = closeAfterOf(closeTime, messenger.pollCloseSeconds)
     const sent = await context.withMessenger((connection) =>
       guardedCreatePoll(context.guard, connection, {
         chat,
@@ -156,6 +172,7 @@ export const pollsCommand = (messenger: Messenger): Command => {
           anonymous: anonymous === true,
           revote: revote === true,
           ...(asQuiz === undefined ? {} : { quiz: asQuiz }),
+          ...(closeAfter === undefined ? {} : { closeAfter }),
         },
         silent: silent === true,
         ...(sendId === undefined ? {} : { sendId }),
