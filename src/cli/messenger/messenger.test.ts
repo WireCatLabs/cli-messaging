@@ -1259,6 +1259,46 @@ describe("the shared read commands", () => {
     expect(unlisted.code).not.toBe(0)
   })
 
+  it("**closes a poll by itself after a delay** inside the messenger's range, refused outside it or where it cannot", async () => {
+    const root = mkdtempSync(join(tmpdir(), "messenger-"))
+    const env = { CHAT_STATE_DIR: join(root, "state"), CHAT_CONFIG_DIR: join(root, "config") }
+    const created: unknown[] = []
+    const polling: MessengerAdapter = {
+      ...fake,
+      createPoll: async (_chatId, poll, { sendId }) => {
+        created.push(poll)
+        return { message: { ...message, id: "9" }, sendId }
+      },
+    }
+    const create = (...extra: string[]) =>
+      call(
+        ["polls", "create", "Book", "Now?", "yes", "no", ...extra],
+        async () => polling,
+        env,
+        {},
+        {
+          pollCloseSeconds: [5, 600],
+        },
+      )
+
+    const seconds = await create("--close-time", "90s", "--json")
+    const minutes = await create("--close-time", "10m", "--json")
+    const tooLong = await create("--close-time", "11m")
+    const tooShort = await create("--close-time", "4s")
+    const clock = await create("--close-time", "2026-10-09T09:00")
+    const unlisted = await call(
+      ["polls", "create", "Book", "Now?", "yes", "no", "--close-time", "5m"],
+      async () => polling,
+      env,
+    )
+
+    expect([seconds.code, minutes.code]).toEqual([0, 0])
+    expect(created).toEqual([expect.objectContaining({ closeAfter: 90 }), expect.objectContaining({ closeAfter: 600 })])
+    expect([tooLong.code, tooShort.code, clock.code]).toEqual([2, 2, 2])
+    expect(tooLong.stderr.join("\n")).toContain("5s to 10m")
+    expect(unlisted.code).not.toBe(0)
+  })
+
   it("**creates a quiz where the messenger makes them**, and refuses quiz options that do not go together", async () => {
     const root = mkdtempSync(join(tmpdir(), "messenger-"))
     const env = { CHAT_STATE_DIR: join(root, "state"), CHAT_CONFIG_DIR: join(root, "config") }

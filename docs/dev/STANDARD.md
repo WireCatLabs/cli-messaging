@@ -356,6 +356,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--check` |  | say whether a newer version exists, and install nothing |  | `bot list`, `upgrade` |
 | `--checkpoints` | `<durations>` | elapsed joining ages to inspect, such as 1d,7d,30d |  | `stats chats retention` |
 | `--chunk-bytes` | `<n>` | maximum source bytes returned from a retained attachment; 1–1048576 | `524288` | `attachments show` |
+| `--close-time` | `<delay>` | it closes by itself this long after sending, like 90s or 5m |  | `polls create` (planned) |
 | `--closed` | `<on\|off>` | on closes a forum topic to new messages, off reopens it |  | `topics edit` (tg-only) |
 | `--comment-to` | `<post>` | comment on this channel post; the comment goes to the post's discussion group |  | `messages send` (tg-only) |
 | `--component` | `<name>` | the ranking component whose contributing messages or answer pairs to read |  | `stats contacts evidence`, `stats messages evidence` |

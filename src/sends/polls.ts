@@ -131,3 +131,22 @@ export const quizOf = ({
     throw new CliError("validation_error", "a quiz needs --correct <n>, the right answer's position")
   return { correct: correct - 1, ...(solution === undefined ? {} : { solution }) }
 }
+
+const seconds = (n: number) => (n % 60 === 0 ? `${n / 60}m` : `${n}s`)
+
+export const closeRange = ([min, max]: readonly [number, number]) => `${seconds(min)} to ${seconds(max)}`
+
+/** A delay like `90s` or `5m`, in seconds, inside the messenger's range. */
+export const closeAfterOf = (value: string | undefined, range: readonly [number, number] | undefined) => {
+  if (value === undefined) return undefined
+  if (range === undefined) throw new CliError("validation_error", "this messenger cannot close a poll by itself")
+  const [, amount, unit] = /^(\d+)(s|m)$/.exec(value.trim()) ?? []
+  const after = Number(amount) * (unit === "m" ? 60 : 1)
+  const [min, max] = range
+  if (!amount || after < min || after > max)
+    throw new CliError(
+      "validation_error",
+      `--close-time takes a delay from ${closeRange(range)}, like 90s or 5m — not "${value}"`,
+    )
+  return after
+}

@@ -2,7 +2,7 @@ import { CliError } from "@leemour/cli-core"
 import * as v from "valibot"
 import type { Messenger } from "../../cli/messenger/context.js"
 import { capability } from "../../cli/messenger/port.js"
-import { guardedClose, guardedCreatePoll, guardedVote, pollVoters, quizOf } from "../../sends/polls.js"
+import { closeAfterOf, guardedClose, guardedCreatePoll, guardedVote, pollVoters, quizOf } from "../../sends/polls.js"
 import { type AnyTool, chatOf, limit, message, READ, tool, WRITE } from "../tool.js"
 
 const answerId = v.pipe(v.string(), v.minLength(1), v.description("an answer id, as polls_show gives it"))
@@ -104,6 +104,13 @@ export const pollWriteTools = (messenger: Messenger): Record<string, AnyTool> =>
         solution: v.optional(
           v.pipe(v.string(), v.minLength(1), v.description("with quiz: what people see once they answered")),
         ),
+        close_time: v.optional(
+          v.pipe(
+            v.string(),
+            v.minLength(1),
+            v.description("it closes by itself this long after sending, like 90s or 5m; where the messenger can"),
+          ),
+        ),
       }),
       annotations: WRITE,
       permission: "send",
@@ -115,6 +122,7 @@ export const pollWriteTools = (messenger: Messenger): Record<string, AnyTool> =>
           ...(args.correct === undefined ? {} : { correct: args.correct }),
           ...(args.solution === undefined ? {} : { solution: args.solution }),
         })
+        const closeAfter = closeAfterOf(args.close_time, messenger.pollCloseSeconds)
         const sent = await guardedCreatePoll(guard, adapter, {
           chat: args.chat,
           poll: {
@@ -124,6 +132,7 @@ export const pollWriteTools = (messenger: Messenger): Record<string, AnyTool> =>
             anonymous: args.anonymous === true,
             revote: args.revote === true,
             ...(asQuiz === undefined ? {} : { quiz: asQuiz }),
+            ...(closeAfter === undefined ? {} : { closeAfter }),
           },
           silent: false,
           ...(args.send_id === undefined ? {} : { sendId: args.send_id }),
