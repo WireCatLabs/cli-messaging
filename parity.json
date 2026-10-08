@@ -2883,8 +2883,9 @@
       }
     },
     "messages press": {
-      "in": ["max"],
+      "in": [],
       "planned": {
+        "max": "feat/client-gaps-bots",
         "tg": "tg-cli backlog: press inline buttons"
       }
     },
