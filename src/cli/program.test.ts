@@ -80,6 +80,22 @@ describe("running a messenger CLI", () => {
     expect(JSON.parse(json.stderr[0] ?? "").error.message).toContain("give a command")
   })
 
+  it("**shows a group's own help at a terminal** when it is given no subcommand", async () => {
+    const terminal = captureStreams()
+    const code = await run(
+      ["chats"],
+      definition(async () => {}),
+      { streams: terminal, tty: true, env: process.env },
+    )
+    const help = terminal.stderr.join("\n")
+
+    expect(code).toBe(2)
+    expect(terminal.stdout).toEqual([])
+    expect(help).toContain("Usage: app chats")
+    expect(help).toMatch(/^\s+list\b/m)
+    expect(help).not.toContain("(outputHelp)")
+  })
+
   it("hands the first word to the command as its profile", async () => {
     let profile = ""
     await call(["work", "chats", "list"], async (command) => {
