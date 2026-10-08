@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.190.0 — 08.10.2026
+
 ### Added
 
 - Retained attachment byte transfer: `attachments show` returns bounded base64 chunks with whole-file SHA-256,
