@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.189.0 — 08.10.2026
+
 ### Fixed
 
 - Command discovery marks counter refresh as a local write, matching its guarded local observation updates.
