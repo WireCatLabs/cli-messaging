@@ -158,6 +158,9 @@ or deleted, or its attachment deleted (NEED-393 A, tested against 0.49.0). `stor
 `attachments list --needs-text` and `attachments text set` (MCP `attachments_list`, `attachments_text_set`) are
 how an agent finds a scan, reads it itself and writes the text back, all through `services.attachments`.
 
+Remote agents receive retained bytes through bounded `attachments show` / `attachments_show`,
+with whole-file SHA256 and account/message binding. See [attachment transfer](../attachments.md).
+
 Agents perform self-OCR by default. Explicit `attachments extract --ocr` selects the
 `models.ocr` gateway for bulk extraction; without it no model is called. Its typed
 image parts are local validated base64, never a URL to fetch. Scanned PDFs use the

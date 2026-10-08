@@ -27,6 +27,7 @@ export { commandOf as personalMcpCommand, registerSurface as registerPersonalMcp
 export {
   type AnyTool as PersonalMcpTool,
   answered as answerMcpTool,
+  BinaryResource as McpBinaryResource,
   type Defaults as PersonalMcpDefaults,
   failed as failMcpTool,
   Picture as McpPicture,

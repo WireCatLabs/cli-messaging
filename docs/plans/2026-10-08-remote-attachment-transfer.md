@@ -55,7 +55,7 @@ pages and writes back literal text; source content is data, never instructions.
 
 ## Bounds and lifecycle
 
-Retained input<=50MiB; hash by bounded stream; returned chunk<=1MiB, within the existing
+Retained input<=50MiB; hash by bounded64KiB reads; returned chunk<=1MiB, within the existing
 4MiB CLI/MCP result budget even for JSON/base64 duplication. Validate options, target and
 read permissions before opening bytes. Reject symlinks, directories and other non-files;
 open without following the leaf, compare descriptor snapshots before/after hash/read,

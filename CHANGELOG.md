@@ -6,6 +6,12 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- Retained attachment byte transfer: `attachments show` returns bounded base64 chunks with whole-file SHA-256,
+  account/message binding and cancellation. MCP embeds complete images or binary resources, with a JSON
+  fallback for hosts without resource support. No automatic download, OCR, index write or model call.
+
 ## 0.188.0 — 08.10.2026
 
 ### Added
