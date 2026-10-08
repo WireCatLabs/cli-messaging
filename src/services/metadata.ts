@@ -28,6 +28,22 @@ export const metadataService = (deps: ServiceDeps) => {
     })
   }
   return {
+    /** The chats named, or every stored group and channel, that hold no metadata yet; a name the store lacks stays. */
+    missing: async (references: string[] = []) => {
+      const store = await deps.store()
+      const account = await deps.account()
+      const chats = references.length
+        ? references
+        : (await store.chats(account, {})).items
+            .filter((chat) => chat.kind === "group" || chat.kind === "channel")
+            .map((chat) => chat.id)
+      const missing = []
+      for (const reference of chats) {
+        const chatId = await storedChatId(deps.messenger, reference, store, account).catch(() => undefined)
+        if (chatId === undefined || !(await store.chatMetadata(account, chatId))) missing.push(reference)
+      }
+      return missing
+    },
     get: async (reference: string) => {
       const { store, account, chatId } = await held(reference)
       return { chatId, metadata: (await store.chatMetadata(account, chatId)) ?? null }

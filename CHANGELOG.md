@@ -6,6 +6,12 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- `metadata refresh --only-missing` refreshes only chats with no stored metadata yet: the `--chat`s named, or,
+  without `--chat`, every stored group and channel, up to `--limit`. `--chat` is no longer required with it.
+  `metadata.missing()` on the services. Planned for max and tg.
+
 ## 0.186.0 — 08.10.2026
 
 ### Added

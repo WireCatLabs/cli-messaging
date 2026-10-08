@@ -15,22 +15,28 @@ export const metadataCommand = (messenger: Messenger): Command => {
       context.renderer.result(await context.withServices((services) => services.metadata.get(chat)))
     })
   annotate(command.command("refresh"), { mutates: true, local: true })
-    .requiredOption(
+    .option(
       "--chat <chat>",
       "stored group/channel; repeat for several",
       (value: string, previous: string[]) => [...previous, value],
       [],
     )
+    .option("--only-missing", "only chats with no metadata yet; without --chat, every stored group/channel")
     .option("--limit <number>", "process at most 1–500 chats", positiveCount("--limit"), 50)
     .action(async function (this: Command) {
       const context = messengerContext(this, messenger)
       refuseLocalWrite(context, messenger.app.command, "metadata.refresh")
-      const options = this.opts<{ chat: string[]; limit: number }>()
+      const options = this.opts<{ chat: string[]; onlyMissing?: boolean; limit: number }>()
       const limit = Number(options.limit)
       if (!Number.isSafeInteger(limit) || limit < 1 || limit > 500)
         throw new CliError("validation_error", "--limit takes 1–500")
+      if (options.chat.length === 0 && !options.onlyMissing)
+        throw new CliError("validation_error", "name a chat with --chat, or give --only-missing")
+      const chats = options.onlyMissing
+        ? await context.withServices((services) => services.metadata.missing(options.chat))
+        : options.chat
       const items = []
-      for (const chat of options.chat.slice(0, limit)) {
+      for (const chat of chats.slice(0, limit)) {
         try {
           items.push(await context.withServices((services) => services.metadata.refresh(chat)))
         } catch (error) {
@@ -38,7 +44,7 @@ export const metadataCommand = (messenger: Messenger): Command => {
           items.push({ chatId: chat, error: { code: error.code, message: error.message } })
         }
       }
-      context.renderer.result({ items, hasMore: options.chat.length > limit })
+      context.renderer.result({ items, hasMore: chats.length > limit })
     })
   return command
 }
