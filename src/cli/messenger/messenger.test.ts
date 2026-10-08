@@ -1765,6 +1765,34 @@ describe("the shared read commands", () => {
     expect(never).not.toHaveBeenCalled()
   })
 
+  it("**search all** finds messages in a store of two accounts with no notes or mail, and **search mail** answers empty", async () => {
+    const root = mkdtempSync(join(tmpdir(), "search-all-only-"))
+    const env = { CHAT_STATE_DIR: join(root, "state"), MESSAGING_STORE: join(root, "m.db") }
+    await call(["messages", "context", "Book", "2", "--json"], async () => fake, env)
+    const store = await openStore({ path: env.MESSAGING_STORE })
+    const other = { provider: "chat", account: "999" }
+    await store.saveChats(other, [{ ...chat, id: "70", title: "Other" }])
+    await store.saveMessages(other, "70", [{ ...thread[0], id: "70", chatId: "70", text: "nothing here" } as Message], {
+      via: "test",
+    })
+    await store.close()
+    const never = vi.fn(async (): Promise<MessengerAdapter> => {
+      throw new Error("search must never connect")
+    })
+
+    const messages = JSON.parse((await call(["search", "messages", "chapter", "--json"], never, env)).stdout[0] ?? "")
+    const all = await call(["search", "all", "chapter", "--json"], never, env)
+    expect(all.code).toBe(0)
+    const answer = JSON.parse(all.stdout[0] ?? "")
+    expect(answer.searched).toContain("messages")
+    expect(answer.items.filter(({ kind }: { kind: string }) => kind === "message")).toHaveLength(messages.items.length)
+
+    const mail = await call(["search", "mail", "chapter", "--json"], never, env)
+    expect(mail.code).toBe(0)
+    expect(JSON.parse(mail.stdout[0] ?? "").items).toEqual([])
+    expect(mail.stderr.join("\n")).toContain("no mail in the store yet")
+  })
+
   it("**search all** finds a message, a mail and a note with one query, each typed, and says what it skipped", async () => {
     const root = mkdtempSync(join(tmpdir(), "search-all-"))
     const env = { CHAT_STATE_DIR: join(root, "state"), MESSAGING_STORE: join(root, "m.db") }

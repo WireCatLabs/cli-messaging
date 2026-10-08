@@ -3,7 +3,8 @@ import { Command } from "commander"
 import { parseLocator } from "../../domain/locator.js"
 import { renderMessages } from "../../render/messages.js"
 import { renderThreadLinks } from "../../render/thread-context.js"
-import type { SearchKind } from "../../services/search-kind.js"
+import type { SearchFound } from "../../services/messages.js"
+import { NO_MAIL, type SearchKind } from "../../services/search-kind.js"
 import { environmentOf } from "../context.js"
 import { positiveCount } from "../paging.js"
 import { archiveSummary } from "./archive-summary.js"
@@ -126,44 +127,51 @@ const searchAction = (messenger: Messenger, kind: SearchKind) =>
       ...(typedLimit === undefined ? {} : { limit: typedLimit }),
     }
     let limit = context.settings.limit
-    const found = await context.withServices(async (services) => {
-      if (saved === undefined) {
-        const pattern = regex ? patternOf(words.join(" ")) : undefined
+    const found: SearchFound = await context
+      .withServices(async (services) => {
+        if (saved === undefined) {
+          const pattern = regex ? patternOf(words.join(" ")) : undefined
+          return services.messages.search({
+            kind,
+            ...syncRequest(this, context),
+            ...backendRequest(this),
+            ...threadRequest(this),
+            ...typed,
+            ...(pattern ? { pattern } : { text: words.join(" ") }),
+            limit,
+            signal,
+            language: language ?? (pattern ? "legacy" : "lucene"),
+            newest: newest === true,
+            context: around ?? (context.format === "pretty" ? 2 : 0),
+          })
+        }
+        const { id, params, pattern } = await services.searches.resolve(saved, { ...typed, text: words.join(" ") })
+        limit = params.limit ?? limit
         return services.messages.search({
           kind,
           ...syncRequest(this, context),
           ...backendRequest(this),
           ...threadRequest(this),
-          ...typed,
-          ...(pattern ? { pattern } : { text: words.join(" ") }),
+          ...(pattern ? { pattern } : params.text === undefined ? {} : { text: params.text }),
+          ...(params.ast === undefined ? {} : { ast: params.ast }),
+          ...(params.chat === undefined ? {} : { chat: params.chat }),
+          ...(params.source === undefined ? {} : { source: params.source }),
+          ...(params.timezone === undefined ? {} : { timezone: params.timezone }),
           limit,
           signal,
-          language: language ?? (pattern ? "legacy" : "lucene"),
-          newest: newest === true,
-          context: around ?? (context.format === "pretty" ? 2 : 0),
+          language: params.language ?? (pattern ? "legacy" : "lucene"),
+          newest: params.newest === true,
+          ...(params.exact ? { exact: true } : {}),
+          context: params.context ?? (context.format === "pretty" ? 2 : 0),
+          saved: id,
         })
-      }
-      const { id, params, pattern } = await services.searches.resolve(saved, { ...typed, text: words.join(" ") })
-      limit = params.limit ?? limit
-      return services.messages.search({
-        kind,
-        ...syncRequest(this, context),
-        ...backendRequest(this),
-        ...threadRequest(this),
-        ...(pattern ? { pattern } : params.text === undefined ? {} : { text: params.text }),
-        ...(params.ast === undefined ? {} : { ast: params.ast }),
-        ...(params.chat === undefined ? {} : { chat: params.chat }),
-        ...(params.source === undefined ? {} : { source: params.source }),
-        ...(params.timezone === undefined ? {} : { timezone: params.timezone }),
-        limit,
-        signal,
-        language: params.language ?? (pattern ? "legacy" : "lucene"),
-        newest: params.newest === true,
-        ...(params.exact ? { exact: true } : {}),
-        context: params.context ?? (context.format === "pretty" ? 2 : 0),
-        saved: id,
       })
-    })
+      .catch((error: unknown) => {
+        // Nothing to search is an empty answer, as `search all` treats it, not a failure.
+        if (!(error instanceof CliError && error.details.reason === NO_MAIL)) throw error
+        context.renderer.note(error.message)
+        return { items: [], hasMore: false, corrections: [], completeness: [], wordsReady: true }
+      })
     for (const hit of found.items) {
       if (hit.thread?.fallback) context.renderer.note(`thread context uses time neighbours: ${hit.thread.fallback}`)
       if (hit.thread?.stale) context.renderer.note("thread graph may be stale; stale links were not followed")

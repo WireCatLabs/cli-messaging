@@ -1,12 +1,13 @@
 import { CliError, singleLine } from "@leemour/cli-core"
 import { Command } from "commander"
 import { searchNotes } from "../../services/notes-search.js"
-import { RESOURCES_SEARCHED, type SearchedResource, searchAll } from "../../services/search-all.js"
+import { RESOURCES_SEARCHED, type SearchedResource } from "../../services/search-all.js"
 import type { Note } from "../../store/index.js"
 import { positiveCount } from "../paging.js"
 import { type Messenger, messengerContext } from "./context.js"
 import { conversationsSearchCommand } from "./conversations-command.js"
 import { messagesSearchCommand } from "./messages-search-command.js"
+import { noteServer } from "./search-backend-options.js"
 import { topicsSearchCommand } from "./topics-command.js"
 
 const onlyOf = (value: string): SearchedResource[] => {
@@ -42,21 +43,17 @@ const allCommand = (messenger: Messenger): Command =>
         exact?: boolean
         timezone?: string
       }>()
-      const found = await context.withStore((store, account) =>
-        searchAll(
-          store,
-          account,
-          {
-            text: words.join(" "),
-            limit: limit ?? context.settings.limit,
-            ...(only === undefined ? {} : { only }),
-            ...(exact ? { exact: true } : {}),
-            ...(timezone === undefined ? {} : { timezone }),
-            env: context.env,
-          },
-          messenger,
-        ),
+      const found = await context.withServices((services) =>
+        services.messages.searchAll({
+          text: words.join(" "),
+          limit: limit ?? context.settings.limit,
+          ...(only === undefined ? {} : { only }),
+          ...(exact ? { exact: true } : {}),
+          ...(timezone === undefined ? {} : { timezone }),
+          env: context.env,
+        }),
       )
+      noteServer(context, found.server)
       for (const { resource, reason } of found.skipped) context.renderer.note(`${resource} not searched: ${reason}`)
       if (found.notes?.meaningSkipped) context.renderer.note(`notes by words only: ${found.notes.meaningSkipped}`)
       if (context.format === "jsonl") return context.renderer.stream(found.items)

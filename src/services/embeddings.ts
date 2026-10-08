@@ -4,7 +4,7 @@ import { RULES_VERSION } from "../conversations/link.js"
 import { formatLocator, parseLocator } from "../domain/locator.js"
 import type { Id } from "../domain/models.js"
 import { defaultThreads, type Embedder, isTextModelInstalled, textModelsDirectory } from "../embeddings/embed.js"
-import { DEFAULT_TEXT_MODEL, type TextModel, textModel } from "../embeddings/models.js"
+import { DEFAULT_TEXT_MODEL, meaningFloor, type TextModel, textModel } from "../embeddings/models.js"
 import { type RemoteModel, remoteKey } from "../embeddings/remote.js"
 import { QUERY_LIMITS, queryError } from "../search/lucene/types.js"
 import type { AccountKey, ConversationHit, ConversationSummary, StoredReadiness } from "../store/store.js"
@@ -559,7 +559,7 @@ export const embeddingsService = (deps: ServiceDeps): EmbeddingsService => {
         accounts: prepared.scopeAccounts,
         model: target.id,
         meaning: target.installed ? "searched" : "unavailable",
-        hits: fused(meaning, words.hits, target.key === "local:e5-small:384" ? 0.8 : 0)
+        hits: fused(meaning, words.hits, meaningFloor(target.key))
           .slice(0, limit)
           .map((hit) => {
             const source = sources.get(hit.summary.id) as AccountKey
@@ -724,7 +724,6 @@ const fused = (
   minimumCosine: number,
 ): FoundConversation[] => {
   const merged = new Map<string, FoundConversation & { fused: number }>()
-  // The e5 floor is measured in bench/search-quality; RRF scores are ranks, not calibrated similarities.
   meaning
     .filter(({ score }) => score > minimumCosine)
     .forEach(({ summary, chunk, score, stale }, index) => {

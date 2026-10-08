@@ -1,7 +1,7 @@
 import { CliError } from "@leemour/cli-core"
 import { normalizeTag } from "../domain/tags.js"
 import { defaultThreads, type Embedder, isTextModelInstalled, textModelsDirectory } from "../embeddings/embed.js"
-import { DEFAULT_TEXT_MODEL, type TextModel, textModel } from "../embeddings/models.js"
+import { DEFAULT_TEXT_MODEL, meaningFloor, type TextModel, textModel } from "../embeddings/models.js"
 import { dateRange, timezoneOf } from "../search/lucene/dates.js"
 import { parseLucene } from "../search/lucene/parser.js"
 import { validateFields } from "../search/lucene/registry.js"
@@ -182,11 +182,13 @@ export const nearestNotes = async (
   if (!query.trim()) throw new CliError("validation_error", "say what to find in the notes")
   const { model, directory, key } = localModel(choice, env, command)
   const [vector] = await withLocal(model, directory, threads, (embedder) => embedder.embed([query], "query"))
-  return store.notes.nearest(key, vector as Float32Array, {
+  const floor = meaningFloor(key)
+  const nearest = await store.notes.nearest(key, vector as Float32Array, {
     limit,
     ...(folderIds ? { folderIds } : {}),
     ...(source ? { source } : {}),
   })
+  return nearest.filter(({ score }) => score > floor)
 }
 
 export interface FoundNote {

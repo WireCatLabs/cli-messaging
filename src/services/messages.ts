@@ -33,6 +33,7 @@ import {
   searchLucene,
   statsLucene,
 } from "./messages-search.js"
+import { type SearchAllFound, type SearchAllRequest, searchAll } from "./search-all.js"
 import { accountsOfKind, type SearchKind } from "./search-kind.js"
 import { refreshSearch, type SearchRefreshed, type SyncOptions, withRefresh } from "./search-refresh.js"
 import { type SearchParams, searchRecordOf } from "./searches.js"
@@ -211,6 +212,8 @@ export interface MessagesService {
   keepDownloaded(chat: string, message: Id, files: readonly DownloadedFile[]): Promise<number>
   /** From the local store only; never asks the messenger. */
   search(query: SearchQuery): Promise<SearchFound>
+  /** Messages, mail and notes at once; messages with the same server step `search` takes. */
+  searchAll(request: SearchAllRequest): Promise<SearchAllFound>
   /** Counts of what a strict query matches, by chat, sender, day or hour; from the local store only. */
   stats(query: SearchQuery & { by: StatsGrouping }): Promise<MessageStats>
   /** A reply is a send with `replyTo`. */
@@ -442,6 +445,15 @@ export const messagesService = (deps: ServiceDeps): MessagesService => {
         return withServer(withRefresh(found, refreshed), server)
       })
     },
+
+    searchAll: (request) =>
+      inStore((store, account) =>
+        searchAll(store, account, request, deps.messenger, async (query) => {
+          await topUp(store)
+          const server = await searchServer(deps, query)
+          return withServer(await searchStore(store, account, query, deps.messenger), server)
+        }),
+      ),
 
     stats: (request) => {
       const query: SearchQuery & { by: StatsGrouping } = {

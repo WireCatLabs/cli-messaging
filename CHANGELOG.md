@@ -6,6 +6,16 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Fixed
+
+- `search all` searches messages the way `search messages` does, asking the messenger's server too
+  (`--backend both`), so it finds every message `search messages` finds; it reports the server step as
+  `server`. It used to read the local store only. MCP `search_all` does the same. `messages.searchAll` is the service.
+- `search mail` with no mail imported answers an empty result with a note on stderr, as `search all` skips mail,
+  instead of failing with `not_found`.
+- A note found by meaning must reach the same similarity as a conversation does (cosine above 0.8 for e5-small),
+  so a rare word no longer returns every embedded note in `search notes` and `search all`.
+
 ## 0.209.0 — 09.10.2026
 
 ### Added
