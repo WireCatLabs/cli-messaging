@@ -831,6 +831,10 @@
       "value": "<state>",
       "meaning": "only tasks in this state: open, done or dismissed"
     },
+    "--sticker": {
+      "value": "<id>",
+      "meaning": "send this sticker, alone; stickers list finds its id"
+    },
     "--store-token": {
       "value": "<profile>",
       "meaning": "keep a returned authentication token only in this bot profile's OS keyring; never print it"
@@ -2773,6 +2777,13 @@
           "in": ["tg"],
           "reason": "MAX has no spoilers or caption placement"
         },
+        "--sticker": {
+          "in": [],
+          "planned": {
+            "max": "feat/client-gaps-stickers",
+            "tg": "tg-cli backlog: stickers"
+          }
+        },
         "--topic": "all",
         "--voice": "all"
       }
@@ -3432,6 +3443,20 @@
         "--type": {
           "in": "all"
         }
+      }
+    },
+    "stickers": {
+      "in": [],
+      "planned": {
+        "max": "feat/client-gaps-stickers",
+        "tg": "tg-cli backlog: stickers"
+      }
+    },
+    "stickers list": {
+      "in": [],
+      "planned": {
+        "max": "feat/client-gaps-stickers",
+        "tg": "tg-cli backlog: stickers"
       }
     },
     "store": {

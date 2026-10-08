@@ -49,6 +49,30 @@ export const mediaCommand = (messenger: Messenger): Command =>
       )
     })
 
+/** `stickers list` — the sets the account added, or one set's stickers with the ids `messages send --sticker` takes. */
+export const stickersCommand = (messenger: Messenger): Command => {
+  const stickers = new Command("stickers").description("the stickers the account has added")
+  stickers
+    .command("list")
+    .description("sticker sets, or with --set the stickers in one; reading changes nothing")
+    .option("--set <id>", "the stickers in this set")
+    .action(async function (this: Command) {
+      const context = messengerContext(this, messenger)
+      const { set } = this.opts<{ set?: string }>()
+      const items = await context.withMessenger(
+        (adapter): Promise<readonly unknown[]> =>
+          set === undefined
+            ? capability(adapter, "stickerSets", "list sticker sets")()
+            : capability(adapter, "stickers", "list stickers")(set),
+      )
+      renderPage(
+        { ...context, settings: { page: 1, limit: items.length, all: true } },
+        { items: [...items], hasMore: false },
+      )
+    })
+  return stickers
+}
+
 /** `calls list` — the account's call history, newest first. */
 export const callsCommand = (messenger: Messenger): Command => {
   const calls = new Command("calls").description("the account's calls")

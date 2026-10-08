@@ -6,6 +6,12 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- Stickers: `stickers list [--set <id>]` (a group a CLI adds itself) and `messages send --sticker <id>`, sent alone,
+  behind `stickers`. Adapters implement `stickerSets` and `stickers` (`AccountRecords`) and take
+  `SendOptions.sticker`; domain types `StickerSet`, `Sticker`. Planned for max and tg.
+
 ## 0.183.0 — 08.10.2026
 
 ### Added

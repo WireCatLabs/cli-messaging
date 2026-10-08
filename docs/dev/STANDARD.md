@@ -503,6 +503,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--source` | `<messenger>` | every account of this messenger held in the store; personal, bots or all — the same as in: in the query |  | `conversations search`, `messages search`, `searches create`, `stats contacts responses`, `stats contacts top`, `stats messages discussion`, `stats messages show`, `stats messages top`, `stats messages unanswered`, `tags list`, `tags remove` |
 | `--spoiler` |  | hide the --photo or video behind a spoiler until tapped |  | `messages send` (tg-only) |
 | `--state` | `<state>` | only tasks in this state: open, done or dismissed |  | `tasks list` |
+| `--sticker` | `<id>` | send this sticker, alone; stickers list finds its id |  | `messages send` (planned) |
 | `--store-token` | `<profile>` | keep a returned authentication token only in this bot profile's OS keyring; never print it |  | `bot api` |
 | `--sync-first` |  | first fetch new messages within the chat, time and message bounds |  | `conversations search`, `messages search`, `stats contacts top`, `stats messages show`, `stats messages top` |
 | `--sync-time` | `<duration>` | stop fetching after this long (default: 30s) |  | `conversations search`, `messages search`, `stats contacts top`, `stats messages show`, `stats messages top` |

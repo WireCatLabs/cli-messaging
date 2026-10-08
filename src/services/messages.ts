@@ -139,6 +139,8 @@ export interface SendRequest {
   origin?: string
   spoiler?: boolean
   captionAbove?: boolean
+  /** A sticker by id, sent alone. */
+  sticker?: Id
   /** One of the ids `chats.sendAs` lists for this chat. */
   sendAs?: Id
   /** A post of `chat`, a channel: the message goes to the post's discussion as a reply to it. */
@@ -464,7 +466,10 @@ export const messagesService = (deps: ServiceDeps): MessagesService => {
       captionAbove,
       sendAs,
       commentTo,
+      sticker,
     }) => {
+      if (sticker !== undefined && (typed.trim() !== "" || attachments.length > 0 || markdown || html))
+        throw new CliError("validation_error", "a sticker goes alone — no text, no file, no photo")
       if (commentTo !== undefined && (typedReplyTo !== undefined || typedThread !== undefined))
         throw new CliError("validation_error", "a comment answers the post itself; not with --reply-to or --topic")
       const media = { ...(spoiler ? { spoiler } : {}), ...(captionAbove ? { captionAbove } : {}) }
@@ -477,7 +482,7 @@ export const messagesService = (deps: ServiceDeps): MessagesService => {
         )
       }
       const { text, spans } = await formatted(connection, typed, { markdown, html })
-      if (text.trim() === "" && attachments.length === 0) {
+      if (text.trim() === "" && attachments.length === 0 && sticker === undefined) {
         throw new CliError("validation_error", "nothing to send — the marks leave no text")
       }
       const threadId = threadIdOf(typedThread)
@@ -522,6 +527,7 @@ export const messagesService = (deps: ServiceDeps): MessagesService => {
               ...(spans.length > 0 ? { formatting: spans } : {}),
               ...(at === undefined ? {} : { at }),
               ...(attachments.length === 0 ? {} : { attachments }),
+              ...(sticker === undefined ? {} : { sticker }),
               ...media,
               ...(sendAs === undefined ? {} : { sendAs }),
             }),
