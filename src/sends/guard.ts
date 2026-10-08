@@ -354,7 +354,7 @@ const refuseToAsk: Asker = async (key) => {
   throw new CliError(
     "confirmation_required",
     `${key} asks before it acts (its permission level is ask), and nobody is here to answer — ` +
-      `add ${key === "messages.delete" ? "--allow-dangerous" : "--yes"} to go ahead`,
+      `add ${key === "messages.delete" || key === "topics.delete" ? "--allow-dangerous" : "--yes"} to go ahead`,
   )
 }
 

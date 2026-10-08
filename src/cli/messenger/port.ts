@@ -247,6 +247,8 @@ export interface TopicEditing {
   editTopic(chatId: Id, topicId: Id, change: TopicChange): Promise<Topic>
   /** Puts the pinned topics in this order; a topic that is not pinned stays unpinned. */
   orderPinnedTopics(chatId: Id, topicIds: Id[]): Promise<void>
+  /** Deletes the topic and every message in it, for everyone; it cannot be undone. A topic that is gone is `not_found`. */
+  deleteTopic?(chatId: Id, topicId: Id): Promise<void>
 }
 
 export interface ThreadAddressing {

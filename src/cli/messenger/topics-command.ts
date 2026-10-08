@@ -91,6 +91,15 @@ export const topicsCommand = (messenger: Messenger): Command => {
         ),
       )
     })
+  annotate(topics.command("delete"), { mutates: true })
+    .description("delete a forum topic and every message in it, for everyone; it cannot be undone")
+    .argument("<chat>", messenger.chatArgument)
+    .argument("<topic>", "the topic id, from `topics list`")
+    .option("--allow-dangerous", "go ahead without the question an ask level puts before a deletion")
+    .action(async function (this: Command, chat: string, topic: string) {
+      const context = messengerContext(this, messenger)
+      context.renderer.result(await context.withServices((services) => services.topics.delete(chat, topic)))
+    })
   annotate(topics.command("order"), { mutates: true })
     .description("put the pinned topics in this order; it pins and unpins nothing")
     .argument("<chat>", messenger.chatArgument)

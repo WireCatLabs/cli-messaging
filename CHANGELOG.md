@@ -6,6 +6,13 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- `topics delete <chat> <topic>` deletes a forum topic and every message in it, for everyone; MCP
+  `topics_delete`. It asks first by default (`topics.delete` is `ask`), and `--allow-dangerous` is the word that
+  skips the question, as for `messages delete`. The General topic is refused. Adapters add the optional
+  `TopicEditing.deleteTopic`.
+
 ## 0.180.0 — 08.10.2026
 
 ### Added

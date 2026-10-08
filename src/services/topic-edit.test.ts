@@ -96,3 +96,31 @@ describe("ordering pinned topics", () => {
     await expect(fixture(false).service.order("7", ["12"])).rejects.toThrow("cannot order pinned forum topics")
   })
 })
+
+describe("deleting a forum topic", () => {
+  it("deletes through the guard by topic id, and refuses General, a blank id and a messenger without it", async () => {
+    const records: Omit<SendEntry, "at" | "profile">[] = []
+    const checked: GuardRequest[] = []
+    const guard = {
+      check: (request: GuardRequest) => checked.push(request),
+      record: (entry) => records.push(entry),
+    } as SendGuard
+    const deleteTopic = vi.fn(async () => {})
+    const service = (capable: boolean) =>
+      topicsService(
+        onlineDeps(
+          { provider: "test" } as Messenger,
+          { resolve: async () => chat, ...(capable ? { deleteTopic } : {}) } as unknown as MessengerAdapter,
+          guard,
+        ),
+      )
+
+    expect(await service(true).delete("synthetic group", " 12 ")).toMatchObject({ chatId: "7", topicId: "12" })
+    expect(deleteTopic).toHaveBeenCalledWith("7", "12")
+    expect(checked[0]).toMatchObject({ action: "topic-delete", key: "topics.delete", threadId: "12" })
+    await expect(service(true).delete("7", "1")).rejects.toThrow("General topic cannot be deleted")
+    await expect(service(true).delete("7", " ")).rejects.toThrow("which topic")
+    await expect(service(false).delete("7", "12")).rejects.toThrow("cannot delete forum topics")
+    expect(deleteTopic).toHaveBeenCalledOnce()
+  })
+})

@@ -18,6 +18,8 @@ export interface TopicsService {
   ): Promise<Operated<{ chatId: string; topic: Topic; sendId: string }>>
   edit(chat: string, topic: string, change: TopicChange): Promise<Operated<{ chatId: string; topic: Topic }>>
   order(chat: string, topics: string[]): Promise<Operated<{ chatId: string; order: string[] }>>
+  /** Every message in it goes too, for everyone; asks first by default (`topics.delete` is `ask`). */
+  delete(chat: string, topic: string): Promise<Operated<{ chatId: string; topicId: string }>>
 }
 
 const actionOf = ({ title, closed, pinned, hidden }: TopicChange): ChatAction => {
@@ -194,6 +196,25 @@ export const topicsService = (deps: ServiceDeps): TopicsService => {
           }),
       )
       return { operationId, chatId, topic }
+    },
+    delete: async (chat, typedTopic) => {
+      const topicId = typedTopic.trim()
+      if (topicId === "") throw new CliError("validation_error", "which topic? give its id from `topics list`")
+      if (topicId === "1")
+        throw new CliError(
+          "validation_error",
+          "the General topic cannot be deleted; `topics edit --hidden on` hides it",
+        )
+      const connection = await online()
+      const remove = capability(connection, "deleteTopic", "delete forum topics")
+      const chatId = (await connection.resolve(chat)).id
+      const operationId = newOperationId()
+      await guardedWrite(
+        deps.guard,
+        { operationId, chatId, kind: "chat", action: "topic-delete", key: "topics.delete", threadId: topicId },
+        () => remove(chatId, topicId),
+      )
+      return { operationId, chatId, topicId }
     },
     order: async (chat, typed) => {
       const order = typed.map((one) => one.trim())

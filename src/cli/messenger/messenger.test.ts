@@ -3579,6 +3579,32 @@ describe("sender identity commands", () => {
   })
 })
 
+describe("topics delete", () => {
+  it("asks first: refused with nobody to answer, done with --allow-dangerous, journaled by topic id", async () => {
+    const root = mkdtempSync(join(tmpdir(), "topic-delete-cli-"))
+    const env = {
+      CHAT_STATE_DIR: join(root, "state"),
+      CHAT_CONFIG_DIR: join(root, "config"),
+      MESSAGING_STORE: join(root, "m.db"),
+    }
+    const deleteTopic = vi.fn(async () => {})
+    const connect = vi.fn(async () => ({ ...fake, deleteTopic }))
+
+    const unasked = await call(["topics", "delete", "7", "12", "--json"], connect, env)
+    const done = await call(["topics", "delete", "7", "12", "--allow-dangerous", "--json"], connect, env)
+    const general = await call(["topics", "delete", "7", "1", "--allow-dangerous", "--json"], connect, env)
+
+    expect(unasked.stderr.join("\n")).toContain("--allow-dangerous")
+    expect(JSON.parse(done.stdout[0] ?? "")).toEqual({ operationId: expect.any(String), chatId: "7", topicId: "12" })
+    expect(general.stderr.join("\n")).toContain("General topic cannot be deleted")
+    expect(deleteTopic.mock.calls).toEqual([["7", "12"]])
+    expect(new SendJournal(sendsPathFor(app, "default", env)).entries()).toMatchObject([
+      { action: "topic-delete", key: "topics.delete", threadId: "12", outcome: "refused" },
+      { action: "topic-delete", key: "topics.delete", threadId: "12", outcome: "sent" },
+    ])
+  })
+})
+
 describe("topics edit", () => {
   it("passes a title and on/off as closed, and refuses another word", async () => {
     const root = mkdtempSync(join(tmpdir(), "topic-edit-cli-"))
