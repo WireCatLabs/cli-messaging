@@ -76,7 +76,7 @@ synthetic traces, not a hardened filesystem boundary or a general guarantee of s
 ## Evidence and repetition
 
 [Per-trial results](2026-10-08-natural-name-stats-results.json) retain usage, durations and verdicts.
-The owner’s private archive holds540 hashed artifacts: prompts/skills, manifests, seeds, ledgers,
+The owner’s private archive holds553 hashed artifacts: prompts/skills, manifests, seeds, ledgers,
 events/finals, run/authentication metadata, raw assessment, parent reviews and the candidate patch.
 No owner content, credentials or SQLite stores are included. Serialized result bytes include
 protocol envelopes and duplicate text/structured output, not network traffic or a causal efficiency metric.
