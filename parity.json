@@ -196,6 +196,10 @@
     "--check": {
       "meaning": "say whether a newer version exists, and install nothing"
     },
+    "--checkpoints": {
+      "value": "<durations>",
+      "meaning": "elapsed joining ages to inspect, such as 1d,7d,30d"
+    },
     "--closed": {
       "value": "<on|off>",
       "meaning": "on closes a forum topic to new messages, off reopens it"
@@ -230,6 +234,10 @@
     "--correct": {
       "value": "<n>",
       "meaning": "with --quiz: the right answer's position, from 1"
+    },
+    "--counters": {
+      "value": "<names>",
+      "meaning": "the counter fields: views,reactions,comments"
     },
     "--cursor": {
       "value": "<cursor>",
@@ -434,6 +442,10 @@
       "value": "<n>",
       "meaning": "at most this many actions in one run",
       "default": "10"
+    },
+    "--max-age": {
+      "value": "<duration>",
+      "meaning": "the observation-age threshold for a fresh counter snapshot"
     },
     "--max-chats": {
       "value": "<n>",
@@ -981,7 +993,7 @@
     },
     "--within": {
       "value": "<duration>",
-      "meaning": "the help window after a known newcomer join"
+      "meaning": "the observation window after a known join; each report names what it measures"
     },
     "--words": {
       "meaning": "match any of these whole words, comma-separated; empty clears",
@@ -2874,14 +2886,32 @@
       "in": "all",
       "options": {
         "--anonymous": "all",
-        "--correct": { "in": [], "reason": "max-cli creates no quizzes", "planned": { "tg": "G2 feat/poll-quiz" } },
+        "--correct": {
+          "in": [],
+          "reason": "max-cli creates no quizzes",
+          "planned": {
+            "tg": "G2 feat/poll-quiz"
+          }
+        },
         "--multiple": "all",
-        "--quiz": { "in": [], "reason": "max-cli creates no quizzes", "planned": { "tg": "G2 feat/poll-quiz" } },
+        "--quiz": {
+          "in": [],
+          "reason": "max-cli creates no quizzes",
+          "planned": {
+            "tg": "G2 feat/poll-quiz"
+          }
+        },
         "--revote": "all",
         "--send-as": "all",
         "--send-id": "all",
         "--silent": "all",
-        "--solution": { "in": [], "reason": "max-cli creates no quizzes", "planned": { "tg": "G2 feat/poll-quiz" } },
+        "--solution": {
+          "in": [],
+          "reason": "max-cli creates no quizzes",
+          "planned": {
+            "tg": "G2 feat/poll-quiz"
+          }
+        },
         "--topic": "all"
       }
     },
@@ -3294,6 +3324,22 @@
       "in": ["tg"],
       "reason": "MAX has no statistics request of its own for a chat"
     },
+    "stats chats retention": {
+      "in": [],
+      "planned": {
+        "max": "Retention/freshness adoption",
+        "tg": "Retention/freshness adoption"
+      },
+      "options": {
+        "--by": "all",
+        "--checkpoints": "all",
+        "--limit": "all",
+        "--since-time": "all",
+        "--timezone": "all",
+        "--until-time": "all",
+        "--within": "all"
+      }
+    },
     "stats chats show": {
       "in": "all",
       "options": {
@@ -3354,6 +3400,47 @@
     },
     "stats messages": {
       "in": "all"
+    },
+    "stats messages counters": {
+      "in": [],
+      "planned": {
+        "max": "Retention/freshness adoption",
+        "tg": "Retention/freshness adoption"
+      }
+    },
+    "stats messages counters refresh": {
+      "in": [],
+      "planned": {
+        "max": "Retention/freshness adoption",
+        "tg": "Retention/freshness adoption"
+      },
+      "options": {
+        "--chat": "all",
+        "--counters": "all",
+        "--exact": "all",
+        "--limit": "all",
+        "--max-messages": "all",
+        "--selection": "all",
+        "--source": "all",
+        "--sync-time": "all",
+        "--timezone": "all"
+      }
+    },
+    "stats messages counters show": {
+      "in": [],
+      "planned": {
+        "max": "Retention/freshness adoption",
+        "tg": "Retention/freshness adoption"
+      },
+      "options": {
+        "--chat": "all",
+        "--counters": "all",
+        "--exact": "all",
+        "--limit": "all",
+        "--max-age": "all",
+        "--source": "all",
+        "--timezone": "all"
+      }
     },
     "stats messages discussion": {
       "in": "all",
