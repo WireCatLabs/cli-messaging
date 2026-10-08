@@ -5,6 +5,7 @@ import { listed, renderPage, window, withPaging } from "../paging.js"
 import { groupCommands } from "./admin-commands.js"
 import { foldersCommand } from "./admin-folders-command.js"
 import { moderateCommand, rulesCommand } from "./admin-moderation-command.js"
+import { botChatCommands } from "./chats-bots-command.js"
 import { membersCommand } from "./chats-members-command.js"
 import { markReadCommand } from "./chats-read-command.js"
 import { trackingCommand } from "./chats-tracking-command.js"
@@ -123,6 +124,7 @@ export const chatsCommand = (messenger: Messenger): Command => {
   if (messenger.chatMedia === true) chats.addCommand(mediaCommand(messenger))
   if (messenger.chatMute === true) for (const command of muteCommands(messenger)) chats.addCommand(command)
   if (messenger.chatDeletion === true) for (const command of chatDeletionCommands(messenger)) chats.addCommand(command)
+  if (messenger.personalBots === true) for (const command of botChatCommands(messenger)) chats.addCommand(command)
 
   return chats
 }

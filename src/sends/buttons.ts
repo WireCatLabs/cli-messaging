@@ -4,7 +4,7 @@ import { capability } from "../cli/messenger/port.js"
 import type { Button, Id } from "../domain/models.js"
 import type { SendGuard } from "./guard.js"
 import { guardedWrite, type Operated } from "./guarded.js"
-import { newOperationId } from "./send-id.js"
+import { newOperationId, newSendId } from "./send-id.js"
 
 export interface Pressed {
   chatId: Id
@@ -61,4 +61,36 @@ export const guardedPress = async (
     press(chatId, message, row, column),
   )
   return { operationId, chatId, messageId: message, button }
+}
+
+/** Starting a bot sends it a message — its start command — so it is guarded like one. */
+export const guardedStart = async (
+  guard: SendGuard,
+  connection: MessengerAdapter,
+  { chat, payload, sendId }: { chat: string; payload?: string; sendId?: string },
+): Promise<Operated<{ chatId: Id; started: true }>> => {
+  const start = capability(connection, "startBot", "start a bot")
+  const { id: chatId } = await connection.resolve(chat)
+  const id = sendId ?? connection.newSendId?.() ?? newSendId()
+  await guardedWrite(
+    guard,
+    { chatId, kind: "message", sendId: id, operationId: id, length: payload?.length ?? 0, key: "chats.start" },
+    () => start(chatId, { sendId: id, ...(payload === undefined ? {} : { payload }) }),
+  )
+  return { operationId: id, chatId, started: true }
+}
+
+/** The mini app's address signs the owner in, so asking for it is guarded like a press, and it is printed only here. */
+export const guardedApp = async (
+  guard: SendGuard,
+  connection: MessengerAdapter,
+  { chat, startParam }: { chat: string; startParam?: string },
+): Promise<Operated<{ chatId: Id; url: string }>> => {
+  const app = capability(connection, "botApp", "open a bot's mini app")
+  const { id: chatId } = await connection.resolve(chat)
+  const operationId = newOperationId()
+  const { url } = await guardedWrite(guard, { operationId, chatId, kind: "reaction", key: "chats.app" }, () =>
+    app(chatId, startParam === undefined ? {} : { startParam }),
+  )
+  return { operationId, chatId, url }
 }

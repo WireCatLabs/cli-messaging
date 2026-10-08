@@ -1118,12 +1118,14 @@ describe("the shared read commands", () => {
       },
     }
 
-    const byNumber = await call(["messages", "press", "Book", "3", "2", "--json"], async () => keyboard, env)
-    const byText = await call(["messages", "press", "Book", "3", "Yes", "--json"], async () => keyboard, env)
-    const phone = await call(["messages", "press", "Book", "3", "3"], async () => keyboard, env)
-    const link = await call(["messages", "press", "Book", "3", "Site"], async () => keyboard, env)
-    const missing = await call(["messages", "press", "Book", "3", "9"], async () => keyboard, env)
-    const unsupported = await call(["messages", "press", "Book", "3", "1"], async () => fake, env)
+    const bots = { personalBots: true }
+    const hidden = await call(["messages", "press", "Book", "3", "1"], async () => keyboard, env)
+    const byNumber = await call(["messages", "press", "Book", "3", "2", "--json"], async () => keyboard, env, {}, bots)
+    const byText = await call(["messages", "press", "Book", "3", "Yes", "--json"], async () => keyboard, env, {}, bots)
+    const phone = await call(["messages", "press", "Book", "3", "3"], async () => keyboard, env, {}, bots)
+    const link = await call(["messages", "press", "Book", "3", "Site"], async () => keyboard, env, {}, bots)
+    const missing = await call(["messages", "press", "Book", "3", "9"], async () => keyboard, env, {}, bots)
+    const unsupported = await call(["messages", "press", "Book", "3", "1"], async () => fake, env, {}, bots)
 
     expect(JSON.parse(byNumber.stdout[0] ?? "")).toMatchObject({
       chatId: "7",
@@ -1139,11 +1141,50 @@ describe("the shared read commands", () => {
     expect(link.stderr.join("\n")).toContain("only opens its link")
     expect(missing.stderr.join("\n")).toContain("there are 4 buttons")
     expect(unsupported.code).not.toBe(0)
+    expect(hidden.stderr.join("\n")).toContain("unknown command")
     const journal = new SendJournal(sendsPathFor(app, "default", env)).entries().filter((one) => one.outcome === "sent")
     expect(journal.map((one) => [one.kind, one.messageId])).toEqual([
       ["reaction", "3"],
       ["reaction", "3"],
     ])
+  })
+
+  it("**starts a bot like a message, and prints its mini app's address** only where the messenger has bots", async () => {
+    const root = mkdtempSync(join(tmpdir(), "messenger-"))
+    const env = { CHAT_STATE_DIR: join(root, "state"), CHAT_CONFIG_DIR: join(root, "config") }
+    const calls: unknown[] = []
+    const bot: MessengerAdapter = {
+      ...fake,
+      startBot: async (chatId, options) => {
+        calls.push(["start", chatId, options])
+      },
+      botApp: async (chatId, options) => {
+        calls.push(["app", chatId, options])
+        return { url: "https://app.example/#signed" }
+      },
+    }
+    const bots = { personalBots: true }
+
+    const started = await call(
+      ["chats", "start", "Book", "--payload", "ref1", "--json"],
+      async () => bot,
+      env,
+      {},
+      bots,
+    )
+    const opened = await call(["chats", "app", "Book", "--start", "p", "--json"], async () => bot, env, {}, bots)
+    const hidden = await call(["chats", "start", "Book"], async () => bot, env)
+
+    expect(JSON.parse(started.stdout[0] ?? "")).toMatchObject({ chatId: "7", started: true })
+    expect(JSON.parse(opened.stdout[0] ?? "")).toMatchObject({ chatId: "7", url: "https://app.example/#signed" })
+    expect(calls).toEqual([
+      ["start", "7", { sendId: expect.any(String), payload: "ref1" }],
+      ["app", "7", { startParam: "p" }],
+    ])
+    expect(hidden.code).not.toBe(0)
+    const journal = new SendJournal(sendsPathFor(app, "default", env)).entries().filter((one) => one.outcome === "sent")
+    expect(journal.map((one) => one.kind)).toEqual(["message", "reaction"])
+    expect(JSON.stringify(journal)).not.toContain("signed")
   })
 
   it("**creates a quiz where the messenger makes them**, and refuses quiz options that do not go together", async () => {

@@ -482,6 +482,14 @@ export interface ChatDeletion {
   clearHistory(chatId: Id): Promise<void>
 }
 
+/** A bot in a one-to-one chat with the personal account. */
+export interface BotChats {
+  /** Starts the bot, as its Start button does; the payload is what the bot reads as its start parameter. */
+  startBot(chatId: Id, options: { sendId: string; payload?: string }): Promise<void>
+  /** The address that opens the bot's mini app. It signs the owner in: a credential. */
+  botApp(chatId: Id, options: { startParam?: string }): Promise<{ url: string }>
+}
+
 /** The owner's own settings; nobody else is told. */
 export interface AccountSettings {
   /** `forever`, an ISO 8601 time, or null to hear the chat again. */
@@ -577,6 +585,7 @@ export interface MessengerAdapter
     Partial<ReadState>,
     Partial<MessagePolls>,
     Partial<MessageButtons>,
+    Partial<BotChats>,
     Partial<ThreadAddressing>,
     Partial<TopicHistory>,
     Partial<ForumControl>,

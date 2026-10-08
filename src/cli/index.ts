@@ -44,7 +44,7 @@ export { type ReplyRender, replyRenderer } from "../replies/rendering.js"
 export { repliesPathFor } from "../replies/rules.js"
 export { NO_RULES, NO_TASKS, NOT_ALLOWED, ONLY_TASK, type Replied, type Replier, replyTo } from "../replies/serve.js"
 export { repliesStatePathFor } from "../replies/state.js"
-export { guardedPress, type Pressed } from "../sends/buttons.js"
+export { guardedApp, guardedPress, guardedStart, type Pressed } from "../sends/buttons.js"
 export { guardedClose, guardedCreatePoll, guardedVote } from "../sends/polls.js"
 export type { InboxReader } from "../services/inbox.js"
 export { INBOX_CHATS, newIn, REVIEW_CHATS, reviewIn, unanswered, unreadIn } from "../services/inbox.js"
@@ -167,6 +167,7 @@ export type {
   AccountStanding,
   AccountTools,
   After,
+  BotChats,
   ChannelComments,
   ChatReading,
   Download,
@@ -177,6 +178,7 @@ export type {
   InviteLinks,
   JoinRequests,
   LiveUpdates,
+  MessageButtons,
   MessageEditing,
   MessageMedia,
   MessagePins,

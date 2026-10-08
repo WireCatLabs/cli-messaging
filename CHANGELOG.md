@@ -6,6 +6,17 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- `chats start <bot> [--payload]` starts a bot in a one-to-one chat, as its Start button does — guarded as a
+  message under `chats.start`; `chats app <bot> [--start]` prints the address of the bot's mini app, which signs
+  the owner in — guarded as a reaction under `chats.app`. Through the optional `BotChats` (`startBot`, `botApp`).
+- `MessageButtons` and `BotChats` exported from `@leemour/cli-messaging/cli`.
+
+### Changed — may break callers
+
+- `messages press`, `chats start` and `chats app` exist only where `Messenger.personalBots` is true.
+
 ## 0.194.0 — 08.10.2026
 
 ### Added
