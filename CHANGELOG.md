@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.198.0 — 08.10.2026
+
 ### Added
 
 - `chats link update --expire-time never` (MCP `expire_time: "never"`) takes a link's expiry away;
