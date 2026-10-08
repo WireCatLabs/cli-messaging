@@ -153,6 +153,31 @@ export const adminTools = (messenger: Messenger): Record<string, AnyTool> => {
       permission: "groups",
       online: (adapter, args, { guard }) => admin(adapter, guard).revokeLink(args.chat, args.link),
     }),
+    chats_link_update: tool({
+      title: "Change an invite link",
+      description:
+        "Change one of the owner's extra invite links: { chatId, link, approval, expiresAt, maxUses }. Only the " +
+        "fields given change; the group's own link cannot be changed. Only when the owner asked.",
+      input: v.object({
+        chat: chatOf(messenger),
+        link: v.pipe(v.string(), v.minLength(1)),
+        approval: v.optional(
+          v.pipe(v.boolean(), v.description("true: who joins by it asks first; false: anyone with it joins at once")),
+        ),
+        expire_time: v.optional(
+          v.pipe(v.string(), v.description("it stops working then: 2026-09-25T09:00 (local time), or 30m, 2h, 7d")),
+        ),
+        max_uses: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(99_999))),
+      }),
+      annotations: WRITE,
+      permission: "groups",
+      online: (adapter, args, { guard }) =>
+        admin(adapter, guard).updateLink(args.chat, args.link, {
+          ...(args.approval === undefined ? {} : { approval: args.approval }),
+          ...(args.expire_time === undefined ? {} : { expires: args.expire_time }),
+          ...(args.max_uses === undefined ? {} : { maxUses: args.max_uses }),
+        }),
+    }),
     chats_requests_list: tool({
       title: "Requests to join a group",
       description:
@@ -257,5 +282,6 @@ export const adminTools = (messenger: Messenger): Record<string, AnyTool> => {
   }
   if (messenger.inviteLinkList === false) delete definitions.chats_link_list
   if (messenger.inviteLinkRevoke === false) delete definitions.chats_link_revoke
+  if (messenger.inviteLinkUpdate !== true) delete definitions.chats_link_update
   return definitions
 }

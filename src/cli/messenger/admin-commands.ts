@@ -123,6 +123,34 @@ const linkCommand = (messenger: Messenger): Command => {
           context.renderer.result(await context.withServices((services) => services.admin.revokeLink(chat, link)))
         }),
     )
+  if (messenger.inviteLinkUpdate === true)
+    link.addCommand(
+      annotate(new Command("update"), { mutates: true })
+        .description("change one of your extra links; the group's own link cannot be changed")
+        .argument("<chat>", messenger.chatArgument)
+        .argument("<link>", "the link, as `chats link list` shows it")
+        .option("--approval", "who joins by it asks first, and an admin lets them in")
+        .option("--no-approval", "anyone with it joins at once")
+        .option("--expire-time <time>", "it stops working then: 2026-09-25T09:00 (local time), or 30m, 2h, 7d from now")
+        .option("--max-uses <n>", "at most this many people join by it, 1 to 99999", positiveCount("--max-uses"))
+        .action(async function (this: Command, chat: string, link: string) {
+          const context = messengerContext(this, messenger)
+          const { approval, expireTime, maxUses } = this.opts<{
+            approval?: boolean
+            expireTime?: string
+            maxUses?: number
+          }>()
+          context.renderer.result(
+            await context.withServices((services) =>
+              services.admin.updateLink(chat, link, {
+                ...(approval === undefined ? {} : { approval }),
+                ...(expireTime === undefined ? {} : { expires: expireTime }),
+                ...(maxUses === undefined ? {} : { maxUses }),
+              }),
+            ),
+          )
+        }),
+    )
   link.addCommand(
     annotate(new Command("reset"), { mutates: true })
       .description("replace the invite link; the old one stops working")

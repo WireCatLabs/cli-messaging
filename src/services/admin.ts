@@ -1,5 +1,5 @@
 import { CliError } from "@leemour/cli-core"
-import { capability } from "../cli/messenger/port.js"
+import { capability, type InviteLinkChange } from "../cli/messenger/port.js"
 import type { AdminRight, GroupCard, GroupChange, Id, InviteLink, JoinRequest, Page } from "../domain/models.js"
 import { sendTime } from "../domain/send-time.js"
 import { guardedWrite, type Operated } from "../sends/guarded.js"
@@ -49,6 +49,12 @@ export interface AdminService {
   ): Promise<{ chatId: Id; accepted: boolean; counted: number; operationId?: string }>
   links(chat: string, window: { limit: number; revoked: boolean }): Promise<Page<InviteLink> & { chatId: Id }>
   revokeLink(chat: string, link: string): Promise<Operated<{ chatId: Id } & InviteLink>>
+  /** Only the fields given change; `expires` as `createLink` takes it. */
+  updateLink(
+    chat: string,
+    link: string,
+    change: { approval?: boolean; expires?: string; maxUses?: number },
+  ): Promise<Operated<{ chatId: Id } & InviteLink>>
   addMembers(
     chat: string,
     people: string[],
@@ -168,9 +174,7 @@ export const adminService = (deps: ServiceDeps): AdminService => {
     },
 
     createLink: async (chat, { approval, expires, maxUses }) => {
-      if (maxUses !== undefined && (!Number.isInteger(maxUses) || maxUses < 1 || maxUses > 99_999))
-        throw new CliError("validation_error", "--max-uses takes a whole number from 1 to 99999")
-      const expiresAt = expires === undefined ? undefined : sendTime(expires, Date.now(), "--expire-time")
+      const expiresAt = linkLimits({ expires, maxUses })
       const connection = await online("chats link create")
       const create = capability(connection, "createInviteLink", "make another invite link")
       const { id: chatId } = await connection.resolve(chat)
@@ -262,6 +266,30 @@ export const adminService = (deps: ServiceDeps): AdminService => {
       return { operationId, chatId, ...answer }
     },
 
+    updateLink: async (chat, link, { approval, expires, maxUses }) => {
+      if (link.trim() === "")
+        throw new CliError("validation_error", "which link? give it as `chats link list` shows it")
+      if (approval === undefined && expires === undefined && maxUses === undefined)
+        throw new CliError(
+          "validation_error",
+          "nothing to change: give --approval, --no-approval, --expire-time or --max-uses",
+        )
+      const expiresAt = linkLimits({ expires, maxUses })
+      const connection = await online("chats link update")
+      const update = capability(connection, "updateInviteLink", "change an invite link")
+      const { id: chatId } = await connection.resolve(chat)
+      const change: InviteLinkChange = {
+        ...(approval === undefined ? {} : { approval }),
+        ...(expiresAt === undefined ? {} : { expiresAt }),
+        ...(maxUses === undefined ? {} : { maxUses }),
+      }
+      const operationId = newOperationId()
+      const answer = await guardedWrite(deps.guard, { operationId, chatId, kind: "chat", action: "link.update" }, () =>
+        update(chatId, link.trim(), change),
+      )
+      return { operationId, chatId, ...answer }
+    },
+
     addMembers: async (chat, people, options) => {
       const connection = await online("chats members add")
       const add = capability(connection, "addMembers", "add people to a group")
@@ -315,4 +343,10 @@ export const adminService = (deps: ServiceDeps): AdminService => {
       return { operationId, chatId, personId: personId as Id }
     },
   }
+}
+
+const linkLimits = ({ expires, maxUses }: { expires?: string | undefined; maxUses?: number | undefined }) => {
+  if (maxUses !== undefined && (!Number.isInteger(maxUses) || maxUses < 1 || maxUses > 99_999))
+    throw new CliError("validation_error", "--max-uses takes a whole number from 1 to 99999")
+  return expires === undefined ? undefined : sendTime(expires, Date.now(), "--expire-time")
 }
