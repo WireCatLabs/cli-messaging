@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.203.0 — 08.10.2026
+
 ### Changed — may break callers
 
 - `chats link create` and `chats link update` (and their MCP tools) refuse `--approval` with `--max-uses`:
