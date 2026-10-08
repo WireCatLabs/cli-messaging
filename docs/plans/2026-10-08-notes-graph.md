@@ -98,6 +98,11 @@ The prefix is what makes a wrong kind fail loudly instead of matching the wrong 
   background job.
 - **Tags** — `tags` gains the `note` target type. `#tag` and `tags:` from a file become tags with
   origin `file`, replaced on each import; tags the owner adds have origin `owner` and survive.
+  **Correction (version 27, 2026-10-08):** the origin is the existing `tags.manual` column (`0` file,
+  `1` owner), written by `NotesStore.replaceFileTags`; an owner tag equal to a file tag is one row the
+  owner owns, so it survives the file dropping it. Labels on a person, entity, task or notes folder live in
+  `owner_targets` (tag type `owner`), with no account; a folder label (`folder:<id>[/<path>]`) labels every
+  note under it at any depth in `tag:` searches.
 - **Entities** — ~~`knowledge_entities` loses `account_pk`~~ **Correction (build, 2026-10-08):** a new
   `entities` table without it, since a forward-only migration may not rebuild a base table; the old rows
   are copied with their ids.
@@ -200,12 +205,16 @@ rename: same id, links and tags kept. Today a move is a new identity. Small and 
   cheap check, and adds only what is missing; removing a copied note or relation also removes its source row
   so it is not copied back. Known gaps until every tool reads 25: an older build's *edit* or *removal* of a
   row already copied is not carried over; tags on a whole notes subfolder (a `chat` tag) and
-  `knowledge_targets` tags on persons, tasks and entities stay where they were.
+  `knowledge_targets` tags on persons, tasks and entities stay where they were. **Correction (version 27):**
+  those two are copied once (`src/store/sqlite/owner-targets-copy.ts`) to `owner_targets` and to the note;
+  an older build's labels written after that open are not copied.
 - tg and max keep `contacts notes …` working over the new table; the services keep their signatures
   for one release. Removing `account_pk` from the API is the week's one breaking change, named in the
   changelog. **Correction (build, 2026-10-08):** the signatures still take an account; what changed is
   the scope — a contact's notes show in every account that sees the contact, `relations` and `entities`
-  list everything (ruling 2 A). The CLI help says so.
+  list everything (ruling 2 A). The CLI help says so. **Correction (version 27):** the knowledge calls for
+  notes, people, entities, tasks, folders and relations take `null` for the account; a chat or contact
+  target still needs one.
 - Migration number: 25, reserved in #763.
 
 ## 4. Work items, in order

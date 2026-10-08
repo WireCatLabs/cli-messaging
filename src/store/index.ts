@@ -31,6 +31,7 @@ export type {
   Note,
   NoteFolder,
   NotesStore,
+  NoteTag,
 } from "./sqlite/notes.js"
 export type { PrivateContact, PrivateContactNote } from "./sqlite/private-people.js"
 export {

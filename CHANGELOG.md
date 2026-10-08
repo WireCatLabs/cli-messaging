@@ -6,6 +6,27 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- Store version 27: `owner_targets`. A label on a person, entity, task or notes folder belongs to no account:
+  the `knowledge` calls for these targets, for notes and for relations and entities take `null` for the
+  account (`KnowledgeScope`). A chat or contact target still needs its account. Labels from before are
+  copied once on open.
+- `folder:<id>[/<path>]` references and the `folder` knowledge target: a label on a notes folder or subfolder
+  labels every note under it, at any depth, in a `tag:` search.
+- `NotesStore.replaceFileTags` and `noteTags`: a note's tags say whether its file or the owner stated them; an
+  import replaces only the file's, and an owner's tag survives the file dropping it.
+- `knowledge.labelled` lists every labelled note and owner target, with `labels` (tag and origin) and a
+  `type` filter.
+- `embedNotes` and `nearestNotes` in `services`: notes embedded with the same local model, prefixes and vector
+  key as conversations, and searched by meaning.
+- `MessageStore.personByUid`: the person a `person:<uid>` reference names, with their identities.
+
+### Changed — may break callers
+
+- `knowledge.labelled` no longer narrows by account and no longer lists `knowledge_targets` rows; its items
+  gain `labels`.
+
 ## 0.201.0 — 08.10.2026
 
 ### Added

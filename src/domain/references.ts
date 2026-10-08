@@ -14,6 +14,8 @@ export type Reference =
   | { type: "person"; id: string }
   | { type: "entity"; id: string }
   | { type: "task"; id: string }
+  /** A notes folder, or one subfolder of it: `path` is inside the folder, `null` the folder itself. */
+  | { type: "folder"; id: string; path: string | null }
 
 const parts = (rest: string, count: number, reference: string, shape: string) => {
   const split = rest.split("/")
@@ -30,6 +32,10 @@ export const formatReference = (reference: Reference): string => {
       return `chat:${[reference.provider, reference.account, reference.chat].map(encodeURIComponent).join("/")}`
     case "contact":
       return `contact:${[reference.provider, reference.id].map(encodeURIComponent).join("/")}`
+    case "folder":
+      return reference.path === null
+        ? `folder:${encodeURIComponent(reference.id)}`
+        : `folder:${encodeURIComponent(reference.id)}/${encodeURIComponent(reference.path)}`
     default:
       return `${reference.type}:${reference.id}`
   }
@@ -55,6 +61,17 @@ export const parseReference = (text: string): Reference => {
       const [provider, id] = parts(rest, 2, reference, "contact:<provider>/<id>") as [string, string]
       return { type: "contact", provider, id }
     }
+    case "folder": {
+      const slash = rest.indexOf("/")
+      const id = decodeURIComponent(slash < 0 ? rest : rest.slice(0, slash))
+      const path = slash < 0 ? null : folderPath(decodeURIComponent(rest.slice(slash + 1)))
+      if (!id.trim() || path === "")
+        throw new CliError(
+          "validation_error",
+          `"${singleLine(reference)}" is not a reference — expected folder:<id>[/<path>]`,
+        )
+      return { type: "folder", id, path }
+    }
     case "note":
     case "person":
     case "entity":
@@ -64,9 +81,18 @@ export const parseReference = (text: string): Reference => {
     default:
       throw new CliError(
         "validation_error",
-        `"${singleLine(reference)}" is not a reference — expected msg:, chat:, contact:, note:, person:, entity: or task:`,
+        `"${singleLine(reference)}" is not a reference — expected msg:, chat:, contact:, folder:, note:, person:, entity: or task:`,
       )
   }
+}
+
+/** A subfolder spelled one way: no leading, trailing or doubled slash, and `.` for the folder itself. */
+const folderPath = (path: string): string | null => {
+  const clean = path
+    .split("/")
+    .filter((part) => part !== "" && part !== ".")
+    .join("/")
+  return clean === "" ? (path.trim() === "" ? "" : null) : clean
 }
 
 /** The stored spelling of a reference, so two spellings of one thing compare equal. */

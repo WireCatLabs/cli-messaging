@@ -314,5 +314,12 @@ export const GENERATED: { name: string; statements: string[] }[] = [
       "-- `analyzer` stays NULL until the first drain claims it; a different one later re-queues every note.\nINSERT INTO search_index_state (name, watermark, filled_through, terms_through, normalizer_version, built_at)\n  VALUES ('note_index', 0, 0, 0, 1, NULL);",
       "INSERT OR IGNORE INTO note_index_pending (pk) SELECT pk FROM notes;"
     ]
+  },
+  {
+    "name": "20261008191711_version-27-owner-targets",
+    "statements": [
+      "CREATE TABLE `owner_targets` (\n\t`pk` integer PRIMARY KEY,\n\t`reference` text NOT NULL UNIQUE,\n\t`folder_id` text,\n\t`folder_path` text,\n\t`created_at` integer NOT NULL\n);",
+      "CREATE INDEX `owner_targets_by_folder` ON `owner_targets` (`folder_id`,`folder_path`);"
+    ]
   }
 ]
