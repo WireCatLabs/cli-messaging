@@ -129,10 +129,7 @@ const compileQuery = (context: StoreContext, execution: QueryExecution, boundedA
     let fragment: Fragment
     let test: Leaf["test"]
     const bound = (sql: string, ...params: SqlValue[]): Fragment => ({ sql, params, exact: true })
-    const stemsOf = (text: string) => {
-      const stems = execution.stemmer?.stemTokens(text) ?? []
-      return stems.length ? quoted(stems.join(" ")) : undefined
-    }
+    const stemsOf = (text: string) => execution.stemmer?.phrases(text)
     if ((field === "text" || field === "exact") && value === "") fragment = bound("0")
     else if (field === "body" && value === "") fragment = bound("m.text = ?", "")
     else if (isStemmed(node)) {

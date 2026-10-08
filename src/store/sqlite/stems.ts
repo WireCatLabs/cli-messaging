@@ -102,6 +102,7 @@ const claim = (database: CacheDatabase, identity: string): boolean => {
   const built = indexRow(database, INDEX)?.analyzer
   if (built === undefined) return false
   if (built === null) {
+    if (savedStemmers(database) === undefined) saveStoreStemmers(database, DEFAULT_STEMMERS, Date.now())
     database.prepare("UPDATE search_index_state SET analyzer = ? WHERE name = ?").run(identity, INDEX)
     return true
   }
@@ -120,7 +121,7 @@ const stemWriter = (database: CacheDatabase, stemmer: Stemmer) => {
   const remove = database.prepare("DELETE FROM message_stems WHERE rowid = ?")
   const dequeue = database.prepare("DELETE FROM message_stems_pending WHERE pk = ?")
   const restem = (pk: number, row: Record<string, unknown> | undefined) => {
-    const stems = row ? stemmer.stemTokens(String(row.text)).join(" ") : ""
+    const stems = row ? stemmer.indexText(String(row.text)) : ""
     if (stems === "") remove.run(pk)
     else write.run(pk, stems, String(row?.scope))
   }
@@ -239,7 +240,10 @@ const newer = (a: number[], b: number[]): boolean => {
  * for `store reindex`, and for `store migrate` when the stems were built by other choices. A row built
  * by a newer Snowball than this binary has is refused: rebuilding it would downgrade every newer tool.
  */
-export const resetStems = (database: CacheDatabase, { force = false }: { force?: boolean } = {}): boolean => {
+export const resetStems = (
+  database: CacheDatabase,
+  { force = false, now = Date.now }: { force?: boolean; now?: () => number } = {},
+): boolean => {
   const state = stemsState(database)
   if (!state) return false
   if (!force && state.cause !== "stemmer_changed" && state.cause !== "stemmer_unknown") return false
@@ -258,6 +262,9 @@ export const resetStems = (database: CacheDatabase, { force = false }: { force?:
     )
   }
   inBatch(database, () => {
+    // Saved, not defaulted: an older tool with another default then refuses as "unknown" instead of
+    // rebuilding the stems back to its own choice on its next reindex.
+    if (savedStemmers(database) === undefined) saveStoreStemmers(database, DEFAULT_STEMMERS, now())
     database.exec(`INSERT INTO ${INDEX} (${INDEX}) VALUES ('delete-all')`)
     database.exec("DELETE FROM message_stems_pending")
     database

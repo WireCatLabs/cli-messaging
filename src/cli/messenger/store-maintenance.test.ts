@@ -428,7 +428,7 @@ describe("the stems", () => {
 
     const { answer, stderr } = await call(["store", "migrate", "--json"], env)
     expect(answer).toMatchObject({ stemmed: 2 })
-    expect(stderr.join("\n")).toContain("rebuilding them with snowball-3.1.1 cyrillic=none latin=spanish")
+    expect(stderr.join("\n")).toContain("rebuilding them with snowball-3.1.1 cyrillic=none latin=english,spanish")
   })
 })
 

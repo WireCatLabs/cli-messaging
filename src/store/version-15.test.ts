@@ -198,7 +198,7 @@ describe("store version 15, the stems", () => {
     await (await openStore({ path })).close()
     await withDatabase(path, (database) =>
       database.exec(
-        `INSERT INTO store_settings (key, value, at) VALUES ('searchStemmers', '{"cyrillic":"russian","latin":"portuguese"}', 0)`,
+        `INSERT OR REPLACE INTO store_settings (key, value, at) VALUES ('searchStemmers', '{"cyrillic":"russian","latin":"portuguese"}', 0)`,
       ),
     )
 

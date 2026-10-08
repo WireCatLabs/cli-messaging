@@ -6,9 +6,16 @@ import { openSqlite } from "../store/sqlite/open.js"
 import EnglishStemmer from "./snowball/english-stemmer.js"
 import RussianStemmer from "./snowball/russian-stemmer.js"
 import SpanishStemmer from "./snowball/spanish-stemmer.js"
-import { analyzerIdentity, createStemmer, DEFAULT_STEMMERS, parseStemmers, type Stemmers } from "./stem.js"
+import {
+  analyzerIdentity,
+  createStemmer,
+  DEFAULT_STEMMERS,
+  parseStemmers,
+  STEM_SEPARATOR,
+  type Stemmers,
+} from "./stem.js"
 
-const stem = createStemmer()
+const stem = createStemmer({ cyrillic: "russian", latin: "spanish" })
 const stemmed = (stemmers: Stemmers) => createStemmer(stemmers).stemToken
 
 describe("the vendored Snowball stemmers", () => {
@@ -28,7 +35,7 @@ describe("the vendored Snowball stemmers", () => {
   })
 })
 
-describe("createStemmer with the default choices", () => {
+describe("createStemmer with Russian and Spanish", () => {
   it.each([
     [["квартира", "квартиру", "квартиры"], "квартир"],
     [["ёлка", "елка", "ёлки"], "елк"],
@@ -56,7 +63,7 @@ describe("createStemmer with the default choices", () => {
     expect([stem.stemToken(a), stem.stemToken(b)]).toEqual([expected, expected])
   })
 
-  it("stems English as Spanish by default", () => {
+  it("stems English as Spanish when only Spanish is chosen", () => {
     expect(stem.stemToken("running")).toBe("running")
   })
 
@@ -108,7 +115,8 @@ describe("the choices", () => {
   it("names what built an index", () => {
     expect(stem.identity).toBe("snowball-3.1.1 cyrillic=russian latin=spanish")
     expect(analyzerIdentity({ cyrillic: "none", latin: "english" })).toBe("snowball-3.1.1 cyrillic=none latin=english")
-    expect(stem.stemmers).toEqual(DEFAULT_STEMMERS)
+    expect(createStemmer().identity).toBe("snowball-3.1.1 cyrillic=russian latin=english,spanish")
+    expect(createStemmer().stemmers).toEqual(DEFAULT_STEMMERS)
   })
 
   it("refuses a language of the other script, naming the allowed ones", () => {
@@ -119,7 +127,14 @@ describe("the choices", () => {
         details: expect.objectContaining({ allowed: ["russian", "none"] }),
       }),
     )
-    expect(() => createStemmer({ cyrillic: "russian", latin: "russian" } as never)).toThrow(/choose spanish, english/)
+    expect(() => createStemmer({ cyrillic: "russian", latin: "russian" })).toThrow(/english, spanish joined by commas/)
+  })
+
+  it("keeps several Latin stemmers in one order, and refuses none beside them", () => {
+    expect(parseStemmers({ latin: "spanish, english" }).latin).toBe("english,spanish")
+    expect(parseStemmers({ latin: ["spanish", "english", "spanish"] }).latin).toBe("english,spanish")
+    expect(() => parseStemmers({ latin: "none,english" })).toThrow(/joined by commas/)
+    expect(() => parseStemmers({ latin: "english,portuguese" })).toThrow(/joined by commas/)
   })
 
   it("takes the default for a missing choice", () => {
@@ -166,7 +181,37 @@ describe("the cache", () => {
   })
 
   it("is never shared between stemmers with different choices", () => {
-    expect(createStemmer().stemToken("running")).toBe("running")
+    expect(stem.stemToken("running")).toBe("running")
     expect(stemmed({ cyrillic: "russian", latin: "english" })("running")).toBe("run")
+  })
+})
+
+describe("several Latin stemmers", () => {
+  const both = createStemmer()
+
+  it("gives one sequence per Latin stemmer, and the same one once", () => {
+    expect(both.stemSequences("running pisos")).toEqual([
+      ["run", "piso"],
+      ["running", "pis"],
+    ])
+    expect(both.stemSequences("Сдаю квартиру")).toEqual([["сда", "квартир"]])
+  })
+
+  it("indexes the sequences apart, so a phrase never spans two", () => {
+    expect(both.indexText("running pisos")).toBe(`run piso ${STEM_SEPARATOR} running pis`)
+    expect(both.indexText("квартиру")).toBe("квартир")
+  })
+
+  it("queries every sequence as its own phrase", () => {
+    expect(both.phrases("running pisos")).toBe('"run piso" OR "running pis"')
+    expect(both.phrases("🎉")).toBeUndefined()
+  })
+
+  it("explains a Latin word once per distinct stem", () => {
+    expect(both.explain("pisos")).toEqual([
+      { word: "pisos", stem: "piso", stemmer: "english" },
+      { word: "pisos", stem: "pis", stemmer: "spanish" },
+    ])
+    expect(both.explain("ok")).toEqual([{ word: "ok", stem: "ok", stemmer: "english" }])
   })
 })
