@@ -1,6 +1,9 @@
 import { CliError } from "@leemour/cli-core"
+import { formatReference } from "../../domain/references.js"
 import type { AccountKey } from "../store.js"
 import { ulid } from "../ulid.js"
+import { resolvePersonLinks } from "./notes.js"
+import { forgetCopied } from "./notes-copy.js"
 import type { StoreContext } from "./open.js"
 import { toIso } from "./values.js"
 
@@ -32,7 +35,7 @@ const required = ({ database }: StoreContext, key: AccountKey, personId: string)
 }
 
 const noteOf = (row: Record<string, unknown>, personId: string): PrivateContactNote => ({
-  id: String(row.uid),
+  id: String(row.id),
   personId,
   text: String(row.text),
   revision: Number(row.revision),
@@ -40,16 +43,22 @@ const noteOf = (row: Record<string, unknown>, personId: string): PrivateContactN
   updatedAt: toIso(Number(row.updated_at)) as string,
 })
 
+const contactRef = (key: AccountKey, personId: string) =>
+  formatReference({ type: "contact", provider: key.provider, id: personId })
+
+/** A contact's notes are the owner's notes about that identity, whichever account wrote them. */
+const NOTES_ABOUT =
+  "SELECT n.* FROM notes n JOIN links l ON l.from_ref = 'note:' || n.id AND l.kind = 'about' " +
+  "WHERE l.to_ref = ? AND n.source = 'internal' AND n.deleted_at IS NULL"
+
 export const privateContact = (context: StoreContext, key: AccountKey, personId: string): PrivateContact => {
   const { account, identity } = required(context, key, personId)
   const alias = context.database
     .prepare("SELECT alias FROM contact_aliases WHERE account_pk=? AND identity_pk=?")
     .get(account, identity)?.alias
   const notes = context.database
-    .prepare(
-      "SELECT * FROM annotations WHERE account_pk=? AND ((target_type='contact' AND target_pk=?) OR (target_type='source' AND target_pk IN (SELECT pk FROM knowledge_targets WHERE account_pk=? AND type='contact' AND reference=?))) ORDER BY created_at, uid",
-    )
-    .all(account, identity, account, personId)
+    .prepare(`${NOTES_ABOUT} ORDER BY n.created_at, n.id`)
+    .all(contactRef(key, personId))
     .map((row) => noteOf(row, personId))
   return { personId, alias: alias == null ? null : String(alias), notes }
 }
@@ -65,6 +74,7 @@ export const setAlias = (context: StoreContext, key: AccountKey, personId: strin
         "ON CONFLICT(account_pk, identity_pk) DO UPDATE SET alias=excluded.alias, alias_folded=excluded.alias_folded, updated_at=excluded.updated_at",
     )
     .run(account, identity, value, value?.toLowerCase() ?? null, context.now())
+  resolvePersonLinks(context.database, [value])
   return { personId, alias: value }
 }
 
@@ -75,15 +85,17 @@ const noteText = (text: string) => {
 }
 
 export const addNote = (context: StoreContext, key: AccountKey, personId: string, text: string) => {
-  const { account, identity } = required(context, key, personId)
+  required(context, key, personId)
   const at = context.now()
   const id = ulid(at)
   context.database
+    .prepare("INSERT INTO notes (id, source, text, created_at, updated_at) VALUES (?, 'internal', ?, ?, ?)")
+    .run(id, noteText(text), at, at)
+  context.database
     .prepare(
-      "INSERT INTO annotations (uid, account_pk, target_type, target_pk, text, revision, created_at, updated_at, authored_by) " +
-        "VALUES (?, ?, 'contact', ?, ?, 1, ?, ?, 'owner')",
+      "INSERT INTO links (id, from_ref, to_ref, kind, origin, confirmed, created_at) VALUES (?, ?, ?, 'about', 'owner', 1, ?)",
     )
-    .run(id, account, identity, noteText(text), at, at)
+    .run(ulid(at), `note:${id}`, contactRef(key, personId), at)
   return privateContact(context, key, personId).notes.find((note) => note.id === id) as PrivateContactNote
 }
 
@@ -101,25 +113,20 @@ export const editNote = (
   text: string,
   revision: number,
 ) => {
-  const { account, identity } = required(context, key, personId)
-  note(context, key, personId, id)
+  const held = note(context, key, personId, id)
   const changed = context.database
-    .prepare(
-      "UPDATE annotations SET text=?, updated_at=?, revision=revision+1 " +
-        "WHERE uid=? AND account_pk=? AND ((target_type='contact' AND target_pk=?) OR (target_type='source' AND target_pk IN (SELECT pk FROM knowledge_targets WHERE account_pk=? AND type='contact' AND reference=?))) AND revision=?",
-    )
-    .run(noteText(text), context.now(), id, account, identity, account, personId, revision).changes
+    .prepare("UPDATE notes SET text=?, updated_at=?, revision=revision+1 WHERE id=? AND revision=?")
+    .run(noteText(text), context.now(), id, revision).changes
   if (!changed) throw new CliError("validation_error", "the note changed; read its current revision before editing")
+  context.database
+    .prepare("INSERT INTO note_revisions (note_pk, text, captured_at) SELECT pk, ?, ? FROM notes WHERE id=?")
+    .run(held.text, context.now(), id)
   return note(context, key, personId, id)
 }
 
 export const removeNote = (context: StoreContext, key: AccountKey, personId: string, id: string) => {
-  const { account, identity } = required(context, key, personId)
   note(context, key, personId, id)
-  context.database
-    .prepare(
-      "DELETE FROM annotations WHERE uid=? AND account_pk=? AND ((target_type='contact' AND target_pk=?) OR (target_type='source' AND target_pk IN (SELECT pk FROM knowledge_targets WHERE account_pk=? AND type='contact' AND reference=?)))",
-    )
-    .run(id, account, identity, account, personId)
+  context.database.prepare("DELETE FROM notes WHERE id=?").run(id)
+  forgetCopied(context.database, { note: id })
   return { id, personId, removed: true }
 }

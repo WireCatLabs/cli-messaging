@@ -32,7 +32,9 @@ it("keeps schema 6 writers compatible without fabricating freshness", async () =
     try {
       migrate(legacy, { migrations: MIGRATIONS.filter((migration) => migration.version <= 6) })
       legacy.exec(`UPDATE messages SET provider_metadata='{"views":30}' WHERE pk=1`)
-      expect(legacy.prepare("SELECT max(version) AS version FROM schema_migrations").get()?.version).toBe(24)
+      expect(legacy.prepare("SELECT max(version) AS version FROM schema_migrations").get()?.version).toBe(
+        MIGRATIONS.at(-1)?.version,
+      )
     } finally {
       legacy.close()
     }

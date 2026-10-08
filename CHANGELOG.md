@@ -6,6 +6,25 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- Store version 25: notes are their own records ([plan](docs/plans/2026-10-08-notes-graph.md)).
+  `MessageStore.notes` holds notes folders (an id here, the path in each computer's config), file and
+  internal notes with their earlier text, one `links` table for every connection by typed reference, and
+  the owner's organisations and projects (`entities`). A link that names a person nobody matches yet is
+  kept and resolved in the write that creates, renames or aliases that person. `parseReference`,
+  `formatReference`: `msg:`, `chat:`, `contact:`, `note:`, `person:`, `entity:`, `task:`.
+- On open, what a build before version 25 wrote — notes stored as `notes`-provider messages, annotations,
+  relations, entities — is copied into the new tables, and again whenever an older build has written since.
+  A notes folder's former path waits in `note_folders.pending_path` for `NotesStore.claimFolderPath`.
+
+### Changed — may break callers
+
+- `contacts notes`, `KnowledgeStore` annotations, relations and entities read and write the new tables. They
+  are the owner's, not one account's: a contact's notes show in every account that sees the contact, and
+  `relations` and `entities` list everything. An annotation on a `msg:notes/…` locator is refused; name the
+  note `note:<id>` (`KnowledgeTarget` gains `note`).
+
 ## 0.197.0 — 08.10.2026
 
 ### Added

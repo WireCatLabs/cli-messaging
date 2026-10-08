@@ -67,7 +67,7 @@ const setup = async () => {
 }
 
 describe("private people metadata", () => {
-  it("keeps aliases and multiple notes private to an account and separate from remote names", async () => {
+  it("keeps aliases to an account, notes to the owner, and both separate from remote names", async () => {
     const f = await setup()
     const other = { ...key, account: "501" }
     await f.store.savePeople(other, [{ id: "10", name: "Alice Synthetic" }])
@@ -75,7 +75,11 @@ describe("private people metadata", () => {
     const first = await f.services.privatePeople.add("Local label", "Own assessment")
     const second = await f.services.privatePeople.add("10", "Follow up Tuesday")
     expect(first.id).not.toBe(second.id)
-    expect(await f.store.privateContact(other, "10")).toEqual({ personId: "10", alias: null, notes: [] })
+    expect(await f.store.privateContact(other, "10")).toMatchObject({
+      personId: "10",
+      alias: null,
+      notes: [{ id: first.id }, { id: second.id }],
+    })
     expect(await f.services.people.show("Local label", { notes: true })).toMatchObject({
       id: "10",
       name: "Alice Synthetic",

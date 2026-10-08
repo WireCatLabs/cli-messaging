@@ -471,7 +471,7 @@ export const tags = sqliteTable(
   "tags",
   {
     pk: integer("pk").primaryKey(),
-    /** `chat`, `contact` or `message`. */
+    /** `chat`, `contact`, `message`, `knowledge` or `note`. */
     taggableType: text("taggable_type").notNull(),
     taggablePk: integer("taggable_pk").notNull(),
     tag: text("tag").notNull(),
@@ -793,3 +793,86 @@ export const autoTagClaims = sqliteTable(
   },
   (table) => [primaryKey({ columns: [table.chatPk, table.tag] })],
 )
+
+/**
+ * The path lives in each computer's config, never here. A folder copied from a pre-25 `notes` account
+ * keeps that account in `account_pk` and its path in `pending_path` until the notes tool claims it.
+ */
+export const noteFolders = sqliteTable("note_folders", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  format: text("format").notNull(),
+  pendingPath: text("pending_path"),
+  accountPk: integer("account_pk")
+    .unique()
+    .references(() => accounts.pk),
+  createdAt: integer("created_at").notNull(),
+})
+
+export const notes = sqliteTable(
+  "notes",
+  {
+    pk: integer("pk").primaryKey(),
+    id: text("id").notNull().unique(),
+    source: text("source").notNull(),
+    folderId: text("folder_id").references(() => noteFolders.id),
+    path: text("path"),
+    title: text("title"),
+    text: text("text").notNull(),
+    frontMatter: text("front_matter"),
+    contentHash: text("content_hash"),
+    revision: integer("revision").notNull().default(1),
+    exportPath: text("export_path"),
+    createdAt: integer("created_at").notNull(),
+    updatedAt: integer("updated_at").notNull(),
+    deletedAt: integer("deleted_at"),
+  },
+  (table) => [uniqueIndex("notes_by_path").on(table.folderId, table.path)],
+)
+
+export const noteRevisions = sqliteTable(
+  "note_revisions",
+  {
+    notePk: integer("note_pk")
+      .notNull()
+      .references(() => notes.pk),
+    text: text("text").notNull(),
+    capturedAt: integer("captured_at").notNull(),
+  },
+  (table) => [index("note_revisions_by_note").on(table.notePk)],
+)
+
+/**
+ * Every connection between two things, by typed reference. `to_ref` is null while a link names nobody
+ * yet; `target_folded` is what a new person or alias is matched against to resolve it.
+ */
+export const links = sqliteTable(
+  "links",
+  {
+    id: text("id").primaryKey(),
+    fromRef: text("from_ref").notNull(),
+    toRef: text("to_ref"),
+    kind: text("kind").notNull(),
+    anchor: text("anchor"),
+    origin: text("origin").notNull(),
+    targetText: text("target_text"),
+    targetFolded: text("target_folded"),
+    role: text("role"),
+    evidence: text("evidence"),
+    provenance: text("provenance"),
+    confirmed: integer("confirmed").notNull().default(1),
+    createdAt: integer("created_at").notNull(),
+  },
+  (table) => [
+    index("links_from").on(table.fromRef),
+    index("links_to").on(table.toRef),
+    index("links_unresolved").on(table.targetFolded).where(sql`to_ref IS NULL`),
+  ],
+)
+
+export const entities = sqliteTable("entities", {
+  id: text("id").primaryKey(),
+  kind: text("kind").notNull(),
+  name: text("name").notNull(),
+  createdAt: integer("created_at").notNull(),
+})

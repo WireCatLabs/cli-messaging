@@ -1,8 +1,11 @@
 import { CliError } from "@leemour/cli-core"
 import { formatLocator, parseLocator } from "../../domain/locator.js"
+import { formatReference, parseReference } from "../../domain/references.js"
 import { normalizeTag } from "../../domain/tags.js"
 import type { AccountKey } from "../store.js"
 import { ulid } from "../ulid.js"
+import { linkOf } from "./notes.js"
+import { forgetCopied } from "./notes-copy.js"
 import type { StoreContext } from "./open.js"
 import {
   addTags as addNativeTags,
@@ -18,6 +21,7 @@ export type KnowledgeTarget =
   | { type: "person"; id: string }
   | { type: "task"; id: string }
   | { type: "entity"; id: string }
+  | { type: "note"; id: string }
 
 export interface Annotation {
   id: string
@@ -138,41 +142,70 @@ export const knowledgeStoreOver = (context: StoreContext): KnowledgeStore => {
     return Number(row.pk)
   }
   const taskAccount = (key: AccountKey) => `${key.provider}:${key.account}`
-  const state = (key: AccountKey, target: KnowledgeTarget): Annotation["targetState"] => {
-    if (!["message", "chat", "contact", "person", "task", "entity"].includes(target.type))
+  /** The owner's notes are not any account's, so a target is stored as a reference that says whose it is. */
+  const referenceOf = (key: AccountKey, target: KnowledgeTarget): string => {
+    if (!["message", "chat", "contact", "person", "task", "entity", "note"].includes(target.type))
       throw new CliError("validation_error", "unknown knowledge target")
-    const pk = account(key)
     if (target.type === "message") {
-      const source = parseLocator(target.locator)
-      if (source.provider !== key.provider || source.account !== key.account)
-        throw new CliError("validation_error", "the locator belongs to another account")
-      const row = database
-        .prepare(
-          "SELECT m.deleted_at FROM messages m JOIN chats c ON c.pk=m.chat_pk WHERE c.account_pk=? AND c.native_id=? AND m.native_id=?",
+      const locator = parseLocator(target.locator)
+      if (locator.provider === "notes")
+        throw new CliError(
+          "validation_error",
+          "a note is named note:<id> since store version 25, not by a msg: locator",
         )
-        .get(pk, source.chat, source.message)
-      return !row ? "unavailable" : row.deleted_at == null ? "available" : "deleted"
+      if (locator.provider !== key.provider || locator.account !== key.account)
+        throw new CliError("validation_error", "the locator belongs to another account")
+      return formatLocator(locator)
     }
     if (!target.id.trim()) throw new CliError("validation_error", "target id must not be empty")
+    return target.type === "chat"
+      ? formatReference({ type: "chat", provider: key.provider, account: key.account, chat: target.id })
+      : target.type === "contact"
+        ? formatReference({ type: "contact", provider: key.provider, id: target.id })
+        : `${target.type}:${target.id}`
+  }
+  const targetOfReference = (reference: string): KnowledgeTarget => {
+    const parsed = parseReference(reference)
+    if (parsed.type === "message") return { type: "message", locator: reference }
+    if (parsed.type === "chat") return { type: "chat", id: parsed.chat }
+    return { type: parsed.type, id: parsed.id }
+  }
+  const referenceState = (reference: string): Annotation["targetState"] => {
+    const parsed = parseReference(reference)
     const row =
-      target.type === "chat"
-        ? database.prepare("SELECT pk FROM chats WHERE account_pk=? AND native_id=?").get(pk, target.id)
-        : target.type === "contact"
+      parsed.type === "message"
+        ? database
+            .prepare(
+              "SELECT m.deleted_at FROM messages m JOIN chats c ON c.pk=m.chat_pk JOIN accounts a ON a.pk=c.account_pk WHERE a.provider=? AND a.native_id=? AND c.native_id=? AND m.native_id=?",
+            )
+            .get(parsed.provider, parsed.account, parsed.chat, parsed.message)
+        : parsed.type === "chat"
           ? database
               .prepare(
-                "SELECT i.pk FROM identities i JOIN account_identities ai ON ai.identity_pk=i.pk WHERE ai.account_pk=? AND i.provider=? AND i.native_id=?",
+                "SELECT NULL AS deleted_at FROM chats c JOIN accounts a ON a.pk=c.account_pk WHERE a.provider=? AND a.native_id=? AND c.native_id=?",
               )
-              .get(pk, key.provider, target.id)
-          : target.type === "person"
+              .get(parsed.provider, parsed.account, parsed.chat)
+          : parsed.type === "contact"
             ? database
-                .prepare(
-                  "SELECT p.pk FROM persons p JOIN identity_links il ON il.person_pk=p.pk JOIN account_identities ai ON ai.identity_pk=il.identity_pk WHERE ai.account_pk=? AND p.uid=?",
-                )
-                .get(pk, target.id)
-            : target.type === "task"
-              ? database.prepare("SELECT id FROM tasks WHERE account=? AND id=?").get(taskAccount(key), target.id)
-              : database.prepare("SELECT uid FROM knowledge_entities WHERE account_pk=? AND uid=?").get(pk, target.id)
-    return row ? "available" : "unavailable"
+                .prepare("SELECT NULL AS deleted_at FROM identities WHERE provider=? AND native_id=?")
+                .get(parsed.provider, parsed.id)
+            : parsed.type === "person"
+              ? database.prepare("SELECT NULL AS deleted_at FROM persons WHERE uid=?").get(parsed.id)
+              : parsed.type === "task"
+                ? database.prepare("SELECT NULL AS deleted_at FROM tasks WHERE id=?").get(parsed.id)
+                : parsed.type === "entity"
+                  ? database.prepare("SELECT NULL AS deleted_at FROM entities WHERE id=?").get(parsed.id)
+                  : database.prepare("SELECT deleted_at FROM notes WHERE id=?").get(parsed.id)
+    return !row ? "unavailable" : row.deleted_at == null ? "available" : "deleted"
+  }
+  const state = (key: AccountKey, target: KnowledgeTarget): Annotation["targetState"] => {
+    account(key)
+    // A task is still one account's: it waits on that account's chats.
+    if (target.type === "task")
+      return database.prepare("SELECT id FROM tasks WHERE account=? AND id=?").get(taskAccount(key), target.id)
+        ? "available"
+        : "unavailable"
+    return referenceState(referenceOf(key, target))
   }
   const targetPk = (key: AccountKey, target: KnowledgeTarget, create: boolean) => {
     const pk = account(key)
@@ -190,7 +223,7 @@ export const knowledgeStoreOver = (context: StoreContext): KnowledgeStore => {
       .get(pk, target.type, reference)
     return row ? Number(row.pk) : undefined
   }
-  const targetOf = (row: Row): KnowledgeTarget =>
+  const knowledgeTargetOf = (row: Row): KnowledgeTarget =>
     row.type === "message"
       ? { type: "message", locator: String(row.reference) }
       : { type: row.type as Exclude<KnowledgeTarget["type"], "message">, id: String(row.reference) }
@@ -203,46 +236,48 @@ export const knowledgeStoreOver = (context: StoreContext): KnowledgeStore => {
     if (target.type === "contact") return { type: "contact", personId: target.id }
     return undefined
   }
-  const annotationOf = (key: AccountKey, row: Row): Annotation => {
-    const target = targetOf(row)
-    return {
-      id: String(row.uid),
-      target,
-      targetState: state(key, target),
-      text: String(row.text),
-      revision: Number(row.revision),
-      authoredBy: "owner",
-      createdAt: iso(row.created_at),
-      updatedAt: iso(row.updated_at),
-    }
-  }
+  /** An annotation is the owner's internal note with one `about` link; its id is the note's. */
+  const ANNOTATIONS =
+    "SELECT n.*, l.to_ref FROM notes n JOIN links l ON l.from_ref = 'note:' || n.id AND l.kind = 'about' " +
+    "WHERE n.source = 'internal' AND n.deleted_at IS NULL AND l.to_ref IS NOT NULL"
+  const annotationOf = (row: Row): Annotation => ({
+    id: String(row.id),
+    target: targetOfReference(String(row.to_ref)),
+    targetState: referenceState(String(row.to_ref)),
+    text: String(row.text),
+    revision: Number(row.revision),
+    authoredBy: "owner",
+    createdAt: iso(row.created_at),
+    updatedAt: iso(row.updated_at),
+  })
   const annotation = (key: AccountKey, id: string): Annotation => {
-    const row = database
-      .prepare(
-        "SELECT a.*,t.type,t.reference FROM annotations a JOIN knowledge_targets t ON t.pk=a.target_pk WHERE a.target_type='source' AND a.account_pk=? AND a.uid=? UNION ALL SELECT a.*, 'contact' AS type,i.native_id AS reference FROM annotations a JOIN identities i ON i.pk=a.target_pk JOIN account_identities ai ON ai.identity_pk=i.pk AND ai.account_pk=a.account_pk WHERE a.target_type='contact' AND a.account_pk=? AND a.uid=?",
-      )
-      .get(account(key), id, account(key), id)
-    if (!row) throw new CliError("not_found", "no annotation with that id in this account")
-    return annotationOf(key, row)
+    account(key)
+    const row = database.prepare(`${ANNOTATIONS} AND n.id = ?`).get(id)
+    if (!row) throw new CliError("not_found", "no annotation with that id")
+    return annotationOf(row)
   }
   const entityOf = (row: Row): KnowledgeEntity => ({
-    id: String(row.uid),
+    id: String(row.id),
     kind: row.kind as KnowledgeEntity["kind"],
     name: String(row.name),
     createdAt: iso(row.created_at),
   })
-  const relationOf = (row: Row): KnowledgeRelation => ({
-    id: String(row.uid),
-    from: String(row.from_ref),
-    to: String(row.to_ref),
-    kind: row.kind as KnowledgeRelation["kind"],
-    role: row.role == null ? null : String(row.role),
-    evidence: row.evidence == null ? null : String(row.evidence),
-    confirmed: Number(row.confirmed) === 1,
-    provenance: row.provenance == null ? null : String(row.provenance),
-    confidenceCategory: Number(row.confirmed) === 1 ? "owner-confirmed" : "weak",
-    createdAt: iso(row.created_at),
-  })
+  const relationOf = (row: Row): KnowledgeRelation => {
+    const link = linkOf(row)
+    return {
+      id: link.id,
+      from: link.from,
+      to: String(link.to),
+      kind: link.kind as KnowledgeRelation["kind"],
+      role: link.role,
+      evidence: link.evidence,
+      confirmed: link.confirmed,
+      provenance: link.provenance,
+      confidenceCategory: link.confirmed ? "owner-confirmed" : "weak",
+      createdAt: link.createdAt,
+    }
+  }
+  const RELATIONS = "SELECT * FROM links WHERE kind IN ('member-of','related-to','assigned-to') AND to_ref IS NOT NULL"
   const reminderOf = (row: Row): Reminder => ({
     id: String(row.uid),
     task: String(row.task_id),
@@ -267,19 +302,18 @@ export const knowledgeStoreOver = (context: StoreContext): KnowledgeStore => {
     if (row?.state !== "open")
       throw new CliError("validation_error", "a reminder requires an open task in this account")
   }
-  const requiredReference = (key: AccountKey, reference: string, globalPerson = false) => {
-    const [prefix, ...rest] = reference.split(":")
-    if (
-      globalPerson &&
-      prefix === "person" &&
-      database.prepare("SELECT uid FROM persons WHERE uid=?").get(rest.join(":"))
-    )
-      return
-    if (
-      (prefix !== "person" && prefix !== "entity" && prefix !== "task") ||
-      state(key, { type: prefix, id: rest.join(":") }) !== "available"
-    )
-      throw new CliError("not_found", "reference needs a stored person:<uid> or entity:<uid> in this account")
+  const requiredReference = (key: AccountKey, reference: string) => {
+    account(key)
+    const [prefix] = reference.split(":")
+    if ((prefix !== "person" && prefix !== "entity" && prefix !== "task") || referenceState(reference) !== "available")
+      throw new CliError("not_found", "reference needs a stored person:<uid>, entity:<uid> or task:<id>")
+  }
+  const noteTagPk = (target: KnowledgeTarget) => {
+    const row = database
+      .prepare("SELECT pk FROM notes WHERE id=? AND deleted_at IS NULL")
+      .get((target as { id: string }).id)
+    if (!row) throw new CliError("not_found", "the note is unavailable or deleted")
+    return Number(row.pk)
   }
   return {
     taskIds: async (key, options = {}) => {
@@ -306,58 +340,66 @@ export const knowledgeStoreOver = (context: StoreContext): KnowledgeStore => {
     },
     addAnnotation: async (key, target, text) => {
       const body = textOf(text)
-      const pk = targetPk(key, target, true)
+      if (state(key, target) !== "available") throw new CliError("not_found", "the target is unavailable or deleted")
       const at = now(),
         id = ulid(at)
-      database
-        .prepare(
-          "INSERT INTO annotations (uid,account_pk,target_type,target_pk,text,revision,created_at,updated_at,authored_by) VALUES (?,?,'source',?,?,1,?,?,'owner')",
-        )
-        .run(id, account(key), pk as number, body, at, at)
+      database.exec("BEGIN IMMEDIATE")
+      try {
+        database
+          .prepare("INSERT INTO notes (id,source,text,created_at,updated_at) VALUES (?,'internal',?,?,?)")
+          .run(id, body, at, at)
+        database
+          .prepare(
+            "INSERT INTO links (id,from_ref,to_ref,kind,origin,confirmed,created_at) VALUES (?,?,?,'about','owner',1,?)",
+          )
+          .run(ulid(at), `note:${id}`, referenceOf(key, target), at)
+        database.exec("COMMIT")
+      } catch (error) {
+        database.exec("ROLLBACK")
+        throw error
+      }
       return annotation(key, id)
     },
     annotations: async (key, options = {}) => {
       const { limit, offset } = bounded(options.limit, options.offset)
-      const target = options.target
-      if (target) state(key, target)
-      const reference = target?.type === "message" ? formatLocator(parseLocator(target.locator)) : target?.id
+      account(key)
+      const reference = options.target ? referenceOf(key, options.target) : null
       const rows = database
         .prepare(
-          "SELECT * FROM (SELECT a.*,t.type,t.reference FROM annotations a JOIN knowledge_targets t ON t.pk=a.target_pk WHERE a.target_type='source' AND a.account_pk=? UNION ALL SELECT a.*,'contact' AS type,i.native_id AS reference FROM annotations a JOIN identities i ON i.pk=a.target_pk JOIN account_identities ai ON ai.identity_pk=i.pk AND ai.account_pk=a.account_pk WHERE a.target_type='contact' AND a.account_pk=?) WHERE (? IS NULL OR (type=? AND reference=?)) AND (? IS NULL OR instr(lower(text),lower(?))>0) ORDER BY created_at DESC,uid DESC LIMIT ? OFFSET ?",
+          `${ANNOTATIONS} AND (? IS NULL OR l.to_ref=?) AND (? IS NULL OR instr(lower(n.text),lower(?))>0) ORDER BY n.created_at DESC,n.id DESC LIMIT ? OFFSET ?`,
         )
-        .all(
-          account(key),
-          account(key),
-          target?.type ?? null,
-          target?.type ?? null,
-          reference ?? null,
-          options.search ?? null,
-          options.search ?? null,
-          limit + 1,
-          offset,
-        )
-      return { items: rows.slice(0, limit).map((row) => annotationOf(key, row)), hasMore: rows.length > limit }
+        .all(reference, reference, options.search ?? null, options.search ?? null, limit + 1, offset)
+      return { items: rows.slice(0, limit).map(annotationOf), hasMore: rows.length > limit }
     },
     annotation: async (key, id) => annotation(key, id),
     editAnnotation: async (key, id, text, revision) => {
-      annotation(key, id)
+      const held = annotation(key, id)
       const changed = database
         .prepare(
-          "UPDATE annotations SET text=?,revision=revision+1,updated_at=? WHERE account_pk=? AND uid=? AND target_type IN ('source','contact') AND revision=?",
+          "UPDATE notes SET text=?,revision=revision+1,updated_at=? WHERE id=? AND source='internal' AND revision=?",
         )
-        .run(textOf(text), now(), account(key), id, revision).changes
+        .run(textOf(text), now(), id, revision).changes
       if (!changed)
         throw new CliError("validation_error", "annotation changed; read the current revision before editing")
+      database
+        .prepare("INSERT INTO note_revisions (note_pk,text,captured_at) SELECT pk,?,? FROM notes WHERE id=?")
+        .run(held.text, now(), id)
       return annotation(key, id)
     },
     removeAnnotation: async (key, id) => {
       annotation(key, id)
-      database
-        .prepare("DELETE FROM annotations WHERE account_pk=? AND uid=? AND target_type IN ('source','contact')")
-        .run(account(key), id)
+      database.prepare("DELETE FROM notes WHERE id=? AND source='internal'").run(id)
+      forgetCopied(database, { note: id })
       return { id, removed: true }
     },
     tags: async (key, target) => {
+      if (target.type === "note") {
+        if (state(key, target) !== "available") return []
+        return database
+          .prepare("SELECT tag FROM tags WHERE taggable_type='note' AND taggable_pk=? ORDER BY tag")
+          .all(noteTagPk(target))
+          .map((row) => String(row.tag))
+      }
       const native = nativeTarget(target)
       if (native) {
         if (state(key, target) !== "available") return []
@@ -375,6 +417,10 @@ export const knowledgeStoreOver = (context: StoreContext): KnowledgeStore => {
             .map((row) => String(row.tag))
     },
     addTags: async (key, target, tags) => {
+      if (target.type === "note") {
+        state(key, target)
+        return addNativeTags(context, noteTagPk(target), "note", [...new Set(tags.map(normalizeTag))])
+      }
       const native = nativeTarget(target)
       if (native) {
         if (state(key, target) !== "available") throw new CliError("not_found", "target is unavailable or deleted")
@@ -394,6 +440,10 @@ export const knowledgeStoreOver = (context: StoreContext): KnowledgeStore => {
       )
     },
     removeTags: async (key, target, tags) => {
+      if (target.type === "note") {
+        if (state(key, target) !== "available") return []
+        return removeNativeTags(context, noteTagPk(target), "note", [...new Set(tags.map(normalizeTag))])
+      }
       const native = nativeTarget(target)
       if (native) {
         if (state(key, target) !== "available") return []
@@ -422,7 +472,7 @@ export const knowledgeStoreOver = (context: StoreContext): KnowledgeStore => {
         .all(account(key), tag, tag, limit + 1, offset)
       return {
         items: rows.slice(0, limit).map((row) => {
-          const target = targetOf(row)
+          const target = knowledgeTargetOf(row)
           return {
             target,
             tags: database
@@ -436,76 +486,73 @@ export const knowledgeStoreOver = (context: StoreContext): KnowledgeStore => {
       }
     },
     addEntity: async (key, kind, name) => {
+      account(key)
       if (!["organization", "family", "project", "group"].includes(kind))
         throw new CliError("validation_error", "unknown entity kind")
       const at = now(),
         id = ulid(at),
         title = textOf(name, 200)
-      database
-        .prepare("INSERT INTO knowledge_entities (uid,account_pk,kind,name,created_at) VALUES (?,?,?,?,?)")
-        .run(id, account(key), kind, title, at)
+      database.prepare("INSERT INTO entities (id,kind,name,created_at) VALUES (?,?,?,?)").run(id, kind, title, at)
       return { id, kind, name: title, createdAt: iso(at) }
     },
-    entities: async (key) =>
-      database
-        .prepare("SELECT * FROM knowledge_entities WHERE account_pk=? ORDER BY name,uid LIMIT 500")
-        .all(account(key))
-        .map(entityOf),
+    entities: async (key) => {
+      account(key)
+      return database.prepare("SELECT * FROM entities ORDER BY name,id LIMIT 500").all().map(entityOf)
+    },
     relate: async (key, input) => {
       requiredReference(key, input.from)
-      requiredReference(key, input.to, input.kind === "assigned-to")
+      requiredReference(key, input.to)
       if (
         input.from === input.to ||
         !["member-of", "related-to", "assigned-to"].includes(input.kind) ||
         (input.kind === "assigned-to" && (!input.from.startsWith("task:") || !input.to.startsWith("person:")))
       )
         throw new CliError("validation_error", "a relationship needs distinct references and a supported kind")
-      const pk = account(key)
       const existing = database
-        .prepare("SELECT * FROM knowledge_relations WHERE account_pk=? AND from_ref=? AND to_ref=? AND kind=?")
-        .get(pk, input.from, input.to, input.kind)
+        .prepare(`${RELATIONS} AND from_ref=? AND to_ref=? AND kind=?`)
+        .get(input.from, input.to, input.kind)
       if (existing) return relationOf(existing)
       const id = ulid(now())
+      const confirmed = input.confirmed !== false
       database
         .prepare(
-          "INSERT INTO knowledge_relations (uid,account_pk,from_ref,to_ref,kind,role,evidence,created_at,confirmed,provenance) VALUES (?,?,?,?,?,?,?,?,?,?)",
+          "INSERT INTO links (id,from_ref,to_ref,kind,origin,role,evidence,provenance,confirmed,created_at) VALUES (?,?,?,?,?,?,?,?,?,?)",
         )
         .run(
           id,
-          pk,
           input.from,
           input.to,
           input.kind,
+          confirmed ? "owner" : "suggested",
           input.role === undefined ? null : textOf(input.role, 200),
           input.evidence === undefined ? null : textOf(input.evidence, 2000),
-          now(),
-          input.confirmed === false ? 0 : 1,
           input.provenance === undefined ? null : textOf(input.provenance, 2000),
+          confirmed ? 1 : 0,
+          now(),
         )
-      return relationOf(database.prepare("SELECT * FROM knowledge_relations WHERE uid=?").get(id) as Row)
+      return relationOf(database.prepare("SELECT * FROM links WHERE id=?").get(id) as Row)
     },
-    relations: async (key, reference) =>
-      database
-        .prepare(
-          "SELECT * FROM knowledge_relations WHERE account_pk=? AND (? IS NULL OR from_ref=? OR to_ref=?) ORDER BY created_at,uid LIMIT 500",
-        )
-        .all(account(key), reference ?? null, reference ?? null, reference ?? null)
-        .map(relationOf),
+    relations: async (key, reference) => {
+      account(key)
+      return database
+        .prepare(`${RELATIONS} AND (? IS NULL OR from_ref=? OR to_ref=?) ORDER BY created_at,id LIMIT 500`)
+        .all(reference ?? null, reference ?? null, reference ?? null)
+        .map(relationOf)
+    },
     removeRelation: async (key, id) => {
-      if (
-        !database.prepare("DELETE FROM knowledge_relations WHERE account_pk=? AND uid=?").run(account(key), id).changes
-      )
-        throw new CliError("not_found", "no relationship with that id in this account")
+      account(key)
+      if (!database.prepare(`DELETE FROM links WHERE id=? AND id IN (SELECT id FROM (${RELATIONS}))`).run(id).changes)
+        throw new CliError("not_found", "no relationship with that id")
+      forgetCopied(database, { link: id })
       return { id, removed: true }
     },
     confirmRelation: async (key, id) => {
-      const row = database
-        .prepare("SELECT * FROM knowledge_relations WHERE account_pk=? AND uid=?")
-        .get(account(key), id)
-      if (!row) throw new CliError("not_found", "no relationship with that id in this account")
+      account(key)
+      const row = database.prepare(`${RELATIONS} AND id=?`).get(id)
+      if (!row) throw new CliError("not_found", "no relationship with that id")
       requiredReference(key, String(row.from_ref))
-      requiredReference(key, String(row.to_ref), row.kind === "assigned-to")
-      database.prepare("UPDATE knowledge_relations SET confirmed=1 WHERE account_pk=? AND uid=?").run(account(key), id)
+      requiredReference(key, String(row.to_ref))
+      database.prepare("UPDATE links SET confirmed=1, origin='owner' WHERE id=?").run(id)
       return relationOf({ ...row, confirmed: 1 })
     },
     schedule: async (key, task, dueAt, timezone) => {

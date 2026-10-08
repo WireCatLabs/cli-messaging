@@ -9,3 +9,4 @@
 
 - 2026-10-07: `../cli-messaging-wt-server-search-handoff` — worktree of the server-search handoff, on the merged branch `docs/server-search-plan`; not created by the server-search session, so left for the owner.
 - 2026-10-07: `../cli-messaging-wt-server-search-fix` — follow-up worktree for #691; remove with its branch after the merge.
+- `annotations`, `knowledge_relations`, `knowledge_entities`, notes-provider `messages`/`chats`/`accounts` rows and their `message` tags — copied into `notes`/`links`/`entities` by store version 25 and kept for older builds; drop in a later migration once tg, max and memo all read version 25 — 2026-10-08

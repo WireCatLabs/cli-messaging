@@ -3,6 +3,7 @@ import type { Id, Page } from "../../domain/models.js"
 import type { IdentityRef, LinkedIdentity, LinkOptions, PersonRecord, StoredHit } from "../store.js"
 import { ulid } from "../ulid.js"
 import { and, eq, inArray, isNull, type SQL, sql } from "./drizzle/core.js"
+import { resolvePersonLinks } from "./notes.js"
 import type { StoreContext } from "./open.js"
 import {
   accountIdentities,
@@ -108,7 +109,13 @@ export const linkIdentities = (
       .all()
     for (const { identityPk } of together) move(context, identityPk, moving.personPk, target.personPk, options)
   }
-  return recordOf(context, target.personPk)
+  const record = recordOf(context, target.personPk)
+  // Two identities that were two people named alike are one now, so a name that was ambiguous may not be.
+  resolvePersonLinks(
+    context.database,
+    record.identities.flatMap(({ name, username }) => [name, username]),
+  )
+  return record
 }
 
 /** Gives the identity a person of its own again; the ones left keep theirs. */

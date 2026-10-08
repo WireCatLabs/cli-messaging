@@ -270,5 +270,28 @@ export const GENERATED: { name: string; statements: string[] }[] = [
       "CREATE INDEX `membership_members_by_stay` ON `membership_batch_members` (`stay_pk`,`batch_pk`);",
       "CREATE INDEX `membership_batches_by_chat_time` ON `membership_batches` (`chat_pk`,`observed_at`);"
     ]
+  },
+  {
+    "name": "20261008175932_version-25-notes",
+    "statements": [
+      "CREATE TABLE `entities` (\n\t`id` text PRIMARY KEY,\n\t`kind` text NOT NULL,\n\t`name` text NOT NULL,\n\t`created_at` integer NOT NULL\n);",
+      "CREATE TABLE `links` (\n\t`id` text PRIMARY KEY,\n\t`from_ref` text NOT NULL,\n\t`to_ref` text,\n\t`kind` text NOT NULL,\n\t`anchor` text,\n\t`origin` text NOT NULL,\n\t`target_text` text,\n\t`target_folded` text,\n\t`role` text,\n\t`evidence` text,\n\t`provenance` text,\n\t`confirmed` integer DEFAULT 1 NOT NULL,\n\t`created_at` integer NOT NULL\n);",
+      "CREATE TABLE `note_folders` (\n\t`id` text PRIMARY KEY,\n\t`name` text NOT NULL,\n\t`format` text NOT NULL,\n\t`pending_path` text,\n\t`account_pk` integer UNIQUE,\n\t`created_at` integer NOT NULL,\n\tCONSTRAINT `fk_note_folders_account_pk_accounts_pk_fk` FOREIGN KEY (`account_pk`) REFERENCES `accounts`(`pk`)\n);",
+      "CREATE TABLE `note_revisions` (\n\t`note_pk` integer NOT NULL,\n\t`text` text NOT NULL,\n\t`captured_at` integer NOT NULL,\n\tCONSTRAINT `fk_note_revisions_note_pk_notes_pk_fk` FOREIGN KEY (`note_pk`) REFERENCES `notes`(`pk`)\n);",
+      "CREATE TABLE `notes` (\n\t`pk` integer PRIMARY KEY,\n\t`id` text NOT NULL UNIQUE,\n\t`source` text NOT NULL,\n\t`folder_id` text,\n\t`path` text,\n\t`title` text,\n\t`text` text NOT NULL,\n\t`front_matter` text,\n\t`content_hash` text,\n\t`revision` integer DEFAULT 1 NOT NULL,\n\t`export_path` text,\n\t`created_at` integer NOT NULL,\n\t`updated_at` integer NOT NULL,\n\t`deleted_at` integer,\n\tCONSTRAINT `fk_notes_folder_id_note_folders_id_fk` FOREIGN KEY (`folder_id`) REFERENCES `note_folders`(`id`)\n);",
+      "CREATE INDEX `links_from` ON `links` (`from_ref`);",
+      "CREATE INDEX `links_to` ON `links` (`to_ref`);",
+      "CREATE INDEX `links_unresolved` ON `links` (`target_folded`) WHERE to_ref IS NULL;",
+      "CREATE INDEX `note_revisions_by_note` ON `note_revisions` (`note_pk`);",
+      "CREATE UNIQUE INDEX `notes_by_path` ON `notes` (`folder_id`,`path`);"
+    ]
+  },
+  {
+    "name": "20261008175933_version-25-note-triggers",
+    "statements": [
+      "-- A tag or an outgoing link has no foreign key to cascade by: these keep them from outliving their note.\nCREATE TRIGGER notes_tombstone AFTER UPDATE OF deleted_at ON notes\n  WHEN old.deleted_at IS NULL AND new.deleted_at IS NOT NULL BEGIN\n  DELETE FROM tags WHERE taggable_type = 'note' AND taggable_pk = new.pk;\nEND;",
+      "CREATE TRIGGER notes_bd BEFORE DELETE ON notes BEGIN\n  DELETE FROM tags WHERE taggable_type = 'note' AND taggable_pk = old.pk;\n  DELETE FROM note_revisions WHERE note_pk = old.pk;\n  DELETE FROM links WHERE from_ref = 'note:' || old.id;\nEND;",
+      "CREATE TRIGGER note_folders_account_bd BEFORE DELETE ON accounts BEGIN\n  UPDATE note_folders SET account_pk = NULL WHERE account_pk = old.pk;\nEND;"
+    ]
   }
 ]
