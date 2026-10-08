@@ -21,6 +21,7 @@ describe("folder capability discovery", () => {
     }
     expect(foldersCommand(messenger).commands.map((command) => command.name())).toEqual([
       "list",
+      "show",
       "create",
       "update",
       "delete",

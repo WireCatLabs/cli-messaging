@@ -1,9 +1,9 @@
 import { CliError } from "@leemour/cli-core"
 import { capability, type MessengerAdapter } from "../cli/messenger/port.js"
-import type { Folder, FolderKind, FolderRules, FolderSkip, Id } from "../domain/models.js"
+import type { Chat, Folder, FolderKind, FolderRules, FolderSkip, Id } from "../domain/models.js"
 import { guardedWrite, type Operated } from "../sends/guarded.js"
 import { newOperationId } from "../sends/send-id.js"
-import type { ServiceDeps } from "./deps.js"
+import { type ServiceDeps, storeIfOpen } from "./deps.js"
 
 /** Chats as typed; `include` and `skip` replace what the folder had. */
 export interface FolderRulesEdit {
@@ -12,6 +12,18 @@ export interface FolderRulesEdit {
   skip?: FolderSkip[]
   exclude?: string[]
   pin?: string[]
+}
+
+export interface FolderChat {
+  id: Id
+  title: string | null
+  kind: Chat["kind"] | null
+}
+
+export type FolderShown = Omit<Folder, "chatIds" | "excludedChatIds" | "pinnedChatIds"> & {
+  chats: FolderChat[]
+  pinned: FolderChat[]
+  excluded: FolderChat[]
 }
 
 export interface FolderEdit extends FolderRulesEdit {
@@ -23,6 +35,8 @@ export interface FolderEdit extends FolderRulesEdit {
 /** The owner's chat folders. Nobody else sees them, but they change the owner's own app, so each change is guarded. */
 export interface FoldersService {
   list(): Promise<Folder[]>
+  /** `folder` is its id, or its title exactly; its chats by name. */
+  show(folder: string): Promise<FolderShown>
   create(title: string, chats: string[], rules?: FolderRulesEdit): Promise<Operated<{ folder: Folder }>>
   /** `folder` is its id, or its title exactly. */
   update(folder: string, edit: FolderEdit): Promise<Operated<{ folder: Folder }>>
@@ -82,6 +96,39 @@ export const foldersService = (deps: ServiceDeps): FoldersService => {
     ].some((one) => one !== undefined && one !== 0)
   return {
     list: async () => capability(await online("chats folders list"), "folders", "list its folders")(),
+
+    show: async (typed) => {
+      const connection = await online("chats folders show")
+      const { chatIds, excludedChatIds = [], pinnedChatIds = [], ...folder } = await folderOf(connection, typed)
+      const held = await storeIfOpen(deps)
+      const known = new Map<Id, FolderChat>()
+      for (const one of held ? (await held.store.chats(held.account, {})).items : [])
+        known.set(one.id, { id: one.id, title: one.title, kind: one.kind })
+      const named = async (ids: Id[]) => {
+        const chats: FolderChat[] = []
+        for (const id of ids) {
+          let found = known.get(id)
+          if (!found) {
+            found = await connection.resolve(id).then(
+              (one) => ({ id, title: one.title, kind: one.kind }),
+              (error: unknown) => {
+                if (error instanceof CliError && error.code === "not_found") return { id, title: null, kind: null }
+                throw error
+              },
+            )
+            known.set(id, found)
+          }
+          chats.push(found)
+        }
+        return chats
+      }
+      return {
+        ...folder,
+        chats: await named(chatIds),
+        pinned: await named(pinnedChatIds),
+        excluded: await named(excludedChatIds),
+      }
+    },
 
     create: async (title, chats, edit = {}) => {
       if (title.trim() === "") throw new CliError("validation_error", "a folder needs a name")

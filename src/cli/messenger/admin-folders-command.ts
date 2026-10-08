@@ -66,6 +66,14 @@ export const foldersCommand = (messenger: Messenger): Command => {
       const context = messengerContext(this, messenger)
       renderList(context.renderer, context.format, await context.withServices((services) => services.folders.list()))
     })
+  folders
+    .command("show")
+    .description("one chat folder, with the names of the chats in it")
+    .argument("<folder>", "the folder's id, or its title exactly")
+    .action(async function (this: Command, folder: string) {
+      const context = messengerContext(this, messenger)
+      context.renderer.result(await context.withServices((services) => services.folders.show(folder)))
+    })
   folders.addCommand(
     withRules(
       annotate(new Command("create"), { mutates: true })
