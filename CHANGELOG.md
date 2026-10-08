@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.184.0 — 08.10.2026
+
 ### Added
 
 - Stickers: `stickers list [--set <id>]` (a group a CLI adds itself) and `messages send --sticker <id>`, sent alone,
