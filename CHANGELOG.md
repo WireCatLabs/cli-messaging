@@ -12,6 +12,13 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   account/message binding and cancellation. MCP embeds complete images or binary resources, with a JSON
   fallback for hosts without resource support. No automatic download, OCR, index write or model call.
 
+## 0.189.0 — 08.10.2026
+
+### Fixed
+
+- Command discovery marks counter refresh as a local write, matching its guarded local observation updates.
+  Ranking help explains observed counter freshness and accepts retention cohort evidence references.
+
 ## 0.188.0 — 08.10.2026
 
 ### Added
