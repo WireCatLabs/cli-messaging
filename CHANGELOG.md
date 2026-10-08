@@ -8,6 +8,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Added
 
+- `chats link update --expire-time never` (MCP `expire_time: "never"`) takes a link's expiry away;
+  `InviteLinkChange.expiresAt` may be `null`.
 - Store version 25: notes are their own records ([plan](docs/plans/2026-10-08-notes-graph.md)).
   `MessageStore.notes` holds notes folders (an id here, the path in each computer's config), file and
   internal notes with their earlier text, one `links` table for every connection by typed reference, and
@@ -37,6 +39,11 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   stem index of a text with Latin words is about twice as large. Once rebuilt, the choices are saved in
   the store, so a tg or max still on an older cli-messaging answers a stemmed search with "upgrade this
   tool" instead of rebuilding the stems back. `Stemmers.latin` is a string of one or more stemmers.
+
+### Fixed
+
+- `chats link update` help no longer says the group's own link cannot be changed: Telegram changes it
+  (measured 2026-10-08).
 
 ## 0.197.0 — 08.10.2026
 
