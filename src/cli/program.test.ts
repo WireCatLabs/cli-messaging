@@ -56,6 +56,30 @@ describe("running a messenger CLI", () => {
     expect(stderr[0]).toContain("read as a profile name")
   })
 
+  it("**shows the help at a terminal when no command is given**, and a validation error to a script", async () => {
+    const terminal = captureStreams()
+    const code = await run(
+      [],
+      definition(async () => {}),
+      { streams: terminal, tty: true, env: process.env },
+    )
+    const script = await call([])
+    const json = captureStreams()
+    await run(
+      ["--json"],
+      definition(async () => {}),
+      { streams: json, tty: true, env: process.env },
+    )
+
+    expect(code).toBe(2)
+    expect(terminal.stdout).toEqual([])
+    expect(terminal.stderr.join("\n")).toContain("Usage:")
+    expect(terminal.stderr.join("\n")).not.toContain("(outputHelp)")
+    expect(script.code).toBe(2)
+    expect(JSON.parse(script.stderr[0] ?? "").error.message).toContain("give a command")
+    expect(JSON.parse(json.stderr[0] ?? "").error.message).toContain("give a command")
+  })
+
   it("hands the first word to the command as its profile", async () => {
     let profile = ""
     await call(["work", "chats", "list"], async (command) => {

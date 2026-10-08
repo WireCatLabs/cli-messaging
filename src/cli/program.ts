@@ -134,9 +134,13 @@ export const run = async (argv: string[], definition: ProgramDefinition, options
   }
   const externalAbort = () => control.abort(new CliError("cancelled", "command cancelled", { retryable: false }))
   const { command } = definition.app
+  // Commander's own error lines are replaced by ours; its help for a missing subcommand is kept for a person.
+  let help = ""
   const program = createProgram(definition, {
     out: (text) => control.streams.data(text.replace(/\n$/, "")),
-    err: () => {},
+    err: (text) => {
+      help += text
+    },
   })
   const environment: RunOptions = {
     ...options,
@@ -254,8 +258,13 @@ export const run = async (argv: string[], definition: ProgramDefinition, options
     if (isCommanderFailure(error)) {
       if (error.exitCode === 0) return 0
       let message = error.message.replace(/^error: /, "")
-      if (error.code === "commander.helpDisplayed")
+      if (error.code === "commander.help") {
+        if (reporting.tty ?? process.stdout.isTTY === true) {
+          streams.diagnostic(help.replace(/\n$/, ""))
+          return exitCodeFor("validation_error")
+        }
         message = `give a command — run \`${command} --help\` for the commands`
+      }
       if (
         profile !== undefined &&
         error.code === "commander.unknownCommand" &&

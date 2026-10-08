@@ -6,6 +6,13 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Fixed
+
+- A CLI run with no command, or a command group with no subcommand (`tg`, `tg chats`), showed only
+  `✗ (outputHelp)`: since 0.156.0's machine error contract, Commander's help was discarded and its "no command"
+  code was not recognised. At a terminal it now shows that command's help on stderr (exit 2); a script or
+  `--json` gets the intended `validation_error` "give a command — run `<cli> --help`".
+
 ## 0.195.0 — 08.10.2026
 
 ### Added
