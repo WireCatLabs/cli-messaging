@@ -620,3 +620,11 @@ or new command names. BOM/strict UTF-8 first; uncertain legacy encoding remains 
 Small pure-JS ZIP/XML dependencies, no office application or local OCR model. Generic ZIP,
 RTF and binary DOC/XLS/PPT remain external conversion. Shared release and both exact-pin
 consumer adoptions follow tested implementation; existing PDF/Word optional engines stay optional.
+
+### Remote attachment transfer — claimed2026-10-08
+
+Owner requested binary file access for remote AI agents. Claimed feat/remote-attachment-transfer,
+[interface before runtime](2026-10-08-remote-attachment-transfer.md): attachments show over
+account-owned retained files, bounded chunks/SHA256, standard MCP image/resource and JSON
+fallback, no new dependency, model call, public URL, or migration. MAX/TG adoption follows
+a shared SDK release. Existing agent OCR/text-index ingestion stays unchanged.

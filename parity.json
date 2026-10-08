@@ -200,6 +200,11 @@
       "value": "<durations>",
       "meaning": "elapsed joining ages to inspect, such as 1d,7d,30d"
     },
+    "--chunk-bytes": {
+      "value": "<n>",
+      "meaning": "maximum source bytes returned from a retained attachment; 1–1048576",
+      "default": "524288"
+    },
     "--closed": {
       "value": "<on|off>",
       "meaning": "on closes a forum topic to new messages, off reopens it"
@@ -381,6 +386,10 @@
     "--idle": {
       "value": "<duration>",
       "meaning": "stop after this long with nobody using it — 15m, 1h"
+    },
+    "--if-sha256": {
+      "value": "<hash>",
+      "meaning": "require the whole retained file to match this previous SHA256"
     },
     "--include": {
       "value": "<kinds>",
@@ -608,6 +617,11 @@
     },
     "--offline": {
       "meaning": "answer from what was recorded and never connect; fails if nothing was"
+    },
+    "--offset-bytes": {
+      "value": "<n>",
+      "meaning": "start byte offset in a retained attachment",
+      "default": "0"
     },
     "--older-than": {
       "value": "<duration>",
@@ -1152,6 +1166,43 @@
         },
         "--page": {
           "in": "all"
+        }
+      }
+    },
+    "attachments show": {
+      "in": [],
+      "planned": {
+        "max": "feat/remote-attachment-transfer",
+        "tg": "feat/remote-attachment-transfer"
+      },
+      "options": {
+        "--attachment": {
+          "in": [],
+          "planned": {
+            "max": "feat/remote-attachment-transfer",
+            "tg": "feat/remote-attachment-transfer"
+          }
+        },
+        "--chunk-bytes": {
+          "in": [],
+          "planned": {
+            "max": "feat/remote-attachment-transfer",
+            "tg": "feat/remote-attachment-transfer"
+          }
+        },
+        "--if-sha256": {
+          "in": [],
+          "planned": {
+            "max": "feat/remote-attachment-transfer",
+            "tg": "feat/remote-attachment-transfer"
+          }
+        },
+        "--offset-bytes": {
+          "in": [],
+          "planned": {
+            "max": "feat/remote-attachment-transfer",
+            "tg": "feat/remote-attachment-transfer"
+          }
         }
       }
     },
