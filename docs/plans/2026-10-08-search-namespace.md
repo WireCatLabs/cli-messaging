@@ -1,6 +1,6 @@
 # Every search under `search <resource>`
 
-**Status:** approved 2026-10-08. Nothing is built.
+**Status:** approved 2026-10-08; built in cli-messaging 2026-10-09 (`feat/search-namespace`). tg, max and memo adopt it next.
 Rule: [STANDARD.md, "Search hierarchy"](../dev/STANDARD.md#search-hierarchy) and "No two commands overlap"
 under command names. Goes with [`2026-10-08-notes-graph.md`](2026-10-08-notes-graph.md), which adds notes.
 
@@ -33,9 +33,13 @@ Only `search all` spans resources.
 - MCP tool names follow the command (`search_all`, `search_messages`, …); the `search_all` description
   says it is the first tool to use.
 - Permission keys: `messages.search` → `search.messages` and so on, with an explicit migration of saved
-  profiles; never a broader key.
-- Saved searches (`searches`): stored records that name an old path get it rewritten by a store
-  migration.
+  profiles; never a broader key. Built as `config migrate` (`src/cli/permission-migration.ts`); a profile
+  still naming an old key refuses `search` until migrated, and `messages: deny` reaches every leaf that reads
+  messages (`readKeysForCommand`).
+- Saved searches (`searches`): ~~stored records that name an old path get it rewritten by a store
+  migration.~~ **Correction 2026-10-09:** a record stores the kind `search` or `stats`, not a command path
+  (`src/store/sqlite/schema.ts`, `searches.command`), so nothing needs rewriting and no migration is taken.
+  A saved query naming `in:email` is refused by `search messages`, with a pointer to `search mail`.
 - Skills, cli-docs pages, READMEs: every example.
 - One release of cli-messaging, then tg, max and memo the same day — the week's breaking change,
   listed under "may break scripts".

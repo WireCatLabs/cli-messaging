@@ -173,7 +173,7 @@ good text. A provider rate limit stops later requests in the run, without retrie
 Needs-agent items include localPath; it is a filesystem reference, not remote
 artifact transport. [OCR contract](../plans/2026-10-07-attachment-ocr.md).
 
-**Searches** (version 17) are one table, `searches`: every successful `messages search` and `stats messages show`
+**Searches** (version 17) are one table, `searches`: every successful `search messages` and `stats messages show`
 run records its parameters as canonical JSON (`searchRecordOf`, `src/services/searches.ts`) — never a
 message or a result — from `MessagesService`, so the command and the MCP tool both record. An identical
 unnamed run counts on its row (a unique index over command and parameters where the name is null); unnamed

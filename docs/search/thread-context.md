@@ -2,7 +2,7 @@
 
 The shared CLI and MCP factories support stored thread context. Consumer CLIs need the package version
 containing it. `messages context --thread` follows a hit's parents and chosen replies through the stored
-conversation graph. `messages search --thread` attaches the same result to each hit as `thread`.
+conversation graph. `search messages --thread` attaches the same result to each hit as `thread`.
 Messages are oldest first; `chain` names parents nearest first. The hit alone carries `anchor: true`.
 Use a `msg:` locator to identify a message across rebuilds. Conversation ids are not stable references.
 A locator from another account is refused by `messages context`: select that profile first.
@@ -42,7 +42,7 @@ context. A hit not included in the snapshot says `not_linked` and is marked stal
 `unsupported_store`. The same byte/message/time/topic caps hold for these fallbacks. The before/after
 options set the cheap time window only; they do not set graph depth.
 
-MCP `messages_context` and `messages_search` accept `thread`, `thread_hops`, `thread_messages`,
+MCP `messages_context` and `search_messages` accept `thread`, `thread_hops`, `thread_messages`,
 `thread_bytes`, `thread_within`. Context accepts a locator in `chat` without `message` when `thread` is true.
 These are ordinary message reads, available on readonly profiles. Message search still scopes every hit
 and its graph by that hit's qualified account locator, including explicit cross-account local searches.

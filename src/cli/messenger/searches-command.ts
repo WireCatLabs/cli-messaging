@@ -19,17 +19,17 @@ const line = ({ id, name, command, params, runs, lastRunAt }: StoredSearch) =>
     lastRunAt?.slice(0, 16).replace("T", " ") ?? "never run",
   ].join("  ")
 
-/** Saved searches and the history of `messages search` and `stats messages show`, in the local store only. */
+/** Saved searches and the history of `search messages` and `stats messages show`, in the local store only. */
 export const searchesCommand = (messenger: Messenger): Command => {
   const searches = new Command("searches").description(
-    "saved searches and the history of messages search and stats messages show, kept in the local store; --saved runs one",
+    "saved searches and the history of search messages and stats messages show, kept in the local store; --saved runs one",
   )
 
   searches
     .command("create")
-    .description("save a search under a name without running it; messages search --saved <name> runs it")
+    .description("save a search under a name without running it; search messages --saved <name> runs it")
     .argument("<name>", "up to 64 letters a–z, digits and hyphens, not only digits")
-    .argument("[query...]", "the query, as for messages search; none matches every stored message")
+    .argument("[query...]", "the query, as for search messages; none matches every stored message")
     .option("--chat <chat>", `only this chat — the same as chat: in the query; ${messenger.chatArgument}`)
     .option(
       "--source <messenger>",

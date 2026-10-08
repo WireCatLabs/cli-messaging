@@ -160,7 +160,7 @@ export const BOT_TOOLS: readonly BotTool[] = [
     }),
   },
   {
-    words: ["messages", "search"],
+    words: ["search", "messages"],
     across: true,
     title: "Search the bot's messages",
     description:

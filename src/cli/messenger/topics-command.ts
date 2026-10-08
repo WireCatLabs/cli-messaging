@@ -5,11 +5,8 @@ import { renderPage, window, withPaging } from "../paging.js"
 import { type Messenger, messengerContext } from "./context.js"
 import { capability } from "./port.js"
 
-/** `topics list|search` — a forum group's topics, with the ids its messages carry as `threadId`. */
-export const topicsCommand = (messenger: Messenger): Command => {
-  const topics = new Command("topics").description("the topics of a forum group")
-
-  const listed = async function (this: Command, chat: string) {
+const listed = (messenger: Messenger) =>
+  async function (this: Command, chat: string) {
     const [, query] = this.args
     const context = messengerContext(this, messenger)
     if (context.settings.offline) {
@@ -22,20 +19,25 @@ export const topicsCommand = (messenger: Messenger): Command => {
     )
   }
 
+/** `search topics`: a forum group's topics whose title matches, asked of the messenger. */
+export const topicsSearchCommand = (messenger: Messenger): Command =>
+  withPaging(
+    new Command("topics")
+      .description("a forum group's topics whose title matches")
+      .argument("<chat>", messenger.chatArgument)
+      .argument("<text>", "words from the topic's title"),
+  ).action(listed(messenger))
+
+/** `topics list` and the writes — a forum group's topics, with the ids its messages carry as `threadId`. */
+export const topicsCommand = (messenger: Messenger): Command => {
+  const topics = new Command("topics").description("the topics of a forum group")
+
   topics.addCommand(
     withPaging(
       new Command("list")
         .description("a forum group's topics, newest activity first")
         .argument("<chat>", messenger.chatArgument),
-    ).action(listed),
-  )
-  topics.addCommand(
-    withPaging(
-      new Command("search")
-        .description("a forum group's topics whose title matches")
-        .argument("<chat>", messenger.chatArgument)
-        .argument("<text>", "words from the topic's title"),
-    ).action(listed),
+    ).action(listed(messenger)),
   )
 
   if (messenger.topicShow)

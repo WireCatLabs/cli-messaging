@@ -11,6 +11,7 @@ import { rememberAccount } from "./accounts.js"
 import { storeCommand } from "./archive-commands.js"
 import type { Messenger } from "./context.js"
 import { messagesCommand } from "./messages-command.js"
+import { searchCommand } from "./search-command.js"
 import { searchesCommand } from "./searches-command.js"
 import { statsCommand } from "./stats-command.js"
 
@@ -55,6 +56,7 @@ const setup = async (config?: object) => {
             statsCommand(messenger),
             searchesCommand(messenger),
             messagesCommand(messenger),
+            searchCommand(messenger),
             storeCommand(messenger),
           ],
         },
@@ -75,14 +77,14 @@ describe("searches", () => {
     expect(saved).toMatchObject({ name: "invoices", command: "search", runs: 0, params: { text: "invoice", limit: 2 } })
     expect(json(await call("searches", "history", "--json")).items).toEqual([])
 
-    const first = json(await call("messages", "search", "--saved", "invoices", "--json"))
+    const first = json(await call("search", "messages", "--saved", "invoices", "--json"))
     expect([first.items.map(({ id }: { id: string }) => id), first.limit, first.hasMore]).toEqual([
       ["106", "102"],
       2,
       true,
     ])
     expect(
-      ids(json(await call("messages", "search", "--saved", "invoices", "alpha", "--limit", "5", "--json"))),
+      ids(json(await call("search", "messages", "--saved", "invoices", "alpha", "--limit", "5", "--json"))),
     ).toEqual(["101", "106"])
     const stats = json(await call("stats", "messages", "show", "--saved", "invoices", "--by", "sender", "--json"))
     expect(stats.total).toBe(3)
@@ -112,20 +114,20 @@ describe("searches", () => {
     expect((await call("store", "backup", file, "--json")).code).toBe(0)
     await call("searches", "delete", "invoices", "--json")
     expect((await call("store", "restore", file, "--json")).code).toBe(0)
-    expect(ids(json(await call("messages", "search", "--saved", "invoices", "--json")))).toEqual(["101", "102", "106"])
+    expect(ids(json(await call("search", "messages", "--saved", "invoices", "--json")))).toEqual(["101", "102", "106"])
   })
 
   it("keeps no history with --no-record, and none of a refused query", async () => {
     const call = await setup()
-    expect((await call("messages", "search", "invoice", "--no-record", "--json")).code).toBe(0)
-    expect((await call("messages", "search", "foo:bar", "--json")).code).toBe(2)
+    expect((await call("search", "messages", "invoice", "--no-record", "--json")).code).toBe(0)
+    expect((await call("search", "messages", "foo:bar", "--json")).code).toBe(2)
     expect(json(await call("searches", "history", "--json")).items).toEqual([])
   })
 
   it("names the saved search when its stored query no longer parses, and refuses what cannot be saved", async () => {
     const call = await setup()
-    expect((await call("messages", "search", "--json")).stderr).toContain("--saved <name>")
-    expect((await call("messages", "search", "--saved", "nothing", "--json")).code).toBe(6)
+    expect((await call("search", "messages", "--json")).stderr).toContain("--saved <name>")
+    expect((await call("search", "messages", "--saved", "nothing", "--json")).code).toBe(6)
     const typo = await call("searches", "create", "typo", "foo:bar", "--json")
     expect([typo.code, typo.stdout]).toEqual([2, []])
     expect((await call("searches", "create", "123", "invoice", "--json")).stderr).toContain(
@@ -133,8 +135,8 @@ describe("searches", () => {
     )
     await call("searches", "create", "pattern", "inv.ice", "--regex", "--json")
     expect((await call("stats", "messages", "show", "--saved", "pattern", "--json")).stderr).toContain("legacy")
-    expect((await call("messages", "search", "--saved", "pattern", "--regex", "--json")).code).toBe(2)
-    expect(ids(json(await call("messages", "search", "--saved", "pattern", "--json")))).toEqual(["101", "102", "106"])
+    expect((await call("search", "messages", "--saved", "pattern", "--regex", "--json")).code).toBe(2)
+    expect(ids(json(await call("search", "messages", "--saved", "pattern", "--json")))).toEqual(["101", "102", "106"])
     expect((await call("searches", "create", "pattern", "x", "--json")).stderr).toContain("--replace")
   })
 
@@ -145,7 +147,7 @@ describe("searches", () => {
     expect((await call("searches", "create", "invoices", "invoice")).stdout.join("")).toContain(
       'invoices  search  "invoice"',
     )
-    await call("messages", "search", "--saved", "invoices")
+    await call("search", "messages", "--saved", "invoices")
     expect((await call("searches", "history", "--limit", "1")).stdout.join("")).toContain("1 runs")
     expect((await call("searches", "list")).stdout.join("")).toContain("invoices")
     expect((await call("searches", "clear")).stdout.join("")).toContain("1 runs cleared")

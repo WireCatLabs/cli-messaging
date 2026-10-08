@@ -150,7 +150,7 @@ export interface Messenger {
   /** Whether the messenger computes a chat's statistics for its admins — `stats chats official`; no when unset. */
   officialStats?: boolean
   /**
-   * Whether `messages search --backend` is offered: the adapter has `searchMessages`. `chat` when its server
+   * Whether `search messages --backend` is offered: the adapter has `searchMessages`. `chat` when its server
    * searches one chat at a time, so only a query that names one chat asks it. No when unset.
    */
   serverSearch?: boolean | "chat"

@@ -23,6 +23,7 @@ import { privatePeopleTools } from "./tools/private-people.js"
 import { rankingTools } from "./tools/rankings.js"
 import { reactionTools } from "./tools/reactions.js"
 import { reviewTools } from "./tools/review.js"
+import { searchTools } from "./tools/search-tools.js"
 import { searchesTools } from "./tools/searches.js"
 import { statsTools } from "./tools/stats.js"
 import { storeTools } from "./tools/store.js"
@@ -44,6 +45,7 @@ export const readTools = (messenger: Messenger): Record<string, AnyTool> => ({
   ...storeTools(messenger),
   ...contactsTools(messenger),
   ...messagesTools(messenger),
+  ...searchTools(messenger),
   ...rankingTools(messenger),
   ...adminStatisticsTools(messenger),
   ...conversationsTools(messenger),

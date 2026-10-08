@@ -19,6 +19,7 @@ import { attachmentsCommand } from "./attachments-command.js"
 import type { Messenger } from "./context.js"
 import { messagesCommand } from "./messages-command.js"
 import type { MessengerAdapter } from "./port.js"
+import { searchCommand } from "./search-command.js"
 
 const app = { command: "chat", appName: "chat-cli", envPrefix: "CHAT", description: "", version: "1.0.0" }
 const OWNER = { provider: "chat", account: "500" }
@@ -138,7 +139,15 @@ const setup = async ({ config, load, history }: { config?: object; load?: LoadEn
       const streams = captureStreams()
       const code = await run(
         argv,
-        { app, commands: () => [attachmentsCommand(messenger), messagesCommand(messenger), storeCommand(messenger)] },
+        {
+          app,
+          commands: () => [
+            attachmentsCommand(messenger),
+            messagesCommand(messenger),
+            searchCommand(messenger),
+            storeCommand(messenger),
+          ],
+        },
         {
           streams,
           tty,
@@ -153,7 +162,7 @@ const setup = async ({ config, load, history }: { config?: object; load?: LoadEn
 
 const json = (result: { stdout: string }) => JSON.parse(result.stdout || "null")
 const hits = async (call: (...argv: string[]) => Promise<{ stdout: string }>, query: string) =>
-  json(await call("messages", "search", query, "--language", "lucene", "--json")).items.map(
+  json(await call("search", "messages", query, "--language", "lucene", "--json")).items.map(
     ({ id }: { id: string }) => id,
   )
 

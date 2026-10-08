@@ -168,10 +168,15 @@ export type { QueryMetadata, SearchCoverage } from "./messages-search.js"
 export { metadataService } from "./metadata.js"
 export {
   embedNotes,
+  type FoundNote,
+  type LinkedRecord,
   type NotesEmbedded,
   type NotesEmbedOptions,
+  type NotesFound,
+  type NotesQuery,
   type NotesSearchRequest,
   nearestNotes,
+  searchNotes,
   searchNotesQuery,
 } from "./notes-search.js"
 export {
@@ -185,12 +190,21 @@ export { privatePeopleService } from "./private-people.js"
 export type { RetentionQuery, RetentionService } from "./retention.js"
 export { retentionService } from "./retention.js"
 export {
+  RESOURCES_SEARCHED,
+  type SearchAllFound,
+  type SearchAllItem,
+  type SearchAllRequest,
+  type SearchedResource,
+  searchAll,
+} from "./search-all.js"
+export {
   CATCH_UP_BOUNDS,
   type CatchUpOptions,
   type CatchUpResult,
   catchUpSearch,
   validateCatchUp,
 } from "./search-catchup.js"
+export { accountsOfKind, type SearchKind } from "./search-kind.js"
 export type { SearchRefreshed, SyncOptions } from "./search-refresh.js"
 export { SYNC_BOUNDS, SYNC_KEY } from "./search-refresh.js"
 export {

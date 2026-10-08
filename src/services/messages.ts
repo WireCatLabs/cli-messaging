@@ -33,6 +33,7 @@ import {
   searchLucene,
   statsLucene,
 } from "./messages-search.js"
+import { accountsOfKind, type SearchKind } from "./search-kind.js"
 import { refreshSearch, type SearchRefreshed, type SyncOptions, withRefresh } from "./search-refresh.js"
 import { type SearchParams, searchRecordOf } from "./searches.js"
 import {
@@ -82,6 +83,8 @@ export interface SearchQuery {
   source?: string
   /** These accounts instead of the one it runs as, already checked by the caller; not with `source` or `in:`. */
   accounts?: AccountKey[]
+  /** `messages` leaves mail out and refuses `in:email`; `mail` reads the mailboxes only. Every kind when unset. */
+  kind?: SearchKind
   /** Any of these senders, already resolved by the caller; not with `from:`. */
   senders?: { provider: Provider; id: Id }[]
   limit: number
@@ -415,7 +418,12 @@ export const messagesService = (deps: ServiceDeps): MessagesService => {
       }),
 
     search: (request) => {
-      const query: SearchQuery = { ...request, language: request.language ?? (request.pattern ? "legacy" : "lucene") }
+      const query: SearchQuery = {
+        ...request,
+        language: request.language ?? (request.pattern ? "legacy" : "lucene"),
+        // Mail is only ever in the local store, and a saved search replays as `search messages`.
+        ...(request.kind === "mail" ? { backend: "archive" as const } : {}),
+      }
       return inStore(async (store, account) => {
         if (query.thread) threadBounds(query.thread)
         const refreshed = await refreshSearch(deps, query)
@@ -430,7 +438,7 @@ export const messagesService = (deps: ServiceDeps): MessagesService => {
               })
             : undefined
         const found = await searchStore(store, account, only ? { ...query, only } : query, deps.messenger)
-        await remember(store, "search", query)
+        if (query.kind !== "mail") await remember(store, "search", query)
         return withServer(withRefresh(found, refreshed), server)
       })
     },
@@ -677,7 +685,7 @@ export const validateSearchDialect = (request: SearchQuery): void => {
 }
 
 /**
- * `messages search` over a store, from the account given — or from `query.accounts`, which a caller such
+ * `search messages` over a store, from the account given — or from `query.accounts`, which a caller such
  * as a bot's search passes after checking it may read them.
  */
 // A large file builds its word index a slice per search as well as in `store migrate` (NEED-453 A).
@@ -715,7 +723,14 @@ export const searchStore = async (
       }
     : await search(
         store,
-        ...(await scopeOf(messenger, store, account, { text: text ?? "", chat, source, accounts, senders })),
+        ...(await scopeOf(messenger, store, account, {
+          text: text ?? "",
+          chat,
+          source,
+          accounts,
+          senders,
+          kind: request.kind,
+        })),
         { limit, newest },
       )
   const items = await Promise.all(
@@ -912,7 +927,8 @@ export const scopeOf = async (
     source,
     accounts: given,
     senders,
-  }: Pick<SearchQuery, "chat" | "source" | "accounts" | "senders"> & {
+    kind,
+  }: Pick<SearchQuery, "chat" | "source" | "accounts" | "senders" | "kind"> & {
     text: string
   },
 ): Promise<[WordQuery, SearchScope]> => {
@@ -934,9 +950,16 @@ export const scopeOf = async (
   if (senders !== undefined && parsed.from !== undefined) {
     throw new CliError("validation_error", "--from and from: together — name the people once")
   }
-  const accounts =
+  const accounts = accountsOfKind(
+    kind,
     given ??
-    (wanted === undefined || held.length === 0 ? [account] : held.filter(({ provider }) => inSource(wanted, provider)))
+      (wanted === undefined || held.length === 0
+        ? [account]
+        : held.filter(({ provider }) => inSource(wanted, provider))),
+    held,
+    wanted,
+    messenger.app?.command,
+  )
   const named = parsed.chat ?? chat
   const scope: SearchScope = { accounts }
   if (named !== undefined) scope.chat = await chatAmong(messenger, store, accounts, named)

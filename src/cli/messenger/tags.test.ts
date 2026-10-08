@@ -11,6 +11,7 @@ import { rememberAccount } from "./accounts.js"
 import { storeCommand } from "./archive-commands.js"
 import type { Messenger } from "./context.js"
 import { messagesCommand } from "./messages-command.js"
+import { searchCommand } from "./search-command.js"
 import { tagsCommand } from "./tags-command.js"
 
 const app = { command: "chat", appName: "chat-cli", envPrefix: "CHAT", description: "", version: "1.0.0" }
@@ -56,7 +57,15 @@ const setup = async (config?: object) => {
       const streams = captureStreams()
       const code = await run(
         argv,
-        { app, commands: () => [tagsCommand(messenger), messagesCommand(messenger), storeCommand(messenger)] },
+        {
+          app,
+          commands: () => [
+            tagsCommand(messenger),
+            messagesCommand(messenger),
+            searchCommand(messenger),
+            storeCommand(messenger),
+          ],
+        },
         { streams, tty, env: { ...env, NO_COLOR: "1" } },
       )
       return { code, stdout: streams.stdout, stderr: streams.stderr.join("\n") }
@@ -97,7 +106,7 @@ describe("tags", () => {
     expect(listed.items.map(({ type }: { type: string }) => type)).toEqual(["chat", "contact", "message", "message"])
     expect(json(await call("tags", "list", "--type", "contact", "--json")).items).toHaveLength(2)
 
-    const search = json(await call("messages", "search", "tag:work", "--json"))
+    const search = json(await call("search", "messages", "tag:work", "--json"))
     expect(search.items.map(({ id }: { id: string }) => id).sort()).toEqual(["101", "102", "103", "106", "107", "108"])
 
     expect(json(await call("tags", "remove", "vip", "gone", "--contact", "11", "--json"))).toMatchObject({
@@ -115,7 +124,7 @@ describe("tags", () => {
     await call("tags", "remove", "work", "--chat", "7", "--json")
     expect((await call("store", "restore", file, "--json")).code).toBe(0)
     expect(json(await call("tags", "list", "--json")).items).toMatchObject([{ tag: "work", chatId: "7" }])
-    expect(json(await call("messages", "search", "tag:work", "--json")).items.length).toBeGreaterThan(0)
+    expect(json(await call("search", "messages", "tag:work", "--json")).items.length).toBeGreaterThan(0)
   })
 
   it("prints for a person, and says so when nothing is tagged", async () => {

@@ -162,7 +162,7 @@ export const registerPrompts = (server: McpServer, { command, name }: { command:
           `message answers one from before the review, read around that one with ${command}_read, command "messages context".`,
           "3. Before calling anything overdue, look for it being done: later in the review, in " +
             (groups ? `these group chats: ${JSON.stringify(groups)}` : "the group chats in the review") +
-            ` ("messages list" for anything older), and with "messages search" — which sees only what` +
+            ` ("messages list" for anything older), and with "search messages" — which sees only what` +
             " this machine has kept, so no hit is not proof.",
           "4. Draft at most five reminders, each with its chat and text. Send one only after I approve that exact",
           `text and recipient, with ${command}_write, command "messages send", and reply_to. Without that command, show the drafts only.`,
@@ -186,7 +186,7 @@ export const registerPrompts = (server: McpServer, { command, name }: { command:
       asked(
         [
           `Find ${JSON.stringify(text)} in ${name}.`,
-          `For a person, use ${command}_read with "contacts list" and "contacts show"; for words, "messages search" — it searches only`,
+          `For a person, use ${command}_read with "contacts list" and "contacts show"; for words, "search all" — it searches only`,
           "what this machine has kept, so an empty answer is not proof it was never said.",
           `Show each hit with "messages context" for the messages around it. Send nothing.`,
           DATA,

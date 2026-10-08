@@ -34,7 +34,7 @@ export const tagsTools = (messenger: Messenger): Record<string, AnyTool> => {
       title: "List tags",
       description:
         "The owner's own tags in the local store: this account's tagged chats and messages, and the people of its " +
-        "messenger. `tag:<tag>` in messages_search finds the messages they label. Returns { items: [{ tag, type, " +
+        "messenger. `tag:<tag>` in search_messages finds the messages they label. Returns { items: [{ tag, type, " +
         "chatId?, chatTitle?, personId?, name?, messageId?, locator?, createdAt }], page, limit, hasMore }.",
       input: v.object({
         tag: v.optional(v.pipe(v.string(), v.minLength(1), v.description("only this tag"))),

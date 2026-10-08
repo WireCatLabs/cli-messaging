@@ -218,7 +218,7 @@ export const stored = (
           },
         }
       : {}),
-    // Without this, a message deleted here would still be found by `messages search` and read `--offline`.
+    // Without this, a message deleted here would still be found by `search messages` and read `--offline`.
     ...(messenger.delete
       ? {
           delete: async (chatId, messageIds, options) => {

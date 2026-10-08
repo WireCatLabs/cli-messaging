@@ -19,7 +19,7 @@ export const CONTRACT = 0
 export const commandsCommand = (app: AppIdentity): Command => {
   const command = new Command("commands")
     .description("commands, options and exit codes as JSON — inspect one command path per call")
-    .argument("[path...]", "one command path, for example: messages search; inspect other groups in separate calls")
+    .argument("[path...]", "one command path, for example: search messages; inspect other groups in separate calls")
     .action(function (this: Command, path: string[]) {
       const root = rootOf(this)
       const { renderer, format } = outputFor(this)

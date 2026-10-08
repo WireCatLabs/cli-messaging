@@ -4,7 +4,16 @@ import { join } from "node:path"
 import { captureStreams, configFilePath, saveConfigFile } from "@leemour/cli-core"
 import * as v from "valibot"
 import { describe, expect, it } from "vitest"
-import { DEFAULT_PERMISSIONS, fromOldSettings, levelFor, PERMISSIONS, RESOURCES } from "../sends/permissions.js"
+import {
+  assertStatsPermissionsCurrent,
+  DEFAULT_PERMISSIONS,
+  fromOldSettings,
+  keyForCommand,
+  levelFor,
+  PERMISSIONS,
+  RESOURCES,
+  readKeysForCommand,
+} from "../sends/permissions.js"
 import { configCommand } from "./config-command.js"
 import { migratePermissionConfig } from "./permission-migration.js"
 import { run } from "./program.js"
@@ -35,6 +44,45 @@ describe("statistics permission relocation", () => {
       profiles: { work: { permissions: { "messages.stats": "deny", "stats.messages.show": "allow" } } },
     }
     expect(() => migratePermissionConfig(input)).toThrow("conflicting")
+  })
+})
+describe("search permission relocation", () => {
+  it("moves every old search key under search, bot keys too, keeping each level", () => {
+    const input: Config = {
+      profiles: {
+        work: {
+          permissions: {
+            "messages.search": "deny",
+            "conversations.search": "readonly",
+            "topics.search": "deny",
+            "bot.messages.search": "deny",
+          },
+        },
+      },
+    }
+    const result = migratePermissionConfig(input)
+    expect(result.config.profiles.work?.permissions).toEqual({
+      "search.messages": "deny",
+      "search.conversations": "readonly",
+      "search.topics": "deny",
+      "bot.search.messages": "deny",
+    })
+    expect(migratePermissionConfig(result.config).changed).toBe(false)
+  })
+
+  it("refuses a search until the old keys are migrated, and lets messages: deny reach every leaf that reads messages", () => {
+    expect(() => assertStatsPermissionsCurrent(["search", "messages"], { "messages.search": "deny" })).toThrow(
+      "config migrate",
+    )
+    expect(() =>
+      assertStatsPermissionsCurrent(["bot", "search", "messages"], { "bot.messages.search": "deny" }),
+    ).toThrow("config migrate")
+    expect(() => assertStatsPermissionsCurrent(["messages", "list"], { "messages.search": "deny" })).not.toThrow()
+    for (const leaf of ["all", "messages", "mail", "conversations"])
+      expect(readKeysForCommand(["search", leaf])).toContain("messages")
+    expect(readKeysForCommand(["search", "notes"])).toEqual(["search.notes"])
+    expect(readKeysForCommand(["search", "topics"])).toEqual(["search.topics", "topics"])
+    expect(keyForCommand(["search", "all"])).toBe("search.all")
   })
 })
 const fresh = () => {
