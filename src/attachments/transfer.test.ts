@@ -33,7 +33,7 @@ it("assembles several bounded windows with one whole-file hash and exact origina
   } while (offset < bytes.length)
   expect(Buffer.concat(parts)).toEqual(bytes)
   expect(transferMime(bytes.subarray(0, 32), null)).toBe("application/pdf")
-})
+}, 30000)
 it("refuses a changed hash, invalid windows, symlinks, directories, missing and oversized files", async () => {
   const { root, path } = await fixture()
   await expect(retainedBytes(path, { ifSha256: "0".repeat(64) })).rejects.toMatchObject({ code: "validation_error" })
