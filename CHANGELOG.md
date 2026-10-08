@@ -6,6 +6,13 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- `account list`: every profile on this computer — the current one, those in the config file and those logged in
+  — with the account each is logged in as and its name from the store; `null` where unknown. Asks the messenger
+  nothing. `MessageStore.accountName`; `profilesWithAccounts` moved to `cli/messenger/accounts`. Planned for max
+  and tg.
+
 ### Fixed
 
 - A CLI run with no command, or a command group with no subcommand (`tg`, `tg chats`), showed only

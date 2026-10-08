@@ -9,6 +9,7 @@ import { SendJournal, sendsPathFor } from "../../sends/journal.js"
 import { run } from "../program.js"
 import { settingsFor } from "../settings.js"
 import { accountCommand } from "./account-command.js"
+import { rememberAccount } from "./accounts.js"
 import { groupCommands } from "./admin-commands.js"
 import { chatsCommand } from "./chats-command.js"
 import { contactsCommand } from "./contacts-command.js"
@@ -701,6 +702,26 @@ describe("chats create, join and leave", () => {
       excluded: [{ id: "7", title: "Book club", kind: "group" }],
     })
     expect(asked).toEqual(["8", "9"])
+  })
+
+  it("**lists every profile with the account it is logged in as**, from this computer alone", async () => {
+    const env = sandbox()
+    await call(["account", "show"], base, env)
+    rememberAccount(app, "work", "501", env)
+    const offline: MessengerAdapter = {
+      ...base,
+      me: async () => {
+        throw new Error("account list must not ask the messenger")
+      },
+    }
+
+    const listed = await call(["account", "list", "--json"], offline, env)
+
+    expect(listed.code).toBe(0)
+    expect(JSON.parse(listed.stdout[0] ?? "").items).toEqual([
+      { profile: "default", current: true, account: "500", name: "Owner" },
+      { profile: "work", current: false, account: "501", name: null },
+    ])
   })
 
   it("**changes the address book through the guard**, each as its own account action", async () => {

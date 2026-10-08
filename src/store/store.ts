@@ -468,6 +468,8 @@ export interface MessageStore {
   refreshRecency(key: AccountKey): Promise<void>
   /** Every account of every messenger the file holds, by messenger then id. */
   accounts(): Promise<AccountKey[]>
+  /** The name the messenger last gave for this account; `null` when it never did. */
+  accountName(key: AccountKey): Promise<string | null>
   /** Everyone this provider's accounts have seen; with `account`, only who that account has seen. */
   people(provider: Provider, options?: { account?: Id; accounts?: Id[] }): Promise<PeopleLookup>
   personOf(identity: IdentityRef): Promise<PersonRecord | undefined>
@@ -1293,6 +1295,7 @@ const storeOver = (context: StoreContext): MessageStore => {
     matchFilters: async (scope, options) => words.matchFilters(context, scope, options),
 
     accounts: async () => accounts.heldAccounts(context),
+    accountName: async (key) => accounts.accountName(context, key),
 
     chatCompleteness: async (key, chatIds) => {
       const accountKey = accounts.findAccountPk(context, key)

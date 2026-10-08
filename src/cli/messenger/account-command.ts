@@ -1,14 +1,52 @@
+import { existsSync } from "node:fs"
 import { annotate } from "@leemour/cli-core/commands"
 import { Command } from "commander"
 import { readUpload } from "../../sends/upload.js"
 import { maskedAccount } from "../../services/people.js"
+import { storePath } from "../../store/path.js"
+import { openStore } from "../../store/store.js"
+import { renderList } from "../paging.js"
 import { accountSessionsCommand } from "./account-sessions-command.js"
+import { profilesWithAccounts, recalledAccount } from "./accounts.js"
 import { type Messenger, messengerContext } from "./context.js"
 import { privacyCommand } from "./records-command.js"
 
 export const accountCommand = (messenger: Messenger): Command => {
   const account = new Command("account")
     .description("the logged-in account")
+    .addCommand(
+      new Command("list")
+        .description("every profile on this computer, and the account each is logged in as; asks the messenger nothing")
+        .action(async function (this: Command) {
+          const context = messengerContext(this, messenger)
+          const { app, provider } = messenger
+          const profiles = [
+            ...new Set([
+              context.settings.profile,
+              ...context.settings.configuredProfiles,
+              ...profilesWithAccounts(app, context.env),
+            ]),
+          ].sort()
+          const store = existsSync(storePath(context.env))
+            ? await openStore({ env: context.env }).catch(() => undefined)
+            : undefined
+          try {
+            const items = []
+            for (const profile of profiles) {
+              const key = recalledAccount(app, provider, profile, context.env)
+              items.push({
+                profile,
+                current: profile === context.settings.profile,
+                account: key?.account ?? null,
+                name: key && store ? await store.accountName(key) : null,
+              })
+            }
+            renderList(context.renderer, context.format, items)
+          } finally {
+            await store?.close()
+          }
+        }),
+    )
     .addCommand(
       new Command("show")
         .description("who this profile is logged in as; the phone number shows its last four digits")

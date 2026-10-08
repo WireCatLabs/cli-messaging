@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs"
+import { existsSync, readdirSync, readFileSync } from "node:fs"
 import { join } from "node:path"
 import { resolvePaths, writeSecurely } from "@leemour/cli-core"
 import type { Provider } from "../../domain/models.js"
@@ -24,4 +24,13 @@ export const recalledAccount = (
   } catch {
     return undefined
   }
+}
+
+/** Profiles somebody has logged in to, whether or not the configuration file names them. */
+export const profilesWithAccounts = (app: AppIdentity, env: NodeJS.ProcessEnv): string[] => {
+  const dir = join(resolvePaths({ appName: app.appName, prefix: app.envPrefix, env }).state, "accounts")
+  if (!existsSync(dir)) return []
+  return readdirSync(dir)
+    .filter((name) => name.endsWith(".json"))
+    .map((name) => name.slice(0, -".json".length))
 }
