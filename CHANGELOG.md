@@ -6,6 +6,15 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Fixed
+
+- A store whose stems an older tool built with its default (`latin=spanish`), with no stemmers ever chosen,
+  no longer asks for `store reindex` after 0.198.0 changed the default: on open the stems start again with
+  `english,spanish`, as a first build does. A small file is stemmed on the spot; a larger one a slice per
+  search and in full by `store migrate`, and until then a stemmed search says how far the build is, while
+  `exact:` and `--exact` keep working. A choice made with `config set searchStemmers.*` still waits for
+  `store reindex`.
+
 ## 0.198.0 — 08.10.2026
 
 ### Added

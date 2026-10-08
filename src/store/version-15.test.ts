@@ -221,6 +221,47 @@ describe("store version 15, the stems", () => {
     await withDatabase(path, (database) => expect(() => resetStems(database)).toThrow(/upgrade this tool/))
   })
 
+  describe("after the default changes", () => {
+    const SPANISH = { cyrillic: "russian", latin: "spanish" } as const
+    /** Stems built by a tool whose default was Spanish only, which saved no setting. */
+    const builtByOldDefault = async (count: number): Promise<string> => {
+      const path = await version14(count)
+      await (await openStore({ path })).close()
+      await withDatabase(path, (database) => {
+        database.exec("DELETE FROM store_settings WHERE key = 'searchStemmers'")
+        database
+          .prepare("UPDATE search_index_state SET analyzer = ? WHERE name = 'message_stems'")
+          .run(analyzerIdentity(SPANISH))
+      })
+      return path
+    }
+
+    it("**rebuilds stems an older default built** on open, with no reindex", async () => {
+      const store = await openStore({ path: await builtByOldDefault(2) })
+      expect(await store.stemsState()).toMatchObject({ ready: true, built: analyzerIdentity(DEFAULT_STEMMERS) })
+      expect(await store.stemmers()).toEqual(DEFAULT_STEMMERS)
+      await store.close()
+    })
+
+    it("**a larger file is building, not changed**, and fills like a first build", async () => {
+      const path = await builtByOldDefault(BACKFILL_ON_OPEN + 1)
+      const store = await openStore({ path })
+      expect(await store.stemsState()).toMatchObject({ ready: false, cause: "building", filledThrough: 0 })
+      await store.fillStems()
+      expect(await store.stemsState()).toMatchObject({ ready: true, built: analyzerIdentity(DEFAULT_STEMMERS) })
+      await store.close()
+    })
+
+    it("**leaves the owner's own choice** for `store reindex`", async () => {
+      const path = await version14(2)
+      await (await openStore({ path })).close()
+      await withDatabase(path, (database) => saveStoreStemmers(database, SPANISH, 0))
+      const store = await openStore({ path })
+      expect(await store.stemsState()).toMatchObject({ ready: false, cause: "stemmer_changed" })
+      await store.close()
+    })
+  })
+
   it("**refuses to rebuild stems a newer Snowball built**, asking to upgrade this tool", async () => {
     const path = await version14(1)
     await (await openStore({ path })).close()

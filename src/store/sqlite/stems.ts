@@ -276,3 +276,16 @@ export const resetStems = (
   })
   return true
 }
+
+/**
+ * Stems an older tool built with its own default, while nobody chose stemmers, start again with this
+ * build's default: nobody chose the old one, so it waits for no `store reindex`. Like a first fill
+ * from then on. A row a newer Snowball built is left for an upgrade.
+ */
+export const followDefaultStemmers = (database: CacheDatabase, now: () => number = Date.now): boolean => {
+  if (savedStemmers(database) !== undefined) return false
+  const state = stemsState(database)
+  if (state?.cause !== "stemmer_changed" || state.built === null) return false
+  if (newer(snowballOf(state.built), snowballOf(`snowball-${SNOWBALL_VERSION}`))) return false
+  return resetStems(database, { now })
+}
