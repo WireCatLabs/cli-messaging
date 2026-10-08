@@ -86,4 +86,12 @@ describe("a chat as Markdown", () => {
     expect(markdown).toContain("> forwarded from **Ivan**\n> news\n> - photo")
     expect(markdown).toContain("- file: a.pdf\n- [Site](https://example.com)")
   })
+
+  it("lists a bot's buttons with their numbers", () => {
+    const keyboard = {
+      kind: "inline_keyboard",
+      buttons: [[{ kind: "callback" as const, text: "Yes" }], [{ kind: "callback" as const, text: "No" }]],
+    }
+    expect(toMarkdown("Bot", [message("1", 0, { attachments: [keyboard] })])).toContain("- buttons: 1 Yes · 2 No")
+  })
 })

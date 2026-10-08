@@ -6,6 +6,14 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- `messages press <chat> <message> <button>` presses a bot's callback button, by its number or its exact text;
+  `messages list|show` print a keyboard under its message, numbered. Buttons that hand over the phone or the
+  location, open a link or an app, send text or copy are refused with what to do instead. Through the optional
+  `MessageButtons` (`buttons`, `pressButton`) and the new `Attachment.buttons` / `Button`; guarded as a
+  reaction under the permission key `messages.press`.
+
 ## 0.193.0 — 08.10.2026
 
 ### Added

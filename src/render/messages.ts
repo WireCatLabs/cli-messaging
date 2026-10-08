@@ -151,19 +151,28 @@ const attachmentLines = (
     return options.color ? `\u001b]8;;${url}\u0007${label}\u001b]8;;\u0007` : `${label} ${url}`
   }
 
+  let number = 0
+  const keyboard = attachments
+    .flatMap((attachment) => attachment.buttons ?? [])
+    .map((row) =>
+      paint("dim", row.map((button) => link(`[${++number} ${singleLine(button.text)}]`, button.url)).join(" ")),
+    )
+
   const groups = new Map<string, Attachment[]>()
   for (const attachment of attachments) {
+    if (attachment.buttons) continue
     const key = singleLine(attachment.name ?? attachment.title ?? attachment.kind)
     groups.set(key, [...(groups.get(key) ?? []), attachment])
   }
 
-  return [...groups].map(([label, same]) => {
+  const files = [...groups].map(([label, same]) => {
     const first = same[0]
     const size = first?.size === undefined ? "" : ` · ${megabytes(first.size)}`
     if (same.length === 1) return paint("dim", `📎 ${link(`${label}${size}`, first?.url)}`)
     const each = same.map((attachment, index) => link(String(index + 1), attachment.url)).join(" ")
     return paint("dim", `📎 ${label} ×${same.length} ${each}`)
   })
+  return [...files, ...keyboard]
 }
 
 const megabytes = (bytes: number): string =>

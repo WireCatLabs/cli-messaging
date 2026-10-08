@@ -2882,6 +2882,12 @@
         "--notify": "all"
       }
     },
+    "messages press": {
+      "in": ["max"],
+      "planned": {
+        "tg": "tg-cli backlog: press inline buttons"
+      }
+    },
     "messages scheduled": {
       "in": "all"
     },

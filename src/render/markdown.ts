@@ -49,6 +49,10 @@ const forwarded = (original: QuotedMessage): string[] => [
 ]
 
 const attachmentLine = (attachment: Attachment): string => {
+  if (attachment.buttons) {
+    const buttons = attachment.buttons.flat().map((button, index) => `${index + 1} ${singleLine(button.text)}`)
+    return `buttons: ${buttons.join(" · ")}`
+  }
   const label = singleLine(attachment.title ?? attachment.name ?? attachment.kind)
   if (attachment.url && /^https?:\/\//i.test(attachment.url)) return `[${label}](${singleLine(attachment.url)})`
   return attachment.name ? `${attachment.kind}: ${singleLine(attachment.name)}` : attachment.kind

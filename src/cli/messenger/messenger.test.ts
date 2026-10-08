@@ -1097,6 +1097,55 @@ describe("the shared read commands", () => {
     ])
   })
 
+  it("**presses a bot's callback button by number or text**, refuses the ones that hand over data, and journals it", async () => {
+    const root = mkdtempSync(join(tmpdir(), "messenger-"))
+    const env = { CHAT_STATE_DIR: join(root, "state"), CHAT_CONFIG_DIR: join(root, "config") }
+    const pressed: unknown[] = []
+    const keyboard: MessengerAdapter = {
+      ...fake,
+      buttons: async () => [
+        [
+          { kind: "callback", text: "Yes" },
+          { kind: "callback", text: "No" },
+        ],
+        [
+          { kind: "contact", text: "Share phone" },
+          { kind: "link", text: "Site", url: "https://example.org" },
+        ],
+      ],
+      pressButton: async (chatId, messageId, row, column) => {
+        pressed.push([chatId, messageId, row, column])
+      },
+    }
+
+    const byNumber = await call(["messages", "press", "Book", "3", "2", "--json"], async () => keyboard, env)
+    const byText = await call(["messages", "press", "Book", "3", "Yes", "--json"], async () => keyboard, env)
+    const phone = await call(["messages", "press", "Book", "3", "3"], async () => keyboard, env)
+    const link = await call(["messages", "press", "Book", "3", "Site"], async () => keyboard, env)
+    const missing = await call(["messages", "press", "Book", "3", "9"], async () => keyboard, env)
+    const unsupported = await call(["messages", "press", "Book", "3", "1"], async () => fake, env)
+
+    expect(JSON.parse(byNumber.stdout[0] ?? "")).toMatchObject({
+      chatId: "7",
+      messageId: "3",
+      button: { kind: "callback", text: "No" },
+    })
+    expect(byText.code).toBe(0)
+    expect(pressed).toEqual([
+      ["7", "3", 0, 1],
+      ["7", "3", 0, 0],
+    ])
+    expect(phone.stderr.join("\n")).toContain("hand your phone number to the bot")
+    expect(link.stderr.join("\n")).toContain("only opens its link")
+    expect(missing.stderr.join("\n")).toContain("there are 4 buttons")
+    expect(unsupported.code).not.toBe(0)
+    const journal = new SendJournal(sendsPathFor(app, "default", env)).entries().filter((one) => one.outcome === "sent")
+    expect(journal.map((one) => [one.kind, one.messageId])).toEqual([
+      ["reaction", "3"],
+      ["reaction", "3"],
+    ])
+  })
+
   it("**creates a quiz where the messenger makes them**, and refuses quiz options that do not go together", async () => {
     const root = mkdtempSync(join(tmpdir(), "messenger-"))
     const env = { CHAT_STATE_DIR: join(root, "state"), CHAT_CONFIG_DIR: join(root, "config") }

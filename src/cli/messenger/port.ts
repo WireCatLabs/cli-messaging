@@ -7,6 +7,7 @@ import type {
   Account,
   AccountSession,
   AdminRight,
+  Button,
   CallRecord,
   Chat,
   ChatCard,
@@ -272,6 +273,13 @@ export interface ThreadAddressing {
 export interface TopicHistory {
   /** One forum topic's messages, oldest to newest; `before` a message id. */
   topicHistory(chat: string, threadId: Id, window: { limit: number; before?: string }): Promise<Page<Message>>
+}
+
+export interface MessageButtons {
+  /** The keyboard one message carries, row by row; a message without one answers `[]`. */
+  buttons(chatId: Id, messageId: Id): Promise<Button[][]>
+  /** Presses one `callback` button, by its row and column from 0. */
+  pressButton(chatId: Id, messageId: Id, row: number, column: number): Promise<void>
 }
 
 export interface MessagePolls {
@@ -568,6 +576,7 @@ export interface MessengerAdapter
     Partial<MessageReactions>,
     Partial<ReadState>,
     Partial<MessagePolls>,
+    Partial<MessageButtons>,
     Partial<ThreadAddressing>,
     Partial<TopicHistory>,
     Partial<ForumControl>,

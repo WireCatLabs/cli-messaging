@@ -24,6 +24,7 @@ import { evidenceCommand } from "./messages-evidence-command.js"
 import { forwardCommand } from "./messages-forward-command.js"
 import { messageLinkCommand } from "./messages-link-command.js"
 import { pinCommand, unpinCommand } from "./messages-pin-command.js"
+import { pressCommand } from "./messages-press-command.js"
 import { scheduledCommand } from "./messages-scheduled-command.js"
 import { messagesSearchCommand } from "./messages-search-command.js"
 import { sendCommand } from "./messages-send-command.js"
@@ -206,6 +207,7 @@ export const messagesCommand = (messenger: Messenger): Command => {
   messages.addCommand(forwardCommand(messenger))
   messages.addCommand(pinCommand(messenger))
   messages.addCommand(unpinCommand(messenger))
+  messages.addCommand(pressCommand(messenger))
   messages.addCommand(scheduledCommand(messenger))
   messages.addCommand(messageLinkCommand(messenger))
   messages.addCommand(commentsCommand(messenger))

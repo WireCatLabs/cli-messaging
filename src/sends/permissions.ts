@@ -110,7 +110,7 @@ export const RESOURCES = [
 const OLD_WORDS: Record<Permission, PermissionKey[]> = {
   send: ["messages.send", "polls.create"],
   forward: ["messages.forward"],
-  reaction: ["reactions", "polls.vote"],
+  reaction: ["reactions", "polls.vote", "messages.press"],
   edit: ["messages.edit", "polls.close"],
   pin: ["messages.pin", "messages.unpin"],
   read: ["chats.mark-read"],
@@ -264,6 +264,7 @@ const NAMED_WRITE_KEYS = [
   "store.gaps.repair",
   "messages.sync-first",
   "messages.server-search",
+  "messages.press",
   "stats.messages.counters.refresh",
   "stats.messages.show.sync-first",
   "stats.messages.top.sync-first",
