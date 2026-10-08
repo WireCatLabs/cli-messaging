@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.209.0 — 09.10.2026
+
 ### Added
 
 - Tasks accept native `note:<id>` sources in the selected account, preview current note text, and retain
