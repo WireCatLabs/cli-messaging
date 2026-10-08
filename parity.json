@@ -910,7 +910,7 @@
     },
     "--state": {
       "value": "<state>",
-      "meaning": "only tasks in this state: open, done or dismissed"
+      "meaning": "only those in this state: tasks open, done or dismissed; jobs running, done, failed, cancelled or died"
     },
     "--sticker": {
       "value": "<id>",
@@ -3881,7 +3881,16 @@
       }
     },
     "store jobs list": {
-      "in": "all"
+      "in": "all",
+      "options": {
+        "--state": {
+          "in": [],
+          "planned": {
+            "max": "each CLI's next cli-messaging bump",
+            "tg": "each CLI's next cli-messaging bump"
+          }
+        }
+      }
     },
     "store jobs retry": {
       "in": ["tg"],

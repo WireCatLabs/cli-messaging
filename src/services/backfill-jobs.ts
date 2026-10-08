@@ -27,7 +27,8 @@ export interface Job {
   cancelRequestedAt?: string
 }
 
-export type JobState = "running" | "done" | "failed" | "cancelled" | "died"
+export const JOB_STATES = ["running", "done", "failed", "cancelled", "died"] as const
+export type JobState = (typeof JOB_STATES)[number]
 
 /** Starts `<cli> <argv>` apart from this process, writing to `log`, and answers its PID. Tests hand one in. */
 export type SpawnJob = (argv: string[], env: NodeJS.ProcessEnv, log: string) => number

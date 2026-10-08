@@ -3,7 +3,7 @@ import { mkdirSync } from "node:fs"
 import { join } from "node:path"
 import { CliError } from "@leemour/cli-core"
 import { annotate } from "@leemour/cli-core/commands"
-import { Command } from "commander"
+import { Command, Option } from "commander"
 import { FETCHING, type Fetched, type FetchedAll } from "../../services/archive.js"
 import { momentOf } from "../../services/moment.js"
 import { validateCatchUpBounds } from "../../services/search-catchup.js"
@@ -13,7 +13,9 @@ import { isCliFailure } from "../failures.js"
 import { renderList } from "../paging.js"
 import { parseDuration } from "../settings.js"
 import {
+  JOB_STATES,
   type Job,
+  type JobState,
   jobsDir,
   listJobs,
   readJob,
@@ -220,11 +222,16 @@ export const jobsCommand = (messenger: Messenger): Command => {
   command
     .command("list")
     .description("background fetch jobs, newest first")
+    .addOption(new Option("--state <state>", "only jobs in this state").choices(JOB_STATES))
     .action(function (this: Command) {
       const context = messengerContext(this, messenger)
-      const jobs = listJobs(jobsDir(messenger.app, context.env)).filter((job) => job.profile === context.profile)
+      const { state } = this.opts<{ state?: JobState }>()
+      const jobs = listJobs(jobsDir(messenger.app, context.env)).filter(
+        (job) => job.profile === context.profile && (state === undefined || stateOf(job) === state),
+      )
       renderList(context.renderer, context.format, jobs.map(brief))
-      if (jobs.length === 0) context.renderer.note("no background fetch jobs for this profile")
+      if (jobs.length === 0)
+        context.renderer.note(`no ${state === undefined ? "" : `${state} `}background fetch jobs for this profile`)
     })
 
   command

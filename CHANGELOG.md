@@ -6,6 +6,11 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- `store jobs list --state <running|done|failed|cancelled|died>` answers only the jobs in that state. `JOB_STATES`
+  exported beside `JobState`. The catalogue meaning of `--state` now covers tasks and jobs. Planned for max and tg.
+
 ## 0.199.0 — 08.10.2026
 
 ### Fixed

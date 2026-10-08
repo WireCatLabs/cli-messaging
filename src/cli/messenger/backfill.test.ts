@@ -553,6 +553,24 @@ describe("store fetch in the background", () => {
     expect(dead.calls).toHaveLength(5)
   })
 
+  it("**list --state** answers only the jobs in that state", async () => {
+    const env = setup()
+    const dead = spawned(2 ** 22 + 12345)
+    const died = (await call(["store", "fetch", "8", "--background", "--json"], idle, env, dead)).answer.job
+    const done = (await call(["store", "fetch", "9", "--background", "--json"], idle, env, dead)).answer.job
+    updateJob(jobsDir(app, env), done, { finishedAt: new Date().toISOString(), result: { fetched: 1 } })
+
+    const listed = async (state: string) =>
+      (await call(["store", "jobs", "list", "--state", state, "--json"], idle, env)).answer.items.map(
+        (item: { job: string }) => item.job,
+      )
+
+    expect(await listed("died")).toEqual([died])
+    expect(await listed("done")).toEqual([done])
+    expect(await listed("running")).toEqual([])
+    expect((await call(["store", "jobs", "list", "--state", "lost"], idle, env)).code).toBe(2)
+  })
+
   it("**clear** forgets finished jobs and their logs, and keeps a running one", async () => {
     const env = setup()
     const dir = jobsDir(app, env)
