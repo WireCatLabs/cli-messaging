@@ -1,5 +1,5 @@
 import { type ChildProcess, spawn } from "node:child_process"
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { dirname, join } from "node:path"
 import { CliError, captureStreams } from "@leemour/cli-core"
@@ -8,7 +8,7 @@ import type { Message } from "../../domain/models.js"
 import { run } from "../program.js"
 import { settingsFor } from "../settings.js"
 import { storeCommand } from "./archive-commands.js"
-import type { SpawnJob } from "./backfill-jobs.js"
+import { jobsDir, listJobs, readJob, type SpawnJob, saveJob, updateJob } from "./backfill-jobs.js"
 import type { Fetching, Messenger } from "./context.js"
 import type { MessengerAdapter, ServerReads } from "./port.js"
 
@@ -477,6 +477,98 @@ describe("store fetch in the background", () => {
     expect((await call(["store", "jobs", "show", job, "--json"], idle, env)).answer).toMatchObject({
       state: "cancelled",
     })
+  })
+
+  it("**retry starts a failed or died job again with the same command**, as a new job", async () => {
+    const env = setup()
+    const dead = spawned(2 ** 22 + 12345)
+    const fetch = ["store", "fetch", "7", "--limit", "30", "--page-size", "10", "--pause", "1ms"]
+    const first = (await call([...fetch, "--since-time", "2026-01-01", "--background", "--json"], idle, env, dead))
+      .answer.job as string
+
+    const retried = await call(["store", "jobs", "retry", first, "--json"], idle, env, dead)
+
+    expect(retried.answer).toMatchObject({ retried: first, chat: "7", pid: 2 ** 22 + 12345 })
+    expect(dead.calls[1]?.argv).toEqual(dead.calls[0]?.argv)
+    expect(dead.calls[1]?.env.CHAT_BACKFILL_JOB).toBe(retried.answer.job)
+    expect(retried.answer.job).not.toBe(first)
+
+    updateJob(jobsDir(app, env), retried.answer.job, { finishedAt: new Date().toISOString(), result: { fetched: 5 } })
+    const done = await call(["store", "jobs", "retry", retried.answer.job], idle, env, dead)
+    expect(done.stderr).toContain("did not fail — it is done")
+    expect((await call(["store", "jobs", "retry"], idle, env, dead)).stderr).toContain("name a job, or --failed")
+  })
+
+  it("retry rebuilds the command of a job recorded before jobs kept theirs", async () => {
+    const env = setup()
+    const dead = spawned(2 ** 22 + 12345)
+    const dir = jobsDir(app, env)
+    saveJob(dir, {
+      id: "20260101T000000-aaaaaa",
+      chat: "7",
+      profile: "default",
+      pid: 2 ** 22 + 12345,
+      startedAt: "2026-01-01T00:00:00.000Z",
+      limit: 40,
+      pageSize: 20,
+      last: 3,
+      log: join(dir, "20260101T000000-aaaaaa.log"),
+    })
+
+    expect((await call(["store", "jobs", "retry", "20260101T000000-aaaaaa"], idle, env, dead)).code).toBe(0)
+    expect(dead.calls[0]?.argv).toEqual([
+      "store",
+      "fetch",
+      "7",
+      "--limit",
+      "40",
+      "--page-size",
+      "20",
+      "--pause",
+      expect.any(String),
+      "--last",
+      "3",
+      "--json",
+    ])
+  })
+
+  it("**retry --failed** retries each chat whose newest job failed or died, once", async () => {
+    const env = setup()
+    const dead = spawned(2 ** 22 + 12345)
+    const dir = jobsDir(app, env)
+    const start = async (chat: string, at: string) => {
+      const { job } = (await call(["store", "fetch", chat, "--background", "--json"], idle, env, dead)).answer
+      updateJob(dir, job, { startedAt: at })
+      return job as string
+    }
+    await start("8", "2026-01-01T00:00:00.000Z")
+    const newest8 = await start("8", "2026-01-02T00:00:00.000Z")
+    await start("9", "2026-01-01T00:00:00.000Z")
+    const done9 = await start("9", "2026-01-02T00:00:00.000Z")
+    updateJob(dir, done9, { finishedAt: "2026-01-02T01:00:00.000Z", result: { fetched: 1 } })
+
+    const retried = await call(["store", "jobs", "retry", "--failed", "--json"], idle, env, dead)
+
+    expect(retried.answer.items).toEqual([expect.objectContaining({ retried: newest8, chat: "8" })])
+    expect(dead.calls).toHaveLength(5)
+  })
+
+  it("**clear** forgets finished jobs and their logs, and keeps a running one", async () => {
+    const env = setup()
+    const dir = jobsDir(app, env)
+    const { spawnJob, stop } = sleeping()
+    onTestFinished(stop)
+    const running = (await call(["store", "fetch", "7", "--background", "--json"], idle, env, { spawnJob })).answer.job
+    const died = (await call(["store", "fetch", "8", "--background", "--json"], idle, env, spawned(2 ** 22 + 12345)))
+      .answer.job
+    const log = readJob(dir, died)?.log ?? ""
+    writeFileSync(log, "a line\n")
+
+    const cleared = await call(["store", "jobs", "clear", "--json"], idle, env)
+
+    expect(cleared.answer).toEqual({ cleared: [died] })
+    expect(listJobs(dir).map((job) => job.id)).toEqual([running])
+    expect(existsSync(log)).toBe(false)
   })
 
   it.skipIf(process.platform !== "linux" && process.platform !== "darwin")(

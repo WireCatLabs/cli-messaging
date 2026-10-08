@@ -1,7 +1,7 @@
 import { spawn } from "node:child_process"
 import { randomBytes } from "node:crypto"
-import { closeSync, existsSync, mkdirSync, openSync, readdirSync, readFileSync, realpathSync } from "node:fs"
-import { join } from "node:path"
+import { closeSync, existsSync, mkdirSync, openSync, readdirSync, readFileSync, realpathSync, rmSync } from "node:fs"
+import { dirname, join } from "node:path"
 import { CliError, resolvePaths, writeSecurely } from "@leemour/cli-core"
 import { carries } from "../background/processes.js"
 import type { AppIdentity } from "../cli/app.js"
@@ -17,6 +17,8 @@ export interface Job {
   limit?: number
   pageSize?: number
   last?: number
+  /** What it was started with, after `<cli>`; absent on a job started before `store jobs retry`. */
+  argv?: string[]
   log: string
   progress?: { fetched: number; chatId: string; oldest: number }
   finishedAt?: string
@@ -69,6 +71,13 @@ export const updateJob = (dir: string, id: string, change: Partial<Job>): void =
   if (job) saveJob(dir, { ...job, ...change })
 }
 
+/** The job's record and its log. */
+export const removeJob = (dir: string, job: Job): void => {
+  rmSync(jobPath(dir, job.id), { force: true })
+  // The record says where its log is; only a log beside it is removed.
+  if (dirname(job.log) === dir) rmSync(job.log, { force: true })
+}
+
 /** Newest first. */
 export const listJobs = (dir: string): Job[] =>
   existsSync(dir)
@@ -119,6 +128,7 @@ export const startArchiveJob = (
     startedAt,
     limit: input.limit,
     pageSize: input.pageSize,
+    argv: input.argv,
     log,
   }
   saveJob(dir, job)

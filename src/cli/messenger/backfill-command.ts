@@ -2,6 +2,7 @@ import { randomBytes } from "node:crypto"
 import { mkdirSync } from "node:fs"
 import { join } from "node:path"
 import { CliError } from "@leemour/cli-core"
+import { annotate } from "@leemour/cli-core/commands"
 import { Command } from "commander"
 import { FETCHING, type Fetched, type FetchedAll } from "../../services/archive.js"
 import { momentOf } from "../../services/moment.js"
@@ -16,6 +17,7 @@ import {
   jobsDir,
   listJobs,
   readJob,
+  removeJob,
   type SpawnJob,
   saveJob,
   spawnDetached,
@@ -151,18 +153,28 @@ export const fetchCommand = (messenger: Messenger): Command => {
         refuseLocalWrite(context, messenger.app.command, "conversations.embed")
       }
       if (background) {
-        startJob(this, context, messenger, {
-          chat: chat ?? ALL_CHATS,
+        const named = chat ?? ALL_CHATS
+        const argv = fetchArgv(this, {
+          chat: named,
           limit,
           pageSize,
           pause,
           catchUp: prepare,
-          catchUpChunks,
-          catchUpMessages,
-          catchUpTime,
+          ...(catchUpChunks === undefined ? {} : { catchUpChunks }),
+          ...(catchUpMessages === undefined ? {} : { catchUpMessages }),
+          ...(catchUpTime === undefined ? {} : { catchUpTime }),
           ...(last === undefined ? {} : { last }),
           ...(sinceMs === undefined ? {} : { since: new Date(sinceMs).toISOString() }),
         })
+        const started = launchJob(this, context, messenger, {
+          chat: named,
+          argv,
+          limit,
+          pageSize,
+          ...(last === undefined ? {} : { last }),
+        })
+        context.renderer.result(started)
+        context.renderer.note(`started — \`${messenger.app.command} store jobs show ${started.job}\` follows it`)
         return
       }
       const jobs = jobsDir(messenger.app, context.env)
@@ -245,6 +257,49 @@ export const jobsCommand = (messenger: Messenger): Command => {
       context.renderer.result({ job: job.id, cancelled: true })
     })
 
+  command
+    .command("retry")
+    .description("start a failed or died job again, as a new job; the fetch resumes where the store stopped")
+    .argument("[job]", "the job id")
+    .option("--failed", "every chat whose newest job failed or died")
+    .action(function (this: Command, id: string | undefined) {
+      const context = messengerContext(this, messenger)
+      const { failed } = this.opts<{ failed?: boolean }>()
+      if ((id === undefined) === (failed !== true))
+        throw new CliError("validation_error", "name a job, or --failed for every failed one")
+      const broken = (job: Job) => ["failed", "died"].includes(stateOf(job))
+      if (id !== undefined) {
+        const job = findJob(messenger, context, id)
+        if (!broken(job)) throw new CliError("validation_error", `job ${job.id} did not fail — it is ${stateOf(job)}`)
+        context.renderer.result(retryJob(this, context, messenger, job))
+        return
+      }
+      const newest = new Map<string, Job>()
+      for (const job of listJobs(jobsDir(messenger.app, context.env)))
+        if (job.profile === context.profile && !newest.has(job.chat)) newest.set(job.chat, job)
+      const items = []
+      for (const job of [...newest.values()].filter(broken)) {
+        try {
+          items.push(retryJob(this, context, messenger, job))
+        } catch (error) {
+          if (!(error instanceof CliError)) throw error
+          items.push({ retried: job.id, chat: job.chat, error: { code: error.code, message: error.message } })
+        }
+      }
+      renderList(context.renderer, context.format, items)
+      if (items.length === 0) context.renderer.note("no failed or died jobs to retry")
+    })
+
+  annotate(command.command("clear"), { mutates: true, local: true })
+    .description("forget finished jobs and remove their logs; a running job is kept")
+    .action(function (this: Command) {
+      const context = messengerContext(this, messenger)
+      const dir = jobsDir(messenger.app, context.env)
+      const finished = listJobs(dir).filter((job) => job.profile === context.profile && stateOf(job) !== "running")
+      for (const job of finished) removeJob(dir, job)
+      context.renderer.result({ cleared: finished.map((job) => job.id) })
+    })
+
   return command
 }
 
@@ -275,10 +330,8 @@ const findJob = (messenger: Messenger, context: MessengerContext, id: string | u
   return job
 }
 
-const startJob = (
+const fetchArgv = (
   command: Command,
-  context: MessengerContext,
-  messenger: Messenger,
   {
     chat,
     limit,
@@ -302,24 +355,9 @@ const startJob = (
     catchUpMessages?: number
     catchUpTime?: string
   },
-) => {
-  const { app } = messenger
-  const dir = jobsDir(app, context.env)
-  const running = listJobs(dir).find(
-    (job) => job.profile === context.profile && job.chat === chat && stateOf(job) === "running",
-  )
-  if (running) {
-    throw new CliError(
-      "validation_error",
-      `job ${running.id} is already fetching ${chat} (PID ${running.pid}) — \`${app.command} store jobs show ${running.id}\``,
-    )
-  }
-  const now = new Date()
-  const id = `${now.toISOString().replace(/[-:]/g, "").slice(0, 15)}-${randomBytes(3).toString("hex")}`
-  mkdirSync(dir, { recursive: true, mode: 0o700 })
-  const log = join(dir, `${id}.log`)
+): string[] => {
   const { timeout } = command.optsWithGlobals<{ timeout?: string }>()
-  const argv = [
+  return [
     "store",
     "fetch",
     chat,
@@ -338,6 +376,35 @@ const startJob = (
     "--json",
     ...(timeout ? ["--timeout", timeout] : []),
   ]
+}
+
+const launchJob = (
+  command: Command,
+  context: MessengerContext,
+  messenger: Messenger,
+  {
+    chat,
+    argv,
+    limit,
+    pageSize,
+    last,
+  }: { chat: string; argv: string[]; limit: number; pageSize: number; last?: number },
+) => {
+  const { app } = messenger
+  const dir = jobsDir(app, context.env)
+  const running = listJobs(dir).find(
+    (job) => job.profile === context.profile && job.chat === chat && stateOf(job) === "running",
+  )
+  if (running) {
+    throw new CliError(
+      "validation_error",
+      `job ${running.id} is already fetching ${chat} (PID ${running.pid}) — \`${app.command} store jobs show ${running.id}\``,
+    )
+  }
+  const now = new Date()
+  const id = `${now.toISOString().replace(/[-:]/g, "").slice(0, 15)}-${randomBytes(3).toString("hex")}`
+  mkdirSync(dir, { recursive: true, mode: 0o700 })
+  const log = join(dir, `${id}.log`)
   // A shell's --timeout default would cut a job short that was asked to outlive the shell.
   const { [envName(app, "TIMEOUT")]: _timeout, ...inherited } = context.env
   const env = { ...inherited, [envName(app, "PROFILE")]: context.profile, [envName(app, "BACKFILL_JOB")]: id }
@@ -350,14 +417,40 @@ const startJob = (
     limit,
     pageSize,
     ...(last === undefined ? {} : { last }),
+    argv,
     log,
   }
   saveJob(dir, job)
   const spawnJob = environmentOf<BaseEnvironment & { spawnJob?: SpawnJob }>(command).spawnJob ?? spawnDetached
   const pid = spawnJob(argv, env, log)
   saveJob(dir, { ...job, pid })
-  context.renderer.result({ job: id, pid, chat, log })
-  context.renderer.note(`started — \`${app.command} store jobs show ${id}\` follows it`)
+  return { job: id, pid, chat, log }
+}
+
+/** A job recorded before it kept its argv: what it did keep, the pause and window back at their defaults. */
+const argvOf = (command: Command, messenger: Messenger, job: Job): string[] => {
+  if (job.argv) return job.argv
+  const fetching = messenger.fetching ?? FETCHING
+  return fetchArgv(command, {
+    chat: job.chat,
+    limit: job.limit ?? fetching.maxPages * fetching.page,
+    pageSize: job.pageSize ?? fetching.page,
+    pause: fetching.pause,
+    ...(job.last === undefined ? {} : { last: job.last }),
+  })
+}
+
+const retryJob = (command: Command, context: MessengerContext, messenger: Messenger, job: Job) => {
+  const fetching = messenger.fetching ?? FETCHING
+  const limit = job.limit ?? fetching.maxPages * fetching.page
+  const started = launchJob(command, context, messenger, {
+    chat: job.chat,
+    argv: argvOf(command, messenger, job),
+    limit,
+    pageSize: job.pageSize ?? fetching.page,
+    ...(job.last === undefined ? {} : { last: job.last }),
+  })
+  return { retried: job.id, ...started }
 }
 
 const wholeNumber = (value: string): number => {
