@@ -249,7 +249,8 @@ for metrics, scores, saved selections, evidence paging and data-quality limits.
 
 ### Private contact metadata and automatic tags
 
-Both messenger consumers can keep account-scoped private contact aliases and multiple notes.
+Both messenger consumers can keep private contact aliases, scoped to one account, and multiple notes,
+which belong to the owner: a contact's notes show in every account that sees the contact.
 `contacts alias set <person> <alias>` and `contacts alias rm <person>` affect local display and
 resolution only. `contacts rename` continues to change the messenger address book. Show/list
 retain the messenger name; a local alias adds `alias` and `displayName`. Duplicate aliases require
@@ -259,8 +260,9 @@ when identities are linked or unlinked.
 
 `contacts notes add <person> --file <path>` (or stdin) creates a stable note id. Use `list`,
 `show`, `edit --revision <number>` and `remove` for that person's notes. Notes are independent of
-public bios, imported documents and source messages. `contacts list --search-notes <text>` is an
-explicit substring search over the selected account's own notes; embeddings are not added here.
+public bios, imported documents and source messages. They are rows of the store's `notes` table (version
+25), linked to the contact, so `search notes` and `search all` find them too. `contacts list --search-notes
+<text>` is an explicit substring search over the notes of the selected account's contacts.
 
 `metadata get --chat <chat>` reads the cached group/channel description and fetched time.
 `metadata refresh --chat <chat>` reads it from the messenger, without changing the remote chat.

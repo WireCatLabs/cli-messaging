@@ -37,7 +37,7 @@ AMD Ryzen AI 9 HX 470 (24 threads), 30 GB RAM, Linux 7.0, Node 24.19.0, Bun 1.3.
 42,417 chunks; the store grew to 292 MB. `embed status` estimated 2,828 s from e5-small's listed
 15 chunks/s — twice the time it took.
 
-**Search** — `conversations search --json`, the hybrid ranking of item 7. One-shot is the median of three
+**Search** — `search conversations --json`, the hybrid ranking of item 7. One-shot is the median of three
 processes, start to exit; warm is the first and the median of ten more calls in one process.
 
 | query | runtime | one-shot | warm, first | warm, median |

@@ -83,7 +83,7 @@ recall to 0.646; it fails the dev recall constraint. Reject that higher floor. D
 to unmeasured local/remote models: they only reject nonpositive cosine. Word-only matches remain
 eligible at every floor, and readiness still describes index coverage, not match quality. The
 synthetic zero-cosine regression now keeps the exact word match without unrelated meaning padding.
-The floor applies to `conversations search` fusion; `conversations related` remains a neighbour
+The floor applies to `search conversations` fusion; `conversations related` remains a neighbour
 lookup with its existing semantics.
 
 ## Vector-index verdict
