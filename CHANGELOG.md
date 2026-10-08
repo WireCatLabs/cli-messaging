@@ -6,6 +6,11 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- Parity: `chats requests` is planned for max — a MAX channel does approve who joins (measured in max-cli, 2026-10-08);
+  the old reason "MAX groups have no join approval" held only for groups.
+
 ## 0.204.0 — 08.10.2026
 
 ### Added

@@ -464,6 +464,11 @@
       "meaning": "how many lines",
       "default": "50"
     },
+    "--link": {
+      "value": "<link>",
+      "meaning": "an invite link: only the requests made through it",
+      "note": "chats requests list filters by it; accept and decline take it with --all — one link, worded for each command (Help text rule 4)"
+    },
     "--local": {
       "meaning": "use the model on this machine, never the messenger"
     },
@@ -2061,7 +2066,75 @@
     },
     "chats requests": {
       "in": ["tg"],
-      "reason": "MAX groups have no join approval"
+      "planned": {
+        "max": "max-cli MAX-73: a MAX channel approves joins (measured 2026-10-08); MAX sends no request time"
+      }
+    },
+    "chats requests accept": {
+      "in": ["tg"],
+      "planned": {
+        "max": "max-cli MAX-73"
+      },
+      "options": {
+        "--all": {
+          "in": ["tg"],
+          "planned": {
+            "max": "max-cli MAX-73"
+          }
+        },
+        "--link": {
+          "in": ["tg"],
+          "planned": {
+            "max": "max-cli MAX-73"
+          }
+        }
+      }
+    },
+    "chats requests decline": {
+      "in": ["tg"],
+      "planned": {
+        "max": "max-cli MAX-73"
+      },
+      "options": {
+        "--all": {
+          "in": ["tg"],
+          "planned": {
+            "max": "max-cli MAX-73"
+          }
+        },
+        "--link": {
+          "in": ["tg"],
+          "planned": {
+            "max": "max-cli MAX-73"
+          }
+        }
+      }
+    },
+    "chats requests list": {
+      "in": ["tg"],
+      "planned": {
+        "max": "max-cli MAX-73"
+      },
+      "options": {
+        "--limit": {
+          "in": ["tg"],
+          "planned": {
+            "max": "max-cli MAX-73"
+          }
+        },
+        "--link": {
+          "in": ["tg"],
+          "planned": {
+            "max": "max-cli MAX-73"
+          }
+        },
+        "--search": {
+          "in": ["tg"],
+          "planned": {
+            "max": "max-cli MAX-73"
+          }
+        }
+      }
     },
     "chats rules": {
       "in": "all"
@@ -3125,7 +3198,9 @@
         "--close-time": {
           "in": [],
           "reason": "max-cli does not close a poll by itself",
-          "planned": { "tg": "G2 feat/polls-close-time" }
+          "planned": {
+            "tg": "G2 feat/polls-close-time"
+          }
         },
         "--correct": {
           "in": ["tg"],
@@ -3159,17 +3234,23 @@
     "polls voters": {
       "in": [],
       "reason": "max-cli does not list who voted in a poll",
-      "planned": { "tg": "G2 feat/polls-voters" },
+      "planned": {
+        "tg": "G2 feat/polls-voters"
+      },
       "options": {
         "--answer": {
           "in": [],
           "reason": "max-cli does not list who voted in a poll",
-          "planned": { "tg": "G2 feat/polls-voters" }
+          "planned": {
+            "tg": "G2 feat/polls-voters"
+          }
         },
         "--limit": {
           "in": [],
           "reason": "max-cli does not list who voted in a poll",
-          "planned": { "tg": "G2 feat/polls-voters" }
+          "planned": {
+            "tg": "G2 feat/polls-voters"
+          }
         }
       }
     },
