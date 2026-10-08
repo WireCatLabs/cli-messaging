@@ -10,7 +10,7 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 - `chats link update <chat> <link> [--approval | --no-approval] [--expire-time] [--max-uses]` and MCP
   `chats_link_update` change one extra invite link; only the fields given change. Through the optional
-  `InviteLinks.updateInviteLink`; listed only where `Messenger.inviteLinkUpdate` is true. Guard action
+  `InviteLinks.updateInviteLink` and the new `InviteLinkChange`; listed only where `Messenger.inviteLinkUpdate` is true. Guard action
   `link.update`, permission key `chats.link.update`.
 
 ## 0.191.0 — 08.10.2026

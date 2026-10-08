@@ -136,6 +136,14 @@ export interface InviteLink {
   joined?: number
 }
 
+/** What `chats link update` changes; a field left out stays as it is. */
+export interface InviteLinkChange {
+  approval?: boolean
+  /** ISO 8601. */
+  expiresAt?: string
+  maxUses?: number
+}
+
 /** A group or channel as the commands that change one answer it. */
 export interface GroupCard extends Chat {
   description: string | null

@@ -20,6 +20,7 @@ import type {
   GroupMember,
   Id,
   InviteLink,
+  InviteLinkChange,
   JoinRequest,
   LinkTarget,
   MediaKind,
@@ -341,12 +342,6 @@ export interface InviteLinks {
   revokeInviteLink?(chatId: Id, link: string): Promise<InviteLink>
   /** Changes only the fields given. */
   updateInviteLink?(chatId: Id, link: string, change: InviteLinkChange): Promise<InviteLink>
-}
-
-export interface InviteLinkChange {
-  approval?: boolean
-  expiresAt?: string
-  maxUses?: number
 }
 
 /** Requests to join a group or channel that needs approval; only its admins see them. */

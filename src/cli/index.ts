@@ -173,7 +173,6 @@ export type {
   ForumState,
   GroupModeration,
   HistoryBatch,
-  InviteLinkChange,
   InviteLinks,
   JoinRequests,
   LiveUpdates,

@@ -1,6 +1,15 @@
 import { CliError } from "@leemour/cli-core"
-import { capability, type InviteLinkChange } from "../cli/messenger/port.js"
-import type { AdminRight, GroupCard, GroupChange, Id, InviteLink, JoinRequest, Page } from "../domain/models.js"
+import { capability } from "../cli/messenger/port.js"
+import type {
+  AdminRight,
+  GroupCard,
+  GroupChange,
+  Id,
+  InviteLink,
+  InviteLinkChange,
+  JoinRequest,
+  Page,
+} from "../domain/models.js"
 import { sendTime } from "../domain/send-time.js"
 import { guardedWrite, type Operated } from "../sends/guarded.js"
 import { newOperationId } from "../sends/send-id.js"
