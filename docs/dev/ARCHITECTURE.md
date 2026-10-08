@@ -237,7 +237,10 @@ means filled to the watermark, an empty queue, and the analyzer this binary woul
 binary runs the triggers and never drains, so a flag alone would lie. Stems built by other choices are
 written by nobody and rebuilt only by `store migrate` or `store reindex`, never by a search, so two
 tools with different settings or Snowball versions cannot rebuild each other's index in turn; a row a
-newer Snowball built is refused with "upgrade this tool".
+newer Snowball built is refused with "upgrade this tool". The first claim and every rebuild also save the
+choices, so a tool with another default sees a setting and refuses as "unknown" instead of rebuilding.
+`latin` may name several stemmers: each Latin stemmer gives a stem sequence, and the distinct ones are
+stored apart by `STEM_SEPARATOR` so a phrase never spans two; a query is the OR of its phrases.
 
 **Notes and links (version 25, [plan](../plans/2026-10-08-notes-graph.md)).** `MessageStore.notes`
 (`src/store/sqlite/notes.ts`) holds the owner's records, which belong to no account: `note_folders` (an
@@ -248,6 +251,16 @@ resolves it in the same write (`resolvePersonLinks`, called from `identities.ts`
 `person-links.ts`). `KnowledgeStore` and `contacts notes` read and write these tables. Builds before 25
 may still write the old ones, so `openStore` copies what is missing on every open
 (`src/store/sqlite/notes-copy.ts`, behind `notesToCopy`).
+
+**Notes' search indexes (version 26).** The same words and stems as messages — `note_words`,
+`note_stems`, same tokenizer and the store's stemmer choices — and `note_chunks`, whose hashes find their
+vectors in `chunk_vectors` beside the conversations'. Triggers on `notes` only queue the note in
+`note_index_pending`; `drainNoteIndex` (`src/store/sqlite/note-index.ts`) writes words, stems and chunks
+in JS before every notes search, `chunksToEmbed` and `nearest`, and in `store migrate` and `store reindex`.
+Notes are few, so a change of stemmer choices queues them all again at the next drain instead of waiting
+for a reindex. `searchNotes` (`src/store/sqlite/note-search.ts`) compiles the same parsed query as
+messages over the fields a note has (`text`, `exact`, `body`, `tag`, `date`, `in`) and refuses the rest;
+`searchNotesQuery` (`src/services/notes-search.ts`) is the service a `search notes` command calls.
 
 **Server search beside the archive.** `messages.search` with `backend: both|server` first runs
 `searchServer` (`src/services/server-search.ts`): it turns the resolved query into at most three

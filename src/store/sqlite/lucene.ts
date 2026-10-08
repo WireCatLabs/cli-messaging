@@ -39,7 +39,7 @@ const combine = (parts: Fragment[], operator: "AND" | "OR"): Fragment => ({
   params: parts.flatMap(({ params }) => params),
   exact: parts.every(({ exact }) => exact),
 })
-const prefixOf = (pattern: string): string => {
+export const prefixOf = (pattern: string): string => {
   if (pattern.includes("|")) return ""
   let prefix = ""
   for (const c of pattern) {

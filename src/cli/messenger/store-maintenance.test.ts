@@ -191,6 +191,7 @@ describe("store migrate", () => {
       indexed: 0,
       terms: 4,
       stemmed: 2,
+      notesIndexed: 0,
     })
     expect(stderr.join("\n")).toContain("2 of 2 normalized")
 
@@ -231,6 +232,7 @@ describe("the word index", () => {
       terms: 4,
       fileTexts: 0,
       stemmed: 2,
+      notesIndexed: 0,
     })
     expect(await words(env, "hola")).toBe(1)
     const { answer: info } = await call(["store", "info", "--json"], env)

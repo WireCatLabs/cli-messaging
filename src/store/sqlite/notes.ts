@@ -3,6 +3,7 @@ import { canonicalReference } from "../../domain/references.js"
 import type { CacheDatabase, CacheStatement } from "../driver.js"
 import { fold } from "../normalize.js"
 import { ulid } from "../ulid.js"
+import type { NoteSearch } from "./note-search.js"
 import { forgetCopied } from "./notes-copy.js"
 import type { StoreContext } from "./open.js"
 
@@ -81,12 +82,14 @@ export interface Entity {
   createdAt: string
 }
 
-export interface NotesStore {
+export interface NotesStore extends NoteSearch {
   addFolder(input: { name: string; format?: NoteFolder["format"] }): Promise<NoteFolder>
   folders(): Promise<NoteFolder[]>
   /** Answers the folder's pending path and forgets it, so it is handed over once. */
   claimFolderPath(id: string): Promise<{ id: string; path: string | null }>
   saveFileNote(input: FileNoteInput): Promise<{ note: Note; changed: boolean }>
+  /** Moves a file note to a new path in its folder, keeping its id, links and tags; a gone note at `to` is dropped. */
+  renameFileNote(folderId: string, from: string, to: string): Promise<Note>
   /** Marks the folder's notes at these paths deleted; answers how many were live. */
   deleteFileNotes(folderId: string, paths: string[]): Promise<number>
   addNote(input: { text: string; title?: string; about?: string[] }): Promise<Note>
@@ -130,7 +133,7 @@ const oneOf = <T extends string>(value: string, allowed: readonly T[], what: str
 /** What a link's written target is matched by: case, accents and a leading `@` do not count. */
 export const targetKey = (text: string): string => fold(text).trim().replace(/^@/, "")
 
-const noteOf = (row: Row): Note => ({
+export const noteOf = (row: Row): Note => ({
   id: String(row.id),
   source: row.source as Note["source"],
   folderId: row.folder_id == null ? null : String(row.folder_id),
@@ -226,7 +229,7 @@ export const resolvePersonLinks = (database: CacheDatabase, names: (string | nul
   for (const key of keys) if (check.get(key)) resolveKey(database, key)
 }
 
-export const notesStoreOver = ({ database, now }: StoreContext): NotesStore => {
+export const notesStoreOver = ({ database, now }: StoreContext): Omit<NotesStore, keyof NoteSearch> => {
   const atomic = <T>(body: () => T): T => {
     database.exec("BEGIN IMMEDIATE")
     try {
@@ -349,6 +352,23 @@ export const notesStoreOver = ({ database, now }: StoreContext): NotesStore => {
             Number(found.pk),
           )
         return { note: noteOf(noteRow(String(found.id))), changed: true }
+      }),
+    renameFileNote: async (folderId, from, to) =>
+      atomic(() => {
+        folderRow(folderId)
+        const target = textOf(to, "a note's path", 4096)
+        const found = database
+          .prepare("SELECT id FROM notes WHERE folder_id = ? AND path = ? AND deleted_at IS NULL")
+          .get(folderId, from)
+        if (!found) throw new CliError("not_found", `no live note at ${from} in folder ${folderId}`)
+        const taken = database
+          .prepare("SELECT pk, deleted_at FROM notes WHERE folder_id = ? AND path = ?")
+          .get(folderId, target)
+        if (taken && taken.deleted_at == null)
+          throw new CliError("validation_error", `a live note is already at ${target} in folder ${folderId}`)
+        if (taken) database.prepare("DELETE FROM notes WHERE pk = ?").run(Number(taken.pk))
+        database.prepare("UPDATE notes SET path = ?, updated_at = ? WHERE id = ?").run(target, now(), String(found.id))
+        return noteOf(noteRow(String(found.id)))
       }),
     deleteFileNotes: async (folderId, paths) =>
       atomic(() => {

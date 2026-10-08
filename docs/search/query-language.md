@@ -287,9 +287,10 @@ Ranking не меняет Boolean множество. Когда в запрос
 
 Стеммеры выбираются для всего хранилища — каждого профиля, tg и MAX:
 `<cli> config set searchStemmers.cyrillic russian|none`,
-`<cli> config set searchStemmers.latin spanish|english|none`. Архиву в основном на английском
-лучше `english` (F1 0.794 против 0.711 на английском тексте). После смены поиск по словам ждёт
-`<cli> store reindex`.
+`<cli> config set searchStemmers.latin english,spanish|english|spanish|none`. По умолчанию латиница
+идёт через оба стеммера, английский и испанский: слово находится в любой из двух форм, и язык угадывать
+не нужно. Архиву только на английском можно оставить `english` (меньше склеек). После смены поиск по
+словам ждёт `<cli> store reindex`.
 
 Известные склейки (разные слова с одной основой): `часть`/`часто` (`част`), `потому`/`потом` (`пот`),
 `caso`/`casa` (`cas`), `partido`/`parte` (`part`), `plazo`/`plaza` (`plaz`); английский через

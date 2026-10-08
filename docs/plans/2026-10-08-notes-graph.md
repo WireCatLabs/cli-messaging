@@ -144,6 +144,13 @@ Notes leave the message tables, so they need their own indexes. Two ways:
 `store reindex` rebuilds both), chunks into the existing vector table, and the same structured query
 language (`tag:`, `after:`, `AND`/`NOT`). A test runs one query set against a message and a note with
 the same text and expects the same hits.
+**Built (2026-10-08, store version 26):** as above, with two choices made in the build. The note indexes
+are written by JS from a queue the `notes` triggers fill (`src/store/sqlite/note-index.ts`), drained
+before every notes search — so every writer of `notes` only enqueues. And a change of stemmer choices
+re-queues every note at the next drain rather than waiting for `store reindex`: notes are few (2,000
+notes of 300 words index in under half a second), and no older build writes these indexes, so two tools
+cannot rebuild them against each other. Fields a note lacks (`from:`, `chat:`, `has:`, …) are refused
+with the list of note fields. The parity test is `src/services/notes-search.test.ts`.
 
 ### 3.6.1 One search over everything
 
@@ -168,6 +175,11 @@ Cyrillic) — one of each pair gets the wrong stemmer.
   a paragraph, unreliable on a short message, so it would be decided per chat from a sample, and a chat
   that mixes languages still needs the fallback above. Worth it only if the extra matches turn out
   noisy.
+- **Built (2026-10-08):** `searchStemmers.latin` takes a comma list; the default is `english,spanish`.
+  Distinct sequences are stored apart by a separator token so a phrase never spans two. On a synthetic
+  fixture the stems of Latin text are 1.94× larger. The choices are saved when the stems are first
+  claimed or rebuilt, so an older tool with the old default refuses as "unknown" instead of rebuilding
+  the stems back — existing stores need one `store reindex` (or `store migrate`).
 
 ### 3.7 Renames
 

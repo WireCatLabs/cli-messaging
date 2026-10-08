@@ -293,5 +293,26 @@ export const GENERATED: { name: string; statements: string[] }[] = [
       "CREATE TRIGGER notes_bd BEFORE DELETE ON notes BEGIN\n  DELETE FROM tags WHERE taggable_type = 'note' AND taggable_pk = old.pk;\n  DELETE FROM note_revisions WHERE note_pk = old.pk;\n  DELETE FROM links WHERE from_ref = 'note:' || old.id;\nEND;",
       "CREATE TRIGGER note_folders_account_bd BEFORE DELETE ON accounts BEGIN\n  UPDATE note_folders SET account_pk = NULL WHERE account_pk = old.pk;\nEND;"
     ]
+  },
+  {
+    "name": "20261008182026_version-26-note-chunks",
+    "statements": [
+      "CREATE TABLE `note_chunks` (\n\t`note_pk` integer NOT NULL,\n\t`seq` integer NOT NULL,\n\t`text_start` integer NOT NULL,\n\t`text_end` integer NOT NULL,\n\t`content_hash` text NOT NULL,\n\tCONSTRAINT `note_chunks_pk` PRIMARY KEY(`note_pk`, `seq`),\n\tCONSTRAINT `fk_note_chunks_note_pk_notes_pk_fk` FOREIGN KEY (`note_pk`) REFERENCES `notes`(`pk`) ON DELETE CASCADE\n);",
+      "CREATE INDEX `note_chunks_by_hash` ON `note_chunks` (`content_hash`);"
+    ]
+  },
+  {
+    "name": "20261008182031_version-26-note-index",
+    "statements": [
+      "-- The same words and stems indexes messages have, for notes. Written by JS from a queue, not by triggers:\n-- the words are normalized and the stems computed in JS, and every writer of `notes` only has to enqueue.\nCREATE VIRTUAL TABLE note_words USING fts5(\n  normalized_text, scope,\n  content = '', contentless_delete = 1,\n  tokenize = 'unicode61 remove_diacritics 2', prefix = '3');",
+      "CREATE VIRTUAL TABLE note_words_vocab USING fts5vocab(note_words, 'col');",
+      "CREATE VIRTUAL TABLE note_stems USING fts5(\n  stems, scope,\n  content = '', contentless_delete = 1,\n  tokenize = 'unicode61 remove_diacritics 2');",
+      "CREATE TABLE note_index_pending (pk INTEGER PRIMARY KEY);",
+      "CREATE TRIGGER note_index_ai AFTER INSERT ON notes BEGIN\n  INSERT OR IGNORE INTO note_index_pending (pk) VALUES (new.pk);\nEND;",
+      "CREATE TRIGGER note_index_au AFTER UPDATE OF title, text, deleted_at, folder_id, source ON notes\n  WHEN old.title IS NOT new.title OR old.text IS NOT new.text OR old.deleted_at IS NOT new.deleted_at\n    OR old.folder_id IS NOT new.folder_id OR old.source IS NOT new.source BEGIN\n  INSERT OR IGNORE INTO note_index_pending (pk) VALUES (new.pk);\nEND;",
+      "-- A vector is keyed by text alone, so it goes only when no other note or conversation chunk still uses it.\nCREATE TRIGGER note_index_bd BEFORE DELETE ON notes BEGIN\n  DELETE FROM chunk_vectors WHERE content_hash IN (\n    SELECT k.content_hash FROM note_chunks k WHERE k.note_pk = old.pk\n      AND NOT EXISTS (SELECT 1 FROM note_chunks o WHERE o.content_hash = k.content_hash AND o.note_pk <> old.pk)\n      AND NOT EXISTS (SELECT 1 FROM conversation_chunks c WHERE c.content_hash = k.content_hash));\n  DELETE FROM note_words WHERE rowid = old.pk;\n  DELETE FROM note_stems WHERE rowid = old.pk;\n  DELETE FROM note_index_pending WHERE pk = old.pk;\nEND;",
+      "-- `analyzer` stays NULL until the first drain claims it; a different one later re-queues every note.\nINSERT INTO search_index_state (name, watermark, filled_through, terms_through, normalizer_version, built_at)\n  VALUES ('note_index', 0, 0, 0, 1, NULL);",
+      "INSERT OR IGNORE INTO note_index_pending (pk) SELECT pk FROM notes;"
+    ]
   }
 ]

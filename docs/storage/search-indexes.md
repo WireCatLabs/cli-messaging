@@ -154,6 +154,13 @@ stemmed-search plan (#524). The stemmers are chosen for the whole store, not per
 `config set searchStemmers.cyrillic russian|none` and `config set searchStemmers.latin spanish|english|none`.
 After a change, the stems wait for `store reindex`.
 
+**Correction 2026-10-08:** `searchStemmers.latin` takes several stemmers, comma-separated, and
+`english,spanish` is now the default. Each gives its own stem sequence; distinct ones are stored apart
+by a separator token (`STEM_SEPARATOR`, `src/search/stem.ts`), and a query matches any of them as a
+phrase. A text with Latin words keeps about twice the stems (1.94× on a synthetic fixture). Notes have
+the same indexes since version 26: `note_words`, `note_stems` and `note_chunks` — see
+[ARCHITECTURE.md](../dev/ARCHITECTURE.md).
+
 ## Search by meaning
 
 Phase 5. Four steps, each a command the owner runs, and nothing leaves the machine unless asked.
