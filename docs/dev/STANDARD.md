@@ -87,7 +87,7 @@ guessable from the others.
    `chats tracking` is the one collection named by what it does rather than a plural: the chats whose
    member lists `serve` fetches daily into the local store — owner's wording, 2026-10-05.
 2. **Top-level words** only for what spans every chat or is the tool itself: `inbox`, `review`,
-   `watch`, `serve`, `doctor`, `upgrade`, `commands`, `complete`, `mcp`, `bot`, `stats`. Prefer an
+   `watch`, `serve`, `doctor`, `upgrade`, `commands`, `complete`, `mcp`, `bot`, `stats`, `search`. Prefer an
    existing resource or namespace before adding another root word. A new root needs a reason in
    its naming pull request: what existing group cannot express, which related commands it groups,
    and why the same hierarchy works for both CLIs. One new report never justifies its own root.
@@ -133,6 +133,9 @@ guessable from the others.
    replies are measures of the same ranking, so they stay options, not sibling commands.
    No command both shows and changes, except an explicitly documented preparatory fetch such as
    `--sync-first`, which retains its own permissions and reports its outcome.
+   **No two commands overlap** (owner, 2026-10-08). If one command's results are a subset of
+   another's, one of them goes: an agent that learns the narrow path never finds the wide one. A
+   narrower scope is an option or a resource of the same command, never a sibling elsewhere in the tree.
 5. **Options are plain words, never a wire field** (`--send-id`, not `--cid`). One meaning, one
    name, in every command of both tools. **A length of time is a `<duration>`** (`500ms`,
    `30s`, `2m`, `4h`, `1d`) — a number and a unit, never a bare number — parsed as `--timeout`
@@ -167,6 +170,16 @@ guessable from the others.
     bot has, as `bot watch --types` does.
 
 `bot api` is exempt: its names mirror each messenger's official Bot API operations.
+
+### Search hierarchy
+
+**Every command whose primary result is a search lives under `search`, then its resource**
+(owner, 2026-10-08), as statistics live under `stats`: `search all`, `search messages`,
+`search mail`, `search notes`, `search conversations`, `search topics`; for the bot account
+`bot search messages`. `search all` covers every resource the store holds and is the one an agent
+should reach for first. A resource's own `search` leaf (`messages search`) does not exist beside it.
+`searches` stays: it is the owner's saved searches, a resource, not a search. The relocation plan is
+[`../plans/2026-10-08-search-namespace.md`](../plans/2026-10-08-search-namespace.md).
 
 ### Statistics hierarchy
 

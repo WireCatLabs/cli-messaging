@@ -79,10 +79,16 @@ The prefix is what makes a wrong kind fail loudly instead of matching the wrong 
   `updated_at`, `deleted_at`, `export_path` (internal notes written out, §3.5). No `account_pk`.
 - **`note_revisions`** — earlier text, as `message_revisions` does for messages.
 - **`links`** — `from_ref`, `to_ref`, `kind` (`links-to | about | member-of | related-to |
-  assigned-to | mentions`), `anchor` (heading or block, nullable), `origin`
-  (`file | owner | name-match`), `confirmed`, `created_at`. One table replaces both
-  `annotations`' target columns and `knowledge_relations`. A `name-match` link is a guess and is never
-  shown as a fact.
+  assigned-to`), `anchor` (heading or block, nullable), `origin` (`file | owner`), `target_text`
+  (what the file wrote, kept while unresolved), `confirmed`, `created_at`. One table replaces both
+  `annotations`' target columns and `knowledge_relations`.
+- **People in notes: direct entries only, at every import** (owner, 2026-10-08). A link in a file
+  whose target is a person — `[[Rin Example]]` or `[[Rin]]` matching a person's name, local alias or
+  username, or an explicit `person:<uid>` — becomes a link to `person:<uid>`. Full names in plain text
+  are not matched. A link that names nobody yet, or two people, is kept unresolved with its
+  `target_text`. When a person is created, renamed or given an alias, the unresolved links whose
+  `target_text` matches are resolved in the same write — one indexed lookup, so live, not a
+  background job.
 - **Tags** — `tags` gains the `note` target type. `#tag` and `tags:` from a file become tags with
   origin `file`, replaced on each import; tags the owner adds have origin `owner` and survive.
 - **Entities** — `knowledge_entities` loses `account_pk`.
@@ -132,16 +138,10 @@ the same text and expects the same hits.
 
 ### 3.6.1 One search over everything
 
-An agent told to search messages will not think of notes, and a flag it has to remember is the same
-problem. So:
-
-- **`search`** becomes a top-level command in tg, max and memo, one shared implementation here. By
-  default it searches everything in the store — messages, mail, notes — and every hit says what it is
-  (`msg:` or `note:` reference, provider, account). `--only messages,mail,notes` narrows it.
-- The MCP surface gets one `search` tool described as the default way to look anything up. It is the
-  tool agents reach for first, so including notes there is what makes them not forgotten.
-- `messages search`, `conversations search` and `topics search` stay as they are — the narrow tools,
-  messages only — so no script or skill breaks. `in:notes` there answers with an error naming `search`.
+Superseded by the owner's ruling (2026-10-08): every search moves under `search <resource>`, with
+`search all` as the default and no overlapping commands —
+[`2026-10-08-search-namespace.md`](2026-10-08-search-namespace.md). Notes are `search notes` and part
+of `search all`; `messages search` does not survive to need an `in:notes`.
 
 ### 3.6.2 Stemming language
 
@@ -150,7 +150,7 @@ one store-wide choice, Spanish by default. An English and Russian mix already wo
 alphabets differ. What does not: English and Spanish (both Latin), Russian and Ukrainian (both
 Cyrillic) — one of each pair gets the wrong stemmer.
 
-- **Proposed:** stem a Latin word with every Latin stemmer the owner enables (English and Spanish) and
+- **Ruled (2026-10-08):** stem a Latin word with every Latin stemmer the owner enables (English and Spanish) and
   index each distinct stem; a query is expanded the same way. No detection, no new dependency, the
   same answer for one-word messages as for long ones. Cost: more index rows and a few extra matches
   where two languages' stems collide.
@@ -184,7 +184,7 @@ rename: same id, links and tags kept. Today a move is a new identity. Small and 
 2. Store: `note_folders`, `notes`, `note_revisions`, `links`, tag target `note`, `account_pk` dropped
    from entities, the copying migration; store API and services; `contacts notes` over `notes`.
 3. Store: `note_words`, `note_stems`, note chunks into the vector table (§3.6), multi-stem for Latin
-   words (§3.6.2); the shared `search` service and command, and the MCP `search` tool (§3.6.1).
+   words (§3.6.2); `search notes` and notes in `search all` ([search namespace plan](2026-10-08-search-namespace.md)).
 4. Release cli-messaging.
 5. cli-memo: `folders add|attach|list`, config with ids, dialect interface with `obsidian` and
    `markdown`, import writing `notes`, `links` and file tags, rename detection.
@@ -208,8 +208,8 @@ rename: same id, links and tags kept. Today a move is a new identity. Small and 
 
 ## 6. Open questions
 
-- `mentions` links: stored at import or computed at each search? The plan stores them; the owner asked
-  for an explanation before ruling (2026-10-08).
+- Matching a person's name in free text is out of scope (owner, 2026-10-08): people rarely write
+  full names. A later item may store suggested person links from imports for the owner to confirm.
 - Multi-stem for Latin words (§3.6.2): which Latin languages to enable by default — English and
   Spanish, matching the owner's chats?
 - `memo annotations` was never released on npm (cli-memo 0.1.2). Can it be replaced by `memo notes`
