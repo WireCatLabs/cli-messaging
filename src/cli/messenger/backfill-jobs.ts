@@ -5,6 +5,7 @@ export {
   jobsDir,
   listJobs,
   readJob,
+  removeJob,
   type SpawnJob,
   saveJob,
   spawnDetached,

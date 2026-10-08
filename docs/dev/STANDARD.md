@@ -368,6 +368,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--exclude-chat` | `<chat>` | never show this chat in the folder; repeat it for more |  | `chats folders create` (planned), `chats folders update` (planned) |
 | `--expire-time` | `<time>` | it stops working then: 2026-09-25T09:00 (local time), or 30m, 2h, 7d from now |  | `chats link create` (planned) |
 | `--extract` |  | extract text from files mapped by this download |  | `messages download` |
+| `--failed` |  | every chat whose newest job failed or died |  | `store jobs retry` |
 | `--fields` | `<paths>` | only these comma-separated fields of machine result items; preserves list metadata |  | every command |
 | `--file` | `<file>` | attach a file; images go as a photo, videos as a video. Repeat it for more |  | `bot messages send`, `contacts notes add`, `contacts notes edit`, `messages send` |
 | `--filename` | `<name>` | the name others see for the --file, instead of its name on disk |  | `messages send` (planned) |

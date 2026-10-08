@@ -11,6 +11,11 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 - `metadata refresh --only-missing` refreshes only chats with no stored metadata yet: the `--chat`s named, or,
   without `--chat`, every stored group and channel, up to `--limit`. `--chat` is no longer required with it.
   `metadata.missing()` on the services. Planned for max and tg.
+- `store jobs retry <job>` starts a failed or died background fetch again as a new job, with the same command;
+  `--failed` retries every chat whose newest job failed or died, each once, and answers one item per chat.
+  `store jobs clear` forgets finished jobs and removes their logs; a running job is kept. A job now records its
+  `argv`; one recorded before is rebuilt from its chat, `limit`, `pageSize` and `last`, with the default pause
+  and no time window. `removeJob`. Planned for max and tg.
 
 ## 0.186.0 — 08.10.2026
 

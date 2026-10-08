@@ -311,6 +311,9 @@
     "--extract": {
       "meaning": "extract text from files mapped by this download"
     },
+    "--failed": {
+      "meaning": "every chat whose newest job failed or died"
+    },
     "--fields": {
       "value": "<paths>",
       "meaning": "only these comma-separated fields of machine result items; preserves list metadata"
@@ -3691,8 +3694,25 @@
     "store jobs cancel": {
       "in": "all"
     },
+    "store jobs clear": {
+      "in": [],
+      "planned": {
+        "max": "each CLI's next cli-messaging bump",
+        "tg": "each CLI's next cli-messaging bump"
+      }
+    },
     "store jobs list": {
       "in": "all"
+    },
+    "store jobs retry": {
+      "in": [],
+      "planned": {
+        "max": "each CLI's next cli-messaging bump",
+        "tg": "each CLI's next cli-messaging bump"
+      },
+      "options": {
+        "--failed": "all"
+      }
     },
     "store jobs show": {
       "in": "all"
