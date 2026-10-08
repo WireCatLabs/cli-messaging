@@ -4,14 +4,18 @@ import { closedStateOf, type TaskView, taskStateOf, taskTypeOf, taskTypesOf } fr
 import { listed, positiveCount } from "../paging.js"
 import { type Messenger, messengerContext, refuseLocalWrite } from "./context.js"
 
-const line = ({ id, state, kind, group, createdAt, message }: TaskView) =>
+const line = ({ id, state, kind, group, createdAt, message, note }: TaskView) =>
   [
     id.slice(0, 8),
     state.padEnd(9),
     kind.padEnd(8),
     group,
     createdAt.toISOString().slice(0, 16).replace("T", " "),
-    message ? `${message.senderName ?? "?"}: ${message.text.replace(/\s+/g, " ").slice(0, 80)}` : "(not in the store)",
+    note
+      ? `${note.title ?? "Note"}: ${note.text.replace(/\s+/g, " ").slice(0, 80)}`
+      : message
+        ? `${message.senderName ?? "?"}: ${message.text.replace(/\s+/g, " ").slice(0, 80)}`
+        : "(not in the store)",
   ].join("  ")
 
 /** What waits on the owner — kept in the local store by `@leemour/cli-tasks`; nothing here reaches the messenger. */
@@ -22,7 +26,7 @@ export const tasksCommand = (messenger: Messenger): Command => {
 
   tasks
     .command("list")
-    .description("tasks, oldest first, with the message each points at")
+    .description("tasks, oldest first, with their message or note source")
     .option("--state <state>", "only tasks in this state: open, done or dismissed", taskStateOf)
     .option("--chat <chat>", `only this chat's tasks; ${messenger.chatArgument}`)
     .option("--type <names>", "only these types, comma-separated: question, request, mention, promise", taskTypesOf)
@@ -54,8 +58,8 @@ export const tasksCommand = (messenger: Messenger): Command => {
 
   tasks
     .command("add")
-    .description("add a task for a message the rules cannot see — a promise, a request")
-    .argument("<message>", "a message locator, msg:<provider>/<account>/<chat>/<message>, as review --json shows")
+    .description("add a task for a stored message or note — a promise, a request")
+    .argument("<message>", "a message locator, msg:<provider>/<account>/<chat>/<message>, or note:<id>")
     .requiredOption("--type <name>", "the task's type: question, request, mention or promise", taskTypeOf)
     .action(async function (this: Command, message: string) {
       const context = messengerContext(this, messenger)
@@ -65,7 +69,7 @@ export const tasksCommand = (messenger: Messenger): Command => {
       if (context.format !== "pretty") context.renderer.result({ ...task, created })
       else {
         context.streams.data(`${line(task)}\n`)
-        if (!created) context.renderer.note("this message already has a task — that one is shown")
+        if (!created) context.renderer.note("this source already has a task — that one is shown")
       }
     })
 

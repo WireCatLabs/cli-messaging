@@ -18,9 +18,10 @@ import { taskAccount } from "./task-rules.js"
 
 export { TASK_KINDS, TASK_STATES }
 
-/** A task as shown: the message it points at, read from the store, or `null` when the store no longer has it. */
+/** Source previews are read on demand; task records never retain source text. */
 export interface TaskView extends Task {
   message: { senderName: string | null; text: string; timestamp: string } | null
+  note?: { id: string; title: string | null; text: string; updatedAt: string } | null
 }
 
 export interface TaskListFilter {
@@ -70,16 +71,6 @@ export const tasksService = (deps: ServiceDeps): TasksService => {
     work(await deps.store(), await deps.account())
   const service = (store: MessageStore) => createTaskService({ store: store.tasks })
 
-  const view = async (store: MessageStore, account: AccountKey, task: Task): Promise<TaskView> => {
-    const { chat, message } = parseLocator(task.source)
-    const found = await store.message(account, message, { chatId: chat })
-    return {
-      ...task,
-      message: found
-        ? { senderName: found.senderName, text: found.text.slice(0, PREVIEW), timestamp: found.timestamp }
-        : null,
-    }
-  }
   const groupOf = async (store: MessageStore, account: AccountKey, chat: string | undefined) =>
     chat === undefined ? undefined : storedChatId(deps.messenger, chat, store, account)
 
@@ -95,29 +86,45 @@ export const tasksService = (deps: ServiceDeps): TasksService => {
         })
         const typed = filter.types?.length ? found.filter((task) => filter.types?.includes(task.kind)) : found
         const shown = filter.limit === undefined ? typed : typed.slice(0, filter.limit)
-        return Promise.all(shown.map((task) => view(store, account, task)))
+        return Promise.all(shown.map((task) => taskView(store, account, task)))
       }),
 
     add: (message, type, origin) =>
       inStore(async (store, account) => {
-        if (!isLocator(message)) {
+        const source = message.trim()
+        const native = source.startsWith("note:")
+        if (!native && !isLocator(source)) {
           throw new CliError(
             "validation_error",
-            `"${singleLine(message)}" is not a message locator — give msg:<provider>/<account>/<chat>/<message>, as review --json and messages list --json show`,
+            `"${singleLine(source)}" is not a message locator or note reference — give msg:<provider>/<account>/<chat>/<message> or note:<id>`,
           )
         }
-        const locator = parseLocator(message)
-        if (locator.provider !== account.provider || locator.account !== account.account)
+        const locator = native ? undefined : parseLocator(source)
+        if (locator && (locator.provider !== account.provider || locator.account !== account.account))
           throw new CliError("validation_error", "that locator belongs to another account; select its profile first")
+        const note = native || locator?.provider === "notes" ? await store.notes.resolveNote(source) : undefined
+        if ((native || locator?.provider === "notes") && !note)
+          throw new CliError("not_found", "the task source note is unavailable or deleted")
+        if (note && note.deletedAt !== null)
+          throw new CliError("not_found", "the task source note is unavailable or deleted")
+        if (note) {
+          for (const reference of await store.notes.noteReferences(note.id)) {
+            const existing = (await store.tasks.findBySource(taskAccount(account), reference)).find(
+              (task) => origin === "rule" || task.kind === type,
+            )
+            if (existing) return { task: await taskView(store, account, existing), created: false }
+          }
+        }
         const { task, created } = await service(store).add({
-          source: message.trim(),
-          sourceKind: account.provider === "notes" ? "note" : account.provider === "email" ? "email" : "message",
+          source: note ? `note:${note.id}` : source,
+          sourceKind:
+            note || account.provider === "notes" ? "note" : account.provider === "email" ? "email" : "message",
           account: taskAccount(account),
-          group: locator.chat,
+          group: note ? `note:${note.id}` : (locator as ReturnType<typeof parseLocator>).chat,
           kind: type,
           origin,
         })
-        return { task: await view(store, account, task), created }
+        return { task: await taskView(store, account, task), created }
       }),
 
     close: (id, { as, reason, by }) =>
@@ -127,7 +134,7 @@ export const tasksService = (deps: ServiceDeps): TasksService => {
           throw new CliError("not_found", `no task ${singleLine(id)} for this account — tasks list shows the ids`)
         try {
           const closed = await service(store).close(id, { as, by, ...(reason === undefined ? {} : { reason }) })
-          return view(store, account, closed)
+          return taskView(store, account, closed)
         } catch (error) {
           if (error instanceof Error && "code" in error && error.code === "closed")
             throw new CliError("validation_error", `${error.message}; a closed task stays closed`)
@@ -144,5 +151,32 @@ export const tasksService = (deps: ServiceDeps): TasksService => {
         })
         return group === undefined ? rows : rows.filter((one) => one.group === group)
       }),
+  }
+}
+
+export const taskView = async (store: MessageStore, account: AccountKey, task: Task): Promise<TaskView> => {
+  if (task.account !== taskAccount(account)) throw new CliError("not_found", "the task belongs to another account")
+  const native = task.source.startsWith("note:")
+  if (!native && !isLocator(task.source)) return { ...task, message: null }
+  const locator = native ? undefined : parseLocator(task.source)
+  if (locator && (locator.provider !== account.provider || locator.account !== account.account))
+    return { ...task, message: null }
+  if (native || locator?.provider === "notes") {
+    const note = await store.notes.resolveNote(task.source)
+    return {
+      ...task,
+      message: null,
+      note:
+        note && note.deletedAt === null
+          ? { id: note.id, title: note.title, text: note.text.slice(0, PREVIEW), updatedAt: note.updatedAt }
+          : null,
+    }
+  }
+  const found = locator ? await store.message(account, locator.message, { chatId: locator.chat }) : undefined
+  return {
+    ...task,
+    message: found
+      ? { senderName: found.senderName, text: found.text.slice(0, PREVIEW), timestamp: found.timestamp }
+      : null,
   }
 }

@@ -1,10 +1,14 @@
 import { mkdtempSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
+import { createTaskService } from "@leemour/cli-tasks"
 import { afterEach, describe, expect, it } from "vitest"
+import { storeOnlyDeps } from "../services/deps.js"
+import { tasksService } from "../services/tasks.js"
 import { MIGRATIONS, migrate } from "./migrations.js"
 import { openCache } from "./open.js"
 import { notesToCopy } from "./sqlite/notes-copy.js"
+import { taskStoreOver } from "./sqlite/tasks.js"
 import { type MessageStore, openStore } from "./store.js"
 
 const telegram = { provider: "telegram", account: "500" }
@@ -240,4 +244,50 @@ describe("the notes store", () => {
       code: "validation_error",
     })
   })
+})
+
+it("resolves migrated task sources to current native notes without duplicating a closed task", async () => {
+  const path = await version24File()
+  const db = await openCache(path)
+  const legacy = createTaskService({ store: taskStoreOver(db) })
+  const { task } = await legacy.add({
+    source: noteLocator,
+    sourceKind: "note",
+    account: `notes:${vault}`,
+    group: "Projects",
+    kind: "request",
+    origin: "owner",
+  })
+  await legacy.close(task.id, { as: "done", by: "owner" })
+  db.close()
+  const store = await open(path)
+  const note = await store.notes.resolveNote(noteLocator)
+  expect(note).toBeDefined()
+  expect(await store.notes.noteReferences(note?.id as string)).toContain(noteLocator)
+  const tasks = tasksService(
+    storeOnlyDeps(
+      store,
+      { provider: "notes", account: vault },
+      { app: { command: "chat", appName: "chat-cli", envPrefix: "CHAT", description: "", version: "1.0.0" } },
+    ),
+  )
+  await store.notes.saveFileNote({
+    folderId: note?.folderId as string,
+    path: "Projects/plan.md",
+    title: "New title",
+    text: "Current native text",
+  })
+  expect((await tasks.list({ state: "done" }))[0]).toMatchObject({
+    source: `note:${note?.id}`,
+    note: { text: "Current native text" },
+  })
+  expect(await tasks.add(`note:${note?.id}`, "request", "owner")).toMatchObject({
+    created: false,
+    task: { id: task.id, state: "done" },
+  })
+  await store.notes.renameFileNote(note?.folderId as string, "Projects/plan.md", "renamed.md")
+  expect((await tasks.list({ state: "done" }))[0]?.note?.text).toBe("Current native text")
+  await expect(tasks.add(noteLocator, "request", "owner")).rejects.toMatchObject({ code: "not_found" })
+  await store.notes.deleteFileNotes(note?.folderId as string, ["renamed.md"])
+  expect((await tasks.list({ state: "done" }))[0]?.note).toBeNull()
 })

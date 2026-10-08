@@ -26,6 +26,7 @@ export const notesToCopy = (database: CacheDatabase): boolean =>
       .prepare(
         "SELECT EXISTS (SELECT 1 FROM accounts a WHERE a.provider = 'notes' AND NOT EXISTS (SELECT 1 FROM note_folders f WHERE f.account_pk = a.pk)) " +
           "OR EXISTS (SELECT 1 FROM note_folders f JOIN chats c ON c.account_pk = f.account_pk JOIN messages m ON m.chat_pk = c.pk WHERE m.pk > ?) " +
+          "OR EXISTS (SELECT 1 FROM tasks WHERE source LIKE 'msg:notes/%') " +
           "OR EXISTS (SELECT 1 FROM annotations a WHERE NOT EXISTS (SELECT 1 FROM notes n WHERE n.id = a.uid)) " +
           "OR EXISTS (SELECT 1 FROM knowledge_relations r WHERE NOT EXISTS (SELECT 1 FROM links l WHERE l.id = r.uid OR (l.from_ref = r.from_ref AND l.to_ref = r.to_ref AND l.kind = r.kind))) " +
           "OR EXISTS (SELECT 1 FROM knowledge_entities e WHERE NOT EXISTS (SELECT 1 FROM entities n WHERE n.id = e.uid)) AS pending",
@@ -138,6 +139,14 @@ export const copyIntoNotes = (database: CacheDatabase, now: () => number): void 
         String(row.id),
       )
     return noteByLocator
+  }
+
+  // A later rename severs the path lookup; task IDs and closed states must outlive that path.
+  const retargetTask = database.prepare("UPDATE tasks SET source=?, source_kind='note', group_key=? WHERE source=?")
+  for (const row of database.prepare("SELECT DISTINCT source FROM tasks WHERE source LIKE 'msg:notes/%'").all()) {
+    const source = String(row.source)
+    const note = notesOfMessages().get(source)
+    if (note !== undefined) retargetTask.run(`note:${note}`, `note:${note}`, source)
   }
 
   const referenceOf = (row: Row): string => {

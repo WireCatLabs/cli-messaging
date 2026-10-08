@@ -8,6 +8,9 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Added
 
+- Tasks accept native `note:<id>` sources in the selected account, preview current note text, and retain
+  their state when a note is deleted. Legacy copied file-note sources resolve through native notes;
+  repeated creation reuses an existing task of the same kind, including closed tasks.
 - `search all`: messenger messages, mail and notes from the local store in one query, merged best first; each
   item says its kind (`message`, `mail`, `note`) and ref. A query field one kind lacks skips that kind and
   `skipped` says why; `--only messages,mail,notes` narrows it. MCP `search_all`, described as the tool to start with.

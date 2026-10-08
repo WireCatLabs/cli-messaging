@@ -88,7 +88,7 @@ export { searchesService, searchRecordOf } from "./searches.js"
 export type { TagsAdded, TagsRemoved, TagsService, TagTargetInput, TagTargetView } from "./tags.js"
 export { tagsService } from "./tags.js"
 export type { TaskListFilter, TasksService, TaskView } from "./tasks.js"
-export { closedStateOf, taskStateOf, tasksService, taskTypeOf } from "./tasks.js"
+export { closedStateOf, taskStateOf, tasksService, taskTypeOf, taskView } from "./tasks.js"
 export { type TopicsService, topicsService } from "./topics.js"
 
 export interface Services {
