@@ -464,6 +464,11 @@
       "meaning": "how many lines",
       "default": "50"
     },
+    "--link": {
+      "value": "<link>",
+      "meaning": "an invite link: only the requests made through it",
+      "note": "chats requests list filters by it; accept and decline take it with --all — one link, worded for each command (Help text rule 4)"
+    },
     "--local": {
       "meaning": "use the model on this machine, never the messenger"
     },
@@ -2117,13 +2122,13 @@
             "max": "max-cli MAX-73"
           }
         },
-        "--search": {
+        "--link": {
           "in": ["tg"],
           "planned": {
             "max": "max-cli MAX-73"
           }
         },
-        "--link": {
+        "--search": {
           "in": ["tg"],
           "planned": {
             "max": "max-cli MAX-73"
