@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.197.0 — 08.10.2026
+
 ### Added
 
 - `chats start <bot>` also takes the bot's link, one the account never opened, and reads its `?start=` when
