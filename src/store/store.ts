@@ -709,6 +709,7 @@ export const openStore = async ({ path, env, now = Date.now }: StoreOptions = {}
     // A small file is filled on the spot; a larger one waits for `db migrate`, since nothing reads the copy yet.
     const pending = pendingNormalization(database)
     if (pending > 0 && pending <= BACKFILL_ON_OPEN) backfillNormalized(database)
+    stems.followDefaultStemmers(database, now)
     const stemming = stems.stemsState(database)
     if (
       stemming?.cause === "building" &&
