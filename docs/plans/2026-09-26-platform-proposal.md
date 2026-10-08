@@ -628,3 +628,8 @@ Owner requested binary file access for remote AI agents. Claimed feat/remote-att
 account-owned retained files, bounded chunks/SHA256, standard MCP image/resource and JSON
 fallback, no new dependency, model call, public URL, or migration. MAX/TG adoption follows
 a shared SDK release. Existing agent OCR/text-index ingestion stays unchanged.
+
+
+Remote-attachment claim closed2026-10-08: SDK744/runtime, publishedSDK190, native MAX482/TG362
+exact-pin adoption and isolated PDF round-trip verified. Current parity marks attachments show
+and its byte-window/hash options supported by both consumers. Consumer publication is separate.
