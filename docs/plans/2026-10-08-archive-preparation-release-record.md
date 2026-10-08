@@ -35,13 +35,19 @@ still need the downloaded archive.
   scoped to `search-architecture.mdx`; local lint, 208 unit tests, search bundle, export, links/SEO and all
   locale HTML/Markdown content checks passed. The handoff now explains reviewed pins.
 
-## Remaining work
+## Completed guide follow-up
 
-The website's reviewed guide pins stay at Telegram v0.28.0 and MAX v0.29.0. Moving them requires a
-separate review of every changed translation/source fingerprint and portal correction; publishing the
-CLIs does not perform that review. The shared architecture page names the new releases explicitly.
+The owner subsequently requested the full guide update. The website now pins Telegram v0.35.0 and
+MAX v0.34.0 with reviewed English, Russian and Spanish guides, per-locale source fingerprints,
+start-page links and exact portal errata. The [guide review record](https://github.com/leemour/cli-docs/blob/main/docs/reviews/2026-10-08-reviewed-tool-guides.md) documents the complete
+scope: 29 Telegram and 31 MAX pages in all three locales, 117 translation overlays and six start pages.
+Publishing a future CLI still does not automatically advance reviewed website pins.
 
-Two existing minor generated-help gaps remain for a follow-up: bulk join-request decline is described
-as counting toward the hourly limit although the guard exempts it; generic folder-order help does not
-mention MAX's mandatory first All chats folder. Handwritten guides describe the actual behavior.
-These are documentation follow-ups, not missing archive-preparation implementation.
+Both minor generated-help gaps are corrected in the delivered website reference: bulk join-request
+decline is exempt from the hourly sending allowance; MAX folder ordering keeps All chats first.
+Immutable consumer tags retain their original generated strings, so the portal records and applies
+these corrections after source-preservation validation. The search-default chronology and stale
+join-request roadmap/migration notes are corrected in the same update. No archive-preparation or
+guide-review task remains from this handoff.
+
+Guide update and publication: [cli-docs #72](https://github.com/leemour/cli-docs/pull/72).

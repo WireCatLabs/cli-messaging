@@ -14,7 +14,9 @@ answer, with `coverage.next` naming the command that would improve it
 **Execution update 2026-10-08:** tg 0.35.0 and max 0.34.0 are published and both tag guides contain
 `store fetch --all`. The EN/RU/ES archive-preparation and coverage additions are implemented in
 [cli-docs #71](https://github.com/leemour/cli-docs/pull/71). The [release record](2026-10-08-archive-preparation-release-record.md)
-links the release and website evidence and identifies the remaining reviewed-guide translation work.
+links the release and website evidence. The owner then requested the full guide review: Telegram
+v0.35.0 and MAX v0.34.0 are now the EN/RU/ES website pins, with source fingerprints and portal errata
+updated together. The [guide review](https://github.com/leemour/cli-docs/blob/main/docs/reviews/2026-10-08-reviewed-tool-guides.md) completes that follow-up.
 The original execution recipe below is retained for reference; the consumer release gate is satisfied.
 
 ## 2. Orient in one call
@@ -60,11 +62,9 @@ Then read `~/.cache/archive-prep-orient.txt` (about 80 lines). It shows:
    message does not exist. Name the versions that carry it, as line 8 and the word-forms section do.
    Decision yours: whether the terminal line («searched 12,430 messages in 37 chats — …») is worth quoting on a
    technical page; the guides already quote it.
-3. **Decide about the guide pins.** The website's tg and max guides come from `docsRef` (tg `v0.28.0`, max
-   `v0.29.0`), far behind. Moving them means a translation review of every changed page
-   ([README rule](https://github.com/leemour/cli-docs/blob/main/README.md#updating-reviewed-tool-versions)),
-   a separate and larger job. The plan leans: leave the pins, link the guides as they are, and say in the reply
-   that the pins are behind. Decision yours.
+3. **Guide pins — completed.** The owner requested review of every changed page. The website now
+   uses tg `v0.35.0` and max `v0.34.0`; English, Russian and Spanish translations, source fingerprints
+   and portal corrections move together. See [the guide review](https://github.com/leemour/cli-docs/blob/main/docs/reviews/2026-10-08-reviewed-tool-guides.md).
    Check: `pnpm lint && pnpm test && pnpm search:check && pnpm build` in cli-docs — passes.
 
 ## 5. What bites
@@ -96,3 +96,5 @@ pnpm lint && pnpm test && pnpm search:check && pnpm build
 ```
 
 Run in the cli-docs worktree. `pnpm build` runs `pnpm sync`, which needs the network for the tag checkouts.
+
+Guide update and publication: [cli-docs #72](https://github.com/leemour/cli-docs/pull/72).
