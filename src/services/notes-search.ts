@@ -1,4 +1,5 @@
 import { CliError } from "@leemour/cli-core"
+import { normalizeTag } from "../domain/tags.js"
 import { defaultThreads, type Embedder, isTextModelInstalled, textModelsDirectory } from "../embeddings/embed.js"
 import { DEFAULT_TEXT_MODEL, type TextModel, textModel } from "../embeddings/models.js"
 import { dateRange, timezoneOf } from "../search/lucene/dates.js"
@@ -7,7 +8,7 @@ import { validateFields } from "../search/lucene/registry.js"
 import { hasStems, type ResolvedNode } from "../search/lucene/resolved.js"
 import type { QueryNode } from "../search/lucene/types.js"
 import { createStemmer, DEFAULT_STEMMERS } from "../search/stem.js"
-import type { NearestNote, Note, NoteHit } from "../store/index.js"
+import type { Link, NearestNote, Note, NoteHit } from "../store/index.js"
 import type { MessageStore } from "../store/store.js"
 import { vectorModelKey } from "./embeddings.js"
 
@@ -186,4 +187,202 @@ export const nearestNotes = async (
     ...(folderIds ? { folderIds } : {}),
     ...(source ? { source } : {}),
   })
+}
+
+export interface FoundNote {
+  ref: string
+  source: Note["source"]
+  folderId: string | null
+  /** The note's path inside its folder; `null` for a note written in memo. */
+  path: string | null
+  title: string | null
+  modifiedAt: string
+  /** The first line holding a word of the query. */
+  line: string
+  links: Pick<Link, "to" | "targetText" | "kind" | "anchor">[]
+  /** Which halves of the search found it. */
+  foundBy: ("words" | "meaning")[]
+}
+
+export interface LinkedRecord {
+  /** `person:…`, `note:…`, `entity:…`, or `null` while the name written in the notes matches nobody yet. */
+  ref: string | null
+  name: string | null
+  /** How many of the notes found link it. */
+  notes: number
+}
+
+export interface NotesFound {
+  query: string
+  tag?: string
+  filter?: string
+  /** Words and word stems always; meaning too when the model is there and the query is not exact. */
+  by: "words" | "words and meaning"
+  /** Why meaning was not searched, when it was not. */
+  meaningSkipped?: string
+  hits: FoundNote[]
+  hasMore: boolean
+  nextOffset?: number
+  /** What the notes found link to, most linked first. */
+  linked: LinkedRecord[]
+}
+
+export interface NotesQuery {
+  limit?: number
+  offset?: number
+  tag?: string
+  /** A query in the same language that every hit must also match; it does not change the meaning half. */
+  filter?: string
+  folderIds?: string[]
+  source?: Note["source"]
+  exact?: boolean
+  timezone?: string
+  env?: NodeJS.ProcessEnv
+  /** The tool's command, named in the hint when the model is missing. */
+  command?: string
+}
+
+const MAX_LINE = 200
+const MAX_NOTES_OFFSET = 1000
+/** How deep each half is read before the two are merged. */
+const CANDIDATES = 50
+/** What a filter may narrow the meaning half to; past this the filter is applied to words only. */
+const FILTERED = 500
+/** Reciprocal rank fusion's usual constant, as conversations use. */
+export const RRF_K = 60
+
+const firstLine = (text: string, query: string): string => {
+  const words = query
+    .toLowerCase()
+    .split(/\s+/)
+    .map((word) => word.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, ""))
+    .filter((word) => word.length > 2 && !["and", "or", "not"].includes(word))
+  const lines = text.split("\n")
+  const found = lines.find((line) => words.some((word) => line.toLowerCase().includes(word)))
+  return (found ?? lines.find((line) => line.trim() !== "") ?? "").trim().slice(0, MAX_LINE)
+}
+
+/**
+ * `search notes`: words and stems, and meaning when the local model is there, merged by reciprocal rank;
+ * each hit says which half found it, and the answer lists what the notes found link to.
+ */
+export const searchNotes = async (
+  store: MessageStore,
+  query: string,
+  {
+    limit = 20,
+    offset = 0,
+    tag,
+    filter: expression,
+    folderIds,
+    source,
+    exact = false,
+    timezone,
+    env,
+    command = "tg",
+  }: NotesQuery = {},
+): Promise<NotesFound> => {
+  const label = tag === undefined ? undefined : normalizeTag(tag)
+  const filter =
+    [expression ? `(${expression})` : "", label === undefined ? "" : `tag:${label}`].filter(Boolean).join(" AND ") ||
+    undefined
+  const text = [query.trim() ? `(${query})` : "", filter ?? ""].filter(Boolean).join(" AND ")
+  const window = offset + limit
+  const scope = {
+    ...(folderIds === undefined ? {} : { folderIds }),
+    ...(source === undefined ? {} : { source }),
+    ...(timezone === undefined ? {} : { timezone }),
+  }
+  let meaningSkipped: string | undefined
+  let meaning: { ref: string; note: Note }[] | undefined
+  if (exact) meaningSkipped = "--exact searches words as written"
+  else if (query.trim()) {
+    try {
+      const nearest = await nearestNotes(store, query, {
+        limit: Math.max(window, CANDIDATES),
+        command,
+        ...(env === undefined ? {} : { env }),
+        ...(folderIds === undefined ? {} : { folderIds }),
+        ...(source === undefined ? {} : { source }),
+      })
+      if (filter === undefined) meaning = nearest
+      else {
+        const allowed = await searchNotesQuery(store, { text: filter, limit: FILTERED, ...scope })
+        const refs = new Set(allowed.items.map(({ ref }) => ref))
+        meaning = nearest.filter(({ ref }) => refs.has(ref))
+      }
+    } catch (error) {
+      if (!(error instanceof CliError && error.code === "not_found")) throw error
+      meaningSkipped = error.message
+    }
+  }
+  const words = await searchNotesQuery(store, {
+    text,
+    limit: meaning === undefined ? limit : Math.max(window, CANDIDATES),
+    offset: meaning === undefined ? offset : 0,
+    exact,
+    ...scope,
+  })
+  const ranked = new Map<string, { note: Note; score: number; foundBy: ("words" | "meaning")[] }>()
+  const add = (list: { ref: string; note: Note }[], by: "words" | "meaning") =>
+    list.forEach(({ ref, note }, rank) => {
+      const held = ranked.get(ref) ?? { note, score: 0, foundBy: [] }
+      held.score += 1 / (RRF_K + rank + 1)
+      held.foundBy.push(by)
+      ranked.set(ref, held)
+    })
+  add(words.items, "words")
+  if (meaning !== undefined) add(meaning, "meaning")
+  const ordered = [...ranked.entries()].sort(([, a], [, b]) => b.score - a.score)
+  const page = meaning === undefined ? ordered : ordered.slice(offset, window)
+  const hasMore = meaning === undefined ? words.hasMore : ordered.length > window || words.hasMore
+  const hits: FoundNote[] = []
+  const counts = new Map<string, LinkedRecord>()
+  for (const [ref, { note, foundBy }] of page) {
+    const links = (await store.notes.links({ from: ref })).map(({ to, targetText, kind, anchor }) => ({
+      to,
+      targetText,
+      kind,
+      anchor,
+    }))
+    hits.push({
+      ref,
+      source: note.source,
+      folderId: note.folderId,
+      path: note.path,
+      title: note.title,
+      modifiedAt: note.updatedAt,
+      line: firstLine(note.text, query),
+      links,
+      foundBy,
+    })
+    for (const link of new Map(links.map((link) => [link.to ?? `?${link.targetText}`, link])).values()) {
+      const key = link.to ?? `?${link.targetText}`
+      const known = counts.get(key) ?? { ref: link.to, name: link.targetText, notes: 0 }
+      known.notes++
+      counts.set(key, known)
+    }
+  }
+  const names = new Map((await store.notes.entities()).map((entity) => [`entity:${entity.id}`, entity.name]))
+  for (const record of counts.values()) {
+    if (record.ref?.startsWith("entity:")) record.name = names.get(record.ref) ?? record.name
+    if (record.ref?.startsWith("person:"))
+      record.name = (await store.personByUid(record.ref.slice("person:".length)))?.name ?? record.name
+    if (record.ref?.startsWith("note:"))
+      record.name =
+        (await store.notes.note(record.ref.slice("note:".length)).catch(() => undefined))?.title ?? record.name
+  }
+  return {
+    query,
+    ...(label === undefined ? {} : { tag: label }),
+    ...(filter === undefined ? {} : { filter }),
+    by: meaning === undefined ? "words" : "words and meaning",
+    ...(meaningSkipped === undefined ? {} : { meaningSkipped }),
+    hits,
+    hasMore,
+    ...(hasMore && window <= MAX_NOTES_OFFSET ? { nextOffset: window } : {}),
+    linked: [...counts.values()].sort(
+      (a, b) => b.notes - a.notes || (a.name ?? a.ref ?? "").localeCompare(b.name ?? b.ref ?? ""),
+    ),
+  }
 }

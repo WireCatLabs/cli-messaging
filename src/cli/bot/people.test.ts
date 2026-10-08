@@ -124,14 +124,14 @@ describe("bot contacts show", () => {
   })
 })
 
-describe("bot messages search and between", () => {
+describe("bot search messages and messages between", () => {
   it("**finds by words or by --from**, in this bot's copy only", async () => {
-    const byWord = await call(["first", "bot", "messages", "search", "team", "--json"])
+    const byWord = await call(["first", "bot", "search", "messages", "team", "--json"])
     const byPerson = await call([
       "first",
       "bot",
-      "messages",
       "search",
+      "messages",
       "--from",
       "@ann",
       "--newest",
@@ -142,7 +142,7 @@ describe("bot messages search and between", () => {
 
     expect(byWord.answer.items.map((message: Message) => message.id).sort()).toEqual(["a1", "b1"])
     expect(byPerson.answer.items.map((message: Message) => message.id)).toEqual(["d1", "a1"])
-    expect((await call(["first", "bot", "messages", "search", "--json"])).code).toBe(2)
+    expect((await call(["first", "bot", "search", "messages", "--json"])).code).toBe(2)
   })
 
   it("**keeps the chats every one of them wrote in**, and with --bots reads the other copy too", async () => {

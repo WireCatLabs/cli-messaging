@@ -12,7 +12,11 @@ StandardSyntaxParser и PrecedenceQueryParser, default AND, default field `text`
 см. «Формы слов»; `--exact` делает полем по умолчанию `exact`).
 Это ограниченный профиль языка, а не полный Lucene search engine.
 
-Этот профиль — для `messages search` и `messages_search` MCP. `bot messages search`
+Этот профиль — для всех команд `search`: `search all` (сообщения, почта и заметки сразу — с неё
+начинать, если неизвестно, где написано), `search messages` (только сообщения мессенджеров), `search mail`
+(только почта, импортированная `memo mail import`) и `search notes` (заметки; у них только поля `text`,
+`exact`, `body`, `tag`, `date`, `in`), и для их MCP-инструментов `search_*`. Поле, которого у вида нет,
+в `search all` пропускает этот вид, и ответ называет причину в `skipped`. `bot search messages`
 сохраняет legacy discovery; строгий поиск общего архива выбирает bot accounts через `in:bots`.
 
 Поиск читает локальную БД и, где сервер мессенджера умеет искать, по умолчанию спрашивает и его
@@ -406,7 +410,7 @@ bounded vocabulary expansion использует безопасный literal p
 со словом — слово быстро сужает выбор, regex оставляет только точную форму:
 
 ```sh
-tg messages search 'мой AND body:/(.*[^а-яёА-ЯЁ])?[Мм]ой([^а-яёА-ЯЁ].*)?/' --chat <chat>
+tg search messages 'мой AND body:/(.*[^а-яёА-ЯЁ])?[Мм]ой([^а-яёА-ЯЁ].*)?/' --chat <chat>
 ```
 
 `body` различает регистр, поэтому `[Мм]` покрывает начало предложения. В Lucene regex нет `\b`,
@@ -431,7 +435,7 @@ Quoted timestamp должен содержать секунды и offset: `"202
 
 ## Подсчёт: stats messages show
 
-`stats messages show` считает то же, что нашёл бы `messages search` с тем же запросом, каждое сообщение один
+`stats messages show` считает то же, что нашёл бы `search messages` с тем же запросом, каждое сообщение один
 раз: `--by chat` (по умолчанию) и `--by sender` — больше всего сверху, `--by day` и `--by hour` —
 календарные дни и часы в `--timezone`, по порядку. Без запроса считаются все сохранённые сообщения.
 
@@ -444,17 +448,17 @@ tg stats messages show 'from:me date>=30d' --by day --timezone Europe/Madrid
 
 ## Сохранённые поиски и история
 
-Каждый успешный запуск `messages search` и `stats messages show` (команда или MCP) записывается в локальное
+Каждый успешный запуск `search messages` и `stats messages show` (команда или MCP) записывается в локальное
 хранилище: запрос и параметры, как их дали, — никогда не сообщения и не результаты. Тот же запуск ещё раз
 увеличивает счётчик своей строки. Хранятся 1000 последних запусков; отказанный запрос и запуск с
 `--no-record` не записываются.
 
 ```sh
 tg searches create invoices 'invoice from:"Alice Synthetic"' --limit 20 --newest
-tg messages search --saved invoices 'date>=7d'
+tg search messages --saved invoices 'date>=7d'
 tg stats messages show --saved invoices --by day
 tg searches history --limit 10
-tg messages search --saved 42
+tg search messages --saved 42
 ```
 
 `searches create` сохраняет и ничего не запускает; занятое имя — только с `--replace`. `--saved`
@@ -533,7 +537,7 @@ CLI печатает позицию с единицы. `~` после слова
 
 ## Миграция legacy
 
-`messages search --language legacy 'from:alice after:7d invoice -draft'` сохраняет старый parser
+`search messages --language legacy 'from:alice after:7d invoice -draft'` сохраняет старый parser
 и discovery chain. Standard default строгий: нулевой результат не заменяется похожими словами.
 `--regex` явно выбирает отдельный legacy JS `iu` full-body mode; `--regex --language lucene` — ошибка.
 Legacy regex теперь также имеет row/byte/time budgets; прежний бесконечный scan не сохраняется.
@@ -636,18 +640,18 @@ Low-level `searchStore` и `MessagesService.search` без language сохран
 
 ## Filters in conversation search
 
-`conversations search` takes a natural-language question and a separate `--filter` in this query language:
+`search conversations` takes a natural-language question and a separate `--filter` in this query language:
 
 ```sh
-max conversations search 'what did we decide about the release?' --filter 'from:alice date:2026-10 NOT has:video' --timezone Europe/Madrid
-max conversations search 'deployment' --source all --filter 'kind:group'
+max search conversations 'what did we decide about the release?' --filter 'from:alice date:2026-10 NOT has:video' --timezone Europe/Madrid
+max search conversations 'deployment' --source all --filter 'kind:group'
 ```
 
 A conversation is eligible when **any of its current, undeleted messages matches the whole filter**. The matching message can be outside the chunk nearest in meaning. The filter constrains both word and vector retrieval before ranking; the question is embedded unchanged. `--since-time` additionally constrains when the conversation was last active.
 
 Search uses the active account by default. `--source personal|bots|all` (or a stored provider) explicitly widens it, with the same account rules as message search, including `in:`. Hits include `source` and a qualified message `locator`; readiness covers only eligible chats and reports separate account scopes when widened. Vectors of different embedding models never mix. A missing local model falls back to words under the same filter.
 
-MCP `conversations_search` accepts `filter`, `source`, and `timezone` with the same semantics. `--refresh` cannot yet be combined with `--filter` or `--source`; build and embed the chosen chats separately. These SDK options reach each CLI at its next dependency bump.
+MCP `search_conversations` accepts `filter`, `source`, and `timezone` with the same semantics. `--refresh` cannot yet be combined with `--filter` or `--source`; build and embed the chosen chats separately. These SDK options reach each CLI at its next dependency bump.
 
 ## Attachment extraction surfaces
 

@@ -10,7 +10,7 @@ import { botContext, online } from "./context.js"
 import { botMcpCommand } from "./mcp.js"
 import { botCan, botIdOf, botMessagesCommand } from "./messages.js"
 import { botModerateCommand, botRulesCommand } from "./moderation.js"
-import { addBotCopyReads, botContactsCommand } from "./people.js"
+import { addBotCopyReads, botContactsCommand, botSearchCommand } from "./people.js"
 import { BOT_ACTIONS, type BotAction, type BotMessenger } from "./port.js"
 import { registryProfiles } from "./registry.js"
 import { botCallbacksCommand, botMenuCommand, botWebhooksCommand } from "./setup.js"
@@ -266,6 +266,7 @@ export const botCommand = (bot: BotMessenger): Command => {
     .addCommand(listCommand(bot, tokenVariable))
     .addCommand(chatsCommand(bot))
     .addCommand(withCopyReads(botMessagesCommand(bot), bot))
+    .addCommand(botSearchCommand(bot))
     .addCommand(recipientsCommand(bot))
     .addCommand(sendsCommand(bot))
     .addCommand(botWatchCommand(bot))

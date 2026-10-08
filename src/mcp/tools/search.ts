@@ -3,6 +3,7 @@ import * as v from "valibot"
 import type { Messenger } from "../../cli/messenger/context.js"
 import { parseDuration } from "../../cli/settings.js"
 import type { MessagesService } from "../../services/messages.js"
+import type { SearchKind } from "../../services/search-kind.js"
 import type { SearchesService, SearchParams } from "../../services/searches.js"
 import { syncInputs } from "../search-sync.js"
 import { threadArgs, threadInputs } from "../thread-options.js"
@@ -50,6 +51,12 @@ export const messagesSearchInput = (messenger: Messenger) =>
         v.description("a messenger held on this machine; personal, bots or all — as in: in text"),
       ),
     ),
+    type: v.optional(
+      v.pipe(
+        v.picklist(["text", "voice", "file"]),
+        v.description("only messages of this type: text alone, a voice message, or a file"),
+      ),
+    ),
     newest: v.optional(v.pipe(v.boolean(), v.description("newest first instead of best first"))),
     exact: v.optional(v.pipe(v.boolean(), v.description(EXACT))),
     context: v.optional(
@@ -65,6 +72,21 @@ export const messagesSearchInput = (messenger: Messenger) =>
         ),
       ),
     ),
+  })
+
+/** `search_mail`: the mailboxes in the local store; no server, no fetching, no saved searches. */
+export const mailSearchInput = (messenger: Messenger) =>
+  v.object({
+    text: v.optional(v.pipe(v.string(), v.description("the query, in the strict Lucene language"))),
+    ast: v.optional(v.unknown()),
+    timezone: v.optional(v.string()),
+    chat: v.optional(chatOf(messenger)),
+    newest: v.optional(v.pipe(v.boolean(), v.description("newest first instead of best first"))),
+    exact: v.optional(v.pipe(v.boolean(), v.description(EXACT))),
+    context: v.optional(
+      v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(20), v.description("messages around each hit")),
+    ),
+    limit,
   })
 
 export const syncArgs = (args: {
@@ -103,17 +125,28 @@ const resolveSaved = async (
   return searches.resolve(args.saved, typedOf(args))
 }
 
+const TYPES = { text: "NOT has:attachment", voice: "has:voice", file: "has:file" } as const
+
+const withType = (text: string | undefined, type: keyof typeof TYPES | undefined) =>
+  type === undefined ? text : text === undefined ? TYPES[type] : `(${text}) AND ${TYPES[type]}`
+
 export const answerMessagesSearch = async (
   messages: Pick<MessagesService, "search">,
-  args: MessagesSearchArgs,
+  given: MessagesSearchArgs,
   defaults: { limit: number; signal?: AbortSignal },
   searches?: Pick<SearchesService, "resolve">,
+  kind: SearchKind = "messages",
 ) => {
+  if (given.type !== undefined && given.ast !== undefined)
+    throw new CliError("validation_error", "type narrows text; an AST names its own fields")
+  const text = withType(given.text, given.type)
+  const args = { ...given, ...(text === undefined ? {} : { text }) }
   const resolved = await resolveSaved(searches, args)
   if (resolved) {
     const { params, pattern } = resolved
     const size = params.limit ?? defaults.limit
     const found = await messages.search({
+      kind,
       ...syncArgs(args),
       ...backendArgs(args),
       ...threadArgs(args),
@@ -136,6 +169,7 @@ export const answerMessagesSearch = async (
     throw new CliError("validation_error", "give search text, a versioned AST, or saved")
   const size = args.limit ?? defaults.limit
   const found = await messages.search({
+    kind,
     ...syncArgs(args),
     ...backendArgs(args),
     ...threadArgs(args),
@@ -155,7 +189,7 @@ export const answerMessagesSearch = async (
 }
 
 export const MESSAGES_STATS_DESCRIPTION =
-  "Count what a strict Lucene query matches in the local store, by chat, sender, calendar day or hour (in the timezone). Each message is counted once; no text means every stored message. Words match every form, as in messages_search; exact=true counts exact forms only. Counts are lower bounds where coverage is not complete. sync_first optionally refreshes within max_chats, sync_time and max_messages; failed refreshes keep counts with stale coverage and refreshed details. Returns { by, items: [{ key, name, account?, count }], total, hasMore, page, limit, query, coverage, completeness }."
+  "Count what a strict Lucene query matches in the local store, by chat, sender, calendar day or hour (in the timezone). Each message is counted once; no text means every stored message. Words match every form, as in search_messages; exact=true counts exact forms only. Counts are lower bounds where coverage is not complete. sync_first optionally refreshes within max_chats, sync_time and max_messages; failed refreshes keep counts with stale coverage and refreshed details. Returns { by, items: [{ key, name, account?, count }], total, hasMore, page, limit, query, coverage, completeness }."
 
 export const messagesStatsInput = (messenger: Messenger) =>
   v.object({

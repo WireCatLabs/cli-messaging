@@ -67,7 +67,7 @@ export interface Defaults {
     Partial<Pick<Settings, "permissions" | "searchCatchUp" | "offline">> &
     AISettings
   env: NodeJS.ProcessEnv
-  /** The server's open models, kept between `conversations_search` calls. */
+  /** The server's open models, kept between `search_conversations` calls. */
   embedders?: WarmEmbedders
   /** False when recording was explicitly disabled; stored search tools keep no query history. */
   history?: boolean

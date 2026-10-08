@@ -10,14 +10,7 @@ import { heard, hearForTool, modelWith } from "../../speech/hearing.js"
 import { searchServices } from "../search-sync.js"
 import { threadArgs, threadInputs } from "../thread-options.js"
 import { type AnyTool, chatOf, limit, message, nameOf, READ, snakeOf, tool } from "../tool.js"
-import {
-  answerMessagesSearch,
-  answerMessagesStats,
-  MESSAGES_SEARCH_DESCRIPTION,
-  MESSAGES_STATS_DESCRIPTION,
-  messagesSearchInput,
-  messagesStatsInput,
-} from "./search.js"
+import { answerMessagesStats, MESSAGES_STATS_DESCRIPTION, messagesStatsInput } from "./search.js"
 
 export const messagesTools = (messenger: Messenger): Record<string, AnyTool> => {
   const chat = chatOf(messenger)
@@ -212,18 +205,6 @@ export const messagesTools = (messenger: Messenger): Record<string, AnyTool> => 
       online: async (adapter, args) => ({
         items: await capability(adapter, "scheduled", "list scheduled messages")(args.chat),
       }),
-    }),
-
-    messages_search: tool({
-      title: "Search messages",
-      description: MESSAGES_SEARCH_DESCRIPTION,
-      input: messagesSearchInput(messenger),
-      annotations: { ...READ, openWorldHint: false },
-      stored: (store, account, args, defaults, connect) => {
-        const network = args.sync_first || (Boolean(messenger.serverSearch) && args.backend !== "archive")
-        const services = searchServices(messenger, store, account, defaults, network ? connect : undefined)
-        return answerMessagesSearch(services.messages, args, defaults, services.searches)
-      },
     }),
 
     stats_messages_show: tool({

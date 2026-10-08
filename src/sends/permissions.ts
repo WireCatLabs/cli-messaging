@@ -98,6 +98,7 @@ export const RESOURCES = [
   "bot",
   "conversations",
   "tags",
+  "search",
   "searches",
   "tasks",
   "replies",
@@ -359,6 +360,10 @@ const STORE_MAINTENANCE = new Set(["info", "check", "migrate", "backup", "restor
 /** Commands outside `messages` that print what people wrote, so `deny messages` reaches them too. */
 const SHOW_MESSAGES = new Set(["inbox", "review", "watch", "serve", "store", "conversations"])
 
+/** Before every search moved under `search` (2026-10-09): `config migrate` rewrites these. */
+const OLD_SEARCH_KEY = /^(bot\.)?(messages|conversations|topics)\.search(?:\.|$)/
+
+/** Statistics and searches moved; a profile still naming the old paths must be migrated before they run. */
 export const assertStatsPermissionsCurrent = (
   path: readonly string[],
   permissions: Readonly<Record<string, Level>>,
@@ -367,6 +372,12 @@ export const assertStatsPermissionsCurrent = (
     assertStatsPermissionsCurrent(path.slice(1), permissions)
     return
   }
+  if (path[0] === "search" && Object.keys(permissions).some((key) => OLD_SEARCH_KEY.test(key)))
+    throw new CliError(
+      "configuration_error",
+      "search permission paths have moved — run config migrate before searching",
+      { retryable: false },
+    )
   if (path[0] !== "stats") return
   if (Object.keys(permissions).some((key) => /^(bot\.)?(messages|chats|tasks)\.stats(?:\.|$)/.test(key)))
     throw new CliError(
@@ -382,6 +393,13 @@ export const readKeysForCommand = (path: readonly string[]): PermissionKey[] => 
   if (!key) return []
   if (path[0] === "attachments" && (path[1] === "extract" || path[1] === "show")) return [key, "messages"]
   if (path[0] === "store" && path[1] === "gaps" && path[2] === "repair") return [key, "messages"]
+  // A search shows what people wrote, so `deny messages` reaches every leaf that reads messages.
+  if (path[0] === "search") {
+    if (path[1] === "notes") return [key]
+    if (path[1] === "topics") return [key, "topics"]
+    if (path[1] === "conversations") return [key, "messages", "conversations"]
+    return [key, "messages"]
+  }
   if (path[0] !== "stats") return [key]
   const resource = path[1] === "charts" ? "chats" : path[1]
   return [

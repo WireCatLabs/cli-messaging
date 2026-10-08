@@ -271,117 +271,6 @@ export const conversationsCommand = (messenger: Messenger): Command => {
       context.renderer.note("no chat has conversations yet — `conversations build --chat <chat>`")
   })
 
-  syncOptions(boundOptions(withModelOptions(conversations.command("search"))))
-    .description(
-      "the conversations nearest to a query in meaning and in words, best first, in one chat or every one — " +
-        "meaning after `conversations embed`; runs on this machine",
-    )
-    .argument("<query>", "what to look for, in your own words, in any language the model reads")
-    .option("--chat <chat>", `only this chat: ${messenger.chatArgument}`)
-    .option("--since-time <time>", "only those still going at this ISO 8601 time, or 30m / 2h / 1d ago, or later")
-    .option(
-      "--filter <query>",
-      "strict Lucene filter: any message in a conversation must match; does not change the meaning query",
-    )
-    .option(
-      "--source <source>",
-      "accounts to search: personal, bots, all, or a provider; defaults to the active account",
-    )
-    .option("--timezone <zone>", "IANA timezone for filter dates; system timezone by default")
-    .option("--limit <n>", "how many", positiveCount("--limit"))
-    .option(
-      "--refresh",
-      "first build and embed, on this machine, the chats in scope that changed or were never built — within " +
-        "--max-chats and --max-chunks",
-    )
-    .action(async function (this: Command, query: string) {
-      const options = this.opts<
-        ModelOptions & {
-          chat?: string
-          sinceTime?: string
-          refresh?: boolean
-          filter?: string
-          source?: string
-          timezone?: string
-        } & BoundOptions
-      >()
-      const { chat, sinceTime: since } = options
-      const context = messengerContext(this, messenger)
-      const model = choiceOf(options, messenger, context)
-      if (options.refresh) {
-        if (options.filter !== undefined || options.source !== undefined)
-          throw new CliError(
-            "validation_error",
-            "--refresh cannot be combined with --filter or --source; build and embed the chosen chats separately",
-          )
-        localOnly(model, "--refresh")
-        refuseLocalWrite(context, messenger.app.command, EMBED_KEY)
-      }
-      const { limit } = context.settings
-      const { found, refreshed } = await context.withServices(async (services) => {
-        const syncing = syncRequest(this, context)
-        const found = await services.embeddings.search(query, {
-          ...syncing,
-          ...(options.refresh
-            ? {
-                refresh: {
-                  ...(chat === undefined ? {} : { chat }),
-                  model: model as string,
-                  ...bounds(options),
-                  progress: (note: string) => context.renderer.note(note),
-                },
-              }
-            : {}),
-          limit,
-          ...(options.filter === undefined ? {} : { filter: options.filter }),
-          ...(options.source === undefined ? {} : { source: options.source }),
-          ...(options.timezone === undefined ? {} : { timezone: options.timezone }),
-          ...(chat === undefined ? {} : { chat }),
-          model,
-          ...(since === undefined ? {} : { since: new Date(momentOf(since, "--since-time")).toISOString() }),
-        })
-        return { found, refreshed: found.prepared }
-      })
-      if (refreshed) for (const note of leftNotes(refreshed, messenger.app.command)) context.renderer.note(note)
-      if (context.format === "pretty") {
-        context.streams.data(found.hits.map((hit) => `${hitLine(hit)}\n`).join(""))
-        if (found.hits.length === 0) {
-          context.renderer.note(
-            found.meaning === "unavailable"
-              ? "nothing matches in words"
-              : `nothing matches in words, nor in meaning among the chats embedded with ${found.model} — ` +
-                  "`conversations embed --chat <chat>` for meaning",
-          )
-        }
-      } else if (context.format === "jsonl") context.renderer.stream(found.hits)
-      else {
-        const { accounts, model, meaning, hits, readiness, embeddedOnlyElsewhere } = found
-        context.renderer.result({
-          model,
-          meaning,
-          items: hits,
-          accounts,
-          limit,
-          readiness,
-          embeddedOnlyElsewhere,
-          ...(refreshed ? { refreshed } : {}),
-          ...(found.refreshed
-            ? {
-                ...(refreshed ? { networkRefreshed: found.refreshed } : { refreshed: found.refreshed }),
-                coverage: found.coverage,
-              }
-            : {}),
-        })
-      }
-      const command = messenger.app.command
-      if (found.meaning === "unavailable") {
-        context.renderer.note(
-          `searched by words only: ${found.model} is not downloaded — \`${command} models text download ${found.model}\``,
-        )
-      }
-      for (const note of readinessNotes(found, command)) context.renderer.note(note)
-    })
-
   const batches = conversations
     .command("batches")
     .description("windows of a chat for your own AI agent to link: which earlier message each one answers")
@@ -861,3 +750,116 @@ const readinessNotes = (
       : "",
   ].filter(Boolean)
 }
+
+/** `search conversations`: the conversations nearest to a query, in meaning and in words. */
+export const conversationsSearchCommand = (messenger: Messenger): Command =>
+  syncOptions(boundOptions(withModelOptions(new Command("conversations"))))
+    .description(
+      "the conversations nearest to a query in meaning and in words, best first, in one chat or every one — " +
+        "meaning after `conversations embed`; runs on this machine",
+    )
+    .argument("<query>", "what to look for, in your own words, in any language the model reads")
+    .option("--chat <chat>", `only this chat: ${messenger.chatArgument}`)
+    .option("--since-time <time>", "only those still going at this ISO 8601 time, or 30m / 2h / 1d ago, or later")
+    .option(
+      "--filter <query>",
+      "strict Lucene filter: any message in a conversation must match; does not change the meaning query",
+    )
+    .option(
+      "--source <source>",
+      "accounts to search: personal, bots, all, or a provider; defaults to the active account",
+    )
+    .option("--timezone <zone>", "IANA timezone for filter dates; system timezone by default")
+    .option("--limit <n>", "how many", positiveCount("--limit"))
+    .option(
+      "--refresh",
+      "first build and embed, on this machine, the chats in scope that changed or were never built — within " +
+        "--max-chats and --max-chunks",
+    )
+    .action(async function (this: Command, query: string) {
+      const options = this.opts<
+        ModelOptions & {
+          chat?: string
+          sinceTime?: string
+          refresh?: boolean
+          filter?: string
+          source?: string
+          timezone?: string
+        } & BoundOptions
+      >()
+      const { chat, sinceTime: since } = options
+      const context = messengerContext(this, messenger)
+      const model = choiceOf(options, messenger, context)
+      if (options.refresh) {
+        if (options.filter !== undefined || options.source !== undefined)
+          throw new CliError(
+            "validation_error",
+            "--refresh cannot be combined with --filter or --source; build and embed the chosen chats separately",
+          )
+        localOnly(model, "--refresh")
+        refuseLocalWrite(context, messenger.app.command, EMBED_KEY)
+      }
+      const { limit } = context.settings
+      const { found, refreshed } = await context.withServices(async (services) => {
+        const syncing = syncRequest(this, context)
+        const found = await services.embeddings.search(query, {
+          ...syncing,
+          ...(options.refresh
+            ? {
+                refresh: {
+                  ...(chat === undefined ? {} : { chat }),
+                  model: model as string,
+                  ...bounds(options),
+                  progress: (note: string) => context.renderer.note(note),
+                },
+              }
+            : {}),
+          limit,
+          ...(options.filter === undefined ? {} : { filter: options.filter }),
+          ...(options.source === undefined ? {} : { source: options.source }),
+          ...(options.timezone === undefined ? {} : { timezone: options.timezone }),
+          ...(chat === undefined ? {} : { chat }),
+          model,
+          ...(since === undefined ? {} : { since: new Date(momentOf(since, "--since-time")).toISOString() }),
+        })
+        return { found, refreshed: found.prepared }
+      })
+      if (refreshed) for (const note of leftNotes(refreshed, messenger.app.command)) context.renderer.note(note)
+      if (context.format === "pretty") {
+        context.streams.data(found.hits.map((hit) => `${hitLine(hit)}\n`).join(""))
+        if (found.hits.length === 0) {
+          context.renderer.note(
+            found.meaning === "unavailable"
+              ? "nothing matches in words"
+              : `nothing matches in words, nor in meaning among the chats embedded with ${found.model} — ` +
+                  "`conversations embed --chat <chat>` for meaning",
+          )
+        }
+      } else if (context.format === "jsonl") context.renderer.stream(found.hits)
+      else {
+        const { accounts, model, meaning, hits, readiness, embeddedOnlyElsewhere } = found
+        context.renderer.result({
+          model,
+          meaning,
+          items: hits,
+          accounts,
+          limit,
+          readiness,
+          embeddedOnlyElsewhere,
+          ...(refreshed ? { refreshed } : {}),
+          ...(found.refreshed
+            ? {
+                ...(refreshed ? { networkRefreshed: found.refreshed } : { refreshed: found.refreshed }),
+                coverage: found.coverage,
+              }
+            : {}),
+        })
+      }
+      const command = messenger.app.command
+      if (found.meaning === "unavailable") {
+        context.renderer.note(
+          `searched by words only: ${found.model} is not downloaded — \`${command} models text download ${found.model}\``,
+        )
+      }
+      for (const note of readinessNotes(found, command)) context.renderer.note(note)
+    })

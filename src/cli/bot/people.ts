@@ -230,9 +230,10 @@ const search = (
   })
 }
 
-/** `bot messages search` and `between`, over the local copy, added to the shared `messages` group. */
-export const addBotCopyReads = (messages: Command, bot: BotMessenger): void => {
-  acrossOptions(messages.command("search"))
+/** `bot search messages`: the messages this bot's local copy holds. */
+export const botSearchCommand = (bot: BotMessenger): Command => {
+  const group = new Command("search").description("find what this bot's local copy holds, by text")
+  acrossOptions(group.command("messages"))
     .argument("[query...]", "the words to find")
     .option("--limit <n>", "how many", positiveCount("--limit"))
     .option("--newest", "newest first instead of best first")
@@ -265,7 +266,11 @@ export const addBotCopyReads = (messages: Command, bot: BotMessenger): void => {
         else context.renderer.result({ items: found.items, page: 1, limit: found.items.length, hasMore: found.hasMore })
       })
     })
+  return group
+}
 
+/** `bot messages between`, over the local copy, added to the shared `messages` group. */
+export const addBotCopyReads = (messages: Command, bot: BotMessenger): void => {
   acrossOptions(messages.command("between"))
     .argument("<people...>", "two or more people — an id, @username or part of a name each")
     .option("--limit <n>", "how many of the latest messages from each chat", positiveCount("--limit"))

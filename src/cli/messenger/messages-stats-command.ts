@@ -14,7 +14,7 @@ export const messagesStatsCommand = (messenger: Messenger): Command =>
     )
     .argument(
       "[query...]",
-      "a strict Lucene query, as for messages search; none counts every stored message; with --saved, more words AND-ed to it",
+      "a strict Lucene query, as for search messages; none counts every stored message; with --saved, more words AND-ed to it",
     )
     .option("--by <chat|sender|day|hour>", "what to count by (default: chat)", groupingOf)
     .option("--chat <chat>", `only this chat — the same as chat: in the query; ${messenger.chatArgument}`)

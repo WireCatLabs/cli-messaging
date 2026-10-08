@@ -131,7 +131,7 @@ export const conversationsTools = (messenger: Messenger): Record<string, AnyTool
       },
     }),
 
-    conversations_search: tool({
+    search_conversations: tool({
       title: "Search conversations by meaning and words",
       description:
         "The conversations nearest to `query`, best first, in one chat or every chat: by meaning in the chats " +
@@ -201,7 +201,7 @@ export const conversationsTools = (messenger: Messenger): Record<string, AnyTool
         `\`${command} conversations embed\`: no model runs. Returns { model, source, items, limit, readiness }: ` +
         "source is the message's conversation; each item has the conversation's summary, the chunk that matched, " +
         "`score` (cosine) and `stale`, true when the chunk changed after it was embedded — its id goes to " +
-        "conversations_show. readiness lists chat ids as conversations_search does. Refused, naming the " +
+        "conversations_show. readiness lists chat ids as search_conversations does. Refused, naming the " +
         "command, when the message's conversation has no vector that matches its messages now.",
       input: v.object({ chat, message, limit }),
       annotations: { ...READ, openWorldHint: false },
@@ -255,7 +255,7 @@ export const conversationsTools = (messenger: Messenger): Record<string, AnyTool
         "rest. Writes only to the local store: nothing is sent, no model is downloaded and no remote model is " +
         "used. Returns { model, modelAvailable, built, embedded, left }; `left` lists chats that still need " +
         "`build` or `embed`. modelAvailable false means nothing was embedded: " +
-        `\`${command} models text download\`. What \`${command} conversations search --refresh\` runs first.`,
+        `\`${command} models text download\`. What \`${command} search conversations --refresh\` runs first.`,
       input: v.object({
         chat: v.optional(chat),
         max_chats: v.optional(

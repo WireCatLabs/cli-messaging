@@ -18,6 +18,7 @@ import {
   type MessageStore,
 } from "../store/store.js"
 import { chatAmong, type SearchFound, type SearchQuery, senderAmong } from "./messages.js"
+import { accountsOfKind } from "./search-kind.js"
 import type { SearchRefreshed } from "./search-refresh.js"
 
 export interface QueryMetadata {
@@ -124,13 +125,18 @@ export const prepareLucene = async (
   if (request.accounts?.length === 0) throw new CliError("validation_error", "a search names at least one account")
   if (request.senders !== undefined && leaves.some(({ field }) => field === "from"))
     throw new CliError("validation_error", "--from and from: together — name the people once")
-  const accounts =
+  const accounts = accountsOfKind(
+    request.kind,
     request.accounts ??
-    (source !== undefined
-      ? held.filter(({ provider }) => inSource(source, provider))
-      : sources.length
-        ? held.filter(({ provider }) => sources.some((source) => inSource(source, provider)))
-        : [account])
+      (source !== undefined
+        ? held.filter(({ provider }) => inSource(source, provider))
+        : sources.length
+          ? held.filter(({ provider }) => sources.some((source) => inSource(source, provider)))
+          : [account]),
+    held,
+    source ?? (sources.includes("email") ? "email" : sources[0]),
+    messenger.app?.command,
+  )
   const scopeAccounts = accounts.map(({ provider, account }) => ({ provider, account }))
   const globalChat =
     request.chat === undefined ? undefined : await chatAmong(messenger, store, scopeAccounts, request.chat)

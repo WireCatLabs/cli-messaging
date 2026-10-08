@@ -349,7 +349,8 @@
     },
     "--filter": {
       "value": "query",
-      "meaning": "Strict Lucene filter: any message in the conversation must match; the meaning query stays unchanged"
+      "meaning": "Strict Lucene filter: any message in the conversation must match; the meaning query stays unchanged",
+      "note": "search notes uses it for a query every note must also match, the meaning half unchanged"
     },
     "--find-by-phone": {
       "value": "<who>",
@@ -362,6 +363,10 @@
     "--first-name": {
       "value": "<name>",
       "meaning": "your first name"
+    },
+    "--folder": {
+      "value": "<id>",
+      "meaning": "only this notes folder, by its id; repeat it for more"
     },
     "--for": {
       "value": "<agents>",
@@ -650,6 +655,10 @@
     "--offline": {
       "meaning": "answer from what was recorded and never connect; fails if nothing was"
     },
+    "--offset": {
+      "value": "<n>",
+      "meaning": "skip this many, for the next page"
+    },
     "--offset-bytes": {
       "value": "<n>",
       "meaning": "start byte offset in a retained attachment",
@@ -662,6 +671,10 @@
     "--online": {
       "meaning": "also log in once, read one chat and start the MCP server; sends nothing",
       "note": "max's own copy is worded differently until T6 moves the command onto the shared one (e13)"
+    },
+    "--only": {
+      "value": "<resources>",
+      "meaning": "only these resources, separated by commas: messages, mail, notes"
     },
     "--only-admins-add": {
       "value": "<on|off>",
@@ -1018,7 +1031,7 @@
     "--type": {
       "value": "<names>",
       "meaning": "only these types",
-      "note": "each command names its own types — chats events the messenger's event types, comma-separated, as it names them; tags list chat, contact or message; tasks list question, request, mention or promise, and tasks add gives the new task one of them — so it differs on purpose (Help text rule 4)"
+      "note": "each command names its own types — chats events the messenger's event types, comma-separated, as it names them; tags list chat, contact or message; tasks list question, request, mention or promise, and tasks add gives the new task one of them — search messages text, voice or file, and search notes internal or file — so it differs on purpose (Help text rule 4)"
     },
     "--types": {
       "value": "<value>",
@@ -1269,7 +1282,10 @@
         },
         "--page": {
           "in": [],
-          "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" }
+          "planned": {
+            "max": "each CLI's next cli-messaging bump",
+            "tg": "each CLI's next cli-messaging bump"
+          }
         }
       }
     },
@@ -1494,7 +1510,11 @@
       }
     },
     "bot messages search": {
-      "in": "all",
+      "in": [],
+      "planned": {
+        "max": "each CLI drops it for search <resource> at its next cli-messaging bump",
+        "tg": "each CLI drops it for search <resource> at its next cli-messaging bump"
+      },
       "options": {
         "--all-bots": "all",
         "--bots": "all",
@@ -1537,6 +1557,27 @@
     },
     "bot recipients remove": {
       "in": "all"
+    },
+    "bot search": {
+      "in": [],
+      "planned": {
+        "max": "each CLI moves to search <resource> at its next cli-messaging bump",
+        "tg": "each CLI moves to search <resource> at its next cli-messaging bump"
+      }
+    },
+    "bot search messages": {
+      "in": [],
+      "planned": {
+        "max": "each CLI moves to search <resource> at its next cli-messaging bump",
+        "tg": "each CLI moves to search <resource> at its next cli-messaging bump"
+      },
+      "options": {
+        "--all-bots": "all",
+        "--bots": "all",
+        "--from": "all",
+        "--limit": "all",
+        "--newest": "all"
+      }
     },
     "bot sends": {
       "in": "all"
@@ -2534,7 +2575,11 @@
       }
     },
     "conversations search": {
-      "in": "all",
+      "in": [],
+      "planned": {
+        "max": "each CLI drops it for search <resource> at its next cli-messaging bump",
+        "tg": "each CLI drops it for search <resource> at its next cli-messaging bump"
+      },
       "options": {
         "--base-url": "all",
         "--chat": "all",
@@ -2931,7 +2976,9 @@
         "--topic": {
           "in": [],
           "reason": "MAX has no forum topics",
-          "planned": { "tg": "G2 feat/topic-show-forward" }
+          "planned": {
+            "tg": "G2 feat/topic-show-forward"
+          }
         }
       }
     },
@@ -2977,7 +3024,11 @@
       "in": "all"
     },
     "messages search": {
-      "in": "all",
+      "in": [],
+      "planned": {
+        "max": "each CLI drops it for search <resource> at its next cli-messaging bump",
+        "tg": "each CLI drops it for search <resource> at its next cli-messaging bump"
+      },
       "options": {
         "--backend": {
           "in": "all"
@@ -3366,6 +3417,163 @@
     },
     "runs show": {
       "in": "all"
+    },
+    "search": {
+      "in": [],
+      "planned": {
+        "max": "each CLI moves to search <resource> at its next cli-messaging bump",
+        "tg": "each CLI moves to search <resource> at its next cli-messaging bump"
+      }
+    },
+    "search all": {
+      "in": [],
+      "planned": {
+        "max": "each CLI moves to search <resource> at its next cli-messaging bump",
+        "tg": "each CLI moves to search <resource> at its next cli-messaging bump"
+      },
+      "options": {
+        "--exact": "all",
+        "--limit": "all",
+        "--only": "all",
+        "--timezone": "all"
+      }
+    },
+    "search conversations": {
+      "in": [],
+      "planned": {
+        "max": "each CLI moves to search <resource> at its next cli-messaging bump",
+        "tg": "each CLI moves to search <resource> at its next cli-messaging bump"
+      },
+      "options": {
+        "--base-url": "all",
+        "--chat": "all",
+        "--dims": "all",
+        "--filter": {
+          "in": "all"
+        },
+        "--limit": "all",
+        "--max-chats": {
+          "in": "all"
+        },
+        "--max-chunks": {
+          "in": "all"
+        },
+        "--max-messages": {
+          "in": "all"
+        },
+        "--model": "all",
+        "--provider": "all",
+        "--refresh": {
+          "in": "all"
+        },
+        "--since-time": "all",
+        "--source": {
+          "in": "all"
+        },
+        "--sync-first": {
+          "in": "all"
+        },
+        "--sync-time": {
+          "in": "all"
+        },
+        "--timezone": {
+          "in": "all"
+        }
+      }
+    },
+    "search mail": {
+      "in": [],
+      "planned": {
+        "max": "each CLI moves to search <resource> at its next cli-messaging bump",
+        "tg": "each CLI moves to search <resource> at its next cli-messaging bump"
+      },
+      "options": {
+        "--chat": "all",
+        "--context": "all",
+        "--exact": "all",
+        "--limit": "all",
+        "--newest": "all",
+        "--timezone": "all"
+      }
+    },
+    "search messages": {
+      "in": [],
+      "planned": {
+        "max": "each CLI moves to search <resource> at its next cli-messaging bump",
+        "tg": "each CLI moves to search <resource> at its next cli-messaging bump"
+      },
+      "options": {
+        "--backend": {
+          "in": "all"
+        },
+        "--chat": "all",
+        "--context": "all",
+        "--exact": "all",
+        "--language": "all",
+        "--limit": "all",
+        "--max-chats": {
+          "in": "all"
+        },
+        "--max-messages": {
+          "in": "all"
+        },
+        "--newest": "all",
+        "--regex": "all",
+        "--saved": {
+          "in": "all"
+        },
+        "--server-time": {
+          "in": "all"
+        },
+        "--source": "all",
+        "--sync-first": {
+          "in": "all"
+        },
+        "--sync-time": {
+          "in": "all"
+        },
+        "--thread": {
+          "in": "all"
+        },
+        "--thread-bytes": {
+          "in": "all"
+        },
+        "--thread-hops": {
+          "in": "all"
+        },
+        "--thread-messages": {
+          "in": "all"
+        },
+        "--thread-within": {
+          "in": "all"
+        },
+        "--timezone": "all",
+        "--type": "all"
+      }
+    },
+    "search notes": {
+      "in": [],
+      "planned": {
+        "max": "each CLI moves to search <resource> at its next cli-messaging bump",
+        "tg": "each CLI moves to search <resource> at its next cli-messaging bump"
+      },
+      "options": {
+        "--exact": "all",
+        "--filter": "all",
+        "--folder": "all",
+        "--limit": "all",
+        "--offset": "all",
+        "--tag": "all",
+        "--timezone": "all",
+        "--type": "all"
+      }
+    },
+    "search topics": {
+      "in": [],
+      "reason": "MAX has no forum topics",
+      "planned": {
+        "tg": "each CLI moves to search <resource> at its next cli-messaging bump"
+      }
     },
     "searches": {
       "in": "all"

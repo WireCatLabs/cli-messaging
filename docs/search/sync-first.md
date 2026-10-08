@@ -1,8 +1,8 @@
 # Refresh before searching
 
 Search reads the local store, and where the messenger's server can search, asks it too (`--backend`,
-[query language](query-language.md#поиск-на-сервере-мессенджера)). Add `--sync-first` to `messages search`, `stats messages show` or
-`conversations search` to fetch new messages before reading it. No message is marked read.
+[query language](query-language.md#поиск-на-сервере-мессенджера)). Add `--sync-first` to `search messages`, `stats messages show` or
+`search conversations` to fetch new messages before reading it. No message is marked read.
 
 The refresh uses the active profile's archive fetch. `--chat` and required `chat:` filters select the chats;
 otherwise it starts with the most recently active stored chats. Defaults are 5 chats, 30 seconds and 500
@@ -25,7 +25,7 @@ mode reports `pushed_history`: keep its server running to ingest new messages. T
 second network path. Provider errors use `fetch_failed`; exhausted time/cancellation uses
 `time_or_abort_bound`, and exhausted message bounds use `message_bound`.
 
-`conversations search --sync-first` fetches messages but does not rebuild the graph or embed them. Add the
+`search conversations --sync-first` fetches messages but does not rebuild the graph or embed them. Add the
 existing `--refresh` for that separate local work. With both flags, `refreshed` retains the existing graph
 report and `networkRefreshed` reports the network step. Fresh messages can still leave the graph stale until
 it is rebuilt. Saved searches do not save network consent: add `--sync-first` explicitly on each run.

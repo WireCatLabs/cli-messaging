@@ -6,6 +6,40 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- `search all`: messenger messages, mail and notes from the local store in one query, merged best first; each
+  item says its kind (`message`, `mail`, `note`) and ref. A query field one kind lacks skips that kind and
+  `skipped` says why; `--only messages,mail,notes` narrows it. MCP `search_all`, described as the tool to start with.
+- `search mail` (mail imported by `memo mail import`) and `search notes` (words and, with the local text model,
+  meaning; `--type internal|file`, `--folder`, `--tag`, `--filter`); MCP `search_mail`, `search_notes`.
+  `searchNotes` and `searchAll` are services, so memo uses the same search.
+- `search messages --type text|voice|file` (MCP `type`).
+
+### Changed — may break callers
+
+- Every search lives under `search <resource>` (STANDARD.md, "Search hierarchy"); the old paths stop working, with
+  no alias:
+
+  | Old | New |
+  |---|---|
+  | `messages search` | `search messages` |
+  | `messages search --source email` / `in:email` | `search mail` |
+  | `conversations search` | `search conversations` |
+  | `topics search <chat> <text>` | `search topics <chat> <text>` |
+  | `bot messages search` | `bot search messages` |
+  | MCP `messages_search`, `conversations_search`, `bot_messages_search` | `search_messages`, `search_conversations`, `bot_search_messages` |
+  | MCP `topics_list` with `search` | `search_topics` |
+
+- `search messages` never returns mail, and refuses `--source email` / `in:email` with a pointer to `search mail`.
+  A saved search whose query names `in:email` is refused the same way.
+- Permission keys `messages.search`, `conversations.search`, `topics.search` and `bot.messages.search` became
+  `search.messages`, `search.conversations`, `search.topics`, `bot.search.messages`. A profile still naming an
+  old key refuses `search` until `config migrate`, which rewrites them with their levels. `messages: deny` still
+  reaches `search all`, `messages`, `mail` and `conversations`.
+- A CLI mounts the new export `searchCommand(messenger)` — tg with `{ topics: true }`. `messagesCommand`,
+  `conversationsCommand` and `topicsCommand` no longer carry a search leaf; `botCommand` mounts `bot search` itself.
+
 ## 0.208.0 — 09.10.2026
 
 ### Fixed

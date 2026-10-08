@@ -145,7 +145,7 @@ export const attachmentsTools = (messenger: Messenger): Record<string, AnyTool> 
         "Files of this account's stored messages, newest first: where each was saved on this machine and whether " +
         "its text is held — never the text. With `needs_text`, only files saved here that nobody has text for yet, " +
         "such as a scan or a photo: use attachments_show to receive bytes remotely, or read `localPath` on the server, then write the text with " +
-        `attachments_text_set, and content:<word> in messages_search finds it. \`${command} attachments extract\` ` +
+        `attachments_text_set, and content:<word> in search_messages finds it. \`${command} attachments extract\` ` +
         `reads text layers (plain text, Word, PDF). Returns { items: [${ITEM}], page, limit, hasMore }.`,
       input: v.object({
         chat: v.optional(chatOf(messenger)),
@@ -170,7 +170,7 @@ export const attachmentsTools = (messenger: Messenger): Record<string, AnyTool> 
       title: "Keep the text read from a file",
       description:
         "Keeps text you read from one file of a stored message — a scan, a photo, a PDF of pictures — in the local " +
-        "store, replacing what was there, so content:<word> in messages_search finds the message. Nothing is sent. " +
+        "store, replacing what was there, so content:<word> in search_messages finds the message. Nothing is sent. " +
         "`message` is an id in `chat`, or a msg: locator alone; `attachment` (from 1) is needed when the message " +
         "has more than one file. Returns { locator, attachment, origin, chars, replaced }.",
       input: v.object({

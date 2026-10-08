@@ -145,6 +145,9 @@ export const migratePermissionConfig = (input: Config): PermissionMigration => {
     "messages.stats": "stats.messages.show",
     "chats.stats": "stats.chats.show",
     "tasks.stats": "stats.tasks.show",
+    "messages.search": "search.messages",
+    "conversations.search": "search.conversations",
+    "topics.search": "search.topics",
   }
   for (const [name, scope] of scopes(renamed)) {
     if (!scope.permissions || typeof scope.permissions !== "object" || Array.isArray(scope.permissions)) continue
