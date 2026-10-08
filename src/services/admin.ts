@@ -58,7 +58,7 @@ export interface AdminService {
   ): Promise<{ chatId: Id; accepted: boolean; counted: number; operationId?: string }>
   links(chat: string, window: { limit: number; revoked: boolean }): Promise<Page<InviteLink> & { chatId: Id }>
   revokeLink(chat: string, link: string): Promise<Operated<{ chatId: Id } & InviteLink>>
-  /** Only the fields given change; `expires` as `createLink` takes it. */
+  /** Only the fields given change; `expires` as `createLink` takes it, or `never`. */
   updateLink(
     chat: string,
     link: string,
@@ -283,7 +283,8 @@ export const adminService = (deps: ServiceDeps): AdminService => {
           "validation_error",
           "nothing to change: give --approval, --no-approval, --expire-time or --max-uses",
         )
-      const expiresAt = linkLimits({ expires, maxUses })
+      const limited = linkLimits({ expires: expires === "never" ? undefined : expires, maxUses })
+      const expiresAt = expires === "never" ? null : limited
       const connection = await online("chats link update")
       const update = capability(connection, "updateInviteLink", "change an invite link")
       const { id: chatId } = await connection.resolve(chat)

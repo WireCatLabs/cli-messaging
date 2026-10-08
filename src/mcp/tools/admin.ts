@@ -156,8 +156,8 @@ export const adminTools = (messenger: Messenger): Record<string, AnyTool> => {
     chats_link_update: tool({
       title: "Change an invite link",
       description:
-        "Change one of the owner's extra invite links: { chatId, link, approval, expiresAt, maxUses }. Only the " +
-        "fields given change; the group's own link cannot be changed. Only when the owner asked.",
+        "Change one of the owner's invite links, the group's own one too: { chatId, link, approval, expiresAt, " +
+        "maxUses }. Only the fields given change. Only when the owner asked.",
       input: v.object({
         chat: chatOf(messenger),
         link: v.pipe(v.string(), v.minLength(1)),
@@ -165,7 +165,12 @@ export const adminTools = (messenger: Messenger): Record<string, AnyTool> => {
           v.pipe(v.boolean(), v.description("true: who joins by it asks first; false: anyone with it joins at once")),
         ),
         expire_time: v.optional(
-          v.pipe(v.string(), v.description("it stops working then: 2026-09-25T09:00 (local time), or 30m, 2h, 7d")),
+          v.pipe(
+            v.string(),
+            v.description(
+              "it stops working then: 2026-09-25T09:00 (local time), or 30m, 2h, 7d; never takes the expiry away",
+            ),
+          ),
         ),
         max_uses: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(99_999))),
       }),

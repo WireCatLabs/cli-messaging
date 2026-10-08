@@ -315,6 +315,7 @@ interface Harness {
   skill?: URL
   history?: Messenger["history"]
   pollQuiz?: boolean
+  inviteLinkUpdate?: boolean
   counterFields?: Messenger["counterFields"]
   serverSearch?: boolean
   /** Another server's files, to read what it stored. */
@@ -342,6 +343,7 @@ const connect = async (telegram: Scripted = scripted(), options: Partial<ServerO
     history,
     serverSearch,
     pollQuiz,
+    inviteLinkUpdate,
     counterFields,
     root: _root,
     http,
@@ -363,6 +365,7 @@ const connect = async (telegram: Scripted = scripted(), options: Partial<ServerO
     ...(history ? { history } : {}),
     ...(serverSearch ? { serverSearch } : {}),
     ...(pollQuiz ? { pollQuiz } : {}),
+    ...(inviteLinkUpdate ? { inviteLinkUpdate } : {}),
     ...(counterFields ? { counterFields } : {}),
   }
   const streams = captureStreams()
@@ -2532,6 +2535,28 @@ describe("sending over MCP", () => {
       ["update", "7", { title: "Books", settings: { allCanPin: true } }],
       ["reset", "7"],
     ])
+  })
+
+  it("**changes an invite link** over MCP, never as no expiry", async () => {
+    const changes: unknown[] = []
+    const telegram = scripted({
+      updateInviteLink: async (_chatId, link, change) => {
+        changes.push(change)
+        return { link, approval: false, expiresAt: null, maxUses: change.maxUses ?? null }
+      },
+    })
+    const { call } = await connect(telegram, { inviteLinkUpdate: true, permission: ["chats.link.update=allow"] })
+
+    const changed = await call("chat_chats_link_update", {
+      chat: "7",
+      link: "https://t.me/+x",
+      approval: false,
+      expire_time: "never",
+      max_uses: 5,
+    })
+
+    expect(changed.body).toMatchObject({ chatId: "7", expiresAt: null, maxUses: 5 })
+    expect(changes).toEqual([{ approval: false, expiresAt: null, maxUses: 5 }])
   })
 
   it("**adds and removes members and admins** over MCP", async () => {

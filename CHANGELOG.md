@@ -8,6 +8,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Added
 
+- `chats link update --expire-time never` (MCP `expire_time: "never"`) takes a link's expiry away;
+  `InviteLinkChange.expiresAt` may be `null`.
 - Store version 25: notes are their own records ([plan](docs/plans/2026-10-08-notes-graph.md)).
   `MessageStore.notes` holds notes folders (an id here, the path in each computer's config), file and
   internal notes with their earlier text, one `links` table for every connection by typed reference, and
@@ -24,6 +26,11 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   are the owner's, not one account's: a contact's notes show in every account that sees the contact, and
   `relations` and `entities` list everything. An annotation on a `msg:notes/…` locator is refused; name the
   note `note:<id>` (`KnowledgeTarget` gains `note`).
+
+### Fixed
+
+- `chats link update` help no longer says the group's own link cannot be changed: Telegram changes it
+  (measured 2026-10-08).
 
 ## 0.197.0 — 08.10.2026
 

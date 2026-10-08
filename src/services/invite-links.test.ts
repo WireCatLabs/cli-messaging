@@ -131,6 +131,15 @@ describe("changing an invite link", () => {
     expect(f.updateInviteLink.mock.calls[0]?.[2]).toEqual({ expiresAt: expect.stringMatching(/:00\.000Z$/) })
   })
 
+  it("takes never as no expiry, and still checks the use limit", async () => {
+    const f = fixtureWith()
+    await f.service.updateLink("synthetic group", "https://t.me/+synthetic", { expires: "never" })
+    expect(f.updateInviteLink.mock.calls[0]?.[2]).toEqual({ expiresAt: null })
+    await expect(
+      f.service.updateLink("synthetic group", "https://t.me/+synthetic", { expires: "never", maxUses: 0 }),
+    ).rejects.toThrow("--max-uses")
+  })
+
   it.each([
     [{}, "nothing to change"],
     [{ maxUses: 0 }, "--max-uses takes a whole number from 1 to 99999"],

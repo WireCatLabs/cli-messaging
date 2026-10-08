@@ -139,8 +139,8 @@ export interface InviteLink {
 /** What `chats link update` changes; a field left out stays as it is. */
 export interface InviteLinkChange {
   approval?: boolean
-  /** ISO 8601. */
-  expiresAt?: string
+  /** ISO 8601; `null` makes it never expire. */
+  expiresAt?: string | null
   maxUses?: number
 }
 
