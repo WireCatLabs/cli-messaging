@@ -11,10 +11,11 @@ reads a local archive, so it is only as good as what was downloaded. cli-messagi
 `store fetch --all` (download every chat, the last 90 days by default) and a coverage summary in every search
 answer, with `coverage.next` naming the command that would improve it
 ([plan](2026-10-07-server-search.md), [query language «Машинный контракт и охват»](../search/query-language.md)).
-tg and max adopted it on `main` and document it in their guides, but neither has a release that carries it yet.
-**Your job:** once both are released, describe archive preparation on the website's
-[How search works](https://github.com/leemour/cli-docs/blob/main/content/docs/search-architecture.mdx) page, in
-English, Russian and Spanish.
+**Execution update 2026-10-08:** tg 0.35.0 and max 0.34.0 are published and both tag guides contain
+`store fetch --all`. The EN/RU/ES archive-preparation and coverage additions are implemented in
+[cli-docs #71](https://github.com/leemour/cli-docs/pull/71). The [release record](2026-10-08-archive-preparation-release-record.md)
+links the release and website evidence and identifies the remaining reviewed-guide translation work.
+The original execution recipe below is retained for reference; the consumer release gate is satisfied.
 
 ## 2. Orient in one call
 

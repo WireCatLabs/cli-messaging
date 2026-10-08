@@ -434,6 +434,7 @@ actually checks are added; the full list grows in Phase 4 when MAX fills it too.
   [validation report](../dev/evaluations/2026-10-07-rankings-validation.md) describe metrics,
   scores, evidence, bounds and missing-data limits.
 
+- **Search archive preparation and coverage** · **Done** · Implemented in cli-messaging 0.174.0, adopted by tg-cli #340 and max-cli #462/#463, published in TG 0.35.0/MAX 0.34.0; EN/RU/ES website implementation in cli-docs #71. Evidence: [release record](2026-10-08-archive-preparation-release-record.md). Moving reviewed website guide pins remains a separate translation review.
 - **Search A1** · **Done** · Lucene 9.12.3 query profile, strict shared search, bounded patterns, legacy migration and executable documentation: shared [#454](https://github.com/leemour/cli-messaging/pull/454), release 0.127.0; consumers [max #355](https://github.com/leemour/max-cli/pull/355) and [tg #238](https://github.com/leemour/tg-cli/pull/238). Media/tag repositories, analytics and archive repair remain subsequent work.
 
 **Phase 0 — spike.** Goal: prove the transport and measure the unknowns. cli-messaging starts here

@@ -3,7 +3,8 @@
 Plan, 2026-10-07 (max-cli journal TASK-456, handoff [2026-10-07-server-search-handoff.md](2026-10-07-server-search-handoff.md)).
 Read at cli-messaging `a1dedb5`, tg-cli `7b00153`, max-cli `adca306`. **§9 answered 2026-10-07: default `both`
 (NEED-809 A), MAX searches one chat (NEED-810), Telegram probed (NEED-811).** Shipped: cli-messaging 0.169.0–0.174.0,
-tg-cli #332/#334/#340, max-cli #462/#463. Remaining: the website's archive-preparation text —
+tg-cli #332/#334/#340, max-cli #462/#463. Consumer publication and the website archive-preparation follow-up are tracked in the
+[release record](2026-10-08-archive-preparation-release-record.md) and
 [handoff](2026-10-08-server-search-website-handoff.md).
 
 Evidence labels as in [the stemmed-search plan](2026-10-04-stemmed-search.md): **verified** has a `path:line`;
@@ -25,9 +26,9 @@ Evidence labels as in [the stemmed-search plan](2026-10-04-stemmed-search.md): *
 **Correction 2026-10-07 (probes, §9):** Telegram matches whole words and Russian word forms, not beginnings;
 MAX's opcode 73 answers in one chat only, matching beginnings, not forms.
 
-**Conclusion.** Telegram gets the capability now. MAX stays archive-only until a probe on a test account
-(NEED-810) shows opcode 73's real answer; an explicit `--backend server` on MAX is refused with a capability
-error, and the default never is.
+**Correction 2026-10-08:** the initial archive-only MAX conclusion is superseded by the §9 probe and
+max-cli #463. MAX can ask opcode 73 for words in one named chat; a query without a chat still reads only
+the archive. Consumer publication and website follow-up are recorded above.
 
 ## 1. Goal
 
