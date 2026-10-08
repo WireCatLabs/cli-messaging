@@ -1,7 +1,9 @@
 # Retention and counter observation command contract
 
-Owner approved on 2026-10-08. Planned availability lives in parity.json; implementation follows
-migration reservation24. Both MAX and Telegram use the same hierarchy and shared services.
+Owner approved on 2026-10-08. Implemented in SDK0.189.0 with additive migration24;
+MAX [PR481](https://github.com/leemour/max-cli/pull/481) and Telegram
+[PR361](https://github.com/leemour/tg-cli/pull/361) adopt the same verified published SDK.
+Both CLI mains expose these paths; parity.json records their shared availability.
 
 | Path | Purpose | Default |
 |---|---|---|
