@@ -1267,7 +1267,10 @@
         "--offset-bytes": {
           "in": "all"
         },
-        "--page": "all"
+        "--page": {
+          "in": [],
+          "planned": { "max": "each CLI's next cli-messaging bump", "tg": "each CLI's next cli-messaging bump" }
+        }
       }
     },
     "attachments text": {

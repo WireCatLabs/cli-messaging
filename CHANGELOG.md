@@ -8,8 +8,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Fixed
 
-- `parity.json` lists `attachments show --page`; without it `cli-messaging-parity` refused every CLI pinning
-  0.207.0.
+- `parity.json` lists `attachments show --page`, planned for both CLIs; without it `cli-messaging-parity` refused
+  every CLI pinning 0.207.0.
 
 ## 0.207.0 — 08.10.2026
 
