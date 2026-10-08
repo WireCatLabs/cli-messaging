@@ -6,6 +6,11 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- MCP `chats_folders_show { folder }`: one folder with its chats, pinned and excluded chats by name, as
+  `chats folders show` answers it. Read-only, offered wherever `chats_folders_list` is.
+
 ## 0.190.0 — 08.10.2026
 
 ### Added
