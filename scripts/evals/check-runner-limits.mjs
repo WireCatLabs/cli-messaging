@@ -12,7 +12,7 @@ mkdirSync(bin)
 const executable = join(bin, "codex")
 writeFileSync(
   executable,
-  `#!${process.execPath}\nif (process.argv.includes("--version")) { console.log("fake-codex-test"); process.exit(0) }\nif (process.env.STATS_LIMIT_TEST === "calls") for (let i=0;i<21;i++) console.log(JSON.stringify({type:"item.started",item:{id:String(i),type:"command_execution"}}))\nsetInterval(()=>{},1000)\n`,
+  `#!${process.execPath}\nif (process.argv.includes("login")) { console.error("Logged in using ChatGPT"); process.exit(0) }\nif (process.argv.includes("--version")) { console.log("fake-codex-test"); process.exit(0) }\nif (process.env.STATS_LIMIT_TEST === "calls") for (let i=0;i<21;i++) console.log(JSON.stringify({type:"item.started",item:{id:String(i),type:"command_execution"}}))\nsetInterval(()=>{},1000)\n`,
 )
 chmodSync(executable, 0o755)
 const hash = (text) => createHash("sha256").update(text).digest("hex")

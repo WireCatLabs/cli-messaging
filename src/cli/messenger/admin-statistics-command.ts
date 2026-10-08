@@ -32,8 +32,8 @@ export const adminStatisticsCommand = (messenger: Messenger, report: AdminReport
     .option("--limit <n>", "report rows, 1–100; 20 if not given", positiveCount("--limit"))
   if (report !== "discussion")
     command.option(
-      "--answerer <id>",
-      "a scoped human identity whose explicit reply qualifies; repeat it for more",
+      "--answerer <person>",
+      "stored name, alias, @username, ID or person:provider/account/id; ambiguous names require a choice; repeat for more",
       collect,
     )
   if (report === "unanswered")

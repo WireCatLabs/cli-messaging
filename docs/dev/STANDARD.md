@@ -321,7 +321,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--analyze` |  | link conversation batches using the configured analysis provider, with remembered chat/provider consent |  | `conversations build` |
 | `--anonymous` |  | nobody sees who voted for what |  | `polls create` |
 | `--answer` | `<id>` | only those who chose this answer, as `polls show` prints it |  | `polls voters` (tg-only) |
-| `--answerer` | `<id>` | a scoped human identity whose explicit reply qualifies; repeat it for more |  | `stats chats newcomers`, `stats contacts responses`, `stats messages unanswered` |
+| `--answerer` | `<person>` | stored name, alias, @username, ID or scoped person locator; ambiguous names require a choice; repeat it for more |  | `stats chats newcomers`, `stats contacts responses`, `stats messages unanswered` |
 | `--app` | `<how>` | the first time only: how to get this profile's app from my.telegram.org | `browser` | `session start` (tg-only), `setup` (planned) |
 | `--approval` |  | who joins by it asks first, and an admin lets them in |  | `chats link create` (planned), `chats link update` (tg-only) |
 | `--as` | `<state>` | how a task is closed: done, or dismissed — it needs no answer |  | `tasks close` |

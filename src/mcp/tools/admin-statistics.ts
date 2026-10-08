@@ -14,11 +14,29 @@ const query = {
   ...common,
   text: v.optional(v.string()),
   ast: v.optional(v.unknown()),
-  chat: v.optional(v.string()),
+  chat: v.optional(
+    v.pipe(
+      v.string(),
+      v.description(
+        "Stored chat ID, @username or title fragment; use chats list to discover IDs. Never guess ambiguous titles.",
+      ),
+    ),
+  ),
   source: v.optional(v.string()),
   exact: v.optional(v.boolean()),
 }
-const people = { answerer: v.optional(v.array(v.string())) }
+const people = {
+  answerer: v.optional(
+    v.array(
+      v.pipe(
+        v.string(),
+        v.description(
+          "Stored name, alias, @username, ID or person:provider/account/id, resolved only in query accounts. Unknown names fail; ambiguous names return candidates. Explicit unseen IDs remain unknown, not evidence of zero activity.",
+        ),
+      ),
+    ),
+  ),
+}
 export const adminStatisticsTools = (messenger: Messenger): Record<string, AnyTool> => {
   const definitions: Record<string, AnyTool> = {}
   for (const report of ["unanswered", "responses", "newcomers", "discussion"] as const) {
@@ -28,7 +46,12 @@ export const adminStatisticsTools = (messenger: Messenger): Record<string, AnyTo
         ? {
             ...common,
             ...people,
-            chat: v.string(),
+            chat: v.pipe(
+              v.string(),
+              v.description(
+                "Stored chat ID, @username or title fragment; ambiguous titles require choosing a candidate.",
+              ),
+            ),
             since_time: v.optional(v.string()),
             until_time: v.optional(v.string()),
             within: v.optional(v.string()),
@@ -87,7 +110,10 @@ export const adminStatisticsTools = (messenger: Messenger): Record<string, AnyTo
     description:
       "Known joining cohorts, observed checkpoint membership, activity and interval departures from saved roster batches. Partial absences and missing joins remain unknown. Rates expose observed denominators. No connection or message actions.",
     input: v.object({
-      chat: v.string(),
+      chat: v.pipe(
+        v.string(),
+        v.description("Stored chat ID, @username or title fragment; ambiguous titles require choosing a candidate."),
+      ),
       since_time: v.optional(v.string()),
       until_time: v.optional(v.string()),
       checkpoints: v.optional(v.string()),

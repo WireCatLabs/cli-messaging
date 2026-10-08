@@ -81,8 +81,8 @@
       "meaning": "only those who chose this answer, as `polls show` prints it"
     },
     "--answerer": {
-      "value": "<id>",
-      "meaning": "a scoped human identity whose explicit reply qualifies; repeat it for more"
+      "value": "<person>",
+      "meaning": "stored name, alias, @username, ID or scoped person locator; ambiguous names require a choice; repeat it for more"
     },
     "--app": {
       "value": "<how>",

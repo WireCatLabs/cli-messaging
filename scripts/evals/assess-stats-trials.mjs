@@ -139,6 +139,45 @@ for (const context of manifest.contexts) {
         outputs.some((one) => one.error?.reason === "selection_changed") &&
         primary.filter((one) => one.kind === "advance").length === 1 &&
         outputs.filter((one) => one.items?.some((item) => item.person) && one.included === 1).length >= 3
+  } else if (context.variant === "discovery") {
+    const evidence = outputs.some((one) =>
+      one.items?.some((item) => item.message?.id === "a1" && item.related?.id === "q1"),
+    )
+    const matched = response?.items.some(
+      (one) =>
+        one.id === "9" &&
+        one.identityKnown === true &&
+        one.answered === 1 &&
+        one.medianMilliseconds === 172800000 &&
+        one.p90Milliseconds === 172800000,
+    )
+    if (task === 1) tracePassed = matched && evidence && injected
+    if (task === 2)
+      tracePassed =
+        retention?.unknownJoin === 1 &&
+        JSON.stringify(retention.items.find((one) => one.stays === 2)?.checkpoints.map((point) => point.rate)) ===
+          JSON.stringify([1, 0.5, null]) &&
+        outputs.some((one) => one.items?.some((item) => item.person && item.activity))
+    if (task === 3) tracePassed = matched && evidence
+    if (task === 4)
+      tracePassed =
+        !response &&
+        outputs.some((one) => {
+          const candidates = one.error?.candidates ?? one.error?.details?.candidates ?? one.items
+          return candidates?.some((person) => person.id === "9") && candidates?.some((person) => person.id === "10")
+        })
+    if (task === 5)
+      tracePassed =
+        !response &&
+        calls.some((one) =>
+          JSON.stringify(one.arguments).includes("Taylor") || one.operation.includes("Taylor")
+            ? one.body?.error?.code === "not_found" || one.body?.items?.length === 0
+            : false,
+        )
+    if (task === 6)
+      tracePassed = response?.items.some(
+        (one) => one.id === "999" && one.identityKnown === false && one.status === "unknown" && one.answered === 0,
+      )
   } else {
     if (task === 1)
       tracePassed =
