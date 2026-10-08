@@ -1,6 +1,6 @@
 # Every search under `search <resource>`
 
-**Status:** proposed 2026-10-08 by the owner's ruling; the mapping below waits for review. Nothing is built.
+**Status:** approved 2026-10-08. Nothing is built.
 Rule: [STANDARD.md, "Search hierarchy"](../dev/STANDARD.md#search-hierarchy) and "No two commands overlap"
 under command names. Goes with [`2026-10-08-notes-graph.md`](2026-10-08-notes-graph.md), which adds notes.
 
@@ -42,11 +42,10 @@ Only `search all` spans resources.
 
 ## 4. Work items
 
-1. This mapping approved; the open question below ruled.
-2. cli-messaging: `search` group and leaves over the existing services, `search all` merge, MCP tools,
+1. cli-messaging: `search` group and leaves over the existing services, `search all` merge, MCP tools,
    permission and saved-search migrations; old leaves removed.
-3. tg, max, memo: adopt; regenerate docs; update skills.
-4. cli-docs: pages and examples.
+2. tg, max, memo: adopt; regenerate docs; update skills.
+3. cli-docs: pages and examples.
 
 ## 5. Tests
 
@@ -55,8 +54,9 @@ Only `search all` spans resources.
 - `search messages` returns no mail; `search mail` no messenger messages.
 - A saved search made with an old path still runs after the migration.
 
-## 6. Open question
+## 6. Rulings
 
-- The owner wrote `search <resource> <type:optional>`. A second positional cannot be told apart from
-  the query (`search notes budget` — a type, or the word?). Proposed: the type is an option,
-  `--type <kind>` (for notes `internal|file`, for messages `text|voice|file`), as `tasks --type` is.
+- **Type is an option** (owner, 2026-10-08): `search notes budget --type internal`, as `tasks --type`;
+  for notes `internal|file`, for messages `text|voice|file`.
+- **Mail is its own resource** (owner, 2026-10-08): `search mail`; `search messages` is messenger
+  messages only.
