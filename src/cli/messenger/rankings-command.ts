@@ -117,7 +117,7 @@ export const rankingsTopCommand = (messenger: Messenger, target: RankingTarget):
       context.renderer.note(
         `${found.eligible} eligible of ${found.population}; ${found.excludedMissing} excluded for missing measurements`,
       )
-      context.renderer.note("snapshot counters are cumulative; counter freshness is unknown")
+      context.renderer.note("snapshot counters are cumulative; freshness depends on each field's observation date")
     }
   })
   return command
@@ -125,11 +125,11 @@ export const rankingsTopCommand = (messenger: Messenger, target: RankingTarget):
 
 export const rankingEvidenceCommand = (messenger: Messenger, target: RankingTarget): Command =>
   new Command("evidence")
-    .description("a bounded page of messages or answer pairs contributing to one ranking component")
+    .description("bounded messages, answer pairs or retention members from an exact drilldown selection")
     .argument(
       target === "messages" ? "<message>" : "<person>",
       target === "messages"
-        ? "the canonical message locator from the ranking row"
+        ? "the canonical message locator, or retention cohort reference, from drilldown"
         : "the exact native person id from the ranking row",
     )
     .requiredOption("--selection <json>", "the resolved ranking selection returned in drilldown", selectionOf)
