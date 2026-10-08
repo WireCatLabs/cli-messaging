@@ -6,6 +6,11 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- Parity: `messages press`, `chats start` and `chats app` are shipped rows in max (max-cli #490), tg planned;
+  `--payload` and `--start` join the option catalogue.
+
 ## 0.196.0 — 08.10.2026
 
 ### Added
