@@ -6,6 +6,11 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- Parity: `polls voters` and `polls create --close-time` are shipped rows in tg (TG#375, TG#378).
+
+
 ## 0.205.0 — 08.10.2026
 
 ### Changed — may break callers
