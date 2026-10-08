@@ -8,6 +8,11 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Added
 
+- `topics show <chat> <topic>` and MCP `topics_show`: one forum topic as `Topic` gives it, through the optional
+  `ChatReading.topic`; listed only where `Messenger.topicShow` is true.
+- `messages forward --topic <id>` and MCP `messages_forward` `topic`: forward into a forum topic of the `--to`
+  chat, checked with `validateThread` before the write, as `send --topic` is; `threadId` in the port's `forward`
+  options. Listed only where `Messenger.forwardTopic` is true.
 - `attachments show --page N` (MCP `page`) renders one retained PDF page as standard image content for remote agents whose clients cannot open embedded PDF resources. Uses optional `unpdf` and `@napi-rs/canvas`; no OCR API calls or automatic indexing. Preview metadata separates the source PDF hash/size from the PNG hash/size.
 
 ## 0.206.0 — 08.10.2026

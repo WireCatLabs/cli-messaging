@@ -169,6 +169,8 @@ export interface ChatReading {
   historyBefore(chat: string, window: { limit: number; time: number }): Promise<Page<Message>>
   /** A forum group's topics, newest activity first; `search` matches their titles. */
   topics(chat: string, window: { search?: string; limit?: number; offset: number }): Promise<Page<Topic>>
+  /** One forum topic; a topic that is not there is `not_found`, a chat that is not a forum `validation_error`. */
+  topic?(chat: string, topicId: Id): Promise<Topic>
   /** What an invite or public link leads to. Reading it joins nothing. */
   inspect(link: string): Promise<LinkTarget>
 }
@@ -214,13 +216,14 @@ export interface MessageEditing {
   ): Promise<Message>
   /**
    * One message into another chat; the answer is the copy there. `silent` delivers it without a
-   * notification. A repeat with the same `sendId` must leave one copy, as a send does.
+   * notification. A repeat with the same `sendId` must leave one copy, as a send does. `threadId` is a forum
+   * topic of the target chat, already checked with `validateThread`.
    */
   forward(
     fromChatId: Id,
     messageId: Id,
     toChatId: Id,
-    options: { sendId: string; silent?: boolean; sendAs?: Id },
+    options: { sendId: string; silent?: boolean; sendAs?: Id; threadId?: Id },
   ): Promise<Message>
   /** For the owner only, unless `forEveryone`; neither can be undone. */
   delete(chatId: Id, messageIds: Id[], options: { forEveryone: boolean }): Promise<void>

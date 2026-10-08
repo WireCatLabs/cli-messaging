@@ -31,6 +31,23 @@ export const topicsTools = (messenger: Messenger): Record<string, AnyTool> => ({
       return envelope(found, number, size)
     },
   }),
+  ...(messenger.topicShow
+    ? {
+        topics_show: tool({
+          title: "One forum topic",
+          description:
+            "One topic of a forum group: { id, title, closed, pinned, unreadCount, lastMessageAt, createdAt }. " +
+            "Reading changes nothing.",
+          input: v.object({
+            chat: chatOf(messenger),
+            topic: v.pipe(v.string(), v.minLength(1), v.description("the topic id, from topics_list")),
+          }),
+          annotations: { ...READ, idempotentHint: true },
+          online: (adapter, args, { guard }) =>
+            servicesFor(onlineDeps(messenger, adapter, guard)).topics.show(args.chat, args.topic),
+        }),
+      }
+    : {}),
 })
 
 export const topicWriteTools = (messenger: Messenger): Record<string, AnyTool> => ({

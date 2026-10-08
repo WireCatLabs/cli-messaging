@@ -687,6 +687,38 @@ describe("the shared read commands", () => {
     expect(journal.at(-1)).toMatchObject({ kind: "forward", outcome: "sent", chatId: "20", messageId: "50" })
   })
 
+  it("**forward into a forum topic of the --to chat**, checked there before the write; no --topic without topics", async () => {
+    const root = mkdtempSync(join(tmpdir(), "messenger-"))
+    const env = { CHAT_STATE_DIR: join(root, "state"), CHAT_CONFIG_DIR: join(root, "config") }
+    const steps: unknown[] = []
+    const forwarding: MessengerAdapter = {
+      ...fake,
+      resolve: async (reference) => (reference === "Zoe" ? { ...chat, id: "20", title: "Zoe" } : chat),
+      validateThread: async (chatId, threadId) => {
+        steps.push(["check", chatId, threadId])
+        if (threadId === "6") throw new CliError("permission_error", "that forum topic is closed")
+      },
+      forward: async (_from, _id, to, options) => {
+        steps.push(["forward", to, options.threadId])
+        return { ...message, id: "50", chatId: to }
+      },
+    }
+    const forward = (topic: string, own: Partial<Messenger> = { forwardTopic: true }) =>
+      call(["messages", "forward", "Book", "3", "--to", "Zoe", "--topic", topic], async () => forwarding, env, {}, own)
+
+    expect((await forward("5")).code).toBe(0)
+    expect((await forward("6")).code).not.toBe(0)
+    expect((await forward("5", {})).code).not.toBe(0)
+
+    expect(steps).toEqual([
+      ["check", "20", "5"],
+      ["forward", "20", "5"],
+      ["check", "20", "6"],
+    ])
+    const journal = new SendJournal(sendsPathFor(app, "default", env)).entries()
+    expect(journal.find((entry) => entry.outcome === "sent")).toMatchObject({ kind: "forward", threadId: "5" })
+  })
+
   it("**a forward repeated with its --send-id after an unknown outcome leaves one copy**", async () => {
     const root = mkdtempSync(join(tmpdir(), "messenger-"))
     const env = { CHAT_STATE_DIR: join(root, "state"), CHAT_CONFIG_DIR: join(root, "config") }
@@ -3678,6 +3710,30 @@ describe("the guard, account and mcp config commands", () => {
       { limit: 20, offset: 0, search: "pisos" },
     ])
     expect((await call(["topics", "list", "7"], async () => fake, env)).code).toBe(2)
+  })
+
+  it("**topics show** answers one forum topic, only where the messenger lists it", async () => {
+    const env = sandbox()
+    const topic = {
+      id: "4",
+      title: "Pisos",
+      closed: true,
+      pinned: false,
+      unreadCount: 0,
+      lastMessageAt: null,
+      createdAt: null,
+    }
+    const forum: MessengerAdapter = { ...fake, topic: async (_chat, topicId) => ({ ...topic, id: topicId }) }
+    const show = (argv: string[], adapter: MessengerAdapter, own: Partial<Messenger> = { topicShow: true }) =>
+      call(["topics", "show", ...argv], async () => adapter, env, {}, own)
+
+    const shown = await show(["7", "4", "--json"], forum)
+
+    expect(json(shown.stdout)).toEqual(topic)
+    expect((await show(["7", "4", "--offline"], forum)).code).toBe(2)
+    expect((await show(["7", " "], forum)).code).toBe(2)
+    expect((await show(["7", "4"], fake)).code).toBe(2)
+    expect((await show(["7", "4"], forum, {})).code).not.toBe(0)
   })
 
   it("refuses a --search under 3 characters and an unknown --kind, before connecting", async () => {

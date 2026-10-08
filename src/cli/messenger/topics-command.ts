@@ -38,6 +38,17 @@ export const topicsCommand = (messenger: Messenger): Command => {
     ).action(listed),
   )
 
+  if (messenger.topicShow)
+    topics
+      .command("show")
+      .description("one forum topic: its title, state and last activity")
+      .argument("<chat>", messenger.chatArgument)
+      .argument("<topic>", "the topic id, from `topics list`")
+      .action(async function (this: Command, chat: string, topic: string) {
+        const context = messengerContext(this, messenger)
+        context.renderer.result(await context.withServices((services) => services.topics.show(chat, topic)))
+      })
+
   annotate(topics.command("enable"), { mutates: true })
     .description("enable forum topics; only the owner, with an explicit upgrade for a basic group")
     .argument("<chat>", messenger.chatArgument)

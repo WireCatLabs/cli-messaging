@@ -11,6 +11,24 @@ export const messageActionTools = (messenger: Messenger): Record<string, AnyTool
   const chat = chatOf(messenger)
   const messages = (adapter: MessengerAdapter, guard: SendGuard) =>
     servicesFor(onlineDeps(messenger, adapter, guard)).messages
+  const forwardInput = {
+    chat: v.pipe(v.string(), v.minLength(1), v.description("the chat the message is in")),
+    message,
+    to: v.pipe(v.string(), v.minLength(1), v.description(`where it goes: ${messenger.chatArgument}`)),
+    silent: v.optional(v.pipe(v.boolean(), v.description("deliver without a notification"))),
+    send_as: v.optional(
+      v.pipe(
+        v.string(),
+        v.minLength(1),
+        v.description("an id from chats_send_as to post as; required where the chat posts as someone else by default"),
+      ),
+    ),
+    send_id: v.optional(v.pipe(v.string(), v.minLength(1), v.description("from an earlier outcome_unknown"))),
+    topic: v.optional(
+      v.pipe(v.string(), v.minLength(1), v.description("a forum topic id of the to chat, from topics_list")),
+    ),
+  }
+  if (!messenger.forwardTopic) delete (forwardInput as Partial<typeof forwardInput>).topic
   return {
     messages_edit: tool({
       title: "Edit a message",
@@ -43,22 +61,7 @@ export const messageActionTools = (messenger: Messenger): Record<string, AnyTool
         "Forward one message to another chat, where new people will read it. Only when the owner asked for this " +
         "message to go to this chat. On outcome_unknown, retry with the send_id it returns, never a new one: " +
         "a repeat without it is a second copy.",
-      input: v.object({
-        chat: v.pipe(v.string(), v.minLength(1), v.description("the chat the message is in")),
-        message,
-        to: v.pipe(v.string(), v.minLength(1), v.description(`where it goes: ${messenger.chatArgument}`)),
-        silent: v.optional(v.pipe(v.boolean(), v.description("deliver without a notification"))),
-        send_as: v.optional(
-          v.pipe(
-            v.string(),
-            v.minLength(1),
-            v.description(
-              "an id from chats_send_as to post as; required where the chat posts as someone else by default",
-            ),
-          ),
-        ),
-        send_id: v.optional(v.pipe(v.string(), v.minLength(1), v.description("from an earlier outcome_unknown"))),
-      }),
+      input: v.object(forwardInput),
       annotations: WRITE,
       permission: "forward",
       online: (adapter, args, { guard }) =>
@@ -69,6 +72,7 @@ export const messageActionTools = (messenger: Messenger): Record<string, AnyTool
           silent: args.silent === true,
           ...(args.send_id === undefined ? {} : { sendId: args.send_id }),
           ...(args.send_as === undefined ? {} : { sendAs: args.send_as }),
+          ...(args.topic === undefined ? {} : { threadId: args.topic }),
         }),
     }),
     messages_pin: tool({
