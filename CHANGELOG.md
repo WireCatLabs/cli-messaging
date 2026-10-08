@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.183.0 — 08.10.2026
+
 ### Added
 
 - The owner's own settings, guarded and journaled as account changes: `chats mute <chat> [--until <time>]` and
