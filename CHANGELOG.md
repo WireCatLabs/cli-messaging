@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.186.0 — 08.10.2026
+
 ### Added
 
 - `chats delete <chat>` and `chats clear <chat>` remove a chat or every message in it for this account only, behind
