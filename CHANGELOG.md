@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.182.0 — 08.10.2026
+
 ### Added
 
 - `MessageStore.knowledge` provides account-scoped source annotations, explicit person/task/entity labels,
