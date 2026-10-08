@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs"
 import { dirname, extname, join } from "node:path"
 import { fileURLToPath } from "node:url"
+import { type CellSpan, delimitedSpans } from "./csv-spans.js"
 import { documentKind, readDocument } from "./documents.js"
 import { decodeText } from "./encoding.js"
 import { MAX_FILE_BYTES, MAX_TEXT_CHARS } from "./limits.js"
@@ -14,7 +15,16 @@ export type Engine = "unpdf" | "mammoth" | "@napi-rs/canvas"
 export type LoadEngine = (name: Engine) => Promise<unknown>
 
 export type Extraction =
-  | { status: "extracted"; text: string; extractor: string; pages?: number; ocrPages?: number }
+  | {
+      status: "extracted"
+      text: string
+      extractor: string
+      pages?: number
+      ocrPages?: number
+      spans?: { page: number; start: number; end: number }[]
+      cells?: CellSpan[]
+      truncated?: boolean
+    }
   /** No text layer: a scan, a photo. An agent reads it and writes the text back. */
   | { status: "needs-agent"; extractor?: string }
   | { status: "unreadable"; extractor: string; error: string }
@@ -83,7 +93,10 @@ interface PdfDocument {
 
 interface Unpdf {
   getDocumentProxy(data: Uint8Array): Promise<PdfDocument>
-  extractText(pdf: PdfDocument, options: { mergePages: true }): Promise<{ text: string }>
+  extractText(
+    pdf: PdfDocument,
+    options: { mergePages: boolean },
+  ): Promise<{ text: string | string[]; totalPages?: number }>
 }
 
 const withEngine = async <T>(
@@ -118,6 +131,7 @@ export const extractText = async (
   load: LoadEngine,
   signal?: AbortSignal,
 ): Promise<Extraction> => {
+  if (bytes.byteLength > MAX_FILE_BYTES) return { status: "too-large" }
   const extension = extensionOf(hint)
   const kind = documentKind(hint)
   if (kind) return readDocument(bytes, kind, signal)
@@ -125,10 +139,25 @@ export const extractText = async (
     return withEngine<Unpdf>(load, "unpdf", async (unpdf, extractor) => {
       const pdf = await unpdf.getDocumentProxy(new Uint8Array(bytes))
       try {
-        const { text } = await unpdf.extractText(pdf, { mergePages: true })
+        const result = await unpdf.extractText(pdf, { mergePages: false })
+        const pages = Array.isArray(result.text) ? result.text : [result.text]
+        const text = pages.join("\n\n")
+        let at = 0
+        const spans = pages.map((page, index) => {
+          const span = { page: index + 1, start: at, end: at + page.length }
+          at += page.length + 2
+          return span
+        })
         return text.trim() === ""
           ? { status: "needs-agent", extractor }
-          : { status: "extracted", text: capped(text), extractor }
+          : {
+              status: "extracted",
+              text: capped(text),
+              extractor,
+              pages: result.totalPages ?? pages.length,
+              spans,
+              ...(text.length > MAX_TEXT_CHARS ? { truncated: true } : {}),
+            }
       } finally {
         await pdf.loadingTask.destroy()
       }
@@ -142,7 +171,16 @@ export const extractText = async (
         : { status: "extracted", text: capped(value), extractor }
     })
   }
-  if (PLAIN.has(extension) || hint.mime?.startsWith("text/") || hint.mime === "application/json") return plain(bytes)
+  if (PLAIN.has(extension) || hint.mime?.startsWith("text/") || hint.mime === "application/json") {
+    const result = plain(bytes)
+    if (result.status !== "extracted" || ![".csv", ".tsv"].includes(extension)) return result
+    try {
+      const spans = delimitedSpans(result.text, extension === ".csv" ? "," : "\t")
+      return { ...result, cells: spans.cells, ...(spans.truncated ? { truncated: true } : {}) }
+    } catch {
+      return { status: "unreadable", extractor: "plain", error: "malformed_delimited_text" }
+    }
+  }
   if (hint.kind === "photo" || hint.mime?.startsWith("image/") || IMAGES.has(extension))
     return { status: "needs-agent" }
   return { status: "unsupported" }

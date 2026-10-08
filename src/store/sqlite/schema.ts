@@ -656,6 +656,69 @@ export const annotations = sqliteTable(
   (table) => [index("annotations_by_target").on(table.accountPk, table.targetType, table.targetPk)],
 )
 
+export const knowledgeTargets = sqliteTable(
+  "knowledge_targets",
+  {
+    pk: integer("pk").primaryKey({ autoIncrement: true }),
+    accountPk: integer("account_pk")
+      .notNull()
+      .references(() => accounts.pk),
+    type: text("type").notNull(),
+    reference: text("reference").notNull(),
+    createdAt: integer("created_at").notNull(),
+  },
+  (table) => [uniqueIndex("knowledge_target_identity").on(table.accountPk, table.type, table.reference)],
+)
+
+export const knowledgeEntities = sqliteTable("knowledge_entities", {
+  uid: text("uid").primaryKey(),
+  accountPk: integer("account_pk")
+    .notNull()
+    .references(() => accounts.pk),
+  kind: text("kind").notNull(),
+  name: text("name").notNull(),
+  createdAt: integer("created_at").notNull(),
+})
+
+export const knowledgeRelations = sqliteTable(
+  "knowledge_relations",
+  {
+    uid: text("uid").primaryKey(),
+    accountPk: integer("account_pk")
+      .notNull()
+      .references(() => accounts.pk),
+    fromRef: text("from_ref").notNull(),
+    toRef: text("to_ref").notNull(),
+    kind: text("kind").notNull(),
+    role: text("role"),
+    evidence: text("evidence"),
+    confirmed: integer("confirmed").notNull().default(1),
+    provenance: text("provenance"),
+    createdAt: integer("created_at").notNull(),
+  },
+  (table) => [uniqueIndex("knowledge_relation_identity").on(table.accountPk, table.fromRef, table.toRef, table.kind)],
+)
+
+export const knowledgeReminders = sqliteTable(
+  "knowledge_reminders",
+  {
+    uid: text("uid").primaryKey(),
+    accountPk: integer("account_pk")
+      .notNull()
+      .references(() => accounts.pk),
+    taskId: text("task_id").notNull(),
+    dueAt: integer("due_at").notNull(),
+    timezone: text("timezone").notNull(),
+    state: text("state").notNull(),
+    revision: integer("revision").notNull().default(1),
+    leaseUntil: integer("lease_until"),
+    receipt: text("receipt"),
+    createdAt: integer("created_at").notNull(),
+    updatedAt: integer("updated_at").notNull(),
+  },
+  (table) => [index("knowledge_reminders_due").on(table.accountPk, table.state, table.dueAt)],
+)
+
 export const chatMetadata = sqliteTable("chat_metadata", {
   chatPk: integer("chat_pk")
     .primaryKey()

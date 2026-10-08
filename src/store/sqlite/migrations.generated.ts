@@ -234,5 +234,31 @@ export const GENERATED: { name: string; statements: string[] }[] = [
       "CREATE TRIGGER private_metadata_identity_delete BEFORE DELETE ON identities BEGIN\n  DELETE FROM contact_aliases WHERE identity_pk=old.pk;\n  DELETE FROM annotations WHERE target_type='contact' AND target_pk=old.pk;\nEND;",
       "CREATE TRIGGER private_metadata_account_delete BEFORE DELETE ON accounts BEGIN\n  DELETE FROM contact_aliases WHERE account_pk=old.pk;\n  DELETE FROM annotations WHERE account_pk=old.pk;\nEND;"
     ]
+  },
+  {
+    "name": "20261007221350_version-23-knowledge",
+    "statements": [
+      "CREATE TABLE `knowledge_entities` (\n\t`uid` text PRIMARY KEY,\n\t`account_pk` integer NOT NULL,\n\t`kind` text NOT NULL,\n\t`name` text NOT NULL,\n\t`created_at` integer NOT NULL,\n\tCONSTRAINT `fk_knowledge_entities_account_pk_accounts_pk_fk` FOREIGN KEY (`account_pk`) REFERENCES `accounts`(`pk`)\n);",
+      "CREATE TABLE `knowledge_relations` (\n\t`uid` text PRIMARY KEY,\n\t`account_pk` integer NOT NULL,\n\t`from_ref` text NOT NULL,\n\t`to_ref` text NOT NULL,\n\t`kind` text NOT NULL,\n\t`role` text,\n\t`evidence` text,\n\t`created_at` integer NOT NULL,\n\tCONSTRAINT `fk_knowledge_relations_account_pk_accounts_pk_fk` FOREIGN KEY (`account_pk`) REFERENCES `accounts`(`pk`)\n);",
+      "CREATE TABLE `knowledge_reminders` (\n\t`uid` text PRIMARY KEY,\n\t`account_pk` integer NOT NULL,\n\t`task_id` text NOT NULL,\n\t`due_at` integer NOT NULL,\n\t`timezone` text NOT NULL,\n\t`state` text NOT NULL,\n\t`revision` integer DEFAULT 1 NOT NULL,\n\t`lease_until` integer,\n\t`receipt` text,\n\t`created_at` integer NOT NULL,\n\t`updated_at` integer NOT NULL,\n\tCONSTRAINT `fk_knowledge_reminders_account_pk_accounts_pk_fk` FOREIGN KEY (`account_pk`) REFERENCES `accounts`(`pk`)\n);",
+      "CREATE TABLE `knowledge_targets` (\n\t`pk` integer PRIMARY KEY AUTOINCREMENT,\n\t`account_pk` integer NOT NULL,\n\t`type` text NOT NULL,\n\t`reference` text NOT NULL,\n\t`created_at` integer NOT NULL,\n\tCONSTRAINT `fk_knowledge_targets_account_pk_accounts_pk_fk` FOREIGN KEY (`account_pk`) REFERENCES `accounts`(`pk`)\n);",
+      "CREATE UNIQUE INDEX `knowledge_relation_identity` ON `knowledge_relations` (`account_pk`,`from_ref`,`to_ref`,`kind`);",
+      "CREATE INDEX `knowledge_reminders_due` ON `knowledge_reminders` (`account_pk`,`state`,`due_at`);",
+      "CREATE UNIQUE INDEX `knowledge_target_identity` ON `knowledge_targets` (`account_pk`,`type`,`reference`);"
+    ]
+  },
+  {
+    "name": "20261007221537_version-23-knowledge-cleanup",
+    "statements": [
+      "-- Custom SQL migration file, put your code below! --\nCREATE TRIGGER knowledge_account_delete BEFORE DELETE ON accounts BEGIN\n  DELETE FROM tags WHERE taggable_type='knowledge' AND taggable_pk IN (SELECT pk FROM knowledge_targets WHERE account_pk=old.pk);\n  DELETE FROM annotations WHERE target_type='source' AND account_pk=old.pk;\n  DELETE FROM knowledge_relations WHERE account_pk=old.pk;\n  DELETE FROM knowledge_reminders WHERE account_pk=old.pk;\n  DELETE FROM knowledge_entities WHERE account_pk=old.pk;\n  DELETE FROM knowledge_targets WHERE account_pk=old.pk;\nEND;",
+      "CREATE TRIGGER knowledge_task_closed AFTER UPDATE OF state ON tasks WHEN new.state<>'open' BEGIN\n  UPDATE knowledge_reminders SET state='cancelled',receipt=NULL,lease_until=NULL,revision=revision+1\n  WHERE task_id=new.id AND state IN ('pending','leased');\nEND;"
+    ]
+  },
+  {
+    "name": "20261007225410_version-23-relation-proposals",
+    "statements": [
+      "ALTER TABLE `knowledge_relations` ADD `confirmed` integer DEFAULT 1 NOT NULL;",
+      "ALTER TABLE `knowledge_relations` ADD `provenance` text;"
+    ]
   }
 ]

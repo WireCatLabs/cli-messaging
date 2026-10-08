@@ -1,3 +1,4 @@
+import ExcelJS from "exceljs"
 import { describe, expect, it } from "vitest"
 import { docx, pdf, zip } from "../testing/files.js"
 import { type Engine, engineHint, extractText, importEngine, type LoadEngine } from "./extract.js"
@@ -18,6 +19,22 @@ const without =
   }
 
 describe("reading the text layer of a file", () => {
+  it("preserves spreadsheet cell addresses and PDF page spans", async () => {
+    const workbook = new ExcelJS.Workbook()
+    const sheet = workbook.addWorksheet("Synthetic Budget")
+    sheet.getCell("A1").value = "Synthetic invoice"
+    sheet.getCell("B2").value = 42
+    const bytes = new Uint8Array(await workbook.xlsx.writeBuffer())
+    const found = await extractText(bytes, hint("budget.xlsx"), importEngine)
+    expect(found).toMatchObject({
+      status: "extracted",
+      text: expect.stringContaining("A1: Synthetic invoice"),
+    })
+    const pages = await extractText(pdf("Synthetic invoice"), hint("invoice.pdf"), importEngine)
+    expect(pages.status === "extracted" && pages.spans).toEqual([
+      { page: 1, start: 0, end: "Synthetic invoice".length },
+    ])
+  })
   it("**reads plain text in UTF-8, with or without a BOM, Cyrillic and Latin alike**", async () => {
     expect(await extractText(text("счёт invoice 42"), hint("notes.txt"), importEngine)).toEqual({
       status: "extracted",

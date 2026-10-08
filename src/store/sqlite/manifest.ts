@@ -41,6 +41,9 @@ export const MANIFEST: ManifestEntry[] = [
   { name: "20261007193040_version-22-tag-provenance", version: 22, minCompatible: 6 },
   { name: "20261007193701_version-22-alias-folding", version: 22, minCompatible: 6 },
   { name: "20261007194652_version-22-metadata-cleanup", version: 22, minCompatible: 6 },
+  { name: "20261007221350_version-23-knowledge", version: 23, minCompatible: 6 },
+  { name: "20261007221537_version-23-knowledge-cleanup", version: 23, minCompatible: 6 },
+  { name: "20261007225410_version-23-relation-proposals", version: 23, minCompatible: 6 },
 ]
 
 export const generatedMigrations = (

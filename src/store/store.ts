@@ -41,6 +41,7 @@ import * as completeness from "./sqlite/completeness.js"
 import { type ConversationEligibility, conversationEligibility } from "./sqlite/conversation-eligibility.js"
 import * as conversationQueries from "./sqlite/conversations.js"
 import * as identities from "./sqlite/identities.js"
+import { type KnowledgeStore, knowledgeStoreOver } from "./sqlite/knowledge.js"
 import { findRegex } from "./sqlite/legacy-regex.js"
 import type { QueryGroup, QueryGrouping } from "./sqlite/lucene.js"
 import * as lucene from "./sqlite/lucene.js"
@@ -515,6 +516,7 @@ export interface MessageStore {
   clearSearchHistory(): Promise<number>
   /** Open tasks waiting on the owner, for `@leemour/cli-tasks`'s service. */
   readonly tasks: TaskStore
+  readonly knowledge: KnowledgeStore
   close(): Promise<void>
 }
 
@@ -1389,6 +1391,7 @@ const storeOver = (context: StoreContext): MessageStore => {
     },
 
     tasks: taskStoreOver(database),
+    knowledge: knowledgeStoreOver(context),
 
     close: async () => database.close(),
   }
