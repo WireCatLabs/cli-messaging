@@ -449,6 +449,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--online` |  | also log in once, read one chat and start the MCP server; sends nothing. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | `doctor` |
 | `--only-admins-add` | `<on\|off>` | only admins may add members |  | `chats update` |
 | `--only-admins-call` | `<on\|off>` | only admins may start a call |  | `chats update` (max-only) |
+| `--only-missing` |  | only chats with no metadata yet; without --chat, every stored group/channel |  | `metadata refresh` (planned) |
 | `--only-owner-edits-info` | `<on\|off>` | only the owner may change the name and photo |  | `chats update` (max-only) |
 | `--order` | `<recent\|name>` | newest conversation first, or alphabetical |  | `contacts list` |
 | `--others` |  | every session but this one. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | `account sessions end` |

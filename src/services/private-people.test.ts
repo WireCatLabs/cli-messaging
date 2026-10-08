@@ -285,6 +285,39 @@ describe("cached metadata and automatic tags", () => {
     expect(await f.store.chatMetadata(key, "7")).toEqual(before)
   })
 
+  it("**refreshes only chats with no metadata yet**: every stored group and channel, or the ones named", async () => {
+    const f = await setup()
+    const channel = { kind: "channel" as const, unreadCount: 0, lastMessageAt: null, participantsCount: 9 }
+    await f.store.saveChats(key, [
+      { ...channel, id: "30", title: "Bare" },
+      { ...channel, id: "31", title: "Described" },
+    ])
+    await f.store.saveChatMetadata(key, { chatId: "31", title: "Described", username: null, description: "x" })
+
+    const all = await f.services.metadata.missing()
+    expect(all).toContain("30")
+    expect(all).not.toContain("31")
+    expect(all).not.toContain("10")
+    expect(await f.services.metadata.missing(["31", "30"])).toEqual(["30"])
+
+    const named = await f.call(
+      "--offline",
+      "metadata",
+      "refresh",
+      "--chat",
+      "31",
+      "--chat",
+      "30",
+      "--only-missing",
+      "--json",
+    )
+    expect(named.result.items.map((item: { chatId: string }) => item.chatId)).toEqual(["30"])
+    const every = await f.call("--offline", "metadata", "refresh", "--only-missing", "--limit", "1", "--json")
+    expect(every.result).toMatchObject({ items: [{ error: { code: "validation_error" } }], hasMore: all.length > 1 })
+    const neither = await f.call("metadata", "refresh", "--json")
+    expect(neither.stderr).toContain("--only-missing")
+  })
+
   it("bounds work, separates account metadata and keeps dry-run and failed refresh unchanged", async () => {
     const f = await setup()
     expect((await f.services.metadata.get("7")).metadata).toBeNull()

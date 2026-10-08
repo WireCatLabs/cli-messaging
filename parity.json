@@ -622,6 +622,9 @@
       "value": "<on|off>",
       "meaning": "only admins may start a call"
     },
+    "--only-missing": {
+      "meaning": "only chats with no metadata yet; without --chat, every stored group/channel"
+    },
     "--only-owner-edits-info": {
       "value": "<on|off>",
       "meaning": "only the owner may change the name and photo"
@@ -2864,7 +2867,14 @@
       "in": "all",
       "options": {
         "--chat": "all",
-        "--limit": "all"
+        "--limit": "all",
+        "--only-missing": {
+          "in": [],
+          "planned": {
+            "max": "each CLI's next cli-messaging bump",
+            "tg": "each CLI's next cli-messaging bump"
+          }
+        }
       }
     },
     "models": {
