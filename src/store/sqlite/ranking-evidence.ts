@@ -1,9 +1,11 @@
 import { createHash } from "node:crypto"
 import { CliError } from "@leemour/cli-core"
+import type { CounterState } from "../../domain/counters.js"
 import { formatLocator } from "../../domain/locator.js"
 import type { QueryExecution } from "../../search/lucene/resolved.js"
 import type { SqlValue } from "../driver.js"
 import type { AccountKey, StoredHit } from "../store.js"
+import { counterStates } from "./counters.js"
 import type { StoreContext } from "./open.js"
 import { type RankingRequest, rankingCounter, rankQuery } from "./rankings.js"
 import { hitsByPk } from "./search.js"
@@ -23,6 +25,7 @@ export interface RankingEvidenceItem {
   message: StoredHit
   related?: StoredHit
   contribution: number | null
+  counters?: CounterState[]
 }
 export interface RankedEvidence {
   items: RankingEvidenceItem[]
@@ -99,7 +102,7 @@ export const rankingEvidence = (
       source = `SELECT m.pk,NULL AS related,${rankingCounter("m", "reactions", true)} AS contribution FROM messages m WHERE m.pk IN (SELECT pk FROM target_messages)`
     else
       source = `SELECT m.pk,NULL AS related,${rankingCounter("m", component)} AS contribution FROM messages m WHERE m.pk IN (SELECT pk FROM target_messages)`
-    const rows = `WITH ${roots},evidence AS (${source}) SELECT e.pk,e.related,e.contribution,m.text,m.reactions,m.provider_metadata,m.edited_at,m.sent_at,ac.provider,ac.native_id AS account,c.native_id AS chat,m.native_id AS id,q.text AS related_text,q.reactions AS related_reactions,q.provider_metadata AS related_metadata,q.edited_at AS related_edited_at,
+    const rows = `WITH ${roots},evidence AS (${source}) SELECT e.pk,e.related,e.contribution,m.text,m.reactions,m.provider_metadata,m.edited_at,m.sent_at,ac.provider,ac.native_id AS account,c.native_id AS chat,m.native_id AS id,(SELECT json_group_array(json_object('counter',counter,'value',value,'at',observed_at,'source',source)) FROM message_counter_observations WHERE message_pk=m.pk) AS counter_observations,(SELECT json_group_array(json_object('counter',counter,'value',value,'at',observed_at,'source',source)) FROM message_counter_observations WHERE message_pk=q.pk) AS related_counter_observations,q.text AS related_text,q.reactions AS related_reactions,q.provider_metadata AS related_metadata,q.edited_at AS related_edited_at,
       (SELECT json_group_array(json_object('kind',att.kind,'name',att.name,'mime',att.mime,'size',att.size,'url',att.url,'ref',att.provider_ref,'local',att.local_path)) FROM attachments att WHERE att.message_pk=m.pk) AS files,
       (SELECT json_group_array(json_object('kind',att.kind,'name',att.name,'mime',att.mime,'size',att.size,'url',att.url,'ref',att.provider_ref,'local',att.local_path)) FROM attachments att WHERE att.message_pk=q.pk) AS related_files
       FROM evidence e JOIN messages m ON m.pk=e.pk JOIN chats c ON c.pk=m.chat_pk JOIN accounts ac ON ac.pk=m.account_pk LEFT JOIN messages q ON q.pk=e.related`
@@ -181,7 +184,12 @@ export const rankingEvidence = (
       if (!message) throw new Error("evidence message disappeared inside its read snapshot")
       const related = row.related == null ? undefined : hitsByPk(context, [Number(row.related)])[0]
       const value = typeof row.contribution === "number" && Number.isFinite(row.contribution) ? row.contribution : null
-      const item = { message, ...(related ? { related } : {}), contribution: value }
+      const item = {
+        message,
+        ...(related ? { related } : {}),
+        contribution: value,
+        counters: counterStates(context, Number(row.pk), context.now(), 86_400_000),
+      }
       const added = Buffer.byteLength(JSON.stringify(item)) + (items.length ? 1 : 0)
       if (bytes + added > EVIDENCE_BYTES) break
       bytes += added

@@ -7,8 +7,10 @@ import {
   type RankingTarget,
   rankingOptions,
 } from "../../domain/rankings-options.js"
+import { assertRetentionEvidenceRead } from "../../sends/permissions.js"
 import { type AdminEvidenceFound, isAdminSelection } from "../../services/admin-statistics.js"
 import { RANKING_SELECTION_BYTES } from "../../services/rankings-selection.js"
+import { isRetentionSelection, type RetentionService } from "../../services/retention.js"
 import type { SearchParams } from "../../services/searches.js"
 import type { RankedEvidence } from "../../store/store.js"
 import { environmentOf } from "../context.js"
@@ -28,7 +30,7 @@ const selectionOf = (value: string): unknown => {
 export const rankingsTopCommand = (messenger: Messenger, target: RankingTarget): Command => {
   const command = syncOptions(new Command("top"))
     .description(
-      `rank ${target === "messages" ? "stored messages" : "the human authors of stored messages"} by a measure or explainable score; counters are snapshots and freshness is unknown`,
+      `rank ${target === "messages" ? "stored messages" : "the human authors of stored messages"} by a measure or explainable score; counters are snapshots with per-field observation freshness`,
     )
     .argument("[query...]", "a strict Lucene query; none selects every stored message")
     .addOption(
@@ -137,18 +139,21 @@ export const rankingEvidenceCommand = (messenger: Messenger, target: RankingTarg
     .action(async function (this: Command, reference: string) {
       const context = messengerContext(this, messenger)
       const options = this.opts<{ selection: unknown; component: string; limit?: number; cursor?: string }>()
-      const found = await context.withServices<AdminEvidenceFound | RankedEvidence>((services) =>
-        (isAdminSelection(options.selection) ? services.adminStatistics : services.rankings).evidence(
-          target,
-          reference,
-          options.selection,
-          {
-            component: options.component,
-            limit: options.limit ?? 20,
-            ...(options.cursor ? { cursor: options.cursor } : {}),
-            signal: environmentOf(this).commandSignal ?? environmentOf(this).signal,
-          },
-        ),
+      if (isRetentionSelection(options.selection)) assertRetentionEvidenceRead(context.settings.permissions)
+      const found = await context.withServices<
+        AdminEvidenceFound | RankedEvidence | Awaited<ReturnType<RetentionService["evidence"]>>
+      >((services) =>
+        (isRetentionSelection(options.selection)
+          ? services.retention
+          : isAdminSelection(options.selection)
+            ? services.adminStatistics
+            : services.rankings
+        ).evidence(target, reference, options.selection, {
+          component: options.component,
+          limit: options.limit ?? 20,
+          ...(options.cursor ? { cursor: options.cursor } : {}),
+          signal: environmentOf(this).commandSignal ?? environmentOf(this).signal,
+        }),
       )
       if (context.format === "jsonl") context.renderer.stream(found.items)
       else context.renderer.result(found)

@@ -1,4 +1,5 @@
 import { CliError } from "@leemour/cli-core"
+import type { CounterState } from "../../domain/counters.js"
 import {
   RANKING_GRAPH_LIMITS,
   type RankingGraphNode,
@@ -17,6 +18,7 @@ import { rankingContextRange } from "../../domain/rankings-range.js"
 import type { DateRange } from "../../search/lucene/dates.js"
 import type { QueryExecution } from "../../search/lucene/resolved.js"
 import type { SqlValue } from "../driver.js"
+import { counterStates } from "./counters.js"
 import { withQuerySelection } from "./lucene.js"
 import type { StoreContext } from "./open.js"
 
@@ -40,6 +42,7 @@ export interface RankedStoreRow {
   knownReactions: number
   unknownReactions: number
   score: ScoreComponents | null
+  counterObservations?: CounterState[]
   graphComplete?: boolean
 }
 export interface RankedStoreFound {
@@ -403,6 +406,9 @@ export const rankQuery = (
         const components = Object.fromEntries(componentNames.map((name) => [name, finite(row[name])]))
         const score = options.weights ? rankingScore(components, maxima, options.weights) : null
         return {
+          ...(row.pk == null
+            ? {}
+            : { counterObservations: counterStates(context, Number(row.pk), context.now(), 86_400_000) }),
           provider: String(row.provider),
           account: String(row.account),
           chatId: row.chat == null ? null : String(row.chat),

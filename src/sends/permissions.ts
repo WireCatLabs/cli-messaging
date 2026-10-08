@@ -264,6 +264,7 @@ const NAMED_WRITE_KEYS = [
   "store.gaps.repair",
   "messages.sync-first",
   "messages.server-search",
+  "stats.messages.counters.refresh",
   "stats.messages.show.sync-first",
   "stats.messages.top.sync-first",
   "stats.contacts.top.sync-first",
@@ -427,4 +428,11 @@ export const permissionOverrides = (entries: readonly string[] = []): Record<Per
     levels[key] = level as Level
   }
   return levels
+}
+
+export const assertRetentionEvidenceRead = (permissions: Readonly<Record<string, Level>>): void => {
+  for (const permission of ["stats.chats.retention", "chats"]) {
+    if (levelFor(permissions, permission).level === "deny")
+      throw new CliError("permission_error", `profile denies ${permission}`, { permission })
+  }
 }

@@ -315,6 +315,7 @@ interface Harness {
   skill?: URL
   history?: Messenger["history"]
   pollQuiz?: boolean
+  counterFields?: Messenger["counterFields"]
   serverSearch?: boolean
   /** Another server's files, to read what it stored. */
   root?: string
@@ -341,6 +342,7 @@ const connect = async (telegram: Scripted = scripted(), options: Partial<ServerO
     history,
     serverSearch,
     pollQuiz,
+    counterFields,
     root: _root,
     http,
     permission = [],
@@ -361,6 +363,7 @@ const connect = async (telegram: Scripted = scripted(), options: Partial<ServerO
     ...(history ? { history } : {}),
     ...(serverSearch ? { serverSearch } : {}),
     ...(pollQuiz ? { pollQuiz } : {}),
+    ...(counterFields ? { counterFields } : {}),
   }
   const streams = captureStreams()
   let made: ReturnType<typeof createServer> | undefined
@@ -522,6 +525,38 @@ describe("the MCP server", () => {
     }
     expect((await raw.listTools()).tools).toHaveLength(3)
     expect(connectSpy).not.toHaveBeenCalled()
+  })
+
+  it("runs retention and counter preview/refresh through the three-tool frontend", async () => {
+    const root = await filledRoot()
+    const fetchCounters = vi.fn(async () => ({
+      views: { value: 21, observedAt: new Date().toISOString(), source: "remote_fetch" as const },
+    }))
+    const backend = scripted({ fetchCounters })
+    const { call, raw } = await connect(backend, { root, counterFields: ["views"] })
+    const retention = await call("chat_stats_chats_retention", { chat: "7", checkpoints: "1d,7d", within: "7d" })
+    expect(retention.isError, JSON.stringify(retention.body)).toBe(false)
+    expect(retention.body.quality).toMatchObject({ membership: "observed_checkpoints", continuousSurvival: false })
+    const shown = await call("chat_stats_messages_counters_show", { chat: "7", counters: "views", limit: 1 })
+    expect(shown.isError, JSON.stringify(shown.body)).toBe(false)
+    const preview = await call("chat_stats_messages_counters_refresh", {
+      selection: shown.body.selection,
+      counters: "views",
+      dry_run: true,
+      limit: 1,
+    })
+    expect(preview.isError, JSON.stringify(preview.body)).toBe(false)
+    expect(preview.body).toMatchObject({ dryRun: true, supported: ["views"] })
+    expect(fetchCounters).not.toHaveBeenCalled()
+    const refreshed = await call("chat_stats_messages_counters_refresh", {
+      selection: shown.body.selection,
+      counters: "views",
+      limit: 1,
+    })
+    expect(refreshed.isError, JSON.stringify(refreshed.body)).toBe(false)
+    expect(refreshed.body).toMatchObject({ complete: true, items: [{ updated: ["views"] }] })
+    expect(fetchCounters).toHaveBeenCalledOnce()
+    expect((await raw.listTools()).tools).toHaveLength(3)
   })
 
   it("refreshes local search and stats over a held session without marking read", async () => {
@@ -703,10 +738,12 @@ describe("the MCP server", () => {
       "chat_searches_list",
       "chat_stats_charts",
       "chat_stats_chats_newcomers",
+      "chat_stats_chats_retention",
       "chat_stats_chats_show",
       "chat_stats_contacts_evidence",
       "chat_stats_contacts_responses",
       "chat_stats_contacts_top",
+      "chat_stats_messages_counters_show",
       "chat_stats_messages_discussion",
       "chat_stats_messages_evidence",
       "chat_stats_messages_show",

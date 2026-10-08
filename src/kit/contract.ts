@@ -38,6 +38,7 @@ const NO_SERVER_READS = { skipped: "the adapter has no server reads (chats, hist
 
 /** Every method of the optional groups, which `capability` hands over or refuses. */
 export const OPTIONAL_METHODS = [
+  "fetchCounters",
   ...SERVER_READS,
   "historyAfter",
   "historyBefore",
@@ -362,7 +363,19 @@ export const contractCases = ({
           const time = Date.parse(seed.messages[0]?.timestamp ?? "")
           await adapter.historyAfter?.(seed.dialog, { limit: 5, after: { time } })
           await adapter.historyBefore?.(seed.dialog, { limit: 5, time: Date.now() })
-          assert.deepEqual(await look(), before)
+          const stable = (value: unknown): unknown =>
+            JSON.parse(
+              JSON.stringify(value, (key, field: unknown) => {
+                if (key !== "counterObservations" || field === null || typeof field !== "object") return field
+                return Object.fromEntries(
+                  Object.entries(field).map(([counter, observation]) => {
+                    const { observedAt: _time, ...facts } = observation as Record<string, unknown>
+                    return [counter, facts]
+                  }),
+                )
+              }),
+            )
+          assert.deepEqual(stable(await look()), stable(before))
         }),
       ],
       [

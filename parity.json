@@ -3360,11 +3360,7 @@
       "reason": "MAX has no statistics request of its own for a chat"
     },
     "stats chats retention": {
-      "in": [],
-      "planned": {
-        "max": "Retention/freshness adoption",
-        "tg": "Retention/freshness adoption"
-      },
+      "in": "all",
       "options": {
         "--by": "all",
         "--checkpoints": "all",
@@ -3437,21 +3433,14 @@
       "in": "all"
     },
     "stats messages counters": {
-      "in": [],
-      "planned": {
-        "max": "Retention/freshness adoption",
-        "tg": "Retention/freshness adoption"
-      }
+      "in": "all"
     },
     "stats messages counters refresh": {
-      "in": [],
-      "planned": {
-        "max": "Retention/freshness adoption",
-        "tg": "Retention/freshness adoption"
-      },
+      "in": "all",
       "options": {
         "--chat": "all",
         "--counters": "all",
+        "--dry-run": "all",
         "--exact": "all",
         "--limit": "all",
         "--max-messages": "all",
@@ -3462,17 +3451,14 @@
       }
     },
     "stats messages counters show": {
-      "in": [],
-      "planned": {
-        "max": "Retention/freshness adoption",
-        "tg": "Retention/freshness adoption"
-      },
+      "in": "all",
       "options": {
         "--chat": "all",
         "--counters": "all",
         "--exact": "all",
         "--limit": "all",
         "--max-age": "all",
+        "--selection": "all",
         "--source": "all",
         "--timezone": "all"
       }

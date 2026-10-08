@@ -359,7 +359,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--dims` | `<n>` | remote: the vector size — needed with --base-url; shortens an OpenAI model's |  | `conversations embed`, `conversations embed clear`, `conversations embed status`, `conversations related`, `conversations search`, `conversations status` |
 | `--do` | `<actions>` | actions: reply, task, or both, comma-separated |  | `replies edit` |
 | `--download` |  | first save, from the messenger, the files no download saved yet |  | `attachments extract` |
-| `--dry-run` |  | judge and plan; do nothing. **A command-specific dry run keeps its richer plan; otherwise the shared shell previews arguments and permissions without running the action. Targets remain unresolved unless that command provides a preview.** |  | every command, `bot chats moderate`, `chats moderate` (planned), `config migrate`, `store repair`, `tags auto` |
+| `--dry-run` |  | judge and plan; do nothing. **A command-specific dry run keeps its richer plan; otherwise the shared shell previews arguments and permissions without running the action. Targets remain unresolved unless that command provides a preview.** |  | every command, `bot chats moderate`, `chats moderate` (planned), `config migrate`, `stats messages counters refresh`, `store repair`, `tags auto` |
 | `--emoji` | `<emoji>` | the folder's icon |  | `chats folders create` (planned), `chats folders update` (planned) |
 | `--encrypt` |  | compress and encrypt with a password, typed at a hidden prompt or piped on stdin; never kept |  | `store backup`, `store export` |
 | `--estimate` |  | only say what the fetch would cost, from this machine's copy; nothing is sent. **max's own copy is worded differently until T6 moves the command onto the shared one (e13)** |  | `store fetch` |
@@ -496,7 +496,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--search` | `<text>` | only chats whose name contains this; at least 3 characters |  | `chats list`, `contacts list` |
 | `--search-notes` | `<text>` | only people whose private notes contain this text |  | `contacts list` |
 | `--secret-stdin` |  | a secret MAX sends back in X-Max-Bot-Api-Secret — asked for, or read from a pipe |  | `bot webhooks set` |
-| `--selection` | `<json>` | the versioned resolved ranking selection returned by drilldown; authorisation is checked again |  | `searches create`, `stats contacts evidence`, `stats messages counters refresh`, `stats messages evidence` |
+| `--selection` | `<json>` | the versioned resolved ranking selection returned by drilldown; authorisation is checked again |  | `searches create`, `stats contacts evidence`, `stats messages counters refresh`, `stats messages counters show`, `stats messages evidence` |
 | `--send-as` | `<id>` | send as one of the identities `chats send-as` lists for the chat; required where the chat posts as someone else by default, refused where the messenger has none |  | `messages forward`, `messages send`, `polls create` |
 | `--send-id` | `<id>` | identify a send or creation attempt; message/poll retries reuse it, while an unknown topic creation must never be repeated |  | `messages forward`, `messages send`, `polls create`, `topics create` (tg-only) |
 | `--serve` |  | start `serve` in the background if it is not running (the default) |  | every command (planned) |

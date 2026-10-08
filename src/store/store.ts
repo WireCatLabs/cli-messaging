@@ -6,6 +6,7 @@ import type { TextRange } from "../conversations/chunks.js"
 import type { Link, LinkInput } from "../conversations/link.js"
 import type { DownloadedFile } from "../domain/attachments.js"
 import type { ChannelTagMatch } from "../domain/channel-tags.js"
+import type { CounterObservations, CounterState } from "../domain/counters.js"
 import type {
   Chat,
   ChatKind,
@@ -20,6 +21,7 @@ import type {
   Reactions,
   WindowedMessage,
 } from "../domain/models.js"
+import type { RetentionOptions } from "../domain/retention.js"
 import type { PeopleLookup } from "../resolve.js"
 import type { QueryExecution } from "../search/lucene/resolved.js"
 import type { Stemmers } from "../search/stem.js"
@@ -40,6 +42,7 @@ import type { ChatCompleteness } from "./sqlite/completeness.js"
 import * as completeness from "./sqlite/completeness.js"
 import { type ConversationEligibility, conversationEligibility } from "./sqlite/conversation-eligibility.js"
 import * as conversationQueries from "./sqlite/conversations.js"
+import { applyCounterObservations, type CounterTarget, counterStates, counterTargets } from "./sqlite/counters.js"
 import * as identities from "./sqlite/identities.js"
 import { type KnowledgeStore, knowledgeStoreOver } from "./sqlite/knowledge.js"
 import { findRegex } from "./sqlite/legacy-regex.js"
@@ -54,6 +57,7 @@ import * as ranges from "./sqlite/ranges.js"
 import { type RankedEvidence, type RankingEvidenceRequest, rankingEvidence } from "./sqlite/ranking-evidence.js"
 import { type RankedStoreFound, type RankingRequest, rankQuery } from "./sqlite/rankings.js"
 import * as reads from "./sqlite/reads.js"
+import { type RetentionResult, retentionQuery } from "./sqlite/retention.js"
 import type {
   MemberCount,
   MemberStay,
@@ -403,6 +407,12 @@ export interface MessageStore {
    */
   rankingDiscussionChats?(account: AccountKey, chatId: string): Promise<string[]>
   rankingEvidence?(execution: QueryExecution, request: RankingEvidenceRequest): Promise<RankedEvidence>
+  retention?(
+    key: AccountKey,
+    chatId: Id,
+    options: RetentionOptions,
+    evidence?: { cohort: string; cursor?: string },
+  ): Promise<RetentionResult>
   adminStatisticsQuery?(execution: QueryExecution, request: AdminStoreRequest): Promise<AdminStoreResult>
   rankQuery?(execution: QueryExecution, request: RankingRequest): Promise<RankedStoreFound>
   matchQuery?(execution: QueryExecution): Promise<Page<ScoredHit>>
@@ -467,7 +477,29 @@ export interface MessageStore {
   /** Messages of the account that name this person, newest first. */
   mentioning(key: AccountKey, person: { id: Id; username: string | null }, limit: number): Promise<Page<StoredHit>>
   /** A message's reactions as they are now; answers whether the message is held at all. */
-  saveReactions(key: AccountKey, chatId: Id, messageId: Id, reactions: Reactions): Promise<boolean>
+  saveReactions(
+    key: AccountKey,
+    chatId: Id,
+    messageId: Id,
+    reactions: Reactions,
+    options?: { observation?: CounterObservations["reactions"] },
+  ): Promise<boolean>
+  counterTargets?(
+    execution: QueryExecution,
+    options: { now: number; maxAge: number },
+  ): Promise<{ items: CounterTarget[]; hasMore: boolean }>
+  counterStates?(
+    key: AccountKey,
+    chatId: Id,
+    messageId: Id,
+    options: { now: number; maxAge: number },
+  ): Promise<CounterState[]>
+  updateCounterObservations?(
+    key: AccountKey,
+    chatId: Id,
+    messageId: Id,
+    observations: CounterObservations,
+  ): Promise<number>
   /**
    * Records that every message from `from` to `to` (inclusive, by ordering key) is held, merging it
    * with the stretches it overlaps or touches. Answers the merged stretch.
@@ -1227,6 +1259,21 @@ const storeOver = (context: StoreContext): MessageStore => {
       return rows.map(({ id }) => String(id))
     },
     rankingEvidence: async (execution, request) => rankingEvidence(context, execution, request),
+    retention: async (key, chatId, options, evidence) => {
+      const accountKey = findAccountPk(key)
+      const chatKey = accountKey === undefined ? undefined : findChatPk(accountKey, chatId)
+      if (accountKey === undefined || chatKey === undefined)
+        throw new CliError("validation_error", "retention needs a stored chat and membership observations")
+      context.database.exec("BEGIN")
+      try {
+        const result = retentionQuery(context, accountKey, chatKey, chatId, options, evidence)
+        context.database.exec("COMMIT")
+        return result
+      } catch (error) {
+        context.database.exec("ROLLBACK")
+        throw error
+      }
+    },
     adminStatisticsQuery: async (execution, request) => adminStatisticsQuery(context, execution, request),
     rankQuery: async (execution, request) => rankQuery(context, execution, request),
     matchQuery: async (execution) => lucene.matchQuery(context, execution),
@@ -1293,10 +1340,41 @@ const storeOver = (context: StoreContext): MessageStore => {
 
     people: async (provider, options = {}) => identities.people(context, provider, options),
 
-    saveReactions: async (key, chatId, messageId, reactions) => {
+    counterTargets: async (execution, options) => counterTargets(context, execution, options),
+    counterStates: async (key, chatId, messageId, options) => {
+      const row = database
+        .prepare(
+          "SELECT m.pk FROM messages m JOIN chats c ON c.pk=m.chat_pk JOIN accounts ac ON ac.pk=m.account_pk WHERE ac.provider=? AND ac.native_id=? AND c.native_id=? AND m.native_id=? AND m.deleted_at IS NULL",
+        )
+        .get(key.provider, key.account, chatId, messageId)
+      return row ? counterStates(context, Number(row.pk), options.now, options.maxAge) : []
+    },
+    updateCounterObservations: async (key, chatId, messageId, observations) => {
+      let updated = 0
+      inTransaction(() => {
+        const row = database
+          .prepare(
+            "SELECT m.pk FROM messages m JOIN chats c ON c.pk=m.chat_pk JOIN accounts ac ON ac.pk=m.account_pk WHERE ac.provider=? AND ac.native_id=? AND c.native_id=? AND m.native_id=? AND m.deleted_at IS NULL",
+          )
+          .get(key.provider, key.account, chatId, messageId)
+        if (row) updated = applyCounterObservations(context, Number(row.pk), observations)
+      })
+      return updated
+    },
+    saveReactions: async (key, chatId, messageId, reactions, options = {}) => {
       const accountKey = findAccountPk(key)
       const chatKey = accountKey === undefined ? undefined : findChatPk(accountKey, chatId)
-      return chatKey === undefined ? false : messageWrites.saveReactions(context, chatKey, messageId, reactions)
+      if (chatKey === undefined) return false
+      let saved = false
+      inTransaction(() => {
+        saved = messageWrites.saveReactions(context, chatKey, messageId, reactions)
+        const row = database
+          .prepare("SELECT pk FROM messages WHERE chat_pk=? AND native_id=? AND deleted_at IS NULL")
+          .get(chatKey, messageId)
+        if (row && options.observation)
+          applyCounterObservations(context, Number(row.pk), { reactions: options.observation })
+      })
+      return saved
     },
 
     markRange: async (key, chatId, from, to) => {
@@ -1397,11 +1475,14 @@ const storeOver = (context: StoreContext): MessageStore => {
   }
 }
 
+export type { CounterField, CounterObservations, CounterState } from "../domain/counters.js"
+export type { RetentionOptions } from "../domain/retention.js"
 export type { AdminStoreRequest, AdminStoreResult } from "./sqlite/admin-statistics.js"
 export type { AttachmentTextEntry, AttachmentView, FileAttachment, TextOrigin } from "./sqlite/attachment-texts.js"
 export { CHAT_LIST_KEY, type ChatCompleteness, fetchedKey, historyStartKey } from "./sqlite/completeness.js"
 export type { RankedEvidence, RankingEvidenceItem, RankingEvidenceRequest } from "./sqlite/ranking-evidence.js"
 export type { RankedStoreFound, RankedStoreRow, RankingRequest } from "./sqlite/rankings.js"
+export type { RetentionResult } from "./sqlite/retention.js"
 export type {
   MemberCount,
   MemberStay,

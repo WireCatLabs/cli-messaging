@@ -1,7 +1,9 @@
+import { validCounter } from "../../domain/counters.js"
 import type { ChatKind, Id, Message, Reactions } from "../../domain/models.js"
 import { NORMALIZER_VERSION, normalize } from "../normalize.js"
 import type { AccountKey, DeletionScope } from "../store.js"
 import { findChatPk } from "./chats.js"
+import { applyCounterObservations } from "./counters.js"
 import { and, eq, isNull, type Placeholder, sql } from "./drizzle/core.js"
 import { identityPk } from "./identities.js"
 import type { Orm, StoreContext } from "./open.js"
@@ -47,7 +49,13 @@ const placeholders = <const T extends string>(names: readonly T[]) =>
 
 const prepare = (orm: Orm) => ({
   find: orm
-    .select({ pk: messages.pk, text: messages.text, editedAt: messages.editedAt, deletedAt: messages.deletedAt })
+    .select({
+      pk: messages.pk,
+      text: messages.text,
+      editedAt: messages.editedAt,
+      deletedAt: messages.deletedAt,
+      providerMetadata: messages.providerMetadata,
+    })
     .from(messages)
     .where(and(eq(messages.chatPk, sql.placeholder("chatPk")), eq(messages.nativeId, sql.placeholder("nativeId"))))
     .prepare(),
@@ -148,6 +156,19 @@ export const upsertMessage = (
     )
   } else {
     pk = found.pk
+    if (found.providerMetadata) {
+      try {
+        const previous = JSON.parse(found.providerMetadata) as Record<string, unknown>
+        const incoming = JSON.parse(String(fields.providerMetadata ?? "{}")) as Record<string, unknown>
+        if (previous && incoming && !Array.isArray(previous) && !Array.isArray(incoming)) {
+          for (const field of ["views", "comments"])
+            if (!validCounter(incoming[field]) && validCounter(previous[field])) incoming[field] = previous[field]
+          fields.providerMetadata = JSON.stringify(incoming)
+        }
+      } catch {
+        /* Malformed old metadata remains untrusted. */
+      }
+    }
     statements.update.run({ ...fields, pk })
     // A tombstone emptied the text: there is no earlier version to keep.
     if (found.text !== message.text && !revived) {
@@ -160,6 +181,8 @@ export const upsertMessage = (
     }
     if (revived) orm.update(messages).set({ deletedAt: null, text: message.text }).where(eq(messages.pk, pk)).run()
   }
+
+  if (message.counterObservations) applyCounterObservations(context, pk, message.counterObservations)
 
   message.attachments.forEach((attachment, position) => {
     statements.attachment.run({
@@ -206,7 +229,7 @@ export const saveReactions = ({ orm }: StoreContext, chatKey: number, messageId:
   orm
     .update(messages)
     .set({ reactions: JSON.stringify(reactions) })
-    .where(and(eq(messages.chatPk, chatKey), eq(messages.nativeId, messageId)))
+    .where(and(eq(messages.chatPk, chatKey), eq(messages.nativeId, messageId), isNull(messages.deletedAt)))
     .returning({ pk: messages.pk })
     .all().length > 0
 

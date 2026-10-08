@@ -322,7 +322,9 @@ export const chatsService = (deps: ServiceDeps): ChatsService => ({
         "`chats members fetch` reads the member list from the messenger; not offline",
       )
     }
+    const startedAt = new Date().toISOString()
     const read = await readMembers(await deps.connection(), chat, budget, pauseMs)
+    const observedAt = new Date().toISOString()
     const { chatId, members, more } = read
     const store = await deps.store()
     const account = await deps.account()
@@ -331,7 +333,12 @@ export const chatsService = (deps: ServiceDeps): ChatsService => ({
       (await store.chats(account, {})).items.find(({ id }) => id === chatId)?.participantsCount ??
       null
     const complete = !more && participants !== null && members.length >= participants
-    const change = await store.saveRoster(account, chatId, { members, complete, participants })
+    const change = await store.saveRoster(account, chatId, {
+      members,
+      complete,
+      participants,
+      observation: { observedAt, startedAt, source: "remote_fetch" },
+    })
     if (track) await store.trackMembers(account, chatId, true)
     const tracked = (await store.trackedChats(account)).some((one) => one.chatId === chatId)
     return { chatId, read: members.length, participants, complete, more, ...change, tracked }

@@ -1,4 +1,5 @@
 import type { Upload } from "../sends/upload.js"
+import type { CounterObservation, CounterObservations } from "./counters.js"
 
 /**
  * What every messenger CLI built on this package promises. **Raw provider objects never reach
@@ -273,6 +274,7 @@ export interface Message {
   threadId?: Id
   /** `null` when nobody asked — offline, or the request failed. */
   reactions: Reactions | null
+  counterObservations?: CounterObservations
   /** ISO 8601 — when the provider will send it. Present only on a message still waiting in the queue. */
   scheduledFor?: string
   providerMetadata?: ProviderMetadata
@@ -291,7 +293,14 @@ export type MessageChange =
   | { event: "edit"; message: MessageHit }
   /** `chatId` is `null` where the provider does not say — Telegram's private chats and basic groups. */
   | { event: "delete"; chatId: Id | null; chatTitle: string | null; messageId: Id }
-  | { event: "reaction"; chatId: Id; chatTitle: string | null; messageId: Id; reactions: Reactions }
+  | {
+      event: "reaction"
+      chatId: Id
+      chatTitle: string | null
+      messageId: Id
+      reactions: Reactions
+      counterObservation?: CounterObservation
+    }
 
 /** What a listening connection reports: a new message, or a change to one. */
 export type MessageEvent = { event: "message"; message: MessageHit } | MessageChange

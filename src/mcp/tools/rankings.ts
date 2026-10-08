@@ -2,7 +2,9 @@ import { CliError } from "@leemour/cli-core"
 import * as v from "valibot"
 import type { Messenger } from "../../cli/messenger/context.js"
 import { AUTHOR_MEASURES, MESSAGE_MEASURES, type RankingTarget } from "../../domain/rankings-options.js"
+import { assertRetentionEvidenceRead } from "../../sends/permissions.js"
 import { isAdminSelection } from "../../services/admin-statistics.js"
+import { isRetentionSelection } from "../../services/retention.js"
 import type { SearchParams } from "../../services/searches.js"
 import { searchServices, syncInputs } from "../search-sync.js"
 import { type AnyTool, READ, tool } from "../tool.js"
@@ -51,7 +53,7 @@ export const rankingTools = (messenger: Messenger): Record<string, AnyTool> => {
     definitions[`stats_${target}_top`] = tool({
       title: `Rank ${target === "messages" ? "messages" : "authors"}`,
       description:
-        "Rank the local matching population by a measure or explainable score; limit is applied after normalization. Unknown counters are not zero. Counter freshness is unknown and counts are cumulative snapshots; graph counts describe stored events in the query period. Returns coverage, exclusions, score components and a resolved drilldown selection. No sends or mark-read; optional sync_first has separate write permissions.",
+        "Rank the local matching population by a measure or explainable score; limit is applied after normalization. Unknown counters are not zero. Per-counter observation freshness is disclosed and counts are cumulative snapshots; graph counts describe stored events in the query period. Returns coverage, exclusions, score components and a resolved drilldown selection. No sends or mark-read; optional sync_first has separate write permissions.",
       input: topInput(target),
       annotations: { ...READ, openWorldHint: false },
       stored: async (store, account, args, defaults, connect) => {
@@ -102,20 +104,22 @@ export const rankingTools = (messenger: Messenger): Record<string, AnyTool> => {
       annotations: { ...READ, openWorldHint: false },
       stored: (store, account, args, defaults) => {
         const services = searchServices(messenger, store, account, defaults)
+        if (isRetentionSelection(args.selection)) assertRetentionEvidenceRead(defaults.settings.permissions ?? {})
         const reference = "message" in args ? args.message : args.person
         if (reference === undefined)
           throw new CliError("validation_error", "ranking evidence needs its exact message or person reference")
-        return (isAdminSelection(args.selection) ? services.adminStatistics : services.rankings).evidence(
-          target as RankingTarget,
-          reference,
-          args.selection,
-          {
-            component: args.component,
-            limit: args.limit ?? 20,
-            ...(args.cursor ? { cursor: args.cursor } : {}),
-            signal: defaults.signal,
-          },
-        )
+        return (
+          isRetentionSelection(args.selection)
+            ? services.retention
+            : isAdminSelection(args.selection)
+              ? services.adminStatistics
+              : services.rankings
+        ).evidence(target as RankingTarget, reference, args.selection, {
+          component: args.component,
+          limit: args.limit ?? 20,
+          ...(args.cursor ? { cursor: args.cursor } : {}),
+          signal: defaults.signal,
+        })
       },
     })
   }

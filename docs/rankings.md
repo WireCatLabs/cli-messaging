@@ -42,7 +42,7 @@ uses authorized stored messages in the same query period without those text or a
 Graph metrics reject ambiguous date branches: use a common positive date range.
 
 Views, reactions, forwards and comment counters are cumulative stored snapshots. Their
-observation time and freshness are unknown; a date filter selects messages, not reactions
+per-field observation times and freshness are disclosed when an authoritative read supplied them; a date filter selects messages, not reactions
 received within that period. Unknown counters are distinct from zero. Author reaction totals
 can be partial, with known and unknown message counts. `--sync-first` is guarded and bounded;
 it fetches newer messages and does not refresh old counters.
@@ -104,7 +104,7 @@ join. `--until-time` ends the join cohort. First-seen-only identities are counte
 and incomplete member history are reported; no saved question does not mean no help was needed.
 
 `discussion` examines stored channel posts. It compares known cumulative views with observed direct discussion replies. Provider
-comment snapshots remain separate; their freshness is unknown. Linked discussion needs stored
+comment snapshots remain separate; their per-field observation freshness is disclosed; old records remain unknown. Linked discussion needs stored
 link metadata and its group's history. Missing counters or graph links are not zero.
 
 Each row provides `drilldown.command` and exact arguments. Run its existing messages/contacts
@@ -135,3 +135,56 @@ History records parameters, not result bodies. Evidence is never recorded as sea
 MCP discovers and invokes these same paths through the existing three-tool frontend. Selection
 is a structured object there. See the [command contract](plans/2026-10-07-rankings-contract.md)
 and [CLI standard](dev/STANDARD.md) for the public interface and standards references.
+
+## Retention from roster observations
+
+Ask your agent: “For the group called Club, show how many newcomers were still observed after one,
+seven and thirty days. Show unknown observations and members who wrote within their first week.”
+The answer needs known joining dates and saved member-list observations. A first sighting is not a joining date.
+
+```sh
+tg stats chats retention Club --checkpoints 1d,7d,30d --within 7d --timezone Europe/Madrid --json
+```
+
+The default joining period is the last 90 days, grouped by Monday week. `--by day`, `--since-time`
+and `--until-time` change the cohorts. Checkpoints accept up to ten increasing positive durations.
+Each checkpoint uses the first saved roster observation at or after its target, within 24 hours.
+Evidence includes its actual time and lag. Presence is observable even in a partial list;
+absence needs a complete list. No qualifying observation means unknown; a future checkpoint is pending.
+The reported rate is present / observable. Eligible, unknown and pending counts stay visible.
+This is observed membership at checkpoints; it does not prove uninterrupted membership.
+
+Departures have an interval after the last positive sighting and at or before the first complete absence.
+An interval crossing the first-week boundary cannot prove an early departure. Rejoining starts a separate stay.
+A saved message proves observed activity. No message means no observed message; `archiveCovered` shows
+whether the archive covers the full window. The report does not infer a silent-member rate for the whole group.
+Copy a cohort's drilldown arguments into `stats messages evidence --component report` to page through members.
+Selections pin the cutoff; changed observations invalidate the cursor. Evidence pages are bounded to 64 KiB.
+
+## Check and refresh counters
+
+Ask your agent: “Check how old the view and reaction counts are for the selected Club messages.
+Preview a refresh of at most twenty messages, then refresh those exact targets.”
+A message's sending date and the time it was saved do not establish when its counters were observed.
+
+```sh
+tg stats messages counters show --chat Club --counters views,reactions --max-age 24h --limit 20 --json
+tg stats messages counters refresh --chat Club --counters views,reactions --max-messages 20 --sync-time 30s --dry-run --json
+```
+
+`show` reads locally and returns each field's value, `observedAt`, source, age and `freshness`:
+`fresh`, `stale` or `unknown`. The default threshold is 24 hours. Missing or invalid fields are unknown,
+not zero. Views, reactions and comments are independent; refreshing one does not freshen the others.
+The returned `selection` pins exact locators and can be passed as JSON with `--selection`.
+It conflicts with extra query and scope options.
+
+`refresh` reads the messenger and writes local observations. It requires an explicit chat or pinned selection,
+uses the active account, defaults to twenty messages and 30 seconds, and caps messages at 100 and time at five minutes.
+`--dry-run` resolves exact targets and supported counters without connecting. The real refresh uses
+`stats.messages.counters.refresh` write permission and message read permission. It sends no messages,
+marks nothing read and requests no view increment. Unsupported, missing, failed and interrupted work
+remain explicit in the result. Counter-only writes preserve message bodies, replies, attachments and tombstones.
+Old/imported messages acquire no guessed timestamps; a legacy writer changing a value makes its freshness unknown.
+
+After refresh, run `show` again for the returned selection and inspect each field's observation date.
+A refreshed cumulative count still does not tell you how many views or reactions happened during a date-filtered period.

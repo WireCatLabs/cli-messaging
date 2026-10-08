@@ -6,6 +6,17 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- `stats chats retention <chat>` reports known joining cohorts with observed checkpoint membership,
+  unknown/pending denominators, interval departures and archive-qualified message activity. Migration 24
+  stores explicit remote roster batches and member/stay references; historical stays gain no invented snapshots.
+- `stats messages counters show|refresh` exposes independent value/time/source observations for views,
+  reactions and comments. Refresh requires one explicit chat or pinned exact targets, defaults to 20 messages
+  and 30 seconds, and previews targets/capabilities with `--dry-run`. Unsupported/missing counters remain explicit.
+- Rankings and evidence disclose per-field freshness; observation changes invalidate evidence cursors.
+  Legacy counter writes remain compatible and lose freshness when their value differs from its observation.
+
 ## 0.187.0 — 08.10.2026
 
 ### Added

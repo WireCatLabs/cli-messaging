@@ -44,6 +44,7 @@ export const MANIFEST: ManifestEntry[] = [
   { name: "20261007221350_version-23-knowledge", version: 23, minCompatible: 6 },
   { name: "20261007221537_version-23-knowledge-cleanup", version: 23, minCompatible: 6 },
   { name: "20261007225410_version-23-relation-proposals", version: 23, minCompatible: 6 },
+  { name: "20261008010235_retention-counter-observations", version: 24, minCompatible: 6 },
 ]
 
 export const generatedMigrations = (

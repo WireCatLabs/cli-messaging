@@ -59,6 +59,7 @@ export interface Fetching {
 export type MediaOption = "spoiler" | "captionAbove" | "fileName"
 
 export interface Messenger {
+  counterFields?: readonly import("../../domain/counters.js").CounterField[]
   app: AppIdentity
   provider: Provider
   /** The messenger's own name, as its users write it — `Telegram`, `MAX`. Defaults to the command. */

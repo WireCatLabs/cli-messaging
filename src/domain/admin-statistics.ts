@@ -35,6 +35,7 @@ export interface AdminStay {
   goneAt: number | null
 }
 export interface AdminRow {
+  counterObservations?: import("./counters.js").CounterState[]
   id: string
   account: { provider: string; account: string }
   chatId?: string
