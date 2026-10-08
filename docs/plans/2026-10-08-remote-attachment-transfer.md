@@ -4,6 +4,11 @@ Owner requested remote-agent file transfer on2026-10-08 after finalizing the con
 releases. This documents the interface before runtime code. It reuses the attachments
 resource and the approved `show` view; no new root, alias, dependency or migration.
 
+Status2026-10-08: completed. Runtime744 merged; SDK0.190.0 published from
+80a4997555d72aa4a97f02615b0ccf8c150be489 with verified tag/npm/SLSA source.
+MAX482 and Telegram362 merged exact-pin adoption after all14/10CI checks.
+Consumer candidates MAX0.36.0/TG0.37.0 remain separate from published MAX0.35.0/TG0.36.0.
+
 ## Task and interface
 
 A remote agent needs retained attachment bytes, not a server-local path, to open a file,
@@ -73,3 +78,9 @@ assembly/checksum and source changes, account/index validation, read denial befo
 missing/large/non-file/symlink input, cancel/descriptor cleanup and output budgets. Assert
 zero messenger/model calls. Node/Bun checks precede SDK publication and exact-pin MAX/TG
 adoption, generated references/matrices and guides. No paid API or real-chat call is needed.
+
+
+Recorded sample: multiplicar-por-dos-cifras.pdf transferred through an isolated MCP client,
+393856bytes in7chunks; exact bytes and whole-file SHA256 verified. Zero model/messenger calls
+and no owner-store writes. Native MAX MCP also returns the expected PDF resource without login;
+both native CLI fixtures verify chunk assembly and changed-hash refusal.

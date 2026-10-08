@@ -1170,39 +1170,19 @@
       }
     },
     "attachments show": {
-      "in": [],
-      "planned": {
-        "max": "feat/remote-attachment-transfer",
-        "tg": "feat/remote-attachment-transfer"
-      },
+      "in": "all",
       "options": {
         "--attachment": {
-          "in": [],
-          "planned": {
-            "max": "feat/remote-attachment-transfer",
-            "tg": "feat/remote-attachment-transfer"
-          }
+          "in": "all"
         },
         "--chunk-bytes": {
-          "in": [],
-          "planned": {
-            "max": "feat/remote-attachment-transfer",
-            "tg": "feat/remote-attachment-transfer"
-          }
+          "in": "all"
         },
         "--if-sha256": {
-          "in": [],
-          "planned": {
-            "max": "feat/remote-attachment-transfer",
-            "tg": "feat/remote-attachment-transfer"
-          }
+          "in": "all"
         },
         "--offset-bytes": {
-          "in": [],
-          "planned": {
-            "max": "feat/remote-attachment-transfer",
-            "tg": "feat/remote-attachment-transfer"
-          }
+          "in": "all"
         }
       }
     },
