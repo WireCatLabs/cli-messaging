@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.208.0 — 09.10.2026
+
 ### Fixed
 
 - `parity.json` lists `attachments show --page`, planned for both CLIs; without it `cli-messaging-parity` refused
