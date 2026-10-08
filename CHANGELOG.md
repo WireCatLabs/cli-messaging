@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.194.0 — 08.10.2026
+
 ### Added
 
 - `messages press <chat> <message> <button>` presses a bot's callback button, by its number or its exact text;
