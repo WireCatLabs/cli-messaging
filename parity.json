@@ -153,6 +153,10 @@
       "meaning": "what to count by",
       "note": "each command names its own groupings — stats messages show chat, sender, day or hour, and searches create the same for stats messages show --saved; stats chats show day or week, as a series beside its totals — so it differs on purpose (Help text rule 4)"
     },
+    "--calls": {
+      "value": "<who>",
+      "meaning": "who may call: everyone, contacts or nobody"
+    },
     "--can": {
       "value": "<rights>",
       "meaning": "what they may do, comma-separated: read, members, admins, info, pin, link, post, edit, delete",
@@ -188,6 +192,10 @@
       "value": "<chat>",
       "meaning": "a chat, by id or name; repeat it for more",
       "note": "chat addressing follows each messenger's supported names, usernames and Saved Messages aliases, so it differs on purpose (Help text rule 4); both message searches resolve stored names without networking"
+    },
+    "--chat-invites": {
+      "value": "<who>",
+      "meaning": "who may add the account to groups and channels: everyone, contacts or nobody"
     },
     "--chats": {
       "meaning": "only these chat ids, comma-separated; empty for any",
@@ -335,6 +343,10 @@
       "value": "query",
       "meaning": "Strict Lucene filter: any message in the conversation must match; the meaning query stays unchanged"
     },
+    "--find-by-phone": {
+      "value": "<who>",
+      "meaning": "who finds the account by its number: everyone, contacts or nobody"
+    },
     "--fingerprint": {
       "value": "<hash>",
       "meaning": "refuse if the inspected coverage plan changed"
@@ -367,6 +379,10 @@
     "--hidden": {
       "value": "<on|off>",
       "meaning": "on hides a forum's General topic from the topic list, off shows it"
+    },
+    "--hide-online": {
+      "value": "<on|off>",
+      "meaning": "hide online status and last seen"
     },
     "--history": {
       "meaning": "the people added also see the messages from before they came"
@@ -706,6 +722,10 @@
     "--personal": {
       "meaning": "the personal account's section of the profile's settings"
     },
+    "--phone-number": {
+      "value": "<who>",
+      "meaning": "who sees the number: everyone, contacts or nobody"
+    },
     "--photo": {
       "value": "<file>",
       "meaning": "an image file — a profile photo in `account update`, a group's photo in `chats update`, a photo to send in `messages send`"
@@ -838,6 +858,10 @@
     "--server-time": {
       "value": "<duration>",
       "meaning": "stop waiting for the server after this long (default: 5s)"
+    },
+    "--set": {
+      "value": "<id>",
+      "meaning": "the stickers in this set"
     },
     "--show-phone": {
       "meaning": "print the whole phone number"
@@ -1070,23 +1094,52 @@
       "in": "all"
     },
     "account privacy": {
-      "in": [],
+      "in": ["max"],
       "planned": {
-        "max": "feat/client-gaps-b",
         "tg": "tg-cli backlog: server reads (calls, chat media, privacy)"
       }
     },
     "account privacy set": {
-      "in": [],
+      "in": ["max"],
       "planned": {
-        "max": "feat/client-gaps-d",
         "tg": "tg-cli backlog: settings writes (mute, privacy)"
+      },
+      "options": {
+        "--calls": {
+          "in": ["max"],
+          "planned": {
+            "tg": "tg-cli backlog: settings writes (mute, privacy)"
+          }
+        },
+        "--chat-invites": {
+          "in": ["max"],
+          "planned": {
+            "tg": "tg-cli backlog: settings writes (mute, privacy)"
+          }
+        },
+        "--find-by-phone": {
+          "in": ["max"],
+          "planned": {
+            "tg": "tg-cli backlog: settings writes (mute, privacy)"
+          }
+        },
+        "--hide-online": {
+          "in": ["max"],
+          "planned": {
+            "tg": "tg-cli backlog: settings writes (mute, privacy)"
+          }
+        },
+        "--phone-number": {
+          "in": ["max"],
+          "planned": {
+            "tg": "tg-cli backlog: settings writes (mute, privacy)"
+          }
+        }
       }
     },
     "account privacy show": {
-      "in": [],
+      "in": ["max"],
       "planned": {
-        "max": "feat/client-gaps-b",
         "tg": "tg-cli backlog: server reads (calls, chat media, privacy)"
       }
     },
@@ -1529,17 +1582,23 @@
       }
     },
     "calls": {
-      "in": [],
+      "in": ["max"],
       "planned": {
-        "max": "feat/client-gaps-b",
         "tg": "tg-cli backlog: server reads (calls, chat media, privacy)"
       }
     },
     "calls list": {
-      "in": [],
+      "in": ["max"],
       "planned": {
-        "max": "feat/client-gaps-b",
         "tg": "tg-cli backlog: server reads (calls, chat media, privacy)"
+      },
+      "options": {
+        "--limit": {
+          "in": ["max"],
+          "planned": {
+            "tg": "tg-cli backlog: server reads (calls, chat media, privacy)"
+          }
+        }
       }
     },
     "chats": {
@@ -1558,10 +1617,17 @@
       "in": "all"
     },
     "chats clear": {
-      "in": [],
+      "in": ["max"],
       "planned": {
-        "max": "feat/client-gaps-e",
         "tg": "tg-cli backlog: chats delete and clear"
+      },
+      "options": {
+        "--allow-dangerous": {
+          "in": ["max"],
+          "planned": {
+            "tg": "tg-cli backlog: chats delete and clear"
+          }
+        }
       }
     },
     "chats create": {
@@ -1571,10 +1637,17 @@
       }
     },
     "chats delete": {
-      "in": [],
+      "in": ["max"],
       "planned": {
-        "max": "feat/client-gaps-e",
         "tg": "tg-cli backlog: chats delete and clear"
+      },
+      "options": {
+        "--allow-dangerous": {
+          "in": ["max"],
+          "planned": {
+            "tg": "tg-cli backlog: chats delete and clear"
+          }
+        }
       }
     },
     "chats events": {
@@ -1652,10 +1725,7 @@
       "in": "all"
     },
     "chats folders order": {
-      "in": ["tg"],
-      "planned": {
-        "max": "feat/client-gaps-a"
-      }
+      "in": "all"
     },
     "chats folders show": {
       "in": ["tg"],
@@ -1836,10 +1906,29 @@
       }
     },
     "chats media": {
-      "in": [],
+      "in": ["max"],
       "planned": {
-        "max": "feat/client-gaps-b",
         "tg": "tg-cli backlog: server reads (calls, chat media, privacy)"
+      },
+      "options": {
+        "--before-id": {
+          "in": ["max"],
+          "planned": {
+            "tg": "tg-cli backlog: server reads (calls, chat media, privacy)"
+          }
+        },
+        "--limit": {
+          "in": ["max"],
+          "planned": {
+            "tg": "tg-cli backlog: server reads (calls, chat media, privacy)"
+          }
+        },
+        "--type": {
+          "in": ["max"],
+          "planned": {
+            "tg": "tg-cli backlog: server reads (calls, chat media, privacy)"
+          }
+        }
       }
     },
     "chats members": {
@@ -1960,10 +2049,17 @@
       }
     },
     "chats mute": {
-      "in": [],
+      "in": ["max"],
       "planned": {
-        "max": "feat/client-gaps-d",
         "tg": "tg-cli backlog: settings writes (mute, privacy)"
+      },
+      "options": {
+        "--until": {
+          "in": ["max"],
+          "planned": {
+            "tg": "tg-cli backlog: settings writes (mute, privacy)"
+          }
+        }
       }
     },
     "chats requests": {
@@ -2025,9 +2121,8 @@
       }
     },
     "chats unmute": {
-      "in": [],
+      "in": ["max"],
       "planned": {
-        "max": "feat/client-gaps-d",
         "tg": "tg-cli backlog: settings writes (mute, privacy)"
       }
     },
@@ -2054,9 +2149,8 @@
           "reason": "Telegram lets admins with the right change the info, never only the owner; a different meaning gets a different name"
         },
         "--photo": {
-          "in": [],
+          "in": ["max"],
           "planned": {
-            "max": "feat/client-gaps-photo",
             "tg": "tg-cli backlog: chats update --photo"
           }
         },
@@ -2921,9 +3015,8 @@
           "reason": "MAX has no spoilers or caption placement"
         },
         "--sticker": {
-          "in": [],
+          "in": ["max"],
           "planned": {
-            "max": "feat/client-gaps-stickers",
             "tg": "tg-cli backlog: stickers"
           }
         },
@@ -3654,17 +3747,23 @@
       }
     },
     "stickers": {
-      "in": [],
+      "in": ["max"],
       "planned": {
-        "max": "feat/client-gaps-stickers",
         "tg": "tg-cli backlog: stickers"
       }
     },
     "stickers list": {
-      "in": [],
+      "in": ["max"],
       "planned": {
-        "max": "feat/client-gaps-stickers",
         "tg": "tg-cli backlog: stickers"
+      },
+      "options": {
+        "--set": {
+          "in": ["max"],
+          "planned": {
+            "tg": "tg-cli backlog: stickers"
+          }
+        }
       }
     },
     "store": {

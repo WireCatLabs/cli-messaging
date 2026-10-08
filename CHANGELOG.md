@@ -6,6 +6,11 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- Parity: max's chat folder order, group photo, privacy, mute, media, calls, stickers and chat delete/clear
+  are shipped rows now (max only, tg planned), with their options in the catalogue.
+
 ## 0.192.0 — 08.10.2026
 
 ### Added
