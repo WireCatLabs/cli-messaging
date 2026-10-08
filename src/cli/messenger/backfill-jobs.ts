@@ -1,5 +1,6 @@
 export {
   isJob,
+  JOB_STATES,
   type Job,
   type JobState,
   jobsDir,
