@@ -10,6 +10,17 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 - Parity: `polls voters` and `polls create --close-time` are shipped rows in tg (TG#375, TG#378).
 
+### Fixed
+
+- Statistics selected answerers resolve stored names, aliases and usernames within query accounts.
+  Ambiguous names return scoped candidates; unknown names fail with recovery guidance instead of
+  yielding a fabricated zero-answer identity. Saved report selections keep resolved IDs.
+
+### Changed — may break callers
+
+- Bare unknown nonnumeric answerer references are now treated as unresolved names. Use an explicit
+  `person:provider/account/id` locator to select an unseen opaque ID. Response rows add `identityKnown`;
+  explicitly selected IDs without stored identity observations have `status: unknown`.
 
 ## 0.205.0 — 08.10.2026
 

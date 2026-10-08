@@ -20,7 +20,7 @@ const options = {
 }
 for (let i = 0; i < flags.length; i++) {
   const flag = flags[i]
-  if (flag === "adversarial") options.variant = "adversarial"
+  if (["adversarial", "discovery"].includes(flag)) options.variant = flag
   else if (flag === "--grouped") options.grouped = true
   else if (["--clock", "--seed", "--repeats", "--interfaces", "--only"].includes(flag)) {
     const value = flags[++i]
@@ -49,7 +49,14 @@ const root = resolve(destination)
 mkdirSync(root, { recursive: false })
 const fixture = fileURLToPath(new URL("stats-fixture.mjs", import.meta.url))
 const tasksText = readFileSync(
-  new URL(options.variant === "adversarial" ? "adversarial-tasks.txt" : "tasks.txt", import.meta.url),
+  new URL(
+    options.variant === "discovery"
+      ? "discovery-tasks.txt"
+      : options.variant === "adversarial"
+        ? "adversarial-tasks.txt"
+        : "tasks.txt",
+    import.meta.url,
+  ),
   "utf8",
 )
 const allTasks = [...tasksText.matchAll(/^(\d+)\. (.+)$/gm)].map((match) => ({ id: Number(match[1]), text: match[2] }))
@@ -57,7 +64,14 @@ const tasks = allTasks.filter((task) => !options.only || options.only.includes(t
 if (!tasks.length || options.only?.some((id) => !allTasks.some((task) => task.id === id)))
   throw new Error("invalid task selection")
 const rubric = readFileSync(
-  new URL(options.variant === "adversarial" ? "adversarial-rubric.json" : "rubric.json", import.meta.url),
+  new URL(
+    options.variant === "discovery"
+      ? "discovery-rubric.json"
+      : options.variant === "adversarial"
+        ? "adversarial-rubric.json"
+        : "rubric.json",
+    import.meta.url,
+  ),
   "utf8",
 )
 const hash = (bytes) => createHash("sha256").update(bytes).digest("hex")
@@ -75,6 +89,7 @@ for (const [provider, subjectPath, skillPath] of [
     path: subject,
     version: JSON.parse(readFileSync(join(subject, "package.json"), "utf8")).version,
     skillSha256: hash(skill),
+    runtimeSha256: hash(readFileSync(join(subject, "dist/services/admin-statistics.js"))),
   }
   for (const mode of options.interfaces)
     for (let repeat = 1; repeat <= options.repeats; repeat++)

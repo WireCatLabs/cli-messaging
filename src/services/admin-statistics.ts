@@ -1,6 +1,7 @@
-import { CliError } from "@leemour/cli-core"
+import { CliError, singleLine } from "@leemour/cli-core"
 import type { AdminOptions, AdminReport, Answerer } from "../domain/admin-statistics.js"
 import { parseLocator } from "../domain/locator.js"
+import { isId, pickPerson } from "../resolve.js"
 import type { QueryExecution } from "../search/lucene/resolved.js"
 import type { AdminStoreResult, MessageStore } from "../store/store.js"
 import type { ServiceDeps } from "./deps.js"
@@ -64,8 +65,21 @@ const count = (value: number, flag: string): number => {
   if (!Number.isSafeInteger(value) || value < 0) invalid(`${flag} takes a nonnegative integer`)
   return value
 }
-const answerers = (refs: string[], accounts: QueryExecution["accounts"]): Answerer[] => {
-  const found = refs.map((ref) => {
+const answerers = async (
+  store: MessageStore,
+  refs: string[],
+  accounts: QueryExecution["accounts"],
+): Promise<Answerer[]> => {
+  if (!refs.length) return []
+  const lookups = await Promise.all(
+    accounts.map(async (account) => ({
+      account,
+      people: await store.people(account.provider, { account: account.account }),
+    })),
+  )
+  const found = refs.map((reference) => {
+    const ref = reference.trim()
+    if (!ref || ref.length > 256) invalid("answerer requires a nonempty reference of at most 256 characters")
     if (ref.startsWith("person:")) {
       const parts = ref.slice(7).split("/")
       if (parts.length !== 3 || parts.some((part) => !part)) invalid("answerer needs person:<provider>/<account>/<id>")
@@ -80,9 +94,51 @@ const answerers = (refs: string[], accounts: QueryExecution["accounts"]): Answer
         invalid("answerer account is outside this query")
       return { provider, account, id }
     }
-    if (accounts.length !== 1 || !ref || ref.length > 256)
-      invalid("bare answerer ids require one scoped account; use person:<provider>/<account>/<id>")
-    return { ...(accounts[0] as QueryExecution["accounts"][number]), id: ref }
+    if (isId(ref)) {
+      if (accounts.length !== 1)
+        invalid("bare answerer ids require one scoped account; use person:<provider>/<account>/<id>")
+      return { ...(accounts[0] as QueryExecution["accounts"][number]), id: ref }
+    }
+    const candidates: (Answerer & { name?: string | null; username?: string | null })[] = []
+    for (const { account, people } of lookups) {
+      try {
+        const person = pickPerson(ref, people)
+        candidates.push({ ...account, id: person.id, name: person.name, username: person.username })
+      } catch (error) {
+        if (!(error instanceof CliError)) throw error
+        if (error.code === "not_found") continue
+        if (error.code !== "validation_error") throw error
+        const matches = error.details?.candidates as
+          | { id: string; name?: string | null; username?: string | null }[]
+          | undefined
+        if (!matches) throw error
+        candidates.push(...matches.map((person) => ({ ...account, ...person })))
+      }
+    }
+    if (candidates.length === 1) {
+      const person = candidates[0] as Answerer
+      return { provider: person.provider, account: person.account, id: person.id }
+    }
+    const recovery =
+      "Find the person with contacts show/list or stats contacts top; choose a scoped person:provider/account/id. Never guess an ambiguous identity."
+    if (!candidates.length)
+      throw new CliError("not_found", `no stored answering identity matches "${singleLine(ref)}". ${recovery}`, {
+        reference: ref,
+        recovery,
+      })
+    throw new CliError(
+      "validation_error",
+      `answerer "${singleLine(ref)}" matches ${candidates.length} identities; choose one by its scoped ID`,
+      {
+        reference: ref,
+        candidates: candidates.slice(0, 100).map((person) => ({
+          ...person,
+          reference: `person:${[person.provider, person.account, person.id].map(encodeURIComponent).join("/")}`,
+        })),
+        total: candidates.length,
+        recovery,
+      },
+    )
   })
   return [...new Map(found.map((one) => [JSON.stringify(one), one])).values()]
 }
@@ -239,7 +295,7 @@ export const adminStatisticsService = (deps: ServiceDeps): AdminStatisticsServic
       answerers:
         query.answerers === undefined && pinned
           ? pinned.options.answerers
-          : answerers(query.answerers ?? [], prepared.execution.accounts),
+          : await answerers(store, query.answerers ?? [], prepared.execution.accounts),
     }
     if (!Number.isSafeInteger(options.joinSince) || !Number.isSafeInteger(options.joinUntil))
       invalid("invalid join dates")
@@ -247,6 +303,12 @@ export const adminStatisticsService = (deps: ServiceDeps): AdminStatisticsServic
     if (report === "responses" && !options.answerers.length)
       invalid("responses requires at least one --answerer identity")
     const result = await requireStore(store)(prepared.execution, { options })
+    const known = new Set<string>()
+    if (report === "responses")
+      for (const person of options.answerers) {
+        const people = await store.people(person.provider, { account: person.account })
+        if (people.get(person.id)) known.add(JSON.stringify([person.provider, person.account, person.id]))
+      }
     const firstAccount = prepared.execution.accounts[0]
     if (deps.history !== false && firstAccount) {
       const entity = { account: firstAccount, id: "report" }
@@ -273,7 +335,14 @@ export const adminStatisticsService = (deps: ServiceDeps): AdminStatisticsServic
       ...result,
       report,
       detectorVersion: 1,
-      items: result.items.map((row) => {
+      items: result.items.map((original) => {
+        const identityKnown = known.has(
+          JSON.stringify([original.account.provider, original.account.account, original.id]),
+        )
+        const row =
+          report === "responses"
+            ? { ...original, identityKnown, status: identityKnown ? original.status : ("unknown" as const) }
+            : original
         const target = row.message ? "messages" : "contacts"
         const base = rankingSelection(
           target,

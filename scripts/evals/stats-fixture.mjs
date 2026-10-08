@@ -45,6 +45,9 @@ const { provide } = await load("cli/context.js")
 const { messengerContext } = await load("cli/messenger/context.js")
 const { settingsFor } = await load("cli/settings.js")
 const { rememberAccount } = await load("cli/messenger/accounts.js")
+const { pickChat, pickPerson } = await load("index.js")
+const { chatsCommand } = await load("cli/messenger/chats-command.js")
+const { contactsCommand } = await load("cli/messenger/contacts-command.js")
 const { statsCommand } = await load("cli/messenger/stats-command.js")
 const { commandsCommand } = await load("cli/commands-command.js")
 mkdirSync(root, { recursive: true })
@@ -91,13 +94,38 @@ if (!existsSync(join(root, "seed.json"))) {
     account,
     ["7", "8", "9"].map((id) => ({
       id,
-      title: `Synthetic ${id}`,
+      title: { 7: "Garden Club", 8: "Planning Room", 9: "Updates Board" }[id],
       kind: id === "9" ? "channel" : "group",
       unreadCount: 0,
       lastMessageAt: null,
       participantsCount: 3,
     })),
   )
+  await store.saveChats(
+    account,
+    ["9", "10"].map((id) => ({
+      id: `dm${id}`,
+      title: id === "9" ? "Alex Rivera" : "Alex Kim",
+      kind: "dialog",
+      unreadCount: 0,
+      lastMessageAt: null,
+      participantsCount: 2,
+      providerMetadata: { partnerId: id },
+    })),
+  )
+  for (const id of ["9", "10"])
+    await store.saveRoster(account, `dm${id}`, {
+      members: [
+        {
+          id,
+          name: id === "9" ? "Alex Rivera" : "Alex Kim",
+          username: id === "9" ? "alex_rivera" : "alex_kim",
+          role: "member",
+        },
+      ],
+      complete: false,
+      participants: 2,
+    })
   const roster = async (day, members, complete) => {
     now = start + day * DAY
     await store.saveRoster(account, "7", {
@@ -118,13 +146,22 @@ if (!existsSync(join(root, "seed.json"))) {
     participants: 3,
     observation: { observedAt: iso(now), source: "remote_fetch" },
   })
+  await store.saveRoster(account, "8", {
+    members: [
+      { id: "9", name: "Alex Rivera", username: "alex_rivera", role: "member" },
+      { id: "10", name: "Alex Kim", username: "alex_kim", role: "member" },
+    ],
+    complete: false,
+    participants: 2,
+  })
+  await store.setContactAlias(account, "9", "Project lead")
   const message = (id, chatId, text, at, senderId = "2", reply) => ({
     id,
     chatId,
     text,
     timestamp: iso(at),
     senderId,
-    senderName: `Synthetic ${senderId}`,
+    senderName: senderId === "9" ? "Alex Rivera" : `Synthetic ${senderId}`,
     outgoing: false,
     attachments: [],
     editedAt: null,
@@ -178,9 +215,13 @@ if (!existsSync(join(root, "seed.json"))) {
     ],
     { via: "history" },
   )
-  if (process.env.STATS_EVAL_VARIANT === "adversarial") {
+  if (["adversarial", "discovery"].includes(process.env.STATS_EVAL_VARIANT)) {
     await store.saveRoster(account, "8", {
-      members: [{ id: "99", name: "Synthetic bot", username: null, role: "member", isBot: true }],
+      members: [
+        { id: "99", name: "Synthetic bot", username: null, role: "member", isBot: true },
+        { id: "9", name: "Alex Rivera", username: "alex_rivera", role: "member" },
+        { id: "10", name: "Alex Kim", username: "alex_kim", role: "member" },
+      ],
       complete: false,
       participants: 1,
     })
@@ -231,10 +272,44 @@ const forbidden = (operation) => async () => {
   log({ kind: "forbidden", operation })
   throw new Error(`Forbidden synthetic operation ${operation}`)
 }
+const readStore = async (read) => {
+  const store = await openStore({ path: env.MESSAGING_STORE })
+  try {
+    return await read(store)
+  } finally {
+    await store.close()
+  }
+}
 const adapter = {
   viewerId: "500",
   self: () => "500",
   close: async () => {},
+  chats: (window) => readStore((store) => store.chats(account, window)),
+  chat: (reference) =>
+    readStore(async (store) => {
+      const chats = (await store.chats(account, {})).items
+      const chat = chats.find((one) => one.id === reference) ?? pickChat(reference, chats)
+      return { ...chat, members: null }
+    }),
+  contact: (reference) =>
+    readStore(async (store) => {
+      const person = pickPerson(reference, await store.people(provider, { account: account.account }))
+      return { ...person, chats: [] }
+    }),
+  people: (references) =>
+    readStore(async (store) => {
+      const people = await store.people(provider, { account: account.account })
+      return references.map((reference) => pickPerson(reference, people).id)
+    }),
+  contacts: (options = {}) =>
+    readStore(async (store) => {
+      const people = (await store.people(provider, { account: account.account }))
+        .all()
+        .filter((person) => !options.search || (person.name ?? "").toLowerCase().includes(options.search.toLowerCase()))
+      const offset = options.offset ?? 0,
+        limit = options.limit ?? 100
+      return { items: people.slice(offset, offset + limit), hasMore: people.length > offset + limit }
+    }),
   fetchCounters: async (chat, messageId, fields) => {
     log({ kind: "fetchCounters", chat, messageId, fields })
     return Object.fromEntries(
@@ -253,7 +328,8 @@ const messenger = {
   provider,
   name: command,
   resolveSettings: settingsFor(app).resolveSettings,
-  chatArgument: "a synthetic chat ID",
+  chatArgument: "a stored chat ID or title fragment",
+  partnerOf: (chat) => chat.providerMetadata?.partnerId,
   counterFields: provider === "max" ? ["views", "reactions"] : ["views", "reactions", "comments"],
   connect: async () => {
     log({ kind: "connect" })
@@ -393,7 +469,15 @@ if (args[0] === "__mcp" || args[0] === "__serve") {
   const streams = captureStreams()
   const code = await run(
     args,
-    { app, commands: () => [statsCommand(messenger), commandsCommand(app)] },
+    {
+      app,
+      commands: () => [
+        statsCommand(messenger),
+        chatsCommand(messenger),
+        contactsCommand(messenger),
+        commandsCommand(app),
+      ],
+    },
     { streams, tty: false, env },
   )
   result = { code, stdout: streams.stdout.join("\n"), stderr: streams.stderr.join("\n") }

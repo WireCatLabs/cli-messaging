@@ -88,7 +88,7 @@ describe("administrator stored reports", () => {
     const { service } = await setup()
     const found = await service.report("responses", {
       text: "date:[2026-10-01 TO 2026-10-01] AND from:member",
-      answerers: ["admin", "zero"],
+      answerers: ["admin", "person:fixture/owner/zero"],
       limit: 20,
     })
     expect(found.summary).toMatchObject({ questions: 1, answered: 1, noObservedAnswer: 0 })
@@ -101,11 +101,76 @@ describe("administrator stored reports", () => {
       answered: 0,
       medianMilliseconds: null,
       p90Milliseconds: null,
+      status: "unknown",
+      identityKnown: false,
     })
     expect(found.quality).toMatchObject({ counterFreshness: "unknown", answererRoles: "user_selected_identities" })
     const waiting = await service.report("unanswered", { chat: "room", olderThan: "1h", limit: 20 })
     expect(waiting.items.map((one) => one.message)).toEqual(["msg:fixture/owner/room/wait"])
     expect(waiting.items[0]).toMatchObject({ status: "no-observed-answer" })
+  })
+  it("resolves names, aliases and usernames locally, rejects guesses and preserves a pinned identity after renaming", async () => {
+    const { service, store } = await setup()
+    await store.saveRoster(account, "room", {
+      members: [
+        { id: "admin", name: "Alex Rivera", username: "alex_rivera", role: "member" },
+        { id: "other", name: "Alex Kim", username: "alex_kim", role: "member" },
+        { id: "opaque/x", name: "Quiet member", username: null, role: "member" },
+      ],
+      complete: false,
+      participants: 3,
+    })
+    await store.setContactAlias(account, "admin", "Project lead")
+    for (const reference of ["Alex Rivera", "@alex_rivera", "Project lead", "Rivera"]) {
+      const found = await service.report("responses", { answerers: [reference], limit: 20 })
+      expect(found.items[0]).toMatchObject({ id: "admin", answered: 1, identityKnown: true, status: "observed" })
+      const row = found.items[0]
+      if (!row) throw new Error("missing resolved row")
+      await store.setContactAlias(account, "admin", "New alias")
+      expect(
+        (
+          await service.evidence("contacts", "admin", row.drilldown.arguments.selection, {
+            component: "report",
+            limit: 20,
+          })
+        ).items[0]?.message.id,
+      ).toBe("a")
+      await store.setContactAlias(account, "admin", "Project lead")
+    }
+    await expect(service.report("responses", { answerers: ["Alex"], limit: 20 })).rejects.toMatchObject({
+      code: "validation_error",
+      details: {
+        total: 2,
+        candidates: expect.arrayContaining([expect.objectContaining({ id: "admin", account: "owner" })]),
+      },
+    })
+    await expect(service.report("responses", { answerers: ["identity9"], limit: 20 })).rejects.toMatchObject({
+      code: "not_found",
+    })
+    expect((await service.report("responses", { answerers: ["opaque/x"], limit: 20 })).items[0]).toMatchObject({
+      answered: 0,
+      identityKnown: true,
+      status: "observed",
+    })
+    expect((await service.report("responses", { answerers: ["999"], limit: 20 })).items[0]).toMatchObject({
+      answered: 0,
+      identityKnown: false,
+      status: "unknown",
+    })
+  })
+  it("does not choose between matching names in different selected accounts", async () => {
+    const { service, store } = await setup()
+    await store.saveMessages(
+      { provider: "fixture", account: "other-owner" },
+      "room",
+      [message("other-q", "Another question?", 1, "admin")],
+      { via: "test" },
+    )
+    await expect(
+      service.report("responses", { source: "fixture", answerers: ["admin"], limit: 20 }),
+    ).rejects.toMatchObject({ code: "validation_error", details: { total: 2 } })
+    const scoped = await service.report("responses", { answerers: ["person:fixture/owner/admin"], limit: 20 })
+    expect(scoped.items[0]).toMatchObject({ account, id: "admin", answered: 1 })
   })
   it("returns bounded question-answer evidence and rejects changed context on continuation", async () => {
     const { service, store } = await setup()

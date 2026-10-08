@@ -95,7 +95,7 @@ history, rather than proof that no answer exists in the messenger.
 `responses` requires the identities to measure with repeated `--answerer`. They are user-selected
 people, not verified past administrator roles. It shows response count, median and p90 latency in
 milliseconds; no response gives null timings. P90 uses the nearest rank, rounded up. Without
-`--answerer`, unanswered and newcomer reports accept any other identifiable human. Bare ids need
+`--answerer`, unanswered and newcomer reports accept any other identifiable human. Names, aliases and @usernames resolve only from the selected accounts’ stored identities; ambiguity returns scoped candidates and missing names return a recovery error. Bare numeric IDs need
 one scoped account; use `person:<provider>/<account>/<id>` for multiple accounts.
 
 `newcomers` defaults to joins in the last 30 days and questions within seven days after a known
@@ -188,3 +188,16 @@ Old/imported messages acquire no guessed timestamps; a legacy writer changing a 
 
 After refresh, run `show` again for the returned selection and inspect each field's observation date.
 A refreshed cumulative count still does not tell you how many views or reactions happened during a date-filtered period.
+
+## Find the person before interpreting zero replies
+
+Use a stored name, local alias or @username for `--answerer`, or choose an explicit ID from
+`contacts show/list` or `stats contacts top`. Names resolve locally without connecting or fetching.
+When several identities match, choose from the returned account/provider/ID candidates; do not guess.
+An unknown name is an error, rather than an invented identity with zero replies. Known opaque IDs
+are accepted; to explicitly select an unseen opaque ID, use `person:provider/account/id`.
+
+Response rows expose `identityKnown`. An explicitly selected ID without stored identity observations
+has `identityKnown: false` and `status: unknown`; a zero count is not evidence that this person never
+answered. A known identity can have zero **observed** qualifying replies, with the usual archive gaps.
+Saved reports and drilldowns pin the resolved identity, so a later rename does not retarget them.

@@ -68,8 +68,8 @@ Codex supports [ChatGPT sign-in and API-key authentication](https://learn.chatgp
 ChatGPT sign-in uses subscription access; API-key usage is billed through the API Platform.
 Before a model run, check `codex login status` without reading credential files. For a
 subscription-only run, require ChatGPT sign-in; do not configure a key, switch authentication, or
-start a paid API run as a fallback. The current runner uses the existing login and does not enforce
-or record its authentication mode, so CLI launch alone is not evidence of the billing route.
+start a paid API run as a fallback. The runner checks ChatGPT login, forces that authentication method for its child runs, and records
+`authenticationMode: chatgpt`. It refuses API-key authentication rather than using a paid fallback.
 The study’s archived metadata establishes the requested model and invocation, not a billing receipt.
 
 Having the development agent perform every task in its existing conversation would be a useful
@@ -130,6 +130,7 @@ local checks, which require no model inference, then prepare and run only the ca
 ```sh
 pnpm build
 node scripts/evals/smoke-stats-evals.mjs
+node scripts/evals/check-discovery.mjs
 node scripts/evals/check-reproducibility.mjs
 node scripts/evals/check-runner-limits.mjs
 ```
@@ -144,7 +145,9 @@ is not a model sampling seed and does not randomize case values. All fixture pro
 Install the exact native candidates and locate their shared SDK directories and public skills.
 Prepare a new directory. The default is one fresh context and two isolated stores per task/repeat,
 with two repeats for each provider/interface cell. Expected answers remain outside subject folders.
-The task prompts give actual synthetic native IDs; display names are not an entity-resolution test.
+The historical primary/adversarial tasks give native IDs to isolate statistics. Use the separately
+registered `discovery` suite to test ordinary names, usernames, failed-reference recovery, ambiguous
+names, unknown names and explicitly selected unseen IDs without supplying the correct IDs.
 
 ```sh
 node scripts/evals/prepare-stats-evals.mjs /tmp/new-stats-eval \
@@ -213,3 +216,16 @@ Serialized-result bytes include duplicated MCP text/structured envelopes; they a
 or a causal efficiency measure. Aggregate by provider, interface and task, retain both repeat outcomes
 and give denominators. Small repeated synthetic samples do not prove live adapter correctness,
 general safety, a reliability percentage or behavior under other models.
+
+## Evaluate ordinary names and recovery
+
+Pass `discovery` to preparation and use a new root, `--seed stats-discovery-v1`, two repeats and
+`--interfaces cli,native-mcp`. The six [tasks](discovery-tasks.txt) and [registered criteria](discovery-rubric.json)
+ask for statistics by stored titles/names/@usernames, request clarification for ambiguous people,
+and distinguish missing observations from zero activity. Correct native IDs are not given for
+name tasks. The fixture now implements chat/person discovery for both interfaces.
+
+Run `check-discovery.mjs` before model inference. It checks real CLI/MCP lookup, aliases, scoped
+ambiguity, unknown-name rejection and unseen-ID uncertainty, with no counter fetch or forbidden
+actions. Historical lookup failures remain unchanged; new results belong to a new suite and SDK
+snapshot. A trace pass still needs final-answer review against the original criteria.

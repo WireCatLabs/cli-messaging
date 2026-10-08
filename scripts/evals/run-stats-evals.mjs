@@ -33,6 +33,12 @@ if (
   hash(readFileSync(join(root, "rubric.json"))) !== manifest.rubricSha256
 )
   throw new Error("fixture or preregistered rubric changed since preparation")
+for (const subject of Object.values(manifest.subjects ?? {}))
+  if (
+    subject.runtimeSha256 &&
+    hash(readFileSync(join(subject.path, "dist/services/admin-statistics.js"))) !== subject.runtimeSha256
+  )
+    throw new Error("subject statistics runtime changed since preparation")
 const selected = manifest.contexts.filter((context) => !options.only || context.name.includes(options.only))
 if (!selected.length) throw new Error("no selected contexts")
 for (const context of selected) {
@@ -41,6 +47,10 @@ for (const context of selected) {
   if (hash(readFileSync(join(context.cwd, "prompt.txt"))) !== context.promptSha256)
     throw new Error(`prompt changed: ${context.name}`)
 }
+const auth = spawnSync("codex", ["login", "status"], { encoding: "utf8" })
+if (auth.status !== 0 || !/logged in using chatgpt/i.test(`${auth.stdout} ${auth.stderr}`))
+  throw new Error("Stats evals require ChatGPT login; API-key authentication and paid fallback are refused")
+const authenticationMode = "chatgpt"
 const runnerSha256 = hash(readFileSync(fileURLToPath(import.meta.url)))
 const version = spawnSync("codex", ["--version"], { encoding: "utf8" })
 if (version.status !== 0) throw new Error("Codex runner unavailable")
@@ -50,6 +60,7 @@ writeFileSync(
     {
       startedAt: new Date().toISOString(),
       requestedModel: options.model,
+      authenticationMode,
       runnerSha256,
       resolvedBackendSnapshot: null,
       runnerVersion: version.stdout.trim(),
@@ -82,6 +93,8 @@ const run = async (context) => {
     "workspace-write",
     "-c",
     'approval_policy="never"',
+    "-c",
+    'forced_login_method="chatgpt"',
     "-c",
     `model_reasoning_effort=${toml(options.reasoning)}`,
     "-C",
@@ -177,6 +190,7 @@ const run = async (context) => {
     mode: context.mode,
     repeat: context.repeat,
     requestedModel: options.model,
+    authenticationMode,
     runnerSha256,
     resolvedBackendSnapshot: null,
     runnerVersion: version.stdout.trim(),
