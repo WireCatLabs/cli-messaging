@@ -226,4 +226,36 @@ describe("reads only the server answers", () => {
     expect(withText.code).toBe(2)
     expect(elsewhere.stderr).toContain("unknown option '--sticker'")
   })
+
+  it("`chats delete` and `clear` ask first, go ahead with --allow-dangerous, and only where the messenger offers them", async () => {
+    const done: unknown[] = []
+    const adapter: MessengerAdapter = {
+      ...base,
+      deleteChat: async (chatId) => {
+        done.push(["delete", chatId])
+      },
+      clearHistory: async (chatId) => {
+        done.push(["clear", chatId])
+      },
+    }
+    const own = { chatDeletion: true }
+    const unasked = await invoke(["chats", "delete", "Book club"], adapter, own)
+    const deleted = await invoke(["chats", "delete", "Book club", "--allow-dangerous", "--json"], adapter, own)
+    const cleared = await invoke(["chats", "clear", "Book club", "--allow-dangerous", "--json"], adapter, own)
+    const readOnly = await invoke(["chats", "clear", "Book club", "--allow-dangerous"], adapter, own, {
+      defaults: { readOnly: true },
+      profiles: {},
+    })
+    const elsewhere = await invoke(["chats", "delete", "Book club", "--allow-dangerous"], adapter)
+
+    expect(unasked.stderr).toContain("--allow-dangerous")
+    expect(JSON.parse(deleted.stdout)).toMatchObject({ chatId: "7" })
+    expect(JSON.parse(cleared.stdout)).toMatchObject({ chatId: "7" })
+    expect(done).toEqual([
+      ["delete", "7"],
+      ["clear", "7"],
+    ])
+    expect([unasked.code, readOnly.code]).toEqual([7, 5])
+    expect(elsewhere.code).not.toBe(0)
+  })
 })

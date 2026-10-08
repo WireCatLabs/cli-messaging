@@ -16,6 +16,8 @@ export type ChatAction =
   | "create"
   | "join"
   | "leave"
+  | "delete"
+  | "clear"
   | "members.add"
   | "members.remove"
   | "admins.add"

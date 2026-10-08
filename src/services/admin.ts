@@ -18,6 +18,10 @@ export interface AdminService {
   create(group: NewGroup): Promise<Operated<{ chat: GroupCard }>>
   join(link: string): Promise<Operated<{ chat: GroupCard } | { requested: true }>>
   leave(chat: string): Promise<Operated<{ chatId: Id }>>
+  /** For this account only; asks first at the default level. */
+  deleteChat(chat: string): Promise<Operated<{ chatId: Id }>>
+  /** Every message, for this account only; asks first at the default level. */
+  clearHistory(chat: string): Promise<Operated<{ chatId: Id }>>
   update(chat: string, change: GroupChange): Promise<Operated<{ chat: GroupCard }>>
   /** The invite link, or `not_found` when the owner may not see it. */
   link(chat: string): Promise<{ chatId: Id; title: string | null; link: string }>
@@ -100,6 +104,24 @@ export const adminService = (deps: ServiceDeps): AdminService => {
       const { id: chatId } = await connection.resolve(chat)
       const operationId = newOperationId()
       await guardedWrite(deps.guard, { operationId, chatId, kind: "chat", action: "leave" }, () => leave(chatId))
+      return { operationId, chatId }
+    },
+
+    deleteChat: async (chat) => {
+      const connection = await online("chats delete")
+      const remove = capability(connection, "deleteChat", "delete a chat")
+      const { id: chatId } = await connection.resolve(chat)
+      const operationId = newOperationId()
+      await guardedWrite(deps.guard, { operationId, chatId, kind: "chat", action: "delete" }, () => remove(chatId))
+      return { operationId, chatId }
+    },
+
+    clearHistory: async (chat) => {
+      const connection = await online("chats clear")
+      const clear = capability(connection, "clearHistory", "clear a chat's history")
+      const { id: chatId } = await connection.resolve(chat)
+      const operationId = newOperationId()
+      await guardedWrite(deps.guard, { operationId, chatId, kind: "chat", action: "clear" }, () => clear(chatId))
       return { operationId, chatId }
     },
 

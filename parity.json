@@ -1482,10 +1482,24 @@
     "chats admins remove": {
       "in": "all"
     },
+    "chats clear": {
+      "in": [],
+      "planned": {
+        "max": "feat/client-gaps-e",
+        "tg": "tg-cli backlog: chats delete and clear"
+      }
+    },
     "chats create": {
       "in": "all",
       "options": {
         "--channel": "all"
+      }
+    },
+    "chats delete": {
+      "in": [],
+      "planned": {
+        "max": "feat/client-gaps-e",
+        "tg": "tg-cli backlog: chats delete and clear"
       }
     },
     "chats events": {

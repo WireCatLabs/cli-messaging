@@ -4,11 +4,10 @@ import { ReadStream } from "node:tty"
 import { CliError } from "@leemour/cli-core"
 import type { Command } from "commander"
 import type { Asker } from "../../sends/guard.js"
+import { skipFlagFor } from "../../sends/permissions.js"
 import { environmentOf } from "../context.js"
 
-/** Deleting has its own word for "yes": the flag a person has to mean, not a habit (max-cli `NEED-238`). */
-export const skipFlagFor = (key: string): "--allow-dangerous" | "--yes" =>
-  key === "messages.delete" || key === "bot.messages.delete" || key === "topics.delete" ? "--allow-dangerous" : "--yes"
+export { skipFlagFor }
 
 /**
  * One line from the terminal itself, not stdin — stdin may be the text being sent. `null` when no

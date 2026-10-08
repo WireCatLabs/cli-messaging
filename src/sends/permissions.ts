@@ -66,6 +66,13 @@ export type Level = (typeof LEVELS)[number]
 /** A command path, dotted: `messages`, `messages.delete`, `chats.members.remove`. */
 export type PermissionKey = string
 
+/** The deletions nobody gets back: the word that skips their question is `--allow-dangerous`, never `--yes`. */
+const DANGEROUS = new Set(["messages.delete", "bot.messages.delete", "topics.delete", "chats.delete", "chats.clear"])
+
+/** Deleting has its own word for "yes": the flag a person has to mean, not a habit (max-cli `NEED-238`). */
+export const skipFlagFor = (key: string): "--allow-dangerous" | "--yes" =>
+  DANGEROUS.has(key) ? "--allow-dangerous" : "--yes"
+
 /** Only what cannot be undone asks; the tool is meant to work without questions (owner, NEED-460). */
 export const DEFAULT_PERMISSIONS: Readonly<Record<PermissionKey, Level>> = {
   "messages.delete": "ask",
@@ -73,6 +80,8 @@ export const DEFAULT_PERMISSIONS: Readonly<Record<PermissionKey, Level>> = {
   "bot.messages.delete": "ask",
   "topics.enable": "ask",
   "topics.delete": "ask",
+  "chats.delete": "ask",
+  "chats.clear": "ask",
   // NEED-568: a rule writes to people with nobody typing a command; it waits for the owner's own allow.
   "replies.send": "deny",
 }
@@ -105,7 +114,7 @@ const OLD_WORDS: Record<Permission, PermissionKey[]> = {
   edit: ["messages.edit", "polls.close"],
   pin: ["messages.pin", "messages.unpin"],
   read: ["chats.mark-read"],
-  delete: ["messages.delete"],
+  delete: ["messages.delete", "chats.delete", "chats.clear"],
   groups: [
     "chats.create",
     "chats.update",

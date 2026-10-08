@@ -458,6 +458,12 @@ export interface AccountRecords {
   stickers(setId: Id): Promise<Sticker[]>
 }
 
+/** Removing a chat or its messages from this account only; the others in it keep theirs. */
+export interface ChatDeletion {
+  deleteChat(chatId: Id): Promise<void>
+  clearHistory(chatId: Id): Promise<void>
+}
+
 /** The owner's own settings; nobody else is told. */
 export interface AccountSettings {
   /** `forever`, an ISO 8601 time, or null to hear the chat again. */
@@ -574,6 +580,7 @@ export interface MessengerAdapter
     Partial<AccountEditing>,
     Partial<AccountRecords>,
     Partial<AccountSettings>,
+    Partial<ChatDeletion>,
     Partial<AccountHealth>,
     Partial<OfficialStats> {}
 

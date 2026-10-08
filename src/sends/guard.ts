@@ -12,7 +12,15 @@ import {
   type SendKind,
   sendsPathFor,
 } from "./journal.js"
-import { keyForWrite, type Level, levelFor, type Permission, type PermissionKey, permissionFor } from "./permissions.js"
+import {
+  keyForWrite,
+  type Level,
+  levelFor,
+  type Permission,
+  type PermissionKey,
+  permissionFor,
+  skipFlagFor,
+} from "./permissions.js"
 import { RecipientList, recipientsPathFor } from "./recipients.js"
 
 const HOUR_MS = 60 * 60 * 1000
@@ -354,7 +362,7 @@ const refuseToAsk: Asker = async (key) => {
   throw new CliError(
     "confirmation_required",
     `${key} asks before it acts (its permission level is ask), and nobody is here to answer — ` +
-      `add ${key === "messages.delete" || key === "topics.delete" ? "--allow-dangerous" : "--yes"} to go ahead`,
+      `add ${skipFlagFor(key)} to go ahead`,
   )
 }
 
