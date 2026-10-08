@@ -245,6 +245,15 @@ export interface Poll {
   creator?: boolean
 }
 
+/** One person's vote in a poll that is not anonymous. */
+export interface PollVote {
+  person: Member
+  /** Answer ids, as `Poll.answers` has them. */
+  answers: Id[]
+  /** ISO 8601. */
+  votedAt: string
+}
+
 /** A chat marked read up to `messageId`, inclusive. `unread` is what the provider says is left, or `null`. */
 export interface ReadMark {
   chatId: Id

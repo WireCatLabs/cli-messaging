@@ -83,6 +83,8 @@ export interface Messenger {
   mediaOptions?: readonly MediaOption[]
   /** Whether `polls create` makes quizzes (`--quiz --correct --solution`); no when unset. */
   pollQuiz?: boolean
+  /** Whether `polls voters` lists who voted for what; no when unset. */
+  pollVoters?: boolean
   /** Whether folders take kinds of chat, skip muted, read or archived ones, exclude and pin chats; no when unset. */
   folderRules?: boolean
   /** Whether the messenger reads HTML in `--html`; no when unset. */

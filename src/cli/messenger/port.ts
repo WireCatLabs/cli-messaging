@@ -34,6 +34,7 @@ import type {
   PersonCard,
   PhoneBookEntry,
   Poll,
+  PollVote,
   PrivacySettings,
   ProfileFacts,
   SenderIdentity,
@@ -289,6 +290,12 @@ export interface MessagePolls {
   vote(chatId: Id, messageId: Id, answerIds: Id[]): Promise<Poll>
   /** Only the owner's own poll; it cannot be reopened. */
   closePoll(chatId: Id, messageId: Id): Promise<Poll>
+  /** Who voted, newest first; `answerId` keeps those who chose it. Only for a poll that is not anonymous. */
+  pollVoters?(
+    chatId: Id,
+    messageId: Id,
+    window: { limit: number; answerId?: Id },
+  ): Promise<Page<PollVote> & { total: number }>
   createPoll(
     chatId: Id,
     poll: NewPoll,

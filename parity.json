@@ -76,6 +76,10 @@
     "--anonymous": {
       "meaning": "nobody sees who voted for what"
     },
+    "--answer": {
+      "value": "<id>",
+      "meaning": "only those who chose this answer, as `polls show` prints it"
+    },
     "--answerer": {
       "value": "<id>",
       "meaning": "a scoped human identity whose explicit reply qualifies; repeat it for more"
@@ -3141,6 +3145,23 @@
       "in": "all",
       "options": {
         "--retract": "all"
+      }
+    },
+    "polls voters": {
+      "in": [],
+      "reason": "max-cli does not list who voted in a poll",
+      "planned": { "tg": "G2 feat/polls-voters" },
+      "options": {
+        "--answer": {
+          "in": [],
+          "reason": "max-cli does not list who voted in a poll",
+          "planned": { "tg": "G2 feat/polls-voters" }
+        },
+        "--limit": {
+          "in": [],
+          "reason": "max-cli does not list who voted in a poll",
+          "planned": { "tg": "G2 feat/polls-voters" }
+        }
       }
     },
     "reactions": {
