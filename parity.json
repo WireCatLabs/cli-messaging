@@ -1102,10 +1102,9 @@
       "in": "all"
     },
     "account list": {
-      "in": [],
+      "in": ["tg"],
       "planned": {
-        "max": "each CLI's next cli-messaging bump",
-        "tg": "each CLI's next cli-messaging bump"
+        "max": "each CLI's next cli-messaging bump"
       }
     },
     "account privacy": {
