@@ -1,3 +1,4 @@
+import { annotate } from "@leemour/cli-core/commands"
 import { Command } from "commander"
 import type { CounterQuery } from "../../services/counters.js"
 import { environmentOf } from "../context.js"
@@ -25,6 +26,7 @@ export const countersCommand = (messenger: Messenger) => {
       .option("--counters <names>", "distinct views,reactions,comments fields; all three by default")
       .option("--limit <n>", "messages, 1–100; 20 by default", positiveCount("--limit"))
     if (operation === "show") command.option("--max-age <duration>", "maximum fresh observation age; 24h by default")
+    if (operation === "refresh") annotate(command, { mutates: true, local: true })
     if (operation === "refresh")
       command
         .option("--max-messages <n>", "maximum messages to refresh, 1–100", positiveCount("--max-messages"))

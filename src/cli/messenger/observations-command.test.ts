@@ -4,6 +4,7 @@ import { join } from "node:path"
 import { captureStreams } from "@leemour/cli-core"
 import { describe, expect, it, vi } from "vitest"
 import { openStore } from "../../store/store.js"
+import { commandsCommand } from "../commands-command.js"
 import { run } from "../program.js"
 import { settingsFor } from "../settings.js"
 import { rememberAccount } from "./accounts.js"
@@ -73,12 +74,29 @@ const setup = async (permissions?: object) => {
   }
   const call = async (...args: string[]) => {
     const streams = captureStreams(),
-      code = await run(args, { app, commands: () => [statsCommand(messenger)] }, { streams, tty: false, env })
+      code = await run(
+        args,
+        { app, commands: () => [statsCommand(messenger), commandsCommand(app)] },
+        { streams, tty: false, env },
+      )
     return { code, stdout: streams.stdout.join("\n"), stderr: streams.stderr.join("\n") }
   }
   return { call, connect }
 }
 describe("observation CLI", () => {
+  it("declares counter refresh as a local write in command discovery", async () => {
+    const { call } = await setup()
+    const discovery = await call("commands", "stats", "messages", "counters", "refresh", "--json")
+    expect(discovery.code, discovery.stderr).toBe(0)
+    const commands = JSON.parse(discovery.stdout).commands as { path: string[]; mutates?: boolean; local?: boolean }[]
+    expect(commands.find((command) => command.path.join(" ") === "stats messages counters refresh")).toMatchObject({
+      mutates: true,
+      local: true,
+    })
+    const shown = await call("commands", "stats", "messages", "counters", "show", "--json")
+    expect(JSON.parse(shown.stdout).commands[0]?.mutates).not.toBe(true)
+  })
+
   it("shows counter freshness and exact dry-run targets without connecting", async () => {
     const { call, connect } = await setup()
     const shown = await call("stats", "messages", "counters", "show", "--chat", "7", "--counters", "views", "--json")
