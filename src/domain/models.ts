@@ -168,6 +168,31 @@ export interface Attachment {
   duration?: number
   /** What the adapter needs to fetch the bytes later. Opaque above the adapter. */
   providerRef?: ProviderMetadata
+  /** A bot's keyboard under the message, row by row. */
+  buttons?: Button[][]
+}
+
+/**
+ * What pressing a bot's button does: `callback` tells the bot, `link` opens `url`, `message` sends its
+ * text, `chat` opens a chat, `contact` and `location` hand the owner's phone or place to the bot, `app`
+ * opens the bot's mini app, `clipboard` copies.
+ */
+export type ButtonKind =
+  | "callback"
+  | "link"
+  | "message"
+  | "chat"
+  | "contact"
+  | "location"
+  | "app"
+  | "clipboard"
+  | "other"
+
+/** One button of a bot's keyboard. What the bot gets on a press stays inside the adapter. */
+export interface Button {
+  kind: ButtonKind
+  text: string
+  url?: string
 }
 
 /** Where one attachment's bytes can be fetched. */

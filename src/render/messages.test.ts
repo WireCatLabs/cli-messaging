@@ -108,6 +108,23 @@ describe("a message, as a person reads it", () => {
     expect(out).toContain("📎 report.pdf · 24 MB")
   })
 
+  it("prints a bot's keyboard row by row, each button numbered for `messages press`", () => {
+    const keyboard = {
+      kind: "inline_keyboard",
+      buttons: [
+        [
+          { kind: "callback" as const, text: "Yes" },
+          { kind: "callback" as const, text: "No" },
+        ],
+        [{ kind: "link" as const, text: "Site", url: "https://example.org" }],
+      ],
+    }
+    const out = renderMessage(message({ attachments: [keyboard] }), plain)
+    expect(out).toContain("[1 Yes] [2 No]")
+    expect(out).toContain("[3 Site] https://example.org")
+    expect(out).not.toContain("inline_keyboard")
+  })
+
   it("makes an attachment a hyperlink when there is colour", () => {
     const out = renderMessage(message({ attachments: [{ kind: "photo", url: "https://i.example/1" }] }), {
       ...plain,

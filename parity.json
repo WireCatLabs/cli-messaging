@@ -2882,6 +2882,13 @@
         "--notify": "all"
       }
     },
+    "messages press": {
+      "in": [],
+      "planned": {
+        "max": "feat/client-gaps-bots",
+        "tg": "tg-cli backlog: press inline buttons"
+      }
+    },
     "messages scheduled": {
       "in": "all"
     },
