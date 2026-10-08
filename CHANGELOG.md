@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.185.0 — 08.10.2026
+
 ### Added
 
 - `polls create --quiz --correct <n> [--solution <text>]` sends a quiz — one right answer, by its position from 1,
