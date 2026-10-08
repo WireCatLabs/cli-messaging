@@ -110,7 +110,10 @@ export const adminTools = (messenger: Messenger): Record<string, AnyTool> => {
       input: v.object({
         chat: chatOf(messenger),
         approval: v.optional(
-          v.pipe(v.boolean(), v.description("who joins by it asks first, and an admin lets them in")),
+          v.pipe(
+            v.boolean(),
+            v.description("who joins by it asks first, and an admin lets them in; not with max_uses"),
+          ),
         ),
         expire_time: v.optional(
           v.pipe(v.string(), v.description("it stops working then: 2026-09-25T09:00 (local time), or 30m, 2h, 7d")),
@@ -162,7 +165,10 @@ export const adminTools = (messenger: Messenger): Record<string, AnyTool> => {
         chat: chatOf(messenger),
         link: v.pipe(v.string(), v.minLength(1)),
         approval: v.optional(
-          v.pipe(v.boolean(), v.description("true: who joins by it asks first; false: anyone with it joins at once")),
+          v.pipe(
+            v.boolean(),
+            v.description("true: who joins by it asks first, not with max_uses; false: anyone with it joins at once"),
+          ),
         ),
         expire_time: v.optional(
           v.pipe(

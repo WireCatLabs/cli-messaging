@@ -30,12 +30,12 @@ const fixture = (capable = true) => {
 }
 
 describe("another invite link", () => {
-  it("is made through the guard with approval, an expiry as an ISO minute and a use limit", async () => {
+  it("is made through the guard with a use limit and an expiry as an ISO minute", async () => {
     const f = fixture()
-    const made = await f.service.createLink("synthetic group", { approval: true, expires: "7d", maxUses: 5 })
-    expect(made).toMatchObject({ chatId: "-1007", link: "https://t.me/+synthetic", approval: true, maxUses: 5 })
+    const made = await f.service.createLink("synthetic group", { approval: false, expires: "7d", maxUses: 5 })
+    expect(made).toMatchObject({ chatId: "-1007", link: "https://t.me/+synthetic", approval: false, maxUses: 5 })
     const [, options] = f.createInviteLink.mock.calls[0] ?? []
-    expect(options).toMatchObject({ approval: true, maxUses: 5, expiresAt: expect.stringMatching(/:00\.000Z$/) })
+    expect(options).toMatchObject({ approval: false, maxUses: 5, expiresAt: expect.stringMatching(/:00\.000Z$/) })
     expect(f.checked).toEqual([expect.objectContaining({ chatId: "-1007", kind: "chat", action: "link.create" })])
     expect(f.records).toMatchObject([{ action: "link.create", outcome: "sent" }])
   })
@@ -49,6 +49,7 @@ describe("another invite link", () => {
   it.each([
     [{ maxUses: 0 }, "--max-uses takes a whole number from 1 to 99999"],
     [{ maxUses: 100_000 }, "--max-uses takes a whole number from 1 to 99999"],
+    [{ approval: true, maxUses: 5 }, "a link that asks first takes no use limit"],
     [{ expires: "soon" }, "--expire-time takes a time like"],
     [{ expires: "2020-01-01T00:00" }, "--expire-time has to be at least a minute from now"],
   ])("refuses %j before connecting", async (options, message) => {

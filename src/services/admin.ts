@@ -183,7 +183,7 @@ export const adminService = (deps: ServiceDeps): AdminService => {
     },
 
     createLink: async (chat, { approval, expires, maxUses }) => {
-      const expiresAt = linkLimits({ expires, maxUses })
+      const expiresAt = linkLimits({ approval, expires, maxUses })
       const connection = await online("chats link create")
       const create = capability(connection, "createInviteLink", "make another invite link")
       const { id: chatId } = await connection.resolve(chat)
@@ -283,7 +283,7 @@ export const adminService = (deps: ServiceDeps): AdminService => {
           "validation_error",
           "nothing to change: give --approval, --no-approval, --expire-time or --max-uses",
         )
-      const limited = linkLimits({ expires: expires === "never" ? undefined : expires, maxUses })
+      const limited = linkLimits({ approval, expires: expires === "never" ? undefined : expires, maxUses })
       const expiresAt = expires === "never" ? null : limited
       const connection = await online("chats link update")
       const update = capability(connection, "updateInviteLink", "change an invite link")
@@ -355,8 +355,19 @@ export const adminService = (deps: ServiceDeps): AdminService => {
   }
 }
 
-const linkLimits = ({ expires, maxUses }: { expires?: string | undefined; maxUses?: number | undefined }) => {
+const linkLimits = ({
+  approval,
+  expires,
+  maxUses,
+}: {
+  approval?: boolean | undefined
+  expires?: string | undefined
+  maxUses?: number | undefined
+}) => {
   if (maxUses !== undefined && (!Number.isInteger(maxUses) || maxUses < 1 || maxUses > 99_999))
     throw new CliError("validation_error", "--max-uses takes a whole number from 1 to 99999")
+  // Measured on Telegram 2026-10-08: turning approval on drops the limit, and says nothing.
+  if (approval === true && maxUses !== undefined)
+    throw new CliError("validation_error", "a link that asks first takes no use limit; give --approval or --max-uses")
   return expires === undefined ? undefined : sendTime(expires, Date.now(), "--expire-time")
 }
