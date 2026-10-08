@@ -314,6 +314,7 @@ interface Harness {
   config?: object
   skill?: URL
   history?: Messenger["history"]
+  pollQuiz?: boolean
   serverSearch?: boolean
   /** Another server's files, to read what it stored. */
   root?: string
@@ -339,6 +340,7 @@ const connect = async (telegram: Scripted = scripted(), options: Partial<ServerO
     skill,
     history,
     serverSearch,
+    pollQuiz,
     root: _root,
     http,
     permission = [],
@@ -358,6 +360,7 @@ const connect = async (telegram: Scripted = scripted(), options: Partial<ServerO
     ...(skill ? { skill } : {}),
     ...(history ? { history } : {}),
     ...(serverSearch ? { serverSearch } : {}),
+    ...(pollQuiz ? { pollQuiz } : {}),
   }
   const streams = captureStreams()
   let made: ReturnType<typeof createServer> | undefined
@@ -2030,6 +2033,23 @@ describe("sending over MCP", () => {
       { action: "topic-create", threadId: "12", sendId: "42", outcome: "sent" },
     ])
     expect(JSON.stringify(entries)).not.toContain("synthetic")
+  })
+
+  it("creates a quiz over MCP where the messenger makes them, and refuses one where it does not", async () => {
+    const polls: unknown[] = []
+    const telegram = scripted({
+      createPoll: async (_chatId, poll, options) => {
+        polls.push(poll)
+        return { message, sendId: options.sendId }
+      },
+    })
+    const quiz = { chat: "7", text: "2+2?", answers: ["3", "4"], quiz: true, correct: 2, solution: "four" }
+
+    const quizzing = await connect(telegram, { pollQuiz: true })
+    expect((await quizzing.call("chat_polls_create", quiz)).isError).toBe(false)
+    const plain = await connect(telegram, {})
+    expect((await plain.call("chat_polls_create", quiz)).isError).toBe(true)
+    expect(polls).toMatchObject([{ quiz: { correct: 1, solution: "four" } }])
   })
 
   it("preserves topic addressing through MCP send and poll tools", async () => {

@@ -103,6 +103,8 @@ export interface NewPoll {
   anonymous: boolean
   /** People may change their vote. Without it they cannot, in every messenger. */
   revote?: boolean
+  /** A quiz: `correct` is the right answer's index from 0, `solution` what is shown once someone answers. */
+  quiz?: { correct: number; solution?: string }
 }
 
 export interface Sent {

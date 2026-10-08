@@ -1,7 +1,8 @@
+import { CliError } from "@leemour/cli-core"
 import * as v from "valibot"
 import type { Messenger } from "../../cli/messenger/context.js"
 import { capability } from "../../cli/messenger/port.js"
-import { guardedClose, guardedCreatePoll, guardedVote } from "../../sends/polls.js"
+import { guardedClose, guardedCreatePoll, guardedVote, quizOf } from "../../sends/polls.js"
 import { type AnyTool, chatOf, message, READ, tool, WRITE } from "../tool.js"
 
 const answerId = v.pipe(v.string(), v.minLength(1), v.description("an answer id, as polls_show gives it"))
@@ -67,10 +68,34 @@ export const pollWriteTools = (messenger: Messenger): Record<string, AnyTool> =>
           ),
         ),
         send_id: v.optional(v.pipe(v.string(), v.minLength(1), v.description("from an earlier outcome_unknown"))),
+        quiz: v.optional(
+          v.pipe(
+            v.boolean(),
+            v.description("a quiz: one answer is right, and a vote is final; where the messenger makes them"),
+          ),
+        ),
+        correct: v.optional(
+          v.pipe(
+            v.number(),
+            v.integer(),
+            v.minValue(1),
+            v.description("with quiz: the right answer's position, from 1"),
+          ),
+        ),
+        solution: v.optional(
+          v.pipe(v.string(), v.minLength(1), v.description("with quiz: what people see once they answered")),
+        ),
       }),
       annotations: WRITE,
       permission: "send",
       online: async (adapter, args, { guard }) => {
+        if (args.quiz === true && !messenger.pollQuiz)
+          throw new CliError("validation_error", "this messenger makes no quizzes")
+        const asQuiz = quizOf({
+          ...(args.quiz === undefined ? {} : { quiz: args.quiz }),
+          ...(args.correct === undefined ? {} : { correct: args.correct }),
+          ...(args.solution === undefined ? {} : { solution: args.solution }),
+        })
         const sent = await guardedCreatePoll(guard, adapter, {
           chat: args.chat,
           poll: {
@@ -79,6 +104,7 @@ export const pollWriteTools = (messenger: Messenger): Record<string, AnyTool> =>
             multiple: args.multiple === true,
             anonymous: args.anonymous === true,
             revote: args.revote === true,
+            ...(asQuiz === undefined ? {} : { quiz: asQuiz }),
           },
           silent: false,
           ...(args.send_id === undefined ? {} : { sendId: args.send_id }),

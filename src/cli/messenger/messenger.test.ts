@@ -1097,6 +1097,50 @@ describe("the shared read commands", () => {
     ])
   })
 
+  it("**creates a quiz where the messenger makes them**, and refuses quiz options that do not go together", async () => {
+    const root = mkdtempSync(join(tmpdir(), "messenger-"))
+    const env = { CHAT_STATE_DIR: join(root, "state"), CHAT_CONFIG_DIR: join(root, "config") }
+    const created: unknown[] = []
+    const quizzing: MessengerAdapter = {
+      ...fake,
+      createPoll: async (_chatId, poll, { sendId }) => {
+        created.push(poll)
+        return { message: { ...message, id: "9" }, sendId }
+      },
+    }
+    const quiz = { pollQuiz: true }
+    const create = (...extra: string[]) =>
+      call(["polls", "create", "Book", "2+2?", "3", "4", "5", ...extra], async () => quizzing, env, {}, quiz)
+
+    const made = await create("--quiz", "--correct", "2", "--solution", "it is 4", "--json")
+    const outOfRange = await create("--quiz", "--correct", "4")
+    const noCorrect = await create("--quiz")
+    const stray = await create("--correct", "2")
+    const final = await create("--quiz", "--correct", "2", "--revote")
+    const elsewhere = await call(
+      ["polls", "create", "Book", "2+2?", "3", "4", "--quiz", "--correct", "2"],
+      async () => quizzing,
+      env,
+    )
+
+    expect(made.code).toBe(0)
+    expect(created).toEqual([
+      {
+        question: "2+2?",
+        answers: ["3", "4", "5"],
+        multiple: false,
+        anonymous: false,
+        revote: false,
+        quiz: { correct: 1, solution: "it is 4" },
+      },
+    ])
+    expect(outOfRange.stderr.join("\n")).toContain("1 to 3")
+    expect(noCorrect.stderr.join("\n")).toContain("needs --correct")
+    expect(stray.stderr.join("\n")).toContain("go with --quiz")
+    expect(final.stderr.join("\n")).toContain("one final answer")
+    expect(elsewhere.stderr.join("\n")).toContain("unknown option '--quiz'")
+  })
+
   it("describe themselves for an agent, with the contract version and which ones write", async () => {
     const root = mkdtempSync(join(tmpdir(), "messenger-"))
     const { stdout } = await call(["commands", "--json"], async () => fake, { CHAT_STATE_DIR: root })
