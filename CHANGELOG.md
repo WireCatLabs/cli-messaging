@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.205.0 — 08.10.2026
+
 ### Changed — may break callers
 
 - `JoinRequest.requestedAt` is `string | null`: MAX lists join requests without a time (measured in max-cli,
