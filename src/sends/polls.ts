@@ -56,6 +56,13 @@ export const guardedCreatePoll = async (
   }: { chat: string; poll: NewPoll; silent: boolean; sendId?: string; threadId?: Id; sendAs?: Id },
 ): Promise<Operated<Sent>> => {
   if (poll.answers.length < 2) throw new CliError("validation_error", "a poll needs two answers or more")
+  if (poll.quiz) {
+    const { correct } = poll.quiz
+    if (!Number.isInteger(correct) || correct < 0 || correct >= poll.answers.length)
+      throw new CliError("validation_error", `--correct takes an answer's position, 1 to ${poll.answers.length}`)
+    if (poll.multiple || poll.revote)
+      throw new CliError("validation_error", "a quiz takes one final answer; not with --multiple or --revote")
+  }
   const threadId = threadIdOf(typedThread)
   const validate =
     threadId === undefined ? undefined : capability(connection, "validateThread", "send to a forum topic")
@@ -87,4 +94,24 @@ export const guardedCreatePoll = async (
     validate === undefined || threadId === undefined ? undefined : () => validate(chatId, threadId, {}),
   )
   return { ...sent, operationId: id }
+}
+
+/** `--quiz --correct <n> --solution <text>` as typed, `n` from 1; refused when they do not go together. */
+export const quizOf = ({
+  quiz,
+  correct,
+  solution,
+}: {
+  quiz?: boolean
+  correct?: number
+  solution?: string
+}): NewPoll["quiz"] => {
+  if (quiz !== true) {
+    if (correct !== undefined || solution !== undefined)
+      throw new CliError("validation_error", "--correct and --solution go with --quiz")
+    return undefined
+  }
+  if (correct === undefined)
+    throw new CliError("validation_error", "a quiz needs --correct <n>, the right answer's position")
+  return { correct: correct - 1, ...(solution === undefined ? {} : { solution }) }
 }

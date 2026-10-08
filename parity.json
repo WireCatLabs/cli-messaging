@@ -227,6 +227,10 @@
       "value": "<n>",
       "meaning": "messages before and after each hit"
     },
+    "--correct": {
+      "value": "<n>",
+      "meaning": "with --quiz: the right answer's position, from 1"
+    },
     "--cursor": {
       "value": "<cursor>",
       "meaning": "continue from the extraction or ranking-evidence cursor"
@@ -702,6 +706,9 @@
       "meaning": "diagnostics off",
       "note": "max's own copy is worded differently until T6 moves the command onto the shared one (e13)"
     },
+    "--quiz": {
+      "meaning": "a quiz: one answer is right, and a vote is final"
+    },
     "--reason": {
       "value": "<text>",
       "meaning": "why a task was closed, kept with it — no-reply-needed, for example"
@@ -819,6 +826,10 @@
     "--skip": {
       "value": "<which>",
       "meaning": "a folder leaves out chats that are muted, read or archived"
+    },
+    "--solution": {
+      "value": "<text>",
+      "meaning": "with --quiz: what people see once they answered"
     },
     "--source": {
       "value": "<messenger>",
@@ -2863,11 +2874,14 @@
       "in": "all",
       "options": {
         "--anonymous": "all",
+        "--correct": { "in": [], "reason": "max-cli creates no quizzes", "planned": { "tg": "G2 feat/poll-quiz" } },
         "--multiple": "all",
+        "--quiz": { "in": [], "reason": "max-cli creates no quizzes", "planned": { "tg": "G2 feat/poll-quiz" } },
         "--revote": "all",
         "--send-as": "all",
         "--send-id": "all",
         "--silent": "all",
+        "--solution": { "in": [], "reason": "max-cli creates no quizzes", "planned": { "tg": "G2 feat/poll-quiz" } },
         "--topic": "all"
       }
     },

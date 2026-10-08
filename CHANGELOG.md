@@ -6,6 +6,13 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- `polls create --quiz --correct <n> [--solution <text>]` sends a quiz — one right answer, by its position from 1,
+  and a vote that is final — where the messenger sets the new `Messenger.pollQuiz`; MCP `polls_create` takes
+  `quiz`, `correct` and `solution`. `--multiple` and `--revote` are refused with `--quiz`. `NewPoll` gains optional
+  `quiz: { correct, solution? }`, `correct` counted from 0.
+
 ## 0.184.0 — 08.10.2026
 
 ### Added

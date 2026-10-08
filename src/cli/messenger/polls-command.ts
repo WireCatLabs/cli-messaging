@@ -1,8 +1,9 @@
 import { CliError } from "@leemour/cli-core"
 import { annotate } from "@leemour/cli-core/commands"
 import { Command } from "commander"
-import { guardedClose, guardedCreatePoll, guardedVote } from "../../sends/polls.js"
+import { guardedClose, guardedCreatePoll, guardedVote, quizOf } from "../../sends/polls.js"
 import { typedSendAs } from "../../sends/send-as.js"
+import { positiveCount } from "../paging.js"
 import { type Messenger, messengerContext } from "./context.js"
 import { capability } from "./port.js"
 import { threadIdOf } from "./thread.js"
@@ -71,7 +72,7 @@ export const pollsCommand = (messenger: Messenger): Command => {
       )
     })
 
-  annotate(polls.command("create"), { mutates: true })
+  const create = annotate(polls.command("create"), { mutates: true })
     .description("send a poll to a chat, as a message of its own; public unless --anonymous")
     .argument("<chat>", messenger.chatArgument)
     .argument("<question>", "the question")
@@ -86,45 +87,58 @@ export const pollsCommand = (messenger: Messenger): Command => {
       "post as one of the identities `chats send-as` lists; required where the chat posts as someone else by default",
     )
     .option("--send-id <id>", "repeat a create whose outcome was unknown, without risking a second poll")
-    .action(async function (this: Command, chat: string, question: string, answers: string[]) {
-      const context = messengerContext(this, messenger)
-      const {
-        multiple,
-        anonymous,
-        revote,
-        silent,
-        sendId,
-        topic,
-        sendAs: given,
-      } = this.opts<{
-        sendAs?: string
-        topic?: string
-        multiple?: boolean
-        anonymous?: boolean
-        revote?: boolean
-        silent?: boolean
-        sendId?: string
-      }>()
-      const threadId = threadIdOf(topic)
-      const sendAs = typedSendAs(given)
-      const sent = await context.withMessenger((connection) =>
-        guardedCreatePoll(context.guard, connection, {
-          chat,
-          ...(threadId === undefined ? {} : { threadId }),
-          poll: {
-            question,
-            answers,
-            multiple: multiple === true,
-            anonymous: anonymous === true,
-            revote: revote === true,
-          },
-          silent: silent === true,
-          ...(sendId === undefined ? {} : { sendId }),
-          ...(sendAs === undefined ? {} : { sendAs }),
-        }),
-      )
-      context.renderer.result({ sendId: sent.sendId, operationId: sent.operationId, message: sent.message })
-    })
+  if (messenger.pollQuiz)
+    create
+      .option("--quiz", "a quiz: one answer is right, and a vote is final")
+      .option("--correct <n>", "with --quiz: the right answer's position, from 1", positiveCount("--correct"))
+      .option("--solution <text>", "with --quiz: what people see once they answered")
+  create.action(async function (this: Command, chat: string, question: string, answers: string[]) {
+    const context = messengerContext(this, messenger)
+    const {
+      multiple,
+      anonymous,
+      revote,
+      silent,
+      sendId,
+      topic,
+      sendAs: given,
+      quiz,
+      correct,
+      solution,
+    } = this.opts<{
+      quiz?: boolean
+      correct?: number
+      solution?: string
+      sendAs?: string
+      topic?: string
+      multiple?: boolean
+      anonymous?: boolean
+      revote?: boolean
+      silent?: boolean
+      sendId?: string
+    }>()
+    const threadId = threadIdOf(topic)
+    const sendAs = typedSendAs(given)
+    const asQuiz = quizOf({ quiz, correct, solution })
+    const sent = await context.withMessenger((connection) =>
+      guardedCreatePoll(context.guard, connection, {
+        chat,
+        ...(threadId === undefined ? {} : { threadId }),
+        poll: {
+          question,
+          answers,
+          multiple: multiple === true,
+          anonymous: anonymous === true,
+          revote: revote === true,
+          ...(asQuiz === undefined ? {} : { quiz: asQuiz }),
+        },
+        silent: silent === true,
+        ...(sendId === undefined ? {} : { sendId }),
+        ...(sendAs === undefined ? {} : { sendAs }),
+      }),
+    )
+    context.renderer.result({ sendId: sent.sendId, operationId: sent.operationId, message: sent.message })
+  })
 
   return polls
 }
