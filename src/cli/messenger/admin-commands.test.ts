@@ -1,7 +1,7 @@
 import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { captureStreams } from "@leemour/cli-core"
+import { CliError, captureStreams } from "@leemour/cli-core"
 import { describe, expect, it } from "vitest"
 import type { Chat, GroupCard } from "../../domain/models.js"
 import { adminTools } from "../../mcp/tools/admin.js"
@@ -627,6 +627,39 @@ describe("chats create, join and leave", () => {
       "folder-order",
       "folder-join",
     ])
+  })
+
+  it("**shows a folder's chats by name**: the store's names first, the messenger asked only for the rest", async () => {
+    const env = sandbox()
+    const asked: string[] = []
+    const adapter: MessengerAdapter = {
+      ...base,
+      folders: async () => [
+        { id: "4", title: "Work", chatIds: ["7", "8", "9"], pinnedChatIds: ["8"], excludedChatIds: ["7"] },
+      ],
+      resolve: async (id) => {
+        asked.push(id)
+        if (id === "9") throw new CliError("not_found", "no such chat")
+        return { ...chat, id, title: "Standup", kind: "channel" }
+      },
+    }
+
+    await call(["chats", "list"], adapter, env)
+    const shown = await call(["chats", "folders", "show", "Work", "--json"], adapter, env)
+
+    expect(shown.code).toBe(0)
+    expect(JSON.parse(shown.stdout[0] ?? "")).toEqual({
+      id: "4",
+      title: "Work",
+      chats: [
+        { id: "7", title: "Book club", kind: "group" },
+        { id: "8", title: "Standup", kind: "channel" },
+        { id: "9", title: null, kind: null },
+      ],
+      pinned: [{ id: "8", title: "Standup", kind: "channel" }],
+      excluded: [{ id: "7", title: "Book club", kind: "group" }],
+    })
+    expect(asked).toEqual(["8", "9"])
   })
 
   it("**changes the address book through the guard**, each as its own account action", async () => {

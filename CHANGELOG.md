@@ -12,6 +12,10 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
   and a vote that is final — where the messenger sets the new `Messenger.pollQuiz`; MCP `polls_create` takes
   `quiz`, `correct` and `solution`. `--multiple` and `--revote` are refused with `--quiz`. `NewPoll` gains optional
   `quiz: { correct, solution? }`, `correct` counted from 0.
+- `chats folders show <folder>`: one folder, by id or exact title, with its chats, pinned and excluded chats by
+  name — `{ id, title, kind }`, names from the store first, the messenger asked only for the rest; a chat it cannot
+  find keeps its id with `title` and `kind` null. `FoldersService.show`. Planned for max and tg.
+- Parity: `session start --sms` planned for tg.
 
 ## 0.184.0 — 08.10.2026
 

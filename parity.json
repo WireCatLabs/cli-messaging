@@ -827,6 +827,9 @@
       "value": "<which>",
       "meaning": "a folder leaves out chats that are muted, read or archived"
     },
+    "--sms": {
+      "meaning": "phone login: ask Telegram to send the code by SMS, not to the app; Telegram may still refuse"
+    },
     "--solution": {
       "value": "<text>",
       "meaning": "with --quiz: what people see once they answered"
@@ -1566,6 +1569,13 @@
       "in": ["tg"],
       "planned": {
         "max": "feat/client-gaps-a"
+      }
+    },
+    "chats folders show": {
+      "in": [],
+      "planned": {
+        "max": "each CLI's next cli-messaging bump",
+        "tg": "each CLI's next cli-messaging bump"
       }
     },
     "chats folders update": {
@@ -3190,6 +3200,13 @@
         "--qr-file": {
           "in": ["tg"],
           "reason": "ruled tg-only with the app registration it belongs to"
+        },
+        "--sms": {
+          "in": [],
+          "reason": "asks Telegram to resend its login code by SMS; MAX has no such choice",
+          "planned": {
+            "tg": "feat/session-start-sms"
+          }
         }
       }
     },
