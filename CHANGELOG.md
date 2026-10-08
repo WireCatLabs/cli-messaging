@@ -6,6 +6,10 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- `attachments show --page N` (MCP `page`) renders one retained PDF page as standard image content for remote agents whose clients cannot open embedded PDF resources. Uses optional `unpdf` and `@napi-rs/canvas`; no OCR API calls or automatic indexing. Preview metadata separates the source PDF hash/size from the PNG hash/size.
+
 ## 0.206.0 — 08.10.2026
 
 ### Added

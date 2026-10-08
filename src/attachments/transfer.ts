@@ -28,7 +28,7 @@ export const validateWindow = ({ offsetBytes = 0, chunkBytes = 524288, ifSha256 
 }
 
 /** Hash and capture the requested bytes in one bounded pass; never return a filesystem path. */
-export const retainedBytes = async (path: string, options: ByteWindow) => {
+export const retainedBytes = async (path: string, options: ByteWindow, captureFile = false) => {
   const { offsetBytes, chunkBytes } = validateWindow(options)
   const cancelled = () => {
     if (options.signal?.aborted) throw new CliError("cancelled", "file transfer cancelled")
@@ -47,6 +47,7 @@ export const retainedBytes = async (path: string, options: ByteWindow) => {
       if (!opened.isFile() || opened.ino !== before.ino || opened.dev !== before.dev || opened.size !== before.size)
         throw new CliError("validation_error", "the retained attachment changed; restart its transfer")
       const bytes = Buffer.alloc(Math.min(chunkBytes, opened.size - offsetBytes))
+      const capturedFile = captureFile ? Buffer.alloc(opened.size) : undefined
       const head = Buffer.alloc(32)
       const hash = createHash("sha256")
       let seen = 0
@@ -60,6 +61,7 @@ export const retainedBytes = async (path: string, options: ByteWindow) => {
         if (seen + chunk.length > MAX_FILE_BYTES || seen + chunk.length > opened.size)
           throw new CliError("validation_error", "the retained attachment changed; restart its transfer")
         hash.update(chunk)
+        if (capturedFile) chunk.copy(capturedFile, seen)
         if (seen < head.length) chunk.copy(head, seen, 0, Math.min(chunk.length, head.length - seen))
         const start = Math.max(0, offsetBytes - seen)
         const end = Math.min(chunk.length, offsetBytes + bytes.length - seen)
@@ -88,6 +90,7 @@ export const retainedBytes = async (path: string, options: ByteWindow) => {
         complete: offsetBytes === 0 && bytes.length === seen,
         base64: bytes.toString("base64"),
         head,
+        capturedFile,
       }
     } finally {
       await handle.close()

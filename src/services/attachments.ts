@@ -15,6 +15,7 @@ import {
   MAX_TEXT_CHARS,
 } from "../attachments/extract.js"
 import { type OcrPipeline, ocrImage, ocrPdf } from "../attachments/ocr.js"
+import { pdfPreview } from "../attachments/pdf-preview.js"
 import { type ByteWindow, retainedBytes, transferMime, validateWindow } from "../attachments/transfer.js"
 import { NOT_FILES } from "../domain/attachments.js"
 import { formatLocator, isLocator, parseLocator } from "../domain/locator.js"
@@ -109,10 +110,13 @@ export interface AttachmentBytes {
   nextOffsetBytes: number | null
   complete: boolean
   base64: string
+  pdf?: { page: number; pageCount: number; sourceSha256: string; sourceBytes: number }
 }
 
 export interface AttachmentsService {
-  show(target: { chat: string; message?: string; attachment?: number } & ByteWindow): Promise<AttachmentBytes>
+  show(
+    target: { chat: string; message?: string; attachment?: number; page?: number; load?: LoadEngine } & ByteWindow,
+  ): Promise<AttachmentBytes>
   /** Reads the text layer of saved files into the local store; prints and sends nothing. */
   extract(options?: ExtractOptions): Promise<ExtractRun>
   /** File attachments of stored messages and what is held of their text; one page more tells `hasMore`. */
@@ -399,8 +403,12 @@ export const attachmentsService = (deps: ServiceDeps): AttachmentsService => ({
     return views.map((view) => itemOf(account, view))
   },
 
-  show: async ({ chat, message, attachment, ...window }) => {
+  show: async ({ chat, message, attachment, page, load, ...window }) => {
     validateWindow(window)
+    if (page !== undefined && (!Number.isSafeInteger(page) || page < 1))
+      throw new CliError("validation_error", "PDF page must be a position from 1")
+    if (page !== undefined && (window.offsetBytes !== undefined || window.chunkBytes !== undefined))
+      throw new CliError("validation_error", "PDF page cannot be combined with byte offset or chunk size")
     if (attachment !== undefined && (!Number.isSafeInteger(attachment) || attachment < 1))
       throw new CliError("validation_error", "attachment must be a position from 1")
     const store = await deps.store()
@@ -421,13 +429,37 @@ export const attachmentsService = (deps: ServiceDeps): AttachmentsService => ({
         "choose one stored file with --attachment and its position from 1",
       )
     if (chosen.localPath === null) throw new CliError("not_found", "download this attachment before transferring it")
-    const { head, ...bytes } = await retainedBytes(chosen.localPath, window)
+    const { head, capturedFile, ...bytes } = await retainedBytes(chosen.localPath, window, page !== undefined)
+    const mimeType = transferMime(head, null, chosen.name)
+    let preview: Partial<AttachmentBytes> = {}
+    if (page !== undefined) {
+      if (mimeType !== "application/pdf" || !capturedFile)
+        throw new CliError("validation_error", "page preview requires a retained PDF")
+      const rendered = await pdfPreview(capturedFile, page, window.signal, load)
+      preview = {
+        mimeType: "image/png",
+        totalBytes: rendered.bytes.length,
+        readBytes: rendered.bytes.length,
+        offsetBytes: 0,
+        nextOffsetBytes: null,
+        complete: true,
+        base64: rendered.bytes.toString("base64"),
+        sha256: createHash("sha256").update(rendered.bytes).digest("hex"),
+        pdf: {
+          page: rendered.page,
+          pageCount: rendered.pageCount,
+          sourceSha256: bytes.sha256,
+          sourceBytes: bytes.totalBytes,
+        },
+      }
+    }
     return {
       locator: formatLocator({ ...account, chat: chatId, message: messageId }),
       attachment: chosen.position + 1,
       name: chosen.name,
-      mimeType: transferMime(head, null, chosen.name),
+      mimeType,
       ...bytes,
+      ...preview,
     }
   },
 
