@@ -703,6 +703,10 @@
       "default": "5s",
       "note": "max's own copy is worded differently until T6 moves the command onto the shared one (e13)"
     },
+    "--payload": {
+      "value": "<text>",
+      "meaning": "the start parameter the bot reads, as a ?start= link carries it"
+    },
     "--people": {
       "meaning": "only these sender ids, comma-separated; empty for any",
       "value": "<ids>"
@@ -899,6 +903,10 @@
     },
     "--spoiler": {
       "meaning": "hide the --photo or video behind a spoiler until tapped"
+    },
+    "--start": {
+      "value": "<param>",
+      "meaning": "the start parameter the app reads"
     },
     "--state": {
       "value": "<state>",
@@ -1604,10 +1612,17 @@
       "in": "all"
     },
     "chats app": {
-      "in": [],
+      "in": ["max"],
       "planned": {
-        "max": "feat/client-gaps-bots",
         "tg": "tg-cli backlog: start a bot, open its mini app"
+      },
+      "options": {
+        "--start": {
+          "in": ["max"],
+          "planned": {
+            "tg": "tg-cli backlog: start a bot, open its mini app"
+          }
+        }
       }
     },
     "chats clear": {
@@ -2061,10 +2076,17 @@
       "in": "all"
     },
     "chats start": {
-      "in": [],
+      "in": ["max"],
       "planned": {
-        "max": "feat/client-gaps-bots",
         "tg": "tg-cli backlog: start a bot, open its mini app"
+      },
+      "options": {
+        "--payload": {
+          "in": ["max"],
+          "planned": {
+            "tg": "tg-cli backlog: start a bot, open its mini app"
+          }
+        }
       }
     },
     "chats tracking": {
@@ -2904,9 +2926,8 @@
       }
     },
     "messages press": {
-      "in": [],
+      "in": ["max"],
       "planned": {
-        "max": "feat/client-gaps-bots",
         "tg": "tg-cli backlog: press inline buttons"
       }
     },
