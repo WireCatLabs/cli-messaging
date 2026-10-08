@@ -208,8 +208,8 @@ rename: same id, links and tags kept. Today a move is a new identity. Small and 
 
 ## 6. Open questions
 
-- `mentions` links: the plan stores them at import (approved 2026-10-08 as the plan's "1 A";
-  the owner asked for an explanation before ruling on stored versus computed).
+- `mentions` links: stored at import or computed at each search? The plan stores them; the owner asked
+  for an explanation before ruling (2026-10-08).
 - Multi-stem for Latin words (§3.6.2): which Latin languages to enable by default — English and
   Spanish, matching the owner's chats?
 - `memo annotations` was never released on npm (cli-memo 0.1.2). Can it be replaced by `memo notes`
