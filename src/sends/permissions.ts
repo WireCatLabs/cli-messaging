@@ -38,6 +38,8 @@ const ACCOUNT: Record<AccountAction, Permission> = {
   "folder-order": "folders",
   "folder-join": "folders",
   "sessions-end": "sessions",
+  "chat-mute": "profile",
+  privacy: "profile",
 }
 
 export const permissionFor = (kind: SendKind, action?: string): Permission => {
@@ -120,7 +122,7 @@ const OLD_WORDS: Record<Permission, PermissionKey[]> = {
     "topics.delete",
   ],
   contacts: ["contacts"],
-  profile: ["account.update"],
+  profile: ["account.update", "account.privacy.set", "chats.mute"],
   folders: ["chats.folders"],
   sessions: ["account.sessions.end"],
 }
@@ -223,6 +225,8 @@ const ACCOUNT_KEYS: Record<AccountAction, PermissionKey> = {
   "folder-order": "chats.folders.order",
   "folder-join": "chats.folders.join",
   "sessions-end": "account.sessions.end",
+  "chat-mute": "chats.mute",
+  privacy: "account.privacy.set",
 }
 
 const KIND_KEYS: Record<Exclude<SendKind, "chat" | "account">, PermissionKey> = {

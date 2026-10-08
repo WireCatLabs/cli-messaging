@@ -6,6 +6,13 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Added
+
+- The owner's own settings, guarded and journaled as account changes: `chats mute <chat> [--until <time>]` and
+  `chats unmute` (`chatMute`), `account privacy set` (with `privacy`). Adapters implement `AccountSettings`
+  (`mute`, `updatePrivacy`); journal actions `chat-mute` (`chats.mute`) and `privacy` (`account.privacy.set`),
+  both under the old `profile` word. Planned for tg.
+
 ## 0.182.0 — 08.10.2026
 
 ### Added
