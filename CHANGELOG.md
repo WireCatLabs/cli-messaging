@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.201.0 — 08.10.2026
+
 ### Added
 
 - `polls voters <chat> <message> [--answer <id>] [--limit]` and MCP `polls_voters`: who voted for what in a
