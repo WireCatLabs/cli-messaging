@@ -31,8 +31,8 @@ observed replies, unknown names, unseen explicit IDs and pinned evidence after a
   denied synthetic store. CLI calls actual shared commands; native MCP uses actual attached stdio
   frontend tools with a fake remote adapter. No real messenger adapter/account/keyring is used.
 - Measured local candidate: SDK version **label0.204.0**, source base `e36ad22` plus local candidate
-  `99481ea`; this is **not the published npm0.204.0 build**. Its exact patch is retained in the private
-  evidence archive. Fixture SHA256 `7c12c1e78d3d77932ba638e0e224267adf21a5c3825027a87494477e67a5f0c3`;
+  `99481ea`; this is **not the published npm0.204.0 build**. Its [exact source patch](2026-10-08-natural-name-candidate.patch) is public and also retained
+  in the private evidence archive. Fixture SHA256 `7c12c1e78d3d77932ba638e0e224267adf21a5c3825027a87494477e67a5f0c3`;
   compiled statistics runtime SHA256 `d670347270295a2568af2597fb972b036cd7da8ff21091eb5a5ed0593c4555da`.
   Preparation records these hashes and the runner refuses a changed subject runtime.
 - Subjects read the public skill and receive goals, not expected answers or correct tool-call scripts.
