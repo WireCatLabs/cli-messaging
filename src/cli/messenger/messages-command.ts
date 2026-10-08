@@ -207,7 +207,7 @@ export const messagesCommand = (messenger: Messenger): Command => {
   messages.addCommand(forwardCommand(messenger))
   messages.addCommand(pinCommand(messenger))
   messages.addCommand(unpinCommand(messenger))
-  messages.addCommand(pressCommand(messenger))
+  if (messenger.personalBots === true) messages.addCommand(pressCommand(messenger))
   messages.addCommand(scheduledCommand(messenger))
   messages.addCommand(messageLinkCommand(messenger))
   messages.addCommand(commentsCommand(messenger))

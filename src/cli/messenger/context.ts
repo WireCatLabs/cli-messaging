@@ -99,6 +99,8 @@ export interface Messenger {
   chatMute?: boolean
   /** Whether `chats delete` and `chats clear` exist; no when unset. */
   chatDeletion?: boolean
+  /** Whether `messages press`, `chats start` and `chats app` exist — a bot met on the personal account; no when unset. */
+  personalBots?: boolean
   /** Whether `messages send --sticker` sends a sticker; no when unset. `stickers list` is a group a CLI adds itself. */
   stickers?: boolean
   /** Whether shared folders can be joined; yes when unset. */

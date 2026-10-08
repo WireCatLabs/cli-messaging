@@ -1596,6 +1596,13 @@
     "chats admins remove": {
       "in": "all"
     },
+    "chats app": {
+      "in": [],
+      "planned": {
+        "max": "feat/client-gaps-bots",
+        "tg": "tg-cli backlog: start a bot, open its mini app"
+      }
+    },
     "chats clear": {
       "in": ["max"],
       "planned": {
@@ -2045,6 +2052,13 @@
     },
     "chats show": {
       "in": "all"
+    },
+    "chats start": {
+      "in": [],
+      "planned": {
+        "max": "feat/client-gaps-bots",
+        "tg": "tg-cli backlog: start a bot, open its mini app"
+      }
     },
     "chats tracking": {
       "in": [],
