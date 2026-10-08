@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.195.0 — 08.10.2026
+
 ### Added
 
 - `chats start <bot> [--payload]` starts a bot in a one-to-one chat, as its Start button does — guarded as a
