@@ -489,6 +489,24 @@ export interface PrivacySettings {
   hideOnline?: boolean
 }
 
+/** A set of stickers the account has added. */
+export interface StickerSet {
+  id: Id
+  title: string
+  count: number
+  /** Where others add it; null when the messenger gives none. */
+  link: string | null
+}
+
+export interface Sticker {
+  id: Id
+  setId: Id | null
+  /** The emoji it stands for, as the messenger tags it. */
+  emoji: string[]
+  /** Where its image is; null when the messenger gives none. */
+  url: string | null
+}
+
 /** Kinds of attachment `chats media` filters by. */
 export const MEDIA_KINDS = ["photo", "video", "file", "audio", "link"] as const
 export type MediaKind = (typeof MEDIA_KINDS)[number]

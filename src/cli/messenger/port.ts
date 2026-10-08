@@ -34,6 +34,8 @@ import type {
   PrivacySettings,
   ProfileFacts,
   SenderIdentity,
+  Sticker,
+  StickerSet,
   Topic,
   TopicChange,
   WindowedMessage,
@@ -74,6 +76,8 @@ export interface SendOptions {
   at?: string
   /** Sent in one message, `text` as the caption. More than one is an album. */
   attachments?: Upload[]
+  /** One sticker by id, alone: no text, no attachment. Only where `Messenger.stickers` is on. */
+  sticker?: Id
   /** The photo or video hidden until tapped. Only where `Messenger.mediaOptions` has it. */
   spoiler?: boolean
   /** The caption shown above the attachment. Only where `Messenger.mediaOptions` has it. */
@@ -447,6 +451,9 @@ export interface AccountRecords {
   privacy(): Promise<PrivacySettings>
   /** A chat's messages that carry these kinds of attachment, oldest first; `before` is a message id. */
   media(chatId: Id, window: { kinds: MediaKind[]; limit: number; before?: Id }): Promise<Page<Message>>
+  /** The sets the account has added, in its order. */
+  stickerSets(): Promise<StickerSet[]>
+  stickers(setId: Id): Promise<Sticker[]>
 }
 
 /** The owner's own settings; nobody else is told. */

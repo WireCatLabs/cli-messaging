@@ -9,8 +9,9 @@ import { settingsFor } from "../settings.js"
 import { accountCommand } from "./account-command.js"
 import { chatsCommand } from "./chats-command.js"
 import type { Messenger } from "./context.js"
+import { messagesCommand } from "./messages-command.js"
 import type { MessengerAdapter } from "./port.js"
-import { callsCommand } from "./records-command.js"
+import { callsCommand, stickersCommand } from "./records-command.js"
 
 const app = { command: "chat", appName: "chat-cli", envPrefix: "CHAT", description: "", version: "1.0.0" }
 const chat: Chat = {
@@ -74,7 +75,16 @@ const invoke = async (argv: string[], adapter: MessengerAdapter, own: Partial<Me
   const streams = captureStreams()
   const code = await run(
     argv,
-    { app, commands: () => [chatsCommand(messenger), accountCommand(messenger), callsCommand(messenger)] },
+    {
+      app,
+      commands: () => [
+        chatsCommand(messenger),
+        accountCommand(messenger),
+        callsCommand(messenger),
+        stickersCommand(messenger),
+        messagesCommand(messenger),
+      ],
+    },
     {
       streams,
       tty: false,
@@ -181,5 +191,39 @@ describe("reads only the server answers", () => {
     expect(JSON.parse(set.stdout)).toMatchObject({ privacy: { findByPhone: "contacts", hideOnline: true } })
     expect(changes).toEqual([{ findByPhone: "contacts", hideOnline: true }])
     expect([wrong.code, empty.code, readOnly.code]).toEqual([2, 2, 5])
+  })
+
+  it("`stickers list` lists the sets, or one set's stickers", async () => {
+    const adapter: MessengerAdapter = {
+      ...base,
+      stickerSets: async () => [{ id: "5", title: "Cats", count: 2, link: null }],
+      stickers: async (setId) => [{ id: "51", setId, emoji: ["🐱"], url: null }],
+    }
+    const sets = await invoke(["stickers", "list", "--json"], adapter)
+    const one = await invoke(["stickers", "list", "--set", "5", "--json"], adapter)
+
+    expect(JSON.parse(sets.stdout)).toMatchObject({ items: [{ id: "5", title: "Cats" }], hasMore: false })
+    expect(JSON.parse(one.stdout).items).toEqual([{ id: "51", setId: "5", emoji: ["🐱"], url: null }])
+  })
+
+  it("`messages send --sticker` sends it alone, refuses text beside it, and exists only where the messenger offers it", async () => {
+    const sent: unknown[] = []
+    const adapter: MessengerAdapter = {
+      ...base,
+      send: async (chatId, text, options) => {
+        sent.push([chatId, text, options.sticker])
+        return { message: { ...message("60"), chatId }, sendId: options.sendId }
+      },
+    }
+    const ok = await invoke(["messages", "send", "Book club", "--sticker", "51", "--json"], adapter, { stickers: true })
+    const withText = await invoke(["messages", "send", "Book club", "hi", "--sticker", "51"], adapter, {
+      stickers: true,
+    })
+    const elsewhere = await invoke(["messages", "send", "Book club", "--sticker", "51"], adapter)
+
+    expect(ok.code, ok.stderr).toBe(0)
+    expect(sent).toEqual([["7", "", "51"]])
+    expect(withText.code).toBe(2)
+    expect(elsewhere.stderr).toContain("unknown option '--sticker'")
   })
 })

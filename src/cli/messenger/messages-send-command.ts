@@ -50,6 +50,8 @@ export const sendCommand = (messenger: Messenger): Command => {
   if (messenger.mediaOptions?.includes("fileName"))
     send.option("--filename <name>", "the name others see for the --file, instead of its name on disk")
   if (messenger.html) send.option("--html", HTML_HELP)
+  if (messenger.stickers === true)
+    send.option("--sticker <id>", "send this sticker, alone; `stickers list` finds its id")
   return send
 }
 
@@ -74,6 +76,7 @@ const sendText = async (command: Command, messenger: Messenger, chat: string, te
     allowAnyFile,
     spoiler,
     captionAbove,
+    sticker,
   } = command.opts<{
     topic?: string
     replyTo?: string
@@ -93,6 +96,7 @@ const sendText = async (command: Command, messenger: Messenger, chat: string, te
     allowAnyFile?: boolean
     spoiler?: boolean
     captionAbove?: boolean
+    sticker?: string
   }>()
   const threadId = threadIdOf(topic)
   const scheduledFor = at === undefined ? undefined : sendTime(at)
@@ -113,8 +117,8 @@ const sendText = async (command: Command, messenger: Messenger, chat: string, te
     },
     read,
   )
-  const body = text ?? (attachments.length > 0 ? "" : await readAll(context.stdin))
-  if (body.trim() === "" && attachments.length === 0) {
+  const body = text ?? (attachments.length > 0 || sticker !== undefined ? "" : await readAll(context.stdin))
+  if (body.trim() === "" && attachments.length === 0 && sticker === undefined) {
     throw new CliError("validation_error", "nothing to send — give the text or pipe it in")
   }
   const sent = await context.withServices((services) =>
@@ -134,6 +138,7 @@ const sendText = async (command: Command, messenger: Messenger, chat: string, te
       ...(attachments.length > 0 ? { attachments } : {}),
       ...(spoiler === true ? { spoiler } : {}),
       ...(captionAbove === true ? { captionAbove } : {}),
+      ...(sticker === undefined ? {} : { sticker }),
     }),
   )
   if (scheduledFor !== undefined) {

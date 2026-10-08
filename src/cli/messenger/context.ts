@@ -94,6 +94,8 @@ export interface Messenger {
   privacy?: boolean
   /** Whether `chats mute` and `unmute` exist; no when unset. */
   chatMute?: boolean
+  /** Whether `messages send --sticker` sends a sticker; no when unset. `stickers list` is a group a CLI adds itself. */
+  stickers?: boolean
   /** Whether shared folders can be joined; yes when unset. */
   folderJoin?: boolean
   /** Whether invite links can be listed; yes when unset. */
