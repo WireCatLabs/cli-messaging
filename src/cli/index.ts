@@ -20,6 +20,7 @@ export { type HttpOptions, MCP_PATH, serveOverHttp } from "../mcp/http/serve.js"
 export {
   answerMcpTool,
   failMcpTool,
+  McpBinaryResource,
   McpPicture,
   type PersonalMcpDefaults,
   type PersonalMcpRegistration,

@@ -158,6 +158,27 @@ const hits = async (call: (...argv: string[]) => Promise<{ stdout: string }>, qu
   )
 
 describe("attachments extract", () => {
+  it("transfers exact retained bytes as JSON", async () => {
+    const fixture = await setup()
+    const result = await fixture.call("attachments", "show", "7", "1", "--json", "--chunk-bytes", "8")
+    expect(result.code).toBe(0)
+    expect(JSON.parse(result.stdout)).toMatchObject({
+      readBytes: 8,
+      complete: false,
+      nextOffsetBytes: 8,
+      base64: Buffer.from(SECRET).subarray(0, 8).toString("base64"),
+    })
+  })
+
+  it("refuses retained file reads when either messages or attachment reads are denied", async () => {
+    for (const permission of ["messages", "attachments.show"]) {
+      const fixture = await setup({ config: { permissions: { [permission]: "deny" } } })
+      const result = await fixture.call("attachments", "show", "7", "1", "--json")
+      expect(result.code).not.toBe(0)
+      expect(result.stdout).not.toContain(Buffer.from(SECRET).toString("base64"))
+    }
+  })
+
   it("aborts a bulk OCR request at the command deadline and leaves no indexed answer", async () => {
     const { call, files } = await setup({
       config: {

@@ -691,6 +691,7 @@ describe("the MCP server", () => {
       "chat_account_sessions",
       "chat_account_show",
       "chat_attachments_list",
+      "chat_attachments_show",
       "chat_chats_events",
       "chat_chats_folders_list",
       "chat_chats_inspect",
@@ -1519,6 +1520,66 @@ describe("the MCP server", () => {
     const names = (await readOnly.client.listTools()).tools.map(({ name }) => name)
     expect(names).toContain("chat_attachments_list")
     expect(names).not.toContain("chat_attachments_text_set")
+  })
+
+  it("delivers retained PDF bytes through the real three-tool transport and honors message permissions", async () => {
+    const root = await filledRoot()
+    const connectSpy = vi.fn(async () => {
+      throw new Error("retained transfer connected")
+    })
+    const { client, raw, env } = await connect(scripted(), { root, connect: connectSpy })
+    const store = await openStore({ path: env.MESSAGING_STORE })
+    const path = join(root, "remote.pdf")
+    const bytes = Buffer.from("%PDF-1.7\nsynthetic remote file")
+    writeFileSync(path, bytes)
+    await store.saveMessages(
+      { provider: "chat", account: "500" },
+      "7",
+      [{ ...message, id: "902", attachments: [{ kind: "file", name: "remote.pdf" }] }],
+      { via: "test" },
+    )
+    await store.keepDownloads({ provider: "chat", account: "500" }, "7", "902", [{ kind: "file", position: 0, path }])
+    await store.close()
+    const answer = await client.callTool({
+      name: "chat_attachments_show",
+      arguments: { message: "msg:chat/500/7/902" },
+    })
+    expect(answer.isError).not.toBe(true)
+    expect(answer.content[0]).toMatchObject({
+      type: "resource",
+      resource: {
+        mimeType: "application/pdf",
+        blob: bytes.toString("base64"),
+      },
+    })
+    expect(answer.structuredContent).toMatchObject({ complete: true, totalBytes: bytes.length })
+    expect(JSON.stringify(answer.structuredContent)).not.toContain("base64")
+    const fallback = await client.callTool({
+      name: "chat_attachments_show",
+      arguments: { message: "msg:chat/500/7/902", format: "base64", chunk_bytes: 5 },
+    })
+    expect(fallback.structuredContent).toMatchObject({
+      base64: bytes.subarray(0, 5).toString("base64"),
+      nextOffsetBytes: 5,
+      complete: false,
+    })
+    const foreign = await client.callTool({
+      name: "chat_attachments_show",
+      arguments: { message: "msg:chat/600/7/902" },
+    })
+    expect(foreign.isError).toBe(true)
+    const png = PNG.sync.write(new PNG({ width: 1, height: 1 }))
+    writeFileSync(path, png)
+    const image = await client.callTool({ name: "chat_attachments_show", arguments: { message: "msg:chat/500/7/902" } })
+    expect(image.content[0]).toMatchObject({ type: "image", mimeType: "image/png", data: png.toString("base64") })
+    expect(connectSpy).not.toHaveBeenCalled()
+    expect((await raw.listTools()).tools.map(({ name }) => name).sort()).toEqual([
+      "chat_read",
+      "chat_tools_search",
+      "chat_write",
+    ])
+    const denied = await connect(scripted(), { root, config: levels({ messages: "deny" }) })
+    expect((await denied.client.listTools()).tools.map(({ name }) => name)).not.toContain("chat_attachments_show")
   })
 
   it("extracts local file text through MCP without connecting and keeps the body out of its answer", async () => {

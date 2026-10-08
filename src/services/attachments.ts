@@ -15,6 +15,7 @@ import {
   MAX_TEXT_CHARS,
 } from "../attachments/extract.js"
 import { type OcrPipeline, ocrImage, ocrPdf } from "../attachments/ocr.js"
+import { type ByteWindow, retainedBytes, transferMime, validateWindow } from "../attachments/transfer.js"
 import { NOT_FILES } from "../domain/attachments.js"
 import { formatLocator, isLocator, parseLocator } from "../domain/locator.js"
 import type { Id } from "../domain/models.js"
@@ -96,7 +97,22 @@ export interface AttachmentTextSet {
   replaced: TextOrigin | null
 }
 
+export interface AttachmentBytes {
+  locator: string
+  attachment: number
+  name: string | null
+  mimeType: string
+  totalBytes: number
+  sha256: string
+  offsetBytes: number
+  readBytes: number
+  nextOffsetBytes: number | null
+  complete: boolean
+  base64: string
+}
+
 export interface AttachmentsService {
+  show(target: { chat: string; message?: string; attachment?: number } & ByteWindow): Promise<AttachmentBytes>
   /** Reads the text layer of saved files into the local store; prints and sends nothing. */
   extract(options?: ExtractOptions): Promise<ExtractRun>
   /** File attachments of stored messages and what is held of their text; one page more tells `hasMore`. */
@@ -381,6 +397,38 @@ export const attachmentsService = (deps: ServiceDeps): AttachmentsService => ({
       limit: limit + 1,
     })
     return views.map((view) => itemOf(account, view))
+  },
+
+  show: async ({ chat, message, attachment, ...window }) => {
+    validateWindow(window)
+    if (attachment !== undefined && (!Number.isSafeInteger(attachment) || attachment < 1))
+      throw new CliError("validation_error", "attachment must be a position from 1")
+    const store = await deps.store()
+    const account = await deps.account()
+    const { chatId, messageId } = await messageOf(deps, store, account, chat, message)
+    const files = (await store.attachments(account, { chatId, messageId, limit: 1000 })).filter(
+      ({ kind }) => !NOT_FILES.has(kind),
+    )
+    const chosen =
+      attachment === undefined
+        ? files.length === 1
+          ? files[0]
+          : undefined
+        : files.find(({ position }) => position === attachment - 1)
+    if (!chosen)
+      throw new CliError(
+        files.length === 0 ? "not_found" : "validation_error",
+        "choose one stored file with --attachment and its position from 1",
+      )
+    if (chosen.localPath === null) throw new CliError("not_found", "download this attachment before transferring it")
+    const { head, ...bytes } = await retainedBytes(chosen.localPath, window)
+    return {
+      locator: formatLocator({ ...account, chat: chatId, message: messageId }),
+      attachment: chosen.position + 1,
+      name: chosen.name,
+      mimeType: transferMime(head, null, chosen.name),
+      ...bytes,
+    }
   },
 
   setText: async ({ chat, message, attachment, text }) => {

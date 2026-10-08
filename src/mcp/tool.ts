@@ -323,6 +323,15 @@ export class Picture {
   ) {}
 }
 
+export class BinaryResource {
+  constructor(
+    readonly base64: string,
+    readonly mimeType: string,
+    readonly uri: string,
+    readonly about: object,
+  ) {}
+}
+
 export const answered = (value: object, maxBytes = DEFAULT_OUTPUT_BYTES): CallToolResult => {
   const bounded = (result: CallToolResult): CallToolResult => {
     if (maxBytes !== 0 && Buffer.byteLength(JSON.stringify(result)) > maxBytes)
@@ -340,6 +349,15 @@ export const answered = (value: object, maxBytes = DEFAULT_OUTPUT_BYTES): CallTo
     if (serialized === null || Array.isArray(serialized) || typeof serialized !== "object")
       throw new CliError("invalid_response", "serialized tool result must be an object", { retryable: false })
     return serialized as Record<string, unknown>
+  }
+  if (value instanceof BinaryResource) {
+    return bounded({
+      structuredContent: objectBody(value.about),
+      content: [
+        { type: "resource", resource: { uri: value.uri, mimeType: value.mimeType, blob: value.base64 } },
+        { type: "text", text: JSON.stringify(value.about) },
+      ],
+    })
   }
   if (value instanceof Picture) {
     return bounded({

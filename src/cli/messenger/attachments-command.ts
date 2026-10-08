@@ -35,7 +35,7 @@ const summary = (run: ExtractRun) =>
 const extractCommand = (messenger: Messenger): Command =>
   new Command("extract")
     .description(
-      "read the text of downloaded files — plain text, Word, PDF with a text layer — into the local store, for content: in a search",
+      "read the text of downloaded files — text, PDF/DOCX text layers, ODT/ODS/XLSX/PPTX/EPUB — into the local store, for content: in a search",
     )
     .option("--chat <chat>", `only this chat's files; ${messenger.chatArgument}`)
     .option("--from-dir <dir>", "match files in this nonrecursive directory; needs --chat")
@@ -144,6 +144,52 @@ const listCommand = (messenger: Messenger): Command =>
     )
   })
 
+const showCommand = (messenger: Messenger): Command =>
+  new Command("show")
+    .description("read a bounded chunk of one retained attachment; JSON includes base64 bytes")
+    .argument("<chat>", `${messenger.chatArgument}; or a msg: locator alone`)
+    .argument("[message]", "the message id")
+    .option("--attachment <n>", "file position from 1; required for several files", count)
+    .option("--offset-bytes <n>", "byte offset from 0", Number)
+    .option("--chunk-bytes <n>", "bytes to return, 1–1048576 (default524288)", Number)
+    .option("--if-sha256 <hash>", "require the whole file SHA-256 from the preceding chunk")
+    .action(async function (this: Command, chat: string, message: string | undefined) {
+      const context = messengerContext(this, messenger)
+      const options = this.opts<{ attachment?: number; offsetBytes?: number; chunkBytes?: number; ifSha256?: string }>()
+      const stop = stopOnSignal(this)
+      try {
+        const done = await context.withServices((services) =>
+          services.attachments.show({
+            chat,
+            ...(message === undefined ? {} : { message }),
+            ...options,
+            signal: AbortSignal.any([
+              stop.signal,
+              ...[environmentOf(this).signal, environmentOf(this).commandSignal].filter(
+                (one): one is AbortSignal => one !== undefined,
+              ),
+            ]),
+          }),
+        )
+        if (context.format === "pretty")
+          context.streams.data(
+            done.locator +
+              " #" +
+              done.attachment +
+              "  " +
+              done.readBytes +
+              "/" +
+              done.totalBytes +
+              " bytes  SHA-256 " +
+              done.sha256 +
+              "\n",
+          )
+        else context.renderer.result(done)
+      } finally {
+        stop.release()
+      }
+    })
+
 const textCommand = (messenger: Messenger): Command => {
   const text = new Command("text").description("the text of one file, as an agent read it")
   text
@@ -180,4 +226,5 @@ export const attachmentsCommand = (messenger: Messenger): Command =>
     .description("the files of stored messages: their text in the local store, for content: in a search")
     .addCommand(extractCommand(messenger))
     .addCommand(listCommand(messenger))
+    .addCommand(showCommand(messenger))
     .addCommand(textCommand(messenger))
