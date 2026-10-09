@@ -1635,6 +1635,63 @@ describe("the MCP server", () => {
     expect((await denied.client.listTools()).tools.map(({ name }) => name)).not.toContain("chat_attachments_show")
   })
 
+  it("refuses protected attachment locations before downloading, indexing or transferring bytes", async () => {
+    const root = await filledRoot()
+    const backend = scripted()
+    const { call, env } = await connect(backend, { root })
+    const store = await openStore({ path: env.MESSAGING_STORE })
+    const owner = { provider: "chat", account: "500" }
+    const directories = [
+      join(root, ".ssh"),
+      join(root, ".config", "autostart"),
+      env.CHAT_STATE_DIR,
+      env.CHAT_CONFIG_DIR,
+      env.CHAT_CACHE_DIR,
+    ]
+    try {
+      await store.saveMessages(
+        owner,
+        "7",
+        [{ ...message, id: "903", attachments: [{ kind: "file", name: "synthetic.txt" }] }],
+        { via: "test" },
+      )
+      for (const [index, directory] of directories.entries()) {
+        mkdirSync(directory, { recursive: true })
+        const path = join(directory, "synthetic.txt")
+        writeFileSync(path, "synthetic protected bytes")
+        const alias = join(root, `protected-alias-${index}`)
+        symlinkSync(directory, alias, "junction")
+        for (const folder of [directory, alias]) {
+          const download = await call("chat_attachments_extract", {
+            chat: "7",
+            download: true,
+            output_dir: join(folder, "missing", "downloads"),
+          })
+          expect(download.isError).toBe(true)
+          expect(download.body).toMatchObject({ error: { code: "validation_error" } })
+          const extract = await call("chat_attachments_extract", { chat: "7", from_dir: folder })
+          expect(extract.isError).toBe(true)
+          expect(extract.body).toMatchObject({ error: { code: "validation_error" } })
+          await store.keepDownloads(owner, "7", "903", [
+            { kind: "file", position: 0, path: join(folder, "synthetic.txt") },
+          ])
+          const transfer = await call("chat_attachments_show", { chat: "7", message: "903", format: "base64" })
+          expect(transfer.isError).toBe(true)
+          expect(transfer.body).toMatchObject({ error: { code: "validation_error" } })
+          expect(JSON.stringify(transfer)).not.toContain(Buffer.from("synthetic protected bytes").toString("base64"))
+        }
+      }
+      expect(backend.opened()).toBe(0)
+      expect(
+        await store.localPathOf(
+          (await store.attachments(owner, { chatId: "7", messageId: "903", limit: 1 }))[0]?.pk as number,
+        ),
+      ).not.toBeNull()
+    } finally {
+      await store.close()
+    }
+  })
+
   it("extracts local file text through MCP without connecting and keeps the body out of its answer", async () => {
     const root = await filledRoot()
     const backend = scripted()

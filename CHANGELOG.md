@@ -6,6 +6,12 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Security
+
+- Attachment directory extraction and retained-file transfer refuse hidden files and folders, the
+  CLI's own folders and the message store, including symlink targets. MCP extraction downloads also
+  refuse these locations; choose an ordinary downloads folder instead.
+
 ## 0.213.0 — 09.10.2026
 
 ### Changed — may break callers
