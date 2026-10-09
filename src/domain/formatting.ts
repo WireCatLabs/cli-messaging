@@ -1,4 +1,4 @@
-import { CliError } from "@leemour/cli-core"
+import { CliError, visibleControls } from "@leemour/cli-core"
 
 export interface TextSpan {
   type:
@@ -82,4 +82,27 @@ export const validateFormattedText = (formatted: FormattedText): FormattedText =
     }
   }
   return formatted
+}
+
+export const visibleFormattedText = (formatted: FormattedText): FormattedText => {
+  validateFormattedText(formatted)
+  const text = visibleControls(formatted.text)
+  const positions = new Map<number, number>([[0, 0]])
+  let original = 0
+  let visible = 0
+  for (const character of formatted.text) {
+    const rendered = text.startsWith(character, visible) ? character : visibleControls(character)
+    original += character.length
+    visible += rendered.length
+    positions.set(original, visible)
+  }
+  return {
+    text,
+    spans: formatted.spans.map((span) => ({
+      ...span,
+      from: positions.get(span.from) as number,
+      length: (positions.get(span.from + span.length) as number) - (positions.get(span.from) as number),
+      ...(span.url === undefined ? {} : { url: visibleControls(span.url) }),
+    })),
+  }
 }

@@ -2204,6 +2204,43 @@ describe("sending over MCP", () => {
   })
 
   it.each(["legacy", "modern"] as const)(
+    "keeps decoded HTML text visible and its spans aligned on the %s transport",
+    async (era) => {
+      const decoded = "a\u{e0041}b"
+      const written: { text: string; from: number; length: number }[] = []
+      const { call } = await connect(
+        scripted({
+          formatHtml: async () => ({ text: decoded, spans: [{ type: "bold", from: 3, length: 1 }] }),
+          send: async (_chat, text, options) => {
+            written.push({
+              text,
+              from: options.formatting?.[0]?.from ?? -1,
+              length: options.formatting?.[0]?.length ?? -1,
+            })
+            return { message: { ...message, text }, sendId: "1" }
+          },
+          edit: async (_chat, _message, text, options) => {
+            written.push({
+              text,
+              from: options?.formatting?.[0]?.from ?? -1,
+              length: options?.formatting?.[0]?.length ?? -1,
+            })
+            return { ...message, text }
+          },
+        }),
+        { era, config: levels({ messages: "allow" }) },
+      )
+      const args = { chat: "7", text: "a&#xE0041;<b>b</b>", html: true }
+      expect((await call("chat_messages_send", args)).isError).toBe(false)
+      expect((await call("chat_messages_edit", { ...args, message: "1" })).isError).toBe(false)
+      expect(written).toEqual(
+        Array.from({ length: 2 }, () => ({ text: "a\\u{e0041}b", from: "a\\u{e0041}".length, length: 1 })),
+      )
+      for (const row of written) expect(row.text.slice(row.from, row.from + row.length)).toBe("b")
+    },
+  )
+
+  it.each(["legacy", "modern"] as const)(
     "exposes hidden text on reads and writes through the %s MCP transport",
     async (era) => {
       const hidden = "a\u{e0041}\u0085\u202e\ufeffb"
