@@ -3,14 +3,12 @@ import type { CacheDatabase } from "../driver.js"
 
 const COPIED = "ownerTargetsCopied"
 
-export const ownerTargetsToCopy = (database: CacheDatabase): boolean =>
-  database.prepare("SELECT 1 FROM store_settings WHERE key = ?").get(COPIED) === undefined
-
 /**
  * Moves labels from before version 27 to where the owner's own labels live: a person's, entity's or
  * task's from its account's `knowledge_targets` to `owner_targets`, a note's to the note, and a notes
  * subfolder's (a chat of the old `notes` provider) to its folder. Runs once — copying again would bring
- * back a label the owner removed since. The old rows stay for builds that still read them.
+ * back a label the owner removed since. Version 28 runs it, if version 27 did not, before dropping the
+ * old tables.
  */
 export const copyIntoOwnerTargets = (database: CacheDatabase, now: () => number): void => {
   const at = now()

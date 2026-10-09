@@ -3,7 +3,6 @@ import { formatReference } from "../../domain/references.js"
 import type { AccountKey } from "../store.js"
 import { ulid } from "../ulid.js"
 import { resolvePersonLinks } from "./notes.js"
-import { forgetCopied } from "./notes-copy.js"
 import type { StoreContext } from "./open.js"
 import { toIso } from "./values.js"
 
@@ -127,6 +126,5 @@ export const editNote = (
 export const removeNote = (context: StoreContext, key: AccountKey, personId: string, id: string) => {
   note(context, key, personId, id)
   context.database.prepare("DELETE FROM notes WHERE id=?").run(id)
-  forgetCopied(context.database, { note: id })
   return { id, personId, removed: true }
 }

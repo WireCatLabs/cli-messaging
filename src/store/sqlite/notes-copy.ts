@@ -17,34 +17,9 @@ const watermark = (database: CacheDatabase): number =>
   Number(database.prepare("SELECT value FROM store_settings WHERE key = ?").get(WATERMARK)?.value ?? 0)
 
 /**
- * Whether a build from before version 25 left anything the owner's tables do not hold yet. Every check
- * is an index lookup or reads a table of the owner's own records, so it runs on each open.
- */
-export const notesToCopy = (database: CacheDatabase): boolean =>
-  Number(
-    database
-      .prepare(
-        "SELECT EXISTS (SELECT 1 FROM accounts a WHERE a.provider = 'notes' AND NOT EXISTS (SELECT 1 FROM note_folders f WHERE f.account_pk = a.pk)) " +
-          "OR EXISTS (SELECT 1 FROM note_folders f JOIN chats c ON c.account_pk = f.account_pk JOIN messages m ON m.chat_pk = c.pk WHERE m.pk > ?) " +
-          "OR EXISTS (SELECT 1 FROM tasks WHERE source LIKE 'msg:notes/%') " +
-          "OR EXISTS (SELECT 1 FROM annotations a WHERE NOT EXISTS (SELECT 1 FROM notes n WHERE n.id = a.uid)) " +
-          "OR EXISTS (SELECT 1 FROM knowledge_relations r WHERE NOT EXISTS (SELECT 1 FROM links l WHERE l.id = r.uid OR (l.from_ref = r.from_ref AND l.to_ref = r.to_ref AND l.kind = r.kind))) " +
-          "OR EXISTS (SELECT 1 FROM knowledge_entities e WHERE NOT EXISTS (SELECT 1 FROM entities n WHERE n.id = e.uid)) AS pending",
-      )
-      .get(watermark(database))?.pending,
-  ) === 1
-
-/** Removing a copied note or link removes its source row too, or the next open would copy it back. */
-export const forgetCopied = (database: CacheDatabase, { note, link }: { note?: string; link?: string }): void => {
-  if (note !== undefined) database.prepare("DELETE FROM annotations WHERE uid = ?").run(note)
-  if (link !== undefined) database.prepare("DELETE FROM knowledge_relations WHERE uid = ?").run(link)
-}
-
-/**
  * Copies what builds before version 25 wrote — notes stored as messages of provider `notes`,
- * annotations, relations, entities — into the owner's tables. It only adds what is missing, so it runs
- * after the migration and again whenever an older build has written since; the old rows are never
- * touched. A notes folder's absolute path stops being an id: it waits in `note_folders.pending_path`
+ * annotations, relations, entities — into the owner's tables, as the first step of version 28, which
+ * then drops the old tables. A notes folder's absolute path stops being an id: it waits in `note_folders.pending_path`
  * for the notes tool to move it into this computer's config.
  */
 export const copyIntoNotes = (database: CacheDatabase, now: () => number): void => {

@@ -80,16 +80,3 @@ describe("chat members", () => {
     await store.close()
   })
 })
-
-describe("a build on version 6, on a version 7 file", () => {
-  it("**keeps reading and writing**: version 7 only adds a table", async () => {
-    const path = fresh()
-    await (await openStore({ path })).close()
-
-    const { openStore: openOlder } = await import("cli-messaging-0.49/store")
-    const older = await openOlder({ path })
-    await older.saveChats(OWNER, [chat("-1", null)])
-    expect((await older.chats(OWNER, {})).items.map(({ id }) => id)).toEqual(["-1"])
-    await older.close()
-  })
-})

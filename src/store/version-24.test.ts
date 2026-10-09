@@ -8,7 +8,7 @@ import { openStore } from "./store.js"
 
 const account = { provider: "telegram", account: "1" }
 const now = Date.parse("2026-10-08T12:00:00Z")
-it("keeps schema 6 writers compatible without fabricating freshness", async () => {
+it("does not fabricate freshness for a counter stored before version 24", async () => {
   const path = join(mkdtempSync(join(tmpdir(), "migration-24-")), "store.db")
   const db = await openCache(path)
   migrate(db, { migrations: MIGRATIONS.filter((migration) => migration.version < 24) })
@@ -22,24 +22,6 @@ it("keeps schema 6 writers compatible without fabricating freshness", async () =
   try {
     expect((await store.counterStates?.(account, "7", "42", { now, maxAge: 1000 }))?.[0]).toMatchObject({
       value: 10,
-      freshness: "unknown",
-      observedAt: null,
-    })
-    await store.updateCounterObservations?.(account, "7", "42", {
-      views: { value: 20, observedAt: new Date(now).toISOString(), source: "remote_fetch" },
-    })
-    const legacy = await openCache(path)
-    try {
-      migrate(legacy, { migrations: MIGRATIONS.filter((migration) => migration.version <= 6) })
-      legacy.exec(`UPDATE messages SET provider_metadata='{"views":30}' WHERE pk=1`)
-      expect(legacy.prepare("SELECT max(version) AS version FROM schema_migrations").get()?.version).toBe(
-        MIGRATIONS.at(-1)?.version,
-      )
-    } finally {
-      legacy.close()
-    }
-    expect((await store.counterStates?.(account, "7", "42", { now, maxAge: 1000 }))?.[0]).toMatchObject({
-      value: 30,
       freshness: "unknown",
       observedAt: null,
     })

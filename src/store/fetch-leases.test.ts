@@ -36,15 +36,3 @@ describe("fetch leases", () => {
     await store.close()
   })
 })
-
-describe("a build on version 6, on a version 9 file", () => {
-  it("keeps reading and writing: version 9 only adds a table", async () => {
-    const path = fresh()
-    await (await openStore({ path })).close()
-
-    const { openStore: openOlder } = await import("cli-messaging-0.49/store")
-    const older = await openOlder({ path })
-    await older.saveAccount(OWNER, { name: "Owner" })
-    await older.close()
-  })
-})

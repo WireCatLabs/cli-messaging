@@ -141,18 +141,3 @@ describe("member history", () => {
     await store.close()
   })
 })
-
-describe("a build on version 6, on a version 18 file", () => {
-  it("**keeps reading and writing**: version 18 only adds tables and a nullable column", async () => {
-    const path = fresh()
-    await (await openStore({ path })).close()
-
-    const { openStore: openOlder } = await import("cli-messaging-0.49/store")
-    const older = await openOlder({ path })
-    await older.saveChats(OWNER, [
-      { id: "-1", title: null, kind: "group", unreadCount: 0, lastMessageAt: null, participantsCount: null },
-    ])
-    expect((await older.chats(OWNER, {})).items.map(({ id }) => id)).toEqual(["-1"])
-    await older.close()
-  })
-})

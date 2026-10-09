@@ -155,20 +155,3 @@ describe("tag: in a strict search", () => {
     })
   })
 })
-
-describe("a build on version 6, on a version 16 file", () => {
-  it("**keeps reading and writing, and its deletions drop tags too**: the triggers live in the file", async () => {
-    const { store, path } = await seeded()
-    await store.addTags(OWNER, { type: "message", chatId: "1", messageId: "2" }, ["work"])
-    await store.close()
-    live.splice(0)
-
-    const { openStore: openOlder } = await import("cli-messaging-0.49/store")
-    const older = await openOlder({ path })
-    await older.saveMessages(OWNER, "1", [message("5", "1", "7", "later")], { via: "history" })
-    await older.markDeleted(OWNER, ["2"], { chatId: "1" })
-    expect((await older.messages(OWNER, "1", { limit: 10 })).items.map(({ id }) => id)).toContain("5")
-    await older.close()
-    expect(await count(path)).toBe(0)
-  })
-})

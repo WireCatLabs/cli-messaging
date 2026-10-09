@@ -314,7 +314,9 @@ Drizzle's own migrator is not used. Every migration is forward-only, additive, n
 edited once it reached anyone's file — a test refuses a generated rebuild of a base table. `min_compatible` lets an older CLI keep using a file a newer
 one migrated; only a breaking change raises it, and that is a major version of this package.
 **Correction 2026-09-30:** version 6 raised it to 6 (0.49.0), so every build before 0.49.0 refuses
-a file a newer build has opened, and asks to be upgraded. Versions 7–11 kept it at 6. The rules are
+a file a newer build has opened, and asks to be upgraded. Versions 7–27 kept it at 6. **Correction
+2026-10-09:** version 28 raised it to 28 outside a major version, by the owner's ruling (no other users):
+it drops the tables kept for builds before the notes refactor, after copying what they held. The rules are
 [proposal §4, Migrations](../plans/2026-09-26-platform-proposal.md#migrations).
 
 ⚠ **Announce a migration number before writing it.** Several sessions work in this repository at
@@ -342,7 +344,7 @@ it by editing that line in a PR of its own, merged before the migration.
    `version`. Two folders with one version — the generated one and its custom one, as version 6 —
    apply as one migration and write one `schema_migrations` row. Versions run on without a gap
    (`manifest.test.ts:38-45`).
-6. **`minCompatible` stays where it is** — 6 today — for an additive change. Raising it locks every
+6. **`minCompatible` stays where it is** — 28 today — for an additive change. Raising it locks every
    older build out of the file: ask the owner first; it is a major version of this package, and
    tg-cli and max-cli ship their upgrade the same day, as with version 6.
 7. **`pnpm db:bundle`** after every `db:generate` and every edit of a `migration.sql`. It rewrites

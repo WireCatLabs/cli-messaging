@@ -321,5 +321,49 @@ export const GENERATED: { name: string; statements: string[] }[] = [
       "CREATE TABLE `owner_targets` (\n\t`pk` integer PRIMARY KEY,\n\t`reference` text NOT NULL UNIQUE,\n\t`folder_id` text,\n\t`folder_path` text,\n\t`created_at` integer NOT NULL\n);",
       "CREATE INDEX `owner_targets_by_folder` ON `owner_targets` (`folder_id`,`folder_path`);"
     ]
+  },
+  {
+    "name": "20261009092409_version-28-legacy-notes-data",
+    "statements": [
+      "DELETE FROM tags WHERE taggable_type = 'knowledge';",
+      "DELETE FROM annotations;",
+      "DELETE FROM knowledge_relations;",
+      "DELETE FROM knowledge_entities;",
+      "DELETE FROM knowledge_targets;",
+      "DROP TRIGGER IF EXISTS knowledge_account_delete;",
+      "CREATE TRIGGER knowledge_account_delete BEFORE DELETE ON accounts BEGIN\n  DELETE FROM knowledge_reminders WHERE account_pk=old.pk;\nEND;",
+      "DROP TRIGGER IF EXISTS private_metadata_account_delete;",
+      "CREATE TRIGGER private_metadata_account_delete BEFORE DELETE ON accounts BEGIN\n  DELETE FROM contact_aliases WHERE account_pk=old.pk;\nEND;",
+      "DROP TRIGGER IF EXISTS private_metadata_chat_delete;",
+      "CREATE TRIGGER private_metadata_chat_delete BEFORE DELETE ON chats BEGIN\n  DELETE FROM chat_metadata WHERE chat_pk=old.pk;\n  DELETE FROM auto_tag_claims WHERE chat_pk=old.pk;\nEND;",
+      "DROP TRIGGER IF EXISTS private_metadata_identity_delete;",
+      "CREATE TRIGGER private_metadata_identity_delete BEFORE DELETE ON identities BEGIN\n  DELETE FROM contact_aliases WHERE identity_pk=old.pk;\nEND;",
+      "DELETE FROM message_revisions WHERE message_pk IN (SELECT m.pk FROM messages m JOIN accounts a ON a.pk = m.account_pk WHERE a.provider = 'notes');",
+      "DELETE FROM attachments WHERE message_pk IN (SELECT m.pk FROM messages m JOIN accounts a ON a.pk = m.account_pk WHERE a.provider = 'notes');",
+      "DELETE FROM messages WHERE account_pk IN (SELECT pk FROM accounts WHERE provider = 'notes');",
+      "DELETE FROM sync_ranges WHERE chat_pk IN (SELECT c.pk FROM chats c JOIN accounts a ON a.pk = c.account_pk WHERE a.provider = 'notes');",
+      "DELETE FROM fetch_leases WHERE chat_pk IN (SELECT c.pk FROM chats c JOIN accounts a ON a.pk = c.account_pk WHERE a.provider = 'notes');",
+      "DELETE FROM transcripts WHERE chat_pk IN (SELECT c.pk FROM chats c JOIN accounts a ON a.pk = c.account_pk WHERE a.provider = 'notes');",
+      "DELETE FROM chat_members WHERE chat_pk IN (SELECT c.pk FROM chats c JOIN accounts a ON a.pk = c.account_pk WHERE a.provider = 'notes');",
+      "DELETE FROM member_stays WHERE chat_pk IN (SELECT c.pk FROM chats c JOIN accounts a ON a.pk = c.account_pk WHERE a.provider = 'notes');",
+      "DELETE FROM member_counts WHERE chat_pk IN (SELECT c.pk FROM chats c JOIN accounts a ON a.pk = c.account_pk WHERE a.provider = 'notes');",
+      "DELETE FROM chats WHERE account_pk IN (SELECT pk FROM accounts WHERE provider = 'notes');",
+      "DELETE FROM sync_state WHERE account_pk IN (SELECT pk FROM accounts WHERE provider = 'notes');",
+      "DELETE FROM account_identities WHERE account_pk IN (SELECT pk FROM accounts WHERE provider = 'notes');",
+      "DELETE FROM accounts WHERE provider = 'notes';",
+      "DELETE FROM store_settings WHERE key IN ('notesCopiedThroughMessage', 'ownerTargetsCopied');"
+    ]
+  },
+  {
+    "name": "20261009092436_version-28-drop-legacy-notes",
+    "statements": [
+      "DROP INDEX IF EXISTS `annotations_by_target`;",
+      "DROP INDEX IF EXISTS `knowledge_relation_identity`;",
+      "DROP INDEX IF EXISTS `knowledge_target_identity`;",
+      "DROP TABLE `annotations`;",
+      "DROP TABLE `knowledge_entities`;",
+      "DROP TABLE `knowledge_relations`;",
+      "DROP TABLE `knowledge_targets`;"
+    ]
   }
 ]

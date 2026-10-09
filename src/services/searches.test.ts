@@ -234,18 +234,3 @@ describe("saved searches", () => {
     expect(await run("2026-01-25T00:00:00.000Z")).toEqual(["2"])
   })
 })
-
-describe("a build on version 6, on a version 17 file", () => {
-  it("**keeps reading and writing**: version 17 only adds a table", async () => {
-    const { store, path, searches } = await setup()
-    await searches.create("kept", { text: "invoice" })
-    await store.close()
-    live.splice(0)
-    const { openStore: openOlder } = await import("cli-messaging-0.49/store")
-    const older = await openOlder({ path })
-    await older.saveMessages(OWNER, "1", [message("3", "later", "2026-01-21T10:00:00.000Z")], { via: "history" })
-    expect((await older.messages(OWNER, "1", { limit: 10 })).items.map(({ id }) => id)).toContain("3")
-    await older.close()
-    expect(await rows(path)).toHaveLength(1)
-  })
-})
