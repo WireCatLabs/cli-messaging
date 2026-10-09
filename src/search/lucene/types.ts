@@ -40,7 +40,7 @@ export function queryError(reason: string, span: Span, alternative?: string): ne
       reason,
       span,
       ...(alternative ? { alternative } : {}),
-      guide: "https://github.com/leemour/cli-messaging/blob/main/docs/search/query-language.md",
+      guide: "https://github.com/WireCatLabs/cli-messaging/blob/main/docs/search/query-language.md",
     },
   )
 }

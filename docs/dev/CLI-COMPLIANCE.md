@@ -67,8 +67,8 @@ measures six representative tasks, not every provider command or every model.
 
 | Consumer | Adopted runtime | Validation |
 |---|---|---|
-| [MAX PR438](https://github.com/leemour/max-cli/pull/438), [PR441](https://github.com/leemour/max-cli/pull/441) | SDK 0.161.0, core 0.17.2 | 1,473 tests passed, 2 skipped; 92.15% line coverage; matrix 700 tested / 100 justified / 0 missing. |
-| [Telegram PR309](https://github.com/leemour/tg-cli/pull/309) | SDK 0.161.0, core 0.17.2 | 1,158 tests passed, 1 skipped; 95.05% line coverage; matrix 2,086 tested / 51 justified / 0 missing. |
+| [MAX PR438](https://github.com/WireCatLabs/max-cli/pull/438), [PR441](https://github.com/WireCatLabs/max-cli/pull/441) | SDK 0.161.0, core 0.17.2 | 1,473 tests passed, 2 skipped; 92.15% line coverage; matrix 700 tested / 100 justified / 0 missing. |
+| [Telegram PR309](https://github.com/WireCatLabs/tg-cli/pull/309) | SDK 0.161.0, core 0.17.2 | 1,158 tests passed, 1 skipped; 95.05% line coverage; matrix 2,086 tested / 51 justified / 0 missing. |
 
 Both consumer changes passed lint/typecheck, generated references, parity, public docs and
 skill/configuration-reference checks. Exact PR-head CI includes Linux, macOS, Windows,

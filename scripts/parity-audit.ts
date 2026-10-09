@@ -111,7 +111,7 @@ const fresh = (): Record<string, string> => {
       "main",
       "--depth",
       "1",
-      `https://github.com/leemour/${cli}-cli.git`,
+      `https://github.com/WireCatLabs/${cli}-cli.git`,
       into,
     ])
     const env = sandboxEnvironment(auditHome())

@@ -6,7 +6,7 @@
   "author": "Viacheslav Ptsarev",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/leemour/cli-messaging.git"
+    "url": "git+https://github.com/WireCatLabs/cli-messaging.git"
   },
   "type": "module",
   "engines": {

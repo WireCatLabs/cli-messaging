@@ -34,7 +34,7 @@ Types-only files have no code to count.
 
 A unit test takes milliseconds; one that takes a round second is sleeping in the code under test,
 and on a slow CI runner a few of those cross vitest's 5 s limit (max-cli
-[`TESTING.md`](https://github.com/leemour/max-cli/blob/main/docs/dev/TESTING.md#no-test-waits-for-real)).
+[`TESTING.md`](https://github.com/WireCatLabs/max-cli/blob/main/docs/dev/TESTING.md#no-test-waits-for-real)).
 On 2026-09-29 the slowest test here took 57 ms. The waits that exist are reached without sleeping:
 
 - `store fetch --pause` is the pause between pages; a test passes `--pause 1ms`. A short "wait N

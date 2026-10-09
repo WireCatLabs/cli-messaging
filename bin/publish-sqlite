@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 # Publishes an empty @leemour/cli-messaging-sqlite@0.0.0 once, so the package exists and npm lets its
 # trusted publisher be set (npmjs.com → the package → Settings → Trusted Publisher: GitHub Actions,
-# leemour/cli-messaging, workflow sqlite.yml, environment npm). Every version with libraries is
+# WireCatLabs/cli-messaging, workflow sqlite.yml, environment npm). Every version with libraries is
 # published by that workflow, never from this machine.
 #
 #   bin/publish-sqlite
@@ -32,7 +32,7 @@ cat > "$work/package.json" <<JSON
   "version": "0.0.0",
   "description": "Placeholder: the SQLite builds for @leemour/cli-messaging are published from CI",
   "license": "MIT",
-  "repository": { "type": "git", "url": "git+https://github.com/leemour/cli-messaging.git", "directory": "packages/sqlite" }
+  "repository": { "type": "git", "url": "git+https://github.com/WireCatLabs/cli-messaging.git", "directory": "packages/sqlite" }
 }
 JSON
 (cd "$work" && npm publish --access public --userconfig "$work/.npmrc")
