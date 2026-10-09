@@ -79,7 +79,7 @@ it cannot establish whether a real model understands a task or resists instructi
 
 ## Read the results and decide what to fix
 
-The [8 October study](../../docs/dev/evaluations/2026-10-08-task-isolated-stats-evaluation.md)
+The 8 October study
 recorded 100 attempts: 12 were blocked by host setup, and their 12 fresh reruns replaced those cells
 in the correctness accounting. That leaves 88 eligible first task trials, of which 85 passed.
 The result is a count for this small sample, not a product reliability percentage.

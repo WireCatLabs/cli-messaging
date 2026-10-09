@@ -111,7 +111,7 @@ sqlite node v24.19.0 100000 query-process peak RSS 150 MB
 
 #### Queries — pglite
 
-**Correction:** the PGlite and Docker query rows in this 100k section, and the PGlite rows in the "N = 100000 bun" section, were measured before the `score < 0` fix and are superseded by the "N = 100000 rerun" section below. PGlite (pg_textsearch 1.3.1) returned **non-matching messages** when a btree pre-filtered the rows (small chat): 337 of 400 returned rows did not contain either word (checked with `to_tsvector @@ to_tsquery`). Docker's 1.4.0 did not. Every Postgres query now wraps the ranked query in `WHERE score < 0`.
+The PGlite and Docker query rows in this 100k section, and the PGlite rows in the "N = 100000 bun" section, were measured before the `score < 0` fix and are superseded by the "N = 100000 rerun" section below. PGlite (pg_textsearch 1.3.1) returned **non-matching messages** when a btree pre-filtered the rows (small chat): 337 of 400 returned rows did not contain either word (checked with `to_tsvector @@ to_tsquery`). Docker's 1.4.0 did not. Every Postgres query now wraps the ranked query in `WHERE score < 0`.
 
 **pglite node v24.19.0 100,000** — open 156 ms; process start → first search answered 231 ms
 

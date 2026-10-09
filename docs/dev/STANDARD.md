@@ -178,8 +178,7 @@ guessable from the others.
 `search mail`, `search notes`, `search conversations`, `search topics`; for the bot account
 `bot search messages`. `search all` covers every resource the store holds and is the one an agent
 should reach for first. A resource's own `search` leaf (`messages search`) does not exist beside it.
-`searches` stays: it is the owner's saved searches, a resource, not a search. The relocation plan is
-[`../plans/2026-10-08-search-namespace.md`](../plans/2026-10-08-search-namespace.md).
+`searches` stays: it is the owner's saved searches, a resource, not a search.
 
 ### Statistics hierarchy
 
@@ -663,7 +662,7 @@ whose values are levels. It holds for a command the owner types and for an agent
      (`messages.delete`) it is `deny`.
    - `ask` — in a terminal, a y/N question that shows what will change, default no. A flag skips
      it: `--allow-dangerous` for a deletion, `--yes` for every other write. With no terminal and
-     no flag the command answers `confirmation_required` (7). **Correction 2026-10-07:** over MCP,
+     no flag the command answers `confirmation_required` (7). Over MCP,
      `ask` permits the requested write without a server form; separate moderation rule consent
      remains authoritative.
    - `allow` — goes ahead and never asks.
@@ -707,7 +706,7 @@ many), `--allow-any-file` (which files).
 
 ## Retention and counter observation contract
 
-The owner approved the [retention and counter observation contract](../plans/2026-10-08-retention-freshness-contract.md)
+The owner approved the retention and counter observation contract
 on 2026-10-08. Retention is a chat report; counters is a distinct subresource of messages.
 Counter refresh is an explicit bounded remote read and local write; ordinary statistics remain
 stored reads. Snapshot times and unknown denominators are exposed, never inferred from ingestion.
@@ -715,14 +714,14 @@ stored reads. Snapshot times and unknown denominators are exposed, never inferre
 ## Administrator statistics contract
 
 The owner approved the four stored-data report views and option meanings in the
-[admin statistics contract](../plans/2026-10-08-admin-statistics-contract.md) on 2026-10-08.
+admin statistics contract on 2026-10-08.
 They are implemented by the shared stats service. Reports use explicit reply evidence and preserve
 unknown history and join times. They share the existing stats namespace and MCP frontend.
 
 ## Planned ranking contract
 
 The owner-approved ranking views and their options are recorded in the
-[ranking command contract](../plans/2026-10-07-rankings-contract.md). Rankings operate on
+ranking command contract. Rankings operate on
 stored messages under `stats messages top` and their human authors under `stats contacts top`;
 ordinary search does not gain ranking modes. The owner also approved `stats messages evidence`
 and `stats contacts evidence` for bounded component drilldown on 2026-10-07. The manifest
@@ -892,7 +891,7 @@ Approved2026-10-07. These additive shared surfaces are implemented in the search
 
 ## Attachment OCR
 
-Approved2026-10-07. [Contract](../plans/2026-10-07-attachment-ocr.md): agent self-OCR
+Approved2026-10-07. Contract: agent self-OCR
 and `attachments text set` are the default. `attachments extract --ocr`
 explicitly selects gateway API OCR for bulk extraction using models.ocr;
 `--concurrency` retains its remote-request meaning, default4, range1–8 here, and
@@ -902,7 +901,7 @@ files to remote agents; binary/artifact transport remains separate.
 
 ## Local attachment document readers
 
-[Reader contract](../plans/2026-10-08-attachment-readers.md): UTF-8/BOM and bounded
+Reader contract: UTF-8/BOM and bounded
 high-confidence legacy decoding; ODT/ODS/XLSX/PPTX/EPUB digital text, using the existing
 extract/text/index commands. No remote model call for locally readable files, including
 an explicit --ocr run. Generic archives, legacy Office and RTF remain external conversion.

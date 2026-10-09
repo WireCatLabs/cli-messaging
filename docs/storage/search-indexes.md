@@ -1,6 +1,6 @@
 # How search works — the indexes, search by meaning, and what each one is for
 
-**Current status, 2026-10-04:** strict Lucene message search and optional graph/embedding conversation search are implemented. **Correction:** the automatic typo/any-word/substring pipeline described in the index-design sections belongs to explicit `--language legacy`, not the current default. The [query-language guide](../search/query-language.md) and [technical specification](../search/query-language-spec.md) define strict syntax, validation, limits and coverage. The semantic-search sections describe the existing separate conversation path. No live account or archive was used for this correction; source inspected at `680d22e`.
+strict Lucene message search and optional graph/embedding conversation search are implemented. the automatic typo/any-word/substring pipeline described in the index-design sections belongs to explicit `--language legacy`, not the current default. The [query-language guide](../search/query-language.md) and [technical specification](../search/query-language-spec.md) define strict syntax, validation, limits and coverage. The semantic-search sections describe the existing separate conversation path. No live account or archive was used for this correction; source inspected at `680d22e`.
 
 ## Two searches
 
@@ -68,7 +68,7 @@ A search for «gestor valencia» looks both lists up and keeps the messages in b
 - **how short the message is** — a short message with the word ranks above a long one where it is
   lost.
 
-No embedding model is needed for this index. [Historical index benchmarks](research/2026-09-29-search-benchmark.md) measure particular query/storage paths, not a universal end-to-end strict-search latency guarantee.
+No embedding model is needed for this index. Historical index benchmarks measure particular query/storage paths, not a universal end-to-end strict-search latency guarantee.
 
 ## 3 · The legacy typo vocabulary
 
@@ -139,23 +139,20 @@ middle of words — and brings noise.
 
 This sequence runs only in legacy discovery. Strict Lucene preserves the requested Boolean set, emits no automatic corrections, and errors when its word index is not ready or an execution budget is exceeded. Filters (chat, sender, source, date) apply at every legacy step in the database.
 
-**Correction 2026-10-02** — as built in `src/search/search.ts`: step 1 also takes word beginnings
+As built in `src/search/search.ts`: step 1 also takes word beginnings
 («квартир» finds квартиру), each step runs only when the one before found nothing, and until the word
 index is fully built a search uses the substring index alone. The index fills itself in batches —
-from `store migrate`, `store reindex`, and up to 200 ms before each `messages search`. `in:` and
+from `store migrate`, `store reindex`, and up to 200 ms before each `search messages`. `in:` and
 `--source` widen the search to other accounts the store holds (`in:personal`, `in:bots`, `in:all`).
 Every hit says which step found it (`match`: `words`, `beginnings`, `corrected`, `anyWord`,
 `substring`), and `corrections` lists the words that were replaced.
 
-**Stems, 2026-10-04** — store version 15 also keeps the Snowball stems of every message
-(`message_stems`), built by `store migrate`, rebuilt by `store reindex`, and reported as `stemIndex` by
-`store info` and `store check`. No search reads them yet; stemmed `text:` search is the next step of the
-stemmed-search plan (#524). The stemmers are chosen for the whole store, not per profile:
-`config set searchStemmers.cyrillic russian|none` and `config set searchStemmers.latin spanish|english|none`.
-After a change, the stems wait for `store reindex`.
+**Stems** — the store keeps the Snowball stems of every message (`message_stems`), built by
+`store migrate`, rebuilt by `store reindex`, and reported as `stemIndex` by `store info` and
+`store check`. The stemmers are chosen for the whole store, not per profile:
+`config set searchStemmers.cyrillic russian|none` and `config set searchStemmers.latin <list>|none`.
 
-**Correction 2026-10-08:** `searchStemmers.latin` takes several stemmers, comma-separated, and
-`english,spanish` is now the default. Each gives its own stem sequence; distinct ones are stored apart
+`searchStemmers.latin` takes several stemmers, comma-separated; `english,spanish` is the default. Each gives its own stem sequence; distinct ones are stored apart
 by a separator token (`STEM_SEPARATOR`, `src/search/stem.ts`), and a query matches any of them as a
 phrase. A text with Latin words keeps about twice the stems (1.94× on a synthetic fixture). Notes have
 the same indexes since version 26: `note_words`, `note_stems` and `note_chunks` — see
@@ -168,7 +165,7 @@ Phase 5. Four steps, each a command the owner runs, and nothing leaves the machi
 ### 1 · Conversations, then chunks
 
 `conversations build --chat <chat>` groups a group chat's messages into conversations — by replies,
-mentions and who wrote next ([phase 3](plans/phase-3.md)). The same build cuts each conversation into
+mentions and who wrote next (phase 3). The same build cuts each conversation into
 **chunks**: consecutive messages, cut only between messages, at most 1,200 characters each (about 300
 tokens; `CHUNK_CHARS`, `src/conversations/chunks.ts`). A chunk's text is `sender: text` per line. The
 text is never stored — only the chunk's first and last message and the sha256 of its text
@@ -214,7 +211,7 @@ vectors point, from −1 to 1; vectors are stored at length one, so it is a plai
 vector index: SQLite reads 5,000 rows at a time in the chunks' key order, and JavaScript does the
 arithmetic (`nearestChunks`, `src/store/sqlite/vectors.ts`). At the sizes measured a plain table was as
 fast as sqlite-vec, which would need a native extension per platform
-([research](research/2026-10-02-vectors.md)).
+(research).
 
 A chat embedded only with another model cannot be searched by meaning with this one: the search names
 it on stderr and in `embeddedOnlyElsewhere`, instead of leaving it out silently.
@@ -279,8 +276,7 @@ the source is already `<chat>`, and a second chat option needs a name of its own
 
 A one-shot command loads the model (~1 s), searches and exits. The MCP server keeps the model between
 calls (`warmEmbedders`, `src/embeddings/embed.ts`), so a search after the first pays only the scan.
-~~On Node the kept model runs in a worker thread of its own and is closed after 10 minutes without a
-search; the next search loads it again. On Bun it stays loaded.~~ **Correction 2026-10-02:** the kept
+The kept
 model runs in a child process of its own, on Node and Bun alike, and the process ends after 10 minutes
 without a search; the next search starts it again (~1 s). The server itself stays near its starting size.
 

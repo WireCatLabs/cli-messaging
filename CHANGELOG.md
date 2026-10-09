@@ -220,7 +220,7 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 - `chats link update --expire-time never` (MCP `expire_time: "never"`) takes a link's expiry away;
   `InviteLinkChange.expiresAt` may be `null`.
-- Store version 25: notes are their own records ([plan](docs/plans/2026-10-08-notes-graph.md)).
+- Store version 25: notes are their own records (plan).
   `MessageStore.notes` holds notes folders (an id here, the path in each computer's config), file and
   internal notes with their earlier text, one `links` table for every connection by typed reference, and
   the owner's organisations and projects (`entities`). A link that names a person nobody matches yet is

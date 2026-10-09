@@ -1,10 +1,7 @@
 # CLI conventions and agent compatibility audit
 
-**Correction 2026-10-07: the shared remediation queue and consumer source adoption are complete.**
-This replaces the initial 2026-10-06 snapshot at `a60391a`, which found parser/TTY error bugs,
-missing execution bounds and incomplete agent discovery. Shared PRs 620, 630, 631 and 637
-implemented the selected controls; PR647 adds a headless setup regression. MAX and Telegram adopted the published SDK through the consumer PRs below. Source adoption
-does not update a previously released consumer binary. This page does not claim third-party certification or full POSIX conformance.
+How the CLIs meet the conventions and agent-compatibility profile, and what is checked. This page
+does not claim third-party certification or full POSIX conformance.
 
 No real session, keyring, messenger, browser login or account data was used by the audit,
 regression suite or agent evaluations. Tests use isolated synthetic fixtures.
@@ -42,7 +39,7 @@ Google product and was not installed or exercised in this audit.
 | Retry and unknown writes | send guard/journal and execution tests | operationId correlates a write; it is not an idempotency guarantee. Unknown outcomes carry conservative retry metadata. Aborted work cannot reserve a new write; inspect the journal/provider before any retry. |
 | MCP surface/results | `src/mcp/surface.ts`, personal/bot server tests | Three discovery/read/write tools replace per-command tools. Actual object results have structured content and advertised open-object output schemas; response and argument bytes are bounded. No server confirmation forms; deny/readonly still block writes. Separate moderation rule consent remains authoritative. |
 | Portable skills | `src/skills/validate.ts`, consumer `check:agent-docs` | YAML frontmatter, local references, installed version and literal command paths are checked against the consumer program. Full arbitrary shell examples and every operand are not statically proven. |
-| Synthetic agent evaluation | [evaluation report](evaluations/2026-10-06-cli-agent-evaluation.md) | Two independent agent passes used synthetic discovery, ambiguity, paging, validation recovery, compact reads and unknown-write tasks. Final pass: 6/6 tasks, 14 calls, 14,846 output bytes, no write replay. Fixture differences prevent a causal before/after claim. |
+| Synthetic agent evaluation | evaluation report | Two independent agent passes used synthetic discovery, ambiguity, paging, validation recovery, compact reads and unknown-write tasks. Final pass: 6/6 tasks, 14 calls, 14,846 output bytes, no write replay. Fixture differences prevent a causal before/after claim. |
 
 ## Verification and intentional limits
 

@@ -5,7 +5,7 @@ The commands read the local store and do not connect by default. Fetch the relev
 first; a ranking describes held data, not all activity in the messenger.
 
 ```sh
-app stats messages top 'chat:room date:[2026-10-01 TO 2026-10-08}' --measure reactions --limit 10 --json
+app stats messages top 'chat:room date:2026-10-01 TO 2026-10-08}' --measure reactions --limit 10 --json
 app stats contacts top 'chat:room date:[2026-10-01 TO 2026-10-08}' --score helpful --min-messages 3 --json
 app stats contacts top --weights '{"messages":0.4,"active-days":0.6}' --timezone Europe/Madrid --json
 ```
@@ -133,7 +133,7 @@ Pinned selections read held data and refuse `--sync-first`; run an ordinary quer
 History records parameters, not result bodies. Evidence is never recorded as search history.
 
 MCP discovers and invokes these same paths through the existing three-tool frontend. Selection
-is a structured object there. See the [command contract](plans/2026-10-07-rankings-contract.md)
+is a structured object there. See the [command contract
 and [CLI standard](dev/STANDARD.md) for the public interface and standards references.
 
 ## Retention from roster observations

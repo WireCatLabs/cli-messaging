@@ -90,9 +90,7 @@ filename/mime: до основного запроса страницами чи�
 mime без / совпадает с первой частью типа. size: SQL по attachments.size, единицы 1024. Совпадение —
 хотя бы одно вложение. tag: SQL по таблице tags (store version 16) — pk сообщения среди меток
 типа message, OR chat_pk среди меток типа chat, OR sender_identity_pk среди меток типа contact;
-точное условие, поэтому NOT tag точен. ~~tag распознаётся, но возвращает unsupported_field.~~
-**Поправка 2026-10-04:** работает с этой версии; FIELD_VERSION не меняется — ни одно поле не
-переименовано, ранее отклонённый запрос теперь выполняется.
+точное условие, поэтому NOT tag точен.
 content: (store version 19) — `m.pk IN (SELECT message_pk FROM attachments WHERE pk IN (SELECT rowid
 FROM attachment_words WHERE attachment_words MATCH ?))`; term и phrase, normalize как у text. Фрагмент
 не задаёт fts, поэтому слова файлов не входят в bm25-ранжирование (оно AND-ит все обязательные слова
