@@ -5,6 +5,7 @@ import { MAX_TEXT_CHARS } from "../../attachments/extract.js"
 import { gatewayOcr } from "../../attachments/gateway-ocr.js"
 import type { Messenger } from "../../cli/messenger/context.js"
 import { levelFor } from "../../sends/permissions.js"
+import { refusedPlace } from "../../sends/upload.js"
 import { onlineDeps } from "../../services/deps.js"
 import { downloadMessage } from "../../services/file-download.js"
 import { servicesFor, storedDeps } from "../../services/index.js"
@@ -31,7 +32,10 @@ export const attachmentsTools = (messenger: Messenger): Record<string, AnyTool> 
       }),
       annotations: { ...READ, openWorldHint: false },
       stored: async (store, account, args, defaults) => {
-        const done = await servicesFor(storedDeps(messenger, store, account, defaults.guard)).attachments.show({
+        const done = await servicesFor({
+          ...storedDeps(messenger, store, account, defaults.guard),
+          env: defaults.env,
+        }).attachments.show({
           chat: args.chat ?? args.message,
           ...(args.chat === undefined ? {} : { message: args.message }),
           ...(args.attachment === undefined ? {} : { attachment: args.attachment }),
@@ -86,6 +90,11 @@ export const attachmentsTools = (messenger: Messenger): Record<string, AnyTool> 
         if (args.download && (!args.output_dir || !connect))
           throw new CliError("validation_error", "download needs output_dir and an online session")
         if (args.output_dir && !args.download) throw new CliError("validation_error", "output_dir requires download")
+        if (args.output_dir && refusedPlace(args.output_dir, messenger.app, defaults.env))
+          throw new CliError(
+            "validation_error",
+            "output_dir cannot write hidden folders, the CLI's own folders or the message store",
+          )
         if (args.from_dir && (!args.chat || args.download || args.output_dir))
           throw new CliError(
             "validation_error",
@@ -108,7 +117,10 @@ export const attachmentsTools = (messenger: Messenger): Record<string, AnyTool> 
               ...(defaults.signal === undefined ? {} : { signal: defaults.signal }),
             })
           : undefined
-        return servicesFor(storedDeps(messenger, store, account, defaults.guard)).attachments.extract({
+        return servicesFor({
+          ...storedDeps(messenger, store, account, defaults.guard),
+          env: defaults.env,
+        }).attachments.extract({
           ...(args.chat === undefined ? {} : { chat: args.chat }),
           ...(args.from_dir === undefined ? {} : { fromDir: args.from_dir }),
           ...(args.cursor === undefined ? {} : { cursor: args.cursor }),

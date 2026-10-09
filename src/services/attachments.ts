@@ -20,6 +20,7 @@ import { type ByteWindow, retainedBytes, transferMime, validateWindow } from "..
 import { NOT_FILES } from "../domain/attachments.js"
 import { formatLocator, isLocator, parseLocator } from "../domain/locator.js"
 import type { Id } from "../domain/models.js"
+import { refusedPlace } from "../sends/upload.js"
 import type { AccountKey, AttachmentView, FileAttachment, MessageStore, TextOrigin } from "../store/store.js"
 import type { ServiceDeps } from "./deps.js"
 import { storedChatId } from "./messages.js"
@@ -264,7 +265,9 @@ export const attachmentsService = (deps: ServiceDeps): AttachmentsService => ({
     const account: AccountKey = await deps.account()
     const chatId = chat === undefined ? undefined : await storedChatId(deps.messenger, chat, store, account)
     const directory =
-      fromDir === undefined ? undefined : await directoryPaths(store, account, chatId as string, fromDir)
+      fromDir === undefined
+        ? undefined
+        : await directoryPaths(store, account, chatId as string, fromDir, deps.messenger.app, deps.env ?? process.env)
     const selected = paths === undefined ? undefined : new Set(paths)
     const run: ExtractRun = {
       items: [],
@@ -429,6 +432,8 @@ export const attachmentsService = (deps: ServiceDeps): AttachmentsService => ({
         "choose one stored file with --attachment and its position from 1",
       )
     if (chosen.localPath === null) throw new CliError("not_found", "download this attachment before transferring it")
+    if (refusedPlace(chosen.localPath, deps.messenger.app, deps.env ?? process.env))
+      throw new CliError("validation_error", "cannot transfer hidden files, the CLI's own files or the message store")
     const { head, capturedFile, ...bytes } = await retainedBytes(chosen.localPath, window, page !== undefined)
     const mimeType = transferMime(head, null, chosen.name)
     let preview: Partial<AttachmentBytes> = {}

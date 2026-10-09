@@ -1,6 +1,6 @@
 import { realpathSync } from "node:fs"
 import { readFile } from "node:fs/promises"
-import { basename, extname, isAbsolute, relative, resolve, sep } from "node:path"
+import { basename, dirname, extname, isAbsolute, relative, resolve, sep } from "node:path"
 import { CliError, resolvePaths } from "@leemour/cli-core"
 import type { AppIdentity } from "../cli/app.js"
 import { storePath } from "../store/path.js"
@@ -25,14 +25,23 @@ const VOICE = new Set([".ogg", ".oga", ".opus"])
  * the message store (max-cli `NEED-274`). The real path is checked as well as the typed one, so a
  * link does not hide where it points.
  */
-const refusedPlace = (path: string, app: AppIdentity, env: NodeJS.ProcessEnv): boolean => {
+export const refusedPlace = (path: string, app: AppIdentity, env: NodeJS.ProcessEnv): boolean => {
   const own = Object.values(resolvePaths({ appName: app.appName, prefix: app.envPrefix, env }))
   // The store file and its -wal and -shm, not its folder: MESSAGING_STORE may sit in the home folder.
   const store = resolve(storePath(env))
-  let real = resolve(path)
-  try {
-    real = realpathSync(path)
-  } catch {}
+  let ancestor = resolve(path)
+  let real = ancestor
+  // Downloads may create missing descendants of a symlinked directory.
+  for (;;) {
+    try {
+      real = resolve(realpathSync(ancestor), relative(ancestor, resolve(path)))
+      break
+    } catch {
+      const parent = dirname(ancestor)
+      if (parent === ancestor) break
+      ancestor = parent
+    }
+  }
   return [resolve(path), real].some(
     (candidate) =>
       candidate.split(sep).some((part) => part.startsWith(".") && part !== "." && part !== "..") ||

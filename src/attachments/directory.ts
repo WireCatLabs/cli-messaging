@@ -1,12 +1,26 @@
 import { lstat, readdir, realpath } from "node:fs/promises"
 import { basename, join, relative, sep } from "node:path"
 import { CliError } from "@leemour/cli-core"
+import type { AppIdentity } from "../cli/app.js"
 import { NOT_FILES } from "../domain/attachments.js"
+import { refusedPlace } from "../sends/upload.js"
 import type { AccountKey, AttachmentView, MessageStore } from "../store/store.js"
 
 const MAX_FILES = 10_000
 
-export const directoryPaths = async (store: MessageStore, account: AccountKey, chat: string, directory: string) => {
+export const directoryPaths = async (
+  store: MessageStore,
+  account: AccountKey,
+  chat: string,
+  directory: string,
+  app: AppIdentity,
+  env: NodeJS.ProcessEnv,
+) => {
+  if (refusedPlace(directory, app, env))
+    throw new CliError(
+      "validation_error",
+      "--from-dir cannot read hidden folders, the CLI's own folders or the message store",
+    )
   const root = await realpath(directory).catch(() => {
     throw new CliError("validation_error", "--from-dir must name an existing directory")
   })
@@ -22,6 +36,11 @@ export const directoryPaths = async (store: MessageStore, account: AccountKey, c
     if (info.isSymbolicLink()) throw new CliError("validation_error", "--from-dir cannot read symbolic links")
     if (!info.isFile()) continue
     const canonical = await realpath(path)
+    if (refusedPlace(canonical, app, env))
+      throw new CliError(
+        "validation_error",
+        "--from-dir cannot read hidden files, the CLI's own files or the message store",
+      )
     const inside = relative(root, canonical)
     if (inside === ".." || inside.startsWith(`..${sep}`))
       throw new CliError("validation_error", "a file escapes --from-dir")
