@@ -167,6 +167,8 @@ This proposal includes the separately agreed breaking window required by the
    scripts use `--exact` or explicit `text:`/AST for strict stemmed matching.
 4. Update parser error alternatives, registry-generated tables/recipes, query specification, search
    schemas, rendering, `search all` scoring, bot paths, saved replay, command reference and skills.
+   Remove language selection from the parity option catalogue and regenerate command discovery,
+   shell completion and reference tables together; account permission flags stay unchanged.
    Put user-visible changes and migration instructions under `Changed — may break callers`.
    Run `pnpm lint`, `pnpm typecheck`, `pnpm test:coverage`, `pnpm docs:check`, the benchmark's own
    TypeScript check, dev ablations and the frozen held-out evaluation. Record the quality/latency
