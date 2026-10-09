@@ -4,7 +4,7 @@ import type { Chat, Id, Message } from "../domain/models.js"
 import type { AccountKey, MessageStore } from "../store/store.js"
 import { decide } from "./decide.js"
 import type { ReplyRender } from "./rendering.js"
-import { type Audience, EVERYONE, isTester, outsideAudience, type ReplyRule, type Tester } from "./rules.js"
+import { type Audience, outsideAudience, type ReplyRule } from "./rules.js"
 import { emptyState, recordReply } from "./state.js"
 import { renderReplyTemplate, type TemplateBlock } from "./template.js"
 
@@ -17,7 +17,7 @@ export interface WouldReply {
   chatTitle: string | null
   to: { id: Id; name: string | null }
   at: string
-  /** `null`: the rule would send nothing here — it only opens a task, or the sender is not a test account. */
+  /** `null`: the rule would send nothing here — it only opens a task, or the audience does not allow the sender. */
   text: string | null
   asReply: boolean
   /** It would open a task for the message. */
@@ -55,15 +55,13 @@ export const dryRun = async (
     since,
     until = Date.now(),
     only,
-    testers,
-    audience = EVERYONE,
+    audience,
     render,
   }: {
     since: number
     until?: number
     only?: string
-    testers: readonly Tester[]
-    audience?: Audience
+    audience: Audience
     render?: ReplyRender
   },
 ): Promise<DryRun> => {
@@ -103,7 +101,6 @@ export const dryRun = async (
           sender: {
             isBot: isBot === true,
             isContact: sender !== null && isContact(sender),
-            isTester: isTester(testers, account.provider, sender),
           },
           outside: outsideAudience(audience, sender, chat.id),
           since,

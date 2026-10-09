@@ -1,13 +1,15 @@
-import { mkdtempSync, writeFileSync } from "node:fs"
+import { mkdtempSync, readFileSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { describe, expect, it } from "vitest"
 import {
   audienceWarnings,
   defaultRule,
+  EVERYONE,
   outsideAudience,
   parseReplies,
   parseReplyRules,
+  readRepliesFile,
   readReplyRules,
 } from "./rules.js"
 
@@ -106,12 +108,14 @@ describe("reply rules", () => {
 })
 
 describe("who may be answered", () => {
-  const audienceOf = (audience: unknown) => parseReplies({ audience, rules: [] }, "replies.json").audience
+  const audienceOf = (audience: unknown) => parseReplies({ audience, rules: [] }, "replies.json", "chat").audience
 
-  it("answers everyone by default, and never the deny list", () => {
+  it("**answers everyone by default**, and never the deny list", () => {
     const open = audienceOf(undefined)
     const denied = audienceOf({ deny: { people: ["p1"], chats: ["c9"] } })
 
+    expect(open).toEqual(EVERYONE)
+    expect(audienceOf({ allow: { people: ["p1"] } }).reply).toBe("all")
     expect(outsideAudience(open, "p1", "c1")).toBeNull()
     expect(outsideAudience(denied, "p1", "c1")).toBe("a person on the deny list")
     expect(outsideAudience(denied, "p2", "c9")).toBe("a chat on the deny list")
@@ -144,13 +148,60 @@ describe("who may be answered", () => {
       "person p2 is on both lists: deny wins, nobody answers them",
       "chat g1 is on both lists: deny wins, nothing is answered there",
     ])
-    expect(audienceWarnings(audienceOf({ allow: { people: ["p1"] } }))).toEqual([
+    expect(audienceWarnings(audienceOf({ reply: "all", allow: { people: ["p1"] } }))).toEqual([
       'the allow list does nothing while audience.reply is "all" — set it to "listed" to answer only those',
     ])
     expect(audienceWarnings(audienceOf({ reply: "listed" }))).toEqual([
       'audience.reply is "listed" and the allow list is empty: nobody is answered',
     ])
-    expect(audienceWarnings(audienceOf(undefined))).toEqual([])
+    expect(audienceWarnings(audienceOf({ reply: "all" }))).toEqual([])
     expect(() => audienceOf({ reply: "some" })).toThrow(/audience\.reply/)
+  })
+})
+
+describe("an older file's testers", () => {
+  const migrated = (file: object) => parseReplies({ rules: [], ...file }, "replies.json", "chat").audience
+
+  it("become the allowed people when the audience answered everyone", () => {
+    expect(
+      migrated({
+        testers: [{ id: "p1" }, { id: "p2", provider: "chat" }, { id: "p3", provider: "other" }, { id: "p1" }],
+        audience: { reply: "all", allow: { people: ["p9"], chats: ["g1"] }, deny: { people: ["p2"], chats: [] } },
+      }),
+    ).toEqual({ reply: "listed", allow: { people: ["p1", "p2"], chats: [] }, deny: { people: ["p2"], chats: [] } })
+    expect(migrated({ testers: [{ id: "p1" }] })).toEqual({
+      reply: "listed",
+      allow: { people: ["p1"], chats: [] },
+      deny: { people: [], chats: [] },
+    })
+  })
+
+  it("keep only those the listed audience also allowed, and drop its chats", () => {
+    expect(
+      migrated({
+        testers: [{ id: "p1" }, { id: "p2" }],
+        audience: { reply: "listed", allow: { people: ["p2", "p3"], chats: ["g1"] } },
+      }),
+    ).toEqual({ reply: "listed", allow: { people: ["p2"], chats: [] }, deny: { people: [], chats: [] } })
+  })
+
+  it("answer nobody when the list was empty", () => {
+    expect(migrated({ testers: [], audience: { reply: "all" } })).toEqual({ ...EVERYONE, reply: "listed" })
+  })
+
+  it("are refused when malformed, and an unknown audience mode is still refused", () => {
+    expect(() => migrated({ testers: [{ name: "p1" }] })).toThrow(/testers/)
+    expect(() => migrated({ testers: [], audience: { reply: "some" } })).toThrow(/audience\.reply/)
+  })
+
+  it("leave the file as it was until the next edit writes it", () => {
+    const path = join(mkdtempSync(join(tmpdir(), "replies-")), "replies.json")
+    writeFileSync(path, JSON.stringify({ testers: [{ id: "p1" }], rules: [] }))
+
+    expect(readRepliesFile(path, "chat")).toEqual({
+      audience: { reply: "listed", allow: { people: ["p1"], chats: [] }, deny: { people: [], chats: [] } },
+      rules: [],
+    })
+    expect(JSON.parse(readFileSync(path, "utf8")).testers).toEqual([{ id: "p1" }])
   })
 })

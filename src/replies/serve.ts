@@ -2,7 +2,7 @@ import type { Id, Message } from "../domain/models.js"
 import { codeOf } from "../sends/guarded.js"
 import { decide } from "./decide.js"
 import type { ReplyChat, ReplyRender } from "./rendering.js"
-import { isTester, outsideAudience, readReplies } from "./rules.js"
+import { outsideAudience, readReplies } from "./rules.js"
 import { readRepliesState, recordReply, writeRepliesState } from "./state.js"
 import { renderReplyTemplate } from "./template.js"
 
@@ -40,19 +40,19 @@ const FINAL = new Set(["permission_error", "confirmation_required", "rate_limite
 
 /**
  * One arriving message through the rules, in file order, the first that matches acting: a task opens
- * for anyone (NEED-582), a reply goes only to a sender named in `testers` (NEED-601) and only with
+ * for anyone (NEED-582), a reply goes only to a sender the file's audience allows and only with
  * `replies.send` at `allow`. A send that fails is
  * tried once more with the same send id, so the messenger delivers at most one; a message whose
  * reply may have gone is kept as answered.
  */
 export const replyTo = async (deps: Replier, message: Message): Promise<Replied> => {
-  const { rules, testers, audience } = readReplies(deps.rulesPath)
+  const { rules, audience } = readReplies(deps.rulesPath, deps.provider)
   if (rules.length === 0) return { skip: NO_RULES }
   let state = readRepliesState(deps.statePath)
   const now = deps.now?.() ?? Date.now()
-  const tester = isTester(testers, deps.provider, message.senderId)
-  // Asked only where a rule may act: for a test account, or when a rule opens tasks for anyone.
-  const looks = tester || rules.some((rule) => rule.on && rule.do.includes("task"))
+  const outside = outsideAudience(audience, message.senderId, message.chatId)
+  // Asked only where a rule may act: for a sender the audience allows, or when a rule opens tasks for anyone.
+  const looks = outside === null || rules.some((rule) => rule.on && rule.do.includes("task"))
   const chat = looks ? await deps.chatOf(message.chatId) : { id: message.chatId, kind: "unknown" as const }
   const facts =
     looks && message.senderId !== null ? await deps.senderOf(message.senderId) : { isBot: false, isContact: false }
@@ -60,8 +60,8 @@ export const replyTo = async (deps: Replier, message: Message): Promise<Replied>
     message,
     chat,
     owner: deps.owner,
-    sender: { ...facts, isTester: tester },
-    outside: outsideAudience(audience, message.senderId, message.chatId),
+    sender: facts,
+    outside,
     since: deps.since,
   }
 
@@ -100,10 +100,9 @@ export const replyTo = async (deps: Replier, message: Message): Promise<Replied>
     // Pause and consent can be revoked while an async model request is in flight.
     if (readRepliesState(deps.statePath).paused || !deps.allowed())
       return { skip: "replies paused or permission revoked during rendering", ...opened }
-    const fresh = readReplies(deps.rulesPath)
+    const fresh = readReplies(deps.rulesPath, deps.provider)
     if (
       JSON.stringify(fresh.rules.find((one) => one.id === rule.id)) !== JSON.stringify(rule) ||
-      !isTester(fresh.testers, deps.provider, message.senderId) ||
       outsideAudience(fresh.audience, message.senderId, message.chatId)
     ) {
       return { skip: "reply rule or audience changed during rendering", ...opened }

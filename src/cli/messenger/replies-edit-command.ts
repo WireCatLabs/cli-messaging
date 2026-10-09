@@ -45,7 +45,7 @@ export const addReplyEditors = (replies: Command, messenger: Messenger): void =>
       .argument("<id>", "lower-case letters, digits and -; unique in this profile")
       .action(function (this: Command, id: string) {
         const { settings, renderer, env } = messengerContext(this, messenger)
-        renderer.result(addRule(repliesPathFor(messenger.app, settings.profile, env), id))
+        renderer.result(addRule(repliesPathFor(messenger.app, settings.profile, env), messenger.provider, id))
       }),
   )
   for (const on of [true, false]) {
@@ -55,7 +55,7 @@ export const addReplyEditors = (replies: Command, messenger: Messenger): void =>
         .argument("<id>", "the rule's id")
         .action(function (this: Command, id: string) {
           const { settings, renderer, env } = messengerContext(this, messenger)
-          renderer.result(switchRule(repliesPathFor(messenger.app, settings.profile, env), id, on))
+          renderer.result(switchRule(repliesPathFor(messenger.app, settings.profile, env), messenger.provider, id, on))
         }),
     )
   }
@@ -68,16 +68,20 @@ export const addReplyEditors = (replies: Command, messenger: Messenger): void =>
     const options = this.opts<RuleEdits>()
     if (this.getOptionValueSource("hours") === "default") delete options.hours
     const { settings, renderer, env } = messengerContext(this, messenger)
-    renderer.result(editRule(repliesPathFor(messenger.app, settings.profile, env), id, options))
+    renderer.result(editRule(repliesPathFor(messenger.app, settings.profile, env), messenger.provider, id, options))
   })
   replies.addCommand(edit)
   const audience = annotate(new Command("audience"), { mutates: true, local: true }).description(
-    "show the profile's reply audience, or replace its named fields; testers still limit answers",
+    "show the reply audience, who the rules may answer, or replace its named fields; a new file answers everyone a rule matches",
   )
   for (const [flag, help] of REPLY_AUDIENCE_OPTIONS) audience.option(flag, help)
   audience.action(function (this: Command) {
     const { settings, renderer, env } = messengerContext(this, messenger)
-    const answer = editAudience(repliesPathFor(messenger.app, settings.profile, env), this.opts<AudienceEdits>())
+    const answer = editAudience(
+      repliesPathFor(messenger.app, settings.profile, env),
+      messenger.provider,
+      this.opts<AudienceEdits>(),
+    )
     for (const warning of audienceWarnings(answer)) renderer.warn(warning)
     renderer.result(answer)
   })

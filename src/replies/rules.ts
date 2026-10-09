@@ -123,12 +123,10 @@ const rule = v.pipe(
 export type ReplyRule = v.InferOutput<typeof rule>
 export type ReplyRuleFile = v.InferInput<typeof rule>
 
-const tester = v.strictObject({
+const legacyTester = v.strictObject({
   provider: v.optional(v.pipe(v.string(), v.minLength(1))),
   id: v.pipe(v.string(), v.minLength(1)),
 })
-
-export type Tester = v.InferOutput<typeof tester>
 
 const side = v.optional(v.strictObject({ people: v.optional(ids, []), chats: v.optional(ids, []) }), {
   people: [],
@@ -137,7 +135,8 @@ const side = v.optional(v.strictObject({ people: v.optional(ids, []), chats: v.o
 
 /**
  * Who may get an answer at all, whatever a rule says: everyone, or only those listed in `allow`; and
- * never anyone in `deny`, which wins when an id is in both. Tasks are not limited by it.
+ * never anyone in `deny`, which wins when an id is in both. Tasks are not limited by it. A file that
+ * does not say answers everyone a rule matches; `replies.send` is what keeps a new file silent.
  */
 const audienceShape = v.optional(
   v.strictObject({ reply: v.optional(v.picklist(["all", "listed"]), "all"), allow: side, deny: side }),
@@ -147,8 +146,7 @@ const audienceShape = v.optional(
 export type Audience = v.InferOutput<typeof audienceShape>
 
 const file = v.pipe(
-  // NEED-601: rules answer test accounts only, until the owner rules otherwise; no list, nobody.
-  v.strictObject({ testers: v.optional(v.array(tester), []), audience: audienceShape, rules: v.array(rule) }),
+  v.strictObject({ audience: audienceShape, rules: v.array(rule) }),
   v.check(
     ({ rules }) => new Set(rules.map((one) => one.id)).size === rules.length,
     "two rules share an id; each needs its own",
@@ -179,7 +177,6 @@ export const repliesPathFor = (app: AppIdentity, profile: string, env: NodeJS.Pr
   join(resolvePaths({ appName: app.appName, prefix: app.envPrefix, env }).config, `${profile}.replies.json`)
 
 export interface Replies {
-  testers: Tester[]
   audience: Audience
   rules: ReplyRule[]
 }
@@ -212,29 +209,60 @@ export const audienceWarnings = ({ reply, allow, deny }: Audience): string[] => 
 ]
 
 /** The owner's rules, in file order. No file is no rules; a file that does not check out refuses, naming the field. */
-export const readReplyRules = (path: string): ReplyRule[] => readReplies(path).rules
+export const readReplyRules = (path: string): ReplyRule[] => readReplies(path, "").rules
 
-export const readReplies = (path: string): Replies => {
-  return parseReplies(readRepliesFile(path), path)
+/** `provider`: the messenger reading the file, which an older file's `testers` may have named. */
+export const readReplies = (path: string, provider: string): Replies => {
+  return parseReplies(readRepliesFile(path, provider), path, provider)
 }
 
 export interface RepliesFile {
-  testers: Tester[]
   audience: Audience
   rules: ReplyRuleFile[]
 }
 
 // Hours and limits are transformed by parsing; editing must keep their file input forms.
-export const readRepliesFile = (path: string): RepliesFile => {
-  if (!existsSync(path)) return { testers: [], audience: structuredClone(EVERYONE), rules: [] }
+export const readRepliesFile = (path: string, provider: string): RepliesFile => {
+  if (!existsSync(path)) return { audience: structuredClone(EVERYONE), rules: [] }
   let parsed: unknown
   try {
     parsed = JSON.parse(readFileSync(path, "utf8"))
   } catch (error) {
     throw broken(path, error instanceof Error ? error.message : String(error))
   }
-  const checked = parseReplies(parsed, path)
-  return { ...(parsed as RepliesFile), testers: checked.testers, audience: checked.audience }
+  const upgraded = withoutTesters(parsed, provider, path)
+  const checked = parseReplies(upgraded, path, provider)
+  return { ...(upgraded as RepliesFile), audience: checked.audience }
+}
+
+/**
+ * A file from before the audience took over still has `testers`: then a reply went only to a sender
+ * who was a tester (with no `provider`, or this one) and also inside the audience. The audience that
+ * answers exactly them is `listed` with the testers as its people — under `listed` already, only the
+ * testers its people list also names. Its allowed chats are dropped: "a tester in this chat" has no
+ * audience form, and keeping a chat would answer everyone in it. Deny lists stay. No testers, nobody.
+ * Read here on every load; the next edit writes the result back.
+ */
+const withoutTesters = (parsed: unknown, provider: string, path: string): unknown => {
+  if (typeof parsed !== "object" || parsed === null || !("testers" in parsed)) return parsed
+  const { testers, ...rest } = parsed as { testers: unknown; audience?: unknown }
+  const named = v.safeParse(v.array(legacyTester), testers)
+  if (!named.success) throw broken(path, `testers: ${named.issues.map((issue) => issue.message).join("; ")}`)
+  const ids = [
+    ...new Set(
+      named.output.filter((one) => one.provider === undefined || one.provider === provider).map((one) => one.id),
+    ),
+  ]
+  const audience = (rest.audience ?? {}) as { reply?: unknown; allow?: { people?: unknown } }
+  if (
+    typeof audience !== "object" ||
+    audience === null ||
+    ![undefined, "all", "listed"].includes(audience.reply as string)
+  )
+    return rest
+  const listed = Array.isArray(audience.allow?.people) ? (audience.allow.people as unknown[]) : []
+  const people = audience.reply === "listed" ? ids.filter((id) => listed.includes(id)) : ids
+  return { ...rest, audience: { ...audience, reply: "listed", allow: { people, chats: [] } } }
 }
 
 export const writeRepliesFile = (path: string, contents: RepliesFile): void => {
@@ -245,16 +273,13 @@ export const writeRepliesFile = (path: string, contents: RepliesFile): void => {
   writeSecurely(path, `${JSON.stringify(contents, null, 2)}\n`, 0o600)
 }
 
-export const parseReplyRules = (parsed: unknown, path: string): ReplyRule[] => parseReplies(parsed, path).rules
+export const parseReplyRules = (parsed: unknown, path: string): ReplyRule[] => parseReplies(parsed, path, "").rules
 
-export const parseReplies = (parsed: unknown, path: string): Replies => {
-  const checked = v.safeParse(file, parsed)
+export const parseReplies = (parsed: unknown, path: string, provider: string): Replies => {
+  const checked = v.safeParse(file, withoutTesters(parsed, provider, path))
   if (!checked.success) throw broken(path, checked.issues.map(problem).join("; "))
   return checked.output
 }
-
-export const isTester = (testers: readonly Tester[], provider: string, id: string | null): boolean =>
-  id !== null && testers.some((one) => one.id === id && (one.provider === undefined || one.provider === provider))
 
 const problem = (issue: v.BaseIssue<unknown>): string => {
   const at = v.getDotPath(issue) ?? "the file"

@@ -61,8 +61,8 @@ const findRule = (file: RepliesFile, id: string): ReplyRuleFile => {
   return rule
 }
 
-export const addRule = (path: string, id: string): ReplyRuleFile => {
-  const file = readRepliesFile(path)
+export const addRule = (path: string, provider: string, id: string): ReplyRuleFile => {
+  const file = readRepliesFile(path, provider)
   if (file.rules.some((one) => one.id === id)) throw new CliError("validation_error", `reply rule ${id} already exists`)
   const rule = defaultRule(id)
   file.rules.push(rule)
@@ -70,16 +70,16 @@ export const addRule = (path: string, id: string): ReplyRuleFile => {
   return rule
 }
 
-export const switchRule = (path: string, id: string, on: boolean): ReplyRuleFile => {
-  const file = readRepliesFile(path)
+export const switchRule = (path: string, provider: string, id: string, on: boolean): ReplyRuleFile => {
+  const file = readRepliesFile(path, provider)
   const rule = findRule(file, id)
   rule.on = on
   writeRepliesFile(path, file)
   return rule
 }
 
-export const editRule = (path: string, id: string, edits: RuleEdits): ReplyRuleFile => {
-  const file = readRepliesFile(path)
+export const editRule = (path: string, provider: string, id: string, edits: RuleEdits): ReplyRuleFile => {
+  const file = readRepliesFile(path, provider)
   const rule = findRule(file, id)
   if (Object.values(edits).every((value) => value === undefined)) {
     throw new CliError("validation_error", "replies edit needs at least one field option")
@@ -117,8 +117,8 @@ export const editRule = (path: string, id: string, edits: RuleEdits): ReplyRuleF
   return rule
 }
 
-export const editAudience = (path: string, edits: AudienceEdits): Audience => {
-  const file = readRepliesFile(path)
+export const editAudience = (path: string, provider: string, edits: AudienceEdits): Audience => {
+  const file = readRepliesFile(path, provider)
   const { audience } = file
   if (Object.values(edits).every((value) => value === undefined)) return audience
   if (edits.reply !== undefined) audience.reply = choices([edits.reply], ["all", "listed"], "--reply")[0] ?? "all"

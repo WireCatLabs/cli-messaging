@@ -45,7 +45,8 @@ const messageWith = (changes: Partial<Message> = {}): Message => ({
 const incomingWith = (changes: Omit<Partial<Incoming>, "message"> & { message?: Partial<Message> } = {}): Incoming => ({
   chat: { id: "c1", kind: "dialog" },
   owner: { id: "me", username: "owner" },
-  sender: { isBot: false, isContact: true, isTester: true },
+  sender: { isBot: false, isContact: true },
+  outside: null,
   since: WEDNESDAY_EVENING - 3_600_000,
   ...changes,
   message: messageWith(changes.message),
@@ -68,9 +69,9 @@ describe("decide", () => {
     })
   })
 
-  it("opens a task for anyone, but answers only a test account", () => {
+  it("opens a task for anyone, but answers only whom the audience allows", () => {
     const both = ruleWith({ do: ["reply", "task"] })
-    const stranger = incomingWith({ sender: { isBot: false, isContact: true, isTester: false } })
+    const stranger = incomingWith({ outside: "not on the allow list" })
 
     expect(decide(both, stranger, emptyState(), WEDNESDAY_EVENING)).toEqual({ actions: ["task"], reply: null })
     expect(decide(ruleWith({ do: ["task"] }), incomingWith(), emptyState(), WEDNESDAY_EVENING)).toEqual({
@@ -87,8 +88,8 @@ describe("decide", () => {
     ["your own message", { message: { outgoing: true } }],
     ["the account is not known", { message: { outgoing: null } }],
     ["sent as a chat, not by a person", { message: { senderIsChat: true } }],
-    ["sent by a bot", { sender: { isBot: true, isContact: false, isTester: true } }],
-    ["not a test account", { sender: { isBot: false, isContact: true, isTester: false } }],
+    ["sent by a bot", { sender: { isBot: true, isContact: false } }],
+    ["not on the allow list", { outside: "not on the allow list" }],
     ["a channel is never answered", { chat: { id: "c1", kind: "channel" as const } }],
     ["a saved is never answered", { chat: { id: "c1", kind: "saved" as const } }],
     ["an edited message", { message: { editedAt: new Date(WEDNESDAY_EVENING).toISOString() } }],
@@ -189,9 +190,7 @@ describe("decide", () => {
 
   it("contactsOnly leaves out a stranger", () => {
     const rule = ruleWith({ when: { from: { people: [], notPeople: [], contactsOnly: true } } })
-    expect(outcome(rule, incomingWith({ sender: { isBot: false, isContact: false, isTester: true } }))).toBe(
-      "not from a contact",
-    )
+    expect(outcome(rule, incomingWith({ sender: { isBot: false, isContact: false } }))).toBe("not from a contact")
   })
 
   it.each([

@@ -1,4 +1,4 @@
-import { mkdtempSync, writeFileSync } from "node:fs"
+import { mkdtempSync, readFileSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { CliError } from "@leemour/cli-core"
@@ -13,8 +13,8 @@ const NOW = Date.parse("2026-10-07T18:30:00Z")
 const said = (id: string, changes: Partial<Message> = {}): Message => ({
   id,
   chatId: "c1",
-  senderId: "tester",
-  senderName: "Test Account",
+  senderId: "friend",
+  senderName: "Ana Example",
   timestamp: new Date(NOW - 60_000).toISOString(),
   editedAt: null,
   text: "are you there?",
@@ -26,20 +26,23 @@ const said = (id: string, changes: Partial<Message> = {}): Message => ({
   ...changes,
 })
 
+const FRIEND_ONLY = { reply: "listed", allow: { people: ["friend"] } }
+
 const setUp = ({
-  testers = [{ id: "tester" }],
   allowed = true,
   perChat = "5/1d",
   does = ["reply"],
   tasks = true,
-  audience,
+  audience = FRIEND_ONLY,
+  testers,
 }: {
-  testers?: { id: string }[]
   allowed?: boolean
   perChat?: string
   does?: string[]
   tasks?: boolean
   audience?: unknown
+  /** An older file's list, written beside the audience. */
+  testers?: { id: string; provider?: string }[]
 } = {}) => {
   const root = mkdtempSync(join(tmpdir(), "replies-serve-"))
   const rule = {
@@ -50,7 +53,7 @@ const setUp = ({
     limits: { perChat, perPerson: "5/1d" },
   }
   const rulesPath = join(root, "replies.json")
-  writeFileSync(rulesPath, JSON.stringify({ testers, ...(audience === undefined ? {} : { audience }), rules: [rule] }))
+  writeFileSync(rulesPath, JSON.stringify({ ...(testers === undefined ? {} : { testers }), audience, rules: [rule] }))
   const sent: { chat: string; text: string; sendId: string; origin: string }[] = []
   const opened: { message: string; origin: string }[] = []
   let fails = 0
@@ -64,7 +67,7 @@ const setUp = ({
     chatOf: async (id) => ({ id, kind: "dialog" }),
     senderOf: async () => ({ isBot: false, isContact: true }),
     send: async (reply) => {
-      if (reply.chat !== "c1") throw new Error("never anyone but the test chat")
+      if (reply.chat !== "c1") throw new Error("never anyone but the allowed chat")
       if (fails > 0) {
         fails -= 1
         throw new CliError("network_error", "dropped")
@@ -86,8 +89,12 @@ const setUp = ({
 }
 
 describe("serve's reply rules", () => {
-  it("never invokes the renderer outside tester, audience and send permission gates", async () => {
-    for (const options of [{ testers: [] }, { allowed: false }, { audience: { deny: { people: ["tester"] } } }]) {
+  it("never invokes the renderer outside the audience and send permission gates", async () => {
+    for (const options of [
+      { audience: { reply: "listed" } },
+      { allowed: false },
+      { audience: { deny: { people: ["friend"] } } },
+    ]) {
       const { deps } = setUp(options)
       const render = vi.fn(async () => ({ text: "Hello", warnings: [], blocks: [] }))
       deps.render = render
@@ -110,7 +117,7 @@ describe("serve's reply rules", () => {
     expect(sent).toHaveLength(0)
     writeRepliesState(deps.statePath, paused(readRepliesState(deps.statePath), false))
     deps.render = async () => {
-      writeFileSync(deps.rulesPath, JSON.stringify({ rules: [], testers: [] }))
+      writeFileSync(deps.rulesPath, JSON.stringify({ rules: [] }))
       return { text: "Hello", warnings: [], blocks: [] }
     }
     expect(await replyTo(deps, said("changed"))).toMatchObject({
@@ -118,24 +125,44 @@ describe("serve's reply rules", () => {
     })
     expect(sent).toHaveLength(0)
   })
-  it("**answers a test account once, and nobody else at all**", async () => {
+  it("**answers an allowed person once, and nobody else at all**", async () => {
     const { deps, sent } = setUp()
 
     const stranger = await replyTo(deps, said("1", { senderId: "real-person" }))
-    const tester = await replyTo(deps, said("2"))
+    const friend = await replyTo(deps, said("2"))
     const again = await replyTo(deps, said("2"))
 
-    expect(stranger).toEqual({ skip: "not a test account" })
-    expect(tester).toEqual({ sent: "away" })
+    expect(stranger).toEqual({ skip: "not on the allow list" })
+    expect(friend).toEqual({ sent: "away" })
     expect(again).toEqual({ skip: "already answered" })
-    expect(sent).toEqual([{ chat: "c1", text: "Thanks, Test.", replyTo: "2", sendId: "send-0", origin: "rule:away" }])
+    expect(sent).toEqual([{ chat: "c1", text: "Thanks, Ana.", replyTo: "2", sendId: "send-0", origin: "rule:away" }])
   })
 
-  it("answers nobody when no test account is named", async () => {
-    const { deps, sent } = setUp({ testers: [] })
+  it("answers anyone a rule matches from a file that names no audience", async () => {
+    const { deps, sent } = setUp()
+    const rules = JSON.parse(readFileSync(deps.rulesPath, "utf8")).rules
+    writeFileSync(deps.rulesPath, JSON.stringify({ rules }))
 
-    expect(await replyTo(deps, said("1"))).toEqual({ skip: "not a test account" })
-    expect(sent).toEqual([])
+    expect(await replyTo(deps, said("1", { senderId: "someone" }))).toEqual({ sent: "away" })
+    expect(sent).toHaveLength(1)
+  })
+
+  it("**answers an older file's testers exactly as before, and nobody else**", async () => {
+    const everyone = { reply: "all", allow: { people: [], chats: ["c1"] } }
+    const open = setUp({ audience: everyone, testers: [{ id: "friend" }, { id: "other", provider: "max" }] })
+    const none = setUp({ audience: everyone, testers: [] })
+    const narrowed = setUp({
+      audience: { reply: "listed", allow: { people: ["someone"] } },
+      testers: [{ id: "friend" }],
+    })
+
+    expect(await replyTo(open.deps, said("1"))).toEqual({ sent: "away" })
+    expect(await replyTo(open.deps, said("2", { senderId: "someone" }))).toEqual({ skip: "not on the allow list" })
+    expect(await replyTo(open.deps, said("3", { senderId: "other" }))).toEqual({ skip: "not on the allow list" })
+    expect(await replyTo(none.deps, said("1"))).toEqual({ skip: "not on the allow list" })
+    expect(await replyTo(narrowed.deps, said("1"))).toEqual({ skip: "not on the allow list" })
+    expect(await replyTo(narrowed.deps, said("2", { senderId: "someone" }))).toEqual({ skip: "not on the allow list" })
+    expect(open.sent).toHaveLength(1)
   })
 
   it("sends nothing unless replies.send is allow", async () => {
@@ -187,10 +214,10 @@ describe("serve's reply rules", () => {
     const { deps, sent, opened } = setUp({ does: ["reply", "task"], allowed: false })
 
     const stranger = await replyTo(deps, said("m1", { senderId: "someone" }))
-    const tester = await replyTo(deps, said("m2"))
+    const friend = await replyTo(deps, said("m2"))
 
     expect(stranger).toEqual({ skip: ONLY_TASK, task: "away" })
-    expect(tester).toEqual({ skip: NOT_ALLOWED, task: "away" })
+    expect(friend).toEqual({ skip: NOT_ALLOWED, task: "away" })
     expect(opened).toEqual([
       { message: "m1", origin: "rule:away" },
       { message: "m2", origin: "rule:away" },
@@ -219,27 +246,32 @@ describe("serve's reply rules", () => {
     expect(opened).toHaveLength(1)
   })
 
-  it("**answers by the audience in every mode**, a test account still first", async () => {
-    const everyone = setUp()
-    const listedIn = setUp({ audience: { reply: "listed", allow: { people: ["tester"] } } })
+  it("**answers by the audience in every mode**", async () => {
+    const everyone = setUp({ audience: { reply: "all" } })
+    const listedIn = setUp()
+    const listedChat = setUp({ audience: { reply: "listed", allow: { chats: ["c1"] } } })
     const listedOut = setUp({ audience: { reply: "listed", allow: { chats: ["other"] } } })
-    const denied = setUp({ audience: { deny: { people: ["tester"] } } })
-    const deniedChat = setUp({ audience: { deny: { chats: ["c1"] } } })
+    const denied = setUp({ audience: { reply: "all", deny: { people: ["friend"] } } })
+    const deniedChat = setUp({ audience: { reply: "all", deny: { chats: ["c1"] } } })
     const conflict = setUp({
-      audience: { reply: "listed", allow: { people: ["tester"] }, deny: { people: ["tester"] } },
+      audience: { reply: "listed", allow: { people: ["friend"] }, deny: { people: ["friend"] } },
     })
 
     expect(await replyTo(everyone.deps, said("m1"))).toEqual({ sent: "away" })
     expect(await replyTo(listedIn.deps, said("m1"))).toEqual({ sent: "away" })
+    expect(await replyTo(listedChat.deps, said("m1", { senderId: "someone" }))).toEqual({ sent: "away" })
     expect(await replyTo(listedOut.deps, said("m1"))).toEqual({ skip: "not on the allow list" })
     expect(await replyTo(denied.deps, said("m1"))).toEqual({ skip: "a person on the deny list" })
     expect(await replyTo(deniedChat.deps, said("m1"))).toEqual({ skip: "a chat on the deny list" })
     expect(await replyTo(conflict.deps, said("m1"))).toEqual({ skip: "a person on the deny list" })
-    expect(await replyTo(listedIn.deps, said("m2", { senderId: "someone" }))).toEqual({ skip: "not a test account" })
+    expect(await replyTo(listedIn.deps, said("m2", { senderId: "someone" }))).toEqual({ skip: "not on the allow list" })
   })
 
   it("opens a task for someone the audience will not answer", async () => {
-    const { deps, sent, opened } = setUp({ does: ["reply", "task"], audience: { deny: { people: ["tester"] } } })
+    const { deps, sent, opened } = setUp({
+      does: ["reply", "task"],
+      audience: { reply: "all", deny: { people: ["friend"] } },
+    })
 
     expect(await replyTo(deps, said("m1"))).toEqual({ skip: ONLY_TASK, task: "away" })
     expect(opened).toHaveLength(1)

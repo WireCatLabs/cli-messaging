@@ -129,8 +129,8 @@ const replying = (context: MessengerContext, messenger: Messenger, since: number
   const owner = recalledAccount(app, provider, profile, env)?.account ?? null
   // A file that does not read is said on each message instead; it must not stop serve.
   try {
-    for (const warning of audienceWarnings(readReplies(repliesPathFor(app, profile, env)).audience))
-      renderer.warn(warning)
+    const { rules, audience } = readReplies(repliesPathFor(app, profile, env), provider)
+    if (rules.length > 0) for (const warning of audienceWarnings(audience)) renderer.warn(warning)
   } catch {}
 
   const handle = async (message: Message) => {
