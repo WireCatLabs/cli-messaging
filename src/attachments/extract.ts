@@ -1,6 +1,8 @@
 import { readFileSync } from "node:fs"
 import { dirname, extname, join } from "node:path"
 import { fileURLToPath } from "node:url"
+import { CliError, isCliError } from "@leemour/cli-core"
+import { ReaderLimit, readContainer } from "./container.js"
 import { type CellSpan, delimitedSpans } from "./csv-spans.js"
 import { documentKind, readDocument } from "./documents.js"
 import { decodeText } from "./encoding.js"
@@ -88,11 +90,12 @@ interface Mammoth {
 }
 
 interface PdfDocument {
+  numPages: number
   loadingTask: { destroy(): Promise<void> }
 }
 
 interface Unpdf {
-  getDocumentProxy(data: Uint8Array): Promise<PdfDocument>
+  getDocumentProxy(data: Uint8Array, options: Record<string, unknown>): Promise<PdfDocument>
   extractText(
     pdf: PdfDocument,
     options: { mergePages: boolean },
@@ -115,7 +118,9 @@ const withEngine = async <T>(
   const extractor = name === "mammoth" ? `docx:${versionOf(name)}` : `pdf:${versionOf(name)}`
   try {
     return await read(engine, extractor)
-  } catch {
+  } catch (error) {
+    if (error instanceof ReaderLimit) return { status: "too-large" }
+    if (isCliError(error) && error.code === "cancelled") throw error
     // The engine's message may quote the file; only the fact that it failed is kept.
     return { status: "unreadable", extractor, error: "unreadable" }
   }
@@ -137,9 +142,43 @@ export const extractText = async (
   if (kind) return readDocument(bytes, kind, signal)
   if (startsWith(bytes, "%PDF-")) {
     return withEngine<Unpdf>(load, "unpdf", async (unpdf, extractor) => {
-      const pdf = await unpdf.getDocumentProxy(new Uint8Array(bytes))
+      const deadline = new AbortController()
+      const timeout = setTimeout(() => deadline.abort(), 30_000)
+      timeout.unref()
+      const bounded = signal ? AbortSignal.any([signal, deadline.signal]) : deadline.signal
+      let pdf: PdfDocument | undefined
+      let closed = false
+      const close = () => {
+        if (pdf && !closed) {
+          closed = true
+          void pdf.loadingTask.destroy().catch(() => {})
+        }
+      }
+      let abort = () => {}
+      const aborted = new Promise<never>((_, reject) => {
+        abort = () => {
+          close()
+          reject(new CliError(signal?.aborted ? "cancelled" : "timeout", "PDF text extraction stopped"))
+        }
+        bounded.addEventListener("abort", abort, { once: true })
+        if (bounded.aborted) abort()
+      })
       try {
-        const result = await unpdf.extractText(pdf, { mergePages: false })
+        const reading = async () => {
+          bounded.throwIfAborted()
+          pdf = await unpdf.getDocumentProxy(new Uint8Array(bytes), {
+            isEvalSupported: false,
+            verbosity: 0,
+            maxImageSize: 20_000_000,
+          })
+          if (bounded.aborted) {
+            close()
+            bounded.throwIfAborted()
+          }
+          if (!Number.isSafeInteger(pdf.numPages) || pdf.numPages < 1 || pdf.numPages > 20) throw new ReaderLimit()
+          return unpdf.extractText(pdf, { mergePages: false })
+        }
+        const result = await Promise.race([reading(), aborted])
         const pages = Array.isArray(result.text) ? result.text : [result.text]
         const text = pages.join("\n\n")
         let at = 0
@@ -159,12 +198,15 @@ export const extractText = async (
               ...(text.length > MAX_TEXT_CHARS ? { truncated: true } : {}),
             }
       } finally {
-        await pdf.loadingTask.destroy()
+        clearTimeout(timeout)
+        bounded.removeEventListener("abort", abort)
+        close()
       }
     })
   }
   if (startsWith(bytes, "PK\u0003\u0004") && (extension === ".docx" || hint.mime === DOCX)) {
     return withEngine<Mammoth>(load, "mammoth", async (mammoth, extractor) => {
+      await readContainer(bytes, signal)
       const { value } = await mammoth.extractRawText({ buffer: Buffer.from(bytes) })
       return value.trim() === ""
         ? { status: "needs-agent", extractor }

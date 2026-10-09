@@ -6,11 +6,21 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Changed — may break callers
+
+- Local voice transcription accepts complete mono or stereo Ogg Opus recordings up to 10 minutes.
+  Longer recordings must be split before local transcription.
+- PDF text extraction supports at most 20 pages and stops after 30 seconds. Split larger PDFs before
+  extracting; failed extraction leaves existing indexed text intact.
+
 ### Security
 
 - Attachment directory extraction and retained-file transfer refuse hidden files and folders, the
   CLI's own folders and the message store, including symlink targets. MCP extraction downloads also
   refuse these locations; choose an ordinary downloads folder instead.
+- Word document extraction applies the same expanded archive limits as the other office readers
+  before loading document content.
+
 
 ## 0.213.0 — 09.10.2026
 
