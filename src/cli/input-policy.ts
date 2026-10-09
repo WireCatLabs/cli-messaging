@@ -1,4 +1,4 @@
-import { CliError } from "@leemour/cli-core"
+import { CliError } from "@wirecat/cli-core"
 
 export const MAX_BUFFERED_INPUT = 16 * 1024 * 1024
 export const MAX_SECRET_INPUT = 64 * 1024

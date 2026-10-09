@@ -1,4 +1,4 @@
-import { CliError } from "@leemour/cli-core"
+import { CliError } from "@wirecat/cli-core"
 import { formatReference } from "../../domain/references.js"
 import type { AccountKey } from "../store.js"
 import { ulid } from "../ulid.js"

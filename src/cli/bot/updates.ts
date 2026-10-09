@@ -1,5 +1,5 @@
 import { existsSync, readFileSync } from "node:fs"
-import { writeSecurely } from "@leemour/cli-core"
+import { writeSecurely } from "@wirecat/cli-core"
 import type { BotPress } from "./port.js"
 
 /**

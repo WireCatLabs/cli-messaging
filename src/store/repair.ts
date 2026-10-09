@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto"
-import { CliError } from "@leemour/cli-core"
+import { CliError } from "@wirecat/cli-core"
 import type { CacheDatabase } from "./driver.js"
 import { MIGRATIONS, migrate } from "./migrations.js"
 

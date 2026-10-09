@@ -1,4 +1,4 @@
-import { CliError } from "@leemour/cli-core"
+import { CliError } from "@wirecat/cli-core"
 
 export const QUERY_VERSION = 1
 export const QUERY_LIMITS = {

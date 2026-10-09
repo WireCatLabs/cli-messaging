@@ -1,5 +1,5 @@
-import { CliError } from "@leemour/cli-core"
-import { annotate } from "@leemour/cli-core/commands"
+import { CliError } from "@wirecat/cli-core"
+import { annotate } from "@wirecat/cli-core/commands"
 import { Command } from "commander"
 import { type Audience, MEDIA_KINDS, type MediaKind, type PrivacySettings } from "../../domain/models.js"
 import { sendTime } from "../../domain/send-time.js"

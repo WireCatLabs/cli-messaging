@@ -1,4 +1,4 @@
-import { CliError, singleLine } from "@leemour/cli-core"
+import { CliError, singleLine } from "@wirecat/cli-core"
 import type { Chat, Contact, Id } from "./domain/models.js"
 
 /** The part of a store that `pickPerson` reads. */

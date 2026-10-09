@@ -1,5 +1,5 @@
-import { CliError } from "@leemour/cli-core"
-import { annotate } from "@leemour/cli-core/commands"
+import { CliError } from "@wirecat/cli-core"
+import { annotate } from "@wirecat/cli-core/commands"
 import { Command } from "commander"
 import { TAG_TYPES, type TagType } from "../../domain/tags.js"
 import type { TagTargetInput, TagTargetView } from "../../services/tags.js"

@@ -7,8 +7,8 @@ import {
   resolvePaths,
   type Streams,
   visibleControls,
-} from "@leemour/cli-core"
-import { skillHint } from "@leemour/cli-core/skill"
+} from "@wirecat/cli-core"
+import { skillHint } from "@wirecat/cli-core/skill"
 import { Command } from "commander"
 import { type AppIdentity, envName } from "./app.js"
 import { commandPathOf } from "./command-contract.js"

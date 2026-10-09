@@ -1,7 +1,7 @@
 import { mkdtempSync, readFileSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { CliError } from "@leemour/cli-core"
+import { CliError } from "@wirecat/cli-core"
 import { describe, expect, it, vi } from "vitest"
 import type { Message } from "../domain/models.js"
 import { defaultRule } from "./rules.js"

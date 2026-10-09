@@ -1,4 +1,4 @@
-import { CliError } from "@leemour/cli-core"
+import { CliError } from "@wirecat/cli-core"
 
 const MINUTE = 60_000
 const YEAR = 365 * 24 * 60 * MINUTE

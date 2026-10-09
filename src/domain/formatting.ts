@@ -1,4 +1,4 @@
-import { CliError, visibleControls } from "@leemour/cli-core"
+import { CliError, visibleControls } from "@wirecat/cli-core"
 
 export interface TextSpan {
   type:

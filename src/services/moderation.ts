@@ -1,4 +1,4 @@
-import { CliError } from "@leemour/cli-core"
+import { CliError } from "@wirecat/cli-core"
 import { capability, type MessengerAdapter } from "../cli/messenger/port.js"
 import type { Id } from "../domain/models.js"
 import { type CheckRow, type Finding, gather, MAX_ACTIONS, type Moderator } from "../moderation/check.js"

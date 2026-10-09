@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs"
 import { dirname, extname, join } from "node:path"
 import { fileURLToPath } from "node:url"
-import { CliError, isCliError } from "@leemour/cli-core"
+import { CliError, isCliError } from "@wirecat/cli-core"
 import { ReaderLimit, readContainer } from "./container.js"
 import { type CellSpan, delimitedSpans } from "./csv-spans.js"
 import { documentKind, readDocument } from "./documents.js"

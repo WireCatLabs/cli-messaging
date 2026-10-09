@@ -1,7 +1,7 @@
 import { mkdirSync, writeFileSync } from "node:fs"
 import { dirname } from "node:path"
-import { CliError } from "@leemour/cli-core"
-import type { TaskStore } from "@leemour/cli-tasks"
+import { CliError } from "@wirecat/cli-core"
+import type { TaskStore } from "@wirecat/cli-tasks"
 import type { TextRange } from "../conversations/chunks.js"
 import type { Link, LinkInput } from "../conversations/link.js"
 import type { DownloadedFile } from "../domain/attachments.js"
@@ -552,7 +552,7 @@ export interface MessageStore {
   deleteSearch(reference: string): Promise<StoredSearch>
   /** Drops the unnamed runs; answers how many. */
   clearSearchHistory(): Promise<number>
-  /** Open tasks waiting on the owner, for `@leemour/cli-tasks`'s service. */
+  /** Open tasks waiting on the owner, for `@wirecat/cli-tasks`'s service. */
   readonly tasks: TaskStore
   readonly knowledge: KnowledgeStore
   /** Notes, the links between anything and anything, and the owner's organisations and projects. */

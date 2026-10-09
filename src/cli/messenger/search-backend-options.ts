@@ -1,4 +1,4 @@
-import { CliError } from "@leemour/cli-core"
+import { CliError } from "@wirecat/cli-core"
 import type { Command } from "commander"
 import type { Backend, ServerOptions, ServerSearched } from "../../services/server-search.js"
 import { parseDuration } from "../settings.js"

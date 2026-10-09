@@ -1,4 +1,4 @@
-import { CliError } from "@leemour/cli-core"
+import { CliError } from "@wirecat/cli-core"
 import { Command } from "commander"
 import { isAdminSelection } from "../../services/admin-statistics.js"
 import { readRankingSelection } from "../../services/rankings-selection.js"

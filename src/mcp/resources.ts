@@ -1,5 +1,5 @@
-import { visibleControls } from "@leemour/cli-core"
 import { type McpServer, ResourceTemplate } from "@modelcontextprotocol/server"
+import { visibleControls } from "@wirecat/cli-core"
 import type { Messenger } from "../cli/messenger/context.js"
 import { capability } from "../cli/messenger/port.js"
 import type { SendGuard } from "../sends/guard.js"

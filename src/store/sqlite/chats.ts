@@ -1,4 +1,4 @@
-import { CliError } from "@leemour/cli-core"
+import { CliError } from "@wirecat/cli-core"
 import type { Chat, Id, Member, Page } from "../../domain/models.js"
 import type { AccountKey, StoredChatFilter } from "../store.js"
 import { and, eq, gt, inArray, or, sql } from "./drizzle/core.js"

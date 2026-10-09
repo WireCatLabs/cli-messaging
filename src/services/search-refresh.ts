@@ -1,4 +1,4 @@
-import { CliError } from "@leemour/cli-core"
+import { CliError } from "@wirecat/cli-core"
 import { parseDuration } from "../cli/settings.js"
 import type { QueryExecution, ResolvedNode } from "../search/lucene/resolved.js"
 import type { AccountKey } from "../store/store.js"

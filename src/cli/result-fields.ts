@@ -1,4 +1,4 @@
-import { CliError } from "@leemour/cli-core"
+import { CliError } from "@wirecat/cli-core"
 
 const FORBIDDEN = new Set(["__proto__", "prototype", "constructor"])
 export const fieldsOf = (value: string): string[] => {

@@ -1,4 +1,4 @@
-import { CliError } from "@leemour/cli-core"
+import { CliError } from "@wirecat/cli-core"
 import type { ChatStats } from "../services/chat-stats.js"
 import { CHART_KINDS, type ChartData, type ChartKind, type ChartPeriod } from "./model.js"
 

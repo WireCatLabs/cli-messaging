@@ -1,4 +1,4 @@
-import { CliError } from "@leemour/cli-core"
+import { CliError } from "@wirecat/cli-core"
 import type { ChannelTagMatch } from "../../domain/channel-tags.js"
 import type { AccountKey } from "../store.js"
 import type { StoreContext } from "./open.js"

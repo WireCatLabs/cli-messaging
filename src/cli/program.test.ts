@@ -1,7 +1,7 @@
 import { mkdtempSync, readdirSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { CliError, captureStreams } from "@leemour/cli-core"
+import { CliError, captureStreams } from "@wirecat/cli-core"
 import { Command, Option } from "commander"
 import { describe, expect, it, vi } from "vitest"
 import { baseContext, environmentOf } from "./context.js"

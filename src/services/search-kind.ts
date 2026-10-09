@@ -1,4 +1,4 @@
-import { CliError } from "@leemour/cli-core"
+import { CliError } from "@wirecat/cli-core"
 import type { AccountKey } from "../store/store.js"
 
 export type SearchKind = "messages" | "mail"

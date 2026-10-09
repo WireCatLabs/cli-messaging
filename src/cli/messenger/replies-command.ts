@@ -1,4 +1,4 @@
-import { CliError } from "@leemour/cli-core"
+import { CliError } from "@wirecat/cli-core"
 import { Command } from "commander"
 import { DRY_RUN_DAYS, dryRun } from "../../replies/dry-run.js"
 import { replyRenderer } from "../../replies/rendering.js"

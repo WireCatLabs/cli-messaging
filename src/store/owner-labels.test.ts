@@ -1,7 +1,7 @@
 import { mkdtempSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { createTaskService } from "@leemour/cli-tasks"
+import { createTaskService } from "@wirecat/cli-tasks"
 import { afterEach, describe, expect, it } from "vitest"
 import { searchNotesQuery } from "../services/notes-search.js"
 import { MIGRATIONS, migrate } from "./migrations.js"

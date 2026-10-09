@@ -1,4 +1,4 @@
-import { CliError } from "@leemour/cli-core"
+import { CliError } from "@wirecat/cli-core"
 import type { RetentionOptions } from "../domain/retention.js"
 import { timezoneOf } from "../search/lucene/dates.js"
 import type { ServiceDeps } from "./deps.js"

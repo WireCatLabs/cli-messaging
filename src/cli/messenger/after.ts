@@ -1,4 +1,4 @@
-import { CliError } from "@leemour/cli-core"
+import { CliError } from "@wirecat/cli-core"
 import { momentOf } from "../../services/moment.js"
 import type { After } from "./port.js"
 

@@ -9,7 +9,7 @@
 set -eu
 
 cd "$(dirname "$0")/.."
-package=@leemour/cli-messaging
+package=@wirecat/cli-messaging
 
 mode=ci
 usage() { echo 'usage: bin/release [--local]' >&2; exit 2; }

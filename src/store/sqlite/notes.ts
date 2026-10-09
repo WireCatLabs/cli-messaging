@@ -1,4 +1,4 @@
-import { CliError } from "@leemour/cli-core"
+import { CliError } from "@wirecat/cli-core"
 import { canonicalReference, parseReference } from "../../domain/references.js"
 import { normalizeTag } from "../../domain/tags.js"
 import type { CacheDatabase, CacheStatement } from "../driver.js"

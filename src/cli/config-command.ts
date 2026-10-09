@@ -5,8 +5,8 @@ import {
   pathsAreOverridden,
   resolvePaths,
   saveConfigFile,
-} from "@leemour/cli-core"
-import { annotate } from "@leemour/cli-core/commands"
+} from "@wirecat/cli-core"
+import { annotate } from "@wirecat/cli-core/commands"
 import { Command } from "commander"
 import * as v from "valibot"
 import { type AppIdentity, envName } from "./app.js"

@@ -1,4 +1,4 @@
-import { CliError } from "@leemour/cli-core"
+import { CliError } from "@wirecat/cli-core"
 import { capability } from "../cli/messenger/port.js"
 import type { Chat, Contact, Id, Member, Page, PersonCard, PersonProfile, PhoneBookEntry } from "../domain/models.js"
 import { pickPerson } from "../resolve.js"

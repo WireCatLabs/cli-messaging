@@ -1,4 +1,4 @@
-import { createTaskService, type TaskKind, type TaskStore } from "@leemour/cli-tasks"
+import { createTaskService, type TaskKind, type TaskStore } from "@wirecat/cli-tasks"
 import { formatLocator } from "../domain/locator.js"
 import type { Id, Message, ReviewChat } from "../domain/models.js"
 import type { AccountKey, MessageStore } from "../store/store.js"

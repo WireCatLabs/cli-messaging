@@ -137,7 +137,7 @@ export const openEmbedder = async (
 ): Promise<Embedder> => {
   const [{ Tokenizer }, ort] = await Promise.all([
     import("@huggingface/tokenizers"),
-    import("@leemour/cli-messaging-onnx"),
+    import("@wirecat/cli-messaging-onnx"),
   ])
   const path = (name: string) => join(directory, model.id, name)
   const tokenizer = new Tokenizer(

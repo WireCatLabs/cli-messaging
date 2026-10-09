@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs"
-import { CliError } from "@leemour/cli-core"
-import { identifier, type ManifestOperation, type SchemaNode } from "@leemour/cli-core/codegen"
+import { CliError } from "@wirecat/cli-core"
+import { identifier, type ManifestOperation, type SchemaNode } from "@wirecat/cli-core/codegen"
 import { isLosslessNumber, isSafeNumber, LosslessNumber, parse, stringify } from "lossless-json"
 import * as v from "valibot"
 

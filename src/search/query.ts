@@ -1,4 +1,4 @@
-import { CliError } from "@leemour/cli-core"
+import { CliError } from "@wirecat/cli-core"
 import type { Provider } from "../domain/models.js"
 
 export type Term = { kind: "word"; text: string } | { kind: "phrase"; words: string[] }

@@ -1,4 +1,4 @@
-import { CliError, singleLine } from "@leemour/cli-core"
+import { CliError, singleLine } from "@wirecat/cli-core"
 import type { AdminOptions, AdminReport, Answerer } from "../domain/admin-statistics.js"
 import { parseLocator } from "../domain/locator.js"
 import { isId, pickPerson } from "../resolve.js"

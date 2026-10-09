@@ -1,5 +1,5 @@
-import { CliError } from "@leemour/cli-core"
-import { annotate } from "@leemour/cli-core/commands"
+import { CliError } from "@wirecat/cli-core"
+import { annotate } from "@wirecat/cli-core/commands"
 import { Command } from "commander"
 import { SendJournal, sendsPathFor } from "../../sends/journal.js"
 import { RecipientList, recipientsPathFor } from "../../sends/recipients.js"

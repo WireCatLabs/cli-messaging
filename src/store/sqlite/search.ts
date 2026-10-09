@@ -1,4 +1,4 @@
-import { CliError } from "@leemour/cli-core"
+import { CliError } from "@wirecat/cli-core"
 import { formatLocator } from "../../domain/locator.js"
 import type { Message, Page } from "../../domain/models.js"
 import type { MessageFilter, StoredHit } from "../store.js"

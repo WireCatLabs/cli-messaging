@@ -2,11 +2,11 @@ import { mkdirSync, mkdtempSync, symlinkSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
-import { CliError, captureStreams } from "@leemour/cli-core"
-import { skillResource } from "@leemour/cli-core/skill"
 import { Client, type ElicitResult } from "@modelcontextprotocol/client"
 import { InMemoryTransport, McpServer } from "@modelcontextprotocol/server"
 import { serveStdio } from "@modelcontextprotocol/server/stdio"
+import { CliError, captureStreams } from "@wirecat/cli-core"
+import { skillResource } from "@wirecat/cli-core/skill"
 import { Command } from "commander"
 import { PNG } from "pngjs"
 import { afterEach, describe, expect, it, vi } from "vitest"
@@ -3322,7 +3322,7 @@ describe("the skill resource", () => {
 })
 
 describe("mcp config", () => {
-  const PNPM = "/home/a/.local/share/pnpm/global/5/node_modules/@leemour/chat-cli/dist/bin/chat.js"
+  const PNPM = "/home/a/.local/share/pnpm/global/5/node_modules/@wirecat/chat-cli/dist/bin/chat.js"
 
   it("names node and the script in full, with the profile first and the directories that were set", () => {
     const { config } = serverEntry(app, {

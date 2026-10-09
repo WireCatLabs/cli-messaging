@@ -88,7 +88,7 @@ Each `send` gets a `sendId`. It is the send's identity.
 
 ## Errors
 
-Throw a `CliError` from `@leemour/cli-core` with a code from its closed list: `validation_error`,
+Throw a `CliError` from `@wirecat/cli-core` with a code from its closed list: `validation_error`,
 `authentication_error`, `permission_error`, `not_found`, `rate_limited`, `timeout`,
 `network_error`, `provider_error`, `provider_unavailable`, `invalid_response`, `outcome_unknown` and
 the others in `errorCodes`.
@@ -158,7 +158,7 @@ Each case checks with `node:assert/strict`, so the kit does not depend on a test
 vitest:
 
 ```ts
-import { contractCases, digitIds } from "@leemour/cli-messaging/testing"
+import { contractCases, digitIds } from "@wirecat/cli-messaging/testing"
 import { describe, it } from "vitest"
 
 describe("the adapter keeps the port's promises", () => {

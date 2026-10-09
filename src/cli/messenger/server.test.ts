@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 
 import { tmpdir } from "node:os"
 import { dirname, join } from "node:path"
 import { setTimeout as sleep } from "node:timers/promises"
-import { captureStreams } from "@leemour/cli-core"
+import { captureStreams } from "@wirecat/cli-core"
 import { describe, expect, it, onTestFinished } from "vitest"
 import { unitScope } from "../../background/units.js"
 import { FloodMemory } from "../../sends/flood.js"

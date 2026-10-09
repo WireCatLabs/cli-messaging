@@ -59,14 +59,14 @@ full-text search the migrations need (`assertStoreCapable`), and refuses with wh
 version number does not tell: official Node 22.0–22.15 has SQLite 3.46–3.49 without FTS5. CI runs the
 built package on Node 22.15.0 to see the refusal (`scripts/check-old-node.mjs`).
 
-Where the runtime's SQLite can be swapped, ours from `@leemour/cli-messaging-sqlite` (built in
+Where the runtime's SQLite can be swapped, ours from `@wirecat/cli-messaging-sqlite` (built in
 `packages/sqlite`, published by `.github/workflows/sqlite.yml`) takes its place
 (plan):
 
 - **Bun on macOS** always loads ours (`bunDatabase`, `src/store/drivers/bun-sqlite.ts`), once, before
   the first database: Bun uses the system's library there, which can be too old.
 - **A Linux distribution's Node** links the system's `libsqlite3`. `ensureSqlite`
-  (`src/sqlite-runtime.ts`, exported as `@leemour/cli-messaging/sqlite-runtime`) is the first thing
+  (`src/sqlite-runtime.ts`, exported as `@wirecat/cli-messaging/sqlite-runtime`) is the first thing
   `tg` and `max` run: when the system's SQLite fails the check above, it starts the command again
   with ours first on `LD_LIBRARY_PATH`, before anything is read or sent. CI runs it on Ubuntu's Node
   with SQLite 3.42 (`scripts/check-sqlite-restart.mjs`).
@@ -355,7 +355,7 @@ A migration is frozen once released: fix a mistake with the next version, never 
 
 ### Open tasks
 
-Tasks waiting on the owner belong to `@leemour/cli-tasks`, which knows no messenger and no SQLite.
+Tasks waiting on the owner belong to `@wirecat/cli-tasks`, which knows no messenger and no SQLite.
 The store implements its `TaskStore` as `store.tasks`, in the `tasks` table (store version 20,
 `src/store/sqlite/tasks.ts`), so backup, restore and export carry tasks with the messages, and a task
 joins its message in one query. A task holds a locator, never the message text; `kind`, `state` and

@@ -1,4 +1,4 @@
-import { CliError } from "@leemour/cli-core"
+import { CliError } from "@wirecat/cli-core"
 import { imageSize } from "image-size"
 import type { ModelImage } from "../models/index.js"
 import { MAX_MODEL_IMAGE_BYTES } from "../models/types.js"

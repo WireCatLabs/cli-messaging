@@ -1,4 +1,4 @@
-import type { CommandInfo, OptionInfo } from "@leemour/cli-core/commands"
+import type { CommandInfo, OptionInfo } from "@wirecat/cli-core/commands"
 import {
   type Cli,
   type CommandRow,

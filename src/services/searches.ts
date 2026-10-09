@@ -1,4 +1,4 @@
-import { CliError, singleLine } from "@leemour/cli-core"
+import { CliError, singleLine } from "@wirecat/cli-core"
 import type { AdminReport } from "../domain/admin-statistics.js"
 import type { RankingInput, RankingTarget } from "../domain/rankings-options.js"
 import { parseLucene } from "../search/lucene/parser.js"

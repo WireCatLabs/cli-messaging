@@ -47,7 +47,7 @@ if (flag === "--pages") {
   const problems = parityProblems(manifest, cli, program)
   for (const problem of problems) console.error(problem)
   if (problems.length > 0) {
-    console.error(`${problems.length} difference(s) from @leemour/cli-messaging parity.json — see docs/dev/STANDARD.md`)
+    console.error(`${problems.length} difference(s) from @wirecat/cli-messaging parity.json — see docs/dev/STANDARD.md`)
     process.exit(1)
   }
 }

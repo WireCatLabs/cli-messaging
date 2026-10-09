@@ -1,5 +1,5 @@
-import { CliError } from "@leemour/cli-core"
-import { metaOf } from "@leemour/cli-core/commands"
+import { CliError } from "@wirecat/cli-core"
+import { metaOf } from "@wirecat/cli-core/commands"
 import type { Command } from "commander"
 import {
   assertStatsPermissionsCurrent,

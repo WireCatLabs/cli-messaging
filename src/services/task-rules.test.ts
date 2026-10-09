@@ -1,7 +1,7 @@
 import { mkdtempSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { memoryTaskStore } from "@leemour/cli-tasks/testing"
+import { memoryTaskStore } from "@wirecat/cli-tasks/testing"
 import { describe, expect, it } from "vitest"
 import type { Messenger } from "../cli/messenger/context.js"
 import type { MessengerAdapter } from "../cli/messenger/port.js"

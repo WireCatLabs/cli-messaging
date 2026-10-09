@@ -1,7 +1,7 @@
 import { mkdtempSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { CliError } from "@leemour/cli-core"
+import { CliError } from "@wirecat/cli-core"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import type { Messenger } from "../cli/messenger/context.js"
 import type { MessengerAdapter, ServerQuery } from "../cli/messenger/port.js"

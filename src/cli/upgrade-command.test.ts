@@ -1,4 +1,4 @@
-import { captureStreams } from "@leemour/cli-core"
+import { captureStreams } from "@wirecat/cli-core"
 import { describe, expect, it, vi } from "vitest"
 import type { PackageUpgradePorts } from "../services/package-upgrade.js"
 import { outputFor } from "./context.js"

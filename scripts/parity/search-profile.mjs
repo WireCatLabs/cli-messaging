@@ -1,7 +1,7 @@
 import { createRequire } from "node:module"
 
 const require = createRequire(`${process.argv[2]}/package.json`)
-const api = await import(require.resolve("@leemour/cli-messaging/services"))
+const api = await import(require.resolve("@wirecat/cli-messaging/services"))
 if (!Array.isArray(api.QUERY_FIELDS) || typeof api.QUERY_VERSION !== "number")
   throw new Error("pinned package has no declared query profile exports")
 console.log(

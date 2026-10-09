@@ -1,5 +1,5 @@
 import { Worker } from "node:worker_threads"
-import { CliError } from "@leemour/cli-core"
+import { CliError } from "@wirecat/cli-core"
 import { exhausted, QUERY_LIMITS } from "./lucene/types.js"
 
 const workerSource = `const {parentPort,workerData}=require("node:worker_threads");

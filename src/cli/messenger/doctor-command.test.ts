@@ -1,7 +1,7 @@
 import { chmodSync, mkdirSync, mkdtempSync, readFileSync, statSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { CliError, captureStreams } from "@leemour/cli-core"
+import { CliError, captureStreams } from "@wirecat/cli-core"
 import { describe, expect, it } from "vitest"
 import type { Chat } from "../../domain/models.js"
 import { FloodMemory } from "../../sends/flood.js"

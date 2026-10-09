@@ -1,4 +1,4 @@
-import { CliError } from "@leemour/cli-core"
+import { CliError } from "@wirecat/cli-core"
 import { describe, expect, it } from "vitest"
 import { answered, BinaryResource, failed, Picture } from "./tool.js"
 

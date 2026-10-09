@@ -1,4 +1,4 @@
-import { CliError } from "@leemour/cli-core"
+import { CliError } from "@wirecat/cli-core"
 import { describe, expect, it, vi } from "vitest"
 import { renderReplyTemplate, type TemplateInput } from "./template.js"
 

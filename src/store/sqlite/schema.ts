@@ -646,7 +646,7 @@ export const attachmentTexts = sqliteTable("attachment_texts", {
 })
 
 /**
- * What `@leemour/cli-tasks` keeps: a question, request, mention or promise waiting on the owner. `source`
+ * What `@wirecat/cli-tasks` keeps: a question, request, mention or promise waiting on the owner. `source`
  * is a locator (`msg:…`), never the message text. Times are milliseconds.
  */
 export const tasks = sqliteTable(

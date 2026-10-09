@@ -1,4 +1,4 @@
-import { type Installer, isNewer, updateCommand } from "@leemour/cli-core/update"
+import { type Installer, isNewer, updateCommand } from "@wirecat/cli-core/update"
 
 export interface ServerRestarts {
   restarted: readonly string[]

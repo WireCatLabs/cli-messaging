@@ -1,4 +1,4 @@
-import { CliError } from "@leemour/cli-core"
+import { CliError } from "@wirecat/cli-core"
 import { Command } from "commander"
 import type { OfficialChatStats, OfficialPerson, OfficialValue } from "../../domain/models.js"
 import { type Messenger, messengerContext } from "./context.js"

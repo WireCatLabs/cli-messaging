@@ -1,5 +1,5 @@
-import { CliError } from "@leemour/cli-core"
-import { identifier, type ManifestOperation, type SchemaNode } from "@leemour/cli-core/codegen"
+import { CliError } from "@wirecat/cli-core"
+import { identifier, type ManifestOperation, type SchemaNode } from "@wirecat/cli-core/codegen"
 import { isLosslessNumber, LosslessNumber } from "lossless-json"
 import type { ApiCommandInput } from "./api.js"
 import { apiJson, parseApiJson } from "./api-input.js"

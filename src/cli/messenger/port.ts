@@ -1,4 +1,4 @@
-import { CliError } from "@leemour/cli-core"
+import { CliError } from "@wirecat/cli-core"
 import type { CounterField, CounterObservations } from "../../domain/counters.js"
 import type { HtmlFormatting, MarkdownFormatting, TextSpan } from "../../domain/formatting.js"
 import type { Markup } from "../../domain/markdown.js"

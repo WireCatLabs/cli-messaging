@@ -1,5 +1,5 @@
 import { setTimeout } from "node:timers/promises"
-import { CliError } from "@leemour/cli-core"
+import { CliError } from "@wirecat/cli-core"
 import { type Embedder, unit } from "./embed.js"
 import type { TextModel } from "./models.js"
 

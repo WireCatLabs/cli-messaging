@@ -1,4 +1,4 @@
-import { CliError } from "@leemour/cli-core"
+import { CliError } from "@wirecat/cli-core"
 import type { GroupMember, Id, Provider } from "../../domain/models.js"
 import { and, asc, eq, gte, inArray, isNotNull, isNull, or, sql } from "./drizzle/core.js"
 import { identityPk, seenIdentity } from "./identities.js"

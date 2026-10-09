@@ -1,6 +1,6 @@
 import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs"
 import { dirname, join } from "node:path"
-import { resolvePaths } from "@leemour/cli-core"
+import { resolvePaths } from "@wirecat/cli-core"
 import type { AppIdentity } from "../cli/app.js"
 
 /** "The messenger said: do not ask for this again before `until`." */

@@ -1,4 +1,4 @@
-import { CliError } from "@leemour/cli-core"
+import { CliError } from "@wirecat/cli-core"
 import { Command } from "commander"
 import { describe, expect, it } from "vitest"
 import { type AgentPolicy, type AgentTask, evaluateAgent } from "./agent-evaluation.js"

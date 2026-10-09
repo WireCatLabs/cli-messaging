@@ -1,4 +1,4 @@
-import { CliError } from "@leemour/cli-core"
+import { CliError } from "@wirecat/cli-core"
 import { imageSize } from "image-size"
 import { importEngine, type LoadEngine } from "./extract.js"
 import { MAX_CHUNK_BYTES } from "./transfer.js"

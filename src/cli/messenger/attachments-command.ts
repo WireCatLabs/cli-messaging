@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs"
-import { CliError } from "@leemour/cli-core"
+import { CliError } from "@wirecat/cli-core"
 import { Command } from "commander"
 import { engineHint } from "../../attachments/extract.js"
 import { gatewayOcr } from "../../attachments/gateway-ocr.js"

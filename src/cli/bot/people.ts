@@ -1,4 +1,4 @@
-import { CliError, singleLine } from "@leemour/cli-core"
+import { CliError, singleLine } from "@wirecat/cli-core"
 import { Command } from "commander"
 import { parseLocator } from "../../domain/locator.js"
 import type { ChatKind, Contact, Message, PersonCard } from "../../domain/models.js"

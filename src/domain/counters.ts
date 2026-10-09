@@ -1,4 +1,4 @@
-import { CliError } from "@leemour/cli-core"
+import { CliError } from "@wirecat/cli-core"
 import type { Message, Reactions } from "./models.js"
 
 export const COUNTER_FIELDS = ["views", "reactions", "comments"] as const

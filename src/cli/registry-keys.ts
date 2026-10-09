@@ -1,4 +1,4 @@
-import { Credentials, pathsAreOverridden, resolvePaths } from "@leemour/cli-core"
+import { Credentials, pathsAreOverridden, resolvePaths } from "@wirecat/cli-core"
 import { type AppIdentity, envName } from "./app.js"
 
 /**
