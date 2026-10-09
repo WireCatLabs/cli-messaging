@@ -224,8 +224,8 @@ describe("reply editors", () => {
   it("shows audience without creating a file, replaces all audience fields and sends warnings only to stderr", async () => {
     const { path, invoke } = setup()
     const shown = await invoke("audience")
-    expect(JSON.parse(shown.data).reply).toBe("listed")
-    expect(shown.diagnostics).toContain("nobody is answered")
+    expect(JSON.parse(shown.data).reply).toBe("all")
+    expect(shown.diagnostics).toBe("")
     expect(existsSync(path)).toBe(false)
     const answer = await invoke(
       "audience",
@@ -266,6 +266,6 @@ describe("reply editors", () => {
       deny: { people: [], chats: [] },
     })
     const other = setup()
-    expect(JSON.parse((await other.invoke("audience", "--reply", "all")).data).reply).toBe("all")
+    expect(JSON.parse((await other.invoke("audience")).data).reply).toBe("all")
   })
 })

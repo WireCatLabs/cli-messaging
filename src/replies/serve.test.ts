@@ -138,13 +138,13 @@ describe("serve's reply rules", () => {
     expect(sent).toEqual([{ chat: "c1", text: "Thanks, Ana.", replyTo: "2", sendId: "send-0", origin: "rule:away" }])
   })
 
-  it("answers nobody from a file that names no audience", async () => {
+  it("answers anyone a rule matches from a file that names no audience", async () => {
     const { deps, sent } = setUp()
     const rules = JSON.parse(readFileSync(deps.rulesPath, "utf8")).rules
     writeFileSync(deps.rulesPath, JSON.stringify({ rules }))
 
-    expect(await replyTo(deps, said("1"))).toEqual({ skip: "not on the allow list" })
-    expect(sent).toEqual([])
+    expect(await replyTo(deps, said("1", { senderId: "someone" }))).toEqual({ sent: "away" })
+    expect(sent).toHaveLength(1)
   })
 
   it("**answers an older file's testers exactly as before, and nobody else**", async () => {

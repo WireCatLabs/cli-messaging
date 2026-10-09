@@ -2,7 +2,8 @@
 
 Reply rules belong to one profile in its config directory, `<profile>.replies.json`.
 `serve` applies enabled rules, within `replies.send`, the file's audience and rate limits. A new file
-answers nobody until `replies audience` allows someone. The editing commands never connect or send.
+answers everyone a rule matches; nothing is sent until `replies.send` is `allow`. The editing commands
+never connect or send.
 
 Create a disabled rule with every key written out, edit its template, then enable it:
 
@@ -37,8 +38,10 @@ one of them. `--no-hours` clears the window and cannot accompany its fields.
 `replies audience` shows the file-level audience. Its flags change only named fields:
 `--reply all|listed`, `--allow-people`, `--allow-chats`, `--deny-people`, `--deny-chats`.
 The lists use the same replacement and clearing rules. `deny` wins over `allow`.
-A file without an audience is `listed` with empty lists, so nobody is answered; tasks can still open.
-`max replies audience --reply listed --allow-people 1000001` lets one person get answers.
+A file without an audience, or without `reply`, answers everyone a rule matches.
+`max replies audience --reply listed --allow-people 1000001` answers only that person;
+`max replies audience --deny-people 1000002` answers everyone but them. With `listed` and an empty
+allow list nobody is answered; tasks can still open.
 
 A file from before the audience replaced `testers` is read as the audience that answers the same
 people: `listed`, allowing the testers of this messenger — or, if it was `listed` already, only the

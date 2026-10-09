@@ -121,7 +121,7 @@ export const editAudience = (path: string, provider: string, edits: AudienceEdit
   const file = readRepliesFile(path, provider)
   const { audience } = file
   if (Object.values(edits).every((value) => value === undefined)) return audience
-  if (edits.reply !== undefined) audience.reply = choices([edits.reply], ["all", "listed"], "--reply")[0] ?? "listed"
+  if (edits.reply !== undefined) audience.reply = choices([edits.reply], ["all", "listed"], "--reply")[0] ?? "all"
   if (edits.allowPeople !== undefined) audience.allow.people = list(edits.allowPeople)
   if (edits.allowChats !== undefined) audience.allow.chats = list(edits.allowChats)
   if (edits.denyPeople !== undefined) audience.deny.people = list(edits.denyPeople)

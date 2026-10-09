@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest"
 import {
   audienceWarnings,
   defaultRule,
-  NOBODY,
+  EVERYONE,
   outsideAudience,
   parseReplies,
   parseReplyRules,
@@ -110,13 +110,12 @@ describe("reply rules", () => {
 describe("who may be answered", () => {
   const audienceOf = (audience: unknown) => parseReplies({ audience, rules: [] }, "replies.json", "chat").audience
 
-  it("**answers nobody by default**, everyone under all, and never the deny list", () => {
-    const open = audienceOf({ reply: "all" })
-    const denied = audienceOf({ reply: "all", deny: { people: ["p1"], chats: ["c9"] } })
+  it("**answers everyone by default**, and never the deny list", () => {
+    const open = audienceOf(undefined)
+    const denied = audienceOf({ deny: { people: ["p1"], chats: ["c9"] } })
 
-    expect(audienceOf(undefined)).toEqual(NOBODY)
-    expect(audienceOf({ allow: { people: ["p1"] } }).reply).toBe("listed")
-    expect(outsideAudience(audienceOf(undefined), "p1", "c1")).toBe("not on the allow list")
+    expect(open).toEqual(EVERYONE)
+    expect(audienceOf({ allow: { people: ["p1"] } }).reply).toBe("all")
     expect(outsideAudience(open, "p1", "c1")).toBeNull()
     expect(outsideAudience(denied, "p1", "c1")).toBe("a person on the deny list")
     expect(outsideAudience(denied, "p2", "c9")).toBe("a chat on the deny list")
@@ -171,8 +170,9 @@ describe("an older file's testers", () => {
       }),
     ).toEqual({ reply: "listed", allow: { people: ["p1", "p2"], chats: [] }, deny: { people: ["p2"], chats: [] } })
     expect(migrated({ testers: [{ id: "p1" }] })).toEqual({
-      ...NOBODY,
+      reply: "listed",
       allow: { people: ["p1"], chats: [] },
+      deny: { people: [], chats: [] },
     })
   })
 
@@ -186,7 +186,7 @@ describe("an older file's testers", () => {
   })
 
   it("answer nobody when the list was empty", () => {
-    expect(migrated({ testers: [], audience: { reply: "all" } })).toEqual(NOBODY)
+    expect(migrated({ testers: [], audience: { reply: "all" } })).toEqual({ ...EVERYONE, reply: "listed" })
   })
 
   it("are refused when malformed, and an unknown audience mode is still refused", () => {

@@ -136,11 +136,11 @@ const side = v.optional(v.strictObject({ people: v.optional(ids, []), chats: v.o
 /**
  * Who may get an answer at all, whatever a rule says: everyone, or only those listed in `allow`; and
  * never anyone in `deny`, which wins when an id is in both. Tasks are not limited by it. A file that
- * does not say is `listed` with nobody allowed, so nobody is answered until the owner allows someone.
+ * does not say answers everyone a rule matches; `replies.send` is what keeps a new file silent.
  */
 const audienceShape = v.optional(
-  v.strictObject({ reply: v.optional(v.picklist(["all", "listed"]), "listed"), allow: side, deny: side }),
-  { reply: "listed", allow: { people: [], chats: [] }, deny: { people: [], chats: [] } },
+  v.strictObject({ reply: v.optional(v.picklist(["all", "listed"]), "all"), allow: side, deny: side }),
+  { reply: "all", allow: { people: [], chats: [] }, deny: { people: [], chats: [] } },
 )
 
 export type Audience = v.InferOutput<typeof audienceShape>
@@ -181,7 +181,7 @@ export interface Replies {
   rules: ReplyRule[]
 }
 
-export const NOBODY: Audience = { reply: "listed", allow: { people: [], chats: [] }, deny: { people: [], chats: [] } }
+export const EVERYONE: Audience = { reply: "all", allow: { people: [], chats: [] }, deny: { people: [], chats: [] } }
 
 /** Why nobody may be answered here, or `null` when the audience lets the reply go. */
 export const outsideAudience = (audience: Audience, person: string | null, chat: string): string | null => {
@@ -223,7 +223,7 @@ export interface RepliesFile {
 
 // Hours and limits are transformed by parsing; editing must keep their file input forms.
 export const readRepliesFile = (path: string, provider: string): RepliesFile => {
-  if (!existsSync(path)) return { audience: structuredClone(NOBODY), rules: [] }
+  if (!existsSync(path)) return { audience: structuredClone(EVERYONE), rules: [] }
   let parsed: unknown
   try {
     parsed = JSON.parse(readFileSync(path, "utf8"))
