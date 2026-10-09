@@ -1,4 +1,4 @@
-import type { Renderer, RenderFormat, Streams } from "@leemour/cli-core"
+import type { Renderer, RenderFormat, Streams } from "@wirecat/cli-core"
 import type { Command } from "commander"
 import { resolveOutput } from "../output.js"
 import type { OpenRecognizer } from "../speech/transcribe.js"

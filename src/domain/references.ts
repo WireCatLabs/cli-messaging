@@ -1,4 +1,4 @@
-import { CliError, singleLine } from "@leemour/cli-core"
+import { CliError, singleLine } from "@wirecat/cli-core"
 import { formatLocator, parseLocator } from "./locator.js"
 
 /**

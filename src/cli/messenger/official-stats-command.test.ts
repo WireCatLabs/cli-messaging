@@ -1,7 +1,7 @@
 import { mkdtempSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { captureStreams } from "@leemour/cli-core"
+import { captureStreams } from "@wirecat/cli-core"
 import { describe, expect, it, vi } from "vitest"
 import type { OfficialChatStats } from "../../domain/models.js"
 import { run } from "../program.js"

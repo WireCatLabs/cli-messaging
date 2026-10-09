@@ -1,4 +1,4 @@
-import { CliError } from "@leemour/cli-core"
+import { CliError } from "@wirecat/cli-core"
 import type { Command } from "commander"
 import { pickChat } from "../../resolve.js"
 import { sendGuard } from "../../sends/guard.js"

@@ -1,5 +1,5 @@
 import { posix } from "node:path"
-import { CliError } from "@leemour/cli-core"
+import { CliError } from "@wirecat/cli-core"
 import type { Element, Node } from "@xmldom/xmldom"
 import { elements, ReaderLimit, readContainer, xmlPart } from "./container.js"
 import type { Extraction, FileHint } from "./extract.js"

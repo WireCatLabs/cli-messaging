@@ -1,7 +1,7 @@
 import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { captureStreams } from "@leemour/cli-core"
+import { captureStreams } from "@wirecat/cli-core"
 import { describe, expect, it, vi } from "vitest"
 import { serveOverHttpUntilStopped } from "../../mcp/server.js"
 import { run } from "../program.js"

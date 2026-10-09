@@ -1,4 +1,4 @@
-import { CliError } from "@leemour/cli-core"
+import { CliError } from "@wirecat/cli-core"
 import { formatLocator, parseLocator } from "../../domain/locator.js"
 import { canonicalReference, formatReference, parseReference } from "../../domain/references.js"
 import { normalizeTag } from "../../domain/tags.js"

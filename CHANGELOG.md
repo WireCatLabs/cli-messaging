@@ -1,8 +1,18 @@
 # Changelog
 
-Notable changes to `@leemour/cli-messaging`, one section per version, newest first. Versions follow
-[semver](https://semver.org/); before `1.0.0` a minor version may break callers, and says how under
-"Changed — may break callers". `pnpm docs:check` checks the shape of this file.
+Notable changes to `@wirecat/cli-messaging` (`@leemour/cli-messaging` up to 0.214.0), one section per
+version, newest first. Versions follow [semver](https://semver.org/); before `1.0.0` a minor version may
+break callers, and says how under "Changed — may break callers". `pnpm docs:check` checks the shape of this file.
+
+## 0.215.0 — 10.10.2026
+
+### Changed — may break callers
+
+- **The package is now `@wirecat/cli-messaging`, and the repository is `WireCatLabs/cli-messaging`.**
+  Install `@wirecat/cli-messaging` and change imports from `@leemour/cli-messaging`. It depends on
+  `@wirecat/cli-tasks` 0.2.0 and `@wirecat/cli-messaging-{sqlite,onnx}` 1.0.0, and its peer is now
+  `@wirecat/cli-core` >=0.18.1 <0.19.0. The code is the same as 0.214.0. `@leemour/cli-messaging` gets
+  no new versions.
 
 ## 0.214.0 — 09.10.2026
 

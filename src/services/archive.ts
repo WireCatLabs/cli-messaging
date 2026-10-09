@@ -1,5 +1,5 @@
 import { setTimeout as sleep } from "node:timers/promises"
-import { CliError } from "@leemour/cli-core"
+import { CliError } from "@wirecat/cli-core"
 import type { Fetching } from "../cli/messenger/context.js"
 import { capability } from "../cli/messenger/port.js"
 import type { Chat, ChatKind, Id, Message } from "../domain/models.js"

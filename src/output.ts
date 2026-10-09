@@ -5,7 +5,7 @@ import {
   type RenderFormat,
   type Streams,
   singleLine,
-} from "@leemour/cli-core"
+} from "@wirecat/cli-core"
 import { fieldsOf, projectFields } from "./cli/result-fields.js"
 
 export interface OutputOptions {

@@ -1,4 +1,4 @@
-import { TASK_KINDS, TASK_STATES } from "@leemour/cli-tasks"
+import { TASK_KINDS, TASK_STATES } from "@wirecat/cli-tasks"
 import * as v from "valibot"
 import type { Messenger } from "../../cli/messenger/context.js"
 import { listed } from "../../cli/paging.js"

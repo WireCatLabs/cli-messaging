@@ -5,7 +5,7 @@ import {
   type KeyringStore,
   pathsAreOverridden,
   resolvePaths,
-} from "@leemour/cli-core"
+} from "@wirecat/cli-core"
 import { type AppIdentity, envName } from "../app.js"
 
 export interface BotTokenStoreOptions {

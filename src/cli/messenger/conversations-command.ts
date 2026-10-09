@@ -1,4 +1,4 @@
-import { CliError } from "@leemour/cli-core"
+import { CliError } from "@wirecat/cli-core"
 import { Command } from "commander"
 import { analysisConsents } from "../../analysis/consents.js"
 import { openAnalysis, providerIdentity } from "../../analysis/provider.js"

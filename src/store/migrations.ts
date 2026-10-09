@@ -1,4 +1,4 @@
-import { CliError } from "@leemour/cli-core"
+import { CliError } from "@wirecat/cli-core"
 import type { CacheDatabase } from "./driver.js"
 import { generatedMigrations } from "./sqlite/manifest.js"
 import { copyIntoNotes } from "./sqlite/notes-copy.js"

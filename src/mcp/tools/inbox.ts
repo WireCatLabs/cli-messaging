@@ -1,4 +1,4 @@
-import { CliError } from "@leemour/cli-core"
+import { CliError } from "@wirecat/cli-core"
 import * as v from "valibot"
 import type { Messenger } from "../../cli/messenger/context.js"
 import { checkPoints } from "../../cli/messenger/points.js"

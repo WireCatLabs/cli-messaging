@@ -1,5 +1,5 @@
-import { CliError } from "@leemour/cli-core"
-import { describeOptions, metaOf } from "@leemour/cli-core/commands"
+import { CliError } from "@wirecat/cli-core"
+import { describeOptions, metaOf } from "@wirecat/cli-core/commands"
 import type { Command } from "commander"
 import { keyForCommand, WRITE_KEYS } from "../sends/permissions.js"
 

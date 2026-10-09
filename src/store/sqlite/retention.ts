@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto"
-import { CliError } from "@leemour/cli-core"
+import { CliError } from "@wirecat/cli-core"
 import {
   RETENTION_TOLERANCE,
   type RetentionOptions,

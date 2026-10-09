@@ -1,4 +1,4 @@
-import { CliError } from "@leemour/cli-core"
+import { CliError } from "@wirecat/cli-core"
 import { tagOf } from "../../domain/tags.js"
 import {
   type Automaton,

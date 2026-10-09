@@ -1,4 +1,4 @@
-import { CliError, singleLine } from "@leemour/cli-core"
+import { CliError, singleLine } from "@wirecat/cli-core"
 import { Command } from "commander"
 import { searchNotes } from "../../services/notes-search.js"
 import { RESOURCES_SEARCHED, type SearchedResource } from "../../services/search-all.js"

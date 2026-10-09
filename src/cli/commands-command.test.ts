@@ -1,5 +1,5 @@
-import { captureStreams } from "@leemour/cli-core"
-import { annotate } from "@leemour/cli-core/commands"
+import { captureStreams } from "@wirecat/cli-core"
+import { annotate } from "@wirecat/cli-core/commands"
 import { Command } from "commander"
 import { describe, expect, it, vi } from "vitest"
 import { commandsCommand } from "./commands-command.js"

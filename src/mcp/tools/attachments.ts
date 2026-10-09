@@ -1,4 +1,4 @@
-import { CliError } from "@leemour/cli-core"
+import { CliError } from "@wirecat/cli-core"
 import { imageSize } from "image-size"
 import * as v from "valibot"
 import { MAX_TEXT_CHARS } from "../../attachments/extract.js"

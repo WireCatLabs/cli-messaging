@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from "node:fs"
-import { CliError, writeSecurely } from "@leemour/cli-core"
-import { annotate } from "@leemour/cli-core/commands"
+import { CliError, writeSecurely } from "@wirecat/cli-core"
+import { annotate } from "@wirecat/cli-core/commands"
 import { Command } from "commander"
 import type { Id, Message } from "../../domain/models.js"
 import { CHECK_READS, describe, type Gathered, MAX_ACTIONS, type Moderator } from "../../moderation/check.js"

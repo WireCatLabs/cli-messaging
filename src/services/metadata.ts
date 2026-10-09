@@ -1,4 +1,4 @@
-import { CliError } from "@leemour/cli-core"
+import { CliError } from "@wirecat/cli-core"
 import { capability } from "../cli/messenger/port.js"
 import { CHANNEL_TAG_RULES_VERSION, classifyChannel } from "../domain/channel-tags.js"
 import type { ServiceDeps } from "./deps.js"

@@ -1,4 +1,4 @@
-import { CliError } from "@leemour/cli-core"
+import { CliError } from "@wirecat/cli-core"
 import type { AppIdentity } from "../cli/app.js"
 import { embeddingKeys, endpointKeyName } from "../cli/embedding-keys.js"
 import type { Chat, Message } from "../domain/models.js"

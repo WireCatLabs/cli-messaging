@@ -1,5 +1,5 @@
 import { realpathSync } from "node:fs"
-import { CliError } from "@leemour/cli-core"
+import { CliError } from "@wirecat/cli-core"
 import { Command } from "commander"
 import { environmentOf } from "../context.js"
 import { type McpEnvironment, serverEntry } from "../messenger/mcp-command.js"

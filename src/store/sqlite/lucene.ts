@@ -1,4 +1,4 @@
-import { CliError } from "@leemour/cli-core"
+import { CliError } from "@wirecat/cli-core"
 import type { Page } from "../../domain/models.js"
 import { tagOf } from "../../domain/tags.js"
 import {

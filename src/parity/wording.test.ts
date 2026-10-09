@@ -1,4 +1,4 @@
-import type { CommandInfo } from "@leemour/cli-core/commands"
+import type { CommandInfo } from "@wirecat/cli-core/commands"
 import { describe, expect, it } from "vitest"
 import type { CommandsJson, Manifest } from "./manifest.js"
 import { wordingProblems } from "./wording.js"

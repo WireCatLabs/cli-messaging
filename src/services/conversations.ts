@@ -1,4 +1,4 @@
-import { CliError } from "@leemour/cli-core"
+import { CliError } from "@wirecat/cli-core"
 import { cutChunks } from "../conversations/chunks.js"
 import { type LinkInput, linkMessages, RULES_VERSION } from "../conversations/link.js"
 import type { Id, Message, Page } from "../domain/models.js"

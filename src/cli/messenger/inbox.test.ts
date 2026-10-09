@@ -1,7 +1,7 @@
 import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { captureStreams } from "@leemour/cli-core"
+import { captureStreams } from "@wirecat/cli-core"
 import { describe, expect, it } from "vitest"
 import type { Chat, Message } from "../../domain/models.js"
 import { INBOX_CHATS, kindsOf, newIn, reviewIn, unreadIn } from "../../services/inbox.js"

@@ -1,4 +1,4 @@
-import { CliError } from "@leemour/cli-core"
+import { CliError } from "@wirecat/cli-core"
 import { counterFreshness } from "../domain/counters.js"
 import { formatLocator, parseLocator } from "../domain/locator.js"
 import {

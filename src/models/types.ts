@@ -1,4 +1,4 @@
-import { CliError } from "@leemour/cli-core"
+import { CliError } from "@wirecat/cli-core"
 
 export interface ModelImage {
   mimeType: "image/png" | "image/jpeg" | "image/webp"

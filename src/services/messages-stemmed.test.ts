@@ -1,7 +1,7 @@
 import { mkdtempSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import type { CliError } from "@leemour/cli-core"
+import type { CliError } from "@wirecat/cli-core"
 import { afterEach, describe, expect, it } from "vitest"
 import type { Message } from "../domain/models.js"
 import { openCache } from "../store/open.js"

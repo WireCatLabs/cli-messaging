@@ -1,4 +1,4 @@
-import { CliError } from "@leemour/cli-core"
+import { CliError } from "@wirecat/cli-core"
 import type { AccountKey, MessageStore } from "../store/store.js"
 
 const KEY = "analysis-consents-v1"

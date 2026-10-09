@@ -1,4 +1,4 @@
-import { CliError } from "@leemour/cli-core"
+import { CliError } from "@wirecat/cli-core"
 import {
   matches,
   TASK_KINDS,
@@ -7,14 +7,14 @@ import {
   type Task,
   type TaskFilter,
   type TaskStore,
-} from "@leemour/cli-tasks"
+} from "@wirecat/cli-tasks"
 import type { CacheDatabase, SqlValue } from "../driver.js"
 
 const COLUMNS =
   "id, source, source_kind, account, group_key, kind, state, reason, origin, created_at, due_at, closed_at, closed_by"
 
 /**
- * Tasks for `@leemour/cli-tasks`, in the message store so backup, restore and export carry them. A task
+ * Tasks for `@wirecat/cli-tasks`, in the message store so backup, restore and export carry them. A task
  * holds a locator, never the message text; kind, state and origin are checked in code, as `chats.kind` is.
  */
 export const taskStoreOver = (database: CacheDatabase): TaskStore => {

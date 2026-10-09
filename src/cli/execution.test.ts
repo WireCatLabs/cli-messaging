@@ -1,4 +1,4 @@
-import { CliError, captureStreams } from "@leemour/cli-core"
+import { CliError, captureStreams } from "@wirecat/cli-core"
 import { describe, expect, it } from "vitest"
 import { guardedWrite, writesInFlight } from "../sends/guarded.js"
 import { withDeadline } from "./deadline.js"

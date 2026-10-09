@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto"
 import { existsSync, mkdirSync, readFileSync } from "node:fs"
 import { dirname, join } from "node:path"
-import { CliError } from "@leemour/cli-core"
+import { CliError } from "@wirecat/cli-core"
 import type { AppIdentity } from "../cli/app.js"
 import type { ServerSystem } from "./system.js"
 

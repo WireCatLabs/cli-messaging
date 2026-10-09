@@ -1,4 +1,4 @@
-import { CliError } from "@leemour/cli-core"
+import { CliError } from "@wirecat/cli-core"
 import { Command } from "commander"
 import type { AppIdentity } from "../app.js"
 import { environmentOf, outputFor } from "../context.js"

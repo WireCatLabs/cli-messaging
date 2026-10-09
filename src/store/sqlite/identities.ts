@@ -1,4 +1,4 @@
-import { CliError } from "@leemour/cli-core"
+import { CliError } from "@wirecat/cli-core"
 import type { Contact, Id, Page, PersonAlias, Provider } from "../../domain/models.js"
 import type { PeopleLookup } from "../../resolve.js"
 import type { AccountKey, PersonFacts } from "../store.js"

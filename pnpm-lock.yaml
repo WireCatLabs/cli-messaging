@@ -17,15 +17,6 @@ importers:
       '@huggingface/tokenizers':
         specifier: 0.2.0
         version: 0.2.0
-      '@leemour/cli-messaging-onnx':
-        specifier: 1.0.0
-        version: 1.0.0
-      '@leemour/cli-messaging-sqlite':
-        specifier: 1.0.0
-        version: 1.0.0
-      '@leemour/cli-tasks':
-        specifier: 0.1.0
-        version: 0.1.0
       '@modelcontextprotocol/server':
         specifier: 2.1.0
         version: 2.1.0
@@ -35,6 +26,15 @@ importers:
       '@valibot/to-json-schema':
         specifier: 1.8.0
         version: 1.8.0(valibot@1.5.0(typescript@7.0.2))
+      '@wirecat/cli-messaging-onnx':
+        specifier: 1.0.0
+        version: 1.0.0
+      '@wirecat/cli-messaging-sqlite':
+        specifier: 1.0.0
+        version: 1.0.0
+      '@wirecat/cli-tasks':
+        specifier: 0.2.0
+        version: 0.2.0
       '@xmldom/xmldom':
         specifier: 0.9.12
         version: 0.9.12
@@ -84,9 +84,6 @@ importers:
       '@biomejs/biome':
         specifier: ^2.3.14
         version: 2.5.14
-      '@leemour/cli-core':
-        specifier: 0.17.3
-        version: 0.17.3(commander@15.0.0)(typescript@7.0.2)
       '@modelcontextprotocol/client':
         specifier: 2.2.0
         version: 2.2.0
@@ -102,6 +99,9 @@ importers:
       '@vitest/coverage-v8':
         specifier: ^5.0.2
         version: 5.0.2(vitest@5.0.2)
+      '@wirecat/cli-core':
+        specifier: 0.18.1
+        version: 0.18.1(commander@15.0.0)(typescript@7.0.2)
       cli-messaging-0.13:
         specifier: npm:@leemour/cli-messaging@0.13.0
         version: '@leemour/cli-messaging@0.13.0(commander@15.0.0)(typescript@7.0.2)'
@@ -445,16 +445,6 @@ packages:
     resolution: {integrity: sha512-hloP58zRVCRSpgDxmqCWJNlizAlUgJFqG2ypq79DCvyv9tHjRYMDOcPFjzfl/A1/YxDvRCZz8wvZvmapQnKwFQ==}
     engines: {node: '>=12'}
 
-  '@leemour/cli-core@0.17.3':
-    resolution: {integrity: sha512-0o4rIPgujN3UL9oVMFHBeUFXpQzgdqmK5w0z60qh/UbpyWb3GAq7YsaNbgI3xXjGUguoFzF8Lkq919YSC/USmA==}
-    engines: {node: '>=22'}
-    hasBin: true
-    peerDependencies:
-      commander: '>=15'
-    peerDependenciesMeta:
-      commander:
-        optional: true
-
   '@leemour/cli-core@0.7.0':
     resolution: {integrity: sha512-u9AC2FwSWLmnyPBu8iPT3FksPmuCkCgWeATTelskeg3imAzM/GvDU9KJcIz5Ra3hRthxL3X2OCEFw6weIhx1JQ==}
     engines: {node: '>=22'}
@@ -473,12 +463,6 @@ packages:
       commander:
         optional: true
 
-  '@leemour/cli-messaging-onnx@1.0.0':
-    resolution: {integrity: sha512-3LdujLvACTZ2+XR+7cUp9ztj3YsnHDSnsyYR4N875irShozmBnpCZILCsMtNGf/DuV3SozizqZmc2ojx6+CSgQ==}
-
-  '@leemour/cli-messaging-sqlite@1.0.0':
-    resolution: {integrity: sha512-NFJMG+/2BWIb3JdOMgyV8SFsB7Fuv3wLtUmMt08GZ4KTpgu0WuA7qQmQE6appEgJJuF/97vHj6+AuXw2z3HMHw==}
-
   '@leemour/cli-messaging@0.13.0':
     resolution: {integrity: sha512-qvJi0NVgE8XH2JUrVZwg6uk+NxQ6LPnYj7q01ddFCXC43sUksVGwoi5qdNFNIZqL5sbojpXEa7ZOpTEf3tz36Q==}
     engines: {node: '>=22'}
@@ -496,10 +480,6 @@ packages:
     engines: {node: '>=22'}
     peerDependencies:
       commander: '>=15'
-
-  '@leemour/cli-tasks@0.1.0':
-    resolution: {integrity: sha512-XN4e7+jn1DoAQk0fBkaS4clXBHIgvjv4dtTnkVfHiqTB9dgneQxglwY+tohNytWE4PaPAzy3SgPrpbe41IELOA==}
-    engines: {node: '>=22'}
 
   '@modelcontextprotocol/client@2.2.0':
     resolution: {integrity: sha512-LxCou/CSYQ6dwEnjhLZY0KnEuc8V4UJ3IEQCl/uR2yHobSQIEdJKUlKLRYRF5i5FqRGHy1eK7une3aAWDHLtig==}
@@ -1040,6 +1020,26 @@ packages:
 
   '@wasm-audio-decoders/opus-ml@0.0.3':
     resolution: {integrity: sha512-SEeTmk0eb3q5etJA/NHCRWW6BivTx9tqvNTmG0kg2ynuATEQRUZnwQE6Ibvl1BBvqIGHqI57+qyJMWmJBwb5XQ==}
+
+  '@wirecat/cli-core@0.18.1':
+    resolution: {integrity: sha512-eDf4p3Y+UMgt1NXj/DIqmbH9GBTPypGmqszViJWgyKhVGG0KS0Gyhb6pfdZ4AN/LCAeNPAH0vfsTPiOvEaCrhA==}
+    engines: {node: '>=22'}
+    hasBin: true
+    peerDependencies:
+      commander: '>=15'
+    peerDependenciesMeta:
+      commander:
+        optional: true
+
+  '@wirecat/cli-messaging-onnx@1.0.0':
+    resolution: {integrity: sha512-U8x0jee2htq5VaWLFeyfmV+Eq3Lv5KTKIZMjyZLnZdA56OYSYwomFAT3usHN3MlA3qCqm6v0Vn77W0OfQg/OGA==}
+
+  '@wirecat/cli-messaging-sqlite@1.0.0':
+    resolution: {integrity: sha512-xdPRDx6p8189iHUikaauadrOUro1LCxkQzwP3jV8fJpA1I6NUoVNmeE3sKVtIkSiT/6XmAPEGov4AgSCuqy6wg==}
+
+  '@wirecat/cli-tasks@0.2.0':
+    resolution: {integrity: sha512-35s9WDYfH+ItLy6D8jphTU7GRUeroPp0USwM3KaFIkU6fiyPNZ8GdWA3rx3/Be+PeRPoJKKKkZBjKZCLWNu22w==}
+    engines: {node: '>=22'}
 
   '@xmldom/xmldom@0.8.15':
     resolution: {integrity: sha512-/5NV/vDALVFDXgLmfsy9TRCBlKwO2LNBFzpzvb9iIj+jR+eSc6DLYYvVOdivT/jm7MtU6TebYuRmzEOI7w40UA==}
@@ -2272,20 +2272,6 @@ snapshots:
     dependencies:
       jsbi: 4.3.2
 
-  '@leemour/cli-core@0.17.3(commander@15.0.0)(typescript@7.0.2)':
-    dependencies:
-      cli-table3: 0.6.5
-      cross-spawn: 7.0.6
-      env-paths: 4.0.0
-      picocolors: 1.1.1
-      pino: 10.3.1
-      valibot: 1.5.0(typescript@7.0.2)
-    optionalDependencies:
-      '@napi-rs/keyring': 2.1.0
-      commander: 15.0.0
-    transitivePeerDependencies:
-      - typescript
-
   '@leemour/cli-core@0.7.0(commander@15.0.0)(typescript@7.0.2)':
     dependencies:
       cli-table3: 0.6.5
@@ -2311,12 +2297,6 @@ snapshots:
       commander: 15.0.0
     transitivePeerDependencies:
       - typescript
-
-  '@leemour/cli-messaging-onnx@1.0.0':
-    dependencies:
-      onnxruntime-common: 1.30.0
-
-  '@leemour/cli-messaging-sqlite@1.0.0': {}
 
   '@leemour/cli-messaging@0.13.0(commander@15.0.0)(typescript@7.0.2)':
     dependencies:
@@ -2409,8 +2389,6 @@ snapshots:
       - typebox
       - typescript
       - zod
-
-  '@leemour/cli-tasks@0.1.0': {}
 
   '@modelcontextprotocol/client@2.2.0':
     dependencies:
@@ -2758,6 +2736,28 @@ snapshots:
   '@wasm-audio-decoders/opus-ml@0.0.3':
     dependencies:
       '@wasm-audio-decoders/common': 9.0.7
+
+  '@wirecat/cli-core@0.18.1(commander@15.0.0)(typescript@7.0.2)':
+    dependencies:
+      cli-table3: 0.6.5
+      cross-spawn: 7.0.6
+      env-paths: 4.0.0
+      picocolors: 1.1.1
+      pino: 10.3.1
+      valibot: 1.5.0(typescript@7.0.2)
+    optionalDependencies:
+      '@napi-rs/keyring': 2.1.0
+      commander: 15.0.0
+    transitivePeerDependencies:
+      - typescript
+
+  '@wirecat/cli-messaging-onnx@1.0.0':
+    dependencies:
+      onnxruntime-common: 1.30.0
+
+  '@wirecat/cli-messaging-sqlite@1.0.0': {}
+
+  '@wirecat/cli-tasks@0.2.0': {}
 
   '@xmldom/xmldom@0.8.15': {}
 

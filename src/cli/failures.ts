@@ -1,4 +1,4 @@
-import { type CliError, errorCodes } from "@leemour/cli-core"
+import { type CliError, errorCodes } from "@wirecat/cli-core"
 
 /**
  * **By shape, not by class.** A package linked during development brings its own copy of

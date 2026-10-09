@@ -1,4 +1,4 @@
-import { CliError } from "@leemour/cli-core"
+import { CliError } from "@wirecat/cli-core"
 import type { DateRange } from "../search/lucene/dates.js"
 import type { ResolvedNode, ResolvedPredicate } from "../search/lucene/resolved.js"
 

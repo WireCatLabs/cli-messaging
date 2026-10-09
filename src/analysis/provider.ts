@@ -1,4 +1,4 @@
-import { CliError } from "@leemour/cli-core"
+import { CliError } from "@wirecat/cli-core"
 import { modelGateway } from "../models/index.js"
 import { endpoint } from "./settings.js"
 

@@ -1,4 +1,4 @@
-import { CliError } from "@leemour/cli-core"
+import { CliError } from "@wirecat/cli-core"
 import { Command } from "commander"
 import { FETCHING } from "../../services/archive.js"
 import { GAP_BOUNDS } from "../../services/archive-gaps.js"

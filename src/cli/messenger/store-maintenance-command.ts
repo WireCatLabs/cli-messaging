@@ -12,7 +12,7 @@ import {
   writeFileSync,
 } from "node:fs"
 import { dirname, resolve } from "node:path"
-import { CliError } from "@leemour/cli-core"
+import { CliError } from "@wirecat/cli-core"
 import { Command } from "commander"
 import { holdersOf } from "../../background/processes.js"
 import { RULES_VERSION } from "../../conversations/link.js"

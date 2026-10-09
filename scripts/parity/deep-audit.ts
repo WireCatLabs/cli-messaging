@@ -96,7 +96,7 @@ const snapshot = (root: string): Snapshot => {
     commit: git(root, "rev-parse", "HEAD"),
     version: pkg.version,
     pins: Object.fromEntries(
-      Object.entries({ ...pkg.dependencies, ...pkg.devDependencies }).filter(([name]) => name.startsWith("@leemour/")),
+      Object.entries({ ...pkg.dependencies, ...pkg.devDependencies }).filter(([name]) => name.startsWith("@wirecat/")),
     ),
     dirty: git(root, "status", "--porcelain"),
   }

@@ -134,7 +134,7 @@ const side = async (cli: string, dir: string): Promise<CliSide> => {
   const pkg = JSON.parse(readFileSync(join(dir, "package.json"), "utf8"))
   const scripts: Record<string, string> = pkg.scripts ?? {}
   const pins = Object.fromEntries(
-    Object.entries({ ...pkg.dependencies, ...pkg.devDependencies }).filter(([name]) => name.startsWith("@leemour/")),
+    Object.entries({ ...pkg.dependencies, ...pkg.devDependencies }).filter(([name]) => name.startsWith("@wirecat/")),
   ) as Record<string, string>
   const pages: Record<string, string> = { "README.md": readFileSync(join(dir, "README.md"), "utf8") }
   for (const name of markdown(join(dir, "docs"))) pages[`docs/${name}`] = readFileSync(join(dir, "docs", name), "utf8")

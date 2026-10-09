@@ -1,4 +1,4 @@
-import type { CommandInfo } from "@leemour/cli-core/commands"
+import type { CommandInfo } from "@wirecat/cli-core/commands"
 import { type CommandsJson, longName, type Manifest, parityProblems } from "./manifest.js"
 import { pageProblems } from "./pages.js"
 import { wordingProblems } from "./wording.js"
@@ -6,7 +6,7 @@ import { wordingProblems } from "./wording.js"
 /** What the audit reads from one CLI's checkout and build. Gathered by `scripts/parity-audit.ts`. */
 export interface CliSide {
   commit: string
-  /** The `@leemour/*` packages it pins, by name. */
+  /** The `@wirecat/*` packages it pins, by name. */
   pins: Record<string, string>
   program: CommandsJson
   /** `tools/list` of its MCP server with every `--allow-*`, prefix kept. */
@@ -157,8 +157,8 @@ export const renderAudit = (input: AuditInput): string => {
   }
 
   section("Shared package pinned")
-  for (const name of ["@leemour/cli-messaging", "@leemour/cli-core"]) {
-    const latest = name === "@leemour/cli-messaging" ? input.shared.version : undefined
+  for (const name of ["@wirecat/cli-messaging", "@wirecat/cli-core"]) {
+    const latest = name === "@wirecat/cli-messaging" ? input.shared.version : undefined
     const pins = each((side) => side.pins[name])
     const same = pins.every((pin) => pin === pins[0]) && (latest === undefined || pins[0] === latest)
     out.push(

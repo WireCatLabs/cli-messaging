@@ -1,4 +1,4 @@
-import { CliError } from "@leemour/cli-core"
+import { CliError } from "@wirecat/cli-core"
 import { stopWrites, type WriteInFlight, withWriteScope } from "../sends/guarded.js"
 
 /** Anything holding something that would keep the process alive — a messenger connection is one. */

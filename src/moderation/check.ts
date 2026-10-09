@@ -1,4 +1,4 @@
-import { CliError } from "@leemour/cli-core"
+import { CliError } from "@wirecat/cli-core"
 import type { MessengerAdapter } from "../cli/messenger/port.js"
 import type { GroupMember, Id, Message } from "../domain/models.js"
 import type { GroupRules } from "./rules.js"

@@ -1,4 +1,4 @@
-import { CliError } from "@leemour/cli-core"
+import { CliError } from "@wirecat/cli-core"
 
 export const RETENTION_TOLERANCE = 86_400_000
 export interface RetentionOptions {

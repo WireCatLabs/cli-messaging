@@ -1,4 +1,4 @@
-import { CliError } from "@leemour/cli-core"
+import { CliError } from "@wirecat/cli-core"
 import { describe, expect, it, vi } from "vitest"
 import { withDeadline } from "../cli/deadline.js"
 import type { Messenger } from "../cli/messenger/context.js"

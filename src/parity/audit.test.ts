@@ -1,4 +1,4 @@
-import type { CommandInfo } from "@leemour/cli-core/commands"
+import type { CommandInfo } from "@wirecat/cli-core/commands"
 import { describe, expect, it } from "vitest"
 import { type AuditInput, allowFlags, type CliSide, ciRuns, pageSplit, renderAudit, split } from "./audit.js"
 import type { CommandsJson, Manifest } from "./manifest.js"
@@ -18,7 +18,7 @@ const program = (cli: string): CommandsJson => ({ cli, globalOptions: [], comman
 
 const side = (cli: string, overrides: Partial<CliSide> = {}): CliSide => ({
   commit: "abc1234",
-  pins: { "@leemour/cli-messaging": "0.9.0" },
+  pins: { "@wirecat/cli-messaging": "0.9.0" },
   program: program(cli),
   tools: [`${cli}_messages_send`],
   pages: {

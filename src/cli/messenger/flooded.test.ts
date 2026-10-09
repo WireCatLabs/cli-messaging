@@ -1,7 +1,7 @@
 import { mkdtempSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { CliError } from "@leemour/cli-core"
+import { CliError } from "@wirecat/cli-core"
 import { describe, expect, it, vi } from "vitest"
 import { FloodMemory } from "../../sends/flood.js"
 import { Pacer } from "../../sends/pace.js"

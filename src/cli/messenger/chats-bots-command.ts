@@ -1,4 +1,4 @@
-import { annotate } from "@leemour/cli-core/commands"
+import { annotate } from "@wirecat/cli-core/commands"
 import { Command } from "commander"
 import { guardedApp, guardedStart } from "../../sends/buttons.js"
 import { type Messenger, messengerContext } from "./context.js"

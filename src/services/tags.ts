@@ -1,4 +1,4 @@
-import { CliError } from "@leemour/cli-core"
+import { CliError } from "@wirecat/cli-core"
 import { formatLocator, isLocator, parseLocator } from "../domain/locator.js"
 import type { Id } from "../domain/models.js"
 import { normalizeTag, type TagType } from "../domain/tags.js"

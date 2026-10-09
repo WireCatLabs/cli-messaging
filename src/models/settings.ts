@@ -1,4 +1,4 @@
-import { CliError } from "@leemour/cli-core"
+import { CliError } from "@wirecat/cli-core"
 import * as v from "valibot"
 import { endpoint } from "./endpoint.js"
 import type { ModelTarget } from "./types.js"
