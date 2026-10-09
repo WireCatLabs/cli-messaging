@@ -1,7 +1,7 @@
 {
-  "name": "@leemour/cli-messaging-sqlite",
+  "name": "@wirecat/cli-messaging-sqlite",
   "version": "1.0.0",
-  "description": "SQLite 3.53.4 builds for @leemour/cli-messaging where the runtime's own SQLite falls short",
+  "description": "SQLite 3.53.4 builds for @wirecat/cli-messaging where the runtime's own SQLite falls short",
   "license": "MIT",
   "type": "module",
   "repository": {
