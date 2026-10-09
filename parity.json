@@ -28,7 +28,8 @@
       "meaning": "call the configured reply model with stored message data; requires reply consent, otherwise uses fallback"
     },
     "--all": {
-      "meaning": "every row, no paging"
+      "meaning": "every row, no paging",
+      "note": "chats requests accept and decline take every pending request instead — Telegram counts them against its hourly limit first; MAX has no way to answer them all at once and refuses it, naming chats requests list — so it differs on purpose (Help text rule 4)"
     },
     "--all-bots": {
       "meaning": "also read every other bot's copy on this machine that readOtherBots allows"
