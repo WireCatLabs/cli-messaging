@@ -72,7 +72,7 @@ export const addReplyEditors = (replies: Command, messenger: Messenger): void =>
   })
   replies.addCommand(edit)
   const audience = annotate(new Command("audience"), { mutates: true, local: true }).description(
-    "show who the rules may answer, or replace its named fields; nobody until you allow someone",
+    "show the reply audience, who the rules may answer, or replace its named fields; a new file answers nobody",
   )
   for (const [flag, help] of REPLY_AUDIENCE_OPTIONS) audience.option(flag, help)
   audience.action(function (this: Command) {
