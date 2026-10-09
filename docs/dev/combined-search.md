@@ -5,6 +5,9 @@ ranking fail the dev quality gates; joint query-message ranking improves the mea
 CLI/MCP and SDK defaults remain unchanged while latency and the original held-out quality gates
 remain unmet. Natural-language question retrieval is a separate diagnostic, not a public feature.
 
+The [evaluation notes](combined-search-evaluation.md) record the contribution of each experiment,
+the retrieval/scoring pipeline, metric interpretation and proposed next measurements.
+
 ## Evidence and acceptance targets
 
 The [message benchmark](../../bench/message-search-quality/README.md) uses 2,616 synthetic messages,

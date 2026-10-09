@@ -191,3 +191,12 @@ roughly a second to load. Scoring 300 uncached pairs therefore costs about 3–4
 the proposed 250 ms latency gate. This is measured benchmark inference, not production p95 or
 an optimized batch/native implementation. Exact-pair caching helps repeated identical requests;
 it does not remove the cost of a new query. No public service/default or consumer version changed.
+
+## Interpreting the measurements
+
+[The evaluation notes](../../docs/dev/combined-search-evaluation.md) explain candidate retrieval,
+model scoring, reranking cost and the precise recall/MRR/nDCG denominators. They also record
+what each experiment contributed and proposed next metrics. In the original held-out keyword
+report, macro recall 0.4375 means an average 43.75 percent of labelled relevant evidence retrieved;
+Success@10 is 50 percent, and grade-2 actual-answer Success@10 is 42.5 percent. Those last two
+values are descriptive audits of saved rankings, not new model runs or changed release gates.
