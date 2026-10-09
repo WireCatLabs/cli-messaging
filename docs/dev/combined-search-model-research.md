@@ -25,7 +25,11 @@ flowchart LR
 
 The smaller shortlist must be chosen by an improved cheap stage, not merely by truncating the
 current order: dev candidate recall drops from 0.90 at 300 to 0.4375 at 50. Measure actual-answer
-and evidence recall before/after every stage. Grouping should suppress near-identical boilerplate
+and evidence recall before/after every stage. A separate candidate-generation experiment can
+union lexical hits with semantic hits, including existing conversation chunks mapped back to
+messages, while preserving authority and hard filters. This could address the paraphrase misses.
+The e5 cosine result rejects it as our final reranker; it does not measure or rule out that
+candidate-generation role. Noise and no-answer behavior must be evaluated for the full cascade. Grouping should suppress near-identical boilerplate
 without discarding genuinely distinct evidence; simple chat caps alone did not improve this corpus.
 
 Ranking asks which message is relatively better. An answerability decision asks whether the
