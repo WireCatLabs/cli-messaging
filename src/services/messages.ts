@@ -3,7 +3,7 @@ import type { MediaOption, Messenger } from "../cli/messenger/context.js"
 import { type After, capability, type Download, type MessengerAdapter, type Sent } from "../cli/messenger/port.js"
 import { threadIdOf } from "../cli/messenger/thread.js"
 import type { DownloadedFile } from "../domain/attachments.js"
-import { type FormattedText, validateFormattedText } from "../domain/formatting.js"
+import { type FormattedText, validateFormattedText, visibleFormattedText } from "../domain/formatting.js"
 import { formatLocator, parseLocator } from "../domain/locator.js"
 import { type MessageLink, messageLinkTarget, validatePermalink } from "../domain/message-link.js"
 import type { Chat, Deletion, Discussion, Id, Message, Page, Provider, WindowedMessage } from "../domain/models.js"
@@ -501,7 +501,8 @@ export const messagesService = (deps: ServiceDeps): MessagesService => {
           "a scheduled send is never repeated: it would be scheduled twice — look in `messages scheduled` instead",
         )
       }
-      const { text, spans } = await formatted(connection, typed, { markdown, html })
+      const prepared = await formatted(connection, typed, { markdown, html })
+      const { text, spans } = deps.agentText ? visibleFormattedText(prepared) : prepared
       if (text.trim() === "" && attachments.length === 0 && sticker === undefined) {
         throw new CliError("validation_error", "nothing to send — the marks leave no text")
       }
@@ -573,7 +574,8 @@ export const messagesService = (deps: ServiceDeps): MessagesService => {
     edit: async ({ chat, message, text: typed, markdown, html }) => {
       const connection = await deps.connection()
       const edit = capability(connection, "edit", "edit a message")
-      const { text, spans } = await formatted(connection, typed, { markdown, html })
+      const prepared = await formatted(connection, typed, { markdown, html })
+      const { text, spans } = deps.agentText ? visibleFormattedText(prepared) : prepared
       if (text.trim() === "") throw new CliError("validation_error", "no new text — the marks leave nothing")
       const { id: chatId } = await connection.resolve(chat)
       const operationId = newOperationId()
