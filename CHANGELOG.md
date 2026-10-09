@@ -4,7 +4,7 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 [semver](https://semver.org/); before `1.0.0` a minor version may break callers, and says how under
 "Changed — may break callers". `pnpm docs:check` checks the shape of this file.
 
-## Unreleased
+## 0.214.0 — 09.10.2026
 
 ### Changed — may break callers
 
