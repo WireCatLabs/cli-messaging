@@ -1,12 +1,16 @@
 import { CliError } from "@leemour/cli-core"
 import type { CacheDatabase } from "./driver.js"
 import { generatedMigrations } from "./sqlite/manifest.js"
+import { copyIntoNotes } from "./sqlite/notes-copy.js"
+import { copyIntoOwnerTargets } from "./sqlite/owner-targets-copy.js"
 
 export interface Migration {
   version: number
   /** The oldest schema version whose statements still work on a file at this version. */
   minCompatible: number
   statements: string[]
+  /** Runs before the statements, inside the same transaction. */
+  before?: (database: CacheDatabase, now: () => number) => void
 }
 
 /**
@@ -15,7 +19,8 @@ export interface Migration {
  * rules here hold for them too. Forward-only and additive: no `DROP` and no rebuild of a base
  * table, a new column is nullable or has a default, and every `INSERT` in the store names its
  * columns — that is what lets an older `tg` keep writing to a file a newer `max` has migrated. Only a breaking change raises `minCompatible`, and that is
- * a major version of this package. The search indexes are derived and may be dropped and rebuilt.
+ * a major version of this package — except version 28, which the owner ruled outside one (no other
+ * users, 2026-10-09): it drops the pre-notes tables, so no older build may open the file. The search indexes are derived and may be dropped and rebuilt.
  *
  * Times are epoch milliseconds: an integer sorts and ranges without a format to agree on. Ids are
  * text: they are 64-bit, and they are not arithmetic.
@@ -272,8 +277,22 @@ const HAND_WRITTEN: Migration[] = [
   },
 ]
 
+/**
+ * Version 28 drops the tables builds before 25 wrote notes, relations and entities to, so whatever they
+ * hold is copied into the owner's tables first — once, on the way up.
+ */
+const BEFORE: Record<number, Migration["before"]> = {
+  28: (database, now) => {
+    copyIntoNotes(database, now)
+    if (database.prepare("SELECT 1 FROM store_settings WHERE key = 'ownerTargetsCopied'").get() === undefined)
+      copyIntoOwnerTargets(database, now)
+  },
+}
+
 /** Every version this build speaks: the hand-written ones, then the generated ones. */
-export const MIGRATIONS: Migration[] = [...HAND_WRITTEN, ...generatedMigrations()]
+export const MIGRATIONS: Migration[] = [...HAND_WRITTEN, ...generatedMigrations()].map((migration) =>
+  BEFORE[migration.version] ? { ...migration, before: BEFORE[migration.version] } : migration,
+)
 
 const HISTORY = `CREATE TABLE IF NOT EXISTS schema_migrations (
   version        INTEGER PRIMARY KEY,
@@ -312,6 +331,7 @@ export const migrate = (
     }
     for (const migration of migrations) {
       if (migration.version <= file.version) continue
+      migration.before?.(database, now)
       for (const statement of migration.statements) database.exec(statement)
       database
         .prepare("INSERT INTO schema_migrations (version, min_compatible, applied_at) VALUES (?, ?, ?)")

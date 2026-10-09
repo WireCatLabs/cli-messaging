@@ -7,7 +7,6 @@ import { storeOnlyDeps } from "../services/deps.js"
 import { tasksService } from "../services/tasks.js"
 import { MIGRATIONS, migrate } from "./migrations.js"
 import { openCache } from "./open.js"
-import { notesToCopy } from "./sqlite/notes-copy.js"
 import { taskStoreOver } from "./sqlite/tasks.js"
 import { type MessageStore, openStore } from "./store.js"
 
@@ -68,7 +67,7 @@ const version24File = async () => {
   return path
 }
 
-describe("version 25: notes as their own records", () => {
+describe("versions 25 and 28: notes as their own records, the old copies dropped", () => {
   it("copies a version 24 file's notes, annotations, relations and entities, losing nothing", async () => {
     const store = await open(await version24File())
     const [folder] = await store.notes.folders()
@@ -102,27 +101,47 @@ describe("version 25: notes as their own records", () => {
     expect((await store.notes.links({ from: "entity:E1" }))[0]?.origin).toBe("suggested")
   })
 
-  it("copies once, catches up what an older build writes later, and never brings back what was removed", async () => {
+  it("copies what an older build wrote on version 27 before version 28 drops the old tables", async () => {
     const path = await version24File()
-    const first = await open(path)
-    expect(await first.notes.notes({ limit: 500 })).toMatchObject({ hasMore: false })
-    const count = (await first.notes.notes({ limit: 500 })).items.length
-    await first.knowledge.removeAnnotation(telegram, "A3")
-    await first.close()
-    opened.splice(opened.indexOf(first), 1)
-
     const db = await openCache(path)
-    expect(notesToCopy(db)).toBe(false)
+    migrate(db, { migrations: MIGRATIONS.filter((migration) => migration.version < 28) })
     db.exec(`INSERT INTO annotations(uid,account_pk,target_type,target_pk,text,revision,created_at,updated_at,authored_by)
       VALUES('A5',2,'contact',1,'Written by an older build',1,30,30,'owner')`)
-    expect(notesToCopy(db)).toBe(true)
     db.close()
 
-    const second = await open(path)
-    const items = (await second.notes.notes({ limit: 500 })).items
-    expect(items).toHaveLength(count)
-    expect(items.map((note) => note.id)).toContain("A5")
-    expect(items.map((note) => note.id)).not.toContain("A3")
+    const store = await open(path)
+    expect((await store.notes.notes({ limit: 500 })).items.map((note) => note.id)).toContain("A5")
+    expect((await store.privateContact(telegram, "101")).notes.map((note) => note.id)).toEqual(["A1", "A5"])
+    expect(await store.accounts()).not.toContainEqual(expect.objectContaining({ provider: "notes" }))
+    await store.close()
+    opened.splice(opened.indexOf(store), 1)
+
+    const after = await openCache(path)
+    const tables = after
+      .prepare(
+        "SELECT name FROM sqlite_master WHERE type = 'table' AND name IN ('annotations','knowledge_targets','knowledge_entities','knowledge_relations')",
+      )
+      .all()
+    expect(tables).toEqual([])
+    expect(after.prepare("SELECT count(*) AS n FROM tags WHERE taggable_type = 'knowledge'").get()?.n).toBe(0)
+    after.close()
+  })
+
+  it("is refused by the published 0.49 build, which asks to be upgraded", async () => {
+    const path = fresh()
+    await open(path)
+    const { openStore: openOlder } = await import("cli-messaging-0.49/store")
+    await expect(openOlder({ path })).rejects.toThrow(/upgrade this tool/)
+  })
+
+  it("is refused by a build from before version 28, which asks to be upgraded", async () => {
+    const path = fresh()
+    await open(path)
+    const db = await openCache(path)
+    expect(() => migrate(db, { migrations: MIGRATIONS.filter((migration) => migration.version < 28) })).toThrow(
+      /needs at least 28; this one speaks 27\) — upgrade this tool/,
+    )
+    db.close()
   })
 
   it("hands a pre-25 folder's path over once", async () => {
@@ -261,9 +280,9 @@ it("resolves migrated task sources to current native notes without duplicating a
   await legacy.close(task.id, { as: "done", by: "owner" })
   db.close()
   const store = await open(path)
-  const note = await store.notes.resolveNote(noteLocator)
+  const note = (await store.notes.notes({ source: "file" })).items.find((item) => item.path === "Projects/plan.md")
   expect(note).toBeDefined()
-  expect(await store.notes.noteReferences(note?.id as string)).toContain(noteLocator)
+  expect(await store.notes.resolveNote(noteLocator)).toBeUndefined()
   const tasks = tasksService(
     storeOnlyDeps(
       store,

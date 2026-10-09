@@ -103,20 +103,6 @@ describe("text of attachments in the store (version 19)", () => {
     expect(await found(store, "content:secret")).toEqual([])
   })
 
-  it("**a build from before version 19 still erases it when it deletes the message**", async () => {
-    const { store, path, pk } = await seeded()
-    await store.keepAttachmentText(pk, { text: "secret contract", origin: "extracted", extractor: "plain" })
-    await store.close()
-    live.splice(0)
-
-    const { openStore: openOlder } = await import("cli-messaging-0.49/store")
-    const older = await openOlder({ path })
-    await older.markDeleted(OWNER, ["1"], { chatId: "-1" })
-    await older.close()
-
-    expect(await raw(path, "SELECT count(*) AS n FROM attachment_texts")).toEqual([{ n: 0 }])
-  })
-
   it("a deleted attachment or message row takes its text with it", async () => {
     const { store, path, pk } = await seeded()
     await store.keepAttachmentText(pk, { text: "words", origin: "extracted", extractor: "plain" })

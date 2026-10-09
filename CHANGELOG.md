@@ -6,6 +6,18 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Changed — may break callers
+
+- Store version 28 drops the copies kept for older builds after the notes refactor: `annotations`,
+  `knowledge_entities`, `knowledge_relations`, `knowledge_targets`, their per-account labels, and the
+  `notes`-provider accounts, chats and messages. Whatever they held that the owner's tables did not is
+  copied in once, as the first step of the upgrade. The copy no longer runs on every open.
+- Version 28 raises the store's `min_compatible` to 28: every build before this one, tg, max and memo
+  alike, refuses an upgraded store with "upgrade this tool". The rules keep that for a major version; the
+  owner ruled it outside one because the store has no other users yet (2026-10-09).
+- `notes.resolveNote` no longer resolves a `msg:notes/…` locator, and `notes.noteReferences` answers the
+  note's `note:` reference only; version 28 points tasks that named an old locator at the note.
+
 ## 0.211.0 — 09.10.2026
 
 ### Fixed

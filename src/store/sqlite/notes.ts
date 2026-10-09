@@ -1,12 +1,10 @@
 import { CliError } from "@leemour/cli-core"
-import { formatLocator } from "../../domain/locator.js"
 import { canonicalReference, parseReference } from "../../domain/references.js"
 import { normalizeTag } from "../../domain/tags.js"
 import type { CacheDatabase, CacheStatement } from "../driver.js"
 import { fold } from "../normalize.js"
 import { ulid } from "../ulid.js"
 import type { NoteSearch } from "./note-search.js"
-import { forgetCopied } from "./notes-copy.js"
 import type { StoreContext } from "./open.js"
 
 export const NOTE_FORMATS = ["obsidian", "markdown"] as const
@@ -414,40 +412,12 @@ export const notesStoreOver = ({ database, now }: StoreContext): Omit<NotesStore
     note: async (id) => noteOf(noteRow(id)),
     resolveNote: async (reference) => {
       const parsed = parseReference(reference)
-      const row =
-        parsed.type === "note"
-          ? database.prepare("SELECT * FROM notes WHERE id=?").get(parsed.id)
-          : parsed.type === "message" && parsed.provider === "notes"
-            ? database
-                .prepare(
-                  "SELECT n.* FROM notes n JOIN note_folders f ON f.id=n.folder_id JOIN accounts a ON a.pk=f.account_pk " +
-                    "JOIN chats c ON c.account_pk=a.pk JOIN messages m ON m.chat_pk=c.pk AND m.native_id=n.path " +
-                    "WHERE a.provider='notes' AND a.native_id=? AND c.native_id=? AND m.native_id=?",
-                )
-                .get(parsed.account, parsed.chat, parsed.message)
-            : undefined
+      const row = parsed.type === "note" ? database.prepare("SELECT * FROM notes WHERE id=?").get(parsed.id) : undefined
       return row ? noteOf(row) : undefined
     },
     noteReferences: async (id) => {
       noteRow(id)
-      const rows = database
-        .prepare(
-          "SELECT a.native_id AS account,c.native_id AS chat,m.native_id AS message FROM notes n " +
-            "JOIN note_folders f ON f.id=n.folder_id JOIN accounts a ON a.pk=f.account_pk " +
-            "JOIN chats c ON c.account_pk=a.pk JOIN messages m ON m.chat_pk=c.pk AND m.native_id=n.path WHERE n.id=?",
-        )
-        .all(id)
-      return [
-        `note:${id}`,
-        ...rows.map((row) =>
-          formatLocator({
-            provider: "notes",
-            account: String(row.account),
-            chat: String(row.chat),
-            message: String(row.message),
-          }),
-        ),
-      ]
+      return [`note:${id}`]
     },
     notes: async (options = {}) => {
       const { limit, offset } = bounded(options.limit, options.offset)
@@ -495,7 +465,6 @@ export const notesStoreOver = ({ database, now }: StoreContext): Omit<NotesStore
         if (noteRow(id).source !== "internal")
           throw new CliError("validation_error", "a file note goes when its file does; the next import notices")
         database.prepare("DELETE FROM notes WHERE id = ?").run(id)
-        forgetCopied(database, { note: id })
         return { id, removed: true as const }
       }),
     addLink: async (input) => atomic(() => insertLink(input)),
@@ -513,7 +482,6 @@ export const notesStoreOver = ({ database, now }: StoreContext): Omit<NotesStore
       atomic(() => {
         if (!database.prepare("DELETE FROM links WHERE id = ?").run(id).changes)
           throw new CliError("not_found", `no link ${id} in the local store`)
-        forgetCopied(database, { link: id })
         return { id, removed: true as const }
       }),
     replaceFileLinks: async (noteId, links) =>

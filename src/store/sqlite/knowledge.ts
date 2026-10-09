@@ -5,7 +5,6 @@ import { normalizeTag } from "../../domain/tags.js"
 import type { AccountKey } from "../store.js"
 import { ulid } from "../ulid.js"
 import { linkOf } from "./notes.js"
-import { forgetCopied } from "./notes-copy.js"
 import type { StoreContext } from "./open.js"
 import {
   addTags as addNativeTags,
@@ -434,7 +433,6 @@ export const knowledgeStoreOver = (context: StoreContext): KnowledgeStore => {
     removeAnnotation: async (key, id) => {
       annotation(key, id)
       database.prepare("DELETE FROM notes WHERE id=? AND source='internal'").run(id)
-      forgetCopied(database, { note: id })
       return { id, removed: true }
     },
     tags: async (key, target) => {
@@ -570,7 +568,6 @@ export const knowledgeStoreOver = (context: StoreContext): KnowledgeStore => {
       checked(key)
       if (!database.prepare(`DELETE FROM links WHERE id=? AND id IN (SELECT id FROM (${RELATIONS}))`).run(id).changes)
         throw new CliError("not_found", "no relationship with that id")
-      forgetCopied(database, { link: id })
       return { id, removed: true }
     },
     confirmRelation: async (key, id) => {

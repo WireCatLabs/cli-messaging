@@ -45,7 +45,9 @@ describe("the generated migrations", () => {
   })
 
   it("**never rebuild a base table** or add a column an older build cannot fill", () => {
-    for (const { statements } of generatedMigrations()) {
+    // A version that raises minCompatible to itself locks every older build out, so it may drop.
+    for (const { version, minCompatible, statements } of generatedMigrations()) {
+      if (minCompatible === version) continue
       for (const statement of statements) expect(rebuilds(statement), statement).toBe(false)
     }
   })

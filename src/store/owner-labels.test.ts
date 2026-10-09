@@ -4,6 +4,7 @@ import { join } from "node:path"
 import { createTaskService } from "@leemour/cli-tasks"
 import { afterEach, describe, expect, it } from "vitest"
 import { searchNotesQuery } from "../services/notes-search.js"
+import { MIGRATIONS, migrate } from "./migrations.js"
 import { openCache } from "./open.js"
 import { type AccountKey, type MessageStore, openStore } from "./store.js"
 
@@ -142,54 +143,39 @@ describe("labels on a notes folder or subfolder", () => {
 
 describe("labels from before version 27", () => {
   it("are copied once — to the person, the note and the notes subfolder — and a removed one stays removed", async () => {
-    const { store, path } = await open()
-    await store.saveAccount(telegram, { name: null })
-    await store.savePeople(telegram, [{ id: "101", name: "Rin Synthetic" }])
-    const person = await store.personOf({ provider: "telegram", id: "101" })
-    const folder = await store.notes.addFolder({ name: "Vault" })
-    const note = await fileNote(store, folder.id, "Projects/a.md")
-    const oldVault: AccountKey = { provider: "notes", account: "/old/vault" }
-    await store.saveAccount(oldVault, { name: "vault" })
-    await store.saveChats(oldVault, [
-      {
-        id: "Projects",
-        title: "Projects",
-        kind: "saved",
-        unreadCount: null,
-        lastMessageAt: null,
-        participantsCount: null,
-      },
-    ])
-    await store.close()
-    live.splice(0)
-
+    const path = join(mkdtempSync(join(tmpdir(), "owner-labels-")), "store.db")
     const db = await openCache(path)
-    db.prepare(
-      "UPDATE note_folders SET account_pk = (SELECT pk FROM accounts WHERE provider = 'notes') WHERE id = ?",
-    ).run(folder.id)
-    db.prepare(
-      "INSERT INTO knowledge_targets (pk, account_pk, type, reference, created_at) VALUES (1, 1, 'person', ?, 0)",
-    ).run(person?.uid as string)
-    db.prepare(
-      "INSERT INTO knowledge_targets (pk, account_pk, type, reference, created_at) VALUES (2, 1, 'note', ?, 0)",
-    ).run(note.id)
-    db.exec(`INSERT INTO tags (taggable_type, taggable_pk, tag, created_at, manual) VALUES
-      ('knowledge', 1, 'client', 0, 1), ('knowledge', 2, 'review', 0, 1)`)
+    migrate(db, { migrations: MIGRATIONS.filter((migration) => migration.version < 28) })
+    db.exec(`INSERT INTO accounts (pk, provider, native_id, name, created_at) VALUES
+      (1, 'telegram', '500', NULL, 0), (2, 'notes', '/old/vault', 'vault', 0)`)
     db.exec(
-      "INSERT INTO tags (taggable_type, taggable_pk, tag, created_at, manual) SELECT 'chat', pk, 'work', 0, 1 FROM chats WHERE native_id = 'Projects'",
+      "INSERT INTO identities (pk, provider, native_id, name, first_seen_at, updated_at) VALUES (1, 'telegram', '101', 'Rin Synthetic', 0, 0)",
     )
-    db.exec("DELETE FROM store_settings WHERE key = 'ownerTargetsCopied'")
+    db.exec("INSERT INTO persons (pk, uid, name, created_at, updated_at) VALUES (1, 'P1', 'Rin Synthetic', 0, 0)")
+    db.exec(
+      "INSERT INTO identity_links (identity_pk, person_pk, method, confidence, linked_at, linked_by) VALUES (1, 1, 'initial', 1, 0, 'ingest')",
+    )
+    db.exec(
+      "INSERT INTO note_folders (id, name, format, pending_path, account_pk, created_at) VALUES ('fld_1', 'Vault', 'obsidian', NULL, 2, 0)",
+    )
+    db.exec(`INSERT INTO notes (id, source, folder_id, path, title, text, revision, created_at, updated_at, deleted_at)
+      VALUES ('N1', 'file', 'fld_1', 'Projects/a.md', 'Projects/a.md', 'about Projects/a.md', 1, 0, 0, NULL)`)
+    db.exec("INSERT INTO chats (pk, account_pk, native_id, kind, updated_at) VALUES (1, 2, 'Projects', 'saved', 0)")
+    db.exec(`INSERT INTO knowledge_targets (pk, account_pk, type, reference, created_at) VALUES
+      (1, 1, 'person', 'P1', 0), (2, 1, 'note', 'N1', 0)`)
+    db.exec(`INSERT INTO tags (taggable_type, taggable_pk, tag, created_at, manual) VALUES
+      ('knowledge', 1, 'client', 0, 1), ('knowledge', 2, 'review', 0, 1), ('chat', 1, 'work', 0, 1)`)
     db.close()
 
     const { store: reopened } = await open(path)
-    expect(await reopened.knowledge.tags(null, { type: "person", id: person?.uid as string })).toEqual(["client"])
-    expect(await reopened.knowledge.tags(null, { type: "note", id: note.id })).toEqual(["review"])
+    expect(await reopened.knowledge.tags(null, { type: "person", id: "P1" })).toEqual(["client"])
+    expect(await reopened.knowledge.tags(null, { type: "note", id: "N1" })).toEqual(["review"])
     expect(await tagged(reopened, "work")).toEqual(["Projects/a.md"])
 
-    await reopened.knowledge.removeTags(null, { type: "person", id: person?.uid as string }, ["client"])
+    await reopened.knowledge.removeTags(null, { type: "person", id: "P1" }, ["client"])
     await reopened.close()
     live.splice(0)
     const { store: again } = await open(path)
-    expect(await again.knowledge.tags(null, { type: "person", id: person?.uid as string })).toEqual([])
+    expect(await again.knowledge.tags(null, { type: "person", id: "P1" })).toEqual([])
   })
 })

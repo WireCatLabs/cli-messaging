@@ -103,16 +103,3 @@ describe("contacts", () => {
     await store.close()
   })
 })
-
-describe("a build on version 6, on a version 10 file", () => {
-  it("keeps reading and writing people: version 10 only adds nullable columns", async () => {
-    const path = fresh()
-    await (await openStore({ path })).close()
-
-    const { openStore: openOlder } = await import("cli-messaging-0.49/store")
-    const older = await openOlder({ path })
-    await older.savePeople(OWNER, [{ id: "7", name: "Vera" }])
-    expect((await older.people("max", { account: "1" })).get("7")).toMatchObject({ name: "Vera" })
-    await older.close()
-  })
-})

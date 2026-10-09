@@ -50,6 +50,8 @@ export const MANIFEST: ManifestEntry[] = [
   { name: "20261008182026_version-26-note-chunks", version: 26, minCompatible: 6 },
   { name: "20261008182031_version-26-note-index", version: 26, minCompatible: 6 },
   { name: "20261008191711_version-27-owner-targets", version: 27, minCompatible: 6 },
+  { name: "20261009092409_version-28-legacy-notes-data", version: 28, minCompatible: 28 },
+  { name: "20261009092436_version-28-drop-legacy-notes", version: 28, minCompatible: 28 },
 ]
 
 export const generatedMigrations = (

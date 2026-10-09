@@ -131,24 +131,4 @@ describe("tasks in the store", () => {
     ).rejects.toMatchObject({ code: "not_found" })
     await store.close()
   })
-
-  it("leaves a build on version 6 reading and writing a version 20 file, tasks kept", async () => {
-    const path = fresh()
-    const tasks = await openTasks(path)
-    await tasks.insert({ ...question, id: "t1", state: "open", createdAt: at("2026-10-05T10:00:00Z") })
-    await tasks.close()
-
-    const { openStore: openOlder } = await import("cli-messaging-0.49/store")
-    const older = await openOlder({ path })
-    const owner = { provider: "telegram", account: "100" }
-    await older.saveChats(owner, [
-      { id: "-1001", title: "Group", kind: "group", unreadCount: 0, lastMessageAt: null, participantsCount: null },
-    ])
-    expect((await older.chats(owner, {})).items.map(({ id }) => id)).toEqual(["-1001"])
-    await older.close()
-
-    const again = await openTasks(path)
-    expect((await again.get("t1"))?.source).toBe(question.source)
-    await again.close()
-  })
 })
