@@ -99,6 +99,7 @@ describe("server search beside the archive", () => {
       hasMore: false,
       chats: [chat("8")],
     }))
+    await one.store.saveChats({ provider: "test", account: "501" }, [chat("9")])
     const found = await servicesFor(one.deps).messages.searchAll({ text: "invoice", limit: 20, only: ["messages"] })
     expect(found.items.map(({ ref }) => ref).sort()).toEqual([
       "msg:test/500/7/1",
@@ -106,6 +107,26 @@ describe("server search beside the archive", () => {
       "msg:test/500/8/2",
     ])
     expect(found.server).toMatchObject({ backend: "both", calls: 1, new: 1 })
+  })
+
+  it("**search all** on a fresh store, with no row for its own account yet, still asks the server", async () => {
+    const store = await openStore({ path: join(mkdtempSync(join(tmpdir(), "server-search-")), "m.db") })
+    stores.push(store)
+    const searchMessages = vi.fn(async () => ({
+      items: [hit("8", "2", "invoices sent")],
+      hasMore: false,
+      chats: [chat("8")],
+    }))
+    const adapter = { self: () => "500", searchMessages } as unknown as MessengerAdapter
+    const guard = { check: vi.fn(), record: vi.fn() } satisfies SendGuard
+    const deps = {
+      ...storedDeps(messenger, store, account, guard),
+      offline: false,
+      connection: vi.fn(async () => adapter),
+    }
+    const found = await servicesFor(deps).messages.searchAll({ text: "invoice", limit: 20, only: ["messages"] })
+    expect(found.items.map(({ ref }) => ref)).toEqual(["msg:test/500/8/2"])
+    expect(found.server).toMatchObject({ calls: 1, new: 1 })
   })
 
   it("keeps exact: and negations strict over server candidates", async () => {

@@ -114,7 +114,11 @@ export const prepareLucene = async (
           }
         : validateFields(parseLucene(request.text, { defaultField: request.exact ? "exact" : "text" }))
   const timezone = timezoneOf(request.timezone)
-  const held = await store.accounts()
+  const stored = await store.accounts()
+  // A fresh store has no row yet for the account it runs as; "every account" still means that one.
+  const held = stored.some((one) => one.provider === account.provider && one.account === account.account)
+    ? stored
+    : [account, ...stored]
   const providers = [...new Set([account.provider, ...held.map(({ provider }) => provider)])]
   const leaves = walkQuery(ast.root)
   const sources = positiveSources(ast.root).map((value) => sourceOf("in:", value, providers))
