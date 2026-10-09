@@ -208,8 +208,8 @@ migration; a larger one records in `search_index_state` the highest `pk` the bat
 normalized text first, then the words, then the typo vocabulary (`search_terms`,
 `search_term_trigrams`), then the words of messages stored since — from `store migrate`,
 `store reindex`, and up to 200 ms before each
-`messages search`. When everything is built it returns without taking the write lock. ~~Nothing ranks
-by it yet~~ **Correction 2026-10-02:** `messages search` ranks by it ([phase 2](../storage/plans/phase-2.md)). The search's steps over it are in
+`search messages` (`messages search` until 0.209.0). When everything is built it returns without taking the write lock. ~~Nothing ranks
+by it yet~~ **Correction 2026-10-02:** `search messages` ranks by it ([phase 2](../storage/plans/phase-2.md)). The search's steps over it are in
 `src/store/sqlite/words.ts`: `matchWords` (every or any word, whole or as beginnings, bm25 then
 newest), `matchSubstring`, and `knownTerms` and `termCandidates` for typo correction. A chat or
 sender of at most `SCOPE_TOKEN_LIMIT` (100,000) messages is filtered inside the index by its scope token, a larger
@@ -261,6 +261,15 @@ Notes are few, so a change of stemmer choices queues them all again at the next 
 for a reindex. `searchNotes` (`src/store/sqlite/note-search.ts`) compiles the same parsed query as
 messages over the fields a note has (`text`, `exact`, `body`, `tag`, `date`, `in`) and refuses the rest;
 `searchNotesQuery` (`src/services/notes-search.ts`) is the service a `search notes` command calls.
+
+**One `search` group ([plan](../plans/2026-10-08-search-namespace.md), STANDARD.md "Search hierarchy").**
+`src/cli/messenger/search-command.ts` mounts `search all|messages|mail|notes|conversations` (and
+`topics` where the messenger has forum topics); `bot search messages` sits under `bot`. Each leaf calls
+the service the old command called, and the MCP tools are named after the leaves
+(`src/mcp/tools/search-tools.ts`). `searchAll` (`src/services/search-all.ts`) runs messages (every
+messenger account, never mail), mail and notes in turn and merges their lists by reciprocal rank, so
+no resource's own scores are compared with another's. A resource that cannot answer the query — a
+field it lacks, or nothing stored — is listed in `skipped` with the reason instead of failing the search.
 
 **Server search beside the archive.** `messages.search` with `backend: both|server` first runs
 `searchServer` (`src/services/server-search.ts`): it turns the resolved query into at most three

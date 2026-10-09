@@ -129,7 +129,7 @@ guessable from the others.
 4. **One action or report, one leaf command.** A different action or independently useful report
    belongs in a nested command. Options choose the scope, measure, order or format of that action;
    they do not switch a search, send or list into another report. For example, ranking is
-   `stats messages top`, not a ranking mode added to `messages search`. Views, reactions and
+   `stats messages top`, not a ranking mode added to `search messages`. Views, reactions and
    replies are measures of the same ranking, so they stay options, not sibling commands.
    No command both shows and changes, except an explicitly documented preparatory fetch such as
    `--sync-first`, which retains its own permissions and reports its outcome.
@@ -398,7 +398,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--for` | `<agents>` | which agents a skill is installed for: claude, agents or all | `all` | `skill install` (planned) |
 | `--for-everyone` |  | delete for everyone in the chat, not only for you — they cannot get it back |  | `messages delete` |
 | `--format` | `<format>` | jsonl, one message per line, or a markdown transcript. **the shared `store export` takes `jsonl` or `markdown`, max's own takes `jsonl` or `md` (e4)** |  | `store export` |
-| `--from` | `<who\|link>` | sender to match in bot messages search; starting message link in tg bot store fetch |  | `bot search messages`, `bot store fetch` (tg-only) |
+| `--from` | `<who\|link>` | sender to match in `bot search messages`; starting message link in tg bot store fetch |  | `bot search messages`, `bot store fetch` (tg-only) |
 | `--from-dir` | `<dir>` | read nonrecursive files from this directory for one explicit chat |  | `attachments extract` |
 | `--hidden` | `<on\|off>` | on hides a forum's General topic from the topic list, off shows it |  | `topics edit` (tg-only) |
 | `--hide-online` | `<on\|off>` | hide online status and last seen |  | `account privacy set` (planned) |
@@ -740,7 +740,7 @@ it writes no file and uses the same `messages` read permission.
    one that changes something, as `{ "command": "messages list", "arguments": { … } }`. A command
    is its CLI path. The bot server's three are `<tool>_bot_tools_search`, `<tool>_bot_read` and
    `<tool>_bot_write`, and its commands are the path under `bot`. `status` answers what the server is.
-   `conversations refresh` runs what `conversations search --refresh` runs before it searches
+   `conversations refresh` runs what `search conversations --refresh` runs before it searches
    (NEED-551 A). The list never changes during a connection.
 2. **Arguments are the command's options in snake_case**, with the option's name: `--send-id` is
    `send_id`, `--since-time` is `since_time`, `--before-n` is `before_n`.
@@ -758,7 +758,7 @@ it writes no file and uses the same `messages` read permission.
 
 ## Help text
 
-`<cli> commands messages search --json` describes one command; `<cli> commands messages --json`
+`<cli> commands search messages --json` describes one command; `<cli> commands messages --json`
 includes the group's descendants. Give one command path per call; inspect different groups in
 separate calls. Scoped discovery keeps `globalOptions` and `exitCodes`, adds
 the canonical `scope` path, and lists options from non-root ancestors in `inheritedOptions`

@@ -35,7 +35,7 @@ StandardSyntaxParser и PrecedenceQueryParser, default AND, default field `text`
 ### Слово
 
 ```sh
-tg messages search 'invoice' --timezone UTC
+tg search messages 'invoice' --timezone UTC
 ```
 
 На synthetic fixture: ids 101, 102, 106. В MAX замените первый аргумент `tg` на `max`.
@@ -43,7 +43,7 @@ tg messages search 'invoice' --timezone UTC
 ### Другие формы слова
 
 ```sh
-tg messages search 'квартира' --timezone UTC
+tg search messages 'квартира' --timezone UTC
 ```
 
 На synthetic fixture: ids 109. В MAX замените первый аргумент `tg` на `max`.
@@ -51,7 +51,7 @@ tg messages search 'квартира' --timezone UTC
 ### Фраза в кавычках — тоже в любой форме
 
 ```sh
-tg messages search '"квартира"' --timezone UTC
+tg search messages '"квартира"' --timezone UTC
 ```
 
 На synthetic fixture: ids 109. В MAX замените первый аргумент `tg` на `max`.
@@ -59,7 +59,7 @@ tg messages search '"квартира"' --timezone UTC
 ### Только точная форма
 
 ```sh
-tg messages search 'exact:квартира' --timezone UTC
+tg search messages 'exact:квартира' --timezone UTC
 ```
 
 На synthetic fixture: ничего. В MAX замените первый аргумент `tg` на `max`.
@@ -67,7 +67,7 @@ tg messages search 'exact:квартира' --timezone UTC
 ### Фраза
 
 ```sh
-tg messages search '"invoice paid"' --timezone UTC
+tg search messages '"invoice paid"' --timezone UTC
 ```
 
 На synthetic fixture: ids 101, 106. В MAX замените первый аргумент `tg` на `max`.
@@ -75,7 +75,7 @@ tg messages search '"invoice paid"' --timezone UTC
 ### Группа авторов
 
 ```sh
-tg messages search 'from:("Alice Synthetic" OR "Bob Synthetic") AND invoice' --timezone UTC
+tg search messages 'from:("Alice Synthetic" OR "Bob Synthetic") AND invoice' --timezone UTC
 ```
 
 На synthetic fixture: ids 101, 102, 106. В MAX замените первый аргумент `tg` на `max`.
@@ -83,7 +83,7 @@ tg messages search 'from:("Alice Synthetic" OR "Bob Synthetic") AND invoice' --t
 ### Чат по имени
 
 ```sh
-tg messages search 'chat:"Work fixture" AND invoice' --timezone UTC
+tg search messages 'chat:"Work fixture" AND invoice' --timezone UTC
 ```
 
 На synthetic fixture: ids 101, 102, 106. В MAX замените первый аргумент `tg` на `max`.
@@ -91,7 +91,7 @@ tg messages search 'chat:"Work fixture" AND invoice' --timezone UTC
 ### Диапазон дат
 
 ```sh
-tg messages search 'invoice date:[2026-01-20 TO 2026-01-22}' --timezone UTC
+tg search messages 'invoice date:[2026-01-20 TO 2026-01-22}' --timezone UTC
 ```
 
 На synthetic fixture: ids 101, 102. В MAX замените первый аргумент `tg` на `max`.
@@ -99,7 +99,7 @@ tg messages search 'invoice date:[2026-01-20 TO 2026-01-22}' --timezone UTC
 ### Все сообщения автора
 
 ```sh
-tg messages search 'from:"Bob Synthetic"' --timezone UTC
+tg search messages 'from:"Bob Synthetic"' --timezone UTC
 ```
 
 На synthetic fixture: ids 106, 107, 108. В MAX замените первый аргумент `tg` на `max`.
@@ -107,7 +107,7 @@ tg messages search 'from:"Bob Synthetic"' --timezone UTC
 ### Начиная с даты
 
 ```sh
-tg messages search 'invoice date>=2026-01-21' --timezone UTC
+tg search messages 'invoice date>=2026-01-21' --timezone UTC
 ```
 
 На synthetic fixture: ids 102, 106. В MAX замените первый аргумент `tg` на `max`.
@@ -115,7 +115,7 @@ tg messages search 'invoice date>=2026-01-21' --timezone UTC
 ### Личная переписка
 
 ```sh
-tg messages search 'passport kind:private' --timezone UTC
+tg search messages 'passport kind:private' --timezone UTC
 ```
 
 На synthetic fixture: ids 103. В MAX замените первый аргумент `tg` на `max`.
@@ -123,7 +123,7 @@ tg messages search 'passport kind:private' --timezone UTC
 ### Кандидат secret в Избранном
 
 ```sh
-tg messages search 'preset:secret kind:saved' --timezone UTC
+tg search messages 'preset:secret kind:saved' --timezone UTC
 ```
 
 На synthetic fixture: ids 104. В MAX замените первый аргумент `tg` на `max`.
@@ -131,7 +131,7 @@ tg messages search 'preset:secret kind:saved' --timezone UTC
 ### Regex по терму
 
 ```sh
-tg messages search 'text:/pass(port)?/ kind:private' --timezone UTC
+tg search messages 'text:/pass(port)?/ kind:private' --timezone UTC
 ```
 
 На synthetic fixture: ids 103. В MAX замените первый аргумент `tg` на `max`.
@@ -139,7 +139,7 @@ tg messages search 'text:/pass(port)?/ kind:private' --timezone UTC
 ### Regex по полному тексту
 
 ```sh
-tg messages search 'body:/.*invoice.*/' --timezone UTC
+tg search messages 'body:/.*invoice.*/' --timezone UTC
 ```
 
 На synthetic fixture: ids 101, 102, 106. В MAX замените первый аргумент `tg` на `max`.
@@ -147,7 +147,7 @@ tg messages search 'body:/.*invoice.*/' --timezone UTC
 ### Сообщение только с файлом
 
 ```sh
-tg messages search 'has:file' --timezone UTC
+tg search messages 'has:file' --timezone UTC
 ```
 
 На synthetic fixture: ids 105, 108. В MAX замените первый аргумент `tg` на `max`.
@@ -155,7 +155,7 @@ tg messages search 'has:file' --timezone UTC
 ### Файл по имени
 
 ```sh
-tg messages search 'filename:*.pdf' --timezone UTC
+tg search messages 'filename:*.pdf' --timezone UTC
 ```
 
 На synthetic fixture: ids 105, 108. В MAX замените первый аргумент `tg` на `max`.
@@ -163,7 +163,7 @@ tg messages search 'filename:*.pdf' --timezone UTC
 ### Имя файла без учёта регистра и ё
 
 ```sh
-tg messages search 'filename:отчет.pdf' --timezone UTC
+tg search messages 'filename:отчет.pdf' --timezone UTC
 ```
 
 На synthetic fixture: ids 108. В MAX замените первый аргумент `tg` на `max`.
@@ -171,7 +171,7 @@ tg messages search 'filename:отчет.pdf' --timezone UTC
 ### Regex по имени файла
 
 ```sh
-tg messages search 'filename:/Отчёт\..*/' --timezone UTC
+tg search messages 'filename:/Отчёт\..*/' --timezone UTC
 ```
 
 На synthetic fixture: ids 108. В MAX замените первый аргумент `tg` на `max`.
@@ -179,7 +179,7 @@ tg messages search 'filename:/Отчёт\..*/' --timezone UTC
 ### Файл больше 1 МБ
 
 ```sh
-tg messages search 'size>1MB' --timezone UTC
+tg search messages 'size>1MB' --timezone UTC
 ```
 
 На synthetic fixture: ids 105. В MAX замените первый аргумент `tg` на `max`.
@@ -187,7 +187,7 @@ tg messages search 'size>1MB' --timezone UTC
 ### Ссылка на сайт
 
 ```sh
-tg messages search 'has:link AND "example.org"' --timezone UTC
+tg search messages 'has:link AND "example.org"' --timezone UTC
 ```
 
 На synthetic fixture: ids 107. В MAX замените первый аргумент `tg` на `max`.
@@ -195,7 +195,7 @@ tg messages search 'has:link AND "example.org"' --timezone UTC
 ### Метка на сообщении или авторе
 
 ```sh
-tg messages search 'tag:work invoice' --timezone UTC
+tg search messages 'tag:work invoice' --timezone UTC
 ```
 
 На synthetic fixture: ids 102, 106. В MAX замените первый аргумент `tg` на `max`.
@@ -203,7 +203,7 @@ tg messages search 'tag:work invoice' --timezone UTC
 ### Метка на чате
 
 ```sh
-tg messages search 'tag:family' --timezone UTC
+tg search messages 'tag:family' --timezone UTC
 ```
 
 На synthetic fixture: ids 103, 108. В MAX замените первый аргумент `tg` на `max`.
@@ -211,7 +211,7 @@ tg messages search 'tag:family' --timezone UTC
 ### Без метки
 
 ```sh
-tg messages search 'invoice NOT tag:work' --timezone UTC
+tg search messages 'invoice NOT tag:work' --timezone UTC
 ```
 
 На synthetic fixture: ids 101. В MAX замените первый аргумент `tg` на `max`.
@@ -219,7 +219,7 @@ tg messages search 'invoice NOT tag:work' --timezone UTC
 ### Слово внутри файла
 
 ```sh
-tg messages search 'content:накладная' --timezone UTC
+tg search messages 'content:накладная' --timezone UTC
 ```
 
 На synthetic fixture: ids 105. В MAX замените первый аргумент `tg` на `max`.
@@ -227,7 +227,7 @@ tg messages search 'content:накладная' --timezone UTC
 ### Фраза внутри файла, а не в сообщении
 
 ```sh
-tg messages search 'content:"оплата до" NOT text:оплата' --timezone UTC
+tg search messages 'content:"оплата до" NOT text:оплата' --timezone UTC
 ```
 
 На synthetic fixture: ids 105. В MAX замените первый аргумент `tg` на `max`.

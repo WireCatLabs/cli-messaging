@@ -42,7 +42,7 @@ const recipes: { recipes: Recipe[] } = JSON.parse(readFileSync(join(root, "docs/
 const examples = recipes.recipes
   .map(
     (recipe) =>
-      `### ${recipe.title}\n\n\`\`\`sh\ntg messages search '${recipe.query.replaceAll("'", "'\\''")}' --timezone UTC\n\`\`\`\n\nНа synthetic fixture: ${recipe.ids.length ? `ids ${recipe.ids.join(", ")}` : "ничего"}. В MAX замените первый аргумент \`tg\` на \`max\`.`,
+      `### ${recipe.title}\n\n\`\`\`sh\ntg search messages '${recipe.query.replaceAll("'", "'\\''")}' --timezone UTC\n\`\`\`\n\nНа synthetic fixture: ${recipe.ids.length ? `ids ${recipe.ids.join(", ")}` : "ничего"}. В MAX замените первый аргумент \`tg\` на \`max\`.`,
   )
   .join("\n\n")
 let result = text

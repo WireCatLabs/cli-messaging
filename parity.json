@@ -384,7 +384,7 @@
     },
     "--from": {
       "value": "<who|link>",
-      "meaning": "sender to match in bot messages search; starting message link in tg bot store fetch"
+      "meaning": "sender to match in `bot search messages`; starting message link in tg bot store fetch"
     },
     "--from-dir": {
       "value": "<dir>",
