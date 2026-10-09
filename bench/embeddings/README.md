@@ -1,6 +1,6 @@
 # Embedding and search by meaning — measurements
 
-Phase 5 ([plan](../../docs/storage/plans/phase-5.md)). Two kinds of script live here:
+Phase 5 (plan). Two kinds of script live here:
 
 - **`commands.mjs` and `commands.sh`** — item 8: the real commands (`conversations build`, `embed`,
   `search`) on the first N rows of [`bench/search`](../search/results.md)'s corpus as one group chat,
@@ -60,7 +60,7 @@ What this says:
   conversation, and SQLite answers each step by reading every vector of the model and sorting them in a
   temporary B-tree: 9 steps cost 1.3 s, while the same rows in one statement come back in 166 ms. The
   query length does not matter, and neither does the runtime.
-- **Workers barely help**: 1.1× with 3 on Node, 1.04× on Bun. **Correction 2026-10-03:** the research
+- **Workers barely help**: 1.1× with 3 on Node, 1.04× on Bun. The research
   grid's ~1.8× compares 3 workers on 4 threads each against one session on **4 threads**, whereas this
   benchmark compares the default allocation against one session on **8 threads**. These gains are not
   directly comparable; option B retains the measured default allocation.

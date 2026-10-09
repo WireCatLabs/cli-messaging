@@ -64,5 +64,5 @@ a replay of an unknown write. Its six passing tasks validate the harness; they d
 language model. Real agent passes must be labelled separately with the skill/build and task set,
 and use the same isolated synthetic provider without owner accounts or external credentials.
 
-The [independent agent pass](evaluations/2026-10-06-cli-agent-evaluation.md) records the source skill,
+The independent agent pass records the source skill,
 task outcomes, calls, bytes and limitations of the first measured synthetic run.

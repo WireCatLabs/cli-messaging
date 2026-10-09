@@ -634,7 +634,7 @@ Low-level `searchStore` и `MessagesService.search` без language сохран
 `skipped`: `legacy`, `unsupported`, `pushed_history`, `offline`, `not_allowed`, `other_accounts`,
 `no_words`, `needs_chat`. `failed[].reason`: `rate_limited`, `search_failed`, `time_or_abort_bound`. Каждый hit
 получает `source`: `archive` (только архив), `server` (новое с сервера), `both` (сервер вернул уже
-хранимое). План: [2026-10-07-server-search.md](../plans/2026-10-07-server-search.md).
+хранимое). План: 2026-10-07-server-search.md.
 
 [Техническая спецификация](query-language-spec.md)
 

@@ -10,7 +10,12 @@ their `release` and `test-live` skills share.
 [max-cli `docs/dev/CONVENTIONS.md`](https://github.com/leemour/max-cli/blob/main/docs/dev/CONVENTIONS.md):
 the linter decides formatting, strict TypeScript with no `any`, sparse comments that say *why*,
 core code takes its environment as arguments, one-shot means the process exits, no credential or
-message in a log, a test must not prepare what a first run lacks, documents corrected in place.
+message in a log, a test must not prepare what a first run lacks.
+
+**Documents state the current facts.** A fact that changed is rewritten — no "Correction" marks, no
+strikethrough, no "as of <date>" trail; git keeps what the text said before. A plan or handoff whose
+work is merged is deleted, a done backlog item is deleted, and a link to a deleted page becomes plain
+text or points at what replaced it. The changelog is the one place that keeps history.
 
 What differs here:
 
@@ -18,17 +23,15 @@ What differs here:
   documents are Russian.
 - **No messenger.** max-cli's "wire names below the adapter" rule becomes stricter: there is no
   adapter here at all, and the lint rule in `biome.json` refuses one.
-- **No user pages rule.** max-cli keeps its Russian user pages free of correction marks and ids;
-  here the README is the only user page, and the same spirit applies — current facts only.
 - **The changelog** has these headings, each at most once per version: `Added`,
   `Changed — may break callers`, `Fixed`, `Security`, `Removed`. The top section is
   `## Unreleased`; a release PR renames it `## <version> — DD.MM.YYYY`. No backlog or decision ids.
   An entry says what changed for a caller, why when it is not obvious, and what to do when it
   breaks something. `pnpm docs:check` checks the shape.
-- **No `docs_ai/` in this repository.** It is gitignored; plans that others need are committed
-  under [`docs/plans/`](../plans/).
-- **Parallel sessions.** Work in a worktree, rebase on `origin/main` before pushing, and announce a
-  store migration first ([`ARCHITECTURE.md`](ARCHITECTURE.md#migrations)).
+- **No `docs_ai/` in this repository.** It is gitignored; a plan for open work that others need is
+  committed in `docs/dev/` and deleted when its work is merged. Open work is [`BACKLOG.md`](BACKLOG.md).
+- **Parallel sessions.** Work in a worktree, rebase on `origin/main` before pushing, and take a store
+  migration number first ([`COORDINATION.md`](COORDINATION.md#store-migrations)).
 
 A link from one repository to another is a GitHub URL. A relative path into a sibling checkout
 resolves on one machine and nowhere else, and `pnpm docs:check` refuses it.

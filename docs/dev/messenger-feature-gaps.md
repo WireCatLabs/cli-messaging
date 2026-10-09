@@ -1,6 +1,6 @@
 # Messenger feature gaps
 
-Status: proposed, 2026-10-04. Not claimed. Slices 1, 2 and mute are owned by other plans (see Ownership). Each slice below is its own docs PR, then code PR, per
+Proposed, not claimed. Slices 1, 2 and mute are owned by other plans (see Ownership). Each slice below is its own docs PR, then code PR, per
 [REVIEW.md](../dev/REVIEW.md).
 
 ## Goal and evidence
@@ -32,7 +32,7 @@ decisions taken here and points there.
 | Gap | Owner | Where |
 |---|---|---|
 | Server-side search | search lane | `--backend live\|archive\|both` on `messages search`, default `archive` — owner's answer 2026-10-04 (max-cli private `docs_ai/journal/2026-10-04-competitor-parity.md`, NEED-563) |
-| Drafts | Telegram actions, G4 (B3) | max-cli private `docs_ai/plans/2026-10-02-telegram-actions-agent.md` §3: local draft revisions, publish/pull |
+| Drafts | Telegram actions, G4 (B3) | local draft revisions, publish/pull |
 | Mute and notification settings, remote media search | Telegram actions, G3 (B4) | same plan, §3 and §4 G3 |
 
 Slices 1, 2 and the mute half of 4 below are therefore coordination notes, not work to start

@@ -1,16 +1,13 @@
 # Architecture
 
-What the package is made of and where the seams are. The design and its reasons are in
-[the platform proposal](../plans/2026-09-26-platform-proposal.md); this page is the map of what
-exists. Written 2026-09-29 against 0.28.0. **Correction 2026-09-30:** the store and migration
-sections describe 0.61.0 — the async store, Drizzle and store versions 6–11 came in 0.36.0–0.60.0.
+What the package is made of and where the seams are: the map of what exists. Open work is in
+[the backlog](BACKLOG.md).
 
 ## The one rule
 
 **Nothing here knows a messenger.** A CLI's adapter translates its provider's objects into the
 domain types, and `biome.json` refuses any import of `@mtcute/*`, `ws` or an adapter directory
-under `src/`. What only one provider has travels in `providerMetadata`. The boundaries are in
-[proposal §3](../plans/2026-09-26-platform-proposal.md#3-package-boundaries).
+under `src/`. What only one provider has travels in `providerMetadata`.
 
 ## CLI design references
 
@@ -45,8 +42,8 @@ conformance or imply that planned command paths are already implemented.
 | `./services` | `src/services/` | the use cases, once each, that commands and MCP tools call — see [Services](#services) |
 | `./background` | `src/background/` | what any background process needs and no messenger: the lock per app and profile, whether a PID is alive and ours, the machine seam tests replace, systemd and launchd units — `serve` and `server` are built on it, each CLI's server stays its own (NEED-492 C) |
 | `./cli` | `src/cli/`, `src/mcp/` | the command skeleton, the shared commands and the MCP server |
-| `./sqlite-runtime` | `src/sqlite-runtime.ts` | **Correction 2026-10-04:** missing from this table until now. `ensureSqlite`, the first thing `tg` and `max` run: restarts the command with the bundled SQLite when the system's lacks FTS5 — see [The store](#the-store) |
-| `./parity` | `src/parity/` | **Correction 2026-10-04:** missing until now. the command manifest, page and wording checks behind `cli-messaging-parity`, which compares `tg` and `max` |
+| `./sqlite-runtime` | `src/sqlite-runtime.ts` | `ensureSqlite`, the first thing `tg` and `max` run: restarts the command with the bundled SQLite when the system's lacks FTS5 — see [The store](#the-store) |
+| `./parity` | `src/parity/` | the command manifest, page and wording checks behind `cli-messaging-parity`, which compares `tg` and `max` |
 | `./testing` | `src/kit/` | the adapter kit: a fake adapter, the contract cases and their seed — see [the adapter guide](ADAPTERS.md). `src/testing/` is this repository's own test setup and is not published |
 
 The README's table lists what each export offers; this page does not repeat it.
@@ -64,7 +61,7 @@ built package on Node 22.15.0 to see the refusal (`scripts/check-old-node.mjs`).
 
 Where the runtime's SQLite can be swapped, ours from `@leemour/cli-messaging-sqlite` (built in
 `packages/sqlite`, published by `.github/workflows/sqlite.yml`) takes its place
-([plan](../storage/plans/sqlite-runtime.md)):
+(plan):
 
 - **Bun on macOS** always loads ours (`bunDatabase`, `src/store/drivers/bun-sqlite.ts`), once, before
   the first database: Bun uses the system's library there, which can be too old.
@@ -85,7 +82,7 @@ write runs as one synchronous `BEGIN IMMEDIATE` transaction, with no `await` bet
 `COMMIT`. The interface has no `transaction(callback)`. The driver is synchronous, so an `await` inside a
 transaction would let the commit run before the awaited part; and since a method never yields
 mid-transaction, two calls on one store in `serve` or `mcp` cannot interleave inside one `BEGIN`
-([phase 1 plan, D3](../storage/plans/phase-1.md#3-decisions-made-here)). A large write therefore
+(phase 1 plan, D3). A large write therefore
 blocks the event loop while it runs — keep writes in bounded batches.
 
 **One method is several transactions on purpose:** `replaceConversations` (phase 3). A chat of 1M
@@ -96,9 +93,9 @@ transaction runs synchronously to its `COMMIT`; the pause is between them. Reade
 `conversation_state.current_build`, so a half-written or failed build is never read. Without the pause
 the next `BEGIN IMMEDIATE` wins the lock again at once and a waiting process sees no gap
 ([`bench/disentangle/`](../../bench/disentangle/README.md), plan
-[phase 3, C3](../storage/plans/phase-3.md#4-decisions-made-here)).
+phase 3, C3).
 
-**The user's agent links what the rules leave open** (phase 4, [plan](../storage/plans/phase-4.md)). The CLI
+**The user's agent links what the rules leave open** (phase 4, plan). The CLI
 never calls a model ([NEED-405](../storage/decisions.md)); it hands the agent batches and stores its
 answers, in `src/store/sqlite/batches.ts`:
 
@@ -121,7 +118,7 @@ answers, in `src/store/sqlite/batches.ts`:
   `src/sends/permissions.ts`), so a profile read-only on messages can still link — the answers write
   only to the local store. `batches next` shows message text and is checked as `messages`.
 
-**Chunks and vectors** (phase 5, store version 14, [plan](../storage/plans/phase-5.md)). Each build
+**Chunks and vectors** (phase 5, store version 14, plan). Each build
 also writes `conversation_chunks`: a conversation cut at message boundaries into pieces of at most
 `CHUNK_CHARS` (`src/conversations/chunks.ts`), each with its first and last message and the sha256 of
 its text. A message longer than a chunk is split into overlapping pieces (`splitText`), a chunk each, and
@@ -171,7 +168,7 @@ Extractor identity records OCR version/provider/model/endpoint hash; cache reuse
 requires that identity plus the file hash. Failed or cancelled OCR never overwrites
 good text. A provider rate limit stops later requests in the run, without retries.
 Needs-agent items include localPath; it is a filesystem reference, not remote
-artifact transport. [OCR contract](../plans/2026-10-07-attachment-ocr.md).
+artifact transport. OCR contract.
 
 **Searches** (version 17) are one table, `searches`: every successful `search messages` and `stats messages show`
 run records its parameters as canonical JSON (`searchRecordOf`, `src/services/searches.ts`) — never a
@@ -208,8 +205,8 @@ migration; a larger one records in `search_index_state` the highest `pk` the bat
 normalized text first, then the words, then the typo vocabulary (`search_terms`,
 `search_term_trigrams`), then the words of messages stored since — from `store migrate`,
 `store reindex`, and up to 200 ms before each
-`search messages` (`messages search` until 0.209.0). When everything is built it returns without taking the write lock. ~~Nothing ranks
-by it yet~~ **Correction 2026-10-02:** `search messages` ranks by it ([phase 2](../storage/plans/phase-2.md)). The search's steps over it are in
+`search messages`. When everything is built it returns without taking the write lock. `search messages`
+ranks by it. The search's steps over it are in
 `src/store/sqlite/words.ts`: `matchWords` (every or any word, whole or as beginnings, bm25 then
 newest), `matchSubstring`, and `knownTerms` and `termCandidates` for typo correction. A chat or
 sender of at most `SCOPE_TOKEN_LIMIT` (100,000) messages is filtered inside the index by its scope token, a larger
@@ -242,7 +239,7 @@ choices, so a tool with another default sees a setting and refuses as "unknown" 
 `latin` may name several stemmers: each Latin stemmer gives a stem sequence, and the distinct ones are
 stored apart by `STEM_SEPARATOR` so a phrase never spans two; a query is the OR of its phrases.
 
-**Notes and links (version 25, [plan](../plans/2026-10-08-notes-graph.md)).** `MessageStore.notes`
+**Notes and links (version 25, plan).** `MessageStore.notes`
 (`src/store/sqlite/notes.ts`) holds the owner's records, which belong to no account: `note_folders` (an
 id; the path is each computer's config), `notes` (from a file or written here) with `note_revisions`,
 `entities`, and `links` — every connection, both ends a typed reference (`src/domain/references.ts`). A
@@ -262,7 +259,7 @@ for a reindex. `searchNotes` (`src/store/sqlite/note-search.ts`) compiles the sa
 messages over the fields a note has (`text`, `exact`, `body`, `tag`, `date`, `in`) and refuses the rest;
 `searchNotesQuery` (`src/services/notes-search.ts`) is the service a `search notes` command calls.
 
-**One `search` group ([plan](../plans/2026-10-08-search-namespace.md), STANDARD.md "Search hierarchy").**
+**One `search` group (plan, STANDARD.md "Search hierarchy").**
 `src/cli/messenger/search-command.ts` mounts `search all|messages|mail|notes|conversations` (and
 `topics` where the messenger has forum topics); `bot search messages` sits under `bot`. Each leaf calls
 the service the old command called, and the MCP tools are named after the leaves
@@ -312,16 +309,13 @@ migration is SQL that `pnpm db:generate` writes into `drizzle/` from `src/store/
 `src/store/sqlite/manifest.ts` numbers. Our runner (`migrate`) applies both, under `BEGIN IMMEDIATE`;
 Drizzle's own migrator is not used. Every migration is forward-only, additive, numbered, and never
 edited once it reached anyone's file — a test refuses a generated rebuild of a base table. `min_compatible` lets an older CLI keep using a file a newer
-one migrated; only a breaking change raises it, and that is a major version of this package.
-**Correction 2026-09-30:** version 6 raised it to 6 (0.49.0), so every build before 0.49.0 refuses
-a file a newer build has opened, and asks to be upgraded. Versions 7–27 kept it at 6. **Correction
-2026-10-09:** version 28 raised it to 28 outside a major version, by the owner's ruling (no other users):
-it drops the tables kept for builds before the notes refactor, after copying what they held. The rules are
-[proposal §4, Migrations](../plans/2026-09-26-platform-proposal.md#migrations).
+one migrated; a migration that drops what an older build reads raises it, and that build then refuses
+the file and asks to be upgraded. It is 28: version 28 dropped the tables kept for builds before the
+notes refactor.
 
 ⚠ **Announce a migration number before writing it.** Several sessions work in this repository at
 once, and two of them taking the same number is a conflict no rebase fixes. The next free number
-lives in [the lanes plan §4](../plans/2026-09-29-parity-lanes.md#4-releases-while-lanes-run); take
+lives in [COORDINATION.md](COORDINATION.md#store-migrations); take
 it by editing that line in a PR of its own, merged before the migration.
 
 #### Adding a migration
@@ -376,7 +370,7 @@ records runs (`src/cli/runs/`) and closes what a command holds when `--timeout` 
 
 Optional `ProgramDefinition.configure`, `prepare` and `onFailure` let a consumer add root options,
 provide legacy command context and settle its own recording before the shared fallback.
-Help/version exits skip failure settlement. The [lifecycle contract](../plans/2026-10-03-shell-lifecycle.md)
+Help/version exits skip failure settlement. The lifecycle contract
 describes the order and failure behavior.
 
 A CLI describes its messenger once — a `Messenger` (`src/cli/messenger/context.ts`) with a
@@ -401,9 +395,7 @@ profile's permissions exactly as over stdio; no form is forced (NEED-774, which 
 
 Five layers, each calling only the ones below it: the **domain** (`src/domain/`), the **adapters**
 (each CLI's own, behind `MessengerAdapter`), the **ports** (`port.ts`, the store), the **services**
-(`src/services/`) and the **interface** (the commands and the MCP tools). The layer design is in
-max-cli's private `docs_ai/plans/2026-09-30-layers.md`; how this package built its half is
-[the services plan](../plans/2026-09-30-services.md). `biome.json` refuses an import of `commander` or
+(`src/services/`) and the **interface** (the commands and the MCP tools). `biome.json` refuses an import of `commander` or
 of a command file from `src/services/`, `src/sends/` and `src/mcp/`: what a service or an MCP tool
 shares with a command lives in the service, and the command imports it.
 
@@ -412,7 +404,7 @@ messenger, `offline`, and a connection, a store and an account that are each ope
 so a read from the store never connects. `servicesFor(deps)` hands out `messages`, `chats`, `people`,
 `inbox` and `archive`. A command gets them from `withServices` on its context, which closes what was
 opened; an MCP tool builds them over the session's connection with `onlineDeps`, or over the store
-with `storedDeps`. **Correction 2026-10-03:** the services callback can also borrow the held
+with `storedDeps`. The services callback can also borrow the held
 connection for hearing. It fetches recordings on that connection and releases it before local
 recognition; closing is awaited once, and store cleanup still runs if closing rejects. Review's
 optional `enrich` hook runs after admin lookups and before unanswered filtering, so transcript text
@@ -451,12 +443,10 @@ Saving what a read answered and timing each call stay decorators on the adapter 
 - **tg-cli** — the whole skeleton, the store, the guard and the MCP server; its adapter is under
   its own `src/telegram/`. To try an unreleased change: `bin/try-messaging` in a tg-cli checkout
   beside this one, never a committed `file:` path.
-- **max-cli** — ~~for now its bot accounts: the store, the guard and parts of the skeleton. Its
-  personal account still keeps its own cache; moving it here is the proposal's Phase 4.~~
-  **Correction 2026-10-04:** both its personal account and its bots. The personal account is a
+- **max-cli** — both its personal account and its bots. The personal account is a
   `Messenger` (`src/messenger.ts`) whose `connect` returns `maxAdapter` (`src/adapter/max-adapter.ts`)
   over max's own protocol client, and it uses the shared commands, services, store and guard; its
-  own cache is gone (max-cli #330–#344, last `56bd224`). max keeps its protocol, session,
+  own cache is gone. max keeps its protocol, session,
   `max serve`, the Bot API slice and its own MCP server (`MaxSession`, `src/mcp/server.ts`), whose
   tools run the shared services through `withShared` (`src/mcp/shared.ts`).
 
@@ -468,7 +458,7 @@ Both pin an exact version; a change here reaches them through a release and a bu
 `upgradePackage` (`src/services/package-upgrade.ts`) owns the explicit upgrade decision and invokes
 installer/latest/install and optional host lifecycle ports. `upgradeCommand` renders its outcome;
 consumers bind their existing update environment and server restart policy. No installer runs on
-check/no-op paths, and a failed install or callback never retries. The [upgrade plan](../plans/2026-10-03-shared-upgrade.md)
+check/no-op paths, and a failed install or callback never retries. The upgrade plan
 describes the common result and consumer adoption.
 
 
@@ -481,7 +471,7 @@ and `conversations_build` rebuilds one stored chat without inference. The last t
 locally under `conversations.links`: readonly/deny hides them, ask refuses with the config key.
 The `link-conversations` prompt reads the same shipped skill as the CLI; its cost/consent gate is
 per chat. These tools call `services.conversations`; inference in this MCP loop belongs to the
-owner's agent. **Correction 2026-10-05:** the explicit CLI `build --analyze` path can call a
+owner's agent. The explicit CLI `build --analyze` path can call a
 configured provider with consent; see [AI providers](../search/ai-providers.md).
 
 Consumer parity: planned for both CLIs on their next SDK adoption. Source-level shared schema and

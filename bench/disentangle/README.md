@@ -1,6 +1,6 @@
 # Scoring the conversation rules
 
-Phase 3 item 6 ([plan](../../docs/storage/plans/phase-3.md)). Two checks of `linkMessages`
+Phase 3 item 6 (plan). Two checks of `linkMessages`
 (`src/conversations/link.ts`):
 
 - **`run.sh`** — the hand-labelled IRC corpus of Kummerfeld et al., "A Large-Scale Corpus for
