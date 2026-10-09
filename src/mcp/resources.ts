@@ -1,3 +1,4 @@
+import { visibleControls } from "@leemour/cli-core"
 import { type McpServer, ResourceTemplate } from "@modelcontextprotocol/server"
 import type { Messenger } from "../cli/messenger/context.js"
 import { capability } from "../cli/messenger/port.js"
@@ -5,6 +6,7 @@ import type { SendGuard } from "../sends/guard.js"
 import { servicesFor, storedDeps } from "../services/index.js"
 import type { AccountKey, MessageStore } from "../store/store.js"
 import type { MessengerSession } from "./session.js"
+import { agentJson } from "./text.js"
 
 const LISTED = 100
 
@@ -52,7 +54,7 @@ export const registerResources = (
         return {
           resources: chats.map(({ id, title }) => ({
             uri: `${command}://chat/${id}`,
-            name: title ?? id,
+            name: visibleControls(title ?? id),
             mimeType: "application/json",
           })),
         }
@@ -80,7 +82,7 @@ export const registerResources = (
               chat: await adapter.chat(String(id)),
               messages: (await capability(adapter, "history", "read a chat's history")(String(id), { limit })).items,
             }))
-      return { contents: [{ uri: uri.href, mimeType: "application/json", text: JSON.stringify(body) }] }
+      return { contents: [{ uri: uri.href, mimeType: "application/json", text: agentJson(body) }] }
     },
   )
 }

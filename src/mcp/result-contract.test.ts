@@ -1,8 +1,30 @@
 import { CliError } from "@leemour/cli-core"
 import { describe, expect, it } from "vitest"
-import { answered, failed, Picture } from "./tool.js"
+import { answered, BinaryResource, failed, Picture } from "./tool.js"
 
 describe("MCP result contract", () => {
+  it("makes nested hidden text and object keys visible in both result formats, including error and image metadata", () => {
+    const hidden = "a\u{e0041}\u0085\u202e\ufeffb"
+    const visible = "a\\u{e0041}\\x85\\u202e\\ufeffb"
+    const flag = "\u{1f3f4}\u{e0067}\u{e0062}\u{e0065}\u{e006e}\u{e0067}\u{e007f}"
+    const original = { items: [{ [hidden]: hidden }], flag }
+    const result = answered(original)
+    expect(result.structuredContent).toEqual({ items: [{ [visible]: visible }], flag })
+    expect(result.content[0]).toEqual({ type: "text", text: JSON.stringify(result.structuredContent) })
+    expect(original.items).toEqual([{ [hidden]: hidden }])
+    expect(JSON.stringify(original)).toContain(hidden)
+    for (const value of [
+      new Picture(new Uint8Array([1]), "image/png", { text: hidden }),
+      new BinaryResource("AQ==", "application/octet-stream", "attachment://fixture", { text: hidden }),
+    ]) {
+      const response = answered(value)
+      expect(response.structuredContent).toEqual({ text: visible })
+      expect(response.content[1]).toEqual({ type: "text", text: JSON.stringify({ text: visible }) })
+    }
+    expect(failed(new CliError("validation_error", hidden, { title: hidden })).structuredContent).toMatchObject({
+      error: { message: visible, title: visible },
+    })
+  })
   it("advertises only objects that it can return as structured content", () => {
     const body = { items: [], page: 1, limit: 0, hasMore: false }
     const result = answered(body)

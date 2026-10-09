@@ -2,6 +2,7 @@ import { CliError } from "@leemour/cli-core"
 import type { CallToolResult, McpServer, ServerContext } from "@modelcontextprotocol/server"
 import { toJsonSchema, toStandardJsonSchema } from "@valibot/to-json-schema"
 import * as v from "valibot"
+import { agentArguments } from "./text.js"
 import {
   type AnyTool,
   answered,
@@ -131,7 +132,7 @@ export const registerCommands = (server: McpServer, prefix: string, commands: Re
             "validation_error",
             `"${command}" ${writing ? "only reads" : "writes"}: call it with ${prefix}_${writing ? "read" : "write"}`,
           )
-        const parsed = v.safeParse(one.input, given ?? {})
+        const parsed = v.safeParse(one.input, writing ? agentArguments(given ?? {}) : (given ?? {}))
         if (!parsed.success)
           throw new CliError("validation_error", `${command}: ${v.summarize(parsed.issues)}`, {
             arguments: toJsonSchema(one.input),

@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   ci:
-    uses: leemour/cli-core/.github/workflows/node-ci.yml@b8acbeebf38cd37edcdcc193152ba5d2c11928cb # v0.17.2
+    uses: leemour/cli-core/.github/workflows/node-ci.yml@b36a30fb6037b457001bd2db860949f64512ecdd # v0.17.3
     with:
       checks: |
         pnpm docs:check

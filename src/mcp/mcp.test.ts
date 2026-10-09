@@ -2203,6 +2203,37 @@ describe("sending over MCP", () => {
     expect(JSON.stringify(entry)).not.toContain("see you")
   })
 
+  it.each(["legacy", "modern"] as const)(
+    "exposes hidden text on reads and writes through the %s MCP transport",
+    async (era) => {
+      const hidden = "a\u{e0041}\u0085\u202e\ufeffb"
+      const visible = "a\\u{e0041}\\x85\\u202e\\ufeffb"
+      const flag = "\u{1f3f4}\u{e0067}\u{e0062}\u{e0065}\u{e006e}\u{e0067}\u{e007f}"
+      const sent: string[] = []
+      const edited: string[] = []
+      const { call } = await connect(
+        scripted({
+          history: async () => ({ items: [{ ...message, text: hidden + flag }], hasMore: false }),
+          send: async (_chat, text) => {
+            sent.push(text)
+            return { message: { ...message, text }, sendId: "1" }
+          },
+          edit: async (_chat, _message, text) => {
+            edited.push(text)
+            return { ...message, text }
+          },
+        }),
+        { era, config: levels({ messages: "allow" }) },
+      )
+      const read = await call("chat_messages_list", { chat: "7" })
+      expect(read.body.items[0].text).toBe(visible + flag)
+      expect((await call("chat_messages_send", { chat: "7", text: hidden + flag })).isError).toBe(false)
+      expect((await call("chat_messages_edit", { chat: "7", message: "1", text: hidden + flag })).isError).toBe(false)
+      expect(sent).toEqual([visible + flag])
+      expect(edited).toEqual([visible + flag])
+    },
+  )
+
   it("configures a forum and creates a topic through the same guarded service", async () => {
     let enabled = false
     const telegram = scripted({
