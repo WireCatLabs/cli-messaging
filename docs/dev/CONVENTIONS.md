@@ -7,7 +7,7 @@
 their `release` and `test-live` skills share.
 
 **The shared rules are max-cli's** —
-[max-cli `docs/dev/CONVENTIONS.md`](https://github.com/leemour/max-cli/blob/main/docs/dev/CONVENTIONS.md):
+[max-cli `docs/dev/CONVENTIONS.md`](https://github.com/WireCatLabs/max-cli/blob/main/docs/dev/CONVENTIONS.md):
 the linter decides formatting, strict TypeScript with no `any`, sparse comments that say *why*,
 core code takes its environment as arguments, one-shot means the process exits, no credential or
 message in a log, a test must not prepare what a first run lacks.

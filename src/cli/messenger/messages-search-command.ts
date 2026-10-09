@@ -72,7 +72,7 @@ export const messagesSearchCommand = (messenger: Messenger, kind: SearchKind = "
 \`${messenger.app.command} store fetch --all --background\` (the last 90 days of every chat); the answer's
 coverage says what was searched and coverage.next what would improve it. Mail is \`${messenger.app.command} search mail\`;
 everything at once is \`${messenger.app.command} search all\`.
-Search guide: https://github.com/leemour/cli-messaging/blob/main/docs/search/query-language.md`,
+Search guide: https://github.com/WireCatLabs/cli-messaging/blob/main/docs/search/query-language.md`,
     )
     .option("--regex", "the words are one regular expression, case-insensitive, tested against every stored text")
     .option("--saved <name|id>", "run a saved search or an earlier run; options typed here replace its own")

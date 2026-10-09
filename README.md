@@ -1,8 +1,8 @@
 # @leemour/cli-messaging
 
 The messenger-neutral half of a messaging command line tool, shared by
-[`tg-cli`](https://github.com/leemour/tg-cli) and [`max-cli`](https://github.com/leemour/max-cli).
-Built on [`@leemour/cli-core`](https://github.com/leemour/cli-core), a peer dependency: the CLI installs
+[`tg-cli`](https://github.com/WireCatLabs/tg-cli) and [`max-cli`](https://github.com/WireCatLabs/max-cli).
+Built on [`@leemour/cli-core`](https://github.com/WireCatLabs/cli-core), a peer dependency: the CLI installs
 it itself, so the install holds one copy.
 
 **Status: on npm** — what each version changed is in [CHANGELOG.md](CHANGELOG.md). The domain model, message locators, message rendering, name
@@ -189,7 +189,7 @@ shows it. The token is never printed and never
 written to a file.
 
 The GitHub form publishes from the job in the `npm` environment, which is what
-npm's trusted publisher names: `leemour` / `cli-messaging` / `release.yml` / environment `npm`.
+npm's trusted publisher names: `WireCatLabs` / `cli-messaging` / `release.yml` / environment `npm`.
 
 ### How often, and what may break
 

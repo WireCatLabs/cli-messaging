@@ -2,8 +2,8 @@
 
 Это справка — третья из четырёх частей документации поиска. Поиск на каждый день и поиск по темам
 описаны в каждом CLI: `docs/search.md` и `docs/topic-search.md`
-([tg](https://github.com/leemour/tg-cli/blob/main/docs/search.md),
-[max](https://github.com/leemour/max-cli/blob/main/docs/search.md)); устройство — на странице
+([tg](https://github.com/WireCatLabs/tg-cli/blob/main/docs/search.md),
+[max](https://github.com/WireCatLabs/max-cli/blob/main/docs/search.md)); устройство — на странице
 [How search works](https://wirecat.dev/en/docs/search-architecture).
 
 Lucene profile v1 доступен через shared services, CLI и MCP; потребителям нужна

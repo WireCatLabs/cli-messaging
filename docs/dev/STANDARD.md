@@ -796,7 +796,7 @@ remains available through `<cli> commands --json`, with no scoped fields.
 1. **Each user page of max has a tg page on the same question**, at the same depth: installing,
    using, configuring, security, troubleshooting, diagnostics, groups. max's pages are Russian,
    tg's English.
-   Both follow the docs site's page set (leemour/cli-docs `docs/STRUCTURE.md`): `index.md` is the
+   Both follow the docs site's page set (WireCatLabs/cli-docs `docs/STRUCTURE.md`): `index.md` is the
    site's short start page, `archive.md` the local store, `roadmap.md` what is coming. Pages one tool
    has alone, and why:
    - max `bot.md` — tg has no bot side yet; its page comes with it (P8).
