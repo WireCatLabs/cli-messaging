@@ -1,5 +1,6 @@
 import { createRequire } from "node:module"
 import type { SpeechModel } from "./models.js"
+import { checkOggDuration } from "./ogg-limit.js"
 
 /** What transcription needs from a speech engine — small enough for a test to stand in for it. */
 export interface Recognizer {
@@ -34,6 +35,7 @@ export const toModelRate = (samples: Float32Array, rate: number): Float32Array =
 }
 
 export const decodeOgg = async (bytes: Uint8Array): Promise<{ samples: Float32Array; rate: number }> => {
+  checkOggDuration(bytes)
   const { OggOpusDecoder } = await import("ogg-opus-decoder")
   const decoder = new OggOpusDecoder()
   await decoder.ready

@@ -1,5 +1,6 @@
 import ExcelJS from "exceljs"
-import { describe, expect, it } from "vitest"
+import { zipSync } from "fflate"
+import { describe, expect, it, vi } from "vitest"
 import { docx, pdf, zip } from "../testing/files.js"
 import { type Engine, engineHint, extractText, importEngine, type LoadEngine } from "./extract.js"
 
@@ -19,6 +20,73 @@ const without =
   }
 
 describe("reading the text layer of a file", () => {
+  it("refuses DOCX expansion before calling mammoth, including false declared sizes", async () => {
+    const extractRawText = vi.fn(async () => ({ value: "unexpected" }))
+    const load: LoadEngine = async () => ({ extractRawText })
+    const bomb = zipSync({ "word/document.xml": new Uint8Array(1) })
+    const bombView = new DataView(bomb.buffer, bomb.byteOffset, bomb.byteLength)
+    for (let offset = 0; offset + 46 < bomb.length; offset++) {
+      if (bombView.getUint32(offset, true) === 0x02014b50) bombView.setUint32(offset + 24, 51 * 1024 * 1024, true)
+    }
+    expect(await extractText(bomb, hint("large.docx"), load)).toEqual({ status: "too-large" })
+    const forged = zipSync({ "word/document.xml": new Uint8Array(10 * 1024 * 1024 + 1) }, { level: 1 })
+    const view = new DataView(forged.buffer, forged.byteOffset, forged.byteLength)
+    view.setUint32(22, 1, true)
+    for (let offset = 0; offset + 46 < forged.length; offset++) {
+      if (view.getUint32(offset, true) === 0x02014b50) view.setUint32(offset + 24, 1, true)
+    }
+    expect(await extractText(forged, hint("forged.docx"), load)).toEqual({ status: "too-large" })
+    expect(extractRawText).not.toHaveBeenCalled()
+  })
+
+  it("refuses oversized PDF page counts before reading text and closes the document", async () => {
+    const destroy = vi.fn(async () => {})
+    const read = vi.fn()
+    const load: LoadEngine = async () => ({
+      getDocumentProxy: async () => ({ numPages: 100_000, loadingTask: { destroy } }),
+      extractText: read,
+    })
+    expect(await extractText(pdf(), hint("large.pdf"), load)).toEqual({ status: "too-large" })
+    expect(read).not.toHaveBeenCalled()
+    expect(destroy).toHaveBeenCalledOnce()
+  })
+
+  it("bounds stuck PDF text extraction and cancels a pending document load", async () => {
+    vi.useFakeTimers()
+    try {
+      const destroy = vi.fn(async () => {})
+      const read = vi.fn(() => new Promise(() => {}))
+      const load: LoadEngine = async () => ({
+        getDocumentProxy: async () => ({ numPages: 1, loadingTask: { destroy } }),
+        extractText: read,
+      })
+      const pending = extractText(pdf(), hint("stuck.pdf"), load)
+      await vi.advanceTimersByTimeAsync(30_000)
+      expect(await pending).toMatchObject({ status: "unreadable" })
+      expect(destroy).toHaveBeenCalledOnce()
+      const abort = new AbortController()
+      let finish = (_value: unknown) => {}
+      const loading: LoadEngine = async () => ({
+        getDocumentProxy: () =>
+          new Promise((resolve) => {
+            finish = resolve
+          }),
+        extractText: read,
+      })
+      const cancelled = extractText(pdf(), hint("cancelled.pdf"), loading, abort.signal)
+      const rejected = expect(cancelled).rejects.toMatchObject({ code: "cancelled" })
+      await vi.advanceTimersByTimeAsync(0)
+      abort.abort()
+      await rejected
+      finish({ numPages: 1, loadingTask: { destroy } })
+      await vi.advanceTimersByTimeAsync(0)
+      expect(destroy).toHaveBeenCalledTimes(2)
+      expect(read).toHaveBeenCalledOnce()
+      expect(vi.getTimerCount()).toBe(0)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
   it("preserves spreadsheet cell addresses and PDF page spans", async () => {
     const workbook = new ExcelJS.Workbook()
     const sheet = workbook.addWorksheet("Synthetic Budget")
