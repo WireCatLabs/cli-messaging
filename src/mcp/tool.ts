@@ -23,6 +23,7 @@ import { onlineDeps, storeModeDeps } from "../services/deps.js"
 import { type Services, servicesFor } from "../services/index.js"
 import type { AccountKey, MessageStore } from "../store/store.js"
 import type { MessengerSession } from "./session.js"
+import { agentArguments, agentJson } from "./text.js"
 
 export const limit = v.optional(
   v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(100), v.description("how many")),
@@ -212,6 +213,7 @@ export const entryRunner = ({
     const run = `mcp ${key.replaceAll("_", " ")}`
     try {
       const execute = async () => {
+        if (definition.annotations.readOnlyHint !== true) args = agentArguments(args)
         if (Buffer.byteLength(JSON.stringify(args)) > MAX_BUFFERED_INPUT)
           throw new CliError("validation_error", "tool arguments exceed the buffered input limit", {
             reason: "input_limit",
@@ -345,7 +347,7 @@ export const answered = (value: object, maxBytes = DEFAULT_OUTPUT_BYTES): CallTo
   if (value === null || Array.isArray(value) || typeof value !== "object")
     throw new CliError("invalid_response", "tool result must be an object", { retryable: false })
   const objectBody = (value: object): Record<string, unknown> => {
-    const serialized = JSON.parse(JSON.stringify(value)) as unknown
+    const serialized = JSON.parse(agentJson(value)) as unknown
     if (serialized === null || Array.isArray(serialized) || typeof serialized !== "object")
       throw new CliError("invalid_response", "serialized tool result must be an object", { retryable: false })
     return serialized as Record<string, unknown>
@@ -355,7 +357,7 @@ export const answered = (value: object, maxBytes = DEFAULT_OUTPUT_BYTES): CallTo
       structuredContent: objectBody(value.about),
       content: [
         { type: "resource", resource: { uri: value.uri, mimeType: value.mimeType, blob: value.base64 } },
-        { type: "text", text: JSON.stringify(value.about) },
+        { type: "text", text: agentJson(value.about) },
       ],
     })
   }
@@ -364,7 +366,7 @@ export const answered = (value: object, maxBytes = DEFAULT_OUTPUT_BYTES): CallTo
       structuredContent: objectBody(value.about),
       content: [
         { type: "image", data: Buffer.from(value.bytes).toString("base64"), mimeType: value.mimeType },
-        { type: "text", text: JSON.stringify(value.about) },
+        { type: "text", text: agentJson(value.about) },
       ],
     })
   }
@@ -374,9 +376,10 @@ export const answered = (value: object, maxBytes = DEFAULT_OUTPUT_BYTES): CallTo
 
 /** The same object the CLI prints on stderr, so an agent reads one error shape from both. */
 export const failed = (error: unknown): CallToolResult => {
-  const body = isCliFailure(error)
+  const original = isCliFailure(error)
     ? { code: error.code, message: error.message, retryable: false, ...error.details }
     : { code: "generic_failure", message: error instanceof Error ? error.message : String(error), retryable: false }
+  const body = JSON.parse(agentJson(original)) as Record<string, unknown>
   return {
     content: [{ type: "text", text: JSON.stringify({ error: body }) }],
     structuredContent: { error: body },

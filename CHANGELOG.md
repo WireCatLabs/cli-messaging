@@ -8,6 +8,10 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ### Changed — may break callers
 
+- MCP results and write arguments make hidden Unicode controls visible, including tags, directional
+  controls, C1 and byte-order marks. Subdivision flag emoji stay intact. CLI machine output preserves
+  original strings. Update the cli-core peer dependency to 0.17.3 or later in the compatible range.
+
 - Local voice transcription accepts complete mono or stereo Ogg Opus recordings up to 10 minutes.
   Longer recordings must be split before local transcription.
 - PDF text extraction supports at most 20 pages and stops after 30 seconds. Split larger PDFs before
