@@ -1,0 +1,3723 @@
+{
+  "corpusSha256": "31ffb8689e06d315a9be7d2ba0094a859b05cb67fc17eb68e4b5b4f5744a0b20",
+  "productionSha256": {
+    "services/messages-combined.js": "d10aeb5f7049f615503d59c37df109bcd284f53b5cfceaac0151f2d7e2ca60e9",
+    "services/messages-search.js": "35eb4ed1dcc002a80985327ffa9f6bd25a5ee6b1a31f3024203a38b6605c7d2a",
+    "search/lucene/parser.js": "5e5562c7512785a06c15bfa05915618c24e0eb7dfac9f73d502958cf02705184",
+    "search/correct.js": "54e5089f217840dd9e27e6e89c29486c2d8704850af16dafd1b8410998066270",
+    "search/stem.js": "84475baa966a17595c480015668dc77da60409a00c391aa9ca6a718433386007",
+    "store/normalize.js": "2c59c9a7c7486b37754b639d26d036c20054aff2c18470ba0524115d9da24de0",
+    "store/sqlite/lucene.js": "efd3f9909ac8205b02019160be2234821f4dacba26d01dc754c1e7e888173964"
+  },
+  "runnerSha256": "b71dd53f4ba99a5d690a313569b048c0bc801d27fa29576e74ec0b58fa50ee44",
+  "configurations": [
+    {
+      "options": {
+        "candidateDepth": 50,
+        "rrfK": 20,
+        "rerank": "none",
+        "chatCap": 0
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.0989270000000033,
+        "p95Ms": 5.586588999999947
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 50,
+        "rrfK": 20,
+        "rerank": "none",
+        "chatCap": 3
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 2.820695999999998,
+        "p95Ms": 4.736476000000039
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 50,
+        "rrfK": 20,
+        "rerank": "none",
+        "chatCap": 5
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 2.999600999999984,
+        "p95Ms": 8.122931999999992
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 50,
+        "rrfK": 20,
+        "rerank": "coverage",
+        "chatCap": 0
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.0147190000000137,
+        "p95Ms": 5.35894200000007
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 50,
+        "rrfK": 20,
+        "rerank": "coverage",
+        "chatCap": 3
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.0481620000000476,
+        "p95Ms": 5.102151000000049
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 50,
+        "rrfK": 20,
+        "rerank": "coverage",
+        "chatCap": 5
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 2.9879390000000967,
+        "p95Ms": 4.4711580000000595
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 50,
+        "rrfK": 20,
+        "rerank": "proximity",
+        "chatCap": 0
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.1766829999999118,
+        "p95Ms": 5.639487000000145
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 50,
+        "rrfK": 20,
+        "rerank": "proximity",
+        "chatCap": 3
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.120296999999937,
+        "p95Ms": 4.803971999999931
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 50,
+        "rrfK": 20,
+        "rerank": "proximity",
+        "chatCap": 5
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.1359469999999874,
+        "p95Ms": 4.584931999999981
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 50,
+        "rrfK": 20,
+        "rerank": "phrase",
+        "chatCap": 0
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 2.931483000000071,
+        "p95Ms": 4.990330999999969
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 50,
+        "rrfK": 20,
+        "rerank": "phrase",
+        "chatCap": 3
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.067167999999583,
+        "p95Ms": 5.065161999999873
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 50,
+        "rrfK": 20,
+        "rerank": "phrase",
+        "chatCap": 5
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.195528000000195,
+        "p95Ms": 5.348733000000266
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 50,
+        "rrfK": 20,
+        "rerank": "all",
+        "chatCap": 0
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 2.9227169999999205,
+        "p95Ms": 4.651435999999649
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 50,
+        "rrfK": 20,
+        "rerank": "all",
+        "chatCap": 3
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.0846299999998337,
+        "p95Ms": 4.821284000000105
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 50,
+        "rrfK": 20,
+        "rerank": "all",
+        "chatCap": 5
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.550333000000137,
+        "p95Ms": 6.034327000000303
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 50,
+        "rrfK": 60,
+        "rerank": "none",
+        "chatCap": 0
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 2.6591629999998077,
+        "p95Ms": 4.640214999999898
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 50,
+        "rrfK": 60,
+        "rerank": "none",
+        "chatCap": 3
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 2.909552000000076,
+        "p95Ms": 5.487913999999819
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 50,
+        "rrfK": 60,
+        "rerank": "none",
+        "chatCap": 5
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 2.993449999999939,
+        "p95Ms": 5.075561000000107
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 50,
+        "rrfK": 60,
+        "rerank": "coverage",
+        "chatCap": 0
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 2.9848830000000817,
+        "p95Ms": 4.624846000000161
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 50,
+        "rrfK": 60,
+        "rerank": "coverage",
+        "chatCap": 3
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.1461449999997058,
+        "p95Ms": 5.130724999999984
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 50,
+        "rrfK": 60,
+        "rerank": "coverage",
+        "chatCap": 5
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 2.8890740000001642,
+        "p95Ms": 4.975163000000066
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 50,
+        "rrfK": 60,
+        "rerank": "proximity",
+        "chatCap": 0
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.1842569999998886,
+        "p95Ms": 4.559173000000101
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 50,
+        "rrfK": 60,
+        "rerank": "proximity",
+        "chatCap": 3
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.094759000000522,
+        "p95Ms": 4.604597999999896
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 50,
+        "rrfK": 60,
+        "rerank": "proximity",
+        "chatCap": 5
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 2.8531670000002123,
+        "p95Ms": 4.757614999999532
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 50,
+        "rrfK": 60,
+        "rerank": "phrase",
+        "chatCap": 0
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.1271700000006604,
+        "p95Ms": 4.51660400000037
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 50,
+        "rrfK": 60,
+        "rerank": "phrase",
+        "chatCap": 3
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.2620529999994687,
+        "p95Ms": 5.642542999999932
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 50,
+        "rrfK": 60,
+        "rerank": "phrase",
+        "chatCap": 5
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 2.9432660000002215,
+        "p95Ms": 5.173072999999931
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 50,
+        "rrfK": 60,
+        "rerank": "all",
+        "chatCap": 0
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.0052319999995234,
+        "p95Ms": 4.6353769999996075
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 50,
+        "rrfK": 60,
+        "rerank": "all",
+        "chatCap": 3
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.2169080000003305,
+        "p95Ms": 4.748657999999523
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 50,
+        "rrfK": 60,
+        "rerank": "all",
+        "chatCap": 5
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.071444999999585,
+        "p95Ms": 4.6720350000005055
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 50,
+        "rrfK": 100,
+        "rerank": "none",
+        "chatCap": 0
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 2.825594999999339,
+        "p95Ms": 4.481768000000557
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 50,
+        "rrfK": 100,
+        "rerank": "none",
+        "chatCap": 3
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 2.948145000000295,
+        "p95Ms": 5.107079999999769
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 50,
+        "rrfK": 100,
+        "rerank": "none",
+        "chatCap": 5
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.072377000000415,
+        "p95Ms": 4.858803999999509
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 50,
+        "rrfK": 100,
+        "rerank": "coverage",
+        "chatCap": 0
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.141276999999718,
+        "p95Ms": 4.986815000000206
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 50,
+        "rrfK": 100,
+        "rerank": "coverage",
+        "chatCap": 3
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.1549220000006244,
+        "p95Ms": 4.732707999999548
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 50,
+        "rrfK": 100,
+        "rerank": "coverage",
+        "chatCap": 5
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 2.8966380000001664,
+        "p95Ms": 4.789594999999281
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 50,
+        "rrfK": 100,
+        "rerank": "proximity",
+        "chatCap": 0
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.083798999999999,
+        "p95Ms": 4.598597000000154
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 50,
+        "rrfK": 100,
+        "rerank": "proximity",
+        "chatCap": 3
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.1582180000004882,
+        "p95Ms": 4.535899999999856
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 50,
+        "rrfK": 100,
+        "rerank": "proximity",
+        "chatCap": 5
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 2.871831999999813,
+        "p95Ms": 4.872200000000703
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 50,
+        "rrfK": 100,
+        "rerank": "phrase",
+        "chatCap": 0
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.1740379999992,
+        "p95Ms": 4.445510999999897
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 50,
+        "rrfK": 100,
+        "rerank": "phrase",
+        "chatCap": 3
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.1011509999998452,
+        "p95Ms": 4.676784000000225
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 50,
+        "rrfK": 100,
+        "rerank": "phrase",
+        "chatCap": 5
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.089318999999705,
+        "p95Ms": 4.93543899999986
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 50,
+        "rrfK": 100,
+        "rerank": "all",
+        "chatCap": 0
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.2209860000002664,
+        "p95Ms": 5.816338999999971
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 50,
+        "rrfK": 100,
+        "rerank": "all",
+        "chatCap": 3
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.0475500000002285,
+        "p95Ms": 4.833337000000029
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 50,
+        "rrfK": 100,
+        "rerank": "all",
+        "chatCap": 5
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 2.9232780000002094,
+        "p95Ms": 4.709133999999722
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 100,
+        "rrfK": 20,
+        "rerank": "none",
+        "chatCap": 0
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.1602720000000772,
+        "p95Ms": 5.875841000000037
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 100,
+        "rrfK": 20,
+        "rerank": "none",
+        "chatCap": 3
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 2.964536000001317,
+        "p95Ms": 5.311302000000069
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 100,
+        "rrfK": 20,
+        "rerank": "none",
+        "chatCap": 5
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 2.943435999999565,
+        "p95Ms": 5.634228000000803
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 100,
+        "rrfK": 20,
+        "rerank": "coverage",
+        "chatCap": 0
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.3664279999993596,
+        "p95Ms": 5.946183000000019
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 100,
+        "rrfK": 20,
+        "rerank": "coverage",
+        "chatCap": 3
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.3577520000017103,
+        "p95Ms": 5.880669000000125
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 100,
+        "rrfK": 20,
+        "rerank": "coverage",
+        "chatCap": 5
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.4458269999995537,
+        "p95Ms": 5.950079000000187
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 100,
+        "rrfK": 20,
+        "rerank": "proximity",
+        "chatCap": 0
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.4552650000005087,
+        "p95Ms": 6.402388000000428
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 100,
+        "rrfK": 20,
+        "rerank": "proximity",
+        "chatCap": 3
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.3393580000010843,
+        "p95Ms": 5.944709999999759
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 100,
+        "rrfK": 20,
+        "rerank": "proximity",
+        "chatCap": 5
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.42479800000001,
+        "p95Ms": 6.081726000000344
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 100,
+        "rrfK": 20,
+        "rerank": "phrase",
+        "chatCap": 0
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.377369000001636,
+        "p95Ms": 5.775934000001143
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 100,
+        "rrfK": 20,
+        "rerank": "phrase",
+        "chatCap": 3
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.4498050000001967,
+        "p95Ms": 5.79357600000003
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 100,
+        "rrfK": 20,
+        "rerank": "phrase",
+        "chatCap": 5
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.3980179999998654,
+        "p95Ms": 6.328649000000951
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 100,
+        "rrfK": 20,
+        "rerank": "all",
+        "chatCap": 0
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.3770779999995284,
+        "p95Ms": 5.879417000000103
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 100,
+        "rrfK": 20,
+        "rerank": "all",
+        "chatCap": 3
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.3765569999995932,
+        "p95Ms": 5.947375000001557
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 100,
+        "rrfK": 20,
+        "rerank": "all",
+        "chatCap": 5
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.438093000000663,
+        "p95Ms": 6.328408000001218
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 100,
+        "rrfK": 60,
+        "rerank": "none",
+        "chatCap": 0
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 2.979233000000022,
+        "p95Ms": 5.716100999999981
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 100,
+        "rrfK": 60,
+        "rerank": "none",
+        "chatCap": 3
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 2.99686500000098,
+        "p95Ms": 5.263794000000416
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 100,
+        "rrfK": 60,
+        "rerank": "none",
+        "chatCap": 5
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 2.9873480000005657,
+        "p95Ms": 5.555910999999469
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 100,
+        "rrfK": 60,
+        "rerank": "coverage",
+        "chatCap": 0
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.24366800000098,
+        "p95Ms": 7.042266000000382
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 100,
+        "rrfK": 60,
+        "rerank": "coverage",
+        "chatCap": 3
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.120136999999886,
+        "p95Ms": 5.631272000000536
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 100,
+        "rrfK": 60,
+        "rerank": "coverage",
+        "chatCap": 5
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.1539000000011583,
+        "p95Ms": 7.556660000000193
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 100,
+        "rrfK": 60,
+        "rerank": "proximity",
+        "chatCap": 0
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.2382180000004155,
+        "p95Ms": 6.014180000000124
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 100,
+        "rrfK": 60,
+        "rerank": "proximity",
+        "chatCap": 3
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.2509419999987585,
+        "p95Ms": 6.167507000000114
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 100,
+        "rrfK": 60,
+        "rerank": "proximity",
+        "chatCap": 5
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.3813960000006773,
+        "p95Ms": 6.469952999999805
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 100,
+        "rrfK": 60,
+        "rerank": "phrase",
+        "chatCap": 0
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.154620999999679,
+        "p95Ms": 6.012516999999207
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 100,
+        "rrfK": 60,
+        "rerank": "phrase",
+        "chatCap": 3
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.4117029999997612,
+        "p95Ms": 9.632669999999052
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 100,
+        "rrfK": 60,
+        "rerank": "phrase",
+        "chatCap": 5
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.2852060000004712,
+        "p95Ms": 6.46590599999945
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 100,
+        "rrfK": 60,
+        "rerank": "all",
+        "chatCap": 0
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.2030119999999442,
+        "p95Ms": 6.237648000000263
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 100,
+        "rrfK": 60,
+        "rerank": "all",
+        "chatCap": 3
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.281227999999828,
+        "p95Ms": 5.967381999998906
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 100,
+        "rrfK": 60,
+        "rerank": "all",
+        "chatCap": 5
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.2434680000005756,
+        "p95Ms": 6.523754999998346
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 100,
+        "rrfK": 100,
+        "rerank": "none",
+        "chatCap": 0
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.147037000000637,
+        "p95Ms": 5.403916000001118
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 100,
+        "rrfK": 100,
+        "rerank": "none",
+        "chatCap": 3
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 2.8970179999996617,
+        "p95Ms": 6.438083999999435
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 100,
+        "rrfK": 100,
+        "rerank": "none",
+        "chatCap": 5
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.028715000000375,
+        "p95Ms": 5.09686099999999
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 100,
+        "rrfK": 100,
+        "rerank": "coverage",
+        "chatCap": 0
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.493426000000909,
+        "p95Ms": 6.166385000000446
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 100,
+        "rrfK": 100,
+        "rerank": "coverage",
+        "chatCap": 3
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.3336959999996907,
+        "p95Ms": 6.222479999998541
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 100,
+        "rrfK": 100,
+        "rerank": "coverage",
+        "chatCap": 5
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.337985000000117,
+        "p95Ms": 5.702556000000186
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 100,
+        "rrfK": 100,
+        "rerank": "proximity",
+        "chatCap": 0
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.463880999999674,
+        "p95Ms": 6.249671000001399
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 100,
+        "rrfK": 100,
+        "rerank": "proximity",
+        "chatCap": 3
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.4468889999989187,
+        "p95Ms": 5.7435329999989335
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 100,
+        "rrfK": 100,
+        "rerank": "proximity",
+        "chatCap": 5
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.197732000000542,
+        "p95Ms": 6.895350999999209
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 100,
+        "rrfK": 100,
+        "rerank": "phrase",
+        "chatCap": 0
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.4615969999995286,
+        "p95Ms": 10.654305000000022
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 100,
+        "rrfK": 100,
+        "rerank": "phrase",
+        "chatCap": 3
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.3023880000000645,
+        "p95Ms": 5.465963000000556
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 100,
+        "rrfK": 100,
+        "rerank": "phrase",
+        "chatCap": 5
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.134103000000323,
+        "p95Ms": 6.911190000000715
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 100,
+        "rrfK": 100,
+        "rerank": "all",
+        "chatCap": 0
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.1532289999995555,
+        "p95Ms": 5.701062999998612
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 100,
+        "rrfK": 100,
+        "rerank": "all",
+        "chatCap": 3
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.2860579999996844,
+        "p95Ms": 6.078510000001188
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 100,
+        "rrfK": 100,
+        "rerank": "all",
+        "chatCap": 5
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.207480000000942,
+        "p95Ms": 7.317231000000902
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 300,
+        "rrfK": 20,
+        "rerank": "none",
+        "chatCap": 0
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.100669999999809,
+        "p95Ms": 9.202213999997184
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 300,
+        "rrfK": 20,
+        "rerank": "none",
+        "chatCap": 3
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.2173079999993206,
+        "p95Ms": 7.690781000001152
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 300,
+        "rrfK": 20,
+        "rerank": "none",
+        "chatCap": 5
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.1045169999997597,
+        "p95Ms": 9.821302999996988
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 300,
+        "rrfK": 20,
+        "rerank": "coverage",
+        "chatCap": 0
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.3173769999993965,
+        "p95Ms": 10.891920000001846
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 300,
+        "rrfK": 20,
+        "rerank": "coverage",
+        "chatCap": 3
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.295234999997774,
+        "p95Ms": 11.62250899999708
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 300,
+        "rrfK": 20,
+        "rerank": "coverage",
+        "chatCap": 5
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.147939000002225,
+        "p95Ms": 9.846882000001642
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 300,
+        "rrfK": 20,
+        "rerank": "proximity",
+        "chatCap": 0
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.125597000002017,
+        "p95Ms": 10.109012999997503
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 300,
+        "rrfK": 20,
+        "rerank": "proximity",
+        "chatCap": 3
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.1926320000020496,
+        "p95Ms": 10.076131999998324
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 300,
+        "rrfK": 20,
+        "rerank": "proximity",
+        "chatCap": 5
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.145183000000543,
+        "p95Ms": 10.246551000000181
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 300,
+        "rrfK": 20,
+        "rerank": "phrase",
+        "chatCap": 0
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.1659529999997176,
+        "p95Ms": 10.46642200000133
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 300,
+        "rrfK": 20,
+        "rerank": "phrase",
+        "chatCap": 3
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.196890999999596,
+        "p95Ms": 10.91766799999823
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 300,
+        "rrfK": 20,
+        "rerank": "phrase",
+        "chatCap": 5
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.2881820000002335,
+        "p95Ms": 11.291237999997975
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 300,
+        "rrfK": 20,
+        "rerank": "all",
+        "chatCap": 0
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.236605000001873,
+        "p95Ms": 9.723580999998376
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 300,
+        "rrfK": 20,
+        "rerank": "all",
+        "chatCap": 3
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.333716999997705,
+        "p95Ms": 11.087255999998888
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 300,
+        "rrfK": 20,
+        "rerank": "all",
+        "chatCap": 5
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.184436999999889,
+        "p95Ms": 10.429353000003175
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 300,
+        "rrfK": 60,
+        "rerank": "none",
+        "chatCap": 0
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.0512780000026396,
+        "p95Ms": 8.476332999998704
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 300,
+        "rrfK": 60,
+        "rerank": "none",
+        "chatCap": 3
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.172945999998774,
+        "p95Ms": 7.6514379999971425
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 300,
+        "rrfK": 60,
+        "rerank": "none",
+        "chatCap": 5
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.0637710000009974,
+        "p95Ms": 9.070777000000817
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 300,
+        "rrfK": 60,
+        "rerank": "coverage",
+        "chatCap": 0
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.162156000002142,
+        "p95Ms": 10.658501999998407
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 300,
+        "rrfK": 60,
+        "rerank": "coverage",
+        "chatCap": 3
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.143499999998312,
+        "p95Ms": 10.011179999997694
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 300,
+        "rrfK": 60,
+        "rerank": "coverage",
+        "chatCap": 5
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.213631999999052,
+        "p95Ms": 10.287045999997645
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 300,
+        "rrfK": 60,
+        "rerank": "proximity",
+        "chatCap": 0
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.3347690000009607,
+        "p95Ms": 10.174446000000898
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 300,
+        "rrfK": 60,
+        "rerank": "proximity",
+        "chatCap": 3
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.2254939999984344,
+        "p95Ms": 10.048009000001912
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 300,
+        "rrfK": 60,
+        "rerank": "proximity",
+        "chatCap": 5
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.2880409999997937,
+        "p95Ms": 12.38845399999991
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 300,
+        "rrfK": 60,
+        "rerank": "phrase",
+        "chatCap": 0
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.256471999997302,
+        "p95Ms": 12.288046000001486
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 300,
+        "rrfK": 60,
+        "rerank": "phrase",
+        "chatCap": 3
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.211076999999932,
+        "p95Ms": 10.37240699999893
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 300,
+        "rrfK": 60,
+        "rerank": "phrase",
+        "chatCap": 5
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.1490610000000743,
+        "p95Ms": 9.428126999999222
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 300,
+        "rrfK": 60,
+        "rerank": "all",
+        "chatCap": 0
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.7868760000019392,
+        "p95Ms": 10.107739999999467
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 300,
+        "rrfK": 60,
+        "rerank": "all",
+        "chatCap": 3
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.550893999999971,
+        "p95Ms": 9.652497000002768
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 300,
+        "rrfK": 60,
+        "rerank": "all",
+        "chatCap": 5
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.0478020000009565,
+        "p95Ms": 14.126581999997143
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 300,
+        "rrfK": 100,
+        "rerank": "none",
+        "chatCap": 0
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.0947699999996985,
+        "p95Ms": 7.647890999996889
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 300,
+        "rrfK": 100,
+        "rerank": "none",
+        "chatCap": 3
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.140835000001971,
+        "p95Ms": 7.737259000001359
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 300,
+        "rrfK": 100,
+        "rerank": "none",
+        "chatCap": 5
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.240011999998387,
+        "p95Ms": 10.344193999997515
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 300,
+        "rrfK": 100,
+        "rerank": "coverage",
+        "chatCap": 0
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 4.588929999998072,
+        "p95Ms": 13.008075999998255
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 300,
+        "rrfK": 100,
+        "rerank": "coverage",
+        "chatCap": 3
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.2248130000007222,
+        "p95Ms": 8.985486999998102
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 300,
+        "rrfK": 100,
+        "rerank": "coverage",
+        "chatCap": 5
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.169378999999026,
+        "p95Ms": 9.119418000002042
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 300,
+        "rrfK": 100,
+        "rerank": "proximity",
+        "chatCap": 0
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.137829999999667,
+        "p95Ms": 11.149172000001272
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 300,
+        "rrfK": 100,
+        "rerank": "proximity",
+        "chatCap": 3
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 4.387360999997327,
+        "p95Ms": 10.366034999999101
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 300,
+        "rrfK": 100,
+        "rerank": "proximity",
+        "chatCap": 5
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.1787359999980254,
+        "p95Ms": 9.140016999997897
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 300,
+        "rrfK": 100,
+        "rerank": "phrase",
+        "chatCap": 0
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.0379629999988538,
+        "p95Ms": 12.552051000002393
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 300,
+        "rrfK": 100,
+        "rerank": "phrase",
+        "chatCap": 3
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.1403140000002168,
+        "p95Ms": 9.01670699999886
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 300,
+        "rrfK": 100,
+        "rerank": "phrase",
+        "chatCap": 5
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.640871999999945,
+        "p95Ms": 11.654589000001579
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 300,
+        "rrfK": 100,
+        "rerank": "all",
+        "chatCap": 0
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.325831999998627,
+        "p95Ms": 9.39201999999932
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 300,
+        "rrfK": 100,
+        "rerank": "all",
+        "chatCap": 3
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.3790619999999763,
+        "p95Ms": 9.77812300000005
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 300,
+        "rrfK": 100,
+        "rerank": "all",
+        "chatCap": 5
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.178325999997469,
+        "p95Ms": 10.559667999998055
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 500,
+        "rrfK": 20,
+        "rerank": "none",
+        "chatCap": 0
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.1289729999989504,
+        "p95Ms": 8.623279000003095
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 500,
+        "rrfK": 20,
+        "rerank": "none",
+        "chatCap": 3
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.0909520000022894,
+        "p95Ms": 8.486472000000504
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 500,
+        "rrfK": 20,
+        "rerank": "none",
+        "chatCap": 5
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.165442000001349,
+        "p95Ms": 8.397134999999253
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 500,
+        "rrfK": 20,
+        "rerank": "coverage",
+        "chatCap": 0
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.136797999999544,
+        "p95Ms": 9.770067999997991
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 500,
+        "rrfK": 20,
+        "rerank": "coverage",
+        "chatCap": 3
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.2483370000009018,
+        "p95Ms": 10.034593999997014
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 500,
+        "rrfK": 20,
+        "rerank": "coverage",
+        "chatCap": 5
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.3170260000006238,
+        "p95Ms": 11.129775999997946
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 500,
+        "rrfK": 20,
+        "rerank": "proximity",
+        "chatCap": 0
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.3663180000003194,
+        "p95Ms": 10.832407999998395
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 500,
+        "rrfK": 20,
+        "rerank": "proximity",
+        "chatCap": 3
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.340158999999403,
+        "p95Ms": 11.217831000001752
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 500,
+        "rrfK": 20,
+        "rerank": "proximity",
+        "chatCap": 5
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.1947459999973944,
+        "p95Ms": 10.823953000002803
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 500,
+        "rrfK": 20,
+        "rerank": "phrase",
+        "chatCap": 0
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.260519999999815,
+        "p95Ms": 10.102961000000505
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 500,
+        "rrfK": 20,
+        "rerank": "phrase",
+        "chatCap": 3
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.2751270000007935,
+        "p95Ms": 10.182721000001038
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 500,
+        "rrfK": 20,
+        "rerank": "phrase",
+        "chatCap": 5
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.1247150000017427,
+        "p95Ms": 10.908601999999519
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 500,
+        "rrfK": 20,
+        "rerank": "all",
+        "chatCap": 0
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.2969080000002577,
+        "p95Ms": 10.397753999997803
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 500,
+        "rrfK": 20,
+        "rerank": "all",
+        "chatCap": 3
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.223972000003414,
+        "p95Ms": 10.098493000001326
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 500,
+        "rrfK": 20,
+        "rerank": "all",
+        "chatCap": 5
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.16842700000052,
+        "p95Ms": 11.122252000001026
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 500,
+        "rrfK": 60,
+        "rerank": "none",
+        "chatCap": 0
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.3580820000024687,
+        "p95Ms": 10.930592000000615
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 500,
+        "rrfK": 60,
+        "rerank": "none",
+        "chatCap": 3
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.2287099999994098,
+        "p95Ms": 8.901921000000584
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 500,
+        "rrfK": 60,
+        "rerank": "none",
+        "chatCap": 5
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.134644000001572,
+        "p95Ms": 8.8235339999992
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 500,
+        "rrfK": 60,
+        "rerank": "coverage",
+        "chatCap": 0
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.1865209999996296,
+        "p95Ms": 11.053323000000091
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 500,
+        "rrfK": 60,
+        "rerank": "coverage",
+        "chatCap": 3
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.318026999997528,
+        "p95Ms": 10.279723000003287
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 500,
+        "rrfK": 60,
+        "rerank": "coverage",
+        "chatCap": 5
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.210897000000841,
+        "p95Ms": 10.048931000001176
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 500,
+        "rrfK": 60,
+        "rerank": "proximity",
+        "chatCap": 0
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.1660120000015013,
+        "p95Ms": 10.784888999998657
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 500,
+        "rrfK": 60,
+        "rerank": "proximity",
+        "chatCap": 3
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.2241810000014084,
+        "p95Ms": 10.18936400000166
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 500,
+        "rrfK": 60,
+        "rerank": "proximity",
+        "chatCap": 5
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.2118379999992612,
+        "p95Ms": 10.870098999999755
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 500,
+        "rrfK": 60,
+        "rerank": "phrase",
+        "chatCap": 0
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.2974390000017593,
+        "p95Ms": 12.574764000000869
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 500,
+        "rrfK": 60,
+        "rerank": "phrase",
+        "chatCap": 3
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.2604190000020026,
+        "p95Ms": 10.03881100000217
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 500,
+        "rrfK": 60,
+        "rerank": "phrase",
+        "chatCap": 5
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.124244999999064,
+        "p95Ms": 9.719203000000562
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 500,
+        "rrfK": 60,
+        "rerank": "all",
+        "chatCap": 0
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.260980000006384,
+        "p95Ms": 9.93393400000059
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 500,
+        "rrfK": 60,
+        "rerank": "all",
+        "chatCap": 3
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.1301149999999325,
+        "p95Ms": 10.841444999998203
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 500,
+        "rrfK": 60,
+        "rerank": "all",
+        "chatCap": 5
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.223489999996673,
+        "p95Ms": 10.250748999998905
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 500,
+        "rrfK": 100,
+        "rerank": "none",
+        "chatCap": 0
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.157636999996612,
+        "p95Ms": 8.342072000006738
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 500,
+        "rrfK": 100,
+        "rerank": "none",
+        "chatCap": 3
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.19188099999883,
+        "p95Ms": 8.674554999997781
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 500,
+        "rrfK": 100,
+        "rerank": "none",
+        "chatCap": 5
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.102082999997947,
+        "p95Ms": 8.305793999999878
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 500,
+        "rrfK": 100,
+        "rerank": "coverage",
+        "chatCap": 0
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.2199129999935394,
+        "p95Ms": 12.216662999999244
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 500,
+        "rrfK": 100,
+        "rerank": "coverage",
+        "chatCap": 3
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 4.07511599999998,
+        "p95Ms": 19.6373969999986
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 500,
+        "rrfK": 100,
+        "rerank": "coverage",
+        "chatCap": 5
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.1366780000025756,
+        "p95Ms": 10.087242000001424
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 500,
+        "rrfK": 100,
+        "rerank": "proximity",
+        "chatCap": 0
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.272711999998137,
+        "p95Ms": 11.465043999996851
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 500,
+        "rrfK": 100,
+        "rerank": "proximity",
+        "chatCap": 3
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.4137569999948028,
+        "p95Ms": 9.849736999996821
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 500,
+        "rrfK": 100,
+        "rerank": "proximity",
+        "chatCap": 5
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.4071749999930034,
+        "p95Ms": 10.754502999996475
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 500,
+        "rrfK": 100,
+        "rerank": "phrase",
+        "chatCap": 0
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.142929000001459,
+        "p95Ms": 10.303015999998024
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 500,
+        "rrfK": 100,
+        "rerank": "phrase",
+        "chatCap": 3
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.5304660000037984,
+        "p95Ms": 9.76239400000486
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 500,
+        "rrfK": 100,
+        "rerank": "phrase",
+        "chatCap": 5
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.4685190000018338,
+        "p95Ms": 11.494158000001335
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 500,
+        "rrfK": 100,
+        "rerank": "all",
+        "chatCap": 0
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.4173440000013215,
+        "p95Ms": 15.484094999999797
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 500,
+        "rrfK": 100,
+        "rerank": "all",
+        "chatCap": 3
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.2240810000002966,
+        "p95Ms": 10.975125999997545
+      }
+    },
+    {
+      "options": {
+        "candidateDepth": 500,
+        "rrfK": 100,
+        "rerank": "all",
+        "chatCap": 5
+      },
+      "metrics": {
+        "recallAt10": 0.3625,
+        "mrr": 0.375,
+        "ndcgAt10": 0.3263914259579807,
+        "noAnswerFalseHits": 0,
+        "p50Ms": 3.3575010000058683,
+        "p95Ms": 10.992918999996618
+      }
+    }
+  ],
+  "devPassed": false,
+  "chosen": {
+    "options": {
+      "candidateDepth": 50,
+      "rrfK": 20,
+      "rerank": "none",
+      "chatCap": 0
+    },
+    "metrics": {
+      "recallAt10": 0.3625,
+      "mrr": 0.375,
+      "ndcgAt10": 0.3263914259579807,
+      "noAnswerFalseHits": 0,
+      "p50Ms": 3.0989270000000033,
+      "p95Ms": 5.586588999999947
+    }
+  },
+  "devRankings": [
+    {
+      "id": "aurora-words",
+      "category": "words",
+      "ids": [
+        "10298",
+        "10293",
+        "10288",
+        "10283",
+        "10278",
+        "10273",
+        "10268",
+        "10263",
+        "10258",
+        "10253"
+      ],
+      "elapsedMs": 3.976211000001058,
+      "recallAt10": 0,
+      "mrr": 0,
+      "ndcgAt10": 0,
+      "falseHits": 0
+    },
+    {
+      "id": "aurora-typo",
+      "category": "typo",
+      "ids": [
+        "10298",
+        "10293",
+        "10288",
+        "10283",
+        "10278",
+        "10273",
+        "10268",
+        "10263",
+        "10258",
+        "10253"
+      ],
+      "elapsedMs": 4.017217000000528,
+      "recallAt10": 0,
+      "mrr": 0,
+      "ndcgAt10": 0,
+      "falseHits": 0
+    },
+    {
+      "id": "aurora-beginnings",
+      "category": "beginnings",
+      "ids": [
+        "10298",
+        "10293",
+        "10288",
+        "10283",
+        "10278",
+        "10273",
+        "10268",
+        "10263",
+        "10258",
+        "10253"
+      ],
+      "elapsedMs": 2.7637489999979152,
+      "recallAt10": 0,
+      "mrr": 0,
+      "ndcgAt10": 0,
+      "falseHits": 0
+    },
+    {
+      "id": "aurora-phrase",
+      "category": "phrase",
+      "ids": [
+        "10298",
+        "10293",
+        "10288",
+        "10283",
+        "10278",
+        "10273",
+        "10268",
+        "10263",
+        "10258",
+        "10253"
+      ],
+      "elapsedMs": 1.8199510000049486,
+      "recallAt10": 0,
+      "mrr": 0,
+      "ndcgAt10": 0,
+      "falseHits": 0
+    },
+    {
+      "id": "aurora-from",
+      "category": "from",
+      "ids": [
+        "10001"
+      ],
+      "elapsedMs": 3.2671019999979762,
+      "recallAt10": 1,
+      "mrr": 1,
+      "ndcgAt10": 1,
+      "falseHits": 0
+    },
+    {
+      "id": "aurora-chat",
+      "category": "chat",
+      "ids": [
+        "10298",
+        "10293",
+        "10288",
+        "10283",
+        "10278",
+        "10273",
+        "10268",
+        "10263",
+        "10258",
+        "10253"
+      ],
+      "elapsedMs": 3.378069999998843,
+      "recallAt10": 0,
+      "mrr": 0,
+      "ndcgAt10": 0,
+      "falseHits": 0
+    },
+    {
+      "id": "aurora-date",
+      "category": "date",
+      "ids": [
+        "10001",
+        "10002"
+      ],
+      "elapsedMs": 3.196129000003566,
+      "recallAt10": 1,
+      "mrr": 1,
+      "ndcgAt10": 1,
+      "falseHits": 0
+    },
+    {
+      "id": "aurora-and",
+      "category": "and",
+      "ids": [
+        "10298",
+        "10293",
+        "10288",
+        "10283",
+        "10278",
+        "10273",
+        "10268",
+        "10263",
+        "10258",
+        "10253"
+      ],
+      "elapsedMs": 1.734269000000495,
+      "recallAt10": 0,
+      "mrr": 0,
+      "ndcgAt10": 0,
+      "falseHits": 0
+    },
+    {
+      "id": "aurora-or",
+      "category": "or",
+      "ids": [
+        "10298",
+        "10293",
+        "10288",
+        "10283",
+        "10278",
+        "10273",
+        "10268",
+        "10263",
+        "10258",
+        "10253"
+      ],
+      "elapsedMs": 1.7011679999995977,
+      "recallAt10": 0,
+      "mrr": 0,
+      "ndcgAt10": 0,
+      "falseHits": 0
+    },
+    {
+      "id": "aurora-paraphrase",
+      "category": "paraphrase",
+      "ids": [],
+      "elapsedMs": 2.1651070000007167,
+      "recallAt10": 0,
+      "mrr": 0,
+      "ndcgAt10": 0,
+      "falseHits": 0
+    },
+    {
+      "id": "aurora-absent",
+      "category": "no-answer-absent",
+      "ids": [],
+      "elapsedMs": 2.0100359999996726,
+      "recallAt10": null,
+      "mrr": null,
+      "ndcgAt10": null,
+      "falseHits": 0
+    },
+    {
+      "id": "aurora-near-miss",
+      "category": "no-answer-near-miss",
+      "ids": [],
+      "elapsedMs": 2.2358600000006845,
+      "recallAt10": null,
+      "mrr": null,
+      "ndcgAt10": null,
+      "falseHits": 0
+    },
+    {
+      "id": "cedar-words",
+      "category": "words",
+      "ids": [
+        "10600",
+        "10595",
+        "10590",
+        "10585",
+        "10580",
+        "10575",
+        "10570",
+        "10565",
+        "10560",
+        "10555"
+      ],
+      "elapsedMs": 3.978183999999601,
+      "recallAt10": 0,
+      "mrr": 0,
+      "ndcgAt10": 0,
+      "falseHits": 0
+    },
+    {
+      "id": "cedar-typo",
+      "category": "typo",
+      "ids": [
+        "10600",
+        "10595",
+        "10590",
+        "10585",
+        "10580",
+        "10575",
+        "10570",
+        "10565",
+        "10560",
+        "10555"
+      ],
+      "elapsedMs": 3.918993999999657,
+      "recallAt10": 0,
+      "mrr": 0,
+      "ndcgAt10": 0,
+      "falseHits": 0
+    },
+    {
+      "id": "cedar-beginnings",
+      "category": "beginnings",
+      "ids": [
+        "10600",
+        "10595",
+        "10590",
+        "10585",
+        "10580",
+        "10575",
+        "10570",
+        "10565",
+        "10560",
+        "10555"
+      ],
+      "elapsedMs": 2.6834280000039143,
+      "recallAt10": 0,
+      "mrr": 0,
+      "ndcgAt10": 0,
+      "falseHits": 0
+    },
+    {
+      "id": "cedar-phrase",
+      "category": "phrase",
+      "ids": [
+        "10600",
+        "10595",
+        "10590",
+        "10585",
+        "10580",
+        "10575",
+        "10570",
+        "10565",
+        "10560",
+        "10555"
+      ],
+      "elapsedMs": 1.6508929999981774,
+      "recallAt10": 0,
+      "mrr": 0,
+      "ndcgAt10": 0,
+      "falseHits": 0
+    },
+    {
+      "id": "cedar-from",
+      "category": "from",
+      "ids": [
+        "10303"
+      ],
+      "elapsedMs": 3.0946489999987534,
+      "recallAt10": 1,
+      "mrr": 1,
+      "ndcgAt10": 1,
+      "falseHits": 0
+    },
+    {
+      "id": "cedar-chat",
+      "category": "chat",
+      "ids": [
+        "10600",
+        "10595",
+        "10590",
+        "10585",
+        "10580",
+        "10575",
+        "10570",
+        "10565",
+        "10560",
+        "10555"
+      ],
+      "elapsedMs": 3.4562460000015562,
+      "recallAt10": 0,
+      "mrr": 0,
+      "ndcgAt10": 0,
+      "falseHits": 0
+    },
+    {
+      "id": "cedar-date",
+      "category": "date",
+      "ids": [
+        "10303",
+        "10304"
+      ],
+      "elapsedMs": 3.1982330000028014,
+      "recallAt10": 1,
+      "mrr": 1,
+      "ndcgAt10": 1,
+      "falseHits": 0
+    },
+    {
+      "id": "cedar-and",
+      "category": "and",
+      "ids": [
+        "10600",
+        "10595",
+        "10590",
+        "10585",
+        "10580",
+        "10575",
+        "10570",
+        "10565",
+        "10560",
+        "10555"
+      ],
+      "elapsedMs": 1.737676000004285,
+      "recallAt10": 0,
+      "mrr": 0,
+      "ndcgAt10": 0,
+      "falseHits": 0
+    },
+    {
+      "id": "cedar-or",
+      "category": "or",
+      "ids": [
+        "10600",
+        "10595",
+        "10590",
+        "10585",
+        "10580",
+        "10575",
+        "10570",
+        "10565",
+        "10560",
+        "10555"
+      ],
+      "elapsedMs": 1.6936129999958212,
+      "recallAt10": 0,
+      "mrr": 0,
+      "ndcgAt10": 0,
+      "falseHits": 0
+    },
+    {
+      "id": "cedar-paraphrase",
+      "category": "paraphrase",
+      "ids": [],
+      "elapsedMs": 1.9198580000011134,
+      "recallAt10": 0,
+      "mrr": 0,
+      "ndcgAt10": 0,
+      "falseHits": 0
+    },
+    {
+      "id": "cedar-absent",
+      "category": "no-answer-absent",
+      "ids": [],
+      "elapsedMs": 1.9002000000036787,
+      "recallAt10": null,
+      "mrr": null,
+      "ndcgAt10": null,
+      "falseHits": 0
+    },
+    {
+      "id": "cedar-near-miss",
+      "category": "no-answer-near-miss",
+      "ids": [],
+      "elapsedMs": 2.203449000000546,
+      "recallAt10": null,
+      "mrr": null,
+      "ndcgAt10": null,
+      "falseHits": 0
+    },
+    {
+      "id": "север-words",
+      "category": "words",
+      "ids": [
+        "10606",
+        "10605",
+        "10902",
+        "10897",
+        "10892",
+        "10887",
+        "10882",
+        "10877",
+        "10872",
+        "10867"
+      ],
+      "elapsedMs": 7.92291600000317,
+      "recallAt10": 1,
+      "mrr": 1,
+      "ndcgAt10": 0.7967075809905066,
+      "falseHits": 0
+    },
+    {
+      "id": "север-typo",
+      "category": "typo",
+      "ids": [
+        "10606",
+        "10605",
+        "10902",
+        "10897",
+        "10892",
+        "10887",
+        "10882",
+        "10877",
+        "10872",
+        "10867"
+      ],
+      "elapsedMs": 4.4926289999930304,
+      "recallAt10": 1,
+      "mrr": 1,
+      "ndcgAt10": 0.7967075809905066,
+      "falseHits": 0
+    },
+    {
+      "id": "север-beginnings",
+      "category": "beginnings",
+      "ids": [
+        "10606",
+        "10605",
+        "10902",
+        "10897",
+        "10892",
+        "10887",
+        "10882",
+        "10877",
+        "10872",
+        "10867"
+      ],
+      "elapsedMs": 2.7162700000044424,
+      "recallAt10": 1,
+      "mrr": 1,
+      "ndcgAt10": 0.7967075809905066,
+      "falseHits": 0
+    },
+    {
+      "id": "север-phrase",
+      "category": "phrase",
+      "ids": [
+        "10606",
+        "10902",
+        "10897",
+        "10892",
+        "10887",
+        "10882",
+        "10877",
+        "10872",
+        "10867",
+        "10862"
+      ],
+      "elapsedMs": 1.6422370000000228,
+      "recallAt10": 0.5,
+      "mrr": 1,
+      "ndcgAt10": 0.27541155237618664,
+      "falseHits": 0
+    },
+    {
+      "id": "север-from",
+      "category": "from",
+      "ids": [
+        "10605"
+      ],
+      "elapsedMs": 3.113615000002028,
+      "recallAt10": 1,
+      "mrr": 1,
+      "ndcgAt10": 1,
+      "falseHits": 0
+    },
+    {
+      "id": "север-chat",
+      "category": "chat",
+      "ids": [
+        "10605",
+        "10606",
+        "10902",
+        "10897",
+        "10892",
+        "10887",
+        "10882",
+        "10877",
+        "10872",
+        "10867"
+      ],
+      "elapsedMs": 3.446919000001799,
+      "recallAt10": 1,
+      "mrr": 1,
+      "ndcgAt10": 1,
+      "falseHits": 0
+    },
+    {
+      "id": "север-date",
+      "category": "date",
+      "ids": [
+        "10605",
+        "10606"
+      ],
+      "elapsedMs": 3.272292000001471,
+      "recallAt10": 1,
+      "mrr": 1,
+      "ndcgAt10": 1,
+      "falseHits": 0
+    },
+    {
+      "id": "север-and",
+      "category": "and",
+      "ids": [
+        "10606",
+        "10605",
+        "10902",
+        "10897",
+        "10892",
+        "10887",
+        "10882",
+        "10877",
+        "10872",
+        "10867"
+      ],
+      "elapsedMs": 1.7656690000003437,
+      "recallAt10": 1,
+      "mrr": 1,
+      "ndcgAt10": 0.7967075809905066,
+      "falseHits": 0
+    },
+    {
+      "id": "север-or",
+      "category": "or",
+      "ids": [
+        "10606",
+        "10605",
+        "10902",
+        "10897",
+        "10892",
+        "10887",
+        "10882",
+        "10877",
+        "10872",
+        "10867"
+      ],
+      "elapsedMs": 1.7154039999950328,
+      "recallAt10": 1,
+      "mrr": 1,
+      "ndcgAt10": 0.7967075809905066,
+      "falseHits": 0
+    },
+    {
+      "id": "север-paraphrase",
+      "category": "paraphrase",
+      "ids": [],
+      "elapsedMs": 2.115262999999686,
+      "recallAt10": 0,
+      "mrr": 0,
+      "ndcgAt10": 0,
+      "falseHits": 0
+    },
+    {
+      "id": "север-absent",
+      "category": "no-answer-absent",
+      "ids": [],
+      "elapsedMs": 1.9881450000029872,
+      "recallAt10": null,
+      "mrr": null,
+      "ndcgAt10": null,
+      "falseHits": 0
+    },
+    {
+      "id": "север-near-miss",
+      "category": "no-answer-near-miss",
+      "ids": [],
+      "elapsedMs": 2.263823000001139,
+      "recallAt10": null,
+      "mrr": null,
+      "ndcgAt10": null,
+      "falseHits": 0
+    },
+    {
+      "id": "lumen-words",
+      "category": "words",
+      "ids": [
+        "11204",
+        "11199",
+        "11194",
+        "11189",
+        "11184",
+        "11179",
+        "11174",
+        "11169",
+        "11164",
+        "11159"
+      ],
+      "elapsedMs": 3.875832999998238,
+      "recallAt10": 0,
+      "mrr": 0,
+      "ndcgAt10": 0,
+      "falseHits": 0
+    },
+    {
+      "id": "lumen-typo",
+      "category": "typo",
+      "ids": [
+        "11204",
+        "11199",
+        "11194",
+        "11189",
+        "11184",
+        "11179",
+        "11174",
+        "11169",
+        "11164",
+        "11159"
+      ],
+      "elapsedMs": 4.720746999999392,
+      "recallAt10": 0,
+      "mrr": 0,
+      "ndcgAt10": 0,
+      "falseHits": 0
+    },
+    {
+      "id": "lumen-beginnings",
+      "category": "beginnings",
+      "ids": [
+        "11204",
+        "11199",
+        "11194",
+        "11189",
+        "11184",
+        "11179",
+        "11174",
+        "11169",
+        "11164",
+        "11159"
+      ],
+      "elapsedMs": 2.649865999999747,
+      "recallAt10": 0,
+      "mrr": 0,
+      "ndcgAt10": 0,
+      "falseHits": 0
+    },
+    {
+      "id": "lumen-phrase",
+      "category": "phrase",
+      "ids": [
+        "11204",
+        "11199",
+        "11194",
+        "11189",
+        "11184",
+        "11179",
+        "11174",
+        "11169",
+        "11164",
+        "11159"
+      ],
+      "elapsedMs": 1.5868439999976545,
+      "recallAt10": 0,
+      "mrr": 0,
+      "ndcgAt10": 0,
+      "falseHits": 0
+    },
+    {
+      "id": "lumen-from",
+      "category": "from",
+      "ids": [
+        "10907"
+      ],
+      "elapsedMs": 3.1440010000005714,
+      "recallAt10": 1,
+      "mrr": 1,
+      "ndcgAt10": 1,
+      "falseHits": 0
+    },
+    {
+      "id": "lumen-chat",
+      "category": "chat",
+      "ids": [
+        "11204",
+        "11199",
+        "11194",
+        "11189",
+        "11184",
+        "11179",
+        "11174",
+        "11169",
+        "11164",
+        "11159"
+      ],
+      "elapsedMs": 3.2406519999931334,
+      "recallAt10": 0,
+      "mrr": 0,
+      "ndcgAt10": 0,
+      "falseHits": 0
+    },
+    {
+      "id": "lumen-date",
+      "category": "date",
+      "ids": [
+        "10908",
+        "10907"
+      ],
+      "elapsedMs": 3.1149070000028587,
+      "recallAt10": 1,
+      "mrr": 1,
+      "ndcgAt10": 0.7967075809905066,
+      "falseHits": 0
+    },
+    {
+      "id": "lumen-and",
+      "category": "and",
+      "ids": [
+        "11204",
+        "11199",
+        "11194",
+        "11189",
+        "11184",
+        "11179",
+        "11174",
+        "11169",
+        "11164",
+        "11159"
+      ],
+      "elapsedMs": 1.6945750000013504,
+      "recallAt10": 0,
+      "mrr": 0,
+      "ndcgAt10": 0,
+      "falseHits": 0
+    },
+    {
+      "id": "lumen-or",
+      "category": "or",
+      "ids": [
+        "11204",
+        "11199",
+        "11194",
+        "11189",
+        "11184",
+        "11179",
+        "11174",
+        "11169",
+        "11164",
+        "11159"
+      ],
+      "elapsedMs": 1.7035219999961555,
+      "recallAt10": 0,
+      "mrr": 0,
+      "ndcgAt10": 0,
+      "falseHits": 0
+    },
+    {
+      "id": "lumen-paraphrase",
+      "category": "paraphrase",
+      "ids": [],
+      "elapsedMs": 2.048427999994601,
+      "recallAt10": 0,
+      "mrr": 0,
+      "ndcgAt10": 0,
+      "falseHits": 0
+    },
+    {
+      "id": "lumen-absent",
+      "category": "no-answer-absent",
+      "ids": [],
+      "elapsedMs": 1.8857040000002598,
+      "recallAt10": null,
+      "mrr": null,
+      "ndcgAt10": null,
+      "falseHits": 0
+    },
+    {
+      "id": "lumen-near-miss",
+      "category": "no-answer-near-miss",
+      "ids": [],
+      "elapsedMs": 2.1373449999955483,
+      "recallAt10": null,
+      "mrr": null,
+      "ndcgAt10": null,
+      "falseHits": 0
+    }
+  ],
+  "heldOut": null
+}

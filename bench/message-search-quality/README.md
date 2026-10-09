@@ -75,3 +75,26 @@ The strict matcher misses typos and word beginnings. Legacy recovers some, but i
 list prevents other matchers from contributing; broad any-word fallback fills no-answer pages.
 Both can bury useful messages beneath exact keyword matches. Sender/date filters are easy controls
 and achieve full recall; category reports prevent them from concealing poor unfiltered rankings.
+
+## Combined lexical experiment
+
+After building, run the separate dev evaluation:
+
+```sh
+pnpm exec tsc -p bench/message-search-quality/tsconfig.json
+node bench/message-search-quality/combined.ts > bench/message-search-quality/combined-dev.json
+```
+
+It calls the internal production matcher directly without changing public `searchStore` defaults.
+All 180 combinations of candidate depth, RRF constant, lexical reranking signal and chat cap are
+measured on dev only. All returned rankings are scored against the unchanged corpus labels.
+Explicit AND/OR/phrase query ids must match the strict production top ten exactly. The runner
+never supplies query `intent` or relevance labels to the matcher.
+
+Every tested configuration has dev recall@10 0.3625, MRR@10 0.375 and nDCG@10 0.3264, with zero
+no-answer false hits. None meets the approved 0.45/0.50/0.40 gates. [combined-dev.json](combined-dev.json)
+records each configuration, measured timing and hashes, and the diagnostic dev rankings. No
+combined held-out result is produced when dev fails. The original baseline is preserved.
+The [revised proposal](../../docs/dev/combined-search.md#measured-lexical-experiment-and-revised-proposal)
+requests a semantic evaluation before public adoption. Timings are from this small corpus on a
+shared machine; they are not release-scale latency evidence.

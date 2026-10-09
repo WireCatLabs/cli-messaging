@@ -1,8 +1,8 @@
 # One message search: proposal for approval
 
-Status: benchmark and plan only. No production search behavior has changed. Owner approval is
-required before implementation. The proposed first release combines lexical matchers under the
-Lucene grammar; meaning search follows only after a separate message-level evaluation.
+Status: the owner approved the lexical experiment. Its dev evaluation failed the approved
+quality gates, so CLI/MCP and SDK defaults remain unchanged. The internal matcher and measured
+results are available for review; the revised semantic evaluation below needs owner approval.
 
 ## Evidence and acceptance targets
 
@@ -41,6 +41,53 @@ These are acceptance targets, not measured promises. If lexical ranking cannot r
 back the measured limitation and a revised plan for approval. Do not tune on held-out failures or
 weaken labels. Freeze the dev-selected configuration before evaluating held-out; a second development
 cycle needs a fresh held-out set. Baseline exposure means this holdout is not blinded.
+
+## Measured lexical experiment and revised proposal
+
+The internal [matcher](../../src/services/messages-combined.ts) evaluates word/stem, prefix and
+corrected candidates independently, retains resolved hard predicates, fuses by rank position and
+can rerank using term strength/coverage, minimum token span and phrase adjacency. It bounds depth,
+AST nodes, hydrated body bytes, reranking work and elapsed time; all candidate paths check account
+scope and cancellation. It is not wired to public services, CLI, MCP, bots or saved replay.
+
+[The dev sweep](../../bench/message-search-quality/combined-dev.json) varies all 180 combinations:
+depth 50/100/300/500, RRF k 20/60/100, no reranker/coverage/proximity/phrase/all, and chat caps 0/3/5.
+Every combination produces the same dev relevance metrics:
+
+| Mode | Recall@10 | MRR@10 | nDCG@10 | No-answer false hits |
+|---|---|---|---|---|
+| Strict baseline | 0.313 | 0.325 | 0.287 | 0 |
+| Legacy baseline | 0.388 | 0.425 | 0.354 | 80 |
+| Combined lexical | 0.363 | 0.375 | 0.326 | 0 |
+| Approved minimum | 0.450 | 0.500 | 0.400 | 0 |
+
+Typos and beginnings reach recall 0.250 on dev, improving on strict's zero but merely matching
+legacy. Sender/date controls retain full recall. Explicit AND/OR and phrases preserve strict
+results and order. The lost legacy paraphrase hits came from broad any-word retrieval; removing
+that noise also removes occasional useful hits. No setting clears the gates or beats legacy's
+answerable metrics. Candidate depth and chat diversification do not distinguish useful messages
+from newer templates with the same words and adjacency. This is a result for these tested signals
+and corpus, not proof that every lexical ranking method is inadequate.
+
+No held-out evaluation was run for combined search because no dev configuration qualified.
+No 100k-message latency claim is made; release-scale performance work follows a qualified design.
+The old baseline remains committed unchanged. The smallest experimental configuration is reported
+for inspection, not selected as a release recommendation; the internal defaults are provisional.
+
+Proposed next phase, requiring approval: measure a local semantic reranker over the bounded,
+filter-valid lexical candidates before changing the public default. First define its model,
+installation/readiness behavior and cost budget, without an automatic download or network call.
+Evaluate per-message text against the whole query; compare it with chunk-to-message semantic
+retrieval only if lexical candidate recall itself is inadequate. Do not reuse the conversation
+0.80 cosine floor as a message threshold.
+
+Keep these relevance labels and release gates. Add separately authored question-form dev queries
+that explicitly ask for the decision/policy when that is the intent; do not substitute them for
+this keyword-query benchmark or relabel distractors. The existing `intent` field contains the
+answer text and must never be passed to retrieval or a reranker. Create fresh held-out topic/query
+families before tuning the new approach, freeze the dev choice, then evaluate held-out once.
+If semantic ranking also fails, report that result rather than relax the release gates implicitly.
+All CLI/MCP removal, SDK/saved conversion and consumer releases below remain pending quality gates.
 
 ## Query behavior
 
@@ -177,7 +224,7 @@ This proposal includes the separately agreed breaking window required by the
    version, updating generated `docs/commands.md`, skills and breaking changelog entries. Avoid other
    consumer `docs/*.md` prose owned by `docs/reader-standards`. Verify unreleased builds with
    `bin/try-messaging` in consumer worktrees; no committed `file:` dependency. Arrange same-day
-   consumer moves when the breaking shared release lands. No release/publish is part of this plan-only task.
+   consumer moves when the breaking shared release lands. No release/publish proceeds while the quality gates are unmet.
 
 No migration number is needed now. If saved conversion or later semantic work requires schema
 changes, reserve a number first through [coordination](COORDINATION.md#store-migrations).
