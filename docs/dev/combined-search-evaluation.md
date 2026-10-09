@@ -147,6 +147,9 @@ of relevant messages, paraphrases, harder missing-fact negatives and independent
 more valuable than treating forty queries as forty independent samples. Future uncertainty estimates
 should resample topic families, and report paired per-query gains/regressions and counts.
 
+The [model and architecture research](combined-search-model-research.md) compares modern rerankers,
+open System One alternatives, candidate cascades and the measured disk/RAM/download costs.
+
 ## Next work
 
 Explain and settle the measurement definitions before modifying metric runners or tuning ranking.

@@ -200,3 +200,8 @@ what each experiment contributed and proposed next metrics. In the original held
 report, macro recall 0.4375 means an average 43.75 percent of labelled relevant evidence retrieved;
 Success@10 is 50 percent, and grade-2 actual-answer Success@10 is 42.5 percent. Those last two
 values are descriptive audits of saved rankings, not new model runs or changed release gates.
+
+The [model research](../../docs/dev/combined-search-model-research.md) records alternative model
+architectures and selected checkpoint sizes. [resources.ts](resources.ts) and [resources.json](resources.json)
+measure the current model's isolated process RAM and scoring time; checkpoint bytes and RAM are
+separate quantities. No real store is opened by that probe.
