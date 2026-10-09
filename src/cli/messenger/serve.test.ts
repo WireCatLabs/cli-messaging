@@ -124,7 +124,10 @@ describe("serve with reply rules", () => {
       on: true,
       reply: { template: "Back soon.", model: "fill-only", asReply: false },
     }
-    writeFileSync(join(config, "default.replies.json"), JSON.stringify({ testers: [{ id: "77" }], rules: [rule] }))
+    writeFileSync(
+      join(config, "default.replies.json"),
+      JSON.stringify({ audience: { reply: "listed", allow: { people: ["77"] } }, rules: [rule] }),
+    )
     if (permissions)
       writeFileSync(join(config, "config.json"), JSON.stringify({ profiles: { default: { permissions } } }))
   }
@@ -173,7 +176,7 @@ describe("serve with reply rules", () => {
     return { sent, answer: JSON.parse(streams.stdout[0] ?? "{}") }
   }
 
-  it("**answers only the test account, and the send journal names the rule**", async () => {
+  it("**answers only the allowed person, and the send journal names the rule**", async () => {
     const { root, env } = setup()
     const withConfig = { ...env, CHAT_CONFIG_DIR: join(root, "config") }
     rulesFor(withConfig, { "replies.send": "allow" })
@@ -181,7 +184,7 @@ describe("serve with reply rules", () => {
     const { sent, answer } = await serving(withConfig)
 
     expect(sent).toEqual([{ chatId: "77", text: "Back soon." }])
-    expect(answer.replies).toEqual({ sent: { away: 1 }, skipped: { "not a test account": 1 } })
+    expect(answer.replies).toEqual({ sent: { away: 1 }, skipped: { "not on the allow list": 1 } })
     const [entry] = new SendJournal(sendsPathFor(app, "default", withConfig))
       .entries()
       .filter((one) => one.outcome === "sent")

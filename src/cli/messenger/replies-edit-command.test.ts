@@ -45,8 +45,8 @@ describe("reply editors", () => {
     const { env, path, invoke } = setup()
     expect(existsSync(env.CHAT_CONFIG_DIR)).toBe(false)
     expect(await invoke("add", "away")).toMatchObject({ code: 0 })
-    expect(readRepliesFile(path).rules).toEqual([defaultRule("away")])
-    expect(readReplies(path).rules[0]?.on).toBe(false)
+    expect(readRepliesFile(path, "chat").rules).toEqual([defaultRule("away")])
+    expect(readReplies(path, "chat").rules[0]?.on).toBe(false)
     if (process.platform !== "win32") expect(statSync(path).mode & 0o777).toBe(0o600)
     const before = readFileSync(path, "utf8")
     expect(await invoke("on", "away")).toMatchObject({ code: 2 })
@@ -71,13 +71,12 @@ describe("reply editors", () => {
     expect(readFileSync(path, "utf8")).toBe(before)
   })
 
-  it("sets every edit option, preserves unrelated rules and testers, and keeps string input forms", async () => {
+  it("sets every edit option, preserves unrelated rules, writes an older file's testers as the audience, and keeps string input forms", async () => {
     const { path, invoke } = setup()
     await invoke("add", "away")
     await invoke("add", "other")
-    const file = readRepliesFile(path)
-    file.testers = [{ provider: "chat", id: "900719925474099399" }]
-    writeFileSync(path, JSON.stringify(file))
+    const { rules } = readRepliesFile(path, "chat")
+    writeFileSync(path, JSON.stringify({ testers: [{ provider: "chat", id: "900719925474099399" }], rules }))
     const answer = await invoke(
       "edit",
       "away",
@@ -129,10 +128,16 @@ describe("reply editors", () => {
       reply: { template: "Hi {name}", model: "may-reword", asReply: false },
       limits: { perChat: "2/12h", perPerson: "3/1d" },
     })
-    expect(readRepliesFile(path).testers).toEqual(file.testers)
-    expect(readRepliesFile(path).rules[1]).toEqual(defaultRule("other"))
+    const written = JSON.parse(readFileSync(path, "utf8"))
+    expect(written).not.toHaveProperty("testers")
+    expect(written.audience).toEqual({
+      reply: "listed",
+      allow: { people: ["900719925474099399"], chats: [] },
+      deny: { people: [], chats: [] },
+    })
+    expect(readRepliesFile(path, "chat").rules[1]).toEqual(defaultRule("other"))
     expect((await invoke("edit", "away", "--timezone", "UTC")).code).toBe(0)
-    expect(readRepliesFile(path).rules[0]?.when.hours).toEqual({
+    expect(readRepliesFile(path, "chat").rules[0]?.when.hours).toEqual({
       outside: "22:00-02:00",
       days: "fri-mon",
       timezone: "UTC",
@@ -162,7 +167,7 @@ describe("reply editors", () => {
         )
       ).code,
     ).toBe(0)
-    const cleared = readRepliesFile(path).rules[0]
+    const cleared = readRepliesFile(path, "chat").rules[0]
     expect(cleared?.when).toEqual(defaultRule("away").when)
     expect(cleared?.where).toEqual({ kinds: [], chats: [], notChats: [] })
     expect(cleared?.reply.asReply).toBe(true)
@@ -218,7 +223,9 @@ describe("reply editors", () => {
 
   it("shows audience without creating a file, replaces all audience fields and sends warnings only to stderr", async () => {
     const { path, invoke } = setup()
-    expect(JSON.parse((await invoke("audience")).data).reply).toBe("all")
+    const shown = await invoke("audience")
+    expect(JSON.parse(shown.data).reply).toBe("listed")
+    expect(shown.diagnostics).toContain("nobody is answered")
     expect(existsSync(path)).toBe(false)
     const answer = await invoke(
       "audience",
@@ -240,7 +247,7 @@ describe("reply editors", () => {
       deny: { people: ["11"], chats: ["21"] },
     })
     expect(answer.diagnostics).toContain("deny wins")
-    expect(readRepliesFile(path).testers).toEqual([])
+    expect(JSON.parse(readFileSync(path, "utf8"))).not.toHaveProperty("testers")
     const cleared = await invoke(
       "audience",
       "--allow-people",
@@ -259,6 +266,6 @@ describe("reply editors", () => {
       deny: { people: [], chats: [] },
     })
     const other = setup()
-    expect(JSON.parse((await other.invoke("audience")).data).reply).toBe("all")
+    expect(JSON.parse((await other.invoke("audience", "--reply", "all")).data).reply).toBe("all")
   })
 })

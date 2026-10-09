@@ -70,7 +70,7 @@ const setUp = async () => {
   }
   writeFileSync(
     join(env.CHAT_CONFIG_DIR, "default.replies.json"),
-    JSON.stringify({ testers: [{ id: "11" }], rules: [rule] }),
+    JSON.stringify({ audience: { reply: "listed", allow: { people: ["11"] } }, rules: [rule] }),
   )
   return { env, root }
 }

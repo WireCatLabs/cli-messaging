@@ -6,6 +6,20 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Changed — may break callers
+
+- Reply rules answer only the people and chats the file's audience allows; the separate `testers` list
+  is gone. A file without an audience, or a new one, is `listed` with empty lists, so nobody is answered
+  until `replies audience --allow-people` names someone. A missing `audience.reply` is `listed` too.
+- A file that still has `testers` is read as the audience that answers exactly the same people: `listed`,
+  allowing the testers with no `provider` or this messenger's; when it was `listed` already, only the
+  testers it also allowed. Its allowed chats are dropped, since "a tester in this chat" has no audience
+  form; deny lists stay; an empty `testers` answers nobody. The next edit writes the result back, without
+  `testers`.
+- `replies status` no longer reports `testers`; its audience warnings say when nobody is answered.
+  The skip reason "not a test account" is now "not on the allow list". `replyTo`, `dryRun`,
+  `readReplies` and the reply editors read the messenger's provider; `dryRun` takes no `testers`.
+
 ## 0.212.0 — 09.10.2026
 
 ### Changed — may break callers

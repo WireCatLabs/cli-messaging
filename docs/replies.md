@@ -1,8 +1,8 @@
 # Editing reply rules
 
 Reply rules belong to one profile in its config directory, `<profile>.replies.json`.
-`serve` applies enabled rules, within `replies.send`, recipient and rate limits. It still answers
-only accounts named in `testers`. The editing commands never connect or send.
+`serve` applies enabled rules, within `replies.send`, the file's audience and rate limits. A new file
+answers nobody until `replies audience` allows someone. The editing commands never connect or send.
 
 Create a disabled rule with every key written out, edit its template, then enable it:
 
@@ -37,11 +37,17 @@ one of them. `--no-hours` clears the window and cannot accompany its fields.
 `replies audience` shows the file-level audience. Its flags change only named fields:
 `--reply all|listed`, `--allow-people`, `--allow-chats`, `--deny-people`, `--deny-chats`.
 The lists use the same replacement and clearing rules. `deny` wins over `allow`.
-With `listed` and an empty allow list nobody is answered; tasks can still open.
+A file without an audience is `listed` with empty lists, so nobody is answered; tasks can still open.
+`max replies audience --reply listed --allow-people 1000001` lets one person get answers.
+
+A file from before the audience replaced `testers` is read as the audience that answers the same
+people: `listed`, allowing the testers of this messenger — or, if it was `listed` already, only the
+testers it also allowed. Its allowed chats are dropped, deny lists stay, and an empty `testers`
+answers nobody. The next edit writes the converted audience back.
 Warnings go to stderr, while `--json` writes only the result to stdout.
 
 Every edit checks both the existing file and the proposed result before an atomic write.
-Malformed files are refused without being overwritten. Reply state and testers stay untouched.
+Malformed files are refused without being overwritten. Reply state stays untouched.
 
 ## Liquid templates and model blocks
 
@@ -82,7 +88,7 @@ It applies across chats in the profile, except opt-outs: `replies consents deny 
 native chat id, `allow <chat>` removes that opt-out without granting profile consent. Grant/revoke
 keep opt-outs. Changing provider or endpoint needs another grant; revocation or a target change
 during a request prevents its output being sent. Pause, rule and audience changes are also checked
-after async rendering. Templates still pass through tester, audience and send-permission gates.
+after async rendering. Templates still pass through the audience and send-permission gates.
 
 `replies test` shows instructions and fallback without calling a model. `replies test --ai` opts
 into sending stored message data to the consented model; it never sends a messenger reply or writes

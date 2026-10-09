@@ -10,7 +10,7 @@ import { type Messenger, messengerContext } from "./context.js"
 import { replyConsentsCommand } from "./replies-consents-command.js"
 import { addReplyEditors } from "./replies-edit-command.js"
 
-/** `replies`: rules that answer messages for the owner, from `serve`, and only to its test accounts (`NEED-601`). */
+/** `replies`: rules that answer messages for the owner, from `serve`, and only to the people and chats the audience allows. */
 export const repliesCommand = (messenger: Messenger): Command => {
   const replies = new Command("replies").description(
     "rules that answer messages for you, kept in a file of this profile",
@@ -45,7 +45,7 @@ export const repliesCommand = (messenger: Messenger): Command => {
         )
       const since = momentOf(sinceTime ?? `${DRY_RUN_DAYS}d`, "--since-time")
       const path = repliesPathFor(messenger.app, settings.profile, env)
-      const { rules, testers, audience } = readReplies(path)
+      const { rules, audience } = readReplies(path, messenger.provider)
       if (rules.length === 0) {
         renderer.note(`no reply rules yet — they live in ${path}`)
       }
@@ -54,7 +54,6 @@ export const repliesCommand = (messenger: Messenger): Command => {
         (store, account) =>
           dryRun(store, account, rules, {
             since,
-            testers,
             audience,
             render: replyRenderer(
               messenger.app,
@@ -120,17 +119,15 @@ export const repliesCommand = (messenger: Messenger): Command => {
     .description("whether the rules may send, which are on, and who they may answer")
     .action(async function (this: Command) {
       const { settings, renderer, env } = messengerContext(this, messenger)
-      const { rules, testers, audience } = readReplies(repliesPathFor(messenger.app, settings.profile, env))
+      const { rules, audience } = readReplies(repliesPathFor(messenger.app, settings.profile, env), messenger.provider)
       const warnings = audienceWarnings(audience)
       for (const warning of warnings) renderer.warn(warning)
       const state = readRepliesState(repliesStatePathFor(messenger.app, settings.profile, env))
       const level = levelFor(settings.permissions ?? {}, "replies.send").level
       if (level !== "allow") renderer.note(`replies.send is ${level}: serve sends nothing until it is allow`)
-      if (testers.length === 0) renderer.note("no test accounts named in testers: serve answers nobody")
       renderer.result({
         paused: state.paused,
         send: level,
-        testers: testers.length,
         audience: {
           reply: audience.reply,
           allow: audience.allow.people.length + audience.allow.chats.length,

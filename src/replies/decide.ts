@@ -8,10 +8,9 @@ export interface Incoming {
   chat: Pick<Chat, "id" | "kind">
   /** The owner, to tell a mention or a reply to them; `null` when the account is not known. */
   owner: { id: Id | null; username?: string }
-  /** `isTester`: named in the file's `testers` — nobody else is ever answered (NEED-601); a task opens for anyone. */
-  sender: { isBot: boolean; isContact: boolean; isTester: boolean }
-  /** Why the file's audience lets no answer go to this sender in this chat, or `null`/absent when it does. */
-  outside?: string | null
+  sender: { isBot: boolean; isContact: boolean }
+  /** Why the file's audience lets no answer go to this sender in this chat, or `null` when it does; a task opens for anyone. */
+  outside: string | null
   /** ms: when `serve` began catching up. Older messages are never answered — a week away must not get a week of replies. */
   since: number
 }
@@ -23,8 +22,6 @@ export type Decision =
 
 const skip = (why: string): Decision => ({ skip: why })
 
-export const NOT_A_TESTER = "not a test account"
-
 /**
  * Whether `rule` answers this message at `now`, and with what — or why not, in words `replies test`
  * can print. Pure: it reads `state` and changes nothing; the caller records a reply it sent.
@@ -35,10 +32,10 @@ export const decide = (rule: ReplyRule, incoming: Incoming, state: RepliesState,
   if (!rule.on) return skip("the rule is off")
   if (message.outgoing !== false) return skip(message.outgoing ? "your own message" : "the account is not known")
   if (message.senderIsChat || message.senderId === null) return skip("sent as a chat, not by a person")
-  // A task stays on this machine; only an answer to a real person waits for the testing to end.
-  const answerable = sender.isTester && !incoming.outside
-  const actions = answerable ? rule.do : rule.do.filter((action) => action !== "reply")
-  if (actions.length === 0) return skip(sender.isTester ? (incoming.outside ?? NOT_A_TESTER) : NOT_A_TESTER)
+  // A task stays on this machine; only an answer to a person needs the audience to allow them.
+  const { outside: why } = incoming
+  if (why !== null && !rule.do.includes("task")) return skip(why)
+  const actions = why === null ? rule.do : rule.do.filter((action) => action !== "reply")
   if (sender.isBot) return skip("sent by a bot")
   if (chat.kind !== "dialog" && chat.kind !== "group") return skip(`a ${chat.kind} is never answered`)
   if (message.editedAt !== null) return skip("an edited message")
