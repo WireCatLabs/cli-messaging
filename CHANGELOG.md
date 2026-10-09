@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.212.0 — 09.10.2026
+
 ### Changed — may break callers
 
 - Store version 28 drops the copies kept for older builds after the notes refactor: `annotations`,
