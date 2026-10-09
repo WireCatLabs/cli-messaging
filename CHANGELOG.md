@@ -6,6 +6,11 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+### Fixed
+
+- `search all` on a store that holds nothing yet for the account it runs as: "every account" now includes that
+  account, so the server step runs and the message it saves is found. 0.210.0 still answered empty there.
+
 ## 0.210.0 — 09.10.2026
 
 ### Fixed
