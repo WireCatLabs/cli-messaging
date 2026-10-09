@@ -6,6 +6,8 @@ Notable changes to `@leemour/cli-messaging`, one section per version, newest fir
 
 ## Unreleased
 
+## 0.213.0 — 09.10.2026
+
 ### Changed — may break callers
 
 - Reply rules answer whom the file's audience allows; the separate `testers` list is gone. A new file,
