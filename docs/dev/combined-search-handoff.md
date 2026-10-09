@@ -55,12 +55,12 @@ text; how a saved search records `legacy`; the SDK compatibility promise; and an
 
 0. **Worktree.** `git -C /home/leemour/Projects/AI/cli-messaging worktree add -b feat/combined-search ../cli-messaging-wt-combined-search origin/main`.
    Other sessions work here at once ([`COORDINATION.md`](COORDINATION.md)); the main checkout is not yours.
-1. **A message-level ranking test set, before any code change.** Add `bench/message-search-quality/`:
+1. **A message-level ranking test set, before any code change.** Use [cli-testing performance/search](https://github.com/WireCatLabs/cli-testing/blob/test/search-experiments/performance/search/README.md):
    a committed synthetic corpus (no real account, no network) with large noisy chats where many
    messages contain the query words but few answer the question; typos, word beginnings, Cyrillic and
    Latin, phrases, filters (`from:`, `chat:`, `date:`); no-answer queries. Label the relevant messages
    per query; split dev / held-out. Measure recall@10, MRR, nDCG@10 and no-answer false hits for
-   the current strict search and the current legacy chain. Check: `node bench/message-search-quality/run.ts > bench/message-search-quality/baseline.json`
+   the current strict search and the current legacy chain. Check: `python3 performance/search/run.py --messaging-root "$SEARCH_MESSAGING_ROOT" run > /tmp/search-baseline-new.json` from cli-testing
    — passes when both modes produce numbers for every query.
 2. **A plan for the owner — `docs/dev/combined-search.md`.** Design, the baseline numbers, the
    targets, the breaking changes (section 5) and the release order. Stop and ask the owner to approve

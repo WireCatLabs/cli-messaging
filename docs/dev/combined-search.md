@@ -5,14 +5,14 @@ ranking fail the dev quality gates; joint query-message ranking improves the mea
 CLI/MCP and SDK defaults remain unchanged while latency and the original held-out quality gates
 remain unmet. Natural-language question retrieval is a separate diagnostic, not a public feature.
 
-The [evaluation notes](combined-search-evaluation.md) record the contribution of each experiment,
+The [evaluation notes](https://github.com/WireCatLabs/cli-testing/blob/test/search-experiments/performance/search/combined-search-evaluation.md) record the contribution of each experiment,
 the retrieval/scoring pipeline, metric interpretation and proposed next measurements.
 
 ## Evidence and acceptance targets
 
-The [message benchmark](../../bench/message-search-quality/README.md) uses 2,616 synthetic messages,
+The [message benchmark](https://github.com/WireCatLabs/cli-testing/blob/test/search-experiments/performance/search/message-search/README.md) uses 2,616 synthetic messages,
 96 queries, ready word/stem indexes, a temporary store and the current production `searchStore`.
-Its [raw baseline](../../bench/message-search-quality/baseline.json) contains every query in both modes.
+Its [raw baseline](https://github.com/WireCatLabs/cli-testing/blob/test/search-experiments/performance/search/message-search/baseline.json) contains every query in both modes.
 Four topic families per split give 40 answerable and eight no-answer queries each; there is no
 real account, model download or network use. Reproduce with the benchmark README's three commands.
 
@@ -54,7 +54,7 @@ can rerank using term strength/coverage, minimum token span and phrase adjacency
 AST nodes, hydrated body bytes, reranking work and elapsed time; all candidate paths check account
 scope and cancellation. It is not wired to public services, CLI, MCP, bots or saved replay.
 
-[The dev sweep](../../bench/message-search-quality/combined-dev.json) varies all 180 combinations:
+[The dev sweep](https://github.com/WireCatLabs/cli-testing/blob/test/search-experiments/performance/search/message-search/combined-dev.json) varies all 180 combinations:
 depth 50/100/300/500, RRF k 20/60/100, no reranker/coverage/proximity/phrase/all, and chat caps 0/3/5.
 Every combination produces the same dev relevance metrics:
 
@@ -96,7 +96,7 @@ quality, latency and query-contract checks.
 
 ## Semantic experiment
 
-The [semantic benchmark](../../bench/message-search-quality/README.md#candidate-recall-and-semantic-ranking)
+The [semantic benchmark](https://github.com/WireCatLabs/cli-testing/blob/test/search-experiments/performance/search/message-search/README.md#candidate-recall-and-semantic-ranking)
 preserves the original corpus/labels and adds separately authored question queries plus fresh
 held-out families. Candidate recall reaches 0.90 at depth 300: every non-paraphrase category has
 full candidate recall, while paraphrase requests have none. Most misses in the top ten are ranking
@@ -108,7 +108,7 @@ answers while eliminating the new no-answer hits. Reject embedding cosine as thi
 
 The benchmark then evaluates an official Apache-2.0 quantized
 [query-message model](https://huggingface.co/cross-encoder/mmarco-mMiniLMv2-L12-H384-v1), pinned separately
-in [reranker.json](../../bench/message-search-quality/reranker.json). It scores query and message
+in [reranker.json](https://github.com/WireCatLabs/cli-testing/blob/test/search-experiments/performance/search/message-search/reranker.json). It scores query and message
 together rather than comparing separately generated vectors. The benchmark uses its raw identity
 logits, with no automatic model installation, and freezes the dev-selected configuration before
 held-out inference. This is a benchmark adapter, not a public model catalogue or service addition.
