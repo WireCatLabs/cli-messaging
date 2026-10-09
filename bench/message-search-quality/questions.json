@@ -1,0 +1,4544 @@
+{
+  "chats": [
+    {
+      "id": "201",
+      "title": "Synthetic cobalt decisions"
+    },
+    {
+      "id": "202",
+      "title": "Synthetic birch decisions"
+    },
+    {
+      "id": "203",
+      "title": "Synthetic спектр decisions"
+    },
+    {
+      "id": "204",
+      "title": "Synthetic nova decisions"
+    }
+  ],
+  "messages": [
+    {
+      "id": "70001",
+      "chatId": "201",
+      "senderId": "800",
+      "timestamp": "2026-10-05T12:00:00.000Z",
+      "text": "Cobalt failover routing approved: route traffic to the west pool and hold the east pool offline."
+    },
+    {
+      "id": "70002",
+      "chatId": "201",
+      "senderId": "800",
+      "timestamp": "2026-10-05T12:00:00.000Z",
+      "text": "Cobalt failover routing owner is Lea; the approved change is documented."
+    },
+    {
+      "id": "70003",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt failover routing: put this item on the agenda. No agreement was reached. Item 0."
+    },
+    {
+      "id": "70004",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt failover routing: rejected suggestion copied from a draft, awaiting a decision. Item 1."
+    },
+    {
+      "id": "70005",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt failover routing: empty form awaiting the actual policy. Item 2."
+    },
+    {
+      "id": "70006",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed cobalt failover routing. This is a question, not a confirmed decision. Item 3."
+    },
+    {
+      "id": "70007",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt keyword list: cobalt failover routing; no instruction is recorded. Item 4."
+    },
+    {
+      "id": "70008",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt failover routing: put this item on the agenda. No agreement was reached. Item 5."
+    },
+    {
+      "id": "70009",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt failover routing: rejected suggestion copied from a draft, awaiting a decision. Item 6."
+    },
+    {
+      "id": "70010",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt failover routing: empty form awaiting the actual policy. Item 7."
+    },
+    {
+      "id": "70011",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed cobalt failover routing. This is a question, not a confirmed decision. Item 8."
+    },
+    {
+      "id": "70012",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt keyword list: cobalt failover routing; no instruction is recorded. Item 9."
+    },
+    {
+      "id": "70013",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt failover routing: put this item on the agenda. No agreement was reached. Item 10."
+    },
+    {
+      "id": "70014",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt failover routing: rejected suggestion copied from a draft, awaiting a decision. Item 11."
+    },
+    {
+      "id": "70015",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt failover routing: empty form awaiting the actual policy. Item 12."
+    },
+    {
+      "id": "70016",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed cobalt failover routing. This is a question, not a confirmed decision. Item 13."
+    },
+    {
+      "id": "70017",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt keyword list: cobalt failover routing; no instruction is recorded. Item 14."
+    },
+    {
+      "id": "70018",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt failover routing: put this item on the agenda. No agreement was reached. Item 15."
+    },
+    {
+      "id": "70019",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt failover routing: rejected suggestion copied from a draft, awaiting a decision. Item 16."
+    },
+    {
+      "id": "70020",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt failover routing: empty form awaiting the actual policy. Item 17."
+    },
+    {
+      "id": "70021",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed cobalt failover routing. This is a question, not a confirmed decision. Item 18."
+    },
+    {
+      "id": "70022",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt keyword list: cobalt failover routing; no instruction is recorded. Item 19."
+    },
+    {
+      "id": "70023",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt failover routing: put this item on the agenda. No agreement was reached. Item 20."
+    },
+    {
+      "id": "70024",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt failover routing: rejected suggestion copied from a draft, awaiting a decision. Item 21."
+    },
+    {
+      "id": "70025",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt failover routing: empty form awaiting the actual policy. Item 22."
+    },
+    {
+      "id": "70026",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed cobalt failover routing. This is a question, not a confirmed decision. Item 23."
+    },
+    {
+      "id": "70027",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt keyword list: cobalt failover routing; no instruction is recorded. Item 24."
+    },
+    {
+      "id": "70028",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt failover routing: put this item on the agenda. No agreement was reached. Item 25."
+    },
+    {
+      "id": "70029",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt failover routing: rejected suggestion copied from a draft, awaiting a decision. Item 26."
+    },
+    {
+      "id": "70030",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt failover routing: empty form awaiting the actual policy. Item 27."
+    },
+    {
+      "id": "70031",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed cobalt failover routing. This is a question, not a confirmed decision. Item 28."
+    },
+    {
+      "id": "70032",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt keyword list: cobalt failover routing; no instruction is recorded. Item 29."
+    },
+    {
+      "id": "70033",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt failover routing: put this item on the agenda. No agreement was reached. Item 30."
+    },
+    {
+      "id": "70034",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt failover routing: rejected suggestion copied from a draft, awaiting a decision. Item 31."
+    },
+    {
+      "id": "70035",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt failover routing: empty form awaiting the actual policy. Item 32."
+    },
+    {
+      "id": "70036",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed cobalt failover routing. This is a question, not a confirmed decision. Item 33."
+    },
+    {
+      "id": "70037",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt keyword list: cobalt failover routing; no instruction is recorded. Item 34."
+    },
+    {
+      "id": "70038",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt failover routing: put this item on the agenda. No agreement was reached. Item 35."
+    },
+    {
+      "id": "70039",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt failover routing: rejected suggestion copied from a draft, awaiting a decision. Item 36."
+    },
+    {
+      "id": "70040",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt failover routing: empty form awaiting the actual policy. Item 37."
+    },
+    {
+      "id": "70041",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed cobalt failover routing. This is a question, not a confirmed decision. Item 38."
+    },
+    {
+      "id": "70042",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt keyword list: cobalt failover routing; no instruction is recorded. Item 39."
+    },
+    {
+      "id": "70043",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt failover routing: put this item on the agenda. No agreement was reached. Item 40."
+    },
+    {
+      "id": "70044",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt failover routing: rejected suggestion copied from a draft, awaiting a decision. Item 41."
+    },
+    {
+      "id": "70045",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt failover routing: empty form awaiting the actual policy. Item 42."
+    },
+    {
+      "id": "70046",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed cobalt failover routing. This is a question, not a confirmed decision. Item 43."
+    },
+    {
+      "id": "70047",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt keyword list: cobalt failover routing; no instruction is recorded. Item 44."
+    },
+    {
+      "id": "70048",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt failover routing: put this item on the agenda. No agreement was reached. Item 45."
+    },
+    {
+      "id": "70049",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt failover routing: rejected suggestion copied from a draft, awaiting a decision. Item 46."
+    },
+    {
+      "id": "70050",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt failover routing: empty form awaiting the actual policy. Item 47."
+    },
+    {
+      "id": "70051",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed cobalt failover routing. This is a question, not a confirmed decision. Item 48."
+    },
+    {
+      "id": "70052",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt keyword list: cobalt failover routing; no instruction is recorded. Item 49."
+    },
+    {
+      "id": "70053",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt failover routing: put this item on the agenda. No agreement was reached. Item 50."
+    },
+    {
+      "id": "70054",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt failover routing: rejected suggestion copied from a draft, awaiting a decision. Item 51."
+    },
+    {
+      "id": "70055",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt failover routing: empty form awaiting the actual policy. Item 52."
+    },
+    {
+      "id": "70056",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed cobalt failover routing. This is a question, not a confirmed decision. Item 53."
+    },
+    {
+      "id": "70057",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt keyword list: cobalt failover routing; no instruction is recorded. Item 54."
+    },
+    {
+      "id": "70058",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt failover routing: put this item on the agenda. No agreement was reached. Item 55."
+    },
+    {
+      "id": "70059",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt failover routing: rejected suggestion copied from a draft, awaiting a decision. Item 56."
+    },
+    {
+      "id": "70060",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt failover routing: empty form awaiting the actual policy. Item 57."
+    },
+    {
+      "id": "70061",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed cobalt failover routing. This is a question, not a confirmed decision. Item 58."
+    },
+    {
+      "id": "70062",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt keyword list: cobalt failover routing; no instruction is recorded. Item 59."
+    },
+    {
+      "id": "70063",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt failover routing: put this item on the agenda. No agreement was reached. Item 60."
+    },
+    {
+      "id": "70064",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt failover routing: rejected suggestion copied from a draft, awaiting a decision. Item 61."
+    },
+    {
+      "id": "70065",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt failover routing: empty form awaiting the actual policy. Item 62."
+    },
+    {
+      "id": "70066",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed cobalt failover routing. This is a question, not a confirmed decision. Item 63."
+    },
+    {
+      "id": "70067",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt keyword list: cobalt failover routing; no instruction is recorded. Item 64."
+    },
+    {
+      "id": "70068",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt failover routing: put this item on the agenda. No agreement was reached. Item 65."
+    },
+    {
+      "id": "70069",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt failover routing: rejected suggestion copied from a draft, awaiting a decision. Item 66."
+    },
+    {
+      "id": "70070",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt failover routing: empty form awaiting the actual policy. Item 67."
+    },
+    {
+      "id": "70071",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed cobalt failover routing. This is a question, not a confirmed decision. Item 68."
+    },
+    {
+      "id": "70072",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt keyword list: cobalt failover routing; no instruction is recorded. Item 69."
+    },
+    {
+      "id": "70073",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt failover routing: put this item on the agenda. No agreement was reached. Item 70."
+    },
+    {
+      "id": "70074",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt failover routing: rejected suggestion copied from a draft, awaiting a decision. Item 71."
+    },
+    {
+      "id": "70075",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt failover routing: empty form awaiting the actual policy. Item 72."
+    },
+    {
+      "id": "70076",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed cobalt failover routing. This is a question, not a confirmed decision. Item 73."
+    },
+    {
+      "id": "70077",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt keyword list: cobalt failover routing; no instruction is recorded. Item 74."
+    },
+    {
+      "id": "70078",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt failover routing: put this item on the agenda. No agreement was reached. Item 75."
+    },
+    {
+      "id": "70079",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt failover routing: rejected suggestion copied from a draft, awaiting a decision. Item 76."
+    },
+    {
+      "id": "70080",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt failover routing: empty form awaiting the actual policy. Item 77."
+    },
+    {
+      "id": "70081",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed cobalt failover routing. This is a question, not a confirmed decision. Item 78."
+    },
+    {
+      "id": "70082",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt keyword list: cobalt failover routing; no instruction is recorded. Item 79."
+    },
+    {
+      "id": "70083",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt failover routing: put this item on the agenda. No agreement was reached. Item 80."
+    },
+    {
+      "id": "70084",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt failover routing: rejected suggestion copied from a draft, awaiting a decision. Item 81."
+    },
+    {
+      "id": "70085",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt failover routing: empty form awaiting the actual policy. Item 82."
+    },
+    {
+      "id": "70086",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed cobalt failover routing. This is a question, not a confirmed decision. Item 83."
+    },
+    {
+      "id": "70087",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt keyword list: cobalt failover routing; no instruction is recorded. Item 84."
+    },
+    {
+      "id": "70088",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt failover routing: put this item on the agenda. No agreement was reached. Item 85."
+    },
+    {
+      "id": "70089",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt failover routing: rejected suggestion copied from a draft, awaiting a decision. Item 86."
+    },
+    {
+      "id": "70090",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt failover routing: empty form awaiting the actual policy. Item 87."
+    },
+    {
+      "id": "70091",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed cobalt failover routing. This is a question, not a confirmed decision. Item 88."
+    },
+    {
+      "id": "70092",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt keyword list: cobalt failover routing; no instruction is recorded. Item 89."
+    },
+    {
+      "id": "70093",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt failover routing: put this item on the agenda. No agreement was reached. Item 90."
+    },
+    {
+      "id": "70094",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt failover routing: rejected suggestion copied from a draft, awaiting a decision. Item 91."
+    },
+    {
+      "id": "70095",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt failover routing: empty form awaiting the actual policy. Item 92."
+    },
+    {
+      "id": "70096",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed cobalt failover routing. This is a question, not a confirmed decision. Item 93."
+    },
+    {
+      "id": "70097",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt keyword list: cobalt failover routing; no instruction is recorded. Item 94."
+    },
+    {
+      "id": "70098",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt failover routing: put this item on the agenda. No agreement was reached. Item 95."
+    },
+    {
+      "id": "70099",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt failover routing: rejected suggestion copied from a draft, awaiting a decision. Item 96."
+    },
+    {
+      "id": "70100",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt failover routing: empty form awaiting the actual policy. Item 97."
+    },
+    {
+      "id": "70101",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed cobalt failover routing. This is a question, not a confirmed decision. Item 98."
+    },
+    {
+      "id": "70102",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt keyword list: cobalt failover routing; no instruction is recorded. Item 99."
+    },
+    {
+      "id": "70103",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt failover routing: put this item on the agenda. No agreement was reached. Item 100."
+    },
+    {
+      "id": "70104",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt failover routing: rejected suggestion copied from a draft, awaiting a decision. Item 101."
+    },
+    {
+      "id": "70105",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt failover routing: empty form awaiting the actual policy. Item 102."
+    },
+    {
+      "id": "70106",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed cobalt failover routing. This is a question, not a confirmed decision. Item 103."
+    },
+    {
+      "id": "70107",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt keyword list: cobalt failover routing; no instruction is recorded. Item 104."
+    },
+    {
+      "id": "70108",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt failover routing: put this item on the agenda. No agreement was reached. Item 105."
+    },
+    {
+      "id": "70109",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt failover routing: rejected suggestion copied from a draft, awaiting a decision. Item 106."
+    },
+    {
+      "id": "70110",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt failover routing: empty form awaiting the actual policy. Item 107."
+    },
+    {
+      "id": "70111",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed cobalt failover routing. This is a question, not a confirmed decision. Item 108."
+    },
+    {
+      "id": "70112",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt keyword list: cobalt failover routing; no instruction is recorded. Item 109."
+    },
+    {
+      "id": "70113",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt failover routing: put this item on the agenda. No agreement was reached. Item 110."
+    },
+    {
+      "id": "70114",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt failover routing: rejected suggestion copied from a draft, awaiting a decision. Item 111."
+    },
+    {
+      "id": "70115",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt failover routing: empty form awaiting the actual policy. Item 112."
+    },
+    {
+      "id": "70116",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed cobalt failover routing. This is a question, not a confirmed decision. Item 113."
+    },
+    {
+      "id": "70117",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt keyword list: cobalt failover routing; no instruction is recorded. Item 114."
+    },
+    {
+      "id": "70118",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt failover routing: put this item on the agenda. No agreement was reached. Item 115."
+    },
+    {
+      "id": "70119",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt failover routing: rejected suggestion copied from a draft, awaiting a decision. Item 116."
+    },
+    {
+      "id": "70120",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt failover routing: empty form awaiting the actual policy. Item 117."
+    },
+    {
+      "id": "70121",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed cobalt failover routing. This is a question, not a confirmed decision. Item 118."
+    },
+    {
+      "id": "70122",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt keyword list: cobalt failover routing; no instruction is recorded. Item 119."
+    },
+    {
+      "id": "70123",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt failover routing: put this item on the agenda. No agreement was reached. Item 120."
+    },
+    {
+      "id": "70124",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt failover routing: rejected suggestion copied from a draft, awaiting a decision. Item 121."
+    },
+    {
+      "id": "70125",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt failover routing: empty form awaiting the actual policy. Item 122."
+    },
+    {
+      "id": "70126",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed cobalt failover routing. This is a question, not a confirmed decision. Item 123."
+    },
+    {
+      "id": "70127",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt keyword list: cobalt failover routing; no instruction is recorded. Item 124."
+    },
+    {
+      "id": "70128",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt failover routing: put this item on the agenda. No agreement was reached. Item 125."
+    },
+    {
+      "id": "70129",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt failover routing: rejected suggestion copied from a draft, awaiting a decision. Item 126."
+    },
+    {
+      "id": "70130",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt failover routing: empty form awaiting the actual policy. Item 127."
+    },
+    {
+      "id": "70131",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed cobalt failover routing. This is a question, not a confirmed decision. Item 128."
+    },
+    {
+      "id": "70132",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt keyword list: cobalt failover routing; no instruction is recorded. Item 129."
+    },
+    {
+      "id": "70133",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt failover routing: put this item on the agenda. No agreement was reached. Item 130."
+    },
+    {
+      "id": "70134",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt failover routing: rejected suggestion copied from a draft, awaiting a decision. Item 131."
+    },
+    {
+      "id": "70135",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt failover routing: empty form awaiting the actual policy. Item 132."
+    },
+    {
+      "id": "70136",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed cobalt failover routing. This is a question, not a confirmed decision. Item 133."
+    },
+    {
+      "id": "70137",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt keyword list: cobalt failover routing; no instruction is recorded. Item 134."
+    },
+    {
+      "id": "70138",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt failover routing: put this item on the agenda. No agreement was reached. Item 135."
+    },
+    {
+      "id": "70139",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt failover routing: rejected suggestion copied from a draft, awaiting a decision. Item 136."
+    },
+    {
+      "id": "70140",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt failover routing: empty form awaiting the actual policy. Item 137."
+    },
+    {
+      "id": "70141",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed cobalt failover routing. This is a question, not a confirmed decision. Item 138."
+    },
+    {
+      "id": "70142",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt keyword list: cobalt failover routing; no instruction is recorded. Item 139."
+    },
+    {
+      "id": "70143",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt failover routing: put this item on the agenda. No agreement was reached. Item 140."
+    },
+    {
+      "id": "70144",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt failover routing: rejected suggestion copied from a draft, awaiting a decision. Item 141."
+    },
+    {
+      "id": "70145",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt failover routing: empty form awaiting the actual policy. Item 142."
+    },
+    {
+      "id": "70146",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed cobalt failover routing. This is a question, not a confirmed decision. Item 143."
+    },
+    {
+      "id": "70147",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt keyword list: cobalt failover routing; no instruction is recorded. Item 144."
+    },
+    {
+      "id": "70148",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt failover routing: put this item on the agenda. No agreement was reached. Item 145."
+    },
+    {
+      "id": "70149",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt failover routing: rejected suggestion copied from a draft, awaiting a decision. Item 146."
+    },
+    {
+      "id": "70150",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt failover routing: empty form awaiting the actual policy. Item 147."
+    },
+    {
+      "id": "70151",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed cobalt failover routing. This is a question, not a confirmed decision. Item 148."
+    },
+    {
+      "id": "70152",
+      "chatId": "201",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "cobalt keyword list: cobalt failover routing; no instruction is recorded. Item 149."
+    },
+    {
+      "id": "70153",
+      "chatId": "202",
+      "senderId": "800",
+      "timestamp": "2026-10-05T12:00:00.000Z",
+      "text": "Birch export encryption policy: encrypt every export with a per-recipient key before sending it."
+    },
+    {
+      "id": "70154",
+      "chatId": "202",
+      "senderId": "800",
+      "timestamp": "2026-10-05T12:00:00.000Z",
+      "text": "Birch export encryption owner is Arun; the agreed policy is documented."
+    },
+    {
+      "id": "70155",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch export encryption: put this item on the agenda. No agreement was reached. Item 0."
+    },
+    {
+      "id": "70156",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch export encryption: rejected suggestion copied from a draft, awaiting a decision. Item 1."
+    },
+    {
+      "id": "70157",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch export encryption: empty form awaiting the actual policy. Item 2."
+    },
+    {
+      "id": "70158",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed birch export encryption. This is a question, not a confirmed decision. Item 3."
+    },
+    {
+      "id": "70159",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch keyword list: birch export encryption; no instruction is recorded. Item 4."
+    },
+    {
+      "id": "70160",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch export encryption: put this item on the agenda. No agreement was reached. Item 5."
+    },
+    {
+      "id": "70161",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch export encryption: rejected suggestion copied from a draft, awaiting a decision. Item 6."
+    },
+    {
+      "id": "70162",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch export encryption: empty form awaiting the actual policy. Item 7."
+    },
+    {
+      "id": "70163",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed birch export encryption. This is a question, not a confirmed decision. Item 8."
+    },
+    {
+      "id": "70164",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch keyword list: birch export encryption; no instruction is recorded. Item 9."
+    },
+    {
+      "id": "70165",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch export encryption: put this item on the agenda. No agreement was reached. Item 10."
+    },
+    {
+      "id": "70166",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch export encryption: rejected suggestion copied from a draft, awaiting a decision. Item 11."
+    },
+    {
+      "id": "70167",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch export encryption: empty form awaiting the actual policy. Item 12."
+    },
+    {
+      "id": "70168",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed birch export encryption. This is a question, not a confirmed decision. Item 13."
+    },
+    {
+      "id": "70169",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch keyword list: birch export encryption; no instruction is recorded. Item 14."
+    },
+    {
+      "id": "70170",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch export encryption: put this item on the agenda. No agreement was reached. Item 15."
+    },
+    {
+      "id": "70171",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch export encryption: rejected suggestion copied from a draft, awaiting a decision. Item 16."
+    },
+    {
+      "id": "70172",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch export encryption: empty form awaiting the actual policy. Item 17."
+    },
+    {
+      "id": "70173",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed birch export encryption. This is a question, not a confirmed decision. Item 18."
+    },
+    {
+      "id": "70174",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch keyword list: birch export encryption; no instruction is recorded. Item 19."
+    },
+    {
+      "id": "70175",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch export encryption: put this item on the agenda. No agreement was reached. Item 20."
+    },
+    {
+      "id": "70176",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch export encryption: rejected suggestion copied from a draft, awaiting a decision. Item 21."
+    },
+    {
+      "id": "70177",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch export encryption: empty form awaiting the actual policy. Item 22."
+    },
+    {
+      "id": "70178",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed birch export encryption. This is a question, not a confirmed decision. Item 23."
+    },
+    {
+      "id": "70179",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch keyword list: birch export encryption; no instruction is recorded. Item 24."
+    },
+    {
+      "id": "70180",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch export encryption: put this item on the agenda. No agreement was reached. Item 25."
+    },
+    {
+      "id": "70181",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch export encryption: rejected suggestion copied from a draft, awaiting a decision. Item 26."
+    },
+    {
+      "id": "70182",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch export encryption: empty form awaiting the actual policy. Item 27."
+    },
+    {
+      "id": "70183",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed birch export encryption. This is a question, not a confirmed decision. Item 28."
+    },
+    {
+      "id": "70184",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch keyword list: birch export encryption; no instruction is recorded. Item 29."
+    },
+    {
+      "id": "70185",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch export encryption: put this item on the agenda. No agreement was reached. Item 30."
+    },
+    {
+      "id": "70186",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch export encryption: rejected suggestion copied from a draft, awaiting a decision. Item 31."
+    },
+    {
+      "id": "70187",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch export encryption: empty form awaiting the actual policy. Item 32."
+    },
+    {
+      "id": "70188",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed birch export encryption. This is a question, not a confirmed decision. Item 33."
+    },
+    {
+      "id": "70189",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch keyword list: birch export encryption; no instruction is recorded. Item 34."
+    },
+    {
+      "id": "70190",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch export encryption: put this item on the agenda. No agreement was reached. Item 35."
+    },
+    {
+      "id": "70191",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch export encryption: rejected suggestion copied from a draft, awaiting a decision. Item 36."
+    },
+    {
+      "id": "70192",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch export encryption: empty form awaiting the actual policy. Item 37."
+    },
+    {
+      "id": "70193",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed birch export encryption. This is a question, not a confirmed decision. Item 38."
+    },
+    {
+      "id": "70194",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch keyword list: birch export encryption; no instruction is recorded. Item 39."
+    },
+    {
+      "id": "70195",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch export encryption: put this item on the agenda. No agreement was reached. Item 40."
+    },
+    {
+      "id": "70196",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch export encryption: rejected suggestion copied from a draft, awaiting a decision. Item 41."
+    },
+    {
+      "id": "70197",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch export encryption: empty form awaiting the actual policy. Item 42."
+    },
+    {
+      "id": "70198",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed birch export encryption. This is a question, not a confirmed decision. Item 43."
+    },
+    {
+      "id": "70199",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch keyword list: birch export encryption; no instruction is recorded. Item 44."
+    },
+    {
+      "id": "70200",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch export encryption: put this item on the agenda. No agreement was reached. Item 45."
+    },
+    {
+      "id": "70201",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch export encryption: rejected suggestion copied from a draft, awaiting a decision. Item 46."
+    },
+    {
+      "id": "70202",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch export encryption: empty form awaiting the actual policy. Item 47."
+    },
+    {
+      "id": "70203",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed birch export encryption. This is a question, not a confirmed decision. Item 48."
+    },
+    {
+      "id": "70204",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch keyword list: birch export encryption; no instruction is recorded. Item 49."
+    },
+    {
+      "id": "70205",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch export encryption: put this item on the agenda. No agreement was reached. Item 50."
+    },
+    {
+      "id": "70206",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch export encryption: rejected suggestion copied from a draft, awaiting a decision. Item 51."
+    },
+    {
+      "id": "70207",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch export encryption: empty form awaiting the actual policy. Item 52."
+    },
+    {
+      "id": "70208",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed birch export encryption. This is a question, not a confirmed decision. Item 53."
+    },
+    {
+      "id": "70209",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch keyword list: birch export encryption; no instruction is recorded. Item 54."
+    },
+    {
+      "id": "70210",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch export encryption: put this item on the agenda. No agreement was reached. Item 55."
+    },
+    {
+      "id": "70211",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch export encryption: rejected suggestion copied from a draft, awaiting a decision. Item 56."
+    },
+    {
+      "id": "70212",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch export encryption: empty form awaiting the actual policy. Item 57."
+    },
+    {
+      "id": "70213",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed birch export encryption. This is a question, not a confirmed decision. Item 58."
+    },
+    {
+      "id": "70214",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch keyword list: birch export encryption; no instruction is recorded. Item 59."
+    },
+    {
+      "id": "70215",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch export encryption: put this item on the agenda. No agreement was reached. Item 60."
+    },
+    {
+      "id": "70216",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch export encryption: rejected suggestion copied from a draft, awaiting a decision. Item 61."
+    },
+    {
+      "id": "70217",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch export encryption: empty form awaiting the actual policy. Item 62."
+    },
+    {
+      "id": "70218",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed birch export encryption. This is a question, not a confirmed decision. Item 63."
+    },
+    {
+      "id": "70219",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch keyword list: birch export encryption; no instruction is recorded. Item 64."
+    },
+    {
+      "id": "70220",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch export encryption: put this item on the agenda. No agreement was reached. Item 65."
+    },
+    {
+      "id": "70221",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch export encryption: rejected suggestion copied from a draft, awaiting a decision. Item 66."
+    },
+    {
+      "id": "70222",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch export encryption: empty form awaiting the actual policy. Item 67."
+    },
+    {
+      "id": "70223",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed birch export encryption. This is a question, not a confirmed decision. Item 68."
+    },
+    {
+      "id": "70224",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch keyword list: birch export encryption; no instruction is recorded. Item 69."
+    },
+    {
+      "id": "70225",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch export encryption: put this item on the agenda. No agreement was reached. Item 70."
+    },
+    {
+      "id": "70226",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch export encryption: rejected suggestion copied from a draft, awaiting a decision. Item 71."
+    },
+    {
+      "id": "70227",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch export encryption: empty form awaiting the actual policy. Item 72."
+    },
+    {
+      "id": "70228",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed birch export encryption. This is a question, not a confirmed decision. Item 73."
+    },
+    {
+      "id": "70229",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch keyword list: birch export encryption; no instruction is recorded. Item 74."
+    },
+    {
+      "id": "70230",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch export encryption: put this item on the agenda. No agreement was reached. Item 75."
+    },
+    {
+      "id": "70231",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch export encryption: rejected suggestion copied from a draft, awaiting a decision. Item 76."
+    },
+    {
+      "id": "70232",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch export encryption: empty form awaiting the actual policy. Item 77."
+    },
+    {
+      "id": "70233",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed birch export encryption. This is a question, not a confirmed decision. Item 78."
+    },
+    {
+      "id": "70234",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch keyword list: birch export encryption; no instruction is recorded. Item 79."
+    },
+    {
+      "id": "70235",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch export encryption: put this item on the agenda. No agreement was reached. Item 80."
+    },
+    {
+      "id": "70236",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch export encryption: rejected suggestion copied from a draft, awaiting a decision. Item 81."
+    },
+    {
+      "id": "70237",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch export encryption: empty form awaiting the actual policy. Item 82."
+    },
+    {
+      "id": "70238",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed birch export encryption. This is a question, not a confirmed decision. Item 83."
+    },
+    {
+      "id": "70239",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch keyword list: birch export encryption; no instruction is recorded. Item 84."
+    },
+    {
+      "id": "70240",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch export encryption: put this item on the agenda. No agreement was reached. Item 85."
+    },
+    {
+      "id": "70241",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch export encryption: rejected suggestion copied from a draft, awaiting a decision. Item 86."
+    },
+    {
+      "id": "70242",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch export encryption: empty form awaiting the actual policy. Item 87."
+    },
+    {
+      "id": "70243",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed birch export encryption. This is a question, not a confirmed decision. Item 88."
+    },
+    {
+      "id": "70244",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch keyword list: birch export encryption; no instruction is recorded. Item 89."
+    },
+    {
+      "id": "70245",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch export encryption: put this item on the agenda. No agreement was reached. Item 90."
+    },
+    {
+      "id": "70246",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch export encryption: rejected suggestion copied from a draft, awaiting a decision. Item 91."
+    },
+    {
+      "id": "70247",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch export encryption: empty form awaiting the actual policy. Item 92."
+    },
+    {
+      "id": "70248",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed birch export encryption. This is a question, not a confirmed decision. Item 93."
+    },
+    {
+      "id": "70249",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch keyword list: birch export encryption; no instruction is recorded. Item 94."
+    },
+    {
+      "id": "70250",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch export encryption: put this item on the agenda. No agreement was reached. Item 95."
+    },
+    {
+      "id": "70251",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch export encryption: rejected suggestion copied from a draft, awaiting a decision. Item 96."
+    },
+    {
+      "id": "70252",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch export encryption: empty form awaiting the actual policy. Item 97."
+    },
+    {
+      "id": "70253",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed birch export encryption. This is a question, not a confirmed decision. Item 98."
+    },
+    {
+      "id": "70254",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch keyword list: birch export encryption; no instruction is recorded. Item 99."
+    },
+    {
+      "id": "70255",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch export encryption: put this item on the agenda. No agreement was reached. Item 100."
+    },
+    {
+      "id": "70256",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch export encryption: rejected suggestion copied from a draft, awaiting a decision. Item 101."
+    },
+    {
+      "id": "70257",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch export encryption: empty form awaiting the actual policy. Item 102."
+    },
+    {
+      "id": "70258",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed birch export encryption. This is a question, not a confirmed decision. Item 103."
+    },
+    {
+      "id": "70259",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch keyword list: birch export encryption; no instruction is recorded. Item 104."
+    },
+    {
+      "id": "70260",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch export encryption: put this item on the agenda. No agreement was reached. Item 105."
+    },
+    {
+      "id": "70261",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch export encryption: rejected suggestion copied from a draft, awaiting a decision. Item 106."
+    },
+    {
+      "id": "70262",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch export encryption: empty form awaiting the actual policy. Item 107."
+    },
+    {
+      "id": "70263",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed birch export encryption. This is a question, not a confirmed decision. Item 108."
+    },
+    {
+      "id": "70264",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch keyword list: birch export encryption; no instruction is recorded. Item 109."
+    },
+    {
+      "id": "70265",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch export encryption: put this item on the agenda. No agreement was reached. Item 110."
+    },
+    {
+      "id": "70266",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch export encryption: rejected suggestion copied from a draft, awaiting a decision. Item 111."
+    },
+    {
+      "id": "70267",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch export encryption: empty form awaiting the actual policy. Item 112."
+    },
+    {
+      "id": "70268",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed birch export encryption. This is a question, not a confirmed decision. Item 113."
+    },
+    {
+      "id": "70269",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch keyword list: birch export encryption; no instruction is recorded. Item 114."
+    },
+    {
+      "id": "70270",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch export encryption: put this item on the agenda. No agreement was reached. Item 115."
+    },
+    {
+      "id": "70271",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch export encryption: rejected suggestion copied from a draft, awaiting a decision. Item 116."
+    },
+    {
+      "id": "70272",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch export encryption: empty form awaiting the actual policy. Item 117."
+    },
+    {
+      "id": "70273",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed birch export encryption. This is a question, not a confirmed decision. Item 118."
+    },
+    {
+      "id": "70274",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch keyword list: birch export encryption; no instruction is recorded. Item 119."
+    },
+    {
+      "id": "70275",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch export encryption: put this item on the agenda. No agreement was reached. Item 120."
+    },
+    {
+      "id": "70276",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch export encryption: rejected suggestion copied from a draft, awaiting a decision. Item 121."
+    },
+    {
+      "id": "70277",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch export encryption: empty form awaiting the actual policy. Item 122."
+    },
+    {
+      "id": "70278",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed birch export encryption. This is a question, not a confirmed decision. Item 123."
+    },
+    {
+      "id": "70279",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch keyword list: birch export encryption; no instruction is recorded. Item 124."
+    },
+    {
+      "id": "70280",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch export encryption: put this item on the agenda. No agreement was reached. Item 125."
+    },
+    {
+      "id": "70281",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch export encryption: rejected suggestion copied from a draft, awaiting a decision. Item 126."
+    },
+    {
+      "id": "70282",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch export encryption: empty form awaiting the actual policy. Item 127."
+    },
+    {
+      "id": "70283",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed birch export encryption. This is a question, not a confirmed decision. Item 128."
+    },
+    {
+      "id": "70284",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch keyword list: birch export encryption; no instruction is recorded. Item 129."
+    },
+    {
+      "id": "70285",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch export encryption: put this item on the agenda. No agreement was reached. Item 130."
+    },
+    {
+      "id": "70286",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch export encryption: rejected suggestion copied from a draft, awaiting a decision. Item 131."
+    },
+    {
+      "id": "70287",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch export encryption: empty form awaiting the actual policy. Item 132."
+    },
+    {
+      "id": "70288",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed birch export encryption. This is a question, not a confirmed decision. Item 133."
+    },
+    {
+      "id": "70289",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch keyword list: birch export encryption; no instruction is recorded. Item 134."
+    },
+    {
+      "id": "70290",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch export encryption: put this item on the agenda. No agreement was reached. Item 135."
+    },
+    {
+      "id": "70291",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch export encryption: rejected suggestion copied from a draft, awaiting a decision. Item 136."
+    },
+    {
+      "id": "70292",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch export encryption: empty form awaiting the actual policy. Item 137."
+    },
+    {
+      "id": "70293",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed birch export encryption. This is a question, not a confirmed decision. Item 138."
+    },
+    {
+      "id": "70294",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch keyword list: birch export encryption; no instruction is recorded. Item 139."
+    },
+    {
+      "id": "70295",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch export encryption: put this item on the agenda. No agreement was reached. Item 140."
+    },
+    {
+      "id": "70296",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch export encryption: rejected suggestion copied from a draft, awaiting a decision. Item 141."
+    },
+    {
+      "id": "70297",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch export encryption: empty form awaiting the actual policy. Item 142."
+    },
+    {
+      "id": "70298",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed birch export encryption. This is a question, not a confirmed decision. Item 143."
+    },
+    {
+      "id": "70299",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch keyword list: birch export encryption; no instruction is recorded. Item 144."
+    },
+    {
+      "id": "70300",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch export encryption: put this item on the agenda. No agreement was reached. Item 145."
+    },
+    {
+      "id": "70301",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch export encryption: rejected suggestion copied from a draft, awaiting a decision. Item 146."
+    },
+    {
+      "id": "70302",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch export encryption: empty form awaiting the actual policy. Item 147."
+    },
+    {
+      "id": "70303",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed birch export encryption. This is a question, not a confirmed decision. Item 148."
+    },
+    {
+      "id": "70304",
+      "chatId": "202",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "birch keyword list: birch export encryption; no instruction is recorded. Item 149."
+    },
+    {
+      "id": "70305",
+      "chatId": "203",
+      "senderId": "800",
+      "timestamp": "2026-10-05T12:00:00.000Z",
+      "text": "Спектр очередь лимит согласован: принимать не более 120 задач, остальные отправлять в резервную очередь."
+    },
+    {
+      "id": "70306",
+      "chatId": "203",
+      "senderId": "800",
+      "timestamp": "2026-10-05T12:00:00.000Z",
+      "text": "Спектр очередь лимит подтвержден, владелец Даша."
+    },
+    {
+      "id": "70307",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр очередь лимит: put this item on the agenda. No agreement was reached. Item 0."
+    },
+    {
+      "id": "70308",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр очередь лимит: rejected suggestion copied from a draft, awaiting a decision. Item 1."
+    },
+    {
+      "id": "70309",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр очередь лимит: empty form awaiting the actual policy. Item 2."
+    },
+    {
+      "id": "70310",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed спектр очередь лимит. This is a question, not a confirmed decision. Item 3."
+    },
+    {
+      "id": "70311",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр keyword list: спектр очередь лимит; no instruction is recorded. Item 4."
+    },
+    {
+      "id": "70312",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр очередь лимит: put this item on the agenda. No agreement was reached. Item 5."
+    },
+    {
+      "id": "70313",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр очередь лимит: rejected suggestion copied from a draft, awaiting a decision. Item 6."
+    },
+    {
+      "id": "70314",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр очередь лимит: empty form awaiting the actual policy. Item 7."
+    },
+    {
+      "id": "70315",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed спектр очередь лимит. This is a question, not a confirmed decision. Item 8."
+    },
+    {
+      "id": "70316",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр keyword list: спектр очередь лимит; no instruction is recorded. Item 9."
+    },
+    {
+      "id": "70317",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр очередь лимит: put this item on the agenda. No agreement was reached. Item 10."
+    },
+    {
+      "id": "70318",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр очередь лимит: rejected suggestion copied from a draft, awaiting a decision. Item 11."
+    },
+    {
+      "id": "70319",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр очередь лимит: empty form awaiting the actual policy. Item 12."
+    },
+    {
+      "id": "70320",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed спектр очередь лимит. This is a question, not a confirmed decision. Item 13."
+    },
+    {
+      "id": "70321",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр keyword list: спектр очередь лимит; no instruction is recorded. Item 14."
+    },
+    {
+      "id": "70322",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр очередь лимит: put this item on the agenda. No agreement was reached. Item 15."
+    },
+    {
+      "id": "70323",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр очередь лимит: rejected suggestion copied from a draft, awaiting a decision. Item 16."
+    },
+    {
+      "id": "70324",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр очередь лимит: empty form awaiting the actual policy. Item 17."
+    },
+    {
+      "id": "70325",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed спектр очередь лимит. This is a question, not a confirmed decision. Item 18."
+    },
+    {
+      "id": "70326",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр keyword list: спектр очередь лимит; no instruction is recorded. Item 19."
+    },
+    {
+      "id": "70327",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр очередь лимит: put this item on the agenda. No agreement was reached. Item 20."
+    },
+    {
+      "id": "70328",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр очередь лимит: rejected suggestion copied from a draft, awaiting a decision. Item 21."
+    },
+    {
+      "id": "70329",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр очередь лимит: empty form awaiting the actual policy. Item 22."
+    },
+    {
+      "id": "70330",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed спектр очередь лимит. This is a question, not a confirmed decision. Item 23."
+    },
+    {
+      "id": "70331",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр keyword list: спектр очередь лимит; no instruction is recorded. Item 24."
+    },
+    {
+      "id": "70332",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр очередь лимит: put this item on the agenda. No agreement was reached. Item 25."
+    },
+    {
+      "id": "70333",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр очередь лимит: rejected suggestion copied from a draft, awaiting a decision. Item 26."
+    },
+    {
+      "id": "70334",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр очередь лимит: empty form awaiting the actual policy. Item 27."
+    },
+    {
+      "id": "70335",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed спектр очередь лимит. This is a question, not a confirmed decision. Item 28."
+    },
+    {
+      "id": "70336",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр keyword list: спектр очередь лимит; no instruction is recorded. Item 29."
+    },
+    {
+      "id": "70337",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр очередь лимит: put this item on the agenda. No agreement was reached. Item 30."
+    },
+    {
+      "id": "70338",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр очередь лимит: rejected suggestion copied from a draft, awaiting a decision. Item 31."
+    },
+    {
+      "id": "70339",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр очередь лимит: empty form awaiting the actual policy. Item 32."
+    },
+    {
+      "id": "70340",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed спектр очередь лимит. This is a question, not a confirmed decision. Item 33."
+    },
+    {
+      "id": "70341",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр keyword list: спектр очередь лимит; no instruction is recorded. Item 34."
+    },
+    {
+      "id": "70342",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр очередь лимит: put this item on the agenda. No agreement was reached. Item 35."
+    },
+    {
+      "id": "70343",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр очередь лимит: rejected suggestion copied from a draft, awaiting a decision. Item 36."
+    },
+    {
+      "id": "70344",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр очередь лимит: empty form awaiting the actual policy. Item 37."
+    },
+    {
+      "id": "70345",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed спектр очередь лимит. This is a question, not a confirmed decision. Item 38."
+    },
+    {
+      "id": "70346",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр keyword list: спектр очередь лимит; no instruction is recorded. Item 39."
+    },
+    {
+      "id": "70347",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр очередь лимит: put this item on the agenda. No agreement was reached. Item 40."
+    },
+    {
+      "id": "70348",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр очередь лимит: rejected suggestion copied from a draft, awaiting a decision. Item 41."
+    },
+    {
+      "id": "70349",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр очередь лимит: empty form awaiting the actual policy. Item 42."
+    },
+    {
+      "id": "70350",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed спектр очередь лимит. This is a question, not a confirmed decision. Item 43."
+    },
+    {
+      "id": "70351",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр keyword list: спектр очередь лимит; no instruction is recorded. Item 44."
+    },
+    {
+      "id": "70352",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр очередь лимит: put this item on the agenda. No agreement was reached. Item 45."
+    },
+    {
+      "id": "70353",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр очередь лимит: rejected suggestion copied from a draft, awaiting a decision. Item 46."
+    },
+    {
+      "id": "70354",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр очередь лимит: empty form awaiting the actual policy. Item 47."
+    },
+    {
+      "id": "70355",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed спектр очередь лимит. This is a question, not a confirmed decision. Item 48."
+    },
+    {
+      "id": "70356",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр keyword list: спектр очередь лимит; no instruction is recorded. Item 49."
+    },
+    {
+      "id": "70357",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр очередь лимит: put this item on the agenda. No agreement was reached. Item 50."
+    },
+    {
+      "id": "70358",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр очередь лимит: rejected suggestion copied from a draft, awaiting a decision. Item 51."
+    },
+    {
+      "id": "70359",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр очередь лимит: empty form awaiting the actual policy. Item 52."
+    },
+    {
+      "id": "70360",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed спектр очередь лимит. This is a question, not a confirmed decision. Item 53."
+    },
+    {
+      "id": "70361",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр keyword list: спектр очередь лимит; no instruction is recorded. Item 54."
+    },
+    {
+      "id": "70362",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр очередь лимит: put this item on the agenda. No agreement was reached. Item 55."
+    },
+    {
+      "id": "70363",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр очередь лимит: rejected suggestion copied from a draft, awaiting a decision. Item 56."
+    },
+    {
+      "id": "70364",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр очередь лимит: empty form awaiting the actual policy. Item 57."
+    },
+    {
+      "id": "70365",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed спектр очередь лимит. This is a question, not a confirmed decision. Item 58."
+    },
+    {
+      "id": "70366",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр keyword list: спектр очередь лимит; no instruction is recorded. Item 59."
+    },
+    {
+      "id": "70367",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр очередь лимит: put this item on the agenda. No agreement was reached. Item 60."
+    },
+    {
+      "id": "70368",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр очередь лимит: rejected suggestion copied from a draft, awaiting a decision. Item 61."
+    },
+    {
+      "id": "70369",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр очередь лимит: empty form awaiting the actual policy. Item 62."
+    },
+    {
+      "id": "70370",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed спектр очередь лимит. This is a question, not a confirmed decision. Item 63."
+    },
+    {
+      "id": "70371",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр keyword list: спектр очередь лимит; no instruction is recorded. Item 64."
+    },
+    {
+      "id": "70372",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр очередь лимит: put this item on the agenda. No agreement was reached. Item 65."
+    },
+    {
+      "id": "70373",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр очередь лимит: rejected suggestion copied from a draft, awaiting a decision. Item 66."
+    },
+    {
+      "id": "70374",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр очередь лимит: empty form awaiting the actual policy. Item 67."
+    },
+    {
+      "id": "70375",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed спектр очередь лимит. This is a question, not a confirmed decision. Item 68."
+    },
+    {
+      "id": "70376",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр keyword list: спектр очередь лимит; no instruction is recorded. Item 69."
+    },
+    {
+      "id": "70377",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр очередь лимит: put this item on the agenda. No agreement was reached. Item 70."
+    },
+    {
+      "id": "70378",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр очередь лимит: rejected suggestion copied from a draft, awaiting a decision. Item 71."
+    },
+    {
+      "id": "70379",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр очередь лимит: empty form awaiting the actual policy. Item 72."
+    },
+    {
+      "id": "70380",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed спектр очередь лимит. This is a question, not a confirmed decision. Item 73."
+    },
+    {
+      "id": "70381",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр keyword list: спектр очередь лимит; no instruction is recorded. Item 74."
+    },
+    {
+      "id": "70382",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр очередь лимит: put this item on the agenda. No agreement was reached. Item 75."
+    },
+    {
+      "id": "70383",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр очередь лимит: rejected suggestion copied from a draft, awaiting a decision. Item 76."
+    },
+    {
+      "id": "70384",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр очередь лимит: empty form awaiting the actual policy. Item 77."
+    },
+    {
+      "id": "70385",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed спектр очередь лимит. This is a question, not a confirmed decision. Item 78."
+    },
+    {
+      "id": "70386",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр keyword list: спектр очередь лимит; no instruction is recorded. Item 79."
+    },
+    {
+      "id": "70387",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр очередь лимит: put this item on the agenda. No agreement was reached. Item 80."
+    },
+    {
+      "id": "70388",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр очередь лимит: rejected suggestion copied from a draft, awaiting a decision. Item 81."
+    },
+    {
+      "id": "70389",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр очередь лимит: empty form awaiting the actual policy. Item 82."
+    },
+    {
+      "id": "70390",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed спектр очередь лимит. This is a question, not a confirmed decision. Item 83."
+    },
+    {
+      "id": "70391",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр keyword list: спектр очередь лимит; no instruction is recorded. Item 84."
+    },
+    {
+      "id": "70392",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр очередь лимит: put this item on the agenda. No agreement was reached. Item 85."
+    },
+    {
+      "id": "70393",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр очередь лимит: rejected suggestion copied from a draft, awaiting a decision. Item 86."
+    },
+    {
+      "id": "70394",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр очередь лимит: empty form awaiting the actual policy. Item 87."
+    },
+    {
+      "id": "70395",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed спектр очередь лимит. This is a question, not a confirmed decision. Item 88."
+    },
+    {
+      "id": "70396",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр keyword list: спектр очередь лимит; no instruction is recorded. Item 89."
+    },
+    {
+      "id": "70397",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр очередь лимит: put this item on the agenda. No agreement was reached. Item 90."
+    },
+    {
+      "id": "70398",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр очередь лимит: rejected suggestion copied from a draft, awaiting a decision. Item 91."
+    },
+    {
+      "id": "70399",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр очередь лимит: empty form awaiting the actual policy. Item 92."
+    },
+    {
+      "id": "70400",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed спектр очередь лимит. This is a question, not a confirmed decision. Item 93."
+    },
+    {
+      "id": "70401",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр keyword list: спектр очередь лимит; no instruction is recorded. Item 94."
+    },
+    {
+      "id": "70402",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр очередь лимит: put this item on the agenda. No agreement was reached. Item 95."
+    },
+    {
+      "id": "70403",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр очередь лимит: rejected suggestion copied from a draft, awaiting a decision. Item 96."
+    },
+    {
+      "id": "70404",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр очередь лимит: empty form awaiting the actual policy. Item 97."
+    },
+    {
+      "id": "70405",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed спектр очередь лимит. This is a question, not a confirmed decision. Item 98."
+    },
+    {
+      "id": "70406",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр keyword list: спектр очередь лимит; no instruction is recorded. Item 99."
+    },
+    {
+      "id": "70407",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр очередь лимит: put this item on the agenda. No agreement was reached. Item 100."
+    },
+    {
+      "id": "70408",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр очередь лимит: rejected suggestion copied from a draft, awaiting a decision. Item 101."
+    },
+    {
+      "id": "70409",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр очередь лимит: empty form awaiting the actual policy. Item 102."
+    },
+    {
+      "id": "70410",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed спектр очередь лимит. This is a question, not a confirmed decision. Item 103."
+    },
+    {
+      "id": "70411",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр keyword list: спектр очередь лимит; no instruction is recorded. Item 104."
+    },
+    {
+      "id": "70412",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр очередь лимит: put this item on the agenda. No agreement was reached. Item 105."
+    },
+    {
+      "id": "70413",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр очередь лимит: rejected suggestion copied from a draft, awaiting a decision. Item 106."
+    },
+    {
+      "id": "70414",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр очередь лимит: empty form awaiting the actual policy. Item 107."
+    },
+    {
+      "id": "70415",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed спектр очередь лимит. This is a question, not a confirmed decision. Item 108."
+    },
+    {
+      "id": "70416",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр keyword list: спектр очередь лимит; no instruction is recorded. Item 109."
+    },
+    {
+      "id": "70417",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр очередь лимит: put this item on the agenda. No agreement was reached. Item 110."
+    },
+    {
+      "id": "70418",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр очередь лимит: rejected suggestion copied from a draft, awaiting a decision. Item 111."
+    },
+    {
+      "id": "70419",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр очередь лимит: empty form awaiting the actual policy. Item 112."
+    },
+    {
+      "id": "70420",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed спектр очередь лимит. This is a question, not a confirmed decision. Item 113."
+    },
+    {
+      "id": "70421",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр keyword list: спектр очередь лимит; no instruction is recorded. Item 114."
+    },
+    {
+      "id": "70422",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр очередь лимит: put this item on the agenda. No agreement was reached. Item 115."
+    },
+    {
+      "id": "70423",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр очередь лимит: rejected suggestion copied from a draft, awaiting a decision. Item 116."
+    },
+    {
+      "id": "70424",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр очередь лимит: empty form awaiting the actual policy. Item 117."
+    },
+    {
+      "id": "70425",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed спектр очередь лимит. This is a question, not a confirmed decision. Item 118."
+    },
+    {
+      "id": "70426",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр keyword list: спектр очередь лимит; no instruction is recorded. Item 119."
+    },
+    {
+      "id": "70427",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр очередь лимит: put this item on the agenda. No agreement was reached. Item 120."
+    },
+    {
+      "id": "70428",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр очередь лимит: rejected suggestion copied from a draft, awaiting a decision. Item 121."
+    },
+    {
+      "id": "70429",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр очередь лимит: empty form awaiting the actual policy. Item 122."
+    },
+    {
+      "id": "70430",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed спектр очередь лимит. This is a question, not a confirmed decision. Item 123."
+    },
+    {
+      "id": "70431",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр keyword list: спектр очередь лимит; no instruction is recorded. Item 124."
+    },
+    {
+      "id": "70432",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр очередь лимит: put this item on the agenda. No agreement was reached. Item 125."
+    },
+    {
+      "id": "70433",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр очередь лимит: rejected suggestion copied from a draft, awaiting a decision. Item 126."
+    },
+    {
+      "id": "70434",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр очередь лимит: empty form awaiting the actual policy. Item 127."
+    },
+    {
+      "id": "70435",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed спектр очередь лимит. This is a question, not a confirmed decision. Item 128."
+    },
+    {
+      "id": "70436",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр keyword list: спектр очередь лимит; no instruction is recorded. Item 129."
+    },
+    {
+      "id": "70437",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр очередь лимит: put this item on the agenda. No agreement was reached. Item 130."
+    },
+    {
+      "id": "70438",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр очередь лимит: rejected suggestion copied from a draft, awaiting a decision. Item 131."
+    },
+    {
+      "id": "70439",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр очередь лимит: empty form awaiting the actual policy. Item 132."
+    },
+    {
+      "id": "70440",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed спектр очередь лимит. This is a question, not a confirmed decision. Item 133."
+    },
+    {
+      "id": "70441",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр keyword list: спектр очередь лимит; no instruction is recorded. Item 134."
+    },
+    {
+      "id": "70442",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр очередь лимит: put this item on the agenda. No agreement was reached. Item 135."
+    },
+    {
+      "id": "70443",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр очередь лимит: rejected suggestion copied from a draft, awaiting a decision. Item 136."
+    },
+    {
+      "id": "70444",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр очередь лимит: empty form awaiting the actual policy. Item 137."
+    },
+    {
+      "id": "70445",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed спектр очередь лимит. This is a question, not a confirmed decision. Item 138."
+    },
+    {
+      "id": "70446",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр keyword list: спектр очередь лимит; no instruction is recorded. Item 139."
+    },
+    {
+      "id": "70447",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр очередь лимит: put this item on the agenda. No agreement was reached. Item 140."
+    },
+    {
+      "id": "70448",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр очередь лимит: rejected suggestion copied from a draft, awaiting a decision. Item 141."
+    },
+    {
+      "id": "70449",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр очередь лимит: empty form awaiting the actual policy. Item 142."
+    },
+    {
+      "id": "70450",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed спектр очередь лимит. This is a question, not a confirmed decision. Item 143."
+    },
+    {
+      "id": "70451",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр keyword list: спектр очередь лимит; no instruction is recorded. Item 144."
+    },
+    {
+      "id": "70452",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр очередь лимит: put this item on the agenda. No agreement was reached. Item 145."
+    },
+    {
+      "id": "70453",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр очередь лимит: rejected suggestion copied from a draft, awaiting a decision. Item 146."
+    },
+    {
+      "id": "70454",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр очередь лимит: empty form awaiting the actual policy. Item 147."
+    },
+    {
+      "id": "70455",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed спектр очередь лимит. This is a question, not a confirmed decision. Item 148."
+    },
+    {
+      "id": "70456",
+      "chatId": "203",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "спектр keyword list: спектр очередь лимит; no instruction is recorded. Item 149."
+    },
+    {
+      "id": "70457",
+      "chatId": "204",
+      "senderId": "800",
+      "timestamp": "2026-10-05T12:00:00.000Z",
+      "text": "Nova access expiry policy: expire temporary access after 48 hours and require a new approval to extend it."
+    },
+    {
+      "id": "70458",
+      "chatId": "204",
+      "senderId": "800",
+      "timestamp": "2026-10-05T12:00:00.000Z",
+      "text": "Nova access expiry owner is Bo; the agreed policy is documented."
+    },
+    {
+      "id": "70459",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova access expiry: put this item on the agenda. No agreement was reached. Item 0."
+    },
+    {
+      "id": "70460",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova access expiry: rejected suggestion copied from a draft, awaiting a decision. Item 1."
+    },
+    {
+      "id": "70461",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova access expiry: empty form awaiting the actual policy. Item 2."
+    },
+    {
+      "id": "70462",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed nova access expiry. This is a question, not a confirmed decision. Item 3."
+    },
+    {
+      "id": "70463",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova keyword list: nova access expiry; no instruction is recorded. Item 4."
+    },
+    {
+      "id": "70464",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova access expiry: put this item on the agenda. No agreement was reached. Item 5."
+    },
+    {
+      "id": "70465",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova access expiry: rejected suggestion copied from a draft, awaiting a decision. Item 6."
+    },
+    {
+      "id": "70466",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova access expiry: empty form awaiting the actual policy. Item 7."
+    },
+    {
+      "id": "70467",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed nova access expiry. This is a question, not a confirmed decision. Item 8."
+    },
+    {
+      "id": "70468",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova keyword list: nova access expiry; no instruction is recorded. Item 9."
+    },
+    {
+      "id": "70469",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova access expiry: put this item on the agenda. No agreement was reached. Item 10."
+    },
+    {
+      "id": "70470",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova access expiry: rejected suggestion copied from a draft, awaiting a decision. Item 11."
+    },
+    {
+      "id": "70471",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova access expiry: empty form awaiting the actual policy. Item 12."
+    },
+    {
+      "id": "70472",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed nova access expiry. This is a question, not a confirmed decision. Item 13."
+    },
+    {
+      "id": "70473",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova keyword list: nova access expiry; no instruction is recorded. Item 14."
+    },
+    {
+      "id": "70474",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova access expiry: put this item on the agenda. No agreement was reached. Item 15."
+    },
+    {
+      "id": "70475",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova access expiry: rejected suggestion copied from a draft, awaiting a decision. Item 16."
+    },
+    {
+      "id": "70476",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova access expiry: empty form awaiting the actual policy. Item 17."
+    },
+    {
+      "id": "70477",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed nova access expiry. This is a question, not a confirmed decision. Item 18."
+    },
+    {
+      "id": "70478",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova keyword list: nova access expiry; no instruction is recorded. Item 19."
+    },
+    {
+      "id": "70479",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova access expiry: put this item on the agenda. No agreement was reached. Item 20."
+    },
+    {
+      "id": "70480",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova access expiry: rejected suggestion copied from a draft, awaiting a decision. Item 21."
+    },
+    {
+      "id": "70481",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova access expiry: empty form awaiting the actual policy. Item 22."
+    },
+    {
+      "id": "70482",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed nova access expiry. This is a question, not a confirmed decision. Item 23."
+    },
+    {
+      "id": "70483",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova keyword list: nova access expiry; no instruction is recorded. Item 24."
+    },
+    {
+      "id": "70484",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova access expiry: put this item on the agenda. No agreement was reached. Item 25."
+    },
+    {
+      "id": "70485",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova access expiry: rejected suggestion copied from a draft, awaiting a decision. Item 26."
+    },
+    {
+      "id": "70486",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova access expiry: empty form awaiting the actual policy. Item 27."
+    },
+    {
+      "id": "70487",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed nova access expiry. This is a question, not a confirmed decision. Item 28."
+    },
+    {
+      "id": "70488",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova keyword list: nova access expiry; no instruction is recorded. Item 29."
+    },
+    {
+      "id": "70489",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova access expiry: put this item on the agenda. No agreement was reached. Item 30."
+    },
+    {
+      "id": "70490",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova access expiry: rejected suggestion copied from a draft, awaiting a decision. Item 31."
+    },
+    {
+      "id": "70491",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova access expiry: empty form awaiting the actual policy. Item 32."
+    },
+    {
+      "id": "70492",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed nova access expiry. This is a question, not a confirmed decision. Item 33."
+    },
+    {
+      "id": "70493",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova keyword list: nova access expiry; no instruction is recorded. Item 34."
+    },
+    {
+      "id": "70494",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova access expiry: put this item on the agenda. No agreement was reached. Item 35."
+    },
+    {
+      "id": "70495",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova access expiry: rejected suggestion copied from a draft, awaiting a decision. Item 36."
+    },
+    {
+      "id": "70496",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova access expiry: empty form awaiting the actual policy. Item 37."
+    },
+    {
+      "id": "70497",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed nova access expiry. This is a question, not a confirmed decision. Item 38."
+    },
+    {
+      "id": "70498",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova keyword list: nova access expiry; no instruction is recorded. Item 39."
+    },
+    {
+      "id": "70499",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova access expiry: put this item on the agenda. No agreement was reached. Item 40."
+    },
+    {
+      "id": "70500",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova access expiry: rejected suggestion copied from a draft, awaiting a decision. Item 41."
+    },
+    {
+      "id": "70501",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova access expiry: empty form awaiting the actual policy. Item 42."
+    },
+    {
+      "id": "70502",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed nova access expiry. This is a question, not a confirmed decision. Item 43."
+    },
+    {
+      "id": "70503",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova keyword list: nova access expiry; no instruction is recorded. Item 44."
+    },
+    {
+      "id": "70504",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova access expiry: put this item on the agenda. No agreement was reached. Item 45."
+    },
+    {
+      "id": "70505",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova access expiry: rejected suggestion copied from a draft, awaiting a decision. Item 46."
+    },
+    {
+      "id": "70506",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova access expiry: empty form awaiting the actual policy. Item 47."
+    },
+    {
+      "id": "70507",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed nova access expiry. This is a question, not a confirmed decision. Item 48."
+    },
+    {
+      "id": "70508",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova keyword list: nova access expiry; no instruction is recorded. Item 49."
+    },
+    {
+      "id": "70509",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova access expiry: put this item on the agenda. No agreement was reached. Item 50."
+    },
+    {
+      "id": "70510",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova access expiry: rejected suggestion copied from a draft, awaiting a decision. Item 51."
+    },
+    {
+      "id": "70511",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova access expiry: empty form awaiting the actual policy. Item 52."
+    },
+    {
+      "id": "70512",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed nova access expiry. This is a question, not a confirmed decision. Item 53."
+    },
+    {
+      "id": "70513",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova keyword list: nova access expiry; no instruction is recorded. Item 54."
+    },
+    {
+      "id": "70514",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova access expiry: put this item on the agenda. No agreement was reached. Item 55."
+    },
+    {
+      "id": "70515",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova access expiry: rejected suggestion copied from a draft, awaiting a decision. Item 56."
+    },
+    {
+      "id": "70516",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova access expiry: empty form awaiting the actual policy. Item 57."
+    },
+    {
+      "id": "70517",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed nova access expiry. This is a question, not a confirmed decision. Item 58."
+    },
+    {
+      "id": "70518",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova keyword list: nova access expiry; no instruction is recorded. Item 59."
+    },
+    {
+      "id": "70519",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova access expiry: put this item on the agenda. No agreement was reached. Item 60."
+    },
+    {
+      "id": "70520",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova access expiry: rejected suggestion copied from a draft, awaiting a decision. Item 61."
+    },
+    {
+      "id": "70521",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova access expiry: empty form awaiting the actual policy. Item 62."
+    },
+    {
+      "id": "70522",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed nova access expiry. This is a question, not a confirmed decision. Item 63."
+    },
+    {
+      "id": "70523",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova keyword list: nova access expiry; no instruction is recorded. Item 64."
+    },
+    {
+      "id": "70524",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova access expiry: put this item on the agenda. No agreement was reached. Item 65."
+    },
+    {
+      "id": "70525",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova access expiry: rejected suggestion copied from a draft, awaiting a decision. Item 66."
+    },
+    {
+      "id": "70526",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova access expiry: empty form awaiting the actual policy. Item 67."
+    },
+    {
+      "id": "70527",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed nova access expiry. This is a question, not a confirmed decision. Item 68."
+    },
+    {
+      "id": "70528",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova keyword list: nova access expiry; no instruction is recorded. Item 69."
+    },
+    {
+      "id": "70529",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova access expiry: put this item on the agenda. No agreement was reached. Item 70."
+    },
+    {
+      "id": "70530",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova access expiry: rejected suggestion copied from a draft, awaiting a decision. Item 71."
+    },
+    {
+      "id": "70531",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova access expiry: empty form awaiting the actual policy. Item 72."
+    },
+    {
+      "id": "70532",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed nova access expiry. This is a question, not a confirmed decision. Item 73."
+    },
+    {
+      "id": "70533",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova keyword list: nova access expiry; no instruction is recorded. Item 74."
+    },
+    {
+      "id": "70534",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova access expiry: put this item on the agenda. No agreement was reached. Item 75."
+    },
+    {
+      "id": "70535",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova access expiry: rejected suggestion copied from a draft, awaiting a decision. Item 76."
+    },
+    {
+      "id": "70536",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova access expiry: empty form awaiting the actual policy. Item 77."
+    },
+    {
+      "id": "70537",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed nova access expiry. This is a question, not a confirmed decision. Item 78."
+    },
+    {
+      "id": "70538",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova keyword list: nova access expiry; no instruction is recorded. Item 79."
+    },
+    {
+      "id": "70539",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova access expiry: put this item on the agenda. No agreement was reached. Item 80."
+    },
+    {
+      "id": "70540",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova access expiry: rejected suggestion copied from a draft, awaiting a decision. Item 81."
+    },
+    {
+      "id": "70541",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova access expiry: empty form awaiting the actual policy. Item 82."
+    },
+    {
+      "id": "70542",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed nova access expiry. This is a question, not a confirmed decision. Item 83."
+    },
+    {
+      "id": "70543",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova keyword list: nova access expiry; no instruction is recorded. Item 84."
+    },
+    {
+      "id": "70544",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova access expiry: put this item on the agenda. No agreement was reached. Item 85."
+    },
+    {
+      "id": "70545",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova access expiry: rejected suggestion copied from a draft, awaiting a decision. Item 86."
+    },
+    {
+      "id": "70546",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova access expiry: empty form awaiting the actual policy. Item 87."
+    },
+    {
+      "id": "70547",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed nova access expiry. This is a question, not a confirmed decision. Item 88."
+    },
+    {
+      "id": "70548",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova keyword list: nova access expiry; no instruction is recorded. Item 89."
+    },
+    {
+      "id": "70549",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova access expiry: put this item on the agenda. No agreement was reached. Item 90."
+    },
+    {
+      "id": "70550",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova access expiry: rejected suggestion copied from a draft, awaiting a decision. Item 91."
+    },
+    {
+      "id": "70551",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova access expiry: empty form awaiting the actual policy. Item 92."
+    },
+    {
+      "id": "70552",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed nova access expiry. This is a question, not a confirmed decision. Item 93."
+    },
+    {
+      "id": "70553",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova keyword list: nova access expiry; no instruction is recorded. Item 94."
+    },
+    {
+      "id": "70554",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova access expiry: put this item on the agenda. No agreement was reached. Item 95."
+    },
+    {
+      "id": "70555",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova access expiry: rejected suggestion copied from a draft, awaiting a decision. Item 96."
+    },
+    {
+      "id": "70556",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova access expiry: empty form awaiting the actual policy. Item 97."
+    },
+    {
+      "id": "70557",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed nova access expiry. This is a question, not a confirmed decision. Item 98."
+    },
+    {
+      "id": "70558",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova keyword list: nova access expiry; no instruction is recorded. Item 99."
+    },
+    {
+      "id": "70559",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova access expiry: put this item on the agenda. No agreement was reached. Item 100."
+    },
+    {
+      "id": "70560",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova access expiry: rejected suggestion copied from a draft, awaiting a decision. Item 101."
+    },
+    {
+      "id": "70561",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova access expiry: empty form awaiting the actual policy. Item 102."
+    },
+    {
+      "id": "70562",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed nova access expiry. This is a question, not a confirmed decision. Item 103."
+    },
+    {
+      "id": "70563",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova keyword list: nova access expiry; no instruction is recorded. Item 104."
+    },
+    {
+      "id": "70564",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova access expiry: put this item on the agenda. No agreement was reached. Item 105."
+    },
+    {
+      "id": "70565",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova access expiry: rejected suggestion copied from a draft, awaiting a decision. Item 106."
+    },
+    {
+      "id": "70566",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova access expiry: empty form awaiting the actual policy. Item 107."
+    },
+    {
+      "id": "70567",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed nova access expiry. This is a question, not a confirmed decision. Item 108."
+    },
+    {
+      "id": "70568",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova keyword list: nova access expiry; no instruction is recorded. Item 109."
+    },
+    {
+      "id": "70569",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova access expiry: put this item on the agenda. No agreement was reached. Item 110."
+    },
+    {
+      "id": "70570",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova access expiry: rejected suggestion copied from a draft, awaiting a decision. Item 111."
+    },
+    {
+      "id": "70571",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova access expiry: empty form awaiting the actual policy. Item 112."
+    },
+    {
+      "id": "70572",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed nova access expiry. This is a question, not a confirmed decision. Item 113."
+    },
+    {
+      "id": "70573",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova keyword list: nova access expiry; no instruction is recorded. Item 114."
+    },
+    {
+      "id": "70574",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova access expiry: put this item on the agenda. No agreement was reached. Item 115."
+    },
+    {
+      "id": "70575",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova access expiry: rejected suggestion copied from a draft, awaiting a decision. Item 116."
+    },
+    {
+      "id": "70576",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova access expiry: empty form awaiting the actual policy. Item 117."
+    },
+    {
+      "id": "70577",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed nova access expiry. This is a question, not a confirmed decision. Item 118."
+    },
+    {
+      "id": "70578",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova keyword list: nova access expiry; no instruction is recorded. Item 119."
+    },
+    {
+      "id": "70579",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova access expiry: put this item on the agenda. No agreement was reached. Item 120."
+    },
+    {
+      "id": "70580",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova access expiry: rejected suggestion copied from a draft, awaiting a decision. Item 121."
+    },
+    {
+      "id": "70581",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova access expiry: empty form awaiting the actual policy. Item 122."
+    },
+    {
+      "id": "70582",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed nova access expiry. This is a question, not a confirmed decision. Item 123."
+    },
+    {
+      "id": "70583",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova keyword list: nova access expiry; no instruction is recorded. Item 124."
+    },
+    {
+      "id": "70584",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova access expiry: put this item on the agenda. No agreement was reached. Item 125."
+    },
+    {
+      "id": "70585",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova access expiry: rejected suggestion copied from a draft, awaiting a decision. Item 126."
+    },
+    {
+      "id": "70586",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova access expiry: empty form awaiting the actual policy. Item 127."
+    },
+    {
+      "id": "70587",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed nova access expiry. This is a question, not a confirmed decision. Item 128."
+    },
+    {
+      "id": "70588",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova keyword list: nova access expiry; no instruction is recorded. Item 129."
+    },
+    {
+      "id": "70589",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova access expiry: put this item on the agenda. No agreement was reached. Item 130."
+    },
+    {
+      "id": "70590",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova access expiry: rejected suggestion copied from a draft, awaiting a decision. Item 131."
+    },
+    {
+      "id": "70591",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova access expiry: empty form awaiting the actual policy. Item 132."
+    },
+    {
+      "id": "70592",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed nova access expiry. This is a question, not a confirmed decision. Item 133."
+    },
+    {
+      "id": "70593",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova keyword list: nova access expiry; no instruction is recorded. Item 134."
+    },
+    {
+      "id": "70594",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova access expiry: put this item on the agenda. No agreement was reached. Item 135."
+    },
+    {
+      "id": "70595",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova access expiry: rejected suggestion copied from a draft, awaiting a decision. Item 136."
+    },
+    {
+      "id": "70596",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova access expiry: empty form awaiting the actual policy. Item 137."
+    },
+    {
+      "id": "70597",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed nova access expiry. This is a question, not a confirmed decision. Item 138."
+    },
+    {
+      "id": "70598",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova keyword list: nova access expiry; no instruction is recorded. Item 139."
+    },
+    {
+      "id": "70599",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova access expiry: put this item on the agenda. No agreement was reached. Item 140."
+    },
+    {
+      "id": "70600",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova access expiry: rejected suggestion copied from a draft, awaiting a decision. Item 141."
+    },
+    {
+      "id": "70601",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova access expiry: empty form awaiting the actual policy. Item 142."
+    },
+    {
+      "id": "70602",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed nova access expiry. This is a question, not a confirmed decision. Item 143."
+    },
+    {
+      "id": "70603",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova keyword list: nova access expiry; no instruction is recorded. Item 144."
+    },
+    {
+      "id": "70604",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova access expiry: put this item on the agenda. No agreement was reached. Item 145."
+    },
+    {
+      "id": "70605",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova access expiry: rejected suggestion copied from a draft, awaiting a decision. Item 146."
+    },
+    {
+      "id": "70606",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova access expiry: empty form awaiting the actual policy. Item 147."
+    },
+    {
+      "id": "70607",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "Checking whether the team discussed nova access expiry. This is a question, not a confirmed decision. Item 148."
+    },
+    {
+      "id": "70608",
+      "chatId": "204",
+      "senderId": "801",
+      "timestamp": "2026-10-06T12:00:00.000Z",
+      "text": "nova keyword list: nova access expiry; no instruction is recorded. Item 149."
+    }
+  ],
+  "queries": [
+    {
+      "id": "aurora-question-decision",
+      "split": "dev",
+      "family": "aurora",
+      "category": "decision",
+      "retrieval": "aurora rollout rollback",
+      "text": "What rollback decision was agreed for the Aurora rollout?",
+      "relevant": {
+        "10001": 2,
+        "10002": 1
+      }
+    },
+    {
+      "id": "aurora-question-question",
+      "split": "dev",
+      "family": "aurora",
+      "category": "question",
+      "retrieval": "aurora rollout rollback",
+      "text": "What should we do to roll back the Aurora rollout?",
+      "relevant": {
+        "10001": 2,
+        "10002": 1
+      }
+    },
+    {
+      "id": "aurora-question-no-answer",
+      "split": "dev",
+      "family": "aurora",
+      "category": "no-answer",
+      "retrieval": "aurora rollout rollback",
+      "text": "Which independent auditor signed off on aurora rollout rollback?",
+      "relevant": {}
+    },
+    {
+      "id": "cedar-question-decision",
+      "split": "dev",
+      "family": "cedar",
+      "category": "decision",
+      "retrieval": "cedar backup retention",
+      "text": "What retention policy was agreed for Cedar backups?",
+      "relevant": {
+        "10303": 2,
+        "10304": 1
+      }
+    },
+    {
+      "id": "cedar-question-question",
+      "split": "dev",
+      "family": "cedar",
+      "category": "question",
+      "retrieval": "cedar backup retention",
+      "text": "How long should Cedar backup snapshots be kept?",
+      "relevant": {
+        "10303": 2,
+        "10304": 1
+      }
+    },
+    {
+      "id": "cedar-question-no-answer",
+      "split": "dev",
+      "family": "cedar",
+      "category": "no-answer",
+      "retrieval": "cedar backup retention",
+      "text": "Which independent auditor signed off on cedar backup retention?",
+      "relevant": {}
+    },
+    {
+      "id": "север-question-decision",
+      "split": "dev",
+      "family": "север",
+      "category": "decision",
+      "retrieval": "север сертификат обновление",
+      "text": "Какое решение принято по обновлению сертификата Север?",
+      "relevant": {
+        "10605": 2,
+        "10606": 1
+      }
+    },
+    {
+      "id": "север-question-question",
+      "split": "dev",
+      "family": "север",
+      "category": "question",
+      "retrieval": "север сертификат обновление",
+      "text": "Что известно о новом сертификате Север и сроке его действия?",
+      "relevant": {
+        "10605": 2,
+        "10606": 1
+      }
+    },
+    {
+      "id": "север-question-no-answer",
+      "split": "dev",
+      "family": "север",
+      "category": "no-answer",
+      "retrieval": "север сертификат обновление",
+      "text": "Какой независимый аудитор подписал обновление сертификата Север?",
+      "relevant": {}
+    },
+    {
+      "id": "lumen-question-decision",
+      "split": "dev",
+      "family": "lumen",
+      "category": "decision",
+      "retrieval": "lumen invoice refund",
+      "text": "What refund was approved for the Lumen invoice?",
+      "relevant": {
+        "10907": 2,
+        "10908": 1
+      }
+    },
+    {
+      "id": "lumen-question-question",
+      "split": "dev",
+      "family": "lumen",
+      "category": "question",
+      "retrieval": "lumen invoice refund",
+      "text": "What should be returned to the payer of the Lumen invoice?",
+      "relevant": {
+        "10907": 2,
+        "10908": 1
+      }
+    },
+    {
+      "id": "lumen-question-no-answer",
+      "split": "dev",
+      "family": "lumen",
+      "category": "no-answer",
+      "retrieval": "lumen invoice refund",
+      "text": "Which independent auditor signed off on lumen invoice refund?",
+      "relevant": {}
+    },
+    {
+      "id": "cobalt-question-decision",
+      "split": "test",
+      "family": "cobalt",
+      "category": "decision",
+      "retrieval": "cobalt failover routing",
+      "text": "What failover routing was approved for Cobalt?",
+      "relevant": {
+        "70001": 2,
+        "70002": 1
+      }
+    },
+    {
+      "id": "cobalt-question-question",
+      "split": "test",
+      "family": "cobalt",
+      "category": "question",
+      "retrieval": "cobalt failover routing",
+      "text": "Where should Cobalt traffic go after failover?",
+      "relevant": {
+        "70001": 2,
+        "70002": 1
+      }
+    },
+    {
+      "id": "cobalt-question-no-answer",
+      "split": "test",
+      "family": "cobalt",
+      "category": "no-answer",
+      "retrieval": "cobalt failover routing",
+      "text": "Which independent auditor signed off on cobalt failover routing?",
+      "relevant": {}
+    },
+    {
+      "id": "birch-question-decision",
+      "split": "test",
+      "family": "birch",
+      "category": "decision",
+      "retrieval": "birch export encryption",
+      "text": "What export encryption policy was agreed for Birch?",
+      "relevant": {
+        "70153": 2,
+        "70154": 1
+      }
+    },
+    {
+      "id": "birch-question-question",
+      "split": "test",
+      "family": "birch",
+      "category": "question",
+      "retrieval": "birch export encryption",
+      "text": "How should Birch exports be encrypted before they are sent?",
+      "relevant": {
+        "70153": 2,
+        "70154": 1
+      }
+    },
+    {
+      "id": "birch-question-no-answer",
+      "split": "test",
+      "family": "birch",
+      "category": "no-answer",
+      "retrieval": "birch export encryption",
+      "text": "Which independent auditor signed off on birch export encryption?",
+      "relevant": {}
+    },
+    {
+      "id": "спектр-question-decision",
+      "split": "test",
+      "family": "спектр",
+      "category": "decision",
+      "retrieval": "спектр очередь лимит",
+      "text": "Какой лимит очереди согласован для Спектр?",
+      "relevant": {
+        "70305": 2,
+        "70306": 1
+      }
+    },
+    {
+      "id": "спектр-question-question",
+      "split": "test",
+      "family": "спектр",
+      "category": "question",
+      "retrieval": "спектр очередь лимит",
+      "text": "Сколько задач принимает очередь Спектр и куда отправлять остальные?",
+      "relevant": {
+        "70305": 2,
+        "70306": 1
+      }
+    },
+    {
+      "id": "спектр-question-no-answer",
+      "split": "test",
+      "family": "спектр",
+      "category": "no-answer",
+      "retrieval": "спектр очередь лимит",
+      "text": "Какой независимый аудитор подписал лимит очереди Спектр?",
+      "relevant": {}
+    },
+    {
+      "id": "nova-question-decision",
+      "split": "test",
+      "family": "nova",
+      "category": "decision",
+      "retrieval": "nova access expiry",
+      "text": "What access expiry policy was agreed for Nova?",
+      "relevant": {
+        "70457": 2,
+        "70458": 1
+      }
+    },
+    {
+      "id": "nova-question-question",
+      "split": "test",
+      "family": "nova",
+      "category": "question",
+      "retrieval": "nova access expiry",
+      "text": "When does Nova temporary access expire and how can it be extended?",
+      "relevant": {
+        "70457": 2,
+        "70458": 1
+      }
+    },
+    {
+      "id": "nova-question-no-answer",
+      "split": "test",
+      "family": "nova",
+      "category": "no-answer",
+      "retrieval": "nova access expiry",
+      "text": "Which independent auditor signed off on nova access expiry?",
+      "relevant": {}
+    }
+  ]
+}

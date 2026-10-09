@@ -40,6 +40,12 @@ type Row = {
 
 const corpusBytes = readFileSync(new URL("./corpus.json", import.meta.url))
 const corpus = JSON.parse(corpusBytes.toString()) as Corpus
+const supplementBytes = process.argv.includes("--include-questions") ? readFileSync(new URL("./questions.json", import.meta.url)) : undefined
+if (supplementBytes) {
+  const supplement = JSON.parse(supplementBytes.toString()) as Pick<Corpus,"chats"|"messages">
+  corpus.chats.push(...supplement.chats)
+  corpus.messages.push(...supplement.messages)
+}
 const ids = new Set(corpus.messages.map(({ id }) => id))
 assert.equal(ids.size, corpus.messages.length)
 assert.equal(new Set(corpus.queries.map(({ id }) => id)).size, corpus.queries.length)
@@ -115,6 +121,7 @@ try {
     "search/correct.js", "search/stem.js", "search/lucene/parser.js", "store/sqlite/lucene.js", "store/sqlite/words.js"]
   console.log(JSON.stringify({
     schemaVersion: 1, k: 10, node: process.version, timezone: "UTC", storePath: path,
+    archiveSupplementSha256: supplementBytes ? digest(supplementBytes) : null,
     corpusSha256: digest(corpusBytes), runnerSha256: digest(readFileSync(fileURLToPath(import.meta.url))),
     productionSha256: Object.fromEntries(productionFiles.map((file) => [file, digest(readFileSync(new URL(`../../dist/${file}`, import.meta.url)))])),
     messages: corpus.messages.length, queries: corpus.queries.length,

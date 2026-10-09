@@ -98,3 +98,96 @@ combined held-out result is produced when dev fails. The original baseline is pr
 The [revised proposal](../../docs/dev/combined-search.md#measured-lexical-experiment-and-revised-proposal)
 requests a semantic evaluation before public adoption. Timings are from this small corpus on a
 shared machine; they are not release-scale latency evidence.
+
+## Candidate recall and semantic ranking
+
+[semantic.ts](semantic.ts) measures the lexical candidate pool before reranking. The original
+corpus and labels remain unchanged. [questions.json](questions.json) adds eight answerable and four
+no-answer questions on the existing dev topics, plus four fresh held-out topic families with 608
+new synthetic messages and twelve questions. [generate-questions.py](generate-questions.py)
+reproduces this supplement. Its input hashes are frozen before model inference and parameter selection.
+Query `intent` and relevance labels are never supplied to either model.
+
+Dev candidate recall is 0.4375 at depth 50, 0.7500 at 100, and 0.9000 at 300/500. Depth 300 is the
+smallest tested pool reaching maximum recall. Every non-paraphrase category has full candidate
+recall at that depth; paraphrases have zero. The pool size measures returned candidates from the
+internal service, rather than the union of every raw matcher list.
+
+To measure the already installed, pinned e5-small model:
+
+```sh
+pnpm build
+pnpm exec tsc -p bench/message-search-quality/tsconfig.json
+node bench/message-search-quality/semantic.ts > bench/message-search-quality/semantic-dev.json
+```
+
+The benchmark verifies the local model's hashes before opening it. e5-small cosine reranking
+reduces original dev keyword recall@10 from 0.3625 to 0.2750, MRR from 0.3750 to 0.3000, and nDCG
+from 0.3264 to 0.2674. On the additional answerable questions it improves ranking when supplied
+manual topic anchors for retrieval, but every tested threshold preserving zero no-answer hits
+reduces answerable recall to zero. No e5 held-out evaluation is performed because dev fails.
+
+The second experiment uses the official
+[mmarco-mMiniLMv2-L12-H384-v1 model](https://huggingface.co/cross-encoder/mmarco-mMiniLMv2-L12-H384-v1)
+to jointly score query-message pairs. [reranker.json](reranker.json) pins an Apache-2.0 ONNX export,
+its revision, tokenizer/config files and SHA-256 hashes. Its identity activation is retained:
+scores are raw logits, not cosine or calibrated probabilities. The benchmark-only adapter is
+[crossencoder.ts](crossencoder.ts); it uses the installed tokenizer and WebAssembly ONNX runtime,
+checks input/output shapes and rejects overlength pairs instead of silently truncating them.
+
+Model preparation is an explicit, separate network step, totaling about 136 MB. Use a directory
+outside the real store and repository, then run the offline evaluation:
+
+```sh
+python bench/message-search-quality/prepare-reranker.py /tmp/message-search-reranker-1427fd6
+MESSAGE_RERANKER_DIR=/tmp/message-search-reranker-1427fd6 \
+  node bench/message-search-quality/semantic.ts --crossencoder > bench/message-search-quality/crossencoder-dev.json
+```
+
+The evaluation cannot download or install a model. Preparation and benchmark stores retain their
+files for inspection; cleanup is a separate task. Both models score only bounded lexical candidates.
+Explicit Boolean/phrase/AST requests retain the existing strict ranking. All parameters are selected
+on dev; held-out inference happens only after the dev ranking/no-answer gates pass.
+
+The question-form experiment deliberately separates two measurements: direct full-question Lucene
+retrieval, which currently finds no candidates, and reranking a manually supplied topic shortlist.
+Manual topic anchors are diagnostic inputs, not an implemented natural-language query parser.
+These results do not establish end-to-end question search. Questions asking for an unknown auditor
+provide harder no-answer controls than the original requests with absent topic words.
+
+### Measured query-message ranking
+
+[crossencoder-dev.json](crossencoder-dev.json) records the frozen model, depth 300, raw score floor
+2 selected for the question diagnostic, exact hashes, per-query rankings, and both held-out reports.
+Keyword requests use reranking without a score floor; their no-answer candidate pools are empty.
+The question floor is fitted on dev only and is not a general answerability or confidence guarantee.
+
+| Original query split | Mode | Recall@10 | MRR@10 | nDCG@10 | No-answer false hits |
+|---|---|---|---|---|---|
+| dev | Strict | 0.313 | 0.325 | 0.287 | 0 |
+| dev | Legacy | 0.388 | 0.425 | 0.354 | 80 |
+| dev | Combined + joint reranker | 0.525 | 0.553 | 0.477 | 0 |
+| held-out | Strict | 0.263 | 0.325 | 0.219 | 0 |
+| held-out | Legacy | 0.338 | 0.450 | 0.299 | 80 |
+| held-out | Combined + joint reranker | 0.438 | 0.488 | 0.405 | 0 |
+
+The original keyword held-out result beats both previous modes but misses the approved recall
+0.45 and MRR 0.50 gates. nDCG and no-answer gates pass. No parameters are changed after reading
+these results. The fresh question held-out diagnostic has recall 0.6875, MRR 1.0, nDCG 0.8660 and
+zero false hits on four no-answer queries, using manual anchors. This small synthetic set does not
+establish general answerability or a functioning full-question retrieval path.
+
+The semantic experiment indexes both the original corpus and fresh supplemental messages. To
+control for the changed archive, strict/legacy results on that same 3,224-message archive are in
+[augmented-baseline.json](augmented-baseline.json); their original-query metrics equal the old
+baseline. Reproduce that comparison without changing the original baseline file:
+
+```sh
+node bench/message-search-quality/run.ts --include-questions > bench/message-search-quality/augmented-baseline.json
+```
+
+The joint model scores about 10–12 ms per pair in these runs on eight WebAssembly threads, plus
+roughly a second to load. Scoring 300 uncached pairs therefore costs about 3–4 seconds, exceeding
+the proposed 250 ms latency gate. This is measured benchmark inference, not production p95 or
+an optimized batch/native implementation. Exact-pair caching helps repeated identical requests;
+it does not remove the cost of a new query. No public service/default or consumer version changed.

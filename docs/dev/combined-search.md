@@ -1,8 +1,9 @@
-# One message search: proposal for approval
+# One message search: measured design
 
-Status: the owner approved the lexical experiment. Its dev evaluation failed the approved
-quality gates, so CLI/MCP and SDK defaults remain unchanged. The internal matcher and measured
-results are available for review; the revised semantic evaluation below needs owner approval.
+Status: the owner approved the lexical and semantic experiments. Lexical reranking and e5 cosine
+ranking fail the dev quality gates; joint query-message ranking improves the measured results.
+CLI/MCP and SDK defaults remain unchanged while latency and the original held-out quality gates
+remain unmet. Natural-language question retrieval is a separate diagnostic, not a public feature.
 
 ## Evidence and acceptance targets
 
@@ -74,9 +75,9 @@ No 100k-message latency claim is made; release-scale performance work follows a 
 The old baseline remains committed unchanged. The smallest experimental configuration is reported
 for inspection, not selected as a release recommendation; the internal defaults are provisional.
 
-Proposed next phase, requiring approval: measure a local semantic reranker over the bounded,
-filter-valid lexical candidates before changing the public default. First define its model,
-installation/readiness behavior and cost budget, without an automatic download or network call.
+The approved semantic experiment measures a local reranker over bounded, filter-valid lexical
+candidates before changing the public default. Model preparation is an explicit separate step;
+the benchmark itself cannot download a model, connect to a messenger or open the real store.
 Evaluate per-message text against the whole query; compare it with chunk-to-message semantic
 retrieval only if lexical candidate recall itself is inadequate. Do not reuse the conversation
 0.80 cosine floor as a message threshold.
@@ -87,7 +88,49 @@ this keyword-query benchmark or relabel distractors. The existing `intent` field
 answer text and must never be passed to retrieval or a reranker. Create fresh held-out topic/query
 families before tuning the new approach, freeze the dev choice, then evaluate held-out once.
 If semantic ranking also fails, report that result rather than relax the release gates implicitly.
-All CLI/MCP removal, SDK/saved conversion and consumer releases below remain pending quality gates.
+All CLI/MCP removal, SDK/saved conversion and consumer releases below remain pending the full
+quality, latency and query-contract checks.
+
+## Semantic experiment
+
+The [semantic benchmark](../../bench/message-search-quality/README.md#candidate-recall-and-semantic-ranking)
+preserves the original corpus/labels and adds separately authored question queries plus fresh
+held-out families. Candidate recall reaches 0.90 at depth 300: every non-paraphrase category has
+full candidate recall, while paraphrase requests have none. Most misses in the top ten are ranking
+errors, not absent candidates. No broader semantic retrieval has been introduced.
+
+The installed pinned e5-small embedding model reduces dev keyword recall@10 to 0.275 and fails
+the quality gates. Clearer questions help it rank some answers, but cosine floors cannot retain
+answers while eliminating the new no-answer hits. Reject embedding cosine as this message reranker.
+
+The benchmark then evaluates an official Apache-2.0 quantized
+[query-message model](https://huggingface.co/cross-encoder/mmarco-mMiniLMv2-L12-H384-v1), pinned separately
+in [reranker.json](../../bench/message-search-quality/reranker.json). It scores query and message
+together rather than comparing separately generated vectors. The benchmark uses its raw identity
+logits, with no automatic model installation, and freezes the dev-selected configuration before
+held-out inference. This is a benchmark adapter, not a public model catalogue or service addition.
+
+Question reranking uses explicitly authored topic anchors for candidate retrieval. Sending a full
+question directly to the current implicit-conjunction Lucene search returns no candidates. Thus
+successful question reranking is diagnostic evidence, not a completed natural-language search path.
+The unknown-auditor queries test whether a model can reject a topical message that lacks the
+requested fact. The original keyword/no-answer queries remain unchanged and are reported separately.
+
+The joint reranker improves original dev keyword recall/MRR/nDCG to 0.525/0.553/0.477, with zero
+no-answer hits. The frozen original held-out result is 0.438/0.488/0.405, also with zero false hits:
+it beats strict and legacy on all three quality measures but misses the 0.45 recall and 0.50 MRR
+gates. Do not retune on these held-out results. The same-archive strict/legacy baseline confirms
+that supplemental messages do not account for the improvement. The fresh question diagnostic
+reaches 0.688 recall, MRR 1.0 and nDCG 0.866, with zero no-answer hits, under manual topic anchors.
+Raw results and reproducibility instructions are in the benchmark README. These are small,
+synthetic evaluations with shared templates, not evidence of general real-archive performance.
+
+The measured CPU pair cost is roughly 10–12 ms per message; scoring 300 fresh candidates takes seconds
+and misses the proposed 250 ms latency gate. A model load also costs roughly one second. Synthetic
+exact-pair caches do not establish production warm latency for a different query. Public adoption
+needs the original held-out quality gates and a measured cost reduction, or an explicitly revised
+release policy. Natural-language question support additionally needs automatic candidate selection;
+the existing public contract remains Lucene expressions. Ranking gains alone do not qualify a release.
 
 ## Query behavior
 
