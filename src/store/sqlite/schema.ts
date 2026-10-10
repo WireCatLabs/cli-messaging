@@ -1147,7 +1147,7 @@ export const searches = sqliteTable(
   "searches",
   {
     id: integer("id").primaryKey(),
-    name: text("name"),
+    name: text("name").unique(),
     command: text("command").notNull(),
     params: text("params").notNull(),
     language: text("language").notNull(),
@@ -1159,7 +1159,6 @@ export const searches = sqliteTable(
     updatedAt: integer("updated_at").notNull(),
   },
   (table) => [
-    unique().on(table.name),
     uniqueIndex("searches_history").on(table.command, table.params).where(sql`name IS NULL`),
     index("searches_by_last_run").on(desc(table.lastRunAt)),
   ],

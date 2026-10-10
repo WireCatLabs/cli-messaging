@@ -303,15 +303,20 @@ with `normalize()`, and its `identity` names what built an index.
 
 ### Migrations
 
-Versions 1–5 are hand-written in `src/store/migrations.ts` and frozen. From version 6 on, a
-migration is SQL that `pnpm db:generate` writes into `drizzle/` from `src/store/sqlite/schema.ts`,
-`pnpm db:bundle` copies into `src/store/sqlite/migrations.generated.ts`, and a row in
-`src/store/sqlite/manifest.ts` numbers. Our runner (`migrate`) applies both, under `BEGIN IMMEDIATE`;
-Drizzle's own migrator is not used. Every migration is forward-only, additive, numbered, and never
-edited once it reached anyone's file — a test refuses a generated rebuild of a base table. `min_compatible` lets an older CLI keep using a file a newer
-one migrated; a migration that drops what an older build reads raises it, and that build then refuses
-the file and asks to be upgraded. It is 28: version 28 dropped the tables kept for builds before the
-notes refactor.
+The store is **v2**: one baseline, store version 100, creates every table in
+[`docs/storage/schema-v2.md`](../storage/schema-v2.md). It is two folders under `drizzle/` — the SQL
+`pnpm db:generate` wrote from `src/store/sqlite/schema.ts`, and a custom one for the FTS5 indexes, their
+triggers and the `WITHOUT ROWID` search-term tables. `pnpm db:bundle` copies them into
+`src/store/sqlite/migrations.generated.ts`, and `src/store/sqlite/manifest.ts` numbers them. Our runner
+(`migrate`) applies them under `BEGIN IMMEDIATE`; Drizzle's own migrator is not used.
+
+The baseline is 100 rather than 1 so that a build of the old line, which speaks up to 28, refuses a v2
+file instead of migrating it; `migrate` in turn refuses a file at 1–99 and names `store upgrade-v2`,
+which converts it once and keeps the old file. Every migration after the baseline is forward-only,
+additive, numbered, and never edited once it reached anyone's file — a test refuses a generated rebuild
+of a base table. `min_compatible` lets an older CLI keep using a file a newer one migrated; a migration
+that drops what an older build reads raises it, and that build then refuses the file and asks to be
+upgraded. It is 100.
 
 ⚠ **Announce a migration number before writing it.** Several sessions work in this repository at
 once, and two of them taking the same number is a conflict no rebase fixes. The next free number
@@ -338,16 +343,16 @@ it by editing that line in a PR of its own, merged before the migration.
    `version`. Two folders with one version — the generated one and its custom one, as version 6 —
    apply as one migration and write one `schema_migrations` row. Versions run on without a gap
    (`manifest.test.ts:38-45`).
-6. **`minCompatible` stays where it is** — 28 today — for an additive change. Raising it locks every
+6. **`minCompatible` stays where it is** — 100 today — for an additive change. Raising it locks every
    older build out of the file: ask the owner first; it is a major version of this package, and
    tg-cli and max-cli ship their upgrade the same day, as with version 6.
 7. **`pnpm db:bundle`** after every `db:generate` and every edit of a `migration.sql`. It rewrites
    `src/store/sqlite/migrations.generated.ts`; `pnpm build` does not, and the test "are bundled
    exactly as drizzle-kit wrote them" (`manifest.test.ts:22`) fails until you run it.
-8. **Test that the oldest build that must still open the file does.** The published 0.49.0 is a
-   development dependency, `cli-messaging-0.49`; the pattern is "a build on version 6, on a version 7
-   file" in `src/store/chat-members.test.ts`. "is what every migration builds"
-   (`src/store/sqlite/schema.test.ts:76`) checks that `schema.ts` and the migrations agree.
+8. **Test the upgrade**: a `src/store/version-<n>.test.ts` opens a file at version n−1, migrates it and
+   reads what the new version added. `src/store/sqlite/schema.test.ts` opens a new store and compares
+   every table and column with [`schema-v2.md`](../storage/schema-v2.md), and compiles every trigger:
+   change the page with the schema.
 9. **CHANGELOG**: an entry under `## Unreleased` that names the store version, as "Chat members in
    the store (store version 7)" does.
 

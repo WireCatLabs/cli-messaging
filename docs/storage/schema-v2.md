@@ -1199,7 +1199,7 @@ Every run of `search messages` and `stats messages show`, with the parameters as
 | Column | Type | Constraints | References | Meaning |
 |---|---|---|---|---|
 | `id` ← `pk` | integer | PK |  |  |
-| `name` | text |  |  | The saved search's unique name; NULL for an unnamed run kept only as history. |
+| `name` | text | unique |  | The saved search's unique name; NULL for an unnamed run kept only as history. |
 | `command` | text | not null |  | `search` or `stats`. |
 | `params` | text | not null |  | JSON, keys sorted, so the same run is the same text. |
 | `language` | text | not null |  | `lucene-v1` or `legacy`. |
@@ -1210,7 +1210,7 @@ Every run of `search messages` and `stats messages show`, with the parameters as
 | `runs` | integer | not null |  | How many times this search has been run. |
 | `updated_at` | integer | not null |  | when this row last changed here |
 
-*Keys and indexes:* `UNIQUE (name)`, `UNIQUE (command, params) WHERE name IS NULL`, `INDEX (last_run_at DESC)`
+*Keys and indexes:* `UNIQUE (command, params) WHERE name IS NULL`, `INDEX (last_run_at DESC)`
 
 ### `taggings` — new
 

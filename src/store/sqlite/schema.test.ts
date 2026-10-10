@@ -24,6 +24,10 @@ const open = async (): Promise<CacheDatabase> => {
   return database
 }
 
+/** A column as the page writes it: name, type, its constraints and what it references. */
+const column = (name: string, type: string, flags: string[], reference: string | undefined): string =>
+  [name, type, flags.filter(Boolean).join(", "), reference && `→ ${reference}`].filter(Boolean).join(" ")
+
 /** Every table the page lists, with its columns in order; a full-text index has none. */
 const documented = (): Record<string, string[]> => {
   const tables: Record<string, string[]> = {}
@@ -34,8 +38,9 @@ const documented = (): Record<string, string[]> => {
     if (heading?.[1]) tables[heading[1]] = current = []
     const virtual = /^CREATE VIRTUAL TABLE (\w+)/.exec(line)
     if (virtual?.[1]) tables[virtual[1]] = []
-    const column = /^\| `(\w+)`/.exec(line)
-    if (column?.[1] && current) current.push(column[1])
+    if (!current || !/^\| `\w+`/.test(line)) continue
+    const [, name = "", type = "", flags = "", reference = ""] = line.split("|").map((cell) => cell.trim())
+    current.push(column(/`(\w+)`/.exec(name)?.[1] ?? "", type, flags.split(", "), /`([\w.]+)`/.exec(reference)?.[1]))
   }
   return tables
 }
@@ -52,14 +57,47 @@ const built = (database: CacheDatabase): Record<string, string[]> => {
   const tables = rows(`SELECT name FROM sqlite_schema WHERE type = 'table' AND name NOT LIKE 'sqlite_%'`)
     .map((row) => String(row.name))
     .filter((name) => !shadows.has(name))
-  return Object.fromEntries(
-    tables.map((name) => [
-      name,
-      virtual.includes(name)
-        ? []
-        : rows(`SELECT name FROM pragma_table_info('${name}') ORDER BY cid`).map((row) => String(row.name)),
-    ]),
-  )
+  const columns = (table: string): string[] => {
+    const info = rows(`SELECT name, type, "notnull", pk FROM pragma_table_info('${table}') ORDER BY cid`)
+    const singleKey = info.filter((row) => Number(row.pk) > 0).length === 1
+    const references = new Map(
+      rows(`SELECT "from", "table", "to" FROM pragma_foreign_key_list('${table}')`).map((row) => [
+        String(row.from),
+        `${String(row.table)}.${String(row.to)}`,
+      ]),
+    )
+    const unique = new Set(
+      rows(`SELECT name FROM pragma_index_list('${table}') WHERE "unique" = 1 AND origin = 'u'`)
+        .map((index) => rows(`SELECT name FROM pragma_index_info('${String(index.name)}')`))
+        .filter((keyed) => keyed.length === 1)
+        .map((keyed) => String(keyed[0]?.name)),
+    )
+    return info.map((row) => {
+      const name = String(row.name)
+      const key = singleKey && Number(row.pk) > 0
+      const flags = [key ? "PK" : "", Number(row.notnull) && !key ? "not null" : "", unique.has(name) ? "unique" : ""]
+      return column(name, String(row.type).toLowerCase(), flags, references.get(name))
+    })
+  }
+  return Object.fromEntries(tables.map((name) => [name, virtual.includes(name) ? [] : columns(name)]))
+}
+
+/**
+ * SQLite compiles a table's triggers into every statement that writes it, so preparing an insert, an
+ * update of every column and a delete reaches every trigger body — a column it names that does not exist
+ * fails here, not on the first real write.
+ */
+const writesReachingEveryTrigger = (database: CacheDatabase): string[] => {
+  const rows = (sql: string) => database.prepare(sql).all()
+  return rows(`SELECT DISTINCT tbl_name FROM sqlite_schema WHERE type = 'trigger' ORDER BY tbl_name`).flatMap((row) => {
+    const table = String(row.tbl_name)
+    const names = rows(`SELECT name FROM pragma_table_info('${table}')`).map((column) => `"${String(column.name)}"`)
+    return [
+      `INSERT INTO ${table} SELECT * FROM ${table} WHERE 0`,
+      `UPDATE ${table} SET ${names.map((name) => `${name} = ${name}`).join(", ")} WHERE 0`,
+      `DELETE FROM ${table} WHERE 0`,
+    ]
+  })
 }
 
 describe("the v2 baseline", () => {
@@ -72,7 +110,16 @@ describe("the v2 baseline", () => {
     expect(built(database)).toEqual(documented())
   })
 
-  it("**runs every trigger and full-text index** on real rows, under the new column names", async () => {
+  it("**compiles every trigger** against the columns the tables really have", async () => {
+    const database = await open()
+    migrate(database)
+
+    const writes = writesReachingEveryTrigger(database)
+    expect(writes.length).toBeGreaterThan(30)
+    for (const write of writes) expect(() => database.prepare(write), write).not.toThrow()
+  })
+
+  it("runs the triggers and full-text indexes on real rows: counts, cleanups, queues and matches", async () => {
     const database = await open()
     migrate(database)
     const run = (sql: string) => database.exec(sql)

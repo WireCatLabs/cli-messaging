@@ -12,3 +12,7 @@ built today is in [ARCHITECTURE, "The store"](../dev/ARCHITECTURE.md#the-store).
 | [`../../bench/search/`](../../bench/search/) | the benchmark fixture and its results |
 
 Search AI configuration and opt-in analysis: [`../search/ai-providers.md`](../search/ai-providers.md).
+
+`schema-v2.md` is the store v2 plan's schema page, rendered from the plan's spec, with its first paragraph
+replaced. After a spec change, copy the page again over everything below that paragraph; the schema test
+fails until the code and the page agree.
