@@ -1,7 +1,7 @@
 {
-  "id": "f106a5e4-e7b4-43a9-b9fc-42a6a2a84537",
+  "id": "60028093-e4d5-4d36-82b4-a38c0271a35b",
   "prevIds": [
-    "f848b1ad-52dc-4ace-9ccc-2a3554f4a4fc"
+    "00c1c03e-b3c8-45cf-a627-6ce65186d99e"
   ],
   "version": "7",
   "dialect": "sqlite",
@@ -15,6 +15,10 @@
       "entityType": "tables"
     },
     {
+      "name": "agent_actions",
+      "entityType": "tables"
+    },
+    {
       "name": "aliases",
       "entityType": "tables"
     },
@@ -24,6 +28,10 @@
     },
     {
       "name": "auto_tag_claims",
+      "entityType": "tables"
+    },
+    {
+      "name": "bot_updates",
       "entityType": "tables"
     },
     {
@@ -56,6 +64,10 @@
     },
     {
       "name": "conversations",
+      "entityType": "tables"
+    },
+    {
+      "name": "decisions",
       "entityType": "tables"
     },
     {
@@ -95,10 +107,6 @@
       "entityType": "tables"
     },
     {
-      "name": "entities",
-      "entityType": "tables"
-    },
-    {
       "name": "event_series",
       "entityType": "tables"
     },
@@ -124,6 +132,10 @@
     },
     {
       "name": "identity_revisions",
+      "entityType": "tables"
+    },
+    {
+      "name": "involvements",
       "entityType": "tables"
     },
     {
@@ -175,6 +187,14 @@
       "entityType": "tables"
     },
     {
+      "name": "memories",
+      "entityType": "tables"
+    },
+    {
+      "name": "memory_index_pending",
+      "entityType": "tables"
+    },
+    {
       "name": "message_counter_observations",
       "entityType": "tables"
     },
@@ -211,11 +231,19 @@
       "entityType": "tables"
     },
     {
+      "name": "organizations",
+      "entityType": "tables"
+    },
+    {
       "name": "persons",
       "entityType": "tables"
     },
     {
       "name": "projects",
+      "entityType": "tables"
+    },
+    {
+      "name": "proposed_actions",
       "entityType": "tables"
     },
     {
@@ -395,6 +423,146 @@
       "name": "updated_at",
       "entityType": "columns",
       "table": "accounts"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "'personal'",
+      "generated": null,
+      "name": "scope",
+      "entityType": "columns",
+      "table": "accounts"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "organization_id",
+      "entityType": "columns",
+      "table": "accounts"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "agent_actions"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "actor_type",
+      "entityType": "columns",
+      "table": "agent_actions"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "actor_id",
+      "entityType": "columns",
+      "table": "agent_actions"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "tool",
+      "entityType": "columns",
+      "table": "agent_actions"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "tier",
+      "entityType": "columns",
+      "table": "agent_actions"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "target_type",
+      "entityType": "columns",
+      "table": "agent_actions"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "target_id",
+      "entityType": "columns",
+      "table": "agent_actions"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "status",
+      "entityType": "columns",
+      "table": "agent_actions"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "error",
+      "entityType": "columns",
+      "table": "agent_actions"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "started_at",
+      "entityType": "columns",
+      "table": "agent_actions"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "finished_at",
+      "entityType": "columns",
+      "table": "agent_actions"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "agent_actions"
     },
     {
       "type": "integer",
@@ -814,6 +982,106 @@
       "generated": null,
       "name": "id",
       "entityType": "columns",
+      "table": "bot_updates"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "account_id",
+      "entityType": "columns",
+      "table": "bot_updates"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "external_id",
+      "entityType": "columns",
+      "table": "bot_updates"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "kind",
+      "entityType": "columns",
+      "table": "bot_updates"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "payload",
+      "entityType": "columns",
+      "table": "bot_updates"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "received_at",
+      "entityType": "columns",
+      "table": "bot_updates"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "handled_at",
+      "entityType": "columns",
+      "table": "bot_updates"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "error",
+      "entityType": "columns",
+      "table": "bot_updates"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "replayed_at",
+      "entityType": "columns",
+      "table": "bot_updates"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "bot_updates"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
       "table": "bots"
     },
     {
@@ -1142,6 +1410,26 @@
       "autoincrement": false,
       "default": null,
       "generated": null,
+      "name": "parent_chat_id",
+      "entityType": "columns",
+      "table": "chats"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "scope",
+      "entityType": "columns",
+      "table": "chats"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
       "name": "id",
       "entityType": "columns",
       "table": "chunks"
@@ -1203,6 +1491,46 @@
       "default": null,
       "generated": null,
       "name": "content_hash",
+      "entityType": "columns",
+      "table": "chunks"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "scope",
+      "entityType": "columns",
+      "table": "chunks"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "account_id",
+      "entityType": "columns",
+      "table": "chunks"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "project_id",
+      "entityType": "columns",
+      "table": "chunks"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "occurred_at",
       "entityType": "columns",
       "table": "chunks"
     },
@@ -1475,6 +1803,136 @@
       "name": "updated_at",
       "entityType": "columns",
       "table": "conversations"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "decisions"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "project_id",
+      "entityType": "columns",
+      "table": "decisions"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "statement",
+      "entityType": "columns",
+      "table": "decisions"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "status",
+      "entityType": "columns",
+      "table": "decisions"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "decided_at",
+      "entityType": "columns",
+      "table": "decisions"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "supersedes_id",
+      "entityType": "columns",
+      "table": "decisions"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "confirmed_by_type",
+      "entityType": "columns",
+      "table": "decisions"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "confirmed_by_id",
+      "entityType": "columns",
+      "table": "decisions"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "source",
+      "entityType": "columns",
+      "table": "decisions"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "metadata",
+      "entityType": "columns",
+      "table": "decisions"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "decisions"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "updated_at",
+      "entityType": "columns",
+      "table": "decisions"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "deleted_at",
+      "entityType": "columns",
+      "table": "decisions"
     },
     {
       "type": "integer",
@@ -2384,56 +2842,6 @@
       "generated": null,
       "name": "id",
       "entityType": "columns",
-      "table": "entities"
-    },
-    {
-      "type": "text",
-      "notNull": true,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "kind",
-      "entityType": "columns",
-      "table": "entities"
-    },
-    {
-      "type": "text",
-      "notNull": true,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "name",
-      "entityType": "columns",
-      "table": "entities"
-    },
-    {
-      "type": "integer",
-      "notNull": true,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "created_at",
-      "entityType": "columns",
-      "table": "entities"
-    },
-    {
-      "type": "integer",
-      "notNull": true,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "updated_at",
-      "entityType": "columns",
-      "table": "entities"
-    },
-    {
-      "type": "integer",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "id",
-      "entityType": "columns",
       "table": "event_series"
     },
     {
@@ -2975,6 +3383,116 @@
       "name": "created_at",
       "entityType": "columns",
       "table": "identity_revisions"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "involvements"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "person_id",
+      "entityType": "columns",
+      "table": "involvements"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "identity_id",
+      "entityType": "columns",
+      "table": "involvements"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "subject_type",
+      "entityType": "columns",
+      "table": "involvements"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "subject_id",
+      "entityType": "columns",
+      "table": "involvements"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "role",
+      "entityType": "columns",
+      "table": "involvements"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "occurred_at",
+      "entityType": "columns",
+      "table": "involvements"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "scope",
+      "entityType": "columns",
+      "table": "involvements"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "account_id",
+      "entityType": "columns",
+      "table": "involvements"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "project_id",
+      "entityType": "columns",
+      "table": "involvements"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "involvements"
     },
     {
       "type": "integer",
@@ -4368,6 +4886,176 @@
     },
     {
       "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "memories"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "kind",
+      "entityType": "columns",
+      "table": "memories"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "body",
+      "entityType": "columns",
+      "table": "memories"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "subject_type",
+      "entityType": "columns",
+      "table": "memories"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "subject_id",
+      "entityType": "columns",
+      "table": "memories"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "author_type",
+      "entityType": "columns",
+      "table": "memories"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "author_id",
+      "entityType": "columns",
+      "table": "memories"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "model",
+      "entityType": "columns",
+      "table": "memories"
+    },
+    {
+      "type": "real",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "confidence",
+      "entityType": "columns",
+      "table": "memories"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "status",
+      "entityType": "columns",
+      "table": "memories"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "last_verified_at",
+      "entityType": "columns",
+      "table": "memories"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "supersedes_id",
+      "entityType": "columns",
+      "table": "memories"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "scope",
+      "entityType": "columns",
+      "table": "memories"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "memories"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "updated_at",
+      "entityType": "columns",
+      "table": "memories"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "memory_index_pending"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "indexable_type",
+      "entityType": "columns",
+      "table": "memory_index_pending"
+    },
+    {
+      "type": "integer",
       "notNull": true,
       "autoincrement": false,
       "default": null,
@@ -4948,6 +5636,16 @@
     },
     {
       "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "thread_root_id",
+      "entityType": "columns",
+      "table": "messages"
+    },
+    {
+      "type": "integer",
       "notNull": true,
       "autoincrement": false,
       "default": null,
@@ -5134,6 +5832,86 @@
       "generated": null,
       "name": "id",
       "entityType": "columns",
+      "table": "organizations"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "kind",
+      "entityType": "columns",
+      "table": "organizations"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "name",
+      "entityType": "columns",
+      "table": "organizations"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "'personal'",
+      "generated": null,
+      "name": "scope",
+      "entityType": "columns",
+      "table": "organizations"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "metadata",
+      "entityType": "columns",
+      "table": "organizations"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "organizations"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "updated_at",
+      "entityType": "columns",
+      "table": "organizations"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "deleted_at",
+      "entityType": "columns",
+      "table": "organizations"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
       "table": "persons"
     },
     {
@@ -5218,6 +5996,36 @@
     },
     {
       "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "type",
+      "entityType": "columns",
+      "table": "projects"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "organization_id",
+      "entityType": "columns",
+      "table": "projects"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "'personal'",
+      "generated": null,
+      "name": "scope",
+      "entityType": "columns",
+      "table": "projects"
+    },
+    {
+      "type": "text",
       "notNull": false,
       "autoincrement": false,
       "default": null,
@@ -5285,6 +6093,196 @@
       "name": "deleted_at",
       "entityType": "columns",
       "table": "projects"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "proposed_actions"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "kind",
+      "entityType": "columns",
+      "table": "proposed_actions"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "account_id",
+      "entityType": "columns",
+      "table": "proposed_actions"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "target_type",
+      "entityType": "columns",
+      "table": "proposed_actions"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "target_id",
+      "entityType": "columns",
+      "table": "proposed_actions"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "payload",
+      "entityType": "columns",
+      "table": "proposed_actions"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "reason",
+      "entityType": "columns",
+      "table": "proposed_actions"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "status",
+      "entityType": "columns",
+      "table": "proposed_actions"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "proposed_by_type",
+      "entityType": "columns",
+      "table": "proposed_actions"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "proposed_by_id",
+      "entityType": "columns",
+      "table": "proposed_actions"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "decided_by_type",
+      "entityType": "columns",
+      "table": "proposed_actions"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "decided_by_id",
+      "entityType": "columns",
+      "table": "proposed_actions"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "decided_at",
+      "entityType": "columns",
+      "table": "proposed_actions"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "executed_at",
+      "entityType": "columns",
+      "table": "proposed_actions"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "result",
+      "entityType": "columns",
+      "table": "proposed_actions"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "error",
+      "entityType": "columns",
+      "table": "proposed_actions"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "verdict",
+      "entityType": "columns",
+      "table": "proposed_actions"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "proposed_actions"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "updated_at",
+      "entityType": "columns",
+      "table": "proposed_actions"
     },
     {
       "type": "integer",
@@ -5847,6 +6845,16 @@
       "table": "taggings"
     },
     {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "0",
+      "generated": null,
+      "name": "main",
+      "entityType": "columns",
+      "table": "taggings"
+    },
+    {
       "type": "text",
       "notNull": true,
       "autoincrement": false,
@@ -5913,6 +6921,16 @@
       "default": null,
       "generated": null,
       "name": "name",
+      "entityType": "columns",
+      "table": "tags"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "'tag'",
+      "generated": null,
+      "name": "kind",
       "entityType": "columns",
       "table": "tags"
     },
@@ -6272,6 +7290,26 @@
       "autoincrement": false,
       "default": null,
       "generated": null,
+      "name": "resolution",
+      "entityType": "columns",
+      "table": "tasks"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "verdict",
+      "entityType": "columns",
+      "table": "tasks"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
       "name": "metadata",
       "entityType": "columns",
       "table": "tasks"
@@ -6338,6 +7376,21 @@
     },
     {
       "columns": [
+        "organization_id"
+      ],
+      "tableTo": "organizations",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "nameExplicit": false,
+      "name": "fk_accounts_organization_id_organizations_id_fk",
+      "entityType": "fks",
+      "table": "accounts"
+    },
+    {
+      "columns": [
         "account_id"
       ],
       "tableTo": "accounts",
@@ -6380,6 +7433,21 @@
       "name": "fk_auto_tag_claims_tag_id_tags_id_fk",
       "entityType": "fks",
       "table": "auto_tag_claims"
+    },
+    {
+      "columns": [
+        "account_id"
+      ],
+      "tableTo": "accounts",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "nameExplicit": false,
+      "name": "fk_bot_updates_account_id_accounts_id_fk",
+      "entityType": "fks",
+      "table": "bot_updates"
     },
     {
       "columns": [
@@ -6440,6 +7508,51 @@
       "name": "fk_chats_account_id_accounts_id_fk",
       "entityType": "fks",
       "table": "chats"
+    },
+    {
+      "columns": [
+        "parent_chat_id"
+      ],
+      "tableTo": "chats",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "nameExplicit": false,
+      "name": "fk_chats_parent_chat_id_chats_id_fk",
+      "entityType": "fks",
+      "table": "chats"
+    },
+    {
+      "columns": [
+        "account_id"
+      ],
+      "tableTo": "accounts",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "nameExplicit": false,
+      "name": "fk_chunks_account_id_accounts_id_fk",
+      "entityType": "fks",
+      "table": "chunks"
+    },
+    {
+      "columns": [
+        "project_id"
+      ],
+      "tableTo": "projects",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "nameExplicit": false,
+      "name": "fk_chunks_project_id_projects_id_fk",
+      "entityType": "fks",
+      "table": "chunks"
     },
     {
       "columns": [
@@ -6560,6 +7673,36 @@
       "name": "fk_conversations_first_message_id_messages_id_fk",
       "entityType": "fks",
       "table": "conversations"
+    },
+    {
+      "columns": [
+        "project_id"
+      ],
+      "tableTo": "projects",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "nameExplicit": false,
+      "name": "fk_decisions_project_id_projects_id_fk",
+      "entityType": "fks",
+      "table": "decisions"
+    },
+    {
+      "columns": [
+        "supersedes_id"
+      ],
+      "tableTo": "decisions",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "nameExplicit": false,
+      "name": "fk_decisions_supersedes_id_decisions_id_fk",
+      "entityType": "fks",
+      "table": "decisions"
     },
     {
       "columns": [
@@ -6830,6 +7973,66 @@
       "name": "fk_identity_revisions_identity_id_identities_id_fk",
       "entityType": "fks",
       "table": "identity_revisions"
+    },
+    {
+      "columns": [
+        "person_id"
+      ],
+      "tableTo": "persons",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "nameExplicit": false,
+      "name": "fk_involvements_person_id_persons_id_fk",
+      "entityType": "fks",
+      "table": "involvements"
+    },
+    {
+      "columns": [
+        "identity_id"
+      ],
+      "tableTo": "identities",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "nameExplicit": false,
+      "name": "fk_involvements_identity_id_identities_id_fk",
+      "entityType": "fks",
+      "table": "involvements"
+    },
+    {
+      "columns": [
+        "account_id"
+      ],
+      "tableTo": "accounts",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "nameExplicit": false,
+      "name": "fk_involvements_account_id_accounts_id_fk",
+      "entityType": "fks",
+      "table": "involvements"
+    },
+    {
+      "columns": [
+        "project_id"
+      ],
+      "tableTo": "projects",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "nameExplicit": false,
+      "name": "fk_involvements_project_id_projects_id_fk",
+      "entityType": "fks",
+      "table": "involvements"
     },
     {
       "columns": [
@@ -7133,6 +8336,21 @@
     },
     {
       "columns": [
+        "supersedes_id"
+      ],
+      "tableTo": "memories",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "nameExplicit": false,
+      "name": "fk_memories_supersedes_id_memories_id_fk",
+      "entityType": "fks",
+      "table": "memories"
+    },
+    {
+      "columns": [
         "message_id"
       ],
       "tableTo": "messages",
@@ -7283,6 +8501,21 @@
     },
     {
       "columns": [
+        "thread_root_id"
+      ],
+      "tableTo": "messages",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "nameExplicit": false,
+      "name": "fk_messages_thread_root_id_messages_id_fk",
+      "entityType": "fks",
+      "table": "messages"
+    },
+    {
+      "columns": [
         "note_id"
       ],
       "tableTo": "notes",
@@ -7295,6 +8528,36 @@
       "name": "fk_note_revisions_note_id_notes_id_fk",
       "entityType": "fks",
       "table": "note_revisions"
+    },
+    {
+      "columns": [
+        "organization_id"
+      ],
+      "tableTo": "organizations",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "nameExplicit": false,
+      "name": "fk_projects_organization_id_organizations_id_fk",
+      "entityType": "fks",
+      "table": "projects"
+    },
+    {
+      "columns": [
+        "account_id"
+      ],
+      "tableTo": "accounts",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "nameExplicit": false,
+      "name": "fk_proposed_actions_account_id_accounts_id_fk",
+      "entityType": "fks",
+      "table": "proposed_actions"
     },
     {
       "columns": [
@@ -7568,6 +8831,16 @@
     },
     {
       "columns": [
+        "indexable_type",
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "memory_index_pending_pk",
+      "entityType": "pks",
+      "table": "memory_index_pending"
+    },
+    {
+      "columns": [
         "message_id",
         "counter"
       ],
@@ -7620,6 +8893,15 @@
         "id"
       ],
       "nameExplicit": false,
+      "name": "agent_actions_pk",
+      "table": "agent_actions",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
       "name": "aliases_pk",
       "table": "aliases",
       "entityType": "pks"
@@ -7631,6 +8913,15 @@
       "nameExplicit": false,
       "name": "attachments_pk",
       "table": "attachments",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "bot_updates_pk",
+      "table": "bot_updates",
       "entityType": "pks"
     },
     {
@@ -7683,6 +8974,15 @@
         "id"
       ],
       "nameExplicit": false,
+      "name": "decisions_pk",
+      "table": "decisions",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
       "name": "document_revisions_pk",
       "table": "document_revisions",
       "entityType": "pks"
@@ -7721,15 +9021,6 @@
       "nameExplicit": false,
       "name": "emails_pk",
       "table": "emails",
-      "entityType": "pks"
-    },
-    {
-      "columns": [
-        "id"
-      ],
-      "nameExplicit": false,
-      "name": "entities_pk",
-      "table": "entities",
       "entityType": "pks"
     },
     {
@@ -7784,6 +9075,15 @@
       "nameExplicit": false,
       "name": "identity_revisions_pk",
       "table": "identity_revisions",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "involvements_pk",
+      "table": "involvements",
       "entityType": "pks"
     },
     {
@@ -7881,6 +9181,15 @@
         "id"
       ],
       "nameExplicit": false,
+      "name": "memories_pk",
+      "table": "memories",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
       "name": "message_links_pk",
       "table": "message_links",
       "entityType": "pks"
@@ -7944,6 +9253,15 @@
         "id"
       ],
       "nameExplicit": false,
+      "name": "organizations_pk",
+      "table": "organizations",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
       "name": "persons_pk",
       "table": "persons",
       "entityType": "pks"
@@ -7955,6 +9273,15 @@
       "nameExplicit": false,
       "name": "projects_pk",
       "table": "projects",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "proposed_actions_pk",
+      "table": "proposed_actions",
       "entityType": "pks"
     },
     {
@@ -8064,6 +9391,70 @@
     {
       "columns": [
         {
+          "value": "organization_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "accounts_by_organization_id",
+      "entityType": "indexes",
+      "table": "accounts"
+    },
+    {
+      "columns": [
+        {
+          "value": "\"started_at\" desc",
+          "isExpression": true
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "agent_actions_by_started_at_desc",
+      "entityType": "indexes",
+      "table": "agent_actions"
+    },
+    {
+      "columns": [
+        {
+          "value": "actor_type",
+          "isExpression": false
+        },
+        {
+          "value": "actor_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "agent_actions_by_actor_type_actor_id",
+      "entityType": "indexes",
+      "table": "agent_actions"
+    },
+    {
+      "columns": [
+        {
+          "value": "target_type",
+          "isExpression": false
+        },
+        {
+          "value": "target_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "agent_actions_by_target_type_target_id",
+      "entityType": "indexes",
+      "table": "agent_actions"
+    },
+    {
+      "columns": [
+        {
           "value": "aliasable_type",
           "isExpression": false
         },
@@ -8106,6 +9497,24 @@
       "name": "auto_tag_claims_by_tag_id",
       "entityType": "indexes",
       "table": "auto_tag_claims"
+    },
+    {
+      "columns": [
+        {
+          "value": "account_id",
+          "isExpression": false
+        },
+        {
+          "value": "\"received_at\" desc",
+          "isExpression": true
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "bot_updates_by_account_id_received_at_desc",
+      "entityType": "indexes",
+      "table": "bot_updates"
     },
     {
       "columns": [
@@ -8156,6 +9565,20 @@
     {
       "columns": [
         {
+          "value": "parent_chat_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "chats_by_parent_chat_id",
+      "entityType": "indexes",
+      "table": "chats"
+    },
+    {
+      "columns": [
+        {
           "value": "content_hash",
           "isExpression": false
         }
@@ -8164,6 +9587,52 @@
       "where": null,
       "origin": "manual",
       "name": "chunks_by_content_hash",
+      "entityType": "indexes",
+      "table": "chunks"
+    },
+    {
+      "columns": [
+        {
+          "value": "scope",
+          "isExpression": false
+        },
+        {
+          "value": "occurred_at",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "chunks_by_scope_occurred_at",
+      "entityType": "indexes",
+      "table": "chunks"
+    },
+    {
+      "columns": [
+        {
+          "value": "account_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "chunks_by_account_id",
+      "entityType": "indexes",
+      "table": "chunks"
+    },
+    {
+      "columns": [
+        {
+          "value": "project_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "chunks_by_project_id",
       "entityType": "indexes",
       "table": "chunks"
     },
@@ -8258,6 +9727,52 @@
       "name": "conversations_by_first_message_id",
       "entityType": "indexes",
       "table": "conversations"
+    },
+    {
+      "columns": [
+        {
+          "value": "project_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "decisions_by_project_id",
+      "entityType": "indexes",
+      "table": "decisions"
+    },
+    {
+      "columns": [
+        {
+          "value": "supersedes_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "decisions_by_supersedes_id",
+      "entityType": "indexes",
+      "table": "decisions"
+    },
+    {
+      "columns": [
+        {
+          "value": "confirmed_by_type",
+          "isExpression": false
+        },
+        {
+          "value": "confirmed_by_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "decisions_by_confirmed_by_type_confirmed_by_id",
+      "entityType": "indexes",
+      "table": "decisions"
     },
     {
       "columns": [
@@ -8462,6 +9977,88 @@
       "name": "identity_revisions_by_identity",
       "entityType": "indexes",
       "table": "identity_revisions"
+    },
+    {
+      "columns": [
+        {
+          "value": "person_id",
+          "isExpression": false
+        },
+        {
+          "value": "\"occurred_at\" desc",
+          "isExpression": true
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "involvements_by_person",
+      "entityType": "indexes",
+      "table": "involvements"
+    },
+    {
+      "columns": [
+        {
+          "value": "identity_id",
+          "isExpression": false
+        },
+        {
+          "value": "\"occurred_at\" desc",
+          "isExpression": true
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "involvements_by_identity",
+      "entityType": "indexes",
+      "table": "involvements"
+    },
+    {
+      "columns": [
+        {
+          "value": "subject_type",
+          "isExpression": false
+        },
+        {
+          "value": "subject_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "involvements_by_subject_type_subject_id",
+      "entityType": "indexes",
+      "table": "involvements"
+    },
+    {
+      "columns": [
+        {
+          "value": "account_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "involvements_by_account_id",
+      "entityType": "indexes",
+      "table": "involvements"
+    },
+    {
+      "columns": [
+        {
+          "value": "project_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "involvements_by_project_id",
+      "entityType": "indexes",
+      "table": "involvements"
     },
     {
       "columns": [
@@ -8734,6 +10331,56 @@
     {
       "columns": [
         {
+          "value": "subject_type",
+          "isExpression": false
+        },
+        {
+          "value": "subject_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "memories_by_subject_type_subject_id",
+      "entityType": "indexes",
+      "table": "memories"
+    },
+    {
+      "columns": [
+        {
+          "value": "author_type",
+          "isExpression": false
+        },
+        {
+          "value": "author_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "memories_by_author_type_author_id",
+      "entityType": "indexes",
+      "table": "memories"
+    },
+    {
+      "columns": [
+        {
+          "value": "supersedes_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "memories_by_supersedes_id",
+      "entityType": "indexes",
+      "table": "memories"
+    },
+    {
+      "columns": [
+        {
           "value": "message_id",
           "isExpression": false
         },
@@ -8888,6 +10535,20 @@
     {
       "columns": [
         {
+          "value": "thread_root_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "messages_by_thread_root_id",
+      "entityType": "indexes",
+      "table": "messages"
+    },
+    {
+      "columns": [
+        {
           "value": "note_id",
           "isExpression": false
         }
@@ -8938,6 +10599,20 @@
     {
       "columns": [
         {
+          "value": "organization_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "projects_by_organization_id",
+      "entityType": "indexes",
+      "table": "projects"
+    },
+    {
+      "columns": [
+        {
           "value": "owner_type",
           "isExpression": false
         },
@@ -8952,6 +10627,92 @@
       "name": "projects_by_owner_type_owner_id",
       "entityType": "indexes",
       "table": "projects"
+    },
+    {
+      "columns": [
+        {
+          "value": "status",
+          "isExpression": false
+        },
+        {
+          "value": "created_at",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "proposed_actions_by_status_created_at",
+      "entityType": "indexes",
+      "table": "proposed_actions"
+    },
+    {
+      "columns": [
+        {
+          "value": "account_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "proposed_actions_by_account_id",
+      "entityType": "indexes",
+      "table": "proposed_actions"
+    },
+    {
+      "columns": [
+        {
+          "value": "target_type",
+          "isExpression": false
+        },
+        {
+          "value": "target_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "proposed_actions_by_target_type_target_id",
+      "entityType": "indexes",
+      "table": "proposed_actions"
+    },
+    {
+      "columns": [
+        {
+          "value": "proposed_by_type",
+          "isExpression": false
+        },
+        {
+          "value": "proposed_by_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "proposed_actions_by_proposed_by_type_proposed_by_id",
+      "entityType": "indexes",
+      "table": "proposed_actions"
+    },
+    {
+      "columns": [
+        {
+          "value": "decided_by_type",
+          "isExpression": false
+        },
+        {
+          "value": "decided_by_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "proposed_actions_by_decided_by_type_decided_by_id",
+      "entityType": "indexes",
+      "table": "proposed_actions"
     },
     {
       "columns": [
@@ -9046,10 +10807,10 @@
           "isExpression": false
         }
       ],
-      "isUnique": false,
-      "where": null,
+      "isUnique": true,
+      "where": "main = 1",
       "origin": "manual",
-      "name": "taggings_by_taggable_type_taggable_id",
+      "name": "taggings_main_topic",
       "entityType": "indexes",
       "table": "taggings"
     },
@@ -9220,6 +10981,16 @@
         "external_id"
       ],
       "nameExplicit": false,
+      "name": "bot_updates_account_id_external_id_unique",
+      "entityType": "uniques",
+      "table": "bot_updates"
+    },
+    {
+      "columns": [
+        "account_id",
+        "external_id"
+      ],
+      "nameExplicit": false,
       "name": "chats_account_id_external_id_unique",
       "entityType": "uniques",
       "table": "chats"
@@ -9347,15 +11118,6 @@
     },
     {
       "columns": [
-        "name"
-      ],
-      "nameExplicit": false,
-      "name": "searches_name_unique",
-      "entityType": "uniques",
-      "table": "searches"
-    },
-    {
-      "columns": [
         "tag_id",
         "taggable_type",
         "taggable_id"
@@ -9404,6 +11166,15 @@
       "name": "projects_key_unique",
       "entityType": "uniques",
       "table": "projects"
+    },
+    {
+      "columns": [
+        "name"
+      ],
+      "nameExplicit": false,
+      "name": "searches_name_unique",
+      "entityType": "uniques",
+      "table": "searches"
     },
     {
       "columns": [

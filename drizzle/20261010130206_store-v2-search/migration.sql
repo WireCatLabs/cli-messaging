@@ -134,6 +134,7 @@ END;--> statement-breakpoint
 CREATE TRIGGER account_bd BEFORE DELETE ON accounts BEGIN
   DELETE FROM aliases WHERE account_id = old.id;
   DELETE FROM reminders WHERE account_id = old.id;
+  DELETE FROM bot_updates WHERE account_id = old.id;
 END;--> statement-breakpoint
 CREATE TRIGGER reminders_task_closed AFTER UPDATE OF status ON tasks
   WHEN new.status IN ('done', 'dismissed') AND old.status NOT IN ('done', 'dismissed') BEGIN
@@ -213,6 +214,37 @@ CREATE TRIGGER note_bd BEFORE DELETE ON notes BEGIN
   DELETE FROM note_revisions WHERE note_id = old.id;
   DELETE FROM taggings WHERE taggable_type = 'note' AND taggable_id = old.id;
   DELETE FROM links WHERE from_type = 'note' AND from_id = old.id;
+END;--> statement-breakpoint
+CREATE VIRTUAL TABLE memory_words USING fts5(
+  normalized_text, scope,
+  content = '', contentless_delete = 1,
+  tokenize = 'unicode61 remove_diacritics 2', prefix = '3');--> statement-breakpoint
+CREATE VIRTUAL TABLE memory_words_vocab USING fts5vocab(memory_words, 'col');--> statement-breakpoint
+CREATE VIRTUAL TABLE memory_stems USING fts5(
+  stems, scope,
+  content = '', contentless_delete = 1,
+  tokenize = 'unicode61 remove_diacritics 2');--> statement-breakpoint
+CREATE TRIGGER memory_index_ai AFTER INSERT ON memories BEGIN
+  INSERT OR IGNORE INTO memory_index_pending (indexable_type, id) VALUES ('memory', new.id);
+END;--> statement-breakpoint
+CREATE TRIGGER memory_index_au AFTER UPDATE OF body, status, scope, subject_type, subject_id ON memories
+  WHEN old.body IS NOT new.body OR old.status IS NOT new.status OR old.scope IS NOT new.scope
+    OR old.subject_type IS NOT new.subject_type OR old.subject_id IS NOT new.subject_id BEGIN
+  INSERT OR IGNORE INTO memory_index_pending (indexable_type, id) VALUES ('memory', new.id);
+END;--> statement-breakpoint
+-- A memory's evidence is links from it; they go with it, the sources they point at stay.
+CREATE TRIGGER memory_bd BEFORE DELETE ON memories BEGIN
+  DELETE FROM embeddings WHERE content_hash IN (
+    SELECT k.content_hash FROM chunks k WHERE k.chunkable_type = 'memory' AND k.chunkable_id = old.id
+      AND NOT EXISTS (SELECT 1 FROM chunks o WHERE o.content_hash = k.content_hash
+        AND NOT (o.chunkable_type = 'memory' AND o.chunkable_id = old.id))
+      AND NOT EXISTS (SELECT 1 FROM conversation_chunks c WHERE c.content_hash = k.content_hash));
+  DELETE FROM chunks WHERE chunkable_type = 'memory' AND chunkable_id = old.id;
+  DELETE FROM memory_words WHERE rowid = old.id;
+  DELETE FROM memory_stems WHERE rowid = old.id;
+  DELETE FROM memory_index_pending WHERE indexable_type = 'memory' AND id = old.id;
+  DELETE FROM taggings WHERE taggable_type = 'memory' AND taggable_id = old.id;
+  DELETE FROM links WHERE from_type = 'memory' AND from_id = old.id;
 END;--> statement-breakpoint
 CREATE VIRTUAL TABLE email_words USING fts5(
   normalized_text, scope,

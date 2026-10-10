@@ -30,8 +30,13 @@ export const accounts = sqliteTable(
     settings: text("settings"),
     status: text("status"),
     updatedAt: integer("updated_at").notNull(),
+    scope: text("scope").notNull().default("personal"),
+    organizationId: integer("organization_id").references(() => organizations.id),
   },
-  (table) => [unique().on(table.provider, table.externalId)],
+  (table) => [
+    unique().on(table.provider, table.externalId),
+    index("accounts_by_organization_id").on(table.organizationId),
+  ],
 )
 
 /** Per account, what a sync remembers between runs: a delta marker, when a list was last complete. */
@@ -75,6 +80,28 @@ export const fetchLeases = sqliteTable(
     expiresAt: integer("expires_at").notNull(),
   },
   (table) => [primaryKey({ columns: [table.chatId, table.anchor] })],
+)
+
+export const botUpdates = sqliteTable(
+  "bot_updates",
+  {
+    id: integer("id").primaryKey(),
+    accountId: integer("account_id")
+      .notNull()
+      .references(() => accounts.id),
+    externalId: text("external_id").notNull(),
+    kind: text("kind").notNull(),
+    payload: text("payload").notNull(),
+    receivedAt: integer("received_at").notNull(),
+    handledAt: integer("handled_at"),
+    error: text("error"),
+    replayedAt: integer("replayed_at"),
+    createdAt: integer("created_at").notNull(),
+  },
+  (table) => [
+    unique().on(table.accountId, table.externalId),
+    index("bot_updates_by_account_id_received_at_desc").on(table.accountId, desc(table.receivedAt)),
+  ],
 )
 
 export const syncs = sqliteTable(
@@ -220,12 +247,15 @@ export const aliases = sqliteTable(
   ],
 )
 
-export const entities = sqliteTable("entities", {
+export const organizations = sqliteTable("organizations", {
   id: integer("id").primaryKey(),
   kind: text("kind").notNull(),
   name: text("name").notNull(),
+  scope: text("scope").notNull().default("personal"),
+  metadata: text("metadata"),
   createdAt: integer("created_at").notNull(),
   updatedAt: integer("updated_at").notNull(),
+  deletedAt: integer("deleted_at"),
 })
 
 export const bots = sqliteTable(
@@ -273,10 +303,13 @@ export const chats = sqliteTable(
     description: text("description"),
     detailsFetchedAt: integer("details_fetched_at"),
     createdAt: integer("created_at").notNull(),
+    parentChatId: integer("parent_chat_id").references((): AnySQLiteColumn => chats.id),
+    scope: text("scope"),
   },
   (table) => [
     unique().on(table.accountId, table.externalId),
     index("chats_by_recency").on(table.accountId, desc(table.lastMessageAt)),
+    index("chats_by_parent_chat_id").on(table.parentChatId),
   ],
 )
 
@@ -377,6 +410,7 @@ export const messages = sqliteTable(
     normalizerVersion: integer("normalizer_version"),
     mentions: text("mentions"),
     updatedAt: integer("updated_at").notNull(),
+    threadRootId: integer("thread_root_id").references((): AnySQLiteColumn => messages.id),
   },
   (table) => [
     unique().on(table.chatId, table.externalId),
@@ -385,6 +419,7 @@ export const messages = sqliteTable(
     // Empty once the backfill is done, so every open can ask "anything left?" without reading the table.
     index("messages_to_normalize").on(table.id).where(sql`normalized_text IS NULL AND deleted_at IS NULL`),
     index("messages_by_sender_identity_id").on(table.senderIdentityId),
+    index("messages_by_thread_root_id").on(table.threadRootId),
   ],
 )
 
@@ -749,6 +784,41 @@ export const noteIndexPending = sqliteTable(
   (table) => [primaryKey({ columns: [table.indexableType, table.id] })],
 )
 
+export const memories = sqliteTable(
+  "memories",
+  {
+    id: integer("id").primaryKey(),
+    kind: text("kind").notNull(),
+    body: text("body").notNull(),
+    subjectType: text("subject_type"),
+    subjectId: integer("subject_id"),
+    authorType: text("author_type").notNull(),
+    authorId: integer("author_id").notNull(),
+    model: text("model"),
+    confidence: real("confidence"),
+    status: text("status").notNull(),
+    lastVerifiedAt: integer("last_verified_at"),
+    supersedesId: integer("supersedes_id").references((): AnySQLiteColumn => memories.id),
+    scope: text("scope").notNull(),
+    createdAt: integer("created_at").notNull(),
+    updatedAt: integer("updated_at").notNull(),
+  },
+  (table) => [
+    index("memories_by_subject_type_subject_id").on(table.subjectType, table.subjectId),
+    index("memories_by_author_type_author_id").on(table.authorType, table.authorId),
+    index("memories_by_supersedes_id").on(table.supersedesId),
+  ],
+)
+
+export const memoryIndexPending = sqliteTable(
+  "memory_index_pending",
+  {
+    id: integer("id").notNull(),
+    indexableType: text("indexable_type").notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.indexableType, table.id] })],
+)
+
 export const eventSeries = sqliteTable("event_series", {
   id: integer("id").primaryKey(),
   title: text("title"),
@@ -999,6 +1069,9 @@ export const projects = sqliteTable(
     key: text("key").notNull().unique(),
     name: text("name").notNull(),
     description: text("description"),
+    type: text("type").notNull(),
+    organizationId: integer("organization_id").references(() => organizations.id),
+    scope: text("scope").notNull().default("personal"),
     ownerType: text("owner_type"),
     ownerId: integer("owner_id"),
     tasksCount: integer("tasks_count").notNull().default(0),
@@ -1007,7 +1080,10 @@ export const projects = sqliteTable(
     updatedAt: integer("updated_at").notNull(),
     deletedAt: integer("deleted_at"),
   },
-  (table) => [index("projects_by_owner_type_owner_id").on(table.ownerType, table.ownerId)],
+  (table) => [
+    index("projects_by_organization_id").on(table.organizationId),
+    index("projects_by_owner_type_owner_id").on(table.ownerType, table.ownerId),
+  ],
 )
 
 export const tasks = sqliteTable(
@@ -1034,6 +1110,8 @@ export const tasks = sqliteTable(
     authorType: text("author_type").notNull(),
     authorId: integer("author_id").notNull(),
     source: text("source").notNull(),
+    resolution: text("resolution"),
+    verdict: text("verdict"),
     metadata: text("metadata"),
     createdAt: integer("created_at").notNull(),
     updatedAt: integer("updated_at").notNull(),
@@ -1086,9 +1164,90 @@ export const taskEvents = sqliteTable(
   ],
 )
 
+export const decisions = sqliteTable(
+  "decisions",
+  {
+    id: integer("id").primaryKey(),
+    projectId: integer("project_id").references(() => projects.id),
+    statement: text("statement").notNull(),
+    status: text("status").notNull(),
+    decidedAt: integer("decided_at"),
+    supersedesId: integer("supersedes_id").references((): AnySQLiteColumn => decisions.id),
+    confirmedByType: text("confirmed_by_type"),
+    confirmedById: integer("confirmed_by_id"),
+    source: text("source").notNull(),
+    metadata: text("metadata"),
+    createdAt: integer("created_at").notNull(),
+    updatedAt: integer("updated_at").notNull(),
+    deletedAt: integer("deleted_at"),
+  },
+  (table) => [
+    index("decisions_by_project_id").on(table.projectId),
+    index("decisions_by_supersedes_id").on(table.supersedesId),
+    index("decisions_by_confirmed_by_type_confirmed_by_id").on(table.confirmedByType, table.confirmedById),
+  ],
+)
+
+export const proposedActions = sqliteTable(
+  "proposed_actions",
+  {
+    id: integer("id").primaryKey(),
+    kind: text("kind").notNull(),
+    accountId: integer("account_id").references(() => accounts.id),
+    targetType: text("target_type"),
+    targetId: integer("target_id"),
+    payload: text("payload"),
+    reason: text("reason"),
+    status: text("status").notNull(),
+    proposedByType: text("proposed_by_type").notNull(),
+    proposedById: integer("proposed_by_id").notNull(),
+    decidedByType: text("decided_by_type"),
+    decidedById: integer("decided_by_id"),
+    decidedAt: integer("decided_at"),
+    executedAt: integer("executed_at"),
+    result: text("result"),
+    error: text("error"),
+    verdict: text("verdict"),
+    createdAt: integer("created_at").notNull(),
+    updatedAt: integer("updated_at").notNull(),
+  },
+  (table) => [
+    index("proposed_actions_by_status_created_at").on(table.status, table.createdAt),
+    index("proposed_actions_by_account_id").on(table.accountId),
+    index("proposed_actions_by_target_type_target_id").on(table.targetType, table.targetId),
+    index("proposed_actions_by_proposed_by_type_proposed_by_id").on(table.proposedByType, table.proposedById),
+    index("proposed_actions_by_decided_by_type_decided_by_id").on(table.decidedByType, table.decidedById),
+  ],
+)
+
+/** An audit trail that is itself readable by agents, so it names the target and never stores the arguments' text. */
+export const agentActions = sqliteTable(
+  "agent_actions",
+  {
+    id: integer("id").primaryKey(),
+    actorType: text("actor_type").notNull(),
+    actorId: integer("actor_id").notNull(),
+    tool: text("tool").notNull(),
+    tier: text("tier").notNull(),
+    targetType: text("target_type"),
+    targetId: integer("target_id"),
+    status: text("status").notNull(),
+    error: text("error"),
+    startedAt: integer("started_at").notNull(),
+    finishedAt: integer("finished_at"),
+    createdAt: integer("created_at").notNull(),
+  },
+  (table) => [
+    index("agent_actions_by_started_at_desc").on(desc(table.startedAt)),
+    index("agent_actions_by_actor_type_actor_id").on(table.actorType, table.actorId),
+    index("agent_actions_by_target_type_target_id").on(table.targetType, table.targetId),
+  ],
+)
+
 export const tags = sqliteTable("tags", {
   id: integer("id").primaryKey(),
   name: text("name").notNull().unique(),
+  kind: text("kind").notNull().default("tag"),
   createdAt: integer("created_at").notNull(),
   updatedAt: integer("updated_at").notNull(),
 })
@@ -1174,6 +1333,7 @@ export const taggings = sqliteTable(
       .references(() => tags.id),
     taggableType: text("taggable_type").notNull(),
     taggableId: integer("taggable_id").notNull(),
+    main: integer("main").notNull().default(0),
     source: text("source").notNull(),
     authorType: text("author_type"),
     authorId: integer("author_id"),
@@ -1182,7 +1342,7 @@ export const taggings = sqliteTable(
   },
   (table) => [
     unique().on(table.tagId, table.taggableType, table.taggableId),
-    index("taggings_by_taggable_type_taggable_id").on(table.taggableType, table.taggableId),
+    uniqueIndex("taggings_main_topic").on(table.taggableType, table.taggableId).where(sql`main = 1`),
     index("taggings_by_author_type_author_id").on(table.authorType, table.authorId),
   ],
 )
@@ -1304,6 +1464,31 @@ export const searchIndexState = sqliteTable("search_index_state", {
   analyzer: text("analyzer"),
 })
 
+/** Derived: rebuilt from senders, recipients, participants, assignees and links, never the only copy of anything. */
+export const involvements = sqliteTable(
+  "involvements",
+  {
+    id: integer("id").primaryKey(),
+    personId: integer("person_id").references(() => persons.id),
+    identityId: integer("identity_id").references(() => identities.id),
+    subjectType: text("subject_type").notNull(),
+    subjectId: integer("subject_id").notNull(),
+    role: text("role").notNull(),
+    occurredAt: integer("occurred_at").notNull(),
+    scope: text("scope").notNull(),
+    accountId: integer("account_id").references(() => accounts.id),
+    projectId: integer("project_id").references(() => projects.id),
+    createdAt: integer("created_at").notNull(),
+  },
+  (table) => [
+    index("involvements_by_person").on(table.personId, desc(table.occurredAt)),
+    index("involvements_by_identity").on(table.identityId, desc(table.occurredAt)),
+    index("involvements_by_subject_type_subject_id").on(table.subjectType, table.subjectId),
+    index("involvements_by_account_id").on(table.accountId),
+    index("involvements_by_project_id").on(table.projectId),
+  ],
+)
+
 export const chunks = sqliteTable(
   "chunks",
   {
@@ -1314,12 +1499,19 @@ export const chunks = sqliteTable(
     startOffset: integer("start_offset").notNull(),
     endOffset: integer("end_offset").notNull(),
     contentHash: text("content_hash").notNull(),
+    scope: text("scope"),
+    accountId: integer("account_id").references(() => accounts.id),
+    projectId: integer("project_id").references(() => projects.id),
+    occurredAt: integer("occurred_at"),
     createdAt: integer("created_at").notNull(),
     updatedAt: integer("updated_at").notNull(),
   },
   (table) => [
     unique().on(table.chunkableType, table.chunkableId, table.position),
     index("chunks_by_content_hash").on(table.contentHash),
+    index("chunks_by_scope_occurred_at").on(table.scope, table.occurredAt),
+    index("chunks_by_account_id").on(table.accountId),
+    index("chunks_by_project_id").on(table.projectId),
   ],
 )
 

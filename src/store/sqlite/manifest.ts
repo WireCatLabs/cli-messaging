@@ -22,8 +22,8 @@ export interface ManifestEntry {
 export const BASELINE = 100
 
 export const MANIFEST: ManifestEntry[] = [
-  { name: "20261010001845_store-v2-baseline", version: BASELINE, minCompatible: BASELINE },
-  { name: "20261010001846_store-v2-search", version: BASELINE, minCompatible: BASELINE },
+  { name: "20261010130203_store-v2-baseline", version: BASELINE, minCompatible: BASELINE },
+  { name: "20261010130206_store-v2-search", version: BASELINE, minCompatible: BASELINE },
 ]
 
 export const generatedMigrations = (

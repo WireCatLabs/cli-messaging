@@ -5,7 +5,7 @@ of the store v2 plan's schema page, generated from the same spec; `src/store/sql
 hand-written SQL in `drizzle/` must agree with it, and `src/store/sqlite/schema.test.ts` checks every table
 and column of a new store against this page.
 
-68 tables, 14 full-text indexes; 38 new, 13 of today's dropped or merged.
+75 tables, 16 full-text indexes; 48 new, 14 of today's dropped or merged.
 Status: **new** — added; **changed** — merged, split or reshaped; **renamed** — naming rules and timestamps only; **kept** — as today.
 
 ## Conventions
@@ -40,8 +40,10 @@ Every integration the owner connects: a messenger account, a mailbox, Zoom, a no
 | `settings` | text |  |  | JSON: per-integration settings, e.g. a folder's path and format |
 | `status` | text |  |  | active, paused, failed |
 | `updated_at` | integer | not null |  | when this row last changed here |
+| `scope` | text | not null |  | `personal` or `work`; what a context query may read for a given purpose, so a work question never pulls private chats (owner) |
+| `organization_id` | integer |  | → `organizations.id` | the organization a work account belongs to |
 
-*Keys and indexes:* `UNIQUE (provider, external_id)`
+*Keys and indexes:* `UNIQUE (provider, external_id)`, `INDEX (organization_id)`
 
 ### `sync_cursors` — changed (was `sync_state`)
 
@@ -82,6 +84,25 @@ Who is fetching a stretch of a chat right now, so two processes do not fetch the
 
 *Keys and indexes:* `PRIMARY KEY (chat_id, anchor)`
 
+### `bot_updates` — new
+
+Every update a bot account received through the Bot API, kept as it came, so it can be inspected and replayed.
+
+| Column | Type | Constraints | References | Meaning |
+|---|---|---|---|---|
+| `id` | integer | PK |  |  |
+| `account_id` | integer | not null | → `accounts.id` | the bot account |
+| `external_id` | text | not null |  | the update id |
+| `kind` | text | not null |  | message, callback, member change, … |
+| `payload` | text | not null |  | JSON, exactly as received |
+| `received_at` | integer | not null |  |  |
+| `handled_at` | integer |  |  | null until handled |
+| `error` | text |  |  | why handling failed |
+| `replayed_at` | integer |  |  | when it was last replayed |
+| `created_at` | integer | not null |  | when this row was saved here |
+
+*Keys and indexes:* `UNIQUE (account_id, external_id)`, `INDEX (account_id, received_at DESC)`
+
 ### `syncs` — new
 
 One run of an integration's sync: what it did and how it ended. The shape of AlignIO's `user_integration_syncs`.
@@ -101,9 +122,9 @@ One run of an integration's sync: what it did and how it ended. The shape of Ali
 
 *Keys and indexes:* `INDEX (account_id)`
 
-## People and bots
+## People, organizations and bots
 
-Humans, the per-source identities they have, and the agents that work here.
+Humans, the per-source identities they have, the organizations they belong to, and the agents that work here.
 
 ### `persons` — changed
 
@@ -202,7 +223,7 @@ Other names for anything: a person's nickname, a contact's name in one messenger
 | Column | Type | Constraints | References | Meaning |
 |---|---|---|---|---|
 | `id` | integer | PK |  |  |
-| `aliasable_type` | text | not null |  | what the alias names: `identity`, `person`, `entity`, `chat`, `project`, `bot`, … |
+| `aliasable_type` | text | not null |  | what the alias names: `identity`, `person`, `organization`, `chat`, `project`, `bot`, … |
 | `aliasable_id` | integer | not null |  | the row in the `aliasable_type` table |
 | `account_id` | integer |  | → `accounts.id` | set when the alias holds only as seen from one account, as a contact name in one messenger does; null when it holds everywhere |
 | `name` | text | not null |  | the alias as written: a nickname, a short name, a former name |
@@ -214,19 +235,6 @@ Other names for anything: a person's nickname, a contact's name in one messenger
 
 *Keys and indexes:* `INDEX (aliasable_type, aliasable_id)`, `INDEX (account_id)`
 
-### `entities` — changed
-
-
-*Change:* Text id → integer id.
-
-| Column | Type | Constraints | References | Meaning |
-|---|---|---|---|---|
-| `id` | integer | PK |  |  |
-| `kind` | text | not null |  | Type of the owner-defined thing: one of `organization`, `family`, `project`, `group`. |
-| `name` | text | not null |  | The entity's name as the owner gave it. |
-| `created_at` | integer | not null |  | when this row was saved here |
-| `updated_at` | integer | not null |  | when this row last changed here |
-
 ### `identities_fts` — kept
 
 Full-text index.
@@ -234,6 +242,21 @@ Full-text index.
 ```sql
 CREATE VIRTUAL TABLE identities_fts USING fts5(name, username, content='identities', content_rowid='id', tokenize='trigram')
 ```
+
+### `organizations` — new
+
+A company, team, family or community the owner deals with. Projects, work accounts and people's identities belong to one.
+
+| Column | Type | Constraints | References | Meaning |
+|---|---|---|---|---|
+| `id` | integer | PK |  |  |
+| `kind` | text | not null |  | company, team, family, community |
+| `name` | text | not null |  |  |
+| `scope` | text | not null |  | `personal` or `work`; what a context query may read for a given purpose, so a work question never pulls private chats (owner) |
+| `metadata` | text |  |  | JSON: what the source sends that has no column, and is not searched |
+| `created_at` | integer | not null |  | when this row was saved here |
+| `updated_at` | integer | not null |  | when this row last changed here |
+| `deleted_at` | integer |  |  | gone at the source; sync never hard-deletes |
 
 ### `bots` — new
 
@@ -285,8 +308,10 @@ What messengers bring.
 | `description` | text |  |  | from `chat_metadata` |
 | `details_fetched_at` | integer |  |  | when title, username and description were last read; from `chat_metadata.fetched_at` |
 | `created_at` | integer | not null |  | when this row was saved here |
+| `parent_chat_id` | integer |  | → `chats.id` | the chat this one sits inside: a forum topic in its group, a channel's discussion group, a channel in a workspace |
+| `scope` | text |  |  | overrides the account's scope for this chat; null takes the account's |
 
-*Keys and indexes:* `UNIQUE (account_id, external_id)`, `INDEX (account_id, last_message_at DESC)`
+*Keys and indexes:* `UNIQUE (account_id, external_id)`, `INDEX (account_id, last_message_at DESC)`, `INDEX (parent_chat_id)`
 
 ### `chat_members` — renamed
 
@@ -365,8 +390,9 @@ A group's size once a day: the messenger's own count and how many members one re
 | `normalizer_version` | integer |  |  | Version of the text-normalisation rules that produced the message's search text (currently 1); NULL until normalised. |
 | `mentions` | text |  |  | JSON: the people the text mentions by id, where the messenger says so; `@handle`s are read from the text. |
 | `updated_at` | integer | not null |  | when this row last changed here |
+| `thread_root_id` | integer |  | → `messages.id` | the message a thread hangs from: a Slack thread, comments under a channel post, replies in a topic; null outside a thread |
 
-*Keys and indexes:* `UNIQUE (chat_id, external_id)`, `INDEX (chat_id, sent_at DESC)`, `INDEX (account_id, external_id)`, `INDEX (id) WHERE normalized_text IS NULL AND deleted_at IS NULL`, `INDEX (sender_identity_id)`
+*Keys and indexes:* `UNIQUE (chat_id, external_id)`, `INDEX (chat_id, sent_at DESC)`, `INDEX (account_id, external_id)`, `INDEX (id) WHERE normalized_text IS NULL AND deleted_at IS NULL`, `INDEX (sender_identity_id)`, `INDEX (thread_root_id)`
 
 ### `message_revisions` — renamed
 
@@ -654,9 +680,9 @@ Full-text index.
 CREATE VIRTUAL TABLE attachment_words USING fts5( normalized_text, content = '', contentless_delete = 1, tokenize = 'unicode61 remove_diacritics 2')
 ```
 
-## Documents and notes
+## Documents, notes and memories
 
-Documents are files and pages that stand on their own; notes are short text about something.
+Documents are files and pages that stand on their own; notes are what a person wrote about something; memories are what an agent concluded.
 
 ### `documents` — new
 
@@ -791,6 +817,58 @@ CREATE VIRTUAL TABLE note_stems USING fts5(stems, scope, content = '', contentle
 ### `note_index_pending` — new
 
 Rows of notes waiting to be indexed: triggers enqueue, JS normalizes, stems and writes the index.
+
+| Column | Type | Constraints | References | Meaning |
+|---|---|---|---|---|
+| `id` | integer | not null |  |  |
+| `indexable_type` | text | not null |  | which table the waiting row belongs to |
+
+*Keys and indexes:* `PRIMARY KEY (indexable_type, id)`
+
+### `memories` — new
+
+What an agent concluded: a summary, a daily digest, a fact, a preference. Derived and fallible, so it carries its evidence (`links` of kind `evidence`), its confidence and its status; notes are what a person wrote.
+
+| Column | Type | Constraints | References | Meaning |
+|---|---|---|---|---|
+| `id` | integer | PK |  |  |
+| `kind` | text | not null |  | summary, digest, fact, preference |
+| `body` | text | not null |  |  |
+| `subject_type` | text |  |  | what it is about: `person`, `chat`, `meeting`, `project`, …; null for a general fact |
+| `subject_id` | integer |  |  | the row in the `subject_type` table |
+| `author_type` | text | not null |  | `person` or `bot` |
+| `author_id` | integer | not null |  | the row in the `author_type` table |
+| `model` | text |  |  | the model that wrote it |
+| `confidence` | real |  |  | 0–1, as the author rated it |
+| `status` | text | not null |  | proposed, confirmed, stale, superseded |
+| `last_verified_at` | integer |  |  | when its evidence was last checked |
+| `supersedes_id` | integer |  | → `memories.id` | the memory this one replaces |
+| `scope` | text | not null |  | personal or work, from its evidence |
+| `created_at` | integer | not null |  | when this row was saved here |
+| `updated_at` | integer | not null |  | when this row last changed here |
+
+*Keys and indexes:* `INDEX (subject_type, subject_id)`, `INDEX (author_type, author_id)`, `INDEX (supersedes_id)`
+
+### `memory_words` — new
+
+Word index over memories.
+
+```sql
+CREATE VIRTUAL TABLE memory_words USING fts5(normalized_text, scope, content = '', contentless_delete = 1, tokenize = 'unicode61 remove_diacritics 2', prefix = '3');
+CREATE VIRTUAL TABLE memory_words_vocab USING fts5vocab(memory_words, 'col')
+```
+
+### `memory_stems` — new
+
+Stem index, the pair of memory_words.
+
+```sql
+CREATE VIRTUAL TABLE memory_stems USING fts5(stems, scope, content = '', contentless_delete = 1, tokenize = 'unicode61 remove_diacritics 2')
+```
+
+### `memory_index_pending` — new
+
+Rows of memories waiting to be indexed: triggers enqueue, JS normalizes, stems and writes the index.
 
 | Column | Type | Constraints | References | Meaning |
 |---|---|---|---|---|
@@ -1026,7 +1104,7 @@ Rows of transcript rows, meeting chat and summaries waiting to be indexed: trigg
 
 ## Tasks
 
-A task and ticket system for people and agents: projects with keys, typed and prioritised tasks, assignees that are people or bots.
+A task and ticket system for people and agents: projects with keys, typed and prioritised tasks, assignees that are people or bots, and the decisions made along the way. A promise is a task of type `promise`; a question is a task of type `question` whose answer is linked.
 
 ### `reminders` — changed (was `knowledge_reminders`)
 
@@ -1059,6 +1137,9 @@ A place for tasks, with the short key their ids start with (`MEET-12`).
 | `key` | text | not null, unique |  | uppercase, e.g. MEET |
 | `name` | text | not null |  | the project's name |
 | `description` | text |  |  | what the project is for |
+| `type` | text | not null |  | work, client, personal, oss, other; tags group projects beyond that |
+| `organization_id` | integer |  | → `organizations.id` | the `organization` it belongs to |
+| `scope` | text | not null |  | `personal` or `work`; what a context query may read for a given purpose, so a work question never pulls private chats (owner) |
 | `owner_type` | text |  |  | `person` or `bot` |
 | `owner_id` | integer |  |  | the row in the `owner_type` table |
 | `tasks_count` | integer | not null |  | the last number given out; the next task takes +1 in the same transaction |
@@ -1067,7 +1148,7 @@ A place for tasks, with the short key their ids start with (`MEET-12`).
 | `updated_at` | integer | not null |  | when this row last changed here |
 | `deleted_at` | integer |  |  | gone at the source; sync never hard-deletes |
 
-*Keys and indexes:* `INDEX (owner_type, owner_id)`
+*Keys and indexes:* `INDEX (organization_id)`, `INDEX (owner_type, owner_id)`
 
 ### `tasks` — new
 
@@ -1094,6 +1175,8 @@ A task or ticket, for people and agents alike. Everything it concerns — people
 | `author_type` | text | not null |  | `person` or `bot` |
 | `author_id` | integer | not null |  | the row in the `author_type` table |
 | `source` | text | not null |  | owner, agent, rule (today's `origin`), or an import |
+| `resolution` | text |  |  | how it ended, in words; a question's answer. Where the answer came from is a `links` row of kind `answered-by` |
+| `verdict` | text |  |  | useful or not_useful, as the owner judged a task an agent raised; null until judged |
 | `metadata` | text |  |  | JSON: what the source sends that has no column, and is not searched |
 | `created_at` | integer | not null |  | when this row was saved here |
 | `updated_at` | integer | not null |  | when this row last changed here |
@@ -1133,6 +1216,81 @@ The history of a task: created, status changed, assigned, due date moved.
 
 *Keys and indexes:* `INDEX (task_id)`, `INDEX (actor_type, actor_id)`
 
+### `decisions` — new
+
+A choice that was made and holds until replaced: why we do something. Its evidence — the message, transcript row or document — is `links` of kind `evidence`; a decision an agent proposed links back to that memory with `created-from`.
+
+| Column | Type | Constraints | References | Meaning |
+|---|---|---|---|---|
+| `id` | integer | PK |  |  |
+| `project_id` | integer |  | → `projects.id` | the `project` it belongs to |
+| `statement` | text | not null |  | the decision in one sentence |
+| `status` | text | not null |  | proposed, accepted, superseded, reversed |
+| `decided_at` | integer |  |  | when it was made, as the evidence shows |
+| `supersedes_id` | integer |  | → `decisions.id` | the decision this one replaces |
+| `confirmed_by_type` | text |  |  | who accepted it; null while proposed |
+| `confirmed_by_id` | integer |  |  | who accepted it; null while proposed |
+| `source` | text | not null |  | owner, agent, an import |
+| `metadata` | text |  |  | JSON: what the source sends that has no column, and is not searched |
+| `created_at` | integer | not null |  | when this row was saved here |
+| `updated_at` | integer | not null |  | when this row last changed here |
+| `deleted_at` | integer |  |  | gone at the source; sync never hard-deletes |
+
+*Keys and indexes:* `INDEX (project_id)`, `INDEX (supersedes_id)`, `INDEX (confirmed_by_type, confirmed_by_id)`
+
+## Agents and actions
+
+What agents propose and what they did: every external action waits for approval, every tool call is logged.
+
+### `proposed_actions` — new
+
+Something an agent wants done outside the store — reply, send, delete, ban, mute, pin, invite, create a task — waiting for a person to approve it. Nothing external happens without approval.
+
+| Column | Type | Constraints | References | Meaning |
+|---|---|---|---|---|
+| `id` | integer | PK |  |  |
+| `kind` | text | not null |  | reply, send, delete, ban, mute, pin, invite, create_task, … |
+| `account_id` | integer |  | → `accounts.id` | the account that would act |
+| `target_type` | text |  |  | what it acts on: `message`, `chat`, `identity`, `task`, … |
+| `target_id` | integer |  |  | the row in the `target_type` table |
+| `payload` | text |  |  | JSON: what to do, e.g. the reply text |
+| `reason` | text |  |  | why the agent proposes it |
+| `status` | text | not null |  | proposed, approved, rejected, executed, failed |
+| `proposed_by_type` | text | not null |  | `person` or `bot` |
+| `proposed_by_id` | integer | not null |  | the row in the `proposed_by_type` table |
+| `decided_by_type` | text |  |  | `person` or `bot` |
+| `decided_by_id` | integer |  |  | the row in the `decided_by_type` table |
+| `decided_at` | integer |  |  |  |
+| `executed_at` | integer |  |  |  |
+| `result` | text |  |  | JSON: what the provider returned |
+| `error` | text |  |  |  |
+| `verdict` | text |  |  | useful or not_useful, as the owner judged the proposal |
+| `created_at` | integer | not null |  | when this row was saved here |
+| `updated_at` | integer | not null |  | when this row last changed here |
+
+*Keys and indexes:* `INDEX (status, created_at)`, `INDEX (account_id)`, `INDEX (target_type, target_id)`, `INDEX (proposed_by_type, proposed_by_id)`, `INDEX (decided_by_type, decided_by_id)`
+
+### `agent_actions` — new
+
+Every tool an agent called through the CLIs or MCP: who, which tool, at what access tier, on what. The audit trail of what agents did.
+
+| Column | Type | Constraints | References | Meaning |
+|---|---|---|---|---|
+| `id` | integer | PK |  |  |
+| `actor_type` | text | not null |  | `person` or `bot` |
+| `actor_id` | integer | not null |  | the row in the `actor_type` table |
+| `tool` | text | not null |  | the command or MCP tool |
+| `tier` | text | not null |  | read, draft, write-private, write-public, destructive, admin |
+| `target_type` | text |  |  | the kind of thing `target_id` points at: a singular table name |
+| `target_id` | integer |  |  | the row in the `target_type` table |
+| `status` | text | not null |  | ok, refused, failed |
+| `error` | text |  |  |  |
+| `started_at` | integer | not null |  |  |
+| `finished_at` | integer |  |  |  |
+| `created_at` | integer | not null |  | when this row was saved here |
+
+*Keys and indexes:* `INDEX (started_at DESC)`, `INDEX (actor_type, actor_id)`, `INDEX (target_type, target_id)`
+
 ## Tags, links and saved searches
 
 Polymorphic: `<name>_type` text + `<name>_id` integer (owner).
@@ -1146,7 +1304,8 @@ A tag's name, once (owner). Which things carry it is `taggings`.
 | Column | Type | Constraints | References | Meaning |
 |---|---|---|---|---|
 | `id` | integer | PK |  |  |
-| `name` | text | not null, unique |  | the tag, as the owner writes it; unique |
+| `name` | text | not null, unique |  | unique across tags and topics, so one name is never both |
+| `kind` | text | not null |  | `tag`: a free label; `topic`: what a thing is about, from a short list only the owner creates (agents propose) |
 | `created_at` | integer | not null |  | when this row was saved here |
 | `updated_at` | integer | not null |  | when this row last changed here |
 
@@ -1166,7 +1325,7 @@ A tag's name, once (owner). Which things carry it is `taggings`.
 
 ### `links` — changed
 
-Every connection between two things, by typed reference. `to_ref` is null while a link names nobody yet; `target_folded` is what a new person or alias is matched against to resolve it.
+Every connection between two things that no column holds. Kinds include `answered-by` (a question task → the message that answered it), `duplicate-of` (the same question asked again), `evidence` (a decision or memory → its source), `created-from` (a thing → what it was made from), `member-of`, `related-to`, `assigned-to`.
 
 *Change:* String references → polymorphic columns, type as a string (owner).
 
@@ -1220,15 +1379,16 @@ One tag on one thing.
 |---|---|---|---|---|
 | `id` | integer | PK |  |  |
 | `tag_id` | integer | not null | → `tags.id` | the `tag` it belongs to |
-| `taggable_type` | text | not null |  | `chat`, `identity`, `message`, `email`, `document`, `note`, `person`, `entity`, `task`, `event`, … |
+| `taggable_type` | text | not null |  | `chat`, `identity`, `message`, `email`, `document`, `note`, `person`, `organization`, `project`, `task`, `event`, … |
 | `taggable_id` | integer | not null |  | the row in the `taggable_type` table |
+| `main` | integer | not null |  | 1 on the thing's main topic; at most one per thing |
 | `source` | text | not null |  | where it came from: owner, agent, auto, an import (owner) |
 | `author_type` | text |  |  | `person` or `bot` |
 | `author_id` | integer |  |  | the row in the `author_type` table |
 | `created_at` | integer | not null |  | when this row was saved here |
 | `updated_at` | integer | not null |  | when this row last changed here |
 
-*Keys and indexes:* `UNIQUE (tag_id, taggable_type, taggable_id)`, `INDEX (taggable_type, taggable_id)`, `INDEX (author_type, author_id)`
+*Keys and indexes:* `UNIQUE (tag_id, taggable_type, taggable_id)`, `UNIQUE (taggable_type, taggable_id) WHERE main = 1`, `INDEX (author_type, author_id)`
 
 ## Chunks, embeddings and search state
 
@@ -1337,6 +1497,26 @@ How far a derived search index is built, one row per index. `watermark` is the h
 
 *Keys and indexes:* `PRIMARY KEY (trigram, length, term)`
 
+### `involvements` — new
+
+Who took part in what, and when: one row per person or identity per message, email, meeting, task or document. Derived from senders, recipients, participants, assignees and links, and rebuilt at will; it turns "everything about Alex" into one indexed range.
+
+| Column | Type | Constraints | References | Meaning |
+|---|---|---|---|---|
+| `id` | integer | PK |  |  |
+| `person_id` | integer |  | → `persons.id` | null while the identity is linked to nobody |
+| `identity_id` | integer |  | → `identities.id` | the `identity` it belongs to |
+| `subject_type` | text | not null |  | `message`, `email`, `meeting`, `task`, `document`, `note`, … |
+| `subject_id` | integer | not null |  | the row in the `subject_type` table |
+| `role` | text | not null |  | sender, recipient, participant, assignee, author, mentioned, linked |
+| `occurred_at` | integer | not null |  | when the subject happened |
+| `scope` | text | not null |  |  |
+| `account_id` | integer |  | → `accounts.id` | the integration account it came through |
+| `project_id` | integer |  | → `projects.id` | the `project` it belongs to |
+| `created_at` | integer | not null |  | when this row was saved here |
+
+*Keys and indexes:* `INDEX (person_id, occurred_at DESC)`, `INDEX (identity_id, occurred_at DESC)`, `INDEX (subject_type, subject_id)`, `INDEX (account_id)`, `INDEX (project_id)`
+
 ### `chunks` — new
 
 Pieces of a longer text, the unit that gets an embedding: ranges of a document, an email, an attachment's text, a note, a meeting transcript or summary; a short task or event is one chunk. Conversations of messages keep their own `conversation_chunks`.
@@ -1350,10 +1530,14 @@ Pieces of a longer text, the unit that gets an embedding: ranges of a document, 
 | `start_offset` | integer | not null |  | where the piece starts in the parent's text, in characters |
 | `end_offset` | integer | not null |  | where it ends, exclusive |
 | `content_hash` | text | not null |  | hash of the piece's text; its embedding is the `embeddings` row with this hash, so equal text is embedded once |
+| `scope` | text |  |  | copied from the parent's account, chat or project, so a vector search filters before it compares |
+| `account_id` | integer |  | → `accounts.id` | copied from the parent, a filter for vector search |
+| `project_id` | integer |  | → `projects.id` | copied from the parent when it belongs to one |
+| `occurred_at` | integer |  |  | when the parent happened (sent, held, written), a filter for vector search |
 | `created_at` | integer | not null |  | when this row was saved here |
 | `updated_at` | integer | not null |  | when this row last changed here |
 
-*Keys and indexes:* `UNIQUE (chunkable_type, chunkable_id, position)`, `INDEX (content_hash)`
+*Keys and indexes:* `UNIQUE (chunkable_type, chunkable_id, position)`, `INDEX (content_hash)`, `INDEX (scope, occurred_at)`, `INDEX (account_id)`, `INDEX (project_id)`
 
 ## Store
 
@@ -1385,7 +1569,8 @@ Settings of the store file itself, shared by every profile, tg and MAX — unlik
 | `attachment_texts` | merged into `attachments` (one row per attachment today) |
 | `membership_batches` | dropped if retention rebuilds on `member_stays` + `member_counts` with its tests passing (owner, NEED-896 A) |
 | `membership_batch_members` | as `membership_batches` |
-| `owner_targets` | taggings and links point at a person, entity, task or folder directly |
+| `owner_targets` | taggings and links point at a person, organization, project, task or folder directly |
+| `entities` | split into `organizations` and `projects` (owner); a family or a group is an organization |
 | `note_folders` | become `accounts` rows of provider `folder` |
 | `notes` | split: files and pages → `documents`; short text about something → the new `notes` |
 | `note_revisions` | → `document_revisions` and `note_revisions` |

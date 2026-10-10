@@ -182,7 +182,7 @@ describe("the v2 baseline", () => {
     expect(all("SELECT name FROM aliases")).toEqual([{ name: "B" }])
     run("INSERT INTO identities_fts (identities_fts) VALUES ('integrity-check')")
 
-    run(`INSERT INTO projects (key, name, created_at, updated_at) VALUES ('MEET', 'Meetings', 1, 1)`)
+    run(`INSERT INTO projects (key, name, type, created_at, updated_at) VALUES ('MEET', 'Meetings', 'work', 1, 1)`)
     run(`INSERT INTO tasks (project_id, number, key, title, type, status, author_type, author_id, source, created_at,
            updated_at) VALUES (1, 1, 'MEET-1', 'Send the notes', 'promise', 'open', 'person', 1, 'owner', 1, 1)`)
     run(`INSERT INTO reminders (task_id, account_id, due_at, timezone, state, created_at, updated_at)
@@ -269,6 +269,83 @@ describe("the v2 baseline", () => {
     ])
   })
 
+  it("nests chats and threads, and keeps one main topic per thing", async () => {
+    const database = await open()
+    migrate(database)
+    const run = (sql: string) => database.exec(sql)
+    const all = (sql: string) => database.prepare(sql).all()
+
+    run(`INSERT INTO accounts (provider, external_id, created_at, updated_at) VALUES ('telegram', '1', 1, 1)`)
+    run(`INSERT INTO chats (account_id, external_id, kind, title, updated_at, created_at)
+           VALUES (1, 'g', 'group', 'Garden club', 1, 1)`)
+    run(`INSERT INTO chats (account_id, external_id, kind, title, parent_chat_id, updated_at, created_at)
+           VALUES (1, 'g/7', 'topic', 'Tomatoes', 1, 1, 1)`)
+    run(`INSERT INTO messages (chat_id, account_id, external_id, sent_at, text, created_at, source, updated_at)
+           VALUES (2, 1, '10', 1, 'Which variety?', 1, 'sync', 1)`)
+    run(`INSERT INTO messages (chat_id, account_id, external_id, sent_at, text, created_at, source, thread_root_id,
+           updated_at) VALUES (2, 1, '11', 2, 'Cherry ones', 1, 'sync', 1, 1)`)
+    expect(
+      all("SELECT c.title FROM chats c JOIN chats p ON p.id = c.parent_chat_id WHERE p.title = 'Garden club'"),
+    ).toEqual([{ title: "Tomatoes" }])
+    expect(() =>
+      run(`INSERT INTO messages (chat_id, account_id, external_id, sent_at, text, created_at, source,
+           thread_root_id, updated_at) VALUES (2, 1, '12', 3, 'x', 1, 'sync', 99, 1)`),
+    ).toThrow(/FOREIGN KEY/)
+
+    run(`INSERT INTO tags (name, kind, created_at, updated_at) VALUES ('Food', 'topic', 1, 1), ('Wellbeing', 'topic', 1, 1),
+           ('animals', 'tag', 1, 1)`)
+    expect(() => run(`INSERT INTO tags (name, kind, created_at, updated_at) VALUES ('Food', 'tag', 1, 1)`)).toThrow(
+      /UNIQUE/,
+    )
+    run(`INSERT INTO taggings (tag_id, taggable_type, taggable_id, main, source, created_at, updated_at)
+           VALUES (1, 'chat', 1, 1, 'owner', 1, 1), (3, 'chat', 1, 0, 'owner', 1, 1)`)
+    expect(() =>
+      run(`INSERT INTO taggings (tag_id, taggable_type, taggable_id, main, source, created_at, updated_at)
+           VALUES (2, 'chat', 1, 1, 'owner', 1, 1)`),
+    ).toThrow(/UNIQUE/)
+    run(`INSERT INTO taggings (tag_id, taggable_type, taggable_id, source, created_at, updated_at)
+           VALUES (2, 'chat', 1, 'owner', 1, 1)`)
+    expect(all("SELECT count(*) AS n FROM taggings WHERE taggable_id = 1")).toEqual([{ n: 3 }])
+  })
+
+  it("queues memories for the indexer and drops their chunks, orphan vectors and evidence links with them", async () => {
+    const database = await open()
+    migrate(database)
+    const run = (sql: string) => database.exec(sql)
+    const all = (sql: string) => database.prepare(sql).all()
+
+    run(`INSERT INTO memories (kind, body, subject_type, subject_id, author_type, author_id, status, scope, created_at,
+           updated_at) VALUES ('fact', 'Prefers weekly reports', 'person', 1, 'bot', 1, 'proposed', 'work', 1, 1)`)
+    expect(all("SELECT indexable_type, id FROM memory_index_pending")).toEqual([{ indexable_type: "memory", id: 1 }])
+    run(`INSERT INTO chunks (chunkable_type, chunkable_id, position, start_offset, end_offset, content_hash, created_at,
+           updated_at) VALUES ('memory', 1, 0, 0, 5, 'm1', 1, 1)`)
+    run(`INSERT INTO embeddings (model, content_hash, dims, vector, created_at, updated_at)
+           VALUES ('m', 'm1', 1, x'00000000', 1, 1)`)
+    run(`INSERT INTO links (from_type, from_id, to_type, to_id, kind, source, confirmed, created_at, updated_at)
+           VALUES ('memory', 1, 'message', 5, 'evidence', 'agent', 1, 1, 1)`)
+    run("DELETE FROM memories")
+
+    for (const table of ["memory_index_pending", "chunks", "embeddings", "links"])
+      expect(all(`SELECT count(*) AS n FROM ${table}`), table).toEqual([{ n: 0 }])
+  })
+
+  it("finds everything a person took part in through one index", async () => {
+    const database = await open()
+    migrate(database)
+    database.exec(`INSERT INTO persons (name, created_at, updated_at) VALUES ('Alice Example', 1, 1)`)
+    database.exec(`INSERT INTO involvements (person_id, subject_type, subject_id, role, occurred_at, scope, created_at)
+           VALUES (1, 'message', 3, 'sender', 10, 'work', 1), (1, 'meeting', 1, 'participant', 20, 'work', 1),
+                  (1, 'message', 4, 'mentioned', 5, 'personal', 1)`)
+    const query =
+      "SELECT subject_type, subject_id FROM involvements WHERE person_id = 1 AND scope = 'work' ORDER BY occurred_at DESC"
+
+    expect(database.prepare(query).all()).toEqual([
+      { subject_type: "meeting", subject_id: 1 },
+      { subject_type: "message", subject_id: 3 },
+    ])
+    expect(JSON.stringify(database.prepare(`EXPLAIN QUERY PLAN ${query}`).all())).toMatch(/involvements_by_person/)
+  })
+
   it(`**is version ${BASELINE}**: a file of the old line is refused with the way to convert it`, async () => {
     const database = await open()
     database.exec(
@@ -305,6 +382,8 @@ describe("the v2 baseline", () => {
         settings: null,
         status: null,
         updatedAt: 2,
+        scope: "personal",
+        organizationId: null,
       },
     ])
     store.database.close()
