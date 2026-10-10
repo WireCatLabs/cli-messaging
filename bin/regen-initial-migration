@@ -1,0 +1,23 @@
+#!/usr/bin/env sh
+# Rebuilds the one initial migration after a change to src/store/sqlite/schema.ts, keeping the hand-written
+# part (FTS5 tables, triggers, seed rows) that Drizzle cannot model. Only while the initial migration is
+# unreleased: once a store file exists that ran it, a schema change is a new migration instead.
+#
+#   bin/regen-initial-migration
+set -eu
+cd "$(dirname "$0")/.."
+old=$(ls drizzle | grep '_initial$')
+marker='^-- Trigram indexes over names'
+line=$(grep -n "$marker" "drizzle/$old/migration.sql" | cut -d: -f1)
+[ -n "$line" ] || { echo "no hand-written part found in drizzle/$old/migration.sql" >&2; exit 1; }
+hand=$(mktemp)
+tail -n +"$line" "drizzle/$old/migration.sql" > "$hand"
+rm -r "drizzle/$old"
+pnpm -s db:generate --name initial
+new=$(ls drizzle | grep '_initial$')
+printf '\n--> statement-breakpoint\n' >> "drizzle/$new/migration.sql"
+cat "$hand" >> "drizzle/$new/migration.sql"
+rm "$hand"
+sed -i "s/\"$old\"/\"$new\"/" src/store/sqlite/manifest.ts
+pnpm -s db:bundle
+echo "drizzle/$new — run: pnpm exec vitest run src/store/sqlite/"
