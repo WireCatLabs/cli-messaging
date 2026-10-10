@@ -16,7 +16,7 @@ break callers, and says how under "Changed — may break callers". `pnpm docs:ch
 - `store.decisions`, `store.memories` (a memory needs a scope and evidence), `store.proposedActions` (agent
   proposals that wait for the owner) and `store.agentActions` (one audit row per MCP tool call, never its
   arguments). Topics: `knowledge.createTag(name, { kind: "topic" })` for the owner, `setMainTopic`.
-- **`store.meetings`: the shared store's `MeetingStore`**, the port `@wirecat/cli-meetings` 0.2.0 defines (now a
+- **`store.meetings`: the shared store's `MeetingStore`**, the port `@wirecat/cli-meetings` 0.2.1 defines (now a
   dependency). It keeps meetings, their series, participants, transcripts with their history, chat, summaries,
   files, calendar events and the pull cursor, and passes the package's `meetingStoreContract`. Search matches
   every word of the query as a prefix.
@@ -27,6 +27,11 @@ break callers, and says how under "Changed — may break callers". `pnpm docs:ch
   package's id, source locator, kind and group in columns; an inbox project names its account. The store refuses
   a second displayed alias for one thing and account, a second meeting summary from one source and a repeated
   meeting chat line. Purging an email takes its recipients, mailboxes and chunks with it.
+
+### Fixed
+
+- Under Bun a missing row read as `null` instead of `undefined`, so the store took it for a found row: linking a
+  meeting to an event that does not exist succeeded. The Bun driver now answers `undefined`, as the Node one does.
 
 ### Changed — may break callers
 
