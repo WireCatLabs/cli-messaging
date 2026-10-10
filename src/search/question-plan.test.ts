@@ -65,3 +65,24 @@ test("bounded retention aliases preserve unrelated qualifiers", () => {
   assert.ok(plan.queries.some((q) => q.includes("хранение") && !q.includes("срок")))
   assert.ok(plan.queries.every((q) => q.includes("ultraviolet")))
 })
+
+test("question punctuation is removed only from the text leaf, preserving filter punctuation", () => {
+  const plan = planQuestion('When does Helix export run? chat:"Which chat?" date:2026-10-08')
+  assert.ok(plan.changed)
+  assert.ok(plan.queries.every((q) => q.includes('chat:"Which chat?"')))
+  assert.ok(plan.queries.every((q) => q.includes("date:2026-10-08")))
+  assert.ok(plan.queries.every((q) => !q.includes("run?")))
+})
+test("a long repeated field suffix is parsed without an ambiguous nested repetition", () => {
+  const suffix = "chat:chat:".repeat(100)
+  assert.throws(() => planQuestion(`What is Helix export? chat:${suffix}end`))
+  const plan = planQuestion(`What is Helix export? chat:"${suffix}end"`)
+  assert.ok(plan.changed)
+  assert.ok(plan.queries.every((q) => q.endsWith(`chat:"${suffix}end"`)))
+})
+
+test("question words in a filter title cannot turn keywords into a question", () => {
+  const text = 'Helix chat:"What?"'
+  assert.deepEqual(planQuestion(text).queries, [text])
+  assert.equal(planQuestion(text).changed, false)
+})

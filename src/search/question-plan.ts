@@ -22,7 +22,10 @@ export function planQuestion(text: string, strict = false) {
       removed: [] as string[],
       aliases: [] as string[],
     }
-  const prefix = words(text).slice(0, 2)
+  const inputAst = parseLucene(text)
+  const rawTextual = walkQuery(inputAst.root).filter((node) => node.field === "text" || node.field === "exact")
+  const body = rawTextual.map((node) => node.value).join(" ")
+  const prefix = words(body).slice(0, 2)
   const questionPrefix =
     [
       "what",
@@ -45,9 +48,15 @@ export function planQuestion(text: string, strict = false) {
       "что",
     ].includes(prefix[0] ?? "") ||
     (["к", "во"].includes(prefix[0] ?? "") && ["кому", "сколько"].includes(prefix[1] ?? ""))
-  const natural = questionWord.test(text) && (/\?/u.test(text) || questionPrefix)
-  const cleaned = natural ? text.replace(/\?(?=\s*(?:(?:chat|from|date):[^\s]+\s*)*$)/u, "") : text
-  const ast = parseLucene(cleaned)
+  const natural = questionWord.test(body) && (/\?/u.test(body) || questionPrefix)
+  let cleaned = text
+  if (natural && !text.includes("\\")) {
+    const last = rawTextual.at(-1)
+    const mark = (last?.span.end ?? 0) - 1
+    if (last?.operator === "wildcard" && text[mark] === "?") cleaned = text.slice(0, mark) + text.slice(mark + 1)
+  }
+
+  const ast = cleaned === text ? inputAst : parseLucene(cleaned)
   const predicates = walkQuery(ast.root)
   const textual = predicates.filter((p) => p.field === "text" || p.field === "exact")
   const fields = predicates.filter((p) => p.field !== "text" && p.field !== "exact")
