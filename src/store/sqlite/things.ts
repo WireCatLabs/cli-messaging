@@ -30,8 +30,8 @@ const TABLES: Record<string, { table: string; tombstone: boolean }> = {
 const storeId = (text: string) => (/^[1-9]\d{0,15}$/.test(text) ? Number(text) : undefined)
 
 /**
- * The row a typed reference names, or `undefined` when the store holds none. An id from before store v2
- * (a ULID, an `entity:`) is simply not found: it is never guessed at.
+ * The row a typed reference names, or `undefined` when the store holds none. An id from the old
+ * `messages.db` (a ULID, an `entity:`) is simply not found: it is never guessed at.
  */
 export const thingOf = (database: CacheDatabase, reference: Reference | string): Thing | undefined => {
   const parsed = typeof reference === "string" ? parseReference(reference) : reference

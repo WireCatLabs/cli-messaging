@@ -14,8 +14,8 @@ import {
 } from "./drizzle/core.js"
 
 /**
- * The store's base tables, v2 — what `drizzle-kit generate` diffs against. Every column is explained in
- * `docs/storage/schema-v2.md`; the two must agree. A change here becomes a migration, under the rules at the
+ * The store's base tables — what `drizzle-kit generate` diffs against. Every column is explained in
+ * `docs/storage/schema.md`; the two must agree. A change here becomes a migration, under the rules at the
  * top of `../migrations.ts`. FTS5 tables, their triggers and the `WITHOUT ROWID` search-term tables are not
  * modelled by Drizzle and live in hand-written SQL.
  */

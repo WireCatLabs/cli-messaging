@@ -303,7 +303,7 @@ with `normalize()`, and its `identity` names what built an index.
 
 ### Migrations
 
-One migration, store version 1, creates every table in [`docs/storage/schema-v2.md`](../storage/schema-v2.md),
+One migration, store version 1, creates every table in [`docs/storage/schema.md`](../storage/schema.md),
 in the file `wirecat.db`. It is one folder under `drizzle/`: the SQL `pnpm db:generate` wrote from
 `src/store/sqlite/schema.ts`, then the FTS5 indexes, their triggers, the `WITHOUT ROWID` search-term tables and
 the seed rows, which Drizzle cannot model. `pnpm db:bundle` copies it into
@@ -349,7 +349,7 @@ it by editing that line in a PR of its own, merged before the migration.
    exactly as drizzle-kit wrote them" (`manifest.test.ts:22`) fails until you run it.
 8. **Test the upgrade**: a `src/store/version-<n>.test.ts` opens a file at version n−1, migrates it and
    reads what the new version added. `src/store/sqlite/schema.test.ts` opens a new store and compares
-   every table and column with [`schema-v2.md`](../storage/schema-v2.md), and compiles every trigger:
+   every table and column with [`schema.md`](../storage/schema.md), and compiles every trigger:
    change the page with the schema.
 9. **CHANGELOG**: an entry under `## Unreleased` that names the store version, as "Chat members in
    the store (store version 7)" does.

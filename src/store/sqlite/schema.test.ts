@@ -10,7 +10,7 @@ import { openStore } from "../store.js"
 import { type OpenedSqlite, openSqlite } from "./open.js"
 import { accounts } from "./schema.js"
 
-const DOC = join(import.meta.dirname, "../../../docs/storage/schema-v2.md")
+const DOC = join(import.meta.dirname, "../../../docs/storage/schema.md")
 const fresh = () => join(mkdtempSync(join(tmpdir(), "schema-")), "messages.db")
 const opened: CacheDatabase[] = []
 afterEach(() => {
@@ -99,8 +99,8 @@ const writesReachingEveryTrigger = (database: CacheDatabase): string[] => {
   })
 }
 
-describe("the v2 baseline", () => {
-  it("**creates exactly the tables and columns schema-v2.md lists** when a store opens on an empty path", async () => {
+describe("the initial migration", () => {
+  it("**creates exactly the tables and columns schema.md lists** when a store opens on an empty path", async () => {
     const path = fresh()
     await (await openStore({ path })).close()
     const database = await openCache(path)
