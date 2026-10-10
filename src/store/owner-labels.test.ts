@@ -4,8 +4,6 @@ import { join } from "node:path"
 import { createTaskService } from "@wirecat/cli-tasks"
 import { afterEach, describe, expect, it } from "vitest"
 import { searchNotesQuery } from "../services/notes-search.js"
-import { MIGRATIONS, migrate } from "./migrations.js"
-import { openCache } from "./open.js"
 import { type AccountKey, type MessageStore, openStore } from "./store.js"
 
 const telegram: AccountKey = { provider: "telegram", account: "500" }
@@ -28,13 +26,13 @@ const tagged = async (store: MessageStore, tag: string) =>
     .map(({ note }) => note.path)
     .sort()
 
-describe("labels that belong to no account (version 27)", () => {
+describe("labels that belong to no account", () => {
   it("labels a person, an entity and a task without naming an account, and relates them", async () => {
     const { store } = await open()
     await store.saveAccount(telegram, { name: null })
     await store.savePeople(telegram, [{ id: "101", name: "Rin Synthetic" }])
     const person = await store.personOf({ provider: "telegram", id: "101" })
-    const entity = await store.notes.addEntity("organization", "Synthetic Studio")
+    const organization = await store.knowledge.addOrganization({ kind: "company", name: "Synthetic Studio" })
     const task = (
       await createTaskService({ store: store.tasks }).add({
         source: "msg:telegram/500/7/42",
@@ -48,7 +46,7 @@ describe("labels that belong to no account (version 27)", () => {
 
     for (const target of [
       { type: "person" as const, id: person?.uid as string },
-      { type: "entity" as const, id: entity.id },
+      { type: "organization" as const, id: organization.id },
       { type: "task" as const, id: task.id },
     ]) {
       expect(await store.knowledge.addTags(null, target, ["Client"])).toEqual(["client"])
@@ -57,11 +55,11 @@ describe("labels that belong to no account (version 27)", () => {
     }
     const relation = await store.knowledge.relate(null, {
       from: `person:${person?.uid}`,
-      to: `entity:${entity.id}`,
+      to: organization.ref,
       kind: "member-of",
     })
-    expect(await store.knowledge.relations(null, `entity:${entity.id}`)).toEqual([relation])
-    expect((await store.knowledge.entities(null)).map(({ id }) => id)).toEqual([entity.id])
+    expect(await store.knowledge.relations(null, organization.ref)).toEqual([relation])
+    expect((await store.knowledge.organizations()).map(({ id }) => id)).toEqual([organization.id])
   })
 
   it("still needs the account for a chat or a contact", async () => {
@@ -91,8 +89,8 @@ describe("a note's tags remember who stated them", () => {
     const note = await fileNote(store, folder.id, "plan.md")
 
     await store.notes.replaceFileTags(note.id, ["budget", "review"])
-    await store.knowledge.addTags(null, { type: "note", id: note.id }, ["review", "mine"])
-    expect(await store.notes.noteTags(note.id)).toEqual([
+    await store.knowledge.addTags(null, { type: "document", id: note.id }, ["review", "mine"])
+    expect(await store.notes.noteTags(note.ref)).toEqual([
       { tag: "budget", origin: "file" },
       { tag: "mine", origin: "owner" },
       { tag: "review", origin: "owner" },
@@ -100,7 +98,7 @@ describe("a note's tags remember who stated them", () => {
 
     await store.notes.replaceFileTags(note.id, ["budget"])
     await store.notes.replaceFileTags(note.id, [])
-    expect(await store.notes.noteTags(note.id)).toEqual([
+    expect(await store.notes.noteTags(note.ref)).toEqual([
       { tag: "mine", origin: "owner" },
       { tag: "review", origin: "owner" },
     ])
@@ -108,6 +106,16 @@ describe("a note's tags remember who stated them", () => {
 })
 
 describe("labels on a notes folder or subfolder", () => {
+  it("rejects a name an old store's file still carries, as not found", async () => {
+    const { store } = await open()
+    await expect(
+      store.knowledge.addTags(null, { type: "note", id: "01J0000000000000000000000" }, ["x"]),
+    ).rejects.toMatchObject({
+      code: "not_found",
+    })
+    expect(await store.knowledge.tags(null, { type: "person", id: "P1" })).toEqual([])
+  })
+
   it("labels every note under the subfolder, at any depth, and none beside it", async () => {
     const { store } = await open()
     const folder = await store.notes.addFolder({ name: "Vault" })
@@ -133,49 +141,10 @@ describe("labels on a notes folder or subfolder", () => {
 
     const all = await store.knowledge.labelled(null)
     expect(all.items.map(({ target, labels }) => ({ target, labels }))).toEqual([
-      { target: { type: "note", id: note.id }, labels: [{ tag: "budget", origin: "file" }] },
+      { target: { type: "document", id: note.id }, labels: [{ tag: "budget", origin: "file" }] },
       { target: { type: "folder", id: folder.id, path: "Projects" }, labels: [{ tag: "work", origin: "owner" }] },
     ])
     expect((await store.knowledge.labelled(null, { type: "folder" })).items).toHaveLength(1)
     expect((await store.knowledge.labelled(null, { tag: "budget" })).items).toHaveLength(1)
-  })
-})
-
-describe("labels from before version 27", () => {
-  it("are copied once — to the person, the note and the notes subfolder — and a removed one stays removed", async () => {
-    const path = join(mkdtempSync(join(tmpdir(), "owner-labels-")), "store.db")
-    const db = await openCache(path)
-    migrate(db, { migrations: MIGRATIONS.filter((migration) => migration.version < 28) })
-    db.exec(`INSERT INTO accounts (pk, provider, native_id, name, created_at) VALUES
-      (1, 'telegram', '500', NULL, 0), (2, 'notes', '/old/vault', 'vault', 0)`)
-    db.exec(
-      "INSERT INTO identities (pk, provider, native_id, name, first_seen_at, updated_at) VALUES (1, 'telegram', '101', 'Rin Synthetic', 0, 0)",
-    )
-    db.exec("INSERT INTO persons (pk, uid, name, created_at, updated_at) VALUES (1, 'P1', 'Rin Synthetic', 0, 0)")
-    db.exec(
-      "INSERT INTO identity_links (identity_pk, person_pk, method, confidence, linked_at, linked_by) VALUES (1, 1, 'initial', 1, 0, 'ingest')",
-    )
-    db.exec(
-      "INSERT INTO note_folders (id, name, format, pending_path, account_pk, created_at) VALUES ('fld_1', 'Vault', 'obsidian', NULL, 2, 0)",
-    )
-    db.exec(`INSERT INTO notes (id, source, folder_id, path, title, text, revision, created_at, updated_at, deleted_at)
-      VALUES ('N1', 'file', 'fld_1', 'Projects/a.md', 'Projects/a.md', 'about Projects/a.md', 1, 0, 0, NULL)`)
-    db.exec("INSERT INTO chats (pk, account_pk, native_id, kind, updated_at) VALUES (1, 2, 'Projects', 'saved', 0)")
-    db.exec(`INSERT INTO knowledge_targets (pk, account_pk, type, reference, created_at) VALUES
-      (1, 1, 'person', 'P1', 0), (2, 1, 'note', 'N1', 0)`)
-    db.exec(`INSERT INTO tags (taggable_type, taggable_pk, tag, created_at, manual) VALUES
-      ('knowledge', 1, 'client', 0, 1), ('knowledge', 2, 'review', 0, 1), ('chat', 1, 'work', 0, 1)`)
-    db.close()
-
-    const { store: reopened } = await open(path)
-    expect(await reopened.knowledge.tags(null, { type: "person", id: "P1" })).toEqual(["client"])
-    expect(await reopened.knowledge.tags(null, { type: "note", id: "N1" })).toEqual(["review"])
-    expect(await tagged(reopened, "work")).toEqual(["Projects/a.md"])
-
-    await reopened.knowledge.removeTags(null, { type: "person", id: "P1" }, ["client"])
-    await reopened.close()
-    live.splice(0)
-    const { store: again } = await open(path)
-    expect(await again.knowledge.tags(null, { type: "person", id: "P1" })).toEqual([])
   })
 })

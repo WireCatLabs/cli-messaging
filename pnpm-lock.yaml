@@ -30,6 +30,9 @@ importers:
       '@valibot/to-json-schema':
         specifier: 1.8.0
         version: 1.8.0(valibot@1.5.0(typescript@7.0.2))
+      '@wirecat/cli-meetings':
+        specifier: 0.2.0
+        version: 0.2.0
       '@wirecat/cli-messaging-onnx':
         specifier: 1.0.0
         version: 1.0.0
@@ -1034,6 +1037,10 @@ packages:
     peerDependenciesMeta:
       commander:
         optional: true
+
+  '@wirecat/cli-meetings@0.2.0':
+    resolution: {integrity: sha512-fRY2vVln95dfo/oO/wgM/PsYIfepXmYB1d4EFt/agFfXuDKivMwD/uc0siHUZzF4kDrA86Ok4AR4cGogJ82Q3w==}
+    engines: {node: '>=22.12.0'}
 
   '@wirecat/cli-messaging-onnx@1.0.0':
     resolution: {integrity: sha512-U8x0jee2htq5VaWLFeyfmV+Eq3Lv5KTKIZMjyZLnZdA56OYSYwomFAT3usHN3MlA3qCqm6v0Vn77W0OfQg/OGA==}
@@ -2750,6 +2757,10 @@ snapshots:
       commander: 15.0.0
     transitivePeerDependencies:
       - typescript
+
+  '@wirecat/cli-meetings@0.2.0':
+    dependencies:
+      commander: 15.0.0
 
   '@wirecat/cli-messaging-onnx@1.0.0':
     dependencies:

@@ -163,6 +163,41 @@ export interface Registration {
   defaults: Defaults
   /** A host's permission scope encloses local reads and online calls alike. */
   around?: <T>(name: string, definition: AnyTool, work: () => Promise<T>) => Promise<T>
+  /** Keeps one audit row per call — tool, tier, outcome, times — never the arguments or the answer. */
+  log?: (call: ToolCall) => Promise<void>
+}
+
+export type ToolTier = "read" | "draft" | "write-private" | "write-public" | "destructive" | "admin"
+
+export interface ToolCall {
+  tool: string
+  tier: ToolTier
+  status: "ok" | "refused" | "failed"
+  /** The failure's code, e.g. `permission_error`; never its message. */
+  error?: string
+  startedAt: number
+  finishedAt: number
+}
+
+/**
+ * How far a tool reaches, read from what it declares: a read; an admin tool; one that removes or bans; a
+ * draft; a write only the owner sees (marking read, tagging, notes); or a write others see.
+ */
+export const tierOf = (key: string, definition: Pick<AnyTool, "annotations">): ToolTier => {
+  if (definition.annotations.readOnlyHint === true) return "read"
+  if (/^admin|_admin/.test(key)) return "admin"
+  if (/delete|ban|kick|remove|purge|block/.test(key)) return "destructive"
+  if (/draft/.test(key)) return "draft"
+  if (/mark_read|read_mark|archive|mute|pin|tag|note|label|folder|alias|save/.test(key)) return "write-private"
+  return "write-public"
+}
+
+/** The audit outcome of an answer: a profile's refusal apart from a failure. */
+const outcomeOf = (result: CallToolResult): Pick<ToolCall, "status" | "error"> => {
+  if (!result.isError) return { status: "ok" }
+  const code = (result.structuredContent as { error?: { code?: unknown } } | undefined)?.error?.code
+  const error = typeof code === "string" ? code : "generic_failure"
+  return { status: error === "permission_error" ? "refused" : "failed", error }
 }
 
 /** The key a tool's level is read from: its own, or its name read as a command path. */
@@ -199,14 +234,26 @@ export const syncAllowedFor = (key: string, defaults: Defaults): boolean => {
   )
 }
 
-export const entryRunner = ({
-  messenger,
-  session,
-  withStore,
-  withServices,
-  defaults,
-  around,
-}: Registration): RunEntry => {
+export const entryRunner = (registration: Registration): RunEntry => {
+  const run = callRunner(registration)
+  const { log } = registration
+  if (!log) return run
+  return async (key, definition, args, ctx) => {
+    const startedAt = Date.now()
+    const result = await run(key, definition, args, ctx)
+    // The audit row must not cost the agent its answer: a store that cannot be written is not this call's failure.
+    await log({
+      tool: key,
+      tier: tierOf(key, definition),
+      ...outcomeOf(result),
+      startedAt,
+      finishedAt: Date.now(),
+    }).catch(() => undefined)
+    return result
+  }
+}
+
+const callRunner = ({ messenger, session, withStore, withServices, defaults, around }: Registration): RunEntry => {
   const where = { profile: defaults.settings.profile, env: defaults.env }
   return async (key, definition, args, ctx) => {
     const run = `mcp ${key.replaceAll("_", " ")}`

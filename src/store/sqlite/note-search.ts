@@ -15,7 +15,7 @@ import type { SqlValue } from "../driver.js"
 import { normalize } from "../normalize.js"
 import { prefixOf } from "./lucene.js"
 import { drainNoteIndex, type NoteIndexState, noteIndexState, noteIndexText } from "./note-index.js"
-import { type Note, noteOf } from "./notes.js"
+import { documentOf, type Note, noteOf } from "./notes.js"
 import type { StoreContext } from "./open.js"
 import { stemmerCache } from "./stems.js"
 import { dot } from "./vectors.js"
@@ -61,16 +61,101 @@ const combine = (parts: Fragment[], operator: "AND" | "OR"): Fragment => ({
   params: parts.flatMap(({ params }) => params),
   exact: parts.every(({ exact }) => exact),
 })
-const wordMatch = (match: string): Fragment => ({
-  sql: "n.pk IN (SELECT rowid FROM note_words WHERE note_words MATCH ?)",
-  params: [`normalized_text : (${match})`],
-  exact: true,
-  fts: match,
-})
+/** Files in notes folders and the notes the owner wrote: the same fields, each in its own table and index. */
+interface Corpus {
+  type: "document" | "note"
+  /** The rows as `n`, with the columns the query reads under one set of names. */
+  view: string
+  words: string
+  stems: string
+  /** The tagged rows; a document is also labelled through its folder or a subfolder of it. */
+  tagged: (tag: string) => Fragment
+}
 
-/** Notes matching a parsed query, by the same language as messages; runs in one read snapshot. */
+const CORPORA: Corpus[] = [
+  {
+    type: "document",
+    view: "(SELECT id, account_id AS folder_id, external_id AS path, title, coalesce(body, '') AS text, updated_at, deleted_at FROM documents)",
+    words: "document_words",
+    stems: "document_stems",
+    tagged: (tag) =>
+      bound(
+        "(n.id IN (SELECT g.taggable_id FROM taggings g JOIN tags t ON t.id = g.tag_id WHERE t.name = ? AND g.taggable_type = 'document') " +
+          "OR n.folder_id IN (SELECT g.taggable_id FROM taggings g JOIN tags t ON t.id = g.tag_id WHERE t.name = ? AND g.taggable_type = 'account') " +
+          "OR EXISTS (SELECT 1 FROM links l JOIN tags t ON t.id = l.to_id WHERE l.from_type = 'account' AND l.from_id = n.folder_id " +
+          "AND l.kind = 'labelled' AND l.to_type = 'tag' AND t.name = ? AND substr(n.path, 1, length(l.anchor) + 1) = l.anchor || '/'))",
+        tag,
+        tag,
+        tag,
+      ),
+  },
+  {
+    type: "note",
+    view: "(SELECT id, NULL AS folder_id, NULL AS path, title, body AS text, updated_at, deleted_at FROM notes)",
+    words: "note_words",
+    stems: "note_stems",
+    tagged: (tag) =>
+      bound(
+        "n.id IN (SELECT g.taggable_id FROM taggings g JOIN tags t ON t.id = g.tag_id WHERE t.name = ? AND g.taggable_type = 'note')",
+        tag,
+      ),
+  },
+]
+
+interface CorpusRow {
+  type: Corpus["type"]
+  id: number
+  updatedAt: number
+  relevance: number | null
+  exact?: boolean
+}
+
+/** Notes matching a parsed query, by the same language as messages: files and written notes, merged. */
 export const searchNotes = (context: StoreContext, query: NoteQuery): { items: NoteHit[]; hasMore: boolean } => {
+  const offset = query.offset ?? 0
+  const chosen = CORPORA.filter(
+    ({ type }) =>
+      (query.source === undefined || (query.source === "file") === (type === "document")) &&
+      (!query.folderIds?.length || type === "document"),
+  )
+  const rows = chosen.flatMap((corpus) => searchCorpus(context, query, corpus))
+  const exactFirst = rows.some((row) => row.exact !== undefined)
+  rows.sort((a, b) =>
+    query.newest
+      ? b.updatedAt - a.updatedAt || a.id - b.id
+      : (exactFirst ? Number(b.exact === true) - Number(a.exact === true) : 0) ||
+        Number(a.relevance === null) - Number(b.relevance === null) ||
+        (a.relevance ?? 0) - (b.relevance ?? 0) ||
+        b.updatedAt - a.updatedAt ||
+        a.id - b.id,
+  )
+  const read = {
+    document: context.database.prepare("SELECT * FROM documents WHERE id = ?"),
+    note: context.database.prepare("SELECT * FROM notes WHERE id = ?"),
+  }
+  return {
+    items: rows.slice(offset, offset + query.limit).map((row) => {
+      const found = read[row.type].get(row.id) as Record<string, unknown>
+      const note = row.type === "document" ? documentOf(found) : noteOf(found)
+      return {
+        ref: note.ref,
+        note,
+        relevance: row.relevance,
+        ...(row.exact === undefined ? {} : { exact: row.exact }),
+      }
+    }),
+    hasMore: rows.length > offset + query.limit,
+  }
+}
+
+const searchCorpus = (context: StoreContext, query: NoteQuery, corpus: Corpus): CorpusRow[] => {
   const { database } = context
+  const wordMatch = (match: string): Fragment => ({
+    sql: `n.id IN (SELECT rowid FROM ${corpus.words} WHERE ${corpus.words} MATCH ?)`,
+    params: [`normalized_text : (${match})`],
+    exact: true,
+    fts: match,
+  })
   const started = context.now()
   const budget: MatchBudget = { work: 0 }
   let expansions = 0
@@ -94,7 +179,7 @@ export const searchNotes = (context: StoreContext, query: NoteQuery): { items: N
       if (!/[\p{L}\p{N}]/u.test(text)) return bound("0")
       const stems = query.stemmer.phrases(value)
       return {
-        sql: `n.pk IN (SELECT rowid FROM note_words WHERE note_words MATCH ?)${stems ? " OR n.pk IN (SELECT rowid FROM note_stems WHERE note_stems MATCH ?)" : ""}`,
+        sql: `n.id IN (SELECT rowid FROM ${corpus.words} WHERE ${corpus.words} MATCH ?)${stems ? ` OR n.id IN (SELECT rowid FROM ${corpus.stems} WHERE ${corpus.stems} MATCH ?)` : ""}`,
         params: [`normalized_text : (${quoted(text)})`, ...(stems ? [`stems : (${stems})`] : [])],
         exact: true,
         fts: quoted(text),
@@ -112,7 +197,7 @@ export const searchNotes = (context: StoreContext, query: NoteQuery): { items: N
       const prefix = prefixOf(pattern)
       const terms = database
         .prepare(
-          `SELECT term FROM note_words_vocab WHERE col='normalized_text'${prefix ? " AND term>=? AND term<=?" : ""} ORDER BY term LIMIT ?`,
+          `SELECT term FROM ${corpus.words}_vocab WHERE col='normalized_text'${prefix ? " AND term>=? AND term<=?" : ""} ORDER BY term LIMIT ?`,
         )
         .all(...(prefix ? [prefix, `${prefix}\u{10ffff}`] : []), QUERY_LIMITS.expansions + 1)
       expansions += terms.length
@@ -133,14 +218,7 @@ export const searchNotes = (context: StoreContext, query: NoteQuery): { items: N
       const tag = tagOf(value)
       if (tag === undefined) queryError("invalid_tag", node.span)
       // A label on a folder or subfolder labels every note under it, at any depth.
-      return bound(
-        "(n.pk IN (SELECT taggable_pk FROM tags WHERE tag = ? AND taggable_type = 'note') OR EXISTS (" +
-          "SELECT 1 FROM owner_targets o JOIN tags l ON l.taggable_type = 'owner' AND l.taggable_pk = o.pk " +
-          "WHERE l.tag = ? AND o.folder_id = n.folder_id " +
-          "AND (o.folder_path = '' OR substr(n.path, 1, length(o.folder_path) + 1) = o.folder_path || '/')))",
-        tag,
-        tag,
-      )
+      return corpus.tagged(tag)
     }
     if (field === "date") {
       const range = node.resolution?.date
@@ -201,9 +279,8 @@ export const searchNotes = (context: StoreContext, query: NoteQuery): { items: N
       [
         bound("n.deleted_at IS NULL"),
         ...(query.folderIds?.length
-          ? [bound("n.folder_id IN (SELECT value FROM json_each(?))", JSON.stringify(query.folderIds))]
+          ? [bound("n.folder_id IN (SELECT CAST(value AS INTEGER) FROM json_each(?))", JSON.stringify(query.folderIds))]
           : []),
-        ...(query.source ? [bound("n.source = ?", query.source)] : []),
       ],
       "AND",
     )
@@ -213,14 +290,14 @@ export const searchNotes = (context: StoreContext, query: NoteQuery): { items: N
     const ctes: string[] = []
     const cteParams: SqlValue[] = []
     if (ranking) {
-      const table = stemmed ? "note_stems" : "note_words"
+      const table = stemmed ? corpus.stems : corpus.words
       ctes.push(
-        `f(pk, rank) AS MATERIALIZED (SELECT rowid, bm25(${table}, 1.0, 0.0) FROM ${table} WHERE ${table} MATCH ?)`,
+        `f(id, rank) AS MATERIALIZED (SELECT rowid, bm25(${table}, 1.0, 0.0) FROM ${table} WHERE ${table} MATCH ?)`,
       )
       cteParams.push(`${stemmed ? "stems" : "normalized_text"} : (${ranking})`)
     }
     if (exactTier) {
-      ctes.push("x(pk) AS MATERIALIZED (SELECT rowid FROM note_words WHERE note_words MATCH ?)")
+      ctes.push(`x(id) AS MATERIALIZED (SELECT rowid FROM ${corpus.words} WHERE ${corpus.words} MATCH ?)`)
       cteParams.push(`normalized_text : (${exactTier})`)
     }
     const order = query.newest
@@ -235,8 +312,8 @@ export const searchNotes = (context: StoreContext, query: NoteQuery): { items: N
     const window = tests.size ? QUERY_LIMITS.candidates + 1 : query.limit + offset + 1
     const rows = database
       .prepare(
-        `${ctes.length ? `WITH ${ctes.join(", ")} ` : ""}SELECT n.*, ${ranking ? "f.rank" : "NULL"} AS relevance${exactTier ? ", n.pk IN (SELECT pk FROM x) AS exact" : ""}${projection}
-           FROM notes n${ranking ? " LEFT JOIN f ON f.pk = n.pk" : ""} WHERE ${where.sql} ORDER BY ${order} LIMIT ?`,
+        `${ctes.length ? `WITH ${ctes.join(", ")} ` : ""}SELECT n.*, ${ranking ? "f.rank" : "NULL"} AS relevance${exactTier ? ", n.id IN (SELECT id FROM x) AS exact" : ""}${projection}
+           FROM ${corpus.view} n${ranking ? " LEFT JOIN f ON f.id = n.id" : ""} WHERE ${where.sql} ORDER BY ${order} LIMIT ?`,
       )
       .all(
         ...cteParams,
@@ -269,19 +346,13 @@ export const searchNotes = (context: StoreContext, query: NoteQuery): { items: N
           return evaluate(query.root, row, text)
         })
       : rows
-    const page = matched.slice(offset, offset + query.limit)
-    return {
-      items: page.map((row) => {
-        const note = noteOf(row)
-        return {
-          ref: `note:${note.id}`,
-          note,
-          relevance: row.relevance === null || row.relevance === undefined ? null : Number(row.relevance),
-          ...(exactTier ? { exact: Number(row.exact) === 1 } : {}),
-        }
-      }),
-      hasMore: matched.length > offset + query.limit,
-    }
+    return matched.map((row) => ({
+      type: corpus.type,
+      id: Number(row.id),
+      updatedAt: Number(row.updated_at),
+      relevance: row.relevance === null || row.relevance === undefined ? null : Number(row.relevance),
+      ...(exactTier ? { exact: Number(row.exact) === 1 } : {}),
+    }))
   } finally {
     database.exec("COMMIT")
   }
@@ -317,14 +388,28 @@ export interface NoteSearch {
 
 const SCAN_PAGE = 5_000
 
+/** The live documents and notes of a chunk scan, narrowed by folder and source. */
+const LIVE =
+  "((k.chunkable_type = 'document' AND EXISTS (SELECT 1 FROM documents d WHERE d.id = k.chunkable_id AND d.deleted_at IS NULL " +
+  "AND (? IS NULL OR d.account_id IN (SELECT CAST(value AS INTEGER) FROM json_each(?))))) " +
+  "OR (k.chunkable_type = 'note' AND ? IS NULL AND EXISTS (SELECT 1 FROM notes n WHERE n.id = k.chunkable_id AND n.deleted_at IS NULL)))"
+
 export const noteSearchOver = (context: StoreContext): NoteSearch => {
   const { database } = context
   const stemmerFor = stemmerCache()
   const drain = () => drainNoteIndex(database, stemmerFor)
-  const filters = (folderIds: string[] | undefined, source: Note["source"] | undefined) => ({
-    sql: `${folderIds?.length ? " AND n.folder_id IN (SELECT value FROM json_each(?))" : ""}${source ? " AND n.source = ?" : ""}`,
-    params: [...(folderIds?.length ? [JSON.stringify(folderIds)] : []), ...(source ? [source] : [])] as SqlValue[],
-  })
+  const read = (type: string, id: number): Note | undefined => {
+    const row = database.prepare(`SELECT * FROM ${type === "document" ? "documents" : "notes"} WHERE id = ?`).get(id)
+    return row ? (type === "document" ? documentOf(row) : noteOf(row)) : undefined
+  }
+  const live = (folderIds: string[] | undefined, source: Note["source"] | undefined) => {
+    const folders = folderIds?.length ? JSON.stringify(folderIds) : null
+    const types = source === undefined ? ["document", "note"] : source === "file" ? ["document"] : ["note"]
+    return {
+      sql: ` AND k.chunkable_type IN (${types.map(() => "?").join(", ")}) AND ${LIVE}`,
+      params: [...types, folders, folders, folders] as SqlValue[],
+    }
+  }
   return {
     search: async (query) => {
       drain()
@@ -333,55 +418,54 @@ export const noteSearchOver = (context: StoreContext): NoteSearch => {
     indexState: async () => noteIndexState(database),
     chunksToEmbed: async (model, { after, limit }) => {
       drain()
+      const scope = live(undefined, undefined)
       return database
         .prepare(
-          `SELECT k.content_hash AS hash, min(k.note_pk) AS pk, k.text_start AS start, k.text_end AS end
-             FROM note_chunks k JOIN notes n ON n.pk = k.note_pk
-            WHERE n.deleted_at IS NULL AND k.content_hash > ?
-              AND NOT EXISTS (SELECT 1 FROM chunk_vectors v WHERE v.model = ? AND v.content_hash = k.content_hash)
+          `SELECT k.content_hash AS hash, min(k.chunkable_type || ':' || k.chunkable_id) AS owner, k.start_offset AS start, k.end_offset AS end
+             FROM chunks k
+            WHERE k.content_hash > ?${scope.sql}
+              AND NOT EXISTS (SELECT 1 FROM embeddings v WHERE v.model = ? AND v.content_hash = k.content_hash)
             GROUP BY k.content_hash ORDER BY k.content_hash LIMIT ?`,
         )
-        .all(after ?? "", model, limit)
+        .all(after ?? "", ...scope.params, model, limit)
         .flatMap((row) => {
-          const note = database.prepare("SELECT title, text FROM notes WHERE pk = ?").get(Number(row.pk))
+          const [type, id] = String(row.owner).split(":")
+          const note = read(String(type), Number(id))
           if (!note) return []
-          const text = noteIndexText(note.title === null ? null : String(note.title), String(note.text))
+          const text = noteIndexText(note.title, note.text)
           return [{ hash: String(row.hash), text: text.slice(Number(row.start), Number(row.end)) }]
         })
     },
     nearest: async (model, query, { limit, folderIds, source }) => {
       drain()
-      const scope = filters(folderIds, source)
+      const scope = live(folderIds, source)
       const page = database.prepare(
-        `SELECT k.note_pk AS pk, k.seq, k.text_start AS start, k.text_end AS end, v.vector FROM note_chunks k
-           CROSS JOIN notes n ON n.pk = k.note_pk
-           JOIN chunk_vectors v ON v.model = ? AND v.content_hash = k.content_hash
-          WHERE n.deleted_at IS NULL${scope.sql} AND (k.note_pk, k.seq) > (?, ?)
-          ORDER BY k.note_pk, k.seq LIMIT ?`,
+        `SELECT k.id, k.chunkable_type AS type, k.chunkable_id AS owner, k.start_offset AS start, k.end_offset AS end, v.vector
+           FROM chunks k JOIN embeddings v ON v.model = ? AND v.content_hash = k.content_hash
+          WHERE k.id > ?${scope.sql}
+          ORDER BY k.id LIMIT ?`,
       )
-      const best = new Map<number, { score: number; start: number; end: number }>()
-      let after = { pk: 0, seq: -1 }
+      const best = new Map<string, { score: number; start: number; end: number }>()
+      let after = 0
       for (;;) {
-        const rows = page.all(model, ...scope.params, after.pk, after.seq, SCAN_PAGE)
+        const rows = page.all(model, after, ...scope.params, SCAN_PAGE)
         for (const row of rows) {
           const score = dot(query, row.vector as Uint8Array)
-          const pk = Number(row.pk)
-          if (score > (best.get(pk)?.score ?? Number.NEGATIVE_INFINITY))
-            best.set(pk, { score, start: Number(row.start), end: Number(row.end) })
+          const key = `${row.type}:${row.owner}`
+          if (score > (best.get(key)?.score ?? Number.NEGATIVE_INFINITY))
+            best.set(key, { score, start: Number(row.start), end: Number(row.end) })
         }
         const last = rows.at(-1)
         if (!last || rows.length < SCAN_PAGE) break
-        after = { pk: Number(last.pk), seq: Number(last.seq) }
+        after = Number(last.id)
       }
-      const read = database.prepare("SELECT * FROM notes WHERE pk = ?")
       return [...best.entries()]
         .sort(([, a], [, b]) => b.score - a.score)
         .slice(0, limit)
-        .flatMap(([pk, { score, start, end }]) => {
-          const row = read.get(pk)
-          if (!row) return []
-          const note = noteOf(row)
-          return [{ ref: `note:${note.id}`, note, score, range: { start, end } }]
+        .flatMap(([key, { score, start, end }]) => {
+          const [type, id] = key.split(":")
+          const note = read(String(type), Number(id))
+          return note ? [{ ref: note.ref, note, score, range: { start, end } }] : []
         })
     },
   }

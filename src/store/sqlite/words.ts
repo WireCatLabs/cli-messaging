@@ -88,11 +88,11 @@ const resolve = (context: StoreContext, scope: SearchScope): Resolved | null => 
     if (chatPk === undefined) return null
     resolved.chatPk = chatPk
     resolved.chatMessages = Number(
-      database.prepare("SELECT message_count FROM chats WHERE pk = ?").get(chatPk)?.message_count,
+      database.prepare("SELECT message_count FROM chats WHERE id = ?").get(chatPk)?.message_count,
     )
   }
   if (scope.senders) {
-    const lookup = database.prepare("SELECT pk FROM identities WHERE provider = ? AND native_id = ?")
+    const lookup = database.prepare("SELECT id AS pk FROM identities WHERE provider = ? AND external_id = ?")
     resolved.senderPks = scope.senders.flatMap(({ provider, id }) => {
       const pk = lookup.get(provider, id)?.pk
       return pk === undefined ? [] : [Number(pk)]
@@ -101,14 +101,14 @@ const resolve = (context: StoreContext, scope: SearchScope): Resolved | null => 
   }
   if (scope.sender) {
     const senderPk = database
-      .prepare("SELECT pk FROM identities WHERE provider = ? AND native_id = ?")
+      .prepare("SELECT id AS pk FROM identities WHERE provider = ? AND external_id = ?")
       .get(scope.sender.provider, scope.sender.id)?.pk
     if (senderPk === undefined) return null
     resolved.senderPk = Number(senderPk)
     // Counted only as far as the limit: past it the answer is "large", whatever the number.
     resolved.senderMessages = Number(
       database
-        .prepare("SELECT count(*) AS n FROM (SELECT 1 FROM messages WHERE sender_identity_pk = ? LIMIT ?)")
+        .prepare("SELECT count(*) AS n FROM (SELECT 1 FROM messages WHERE sender_identity_id = ? LIMIT ?)")
         .get(resolved.senderPk, SCOPE_TOKEN_LIMIT + 1)?.n,
     )
   }
@@ -117,17 +117,17 @@ const resolve = (context: StoreContext, scope: SearchScope): Resolved | null => 
 
 /** The conditions on the message row, shared by every step. */
 const rowConditions = (resolved: Resolved, scope: SearchScope, joined: { chat: boolean; sender: boolean }) => {
-  const where = ["m.deleted_at IS NULL", `m.account_pk IN (${resolved.accountPks.join(", ")})`]
+  const where = ["m.deleted_at IS NULL", `m.account_id IN (${resolved.accountPks.join(", ")})`]
   const params: SqlValue[] = []
   if (joined.chat) {
-    where.push("m.chat_pk = ?")
+    where.push("m.chat_id = ?")
     params.push(resolved.chatPk as number)
   }
   if (joined.sender) {
-    where.push("m.sender_identity_pk = ?")
+    where.push("m.sender_identity_id = ?")
     params.push(resolved.senderPk as number)
   }
-  if (resolved.senderPks) where.push(`m.sender_identity_pk IN (${resolved.senderPks.join(", ")})`)
+  if (resolved.senderPks) where.push(`m.sender_identity_id IN (${resolved.senderPks.join(", ")})`)
   if (scope.outgoing) where.push("m.outgoing = 1")
   if (scope.after !== undefined) {
     where.push("m.sent_at >= ?")
@@ -138,15 +138,18 @@ const rowConditions = (resolved: Resolved, scope: SearchScope, joined: { chat: b
     params.push(scope.before)
   }
   for (const kind of scope.has ?? []) {
-    if (kind === "link") where.push(`m.pk IN (SELECT rowid FROM messages_fts WHERE messages_fts MATCH '"://"')`)
-    else if (kind === "attachment") where.push("EXISTS (SELECT 1 FROM attachments a WHERE a.message_pk = m.pk)")
+    if (kind === "link") where.push(`m.id IN (SELECT rowid FROM messages_fts WHERE messages_fts MATCH '"://"')`)
+    else if (kind === "attachment")
+      where.push("EXISTS (SELECT 1 FROM attachments a WHERE a.attachable_type = 'message' AND a.attachable_id = m.id)")
     else {
-      where.push("EXISTS (SELECT 1 FROM attachments a WHERE a.message_pk = m.pk AND a.kind = ?)")
+      where.push(
+        "EXISTS (SELECT 1 FROM attachments a WHERE a.attachable_type = 'message' AND a.attachable_id = m.id AND a.kind = ?)",
+      )
       params.push(kind)
     }
   }
   // A chat marked not searchable is searched only when the search names it (plan S9).
-  if (!scope.chat) where.push("c.is_searchable = 1")
+  if (!scope.chat) where.push("c.searchable = 1")
   return { where: where.join(" AND "), params }
 }
 
@@ -202,13 +205,13 @@ export const matchWords = (
     sender: resolved.senderPk !== undefined && !tokenSender,
   }
   const { where, params } = rowConditions(resolved, scope, joined)
-  const order = newest ? "m.sent_at DESC, m.pk DESC" : "f.rank, m.sent_at DESC, m.pk DESC"
+  const order = newest ? "m.sent_at DESC, m.id DESC" : "f.rank, m.sent_at DESC, m.id DESC"
   const full = () =>
     context.database
       .prepare(
-        `SELECT m.pk AS pk, f.rank AS score
+        `SELECT m.id AS pk, f.rank AS score
          FROM message_words f CROSS JOIN messages m CROSS JOIN chats c
-         WHERE message_words MATCH ? AND f.rank MATCH '${UNSCOPED_RANK}' AND m.pk = f.rowid AND c.pk = m.chat_pk
+         WHERE message_words MATCH ? AND f.rank MATCH '${UNSCOPED_RANK}' AND m.id = f.rowid AND c.id = m.chat_id
            AND ${where}
          ORDER BY ${order} LIMIT ?`,
       )
@@ -225,8 +228,8 @@ export const matchWords = (
   const kept = new Map(
     context.database
       .prepare(
-        `SELECT m.pk AS pk, m.sent_at AS sent FROM messages m CROSS JOIN chats c
-         WHERE m.pk IN (${ranked.map((row) => Number(row.pk)).join(", ")}) AND c.pk = m.chat_pk AND ${where}`,
+        `SELECT m.id AS pk, m.sent_at AS sent FROM messages m CROSS JOIN chats c
+         WHERE m.id IN (${ranked.map((row) => Number(row.pk)).join(", ")}) AND c.id = m.chat_id AND ${where}`,
       )
       .all(...params)
       .map((row) => [Number(row.pk), Number(row.sent)]),
@@ -254,8 +257,8 @@ export const matchFilters = (
   })
   const rows = context.database
     .prepare(
-      `SELECT m.pk AS pk FROM messages m CROSS JOIN chats c
-       WHERE c.pk = m.chat_pk AND ${where} ORDER BY m.sent_at DESC, m.pk DESC LIMIT ?`,
+      `SELECT m.id AS pk FROM messages m CROSS JOIN chats c
+       WHERE c.id = m.chat_id AND ${where} ORDER BY m.sent_at DESC, m.id DESC LIMIT ?`,
     )
     .all(...params, limit + 1)
     .map((row) => ({ pk: Number(row.pk), score: null }))
@@ -291,9 +294,9 @@ export const matchSubstring = (
   })
   const rows = context.database
     .prepare(
-      `SELECT m.pk AS pk FROM messages_fts f CROSS JOIN messages m CROSS JOIN chats c
-       WHERE messages_fts MATCH ? AND m.pk = f.rowid AND c.pk = m.chat_pk AND ${where}
-       ORDER BY m.sent_at DESC, m.pk DESC LIMIT ?`,
+      `SELECT m.id AS pk FROM messages_fts f CROSS JOIN messages m CROSS JOIN chats c
+       WHERE messages_fts MATCH ? AND m.id = f.rowid AND c.id = m.chat_id AND ${where}
+       ORDER BY m.sent_at DESC, m.id DESC LIMIT ?`,
     )
     .all(match, ...params, limit + 1)
     .map((row) => ({ pk: Number(row.pk), score: null }))

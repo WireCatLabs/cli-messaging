@@ -11,22 +11,22 @@ import { parsed, present, toIso, toMs } from "./values.js"
  * a plain select and a subquery (`find` per chat).
  */
 export const MESSAGE_FIELDS = {
-  pk: messages.pk,
-  nativeId: messages.nativeId,
-  chatNativeId: sql<string>`${chats.nativeId}`.as("chat_native_id"),
-  senderNativeId: sql<string | null>`${identities.nativeId}`.as("sender_native_id"),
-  senderChatNativeId: messages.senderChatNativeId,
+  pk: messages.id,
+  nativeId: messages.externalId,
+  chatNativeId: sql<string>`${chats.externalId}`.as("chat_native_id"),
+  senderNativeId: sql<string | null>`${identities.externalId}`.as("sender_native_id"),
+  senderChatNativeId: messages.senderChatExternalId,
   senderName: messages.senderName,
   sentAt: messages.sentAt,
   editedAt: messages.editedAt,
   text: messages.text,
   outgoing: messages.outgoing,
   replyTo: messages.replyTo,
-  replyToNativeId: messages.replyToNativeId,
+  replyToNativeId: messages.replyToExternalId,
   forward: messages.forward,
-  threadNativeId: messages.threadNativeId,
+  threadNativeId: messages.threadExternalId,
   reactions: messages.reactions,
-  providerMetadata: messages.providerMetadata,
+  providerMetadata: messages.metadata,
   mentions: messages.mentions,
 }
 
@@ -54,17 +54,17 @@ export const selectMessages = ({ orm }: StoreContext) =>
   orm
     .select(MESSAGE_FIELDS)
     .from(messages)
-    .innerJoin(chats, eq(chats.pk, messages.chatPk))
-    .leftJoin(identities, eq(identities.pk, messages.senderIdentityPk))
+    .innerJoin(chats, eq(chats.id, messages.chatId))
+    .leftJoin(identities, eq(identities.id, messages.senderIdentityId))
 
-export const newestFirst = [desc(messages.sentAt), desc(messages.pk)]
+export const newestFirst = [desc(messages.sentAt), desc(messages.id)]
 
-export const before = (sentAt: number, pk: number) => sql`(${messages.sentAt}, ${messages.pk}) < (${sentAt}, ${pk})`
+export const before = (sentAt: number, pk: number) => sql`(${messages.sentAt}, ${messages.id}) < (${sentAt}, ${pk})`
 
-const after = (sentAt: number, pk: number) => sql`(${messages.sentAt}, ${messages.pk}) > (${sentAt}, ${pk})`
+const after = (sentAt: number, pk: number) => sql`(${messages.sentAt}, ${messages.id}) > (${sentAt}, ${pk})`
 
 const live = (chatKey: number, ...conditions: (SQL | undefined)[]) =>
-  and(eq(messages.chatPk, chatKey), isNull(messages.deletedAt), ...conditions)
+  and(eq(messages.chatId, chatKey), isNull(messages.deletedAt), ...conditions)
 
 export const toMessages = ({ orm }: StoreContext, rows: MessageRow[]): Message[] => {
   const byMessage = new Map<number, Attachment[]>()
@@ -73,14 +73,18 @@ export const toMessages = ({ orm }: StoreContext, rows: MessageRow[]): Message[]
       .select()
       .from(attachments)
       .where(
-        inArray(
-          attachments.messagePk,
-          rows.map((row) => row.pk),
+        and(
+          eq(attachments.attachableType, "message"),
+          inArray(
+            attachments.attachableId,
+            rows.map((row) => row.pk),
+          ),
         ),
       )
-      .orderBy(attachments.messagePk, attachments.position)
+      .orderBy(attachments.attachableId, attachments.position)
       .all()
-    for (const row of found) byMessage.set(row.messagePk, [...(byMessage.get(row.messagePk) ?? []), toAttachment(row)])
+    for (const row of found)
+      byMessage.set(row.attachableId, [...(byMessage.get(row.attachableId) ?? []), toAttachment(row)])
   }
   return rows.map((row) => toMessage(row, byMessage.get(row.pk) ?? []))
 }
@@ -106,18 +110,18 @@ export const changesSince = (
   at: number,
 ): { messages: Message[]; deleted: Id[] } => {
   const edited = context.orm
-    .select({ pk: messageRevisions.messagePk })
+    .select({ pk: messageRevisions.messageId })
     .from(messageRevisions)
-    .where(gt(messageRevisions.capturedAt, at))
+    .where(gt(messageRevisions.createdAt, at))
   const rows = selectMessages(context)
-    .where(live(chatKey, or(gt(messages.ingestedAt, at), inArray(messages.pk, edited))))
-    .orderBy(asc(messages.sentAt), asc(messages.pk))
+    .where(live(chatKey, or(gt(messages.createdAt, at), inArray(messages.id, edited))))
+    .orderBy(asc(messages.sentAt), asc(messages.id))
     .all()
   const deleted = context.orm
-    .select({ id: messages.nativeId })
+    .select({ id: messages.externalId })
     .from(messages)
-    .where(and(eq(messages.chatPk, chatKey), gt(messages.deletedAt, at)))
-    .orderBy(asc(messages.deletedAt), asc(messages.pk))
+    .where(and(eq(messages.chatId, chatKey), gt(messages.deletedAt, at)))
+    .orderBy(asc(messages.deletedAt), asc(messages.id))
     .all()
   return { messages: toMessages(context, rows), deleted: deleted.map((row) => row.id) }
 }
@@ -135,7 +139,7 @@ export const messagesWindow = (
     .all()
   const newer = selectMessages(context)
     .where(live(chatKey, gt(messages.sentAt, moment)))
-    .orderBy(asc(messages.sentAt), asc(messages.pk))
+    .orderBy(asc(messages.sentAt), asc(messages.id))
     .limit(later)
     .all()
   return toMessages(context, [...older.reverse(), ...newer])
@@ -150,9 +154,9 @@ export const messagePage = (
     anchorId === undefined
       ? undefined
       : context.orm
-          .select({ sentAt: messages.sentAt, pk: messages.pk })
+          .select({ sentAt: messages.sentAt, pk: messages.id })
           .from(messages)
-          .where(and(eq(messages.chatPk, chatKey), eq(messages.nativeId, anchorId)))
+          .where(and(eq(messages.chatId, chatKey), eq(messages.externalId, anchorId)))
           .get()
   if (anchorId !== undefined && !anchor) {
     throw new CliError("not_found", `message ${anchorId} is not in the local copy of this chat`)
@@ -163,7 +167,7 @@ export const messagePage = (
         chatKey,
         anchor ? before(anchor.sentAt, anchor.pk) : undefined,
         since === undefined ? undefined : gte(messages.sentAt, toMs(since) as number),
-        threadId === undefined ? undefined : eq(messages.threadNativeId, threadId),
+        threadId === undefined ? undefined : eq(messages.threadExternalId, threadId),
       ),
     )
     .orderBy(...newestFirst)
@@ -182,7 +186,7 @@ export const around = (
     chatKey === undefined
       ? undefined
       : selectMessages(context)
-          .where(live(chatKey, eq(messages.nativeId, messageId)))
+          .where(live(chatKey, eq(messages.externalId, messageId)))
           .get()
   if (chatKey === undefined || !anchor) {
     throw new CliError("not_found", `message ${messageId} is not in the local copy of this chat`)
@@ -192,7 +196,7 @@ export const around = (
       ? []
       : selectMessages(context)
           .where(live(chatKey, older ? before(anchor.sentAt, anchor.pk) : after(anchor.sentAt, anchor.pk)))
-          .orderBy(...(older ? newestFirst : [asc(messages.sentAt), asc(messages.pk)]))
+          .orderBy(...(older ? newestFirst : [asc(messages.sentAt), asc(messages.id)]))
           .limit(count)
           .all()
   const rows = [...side(true, earlier).reverse(), anchor, ...side(false, later)]
@@ -210,10 +214,10 @@ export const message = (
   const rows = selectMessages(context)
     .where(
       and(
-        eq(messages.accountPk, accountKey),
-        eq(messages.nativeId, messageId),
+        eq(messages.accountId, accountKey),
+        eq(messages.externalId, messageId),
         isNull(messages.deletedAt),
-        chatId === undefined ? undefined : eq(chats.nativeId, chatId),
+        chatId === undefined ? undefined : eq(chats.externalId, chatId),
       ),
     )
     .limit(2)
@@ -228,17 +232,17 @@ export const chatStats = ({ orm }: StoreContext, accountKey: number, chatId: Id 
   const newest = sql<number | null>`max(${messages.sentAt})`
   return orm
     .select({
-      chatId: chats.nativeId,
+      chatId: chats.externalId,
       title: chats.title,
-      messages: sql<number>`count(${messages.pk})`,
+      messages: sql<number>`count(${messages.id})`,
       oldest: sql<number | null>`min(${messages.sentAt})`,
       newest,
-      stored: sql<number | null>`max(${messages.ingestedAt})`,
+      stored: sql<number | null>`max(${messages.createdAt})`,
     })
     .from(chats)
-    .innerJoin(messages, and(eq(messages.chatPk, chats.pk), isNull(messages.deletedAt)))
-    .where(and(eq(chats.accountPk, accountKey), chatId === undefined ? undefined : eq(chats.nativeId, chatId)))
-    .groupBy(chats.pk)
+    .innerJoin(messages, and(eq(messages.chatId, chats.id), isNull(messages.deletedAt)))
+    .where(and(eq(chats.accountId, accountKey), chatId === undefined ? undefined : eq(chats.externalId, chatId)))
+    .groupBy(chats.id)
     .orderBy(desc(newest))
     .all()
     .map((row) => ({
@@ -261,25 +265,25 @@ export const senderStats = (
   const newest = sql<number | null>`max(${messages.sentAt})`
   return orm
     .select({
-      chatId: chats.nativeId,
+      chatId: chats.externalId,
       title: chats.title,
       kind: chats.kind,
-      messages: sql<number>`count(${messages.pk})`,
+      messages: sql<number>`count(${messages.id})`,
       oldest: sql<number | null>`min(${messages.sentAt})`,
       newest,
     })
     .from(messages)
-    .innerJoin(chats, eq(chats.pk, messages.chatPk))
-    .innerJoin(identities, eq(identities.pk, messages.senderIdentityPk))
+    .innerJoin(chats, eq(chats.id, messages.chatId))
+    .innerJoin(identities, eq(identities.id, messages.senderIdentityId))
     .where(
       and(
-        eq(chats.accountPk, accountKey),
+        eq(chats.accountId, accountKey),
         isNull(messages.deletedAt),
         eq(identities.provider, provider),
-        eq(identities.nativeId, senderId),
+        eq(identities.externalId, senderId),
       ),
     )
-    .groupBy(chats.pk)
+    .groupBy(chats.id)
     .orderBy(desc(newest))
     .all()
     .map((row) => ({

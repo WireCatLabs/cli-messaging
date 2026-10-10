@@ -4,56 +4,19 @@ import { GENERATED } from "./migrations.generated.js"
 /**
  * Every folder drizzle-kit generated, in order, and the schema version it becomes. Consecutive
  * folders may share a version — a generated one and a `--custom` one for its triggers — and are
- * applied as one migration, one `schema_migrations` row. The version and
+ * applied as one migration, one `schema_migrations` row. The initial folder holds both: the SQL drizzle-kit
+ * generated and, after it, the FTS5 tables, triggers and seed rows it cannot. The version and
  * `minCompatible` are ours, not Drizzle's: `schema_migrations` is the only log, and every build
  * already installed decides by it.
  */
-export type ManifestEntry =
-  | { name: string; version: number; minCompatible: number }
-  /** Built by versions 1–5 before Drizzle; kept only as what drizzle-kit diffs against. */
-  | { name: string; coveredByHandWritten: true }
+export interface ManifestEntry {
+  name: string
+  version: number
+  minCompatible: number
+}
 
-export const MANIFEST: ManifestEntry[] = [
-  { name: "20260929205838_baseline", coveredByHandWritten: true },
-  // Older builds refuse the file from here on (plan D6): none of them writes normalized_text.
-  { name: "20260930003739_version-6-columns", version: 6, minCompatible: 6 },
-  { name: "20260930003740_version-6-message-count", version: 6, minCompatible: 6 },
-  { name: "20260930022658_version-7-chat-members", version: 7, minCompatible: 6 },
-  { name: "20260930023839_version-8-sync-state", version: 8, minCompatible: 6 },
-  { name: "20260930024055_version-9-fetch-leases", version: 9, minCompatible: 6 },
-  { name: "20260930024643_version-10-contacts", version: 10, minCompatible: 6 },
-  { name: "20260930024933_version-11-transcripts", version: 11, minCompatible: 6 },
-  { name: "20261001110735_version-12-search-state", version: 12, minCompatible: 6 },
-  { name: "20261001110736_version-12-word-index", version: 12, minCompatible: 6 },
-  { name: "20261001170143_version-13-conversations", version: 13, minCompatible: 6 },
-  { name: "20261001231437_version-14-chunks", version: 14, minCompatible: 6 },
-  { name: "20261004194933_version-15-stem-state", version: 15, minCompatible: 6 },
-  { name: "20261004194950_version-15-stem-index", version: 15, minCompatible: 6 },
-  { name: "20261004201838_version-16-tags", version: 16, minCompatible: 6 },
-  { name: "20261004201839_version-16-tag-triggers", version: 16, minCompatible: 6 },
-  { name: "20261004202018_version-17-searches", version: 17, minCompatible: 6 },
-  { name: "20261004215824_version-18-member-history", version: 18, minCompatible: 6 },
-  { name: "20261005142356_version-19-attachment-texts", version: 19, minCompatible: 6 },
-  { name: "20261005142357_version-19-attachment-words", version: 19, minCompatible: 6 },
-  { name: "20261005215529_version-20-tasks", version: 20, minCompatible: 6 },
-  { name: "20261006182644_version-21-chunk-ranges", version: 21, minCompatible: 6 },
-  { name: "20261007192852_version-22-private-metadata", version: 22, minCompatible: 6 },
-  { name: "20261007193040_version-22-tag-provenance", version: 22, minCompatible: 6 },
-  { name: "20261007193701_version-22-alias-folding", version: 22, minCompatible: 6 },
-  { name: "20261007194652_version-22-metadata-cleanup", version: 22, minCompatible: 6 },
-  { name: "20261007221350_version-23-knowledge", version: 23, minCompatible: 6 },
-  { name: "20261007221537_version-23-knowledge-cleanup", version: 23, minCompatible: 6 },
-  { name: "20261007225410_version-23-relation-proposals", version: 23, minCompatible: 6 },
-  { name: "20261008010235_retention-counter-observations", version: 24, minCompatible: 6 },
-  { name: "20261008175932_version-25-notes", version: 25, minCompatible: 6 },
-  { name: "20261008175933_version-25-note-triggers", version: 25, minCompatible: 6 },
-  { name: "20261008182026_version-26-note-chunks", version: 26, minCompatible: 6 },
-  { name: "20261008182031_version-26-note-index", version: 26, minCompatible: 6 },
-  { name: "20261008191711_version-27-owner-targets", version: 27, minCompatible: 6 },
-  { name: "20261009092409_version-28-legacy-notes-data", version: 28, minCompatible: 28 },
-  { name: "20261009092436_version-28-drop-legacy-notes", version: 28, minCompatible: 28 },
-  { name: "20261010132610_version-29-direct-replies", version: 29, minCompatible: 28 },
-]
+/** One migration creates the whole schema; every later one is added as the next version. */
+export const MANIFEST: ManifestEntry[] = [{ name: "20261010165959_initial", version: 1, minCompatible: 1 }]
 
 export const generatedMigrations = (
   manifest: ManifestEntry[] = MANIFEST,
@@ -61,7 +24,6 @@ export const generatedMigrations = (
 ): Migration[] => {
   const migrations: Migration[] = []
   for (const entry of manifest) {
-    if ("coveredByHandWritten" in entry) continue
     const found = generated.find(({ name }) => name === entry.name)
     if (!found) throw new Error(`migration ${entry.name} is in the manifest and not in the bundle — run pnpm db:bundle`)
     const last = migrations.at(-1)

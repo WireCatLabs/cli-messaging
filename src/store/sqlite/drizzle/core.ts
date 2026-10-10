@@ -17,6 +17,7 @@ export {
   sql,
 } from "drizzle-orm"
 export {
+  type AnySQLiteColumn,
   alias,
   blob,
   index,

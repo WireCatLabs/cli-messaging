@@ -93,11 +93,10 @@ describe.each(["max", "telegram"])("strict store profile (%s)", (provider) => {
     expect(ids(await run(store, account, "alph gamma"))).toEqual([])
     expect(ids(await run(store, account, "alpha nonexisting"))).toEqual([])
     expect(ids(await run(store, account, "alpha OR beta gamma"))).toEqual([5, 6, 7, 13, 14, 15])
-    const partial: MessageStore = {
-      ...store,
+    const partial: MessageStore = Object.assign(Object.create(store) as MessageStore, {
       fillSearchIndex: async () => ({ normalized: 0, indexed: 0, terms: 0 }),
       searchIndexState: async () => undefined,
-    }
+    })
     await expect(run(partial, account, "alpha")).rejects.toThrow("index is not ready")
     const metadataOnly = await run(partial, account, "kind:group")
     expect(ids(metadataOnly)).toEqual([0, 2, 4, 6, 8, 10, 12, 14])
@@ -369,7 +368,11 @@ describe.each(["max", "telegram"])("strict store profile (%s)", (provider) => {
     await expect(run(store, account, "body:/alpha/i")).rejects.toThrow("unsupported_regex_flags")
     await expect(run(store, account, "alpha~1")).rejects.toThrow("unsupported_operator")
     await expect(
-      searchStore({ ...store, matchQuery: undefined }, account, { language: "lucene", text: "alpha", limit: 1 }),
+      searchStore(Object.assign(Object.create(store) as MessageStore, { matchQuery: undefined }), account, {
+        language: "lucene",
+        text: "alpha",
+        limit: 1,
+      }),
     ).rejects.toThrow("upgrade cli-messaging")
     const controller = new AbortController()
     controller.abort()

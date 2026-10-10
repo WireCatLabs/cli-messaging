@@ -119,9 +119,9 @@ describe("conversations in the store", () => {
     const database = await openCache(path)
     database
       .prepare(
-        `INSERT INTO message_links (chat_pk, message_pk, parent_pk, source, kind, confidence, method, created_at)
-         SELECT m.chat_pk, m.pk, p.pk, 'agent', 'answer', 0.9, 'model', 0
-         FROM messages m JOIN messages p ON p.native_id = '2' WHERE m.native_id = '3'`,
+        `INSERT INTO message_links (chat_id, message_id, parent_id, source, kind, confidence, method, created_at,updated_at)
+         SELECT m.chat_id, m.id, p.id, 'agent', 'answer', 0.9, 'model', 0
+         ,0 FROM messages m JOIN messages p ON p.external_id = '2' WHERE m.external_id = '3'`,
       )
       .run()
     database.close()
@@ -141,9 +141,9 @@ describe("conversations in the store", () => {
     const answer = (message: string, parent: string) =>
       database
         .prepare(
-          `INSERT INTO message_links (chat_pk, message_pk, parent_pk, source, kind, confidence, method, created_at)
-           SELECT m.chat_pk, m.pk, p.pk, 'agent', 'answer', 0.9, 'model', ?
-           FROM messages m JOIN messages p ON p.native_id = ? WHERE m.native_id = ?`,
+          `INSERT INTO message_links (chat_id, message_id, parent_id, source, kind, confidence, method, created_at,updated_at)
+           SELECT m.chat_id, m.id, p.id, 'agent', 'answer', 0.9, 'model', ?
+           ,0 FROM messages m JOIN messages p ON p.external_id = ? WHERE m.external_id = ?`,
         )
         .run(Date.parse("2026-10-01T19:00:00Z"), parent, message)
     answer("3", "2")
@@ -224,9 +224,9 @@ describe("conversations in the store", () => {
     const database = await openCache(path)
     database
       .prepare(
-        `INSERT INTO messages (account_pk, chat_pk, native_id, text, sent_at, ingested_at, ingested_via)
+        `INSERT INTO messages (account_id, chat_id, external_id, text, sent_at, created_at, source, updated_at)
          WITH RECURSIVE n(i) AS (SELECT 100 UNION ALL SELECT i + 1 FROM n WHERE i < 200099)
-         SELECT account_pk, chat_pk, i, '', i, 0, 'history' FROM messages, n WHERE native_id = '1'`,
+         SELECT account_id, chat_id, i, '', i, 0, 'history', 0 FROM messages, n WHERE external_id = '1'`,
       )
       .run()
     database.close()

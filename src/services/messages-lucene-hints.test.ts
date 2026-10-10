@@ -117,11 +117,11 @@ describe("strict search hints", () => {
   it("says how far the word index is and which command finishes it", async () => {
     const store = await open({ "1": ["alpha"] })
     const app = { command: "tg" } as AppIdentity
-    const stuck = (state: Awaited<ReturnType<MessageStore["searchIndexState"]>>): MessageStore => ({
-      ...store,
-      fillSearchIndex: async () => ({ normalized: 0, indexed: 0, terms: 0 }),
-      searchIndexState: async () => state,
-    })
+    const stuck = (state: Awaited<ReturnType<MessageStore["searchIndexState"]>>): MessageStore =>
+      Object.assign(Object.create(store) as MessageStore, {
+        fillSearchIndex: async () => ({ normalized: 0, indexed: 0, terms: 0 }),
+        searchIndexState: async () => state,
+      })
     const partial = { watermark: 200, filledThrough: 50, pendingNormalization: 0, ready: false, termsThrough: 0 }
     const filling = await failure(run(stuck({ ...partial, builtAt: null }), "alpha", { app }))
     expect(filling.details).toMatchObject({ reason: "index_not_ready" })

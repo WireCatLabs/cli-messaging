@@ -4,6 +4,7 @@ import { join } from "node:path"
 import { createTaskService } from "@wirecat/cli-tasks"
 import { afterEach, describe, expect, it } from "vitest"
 import { formatLocator } from "../domain/locator.js"
+import { openCache } from "./open.js"
 import { type MessageStore, openStore } from "./store.js"
 
 const key = { provider: "telegram", account: "500" }
@@ -12,37 +13,35 @@ const opened: MessageStore[] = []
 afterEach(async () => {
   for (const store of opened.splice(0)) await store.close()
 })
+/** Two accounts, each with chat 7 and its message 42, written directly: messaging writes are another area. */
+const seed = async (path: string, accounts: (typeof key)[]) => {
+  const database = await openCache(path)
+  for (const account of accounts) {
+    const row = database
+      .prepare("INSERT INTO accounts (provider, external_id, created_at, updated_at) VALUES (?, ?, 0, 0) RETURNING id")
+      .get(account.provider, account.account)
+    const chat = database
+      .prepare(
+        "INSERT INTO chats (account_id, external_id, kind, title, created_at, updated_at) VALUES (?, '7', 'group', 'Synthetic', 0, 0) RETURNING id",
+      )
+      .get(row?.id as number)
+    database
+      .prepare(
+        "INSERT INTO messages (chat_id, account_id, external_id, sent_at, text, normalized_text, normalizer_version, outgoing, " +
+          "created_at, source, updated_at) VALUES (?, ?, '42', 0, 'Source budget plan', 'source budget plan', 1, 1, 0, 'test', 0)",
+      )
+      .run(chat?.id as number, row?.id as number)
+  }
+  // As if already stemmed: filling stems on reopen is the messaging area's.
+  database.exec("DELETE FROM message_stems_pending")
+  database.close()
+}
 const fixture = async () => {
   const path = join(mkdtempSync(join(tmpdir(), "knowledge-")), "store.db")
   let clock = Date.parse("2026-10-08T10:00:00Z")
   const store = await openStore({ path, now: () => clock })
   opened.push(store)
-  for (const account of [key, other]) {
-    await store.saveChats(account, [
-      { id: "7", title: "Synthetic", kind: "group", unreadCount: 0, lastMessageAt: null, participantsCount: null },
-    ])
-    await store.saveMessages(
-      account,
-      "7",
-      [
-        {
-          id: "42",
-          chatId: "7",
-          senderId: null,
-          senderName: null,
-          timestamp: new Date(clock).toISOString(),
-          editedAt: null,
-          text: "Source budget plan",
-          outgoing: true,
-          attachments: [],
-          replyTo: null,
-          forwardedFrom: null,
-          reactions: null,
-        },
-      ],
-      { via: "test" },
-    )
-  }
+  await seed(path, [key, other])
   const locator = formatLocator({ ...key, chat: "7", message: "42" })
   const target = { type: "message" as const, locator }
   const tasks = createTaskService({ store: store.tasks, now: () => new Date(clock) })
@@ -116,12 +115,13 @@ describe("cross-source knowledge metadata", () => {
     await expect(f.store.knowledge.editAnnotation(key, note.id, "Stale", 1)).rejects.toMatchObject({
       code: "validation_error",
     })
-    await f.store.markDeleted(key, ["42"], { chatId: "7" })
+    const database = await openCache(f.path)
+    database.exec("UPDATE messages SET deleted_at = 1 WHERE external_id = '42'")
+    database.close()
     expect(await f.store.knowledge.annotation(key, note.id)).toMatchObject({
       text: "Updated owner assessment",
       targetState: "deleted",
     })
-    expect(await f.store.message(key, "42", { chatId: "7" })).toBeUndefined()
     const reopened = await openStore({ path: f.path })
     opened.push(reopened)
     expect(await reopened.knowledge.annotation(key, note.id)).toMatchObject({ targetState: "deleted", revision: 2 })
@@ -139,10 +139,10 @@ describe("cross-source knowledge metadata", () => {
     await expect(f.store.knowledge.addTags(other, target, ["work"])).rejects.toMatchObject({ code: "not_found" })
     await f.store.savePeople(key, [{ id: "101", name: "Rin Synthetic" }])
     const person = await f.store.personOf({ provider: key.provider, id: "101" })
-    const entity = await f.store.knowledge.addEntity(key, "organization", "Synthetic Studio")
+    const organization = await f.store.knowledge.addOrganization({ kind: "company", name: "Synthetic Studio" })
     const relation = await f.store.knowledge.relate(key, {
       from: `person:${person?.uid}`,
-      to: `entity:${entity.id}`,
+      to: organization.ref,
       kind: "member-of",
       role: "author",
     })

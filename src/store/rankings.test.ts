@@ -23,9 +23,9 @@ const open = async () => {
   live.push(context)
   migrate(context.database)
   context.database.exec(`
-    INSERT INTO accounts(pk,provider,native_id,created_at) VALUES (1,'fixture','owner',0),(2,'fixture','other',0);
-    INSERT INTO chats(pk,account_pk,native_id,kind,updated_at) VALUES (1,1,'room','group',0),(2,2,'room','group',0);
-    INSERT INTO identities(pk,provider,native_id,name,first_seen_at,updated_at) VALUES (1,'fixture','alice','Alice',0,0),(2,'fixture','bob','Bob',0,0);
+    INSERT INTO accounts(id,provider,external_id,created_at,updated_at) VALUES (1,'fixture','owner',0,0),(2,'fixture','other',0,0);
+    INSERT INTO chats(id,account_id,external_id,kind,updated_at,created_at) VALUES (1,1,'room','group',0,0),(2,2,'room','group',0,0);
+    INSERT INTO identities(id,provider,external_id,name,created_at,updated_at) VALUES (1,'fixture','alice','Alice',0,0),(2,'fixture','bob','Bob',0,0);
   `)
   return context
 }
@@ -51,7 +51,7 @@ const put = (
       : { version: 1, reply: extra.reply ? { chatId: "room", messageId: extra.reply } : null }
   context.database
     .prepare(
-      "INSERT INTO messages(pk,account_pk,chat_pk,native_id,sender_identity_pk,sent_at,text,reactions,provider_metadata,deleted_at,ingested_at,ingested_via) VALUES (?,?,?,?,?,?,?,?,?,?,0,'history')",
+      "INSERT INTO messages(id,account_id,chat_id,external_id,sender_identity_id,sent_at,text,reactions,metadata,deleted_at,created_at,source,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,0,'history',0)",
     )
     .run(
       pk,
@@ -227,19 +227,19 @@ describe("stored rankings", () => {
   it("uses proven channel discussion scope and collapses its automatic copy", async () => {
     const context = await open()
     context.database.exec(
-      "UPDATE chats SET kind='channel' WHERE pk=1; INSERT INTO chats(pk,account_pk,native_id,kind,updated_at) VALUES (3,1,'discussion','group',0)",
+      "UPDATE chats SET kind='channel' WHERE id=1; INSERT INTO chats(id,account_id,external_id,kind,updated_at,created_at) VALUES (3,1,'discussion','group',0,0)",
     )
     put(context, 1, null, { reactions: 2 })
     put(context, 2, null, { chat: 3 })
     put(context, 3, 2, { chat: 3, reactions: 1 })
     context.database
-      .prepare("UPDATE messages SET sender_chat_native_id='room',provider_metadata=? WHERE pk=1")
+      .prepare("UPDATE messages SET sender_chat_external_id='room',metadata=? WHERE id=1")
       .run(JSON.stringify({ graph: { version: 1, reply: null, discussionChatId: "discussion" } }))
     context.database
-      .prepare("UPDATE messages SET sender_chat_native_id='room',provider_metadata=? WHERE pk=2")
+      .prepare("UPDATE messages SET sender_chat_external_id='room',metadata=? WHERE id=2")
       .run(JSON.stringify({ graph: { version: 1, reply: null, discussionSource: { chatId: "room", messageId: "1" } } }))
     context.database
-      .prepare("UPDATE messages SET provider_metadata=? WHERE pk=3")
+      .prepare("UPDATE messages SET metadata=? WHERE id=3")
       .run(JSON.stringify({ graph: { version: 1, reply: { chatId: "discussion", messageId: "2" } } }))
     const found = run(context, "messages", { measure: "replies" }, 10, { chat: { account, chatId: "room" } })
     expect(found.items[0]).toMatchObject({ id: "1", value: 1 })

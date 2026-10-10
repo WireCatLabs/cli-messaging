@@ -51,16 +51,16 @@ export const fileAttachments = (
 ): FileAttachment[] =>
   database
     .prepare(
-      `SELECT att.pk, c.native_id AS chat_id, m.native_id AS message_id, att.position, att.kind, att.name, att.mime,
-         att.size, att.local_path, t.origin, t.bytes AS read_bytes, t.error, t.content_sha256, t.extractor
+      `SELECT att.id AS pk, c.external_id AS chat_id, m.external_id AS message_id, att.position, att.kind, att.name, att.mime,
+         att.size, att.local_path, att.extraction AS origin, att.size AS read_bytes, att.extraction_error AS error, att.content_sha256, att.extractor
        FROM attachments att
-       JOIN messages m ON m.pk = att.message_pk
-       JOIN chats c ON c.pk = m.chat_pk
-       LEFT JOIN attachment_texts t ON t.attachment_pk = att.pk
-       WHERE m.account_pk = ? AND m.deleted_at IS NULL AND att.kind NOT IN (${NOT_FILE_LIST})
-         AND (t.origin IS NULL OR t.origin <> 'agent')
-         ${chatKey === undefined ? "" : "AND m.chat_pk = ?"} ${messageId === undefined ? "" : "AND m.native_id = ?"} AND att.pk < ?
-       ORDER BY att.pk DESC LIMIT ?`,
+       JOIN messages m ON m.id = att.attachable_id AND att.attachable_type = 'message'
+       JOIN chats c ON c.id = m.chat_id
+
+       WHERE m.account_id = ? AND m.deleted_at IS NULL AND att.kind NOT IN (${NOT_FILE_LIST})
+         AND (att.extraction IS NULL OR att.extraction <> 'agent')
+         ${chatKey === undefined ? "" : "AND m.chat_id = ?"} ${messageId === undefined ? "" : "AND m.external_id = ?"} AND att.id < ?
+       ORDER BY att.id DESC LIMIT ?`,
     )
     .all(
       accountKey,
@@ -83,7 +83,7 @@ export const fileAttachments = (
         row.origin == null
           ? null
           : {
-              origin: String(row.origin) as TextOrigin,
+              origin: row.origin === "agent" ? "agent" : "extracted",
               bytes: row.read_bytes == null ? null : Number(row.read_bytes),
               contentSha256: row.content_sha256 == null ? null : String(row.content_sha256),
               error: row.error == null ? null : String(row.error),
@@ -93,7 +93,7 @@ export const fileAttachments = (
 
 /** Where a downloaded attachment was saved, after `messages download` recorded it. */
 export const localPathOf = ({ database }: StoreContext, attachmentPk: number): string | null => {
-  const row = database.prepare("SELECT local_path FROM attachments WHERE pk = ?").get(attachmentPk)
+  const row = database.prepare("SELECT local_path FROM attachments WHERE id = ?").get(attachmentPk)
   return row?.local_path == null ? null : String(row.local_path)
 }
 
@@ -105,24 +105,22 @@ export const keepText = (
 ): boolean => {
   const { changes } = database
     .prepare(
-      `INSERT INTO attachment_texts
-         (attachment_pk, text, normalized_text, origin, extractor, content_sha256, bytes, error, written_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-       ON CONFLICT (attachment_pk) DO UPDATE SET text = excluded.text, normalized_text = excluded.normalized_text,
-         origin = excluded.origin, extractor = excluded.extractor, content_sha256 = excluded.content_sha256,
-         bytes = excluded.bytes, error = excluded.error, written_at = excluded.written_at
-       ${entry.origin === "agent" ? "" : "WHERE attachment_texts.origin <> 'agent' AND (excluded.error IS NULL OR attachment_texts.error IS NOT NULL OR attachment_texts.text = '')"}`,
+      `UPDATE attachments SET text=?, normalized_text=?, extraction=?, extractor=?, content_sha256=?,
+         extraction_error=?, extracted_at=?, updated_at=?, size=coalesce(?,size) WHERE id=?
+       ${entry.origin === "agent" ? "" : "AND (extraction IS NULL OR extraction <> 'agent') AND (? IS NULL OR extraction_error IS NOT NULL OR coalesce(text, '') = '')"}`,
     )
     .run(
-      attachmentPk,
       entry.text,
       normalize(entry.text),
-      entry.origin,
+      entry.origin === "agent" ? "agent" : entry.error ? "failed" : "text",
       entry.extractor,
       entry.contentSha256 ?? null,
-      entry.bytes ?? null,
       entry.error ?? null,
       now(),
+      now(),
+      entry.bytes ?? null,
+      attachmentPk,
+      ...(entry.origin === "agent" ? [] : [entry.error ?? null]),
     )
   return Number(changes) > 0
 }
@@ -135,15 +133,17 @@ export const resetAttachmentWords = (database: CacheDatabase): number => {
   const exists = database.prepare("SELECT 1 FROM sqlite_master WHERE name = 'attachment_words'").get()
   if (!exists) return 0
   return inBatch(database, () => {
-    const update = database.prepare("UPDATE attachment_texts SET normalized_text = ? WHERE attachment_pk = ?")
-    for (const row of database.prepare("SELECT attachment_pk, text, normalized_text FROM attachment_texts").all()) {
+    const update = database.prepare("UPDATE attachments SET normalized_text = ? WHERE id = ?")
+    for (const row of database
+      .prepare("SELECT id AS attachment_id, text, normalized_text FROM attachments WHERE text IS NOT NULL")
+      .all()) {
       const normalized = normalize(String(row.text))
-      if (normalized !== row.normalized_text) update.run(normalized, Number(row.attachment_pk))
+      if (normalized !== row.normalized_text) update.run(normalized, Number(row.attachment_id))
     }
     database.exec("INSERT INTO attachment_words (attachment_words) VALUES ('delete-all')")
     const { changes } = database
       .prepare(
-        "INSERT INTO attachment_words (rowid, normalized_text) SELECT attachment_pk, normalized_text FROM attachment_texts WHERE normalized_text <> ''",
+        "INSERT INTO attachment_words (rowid, normalized_text) SELECT id, normalized_text FROM attachments WHERE normalized_text <> ''",
       )
       .run()
     return Number(changes)
@@ -183,29 +183,29 @@ export const attachmentViews = (
   }: { chatKey?: number; messageId?: Id; needsText?: boolean; offset?: number; limit: number },
 ): AttachmentView[] => {
   const where = [
-    "m.account_pk = ?",
+    "m.account_id = ?",
     "m.deleted_at IS NULL",
     `att.kind NOT IN (${NOT_FILE_LIST})`,
-    ...(chatKey === undefined ? [] : ["m.chat_pk = ?"]),
-    ...(messageId === undefined ? [] : ["m.native_id = ?"]),
+    ...(chatKey === undefined ? [] : ["m.chat_id = ?"]),
+    ...(messageId === undefined ? [] : ["m.external_id = ?"]),
     ...(needsText
       ? [
           "att.local_path IS NOT NULL",
           `att.kind NOT IN (${NO_TEXT_LIST})`,
-          "(t.attachment_pk IS NULL OR (t.origin = 'extracted' AND t.normalized_text = ''))",
+          "(att.extracted_at IS NULL OR (att.extraction <> 'agent' AND coalesce(att.normalized_text, '') = ''))",
         ]
       : []),
   ]
   return database
     .prepare(
-      `SELECT att.pk, c.native_id AS chat_id, m.native_id AS message_id, att.position, att.kind, att.name,
-         att.local_path, t.origin, t.extractor, length(t.text) AS chars, t.error
+      `SELECT att.id AS pk, c.external_id AS chat_id, m.external_id AS message_id, att.position, att.kind, att.name,
+         att.local_path, att.extraction AS origin, att.extractor, length(att.text) AS chars, att.extraction_error AS error
        FROM attachments att
-       JOIN messages m ON m.pk = att.message_pk
-       JOIN chats c ON c.pk = m.chat_pk
-       LEFT JOIN attachment_texts t ON t.attachment_pk = att.pk
+       JOIN messages m ON m.id = att.attachable_id AND att.attachable_type = 'message'
+       JOIN chats c ON c.id = m.chat_id
+
        WHERE ${where.join(" AND ")}
-       ORDER BY m.sent_at DESC, att.pk DESC, att.position LIMIT ? OFFSET ?`,
+       ORDER BY m.sent_at DESC, att.id DESC, att.position LIMIT ? OFFSET ?`,
     )
     .all(
       accountKey,
@@ -226,7 +226,7 @@ export const attachmentViews = (
         row.origin == null
           ? null
           : {
-              origin: String(row.origin) as TextOrigin,
+              origin: row.origin === "agent" ? "agent" : "extracted",
               extractor: String(row.extractor),
               chars: Number(row.chars),
               error: row.error == null ? null : String(row.error),

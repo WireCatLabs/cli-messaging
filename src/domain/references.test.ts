@@ -11,6 +11,11 @@ describe("references", () => {
       "note:01J",
       "person:P1",
       "entity:E1",
+      "organization:3",
+      "project:4",
+      "document:5",
+      "memory:6",
+      "decision:7",
       "task:T1",
     ])
       expect(formatReference(parseReference(text))).toBe(text)

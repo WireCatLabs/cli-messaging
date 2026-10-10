@@ -30,7 +30,7 @@ export const retentionQuery = (
   const { database } = context
   const count = Number(
     database
-      .prepare("SELECT count(*) AS n FROM member_stays WHERE chat_pk=? AND joined_at BETWEEN ? AND ?")
+      .prepare("SELECT count(*) AS n FROM member_stays WHERE chat_id=? AND joined_at BETWEEN ? AND ?")
       .get(chatPk, options.since, options.until)?.n ?? 0,
   )
   if (count > 10_000)
@@ -42,20 +42,11 @@ export const retentionQuery = (
   const archive = chatCompleteness(context, accountPk, [chatId])[0]
   const raw = database
     .prepare(
-      "SELECT s.pk,i.native_id AS person,s.identity_pk,s.joined_at,s.first_seen_at,s.last_seen_at,s.gone_at FROM member_stays s JOIN identities i ON i.pk=s.identity_pk WHERE s.chat_pk=? AND s.joined_at BETWEEN ? AND ? ORDER BY s.joined_at,s.pk",
+      "SELECT s.id AS pk,i.external_id AS person,s.identity_id,s.joined_at,s.first_seen_at,s.last_seen_at,s.left_at FROM member_stays s JOIN identities i ON i.id=s.identity_id WHERE s.chat_id=? AND s.joined_at BETWEEN ? AND ? ORDER BY s.joined_at,s.id",
     )
     .all(chatPk, options.since, options.until)
-  const batchStatement = database.prepare(
-    `SELECT b.pk,b.observed_at,b.complete,EXISTS(SELECT 1 FROM membership_batch_members bm WHERE bm.batch_pk=b.pk AND bm.stay_pk=?) AS present FROM membership_batches b WHERE b.chat_pk=? AND b.observed_at BETWEEN ? AND ? ORDER BY b.observed_at,b.pk LIMIT 1`,
-  )
-  const departureStatement = database.prepare(
-    `SELECT b.observed_at FROM membership_batches b WHERE b.chat_pk=? AND b.complete=1 AND b.observed_at BETWEEN ? AND ? AND NOT EXISTS(SELECT 1 FROM membership_batch_members bm WHERE bm.batch_pk=b.pk AND bm.stay_pk=?) ORDER BY b.observed_at,b.pk LIMIT 1`,
-  )
-  const lastPositiveStatement = database.prepare(
-    `SELECT max(b.observed_at) AS at FROM membership_batches b JOIN membership_batch_members bm ON bm.batch_pk=b.pk WHERE bm.stay_pk=? AND b.observed_at < ?`,
-  )
   const activityStatement = database.prepare(
-    `SELECT min(sent_at) AS at FROM messages WHERE chat_pk=? AND sender_identity_pk=? AND deleted_at IS NULL AND sent_at >= ? AND sent_at < ?`,
+    `SELECT min(sent_at) AS at FROM messages WHERE chat_id=? AND sender_identity_id=? AND deleted_at IS NULL AND sent_at >= ? AND sent_at < ?`,
   )
   const stays: RetentionStay[] = raw.map((row) => {
     const joinedAt = Number(row.joined_at),
@@ -63,12 +54,15 @@ export const retentionQuery = (
       end = joinedAt + options.within
     const day = dayOf(joinedAt),
       cohort = options.by === "week" ? week(day) : day
-    const absence = departureStatement.get(chatPk, Math.max(joinedAt, Number(row.first_seen_at)), options.cutoff, pk)
-    const upper = absence ? Number(absence.observed_at) : null
-    const positive = lastPositiveStatement.get(pk, upper ?? options.cutoff + 1)
-    const lower = positive?.at === null || positive?.at === undefined ? null : Number(positive.at)
+    const upper = row.left_at == null || Number(row.left_at) > options.cutoff ? null : Number(row.left_at)
+    const lower =
+      Number(row.last_seen_at) <= options.cutoff
+        ? Number(row.last_seen_at)
+        : Number(row.first_seen_at) <= options.cutoff
+          ? Number(row.first_seen_at)
+          : null
     const activityEnd = Math.min(end, options.cutoff + 1, upper ?? Number.POSITIVE_INFINITY)
-    const first = activityStatement.get(chatPk, Number(row.identity_pk), joinedAt, activityEnd)?.at
+    const first = activityStatement.get(chatPk, Number(row.identity_id), joinedAt, activityEnd)?.at
     const covered =
       archive?.state === "complete" &&
       archive.fetchedAt !== null &&
@@ -90,20 +84,19 @@ export const retentionQuery = (
             lagMilliseconds: null,
             complete: null,
           }
-        const batch = batchStatement.get(pk, chatPk, target, Math.min(target + RETENTION_TOLERANCE, options.cutoff))
+        const end = Math.min(target + RETENTION_TOLERANCE, options.cutoff)
+        const positive = [Number(row.first_seen_at), Number(row.last_seen_at)]
+          .filter((at) => at >= target && at <= end)
+          .sort((a, b) => a - b)[0]
+        const absent = upper !== null && upper >= target && upper <= end ? upper : undefined
+        const at = positive !== undefined && (absent === undefined || positive < absent) ? positive : absent
         return {
           checkpoint,
           targetAt: iso(target),
-          state: !batch
-            ? "unknown"
-            : Number(batch.present) === 1
-              ? "present"
-              : Number(batch.complete) === 1
-                ? "absent"
-                : "unknown",
-          observedAt: batch ? iso(Number(batch.observed_at)) : null,
-          lagMilliseconds: batch ? Number(batch.observed_at) - target : null,
-          complete: batch ? Number(batch.complete) === 1 : null,
+          state: at === undefined ? "unknown" : at === positive ? "present" : "absent",
+          observedAt: at === undefined ? null : iso(at),
+          lagMilliseconds: at === undefined ? null : at - target,
+          complete: absent !== undefined && at === absent ? true : null,
         }
       }),
       activity: {
@@ -134,7 +127,7 @@ export const retentionQuery = (
   const unknownJoin = Number(
     database
       .prepare(
-        "SELECT count(*) AS n FROM member_stays WHERE chat_pk=? AND joined_at IS NULL AND first_seen_at BETWEEN ? AND ?",
+        "SELECT count(*) AS n FROM member_stays WHERE chat_id=? AND joined_at IS NULL AND first_seen_at BETWEEN ? AND ?",
       )
       .get(chatPk, options.since, options.until)?.n ?? 0,
   )

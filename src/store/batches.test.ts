@@ -43,8 +43,8 @@ const answered = async (path: string, id: number, staleAt: number | null = null)
   const database = await openCache(path)
   database
     .prepare(
-      `INSERT OR REPLACE INTO message_links (chat_pk, message_pk, parent_pk, source, kind, confidence, method, created_at, stale_at)
-       SELECT chat_pk, pk, NULL, 'agent', 'answer', 0.9, 'model', 0, ? FROM messages WHERE native_id = ?`,
+      `INSERT OR REPLACE INTO message_links (chat_id, message_id, parent_id, source, kind, confidence, method, created_at, stale_at, updated_at)
+       SELECT chat_id, id, NULL, 'agent', 'answer', 0.9, 'model', 0, ?, 0 FROM messages WHERE external_id = ?`,
     )
     .run(staleAt, String(id))
   database.close()
@@ -98,8 +98,8 @@ describe("the agent's answers", () => {
     try {
       return database
         .prepare(
-          `SELECT m.native_id AS message, p.native_id AS parent, l.method, l.batch FROM message_links l
-           JOIN messages m ON m.pk = l.message_pk LEFT JOIN messages p ON p.pk = l.parent_pk
+          `SELECT m.external_id AS message, p.external_id AS parent, l.method, l.batch FROM message_links l
+           JOIN messages m ON m.id = l.message_id LEFT JOIN messages p ON p.id = l.parent_id
            WHERE l.source = 'agent' ORDER BY m.sent_at`,
         )
         .all()

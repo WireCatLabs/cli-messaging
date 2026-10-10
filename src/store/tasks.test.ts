@@ -84,31 +84,45 @@ describe("tasks in the store", () => {
     await store.close()
   })
 
-  it("has no column that could hold message text", async () => {
+  it("keeps the source's locator and never its text", async () => {
     const path = fresh()
-    await (await openTasks(path)).close()
+    const store = await openTasks(path)
+    await createTaskService({ store }).add(question)
+    await store.close()
     const database = await openCache(path)
-    const columns = database
-      .prepare("SELECT name FROM pragma_table_info('tasks')")
-      .all()
-      .map((row) => row.name)
+    const rows = database.prepare("SELECT * FROM tasks").all()
     database.close()
 
-    expect(columns).toEqual([
-      "id",
-      "source",
-      "source_kind",
-      "account",
-      "group_key",
-      "kind",
-      "state",
-      "reason",
-      "origin",
-      "created_at",
-      "due_at",
-      "closed_at",
-      "closed_by",
-    ])
+    expect(rows).toHaveLength(1)
+    expect(JSON.stringify(rows)).toContain(question.source)
+    expect(rows[0]).toMatchObject({
+      type: "question",
+      status: "open",
+      source: "rule",
+      key: expect.stringMatching(/^IN[0-9A-F]{8}-1$/),
+    })
+  })
+
+  it("records a question's answer and the owner's verdict", async () => {
+    const path = fresh()
+    const store = await openTasks(path)
+    const { task } = await createTaskService({ store, newId: () => "q1" }).add(question)
+    await store.answer(task.id, { resolution: "Friday works", by: "msg:telegram/100/-1001/43" })
+    await store.judge(task.id, "useful")
+    await expect(store.judge(task.id, "great" as "useful")).rejects.toMatchObject({ code: "validation_error" })
+    await store.close()
+    const database = await openCache(path)
+    const row = database.prepare("SELECT id, resolution, verdict FROM tasks").get()
+    const link = database.prepare("SELECT from_type, from_id, kind, target_text FROM links").get()
+    database.close()
+
+    expect(row).toMatchObject({ resolution: "Friday works", verdict: "useful" })
+    expect(link).toEqual({
+      from_type: "task",
+      from_id: row?.id,
+      kind: "answered-by",
+      target_text: "msg:telegram/100/-1001/43",
+    })
   })
 
   it("names an unknown value instead of passing it on", async () => {
@@ -116,7 +130,7 @@ describe("tasks in the store", () => {
     const store = await openTasks(path)
     await store.insert({ ...question, id: "t1", state: "open", createdAt: at("2026-10-05T10:00:00Z") })
     const database = await openCache(path)
-    database.exec("UPDATE tasks SET kind = 'gossip'")
+    database.exec("UPDATE tasks SET type = 'gossip'")
     database.close()
 
     await expect(store.get("t1")).rejects.toThrow('the store holds a task with an unknown kind "gossip"')

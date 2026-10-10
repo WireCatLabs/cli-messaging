@@ -4,6 +4,44 @@ Notable changes to `@wirecat/cli-messaging` (`@leemour/cli-messaging` up to 0.21
 version, newest first. Versions follow [semver](https://semver.org/); before `1.0.0` a minor version may
 break callers, and says how under "Changed — may break callers". `pnpm docs:check` checks the shape of this file.
 
+## Unreleased
+
+### Added
+
+- `store.botUpdates` records Bot API deliveries once per account and update id, with handling, failure and replay state.
+- `store.involvements` rebuilds a person timeline across messages, chats, meetings, mail, tasks and person links; reads
+  can filter scope and return newest first through the person index.
+- Account and chat scopes, nested chats and message thread roots; conversation vector searches can narrow by scope,
+  project, person and time. See [the messaging store APIs](docs/storage/messaging-v2.md).
+- `store.decisions`, `store.memories` (a memory needs a scope and evidence), `store.proposedActions` (agent
+  proposals that wait for the owner) and `store.agentActions` (one audit row per MCP tool call, never its
+  arguments). Topics: `knowledge.createTag(name, { kind: "topic" })` for the owner, `setMainTopic`.
+- **`store.meetings`: the shared store's `MeetingStore`**, the port `@wirecat/cli-meetings` 0.2.0 defines (now a
+  dependency). It keeps meetings, their series, participants, transcripts with their history, chat, summaries,
+  files, calendar events and the pull cursor, and passes the package's `meetingStoreContract`. Search matches
+  every word of the query as a prefix.
+- **`store.mail`: email threads, emails, recipients and mailboxes**, keyed by account and Message-ID. Save a
+  thread, list threads, read one, read an email by Message-ID, mark emails gone, and search subjects and bodies.
+- `saveAccount` answers the store's id for the account, which `store.meetings` and `store.mail` take.
+
+### Changed — may break callers
+
+- Retention uses the first and last positive roster observations and observed departures. An intermediate roster
+  observation that those materialized stays no longer retain is reported as unknown.
+- **A new store schema in a new file, `wirecat.db`, created by one initial migration (store version 1).** Tables
+  and columns follow Rails naming (`id`, `<thing>_id`, `external_id`, `created_at`/`updated_at`); mail, documents,
+  notes, memories, decisions, events, meetings, organizations, projects, tasks, proposed actions, aliases,
+  taggings and topics, chunks and embeddings have tables of their own. Every table and column is in
+  [`docs/storage/schema-v2.md`](docs/storage/schema-v2.md). The old `messages.db` is left as it is and not
+  converted: messages come back with a fresh sync.
+- **Knowledge, notes and tasks write the new tables.** `store.notes` splits files in a folder (`documents`,
+  `ref` `document:<id>`) from written notes (`notes`, `ref` `note:<id>`); a `Note` now carries `ref`, and
+  `note`, `noteTags` and `noteReferences` take a reference. Folders are `accounts` rows of provider `folder`;
+  `claimFolderPath` and `pendingPath` are gone with the old migration line. `addEntity`/`entities` are
+  replaced by `knowledge.addOrganization`/`organizations` and `addProject`/`projects`; `entity:` references
+  resolve as not found. `store.tasks` keeps the `@wirecat/cli-tasks` `TaskStore` and adds `answer` and
+  `judge`.
+
 ## 0.217.0 — 10.10.2026
 
 ### Fixed

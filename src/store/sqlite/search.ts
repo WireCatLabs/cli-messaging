@@ -12,7 +12,7 @@ const HIT_FIELDS = {
   ...MESSAGE_FIELDS,
   chatTitle: sql<string | null>`${chats.title}`.as("chat_title"),
   provider: sql<string>`${accounts.provider}`.as("provider"),
-  accountNativeId: sql<string>`${accounts.nativeId}`.as("account_native_id"),
+  accountNativeId: sql<string>`${accounts.externalId}`.as("account_native_id"),
 }
 
 type HitRow = MessageRow & { chatTitle: string | null; provider: string; accountNativeId: string }
@@ -55,14 +55,14 @@ export const matching = (
   return and(
     isNull(messages.deletedAt),
     trimmed
-      ? sql`${messages.pk} IN (SELECT rowid FROM messages_fts WHERE messages_fts MATCH ${wordsOf(trimmed)})`
+      ? sql`${messages.id} IN (SELECT rowid FROM messages_fts WHERE messages_fts MATCH ${wordsOf(trimmed)})`
       : undefined,
     scopeProvider === undefined ? undefined : eq(accounts.provider, scopeProvider),
-    account ? eq(accounts.nativeId, account.account) : undefined,
-    within ? inArray(accounts.nativeId, within) : undefined,
-    chatId === undefined ? undefined : eq(chats.nativeId, chatId),
-    ids ? and(eq(identities.provider, accounts.provider), inArray(identities.nativeId, ids)) : undefined,
-    ids && together ? inArray(messages.chatPk, everyoneWrote(context, ids, scopeProvider)) : undefined,
+    account ? eq(accounts.externalId, account.account) : undefined,
+    within ? inArray(accounts.externalId, within) : undefined,
+    chatId === undefined ? undefined : eq(chats.externalId, chatId),
+    ids ? and(eq(identities.provider, accounts.provider), inArray(identities.externalId, ids)) : undefined,
+    ids && together ? inArray(messages.chatId, everyoneWrote(context, ids, scopeProvider)) : undefined,
   )
 }
 
@@ -71,37 +71,37 @@ const everyoneWrote = ({ orm }: StoreContext, ids: string[], scopeProvider: stri
   const written = alias(messages, "m2")
   const writer = alias(identities, "i2")
   return orm
-    .select({ chatPk: written.chatPk })
+    .select({ chatPk: written.chatId })
     .from(written)
-    .innerJoin(writer, eq(writer.pk, written.senderIdentityPk))
+    .innerJoin(writer, eq(writer.id, written.senderIdentityId))
     .where(
       and(
         isNull(written.deletedAt),
         eq(writer.provider, scopeProvider ?? identities.provider),
-        inArray(writer.nativeId, ids),
+        inArray(writer.externalId, ids),
       ),
     )
-    .groupBy(written.chatPk)
-    .having(sql`count(DISTINCT ${writer.nativeId}) = ${ids.length}`)
+    .groupBy(written.chatId)
+    .having(sql`count(DISTINCT ${writer.externalId}) = ${ids.length}`)
 }
 
-const chatRank = sql<number>`row_number() OVER (PARTITION BY ${messages.chatPk} ORDER BY ${messages.sentAt} DESC, ${messages.pk} DESC)`
+const chatRank = sql<number>`row_number() OVER (PARTITION BY ${messages.chatId} ORDER BY ${messages.sentAt} DESC, ${messages.id} DESC)`
 
 const selectHits = ({ orm }: StoreContext) =>
   orm
     .select(HIT_FIELDS)
     .from(messages)
-    .innerJoin(chats, eq(chats.pk, messages.chatPk))
-    .leftJoin(identities, eq(identities.pk, messages.senderIdentityPk))
-    .innerJoin(accounts, eq(accounts.pk, messages.accountPk))
+    .innerJoin(chats, eq(chats.id, messages.chatId))
+    .leftJoin(identities, eq(identities.id, messages.senderIdentityId))
+    .innerJoin(accounts, eq(accounts.id, messages.accountId))
 
 const selectRanked = ({ orm }: StoreContext) =>
   orm
     .select({ ...HIT_FIELDS, chatRank: chatRank.as("chat_rank") })
     .from(messages)
-    .innerJoin(chats, eq(chats.pk, messages.chatPk))
-    .leftJoin(identities, eq(identities.pk, messages.senderIdentityPk))
-    .innerJoin(accounts, eq(accounts.pk, messages.accountPk))
+    .innerJoin(chats, eq(chats.id, messages.chatId))
+    .leftJoin(identities, eq(identities.id, messages.senderIdentityId))
+    .innerJoin(accounts, eq(accounts.id, messages.accountId))
 
 /** The plain search, newest first; exported so a test can read the plan SQLite makes of it. */
 export const newestHits = (context: StoreContext, where: SQL | undefined, wanted: number) =>
@@ -151,7 +151,7 @@ export const hitsByPk = (context: StoreContext, pks: number[]): StoredHit[] => {
   if (pks.length === 0) return []
   const rows = new Map(
     selectHits(context)
-      .where(inArray(messages.pk, pks))
+      .where(inArray(messages.id, pks))
       .all()
       .map((row) => [row.pk, row]),
   )
@@ -181,14 +181,14 @@ export const directReplies = (
   if (!parents.length) return { items: [], hasMore: false }
   const rows = context.database
     .prepare(`
-    SELECT DISTINCT m.pk, length(cast(m.text AS BLOB)) AS bytes FROM json_each(?) requested
+    SELECT DISTINCT m.id, length(cast(m.text AS BLOB)) AS bytes FROM json_each(?) requested
     JOIN accounts ac ON ac.provider=json_extract(requested.value,'$.account.provider')
-      AND ac.native_id=json_extract(requested.value,'$.account.account')
-    JOIN chats c ON c.account_pk=ac.pk AND c.native_id=json_extract(requested.value,'$.chatId')
-    JOIN messages parent ON parent.chat_pk=c.pk AND parent.native_id=json_extract(requested.value,'$.id')
-    JOIN messages m INDEXED BY messages_by_reply ON m.chat_pk=c.pk AND m.reply_to_native_id=parent.native_id
-    WHERE m.deleted_at IS NULL AND parent.deleted_at IS NULL AND m.reply_to_native_id IS NOT NULL
-    ORDER BY cast(requested.key AS INTEGER), m.pk LIMIT ?
+      AND ac.external_id=json_extract(requested.value,'$.account.account')
+    JOIN chats c ON c.account_id=ac.id AND c.external_id=json_extract(requested.value,'$.chatId')
+    JOIN messages parent ON parent.chat_id=c.id AND parent.external_id=json_extract(requested.value,'$.id')
+    JOIN messages m INDEXED BY messages_by_reply ON m.chat_id=c.id AND m.reply_to_external_id=parent.external_id
+    WHERE m.deleted_at IS NULL AND parent.deleted_at IS NULL AND m.reply_to_external_id IS NOT NULL
+    ORDER BY cast(requested.key AS INTEGER), m.id LIMIT ?
   `)
     .all(JSON.stringify(parents), limit + 1)
   if (rows.slice(0, limit).reduce((sum, row) => sum + Number(row.bytes), 0) > QUERY_LIMITS.bodyBytes)
@@ -196,7 +196,7 @@ export const directReplies = (
   return {
     items: hitsByPk(
       context,
-      rows.slice(0, limit).map((r) => Number(r.pk)),
+      rows.slice(0, limit).map((r) => Number(r.id)),
     ),
     hasMore: rows.length > limit,
   }

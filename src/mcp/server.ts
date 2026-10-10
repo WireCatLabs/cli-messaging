@@ -8,6 +8,7 @@ import { connected, type Messenger, type MessengerContext } from "../cli/messeng
 import { warmEmbedders } from "../embeddings/embed.js"
 import { guardFor } from "../sends/guard.js"
 import { levelFor, readKeysForCommand } from "../sends/permissions.js"
+import { openStore } from "../store/store.js"
 import type { HttpOptions } from "./http/serve.js"
 import { instructions } from "./instructions.js"
 import { personalMcpTools } from "./personal.js"
@@ -103,6 +104,15 @@ export const createServer = (
         messenger,
         session,
         withStore: context.withStore,
+        log: async (call) => {
+          if (!recalledAccount(app, provider, settings.profile, context.env)) return
+          const store = await openStore({ env: context.env })
+          try {
+            await store.agentActions.record({ actor: { bot: `${app.command}-mcp` }, ...call })
+          } finally {
+            await store.close()
+          }
+        },
         around: (key, definition, work) => {
           refreshPermissions()
           const level = levelOf(toolKey(key, definition))

@@ -61,8 +61,7 @@ export interface RankedStoreFound {
 const column = (name: string) => `"${name.replaceAll('"', '""')}"`
 const finite = (value: unknown): number | null =>
   typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : null
-const metadata = (alias: string) =>
-  `CASE WHEN json_valid(${alias}.provider_metadata) THEN ${alias}.provider_metadata ELSE '{}' END`
+const metadata = (alias: string) => `CASE WHEN json_valid(${alias}.metadata) THEN ${alias}.metadata ELSE '{}' END`
 export const rankingCounter = (alias: string, field: string, reactions = false) => {
   const source = reactions
     ? `CASE WHEN json_valid(${alias}.reactions) THEN ${alias}.reactions ELSE '{}' END`
@@ -73,14 +72,14 @@ export const rankingCounter = (alias: string, field: string, reactions = false) 
 }
 const scopeOf = (execution: QueryExecution, request: RankingRequest) => {
   const params: SqlValue[] = execution.accounts.flatMap(({ provider, account }) => [provider, account])
-  let sql = `(${execution.accounts.map(() => "(ac.provider=? AND ac.native_id=?)").join(" OR ") || "0"})`
+  let sql = `(${execution.accounts.map(() => "(ac.provider=? AND ac.external_id=?)").join(" OR ") || "0"})`
   const chat = request.contextChat ?? execution.chat
   if (chat) {
-    sql += ` AND ac.provider=? AND ac.native_id=? AND (c.native_id=? OR c.native_id IN (
+    sql += ` AND ac.provider=? AND ac.external_id=? AND (c.external_id=? OR c.external_id IN (
       SELECT json_extract(${metadata("post")},'$.graph.discussionChatId') FROM messages post
-      JOIN chats source ON source.pk=post.chat_pk WHERE post.account_pk=ac.pk AND source.native_id=? AND source.kind='channel' AND json_extract(${metadata("post")},'$.graph.version')=1 AND json_type(${metadata("post")},'$.graph.discussionChatId')='text' AND post.deleted_at IS NULL))`
+      JOIN chats source ON source.id=post.chat_id WHERE post.account_id=ac.id AND source.external_id=? AND source.kind='channel' AND json_extract(${metadata("post")},'$.graph.version')=1 AND json_type(${metadata("post")},'$.graph.discussionChatId')='text' AND post.deleted_at IS NULL))`
     params.push(chat.account.provider, chat.account.account, chat.chatId, chat.chatId)
-  } else sql += " AND c.is_searchable=1"
+  } else sql += " AND c.searchable=1"
   return { sql, params }
 }
 const periodOf = (range: DateRange | undefined) => {
@@ -97,16 +96,16 @@ const periodOf = (range: DateRange | undefined) => {
   return { sql: clauses.join(" AND ") || "1", params }
 }
 const joined =
-  "FROM messages m JOIN chats c ON c.pk=m.chat_pk JOIN accounts ac ON ac.pk=m.account_pk LEFT JOIN identities i ON i.pk=m.sender_identity_pk"
-const graphColumns = `m.pk,m.native_id AS id,c.native_id AS chat,ac.provider,ac.native_id AS account,c.kind,
-  coalesce(i.native_id,m.sender_chat_native_id) AS sender,m.sender_chat_native_id IS NOT NULL AS sender_chat,
+  "FROM messages m JOIN chats c ON c.id=m.chat_id JOIN accounts ac ON ac.id=m.account_id LEFT JOIN identities i ON i.id=m.sender_identity_id"
+const graphColumns = `m.id AS pk,m.external_id AS id,c.external_id AS chat,ac.provider,ac.external_id AS account,c.kind,
+  coalesce(i.external_id,m.sender_chat_external_id) AS sender,m.sender_chat_external_id IS NOT NULL AS sender_chat,
   m.sent_at AS at,${metadata("m")} AS metadata`
 
 const graphIn = (context: StoreContext, execution: QueryExecution, request: RankingRequest, check: () => void) => {
   const { database } = context
   const scope = scopeOf(execution, request)
   const period = periodOf(rankingContextRange(execution.root))
-  const where = `m.deleted_at IS NULL AND ${scope.sql} AND (${period.sql} OR m.pk IN (SELECT pk FROM ranking_selected))`
+  const where = `m.deleted_at IS NULL AND ${scope.sql} AND (${period.sql} OR m.id IN (SELECT id FROM ranking_selected))`
   const params = [...scope.params, ...period.params]
   const questions = request.options.components.some((name) => ["answers", "answer-time"].includes(name))
   const body = questions ? "m.text" : "''"
@@ -124,7 +123,7 @@ const graphIn = (context: StoreContext, execution: QueryExecution, request: Rank
     )
   const rows = database
     .prepare(
-      `SELECT ${graphColumns},${body} AS text,(${period.sql}) AS event,m.pk IN (SELECT pk FROM ranking_selected) AS selected ${joined} WHERE ${where}`,
+      `SELECT ${graphColumns},${body} AS text,(${period.sql}) AS event,m.id IN (SELECT id FROM ranking_selected) AS selected ${joined} WHERE ${where}`,
     )
     .all(...period.params, ...params)
   const nodes: RankingGraphNode[] = []
@@ -165,7 +164,7 @@ const graphIn = (context: StoreContext, execution: QueryExecution, request: Rank
   for (const row of rows) add(row)
   const missing = new Set<string>()
   const parentQuery = database.prepare(
-    `SELECT ${graphColumns} ${joined} WHERE m.deleted_at IS NULL AND ${scope.sql} AND ac.provider=? AND ac.native_id=? AND c.native_id=? AND m.native_id=?`,
+    `SELECT ${graphColumns} ${joined} WHERE m.deleted_at IS NULL AND ${scope.sql} AND ac.provider=? AND ac.external_id=? AND c.external_id=? AND m.external_id=?`,
   )
   for (let index = 0; index < nodes.length; index++) {
     check()
@@ -187,15 +186,15 @@ const graphIn = (context: StoreContext, execution: QueryExecution, request: Rank
   }
   const found = rankReplyGraph(nodes, check)
   const quality = database.prepare(
-    "INSERT INTO ranking_quality(account_pk,complete) SELECT pk,? FROM accounts WHERE provider=? AND native_id=?",
+    "INSERT INTO ranking_quality(account_id,complete) SELECT id AS pk,? FROM accounts WHERE provider=? AND external_id=?",
   )
   for (const account of found.accounts)
     quality.run(account.complete ? 1 : 0, account.account.provider, account.account.account)
   const update = database.prepare(
-    "UPDATE ranking_derived SET kind=?,replies=?,others=?,descendants=?,thread=?,answer_for=?,delay=? WHERE pk=?",
+    "UPDATE ranking_derived SET kind=?,replies=?,others=?,descendants=?,thread=?,answer_for=?,delay=? WHERE id=?",
   )
   const insertGraph = database.prepare(
-    "INSERT INTO ranking_graph(pk,parent,kind,event,answer_for,delay,sender,sender_chat) VALUES (?,?,?,?,?,?,?,?)",
+    "INSERT INTO ranking_graph(id,parent,kind,event,answer_for,delay,sender,sender_chat) VALUES (?,?,?,?,?,?,?,?)",
   )
   for (const node of nodes) {
     const row = found.rows.get(node.pk)
@@ -238,11 +237,11 @@ export const rankQuery = (
     const { options } = request
     const componentNames = options.components
     database.exec(
-      "CREATE TEMP TABLE ranking_selected(pk INTEGER PRIMARY KEY); CREATE TEMP TABLE ranking_derived(pk INTEGER PRIMARY KEY,words INTEGER,day TEXT,kind TEXT,replies INTEGER,others INTEGER,descendants INTEGER,thread INTEGER,answer_for INTEGER,delay REAL); CREATE TEMP TABLE ranking_quality(account_pk INTEGER PRIMARY KEY,complete INTEGER); CREATE TEMP TABLE ranking_graph(pk INTEGER PRIMARY KEY,parent INTEGER,kind TEXT,event INTEGER,answer_for INTEGER,delay REAL,sender TEXT,sender_chat INTEGER); CREATE INDEX ranking_graph_parent ON ranking_graph(parent)",
+      "CREATE TEMP TABLE ranking_selected(id INTEGER PRIMARY KEY); CREATE TEMP TABLE ranking_derived(id INTEGER PRIMARY KEY,words INTEGER,day TEXT,kind TEXT,replies INTEGER,others INTEGER,descendants INTEGER,thread INTEGER,answer_for INTEGER,delay REAL); CREATE TEMP TABLE ranking_quality(account_id INTEGER PRIMARY KEY,complete INTEGER); CREATE TEMP TABLE ranking_graph(id INTEGER PRIMARY KEY,parent INTEGER,kind TEXT,event INTEGER,answer_for INTEGER,delay REAL,sender TEXT,sender_chat INTEGER); CREATE INDEX ranking_graph_parent ON ranking_graph(parent)",
     )
     try {
       database.prepare(`INSERT INTO ranking_selected ${selection.sql}`).run(...selection.params)
-      database.exec("INSERT INTO ranking_derived(pk) SELECT pk FROM ranking_selected")
+      database.exec("INSERT INTO ranking_derived(id) SELECT id FROM ranking_selected")
       const total = Number(database.prepare("SELECT count(*) AS n FROM ranking_selected").get()?.n ?? 0)
       if (total === 0)
         return {
@@ -268,7 +267,7 @@ export const rankQuery = (
           ? Number(
               database
                 .prepare(
-                  "SELECT sum(length(cast(m.text AS BLOB))) AS bytes FROM ranking_selected s JOIN messages m ON m.pk=s.pk",
+                  "SELECT sum(length(cast(m.text AS BLOB))) AS bytes FROM ranking_selected s JOIN messages m ON m.id=s.id",
                 )
                 .get()?.bytes ?? 0,
             )
@@ -288,9 +287,9 @@ export const rankQuery = (
             })
           : undefined
         const page = database.prepare(
-          `SELECT m.pk,m.sent_at${words ? ",m.text" : ""} FROM ranking_selected s JOIN messages m ON m.pk=s.pk WHERE s.pk>? ORDER BY s.pk LIMIT 500`,
+          `SELECT m.id AS pk,m.sent_at${words ? ",m.text" : ""} FROM ranking_selected s JOIN messages m ON m.id=s.id WHERE s.id>? ORDER BY s.id LIMIT 500`,
         )
-        const update = database.prepare("UPDATE ranking_derived SET words=?,day=? WHERE pk=?")
+        const update = database.prepare("UPDATE ranking_derived SET words=?,day=? WHERE id=?")
         let after = -1
         for (let rows = page.all(after); rows.length; rows = page.all(after)) {
           check()
@@ -326,11 +325,11 @@ export const rankQuery = (
         "replies-from-others": nonself,
         "thread-size": local("d.descendants"),
       }
-      const filtered = `FROM ranking_selected s JOIN messages m ON m.pk=s.pk JOIN chats c ON c.pk=m.chat_pk JOIN accounts ac ON ac.pk=m.account_pk LEFT JOIN identities i ON i.pk=m.sender_identity_pk LEFT JOIN ranking_derived d ON d.pk=m.pk LEFT JOIN ranking_quality q ON q.account_pk=m.account_pk WHERE ${options.messageKind === "all" ? "1" : `${kind}=?`}`
+      const filtered = `FROM ranking_selected s JOIN messages m ON m.id=s.id JOIN chats c ON c.id=m.chat_id JOIN accounts ac ON ac.id=m.account_id LEFT JOIN identities i ON i.id=m.sender_identity_id LEFT JOIN ranking_derived d ON d.id=m.id LEFT JOIN ranking_quality q ON q.account_id=m.account_id WHERE ${options.messageKind === "all" ? "1" : `${kind}=?`}`
       const params: SqlValue[] = options.messageKind === "all" ? [] : [options.messageKind]
       let raw: string
       if (options.target === "messages")
-        raw = `SELECT m.pk,ac.provider,ac.native_id AS account,c.native_id AS chat,m.native_id AS id,m.sender_name AS name,${kind} AS kind,1 AS messages,coalesce(q.complete,0) AS graph_complete,CASE WHEN ${reaction} IS NULL THEN 0 ELSE 1 END AS known_reactions,CASE WHEN ${reaction} IS NULL THEN 1 ELSE 0 END AS unknown_reactions${Object.entries(
+        raw = `SELECT m.id AS pk,ac.provider,ac.external_id AS account,c.external_id AS chat,m.external_id AS id,m.sender_name AS name,${kind} AS kind,1 AS messages,coalesce(q.complete,0) AS graph_complete,CASE WHEN ${reaction} IS NULL THEN 0 ELSE 1 END AS known_reactions,CASE WHEN ${reaction} IS NULL THEN 1 ELSE 0 END AS unknown_reactions${Object.entries(
           messageColumns,
         )
           .filter(([name]) => componentNames.includes(name as RankingComponent))
@@ -357,14 +356,14 @@ export const rankQuery = (
           answers: graphValue("sum(d.answer_for IS NOT NULL)"),
           threads: graphValue("sum(coalesce(d.thread,0))"),
           "active-days": "count(DISTINCT d.day)",
-          "answer-time": `SELECT avg(delay) FROM (SELECT dd.delay,row_number() OVER (ORDER BY dd.delay,mm.native_id) AS position,count(*) OVER () AS n FROM ranking_derived dd JOIN messages mm ON mm.pk=dd.pk WHERE dd.answer_for IS NOT NULL AND mm.account_pk=m.account_pk AND mm.sender_identity_pk=m.sender_identity_pk ${kindCondition}) WHERE position IN ((n+1)/2,(n+2)/2)`,
+          "answer-time": `SELECT avg(delay) FROM (SELECT dd.delay,row_number() OVER (ORDER BY dd.delay,mm.external_id) AS position,count(*) OVER () AS n FROM ranking_derived dd JOIN messages mm ON mm.id=dd.id WHERE dd.answer_for IS NOT NULL AND mm.account_id=m.account_id AND mm.sender_identity_id=m.sender_identity_id ${kindCondition}) WHERE position IN ((n+1)/2,(n+2)/2)`,
         }
-        raw = `SELECT NULL AS pk,ac.provider,ac.native_id AS account,NULL AS chat,i.native_id AS id,i.name AS name,NULL AS kind,count(*) AS messages,coalesce(max(q.complete),0) AS graph_complete,${known} AS known_reactions,count(*)-${known} AS unknown_reactions${Object.entries(
+        raw = `SELECT NULL AS pk,ac.provider,ac.external_id AS account,NULL AS chat,i.external_id AS id,i.name AS name,NULL AS kind,count(*) AS messages,coalesce(max(q.complete),0) AS graph_complete,${known} AS known_reactions,count(*)-${known} AS unknown_reactions${Object.entries(
           authorColumns,
         )
           .filter(([name]) => componentNames.includes(name as RankingComponent))
           .map(([name, sql]) => `,(${sql}) AS ${column(name)}`)
-          .join("")} ${filtered} AND m.sender_identity_pk IS NOT NULL GROUP BY m.account_pk,m.sender_identity_pk`
+          .join("")} ${filtered} AND m.sender_identity_id IS NOT NULL GROUP BY m.account_id,m.sender_identity_id`
       }
       const present = componentNames
         .map((name) => `${column(name)} IS NOT NULL AND ${column(name)}>=0 AND ${column(name)}<=1.7976931348623157e308`)
@@ -429,7 +428,7 @@ export const rankQuery = (
       const excludedUnknownSender =
         options.target === "contacts"
           ? Number(
-              database.prepare(`SELECT count(*) AS n ${filtered} AND m.sender_identity_pk IS NULL`).get(...params)?.n ??
+              database.prepare(`SELECT count(*) AS n ${filtered} AND m.sender_identity_id IS NULL`).get(...params)?.n ??
                 0,
             )
           : 0
@@ -438,7 +437,7 @@ export const rankQuery = (
           ? Number(
               database
                 .prepare(
-                  `SELECT count(*) AS n FROM ranking_selected s JOIN messages m ON m.pk=s.pk JOIN chats c ON c.pk=m.chat_pk LEFT JOIN ranking_derived d ON d.pk=m.pk LEFT JOIN ranking_quality q ON q.account_pk=m.account_pk WHERE (${kind}) IS NULL`,
+                  `SELECT count(*) AS n FROM ranking_selected s JOIN messages m ON m.id=s.id JOIN chats c ON c.id=m.chat_id LEFT JOIN ranking_derived d ON d.id=m.id LEFT JOIN ranking_quality q ON q.account_id=m.account_id WHERE (${kind}) IS NULL`,
                 )
                 .get()?.n ?? 0,
             )

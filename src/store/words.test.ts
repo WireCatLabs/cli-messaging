@@ -153,7 +153,7 @@ describe("matchWords", () => {
     const asToken = await ranked()
 
     const database = await openCache(path)
-    database.exec("UPDATE chats SET message_count = 1000000 WHERE native_id = '1'")
+    database.exec("UPDATE chats SET message_count = 1000000 WHERE external_id = '1'")
     database.close()
 
     expect(asToken.map(([id]) => id).sort()).toEqual(["1", "2", "3"])
@@ -197,7 +197,7 @@ describe("matchWords", () => {
     await store.saveMessages(ME, "2", [message("2", "3", "valencia")], { via: "history" })
     await store.markDeleted(ME, ["2"], { chatId: "1" })
     const database = await openCache(path)
-    database.exec("UPDATE chats SET is_searchable = 0 WHERE native_id = '2'")
+    database.exec("UPDATE chats SET searchable = 0 WHERE external_id = '2'")
     database.close()
 
     expect(ids(await store.matchWords(every("valencia"), { accounts: [ME] }, options))).toEqual(["1"])

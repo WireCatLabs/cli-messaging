@@ -48,15 +48,15 @@ const conversationIn = async (path: string) => {
   await store.saveMessages(OWNER, "-1", [message("1"), message("2", "1")], { via: "history" })
   await store.close()
   await withDatabase(path, (run) => {
-    run(`INSERT INTO message_links (chat_pk, message_pk, parent_pk, source, kind, confidence, method, created_at, build)
-         SELECT m.chat_pk, m.pk, p.pk, 'provider', 'reply', 1, 'reply', 0, 1
-         FROM messages m JOIN messages p ON p.native_id = '1' WHERE m.native_id = '2'`)
-    run(`INSERT INTO message_links (chat_pk, message_pk, parent_pk, source, kind, confidence, method, created_at)
-         SELECT chat_pk, pk, NULL, 'agent', 'start', 0.9, 'model', 0 FROM messages WHERE native_id = '1'`)
-    run(`INSERT INTO conversations (chat_pk, build, first_message_pk, first_at, last_at, message_count, built_at, algorithm_version)
-         SELECT chat_pk, 1, pk, sent_at, sent_at, 2, 0, 2 FROM messages WHERE native_id = '1'`)
-    run("INSERT INTO conversation_messages (conversation_pk, message_pk) SELECT 1, pk FROM messages")
-    run("INSERT INTO conversation_state (chat_pk, enabled_at, current_build) SELECT pk, 0, 1 FROM chats")
+    run(`INSERT INTO message_links (chat_id, message_id, parent_id, source, kind, confidence, method, created_at, build,updated_at)
+         SELECT m.chat_id, m.id, p.id, 'provider', 'reply', 1, 'reply', 0, 1
+         ,0 FROM messages m JOIN messages p ON p.external_id = '1' WHERE m.external_id = '2'`)
+    run(`INSERT INTO message_links (chat_id, message_id, parent_id, source, kind, confidence, method, created_at,updated_at)
+         SELECT chat_id, id, NULL, 'agent', 'start', 0.9, 'model', 0 ,0 FROM messages WHERE external_id = '1'`)
+    run(`INSERT INTO conversations (chat_id, build, first_message_id, first_at, last_at, message_count, built_at, algorithm_version,created_at,updated_at)
+         SELECT chat_id, 1, id, sent_at, sent_at, 2, 0, 2 ,0,0 FROM messages WHERE external_id = '1'`)
+    run("INSERT INTO conversation_messages (conversation_id, message_id) SELECT 1, id FROM messages")
+    run("INSERT INTO conversation_state (chat_id, enabled_at, current_build) SELECT id, 0, 1 FROM chats")
   })
 }
 
@@ -99,12 +99,12 @@ describe("conversation tables (store version 13)", () => {
     await conversationIn(path)
     await withDatabase(path, (run) => {
       expect(() =>
-        run(`INSERT INTO message_links (chat_pk, message_pk, parent_pk, source, kind, confidence, method, created_at, build)
-             SELECT chat_pk, message_pk, parent_pk, source, kind, 0.5, 'again', 1, build FROM message_links WHERE parent_pk IS NOT NULL`),
+        run(`INSERT INTO message_links (chat_id, message_id, parent_id, source, kind, confidence, method, created_at, build,updated_at)
+             SELECT chat_id, message_id, parent_id, source, kind, 0.5, 'again', 1, build ,0 FROM message_links WHERE parent_id IS NOT NULL`),
       ).toThrow(/UNIQUE/)
       expect(() =>
-        run(`INSERT INTO message_links (chat_pk, message_pk, parent_pk, source, kind, confidence, method, created_at)
-             SELECT chat_pk, message_pk, NULL, source, kind, 0.5, 'again', 1 FROM message_links WHERE parent_pk IS NULL`),
+        run(`INSERT INTO message_links (chat_id, message_id, parent_id, source, kind, confidence, method, created_at,updated_at)
+             SELECT chat_id, message_id, NULL, source, kind, 0.5, 'again', 1 ,0 FROM message_links WHERE parent_id IS NULL`),
       ).toThrow(/UNIQUE/)
     })
   })
@@ -115,10 +115,10 @@ describe("chunk tables (store version 14)", () => {
     const path = fresh()
     await conversationIn(path)
     await withDatabase(path, (run) => {
-      run(`INSERT INTO conversation_chunks (conversation_pk, ordinal, first_message_pk, last_message_pk, content_hash)
-           SELECT 1, 0, min(pk), max(pk), 'abc' FROM messages`)
-      run(`INSERT INTO chunk_vectors (model, content_hash, dims, vector, created_at)
-           VALUES ('local:e5-small:384', 'abc', 2, x'0000803f00000000', 0)`)
+      run(`INSERT INTO conversation_chunks (conversation_id, ordinal, first_message_id, last_message_id, content_hash)
+           SELECT 1, 0, min(id), max(id), 'abc' FROM messages`)
+      run(`INSERT INTO embeddings (model, content_hash, dims, vector, created_at,updated_at)
+           VALUES ('local:e5-small:384', 'abc', 2, x'0000803f00000000', 0,0)`)
     })
 
     const store = await openStore({ path })
@@ -128,7 +128,7 @@ describe("chunk tables (store version 14)", () => {
     expect(
       await withDatabase(path, (run) => [
         Number(run("SELECT count(*) AS n FROM conversation_chunks")[0]?.n),
-        Number(run("SELECT count(*) AS n FROM chunk_vectors")[0]?.n),
+        Number(run("SELECT count(*) AS n FROM embeddings")[0]?.n),
       ]),
     ).toEqual([0, 1])
   })

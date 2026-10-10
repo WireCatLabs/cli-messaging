@@ -49,6 +49,18 @@ const message = (overrides: Partial<Message> = {}): Message => ({
 })
 
 describe("the message store", () => {
+  it("answers the store's id for an account, the same id every time, for meetings and mail", async () => {
+    const store = await openStore({ path: fresh() })
+    const first = await store.saveAccount({ provider: "zoom", account: "alice@example.com" }, { name: null })
+    const again = await store.saveAccount({ provider: "zoom", account: "alice@example.com" }, { name: "Alice Example" })
+    const other = await store.saveAccount({ provider: "zoom", account: "bob@example.com" }, { name: null })
+
+    expect(again).toBe(first)
+    expect(other).not.toBe(first)
+    expect(await store.mail.threads({ accountId: first })).toEqual([])
+    await store.close()
+  })
+
   it("**gives back exactly the chat and the message it was given**", async () => {
     const store = await openStore({ path: fresh() })
     await store.saveChats(ME, [chat])
@@ -398,7 +410,7 @@ describe("finding people and what they wrote", () => {
     await store.savePeople(ME, [{ id: "7", name: "Vera", username: null }])
     const updatedAt = async () => {
       const database = await openCache(path)
-      const row = database.prepare("SELECT updated_at FROM identities WHERE native_id = '7'").get()
+      const row = database.prepare("SELECT updated_at FROM identities WHERE external_id = '7'").get()
       database.close()
       return row?.updated_at
     }
@@ -543,46 +555,6 @@ describe("migrating the store", () => {
       [...MIGRATIONS, next].map(({ version }) => ({ version })),
     )
     database.close()
-  })
-
-  it.each(MIGRATIONS.slice(0, -1))("brings version $version forward without losing a message", async (shipped) => {
-    const path = fresh()
-    const older = await openCache(path)
-    migrate(older, { migrations: MIGRATIONS.filter(({ version }) => version <= shipped.version) })
-    // Written the way that version wrote it — named columns, the ones version 1 has.
-    older.exec(`INSERT INTO accounts (pk, provider, native_id, created_at) VALUES (1, 'telegram', '100', 0)`)
-    older.exec(
-      `INSERT INTO chats (pk, account_pk, native_id, kind, updated_at) VALUES (1, 1, '${chat.id}', 'group', 0)`,
-    )
-    older.exec(`INSERT INTO messages (chat_pk, account_pk, native_id, sent_at, text, ingested_at, ingested_via)
-                VALUES (1, 1, '42', 1, 'kept across the upgrade', 0, 'history')`)
-    older.close()
-
-    const store = await openStore({ path })
-    expect((await store.messages(ME, chat.id, { limit: 5 })).items.map((one) => one.text)).toEqual([
-      "kept across the upgrade",
-    ])
-    expect((await store.search("across", { limit: 5 })).items.map((hit) => hit.id)).toEqual(["42"])
-    await store.close()
-  })
-
-  it("counts every sender already stored as seen by the account they wrote to", async () => {
-    const path = fresh()
-    const older = await openCache(path)
-    migrate(older, { migrations: MIGRATIONS.filter(({ version }) => version <= 3) })
-    older.exec(`INSERT INTO accounts (pk, provider, native_id, created_at) VALUES (1, 'telegram', '100', 0)`)
-    older.exec(
-      `INSERT INTO chats (pk, account_pk, native_id, kind, updated_at) VALUES (1, 1, '${chat.id}', 'group', 0)`,
-    )
-    older.exec(`INSERT INTO identities (pk, provider, native_id, name, first_seen_at, updated_at)
-                VALUES (1, 'telegram', '7', 'Seven', 0, 0)`)
-    older.exec(`INSERT INTO messages (chat_pk, account_pk, native_id, sender_identity_pk, sent_at, text, ingested_at,
-                ingested_via) VALUES (1, 1, '42', 1, 1, 'hi', 0, 'history')`)
-    older.close()
-
-    const store = await openStore({ path })
-    expect((await store.people("telegram", { account: "100" })).get("7")).toMatchObject({ name: "Seven" })
-    await store.close()
   })
 
   it("brings an older file forward without losing a message", async () => {

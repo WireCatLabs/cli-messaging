@@ -82,7 +82,7 @@ describe("text of attachments in the store (version 19)", () => {
     expect(await store.keepAttachmentText(pk, { text: "read by eye", origin: "agent", extractor: "agent" })).toBe(true)
     expect(await store.keepAttachmentText(pk, { text: "again", origin: "extracted", extractor: "plain" })).toBe(false)
 
-    expect(await raw(path, "SELECT text, origin FROM attachment_texts")).toEqual([
+    expect(await raw(path, "SELECT text, extraction AS origin FROM attachments")).toEqual([
       { text: "read by eye", origin: "agent" },
     ])
     expect(await store.fileAttachments(OWNER, { limit: 10 })).toEqual([])
@@ -96,7 +96,7 @@ describe("text of attachments in the store (version 19)", () => {
 
     expect(await store.markDeleted(OWNER, ["1"], { chatId: "-1" })).toBe(1)
 
-    expect(await raw(path, "SELECT count(*) AS n FROM attachment_texts")).toEqual([{ n: 0 }])
+    expect(await raw(path, "SELECT count(*) AS n FROM attachments WHERE text IS NOT NULL")).toEqual([{ n: 0 }])
     expect(await raw(path, "SELECT count(*) AS n FROM attachment_words WHERE attachment_words MATCH 'secret'")).toEqual(
       [{ n: 0 }],
     )
@@ -112,7 +112,7 @@ describe("text of attachments in the store (version 19)", () => {
     database.exec("PRAGMA foreign_keys = OFF")
     database.exec("DELETE FROM attachments")
     database.close()
-    expect(await raw(path, "SELECT count(*) AS n FROM attachment_texts")).toEqual([{ n: 0 }])
+    expect(await raw(path, "SELECT count(*) AS n FROM attachments WHERE text IS NOT NULL")).toEqual([{ n: 0 }])
 
     const again = await seeded()
     await again.store.keepAttachmentText(again.pk, { text: "words", origin: "extracted", extractor: "plain" })
@@ -122,7 +122,7 @@ describe("text of attachments in the store (version 19)", () => {
     other.exec("PRAGMA foreign_keys = OFF")
     other.exec("DELETE FROM messages")
     other.close()
-    expect(await raw(again.path, "SELECT count(*) AS n FROM attachment_texts")).toEqual([{ n: 0 }])
+    expect(await raw(again.path, "SELECT count(*) AS n FROM attachments WHERE text IS NOT NULL")).toEqual([{ n: 0 }])
   })
 
   it("**`store reindex` rebuilds the files' word index from the kept text**", async () => {
@@ -131,12 +131,12 @@ describe("text of attachments in the store (version 19)", () => {
     await store.close()
     live.splice(0)
     const database = await openCache(path)
-    database.exec("UPDATE attachment_texts SET normalized_text = 'stale'")
+    database.exec("UPDATE attachments SET normalized_text = 'stale'")
     database.exec("INSERT INTO attachment_words (attachment_words) VALUES ('delete-all')")
     expect(resetAttachmentWords(database)).toBe(1)
     database.close()
 
-    expect(await raw(path, "SELECT normalized_text FROM attachment_texts")).toEqual([
+    expect(await raw(path, "SELECT normalized_text FROM attachments WHERE text IS NOT NULL")).toEqual([
       { normalized_text: "елка invoice" },
     ])
     const reopened = await openStore({ path })

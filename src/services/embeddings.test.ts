@@ -676,12 +676,10 @@ const withDatabase = async <T>(path: string, body: (run: (sql: string) => Record
 }
 
 const vectorRows = (path: string, hash: string) =>
-  withDatabase(path, (run) =>
-    Number(run(`SELECT count(*) AS n FROM chunk_vectors WHERE content_hash = '${hash}'`)[0]?.n),
-  )
+  withDatabase(path, (run) => Number(run(`SELECT count(*) AS n FROM embeddings WHERE content_hash = '${hash}'`)[0]?.n))
 
 const vectorOf = (path: string, hash: string) =>
   withDatabase(path, (run) => {
-    const blob = run(`SELECT vector FROM chunk_vectors WHERE content_hash = '${hash}'`)[0]?.vector as Uint8Array
+    const blob = run(`SELECT vector FROM embeddings WHERE content_hash = '${hash}'`)[0]?.vector as Uint8Array
     return new Float32Array(blob.buffer.slice(blob.byteOffset, blob.byteOffset + blob.byteLength))
   })

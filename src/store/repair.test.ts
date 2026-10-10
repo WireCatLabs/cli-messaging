@@ -3,41 +3,41 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { describe, expect, it } from "vitest"
 import type { CacheDatabase, SqlValue } from "./driver.js"
-import { MIGRATIONS, migrate } from "./migrations.js"
+import { migrate } from "./migrations.js"
 import { openCache } from "./open.js"
 import { copiesIn, deleteCopy, repairStore } from "./repair.js"
 import { openStore } from "./store.js"
 
-/** The early draft of version 13 that a branch build applied to a real store before #255 merged. */
+/** A deliberately incomplete conversation schema for repair checks. */
 const DRAFT_13 = [
   `CREATE TABLE conversation_messages (
-     conversation_pk integer NOT NULL,
-     message_pk integer NOT NULL UNIQUE,
-     CONSTRAINT fk_conversation_messages_conversation_pk_conversations_pk_fk FOREIGN KEY (conversation_pk) REFERENCES conversations(pk) ON DELETE CASCADE,
-     CONSTRAINT fk_conversation_messages_message_pk_messages_pk_fk FOREIGN KEY (message_pk) REFERENCES messages(pk) ON DELETE CASCADE
+     conversation_id integer NOT NULL,
+     message_id integer NOT NULL UNIQUE,
+     CONSTRAINT fk_conversation_messages_conversation_pk_conversations_pk_fk FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE,
+     CONSTRAINT fk_conversation_messages_message_pk_messages_pk_fk FOREIGN KEY (message_id) REFERENCES messages(id) ON DELETE CASCADE
    )`,
   `CREATE TABLE conversation_state (
-     chat_pk integer PRIMARY KEY,
+     chat_id integer PRIMARY KEY,
      enabled_at integer NOT NULL,
      built_at integer,
      algorithm_version integer,
-     CONSTRAINT fk_conversation_state_chat_pk_chats_pk_fk FOREIGN KEY (chat_pk) REFERENCES chats(pk) ON DELETE CASCADE
+     CONSTRAINT fk_conversation_state_chat_pk_chats_pk_fk FOREIGN KEY (chat_id) REFERENCES chats(id) ON DELETE CASCADE
    )`,
   `CREATE TABLE conversations (
-     pk integer PRIMARY KEY,
-     chat_pk integer NOT NULL,
-     first_message_pk integer NOT NULL,
+     id integer PRIMARY KEY,
+     chat_id integer NOT NULL,
+     first_message_id integer NOT NULL,
      first_at integer NOT NULL,
      last_at integer NOT NULL,
      message_count integer NOT NULL,
      built_at integer NOT NULL,
      algorithm_version integer NOT NULL,
-     CONSTRAINT fk_conversations_chat_pk_chats_pk_fk FOREIGN KEY (chat_pk) REFERENCES chats(pk) ON DELETE CASCADE,
-     CONSTRAINT fk_conversations_first_message_pk_messages_pk_fk FOREIGN KEY (first_message_pk) REFERENCES messages(pk) ON DELETE CASCADE
+     CONSTRAINT fk_conversations_chat_pk_chats_pk_fk FOREIGN KEY (chat_id) REFERENCES chats(id) ON DELETE CASCADE,
+     CONSTRAINT fk_conversations_first_message_pk_messages_pk_fk FOREIGN KEY (first_message_id) REFERENCES messages(id) ON DELETE CASCADE
    )`,
   `CREATE TABLE message_links (
-     message_pk integer NOT NULL,
-     parent_pk integer,
+     message_id integer NOT NULL,
+     parent_id integer,
      source text NOT NULL,
      kind text NOT NULL,
      confidence real NOT NULL,
@@ -46,17 +46,15 @@ const DRAFT_13 = [
      batch text,
      created_at integer NOT NULL,
      stale_at integer,
-     CONSTRAINT fk_message_links_message_pk_messages_pk_fk FOREIGN KEY (message_pk) REFERENCES messages(pk) ON DELETE CASCADE,
-     CONSTRAINT fk_message_links_parent_pk_messages_pk_fk FOREIGN KEY (parent_pk) REFERENCES messages(pk) ON DELETE CASCADE,
-     CONSTRAINT message_links_message_pk_parent_pk_source_kind_unique UNIQUE(message_pk, parent_pk, source, kind)
+     CONSTRAINT fk_message_links_message_pk_messages_pk_fk FOREIGN KEY (message_id) REFERENCES messages(id) ON DELETE CASCADE,
+     CONSTRAINT fk_message_links_parent_id_messages_pk_fk FOREIGN KEY (parent_id) REFERENCES messages(id) ON DELETE CASCADE,
+     CONSTRAINT message_links_message_pk_parent_id_source_kind_unique UNIQUE(message_id, parent_id, source, kind)
    )`,
-  "CREATE INDEX conversation_messages_by_conversation ON conversation_messages (conversation_pk)",
-  "CREATE INDEX conversations_by_chat ON conversations (chat_pk, first_at)",
-  "CREATE UNIQUE INDEX message_links_start ON message_links (message_pk, source, kind) WHERE parent_pk IS NULL",
-  "CREATE INDEX message_links_by_parent ON message_links (parent_pk)",
+  "CREATE INDEX conversation_messages_by_conversation ON conversation_messages (conversation_id)",
+  "CREATE INDEX conversations_by_chat ON conversations (chat_id, first_at)",
+  "CREATE UNIQUE INDEX message_links_start ON message_links (message_id, source, kind) WHERE parent_id IS NULL",
+  "CREATE INDEX message_links_by_parent ON message_links (parent_id)",
 ]
-
-const upTo = (version: number) => MIGRATIONS.filter((one) => one.version <= version)
 
 /** Fills a row's required columns with placeholders, so a fixture survives columns added later. */
 const insert = (database: CacheDatabase, table: string, given: Record<string, SqlValue>): number => {
@@ -76,22 +74,24 @@ const insert = (database: CacheDatabase, table: string, given: Record<string, Sq
   return Number(database.prepare("SELECT last_insert_rowid() AS pk").get()?.pk)
 }
 
-/** A store at version 14 whose version 13 is the draft, with one message — the owner's file in shape. */
+/** A baseline store with incomplete conversation tables and one synthetic message. */
 const draftStore = async ({ rows = false } = {}) => {
   const path = join(mkdtempSync(join(tmpdir(), "repair-")), "messages.db")
   const database = await openCache(path)
-  migrate(database, { migrations: upTo(12) })
+  migrate(database)
+  database.exec(
+    "PRAGMA foreign_keys=OFF; DROP TABLE conversation_messages; DROP TABLE conversation_state; DROP TABLE conversations; DROP TABLE message_links; ALTER TABLE messages DROP COLUMN mentions",
+  )
   for (const statement of DRAFT_13) database.exec(statement)
-  database.prepare("INSERT INTO schema_migrations (version, min_compatible, applied_at) VALUES (13, 6, 1)").run()
-  migrate(database, { migrations: upTo(14) })
-  const account = insert(database, "accounts", { provider: "telegram", native_id: "100" })
-  const chat = insert(database, "chats", { account_pk: account, native_id: "-1001" })
-  const message = insert(database, "messages", { chat_pk: chat, native_id: "1", text: "hello" })
+  database.exec("PRAGMA foreign_keys=ON")
+  const account = insert(database, "accounts", { provider: "telegram", external_id: "100" })
+  const chat = insert(database, "chats", { account_id: account, external_id: "-1001" })
+  const message = insert(database, "messages", { account_id: account, chat_id: chat, external_id: "1", text: "hello" })
   if (rows) {
-    const conversation = insert(database, "conversations", { chat_pk: chat, first_message_pk: message })
-    insert(database, "conversation_messages", { conversation_pk: conversation, message_pk: message })
-    insert(database, "conversation_state", { chat_pk: chat, enabled_at: 1 })
-    insert(database, "message_links", { message_pk: message, source: "reply", kind: "reply" })
+    const conversation = insert(database, "conversations", { chat_id: chat, first_message_id: message })
+    insert(database, "conversation_messages", { conversation_id: conversation, message_id: message })
+    insert(database, "conversation_state", { chat_id: chat, enabled_at: 1 })
+    insert(database, "message_links", { message_id: message, source: "reply", kind: "reply" })
   }
   return { path, database }
 }
@@ -127,7 +127,7 @@ const columnsOf = (database: CacheDatabase, table: string) =>
     .map((row) => String(row.name))
 
 describe("store repair", () => {
-  it("brings a draft-13 store to the published shape, keeping its messages and the old tables as copies", async () => {
+  it("brings an incomplete store to the published shape, keeping its messages and the old tables as copies", async () => {
     const { database } = await draftStore()
 
     const report = await repair(database)
@@ -180,7 +180,7 @@ describe("store repair", () => {
     const report = await repair(database)
     const by = (table: string) => report.repaired.find((one) => one.table === table)
 
-    // `conversations.build` and `message_links.chat_pk` are NOT NULL with nothing to fill them from.
+    // `conversations.build` and `message_links.chat_id` are NOT NULL with nothing to fill them from.
     expect(by("conversations")).toMatchObject({ rowsInCopy: 1, rowsCopied: 0 })
     expect(by("message_links")).toMatchObject({ rowsInCopy: 1, rowsCopied: 0 })
     expect(by("conversation_messages")).toMatchObject({ rowsInCopy: 1, rowsCopied: 1 })
@@ -217,6 +217,7 @@ describe("store repair", () => {
   it("refuses a dry run on a file behind this build, which it could not compare without migrating", async () => {
     const { database } = await draftStore()
 
+    database.exec("DELETE FROM schema_migrations")
     await expect(repair(database, { dryRun: true })).rejects.toThrow("store migrate")
     database.close()
   })

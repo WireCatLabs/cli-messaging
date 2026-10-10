@@ -1,1 +1,0 @@
-CREATE INDEX `messages_by_reply` ON `messages` (`chat_pk`,`reply_to_native_id`) WHERE reply_to_native_id IS NOT NULL AND deleted_at IS NULL;

@@ -37,9 +37,11 @@ describe("the search query plan", () => {
 
   it("**searches the word and substring indexes before the rows**, with a chat joined and with none", async () => {
     const context = await opened()
-    context.database.exec(`INSERT INTO accounts (pk, provider, native_id, created_at) VALUES (1, 'telegram', '1', 0)`)
     context.database.exec(
-      `INSERT INTO chats (pk, account_pk, native_id, kind, updated_at, message_count) VALUES (1, 1, '-100', 'group', 0, 1000000)`,
+      `INSERT INTO accounts (id, provider, external_id, created_at,updated_at) VALUES (1, 'telegram', '1', 0,0)`,
+    )
+    context.database.exec(
+      `INSERT INTO chats (id, account_id, external_id, kind, updated_at, message_count,created_at) VALUES (1, 1, '-100', 'group', 0, 1000000,0)`,
     )
     const statements: string[] = []
     const recording = {
@@ -67,9 +69,11 @@ describe("the search query plan", () => {
 
   it("**reads the stems and words once** for a stemmed search, and never scans every message", async () => {
     const context = await opened()
-    context.database.exec(`INSERT INTO accounts (pk, provider, native_id, created_at) VALUES (1, 'telegram', '1', 0)`)
     context.database.exec(
-      `INSERT INTO chats (pk, account_pk, native_id, kind, updated_at) VALUES (1, 1, '-100', 'group', 0)`,
+      `INSERT INTO accounts (id, provider, external_id, created_at,updated_at) VALUES (1, 'telegram', '1', 0,0)`,
+    )
+    context.database.exec(
+      `INSERT INTO chats (id, account_id, external_id, kind, updated_at,created_at) VALUES (1, 1, '-100', 'group', 0,0)`,
     )
     const statements: { sql: string; params: unknown[] }[] = []
     const recording = {
@@ -129,8 +133,8 @@ describe("the search query plan", () => {
 
   it("would notice the slow shape", async () => {
     const context = await opened()
-    const forced = `SELECT m.pk FROM chats c CROSS JOIN messages m CROSS JOIN messages_fts f
-                    WHERE m.chat_pk = c.pk AND f.rowid = m.pk AND messages_fts MATCH ? AND c.native_id = ?`
+    const forced = `SELECT m.id FROM chats c CROSS JOIN messages m CROSS JOIN messages_fts f
+                    WHERE m.chat_id = c.id AND f.rowid = m.id AND messages_fts MATCH ? AND c.external_id = ?`
 
     expect(perRow(planOf(context, forced, ['"valencia"', "-100"]))).toBe(true)
     context.database.close()

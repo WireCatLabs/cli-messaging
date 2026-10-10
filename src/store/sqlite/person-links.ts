@@ -1,10 +1,9 @@
 import { CliError } from "@wirecat/cli-core"
 import type { Id, Page } from "../../domain/models.js"
 import type { IdentityRef, LinkedIdentity, LinkOptions, PersonRecord, StoredHit } from "../store.js"
-import { ulid } from "../ulid.js"
 import { and, eq, inArray, isNull, type SQL, sql } from "./drizzle/core.js"
-import { resolvePersonLinks } from "./notes.js"
 import type { StoreContext } from "./open.js"
+import { resolvePersonLinks } from "./person-resolution.js"
 import {
   accountIdentities,
   accounts,
@@ -18,10 +17,10 @@ import { hitsWhere } from "./search.js"
 
 const identityRow = ({ orm }: StoreContext, { provider, id }: IdentityRef) =>
   orm
-    .select({ pk: identities.pk, personPk: identityLinks.personPk })
+    .select({ pk: identities.id, personPk: identityLinks.personId })
     .from(identities)
-    .innerJoin(identityLinks, eq(identityLinks.identityPk, identities.pk))
-    .where(and(eq(identities.provider, provider), eq(identities.nativeId, id)))
+    .innerJoin(identityLinks, eq(identityLinks.identityId, identities.id))
+    .where(and(eq(identities.provider, provider), eq(identities.externalId, id)))
     .get()
 
 const required = (context: StoreContext, ref: IdentityRef) => {
@@ -31,32 +30,32 @@ const required = (context: StoreContext, ref: IdentityRef) => {
 }
 
 const recordOf = ({ orm }: StoreContext, personPk: number): PersonRecord => {
-  const person = orm.select().from(persons).where(eq(persons.pk, personPk)).get()
+  const person = orm.select().from(persons).where(eq(persons.id, personPk)).get()
   if (!person) throw new CliError("not_found", "that person is not in the store")
   const rows = orm
     .select({
-      pk: identities.pk,
+      pk: identities.id,
       provider: identities.provider,
-      id: identities.nativeId,
+      id: identities.externalId,
       name: identities.name,
       username: identities.username,
-      isBot: identities.isBot,
+      isBot: identities.bot,
       method: identityLinks.method,
-      linkedBy: identityLinks.linkedBy,
-      linkedAt: identityLinks.linkedAt,
+      linkedBy: identityLinks.author,
+      linkedAt: identityLinks.createdAt,
     })
     .from(identityLinks)
-    .innerJoin(identities, eq(identities.pk, identityLinks.identityPk))
-    .where(eq(identityLinks.personPk, personPk))
-    .orderBy(identities.provider, identities.nativeId)
+    .innerJoin(identities, eq(identities.id, identityLinks.identityId))
+    .where(eq(identityLinks.personId, personPk))
+    .orderBy(identities.provider, identities.externalId)
     .all()
   const seen = orm
-    .select({ identityPk: accountIdentities.identityPk, account: accounts.nativeId })
+    .select({ identityPk: accountIdentities.identityId, account: accounts.externalId })
     .from(accountIdentities)
-    .innerJoin(accounts, eq(accounts.pk, accountIdentities.accountPk))
+    .innerJoin(accounts, eq(accounts.id, accountIdentities.accountId))
     .where(
       inArray(
-        accountIdentities.identityPk,
+        accountIdentities.identityId,
         rows.map((row) => row.pk),
       ),
     )
@@ -67,12 +66,13 @@ const recordOf = ({ orm }: StoreContext, personPk: number): PersonRecord => {
     accounts: seen.filter((one) => one.identityPk === pk).map((one) => one.account),
     linkedAt: new Date(linkedAt).toISOString(),
   }))
-  return { uid: person.uid, name: person.name, identities: identitiesOf }
+  return { uid: String(person.id), name: person.name, identities: identitiesOf }
 }
 
 /** A person by the uid a `person:` reference holds, with every identity linked to them. */
 export const personByUid = (context: StoreContext, uid: string): PersonRecord | undefined => {
-  const found = context.database.prepare("SELECT pk FROM persons WHERE uid = ?").get(uid)
+  if (!/^[1-9]\d*$/.test(uid) || !Number.isSafeInteger(Number(uid))) return undefined
+  const found = context.database.prepare("SELECT id AS pk FROM persons WHERE id = ?").get(uid)
   return found ? recordOf(context, Number(found.pk)) : undefined
 }
 
@@ -86,12 +86,12 @@ const move = (context: StoreContext, identityPk: number, from: number, to: numbe
   const at = context.now()
   context.orm
     .update(identityLinks)
-    .set({ personPk: to, method, confidence: 1, linkedAt: at, linkedBy: by })
-    .where(eq(identityLinks.identityPk, identityPk))
+    .set({ personId: to, method, confidence: 1, createdAt: at, updatedAt: at, author: by })
+    .where(eq(identityLinks.identityId, identityPk))
     .run()
   context.orm
     .insert(identityLinkEvents)
-    .values({ identityPk, fromPersonPk: from, toPersonPk: to, method, at, by })
+    .values({ identityId: identityPk, fromPersonId: from, toPersonId: to, method, createdAt: at, author: by })
     .run()
 }
 
@@ -109,9 +109,9 @@ export const linkIdentities = (
   const moving = required(context, other)
   if (moving.personPk !== target.personPk) {
     const together = context.orm
-      .select({ identityPk: identityLinks.identityPk })
+      .select({ identityPk: identityLinks.identityId })
       .from(identityLinks)
-      .where(eq(identityLinks.personPk, moving.personPk))
+      .where(eq(identityLinks.personId, moving.personPk))
       .all()
     for (const { identityPk } of together) move(context, identityPk, moving.personPk, target.personPk, options)
   }
@@ -130,17 +130,17 @@ export const unlinkIdentity = (context: StoreContext, ref: IdentityRef, options:
   const others = context.orm
     .select({ n: sql<number>`count(*)` })
     .from(identityLinks)
-    .where(eq(identityLinks.personPk, found.personPk))
+    .where(eq(identityLinks.personId, found.personPk))
     .get()
   if (Number(others?.n) <= 1)
     throw new CliError("validation_error", `${ref.provider} ${ref.id} is not linked to anyone`)
   const at = context.now()
-  const named = context.orm.select({ name: identities.name }).from(identities).where(eq(identities.pk, found.pk)).get()
+  const named = context.orm.select({ name: identities.name }).from(identities).where(eq(identities.id, found.pk)).get()
   const alone = Number(
     context.orm
       .insert(persons)
-      .values({ uid: ulid(at), name: named?.name ?? null, createdAt: at, updatedAt: at })
-      .returning({ pk: persons.pk })
+      .values({ name: named?.name ?? null, createdAt: at, updatedAt: at })
+      .returning({ pk: persons.id })
       .get()?.pk,
   )
   move(context, found.pk, found.personPk, alone, options)
@@ -158,7 +158,7 @@ export const mentioning = (
   const byHandle: SQL | undefined =
     username === null ? undefined : sql`instr(lower(${messages.text}), ${`@${username.toLowerCase()}`}) > 0`
   const where = and(
-    eq(messages.accountPk, accountKey),
+    eq(messages.accountId, accountKey),
     isNull(messages.deletedAt),
     byHandle ? sql`(${byId} OR ${byHandle})` : byId,
   )

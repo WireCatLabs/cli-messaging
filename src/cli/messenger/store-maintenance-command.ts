@@ -277,7 +277,7 @@ const inspect = (path: string) =>
       ...(schema.version > 0 ? SEARCH_INDEXES.map((index) => [index, indexIntegrity(database, index)]) : []),
       ...(wordIndex ? [[WORD_INDEX, indexIntegrity(database, WORD_INDEX, 0)]] : []),
       ...(stems ? [["message_stems", indexIntegrity(database, "message_stems", 0)]] : []),
-      ...(schema.version >= 19 ? [["attachment_words", indexIntegrity(database, "attachment_words", 0)]] : []),
+      ...(schema.version > 0 ? [["attachment_words", indexIntegrity(database, "attachment_words", 0)]] : []),
     ])
     const size = bytesOf(path) + bytesOf(`${path}-wal`)
     const { bavail, bsize } = statfsSync(dirname(path))
@@ -327,17 +327,17 @@ const indexIntegrity = (database: CacheDatabase, index: string, rank = 1): strin
  * conversation's text leaves its old vector behind until `conversations embed clear` (phase 5).
  */
 const vectorsHeld = (database: CacheDatabase) => {
-  const exists = database.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'chunk_vectors'").get()
+  const exists = database.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'embeddings'").get()
   if (!exists) return null
   const models = Object.fromEntries(
     database
-      .prepare("SELECT model, count(*) AS n FROM chunk_vectors GROUP BY model ORDER BY model")
+      .prepare("SELECT model, count(*) AS n FROM embeddings GROUP BY model ORDER BY model")
       .all()
       .map((row) => [String(row.model), Number(row.n)]),
   )
   const unused = database
     .prepare(
-      `SELECT count(*) AS n FROM chunk_vectors v
+      `SELECT count(*) AS n FROM embeddings v
        WHERE NOT EXISTS (SELECT 1 FROM conversation_chunks k WHERE k.content_hash = v.content_hash)`,
     )
     .get()
@@ -355,10 +355,10 @@ const conversationsBuilt = (database: CacheDatabase) => {
   if (!exists) return []
   return database
     .prepare(
-      `SELECT a.provider, a.native_id AS account, c.native_id AS chat, c.title, s.built_at, s.algorithm_version,
-         (SELECT count(*) FROM message_links l WHERE l.chat_pk = c.pk AND l.source = 'agent' AND l.stale_at IS NOT NULL)
+      `SELECT a.provider, a.external_id AS account, c.external_id AS chat, c.title, s.built_at, s.algorithm_version,
+         (SELECT count(*) FROM message_links l WHERE l.chat_id = c.id AND l.source = 'agent' AND l.stale_at IS NOT NULL)
            AS stale
-       FROM conversation_state s JOIN chats c ON c.pk = s.chat_pk JOIN accounts a ON a.pk = c.account_pk
+       FROM conversation_state s JOIN chats c ON c.id = s.chat_id JOIN accounts a ON a.id = c.account_id
        ORDER BY s.built_at DESC`,
     )
     .all()
@@ -377,9 +377,9 @@ const conversationsBuilt = (database: CacheDatabase) => {
 const chatsBehind = (database: CacheDatabase) =>
   database
     .prepare(
-      `SELECT a.provider, a.native_id AS account, c.native_id AS chat, c.title, c.last_message_at AS newest,
-         (SELECT max(m.sent_at) FROM messages m WHERE m.chat_pk = c.pk) AS held, c.updated_at AS refreshed
-       FROM chats c JOIN accounts a ON a.pk = c.account_pk
+      `SELECT a.provider, a.external_id AS account, c.external_id AS chat, c.title, c.last_message_at AS newest,
+         (SELECT max(m.sent_at) FROM messages m WHERE m.chat_id = c.id) AS held, c.updated_at AS refreshed
+       FROM chats c JOIN accounts a ON a.id = c.account_id
        WHERE c.last_message_at IS NOT NULL
        ORDER BY c.last_message_at DESC`,
     )
@@ -477,7 +477,15 @@ const reindexCommand = (messenger: Messenger): Command =>
         return
       }
       const answer = await reading(path, (database) => {
-        if (schemaOf(database).version < SPEAKS) {
+        const schema = schemaOf(database)
+        if (!schema.writable) {
+          throw new CliError(
+            "configuration_error",
+            `the message store was written by a newer version (schema ${schema.version}, needs at least ` +
+              `${schema.minCompatible}; this one speaks ${SPEAKS}) — upgrade this tool`,
+          )
+        }
+        if (schema.version < SPEAKS) {
           throw new CliError(
             "validation_error",
             `the store is behind this build — \`${messenger.app.command} store migrate\` first`,

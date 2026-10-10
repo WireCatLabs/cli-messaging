@@ -26,6 +26,8 @@ export type ChatKind = "dialog" | "group" | "channel" | "saved" | "unknown"
 export type MembershipState = "joined" | "left" | "public" | "imported" | "archived" | "external"
 
 export interface Chat {
+  parentChatId?: Id
+  scope?: "personal" | "work"
   id: Id
   title: string | null
   kind: ChatKind
@@ -314,6 +316,7 @@ export interface Message {
   forwardedFrom: QuotedMessage | null
   /** The topic or thread inside the chat, where the provider has them. */
   threadId?: Id
+  threadRootId?: Id
   /** `null` when nobody asked — offline, or the request failed. */
   reactions: Reactions | null
   counterObservations?: CounterObservations

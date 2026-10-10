@@ -92,11 +92,11 @@ export const tasksService = (deps: ServiceDeps): TasksService => {
     add: (message, type, origin) =>
       inStore(async (store, account) => {
         const source = message.trim()
-        const native = source.startsWith("note:")
+        const native = isNoteReference(source)
         if (!native && !isLocator(source)) {
           throw new CliError(
             "validation_error",
-            `"${singleLine(source)}" is not a message locator or note reference — give msg:<provider>/<account>/<chat>/<message> or note:<id>`,
+            `"${singleLine(source)}" is not a message locator or note reference — give msg:<provider>/<account>/<chat>/<message>, note:<id> or document:<id>`,
           )
         }
         const locator = native ? undefined : parseLocator(source)
@@ -108,7 +108,7 @@ export const tasksService = (deps: ServiceDeps): TasksService => {
         if (note && note.deletedAt !== null)
           throw new CliError("not_found", "the task source note is unavailable or deleted")
         if (note) {
-          for (const reference of await store.notes.noteReferences(note.id)) {
+          for (const reference of await store.notes.noteReferences(note.ref)) {
             const existing = (await store.tasks.findBySource(taskAccount(account), reference)).find(
               (task) => origin === "rule" || task.kind === type,
             )
@@ -116,11 +116,11 @@ export const tasksService = (deps: ServiceDeps): TasksService => {
           }
         }
         const { task, created } = await service(store).add({
-          source: note ? `note:${note.id}` : source,
+          source: note ? note.ref : source,
           sourceKind:
             note || account.provider === "notes" ? "note" : account.provider === "email" ? "email" : "message",
           account: taskAccount(account),
-          group: note ? `note:${note.id}` : (locator as ReturnType<typeof parseLocator>).chat,
+          group: note ? note.ref : (locator as ReturnType<typeof parseLocator>).chat,
           kind: type,
           origin,
         })
@@ -154,9 +154,12 @@ export const tasksService = (deps: ServiceDeps): TasksService => {
   }
 }
 
+/** A file in a notes folder is a `document:`, a written note a `note:`. */
+const isNoteReference = (source: string) => source.startsWith("note:") || source.startsWith("document:")
+
 export const taskView = async (store: MessageStore, account: AccountKey, task: Task): Promise<TaskView> => {
   if (task.account !== taskAccount(account)) throw new CliError("not_found", "the task belongs to another account")
-  const native = task.source.startsWith("note:")
+  const native = isNoteReference(task.source)
   if (!native && !isLocator(task.source)) return { ...task, message: null }
   const locator = native ? undefined : parseLocator(task.source)
   if (locator && (locator.provider !== account.provider || locator.account !== account.account))
