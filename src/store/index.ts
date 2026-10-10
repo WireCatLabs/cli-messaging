@@ -7,6 +7,19 @@ export { resetAttachmentWords } from "./sqlite/attachment-texts.js"
 export { backfillNormalized, pendingNormalization } from "./sqlite/backfill.js"
 export type { ChatMetadata } from "./sqlite/chat-metadata.js"
 export type {
+  Email,
+  EmailAddress,
+  EmailInput,
+  EmailRecipient,
+  EmailThread,
+  Mailbox,
+  MailboxInput,
+  MailFilter,
+  MailStore,
+  ThreadDetails,
+  ThreadSave,
+} from "./sqlite/emails.js"
+export type {
   Annotation,
   KnowledgeEntity,
   KnowledgeRelation,

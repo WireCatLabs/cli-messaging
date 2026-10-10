@@ -1,6 +1,7 @@
 import { mkdirSync, writeFileSync } from "node:fs"
 import { dirname } from "node:path"
 import { CliError } from "@wirecat/cli-core"
+import type { MeetingStore } from "@wirecat/cli-meetings"
 import type { TaskStore } from "@wirecat/cli-tasks"
 import type { TextRange } from "../conversations/chunks.js"
 import type { Link, LinkInput } from "../conversations/link.js"
@@ -43,11 +44,13 @@ import * as completeness from "./sqlite/completeness.js"
 import { type ConversationEligibility, conversationEligibility } from "./sqlite/conversation-eligibility.js"
 import * as conversationQueries from "./sqlite/conversations.js"
 import { applyCounterObservations, type CounterTarget, counterStates, counterTargets } from "./sqlite/counters.js"
+import { type MailStore, mailStoreOver } from "./sqlite/emails.js"
 import * as identities from "./sqlite/identities.js"
 import { type KnowledgeStore, knowledgeStoreOver } from "./sqlite/knowledge.js"
 import { findRegex } from "./sqlite/legacy-regex.js"
 import type { QueryGroup, QueryGrouping } from "./sqlite/lucene.js"
 import * as lucene from "./sqlite/lucene.js"
+import { meetingStoreOver } from "./sqlite/meetings.js"
 import * as messageWrites from "./sqlite/messages.js"
 import { noteSearchOver } from "./sqlite/note-search.js"
 import { type NotesStore, notesStoreOver } from "./sqlite/notes.js"
@@ -557,6 +560,10 @@ export interface MessageStore {
   readonly knowledge: KnowledgeStore
   /** Notes, the links between anything and anything, and the owner's organisations and projects. */
   readonly notes: NotesStore
+  /** Meetings and calendar events: the port `@wirecat/cli-meetings` defines. */
+  readonly meetings: MeetingStore
+  /** Email threads, emails, recipients and mailboxes. */
+  readonly mail: MailStore
   close(): Promise<void>
 }
 
@@ -765,6 +772,8 @@ const storeOver = (context: StoreContext): MessageStore => {
   let tasks: MessageStore["tasks"] | undefined
   let knowledge: MessageStore["knowledge"] | undefined
   let notes: MessageStore["notes"] | undefined
+  let meetings: MessageStore["meetings"] | undefined
+  let mail: MessageStore["mail"] | undefined
 
   return {
     saveAccount: async (key, { name }) => {
@@ -1505,6 +1514,14 @@ const storeOver = (context: StoreContext): MessageStore => {
     get notes() {
       notes ??= { ...notesStoreOver(context), ...noteSearchOver(context) }
       return notes
+    },
+    get meetings() {
+      meetings ??= meetingStoreOver(context)
+      return meetings
+    },
+    get mail() {
+      mail ??= mailStoreOver(context)
+      return mail
     },
 
     close: async () => database.close(),
