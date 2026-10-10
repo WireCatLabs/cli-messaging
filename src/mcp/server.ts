@@ -137,6 +137,13 @@ export const createServer = (
         withStore: context.withStore,
         messenger,
         guard,
+        assertRead: (key) => {
+          refreshPermissions()
+          if (levelOf(key) === "deny")
+            throw new CliError("permission_error", "the current profile does not allow this resource", {
+              permission: key,
+            })
+        },
       })
     if (skill) {
       const { uri, name: resource, title, description, mimeType, read } = skill

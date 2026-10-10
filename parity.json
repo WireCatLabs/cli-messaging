@@ -411,8 +411,7 @@
       "meaning": "the text is HTML: <b>, <i>, <a href>, <code>"
     },
     "--http": {
-      "meaning": "serve MCP over HTTP on 127.0.0.1 behind the owner's tunnel, with a one-owner login; every write asks first by default",
-      "note": "MAX wording catches up with Telegram’s explicit “by default” at the next shared SDK adoption; both HTTP servers confirm writes by default"
+      "meaning": "serve MCP over HTTP on 127.0.0.1 behind the owner's tunnel, with a one-owner login"
     },
     "--http-confirmation": {
       "value": "<mode>",

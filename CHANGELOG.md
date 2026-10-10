@@ -9,8 +9,8 @@ break callers, and says how under "Changed — may break callers". `pnpm docs:ch
 ### Fixed
 
 - HTTP login recovers after a bounded throttle; embedding requests refuse redirects carrying credentials or text.
-- MCP permissions refresh before each call; tool descriptions frame returned text as untrusted data for reads and writes.
-- Reply model blocks keep interpolated metadata separate from instructions. Markdown export escapes untrusted message structure and link labels.
+- MCP tool and chat resource permissions refresh before each invocation; tool descriptions frame returned text as untrusted data for reads and writes.
+- Reply model blocks keep interpolated metadata separate from instructions.
 - Model download temporary files use exclusive random names. Reserved downloaded filenames are normalized only on Windows; POSIX names remain unchanged.
 - Development dependency overrides remove obsolete uuid and sprintf-js versions.
 
@@ -19,6 +19,8 @@ break callers, and says how under "Changed — may break callers". `pnpm docs:ch
 - `--agent-json` makes JSON strings and keys safe for agent consumption, while `--json` retains its raw data contract. Combine with `--jsonl` for streams.
 
 ### Changed — may break callers
+
+- Markdown exports quote message bodies and escape untrusted structure and link labels. Transcript parsers must account for this framing.
 
 - Consumers use `@wirecat/cli-core` 0.19.x for Windows maintenance command resolution.
 

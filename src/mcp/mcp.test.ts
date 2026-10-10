@@ -1849,7 +1849,7 @@ describe("the MCP server", () => {
   it("honours permission tightening on an already-open MCP session, including local writes", async () => {
     const root = mkdtempSync(join(tmpdir(), "mcp-permissions-current-"))
     const backend = scripted()
-    const { call, env } = await connect(backend, { root })
+    const { call, env, raw } = await connect(backend, { root })
     expect((await call("chat_messages_list", { chat: "7" })).isError).toBe(false)
     writeFileSync(
       join(env.CHAT_CONFIG_DIR, "config.json"),
@@ -1857,6 +1857,9 @@ describe("the MCP server", () => {
     )
     expect((await call("chat_messages_list", { chat: "7" })).body.error.code).toBe("permission_error")
     expect((await call("chat_tags_add", { tags: ["synthetic"], chat: "7" })).body.error.code).toBe("permission_error")
+    await expect(raw.readResource({ uri: "chat://chat/7" })).rejects.toThrow(/does not allow this resource/)
+    writeFileSync(join(env.CHAT_CONFIG_DIR, "config.json"), JSON.stringify(levels({ chats: "deny" })))
+    await expect(raw.listResources()).rejects.toThrow(/does not allow this resource/)
   })
 
   it("hides contact context when message reading is denied", async () => {
