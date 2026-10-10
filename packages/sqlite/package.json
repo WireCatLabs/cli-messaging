@@ -1,8 +1,8 @@
 {
   "name": "@wirecat/cli-messaging-sqlite",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "SQLite 3.53.4 builds for @wirecat/cli-messaging where the runtime's own SQLite falls short",
-  "license": "MIT",
+  "license": "Apache-2.0",
   "type": "module",
   "repository": {
     "type": "git",
@@ -16,6 +16,7 @@
     }
   },
   "files": [
+    "LICENSE",
     "index.js",
     "index.d.ts",
     "lib/",
