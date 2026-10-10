@@ -1,7 +1,7 @@
 // Written by scripts/bundle-migrations.ts from drizzle/ — run `pnpm db:bundle`, do not edit.
 export const GENERATED: { name: string; statements: string[] }[] = [
   {
-    "name": "20261010130203_store-v2-baseline",
+    "name": "20261010130203_initial",
     "statements": [
       "CREATE TABLE `account_identities` (\n\t`account_id` integer NOT NULL,\n\t`identity_id` integer NOT NULL,\n\t`created_at` integer NOT NULL,\n\t`last_messaged_at` integer,\n\t`updated_at` integer NOT NULL,\n\tCONSTRAINT `account_identities_pk` PRIMARY KEY(`account_id`, `identity_id`),\n\tCONSTRAINT `fk_account_identities_account_id_accounts_id_fk` FOREIGN KEY (`account_id`) REFERENCES `accounts`(`id`),\n\tCONSTRAINT `fk_account_identities_identity_id_identities_id_fk` FOREIGN KEY (`identity_id`) REFERENCES `identities`(`id`)\n);",
       "CREATE TABLE `accounts` (\n\t`id` integer PRIMARY KEY,\n\t`provider` text NOT NULL,\n\t`external_id` text NOT NULL,\n\t`name` text,\n\t`created_at` integer NOT NULL,\n\t`settings` text,\n\t`status` text,\n\t`updated_at` integer NOT NULL,\n\t`scope` text DEFAULT 'personal' NOT NULL,\n\t`organization_id` integer,\n\tCONSTRAINT `fk_accounts_organization_id_organizations_id_fk` FOREIGN KEY (`organization_id`) REFERENCES `organizations`(`id`),\n\tCONSTRAINT `accounts_provider_external_id_unique` UNIQUE(`provider`,`external_id`)\n);",
@@ -174,12 +174,7 @@ export const GENERATED: { name: string; statements: string[] }[] = [
       "CREATE INDEX `tasks_by_status` ON `tasks` (`project_id`,`status`,`due_at`);",
       "CREATE INDEX `tasks_by_parent_id` ON `tasks` (`parent_id`);",
       "CREATE INDEX `tasks_by_closed_by_type_closed_by_id` ON `tasks` (`closed_by_type`,`closed_by_id`);",
-      "CREATE INDEX `tasks_by_author_type_author_id` ON `tasks` (`author_type`,`author_id`);"
-    ]
-  },
-  {
-    "name": "20261010130206_store-v2-search",
-    "statements": [
+      "CREATE INDEX `tasks_by_author_type_author_id` ON `tasks` (`author_type`,`author_id`);",
       "-- Trigram indexes over names and text, kept by triggers; external content, so their rowid is the row's id.\nCREATE VIRTUAL TABLE identities_fts USING fts5(name, username, content='identities', content_rowid='id', tokenize='trigram');",
       "CREATE TRIGGER identities_fts_ai AFTER INSERT ON identities BEGIN\n  INSERT INTO identities_fts (rowid, name, username) VALUES (new.id, new.name, new.username);\nEND;",
       "CREATE TRIGGER identities_fts_au AFTER UPDATE OF name, username ON identities BEGIN\n  INSERT INTO identities_fts (identities_fts, rowid, name, username) VALUES ('delete', old.id, old.name, old.username);\n  INSERT INTO identities_fts (rowid, name, username) VALUES (new.id, new.name, new.username);\nEND;",

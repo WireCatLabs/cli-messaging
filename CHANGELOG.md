@@ -8,12 +8,12 @@ break callers, and says how under "Changed — may break callers". `pnpm docs:ch
 
 ### Changed — may break callers
 
-- **The store is v2: one baseline at store version 100 replaces versions 1–28.** Tables and columns follow
-  Rails naming (`id`, `<thing>_id`, `external_id`, `created_at`/`updated_at`); mail, documents, notes,
-  events, meetings, tasks with projects and bots, aliases, taggings, chunks and embeddings have tables of
-  their own. Every table and column is in [`docs/storage/schema-v2.md`](docs/storage/schema-v2.md). A file
-  at an older version is refused with the way to convert it (`store upgrade-v2`, which keeps the old file),
-  and an older build refuses a v2 file.
+- **A new store schema in a new file, `wirecat.db`, created by one initial migration (store version 1).** Tables
+  and columns follow Rails naming (`id`, `<thing>_id`, `external_id`, `created_at`/`updated_at`); mail, documents,
+  notes, memories, decisions, events, meetings, organizations, projects, tasks, proposed actions, aliases,
+  taggings and topics, chunks and embeddings have tables of their own. Every table and column is in
+  [`docs/storage/schema-v2.md`](docs/storage/schema-v2.md). The old `messages.db` is left as it is and not
+  converted: messages come back with a fresh sync.
 
 ## 0.215.0 — 10.10.2026
 

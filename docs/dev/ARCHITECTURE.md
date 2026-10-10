@@ -303,20 +303,18 @@ with `normalize()`, and its `identity` names what built an index.
 
 ### Migrations
 
-The store is **v2**: one baseline, store version 100, creates every table in
-[`docs/storage/schema-v2.md`](../storage/schema-v2.md). It is two folders under `drizzle/` — the SQL
-`pnpm db:generate` wrote from `src/store/sqlite/schema.ts`, and a custom one for the FTS5 indexes, their
-triggers and the `WITHOUT ROWID` search-term tables. `pnpm db:bundle` copies them into
-`src/store/sqlite/migrations.generated.ts`, and `src/store/sqlite/manifest.ts` numbers them. Our runner
-(`migrate`) applies them under `BEGIN IMMEDIATE`; Drizzle's own migrator is not used.
+One migration, store version 1, creates every table in [`docs/storage/schema-v2.md`](../storage/schema-v2.md),
+in the file `wirecat.db`. It is one folder under `drizzle/`: the SQL `pnpm db:generate` wrote from
+`src/store/sqlite/schema.ts`, then the FTS5 indexes, their triggers, the `WITHOUT ROWID` search-term tables and
+the seed rows, which Drizzle cannot model. `pnpm db:bundle` copies it into
+`src/store/sqlite/migrations.generated.ts`, and `src/store/sqlite/manifest.ts` numbers it. Our runner (`migrate`)
+applies migrations under `BEGIN IMMEDIATE`; Drizzle's own migrator is not used.
 
-The baseline is 100 rather than 1 so that a build of the old line, which speaks up to 28, refuses a v2
-file instead of migrating it; `migrate` in turn refuses a file at 1–99 and names `store upgrade-v2`,
-which converts it once and keeps the old file. Every migration after the baseline is forward-only,
-additive, numbered, and never edited once it reached anyone's file — a test refuses a generated rebuild
-of a base table. `min_compatible` lets an older CLI keep using a file a newer one migrated; a migration
-that drops what an older build reads raises it, and that build then refuses the file and asks to be
-upgraded. It is 100.
+The schema before this one lived in `messages.db` and is not converted: the new file has a new name so that a
+build still installed never opens it. Every migration after the first is forward-only, additive, numbered, and
+never edited once it reached anyone's file — a test refuses a generated rebuild of a base table.
+`min_compatible` lets an older CLI keep using a file a newer one migrated; a migration that drops what an older
+build reads raises it, and that build then refuses the file and asks to be upgraded. It is 1.
 
 ⚠ **Announce a migration number before writing it.** Several sessions work in this repository at
 once, and two of them taking the same number is a conflict no rebase fixes. The next free number
@@ -343,7 +341,7 @@ it by editing that line in a PR of its own, merged before the migration.
    `version`. Two folders with one version — the generated one and its custom one, as version 6 —
    apply as one migration and write one `schema_migrations` row. Versions run on without a gap
    (`manifest.test.ts:38-45`).
-6. **`minCompatible` stays where it is** — 100 today — for an additive change. Raising it locks every
+6. **`minCompatible` stays where it is** — 1 today — for an additive change. Raising it locks every
    older build out of the file: ask the owner first; it is a major version of this package, and
    tg-cli and max-cli ship their upgrade the same day, as with version 6.
 7. **`pnpm db:bundle`** after every `db:generate` and every edit of a `migration.sql`. It rewrites

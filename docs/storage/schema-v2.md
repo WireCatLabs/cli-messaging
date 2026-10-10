@@ -1,6 +1,6 @@
 # Store v2 schema
 
-Every table of the shared store (tg, max, memo, zm) as the v2 baseline creates it (store version 100). A copy
+Every table of the shared store (tg, max, memo, zm) as its one initial migration creates it (store version 1). A copy
 of the store v2 plan's schema page, generated from the same spec; `src/store/sqlite/schema.ts` and the
 hand-written SQL in `drizzle/` must agree with it, and `src/store/sqlite/schema.test.ts` checks every table
 and column of a new store against this page.

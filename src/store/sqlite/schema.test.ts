@@ -7,7 +7,6 @@ import type { CacheDatabase } from "../driver.js"
 import { migrate } from "../migrations.js"
 import { openCache } from "../open.js"
 import { openStore } from "../store.js"
-import { BASELINE } from "./manifest.js"
 import { type OpenedSqlite, openSqlite } from "./open.js"
 import { accounts } from "./schema.js"
 
@@ -344,25 +343,6 @@ describe("the v2 baseline", () => {
       { subject_type: "message", subject_id: 3 },
     ])
     expect(JSON.stringify(database.prepare(`EXPLAIN QUERY PLAN ${query}`).all())).toMatch(/involvements_by_person/)
-  })
-
-  it(`**is version ${BASELINE}**: a file of the old line is refused with the way to convert it`, async () => {
-    const database = await open()
-    database.exec(
-      "CREATE TABLE schema_migrations (version INTEGER PRIMARY KEY, min_compatible INTEGER NOT NULL, applied_at INTEGER NOT NULL)",
-    )
-    database.exec("INSERT INTO schema_migrations VALUES (28, 28, 1)")
-
-    expect(() => migrate(database)).toThrow(/schema 28, from before store v2 — convert it once with `store upgrade-v2`/)
-  })
-
-  it("is refused by a build of the old line, which speaks up to version 28", async () => {
-    const database = await open()
-    migrate(database)
-
-    expect(() => migrate(database, { migrations: [{ version: 28, minCompatible: 28, statements: [] }] })).toThrow(
-      /written by a newer version \(schema 100, needs at least 100; this one speaks 28\)/,
-    )
   })
 
   it("reads through Drizzle what the hand-written SQL wrote, over one connection", async () => {

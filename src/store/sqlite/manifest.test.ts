@@ -5,7 +5,7 @@ import { join } from "node:path"
 import { describe, expect, it } from "vitest"
 import { MIGRATIONS, migrate } from "../migrations.js"
 import { openCache } from "../open.js"
-import { BASELINE, generatedMigrations, MANIFEST } from "./manifest.js"
+import { generatedMigrations, MANIFEST } from "./manifest.js"
 import { GENERATED } from "./migrations.generated.js"
 
 const DRIZZLE = join(import.meta.dirname, "../../../drizzle")
@@ -35,12 +35,12 @@ describe("the generated migrations", () => {
     expect(GENERATED).toEqual(onDisk)
   })
 
-  it("each have one manifest row, in order, numbered on from the v2 baseline without a gap", () => {
+  it("each have one manifest row, in order, numbered from 1 without a gap", () => {
     expect(MANIFEST.map(({ name }) => name)).toEqual(GENERATED.map(({ name }) => name))
     const versions = [...new Set(MANIFEST.map(({ version }) => version))]
-    expect(versions).toEqual(versions.map((_, index) => BASELINE + index))
+    expect(versions).toEqual(versions.map((_, index) => 1 + index))
     for (const entry of MANIFEST) expect(entry.minCompatible).toBeLessThanOrEqual(entry.version)
-    expect(MIGRATIONS.map(({ version }) => version)).toEqual(MIGRATIONS.map((_, index) => BASELINE + index))
+    expect(MIGRATIONS.map(({ version }) => version)).toEqual(MIGRATIONS.map((_, index) => 1 + index))
   })
 
   it("**never rebuild a base table** or add a column an older build cannot fill", () => {
