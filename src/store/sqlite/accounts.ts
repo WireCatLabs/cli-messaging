@@ -18,6 +18,7 @@ import {
   messageRevisions,
   messages,
   messageTranscripts,
+  projects,
   syncCursors,
   syncRanges,
   syncs,
@@ -95,5 +96,7 @@ export const purgeAccount = ({ orm }: StoreContext, accountKey: number): void =>
   orm.delete(chats).where(eq(chats.accountId, accountKey)).run()
   orm.delete(syncCursors).where(eq(syncCursors.accountId, accountKey)).run()
   orm.delete(accountIdentities).where(eq(accountIdentities.accountId, accountKey)).run()
+  // The inbox project and its tasks are the owner's; only the tie to the account goes.
+  orm.update(projects).set({ accountId: null }).where(eq(projects.accountId, accountKey)).run()
   orm.delete(accounts).where(eq(accounts.id, accountKey)).run()
 }

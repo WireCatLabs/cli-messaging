@@ -114,12 +114,13 @@ describe("tasks in the store", () => {
     await tasks.add(question)
     const accountId = await store.saveAccount({ provider: "telegram", account: "100" }, { name: null })
     await tasks.add({ ...question, source: "msg:telegram:100:-1001:43" })
-    await store.close()
     const database = await openCache(path)
-    const projects = database.prepare("SELECT account_id FROM projects").all()
-    database.close()
+    expect(database.prepare("SELECT account_id FROM projects").all()).toEqual([{ account_id: accountId }])
 
-    expect(projects).toEqual([{ account_id: accountId }])
+    await store.purge({ provider: "telegram", account: "100" })
+    expect(database.prepare("SELECT account_id FROM projects").all()).toEqual([{ account_id: null }])
+    database.close()
+    await store.close()
   })
 
   it("records a question's answer and the owner's verdict", async () => {
