@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto"
 import { CliError } from "@wirecat/cli-core"
 import {
   matches,
@@ -9,66 +10,228 @@ import {
   type TaskStore,
 } from "@wirecat/cli-tasks"
 import type { CacheDatabase, SqlValue } from "../driver.js"
+import { actorOfOrigin, originOfActor } from "./actors.js"
+import { atomic } from "./atomic.js"
+import { taskRowOf, thingOf } from "./things.js"
 
-const COLUMNS =
-  "id, source, source_kind, account, group_key, kind, state, reason, origin, created_at, due_at, closed_at, closed_by"
+export { taskIdOf, taskRowOf } from "./things.js"
+
+export const TASK_VERDICTS = ["useful", "not_useful"] as const
+
+/** `TaskStore` for `@wirecat/cli-tasks`, plus what the new task table adds: an answer and a verdict. */
+export interface StoreTaskStore extends TaskStore {
+  /** A question's answer: its text as the resolution, where it came from as an `answered-by` link. */
+  answer(id: string, input: { resolution: string; by?: string }): Promise<void>
+  /** The owner's judgement of a task an agent or a rule raised. */
+  judge(id: string, verdict: (typeof TASK_VERDICTS)[number] | null): Promise<void>
+  /** What the task package calls a task — its id, or a key like `IN1A2B3C4D-3` — as the row's `tasks.id`. */
+  rowOf(id: string): number | undefined
+}
 
 /**
- * Tasks for `@wirecat/cli-tasks`, in the message store so backup, restore and export carry them. A task
- * holds a locator, never the message text; kind, state and origin are checked in code, as `chats.kind` is.
+ * The package's id, the source locator, its kind and its group have no column of their own yet (schema
+ * request): they live in `metadata`, and a task carries a locator, never the message text.
  */
-export const taskStoreOver = (database: CacheDatabase): TaskStore => {
-  const insert = database.prepare(`INSERT INTO tasks (${COLUMNS}) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
-  const update = database.prepare(
-    "UPDATE tasks SET state = ?, reason = ?, due_at = ?, closed_at = ?, closed_by = ? WHERE id = ?",
-  )
-  const get = database.prepare(`SELECT ${COLUMNS} FROM tasks WHERE id = ?`)
-  const bySource = database.prepare(`SELECT ${COLUMNS} FROM tasks WHERE account = ? AND source = ? ORDER BY created_at`)
+interface Held {
+  id: string
+  locator: string
+  sourceKind: string
+  group: string
+}
+
+const COLUMNS =
+  "t.id AS row_id, t.metadata, t.type, t.status, t.close_reason, t.source, t.created_at, t.due_at, t.closed_at, " +
+  "t.closed_by_type, t.closed_by_id, p.name AS account"
+
+/** One inbox project per task account (`telegram:100`): derived from the account text alone, no `-` in it. */
+export const inboxKey = (account: string): string =>
+  `IN${createHash("sha256").update(account).digest("hex").slice(0, 8).toUpperCase()}`
+
+/** The task account (`provider:account`) a task row belongs to: its inbox project's name. */
+export const taskAccountOf = (database: CacheDatabase, rowId: number): string | undefined => {
+  const row = database
+    .prepare("SELECT p.name FROM tasks t JOIN projects p ON p.id = t.project_id WHERE t.id = ?")
+    .get(rowId)
+  return row ? String(row.name) : undefined
+}
+
+export const taskStoreOver = (database: CacheDatabase, now: () => number = Date.now): StoreTaskStore => {
+  const inbox = (account: string, create: boolean): number | undefined => {
+    const key = inboxKey(account)
+    const found = database.prepare("SELECT id FROM projects WHERE key = ?").get(key)
+    if (found || !create) return found ? Number(found.id) : undefined
+    const at = now()
+    return Number(
+      database
+        .prepare(
+          "INSERT INTO projects (key, name, description, type, scope, tasks_count, status, created_at, updated_at) " +
+            "VALUES (?, ?, ?, 'personal', 'personal', 0, 'active', ?, ?) RETURNING id",
+        )
+        .get(key, account, `What waits on the owner in ${account}`, at, at)?.id,
+    )
+  }
+  const select = (where: string) =>
+    database.prepare(`SELECT ${COLUMNS} FROM tasks t JOIN projects p ON p.id = t.project_id WHERE ${where}`)
+  const toTask = (row: Record<string, unknown>): Task => {
+    const held = JSON.parse(String(row.metadata ?? "{}")) as Partial<Held>
+    const task: Task = {
+      id: String(held.id),
+      source: String(held.locator),
+      sourceKind: String(held.sourceKind),
+      account: String(row.account),
+      group: String(held.group),
+      kind: oneOf(TASK_KINDS, row.type, "kind"),
+      state: oneOf(TASK_STATES, row.status, "state"),
+      origin: oneOf(TASK_ORIGINS, row.source, "origin"),
+      createdAt: new Date(Number(row.created_at)),
+    }
+    if (row.close_reason !== null) task.reason = String(row.close_reason)
+    if (row.due_at !== null) task.dueAt = new Date(Number(row.due_at))
+    if (row.closed_at !== null) task.closedAt = new Date(Number(row.closed_at))
+    const closedBy = originOfActor(database, row.closed_by_type, row.closed_by_id)
+    if (closedBy) task.closedBy = closedBy
+    return task
+  }
+  const required = (id: string) => {
+    const row = taskRowOf(database, id)
+    if (row === undefined) throw new CliError("not_found", `no task ${id}`)
+    return row
+  }
 
   return {
+    rowOf: (id) => taskRowOf(database, id),
     get: async (id) => {
-      const row = get.get(id)
-      return row && toTask(row)
+      const row = taskRowOf(database, id)
+      if (row === undefined) return undefined
+      const found = select("t.id = ?").get(row)
+      return found && toTask(found)
     },
-    findBySource: async (account, source) => bySource.all(account, source).map(toTask),
+    findBySource: async (account, source) => {
+      const project = inbox(account, false)
+      if (project === undefined) return []
+      return select("t.project_id = ? AND json_extract(t.metadata, '$.locator') = ? ORDER BY t.created_at, t.id")
+        .all(project, source)
+        .map(toTask)
+    },
     insert: async (task) => {
-      insert.run(...toRow(task))
+      atomic(database, () => {
+        const project = inbox(task.account, true) as number
+        const counted = database
+          .prepare(
+            "UPDATE projects SET tasks_count = tasks_count + 1, updated_at = ? WHERE id = ? RETURNING key, tasks_count",
+          )
+          .get(now(), project)
+        const number = Number(counted?.tasks_count)
+        const author = actorOfOrigin(database, task.origin, now())
+        const closedBy = task.closedBy ? actorOfOrigin(database, task.closedBy, now()) : undefined
+        const held: Held = { id: task.id, locator: task.source, sourceKind: task.sourceKind, group: task.group }
+        database
+          .prepare(
+            "INSERT INTO tasks (project_id, number, key, title, type, status, due_at, closed_at, closed_by_type, closed_by_id, " +
+              "close_reason, author_type, author_id, source, metadata, created_at, updated_at) " +
+              "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+          )
+          .run(
+            project,
+            number,
+            `${String(counted?.key)}-${number}`,
+            `${task.kind} — ${task.source}`,
+            task.kind,
+            task.state,
+            time(task.dueAt),
+            time(task.closedAt),
+            closedBy?.type ?? null,
+            closedBy?.id ?? null,
+            task.reason ?? null,
+            author.type,
+            author.id,
+            task.origin,
+            JSON.stringify(held),
+            task.createdAt.getTime(),
+            now(),
+          )
+      })
     },
     update: async (task) => {
-      const { changes } = update.run(
-        task.state,
-        task.reason ?? null,
-        time(task.dueAt),
-        time(task.closedAt),
-        task.closedBy ?? null,
-        task.id,
-      )
-      if (changes === 0) throw new CliError("not_found", `no task ${task.id}`)
+      const row = taskRowOf(database, task.id)
+      if (row === undefined) throw new CliError("not_found", `no task ${task.id}`)
+      const closedBy = task.closedBy ? actorOfOrigin(database, task.closedBy, now()) : undefined
+      database
+        .prepare(
+          "UPDATE tasks SET status = ?, close_reason = ?, due_at = ?, closed_at = ?, closed_by_type = ?, closed_by_id = ?, " +
+            "updated_at = ? WHERE id = ?",
+        )
+        .run(
+          task.state,
+          task.reason ?? null,
+          time(task.dueAt),
+          time(task.closedAt),
+          closedBy?.type ?? null,
+          closedBy?.id ?? null,
+          now(),
+          row,
+        )
     },
-    list: async (filter) => listTasks(database, filter),
+    list: async (filter) => listTasks(filter, select, toTask, inbox),
+    answer: async (id, { resolution, by }) => {
+      const text = resolution.trim()
+      if (!text || text.length > 2000) throw new CliError("validation_error", "an answer takes 1–2000 characters")
+      const row = required(id)
+      const at = now()
+      atomic(database, () => {
+        database.prepare("UPDATE tasks SET resolution = ?, updated_at = ? WHERE id = ?").run(text, at, row)
+        if (!by) return
+        database.prepare("DELETE FROM links WHERE from_type = 'task' AND from_id = ? AND kind = 'answered-by'").run(row)
+        // A message the store has not saved yet keeps its locator as the written target.
+        const thing = thingOf(database, by)
+        database
+          .prepare(
+            "INSERT INTO links (from_type, from_id, to_type, to_id, kind, source, target_text, confirmed, created_at, author, updated_at) " +
+              "VALUES ('task', ?, ?, ?, 'answered-by', 'owner', ?, 1, ?, 'rule', ?)",
+          )
+          .run(row, thing?.type ?? null, thing?.id ?? null, thing ? null : by.slice(0, 500), at, at)
+      })
+    },
+    judge: async (id, verdict) => {
+      if (verdict !== null && !TASK_VERDICTS.includes(verdict))
+        throw new CliError("validation_error", `a verdict is one of ${TASK_VERDICTS.join(", ")}`)
+      database.prepare("UPDATE tasks SET verdict = ?, updated_at = ? WHERE id = ?").run(verdict, now(), required(id))
+    },
   }
 }
 
-const listTasks = (database: CacheDatabase, filter: TaskFilter): Task[] => {
-  const where: string[] = []
+const listTasks = (
+  filter: TaskFilter,
+  select: (where: string) => ReturnType<CacheDatabase["prepare"]>,
+  toTask: (row: Record<string, unknown>) => Task,
+  inbox: (account: string, create: boolean) => number | undefined,
+): Task[] => {
+  const where: string[] = ["t.deleted_at IS NULL"]
   const values: SqlValue[] = []
-  const equal = (column: string, value: string | undefined) => {
-    if (value === undefined) return
-    where.push(`${column} = ?`)
-    values.push(value)
+  if (filter.account !== undefined) {
+    const project = inbox(filter.account, false)
+    if (project === undefined) return []
+    where.push("t.project_id = ?")
+    values.push(project)
   }
-  equal("account", filter.account)
-  equal("state", filter.state)
-  equal("group_key", filter.group)
-  equal("kind", filter.kind)
+  if (filter.state !== undefined) {
+    where.push("t.status = ?")
+    values.push(filter.state)
+  }
+  if (filter.kind !== undefined) {
+    where.push("t.type = ?")
+    values.push(filter.kind)
+  }
+  if (filter.group !== undefined) {
+    where.push("json_extract(t.metadata, '$.group') = ?")
+    values.push(filter.group)
+  }
   if (filter.createdBefore) {
-    where.push("created_at < ?")
+    where.push("t.created_at < ?")
     values.push(filter.createdBefore.getTime())
   }
-  const sql = `SELECT ${COLUMNS} FROM tasks${where.length ? ` WHERE ${where.join(" AND ")}` : ""} ORDER BY created_at, id`
   // matches() again: the SQL narrows, the package's own filter stays the definition.
-  return database
-    .prepare(sql)
+  return select(`${where.join(" AND ")} ORDER BY t.created_at, t.id`)
     .all(...values)
     .map(toTask)
     .filter((task) => matches(task, filter))
@@ -76,46 +239,7 @@ const listTasks = (database: CacheDatabase, filter: TaskFilter): Task[] => {
 
 const time = (date: Date | undefined): number | null => (date ? date.getTime() : null)
 
-const toRow = (task: Task): SqlValue[] => [
-  task.id,
-  task.source,
-  task.sourceKind,
-  task.account,
-  task.group,
-  task.kind,
-  task.state,
-  task.reason ?? null,
-  task.origin,
-  task.createdAt.getTime(),
-  time(task.dueAt),
-  time(task.closedAt),
-  task.closedBy ?? null,
-]
-
 const oneOf = <T extends string>(values: readonly T[], value: unknown, column: string): T => {
   if (typeof value === "string" && (values as readonly string[]).includes(value)) return value as T
   throw new CliError("configuration_error", `the store holds a task with an unknown ${column} "${String(value)}"`)
-}
-
-const optionalDate = (value: unknown): Date | undefined => (value === null ? undefined : new Date(Number(value)))
-
-const toTask = (row: Record<string, unknown>): Task => {
-  const task: Task = {
-    id: String(row.id),
-    source: String(row.source),
-    sourceKind: String(row.source_kind),
-    account: String(row.account),
-    group: String(row.group_key),
-    kind: oneOf(TASK_KINDS, row.kind, "kind"),
-    state: oneOf(TASK_STATES, row.state, "state"),
-    origin: oneOf(TASK_ORIGINS, row.origin, "origin"),
-    createdAt: new Date(Number(row.created_at)),
-  }
-  const dueAt = optionalDate(row.due_at)
-  const closedAt = optionalDate(row.closed_at)
-  if (row.reason !== null) task.reason = String(row.reason)
-  if (dueAt) task.dueAt = dueAt
-  if (closedAt) task.closedAt = closedAt
-  if (row.closed_by !== null) task.closedBy = oneOf(TASK_ORIGINS, row.closed_by, "closed_by")
-  return task
 }

@@ -1,7 +1,6 @@
 import { mkdirSync, writeFileSync } from "node:fs"
 import { dirname } from "node:path"
 import { CliError } from "@wirecat/cli-core"
-import type { TaskStore } from "@wirecat/cli-tasks"
 import type { TextRange } from "../conversations/chunks.js"
 import type { Link, LinkInput } from "../conversations/link.js"
 import type { DownloadedFile } from "../domain/attachments.js"
@@ -79,7 +78,7 @@ import * as stems from "./sqlite/stems.js"
 import * as sync from "./sqlite/sync.js"
 import type { StoredTag, TagFilter, TagTarget } from "./sqlite/tags.js"
 import * as tagQueries from "./sqlite/tags.js"
-import { taskStoreOver } from "./sqlite/tasks.js"
+import { type StoreTaskStore, taskStoreOver } from "./sqlite/tasks.js"
 import * as transcripts from "./sqlite/transcripts.js"
 import { toMs } from "./sqlite/values.js"
 import type { ChunkToEmbed } from "./sqlite/vectors.js"
@@ -553,7 +552,7 @@ export interface MessageStore {
   /** Drops the unnamed runs; answers how many. */
   clearSearchHistory(): Promise<number>
   /** Open tasks waiting on the owner, for `@wirecat/cli-tasks`'s service. */
-  readonly tasks: TaskStore
+  readonly tasks: StoreTaskStore
   readonly knowledge: KnowledgeStore
   /** Notes, the links between anything and anything, and the owner's organisations and projects. */
   readonly notes: NotesStore
@@ -1495,7 +1494,7 @@ const storeOver = (context: StoreContext): MessageStore => {
 
     // Built on first use: an area that prepares its statements must not stop the store opening for the rest.
     get tasks() {
-      tasks ??= taskStoreOver(database)
+      tasks ??= taskStoreOver(database, context.now)
       return tasks
     },
     get knowledge() {
