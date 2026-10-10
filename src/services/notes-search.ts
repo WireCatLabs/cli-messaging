@@ -365,14 +365,18 @@ export const searchNotes = async (
       counts.set(key, known)
     }
   }
-  const names = new Map((await store.notes.entities()).map((entity) => [`entity:${entity.id}`, entity.name]))
+  const names = new Map<string, string>(
+    [...(await store.knowledge.organizations()), ...(await store.knowledge.projects())].map(({ ref, name }) => [
+      ref,
+      name,
+    ]),
+  )
   for (const record of counts.values()) {
-    if (record.ref?.startsWith("entity:")) record.name = names.get(record.ref) ?? record.name
+    if (record.ref && names.has(record.ref)) record.name = names.get(record.ref) ?? record.name
     if (record.ref?.startsWith("person:"))
       record.name = (await store.personByUid(record.ref.slice("person:".length)))?.name ?? record.name
-    if (record.ref?.startsWith("note:"))
-      record.name =
-        (await store.notes.note(record.ref.slice("note:".length)).catch(() => undefined))?.title ?? record.name
+    if (record.ref?.startsWith("note:") || record.ref?.startsWith("document:"))
+      record.name = (await store.notes.note(record.ref).catch(() => undefined))?.title ?? record.name
   }
   return {
     query,

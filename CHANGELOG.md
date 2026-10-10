@@ -24,6 +24,19 @@ break callers, and says how under "Changed — may break callers". `pnpm docs:ch
   taggings and topics, chunks and embeddings have tables of their own. Every table and column is in
   [`docs/storage/schema-v2.md`](docs/storage/schema-v2.md). The old `messages.db` is left as it is and not
   converted: messages come back with a fresh sync.
+- **Knowledge, notes and tasks write the new tables.** `store.notes` splits files in a folder (`documents`,
+  `ref` `document:<id>`) from written notes (`notes`, `ref` `note:<id>`); a `Note` now carries `ref`, and
+  `note`, `noteTags` and `noteReferences` take a reference. Folders are `accounts` rows of provider `folder`;
+  `claimFolderPath` and `pendingPath` are gone with the old migration line. `addEntity`/`entities` are
+  replaced by `knowledge.addOrganization`/`organizations` and `addProject`/`projects`; `entity:` references
+  resolve as not found. `store.tasks` keeps the `@wirecat/cli-tasks` `TaskStore` and adds `answer` and
+  `judge`.
+
+### Added
+
+- `store.decisions`, `store.memories` (a memory needs a scope and evidence), `store.proposedActions` (agent
+  proposals that wait for the owner) and `store.agentActions` (one audit row per MCP tool call, never its
+  arguments). Topics: `knowledge.createTag(name, { kind: "topic" })` for the owner, `setMainTopic`.
 
 ## 0.215.0 — 10.10.2026
 

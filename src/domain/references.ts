@@ -10,12 +10,27 @@ export type Reference =
   | { type: "message"; provider: string; account: string; chat: string; message: string }
   | { type: "chat"; provider: string; account: string; chat: string }
   | { type: "contact"; provider: string; id: string }
-  | { type: "note"; id: string }
-  | { type: "person"; id: string }
-  | { type: "entity"; id: string }
-  | { type: "task"; id: string }
+  | { type: SimpleReference; id: string }
   /** A notes folder, or one subfolder of it: `path` is inside the folder, `null` the folder itself. */
   | { type: "folder"; id: string; path: string | null }
+
+/**
+ * Things named by their store id (a task also by its key or the task package's id). `entity` is the name
+ * before organizations and projects: it still parses, so an old file's reference resolves as not found.
+ */
+export const SIMPLE_REFERENCES = [
+  "note",
+  "document",
+  "person",
+  "organization",
+  "project",
+  "task",
+  "memory",
+  "decision",
+  "bot",
+  "entity",
+] as const
+export type SimpleReference = (typeof SIMPLE_REFERENCES)[number]
 
 const parts = (rest: string, count: number, reference: string, shape: string) => {
   const split = rest.split("/")
@@ -72,16 +87,14 @@ export const parseReference = (text: string): Reference => {
         )
       return { type: "folder", id, path }
     }
-    case "note":
-    case "person":
-    case "entity":
-    case "task":
-      if (!rest.trim()) throw new CliError("validation_error", `"${singleLine(reference)}" names no ${prefix}`)
-      return { type: prefix, id: rest }
     default:
+      if ((SIMPLE_REFERENCES as readonly string[]).includes(prefix)) {
+        if (!rest.trim()) throw new CliError("validation_error", `"${singleLine(reference)}" names no ${prefix}`)
+        return { type: prefix as SimpleReference, id: rest }
+      }
       throw new CliError(
         "validation_error",
-        `"${singleLine(reference)}" is not a reference — expected msg:, chat:, contact:, folder:, note:, person:, entity: or task:`,
+        `"${singleLine(reference)}" is not a reference — expected msg:, chat:, contact:, folder:, ${SIMPLE_REFERENCES.filter((one) => one !== "entity").join(":, ")}:`,
       )
   }
 }

@@ -1,7 +1,6 @@
 import { mkdirSync, writeFileSync } from "node:fs"
 import { dirname } from "node:path"
 import { CliError } from "@wirecat/cli-core"
-import type { TaskStore } from "@wirecat/cli-tasks"
 import type { TextRange } from "../conversations/chunks.js"
 import type { Link, LinkInput } from "../conversations/link.js"
 import type { DownloadedFile } from "../domain/attachments.js"
@@ -30,6 +29,7 @@ import { storeCapable } from "./open.js"
 import { storePath } from "./path.js"
 import * as accounts from "./sqlite/accounts.js"
 import { type AdminStoreRequest, type AdminStoreResult, adminStatisticsQuery } from "./sqlite/admin-statistics.js"
+import { type AgentActionsStore, agentActionsStoreOver } from "./sqlite/agent-actions.js"
 import type { AttachmentTextEntry, AttachmentView, FileAttachment } from "./sqlite/attachment-texts.js"
 import * as attachmentTexts from "./sqlite/attachment-texts.js"
 import * as attachmentRows from "./sqlite/attachments.js"
@@ -44,12 +44,14 @@ import * as completeness from "./sqlite/completeness.js"
 import { type ConversationEligibility, conversationEligibility } from "./sqlite/conversation-eligibility.js"
 import * as conversationQueries from "./sqlite/conversations.js"
 import { applyCounterObservations, type CounterTarget, counterStates, counterTargets } from "./sqlite/counters.js"
+import { type DecisionsStore, decisionsStoreOver } from "./sqlite/decisions.js"
 import * as identities from "./sqlite/identities.js"
 import { type InvolvementStore, involvementStoreOver } from "./sqlite/involvements.js"
 import { type KnowledgeStore, knowledgeStoreOver } from "./sqlite/knowledge.js"
 import { findRegex } from "./sqlite/legacy-regex.js"
 import type { QueryGroup, QueryGrouping } from "./sqlite/lucene.js"
 import * as lucene from "./sqlite/lucene.js"
+import { type MemoriesStore, memoriesStoreOver } from "./sqlite/memories.js"
 import * as messageWrites from "./sqlite/messages.js"
 import { noteSearchOver } from "./sqlite/note-search.js"
 import { type NotesStore, notesStoreOver } from "./sqlite/notes.js"
@@ -57,6 +59,7 @@ import { openSqlite, type StoreContext } from "./sqlite/open.js"
 import * as personLinks from "./sqlite/person-links.js"
 import type { PrivateContact, PrivateContactNote } from "./sqlite/private-people.js"
 import * as privatePeople from "./sqlite/private-people.js"
+import { type ProposedActionsStore, proposedActionsStoreOver } from "./sqlite/proposed-actions.js"
 import * as ranges from "./sqlite/ranges.js"
 import { type RankedEvidence, type RankingEvidenceRequest, rankingEvidence } from "./sqlite/ranking-evidence.js"
 import { type RankedStoreFound, type RankingRequest, rankQuery } from "./sqlite/rankings.js"
@@ -81,7 +84,7 @@ import * as stems from "./sqlite/stems.js"
 import * as sync from "./sqlite/sync.js"
 import type { StoredTag, TagFilter, TagTarget } from "./sqlite/tags.js"
 import * as tagQueries from "./sqlite/tags.js"
-import { taskStoreOver } from "./sqlite/tasks.js"
+import { type StoreTaskStore, taskStoreOver } from "./sqlite/tasks.js"
 import * as transcripts from "./sqlite/transcripts.js"
 import { toMs } from "./sqlite/values.js"
 import type { ChunkToEmbed } from "./sqlite/vectors.js"
@@ -562,10 +565,18 @@ export interface MessageStore {
   /** Open tasks waiting on the owner, for `@wirecat/cli-tasks`'s service. */
   readonly botUpdates: BotUpdateStore
   readonly involvements: InvolvementStore
-  readonly tasks: TaskStore
+  readonly tasks: StoreTaskStore
   readonly knowledge: KnowledgeStore
   /** Notes, the links between anything and anything, and the owner's organisations and projects. */
   readonly notes: NotesStore
+  /** Choices that hold until replaced, each with its evidence. */
+  readonly decisions: DecisionsStore
+  /** What agents concluded: summaries, digests, facts, preferences, each with evidence and a scope. */
+  readonly memories: MemoriesStore
+  /** What an agent wants done outside the store, waiting for the owner's approval. */
+  readonly proposedActions: ProposedActionsStore
+  /** One row per tool an agent called, never its arguments. */
+  readonly agentActions: AgentActionsStore
   close(): Promise<void>
 }
 
@@ -776,6 +787,10 @@ const storeOver = (context: StoreContext): MessageStore => {
   let tasks: MessageStore["tasks"] | undefined
   let knowledge: MessageStore["knowledge"] | undefined
   let notes: MessageStore["notes"] | undefined
+  let decisions: MessageStore["decisions"] | undefined
+  let memories: MessageStore["memories"] | undefined
+  let proposedActions: MessageStore["proposedActions"] | undefined
+  let agentActions: MessageStore["agentActions"] | undefined
 
   return {
     saveAccount: async (key, { name }) => {
@@ -1470,7 +1485,7 @@ const storeOver = (context: StoreContext): MessageStore => {
     addTags: async (key, target, list) => {
       let added: string[] = []
       inTransaction(() => {
-        added = tagQueries.addTags(context, tagQueries.targetPk(context, key, target), target.type, list)
+        added = tagQueries.addTags(context, tagQueries.targetThing(context, key, target), list)
       })
       return added
     },
@@ -1478,7 +1493,7 @@ const storeOver = (context: StoreContext): MessageStore => {
     removeTags: async (key, target, list, source) => {
       let removed: string[] = []
       inTransaction(() => {
-        removed = tagQueries.removeTags(context, tagQueries.targetPk(context, key, target), target.type, list, source)
+        removed = tagQueries.removeTags(context, tagQueries.targetThing(context, key, target), list, source)
       })
       return removed
     },
@@ -1527,7 +1542,7 @@ const storeOver = (context: StoreContext): MessageStore => {
       return involvements
     },
     get tasks() {
-      tasks ??= taskStoreOver(database)
+      tasks ??= taskStoreOver(database, context.now)
       return tasks
     },
     get knowledge() {
@@ -1537,6 +1552,22 @@ const storeOver = (context: StoreContext): MessageStore => {
     get notes() {
       notes ??= { ...notesStoreOver(context), ...noteSearchOver(context) }
       return notes
+    },
+    get decisions() {
+      decisions ??= decisionsStoreOver(context)
+      return decisions
+    },
+    get memories() {
+      memories ??= memoriesStoreOver(context)
+      return memories
+    },
+    get proposedActions() {
+      proposedActions ??= proposedActionsStoreOver(context)
+      return proposedActions
+    },
+    get agentActions() {
+      agentActions ??= agentActionsStoreOver(context)
+      return agentActions
     },
 
     close: async () => database.close(),
