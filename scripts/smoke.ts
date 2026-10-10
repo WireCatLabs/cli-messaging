@@ -88,12 +88,14 @@ check("the store finds a Cyrillic word by its beginning", (await store.search("Ð
 await store.close()
 const sqlite = await openSqlite(join(mkdtempSync(join(tmpdir(), "cli-messaging-smoke-")), "messages.db"))
 migrate(sqlite.database)
-sqlite.database.prepare("INSERT INTO accounts (provider, native_id, created_at) VALUES ('telegram', '1', 0)").run()
-check("Drizzle reads the row the seam wrote", (await sqlite.orm.select().from(accounts))[0]?.nativeId === "1")
+sqlite.database
+  .prepare("INSERT INTO accounts (provider, external_id, created_at, updated_at) VALUES ('telegram', '1', 0, 0)")
+  .run()
+check("Drizzle reads the row the seam wrote", (await sqlite.orm.select().from(accounts))[0]?.externalId === "1")
 sqlite.database.exec(`
-  INSERT INTO chats (pk,account_pk,native_id,kind,updated_at) VALUES (1,1,'fixture','group',0);
-  INSERT INTO messages (chat_pk,account_pk,native_id,sent_at,text,ingested_at,ingested_via)
-    VALUES (1,1,'fixture',0,'synthetic',0,'history');
+  INSERT INTO chats (id,account_id,external_id,kind,created_at,updated_at) VALUES (1,1,'fixture','group',0,0);
+  INSERT INTO messages (chat_id,account_id,external_id,sent_at,text,created_at,source,updated_at)
+    VALUES (1,1,'fixture',0,'synthetic',0,'history',0);
 `)
 check(
   "compiled selection aggregates stored rows in one read transaction",
@@ -115,7 +117,7 @@ check(
       sqlite.database.prepare(`SELECT count(*) AS total FROM (${selection.sql})`).get(...selection.params)?.total,
   ) === 1,
 )
-sqlite.database.exec(`UPDATE messages SET provider_metadata='{"views":3}'`)
+sqlite.database.exec(`UPDATE messages SET metadata='{"views":3}'`)
 check(
   "ranking aggregation runs under both SQLite runtimes",
   rankQuery(

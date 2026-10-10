@@ -142,15 +142,15 @@ const claim = (database: CacheDatabase, identity: string): boolean => {
 
 const stemWriter = (database: CacheDatabase, stemmer: Stemmer) => {
   const read = database.prepare(
-    `SELECT pk, text, 'c' || chat_pk || coalesce(' s' || sender_identity_pk, '') AS scope
-       FROM messages WHERE pk > ? AND pk <= ?`,
+    `SELECT id AS pk, text, 'c' || chat_id || coalesce(' s' || sender_identity_id, '') AS scope
+       FROM messages WHERE id > ? AND id <= ?`,
   )
   const one = database.prepare(
-    "SELECT text, 'c' || chat_pk || coalesce(' s' || sender_identity_pk, '') AS scope FROM messages WHERE pk = ?",
+    "SELECT text, 'c' || chat_id || coalesce(' s' || sender_identity_id, '') AS scope FROM messages WHERE id = ?",
   )
   const write = database.prepare("INSERT OR REPLACE INTO message_stems (rowid, stems, scope) VALUES (?, ?, ?)")
   const remove = database.prepare("DELETE FROM message_stems WHERE rowid = ?")
-  const dequeue = database.prepare("DELETE FROM message_stems_pending WHERE pk = ?")
+  const dequeue = database.prepare("DELETE FROM message_stems_pending WHERE id = ?")
   const restem = (pk: number, row: Record<string, unknown> | undefined) => {
     const stems = row ? stemmer.indexText(String(row.text)) : ""
     if (stems === "") remove.run(pk)
@@ -174,7 +174,7 @@ const stemWriter = (database: CacheDatabase, stemmer: Stemmer) => {
 
 const nextQueued = (database: CacheDatabase, limit: number): number[] =>
   database
-    .prepare("SELECT pk FROM message_stems_pending ORDER BY pk LIMIT ?")
+    .prepare("SELECT id AS pk FROM message_stems_pending ORDER BY id LIMIT ?")
     .all(limit)
     .map((row) => Number(row.pk))
 
@@ -300,7 +300,7 @@ export const resetStems = (
     database.exec("DELETE FROM message_stems_pending")
     database
       .prepare(
-        `UPDATE search_index_state SET watermark = (SELECT coalesce(max(pk), 0) FROM messages),
+        `UPDATE search_index_state SET watermark = (SELECT coalesce(max(id), 0) FROM messages),
            filled_through = 0, built_at = NULL, analyzer = ? WHERE name = ?`,
       )
       .run(state.wanted, INDEX)

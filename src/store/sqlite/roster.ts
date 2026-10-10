@@ -88,29 +88,12 @@ export const saveRoster = (
   )
     throw new CliError("validation_error", "member observation requires a valid nonfuture timestamp and remote source")
   const latest = context.database
-    .prepare("SELECT max(max(last_seen_at,coalesce(gone_at,last_seen_at))) AS at FROM member_stays WHERE chat_pk=?")
+    .prepare("SELECT max(max(last_seen_at,coalesce(left_at,last_seen_at))) AS at FROM member_stays WHERE chat_id=?")
     .get(chatKey)
   if (observation && latest?.at !== null && latest?.at !== undefined && observedAt < Number(latest.at))
     throw new CliError("validation_error", "member observation predates the latest saved roster")
   if (new Set(members.map((member) => member.id)).size !== members.length)
     throw new CliError("validation_error", "member roster contains duplicate identities")
-  const batch = observation
-    ? Number(
-        context.database
-          .prepare(
-            "INSERT INTO membership_batches(chat_pk,observed_at,started_at,complete,participants,listed,source) VALUES(?,?,?,?,?,?,?) RETURNING pk",
-          )
-          .get(chatKey, observedAt, startedAt, complete ? 1 : 0, participants, members.length, observation.source)?.pk,
-      )
-    : undefined
-  const recordMember = (person: number, stay: number) => {
-    if (batch !== undefined)
-      context.database
-        .prepare(
-          "INSERT INTO membership_batch_members(batch_pk,identity_pk,stay_pk) VALUES(?,?,?) ON CONFLICT DO NOTHING",
-        )
-        .run(batch, person, stay)
-  }
   const change: RosterChange = { joined: [], gone: [], changed: [] }
   const present = new Set<number>()
 
@@ -124,64 +107,70 @@ export const saveRoster = (
     if (revised) change.changed.push(member.id)
 
     const open = orm
-      .select({ pk: memberStays.pk, joinedAt: memberStays.joinedAt, lastSeenAt: memberStays.lastSeenAt })
+      .select({ pk: memberStays.id, joinedAt: memberStays.joinedAt, lastSeenAt: memberStays.lastSeenAt })
       .from(memberStays)
-      .where(and(eq(memberStays.chatPk, chatKey), eq(memberStays.identityPk, person), isNull(memberStays.goneAt)))
+      .where(and(eq(memberStays.chatId, chatKey), eq(memberStays.identityId, person), isNull(memberStays.leftAt)))
       .get()
     const parsedJoin = member.joinedAt ? Date.parse(member.joinedAt) : Number.NaN
     const joinedAt = Number.isSafeInteger(parsedJoin) && parsedJoin >= 0 && parsedJoin <= observedAt ? parsedJoin : null
     const rejoined =
       open && joinedAt !== null && open.joinedAt !== null && joinedAt !== open.joinedAt && joinedAt > open.lastSeenAt
-    if (rejoined) orm.update(memberStays).set({ goneAt: joinedAt }).where(eq(memberStays.pk, open.pk)).run()
+    if (rejoined) orm.update(memberStays).set({ leftAt: joinedAt }).where(eq(memberStays.id, open.pk)).run()
     if (open && !rejoined) {
       orm
         .update(memberStays)
         .set({ lastSeenAt: observedAt, role: member.role ?? null, joinedAt: joinedAt ?? open.joinedAt })
-        .where(eq(memberStays.pk, open.pk))
+        .where(eq(memberStays.id, open.pk))
         .run()
-      recordMember(person, open.pk)
       continue
     }
     const invitedBy = member.invitedBy ? identityPk(context, accountKey, provider, member.invitedBy, null) : null
-    const inserted = orm
+    orm
       .insert(memberStays)
       .values({
-        chatPk: chatKey,
-        identityPk: person,
+        chatId: chatKey,
+        identityId: person,
         firstSeenAt: observedAt,
         lastSeenAt: observedAt,
         joinedAt,
-        invitedByPk: invitedBy,
+        invitedByIdentityId: invitedBy,
         role: member.role ?? null,
+        createdAt: at,
+        updatedAt: at,
       })
-      .returning({ pk: memberStays.pk })
+      .returning({ pk: memberStays.id })
       .get()
-    if (inserted) recordMember(person, inserted.pk)
     change.joined.push(member.id)
   }
 
   if (complete) {
     const missing = orm
-      .select({ pk: memberStays.pk, person: memberStays.identityPk, id: identities.nativeId })
+      .select({ pk: memberStays.id, person: memberStays.identityId, id: identities.externalId })
       .from(memberStays)
-      .innerJoin(identities, eq(identities.pk, memberStays.identityPk))
-      .where(and(eq(memberStays.chatPk, chatKey), isNull(memberStays.goneAt)))
+      .innerJoin(identities, eq(identities.id, memberStays.identityId))
+      .where(and(eq(memberStays.chatId, chatKey), isNull(memberStays.leftAt)))
       .all()
       .filter(({ person }) => !present.has(person))
     for (const { pk, id } of missing) {
-      orm.update(memberStays).set({ goneAt: observedAt }).where(eq(memberStays.pk, pk)).run()
+      orm.update(memberStays).set({ leftAt: observedAt }).where(eq(memberStays.id, pk)).run()
       change.gone.push(id)
     }
-    orm.delete(chatMembers).where(eq(chatMembers.chatPk, chatKey)).run()
-    for (const person of present) orm.insert(chatMembers).values({ chatPk: chatKey, identityPk: person }).run()
+    orm.delete(chatMembers).where(eq(chatMembers.chatId, chatKey)).run()
+    for (const person of present)
+      orm.insert(chatMembers).values({ chatId: chatKey, identityId: person, createdAt: at }).run()
   }
 
   const day = new Date(at).toISOString().slice(0, 10)
-  const count = { participants, listed: members.length, complete: complete ? 1 : 0, at }
+  const count = {
+    reportedCount: participants,
+    listedCount: members.length,
+    completeList: complete ? 1 : 0,
+    createdAt: at,
+  }
   orm
     .insert(memberCounts)
-    .values({ chatPk: chatKey, day, ...count })
-    .onConflictDoUpdate({ target: [memberCounts.chatPk, memberCounts.day], set: count })
+    .values({ chatId: chatKey, date: day, ...count })
+    .onConflictDoUpdate({ target: [memberCounts.chatId, memberCounts.date], set: count })
     .run()
   return change
 }
@@ -190,25 +179,27 @@ export const saveRoster = (
 export const memberStaysOf = ({ orm }: StoreContext, chatKey: number, since?: number): MemberStay[] =>
   orm
     .select({
-      id: identities.nativeId,
+      id: identities.externalId,
       name: identities.name,
       username: identities.username,
       firstSeenAt: memberStays.firstSeenAt,
       lastSeenAt: memberStays.lastSeenAt,
       joinedAt: memberStays.joinedAt,
-      invitedBy: sql<string | null>`(SELECT native_id FROM identities i WHERE i.pk = ${memberStays.invitedByPk})`,
+      invitedBy: sql<
+        string | null
+      >`(SELECT external_id FROM identities i WHERE i.id = ${memberStays.invitedByIdentityId})`,
       role: memberStays.role,
-      goneAt: memberStays.goneAt,
+      goneAt: memberStays.leftAt,
     })
     .from(memberStays)
-    .innerJoin(identities, eq(identities.pk, memberStays.identityPk))
+    .innerJoin(identities, eq(identities.id, memberStays.identityId))
     .where(
       and(
-        eq(memberStays.chatPk, chatKey),
-        since === undefined ? undefined : or(isNull(memberStays.goneAt), gte(memberStays.goneAt, since)),
+        eq(memberStays.chatId, chatKey),
+        since === undefined ? undefined : or(isNull(memberStays.leftAt), gte(memberStays.leftAt, since)),
       ),
     )
-    .orderBy(asc(memberStays.firstSeenAt), asc(memberStays.pk))
+    .orderBy(asc(memberStays.firstSeenAt), asc(memberStays.id))
     .all()
     .map((row) => ({
       ...row,
@@ -221,41 +212,41 @@ export const memberStaysOf = ({ orm }: StoreContext, chatKey: number, since?: nu
 export const memberCountsOf = ({ orm }: StoreContext, chatKey: number, since?: string): MemberCount[] =>
   orm
     .select({
-      day: memberCounts.day,
-      participants: memberCounts.participants,
-      listed: memberCounts.listed,
-      complete: memberCounts.complete,
+      day: memberCounts.date,
+      participants: memberCounts.reportedCount,
+      listed: memberCounts.listedCount,
+      complete: memberCounts.completeList,
     })
     .from(memberCounts)
-    .where(and(eq(memberCounts.chatPk, chatKey), since === undefined ? undefined : gte(memberCounts.day, since)))
-    .orderBy(asc(memberCounts.day))
+    .where(and(eq(memberCounts.chatId, chatKey), since === undefined ? undefined : gte(memberCounts.date, since)))
+    .orderBy(asc(memberCounts.date))
     .all()
     .map((row) => ({ ...row, complete: row.complete === 1 }))
 
 /** Profiles of the chat's members, every revision, oldest first. */
 export const profileRevisionsOf = ({ orm }: StoreContext, chatKey: number, since?: number): ProfileRevision[] => {
   const people = orm
-    .selectDistinct({ pk: memberStays.identityPk })
+    .selectDistinct({ pk: memberStays.identityId })
     .from(memberStays)
-    .where(eq(memberStays.chatPk, chatKey))
+    .where(eq(memberStays.chatId, chatKey))
   return orm
     .select({
-      id: identities.nativeId,
+      id: identities.externalId,
       name: identityRevisions.name,
       username: identityRevisions.username,
       description: identityRevisions.description,
       marks: identityRevisions.marks,
-      capturedAt: identityRevisions.capturedAt,
+      capturedAt: identityRevisions.createdAt,
     })
     .from(identityRevisions)
-    .innerJoin(identities, eq(identities.pk, identityRevisions.identityPk))
+    .innerJoin(identities, eq(identities.id, identityRevisions.identityId))
     .where(
       and(
-        inArray(identityRevisions.identityPk, people),
-        since === undefined ? undefined : gte(identityRevisions.capturedAt, since),
+        inArray(identityRevisions.identityId, people),
+        since === undefined ? undefined : gte(identityRevisions.createdAt, since),
       ),
     )
-    .orderBy(asc(identityRevisions.capturedAt), asc(identityRevisions.pk))
+    .orderBy(asc(identityRevisions.createdAt), asc(identityRevisions.id))
     .all()
     .map((row) => ({
       ...row,
@@ -268,15 +259,15 @@ export const setTracked = ({ orm, now }: StoreContext, chatKey: number, tracked:
   orm
     .update(chats)
     .set({ membersTrackedAt: tracked ? sql`coalesce(${chats.membersTrackedAt}, ${now()})` : null })
-    .where(eq(chats.pk, chatKey))
+    .where(eq(chats.id, chatKey))
     .run()
 }
 
 export const trackedChats = (context: StoreContext, accountKey: number): TrackedChat[] =>
   context.orm
-    .select({ pk: chats.pk, chatId: chats.nativeId, title: chats.title, trackedAt: chats.membersTrackedAt })
+    .select({ pk: chats.id, chatId: chats.externalId, title: chats.title, trackedAt: chats.membersTrackedAt })
     .from(chats)
-    .where(and(eq(chats.accountPk, accountKey), isNotNull(chats.membersTrackedAt)))
+    .where(and(eq(chats.accountId, accountKey), isNotNull(chats.membersTrackedAt)))
     .orderBy(asc(chats.membersTrackedAt))
     .all()
     .map(({ pk, chatId, title, trackedAt }) => ({

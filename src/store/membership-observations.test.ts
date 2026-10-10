@@ -34,7 +34,7 @@ const setup = async () => {
 }
 
 describe("membership observation history", () => {
-  it("records every explicit batch, including partial absence, without inventing old observations", async () => {
+  it("records every explicit batch, including partial absence, in daily counts", async () => {
     const { store, path, advance, observation } = await setup()
     try {
       await store.saveRoster(OWNER, "7", { members: [member()], complete: true, participants: 1 })
@@ -53,12 +53,14 @@ describe("membership observation history", () => {
       expect((await store.memberStays(OWNER, "7"))[0]?.goneAt).toBe(new Date(START + 3 * DAY).toISOString())
       const db = await openCache(path)
       try {
-        expect(db.prepare("SELECT complete,listed,observed_at FROM membership_batches ORDER BY pk").all()).toEqual([
-          { complete: 0, listed: 1, observed_at: START + DAY },
-          { complete: 0, listed: 0, observed_at: START + 2 * DAY },
-          { complete: 1, listed: 0, observed_at: START + 3 * DAY },
+        expect(
+          db.prepare("SELECT complete_list,listed_count,created_at FROM member_counts ORDER BY date").all(),
+        ).toEqual([
+          { complete_list: 1, listed_count: 1, created_at: START },
+          { complete_list: 0, listed_count: 1, created_at: START + DAY },
+          { complete_list: 0, listed_count: 0, created_at: START + 2 * DAY },
+          { complete_list: 1, listed_count: 0, created_at: START + 3 * DAY },
         ])
-        expect(db.prepare("SELECT count(*) AS n FROM membership_batch_members").get()?.n).toBe(1)
       } finally {
         db.close()
       }
@@ -66,7 +68,7 @@ describe("membership observation history", () => {
       await store.close()
     }
   })
-  it("splits a definite rejoin into separate stays and retains their batch references", async () => {
+  it("splits a definite rejoin into separate stays and retains both stays", async () => {
     const { store, path, advance, observation } = await setup()
     try {
       await store.saveRoster(OWNER, "7", {
@@ -89,7 +91,7 @@ describe("membership observation history", () => {
       ])
       const db = await openCache(path)
       try {
-        expect(db.prepare("SELECT count(DISTINCT stay_pk) AS n FROM membership_batch_members").get()?.n).toBe(2)
+        expect(db.prepare("SELECT count(*) AS n FROM member_stays").get()?.n).toBe(2)
       } finally {
         db.close()
       }
@@ -126,7 +128,7 @@ describe("membership observation history", () => {
       expect((await store.memberStays(OWNER, "7"))[0]?.goneAt).toBeNull()
       const db = await openCache(path)
       try {
-        expect(db.prepare("SELECT count(*) AS n FROM membership_batches").get()?.n).toBe(1)
+        expect(db.prepare("SELECT count(*) AS n FROM member_counts").get()?.n).toBe(1)
       } finally {
         db.close()
       }

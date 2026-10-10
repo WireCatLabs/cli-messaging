@@ -18,16 +18,24 @@ const large = async (count = BACKFILL_ON_OPEN + 20, waiting: number[] = []): Pro
   const database = await openCache(join(mkdtempSync(join(tmpdir(), "words-")), "messages.db"))
   opened.push(database)
   migrate(database, { migrations: MIGRATIONS.filter(({ version }) => version <= 11) })
-  database.exec(`INSERT INTO accounts (pk, provider, native_id, created_at) VALUES (1, 'telegram', '100', 0)`)
-  database.exec(`INSERT INTO chats (pk, account_pk, native_id, kind, updated_at) VALUES (1, 1, '-1', 'group', 0)`)
+  database.exec(
+    `INSERT INTO accounts (id, provider, external_id, created_at,updated_at) VALUES (1, 'telegram', '100', 0,0)`,
+  )
+  database.exec(
+    `INSERT INTO chats (id, account_id, external_id, kind, updated_at,created_at) VALUES (1, 1, '-1', 'group', 0,0)`,
+  )
   const pending = `i IN (${waiting.join(", ")})`
   database.exec(`WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM n WHERE i < ${count})
-    INSERT INTO messages (pk, chat_pk, account_pk, native_id, sent_at, text, normalized_text, normalizer_version,
-                          ingested_at, ingested_via)
+    INSERT INTO messages (id, chat_id, account_id, external_id, sent_at, text, normalized_text, normalizer_version,
+                          created_at, source,updated_at)
     SELECT i, 1, 1, CAST(i AS TEXT), i, 'W' || i || ' Valencia 2026',
            CASE WHEN ${pending} THEN NULL ELSE 'w' || i || ' valencia 2026' END,
-           CASE WHEN ${pending} THEN NULL ELSE 1 END, 0, 'history' FROM n`)
-  migrate(database)
+           CASE WHEN ${pending} THEN NULL ELSE 1 END, 0, 'history' ,0 FROM n`)
+  resetSearchIndex(database)
+  if (count <= BACKFILL_ON_OPEN) fillSearchIndex(database, { until: () => false })
+  database.exec(
+    "DELETE FROM search_terms; DELETE FROM search_term_trigrams; UPDATE search_index_state SET terms_through=0 WHERE name='message_words'",
+  )
   return database
 }
 
@@ -108,8 +116,8 @@ describe("filling the word index", () => {
   it("**adds the words of messages stored after the vocabulary was built**", async () => {
     const database = await large(30)
     fillSearchIndex(database)
-    database.exec(`INSERT INTO messages (chat_pk, account_pk, native_id, sent_at, text, normalized_text, normalizer_version,
-                     ingested_at, ingested_via) VALUES (1, 1, '31', 31, 'Ruzafa, piso', 'ruzafa, piso', 1, 0, 'history')`)
+    database.exec(`INSERT INTO messages (chat_id, account_id, external_id, sent_at, text, normalized_text, normalizer_version,
+                     created_at, source,updated_at) VALUES (1, 1, '31', 31, 'Ruzafa, piso', 'ruzafa, piso', 1, 0, 'history',0)`)
     expect(searchIndexState(database)?.termsThrough).toBe(30)
 
     expect(fillSearchIndex(database).terms).toBe(2)
@@ -152,7 +160,6 @@ describe("filling the word index", () => {
   it("does nothing on a file without the word index", async () => {
     const database = await openCache(":memory:")
     opened.push(database)
-    migrate(database, { migrations: MIGRATIONS.filter(({ version }) => version <= 11) })
 
     expect(searchIndexState(database)).toBeUndefined()
     expect(fillSearchIndex(database)).toEqual({ normalized: 0, indexed: 0, terms: 0 })

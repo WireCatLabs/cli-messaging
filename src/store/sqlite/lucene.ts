@@ -53,7 +53,7 @@ export const prefixOf = (pattern: string): string => {
 }
 
 const wordMatch = (match: string): Fragment => ({
-  sql: "m.pk IN (SELECT rowid FROM message_words WHERE message_words MATCH ?)",
+  sql: "m.id IN (SELECT rowid FROM message_words WHERE message_words MATCH ?)",
   params: [`normalized_text : (${match})`],
   exact: true,
   fts: match,
@@ -78,13 +78,13 @@ export interface QueryGroup {
 }
 const GROUPS: Record<QueryGrouping, { key: string; select: string }> = {
   chat: {
-    key: "m.chat_pk",
-    select: "ac.provider AS provider, ac.native_id AS account, c.native_id AS id, c.title AS name",
+    key: "m.chat_id",
+    select: "ac.provider AS provider, ac.external_id AS account, c.external_id AS id, c.title AS name",
   },
   sender: {
-    key: "coalesce(m.sender_identity_pk, -m.account_pk)",
+    key: "coalesce(m.sender_identity_id, -m.account_id)",
     select:
-      "ac.provider AS provider, ac.native_id AS account, i.native_id AS id, i.name AS name, max(m.outgoing) AS outgoing",
+      "ac.provider AS provider, ac.external_id AS account, i.external_id AS id, i.name AS name, max(m.outgoing) AS outgoing",
   },
   // Quarter hours, so a calendar day or hour in any zone (+05:30, +05:45) is a whole number of buckets.
   time: { key: "m.sent_at / 900000", select: "CAST(min(m.sent_at / 900000) * 900000 AS TEXT) AS id, NULL AS name" },
@@ -140,7 +140,7 @@ const compileQuery = (context: StoreContext, execution: QueryExecution, boundedA
       // Words OR stems: two spellings can fold one word to different stems, and every exact hit must stay.
       fragment = /[\p{L}\p{N}]/u.test(text)
         ? {
-            sql: `m.pk IN (SELECT rowid FROM message_words WHERE message_words MATCH ?)${stems ? " OR m.pk IN (SELECT rowid FROM message_stems WHERE message_stems MATCH ?)" : ""}`,
+            sql: `m.id IN (SELECT rowid FROM message_words WHERE message_words MATCH ?)${stems ? " OR m.id IN (SELECT rowid FROM message_stems WHERE message_stems MATCH ?)" : ""}`,
             params: [`normalized_text : (${quoted(text)})`, ...(stems ? [`stems : (${stems})`] : [])],
             exact: true,
             fts: quoted(text),
@@ -201,7 +201,9 @@ const compileQuery = (context: StoreContext, execution: QueryExecution, boundedA
         return name === wanted || (column === "mime" && !wanted.includes("/") && name.startsWith(`${wanted}/`))
       }
       let scope = combine(
-        execution.accounts.map(({ provider, account }) => bound("ac.provider=? AND ac.native_id=?", provider, account)),
+        execution.accounts.map(({ provider, account }) =>
+          bound("ac.provider=? AND ac.external_id=?", provider, account),
+        ),
         "OR",
       )
       if (boundedAttachments && execution.chat) {
@@ -210,7 +212,7 @@ const compileQuery = (context: StoreContext, execution: QueryExecution, boundedA
           [
             scope,
             bound(
-              "ac.provider=? AND ac.native_id=? AND m.chat_pk IN (SELECT pk FROM chats WHERE account_pk=ac.pk AND native_id=?)",
+              "ac.provider=? AND ac.external_id=? AND m.chat_id IN (SELECT id FROM chats WHERE account_id=ac.id AND external_id=?)",
               chat.account.provider,
               chat.account.account,
               chat.chatId,
@@ -220,7 +222,7 @@ const compileQuery = (context: StoreContext, execution: QueryExecution, boundedA
         )
       }
       const page = database.prepare(
-        `SELECT att.pk AS pk, att.message_pk AS message, att.${column} AS value FROM attachments att JOIN messages m ON m.pk=att.message_pk JOIN accounts ac ON ac.pk=m.account_pk WHERE att.pk > ? AND att.${column} IS NOT NULL AND m.deleted_at IS NULL AND ${scope.sql} ORDER BY att.pk LIMIT 5000`,
+        `SELECT att.id AS id, att.attachable_id AS message, att.${column} AS value FROM attachments att JOIN messages m ON m.id=att.attachable_id AND att.attachable_type='message' JOIN accounts ac ON ac.id=m.account_id WHERE att.id > ? AND att.${column} IS NOT NULL AND m.deleted_at IS NULL AND ${scope.sql} ORDER BY att.id LIMIT 5000`,
       )
       const messages = new Set<number>()
       for (let rows = page.all(0, ...scope.params); rows.length > 0; ) {
@@ -229,9 +231,9 @@ const compileQuery = (context: StoreContext, execution: QueryExecution, boundedA
           if (fits(String(row.value))) messages.add(Number(row.message))
           if (boundedAttachments && messages.size > QUERY_LIMITS.candidates) exhausted("attachment message keys")
         }
-        rows = page.all(Number(rows.at(-1)?.pk), ...scope.params)
+        rows = page.all(Number(rows.at(-1)?.id), ...scope.params)
       }
-      fragment = bound("m.pk IN (SELECT value FROM json_each(?))", JSON.stringify([...messages]))
+      fragment = bound("m.id IN (SELECT value FROM json_each(?))", JSON.stringify([...messages]))
     } else if (field === "size") {
       const conditions =
         operator === "range"
@@ -246,7 +248,7 @@ const compileQuery = (context: StoreContext, execution: QueryExecution, boundedA
           : [bound("att.size = ?", parseBytes(value, node.span))]
       const range = combine(conditions, "AND")
       fragment = bound(
-        `EXISTS (SELECT 1 FROM attachments att WHERE att.message_pk=m.pk AND att.size IS NOT NULL AND ${range.sql})`,
+        `EXISTS (SELECT 1 FROM attachments att WHERE att.attachable_type='message' AND att.attachable_id=m.id AND att.size IS NOT NULL AND ${range.sql})`,
         ...range.params,
       )
     } else if (field === "content") {
@@ -254,7 +256,7 @@ const compileQuery = (context: StoreContext, execution: QueryExecution, boundedA
       // Never `fts`: the ranking ANDs every required word into message_words, where a file's words are not.
       fragment = /[\p{L}\p{N}]/u.test(text)
         ? bound(
-            "m.pk IN (SELECT att.message_pk FROM attachments att WHERE att.pk IN (SELECT rowid FROM attachment_words WHERE attachment_words MATCH ?))",
+            "m.id IN (SELECT att.attachable_id FROM attachments att WHERE att.attachable_type='message' AND att.id IN (SELECT rowid FROM attachment_words WHERE attachment_words MATCH ?))",
             quoted(text),
           )
         : bound("0")
@@ -271,7 +273,7 @@ const compileQuery = (context: StoreContext, execution: QueryExecution, boundedA
       const chat = resolution?.chat
       if (!chat) queryError("invalid_ast", node.span)
       fragment = bound(
-        "m.chat_pk IN (SELECT cc.pk FROM chats cc JOIN accounts aa ON aa.pk=cc.account_pk WHERE aa.provider=? AND aa.native_id=? AND cc.native_id=?)",
+        "m.chat_id IN (SELECT cc.id FROM chats cc JOIN accounts aa ON aa.id=cc.account_id WHERE aa.provider=? AND aa.external_id=? AND cc.external_id=?)",
         chat.account.provider,
         chat.account.account,
         chat.chatId,
@@ -281,7 +283,7 @@ const compileQuery = (context: StoreContext, execution: QueryExecution, boundedA
       if (resolution?.outgoing) fragment = bound("m.outgoing = 1")
       else if (sender)
         fragment = bound(
-          "m.sender_identity_pk IN (SELECT ii.pk FROM identities ii WHERE ii.provider=? AND ii.native_id=?)",
+          "m.sender_identity_id IN (SELECT ii.id FROM identities ii WHERE ii.provider=? AND ii.external_id=?)",
           sender.provider,
           sender.id,
         )
@@ -290,18 +292,18 @@ const compileQuery = (context: StoreContext, execution: QueryExecution, boundedA
       const tag = tagOf(value)
       if (tag === undefined) queryError("invalid_tag", node.span)
       fragment = bound(
-        "m.pk IN (SELECT taggable_pk FROM tags WHERE tag=? AND taggable_type='message') OR " +
-          "m.chat_pk IN (SELECT taggable_pk FROM tags WHERE tag=? AND taggable_type='chat') OR " +
-          "m.sender_identity_pk IN (SELECT taggable_pk FROM tags WHERE tag=? AND taggable_type='contact')",
+        "m.id IN (SELECT tg.taggable_id FROM taggings tg JOIN tags t ON t.id=tg.tag_id WHERE t.name=? AND tg.taggable_type='message') OR " +
+          "m.chat_id IN (SELECT tg.taggable_id FROM taggings tg JOIN tags t ON t.id=tg.tag_id WHERE t.name=? AND tg.taggable_type='chat') OR " +
+          "m.sender_identity_id IN (SELECT tg.taggable_id FROM taggings tg JOIN tags t ON t.id=tg.tag_id WHERE t.name=? AND tg.taggable_type='identity')",
         tag,
         tag,
         tag,
       )
-    } else if (field === "topic") fragment = bound("m.thread_native_id = ?", value)
+    } else if (field === "topic") fragment = bound("m.thread_external_id = ?", value)
     else if (field === "kind") {
       const kind = value.toLowerCase()
       fragment = bound(
-        "CASE WHEN json_extract(c.provider_metadata,'$.peerKind') IN ('private','saved','bot','service','group','channel','unknown') THEN json_extract(c.provider_metadata,'$.peerKind') WHEN c.kind='dialog' AND json_extract(c.provider_metadata,'$.isBot')=1 THEN 'bot' WHEN c.kind='dialog' THEN 'private' ELSE c.kind END = ?",
+        "CASE WHEN json_extract(c.metadata,'$.peerKind') IN ('private','saved','bot','service','group','channel','unknown') THEN json_extract(c.metadata,'$.peerKind') WHEN c.kind='dialog' AND json_extract(c.metadata,'$.isBot')=1 THEN 'bot' WHEN c.kind='dialog' THEN 'private' ELSE c.kind END = ?",
         kind,
       )
     } else if (field === "has") {
@@ -309,18 +311,23 @@ const compileQuery = (context: StoreContext, execution: QueryExecution, boundedA
       fragment =
         kind === "link"
           ? bound(
-              "(m.pk IN (SELECT rowid FROM messages_fts WHERE messages_fts MATCH ?) OR EXISTS (SELECT 1 FROM attachments att WHERE att.message_pk=m.pk AND att.kind IN ('share','webpage')))",
+              "(m.id IN (SELECT rowid FROM messages_fts WHERE messages_fts MATCH ?) OR EXISTS (SELECT 1 FROM attachments att WHERE att.attachable_type='message' AND att.attachable_id=m.id AND att.kind IN ('share','webpage')))",
               quoted("://"),
             )
           : kind === "attachment"
-            ? bound("EXISTS (SELECT 1 FROM attachments att WHERE att.message_pk=m.pk)")
-            : bound("EXISTS (SELECT 1 FROM attachments att WHERE att.message_pk=m.pk AND att.kind=?)", kind)
+            ? bound(
+                "EXISTS (SELECT 1 FROM attachments att WHERE att.attachable_type='message' AND att.attachable_id=m.id)",
+              )
+            : bound(
+                "EXISTS (SELECT 1 FROM attachments att WHERE att.attachable_type='message' AND att.attachable_id=m.id AND att.kind=?)",
+                kind,
+              )
     } else if (field === "in") {
       const source = value.toLowerCase()
       const chosen = execution.accounts.filter(({ provider }) => inSource(source, provider))
       fragment = chosen.length
         ? combine(
-            chosen.map(({ provider, account }) => bound("ac.provider=? AND ac.native_id=?", provider, account)),
+            chosen.map(({ provider, account }) => bound("ac.provider=? AND ac.external_id=?", provider, account)),
             "OR",
           )
         : bound("0")
@@ -356,7 +363,7 @@ const compileQuery = (context: StoreContext, execution: QueryExecution, boundedA
   if (execution.accounts.length === 0) queryError("invalid_scope", { start: 0, end: 0 })
   const expression = compile(execution.root)
   const scopeParts = execution.accounts.map(({ provider, account }) => ({
-    sql: "ac.provider=? AND ac.native_id=?",
+    sql: "ac.provider=? AND ac.external_id=?",
     params: [provider, account],
     exact: true,
   }))
@@ -366,21 +373,21 @@ const compileQuery = (context: StoreContext, execution: QueryExecution, boundedA
       [
         scope,
         {
-          sql: "ac.provider=? AND ac.native_id=? AND c.native_id=?",
+          sql: "ac.provider=? AND ac.external_id=? AND c.external_id=?",
           params: [execution.chat.account.provider, execution.chat.account.account, execution.chat.chatId],
           exact: true,
         },
       ],
       "AND",
     )
-  else scope = combine([scope, { sql: "c.is_searchable=1", params: [], exact: true }], "AND")
+  else scope = combine([scope, { sql: "c.searchable=1", params: [], exact: true }], "AND")
   if (execution.senders)
     scope = combine(
       [
         scope,
         combine(
           execution.senders.map(({ provider, id }) => ({
-            sql: "i.provider=? AND i.native_id=?",
+            sql: "i.provider=? AND i.external_id=?",
             params: [provider, id],
             exact: true,
           })),
@@ -396,7 +403,7 @@ const compileQuery = (context: StoreContext, execution: QueryExecution, boundedA
       [
         where,
         {
-          sql: `m.pk IN (SELECT cm.message_pk FROM conversation_messages cm JOIN conversations cv ON cv.pk=cm.conversation_pk JOIN conversation_state cs ON cs.chat_pk=cv.chat_pk AND cs.current_build=cv.build WHERE 1${ids === undefined ? "" : " AND cv.pk IN (SELECT value FROM json_each(?))"}${execution.conversationSince === undefined ? "" : " AND cv.last_at>=?"})`,
+          sql: `m.id IN (SELECT cm.message_id FROM conversation_messages cm JOIN conversations cv ON cv.id=cm.conversation_id JOIN conversation_state cs ON cs.chat_id=cv.chat_id AND cs.current_build=cv.build WHERE 1${ids === undefined ? "" : " AND cv.id IN (SELECT value FROM json_each(?))"}${execution.conversationSince === undefined ? "" : " AND cv.last_at>=?"})`,
           params: [
             ...(ids === undefined ? [] : [JSON.stringify(ids)]),
             ...(execution.conversationSince === undefined ? [] : [execution.conversationSince]),
@@ -412,7 +419,7 @@ const compileQuery = (context: StoreContext, execution: QueryExecution, boundedA
       [
         where,
         {
-          sql: "EXISTS (SELECT 1 FROM json_each(?) j WHERE json_extract(j.value,'$.chatId')=c.native_id AND json_extract(j.value,'$.id')=m.native_id)",
+          sql: "EXISTS (SELECT 1 FROM json_each(?) j WHERE json_extract(j.value,'$.chatId')=c.external_id AND json_extract(j.value,'$.id')=m.external_id)",
           params: [JSON.stringify(execution.only)],
           exact: true,
         },
@@ -420,7 +427,7 @@ const compileQuery = (context: StoreContext, execution: QueryExecution, boundedA
       "AND",
     )
   const joinedFrom =
-    "FROM messages m JOIN chats c ON c.pk=m.chat_pk JOIN accounts ac ON ac.pk=m.account_pk LEFT JOIN identities i ON i.pk=m.sender_identity_pk"
+    "FROM messages m JOIN chats c ON c.id=m.chat_id JOIN accounts ac ON ac.id=m.account_id LEFT JOIN identities i ON i.id=m.sender_identity_id"
   let baseFrom = joinedFrom
   const requiredText = (node: ResolvedNode, index: "fts" | "stems" = "fts"): string | undefined => {
     if (node.kind === "predicate") return fragments.get(node)?.fragment[index]
@@ -439,8 +446,8 @@ const compileQuery = (context: StoreContext, execution: QueryExecution, boundedA
   const rankMatch = stemmed ? undefined : requiredText(execution.root)
   if (execution.chat && !rankMatch && !stemmed) {
     baseFrom =
-      "FROM chats c JOIN accounts ac ON ac.pk=c.account_pk CROSS JOIN messages m LEFT JOIN identities i ON i.pk=m.sender_identity_pk"
-    where = combine([{ sql: "m.chat_pk=c.pk", params: [], exact: true }, where], "AND")
+      "FROM chats c JOIN accounts ac ON ac.id=c.account_id CROSS JOIN messages m LEFT JOIN identities i ON i.id=m.sender_identity_id"
+    where = combine([{ sql: "m.chat_id=c.id", params: [], exact: true }, where], "AND")
   }
   // A stemmed search starts from the messages its indexes name, read by key; without it SQLite walks every
   // message of the account and tests each against the index sets.
@@ -448,7 +455,7 @@ const compileQuery = (context: StoreContext, execution: QueryExecution, boundedA
     if (node.kind === "predicate") {
       const { fts, stems } = fragments.get(node)?.fragment ?? {}
       if (fts === undefined) return undefined
-      const words = "SELECT rowid AS pk FROM message_words WHERE message_words MATCH ?"
+      const words = "SELECT rowid AS id FROM message_words WHERE message_words MATCH ?"
       return isStemmed(node) && stems
         ? {
             sql: `${words} UNION SELECT rowid FROM message_stems WHERE message_stems MATCH ?`,
@@ -464,13 +471,13 @@ const compileQuery = (context: StoreContext, execution: QueryExecution, boundedA
     if (!parts.length || parts.some((part) => part === undefined)) return undefined
     const sets = parts as { sql: string; params: SqlValue[] }[]
     return {
-      sql: sets.map(({ sql }) => `SELECT pk FROM (${sql})`).join(required.length ? " INTERSECT " : " UNION "),
+      sql: sets.map(({ sql }) => `SELECT id FROM (${sql})`).join(required.length ? " INTERSECT " : " UNION "),
       params: sets.flatMap(({ params }) => params),
     }
   }
   const driver = stemmed ? driverOf(execution.root) : undefined
   const filtered = where
-  if (driver) where = combine([{ sql: "m.pk=d.pk", params: [], exact: true }, where], "AND")
+  if (driver) where = combine([{ sql: "m.id=d.id", params: [], exact: true }, where], "AND")
   const from = rankMatch
     ? baseFrom.replace("FROM messages m", "FROM message_words f CROSS JOIN messages m")
     : driver
@@ -480,7 +487,7 @@ const compileQuery = (context: StoreContext, execution: QueryExecution, boundedA
     where = combine(
       [
         {
-          sql: "message_words MATCH ? AND f.rank MATCH 'bm25(1.0, 0.0)' AND m.pk=f.rowid",
+          sql: "message_words MATCH ? AND f.rank MATCH 'bm25(1.0, 0.0)' AND m.id=f.rowid",
           params: [`normalized_text : (${rankMatch})`],
           exact: true,
         },
@@ -493,28 +500,28 @@ const compileQuery = (context: StoreContext, execution: QueryExecution, boundedA
   const ranking = stemmed ? requiredText(execution.root, "stems") : undefined
   const exactTier = stemmed ? requiredText(execution.root) : undefined
   const ranked: { sql: string[]; params: SqlValue[] } = driver
-    ? { sql: [`d(pk) AS MATERIALIZED (${driver.sql})`], params: [...driver.params] }
+    ? { sql: [`d(id) AS MATERIALIZED (${driver.sql})`], params: [...driver.params] }
     : { sql: [], params: [] }
   if (ranking && !execution.newest) {
     ranked.sql.push(
-      "f(pk, rank) AS MATERIALIZED (SELECT rowid, bm25(message_stems, 1.0, 0.0) FROM message_stems WHERE message_stems MATCH ?)",
+      "f(id, rank) AS MATERIALIZED (SELECT rowid, bm25(message_stems, 1.0, 0.0) FROM message_stems WHERE message_stems MATCH ?)",
     )
     ranked.params.push(`stems : (${ranking})`)
   }
   if (exactTier) {
-    ranked.sql.push("x(pk) AS MATERIALIZED (SELECT rowid FROM message_words WHERE message_words MATCH ?)")
+    ranked.sql.push("x(id) AS MATERIALIZED (SELECT rowid FROM message_words WHERE message_words MATCH ?)")
     ranked.params.push(`normalized_text : (${exactTier})`)
   }
   const withRanking = ranked.sql.length ? `WITH ${ranked.sql.join(", ")} ` : ""
-  const rankedFrom = ranking && !execution.newest ? `${from} LEFT JOIN f ON f.pk=m.pk` : from
-  const exactColumn = exactTier ? ", m.pk IN (SELECT pk FROM x) AS exact" : ""
+  const rankedFrom = ranking && !execution.newest ? `${from} LEFT JOIN f ON f.id=m.id` : from
+  const exactColumn = exactTier ? ", m.id IN (SELECT id FROM x) AS exact" : ""
   const relevance = rankMatch ? "f.rank" : ranking && !execution.newest ? "f.rank" : "NULL"
   const tiers = execution.newest
     ? ""
     : rankMatch
       ? "f.rank,"
       : `${exactTier ? "exact DESC," : ""}${ranking ? "f.rank IS NULL, f.rank," : ""}`
-  const order = `${tiers}m.sent_at DESC, ac.provider, ac.native_id, c.native_id, m.native_id DESC`
+  const order = `${tiers}m.sent_at DESC, ac.provider, ac.external_id, c.external_id, m.external_id DESC`
   const leaves = [...fragments.values()]
   const exact = leaves.filter(({ test }) => test === undefined)
   const projection = exact.map(({ fragment }, index) => `coalesce(${fragment.sql},0) AS q${index}`).join(",")
@@ -593,13 +600,13 @@ export const withQuerySelection = <T>(
     let selection: QuerySelection
     if (leaves.every(({ test }) => !test)) {
       selection = {
-        sql: `${withRanking}SELECT DISTINCT m.pk AS pk ${from} WHERE ${where.sql}`,
+        sql: `${withRanking}SELECT DISTINCT m.id AS id ${from} WHERE ${where.sql}`,
         params: [...ranked.params, ...where.params],
       }
     } else {
       const candidates = database
         .prepare(
-          `${withRanking}SELECT m.pk AS pk, length(cast(m.text AS BLOB)) AS bytes ${from} WHERE ${where.sql} ORDER BY m.pk LIMIT ?`,
+          `${withRanking}SELECT m.id AS id, length(cast(m.text AS BLOB)) AS bytes ${from} WHERE ${where.sql} ORDER BY m.id LIMIT ?`,
         )
         .all(...ranked.params, ...where.params, QUERY_LIMITS.candidates + 1)
       check()
@@ -608,10 +615,10 @@ export const withQuerySelection = <T>(
       const matched: number[] = []
       for (let offset = 0; offset < candidates.length; offset += 500) {
         check()
-        const pks = candidates.slice(offset, offset + 500).map(({ pk }) => Number(pk))
+        const pks = candidates.slice(offset, offset + 500).map(({ id }) => Number(id))
         const rows = database
           .prepare(
-            `SELECT m.pk AS pk, m.text AS body${query.projection ? `,${query.projection}` : ""},(SELECT json_group_array(att.kind) FROM attachments att WHERE att.message_pk=m.pk) AS attachment_kinds ${query.joinedFrom} WHERE m.pk IN (${pks.map(() => "?").join(",")})`,
+            `SELECT m.id AS id, m.text AS body${query.projection ? `,${query.projection}` : ""},(SELECT json_group_array(att.kind) FROM attachments att WHERE att.attachable_type='message' AND att.attachable_id=m.id) AS attachment_kinds ${query.joinedFrom} WHERE m.id IN (${pks.map(() => "?").join(",")})`,
           )
           .all(...query.projectionParams, ...pks)
         for (const row of rows) {
@@ -625,10 +632,10 @@ export const withQuerySelection = <T>(
               Array.isArray(attachments) ? attachments.map(String) : [],
             )
           )
-            matched.push(Number(row.pk))
+            matched.push(Number(row.id))
         }
       }
-      selection = { sql: "SELECT value AS pk FROM json_each(?)", params: [JSON.stringify(matched)] }
+      selection = { sql: "SELECT value AS id FROM json_each(?)", params: [JSON.stringify(matched)] }
     }
     const result = consume(selection, check)
     if (
@@ -678,11 +685,11 @@ const runQuery = async (
   } = compileQuery(context, execution)
   if (by === "pks" && leaves.every(({ test }) => !test)) {
     const rows = database
-      .prepare(`${withRanking}SELECT m.pk AS pk ${from} WHERE ${where.sql}`)
+      .prepare(`${withRanking}SELECT m.id AS id ${from} WHERE ${where.sql}`)
       .all(...ranked.params, ...where.params)
     await new Promise<void>((resolve) => setImmediate(resolve))
     check()
-    return rows.map(({ pk }) => Number(pk))
+    return rows.map(({ id }) => Number(id))
   }
   if (by && by !== "pks" && leaves.every(({ test }) => !test))
     return grouped(by, where.sql, [...ranked.params, ...where.params], from, withRanking)
@@ -691,7 +698,7 @@ const runQuery = async (
   if (stemmed && exactTier && driver && !execution.newest && leaves.every(({ test }) => !test)) {
     const exactRows = database
       .prepare(
-        `SELECT m.pk AS pk, w.rank AS relevance ${baseFrom.replace("FROM messages m", "FROM message_words w CROSS JOIN messages m")} WHERE message_words MATCH ? AND w.rank MATCH 'bm25(1.0, 0.0)' AND m.pk=w.rowid AND ${filtered.sql} ORDER BY w.rank, m.sent_at DESC, ac.provider, ac.native_id, c.native_id, m.native_id DESC LIMIT ?`,
+        `SELECT m.id AS id, w.rank AS relevance ${baseFrom.replace("FROM messages m", "FROM message_words w CROSS JOIN messages m")} WHERE message_words MATCH ? AND w.rank MATCH 'bm25(1.0, 0.0)' AND m.id=w.rowid AND ${filtered.sql} ORDER BY w.rank, m.sent_at DESC, ac.provider, ac.external_id, c.external_id, m.external_id DESC LIMIT ?`,
       )
       .all(`normalized_text : (${exactTier})`, ...filtered.params, execution.limit + 1)
     await new Promise<void>((resolve) => setImmediate(resolve))
@@ -701,20 +708,20 @@ const runQuery = async (
       room > 0
         ? database
             .prepare(
-              `${withRanking}SELECT m.pk AS pk, ${relevance} AS relevance ${rankedFrom} WHERE ${where.sql} AND m.pk NOT IN (SELECT pk FROM x) ORDER BY ${ranking ? "f.rank IS NULL, f.rank," : ""}m.sent_at DESC, ac.provider, ac.native_id, c.native_id, m.native_id DESC LIMIT ?`,
+              `${withRanking}SELECT m.id AS id, ${relevance} AS relevance ${rankedFrom} WHERE ${where.sql} AND m.id NOT IN (SELECT id FROM x) ORDER BY ${ranking ? "f.rank IS NULL, f.rank," : ""}m.sent_at DESC, ac.provider, ac.external_id, c.external_id, m.external_id DESC LIMIT ?`,
             )
             .all(...ranked.params, ...where.params, room)
         : []
     await new Promise<void>((resolve) => setImmediate(resolve))
     check()
     const rows = [
-      ...exactRows.map(({ pk, relevance }) => ({ pk, relevance, exact: true })),
-      ...otherRows.map(({ pk, relevance }) => ({ pk, relevance, exact: false })),
+      ...exactRows.map(({ id, relevance }) => ({ id, relevance, exact: true })),
+      ...otherRows.map(({ id, relevance }) => ({ id, relevance, exact: false })),
     ]
     return {
       items: hitsByPk(
         context,
-        rows.slice(0, execution.limit).map(({ pk }) => Number(pk)),
+        rows.slice(0, execution.limit).map(({ id }) => Number(id)),
       ).map((hit, index) => ({
         ...hit,
         score: rows[index]?.relevance == null ? null : -Number(rows[index]?.relevance),
@@ -726,7 +733,7 @@ const runQuery = async (
   if (leaves.every(({ test }) => !test)) {
     const rows = database
       .prepare(
-        `${withRanking}SELECT m.pk AS pk, ${relevance} AS relevance${exactColumn} ${rankedFrom} WHERE ${where.sql} ORDER BY ${order} LIMIT ?`,
+        `${withRanking}SELECT m.id AS id, ${relevance} AS relevance${exactColumn} ${rankedFrom} WHERE ${where.sql} ORDER BY ${order} LIMIT ?`,
       )
       .all(...ranked.params, ...where.params, execution.limit + 1)
     await new Promise<void>((resolve) => setImmediate(resolve))
@@ -734,7 +741,7 @@ const runQuery = async (
     return {
       items: hitsByPk(
         context,
-        rows.slice(0, execution.limit).map(({ pk }) => Number(pk)),
+        rows.slice(0, execution.limit).map(({ id }) => Number(id)),
       ).map((hit, index) => ({
         ...hit,
         score: rows[index]?.relevance == null ? null : -Number(rows[index]?.relevance),
@@ -745,7 +752,7 @@ const runQuery = async (
   }
   const candidates = database
     .prepare(
-      `${withRanking}SELECT m.pk AS pk, ${relevance} AS relevance${exactColumn}, length(cast(m.text AS BLOB)) AS bytes ${rankedFrom} WHERE ${where.sql} ORDER BY ${order} LIMIT ?`,
+      `${withRanking}SELECT m.id AS id, ${relevance} AS relevance${exactColumn}, length(cast(m.text AS BLOB)) AS bytes ${rankedFrom} WHERE ${where.sql} ORDER BY ${order} LIMIT ?`,
     )
     .all(...ranked.params, ...where.params, QUERY_LIMITS.candidates + 1)
   await new Promise<void>((resolve) => setImmediate(resolve))
@@ -754,31 +761,31 @@ const runQuery = async (
   if (candidates.reduce((sum, row) => sum + Number(row.bytes), 0) > QUERY_LIMITS.bodyBytes) exhausted("body bytes")
   const found: number[] = []
   const scores = new Map(
-    candidates.map((row) => [Number(row.pk), row.relevance == null ? null : -Number(row.relevance)]),
+    candidates.map((row) => [Number(row.id), row.relevance == null ? null : -Number(row.relevance)]),
   )
-  const exactness = new Map(candidates.map((row) => [Number(row.pk), Number(row.exact) === 1]))
+  const exactness = new Map(candidates.map((row) => [Number(row.id), Number(row.exact) === 1]))
   for (let offset = 0; offset < candidates.length; offset += 500) {
     if (offset > 0) await new Promise<void>((resolve) => setImmediate(resolve))
     check()
-    const pks = candidates.slice(offset, offset + 500).map(({ pk }) => Number(pk))
+    const pks = candidates.slice(offset, offset + 500).map(({ id }) => Number(id))
     const rows = database
       .prepare(
-        `SELECT m.pk AS pk,m.text AS body${projection ? `,${projection}` : ""},(SELECT json_group_array(att.kind) FROM attachments att WHERE att.message_pk=m.pk) AS attachment_kinds ${joinedFrom} WHERE m.pk IN (${pks.map(() => "?").join(",")})`,
+        `SELECT m.id AS id,m.text AS body${projection ? `,${projection}` : ""},(SELECT json_group_array(att.kind) FROM attachments att WHERE att.attachable_type='message' AND att.attachable_id=m.id) AS attachment_kinds ${joinedFrom} WHERE m.id IN (${pks.map(() => "?").join(",")})`,
       )
       .all(...projectionParams, ...pks)
-    const byPk = new Map(rows.map((row) => [Number(row.pk), row]))
-    for (const pk of pks) {
+    const byPk = new Map(rows.map((row) => [Number(row.id), row]))
+    for (const id of pks) {
       check()
-      const row = byPk.get(pk) as Record<string, unknown>
+      const row = byPk.get(id) as Record<string, unknown>
       const attachments: unknown = JSON.parse(String(row.attachment_kinds))
       if (evaluate(execution.root, row, String(row.body), Array.isArray(attachments) ? attachments.map(String) : []))
-        found.push(pk)
+        found.push(id)
       if (!by && found.length > execution.limit) break
     }
     if (!by && found.length > execution.limit) break
   }
   if (by === "pks") return found
-  if (by) return grouped(by, "m.pk IN (SELECT value FROM json_each(?))", [JSON.stringify(found)], joinedFrom)
+  if (by) return grouped(by, "m.id IN (SELECT value FROM json_each(?))", [JSON.stringify(found)], joinedFrom)
   return {
     items: hitsByPk(context, found.slice(0, execution.limit)).map((hit, index) => ({
       ...hit,

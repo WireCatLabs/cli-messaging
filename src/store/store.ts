@@ -35,8 +35,9 @@ import * as attachmentTexts from "./sqlite/attachment-texts.js"
 import * as attachmentRows from "./sqlite/attachments.js"
 import { backfillNormalized, pendingNormalization } from "./sqlite/backfill.js"
 import * as batches from "./sqlite/batches.js"
-import type { ChatMetadata } from "./sqlite/chat-metadata.js"
-import * as metadataQueries from "./sqlite/chat-metadata.js"
+import { type BotUpdateStore, botUpdateStoreOver } from "./sqlite/bot-updates.js"
+import type { ChatMetadata } from "./sqlite/chats.js"
+import * as metadataQueries from "./sqlite/chats.js"
 import * as chatQueries from "./sqlite/chats.js"
 import type { ChatCompleteness } from "./sqlite/completeness.js"
 import * as completeness from "./sqlite/completeness.js"
@@ -44,6 +45,7 @@ import { type ConversationEligibility, conversationEligibility } from "./sqlite/
 import * as conversationQueries from "./sqlite/conversations.js"
 import { applyCounterObservations, type CounterTarget, counterStates, counterTargets } from "./sqlite/counters.js"
 import * as identities from "./sqlite/identities.js"
+import { type InvolvementStore, involvementStoreOver } from "./sqlite/involvements.js"
 import { type KnowledgeStore, knowledgeStoreOver } from "./sqlite/knowledge.js"
 import { findRegex } from "./sqlite/legacy-regex.js"
 import type { QueryGroup, QueryGrouping } from "./sqlite/lucene.js"
@@ -91,6 +93,7 @@ import * as words from "./sqlite/words.js"
 export interface AccountKey {
   provider: Provider
   account: Id
+  scope?: "personal" | "work"
 }
 
 /** Whether a stored chat may hold a message deleted without naming its chat. */
@@ -322,6 +325,10 @@ export interface MessageStore {
       query: Float32Array
       exclude?: string
       conversations?: string[]
+      scope?: "personal" | "work"
+      projectId?: string
+      personId?: string
+      before?: string
     },
   ): Promise<ConversationHit[]>
   /**
@@ -553,6 +560,8 @@ export interface MessageStore {
   /** Drops the unnamed runs; answers how many. */
   clearSearchHistory(): Promise<number>
   /** Open tasks waiting on the owner, for `@wirecat/cli-tasks`'s service. */
+  readonly botUpdates: BotUpdateStore
+  readonly involvements: InvolvementStore
   readonly tasks: TaskStore
   readonly knowledge: KnowledgeStore
   /** Notes, the links between anything and anything, and the owner's organisations and projects. */
@@ -762,6 +771,8 @@ const storeOver = (context: StoreContext): MessageStore => {
 
   const writeState = (accountKey: number, name: string, value: string) =>
     sync.writeState(context, accountKey, name, value)
+  let botUpdates: BotUpdateStore | undefined
+  let involvements: InvolvementStore | undefined
   let tasks: MessageStore["tasks"] | undefined
   let knowledge: MessageStore["knowledge"] | undefined
   let notes: MessageStore["notes"] | undefined
@@ -1086,7 +1097,10 @@ const storeOver = (context: StoreContext): MessageStore => {
       return cleared
     },
 
-    nearestConversations: async (key, { chatId, model, since, limit, query, exclude, conversations }) => {
+    nearestConversations: async (
+      key,
+      { chatId, model, since, limit, query, exclude, conversations, scope, projectId, personId, before },
+    ) => {
       const accountPk = findAccountPk(key)
       if (accountPk === undefined) return []
       const chatKey = chatId === undefined ? undefined : chatKeyOf(key, chatId)
@@ -1099,6 +1113,10 @@ const storeOver = (context: StoreContext): MessageStore => {
         limit,
         query,
         ...(conversations === undefined ? {} : { conversations }),
+        ...(scope === undefined ? {} : { scope }),
+        ...(projectId === undefined ? {} : { projectId: Number(projectId) }),
+        ...(personId === undefined ? {} : { personId: Number(personId) }),
+        ...(before === undefined ? {} : { before: Date.parse(before) }),
       })
       const found = conversationQueries.summariesOf(
         context,
@@ -1264,7 +1282,7 @@ const storeOver = (context: StoreContext): MessageStore => {
     rankingDiscussionChats: async (account, chatId) => {
       const rows = database
         .prepare(
-          "SELECT DISTINCT json_extract(CASE WHEN json_valid(m.provider_metadata) THEN m.provider_metadata ELSE '{}' END,'$.graph.discussionChatId') AS id FROM messages m JOIN chats c ON c.pk=m.chat_pk JOIN accounts ac ON ac.pk=m.account_pk WHERE ac.provider=? AND ac.native_id=? AND c.native_id=? AND c.kind='channel' AND m.deleted_at IS NULL AND json_extract(CASE WHEN json_valid(m.provider_metadata) THEN m.provider_metadata ELSE '{}' END,'$.graph.version')=1 AND json_type(CASE WHEN json_valid(m.provider_metadata) THEN m.provider_metadata ELSE '{}' END,'$.graph.discussionChatId')='text' LIMIT 101",
+          "SELECT DISTINCT json_extract(CASE WHEN json_valid(m.metadata) THEN m.metadata ELSE '{}' END,'$.graph.discussionChatId') AS id FROM messages m JOIN chats c ON c.id=m.chat_id JOIN accounts ac ON ac.id=m.account_id WHERE ac.provider=? AND ac.external_id=? AND c.external_id=? AND c.kind='channel' AND m.deleted_at IS NULL AND json_extract(CASE WHEN json_valid(m.metadata) THEN m.metadata ELSE '{}' END,'$.graph.version')=1 AND json_type(CASE WHEN json_valid(m.metadata) THEN m.metadata ELSE '{}' END,'$.graph.discussionChatId')='text' LIMIT 101",
         )
         .all(account.provider, account.account, chatId)
       if (rows.length > 100)
@@ -1358,7 +1376,7 @@ const storeOver = (context: StoreContext): MessageStore => {
     counterStates: async (key, chatId, messageId, options) => {
       const row = database
         .prepare(
-          "SELECT m.pk FROM messages m JOIN chats c ON c.pk=m.chat_pk JOIN accounts ac ON ac.pk=m.account_pk WHERE ac.provider=? AND ac.native_id=? AND c.native_id=? AND m.native_id=? AND m.deleted_at IS NULL",
+          "SELECT m.id AS pk FROM messages m JOIN chats c ON c.id=m.chat_id JOIN accounts ac ON ac.id=m.account_id WHERE ac.provider=? AND ac.external_id=? AND c.external_id=? AND m.external_id=? AND m.deleted_at IS NULL",
         )
         .get(key.provider, key.account, chatId, messageId)
       return row ? counterStates(context, Number(row.pk), options.now, options.maxAge) : []
@@ -1368,7 +1386,7 @@ const storeOver = (context: StoreContext): MessageStore => {
       inTransaction(() => {
         const row = database
           .prepare(
-            "SELECT m.pk FROM messages m JOIN chats c ON c.pk=m.chat_pk JOIN accounts ac ON ac.pk=m.account_pk WHERE ac.provider=? AND ac.native_id=? AND c.native_id=? AND m.native_id=? AND m.deleted_at IS NULL",
+            "SELECT m.id AS pk FROM messages m JOIN chats c ON c.id=m.chat_id JOIN accounts ac ON ac.id=m.account_id WHERE ac.provider=? AND ac.external_id=? AND c.external_id=? AND m.external_id=? AND m.deleted_at IS NULL",
           )
           .get(key.provider, key.account, chatId, messageId)
         if (row) updated = applyCounterObservations(context, Number(row.pk), observations)
@@ -1383,7 +1401,7 @@ const storeOver = (context: StoreContext): MessageStore => {
       inTransaction(() => {
         saved = messageWrites.saveReactions(context, chatKey, messageId, reactions)
         const row = database
-          .prepare("SELECT pk FROM messages WHERE chat_pk=? AND native_id=? AND deleted_at IS NULL")
+          .prepare("SELECT id AS pk FROM messages WHERE chat_id=? AND external_id=? AND deleted_at IS NULL")
           .get(chatKey, messageId)
         if (row && options.observation)
           applyCounterObservations(context, Number(row.pk), { reactions: options.observation })
@@ -1425,7 +1443,13 @@ const storeOver = (context: StoreContext): MessageStore => {
     replaceAutoTags: async (key, chatId, algorithm, matches) =>
       inTransaction(() => metadataQueries.replaceAutoTags(context, key, chatId, algorithm, matches)),
     privateContact: async (key, person) => privatePeople.privateContact(context, key, person),
-    setContactAlias: async (key, person, alias) => privatePeople.setAlias(context, key, person, alias),
+    setContactAlias: async (key, person, alias) => {
+      let result: { personId: Id; alias: string | null } | undefined
+      inTransaction(() => {
+        result = privatePeople.setAlias(context, key, person, alias)
+      })
+      return result as { personId: Id; alias: string | null }
+    },
     addContactNote: async (key, person, text) => {
       let added: PrivateContactNote | undefined
       inTransaction(() => {
@@ -1494,6 +1518,14 @@ const storeOver = (context: StoreContext): MessageStore => {
     },
 
     // Built on first use: an area that prepares its statements must not stop the store opening for the rest.
+    get botUpdates() {
+      botUpdates ??= botUpdateStoreOver(context)
+      return botUpdates
+    },
+    get involvements() {
+      involvements ??= involvementStoreOver(context)
+      return involvements
+    },
     get tasks() {
       tasks ??= taskStoreOver(database)
       return tasks

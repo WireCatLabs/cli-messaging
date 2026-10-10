@@ -7,23 +7,23 @@ import { applyCounterObservations } from "./counters.js"
 import { and, eq, isNull, type Placeholder, sql } from "./drizzle/core.js"
 import { identityPk } from "./identities.js"
 import type { Orm, StoreContext } from "./open.js"
-import { attachments, chats, messageRevisions, messages, transcripts } from "./schema.js"
+import { attachments, chats, messageRevisions, messages, messageTranscripts } from "./schema.js"
 import { json, parsed, toMs } from "./values.js"
 import { purgeVectorsOf } from "./vectors.js"
 
 const FIELDS = [
-  "threadNativeId",
-  "senderIdentityPk",
-  "senderChatNativeId",
+  "threadExternalId",
+  "senderIdentityId",
+  "senderChatExternalId",
   "senderName",
   "sentAt",
   "editedAt",
-  "replyToNativeId",
+  "replyToExternalId",
   "replyTo",
   "forward",
   "outgoing",
   "reactions",
-  "providerMetadata",
+  "metadata",
   "mentions",
   "normalizedText",
   "normalizerVersion",
@@ -50,19 +50,19 @@ const placeholders = <const T extends string>(names: readonly T[]) =>
 const prepare = (orm: Orm) => ({
   find: orm
     .select({
-      pk: messages.pk,
+      pk: messages.id,
       text: messages.text,
       editedAt: messages.editedAt,
       deletedAt: messages.deletedAt,
-      providerMetadata: messages.providerMetadata,
+      providerMetadata: messages.metadata,
     })
     .from(messages)
-    .where(and(eq(messages.chatPk, sql.placeholder("chatPk")), eq(messages.nativeId, sql.placeholder("nativeId"))))
+    .where(and(eq(messages.chatId, sql.placeholder("chatId")), eq(messages.externalId, sql.placeholder("externalId"))))
     .prepare(),
   insert: orm
     .insert(messages)
-    .values(placeholders(["chatPk", "accountPk", "nativeId", "text", "ingestedAt", "ingestedVia", ...FIELDS]))
-    .returning({ pk: messages.pk })
+    .values(placeholders(["chatId", "accountId", "externalId", "text", "createdAt", "source", "updatedAt", ...FIELDS]))
+    .returning({ pk: messages.id })
     .prepare(),
   // A copy that knows less — no reactions asked for, no quote sent, no sender — never erases what we had.
   update: orm
@@ -72,14 +72,17 @@ const prepare = (orm: Orm) => ({
         FIELDS.map((name) => [name, sql`coalesce(${sql.placeholder(name)}, ${messages[name]})`]),
       ) as Record<(typeof FIELDS)[number], ReturnType<typeof sql>>,
     )
-    .where(eq(messages.pk, sql.placeholder("pk")))
+    .where(eq(messages.id, sql.placeholder("pk")))
     .prepare(),
   // Upserted by position, never replaced: a later fetch must not lose where the bytes were saved.
   attachment: orm
     .insert(attachments)
-    .values(placeholders(["messagePk", "position", ...ATTACHMENT_FIELDS]))
+    .values({
+      attachableType: "message",
+      ...placeholders(["attachableId", "position", "createdAt", "updatedAt", ...ATTACHMENT_FIELDS]),
+    })
     .onConflictDoUpdate({
-      target: [attachments.messagePk, attachments.position],
+      target: [attachments.attachableType, attachments.attachableId, attachments.position],
       set: Object.fromEntries(
         ATTACHMENT_FIELDS.map((name) => [name, sql.raw(`excluded.${attachments[name].name}`)]),
       ) as Record<(typeof ATTACHMENT_FIELDS)[number], ReturnType<typeof sql.raw>>,
@@ -96,18 +99,18 @@ const statementsOf = (orm: Orm) => {
 }
 
 const fieldsOf = (message: Message, sender: number | null): Fields => ({
-  threadNativeId: message.threadId ?? null,
-  senderIdentityPk: sender,
-  senderChatNativeId: message.senderIsChat ? message.senderId : null,
+  threadExternalId: message.threadId ?? message.threadRootId ?? null,
+  senderIdentityId: sender,
+  senderChatExternalId: message.senderIsChat ? message.senderId : null,
   senderName: message.senderName,
   sentAt: toMs(message.timestamp) ?? 0,
   editedAt: toMs(message.editedAt),
-  replyToNativeId: message.replyToId ?? message.replyTo?.id ?? null,
+  replyToExternalId: message.replyToId ?? message.replyTo?.id ?? null,
   replyTo: json(message.replyTo ?? undefined),
   forward: json(message.forwardedFrom ?? undefined),
   outgoing: message.outgoing === null ? null : Number(message.outgoing),
   reactions: json(message.reactions ?? undefined),
-  providerMetadata: json(message.providerMetadata),
+  metadata: json(message.providerMetadata),
   mentions: message.mentions?.length ? JSON.stringify(message.mentions) : null,
   normalizedText: normalize(message.text),
   normalizerVersion: NORMALIZER_VERSION,
@@ -137,7 +140,7 @@ export const upsertMessage = (
         )
   const fields = fieldsOf(message, sender)
 
-  const found = statements.find.get({ chatPk: chatKey, nativeId: message.id })
+  const found = statements.find.get({ chatId: chatKey, externalId: message.id })
   const revived = found?.deletedAt != null && seenAt !== undefined && found.deletedAt < seenAt
   // A deleted message leaves no text behind, and a sync that still carries it does not bring it back.
   if (found?.deletedAt != null && !revived) return
@@ -145,12 +148,13 @@ export const upsertMessage = (
   if (!found) {
     pk = Number(
       statements.insert.get({
-        chatPk: chatKey,
-        accountPk: accountKey,
-        nativeId: message.id,
+        chatId: chatKey,
+        accountId: accountKey,
+        externalId: message.id,
         text: message.text,
-        ingestedAt: now(),
-        ingestedVia: via,
+        createdAt: now(),
+        source: via,
+        updatedAt: now(),
         ...fields,
       })?.pk,
     )
@@ -159,11 +163,11 @@ export const upsertMessage = (
     if (found.providerMetadata) {
       try {
         const previous = JSON.parse(found.providerMetadata) as Record<string, unknown>
-        const incoming = JSON.parse(String(fields.providerMetadata ?? "{}")) as Record<string, unknown>
+        const incoming = JSON.parse(String(fields.metadata ?? "{}")) as Record<string, unknown>
         if (previous && incoming && !Array.isArray(previous) && !Array.isArray(incoming)) {
           for (const field of ["views", "comments"])
             if (!validCounter(incoming[field]) && validCounter(previous[field])) incoming[field] = previous[field]
-          fields.providerMetadata = JSON.stringify(incoming)
+          fields.metadata = JSON.stringify(incoming)
         }
       } catch {
         /* Malformed old metadata remains untrusted. */
@@ -174,19 +178,37 @@ export const upsertMessage = (
     if (found.text !== message.text && !revived) {
       orm
         .insert(messageRevisions)
-        .values({ messagePk: pk, text: found.text, editedAt: found.editedAt, capturedAt: now() })
+        .values({ messageId: pk, text: found.text, editedAt: found.editedAt, createdAt: now() })
         .run()
-      orm.update(messages).set({ text: message.text }).where(eq(messages.pk, pk)).run()
+      orm.update(messages).set({ text: message.text }).where(eq(messages.id, pk)).run()
       purgeVectorsOf(context, pk)
     }
-    if (revived) orm.update(messages).set({ deletedAt: null, text: message.text }).where(eq(messages.pk, pk)).run()
+    if (revived) orm.update(messages).set({ deletedAt: null, text: message.text }).where(eq(messages.id, pk)).run()
   }
 
   if (message.counterObservations) applyCounterObservations(context, pk, message.counterObservations)
 
+  const root = message.threadRootId ?? message.threadId
+  if (root !== undefined) {
+    context.database
+      .prepare(
+        "UPDATE messages SET thread_root_id=(SELECT id FROM messages WHERE chat_id=? AND external_id=?) WHERE id=?",
+      )
+      .run(chatKey, root, pk)
+  }
+  context.database
+    .prepare("UPDATE messages SET thread_root_id=? WHERE chat_id=? AND thread_external_id=? AND thread_root_id IS NULL")
+    .run(pk, chatKey, message.id)
+  context.database
+    .prepare(
+      "UPDATE message_transcripts SET message_id=? WHERE chat_id=? AND message_external_id=? AND message_id IS NULL",
+    )
+    .run(pk, chatKey, message.id)
   message.attachments.forEach((attachment, position) => {
     statements.attachment.run({
-      messagePk: pk,
+      attachableId: pk,
+      createdAt: now(),
+      updatedAt: now(),
       position,
       kind: attachment.kind,
       mime: attachment.mime ?? null,
@@ -211,15 +233,20 @@ export const tombstone = (context: StoreContext, pk: number): number => {
   const row = orm
     .update(messages)
     .set({ deletedAt: now(), text: "", normalizedText: null })
-    .where(and(eq(messages.pk, pk), isNull(messages.deletedAt)))
-    .returning({ chatPk: messages.chatPk, nativeId: messages.nativeId })
+    .where(and(eq(messages.id, pk), isNull(messages.deletedAt)))
+    .returning({ chatId: messages.chatId, externalId: messages.externalId })
     .get()
   if (!row) return 0
-  orm.delete(messageRevisions).where(eq(messageRevisions.messagePk, pk)).run()
+  context.database
+    .prepare(
+      "UPDATE attachments SET extraction=NULL, extractor=NULL, extraction_error=NULL, content_sha256=NULL, extracted_at=NULL, updated_at=? WHERE attachable_type='message' AND attachable_id=?",
+    )
+    .run(now(), pk)
+  orm.delete(messageRevisions).where(eq(messageRevisions.messageId, pk)).run()
   purgeVectorsOf(context, pk)
   orm
-    .delete(transcripts)
-    .where(and(eq(transcripts.chatPk, row.chatPk), eq(transcripts.messageNativeId, row.nativeId)))
+    .delete(messageTranscripts)
+    .where(and(eq(messageTranscripts.chatId, row.chatId), eq(messageTranscripts.messageExternalId, row.externalId)))
     .run()
   return 1
 }
@@ -229,8 +256,8 @@ export const saveReactions = ({ orm }: StoreContext, chatKey: number, messageId:
   orm
     .update(messages)
     .set({ reactions: JSON.stringify(reactions) })
-    .where(and(eq(messages.chatPk, chatKey), eq(messages.nativeId, messageId), isNull(messages.deletedAt)))
-    .returning({ pk: messages.pk })
+    .where(and(eq(messages.chatId, chatKey), eq(messages.externalId, messageId), isNull(messages.deletedAt)))
+    .returning({ pk: messages.id })
     .all().length > 0
 
 export const markDeleted = (
@@ -244,15 +271,15 @@ export const markDeleted = (
   const chatKey = chatId === undefined ? undefined : findChatPk(context, accountKey, chatId)
   let changed = 0
   for (const messageId of messageIds) {
-    const live = and(eq(messages.accountPk, accountKey), eq(messages.nativeId, messageId), isNull(messages.deletedAt))
+    const live = and(eq(messages.accountId, accountKey), eq(messages.externalId, messageId), isNull(messages.deletedAt))
     if (chatId !== undefined) {
       const found =
         chatKey === undefined
           ? undefined
           : orm
-              .select({ pk: messages.pk })
+              .select({ pk: messages.id })
               .from(messages)
-              .where(and(live, eq(messages.chatPk, chatKey)))
+              .where(and(live, eq(messages.chatId, chatKey)))
               .get()
       if (found) changed += tombstone(context, found.pk)
       continue
@@ -260,9 +287,9 @@ export const markDeleted = (
     if (!among) continue
     // Two candidates left means the id is ambiguous, and a missed tombstone is better than a wrong one.
     const candidates = orm
-      .select({ pk: messages.pk, id: chats.nativeId, kind: chats.kind, providerMetadata: chats.providerMetadata })
+      .select({ pk: messages.id, id: chats.externalId, kind: chats.kind, providerMetadata: chats.metadata })
       .from(messages)
-      .innerJoin(chats, eq(chats.pk, messages.chatPk))
+      .innerJoin(chats, eq(chats.id, messages.chatId))
       .where(live)
       .all()
       .filter(({ id, kind, providerMetadata }) =>

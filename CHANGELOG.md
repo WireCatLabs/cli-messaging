@@ -6,8 +6,18 @@ break callers, and says how under "Changed — may break callers". `pnpm docs:ch
 
 ## Unreleased
 
+### Added
+
+- `store.botUpdates` records Bot API deliveries once per account and update id, with handling, failure and replay state.
+- `store.involvements` rebuilds a person timeline across messages, chats, meetings, mail, tasks and person links; reads
+  can filter scope and return newest first through the person index.
+- Account and chat scopes, nested chats and message thread roots; conversation vector searches can narrow by scope,
+  project, person and time. See [the messaging store APIs](docs/storage/messaging-v2.md).
+
 ### Changed — may break callers
 
+- Retention uses the first and last positive roster observations and observed departures. An intermediate roster
+  observation that those materialized stays no longer retain is reported as unknown.
 - **A new store schema in a new file, `wirecat.db`, created by one initial migration (store version 1).** Tables
   and columns follow Rails naming (`id`, `<thing>_id`, `external_id`, `created_at`/`updated_at`); mail, documents,
   notes, memories, decisions, events, meetings, organizations, projects, tasks, proposed actions, aliases,

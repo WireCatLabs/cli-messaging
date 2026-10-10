@@ -22,7 +22,7 @@ export const counterStates = (
   maxAge: number,
 ): CounterState[] => {
   const row = database
-    .prepare("SELECT reactions,provider_metadata FROM messages WHERE pk=? AND deleted_at IS NULL")
+    .prepare("SELECT reactions,metadata FROM messages WHERE id=? AND deleted_at IS NULL")
     .get(messagePk)
   if (!row) return []
   const parse = (raw: unknown): Record<string, unknown> => {
@@ -35,16 +35,16 @@ export const counterStates = (
       return {}
     }
   }
-  const metadata = parse(row.provider_metadata),
+  const metadata = parse(row.metadata),
     reactions = parse(row.reactions)
   const records = database
-    .prepare("SELECT counter,value,observed_at,source FROM message_counter_observations WHERE message_pk=?")
+    .prepare("SELECT counter,value,created_at,source FROM message_counter_observations WHERE message_id=?")
     .all(messagePk)
   return COUNTER_FIELDS.map((counter) => {
     const raw = counter === "reactions" ? reactions.total : metadata[counter]
     const value = validCounter(raw) ? raw : null
     const record = records.find((one) => one.counter === counter)
-    const at = record && Number(record.value) === value ? Number(record.observed_at) : Number.NaN
+    const at = record && Number(record.value) === value ? Number(record.created_at) : Number.NaN
     const known =
       Number.isSafeInteger(at) &&
       at >= 0 &&
@@ -74,7 +74,7 @@ export const applyCounterObservations = (
   })
   if (!validated.length) return 0
   const message = database
-    .prepare("SELECT provider_metadata,reactions FROM messages WHERE pk=? AND deleted_at IS NULL")
+    .prepare("SELECT metadata,reactions FROM messages WHERE id=? AND deleted_at IS NULL")
     .get(messagePk)
   if (!message) return 0
   const object = (raw: unknown): Record<string, unknown> => {
@@ -87,14 +87,14 @@ export const applyCounterObservations = (
     }
     return invalidMetadata()
   }
-  const metadata = validated.some((one) => one.field !== "reactions") ? object(message.provider_metadata) : {}
+  const metadata = validated.some((one) => one.field !== "reactions") ? object(message.metadata) : {}
   let reactions = message.reactions === null ? null : String(message.reactions)
   let updated = 0
   for (const { field, observation, at } of validated) {
     const existing = database
-      .prepare("SELECT value,observed_at FROM message_counter_observations WHERE message_pk=? AND counter=?")
+      .prepare("SELECT value,created_at FROM message_counter_observations WHERE message_id=? AND counter=?")
       .get(messagePk, field)
-    const oldWins = existing && Number(existing.observed_at) > at
+    const oldWins = existing && Number(existing.created_at) > at
     const value = oldWins ? Number(existing.value) : observation.value
     if (field === "reactions") {
       if (!oldWins && observation.reactions) reactions = JSON.stringify(observation.reactions)
@@ -103,20 +103,20 @@ export const applyCounterObservations = (
     if (oldWins) continue
     database
       .prepare(
-        "INSERT INTO message_counter_observations(message_pk,counter,value,observed_at,source) VALUES(?,?,?,?,?) ON CONFLICT(message_pk,counter) DO UPDATE SET value=excluded.value,observed_at=excluded.observed_at,source=excluded.source",
+        "INSERT INTO message_counter_observations(message_id,counter,value,created_at,source) VALUES(?,?,?,?,?) ON CONFLICT(message_id,counter) DO UPDATE SET value=excluded.value,created_at=excluded.created_at,source=excluded.source",
       )
       .run(messagePk, field, value, at, observation.source)
     updated++
   }
   if (validated.length)
     database
-      .prepare("UPDATE messages SET provider_metadata=?,reactions=? WHERE pk=? AND deleted_at IS NULL")
+      .prepare("UPDATE messages SET metadata=?,reactions=? WHERE id=? AND deleted_at IS NULL")
       .run(
         validated.some((one) => one.field !== "reactions")
           ? JSON.stringify(metadata)
-          : message.provider_metadata === null
+          : message.metadata === null
             ? null
-            : String(message.provider_metadata),
+            : String(message.metadata),
         reactions,
         messagePk,
       )
@@ -138,7 +138,7 @@ export const counterTargets = (
   withQuerySelection(context, execution, (selection, check) => {
     const rows = context.database
       .prepare(
-        `WITH selected AS (${selection.sql}) SELECT m.pk,m.native_id AS message,c.native_id AS chat,ac.provider,ac.native_id AS account FROM messages m JOIN chats c ON c.pk=m.chat_pk JOIN accounts ac ON ac.pk=m.account_pk WHERE m.pk IN (SELECT pk FROM selected) AND m.deleted_at IS NULL ORDER BY m.sent_at DESC,m.pk DESC LIMIT ?`,
+        `WITH selected AS (${selection.sql}) SELECT m.id AS pk,m.external_id AS message,c.external_id AS chat,ac.provider,ac.external_id AS account FROM messages m JOIN chats c ON c.id=m.chat_id JOIN accounts ac ON ac.id=m.account_id WHERE m.id IN (SELECT id FROM selected) AND m.deleted_at IS NULL ORDER BY m.sent_at DESC,m.id DESC LIMIT ?`,
       )
       .all(...selection.params, execution.limit + 1)
     check()

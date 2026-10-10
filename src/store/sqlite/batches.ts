@@ -13,32 +13,32 @@ export const BATCH_CONTEXT = 50
  * Phase 4 plan A2: a live message the agent is asked about — no reply the messenger itself records to a
  * message held here, and no current agent answer. A stale answer makes it need the agent again.
  */
-const replied = (m: SQL) => sql`EXISTS (SELECT 1 FROM messages p WHERE p.chat_pk = ${m}.chat_pk
-  AND p.native_id = ${m}.reply_to_native_id AND p.deleted_at IS NULL)`
+const replied = (m: SQL) => sql`EXISTS (SELECT 1 FROM messages p WHERE p.chat_id = ${m}.chat_id
+  AND p.external_id = ${m}.reply_to_external_id AND p.deleted_at IS NULL)`
 
 const needsAgent = (m: SQL) => sql`(
   NOT ${replied(m)}
-  AND NOT EXISTS (SELECT 1 FROM message_links l WHERE l.message_pk = ${m}.pk AND l.source = 'agent'
+  AND NOT EXISTS (SELECT 1 FROM message_links l WHERE l.message_id = ${m}.id AND l.source = 'agent'
     AND l.stale_at IS NULL))`
 
 interface Row {
   pk: number
-  native_id: string
+  external_id: string
   sent_at: number
   text: string
   sender_id: string | null
   sender_name: string | null
-  reply_to_native_id: string | null
-  thread_native_id: string | null
+  reply_to_external_id: string | null
+  thread_external_id: string | null
   mentions: string | null
   needs: number
   replied: number
 }
 
-const COLUMNS = sql`m.pk, m.native_id, m.sent_at, m.text, coalesce(m.sender_chat_native_id, i.native_id) AS sender_id,
-  m.sender_name, m.reply_to_native_id, m.thread_native_id, m.mentions, ${needsAgent(sql`m`)} AS needs,
+const COLUMNS = sql`m.id AS pk, m.external_id, m.sent_at, m.text, coalesce(m.sender_chat_external_id, i.external_id) AS sender_id,
+  m.sender_name, m.reply_to_external_id, m.thread_external_id, m.mentions, ${needsAgent(sql`m`)} AS needs,
   ${replied(sql`m`)} AS replied`
-const FROM = sql`messages m LEFT JOIN identities i ON i.pk = m.sender_identity_pk`
+const FROM = sql`messages m LEFT JOIN identities i ON i.id = m.sender_identity_id`
 
 /**
  * `b1.<chat>.<first>.<last>.<hash>` (A3): the first and last message to answer, and a hash of every live
@@ -52,7 +52,7 @@ export const batchId = (chatKey: number, span: number[]): string =>
 export const batchStatus = ({ orm }: StoreContext, chatKey: number) => {
   const row = orm.get<{ messages: number; characters: number | null }>(
     sql`SELECT count(*) AS messages, sum(length(m.text)) AS characters FROM messages m
-      WHERE m.chat_pk = ${chatKey} AND m.deleted_at IS NULL AND ${needsAgent(sql`m`)}`,
+      WHERE m.chat_id = ${chatKey} AND m.deleted_at IS NULL AND ${needsAgent(sql`m`)}`,
   )
   return { messages: Number(row?.messages ?? 0), characters: Number(row?.characters ?? 0) }
 }
@@ -70,19 +70,19 @@ export const nextBatch = (
 ): Omit<LinkBatch, "remaining"> | undefined => {
   const { orm } = context
   const first = orm.get<{ pk: number; sent_at: number }>(
-    sql`SELECT m.pk, m.sent_at FROM messages m WHERE m.chat_pk = ${chatKey} AND m.deleted_at IS NULL
-      AND ${needsAgent(sql`m`)} ORDER BY m.sent_at, m.pk LIMIT 1`,
+    sql`SELECT m.id AS pk, m.sent_at FROM messages m WHERE m.chat_id = ${chatKey} AND m.deleted_at IS NULL
+      AND ${needsAgent(sql`m`)} ORDER BY m.sent_at, m.id LIMIT 1`,
   )
   if (!first) return undefined
-  const live = sql`m.chat_pk = ${chatKey} AND m.deleted_at IS NULL`
+  const live = sql`m.chat_id = ${chatKey} AND m.deleted_at IS NULL`
   const span = orm.all<Row>(
-    sql`SELECT ${COLUMNS} FROM ${FROM} WHERE ${live} AND (m.sent_at, m.pk) >= (${first.sent_at}, ${first.pk})
-      ORDER BY m.sent_at, m.pk LIMIT ${size}`,
+    sql`SELECT ${COLUMNS} FROM ${FROM} WHERE ${live} AND (m.sent_at, m.id) >= (${first.sent_at}, ${first.pk})
+      ORDER BY m.sent_at, m.id LIMIT ${size}`,
   )
   const before = orm
     .all<Row>(
-      sql`SELECT ${COLUMNS} FROM ${FROM} WHERE ${live} AND (m.sent_at, m.pk) < (${first.sent_at}, ${first.pk})
-        ORDER BY m.sent_at DESC, m.pk DESC LIMIT ${BATCH_CONTEXT}`,
+      sql`SELECT ${COLUMNS} FROM ${FROM} WHERE ${live} AND (m.sent_at, m.id) < (${first.sent_at}, ${first.pk})
+        ORDER BY m.sent_at DESC, m.id DESC LIMIT ${BATCH_CONTEXT}`,
     )
     .reverse()
   const core = span.filter((row) => Number(row.needs) === 1)
@@ -105,19 +105,19 @@ export const nextBatch = (
 const candidatesOf = ({ orm }: StoreContext, pks: number[]) => {
   const found = new Map<number, BatchMessage["candidates"]>()
   if (pks.length === 0) return found
-  const rows = orm.all<{ message_pk: number; parent: string | null; source: string; kind: string; confidence: number }>(
-    sql`SELECT l.message_pk, p.native_id AS parent, l.source, l.kind, l.confidence
-      FROM message_links l LEFT JOIN messages p ON p.pk = l.parent_pk
-      WHERE l.message_pk IN (${sql.join(
+  const rows = orm.all<{ message_id: number; parent: string | null; source: string; kind: string; confidence: number }>(
+    sql`SELECT l.message_id, p.external_id AS parent, l.source, l.kind, l.confidence
+      FROM message_links l LEFT JOIN messages p ON p.id = l.parent_id
+      WHERE l.message_id IN (${sql.join(
         pks.map((pk) => sql`${pk}`),
         sql`, `,
       )}) AND l.source IN ('provider', 'rule')
-        AND l.build = (SELECT s.current_build FROM conversation_state s WHERE s.chat_pk = l.chat_pk)
-      ORDER BY l.message_pk, l.confidence DESC`,
+        AND l.build = (SELECT s.current_build FROM conversation_state s WHERE s.chat_id = l.chat_id)
+      ORDER BY l.message_id, l.confidence DESC`,
   )
   for (const row of rows) {
-    found.set(row.message_pk, [
-      ...(found.get(row.message_pk) ?? []),
+    found.set(row.message_id, [
+      ...(found.get(row.message_id) ?? []),
       { parent: row.parent, source: row.source, kind: row.kind, confidence: row.confidence },
     ])
   }
@@ -125,12 +125,12 @@ const candidatesOf = ({ orm }: StoreContext, pks: number[]) => {
 }
 
 const toBatchMessage = (row: Row, candidates: BatchMessage["candidates"] | undefined): BatchMessage => ({
-  id: row.native_id,
+  id: row.external_id,
   at: toIso(row.sent_at) as string,
   sender: { id: row.sender_id, name: row.sender_name },
   text: row.text,
-  ...(row.reply_to_native_id === null ? {} : { replyTo: row.reply_to_native_id }),
-  ...(row.thread_native_id === null ? {} : { thread: row.thread_native_id }),
+  ...(row.reply_to_external_id === null ? {} : { replyTo: row.reply_to_external_id }),
+  ...(row.thread_external_id === null ? {} : { thread: row.thread_external_id }),
   ...(row.mentions === null ? {} : { mentions: JSON.parse(row.mentions) as Id[] }),
   answer: Number(row.needs) === 1,
   ...(Number(row.needs) === 1 ? { candidates: candidates ?? [] } : {}),
@@ -147,16 +147,16 @@ const windowOf = (context: StoreContext, id: string) => {
   if (!chat) throw refused(`${id} is not a batch id from \`conversations batches next\``)
   const chatKey = Number(chat)
   const ends = orm.all<{ pk: number; sent_at: number }>(
-    sql`SELECT pk, sent_at FROM messages WHERE chat_pk = ${chatKey} AND deleted_at IS NULL AND pk IN (${Number(first)}, ${Number(last)})
-      ORDER BY sent_at, pk`,
+    sql`SELECT id AS pk, sent_at FROM messages WHERE chat_id = ${chatKey} AND deleted_at IS NULL AND id IN (${Number(first)}, ${Number(last)})
+      ORDER BY sent_at, id`,
   )
   const [from, to] = ends.length === 1 ? [ends[0], ends[0]] : ends
   if (!from || !to) throw refused("the chat changed under this batch — ask for a new one")
-  const live = sql`m.chat_pk = ${chatKey} AND m.deleted_at IS NULL`
+  const live = sql`m.chat_id = ${chatKey} AND m.deleted_at IS NULL`
   const span = orm.all<Row>(
     sql`SELECT ${COLUMNS} FROM ${FROM} WHERE ${live}
-      AND (m.sent_at, m.pk) >= (${from.sent_at}, ${from.pk}) AND (m.sent_at, m.pk) <= (${to.sent_at}, ${to.pk})
-      ORDER BY m.sent_at, m.pk`,
+      AND (m.sent_at, m.id) >= (${from.sent_at}, ${from.pk}) AND (m.sent_at, m.id) <= (${to.sent_at}, ${to.pk})
+      ORDER BY m.sent_at, m.id`,
   )
   if (
     batchId(
@@ -167,8 +167,8 @@ const windowOf = (context: StoreContext, id: string) => {
     throw refused("the chat changed under this batch — ask for a new one")
   }
   const before = orm.all<Row>(
-    sql`SELECT ${COLUMNS} FROM ${FROM} WHERE ${live} AND (m.sent_at, m.pk) < (${from.sent_at}, ${from.pk})
-      ORDER BY m.sent_at DESC, m.pk DESC LIMIT ${BATCH_CONTEXT}`,
+    sql`SELECT ${COLUMNS} FROM ${FROM} WHERE ${live} AND (m.sent_at, m.id) < (${from.sent_at}, ${from.pk})
+      ORDER BY m.sent_at DESC, m.id DESC LIMIT ${BATCH_CONTEXT}`,
   )
   return { chatKey, span, before }
 }
@@ -189,21 +189,21 @@ export const saveAnswers = (context: StoreContext, id: string, answer: AgentAnsw
   if (!answer.model?.trim()) throw refused("name the model that answered (`model`)")
   const { chatKey, span, before } = windowOf(context, id)
   // Asked about: in the window and not a reply the messenger records. One answered earlier may be answered again.
-  const askable = new Map(span.filter((row) => Number(row.replied) === 0).map((row) => [row.native_id, row]))
-  const order = new Map([...before.reverse(), ...span].map((row, index) => [row.native_id, { index, pk: row.pk }]))
+  const askable = new Map(span.filter((row) => Number(row.replied) === 0).map((row) => [row.external_id, row]))
+  const order = new Map([...before.reverse(), ...span].map((row, index) => [row.external_id, { index, pk: row.pk }]))
   const seen = new Set<string>()
   const rows = answer.answers.map(({ message, parent, confidence }) => {
     const asked = askable.get(String(message))
     if (!asked) throw refused(`message ${message} is not one this batch asks about`)
-    if (seen.has(asked.native_id)) throw refused(`message ${message} is answered twice`)
-    seen.add(asked.native_id)
+    if (seen.has(asked.external_id)) throw refused(`message ${message} is answered twice`)
+    seen.add(asked.external_id)
     if (typeof confidence !== "number" || !(confidence >= 0 && confidence <= 1)) {
       throw refused(`the confidence for message ${message} is not between 0 and 1`)
     }
     if (parent === null) return { messagePk: asked.pk, parentPk: null, confidence }
     const found = order.get(String(parent))
     if (!found) throw refused(`the parent ${parent} of message ${message} is not in this batch`)
-    if (found.index >= (order.get(asked.native_id)?.index ?? -1)) {
+    if (found.index >= (order.get(asked.external_id)?.index ?? -1)) {
       throw refused(`the parent ${parent} of message ${message} is not earlier than it`)
     }
     return { messagePk: asked.pk, parentPk: found.pk, confidence }
@@ -213,13 +213,13 @@ export const saveAnswers = (context: StoreContext, id: string, answer: AgentAnsw
     rows.map(({ messagePk }) => sql`${messagePk}`),
     sql`, `,
   )
-  orm.run(sql`DELETE FROM message_links WHERE source = 'agent' AND message_pk IN (${pks})`)
+  orm.run(sql`DELETE FROM message_links WHERE source = 'agent' AND message_id IN (${pks})`)
   const at = now()
   for (const row of rows) {
     orm.run(
-      sql`INSERT INTO message_links (chat_pk, message_pk, parent_pk, source, kind, confidence, method, version, batch, created_at)
+      sql`INSERT INTO message_links (chat_id, message_id, parent_id, source, kind, confidence, method, version, batch, created_at, updated_at)
         VALUES (${chatKey}, ${row.messagePk}, ${row.parentPk}, 'agent', 'answer', ${row.confidence}, ${answer.model.trim()},
-          ${answer.skill ?? null}, ${id}, ${at})`,
+          ${answer.skill ?? null}, ${id}, ${at}, ${at})`,
     )
   }
   return rows.length
@@ -229,7 +229,7 @@ export const saveAnswers = (context: StoreContext, id: string, answer: AgentAnsw
 export const clearAnswers = ({ orm }: StoreContext, chatKey: number, model: string | undefined): number =>
   Number(
     orm.all<{ n: number }>(
-      sql`DELETE FROM message_links WHERE chat_pk = ${chatKey} AND source = 'agent'
+      sql`DELETE FROM message_links WHERE chat_id = ${chatKey} AND source = 'agent'
         ${model === undefined ? sql`` : sql`AND method = ${model}`} RETURNING 1 AS n`,
     ).length,
   )

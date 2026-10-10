@@ -21,9 +21,9 @@ export const backfillNormalized = (
   }: { batch?: number; onBatch?: (filled: number) => void; until?: () => boolean } = {},
 ): number => {
   const next = database.prepare(
-    `SELECT pk, text FROM messages WHERE normalized_text IS NULL AND deleted_at IS NULL AND pk > ? ORDER BY pk LIMIT ?`,
+    `SELECT id AS pk, text FROM messages WHERE normalized_text IS NULL AND deleted_at IS NULL AND id > ? ORDER BY id LIMIT ?`,
   )
-  const fill = database.prepare("UPDATE messages SET normalized_text = ?, normalizer_version = ? WHERE pk = ?")
+  const fill = database.prepare("UPDATE messages SET normalized_text = ?, normalizer_version = ? WHERE id = ?")
   let filled = 0
   let after = 0
   for (;;) {

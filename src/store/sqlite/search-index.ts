@@ -86,8 +86,8 @@ export const fillSearchIndex = (
 
   const index = database.prepare(
     `INSERT OR REPLACE INTO message_words (rowid, normalized_text, scope)
-       SELECT pk, normalized_text, 'c' || chat_pk || coalesce(' s' || sender_identity_pk, '')
-       FROM messages WHERE pk > ? AND pk <= ? AND normalized_text <> ''`,
+       SELECT id AS pk, normalized_text, 'c' || chat_id || coalesce(' s' || sender_identity_id, '')
+       FROM messages WHERE id > ? AND id <= ? AND normalized_text <> ''`,
   )
   const advance = database.prepare("UPDATE search_index_state SET filled_through = ? WHERE name = ?")
   for (;;) {
@@ -112,7 +112,7 @@ export const fillSearchIndex = (
 }
 
 const newestMessage = (database: CacheDatabase) =>
-  Number(database.prepare("SELECT coalesce(max(pk), 0) AS pk FROM messages").get()?.pk)
+  Number(database.prepare("SELECT coalesce(max(id), 0) AS pk FROM messages").get()?.pk)
 
 const termWriters = (database: CacheDatabase) => {
   const term = database.prepare("INSERT OR IGNORE INTO search_terms (term, length) VALUES (?, ?)")
@@ -136,7 +136,7 @@ const refreshTerms = (
 ): number => {
   const newest = newestMessage(database)
   const texts = database.prepare(
-    "SELECT normalized_text AS text FROM messages WHERE pk > ? AND pk <= ? AND normalized_text <> ''",
+    "SELECT normalized_text AS text FROM messages WHERE id > ? AND id <= ? AND normalized_text <> ''",
   )
   const advance = database.prepare("UPDATE search_index_state SET terms_through = ? WHERE name = ?")
   const write = termWriters(database)
@@ -170,7 +170,7 @@ const buildTerms = (
   database: CacheDatabase,
   { batch, until, onBatch }: { batch: number; until: () => boolean; onBatch?: (step: string, done: number) => void },
 ): number => {
-  const through = Number(database.prepare("SELECT coalesce(max(pk), 0) AS pk FROM messages").get()?.pk)
+  const through = Number(database.prepare("SELECT coalesce(max(id), 0) AS pk FROM messages").get()?.pk)
   const next = database.prepare(
     `SELECT term FROM message_words_vocab WHERE col = 'normalized_text' AND term > ? ORDER BY term LIMIT ?`,
   )
@@ -205,7 +205,7 @@ export const resetSearchIndex = (database: CacheDatabase): void => {
     database.exec("DELETE FROM search_term_trigrams")
     database
       .prepare(
-        `UPDATE search_index_state SET watermark = (SELECT coalesce(max(pk), 0) FROM messages),
+        `UPDATE search_index_state SET watermark = (SELECT coalesce(max(id), 0) FROM messages),
            filled_through = 0, terms_through = 0, built_at = NULL WHERE name = ?`,
       )
       .run(INDEX)

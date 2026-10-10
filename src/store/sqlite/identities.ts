@@ -2,16 +2,15 @@ import { CliError } from "@wirecat/cli-core"
 import type { Contact, Id, Page, PersonAlias, Provider } from "../../domain/models.js"
 import type { PeopleLookup } from "../../resolve.js"
 import type { AccountKey, PersonFacts } from "../store.js"
-import { ulid } from "../ulid.js"
 import { and, asc, desc, eq, inArray, isNotNull, isNull, ne, sql } from "./drizzle/core.js"
-import { resolvePersonLinks } from "./notes.js"
 import type { Orm, StoreContext } from "./open.js"
+import { resolvePersonLinks } from "./person-resolution.js"
 import {
   accountIdentities,
   accounts,
+  aliases,
   chatMembers,
   chats,
-  contactAliases,
   identities,
   identityLinkEvents,
   identityLinks,
@@ -43,37 +42,41 @@ const flag = (value: boolean | null | undefined) => (value === undefined || valu
 const prepare = (orm: Orm) => ({
   find: orm
     .select({
-      pk: identities.pk,
+      pk: identities.id,
       name: identities.name,
       username: identities.username,
-      isBot: identities.isBot,
+      isBot: identities.bot,
       description: identities.description,
       updatedAt: identities.updatedAt,
     })
     .from(identities)
     .where(
-      and(eq(identities.provider, sql.placeholder("provider")), eq(identities.nativeId, sql.placeholder("nativeId"))),
+      and(
+        eq(identities.provider, sql.placeholder("provider")),
+        eq(identities.externalId, sql.placeholder("externalId")),
+      ),
     )
     .prepare(),
   seen: orm
     .insert(accountIdentities)
     .values({
-      accountPk: sql.placeholder("accountPk"),
-      identityPk: sql.placeholder("identityPk"),
-      firstSeenAt: sql.placeholder("firstSeenAt"),
+      accountId: sql.placeholder("accountId"),
+      identityId: sql.placeholder("identityId"),
+      createdAt: sql.placeholder("createdAt"),
+      updatedAt: sql.placeholder("createdAt"),
     })
     .onConflictDoNothing()
     .prepare(),
   lastRevision: orm
     .select({
-      pk: identityRevisions.pk,
+      pk: identityRevisions.id,
       name: identityRevisions.name,
       username: identityRevisions.username,
       marks: identityRevisions.marks,
     })
     .from(identityRevisions)
-    .where(eq(identityRevisions.identityPk, sql.placeholder("identityPk")))
-    .orderBy(desc(identityRevisions.capturedAt), desc(identityRevisions.pk))
+    .where(eq(identityRevisions.identityId, sql.placeholder("identityId")))
+    .orderBy(desc(identityRevisions.createdAt), desc(identityRevisions.id))
     .limit(1)
     .prepare(),
 })
@@ -90,8 +93,8 @@ const writeRevision = (orm: Orm, identityPk: number, { name, username, marks }: 
   Number(
     orm
       .insert(identityRevisions)
-      .values({ identityPk, name, username, marks: marks ?? null, capturedAt })
-      .returning({ pk: identityRevisions.pk })
+      .values({ identityId: identityPk, name, username, marks: marks ?? null, createdAt: capturedAt })
+      .returning({ pk: identityRevisions.id })
       .get()?.pk,
   )
 
@@ -101,13 +104,13 @@ const writeRevision = (orm: Orm, identityPk: number, { name, username, marks }: 
  * change, and member history would report one.
  */
 const revise = (orm: Orm, identity: number, next: Profile, at: number, before?: Profile & { at: number }): boolean => {
-  let last = statementsOf(orm).lastRevision.get({ identityPk: identity })
+  let last = statementsOf(orm).lastRevision.get({ identityId: identity })
   if (!last && before) last = { ...before, marks: null, pk: writeRevision(orm, identity, before, before.at) }
   const marks = next.marks ?? last?.marks ?? null
   if (last && last.name === next.name && last.username === next.username) {
     if (last.marks === marks) return false
     if (last.marks === null) {
-      orm.update(identityRevisions).set({ marks }).where(eq(identityRevisions.pk, last.pk)).run()
+      orm.update(identityRevisions).set({ marks }).where(eq(identityRevisions.id, last.pk)).run()
       return false
     }
   }
@@ -131,26 +134,26 @@ const saveIdentity = (
   name: string | null,
   facts: Facts,
 ): SavedIdentity => {
-  const found = statementsOf(orm).find.get({ provider, nativeId })
+  const found = statementsOf(orm).find.get({ provider, externalId: nativeId })
   const marks = facts.marks ? JSON.stringify(facts.marks) : undefined
   if (found) {
     const changed = {
       name: name ?? found.name,
       username: facts.username ?? found.username,
-      isBot: flag(facts.isBot) ?? found.isBot,
+      bot: flag(facts.isBot) ?? found.isBot,
       description: facts.description ?? found.description,
     }
     // Only on a real change: the search trigger rewrites the index row on every update of `name`.
     if (
       changed.name !== found.name ||
       changed.username !== found.username ||
-      changed.isBot !== found.isBot ||
+      changed.bot !== found.isBot ||
       changed.description !== found.description
     ) {
       orm
         .update(identities)
         .set({ ...changed, updatedAt: now() })
-        .where(eq(identities.pk, found.pk))
+        .where(eq(identities.id, found.pk))
         .run()
     }
     const renamed = changed.name !== found.name || changed.username !== found.username
@@ -166,38 +169,42 @@ const saveIdentity = (
       .insert(identities)
       .values({
         provider,
-        nativeId,
+        externalId: nativeId,
         name,
         username: facts.username ?? null,
-        isBot: flag(facts.isBot),
+        bot: flag(facts.isBot),
         description: facts.description ?? null,
-        firstSeenAt: at,
+        createdAt: at,
         updatedAt: at,
       })
-      .returning({ pk: identities.pk })
+      .returning({ pk: identities.id })
       .get()?.pk,
   )
   const person = Number(
-    orm
-      .insert(persons)
-      .values({ uid: ulid(at), name, createdAt: at, updatedAt: at })
-      .returning({ pk: persons.pk })
-      .get()?.pk,
+    orm.insert(persons).values({ name, createdAt: at, updatedAt: at }).returning({ pk: persons.id }).get()?.pk,
   )
   orm
     .insert(identityLinks)
     .values({
-      identityPk: identity,
-      personPk: person,
+      identityId: identity,
+      personId: person,
       method: "initial",
       confidence: 1,
-      linkedAt: at,
-      linkedBy: "ingest",
+      createdAt: at,
+      updatedAt: at,
+      author: "ingest",
     })
     .run()
   orm
     .insert(identityLinkEvents)
-    .values({ identityPk: identity, fromPersonPk: null, toPersonPk: person, method: "initial", at, by: "ingest" })
+    .values({
+      identityId: identity,
+      fromPersonId: null,
+      toPersonId: person,
+      method: "initial",
+      createdAt: at,
+      author: "ingest",
+    })
     .run()
   if (marks !== undefined) revise(orm, identity, { name, username: facts.username ?? null, marks }, at)
   resolvePersonLinks(database, [name, facts.username])
@@ -223,7 +230,7 @@ export const seenIdentity = (
   facts: Facts = {},
 ): SavedIdentity => {
   const saved = saveIdentity(context, provider, nativeId, name, facts)
-  statementsOf(context.orm).seen.run({ accountPk: accountKey, identityPk: saved.pk, firstSeenAt: context.now() })
+  statementsOf(context.orm).seen.run({ accountId: accountKey, identityId: saved.pk, createdAt: context.now() })
   return saved
 }
 
@@ -236,20 +243,20 @@ export const people = (
   const seenBy =
     within &&
     orm
-      .select({ pk: accountIdentities.identityPk })
+      .select({ pk: accountIdentities.identityId })
       .from(accountIdentities)
-      .innerJoin(accounts, eq(accounts.pk, accountIdentities.accountPk))
-      .where(and(eq(accounts.provider, provider), inArray(accounts.nativeId, within)))
+      .innerJoin(accounts, eq(accounts.id, accountIdentities.accountId))
+      .where(and(eq(accounts.provider, provider), inArray(accounts.externalId, within)))
   const everyone: Contact[] = orm
-    .select({ id: identities.nativeId, name: identities.name, username: identities.username })
+    .select({ id: identities.externalId, name: identities.name, username: identities.username })
     .from(identities)
-    .where(and(eq(identities.provider, provider), seenBy ? inArray(identities.pk, seenBy) : undefined))
+    .where(and(eq(identities.provider, provider), seenBy ? inArray(identities.id, seenBy) : undefined))
     .all()
     .map((row) => ({ ...row, description: null, lastMessagedAt: null }))
   if (account !== undefined) {
     const aliases = database
       .prepare(
-        "SELECT i.native_id AS id, ca.alias FROM contact_aliases ca JOIN identities i ON i.pk=ca.identity_pk JOIN accounts a ON a.pk=ca.account_pk WHERE a.provider=? AND a.native_id=?",
+        "SELECT i.external_id AS id, ca.name AS alias FROM aliases ca JOIN identities i ON i.id=ca.aliasable_id AND ca.aliasable_type='identity' AND ca.display=1 JOIN accounts a ON a.id=ca.account_id WHERE a.provider=? AND a.external_id=?",
       )
       .all(provider, account)
     for (const row of aliases) {
@@ -270,14 +277,14 @@ const contactsWhere = (accountKey: number, key: AccountKey, query: string | unde
     throw new CliError("validation_error", `a contact search takes at least 3 characters, got "${query}"`)
   }
   return and(
-    eq(accountIdentities.accountPk, accountKey),
-    ne(identities.nativeId, key.account),
-    sql`EXISTS (SELECT 1 FROM ${chatMembers} JOIN ${chats} ON ${chats.pk} = ${chatMembers.chatPk}
-                WHERE ${chatMembers.identityPk} = ${identities.pk} AND ${chats.accountPk} = ${accountIdentities.accountPk}
+    eq(accountIdentities.accountId, accountKey),
+    ne(identities.externalId, key.account),
+    sql`EXISTS (SELECT 1 FROM ${chatMembers} JOIN ${chats} ON ${chats.id} = ${chatMembers.chatId}
+                WHERE ${chatMembers.identityId} = ${identities.id} AND ${chats.accountId} = ${accountIdentities.accountId}
                   AND ${chats.kind} = 'dialog')`,
     query === undefined
       ? undefined
-      : sql`(${identities.pk} IN (SELECT rowid FROM identities_fts WHERE identities_fts MATCH ${`"${query.trim().replaceAll('"', '""')}"`}) OR EXISTS (SELECT 1 FROM contact_aliases ca WHERE ca.account_pk=${accountKey} AND ca.identity_pk=${identities.pk} AND instr(ca.alias_folded, ${query.trim().toLowerCase()}) > 0))`,
+      : sql`(${identities.id} IN (SELECT rowid FROM identities_fts WHERE identities_fts MATCH ${`"${query.trim().replaceAll('"', '""')}"`}) OR EXISTS (SELECT 1 FROM aliases ca WHERE ca.aliasable_type='identity' AND ca.display=1 AND ca.account_id=${accountKey} AND ca.aliasable_id=${identities.id} AND instr(ca.name_folded, ${query.trim().toLowerCase()}) > 0))`,
   )
 }
 
@@ -288,24 +295,29 @@ export const contacts = (
   { order, query, limit, offset = 0 }: { order: "recent" | "name"; query?: string; limit: number; offset?: number },
 ): Page<Contact> => {
   const byName = [
-    sql`coalesce(${contactAliases.alias}, ${identities.name}) IS NULL`,
-    sql`coalesce(${contactAliases.alias}, ${identities.name})`,
-    identities.nativeId,
+    sql`coalesce(${aliases.name}, ${identities.name}) IS NULL`,
+    sql`coalesce(${aliases.name}, ${identities.name})`,
+    identities.externalId,
   ]
   const rows = orm
     .select({
-      alias: contactAliases.alias,
-      id: identities.nativeId,
+      alias: aliases.name,
+      id: identities.externalId,
       name: identities.name,
       username: identities.username,
       description: identities.description,
       lastMessagedAt: accountIdentities.lastMessagedAt,
     })
     .from(accountIdentities)
-    .innerJoin(identities, eq(identities.pk, accountIdentities.identityPk))
+    .innerJoin(identities, eq(identities.id, accountIdentities.identityId))
     .leftJoin(
-      contactAliases,
-      and(eq(contactAliases.identityPk, identities.pk), eq(contactAliases.accountPk, accountKey)),
+      aliases,
+      and(
+        eq(aliases.aliasableId, identities.id),
+        eq(aliases.aliasableType, "identity"),
+        eq(aliases.display, 1),
+        eq(aliases.accountId, accountKey),
+      ),
     )
     .where(contactsWhere(accountKey, key, query))
     .orderBy(...(order === "recent" ? [sql`${accountIdentities.lastMessagedAt} DESC NULLS LAST`] : []), ...byName)
@@ -334,7 +346,7 @@ export const countContacts = (
     orm
       .select({ n: sql<number>`count(*)` })
       .from(accountIdentities)
-      .innerJoin(identities, eq(identities.pk, accountIdentities.identityPk))
+      .innerJoin(identities, eq(identities.id, accountIdentities.identityId))
       .where(contactsWhere(accountKey, key, query))
       .get()?.n,
   )
@@ -343,11 +355,11 @@ export const refreshRecency = ({ orm }: StoreContext, accountKey: number): void 
   orm
     .update(accountIdentities)
     .set({
-      lastMessagedAt: sql`(SELECT max(${chats.lastMessageAt}) FROM ${chatMembers} JOIN ${chats} ON ${chats.pk} = ${chatMembers.chatPk}
-        WHERE ${chatMembers.identityPk} = ${accountIdentities.identityPk} AND ${chats.accountPk} = ${accountIdentities.accountPk}
+      lastMessagedAt: sql`(SELECT max(${chats.lastMessageAt}) FROM ${chatMembers} JOIN ${chats} ON ${chats.id} = ${chatMembers.chatId}
+        WHERE ${chatMembers.identityId} = ${accountIdentities.identityId} AND ${chats.accountId} = ${accountIdentities.accountId}
           AND ${chats.kind} = 'dialog')`,
     })
-    .where(eq(accountIdentities.accountPk, accountKey))
+    .where(eq(accountIdentities.accountId, accountKey))
     .run()
 }
 
@@ -357,24 +369,24 @@ export const refreshRecency = ({ orm }: StoreContext, accountKey: number): void 
  */
 export const namesOf = ({ orm }: StoreContext, accountKey: number, provider: Provider, nativeId: Id): PersonAlias[] => {
   const person = orm
-    .select({ pk: identities.pk })
+    .select({ pk: identities.id })
     .from(identities)
-    .innerJoin(accountIdentities, eq(accountIdentities.identityPk, identities.pk))
+    .innerJoin(accountIdentities, eq(accountIdentities.identityId, identities.id))
     .where(
       and(
         eq(identities.provider, provider),
-        eq(identities.nativeId, nativeId),
-        eq(accountIdentities.accountPk, accountKey),
+        eq(identities.externalId, nativeId),
+        eq(accountIdentities.accountId, accountKey),
       ),
     )
     .get()
   if (!person) return []
   const profile = new Map<string, PersonAlias>()
   const revisions = orm
-    .select({ name: identityRevisions.name, username: identityRevisions.username, at: identityRevisions.capturedAt })
+    .select({ name: identityRevisions.name, username: identityRevisions.username, at: identityRevisions.createdAt })
     .from(identityRevisions)
-    .where(eq(identityRevisions.identityPk, person.pk))
-    .orderBy(asc(identityRevisions.capturedAt), asc(identityRevisions.pk))
+    .where(eq(identityRevisions.identityId, person.pk))
+    .orderBy(asc(identityRevisions.createdAt), asc(identityRevisions.id))
     .all()
   for (const { name, username, at } of revisions) {
     const key = JSON.stringify([name, username])
@@ -391,11 +403,11 @@ export const namesOf = ({ orm }: StoreContext, accountKey: number, provider: Pro
       last: sql<number>`max(${messages.sentAt})`,
     })
     .from(messages)
-    .innerJoin(chats, eq(chats.pk, messages.chatPk))
+    .innerJoin(chats, eq(chats.id, messages.chatId))
     .where(
       and(
-        eq(messages.senderIdentityPk, person.pk),
-        eq(chats.accountPk, accountKey),
+        eq(messages.senderIdentityId, person.pk),
+        eq(chats.accountId, accountKey),
         isNull(messages.deletedAt),
         isNotNull(messages.senderName),
       ),

@@ -11,11 +11,11 @@ export const findRegex = async (context: StoreContext, filter: MessageFilter) =>
   const pattern = filter.pattern
   if (!pattern) return { items: [] as StoredHit[], hasMore: false }
   const selected = context.orm
-    .select({ pk: messages.pk, bytes: sql<number>`length(cast(${messages.text} AS BLOB))` })
+    .select({ pk: messages.id, bytes: sql<number>`length(cast(${messages.text} AS BLOB))` })
     .from(messages)
-    .innerJoin(chats, eq(chats.pk, messages.chatPk))
-    .leftJoin(identities, eq(identities.pk, messages.senderIdentityPk))
-    .innerJoin(accounts, eq(accounts.pk, messages.accountPk))
+    .innerJoin(chats, eq(chats.id, messages.chatId))
+    .leftJoin(identities, eq(identities.id, messages.senderIdentityId))
+    .innerJoin(accounts, eq(accounts.id, messages.accountId))
     .where(matching(context, filter))
     .orderBy(...newestFirst)
     .limit(QUERY_LIMITS.candidates + 1)
@@ -26,9 +26,9 @@ export const findRegex = async (context: StoreContext, filter: MessageFilter) =>
   const texts = new Map<number, string>()
   for (let at = 0; at < ids.length; at += 500) {
     const rows = context.orm
-      .select({ pk: messages.pk, text: messages.text })
+      .select({ pk: messages.id, text: messages.text })
       .from(messages)
-      .where(inArray(messages.pk, ids.slice(at, at + 500)))
+      .where(inArray(messages.id, ids.slice(at, at + 500)))
       .all()
     for (const row of rows) texts.set(row.pk, row.text)
   }

@@ -77,44 +77,44 @@ export const rankingEvidence = (
       throw new CliError("not_found", "ranking row is no longer eligible in this selection — run stats top again", {
         reason: "selection_changed",
       })
-    const targetSql = `${filtered} AND ac.provider=? AND ac.native_id=? AND ${request.options.target === "messages" ? "c.native_id=? AND m.native_id=?" : "i.native_id=?"}`
+    const targetSql = `${filtered} AND ac.provider=? AND ac.external_id=? AND ${request.options.target === "messages" ? "c.external_id=? AND m.external_id=?" : "i.external_id=?"}`
     const targetParams = [...params, ...identityParams]
-    const roots = `target_messages AS (SELECT m.pk ${targetSql})`
-    let source = "SELECT pk,NULL AS related,NULL AS contribution FROM target_messages"
+    const roots = `target_messages AS (SELECT m.id ${targetSql})`
+    let source = "SELECT id AS id,NULL AS related,NULL AS contribution FROM target_messages"
     if (["replies", "replies-from-others", "replies-from-others-per-message"].includes(component)) {
-      source = `SELECT g.pk,g.parent AS related,1 AS contribution FROM ranking_graph g JOIN ranking_graph parent ON parent.pk=g.parent WHERE g.event=1 AND g.pk<>g.parent AND g.parent IN (SELECT pk FROM target_messages)${component === "replies" ? "" : " AND g.sender IS NOT NULL AND g.sender_chat=0 AND parent.sender IS NOT NULL AND (parent.sender<>g.sender OR parent.sender_chat<>g.sender_chat)"}`
+      source = `SELECT g.id AS id,g.parent AS related,1 AS contribution FROM ranking_graph g JOIN ranking_graph parent ON parent.id=g.parent WHERE g.event=1 AND g.id<>g.parent AND g.parent IN (SELECT id FROM target_messages)${component === "replies" ? "" : " AND g.sender IS NOT NULL AND g.sender_chat=0 AND parent.sender IS NOT NULL AND (parent.sender<>g.sender OR parent.sender_chat<>g.sender_chat)"}`
     } else if (["answers", "answer-time"].includes(component)) {
-      source = `SELECT d.pk,d.answer_for AS related,${component === "answers" ? "1" : "d.delay"} AS contribution FROM ranking_derived d WHERE d.pk IN (SELECT pk FROM target_messages) AND d.answer_for IS NOT NULL`
+      source = `SELECT d.id AS id,d.answer_for AS related,${component === "answers" ? "1" : "d.delay"} AS contribution FROM ranking_derived d WHERE d.id IN (SELECT id FROM target_messages) AND d.answer_for IS NOT NULL`
     } else if (component === "threads") {
       source =
-        "SELECT d.pk,NULL AS related,1 AS contribution FROM ranking_derived d WHERE d.pk IN (SELECT pk FROM target_messages) AND d.thread=1"
+        "SELECT d.id AS id,NULL AS related,1 AS contribution FROM ranking_derived d WHERE d.id IN (SELECT id FROM target_messages) AND d.thread=1"
     } else if (component === "thread-size") {
-      source = `WITH RECURSIVE descendants(root,pk,path) AS (
-        SELECT g.parent,g.pk,'/'||g.parent||'/'||g.pk||'/' FROM ranking_graph g WHERE g.parent IN (SELECT pk FROM target_messages) AND g.pk<>g.parent
-        UNION ALL SELECT d.root,g.pk,d.path||g.pk||'/' FROM descendants d JOIN ranking_graph g ON g.parent=d.pk WHERE instr(d.path,'/'||g.pk||'/')=0 LIMIT 50001)
-        SELECT DISTINCT d.pk,d.root AS related,1 AS contribution FROM descendants d JOIN ranking_graph g ON g.pk=d.pk WHERE g.event=1 AND coalesce(g.kind,'')<>'bridge'`
+      source = `WITH RECURSIVE descendants(root,id,path) AS (
+        SELECT g.parent,g.id,'/'||g.parent||'/'||g.id||'/' FROM ranking_graph g WHERE g.parent IN (SELECT id FROM target_messages) AND g.id<>g.parent
+        UNION ALL SELECT d.root,g.id,d.path||g.id||'/' FROM descendants d JOIN ranking_graph g ON g.parent=d.id WHERE instr(d.path,'/'||g.id||'/')=0 LIMIT 50001)
+        SELECT DISTINCT d.id,d.root AS related,1 AS contribution FROM descendants d JOIN ranking_graph g ON g.id=d.id WHERE g.event=1 AND coalesce(g.kind,'')<>'bridge'`
     } else if (component === "words")
       source =
-        "SELECT d.pk,NULL AS related,d.words AS contribution FROM ranking_derived d WHERE d.pk IN (SELECT pk FROM target_messages)"
+        "SELECT d.id AS id,NULL AS related,d.words AS contribution FROM ranking_derived d WHERE d.id IN (SELECT id FROM target_messages)"
     else if (component === "active-days" || component === "messages")
-      source = "SELECT pk,NULL AS related,1 AS contribution FROM target_messages"
+      source = "SELECT id AS id,NULL AS related,1 AS contribution FROM target_messages"
     else if (["reactions", "reactions-per-message"].includes(component))
-      source = `SELECT m.pk,NULL AS related,${rankingCounter("m", "reactions", true)} AS contribution FROM messages m WHERE m.pk IN (SELECT pk FROM target_messages)`
+      source = `SELECT m.id AS id,NULL AS related,${rankingCounter("m", "reactions", true)} AS contribution FROM messages m WHERE m.id IN (SELECT id FROM target_messages)`
     else
-      source = `SELECT m.pk,NULL AS related,${rankingCounter("m", component)} AS contribution FROM messages m WHERE m.pk IN (SELECT pk FROM target_messages)`
-    const rows = `WITH ${roots},evidence AS (${source}) SELECT e.pk,e.related,e.contribution,m.text,m.reactions,m.provider_metadata,m.edited_at,m.sent_at,ac.provider,ac.native_id AS account,c.native_id AS chat,m.native_id AS id,(SELECT json_group_array(json_object('counter',counter,'value',value,'at',observed_at,'source',source)) FROM message_counter_observations WHERE message_pk=m.pk) AS counter_observations,(SELECT json_group_array(json_object('counter',counter,'value',value,'at',observed_at,'source',source)) FROM message_counter_observations WHERE message_pk=q.pk) AS related_counter_observations,q.text AS related_text,q.reactions AS related_reactions,q.provider_metadata AS related_metadata,q.edited_at AS related_edited_at,
-      (SELECT json_group_array(json_object('kind',att.kind,'name',att.name,'mime',att.mime,'size',att.size,'url',att.url,'ref',att.provider_ref,'local',att.local_path)) FROM attachments att WHERE att.message_pk=m.pk) AS files,
-      (SELECT json_group_array(json_object('kind',att.kind,'name',att.name,'mime',att.mime,'size',att.size,'url',att.url,'ref',att.provider_ref,'local',att.local_path)) FROM attachments att WHERE att.message_pk=q.pk) AS related_files
-      FROM evidence e JOIN messages m ON m.pk=e.pk JOIN chats c ON c.pk=m.chat_pk JOIN accounts ac ON ac.pk=m.account_pk LEFT JOIN messages q ON q.pk=e.related`
+      source = `SELECT m.id AS id,NULL AS related,${rankingCounter("m", component)} AS contribution FROM messages m WHERE m.id IN (SELECT id FROM target_messages)`
+    const rows = `WITH ${roots},evidence AS (${source}) SELECT e.id AS pk,e.related,e.contribution,m.text,m.reactions,m.metadata,m.edited_at,m.sent_at,ac.provider,ac.external_id AS account,c.external_id AS chat,m.external_id AS id,(SELECT json_group_array(json_object('counter',counter,'value',value,'at',created_at,'source',source)) FROM message_counter_observations WHERE message_id=m.id) AS counter_observations,(SELECT json_group_array(json_object('counter',counter,'value',value,'at',created_at,'source',source)) FROM message_counter_observations WHERE message_id=q.id) AS related_counter_observations,q.text AS related_text,q.reactions AS related_reactions,q.metadata AS related_metadata,q.edited_at AS related_edited_at,
+      (SELECT json_group_array(json_object('kind',att.kind,'name',att.name,'mime',att.mime,'size',att.size,'url',att.url,'ref',att.provider_ref,'local',att.local_path)) FROM attachments att WHERE att.attachable_type='message' AND att.attachable_id=m.id) AS files,
+      (SELECT json_group_array(json_object('kind',att.kind,'name',att.name,'mime',att.mime,'size',att.size,'url',att.url,'ref',att.provider_ref,'local',att.local_path)) FROM attachments att WHERE att.attachable_type='message' AND att.attachable_id=q.id) AS related_files
+      FROM evidence e JOIN messages m ON m.id=e.id JOIN chats c ON c.id=m.chat_id JOIN accounts ac ON ac.id=m.account_id LEFT JOIN messages q ON q.id=e.related`
     const size = database
       .prepare(
-        `SELECT count(*) AS n,sum(coalesce(length(cast(text AS BLOB)),0)+coalesce(length(cast(reactions AS BLOB)),0)+coalesce(length(cast(provider_metadata AS BLOB)),0)+coalesce(length(cast(edited_at AS BLOB)),0)+coalesce(length(cast(related_text AS BLOB)),0)+coalesce(length(cast(related_reactions AS BLOB)),0)+coalesce(length(cast(related_metadata AS BLOB)),0)+coalesce(length(cast(related_edited_at AS BLOB)),0)+coalesce(length(cast(files AS BLOB)),0)+coalesce(length(cast(related_files AS BLOB)),0)) AS bytes FROM (${rows})`,
+        `SELECT count(*) AS n,sum(coalesce(length(cast(text AS BLOB)),0)+coalesce(length(cast(reactions AS BLOB)),0)+coalesce(length(cast(metadata AS BLOB)),0)+coalesce(length(cast(edited_at AS BLOB)),0)+coalesce(length(cast(related_text AS BLOB)),0)+coalesce(length(cast(related_reactions AS BLOB)),0)+coalesce(length(cast(related_metadata AS BLOB)),0)+coalesce(length(cast(related_edited_at AS BLOB)),0)+coalesce(length(cast(files AS BLOB)),0)+coalesce(length(cast(related_files AS BLOB)),0)) AS bytes FROM (${rows})`,
       )
       .get(...targetParams)
     const total = Number(size?.n ?? 0)
     if (total > 50_000 || Number(size?.bytes ?? 0) > FINGERPRINT_BYTES)
       fail("evidence exceeds its fingerprint budget — narrow chat/date scope", "query_limit")
-    const ordered = `${rows} ORDER BY m.sent_at,ac.provider,ac.native_id,c.native_id,m.native_id`
+    const ordered = `${rows} ORDER BY m.sent_at,ac.provider,ac.external_id,c.external_id,m.external_id`
     const seed = JSON.stringify([
       execution.root,
       execution.accounts,

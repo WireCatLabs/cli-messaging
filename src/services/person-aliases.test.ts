@@ -76,7 +76,7 @@ describe("past names", () => {
     )
     await store.close()
     const db = new DatabaseSync(path)
-    db.exec("UPDATE messages SET sender_name = 'Bea' WHERE native_id = '2'")
+    db.exec("UPDATE messages SET sender_name = 'Bea' WHERE external_id = '2'")
     db.close()
     const reopened = await openStore({ path })
     const read = peopleService(
