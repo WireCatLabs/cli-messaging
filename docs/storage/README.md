@@ -7,6 +7,7 @@ built today is in [ARCHITECTURE, "The store"](../dev/ARCHITECTURE.md#the-store).
 |---|---|
 | [`requirements.md`](requirements.md) | what the owner asked for, verbatim |
 | [`decisions.md`](decisions.md) | the storage rulings in force |
+| [`schema-v2.md`](schema-v2.md) | every table and column of the v2 store, and what each one means |
 | [`search-indexes.md`](search-indexes.md) | how search works: the word indexes, search by meaning — chunks, vectors, the scan, the merge with words |
 | [`../../bench/search/`](../../bench/search/) | the benchmark fixture and its results |
 

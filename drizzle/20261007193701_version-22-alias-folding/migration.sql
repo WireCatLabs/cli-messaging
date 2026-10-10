@@ -1,1 +1,0 @@
-ALTER TABLE `contact_aliases` ADD `alias_folded` text;

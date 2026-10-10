@@ -4,6 +4,17 @@ Notable changes to `@wirecat/cli-messaging` (`@leemour/cli-messaging` up to 0.21
 version, newest first. Versions follow [semver](https://semver.org/); before `1.0.0` a minor version may
 break callers, and says how under "Changed — may break callers". `pnpm docs:check` checks the shape of this file.
 
+## Unreleased
+
+### Changed — may break callers
+
+- **The store is v2: one baseline at store version 100 replaces versions 1–28.** Tables and columns follow
+  Rails naming (`id`, `<thing>_id`, `external_id`, `created_at`/`updated_at`); mail, documents, notes,
+  events, meetings, tasks with projects and bots, aliases, taggings, chunks and embeddings have tables of
+  their own. Every table and column is in [`docs/storage/schema-v2.md`](docs/storage/schema-v2.md). A file
+  at an older version is refused with the way to convert it (`store upgrade-v2`, which keeps the old file),
+  and an older build refuses a v2 file.
+
 ## 0.215.0 — 10.10.2026
 
 ### Changed — may break callers

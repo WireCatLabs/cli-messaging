@@ -1,369 +1,221 @@
 // Written by scripts/bundle-migrations.ts from drizzle/ — run `pnpm db:bundle`, do not edit.
 export const GENERATED: { name: string; statements: string[] }[] = [
   {
-    "name": "20260929205838_baseline",
+    "name": "20261010001845_store-v2-baseline",
     "statements": [
-      "CREATE TABLE `account_identities` (\n\t`account_pk` integer NOT NULL,\n\t`identity_pk` integer NOT NULL,\n\t`first_seen_at` integer NOT NULL,\n\tCONSTRAINT `account_identities_pk` PRIMARY KEY(`account_pk`, `identity_pk`),\n\tCONSTRAINT `fk_account_identities_account_pk_accounts_pk_fk` FOREIGN KEY (`account_pk`) REFERENCES `accounts`(`pk`),\n\tCONSTRAINT `fk_account_identities_identity_pk_identities_pk_fk` FOREIGN KEY (`identity_pk`) REFERENCES `identities`(`pk`)\n);",
-      "CREATE TABLE `accounts` (\n\t`pk` integer PRIMARY KEY,\n\t`provider` text NOT NULL,\n\t`native_id` text NOT NULL,\n\t`name` text,\n\t`created_at` integer NOT NULL,\n\tCONSTRAINT `accounts_provider_native_id_unique` UNIQUE(`provider`,`native_id`)\n);",
-      "CREATE TABLE `attachments` (\n\t`pk` integer PRIMARY KEY,\n\t`message_pk` integer NOT NULL,\n\t`position` integer NOT NULL,\n\t`kind` text NOT NULL,\n\t`mime` text,\n\t`name` text,\n\t`title` text,\n\t`url` text,\n\t`size` integer,\n\t`width` integer,\n\t`height` integer,\n\t`duration` real,\n\t`provider_ref` text,\n\t`local_path` text,\n\tCONSTRAINT `fk_attachments_message_pk_messages_pk_fk` FOREIGN KEY (`message_pk`) REFERENCES `messages`(`pk`),\n\tCONSTRAINT `attachments_message_pk_position_unique` UNIQUE(`message_pk`,`position`)\n);",
-      "CREATE TABLE `chats` (\n\t`pk` integer PRIMARY KEY,\n\t`account_pk` integer NOT NULL,\n\t`native_id` text NOT NULL,\n\t`kind` text NOT NULL,\n\t`title` text,\n\t`unread_count` integer,\n\t`last_message_at` integer,\n\t`participants_count` integer,\n\t`provider_metadata` text,\n\t`updated_at` integer NOT NULL,\n\tCONSTRAINT `fk_chats_account_pk_accounts_pk_fk` FOREIGN KEY (`account_pk`) REFERENCES `accounts`(`pk`),\n\tCONSTRAINT `chats_account_pk_native_id_unique` UNIQUE(`account_pk`,`native_id`)\n);",
-      "CREATE TABLE `identities` (\n\t`pk` integer PRIMARY KEY,\n\t`provider` text NOT NULL,\n\t`native_id` text NOT NULL,\n\t`username` text,\n\t`name` text,\n\t`is_bot` integer,\n\t`phone_hmac` text,\n\t`provider_metadata` text,\n\t`first_seen_at` integer NOT NULL,\n\t`updated_at` integer NOT NULL,\n\tCONSTRAINT `identities_provider_native_id_unique` UNIQUE(`provider`,`native_id`)\n);",
-      "CREATE TABLE `identity_link_events` (\n\t`pk` integer PRIMARY KEY,\n\t`identity_pk` integer NOT NULL,\n\t`from_person_pk` integer,\n\t`to_person_pk` integer NOT NULL,\n\t`method` text NOT NULL,\n\t`at` integer NOT NULL,\n\t`by` text NOT NULL,\n\tCONSTRAINT `fk_identity_link_events_identity_pk_identities_pk_fk` FOREIGN KEY (`identity_pk`) REFERENCES `identities`(`pk`),\n\tCONSTRAINT `fk_identity_link_events_from_person_pk_persons_pk_fk` FOREIGN KEY (`from_person_pk`) REFERENCES `persons`(`pk`),\n\tCONSTRAINT `fk_identity_link_events_to_person_pk_persons_pk_fk` FOREIGN KEY (`to_person_pk`) REFERENCES `persons`(`pk`)\n);",
-      "CREATE TABLE `identity_links` (\n\t`identity_pk` integer PRIMARY KEY,\n\t`person_pk` integer NOT NULL,\n\t`method` text NOT NULL,\n\t`confidence` real NOT NULL,\n\t`linked_at` integer NOT NULL,\n\t`linked_by` text NOT NULL,\n\tCONSTRAINT `fk_identity_links_identity_pk_identities_pk_fk` FOREIGN KEY (`identity_pk`) REFERENCES `identities`(`pk`),\n\tCONSTRAINT `fk_identity_links_person_pk_persons_pk_fk` FOREIGN KEY (`person_pk`) REFERENCES `persons`(`pk`)\n);",
-      "CREATE TABLE `message_revisions` (\n\t`message_pk` integer NOT NULL,\n\t`text` text NOT NULL,\n\t`edited_at` integer,\n\t`captured_at` integer NOT NULL,\n\tCONSTRAINT `fk_message_revisions_message_pk_messages_pk_fk` FOREIGN KEY (`message_pk`) REFERENCES `messages`(`pk`)\n);",
-      "CREATE TABLE `messages` (\n\t`pk` integer PRIMARY KEY,\n\t`chat_pk` integer NOT NULL,\n\t`account_pk` integer NOT NULL,\n\t`native_id` text NOT NULL,\n\t`thread_native_id` text,\n\t`sender_identity_pk` integer,\n\t`sender_chat_native_id` text,\n\t`sender_name` text,\n\t`sent_at` integer NOT NULL,\n\t`edited_at` integer,\n\t`deleted_at` integer,\n\t`text` text NOT NULL,\n\t`reply_to_native_id` text,\n\t`reply_to` text,\n\t`forward` text,\n\t`outgoing` integer,\n\t`reactions` text,\n\t`provider_metadata` text,\n\t`ingested_at` integer NOT NULL,\n\t`ingested_via` text NOT NULL,\n\tCONSTRAINT `fk_messages_chat_pk_chats_pk_fk` FOREIGN KEY (`chat_pk`) REFERENCES `chats`(`pk`),\n\tCONSTRAINT `fk_messages_account_pk_accounts_pk_fk` FOREIGN KEY (`account_pk`) REFERENCES `accounts`(`pk`),\n\tCONSTRAINT `fk_messages_sender_identity_pk_identities_pk_fk` FOREIGN KEY (`sender_identity_pk`) REFERENCES `identities`(`pk`),\n\tCONSTRAINT `messages_chat_pk_native_id_unique` UNIQUE(`chat_pk`,`native_id`)\n);",
-      "CREATE TABLE `persons` (\n\t`pk` integer PRIMARY KEY,\n\t`uid` text NOT NULL UNIQUE,\n\t`name` text,\n\t`is_self` integer DEFAULT 0 NOT NULL,\n\t`created_at` integer NOT NULL,\n\t`updated_at` integer NOT NULL\n);",
-      "CREATE TABLE `sync_ranges` (\n\t`chat_pk` integer NOT NULL,\n\t`from_key` integer NOT NULL,\n\t`to_key` integer NOT NULL,\n\tCONSTRAINT `sync_ranges_pk` PRIMARY KEY(`chat_pk`, `from_key`),\n\tCONSTRAINT `fk_sync_ranges_chat_pk_chats_pk_fk` FOREIGN KEY (`chat_pk`) REFERENCES `chats`(`pk`)\n);",
-      "CREATE INDEX `chats_by_recency` ON `chats` (`account_pk`,\"last_message_at\" desc);",
-      "CREATE INDEX `identity_links_by_person` ON `identity_links` (`person_pk`);",
-      "CREATE INDEX `revisions_by_message` ON `message_revisions` (`message_pk`);",
-      "CREATE INDEX `messages_by_time` ON `messages` (`chat_pk`,\"sent_at\" desc);",
-      "CREATE INDEX `messages_by_account` ON `messages` (`account_pk`,`native_id`);",
-      "CREATE INDEX `messages_by_sender` ON `messages` (`sender_identity_pk`);"
-    ]
-  },
-  {
-    "name": "20260930003739_version-6-columns",
-    "statements": [
-      "ALTER TABLE `chats` ADD `username` text;",
-      "ALTER TABLE `chats` ADD `membership_state` text;",
-      "ALTER TABLE `chats` ADD `is_searchable` integer DEFAULT 1 NOT NULL;",
-      "ALTER TABLE `chats` ADD `message_count` integer DEFAULT 0 NOT NULL;",
-      "ALTER TABLE `messages` ADD `normalized_text` text;",
-      "ALTER TABLE `messages` ADD `normalizer_version` integer;",
-      "CREATE INDEX `messages_to_normalize` ON `messages` (`pk`) WHERE normalized_text IS NULL AND deleted_at IS NULL;"
-    ]
-  },
-  {
-    "name": "20260930003740_version-6-message-count",
-    "statements": [
-      "-- A chat's live messages, kept by triggers: a tombstone is not counted, and taking it back is.\nCREATE TRIGGER chats_count_ai AFTER INSERT ON messages WHEN new.deleted_at IS NULL BEGIN\n  UPDATE chats SET message_count = message_count + 1 WHERE pk = new.chat_pk;\nEND;",
-      "CREATE TRIGGER chats_count_ad AFTER DELETE ON messages WHEN old.deleted_at IS NULL BEGIN\n  UPDATE chats SET message_count = message_count - 1 WHERE pk = old.chat_pk;\nEND;",
-      "CREATE TRIGGER chats_count_tombstone AFTER UPDATE OF deleted_at ON messages\n  WHEN old.deleted_at IS NULL AND new.deleted_at IS NOT NULL BEGIN\n  UPDATE chats SET message_count = message_count - 1 WHERE pk = new.chat_pk;\nEND;",
-      "CREATE TRIGGER chats_count_untombstone AFTER UPDATE OF deleted_at ON messages\n  WHEN old.deleted_at IS NOT NULL AND new.deleted_at IS NULL BEGIN\n  UPDATE chats SET message_count = message_count + 1 WHERE pk = new.chat_pk;\nEND;",
-      "UPDATE chats SET message_count = counted.n\n  FROM (SELECT chat_pk, count(*) AS n FROM messages WHERE deleted_at IS NULL GROUP BY chat_pk) AS counted\n  WHERE chats.pk = counted.chat_pk;"
-    ]
-  },
-  {
-    "name": "20260930022658_version-7-chat-members",
-    "statements": [
-      "CREATE TABLE `chat_members` (\n\t`chat_pk` integer NOT NULL,\n\t`identity_pk` integer NOT NULL,\n\tCONSTRAINT `chat_members_pk` PRIMARY KEY(`chat_pk`, `identity_pk`),\n\tCONSTRAINT `fk_chat_members_chat_pk_chats_pk_fk` FOREIGN KEY (`chat_pk`) REFERENCES `chats`(`pk`),\n\tCONSTRAINT `fk_chat_members_identity_pk_identities_pk_fk` FOREIGN KEY (`identity_pk`) REFERENCES `identities`(`pk`)\n);",
-      "CREATE INDEX `chat_members_by_identity` ON `chat_members` (`identity_pk`);"
-    ]
-  },
-  {
-    "name": "20260930023839_version-8-sync-state",
-    "statements": [
-      "CREATE TABLE `sync_state` (\n\t`account_pk` integer NOT NULL,\n\t`key` text NOT NULL,\n\t`value` text NOT NULL,\n\t`at` integer NOT NULL,\n\tCONSTRAINT `sync_state_pk` PRIMARY KEY(`account_pk`, `key`),\n\tCONSTRAINT `fk_sync_state_account_pk_accounts_pk_fk` FOREIGN KEY (`account_pk`) REFERENCES `accounts`(`pk`)\n);"
-    ]
-  },
-  {
-    "name": "20260930024055_version-9-fetch-leases",
-    "statements": [
-      "CREATE TABLE `fetch_leases` (\n\t`chat_pk` integer NOT NULL,\n\t`anchor` text NOT NULL,\n\t`holder` text NOT NULL,\n\t`expires_at` integer NOT NULL,\n\tCONSTRAINT `fetch_leases_pk` PRIMARY KEY(`chat_pk`, `anchor`),\n\tCONSTRAINT `fk_fetch_leases_chat_pk_chats_pk_fk` FOREIGN KEY (`chat_pk`) REFERENCES `chats`(`pk`)\n);"
-    ]
-  },
-  {
-    "name": "20260930024643_version-10-contacts",
-    "statements": [
-      "ALTER TABLE `account_identities` ADD `last_messaged_at` integer;",
-      "ALTER TABLE `identities` ADD `description` text;"
-    ]
-  },
-  {
-    "name": "20260930024933_version-11-transcripts",
-    "statements": [
-      "CREATE TABLE `transcripts` (\n\t`chat_pk` integer NOT NULL,\n\t`message_native_id` text NOT NULL,\n\t`text` text NOT NULL,\n\t`source` text NOT NULL,\n\t`heard_at` integer NOT NULL,\n\tCONSTRAINT `transcripts_pk` PRIMARY KEY(`chat_pk`, `message_native_id`),\n\tCONSTRAINT `fk_transcripts_chat_pk_chats_pk_fk` FOREIGN KEY (`chat_pk`) REFERENCES `chats`(`pk`)\n);"
-    ]
-  },
-  {
-    "name": "20261001110735_version-12-search-state",
-    "statements": [
-      "CREATE TABLE `search_index_state` (\n\t`name` text PRIMARY KEY,\n\t`watermark` integer NOT NULL,\n\t`filled_through` integer NOT NULL,\n\t`terms_through` integer NOT NULL,\n\t`normalizer_version` integer NOT NULL,\n\t`built_at` integer\n);"
-    ]
-  },
-  {
-    "name": "20261001110736_version-12-word-index",
-    "statements": [
-      "-- Words of the normalized text, ranked by bm25. Contentless with delete support: an index filled in\n-- batches after its triggers exist stays consistent only this way (phase 2 plan, S1). `scope` holds\n-- `c<chat_pk>` and `s<sender_identity_pk>` so a small chat or a sender is filtered inside the index.\nCREATE VIRTUAL TABLE message_words USING fts5(\n  normalized_text, scope,\n  content = '', contentless_delete = 1,\n  tokenize = 'unicode61 remove_diacritics 2', prefix = '3');",
-      "-- 'col', not 'row': the scope tokens must never come back as a word or a correction.\nCREATE VIRTUAL TABLE message_words_vocab USING fts5vocab(message_words, 'col');",
-      "CREATE TRIGGER message_words_ai AFTER INSERT ON messages WHEN new.normalized_text <> '' BEGIN\n  INSERT INTO message_words (rowid, normalized_text, scope)\n    VALUES (new.pk, new.normalized_text, 'c' || new.chat_pk || coalesce(' s' || new.sender_identity_pk, ''));\nEND;",
-      "-- Every re-save of a message sets these columns; only a real change may touch the index.\nCREATE TRIGGER message_words_au AFTER UPDATE OF normalized_text, sender_identity_pk, chat_pk ON messages\n  WHEN old.normalized_text IS NOT new.normalized_text\n    OR old.sender_identity_pk IS NOT new.sender_identity_pk\n    OR old.chat_pk IS NOT new.chat_pk BEGIN\n  DELETE FROM message_words WHERE rowid = old.pk;\n  INSERT INTO message_words (rowid, normalized_text, scope)\n    SELECT new.pk, new.normalized_text, 'c' || new.chat_pk || coalesce(' s' || new.sender_identity_pk, '')\n    WHERE new.normalized_text <> '';\nEND;",
-      "CREATE TRIGGER message_words_ad AFTER DELETE ON messages BEGIN\n  DELETE FROM message_words WHERE rowid = old.pk;\nEND;",
-      "-- Drizzle cannot declare WITHOUT ROWID, so the vocabulary is written here and not in schema.ts.\nCREATE TABLE search_terms (\n  term   TEXT PRIMARY KEY,\n  length INTEGER NOT NULL\n) WITHOUT ROWID;",
-      "CREATE TABLE search_term_trigrams (\n  trigram TEXT NOT NULL,\n  length  INTEGER NOT NULL,\n  term    TEXT NOT NULL,\n  PRIMARY KEY (trigram, length, term)\n) WITHOUT ROWID;",
-      "-- 5,000 is BACKFILL_ON_OPEN and 1 is NORMALIZER_VERSION as of this version; a migration is frozen.\n-- A larger file is filled up to the watermark in batches, outside this transaction.\nINSERT INTO search_index_state (name, watermark, filled_through, terms_through, normalizer_version, built_at)\n  SELECT 'message_words', coalesce(max(pk), 0),\n    CASE WHEN count(*) <= 5000 THEN coalesce(max(pk), 0) ELSE 0 END,\n    0, 1,\n    CASE WHEN count(*) <= 5000 THEN CAST(unixepoch('subsec') * 1000 AS INTEGER) END\n  FROM messages;",
-      "INSERT INTO message_words (rowid, normalized_text, scope)\n  SELECT pk, normalized_text, 'c' || chat_pk || coalesce(' s' || sender_identity_pk, '')\n  FROM messages\n  WHERE normalized_text <> '' AND (SELECT count(*) FROM messages) <= 5000;"
-    ]
-  },
-  {
-    "name": "20261001170143_version-13-conversations",
-    "statements": [
-      "CREATE TABLE `conversation_messages` (\n\t`conversation_pk` integer NOT NULL,\n\t`message_pk` integer NOT NULL,\n\tCONSTRAINT `conversation_messages_pk` PRIMARY KEY(`conversation_pk`, `message_pk`),\n\tCONSTRAINT `fk_conversation_messages_conversation_pk_conversations_pk_fk` FOREIGN KEY (`conversation_pk`) REFERENCES `conversations`(`pk`) ON DELETE CASCADE,\n\tCONSTRAINT `fk_conversation_messages_message_pk_messages_pk_fk` FOREIGN KEY (`message_pk`) REFERENCES `messages`(`pk`) ON DELETE CASCADE\n);",
-      "CREATE TABLE `conversation_state` (\n\t`chat_pk` integer PRIMARY KEY,\n\t`enabled_at` integer NOT NULL,\n\t`built_at` integer,\n\t`algorithm_version` integer,\n\t`current_build` integer,\n\tCONSTRAINT `fk_conversation_state_chat_pk_chats_pk_fk` FOREIGN KEY (`chat_pk`) REFERENCES `chats`(`pk`) ON DELETE CASCADE\n);",
-      "CREATE TABLE `conversations` (\n\t`pk` integer PRIMARY KEY,\n\t`chat_pk` integer NOT NULL,\n\t`first_message_pk` integer NOT NULL,\n\t`build` integer NOT NULL,\n\t`first_at` integer NOT NULL,\n\t`last_at` integer NOT NULL,\n\t`message_count` integer NOT NULL,\n\t`built_at` integer NOT NULL,\n\t`algorithm_version` integer NOT NULL,\n\tCONSTRAINT `fk_conversations_chat_pk_chats_pk_fk` FOREIGN KEY (`chat_pk`) REFERENCES `chats`(`pk`) ON DELETE CASCADE,\n\tCONSTRAINT `fk_conversations_first_message_pk_messages_pk_fk` FOREIGN KEY (`first_message_pk`) REFERENCES `messages`(`pk`) ON DELETE CASCADE\n);",
-      "CREATE TABLE `message_links` (\n\t`chat_pk` integer NOT NULL,\n\t`message_pk` integer NOT NULL,\n\t`parent_pk` integer,\n\t`source` text NOT NULL,\n\t`kind` text NOT NULL,\n\t`confidence` real NOT NULL,\n\t`method` text NOT NULL,\n\t`version` text,\n\t`batch` text,\n\t`build` integer,\n\t`created_at` integer NOT NULL,\n\t`stale_at` integer,\n\tCONSTRAINT `fk_message_links_chat_pk_chats_pk_fk` FOREIGN KEY (`chat_pk`) REFERENCES `chats`(`pk`) ON DELETE CASCADE,\n\tCONSTRAINT `fk_message_links_message_pk_messages_pk_fk` FOREIGN KEY (`message_pk`) REFERENCES `messages`(`pk`) ON DELETE CASCADE,\n\tCONSTRAINT `fk_message_links_parent_pk_messages_pk_fk` FOREIGN KEY (`parent_pk`) REFERENCES `messages`(`pk`) ON DELETE CASCADE\n);",
-      "ALTER TABLE `messages` ADD `mentions` text;",
-      "CREATE INDEX `conversation_messages_by_message` ON `conversation_messages` (`message_pk`);",
-      "CREATE INDEX `conversations_by_chat` ON `conversations` (`chat_pk`,`build`,`first_at`);",
-      "CREATE UNIQUE INDEX `message_links_unique` ON `message_links` (`message_pk`,ifnull(\"parent_pk\", 0),`source`,`kind`,ifnull(\"build\", 0));",
-      "CREATE INDEX `message_links_by_parent` ON `message_links` (`parent_pk`);",
-      "CREATE INDEX `message_links_by_build` ON `message_links` (`chat_pk`,`build`);"
-    ]
-  },
-  {
-    "name": "20261001231437_version-14-chunks",
-    "statements": [
-      "CREATE TABLE `chunk_vectors` (\n\t`model` text NOT NULL,\n\t`content_hash` text NOT NULL,\n\t`dims` integer NOT NULL,\n\t`vector` blob NOT NULL,\n\t`created_at` integer NOT NULL,\n\tCONSTRAINT `chunk_vectors_pk` PRIMARY KEY(`model`, `content_hash`)\n);",
-      "CREATE TABLE `conversation_chunks` (\n\t`conversation_pk` integer NOT NULL,\n\t`ordinal` integer NOT NULL,\n\t`first_message_pk` integer NOT NULL,\n\t`last_message_pk` integer NOT NULL,\n\t`content_hash` text NOT NULL,\n\tCONSTRAINT `conversation_chunks_pk` PRIMARY KEY(`conversation_pk`, `ordinal`),\n\tCONSTRAINT `fk_conversation_chunks_conversation_pk_conversations_pk_fk` FOREIGN KEY (`conversation_pk`) REFERENCES `conversations`(`pk`) ON DELETE CASCADE,\n\tCONSTRAINT `fk_conversation_chunks_first_message_pk_messages_pk_fk` FOREIGN KEY (`first_message_pk`) REFERENCES `messages`(`pk`) ON DELETE CASCADE,\n\tCONSTRAINT `fk_conversation_chunks_last_message_pk_messages_pk_fk` FOREIGN KEY (`last_message_pk`) REFERENCES `messages`(`pk`) ON DELETE CASCADE\n);",
-      "CREATE INDEX `conversation_chunks_by_hash` ON `conversation_chunks` (`content_hash`);"
-    ]
-  },
-  {
-    "name": "20261004194933_version-15-stem-state",
-    "statements": [
-      "CREATE TABLE `message_stems_pending` (\n\t`pk` integer PRIMARY KEY\n);",
+      "CREATE TABLE `account_identities` (\n\t`account_id` integer NOT NULL,\n\t`identity_id` integer NOT NULL,\n\t`created_at` integer NOT NULL,\n\t`last_messaged_at` integer,\n\t`updated_at` integer NOT NULL,\n\tCONSTRAINT `account_identities_pk` PRIMARY KEY(`account_id`, `identity_id`),\n\tCONSTRAINT `fk_account_identities_account_id_accounts_id_fk` FOREIGN KEY (`account_id`) REFERENCES `accounts`(`id`),\n\tCONSTRAINT `fk_account_identities_identity_id_identities_id_fk` FOREIGN KEY (`identity_id`) REFERENCES `identities`(`id`)\n);",
+      "CREATE TABLE `accounts` (\n\t`id` integer PRIMARY KEY,\n\t`provider` text NOT NULL,\n\t`external_id` text NOT NULL,\n\t`name` text,\n\t`created_at` integer NOT NULL,\n\t`settings` text,\n\t`status` text,\n\t`updated_at` integer NOT NULL,\n\tCONSTRAINT `accounts_provider_external_id_unique` UNIQUE(`provider`,`external_id`)\n);",
+      "CREATE TABLE `aliases` (\n\t`id` integer PRIMARY KEY,\n\t`aliasable_type` text NOT NULL,\n\t`aliasable_id` integer NOT NULL,\n\t`account_id` integer,\n\t`name` text NOT NULL,\n\t`name_folded` text NOT NULL,\n\t`display` integer DEFAULT 0 NOT NULL,\n\t`source` text NOT NULL,\n\t`created_at` integer NOT NULL,\n\t`updated_at` integer NOT NULL,\n\tCONSTRAINT `fk_aliases_account_id_accounts_id_fk` FOREIGN KEY (`account_id`) REFERENCES `accounts`(`id`)\n);",
+      "CREATE TABLE `attachments` (\n\t`id` integer PRIMARY KEY,\n\t`attachable_type` text NOT NULL,\n\t`attachable_id` integer NOT NULL,\n\t`position` integer NOT NULL,\n\t`kind` text NOT NULL,\n\t`mime` text,\n\t`name` text,\n\t`title` text,\n\t`url` text,\n\t`size` integer,\n\t`width` integer,\n\t`height` integer,\n\t`duration` real,\n\t`provider_ref` text,\n\t`local_path` text,\n\t`text` text,\n\t`normalized_text` text,\n\t`extraction` text,\n\t`extractor` text,\n\t`extraction_error` text,\n\t`content_sha256` text,\n\t`extracted_at` integer,\n\t`created_at` integer NOT NULL,\n\t`updated_at` integer NOT NULL,\n\tCONSTRAINT `attachments_attachable_type_attachable_id_position_unique` UNIQUE(`attachable_type`,`attachable_id`,`position`)\n);",
+      "CREATE TABLE `auto_tag_claims` (\n\t`chat_id` integer NOT NULL,\n\t`tag_id` integer NOT NULL,\n\t`algorithm` text NOT NULL,\n\t`score` real NOT NULL,\n\t`fields` text NOT NULL,\n\t`created_at` integer NOT NULL,\n\t`updated_at` integer NOT NULL,\n\tCONSTRAINT `auto_tag_claims_pk` PRIMARY KEY(`chat_id`, `tag_id`),\n\tCONSTRAINT `fk_auto_tag_claims_chat_id_chats_id_fk` FOREIGN KEY (`chat_id`) REFERENCES `chats`(`id`),\n\tCONSTRAINT `fk_auto_tag_claims_tag_id_tags_id_fk` FOREIGN KEY (`tag_id`) REFERENCES `tags`(`id`)\n);",
+      "CREATE TABLE `bots` (\n\t`id` integer PRIMARY KEY,\n\t`name` text NOT NULL UNIQUE,\n\t`kind` text NOT NULL,\n\t`description` text,\n\t`owner_person_id` integer,\n\t`model` text,\n\t`token_digest` text,\n\t`last_seen_at` integer,\n\t`disabled_at` integer,\n\t`metadata` text,\n\t`created_at` integer NOT NULL,\n\t`updated_at` integer NOT NULL,\n\tCONSTRAINT `fk_bots_owner_person_id_persons_id_fk` FOREIGN KEY (`owner_person_id`) REFERENCES `persons`(`id`)\n);",
+      "CREATE TABLE `chat_members` (\n\t`chat_id` integer NOT NULL,\n\t`identity_id` integer NOT NULL,\n\t`created_at` integer NOT NULL,\n\tCONSTRAINT `chat_members_pk` PRIMARY KEY(`chat_id`, `identity_id`),\n\tCONSTRAINT `fk_chat_members_chat_id_chats_id_fk` FOREIGN KEY (`chat_id`) REFERENCES `chats`(`id`),\n\tCONSTRAINT `fk_chat_members_identity_id_identities_id_fk` FOREIGN KEY (`identity_id`) REFERENCES `identities`(`id`)\n);",
+      "CREATE TABLE `chats` (\n\t`id` integer PRIMARY KEY,\n\t`account_id` integer NOT NULL,\n\t`external_id` text NOT NULL,\n\t`kind` text NOT NULL,\n\t`title` text,\n\t`unread_count` integer,\n\t`last_message_at` integer,\n\t`participants_count` integer,\n\t`metadata` text,\n\t`updated_at` integer NOT NULL,\n\t`username` text,\n\t`membership_state` text,\n\t`searchable` integer DEFAULT 1 NOT NULL,\n\t`message_count` integer DEFAULT 0 NOT NULL,\n\t`members_tracked_at` integer,\n\t`description` text,\n\t`details_fetched_at` integer,\n\t`created_at` integer NOT NULL,\n\tCONSTRAINT `fk_chats_account_id_accounts_id_fk` FOREIGN KEY (`account_id`) REFERENCES `accounts`(`id`),\n\tCONSTRAINT `chats_account_id_external_id_unique` UNIQUE(`account_id`,`external_id`)\n);",
+      "CREATE TABLE `chunks` (\n\t`id` integer PRIMARY KEY,\n\t`chunkable_type` text NOT NULL,\n\t`chunkable_id` integer NOT NULL,\n\t`position` integer NOT NULL,\n\t`start_offset` integer NOT NULL,\n\t`end_offset` integer NOT NULL,\n\t`content_hash` text NOT NULL,\n\t`created_at` integer NOT NULL,\n\t`updated_at` integer NOT NULL,\n\tCONSTRAINT `chunks_chunkable_type_chunkable_id_position_unique` UNIQUE(`chunkable_type`,`chunkable_id`,`position`)\n);",
+      "CREATE TABLE `conversation_chunks` (\n\t`conversation_id` integer NOT NULL,\n\t`ordinal` integer NOT NULL,\n\t`first_message_id` integer NOT NULL,\n\t`last_message_id` integer NOT NULL,\n\t`content_hash` text NOT NULL,\n\t`text_start` integer,\n\t`text_end` integer,\n\tCONSTRAINT `conversation_chunks_pk` PRIMARY KEY(`conversation_id`, `ordinal`),\n\tCONSTRAINT `fk_conversation_chunks_conversation_id_conversations_id_fk` FOREIGN KEY (`conversation_id`) REFERENCES `conversations`(`id`) ON DELETE CASCADE,\n\tCONSTRAINT `fk_conversation_chunks_first_message_id_messages_id_fk` FOREIGN KEY (`first_message_id`) REFERENCES `messages`(`id`) ON DELETE CASCADE,\n\tCONSTRAINT `fk_conversation_chunks_last_message_id_messages_id_fk` FOREIGN KEY (`last_message_id`) REFERENCES `messages`(`id`) ON DELETE CASCADE\n);",
+      "CREATE TABLE `conversation_messages` (\n\t`conversation_id` integer NOT NULL,\n\t`message_id` integer NOT NULL,\n\tCONSTRAINT `conversation_messages_pk` PRIMARY KEY(`conversation_id`, `message_id`),\n\tCONSTRAINT `fk_conversation_messages_conversation_id_conversations_id_fk` FOREIGN KEY (`conversation_id`) REFERENCES `conversations`(`id`) ON DELETE CASCADE,\n\tCONSTRAINT `fk_conversation_messages_message_id_messages_id_fk` FOREIGN KEY (`message_id`) REFERENCES `messages`(`id`) ON DELETE CASCADE\n);",
+      "CREATE TABLE `conversation_state` (\n\t`chat_id` integer PRIMARY KEY,\n\t`enabled_at` integer NOT NULL,\n\t`built_at` integer,\n\t`algorithm_version` integer,\n\t`current_build` integer,\n\tCONSTRAINT `fk_conversation_state_chat_id_chats_id_fk` FOREIGN KEY (`chat_id`) REFERENCES `chats`(`id`) ON DELETE CASCADE\n);",
+      "CREATE TABLE `conversations` (\n\t`id` integer PRIMARY KEY,\n\t`chat_id` integer NOT NULL,\n\t`first_message_id` integer NOT NULL,\n\t`build` integer NOT NULL,\n\t`first_at` integer NOT NULL,\n\t`last_at` integer NOT NULL,\n\t`message_count` integer NOT NULL,\n\t`built_at` integer NOT NULL,\n\t`algorithm_version` integer NOT NULL,\n\t`created_at` integer NOT NULL,\n\t`updated_at` integer NOT NULL,\n\tCONSTRAINT `fk_conversations_chat_id_chats_id_fk` FOREIGN KEY (`chat_id`) REFERENCES `chats`(`id`) ON DELETE CASCADE,\n\tCONSTRAINT `fk_conversations_first_message_id_messages_id_fk` FOREIGN KEY (`first_message_id`) REFERENCES `messages`(`id`) ON DELETE CASCADE\n);",
+      "CREATE TABLE `document_index_pending` (\n\t`id` integer NOT NULL,\n\t`indexable_type` text NOT NULL,\n\tCONSTRAINT `document_index_pending_pk` PRIMARY KEY(`indexable_type`, `id`)\n);",
+      "CREATE TABLE `document_revisions` (\n\t`id` integer PRIMARY KEY,\n\t`document_id` integer NOT NULL,\n\t`body` text NOT NULL,\n\t`revision` integer NOT NULL,\n\t`created_at` integer NOT NULL,\n\tCONSTRAINT `fk_document_revisions_document_id_documents_id_fk` FOREIGN KEY (`document_id`) REFERENCES `documents`(`id`)\n);",
+      "CREATE TABLE `documents` (\n\t`id` integer PRIMARY KEY,\n\t`account_id` integer NOT NULL,\n\t`external_id` text NOT NULL,\n\t`kind` text NOT NULL,\n\t`title` text,\n\t`location` text,\n\t`file_name` text,\n\t`extension` text,\n\t`url` text,\n\t`storage` text,\n\t`local_path` text,\n\t`mime` text,\n\t`size` integer,\n\t`content_hash` text,\n\t`front_matter` text,\n\t`body` text,\n\t`normalized_text` text,\n\t`extraction` text,\n\t`extraction_error` text,\n\t`language` text,\n\t`revision` integer DEFAULT 1 NOT NULL,\n\t`export_path` text,\n\t`external_created_at` integer,\n\t`external_updated_at` integer,\n\t`metadata` text,\n\t`created_at` integer NOT NULL,\n\t`updated_at` integer NOT NULL,\n\t`deleted_at` integer,\n\tCONSTRAINT `fk_documents_account_id_accounts_id_fk` FOREIGN KEY (`account_id`) REFERENCES `accounts`(`id`),\n\tCONSTRAINT `documents_account_id_external_id_unique` UNIQUE(`account_id`,`external_id`)\n);",
+      "CREATE TABLE `email_index_pending` (\n\t`id` integer NOT NULL,\n\t`indexable_type` text NOT NULL,\n\tCONSTRAINT `email_index_pending_pk` PRIMARY KEY(`indexable_type`, `id`)\n);",
+      "CREATE TABLE `email_mailboxes` (\n\t`email_id` integer NOT NULL,\n\t`mailbox_id` integer NOT NULL,\n\t`created_at` integer NOT NULL,\n\tCONSTRAINT `email_mailboxes_pk` PRIMARY KEY(`email_id`, `mailbox_id`),\n\tCONSTRAINT `fk_email_mailboxes_email_id_emails_id_fk` FOREIGN KEY (`email_id`) REFERENCES `emails`(`id`),\n\tCONSTRAINT `fk_email_mailboxes_mailbox_id_mailboxes_id_fk` FOREIGN KEY (`mailbox_id`) REFERENCES `mailboxes`(`id`)\n);",
+      "CREATE TABLE `email_recipients` (\n\t`id` integer PRIMARY KEY,\n\t`email_id` integer NOT NULL,\n\t`identity_id` integer,\n\t`address` text NOT NULL,\n\t`name` text,\n\t`role` text NOT NULL,\n\t`position` integer NOT NULL,\n\t`created_at` integer NOT NULL,\n\t`updated_at` integer NOT NULL,\n\tCONSTRAINT `fk_email_recipients_email_id_emails_id_fk` FOREIGN KEY (`email_id`) REFERENCES `emails`(`id`),\n\tCONSTRAINT `fk_email_recipients_identity_id_identities_id_fk` FOREIGN KEY (`identity_id`) REFERENCES `identities`(`id`)\n);",
+      "CREATE TABLE `email_threads` (\n\t`id` integer PRIMARY KEY,\n\t`account_id` integer NOT NULL,\n\t`external_id` text NOT NULL,\n\t`subject` text,\n\t`last_email_at` integer,\n\t`emails_count` integer DEFAULT 0 NOT NULL,\n\t`metadata` text,\n\t`created_at` integer NOT NULL,\n\t`updated_at` integer NOT NULL,\n\t`deleted_at` integer,\n\tCONSTRAINT `fk_email_threads_account_id_accounts_id_fk` FOREIGN KEY (`account_id`) REFERENCES `accounts`(`id`),\n\tCONSTRAINT `email_threads_account_id_external_id_unique` UNIQUE(`account_id`,`external_id`)\n);",
+      "CREATE TABLE `emails` (\n\t`id` integer PRIMARY KEY,\n\t`account_id` integer NOT NULL,\n\t`email_thread_id` integer NOT NULL,\n\t`external_id` text NOT NULL,\n\t`subject` text,\n\t`from_identity_id` integer,\n\t`from_address` text,\n\t`from_name` text,\n\t`sent_at` integer,\n\t`received_at` integer,\n\t`in_reply_to` text,\n\t`references` text,\n\t`body_text` text,\n\t`body_html` text,\n\t`snippet` text,\n\t`outgoing` integer,\n\t`read` integer,\n\t`flagged` integer,\n\t`draft` integer,\n\t`size` integer,\n\t`headers` text,\n\t`metadata` text,\n\t`created_at` integer NOT NULL,\n\t`updated_at` integer NOT NULL,\n\t`deleted_at` integer,\n\tCONSTRAINT `fk_emails_account_id_accounts_id_fk` FOREIGN KEY (`account_id`) REFERENCES `accounts`(`id`),\n\tCONSTRAINT `fk_emails_email_thread_id_email_threads_id_fk` FOREIGN KEY (`email_thread_id`) REFERENCES `email_threads`(`id`),\n\tCONSTRAINT `fk_emails_from_identity_id_identities_id_fk` FOREIGN KEY (`from_identity_id`) REFERENCES `identities`(`id`),\n\tCONSTRAINT `emails_account_id_external_id_unique` UNIQUE(`account_id`,`external_id`)\n);",
+      "CREATE TABLE `embeddings` (\n\t`model` text NOT NULL,\n\t`content_hash` text NOT NULL,\n\t`dims` integer NOT NULL,\n\t`vector` blob NOT NULL,\n\t`created_at` integer NOT NULL,\n\t`updated_at` integer NOT NULL,\n\tCONSTRAINT `embeddings_pk` PRIMARY KEY(`model`, `content_hash`)\n);",
+      "CREATE TABLE `entities` (\n\t`id` integer PRIMARY KEY,\n\t`kind` text NOT NULL,\n\t`name` text NOT NULL,\n\t`created_at` integer NOT NULL,\n\t`updated_at` integer NOT NULL\n);",
+      "CREATE TABLE `event_series` (\n\t`id` integer PRIMARY KEY,\n\t`title` text,\n\t`recurrence` text,\n\t`origin` text NOT NULL,\n\t`created_at` integer NOT NULL,\n\t`updated_at` integer NOT NULL\n);",
+      "CREATE TABLE `events` (\n\t`id` integer PRIMARY KEY,\n\t`event_series_id` integer,\n\t`title` text,\n\t`description` text,\n\t`location` text,\n\t`starts_at` integer,\n\t`ends_at` integer,\n\t`timezone` text,\n\t`origin` text NOT NULL,\n\t`created_at` integer NOT NULL,\n\t`updated_at` integer NOT NULL,\n\t`deleted_at` integer,\n\tCONSTRAINT `fk_events_event_series_id_event_series_id_fk` FOREIGN KEY (`event_series_id`) REFERENCES `event_series`(`id`)\n);",
+      "CREATE TABLE `fetch_leases` (\n\t`chat_id` integer NOT NULL,\n\t`anchor` text NOT NULL,\n\t`holder` text NOT NULL,\n\t`expires_at` integer NOT NULL,\n\tCONSTRAINT `fetch_leases_pk` PRIMARY KEY(`chat_id`, `anchor`),\n\tCONSTRAINT `fk_fetch_leases_chat_id_chats_id_fk` FOREIGN KEY (`chat_id`) REFERENCES `chats`(`id`)\n);",
+      "CREATE TABLE `identities` (\n\t`id` integer PRIMARY KEY,\n\t`provider` text NOT NULL,\n\t`external_id` text NOT NULL,\n\t`username` text,\n\t`name` text,\n\t`bot` integer,\n\t`phone_hmac` text,\n\t`metadata` text,\n\t`created_at` integer NOT NULL,\n\t`updated_at` integer NOT NULL,\n\t`description` text,\n\tCONSTRAINT `identities_provider_external_id_unique` UNIQUE(`provider`,`external_id`)\n);",
+      "CREATE TABLE `identity_link_events` (\n\t`id` integer PRIMARY KEY,\n\t`identity_id` integer NOT NULL,\n\t`from_person_id` integer,\n\t`to_person_id` integer NOT NULL,\n\t`method` text NOT NULL,\n\t`created_at` integer NOT NULL,\n\t`author` text NOT NULL,\n\tCONSTRAINT `fk_identity_link_events_identity_id_identities_id_fk` FOREIGN KEY (`identity_id`) REFERENCES `identities`(`id`),\n\tCONSTRAINT `fk_identity_link_events_from_person_id_persons_id_fk` FOREIGN KEY (`from_person_id`) REFERENCES `persons`(`id`),\n\tCONSTRAINT `fk_identity_link_events_to_person_id_persons_id_fk` FOREIGN KEY (`to_person_id`) REFERENCES `persons`(`id`)\n);",
+      "CREATE TABLE `identity_links` (\n\t`identity_id` integer PRIMARY KEY,\n\t`person_id` integer NOT NULL,\n\t`method` text NOT NULL,\n\t`confidence` real NOT NULL,\n\t`created_at` integer NOT NULL,\n\t`author` text NOT NULL,\n\t`source` text,\n\t`updated_at` integer NOT NULL,\n\tCONSTRAINT `fk_identity_links_identity_id_identities_id_fk` FOREIGN KEY (`identity_id`) REFERENCES `identities`(`id`),\n\tCONSTRAINT `fk_identity_links_person_id_persons_id_fk` FOREIGN KEY (`person_id`) REFERENCES `persons`(`id`)\n);",
+      "CREATE TABLE `identity_revisions` (\n\t`id` integer PRIMARY KEY,\n\t`identity_id` integer NOT NULL,\n\t`name` text,\n\t`username` text,\n\t`description` text,\n\t`marks` text,\n\t`created_at` integer NOT NULL,\n\tCONSTRAINT `fk_identity_revisions_identity_id_identities_id_fk` FOREIGN KEY (`identity_id`) REFERENCES `identities`(`id`)\n);",
+      "CREATE TABLE `links` (\n\t`id` integer PRIMARY KEY,\n\t`from_type` text NOT NULL,\n\t`from_id` integer NOT NULL,\n\t`to_type` text,\n\t`to_id` integer,\n\t`kind` text NOT NULL,\n\t`anchor` text,\n\t`source` text NOT NULL,\n\t`target_text` text,\n\t`target_folded` text,\n\t`role` text,\n\t`evidence` text,\n\t`metadata` text,\n\t`confirmed` integer DEFAULT 1 NOT NULL,\n\t`created_at` integer NOT NULL,\n\t`author` text,\n\t`updated_at` integer NOT NULL\n);",
+      "CREATE TABLE `mailboxes` (\n\t`id` integer PRIMARY KEY,\n\t`account_id` integer NOT NULL,\n\t`external_id` text NOT NULL,\n\t`name` text NOT NULL,\n\t`kind` text,\n\t`created_at` integer NOT NULL,\n\t`updated_at` integer NOT NULL,\n\tCONSTRAINT `fk_mailboxes_account_id_accounts_id_fk` FOREIGN KEY (`account_id`) REFERENCES `accounts`(`id`),\n\tCONSTRAINT `mailboxes_account_id_external_id_unique` UNIQUE(`account_id`,`external_id`)\n);",
+      "CREATE TABLE `meeting_chat_messages` (\n\t`id` integer PRIMARY KEY,\n\t`meeting_id` integer NOT NULL,\n\t`external_id` text,\n\t`sent_at` integer NOT NULL,\n\t`sender_participant_id` integer,\n\t`sender_name` text,\n\t`recipient` text,\n\t`text` text NOT NULL,\n\t`normalized_text` text,\n\t`metadata` text,\n\t`created_at` integer NOT NULL,\n\t`updated_at` integer NOT NULL,\n\tCONSTRAINT `fk_meeting_chat_messages_meeting_id_meetings_id_fk` FOREIGN KEY (`meeting_id`) REFERENCES `meetings`(`id`),\n\tCONSTRAINT `fk_meeting_chat_messages_sender_participant_id_meeting_participants_id_fk` FOREIGN KEY (`sender_participant_id`) REFERENCES `meeting_participants`(`id`)\n);",
+      "CREATE TABLE `meeting_index_pending` (\n\t`id` integer NOT NULL,\n\t`indexable_type` text NOT NULL,\n\tCONSTRAINT `meeting_index_pending_pk` PRIMARY KEY(`indexable_type`, `id`)\n);",
+      "CREATE TABLE `meeting_participants` (\n\t`id` integer PRIMARY KEY,\n\t`meeting_id` integer NOT NULL,\n\t`identity_id` integer NOT NULL,\n\t`display_name` text,\n\t`email` text,\n\t`role` text,\n\t`joined_at` integer,\n\t`left_at` integer,\n\t`duration_ms` integer,\n\t`sessions` text,\n\t`external_id` text,\n\t`metadata` text,\n\t`created_at` integer NOT NULL,\n\t`updated_at` integer NOT NULL,\n\tCONSTRAINT `fk_meeting_participants_meeting_id_meetings_id_fk` FOREIGN KEY (`meeting_id`) REFERENCES `meetings`(`id`),\n\tCONSTRAINT `fk_meeting_participants_identity_id_identities_id_fk` FOREIGN KEY (`identity_id`) REFERENCES `identities`(`id`),\n\tCONSTRAINT `meeting_participants_meeting_id_identity_id_unique` UNIQUE(`meeting_id`,`identity_id`)\n);",
+      "CREATE TABLE `meeting_series` (\n\t`id` integer PRIMARY KEY,\n\t`account_id` integer NOT NULL,\n\t`external_id` text NOT NULL,\n\t`event_series_id` integer,\n\t`title` text,\n\t`description` text,\n\t`kind` text,\n\t`recurrence` text,\n\t`host_identity_id` integer,\n\t`join_url` text,\n\t`metadata` text,\n\t`created_at` integer NOT NULL,\n\t`updated_at` integer NOT NULL,\n\t`deleted_at` integer,\n\tCONSTRAINT `fk_meeting_series_account_id_accounts_id_fk` FOREIGN KEY (`account_id`) REFERENCES `accounts`(`id`),\n\tCONSTRAINT `fk_meeting_series_event_series_id_event_series_id_fk` FOREIGN KEY (`event_series_id`) REFERENCES `event_series`(`id`),\n\tCONSTRAINT `fk_meeting_series_host_identity_id_identities_id_fk` FOREIGN KEY (`host_identity_id`) REFERENCES `identities`(`id`),\n\tCONSTRAINT `meeting_series_account_id_external_id_unique` UNIQUE(`account_id`,`external_id`)\n);",
+      "CREATE TABLE `meeting_summaries` (\n\t`id` integer PRIMARY KEY,\n\t`meeting_id` integer NOT NULL,\n\t`source` text NOT NULL,\n\t`title` text,\n\t`overview` text,\n\t`sections` text,\n\t`next_steps` text,\n\t`content` text,\n\t`doc_url` text,\n\t`external_created_at` integer,\n\t`external_updated_at` integer,\n\t`metadata` text,\n\t`created_at` integer NOT NULL,\n\t`updated_at` integer NOT NULL,\n\tCONSTRAINT `fk_meeting_summaries_meeting_id_meetings_id_fk` FOREIGN KEY (`meeting_id`) REFERENCES `meetings`(`id`)\n);",
+      "CREATE TABLE `meeting_transcript_rows` (\n\t`id` integer PRIMARY KEY,\n\t`meeting_transcript_id` integer NOT NULL,\n\t`position` integer NOT NULL,\n\t`start_ms` integer NOT NULL,\n\t`end_ms` integer NOT NULL,\n\t`speaker_participant_id` integer,\n\t`speaker_name` text,\n\t`text` text NOT NULL,\n\t`normalized_text` text,\n\t`metadata` text,\n\t`created_at` integer NOT NULL,\n\tCONSTRAINT `fk_meeting_transcript_rows_meeting_transcript_id_meeting_transcripts_id_fk` FOREIGN KEY (`meeting_transcript_id`) REFERENCES `meeting_transcripts`(`id`),\n\tCONSTRAINT `fk_meeting_transcript_rows_speaker_participant_id_meeting_participants_id_fk` FOREIGN KEY (`speaker_participant_id`) REFERENCES `meeting_participants`(`id`),\n\tCONSTRAINT `meeting_transcript_rows_meeting_transcript_id_position_unique` UNIQUE(`meeting_transcript_id`,`position`)\n);",
+      "CREATE TABLE `meeting_transcripts` (\n\t`id` integer PRIMARY KEY,\n\t`meeting_id` integer NOT NULL,\n\t`source` text NOT NULL,\n\t`format` text,\n\t`language` text,\n\t`content_hash` text,\n\t`external_created_at` integer,\n\t`superseded_at` integer,\n\t`metadata` text,\n\t`created_at` integer NOT NULL,\n\t`updated_at` integer NOT NULL,\n\t`deleted_at` integer,\n\tCONSTRAINT `fk_meeting_transcripts_meeting_id_meetings_id_fk` FOREIGN KEY (`meeting_id`) REFERENCES `meetings`(`id`)\n);",
+      "CREATE TABLE `meetings` (\n\t`id` integer PRIMARY KEY,\n\t`account_id` integer NOT NULL,\n\t`meeting_series_id` integer,\n\t`event_id` integer,\n\t`external_id` text NOT NULL,\n\t`title` text,\n\t`description` text,\n\t`location` text,\n\t`join_url` text,\n\t`started_at` integer,\n\t`ended_at` integer,\n\t`duration_ms` integer,\n\t`timezone` text,\n\t`host_identity_id` integer,\n\t`participants_count` integer,\n\t`metadata` text,\n\t`created_at` integer NOT NULL,\n\t`updated_at` integer NOT NULL,\n\t`deleted_at` integer,\n\tCONSTRAINT `fk_meetings_account_id_accounts_id_fk` FOREIGN KEY (`account_id`) REFERENCES `accounts`(`id`),\n\tCONSTRAINT `fk_meetings_meeting_series_id_meeting_series_id_fk` FOREIGN KEY (`meeting_series_id`) REFERENCES `meeting_series`(`id`),\n\tCONSTRAINT `fk_meetings_event_id_events_id_fk` FOREIGN KEY (`event_id`) REFERENCES `events`(`id`),\n\tCONSTRAINT `fk_meetings_host_identity_id_identities_id_fk` FOREIGN KEY (`host_identity_id`) REFERENCES `identities`(`id`),\n\tCONSTRAINT `meetings_account_id_external_id_unique` UNIQUE(`account_id`,`external_id`)\n);",
+      "CREATE TABLE `member_counts` (\n\t`chat_id` integer NOT NULL,\n\t`date` text NOT NULL,\n\t`reported_count` integer,\n\t`listed_count` integer NOT NULL,\n\t`complete_list` integer NOT NULL,\n\t`created_at` integer NOT NULL,\n\tCONSTRAINT `member_counts_pk` PRIMARY KEY(`chat_id`, `date`),\n\tCONSTRAINT `fk_member_counts_chat_id_chats_id_fk` FOREIGN KEY (`chat_id`) REFERENCES `chats`(`id`)\n);",
+      "CREATE TABLE `member_stays` (\n\t`id` integer PRIMARY KEY,\n\t`chat_id` integer NOT NULL,\n\t`identity_id` integer NOT NULL,\n\t`first_seen_at` integer NOT NULL,\n\t`last_seen_at` integer NOT NULL,\n\t`joined_at` integer,\n\t`invited_by_identity_id` integer,\n\t`role` text,\n\t`left_at` integer,\n\t`created_at` integer NOT NULL,\n\t`updated_at` integer NOT NULL,\n\tCONSTRAINT `fk_member_stays_chat_id_chats_id_fk` FOREIGN KEY (`chat_id`) REFERENCES `chats`(`id`),\n\tCONSTRAINT `fk_member_stays_identity_id_identities_id_fk` FOREIGN KEY (`identity_id`) REFERENCES `identities`(`id`),\n\tCONSTRAINT `fk_member_stays_invited_by_identity_id_identities_id_fk` FOREIGN KEY (`invited_by_identity_id`) REFERENCES `identities`(`id`)\n);",
+      "CREATE TABLE `message_counter_observations` (\n\t`message_id` integer NOT NULL,\n\t`counter` text NOT NULL,\n\t`value` real NOT NULL,\n\t`created_at` integer NOT NULL,\n\t`source` text NOT NULL,\n\tCONSTRAINT `message_counter_observations_pk` PRIMARY KEY(`message_id`, `counter`),\n\tCONSTRAINT `fk_message_counter_observations_message_id_messages_id_fk` FOREIGN KEY (`message_id`) REFERENCES `messages`(`id`) ON DELETE CASCADE\n);",
+      "CREATE TABLE `message_links` (\n\t`id` integer PRIMARY KEY,\n\t`chat_id` integer NOT NULL,\n\t`message_id` integer NOT NULL,\n\t`parent_id` integer,\n\t`source` text NOT NULL,\n\t`kind` text NOT NULL,\n\t`confidence` real NOT NULL,\n\t`method` text NOT NULL,\n\t`version` text,\n\t`batch` text,\n\t`build` integer,\n\t`created_at` integer NOT NULL,\n\t`stale_at` integer,\n\t`updated_at` integer NOT NULL,\n\tCONSTRAINT `fk_message_links_chat_id_chats_id_fk` FOREIGN KEY (`chat_id`) REFERENCES `chats`(`id`) ON DELETE CASCADE,\n\tCONSTRAINT `fk_message_links_message_id_messages_id_fk` FOREIGN KEY (`message_id`) REFERENCES `messages`(`id`) ON DELETE CASCADE,\n\tCONSTRAINT `fk_message_links_parent_id_messages_id_fk` FOREIGN KEY (`parent_id`) REFERENCES `messages`(`id`) ON DELETE CASCADE\n);",
+      "CREATE TABLE `message_revisions` (\n\t`id` integer PRIMARY KEY,\n\t`message_id` integer NOT NULL,\n\t`text` text NOT NULL,\n\t`edited_at` integer,\n\t`created_at` integer NOT NULL,\n\tCONSTRAINT `fk_message_revisions_message_id_messages_id_fk` FOREIGN KEY (`message_id`) REFERENCES `messages`(`id`)\n);",
+      "CREATE TABLE `message_stems_pending` (\n\t`id` integer PRIMARY KEY\n);",
+      "CREATE TABLE `message_transcripts` (\n\t`id` integer PRIMARY KEY,\n\t`message_id` integer,\n\t`chat_id` integer NOT NULL,\n\t`message_external_id` text NOT NULL,\n\t`text` text NOT NULL,\n\t`source` text NOT NULL,\n\t`heard_at` integer NOT NULL,\n\t`created_at` integer NOT NULL,\n\t`updated_at` integer NOT NULL,\n\tCONSTRAINT `fk_message_transcripts_message_id_messages_id_fk` FOREIGN KEY (`message_id`) REFERENCES `messages`(`id`),\n\tCONSTRAINT `fk_message_transcripts_chat_id_chats_id_fk` FOREIGN KEY (`chat_id`) REFERENCES `chats`(`id`),\n\tCONSTRAINT `message_transcripts_chat_id_message_external_id_unique` UNIQUE(`chat_id`,`message_external_id`)\n);",
+      "CREATE TABLE `messages` (\n\t`id` integer PRIMARY KEY,\n\t`chat_id` integer NOT NULL,\n\t`account_id` integer NOT NULL,\n\t`external_id` text NOT NULL,\n\t`thread_external_id` text,\n\t`sender_identity_id` integer,\n\t`sender_chat_external_id` text,\n\t`sender_name` text,\n\t`sent_at` integer NOT NULL,\n\t`edited_at` integer,\n\t`deleted_at` integer,\n\t`text` text NOT NULL,\n\t`reply_to_external_id` text,\n\t`reply_to` text,\n\t`forward` text,\n\t`outgoing` integer,\n\t`reactions` text,\n\t`metadata` text,\n\t`created_at` integer NOT NULL,\n\t`source` text NOT NULL,\n\t`normalized_text` text,\n\t`normalizer_version` integer,\n\t`mentions` text,\n\t`updated_at` integer NOT NULL,\n\tCONSTRAINT `fk_messages_chat_id_chats_id_fk` FOREIGN KEY (`chat_id`) REFERENCES `chats`(`id`),\n\tCONSTRAINT `fk_messages_account_id_accounts_id_fk` FOREIGN KEY (`account_id`) REFERENCES `accounts`(`id`),\n\tCONSTRAINT `fk_messages_sender_identity_id_identities_id_fk` FOREIGN KEY (`sender_identity_id`) REFERENCES `identities`(`id`),\n\tCONSTRAINT `messages_chat_id_external_id_unique` UNIQUE(`chat_id`,`external_id`)\n);",
+      "CREATE TABLE `note_index_pending` (\n\t`id` integer NOT NULL,\n\t`indexable_type` text NOT NULL,\n\tCONSTRAINT `note_index_pending_pk` PRIMARY KEY(`indexable_type`, `id`)\n);",
+      "CREATE TABLE `note_revisions` (\n\t`id` integer PRIMARY KEY,\n\t`note_id` integer NOT NULL,\n\t`body` text NOT NULL,\n\t`revision` integer NOT NULL,\n\t`created_at` integer NOT NULL,\n\tCONSTRAINT `fk_note_revisions_note_id_notes_id_fk` FOREIGN KEY (`note_id`) REFERENCES `notes`(`id`)\n);",
+      "CREATE TABLE `notes` (\n\t`id` integer PRIMARY KEY,\n\t`notable_type` text NOT NULL,\n\t`notable_id` integer NOT NULL,\n\t`title` text,\n\t`body` text NOT NULL,\n\t`author_type` text,\n\t`author_id` integer,\n\t`revision` integer DEFAULT 1 NOT NULL,\n\t`created_at` integer NOT NULL,\n\t`updated_at` integer NOT NULL,\n\t`deleted_at` integer\n);",
+      "CREATE TABLE `persons` (\n\t`id` integer PRIMARY KEY,\n\t`name` text,\n\t`owner` integer DEFAULT 0 NOT NULL,\n\t`created_at` integer NOT NULL,\n\t`updated_at` integer NOT NULL\n);",
+      "CREATE TABLE `projects` (\n\t`id` integer PRIMARY KEY,\n\t`key` text NOT NULL UNIQUE,\n\t`name` text NOT NULL,\n\t`description` text,\n\t`owner_type` text,\n\t`owner_id` integer,\n\t`tasks_count` integer DEFAULT 0 NOT NULL,\n\t`status` text,\n\t`created_at` integer NOT NULL,\n\t`updated_at` integer NOT NULL,\n\t`deleted_at` integer\n);",
+      "CREATE TABLE `reminders` (\n\t`id` integer PRIMARY KEY,\n\t`task_id` integer NOT NULL,\n\t`account_id` integer NOT NULL,\n\t`due_at` integer NOT NULL,\n\t`timezone` text NOT NULL,\n\t`state` text NOT NULL,\n\t`revision` integer DEFAULT 1 NOT NULL,\n\t`lease_until` integer,\n\t`receipt` text,\n\t`created_at` integer NOT NULL,\n\t`updated_at` integer NOT NULL,\n\tCONSTRAINT `fk_reminders_task_id_tasks_id_fk` FOREIGN KEY (`task_id`) REFERENCES `tasks`(`id`),\n\tCONSTRAINT `fk_reminders_account_id_accounts_id_fk` FOREIGN KEY (`account_id`) REFERENCES `accounts`(`id`)\n);",
+      "CREATE TABLE `search_index_state` (\n\t`name` text PRIMARY KEY,\n\t`watermark` integer NOT NULL,\n\t`filled_through` integer NOT NULL,\n\t`terms_through` integer NOT NULL,\n\t`normalizer_version` integer NOT NULL,\n\t`built_at` integer,\n\t`analyzer` text\n);",
+      "CREATE TABLE `searches` (\n\t`id` integer PRIMARY KEY,\n\t`name` text UNIQUE,\n\t`command` text NOT NULL,\n\t`params` text NOT NULL,\n\t`language` text NOT NULL,\n\t`version` integer NOT NULL,\n\t`fields_version` integer NOT NULL,\n\t`created_at` integer NOT NULL,\n\t`last_run_at` integer,\n\t`runs` integer DEFAULT 0 NOT NULL,\n\t`updated_at` integer NOT NULL\n);",
       "CREATE TABLE `store_settings` (\n\t`key` text PRIMARY KEY,\n\t`value` text NOT NULL,\n\t`at` integer NOT NULL\n);",
-      "ALTER TABLE `search_index_state` ADD `analyzer` text;"
-    ]
-  },
-  {
-    "name": "20261004194950_version-15-stem-index",
-    "statements": [
-      "-- Snowball stems of `messages.text`, shaped like `message_words` so its `scope` filter and bm25 weights\n-- carry over. No prefix index: wildcards never read stems. SQL cannot stem — a UDF in a trigger would\n-- break every older writer — so the triggers only queue the message, and JS writes the stems.\nCREATE VIRTUAL TABLE message_stems USING fts5(\n  stems, scope,\n  content = '', contentless_delete = 1,\n  tokenize = 'unicode61 remove_diacritics 2');",
-      "CREATE TRIGGER message_stems_ai AFTER INSERT ON messages WHEN new.text <> '' BEGIN\n  INSERT OR IGNORE INTO message_stems_pending (pk) VALUES (new.pk);\nEND;",
-      "CREATE TRIGGER message_stems_au AFTER UPDATE OF text, sender_identity_pk, chat_pk ON messages\n  WHEN old.text IS NOT new.text\n    OR old.sender_identity_pk IS NOT new.sender_identity_pk\n    OR old.chat_pk IS NOT new.chat_pk BEGIN\n  INSERT OR IGNORE INTO message_stems_pending (pk) VALUES (new.pk);\nEND;",
-      "CREATE TRIGGER message_stems_ad AFTER DELETE ON messages BEGIN\n  DELETE FROM message_stems WHERE rowid = old.pk;\n  DELETE FROM message_stems_pending WHERE pk = old.pk;\nEND;",
-      "-- 1 is NORMALIZER_VERSION as of this version; a migration is frozen. Every file starts unbuilt\n-- (analyzer NULL): the first JS fill claims the row with its analyzer and fills up to the watermark.\nINSERT INTO search_index_state (name, watermark, filled_through, terms_through, normalizer_version, analyzer)\n  SELECT 'message_stems', coalesce(max(pk), 0), 0, 0, 1, NULL FROM messages;"
-    ]
-  },
-  {
-    "name": "20261004201838_version-16-tags",
-    "statements": [
-      "CREATE TABLE `tags` (\n\t`pk` integer PRIMARY KEY,\n\t`taggable_type` text NOT NULL,\n\t`taggable_pk` integer NOT NULL,\n\t`tag` text NOT NULL,\n\t`created_at` integer NOT NULL,\n\tCONSTRAINT `tags_taggable_type_taggable_pk_tag_unique` UNIQUE(`taggable_type`,`taggable_pk`,`tag`)\n);",
-      "CREATE INDEX `tags_by_tag` ON `tags` (`tag`,`taggable_type`,`taggable_pk`);"
-    ]
-  },
-  {
-    "name": "20261004201839_version-16-tag-triggers",
-    "statements": [
-      "-- A tag has no foreign key to cascade by: these keep a deleted message's or chat's tags from outliving it.\nCREATE TRIGGER tags_message_tombstone AFTER UPDATE OF deleted_at ON messages\n  WHEN old.deleted_at IS NULL AND new.deleted_at IS NOT NULL BEGIN\n  DELETE FROM tags WHERE taggable_type = 'message' AND taggable_pk = new.pk;\nEND;",
-      "CREATE TRIGGER tags_message_ad AFTER DELETE ON messages BEGIN\n  DELETE FROM tags WHERE taggable_type = 'message' AND taggable_pk = old.pk;\nEND;",
-      "CREATE TRIGGER tags_chat_ad AFTER DELETE ON chats BEGIN\n  DELETE FROM tags WHERE taggable_type = 'chat' AND taggable_pk = old.pk;\nEND;"
-    ]
-  },
-  {
-    "name": "20261004202018_version-17-searches",
-    "statements": [
-      "CREATE TABLE `searches` (\n\t`pk` integer PRIMARY KEY,\n\t`name` text UNIQUE,\n\t`command` text NOT NULL,\n\t`params` text NOT NULL,\n\t`language` text NOT NULL,\n\t`version` integer NOT NULL,\n\t`fields_version` integer NOT NULL,\n\t`created_at` integer NOT NULL,\n\t`last_run_at` integer,\n\t`runs` integer DEFAULT 0 NOT NULL\n);",
+      "CREATE TABLE `sync_cursors` (\n\t`account_id` integer NOT NULL,\n\t`key` text NOT NULL,\n\t`value` text NOT NULL,\n\t`updated_at` integer NOT NULL,\n\t`created_at` integer NOT NULL,\n\tCONSTRAINT `sync_cursors_pk` PRIMARY KEY(`account_id`, `key`),\n\tCONSTRAINT `fk_sync_cursors_account_id_accounts_id_fk` FOREIGN KEY (`account_id`) REFERENCES `accounts`(`id`)\n);",
+      "CREATE TABLE `sync_ranges` (\n\t`chat_id` integer NOT NULL,\n\t`from_key` integer NOT NULL,\n\t`to_key` integer NOT NULL,\n\t`created_at` integer NOT NULL,\n\t`updated_at` integer NOT NULL,\n\tCONSTRAINT `sync_ranges_pk` PRIMARY KEY(`chat_id`, `from_key`),\n\tCONSTRAINT `fk_sync_ranges_chat_id_chats_id_fk` FOREIGN KEY (`chat_id`) REFERENCES `chats`(`id`)\n);",
+      "CREATE TABLE `syncs` (\n\t`id` integer PRIMARY KEY,\n\t`account_id` integer NOT NULL,\n\t`kind` text NOT NULL,\n\t`started_at` integer NOT NULL,\n\t`finished_at` integer,\n\t`status` text NOT NULL,\n\t`counts` text,\n\t`error` text,\n\t`created_at` integer NOT NULL,\n\t`updated_at` integer NOT NULL,\n\tCONSTRAINT `fk_syncs_account_id_accounts_id_fk` FOREIGN KEY (`account_id`) REFERENCES `accounts`(`id`)\n);",
+      "CREATE TABLE `taggings` (\n\t`id` integer PRIMARY KEY,\n\t`tag_id` integer NOT NULL,\n\t`taggable_type` text NOT NULL,\n\t`taggable_id` integer NOT NULL,\n\t`source` text NOT NULL,\n\t`author_type` text,\n\t`author_id` integer,\n\t`created_at` integer NOT NULL,\n\t`updated_at` integer NOT NULL,\n\tCONSTRAINT `fk_taggings_tag_id_tags_id_fk` FOREIGN KEY (`tag_id`) REFERENCES `tags`(`id`),\n\tCONSTRAINT `taggings_tag_id_taggable_type_taggable_id_unique` UNIQUE(`tag_id`,`taggable_type`,`taggable_id`)\n);",
+      "CREATE TABLE `tags` (\n\t`id` integer PRIMARY KEY,\n\t`name` text NOT NULL UNIQUE,\n\t`created_at` integer NOT NULL,\n\t`updated_at` integer NOT NULL\n);",
+      "CREATE TABLE `task_assignments` (\n\t`id` integer PRIMARY KEY,\n\t`task_id` integer NOT NULL,\n\t`assignee_type` text NOT NULL,\n\t`assignee_id` integer NOT NULL,\n\t`role` text NOT NULL,\n\t`created_at` integer NOT NULL,\n\t`updated_at` integer NOT NULL,\n\tCONSTRAINT `fk_task_assignments_task_id_tasks_id_fk` FOREIGN KEY (`task_id`) REFERENCES `tasks`(`id`),\n\tCONSTRAINT `task_assignments_task_id_assignee_type_assignee_id_role_unique` UNIQUE(`task_id`,`assignee_type`,`assignee_id`,`role`)\n);",
+      "CREATE TABLE `task_events` (\n\t`id` integer PRIMARY KEY,\n\t`task_id` integer NOT NULL,\n\t`actor_type` text,\n\t`actor_id` integer,\n\t`kind` text NOT NULL,\n\t`changes` text,\n\t`created_at` integer NOT NULL,\n\tCONSTRAINT `fk_task_events_task_id_tasks_id_fk` FOREIGN KEY (`task_id`) REFERENCES `tasks`(`id`)\n);",
+      "CREATE TABLE `tasks` (\n\t`id` integer PRIMARY KEY,\n\t`project_id` integer NOT NULL,\n\t`number` integer NOT NULL,\n\t`key` text NOT NULL UNIQUE,\n\t`title` text NOT NULL,\n\t`description` text,\n\t`type` text NOT NULL,\n\t`status` text NOT NULL,\n\t`priority` integer,\n\t`parent_id` integer,\n\t`due_at` integer,\n\t`started_at` integer,\n\t`closed_at` integer,\n\t`closed_by_type` text,\n\t`closed_by_id` integer,\n\t`close_reason` text,\n\t`author_type` text NOT NULL,\n\t`author_id` integer NOT NULL,\n\t`source` text NOT NULL,\n\t`metadata` text,\n\t`created_at` integer NOT NULL,\n\t`updated_at` integer NOT NULL,\n\t`deleted_at` integer,\n\tCONSTRAINT `fk_tasks_project_id_projects_id_fk` FOREIGN KEY (`project_id`) REFERENCES `projects`(`id`),\n\tCONSTRAINT `fk_tasks_parent_id_tasks_id_fk` FOREIGN KEY (`parent_id`) REFERENCES `tasks`(`id`),\n\tCONSTRAINT `tasks_project_id_number_unique` UNIQUE(`project_id`,`number`)\n);",
+      "CREATE INDEX `account_identities_by_identity_id` ON `account_identities` (`identity_id`);",
+      "CREATE INDEX `aliases_by_aliasable_type_aliasable_id` ON `aliases` (`aliasable_type`,`aliasable_id`);",
+      "CREATE INDEX `aliases_by_account_id` ON `aliases` (`account_id`);",
+      "CREATE INDEX `auto_tag_claims_by_tag_id` ON `auto_tag_claims` (`tag_id`);",
+      "CREATE INDEX `bots_by_owner_person_id` ON `bots` (`owner_person_id`);",
+      "CREATE INDEX `chat_members_by_identity_id` ON `chat_members` (`identity_id`);",
+      "CREATE INDEX `chats_by_recency` ON `chats` (`account_id`,\"last_message_at\" desc);",
+      "CREATE INDEX `chunks_by_content_hash` ON `chunks` (`content_hash`);",
+      "CREATE INDEX `conversation_chunks_by_hash` ON `conversation_chunks` (`content_hash`);",
+      "CREATE INDEX `conversation_chunks_by_first_message_id` ON `conversation_chunks` (`first_message_id`);",
+      "CREATE INDEX `conversation_chunks_by_last_message_id` ON `conversation_chunks` (`last_message_id`);",
+      "CREATE INDEX `conversation_messages_by_message_id` ON `conversation_messages` (`message_id`);",
+      "CREATE INDEX `conversations_by_chat` ON `conversations` (`chat_id`,`build`,`first_at`);",
+      "CREATE INDEX `conversations_by_first_message_id` ON `conversations` (`first_message_id`);",
+      "CREATE INDEX `document_revisions_by_document_id` ON `document_revisions` (`document_id`);",
+      "CREATE INDEX `email_mailboxes_by_mailbox_id` ON `email_mailboxes` (`mailbox_id`);",
+      "CREATE INDEX `email_recipients_by_email_id` ON `email_recipients` (`email_id`);",
+      "CREATE INDEX `email_recipients_by_identity_id` ON `email_recipients` (`identity_id`);",
+      "CREATE INDEX `emails_by_time` ON `emails` (`account_id`,\"sent_at\" desc);",
+      "CREATE INDEX `emails_by_email_thread_id` ON `emails` (`email_thread_id`);",
+      "CREATE INDEX `emails_by_from_identity_id` ON `emails` (`from_identity_id`);",
+      "CREATE INDEX `events_by_time` ON `events` (`starts_at`);",
+      "CREATE INDEX `events_by_event_series_id` ON `events` (`event_series_id`);",
+      "CREATE INDEX `identity_link_events_by_identity_id` ON `identity_link_events` (`identity_id`);",
+      "CREATE INDEX `identity_link_events_by_from_person_id` ON `identity_link_events` (`from_person_id`);",
+      "CREATE INDEX `identity_link_events_by_to_person_id` ON `identity_link_events` (`to_person_id`);",
+      "CREATE INDEX `identity_links_by_person_id` ON `identity_links` (`person_id`);",
+      "CREATE INDEX `identity_revisions_by_identity` ON `identity_revisions` (`identity_id`,`created_at`);",
+      "CREATE INDEX `links_unresolved` ON `links` (`target_folded`) WHERE to_id IS NULL;",
+      "CREATE INDEX `links_by_from_type_from_id` ON `links` (`from_type`,`from_id`);",
+      "CREATE INDEX `links_by_to_type_to_id` ON `links` (`to_type`,`to_id`);",
+      "CREATE INDEX `meeting_chat_messages_by_meeting_id` ON `meeting_chat_messages` (`meeting_id`);",
+      "CREATE INDEX `meeting_chat_messages_by_sender_participant_id` ON `meeting_chat_messages` (`sender_participant_id`);",
+      "CREATE INDEX `meeting_participants_by_identity_id` ON `meeting_participants` (`identity_id`);",
+      "CREATE INDEX `meeting_series_by_event_series_id` ON `meeting_series` (`event_series_id`);",
+      "CREATE INDEX `meeting_series_by_host_identity_id` ON `meeting_series` (`host_identity_id`);",
+      "CREATE INDEX `meeting_summaries_by_meeting_id` ON `meeting_summaries` (`meeting_id`);",
+      "CREATE INDEX `meeting_transcript_rows_by_speaker_participant_id` ON `meeting_transcript_rows` (`speaker_participant_id`);",
+      "CREATE INDEX `meeting_transcripts_by_meeting_id` ON `meeting_transcripts` (`meeting_id`);",
+      "CREATE INDEX `meetings_by_time` ON `meetings` (`account_id`,\"started_at\" desc);",
+      "CREATE INDEX `meetings_by_meeting_series_id` ON `meetings` (`meeting_series_id`);",
+      "CREATE INDEX `meetings_by_event_id` ON `meetings` (`event_id`);",
+      "CREATE INDEX `meetings_by_host_identity_id` ON `meetings` (`host_identity_id`);",
+      "CREATE UNIQUE INDEX `member_stays_open` ON `member_stays` (`chat_id`,`identity_id`) WHERE left_at IS NULL;",
+      "CREATE INDEX `member_stays_by_identity_id` ON `member_stays` (`identity_id`);",
+      "CREATE INDEX `member_stays_by_invited_by_identity_id` ON `member_stays` (`invited_by_identity_id`);",
+      "CREATE UNIQUE INDEX `message_links_unique` ON `message_links` (`message_id`,ifnull(\"parent_id\", 0),`source`,`kind`,ifnull(\"build\", 0));",
+      "CREATE INDEX `message_links_by_build` ON `message_links` (`chat_id`,`build`);",
+      "CREATE INDEX `message_links_by_parent_id` ON `message_links` (`parent_id`);",
+      "CREATE INDEX `message_revisions_by_message_id` ON `message_revisions` (`message_id`);",
+      "CREATE INDEX `message_transcripts_by_message_id` ON `message_transcripts` (`message_id`);",
+      "CREATE INDEX `messages_by_time` ON `messages` (`chat_id`,\"sent_at\" desc);",
+      "CREATE INDEX `messages_by_account` ON `messages` (`account_id`,`external_id`);",
+      "CREATE INDEX `messages_to_normalize` ON `messages` (`id`) WHERE normalized_text IS NULL AND deleted_at IS NULL;",
+      "CREATE INDEX `messages_by_sender_identity_id` ON `messages` (`sender_identity_id`);",
+      "CREATE INDEX `note_revisions_by_note_id` ON `note_revisions` (`note_id`);",
+      "CREATE INDEX `notes_by_notable_type_notable_id` ON `notes` (`notable_type`,`notable_id`);",
+      "CREATE INDEX `notes_by_author_type_author_id` ON `notes` (`author_type`,`author_id`);",
+      "CREATE INDEX `projects_by_owner_type_owner_id` ON `projects` (`owner_type`,`owner_id`);",
+      "CREATE INDEX `reminders_due` ON `reminders` (`account_id`,`state`,`due_at`);",
+      "CREATE INDEX `reminders_by_task_id` ON `reminders` (`task_id`);",
       "CREATE UNIQUE INDEX `searches_history` ON `searches` (`command`,`params`) WHERE name IS NULL;",
-      "CREATE INDEX `searches_by_last_run` ON `searches` (\"last_run_at\" desc);"
+      "CREATE INDEX `searches_by_last_run` ON `searches` (\"last_run_at\" desc);",
+      "CREATE INDEX `syncs_by_account_id` ON `syncs` (`account_id`);",
+      "CREATE INDEX `taggings_by_taggable_type_taggable_id` ON `taggings` (`taggable_type`,`taggable_id`);",
+      "CREATE INDEX `taggings_by_author_type_author_id` ON `taggings` (`author_type`,`author_id`);",
+      "CREATE INDEX `task_assignments_by_assignee_type_assignee_id` ON `task_assignments` (`assignee_type`,`assignee_id`);",
+      "CREATE INDEX `task_events_by_task_id` ON `task_events` (`task_id`);",
+      "CREATE INDEX `task_events_by_actor_type_actor_id` ON `task_events` (`actor_type`,`actor_id`);",
+      "CREATE INDEX `tasks_by_status` ON `tasks` (`project_id`,`status`,`due_at`);",
+      "CREATE INDEX `tasks_by_parent_id` ON `tasks` (`parent_id`);",
+      "CREATE INDEX `tasks_by_closed_by_type_closed_by_id` ON `tasks` (`closed_by_type`,`closed_by_id`);",
+      "CREATE INDEX `tasks_by_author_type_author_id` ON `tasks` (`author_type`,`author_id`);"
     ]
   },
   {
-    "name": "20261004215824_version-18-member-history",
+    "name": "20261010001846_store-v2-search",
     "statements": [
-      "CREATE TABLE `identity_revisions` (\n\t`pk` integer PRIMARY KEY,\n\t`identity_pk` integer NOT NULL,\n\t`name` text,\n\t`username` text,\n\t`description` text,\n\t`marks` text,\n\t`captured_at` integer NOT NULL,\n\tCONSTRAINT `fk_identity_revisions_identity_pk_identities_pk_fk` FOREIGN KEY (`identity_pk`) REFERENCES `identities`(`pk`)\n);",
-      "CREATE TABLE `member_counts` (\n\t`chat_pk` integer NOT NULL,\n\t`day` text NOT NULL,\n\t`participants` integer,\n\t`listed` integer NOT NULL,\n\t`complete` integer NOT NULL,\n\t`at` integer NOT NULL,\n\tCONSTRAINT `member_counts_pk` PRIMARY KEY(`chat_pk`, `day`),\n\tCONSTRAINT `fk_member_counts_chat_pk_chats_pk_fk` FOREIGN KEY (`chat_pk`) REFERENCES `chats`(`pk`)\n);",
-      "CREATE TABLE `member_stays` (\n\t`pk` integer PRIMARY KEY,\n\t`chat_pk` integer NOT NULL,\n\t`identity_pk` integer NOT NULL,\n\t`first_seen_at` integer NOT NULL,\n\t`last_seen_at` integer NOT NULL,\n\t`joined_at` integer,\n\t`invited_by_pk` integer,\n\t`role` text,\n\t`gone_at` integer,\n\tCONSTRAINT `fk_member_stays_chat_pk_chats_pk_fk` FOREIGN KEY (`chat_pk`) REFERENCES `chats`(`pk`),\n\tCONSTRAINT `fk_member_stays_identity_pk_identities_pk_fk` FOREIGN KEY (`identity_pk`) REFERENCES `identities`(`pk`),\n\tCONSTRAINT `fk_member_stays_invited_by_pk_identities_pk_fk` FOREIGN KEY (`invited_by_pk`) REFERENCES `identities`(`pk`)\n);",
-      "ALTER TABLE `chats` ADD `members_tracked_at` integer;",
-      "CREATE INDEX `identity_revisions_by_identity` ON `identity_revisions` (`identity_pk`,`captured_at`);",
-      "CREATE UNIQUE INDEX `member_stays_open` ON `member_stays` (`chat_pk`,`identity_pk`) WHERE gone_at IS NULL;",
-      "CREATE INDEX `member_stays_by_identity` ON `member_stays` (`identity_pk`);"
-    ]
-  },
-  {
-    "name": "20261005142356_version-19-attachment-texts",
-    "statements": [
-      "CREATE TABLE `attachment_texts` (\n\t`attachment_pk` integer PRIMARY KEY,\n\t`text` text NOT NULL,\n\t`normalized_text` text NOT NULL,\n\t`origin` text NOT NULL,\n\t`extractor` text NOT NULL,\n\t`content_sha256` text,\n\t`bytes` integer,\n\t`error` text,\n\t`written_at` integer NOT NULL\n);"
-    ]
-  },
-  {
-    "name": "20261005142357_version-19-attachment-words",
-    "statements": [
-      "-- Words of the attachments' text, rowid = attachment pk. Kept apart from message_words so `text:` stays\n-- what was written and a file's words never rank a message (max-cli plan, file content search, D3 a).\nCREATE VIRTUAL TABLE attachment_words USING fts5(\n  normalized_text,\n  content = '', contentless_delete = 1,\n  tokenize = 'unicode61 remove_diacritics 2');",
-      "CREATE TRIGGER attachment_words_ai AFTER INSERT ON attachment_texts WHEN new.normalized_text <> '' BEGIN\n  INSERT INTO attachment_words (rowid, normalized_text) VALUES (new.attachment_pk, new.normalized_text);\nEND;",
-      "CREATE TRIGGER attachment_words_au AFTER UPDATE OF normalized_text ON attachment_texts\n  WHEN old.normalized_text IS NOT new.normalized_text BEGIN\n  DELETE FROM attachment_words WHERE rowid = old.attachment_pk;\n  INSERT INTO attachment_words (rowid, normalized_text)\n    SELECT new.attachment_pk, new.normalized_text WHERE new.normalized_text <> '';\nEND;",
-      "CREATE TRIGGER attachment_words_ad AFTER DELETE ON attachment_texts BEGIN\n  DELETE FROM attachment_words WHERE rowid = old.attachment_pk;\nEND;",
-      "-- Triggers, not code, so a build pinned to an older package still erases a deleted message's file text.\nCREATE TRIGGER attachment_texts_message_tombstone AFTER UPDATE OF deleted_at ON messages\n  WHEN old.deleted_at IS NULL AND new.deleted_at IS NOT NULL BEGIN\n  DELETE FROM attachment_texts WHERE attachment_pk IN (SELECT pk FROM attachments WHERE message_pk = new.pk);\nEND;",
-      "CREATE TRIGGER attachment_texts_message_ad AFTER DELETE ON messages BEGIN\n  DELETE FROM attachment_texts WHERE attachment_pk IN (SELECT pk FROM attachments WHERE message_pk = old.pk);\nEND;",
-      "CREATE TRIGGER attachment_texts_attachment_ad AFTER DELETE ON attachments BEGIN\n  DELETE FROM attachment_texts WHERE attachment_pk = old.pk;\nEND;"
-    ]
-  },
-  {
-    "name": "20261005215529_version-20-tasks",
-    "statements": [
-      "CREATE TABLE `tasks` (\n\t`id` text PRIMARY KEY,\n\t`source` text NOT NULL,\n\t`source_kind` text NOT NULL,\n\t`account` text NOT NULL,\n\t`group_key` text NOT NULL,\n\t`kind` text NOT NULL,\n\t`state` text NOT NULL,\n\t`reason` text,\n\t`origin` text NOT NULL,\n\t`created_at` integer NOT NULL,\n\t`due_at` integer,\n\t`closed_at` integer,\n\t`closed_by` text\n);",
-      "CREATE INDEX `tasks_by_source` ON `tasks` (`account`,`source`);",
-      "CREATE INDEX `tasks_by_state` ON `tasks` (`account`,`state`,`group_key`);"
-    ]
-  },
-  {
-    "name": "20261006182644_version-21-chunk-ranges",
-    "statements": [
-      "ALTER TABLE `conversation_chunks` ADD `text_start` integer;",
-      "ALTER TABLE `conversation_chunks` ADD `text_end` integer;"
-    ]
-  },
-  {
-    "name": "20261007192852_version-22-private-metadata",
-    "statements": [
-      "CREATE TABLE `annotations` (\n\t`uid` text PRIMARY KEY,\n\t`account_pk` integer NOT NULL,\n\t`target_type` text NOT NULL,\n\t`target_pk` integer NOT NULL,\n\t`text` text NOT NULL,\n\t`revision` integer DEFAULT 1 NOT NULL,\n\t`created_at` integer NOT NULL,\n\t`updated_at` integer NOT NULL,\n\t`authored_by` text NOT NULL,\n\tCONSTRAINT `fk_annotations_account_pk_accounts_pk_fk` FOREIGN KEY (`account_pk`) REFERENCES `accounts`(`pk`)\n);",
-      "CREATE TABLE `auto_tag_claims` (\n\t`chat_pk` integer NOT NULL,\n\t`tag` text NOT NULL,\n\t`algorithm` text NOT NULL,\n\t`score` real NOT NULL,\n\t`fields` text NOT NULL,\n\t`created_at` integer NOT NULL,\n\tCONSTRAINT `auto_tag_claims_pk` PRIMARY KEY(`chat_pk`, `tag`),\n\tCONSTRAINT `fk_auto_tag_claims_chat_pk_chats_pk_fk` FOREIGN KEY (`chat_pk`) REFERENCES `chats`(`pk`)\n);",
-      "CREATE TABLE `chat_metadata` (\n\t`chat_pk` integer PRIMARY KEY,\n\t`title` text,\n\t`username` text,\n\t`description` text,\n\t`fetched_at` integer NOT NULL,\n\tCONSTRAINT `fk_chat_metadata_chat_pk_chats_pk_fk` FOREIGN KEY (`chat_pk`) REFERENCES `chats`(`pk`)\n);",
-      "CREATE TABLE `contact_aliases` (\n\t`account_pk` integer NOT NULL,\n\t`identity_pk` integer NOT NULL,\n\t`alias` text,\n\t`updated_at` integer NOT NULL,\n\tCONSTRAINT `contact_aliases_pk` PRIMARY KEY(`account_pk`, `identity_pk`),\n\tCONSTRAINT `fk_contact_aliases_account_pk_accounts_pk_fk` FOREIGN KEY (`account_pk`) REFERENCES `accounts`(`pk`),\n\tCONSTRAINT `fk_contact_aliases_identity_pk_identities_pk_fk` FOREIGN KEY (`identity_pk`) REFERENCES `identities`(`pk`)\n);",
-      "CREATE INDEX `annotations_by_target` ON `annotations` (`account_pk`,`target_type`,`target_pk`);"
-    ]
-  },
-  {
-    "name": "20261007193040_version-22-tag-provenance",
-    "statements": [
-      "ALTER TABLE `tags` ADD `manual` integer DEFAULT 1 NOT NULL;"
-    ]
-  },
-  {
-    "name": "20261007193701_version-22-alias-folding",
-    "statements": [
-      "ALTER TABLE `contact_aliases` ADD `alias_folded` text;"
-    ]
-  },
-  {
-    "name": "20261007194652_version-22-metadata-cleanup",
-    "statements": [
-      "CREATE TRIGGER private_metadata_chat_delete BEFORE DELETE ON chats BEGIN\n  DELETE FROM chat_metadata WHERE chat_pk=old.pk;\n  DELETE FROM auto_tag_claims WHERE chat_pk=old.pk;\n  DELETE FROM annotations WHERE target_type='chat' AND target_pk=old.pk;\nEND;",
-      "CREATE TRIGGER private_metadata_identity_delete BEFORE DELETE ON identities BEGIN\n  DELETE FROM contact_aliases WHERE identity_pk=old.pk;\n  DELETE FROM annotations WHERE target_type='contact' AND target_pk=old.pk;\nEND;",
-      "CREATE TRIGGER private_metadata_account_delete BEFORE DELETE ON accounts BEGIN\n  DELETE FROM contact_aliases WHERE account_pk=old.pk;\n  DELETE FROM annotations WHERE account_pk=old.pk;\nEND;"
-    ]
-  },
-  {
-    "name": "20261007221350_version-23-knowledge",
-    "statements": [
-      "CREATE TABLE `knowledge_entities` (\n\t`uid` text PRIMARY KEY,\n\t`account_pk` integer NOT NULL,\n\t`kind` text NOT NULL,\n\t`name` text NOT NULL,\n\t`created_at` integer NOT NULL,\n\tCONSTRAINT `fk_knowledge_entities_account_pk_accounts_pk_fk` FOREIGN KEY (`account_pk`) REFERENCES `accounts`(`pk`)\n);",
-      "CREATE TABLE `knowledge_relations` (\n\t`uid` text PRIMARY KEY,\n\t`account_pk` integer NOT NULL,\n\t`from_ref` text NOT NULL,\n\t`to_ref` text NOT NULL,\n\t`kind` text NOT NULL,\n\t`role` text,\n\t`evidence` text,\n\t`created_at` integer NOT NULL,\n\tCONSTRAINT `fk_knowledge_relations_account_pk_accounts_pk_fk` FOREIGN KEY (`account_pk`) REFERENCES `accounts`(`pk`)\n);",
-      "CREATE TABLE `knowledge_reminders` (\n\t`uid` text PRIMARY KEY,\n\t`account_pk` integer NOT NULL,\n\t`task_id` text NOT NULL,\n\t`due_at` integer NOT NULL,\n\t`timezone` text NOT NULL,\n\t`state` text NOT NULL,\n\t`revision` integer DEFAULT 1 NOT NULL,\n\t`lease_until` integer,\n\t`receipt` text,\n\t`created_at` integer NOT NULL,\n\t`updated_at` integer NOT NULL,\n\tCONSTRAINT `fk_knowledge_reminders_account_pk_accounts_pk_fk` FOREIGN KEY (`account_pk`) REFERENCES `accounts`(`pk`)\n);",
-      "CREATE TABLE `knowledge_targets` (\n\t`pk` integer PRIMARY KEY AUTOINCREMENT,\n\t`account_pk` integer NOT NULL,\n\t`type` text NOT NULL,\n\t`reference` text NOT NULL,\n\t`created_at` integer NOT NULL,\n\tCONSTRAINT `fk_knowledge_targets_account_pk_accounts_pk_fk` FOREIGN KEY (`account_pk`) REFERENCES `accounts`(`pk`)\n);",
-      "CREATE UNIQUE INDEX `knowledge_relation_identity` ON `knowledge_relations` (`account_pk`,`from_ref`,`to_ref`,`kind`);",
-      "CREATE INDEX `knowledge_reminders_due` ON `knowledge_reminders` (`account_pk`,`state`,`due_at`);",
-      "CREATE UNIQUE INDEX `knowledge_target_identity` ON `knowledge_targets` (`account_pk`,`type`,`reference`);"
-    ]
-  },
-  {
-    "name": "20261007221537_version-23-knowledge-cleanup",
-    "statements": [
-      "-- Custom SQL migration file, put your code below! --\nCREATE TRIGGER knowledge_account_delete BEFORE DELETE ON accounts BEGIN\n  DELETE FROM tags WHERE taggable_type='knowledge' AND taggable_pk IN (SELECT pk FROM knowledge_targets WHERE account_pk=old.pk);\n  DELETE FROM annotations WHERE target_type='source' AND account_pk=old.pk;\n  DELETE FROM knowledge_relations WHERE account_pk=old.pk;\n  DELETE FROM knowledge_reminders WHERE account_pk=old.pk;\n  DELETE FROM knowledge_entities WHERE account_pk=old.pk;\n  DELETE FROM knowledge_targets WHERE account_pk=old.pk;\nEND;",
-      "CREATE TRIGGER knowledge_task_closed AFTER UPDATE OF state ON tasks WHEN new.state<>'open' BEGIN\n  UPDATE knowledge_reminders SET state='cancelled',receipt=NULL,lease_until=NULL,revision=revision+1\n  WHERE task_id=new.id AND state IN ('pending','leased');\nEND;"
-    ]
-  },
-  {
-    "name": "20261007225410_version-23-relation-proposals",
-    "statements": [
-      "ALTER TABLE `knowledge_relations` ADD `confirmed` integer DEFAULT 1 NOT NULL;",
-      "ALTER TABLE `knowledge_relations` ADD `provenance` text;"
-    ]
-  },
-  {
-    "name": "20261008010235_retention-counter-observations",
-    "statements": [
-      "CREATE TABLE `membership_batch_members` (\n\t`batch_pk` integer NOT NULL,\n\t`identity_pk` integer NOT NULL,\n\t`stay_pk` integer NOT NULL,\n\tCONSTRAINT `membership_batch_members_pk` PRIMARY KEY(`batch_pk`, `identity_pk`),\n\tCONSTRAINT `fk_membership_batch_members_batch_pk_membership_batches_pk_fk` FOREIGN KEY (`batch_pk`) REFERENCES `membership_batches`(`pk`) ON DELETE CASCADE,\n\tCONSTRAINT `fk_membership_batch_members_identity_pk_identities_pk_fk` FOREIGN KEY (`identity_pk`) REFERENCES `identities`(`pk`) ON DELETE CASCADE,\n\tCONSTRAINT `fk_membership_batch_members_stay_pk_member_stays_pk_fk` FOREIGN KEY (`stay_pk`) REFERENCES `member_stays`(`pk`) ON DELETE CASCADE\n);",
-      "CREATE TABLE `membership_batches` (\n\t`pk` integer PRIMARY KEY,\n\t`chat_pk` integer NOT NULL,\n\t`observed_at` integer NOT NULL,\n\t`started_at` integer,\n\t`complete` integer NOT NULL,\n\t`participants` integer,\n\t`listed` integer NOT NULL,\n\t`source` text NOT NULL,\n\tCONSTRAINT `fk_membership_batches_chat_pk_chats_pk_fk` FOREIGN KEY (`chat_pk`) REFERENCES `chats`(`pk`) ON DELETE CASCADE\n);",
-      "CREATE TABLE `message_counter_observations` (\n\t`message_pk` integer NOT NULL,\n\t`counter` text NOT NULL,\n\t`value` real NOT NULL,\n\t`observed_at` integer NOT NULL,\n\t`source` text NOT NULL,\n\tCONSTRAINT `message_counter_observations_pk` PRIMARY KEY(`message_pk`, `counter`),\n\tCONSTRAINT `fk_message_counter_observations_message_pk_messages_pk_fk` FOREIGN KEY (`message_pk`) REFERENCES `messages`(`pk`) ON DELETE CASCADE\n);",
-      "CREATE INDEX `membership_members_by_stay` ON `membership_batch_members` (`stay_pk`,`batch_pk`);",
-      "CREATE INDEX `membership_batches_by_chat_time` ON `membership_batches` (`chat_pk`,`observed_at`);"
-    ]
-  },
-  {
-    "name": "20261008175932_version-25-notes",
-    "statements": [
-      "CREATE TABLE `entities` (\n\t`id` text PRIMARY KEY,\n\t`kind` text NOT NULL,\n\t`name` text NOT NULL,\n\t`created_at` integer NOT NULL\n);",
-      "CREATE TABLE `links` (\n\t`id` text PRIMARY KEY,\n\t`from_ref` text NOT NULL,\n\t`to_ref` text,\n\t`kind` text NOT NULL,\n\t`anchor` text,\n\t`origin` text NOT NULL,\n\t`target_text` text,\n\t`target_folded` text,\n\t`role` text,\n\t`evidence` text,\n\t`provenance` text,\n\t`confirmed` integer DEFAULT 1 NOT NULL,\n\t`created_at` integer NOT NULL\n);",
-      "CREATE TABLE `note_folders` (\n\t`id` text PRIMARY KEY,\n\t`name` text NOT NULL,\n\t`format` text NOT NULL,\n\t`pending_path` text,\n\t`account_pk` integer UNIQUE,\n\t`created_at` integer NOT NULL,\n\tCONSTRAINT `fk_note_folders_account_pk_accounts_pk_fk` FOREIGN KEY (`account_pk`) REFERENCES `accounts`(`pk`)\n);",
-      "CREATE TABLE `note_revisions` (\n\t`note_pk` integer NOT NULL,\n\t`text` text NOT NULL,\n\t`captured_at` integer NOT NULL,\n\tCONSTRAINT `fk_note_revisions_note_pk_notes_pk_fk` FOREIGN KEY (`note_pk`) REFERENCES `notes`(`pk`)\n);",
-      "CREATE TABLE `notes` (\n\t`pk` integer PRIMARY KEY,\n\t`id` text NOT NULL UNIQUE,\n\t`source` text NOT NULL,\n\t`folder_id` text,\n\t`path` text,\n\t`title` text,\n\t`text` text NOT NULL,\n\t`front_matter` text,\n\t`content_hash` text,\n\t`revision` integer DEFAULT 1 NOT NULL,\n\t`export_path` text,\n\t`created_at` integer NOT NULL,\n\t`updated_at` integer NOT NULL,\n\t`deleted_at` integer,\n\tCONSTRAINT `fk_notes_folder_id_note_folders_id_fk` FOREIGN KEY (`folder_id`) REFERENCES `note_folders`(`id`)\n);",
-      "CREATE INDEX `links_from` ON `links` (`from_ref`);",
-      "CREATE INDEX `links_to` ON `links` (`to_ref`);",
-      "CREATE INDEX `links_unresolved` ON `links` (`target_folded`) WHERE to_ref IS NULL;",
-      "CREATE INDEX `note_revisions_by_note` ON `note_revisions` (`note_pk`);",
-      "CREATE UNIQUE INDEX `notes_by_path` ON `notes` (`folder_id`,`path`);"
-    ]
-  },
-  {
-    "name": "20261008175933_version-25-note-triggers",
-    "statements": [
-      "-- A tag or an outgoing link has no foreign key to cascade by: these keep them from outliving their note.\nCREATE TRIGGER notes_tombstone AFTER UPDATE OF deleted_at ON notes\n  WHEN old.deleted_at IS NULL AND new.deleted_at IS NOT NULL BEGIN\n  DELETE FROM tags WHERE taggable_type = 'note' AND taggable_pk = new.pk;\nEND;",
-      "CREATE TRIGGER notes_bd BEFORE DELETE ON notes BEGIN\n  DELETE FROM tags WHERE taggable_type = 'note' AND taggable_pk = old.pk;\n  DELETE FROM note_revisions WHERE note_pk = old.pk;\n  DELETE FROM links WHERE from_ref = 'note:' || old.id;\nEND;",
-      "CREATE TRIGGER note_folders_account_bd BEFORE DELETE ON accounts BEGIN\n  UPDATE note_folders SET account_pk = NULL WHERE account_pk = old.pk;\nEND;"
-    ]
-  },
-  {
-    "name": "20261008182026_version-26-note-chunks",
-    "statements": [
-      "CREATE TABLE `note_chunks` (\n\t`note_pk` integer NOT NULL,\n\t`seq` integer NOT NULL,\n\t`text_start` integer NOT NULL,\n\t`text_end` integer NOT NULL,\n\t`content_hash` text NOT NULL,\n\tCONSTRAINT `note_chunks_pk` PRIMARY KEY(`note_pk`, `seq`),\n\tCONSTRAINT `fk_note_chunks_note_pk_notes_pk_fk` FOREIGN KEY (`note_pk`) REFERENCES `notes`(`pk`) ON DELETE CASCADE\n);",
-      "CREATE INDEX `note_chunks_by_hash` ON `note_chunks` (`content_hash`);"
-    ]
-  },
-  {
-    "name": "20261008182031_version-26-note-index",
-    "statements": [
-      "-- The same words and stems indexes messages have, for notes. Written by JS from a queue, not by triggers:\n-- the words are normalized and the stems computed in JS, and every writer of `notes` only has to enqueue.\nCREATE VIRTUAL TABLE note_words USING fts5(\n  normalized_text, scope,\n  content = '', contentless_delete = 1,\n  tokenize = 'unicode61 remove_diacritics 2', prefix = '3');",
+      "-- Trigram indexes over names and text, kept by triggers; external content, so their rowid is the row's id.\nCREATE VIRTUAL TABLE identities_fts USING fts5(name, username, content='identities', content_rowid='id', tokenize='trigram');",
+      "CREATE TRIGGER identities_fts_ai AFTER INSERT ON identities BEGIN\n  INSERT INTO identities_fts (rowid, name, username) VALUES (new.id, new.name, new.username);\nEND;",
+      "CREATE TRIGGER identities_fts_au AFTER UPDATE OF name, username ON identities BEGIN\n  INSERT INTO identities_fts (identities_fts, rowid, name, username) VALUES ('delete', old.id, old.name, old.username);\n  INSERT INTO identities_fts (rowid, name, username) VALUES (new.id, new.name, new.username);\nEND;",
+      "CREATE TRIGGER identities_fts_ad AFTER DELETE ON identities BEGIN\n  INSERT INTO identities_fts (identities_fts, rowid, name, username) VALUES ('delete', old.id, old.name, old.username);\nEND;",
+      "CREATE VIRTUAL TABLE chats_fts USING fts5(title, content='chats', content_rowid='id', tokenize='trigram');",
+      "CREATE TRIGGER chats_fts_ai AFTER INSERT ON chats BEGIN\n  INSERT INTO chats_fts (rowid, title) VALUES (new.id, new.title);\nEND;",
+      "CREATE TRIGGER chats_fts_au AFTER UPDATE OF title ON chats BEGIN\n  INSERT INTO chats_fts (chats_fts, rowid, title) VALUES ('delete', old.id, old.title);\n  INSERT INTO chats_fts (rowid, title) VALUES (new.id, new.title);\nEND;",
+      "CREATE TRIGGER chats_fts_ad AFTER DELETE ON chats BEGIN\n  INSERT INTO chats_fts (chats_fts, rowid, title) VALUES ('delete', old.id, old.title);\nEND;",
+      "-- Trigram for message text (owner, 2026-09-29): a search finds any three letters inside a word.\nCREATE VIRTUAL TABLE messages_fts USING fts5(text, content='messages', content_rowid='id', tokenize='trigram');",
+      "CREATE TRIGGER messages_fts_ai AFTER INSERT ON messages BEGIN\n  INSERT INTO messages_fts (rowid, text) VALUES (new.id, new.text);\nEND;",
+      "CREATE TRIGGER messages_fts_au AFTER UPDATE OF text ON messages BEGIN\n  INSERT INTO messages_fts (messages_fts, rowid, text) VALUES ('delete', old.id, old.text);\n  INSERT INTO messages_fts (rowid, text) VALUES (new.id, new.text);\nEND;",
+      "CREATE TRIGGER messages_fts_ad AFTER DELETE ON messages BEGIN\n  INSERT INTO messages_fts (messages_fts, rowid, text) VALUES ('delete', old.id, old.text);\nEND;",
+      "CREATE TRIGGER chats_count_ai AFTER INSERT ON messages WHEN new.deleted_at IS NULL BEGIN\n  UPDATE chats SET message_count = message_count + 1 WHERE id = new.chat_id;\nEND;",
+      "CREATE TRIGGER chats_count_ad AFTER DELETE ON messages WHEN old.deleted_at IS NULL BEGIN\n  UPDATE chats SET message_count = message_count - 1 WHERE id = old.chat_id;\nEND;",
+      "CREATE TRIGGER chats_count_tombstone AFTER UPDATE OF deleted_at ON messages\n  WHEN old.deleted_at IS NULL AND new.deleted_at IS NOT NULL BEGIN\n  UPDATE chats SET message_count = message_count - 1 WHERE id = new.chat_id;\nEND;",
+      "CREATE TRIGGER chats_count_untombstone AFTER UPDATE OF deleted_at ON messages\n  WHEN old.deleted_at IS NOT NULL AND new.deleted_at IS NULL BEGIN\n  UPDATE chats SET message_count = message_count + 1 WHERE id = new.chat_id;\nEND;",
+      "-- Words of the normalized text, ranked by bm25. Contentless with delete support: an index filled in\n-- batches after its triggers exist stays consistent only this way. `scope` holds `c<chat_id>` and\n-- `s<sender_identity_id>` so a small chat or a sender is filtered inside the index.\nCREATE VIRTUAL TABLE message_words USING fts5(\n  normalized_text, scope,\n  content = '', contentless_delete = 1,\n  tokenize = 'unicode61 remove_diacritics 2', prefix = '3');",
+      "-- 'col', not 'row': the scope tokens must never come back as a word or a correction.\nCREATE VIRTUAL TABLE message_words_vocab USING fts5vocab(message_words, 'col');",
+      "CREATE TRIGGER message_words_ai AFTER INSERT ON messages WHEN new.normalized_text <> '' BEGIN\n  INSERT INTO message_words (rowid, normalized_text, scope)\n    VALUES (new.id, new.normalized_text, 'c' || new.chat_id || coalesce(' s' || new.sender_identity_id, ''));\nEND;",
+      "-- Every re-save of a message sets these columns; only a real change may touch the index.\nCREATE TRIGGER message_words_au AFTER UPDATE OF normalized_text, sender_identity_id, chat_id ON messages\n  WHEN old.normalized_text IS NOT new.normalized_text\n    OR old.sender_identity_id IS NOT new.sender_identity_id\n    OR old.chat_id IS NOT new.chat_id BEGIN\n  DELETE FROM message_words WHERE rowid = old.id;\n  INSERT INTO message_words (rowid, normalized_text, scope)\n    SELECT new.id, new.normalized_text, 'c' || new.chat_id || coalesce(' s' || new.sender_identity_id, '')\n    WHERE new.normalized_text <> '';\nEND;",
+      "CREATE TRIGGER message_words_ad AFTER DELETE ON messages BEGIN\n  DELETE FROM message_words WHERE rowid = old.id;\nEND;",
+      "-- Snowball stems, shaped like `message_words` so its `scope` filter and bm25 weights carry over. No prefix\n-- index: wildcards never read stems. SQL cannot stem, so the triggers only queue the row and JS writes the\n-- stems. Every `*_stems` index below follows this recipe.\nCREATE VIRTUAL TABLE message_stems USING fts5(\n  stems, scope,\n  content = '', contentless_delete = 1,\n  tokenize = 'unicode61 remove_diacritics 2');",
+      "CREATE TRIGGER message_stems_ai AFTER INSERT ON messages WHEN new.text <> '' BEGIN\n  INSERT OR IGNORE INTO message_stems_pending (id) VALUES (new.id);\nEND;",
+      "CREATE TRIGGER message_stems_au AFTER UPDATE OF text, sender_identity_id, chat_id ON messages\n  WHEN old.text IS NOT new.text\n    OR old.sender_identity_id IS NOT new.sender_identity_id\n    OR old.chat_id IS NOT new.chat_id BEGIN\n  INSERT OR IGNORE INTO message_stems_pending (id) VALUES (new.id);\nEND;",
+      "CREATE TRIGGER message_stems_ad AFTER DELETE ON messages BEGIN\n  DELETE FROM message_stems WHERE rowid = old.id;\n  DELETE FROM message_stems_pending WHERE id = old.id;\nEND;",
+      "-- Words of an attachment's text, rowid = attachment id. Apart from message_words so `text:` stays what was\n-- written and a file's words never rank a message.\nCREATE VIRTUAL TABLE attachment_words USING fts5(\n  normalized_text,\n  content = '', contentless_delete = 1,\n  tokenize = 'unicode61 remove_diacritics 2');",
+      "CREATE TRIGGER attachment_words_ai AFTER INSERT ON attachments WHEN new.normalized_text <> '' BEGIN\n  INSERT INTO attachment_words (rowid, normalized_text) VALUES (new.id, new.normalized_text);\nEND;",
+      "CREATE TRIGGER attachment_words_au AFTER UPDATE OF normalized_text ON attachments\n  WHEN old.normalized_text IS NOT new.normalized_text BEGIN\n  DELETE FROM attachment_words WHERE rowid = old.id;\n  INSERT INTO attachment_words (rowid, normalized_text)\n    SELECT new.id, new.normalized_text WHERE new.normalized_text <> '';\nEND;",
+      "CREATE TRIGGER attachment_words_ad AFTER DELETE ON attachments BEGIN\n  DELETE FROM attachment_words WHERE rowid = old.id;\nEND;",
+      "-- Polymorphic rows have no foreign key to cascade by: these keep what hangs off a message, a chat, an\n-- identity or an account from outliving it, whichever build deletes it.\nCREATE TRIGGER message_tombstone AFTER UPDATE OF deleted_at ON messages\n  WHEN old.deleted_at IS NULL AND new.deleted_at IS NOT NULL BEGIN\n  UPDATE attachments SET text = NULL, normalized_text = NULL\n    WHERE attachable_type = 'message' AND attachable_id = new.id;\n  DELETE FROM taggings WHERE taggable_type = 'message' AND taggable_id = new.id;\nEND;",
+      "CREATE TRIGGER message_ad AFTER DELETE ON messages BEGIN\n  DELETE FROM attachments WHERE attachable_type = 'message' AND attachable_id = old.id;\n  DELETE FROM taggings WHERE taggable_type = 'message' AND taggable_id = old.id;\nEND;",
+      "CREATE TRIGGER chat_bd BEFORE DELETE ON chats BEGIN\n  DELETE FROM auto_tag_claims WHERE chat_id = old.id;\n  DELETE FROM taggings WHERE taggable_type = 'chat' AND taggable_id = old.id;\n  DELETE FROM aliases WHERE aliasable_type = 'chat' AND aliasable_id = old.id;\nEND;",
+      "CREATE TRIGGER identity_bd BEFORE DELETE ON identities BEGIN\n  DELETE FROM aliases WHERE aliasable_type = 'identity' AND aliasable_id = old.id;\nEND;",
+      "CREATE TRIGGER account_bd BEFORE DELETE ON accounts BEGIN\n  DELETE FROM aliases WHERE account_id = old.id;\n  DELETE FROM reminders WHERE account_id = old.id;\nEND;",
+      "CREATE TRIGGER reminders_task_closed AFTER UPDATE OF status ON tasks\n  WHEN new.status IN ('done', 'dismissed') AND old.status NOT IN ('done', 'dismissed') BEGIN\n  UPDATE reminders SET state = 'cancelled', receipt = NULL, lease_until = NULL, revision = revision + 1\n    WHERE task_id = new.id AND state IN ('pending', 'leased');\nEND;",
+      "-- Documents, notes, emails and meetings: written by JS from a queue, not by triggers, because the words are\n-- normalized and the stems computed in JS; every writer only has to enqueue. The words indexes follow\n-- `message_words` (prefix index, a 'col' vocabulary).\nCREATE VIRTUAL TABLE document_words USING fts5(\n  normalized_text, scope,\n  content = '', contentless_delete = 1,\n  tokenize = 'unicode61 remove_diacritics 2', prefix = '3');",
+      "CREATE VIRTUAL TABLE document_words_vocab USING fts5vocab(document_words, 'col');",
+      "CREATE VIRTUAL TABLE document_stems USING fts5(\n  stems, scope,\n  content = '', contentless_delete = 1,\n  tokenize = 'unicode61 remove_diacritics 2');",
+      "CREATE TRIGGER document_index_ai AFTER INSERT ON documents BEGIN\n  INSERT OR IGNORE INTO document_index_pending (indexable_type, id) VALUES ('document', new.id);\nEND;",
+      "CREATE TRIGGER document_index_au AFTER UPDATE OF title, body, deleted_at, account_id ON documents\n  WHEN old.title IS NOT new.title OR old.body IS NOT new.body OR old.deleted_at IS NOT new.deleted_at\n    OR old.account_id IS NOT new.account_id BEGIN\n  INSERT OR IGNORE INTO document_index_pending (indexable_type, id) VALUES ('document', new.id);\nEND;",
+      "CREATE TRIGGER document_tombstone AFTER UPDATE OF deleted_at ON documents\n  WHEN old.deleted_at IS NULL AND new.deleted_at IS NOT NULL BEGIN\n  DELETE FROM taggings WHERE taggable_type = 'document' AND taggable_id = new.id;\nEND;",
+      "-- A vector is keyed by text alone, so it goes only when no other chunk or conversation chunk still uses it.\nCREATE TRIGGER document_bd BEFORE DELETE ON documents BEGIN\n  DELETE FROM embeddings WHERE content_hash IN (\n    SELECT k.content_hash FROM chunks k WHERE k.chunkable_type = 'document' AND k.chunkable_id = old.id\n      AND NOT EXISTS (SELECT 1 FROM chunks o WHERE o.content_hash = k.content_hash\n        AND NOT (o.chunkable_type = 'document' AND o.chunkable_id = old.id))\n      AND NOT EXISTS (SELECT 1 FROM conversation_chunks c WHERE c.content_hash = k.content_hash));\n  DELETE FROM chunks WHERE chunkable_type = 'document' AND chunkable_id = old.id;\n  DELETE FROM document_words WHERE rowid = old.id;\n  DELETE FROM document_stems WHERE rowid = old.id;\n  DELETE FROM document_index_pending WHERE indexable_type = 'document' AND id = old.id;\n  DELETE FROM document_revisions WHERE document_id = old.id;\n  DELETE FROM taggings WHERE taggable_type = 'document' AND taggable_id = old.id;\n  DELETE FROM links WHERE from_type = 'document' AND from_id = old.id;\nEND;",
+      "CREATE VIRTUAL TABLE note_words USING fts5(\n  normalized_text, scope,\n  content = '', contentless_delete = 1,\n  tokenize = 'unicode61 remove_diacritics 2', prefix = '3');",
       "CREATE VIRTUAL TABLE note_words_vocab USING fts5vocab(note_words, 'col');",
       "CREATE VIRTUAL TABLE note_stems USING fts5(\n  stems, scope,\n  content = '', contentless_delete = 1,\n  tokenize = 'unicode61 remove_diacritics 2');",
-      "CREATE TABLE note_index_pending (pk INTEGER PRIMARY KEY);",
-      "CREATE TRIGGER note_index_ai AFTER INSERT ON notes BEGIN\n  INSERT OR IGNORE INTO note_index_pending (pk) VALUES (new.pk);\nEND;",
-      "CREATE TRIGGER note_index_au AFTER UPDATE OF title, text, deleted_at, folder_id, source ON notes\n  WHEN old.title IS NOT new.title OR old.text IS NOT new.text OR old.deleted_at IS NOT new.deleted_at\n    OR old.folder_id IS NOT new.folder_id OR old.source IS NOT new.source BEGIN\n  INSERT OR IGNORE INTO note_index_pending (pk) VALUES (new.pk);\nEND;",
-      "-- A vector is keyed by text alone, so it goes only when no other note or conversation chunk still uses it.\nCREATE TRIGGER note_index_bd BEFORE DELETE ON notes BEGIN\n  DELETE FROM chunk_vectors WHERE content_hash IN (\n    SELECT k.content_hash FROM note_chunks k WHERE k.note_pk = old.pk\n      AND NOT EXISTS (SELECT 1 FROM note_chunks o WHERE o.content_hash = k.content_hash AND o.note_pk <> old.pk)\n      AND NOT EXISTS (SELECT 1 FROM conversation_chunks c WHERE c.content_hash = k.content_hash));\n  DELETE FROM note_words WHERE rowid = old.pk;\n  DELETE FROM note_stems WHERE rowid = old.pk;\n  DELETE FROM note_index_pending WHERE pk = old.pk;\nEND;",
-      "-- `analyzer` stays NULL until the first drain claims it; a different one later re-queues every note.\nINSERT INTO search_index_state (name, watermark, filled_through, terms_through, normalizer_version, built_at)\n  VALUES ('note_index', 0, 0, 0, 1, NULL);",
-      "INSERT OR IGNORE INTO note_index_pending (pk) SELECT pk FROM notes;"
-    ]
-  },
-  {
-    "name": "20261008191711_version-27-owner-targets",
-    "statements": [
-      "CREATE TABLE `owner_targets` (\n\t`pk` integer PRIMARY KEY,\n\t`reference` text NOT NULL UNIQUE,\n\t`folder_id` text,\n\t`folder_path` text,\n\t`created_at` integer NOT NULL\n);",
-      "CREATE INDEX `owner_targets_by_folder` ON `owner_targets` (`folder_id`,`folder_path`);"
-    ]
-  },
-  {
-    "name": "20261009092409_version-28-legacy-notes-data",
-    "statements": [
-      "DELETE FROM tags WHERE taggable_type = 'knowledge';",
-      "DELETE FROM annotations;",
-      "DELETE FROM knowledge_relations;",
-      "DELETE FROM knowledge_entities;",
-      "DELETE FROM knowledge_targets;",
-      "DROP TRIGGER IF EXISTS knowledge_account_delete;",
-      "CREATE TRIGGER knowledge_account_delete BEFORE DELETE ON accounts BEGIN\n  DELETE FROM knowledge_reminders WHERE account_pk=old.pk;\nEND;",
-      "DROP TRIGGER IF EXISTS private_metadata_account_delete;",
-      "CREATE TRIGGER private_metadata_account_delete BEFORE DELETE ON accounts BEGIN\n  DELETE FROM contact_aliases WHERE account_pk=old.pk;\nEND;",
-      "DROP TRIGGER IF EXISTS private_metadata_chat_delete;",
-      "CREATE TRIGGER private_metadata_chat_delete BEFORE DELETE ON chats BEGIN\n  DELETE FROM chat_metadata WHERE chat_pk=old.pk;\n  DELETE FROM auto_tag_claims WHERE chat_pk=old.pk;\nEND;",
-      "DROP TRIGGER IF EXISTS private_metadata_identity_delete;",
-      "CREATE TRIGGER private_metadata_identity_delete BEFORE DELETE ON identities BEGIN\n  DELETE FROM contact_aliases WHERE identity_pk=old.pk;\nEND;",
-      "DELETE FROM message_revisions WHERE message_pk IN (SELECT m.pk FROM messages m JOIN accounts a ON a.pk = m.account_pk WHERE a.provider = 'notes');",
-      "DELETE FROM attachments WHERE message_pk IN (SELECT m.pk FROM messages m JOIN accounts a ON a.pk = m.account_pk WHERE a.provider = 'notes');",
-      "DELETE FROM messages WHERE account_pk IN (SELECT pk FROM accounts WHERE provider = 'notes');",
-      "DELETE FROM sync_ranges WHERE chat_pk IN (SELECT c.pk FROM chats c JOIN accounts a ON a.pk = c.account_pk WHERE a.provider = 'notes');",
-      "DELETE FROM fetch_leases WHERE chat_pk IN (SELECT c.pk FROM chats c JOIN accounts a ON a.pk = c.account_pk WHERE a.provider = 'notes');",
-      "DELETE FROM transcripts WHERE chat_pk IN (SELECT c.pk FROM chats c JOIN accounts a ON a.pk = c.account_pk WHERE a.provider = 'notes');",
-      "DELETE FROM chat_members WHERE chat_pk IN (SELECT c.pk FROM chats c JOIN accounts a ON a.pk = c.account_pk WHERE a.provider = 'notes');",
-      "DELETE FROM member_stays WHERE chat_pk IN (SELECT c.pk FROM chats c JOIN accounts a ON a.pk = c.account_pk WHERE a.provider = 'notes');",
-      "DELETE FROM member_counts WHERE chat_pk IN (SELECT c.pk FROM chats c JOIN accounts a ON a.pk = c.account_pk WHERE a.provider = 'notes');",
-      "DELETE FROM chats WHERE account_pk IN (SELECT pk FROM accounts WHERE provider = 'notes');",
-      "DELETE FROM sync_state WHERE account_pk IN (SELECT pk FROM accounts WHERE provider = 'notes');",
-      "DELETE FROM account_identities WHERE account_pk IN (SELECT pk FROM accounts WHERE provider = 'notes');",
-      "DELETE FROM accounts WHERE provider = 'notes';",
-      "DELETE FROM store_settings WHERE key IN ('notesCopiedThroughMessage', 'ownerTargetsCopied');"
-    ]
-  },
-  {
-    "name": "20261009092436_version-28-drop-legacy-notes",
-    "statements": [
-      "DROP INDEX IF EXISTS `annotations_by_target`;",
-      "DROP INDEX IF EXISTS `knowledge_relation_identity`;",
-      "DROP INDEX IF EXISTS `knowledge_target_identity`;",
-      "DROP TABLE `annotations`;",
-      "DROP TABLE `knowledge_entities`;",
-      "DROP TABLE `knowledge_relations`;",
-      "DROP TABLE `knowledge_targets`;"
+      "CREATE TRIGGER note_index_ai AFTER INSERT ON notes BEGIN\n  INSERT OR IGNORE INTO note_index_pending (indexable_type, id) VALUES ('note', new.id);\nEND;",
+      "CREATE TRIGGER note_index_au AFTER UPDATE OF title, body, deleted_at, notable_type, notable_id ON notes\n  WHEN old.title IS NOT new.title OR old.body IS NOT new.body OR old.deleted_at IS NOT new.deleted_at\n    OR old.notable_type IS NOT new.notable_type OR old.notable_id IS NOT new.notable_id BEGIN\n  INSERT OR IGNORE INTO note_index_pending (indexable_type, id) VALUES ('note', new.id);\nEND;",
+      "CREATE TRIGGER note_tombstone AFTER UPDATE OF deleted_at ON notes\n  WHEN old.deleted_at IS NULL AND new.deleted_at IS NOT NULL BEGIN\n  DELETE FROM taggings WHERE taggable_type = 'note' AND taggable_id = new.id;\nEND;",
+      "CREATE TRIGGER note_bd BEFORE DELETE ON notes BEGIN\n  DELETE FROM embeddings WHERE content_hash IN (\n    SELECT k.content_hash FROM chunks k WHERE k.chunkable_type = 'note' AND k.chunkable_id = old.id\n      AND NOT EXISTS (SELECT 1 FROM chunks o WHERE o.content_hash = k.content_hash\n        AND NOT (o.chunkable_type = 'note' AND o.chunkable_id = old.id))\n      AND NOT EXISTS (SELECT 1 FROM conversation_chunks c WHERE c.content_hash = k.content_hash));\n  DELETE FROM chunks WHERE chunkable_type = 'note' AND chunkable_id = old.id;\n  DELETE FROM note_words WHERE rowid = old.id;\n  DELETE FROM note_stems WHERE rowid = old.id;\n  DELETE FROM note_index_pending WHERE indexable_type = 'note' AND id = old.id;\n  DELETE FROM note_revisions WHERE note_id = old.id;\n  DELETE FROM taggings WHERE taggable_type = 'note' AND taggable_id = old.id;\n  DELETE FROM links WHERE from_type = 'note' AND from_id = old.id;\nEND;",
+      "CREATE VIRTUAL TABLE email_words USING fts5(\n  normalized_text, scope,\n  content = '', contentless_delete = 1,\n  tokenize = 'unicode61 remove_diacritics 2', prefix = '3');",
+      "CREATE VIRTUAL TABLE email_words_vocab USING fts5vocab(email_words, 'col');",
+      "CREATE VIRTUAL TABLE email_stems USING fts5(\n  stems, scope,\n  content = '', contentless_delete = 1,\n  tokenize = 'unicode61 remove_diacritics 2');",
+      "CREATE TRIGGER email_index_ai AFTER INSERT ON emails BEGIN\n  INSERT OR IGNORE INTO email_index_pending (indexable_type, id) VALUES ('email', new.id);\nEND;",
+      "CREATE TRIGGER email_index_au AFTER UPDATE OF subject, body_text, deleted_at, email_thread_id ON emails\n  WHEN old.subject IS NOT new.subject OR old.body_text IS NOT new.body_text\n    OR old.deleted_at IS NOT new.deleted_at OR old.email_thread_id IS NOT new.email_thread_id BEGIN\n  INSERT OR IGNORE INTO email_index_pending (indexable_type, id) VALUES ('email', new.id);\nEND;",
+      "CREATE TRIGGER email_bd BEFORE DELETE ON emails BEGIN\n  DELETE FROM email_words WHERE rowid = old.id;\n  DELETE FROM email_stems WHERE rowid = old.id;\n  DELETE FROM email_index_pending WHERE indexable_type = 'email' AND id = old.id;\n  DELETE FROM attachments WHERE attachable_type = 'email' AND attachable_id = old.id;\n  DELETE FROM taggings WHERE taggable_type = 'email' AND taggable_id = old.id;\nEND;",
+      "-- Three tables feed the meeting index and their ids overlap, so the rowid scheme is the indexer's: a change\n-- or a delete only queues the row, and the drain removes what it finds gone.\nCREATE VIRTUAL TABLE meeting_words USING fts5(\n  normalized_text, scope,\n  content = '', contentless_delete = 1,\n  tokenize = 'unicode61 remove_diacritics 2', prefix = '3');",
+      "CREATE VIRTUAL TABLE meeting_words_vocab USING fts5vocab(meeting_words, 'col');",
+      "CREATE VIRTUAL TABLE meeting_stems USING fts5(\n  stems, scope,\n  content = '', contentless_delete = 1,\n  tokenize = 'unicode61 remove_diacritics 2');",
+      "CREATE TRIGGER meeting_transcript_row_index_ai AFTER INSERT ON meeting_transcript_rows BEGIN\n  INSERT OR IGNORE INTO meeting_index_pending (indexable_type, id) VALUES ('meeting_transcript_row', new.id);\nEND;",
+      "CREATE TRIGGER meeting_transcript_row_index_au AFTER UPDATE OF text ON meeting_transcript_rows\n  WHEN old.text IS NOT new.text BEGIN\n  INSERT OR IGNORE INTO meeting_index_pending (indexable_type, id) VALUES ('meeting_transcript_row', new.id);\nEND;",
+      "CREATE TRIGGER meeting_transcript_row_index_ad AFTER DELETE ON meeting_transcript_rows BEGIN\n  INSERT OR IGNORE INTO meeting_index_pending (indexable_type, id) VALUES ('meeting_transcript_row', old.id);\nEND;",
+      "CREATE TRIGGER meeting_chat_message_index_ai AFTER INSERT ON meeting_chat_messages BEGIN\n  INSERT OR IGNORE INTO meeting_index_pending (indexable_type, id) VALUES ('meeting_chat_message', new.id);\nEND;",
+      "CREATE TRIGGER meeting_chat_message_index_au AFTER UPDATE OF text ON meeting_chat_messages\n  WHEN old.text IS NOT new.text BEGIN\n  INSERT OR IGNORE INTO meeting_index_pending (indexable_type, id) VALUES ('meeting_chat_message', new.id);\nEND;",
+      "CREATE TRIGGER meeting_chat_message_index_ad AFTER DELETE ON meeting_chat_messages BEGIN\n  INSERT OR IGNORE INTO meeting_index_pending (indexable_type, id) VALUES ('meeting_chat_message', old.id);\nEND;",
+      "CREATE TRIGGER meeting_summary_index_ai AFTER INSERT ON meeting_summaries BEGIN\n  INSERT OR IGNORE INTO meeting_index_pending (indexable_type, id) VALUES ('meeting_summary', new.id);\nEND;",
+      "CREATE TRIGGER meeting_summary_index_au AFTER UPDATE OF title, overview, sections, next_steps, content ON meeting_summaries\n  WHEN old.title IS NOT new.title OR old.overview IS NOT new.overview OR old.sections IS NOT new.sections\n    OR old.next_steps IS NOT new.next_steps OR old.content IS NOT new.content BEGIN\n  INSERT OR IGNORE INTO meeting_index_pending (indexable_type, id) VALUES ('meeting_summary', new.id);\nEND;",
+      "CREATE TRIGGER meeting_summary_index_ad AFTER DELETE ON meeting_summaries BEGIN\n  INSERT OR IGNORE INTO meeting_index_pending (indexable_type, id) VALUES ('meeting_summary', old.id);\nEND;",
+      "-- Drizzle cannot declare WITHOUT ROWID, so the vocabulary is written here and not in schema.ts.\nCREATE TABLE search_terms (\n  term   TEXT PRIMARY KEY,\n  length INTEGER NOT NULL\n) WITHOUT ROWID;",
+      "CREATE TABLE search_term_trigrams (\n  trigram TEXT NOT NULL,\n  length  INTEGER NOT NULL,\n  term    TEXT NOT NULL,\n  PRIMARY KEY (trigram, length, term)\n) WITHOUT ROWID;",
+      "-- A new file has nothing to fill: the words index is built at once. `analyzer` stays NULL until the first\n-- drain claims it.\nINSERT INTO search_index_state (name, watermark, filled_through, terms_through, normalizer_version, built_at, analyzer)\n  VALUES ('message_words', 0, 0, 0, 1, CAST(unixepoch('subsec') * 1000 AS INTEGER), NULL),\n         ('message_stems', 0, 0, 0, 1, NULL, NULL),\n         ('note_index', 0, 0, 0, 1, NULL, NULL);"
     ]
   }
 ]
