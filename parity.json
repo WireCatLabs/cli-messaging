@@ -3369,7 +3369,13 @@
         },
         "--chat": "all",
         "--context": "all",
-        "--discover": "all",
+        "--discover": {
+          "in": [],
+          "planned": {
+            "max": "search discovery adoption after the shared release",
+            "tg": "search discovery adoption after the shared release"
+          }
+        },
         "--exact": "all",
         "--language": "all",
         "--limit": "all",

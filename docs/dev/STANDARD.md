@@ -374,7 +374,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--deny-people` | `<ids>` | replace denied sender ids, comma-separated; empty clears; deny wins |  | `replies audience` |
 | `--description` | `<text>` | the new about text — of a chat or of your account |  | `account update`, `chats update` |
 | `--dims` | `<n>` | remote: the vector size — needed with --base-url; shortens an OpenAI model's |  | `conversations embed`, `conversations embed clear`, `conversations embed status`, `conversations related`, `conversations status`, `search conversations` |
-| `--discover` |  | find partial lexical matches and eligible replies in the local archive; results are evidence, not confirmed answers |  | `search messages` |
+| `--discover` |  | find partial lexical matches and eligible replies in the local archive; results are evidence, not confirmed answers |  | `search messages` (planned) |
 | `--do` | `<actions>` | actions: reply, task, or both, comma-separated |  | `replies edit` |
 | `--download` |  | first save, from the messenger, the files no download saved yet |  | `attachments extract` |
 | `--dry-run` |  | judge and plan; do nothing. **A command-specific dry run keeps its richer plan; otherwise the shared shell previews arguments and permissions without running the action. Targets remain unresolved unless that command provides a preview.** |  | every command, `bot chats moderate`, `chats moderate` (planned), `config migrate`, `stats messages counters refresh`, `store repair`, `tags auto` |
