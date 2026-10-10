@@ -183,7 +183,7 @@ export const searchDiscovery = async (
         repliesAdded: replyCount,
         truncated,
         terms,
-        queries: [...plan.queries, relaxed],
+        queries: [...(plan.changed ? [] : plan.queries), relaxed],
       },
     },
   }

@@ -70,6 +70,7 @@ describe("archive discovery", () => {
     expect(ids(found)).toContain("2")
     expect(found.items.find((m) => m.id === "2")?.discovery?.parent).toBe("msg:synthetic/500/101/1")
     expect(found.query?.discovery).toMatchObject({ method: "lexical-partial", repliesAdded: 3 })
+    expect(found.query?.discovery?.queries).toEqual(["(time OR helix OR export OR run)"])
     const partial = await searchStore(store, account, request("What is Helix ultraviolet retention?"))
     expect(partial.items.length).toBeGreaterThan(0)
     expect(partial.items.every((m) => m.discovery?.missingTerms.includes("ultraviolet"))).toBe(true)
