@@ -7,12 +7,13 @@ built today is in [ARCHITECTURE, "The store"](../dev/ARCHITECTURE.md#the-store).
 |---|---|
 | [`requirements.md`](requirements.md) | what the owner asked for, verbatim |
 | [`decisions.md`](decisions.md) | the storage rulings in force |
-| [`schema-v2.md`](schema-v2.md) | every table and column of the v2 store, and what each one means |
+| [`schema.md`](schema.md) | every table and column of the store, and what each one means |
+| [`messaging.md`](messaging.md) | the messaging store APIs: scopes, nested chats, threads, retention evidence |
 | [`search-indexes.md`](search-indexes.md) | how search works: the word indexes, search by meaning — chunks, vectors, the scan, the merge with words |
 | [`../../bench/search/`](../../bench/search/) | the benchmark fixture and its results |
 
 Search AI configuration and opt-in analysis: [`../search/ai-providers.md`](../search/ai-providers.md).
 
-`schema-v2.md` is the store v2 plan's schema page, rendered from the plan's spec, with its first paragraph
+`schema.md` is the store plan's schema page, rendered from the plan's spec, with its first paragraph
 replaced. After a spec change, copy the page again over everything below that paragraph; the schema test
 fails until the code and the page agree.

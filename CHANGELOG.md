@@ -12,7 +12,7 @@ break callers, and says how under "Changed — may break callers". `pnpm docs:ch
 - `store.involvements` rebuilds a person timeline across messages, chats, meetings, mail, tasks and person links; reads
   can filter scope and return newest first through the person index.
 - Account and chat scopes, nested chats and message thread roots; conversation vector searches can narrow by scope,
-  project, person and time. See [the messaging store APIs](docs/storage/messaging-v2.md).
+  project, person and time. See [the messaging store APIs](docs/storage/messaging.md).
 - `store.decisions`, `store.memories` (a memory needs a scope and evidence), `store.proposedActions` (agent
   proposals that wait for the owner) and `store.agentActions` (one audit row per MCP tool call, never its
   arguments). Topics: `knowledge.createTag(name, { kind: "topic" })` for the owner, `setMainTopic`.
@@ -34,7 +34,7 @@ break callers, and says how under "Changed — may break callers". `pnpm docs:ch
   and columns follow Rails naming (`id`, `<thing>_id`, `external_id`, `created_at`/`updated_at`); mail, documents,
   notes, memories, decisions, events, meetings, organizations, projects, tasks, proposed actions, aliases,
   taggings and topics, chunks and embeddings have tables of their own. Every table and column is in
-  [`docs/storage/schema-v2.md`](docs/storage/schema-v2.md). The old `messages.db` is left as it is and not
+  [`docs/storage/schema.md`](docs/storage/schema.md). The old `messages.db` is left as it is and not
   converted: messages come back with a fresh sync.
 - **Knowledge, notes and tasks write the new tables.** `store.notes` splits files in a folder (`documents`,
   `ref` `document:<id>`) from written notes (`notes`, `ref` `note:<id>`); a `Note` now carries `ref`, and

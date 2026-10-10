@@ -1,6 +1,6 @@
 # Messaging store APIs
 
-`openStore` creates the v2 schema described in [schema-v2.md](schema-v2.md). Message and chat IDs in its API are
+`openStore` creates the schema described in [schema.md](schema.md). Message and chat IDs in its API are
 provider IDs. Canonical person IDs and private note IDs are integer store keys serialized as strings.
 
 An `AccountKey` can supply `scope: "personal" | "work"` when writing. An omitted scope preserves the account's

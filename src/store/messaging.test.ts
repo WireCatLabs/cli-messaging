@@ -23,7 +23,7 @@ const message = (id: string, extra: Partial<Message> = {}): Message => ({
   reactions: null,
   ...extra,
 })
-const fresh = () => join(mkdtempSync(join(tmpdir(), "messaging-v2-")), "store.db")
+const fresh = () => join(mkdtempSync(join(tmpdir(), "messaging-")), "store.db")
 
 it("stores scoped nested chats and connects a reply thread when its root arrives later", async () => {
   const path = fresh(),
