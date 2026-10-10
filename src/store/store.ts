@@ -192,7 +192,8 @@ export interface StoredChatFilter {
 }
 
 export interface MessageStore {
-  saveAccount(key: AccountKey, account: { name: string | null }): Promise<void>
+  /** Answers the store's id for the account, which `meetings` and `mail` take. */
+  saveAccount(key: AccountKey, account: { name: string | null }): Promise<number>
   saveChats(key: AccountKey, chats: Chat[]): Promise<void>
   /** A scheduled message is not kept: it is not history yet. */
   /**
@@ -802,9 +803,7 @@ const storeOver = (context: StoreContext): MessageStore => {
   let mail: MessageStore["mail"] | undefined
 
   return {
-    saveAccount: async (key, { name }) => {
-      accountPk(key, name)
-    },
+    saveAccount: async (key, { name }) => accountPk(key, name),
 
     saveChats: async (key, list) =>
       inTransaction(() => {

@@ -13,6 +13,16 @@ break callers, and says how under "Changed — may break callers". `pnpm docs:ch
   can filter scope and return newest first through the person index.
 - Account and chat scopes, nested chats and message thread roots; conversation vector searches can narrow by scope,
   project, person and time. See [the messaging store APIs](docs/storage/messaging-v2.md).
+- `store.decisions`, `store.memories` (a memory needs a scope and evidence), `store.proposedActions` (agent
+  proposals that wait for the owner) and `store.agentActions` (one audit row per MCP tool call, never its
+  arguments). Topics: `knowledge.createTag(name, { kind: "topic" })` for the owner, `setMainTopic`.
+- **`store.meetings`: the shared store's `MeetingStore`**, the port `@wirecat/cli-meetings` 0.2.0 defines (now a
+  dependency). It keeps meetings, their series, participants, transcripts with their history, chat, summaries,
+  files, calendar events and the pull cursor, and passes the package's `meetingStoreContract`. Search matches
+  every word of the query as a prefix.
+- **`store.mail`: email threads, emails, recipients and mailboxes**, keyed by account and Message-ID. Save a
+  thread, list threads, read one, read an email by Message-ID, mark emails gone, and search subjects and bodies.
+- `saveAccount` answers the store's id for the account, which `store.meetings` and `store.mail` take.
 
 ### Changed — may break callers
 
@@ -31,21 +41,6 @@ break callers, and says how under "Changed — may break callers". `pnpm docs:ch
   replaced by `knowledge.addOrganization`/`organizations` and `addProject`/`projects`; `entity:` references
   resolve as not found. `store.tasks` keeps the `@wirecat/cli-tasks` `TaskStore` and adds `answer` and
   `judge`.
-
-### Added
-
-- `store.decisions`, `store.memories` (a memory needs a scope and evidence), `store.proposedActions` (agent
-  proposals that wait for the owner) and `store.agentActions` (one audit row per MCP tool call, never its
-  arguments). Topics: `knowledge.createTag(name, { kind: "topic" })` for the owner, `setMainTopic`.
-
-### Added
-
-- **`store.meetings`: the shared store's `MeetingStore`**, the port `@wirecat/cli-meetings` 0.2.0 defines (now a
-  dependency). It keeps meetings, their series, participants, transcripts with their history, chat, summaries,
-  files, calendar events and the pull cursor, and passes the package's `meetingStoreContract`. Search matches
-  every word of the query as a prefix.
-- **`store.mail`: email threads, emails, recipients and mailboxes**, keyed by account and Message-ID. Save a
-  thread, list threads, read one, read an email by Message-ID, mark emails gone, and search subjects and bodies.
 
 ## 0.215.0 — 10.10.2026
 

@@ -49,6 +49,18 @@ const message = (overrides: Partial<Message> = {}): Message => ({
 })
 
 describe("the message store", () => {
+  it("answers the store's id for an account, the same id every time, for meetings and mail", async () => {
+    const store = await openStore({ path: fresh() })
+    const first = await store.saveAccount({ provider: "zoom", account: "alice@example.com" }, { name: null })
+    const again = await store.saveAccount({ provider: "zoom", account: "alice@example.com" }, { name: "Alice Example" })
+    const other = await store.saveAccount({ provider: "zoom", account: "bob@example.com" }, { name: null })
+
+    expect(again).toBe(first)
+    expect(other).not.toBe(first)
+    expect(await store.mail.threads({ accountId: first })).toEqual([])
+    await store.close()
+  })
+
   it("**gives back exactly the chat and the message it was given**", async () => {
     const store = await openStore({ path: fresh() })
     await store.saveChats(ME, [chat])
