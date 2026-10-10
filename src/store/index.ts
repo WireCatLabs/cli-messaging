@@ -8,10 +8,12 @@ export { backfillNormalized, pendingNormalization } from "./sqlite/backfill.js"
 export type { ChatMetadata } from "./sqlite/chat-metadata.js"
 export type {
   Annotation,
-  KnowledgeEntity,
   KnowledgeRelation,
   KnowledgeStore,
   KnowledgeTarget,
+  LabelledType,
+  Organization,
+  Project,
   Reminder,
 } from "./sqlite/knowledge.js"
 export type { NoteIndexState } from "./sqlite/note-index.js"
@@ -24,7 +26,6 @@ export {
   type NoteSearch,
 } from "./sqlite/note-search.js"
 export type {
-  Entity,
   FileNoteInput,
   Link,
   LinkInput,

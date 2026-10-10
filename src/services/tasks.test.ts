@@ -14,7 +14,7 @@ it("keeps native note tasks scoped, idempotent and closed, with live previews an
   try {
     const tasks = tasksService(storeOnlyDeps(store, account, { app }))
     const note = await store.notes.addNote({ text: "Synthetic request", title: "A note" })
-    const source = `note:${note.id}`
+    const source = note.ref
     const first = await tasks.add(source, "request", "owner")
     expect(first).toMatchObject({
       created: true,
@@ -32,7 +32,7 @@ it("keeps native note tasks scoped, idempotent and closed, with live previews an
     await store.notes.removeNote(note.id)
     expect((await tasks.list({ state: "done" }))[0]).toMatchObject({ id: first.task.id, message: null, note: null })
     await expect(tasks.add(source, "request", "owner")).rejects.toMatchObject({ code: "not_found" })
-    await expect(tasks.add("note:missing", "request", "owner")).rejects.toMatchObject({ code: "not_found" })
+    await expect(tasks.add("note:999", "request", "owner")).rejects.toMatchObject({ code: "not_found" })
   } finally {
     await store.close()
   }
@@ -49,12 +49,12 @@ it("keeps a file task when its source is removed and reads the restored file by 
       text: "Synthetic file",
     })
     const tasks = tasksService(storeOnlyDeps(store, account, { app }))
-    const added = await tasks.add(`note:${note.id}`, "promise", "owner")
+    const added = await tasks.add(note.ref, "promise", "owner")
     await store.notes.renameFileNote(folder.id, "plan.md", "new.md")
     expect((await tasks.list())[0]?.note?.text).toBe("Synthetic file")
     await store.notes.deleteFileNotes(folder.id, ["new.md"])
     expect((await tasks.list())[0]?.note).toBeNull()
-    await expect(tasks.add(`note:${note.id}`, "promise", "owner")).rejects.toMatchObject({ code: "not_found" })
+    await expect(tasks.add(note.ref, "promise", "owner")).rejects.toMatchObject({ code: "not_found" })
     const restored = await store.notes.saveFileNote({
       folderId: folder.id,
       path: "new.md",
@@ -62,7 +62,7 @@ it("keeps a file task when its source is removed and reads the restored file by 
       text: "Restored",
     })
     expect(restored.note.id).toBe(note.id)
-    expect(await tasks.add(`note:${note.id}`, "promise", "owner")).toMatchObject({
+    expect(await tasks.add(note.ref, "promise", "owner")).toMatchObject({
       created: false,
       task: { id: added.task.id, note: { text: "Restored" } },
     })

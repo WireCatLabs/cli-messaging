@@ -1445,7 +1445,7 @@ const storeOver = (context: StoreContext): MessageStore => {
     addTags: async (key, target, list) => {
       let added: string[] = []
       inTransaction(() => {
-        added = tagQueries.addTags(context, tagQueries.targetPk(context, key, target), target.type, list)
+        added = tagQueries.addTags(context, tagQueries.targetThing(context, key, target), list)
       })
       return added
     },
@@ -1453,7 +1453,7 @@ const storeOver = (context: StoreContext): MessageStore => {
     removeTags: async (key, target, list, source) => {
       let removed: string[] = []
       inTransaction(() => {
-        removed = tagQueries.removeTags(context, tagQueries.targetPk(context, key, target), target.type, list, source)
+        removed = tagQueries.removeTags(context, tagQueries.targetThing(context, key, target), list, source)
       })
       return removed
     },

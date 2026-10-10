@@ -5,106 +5,176 @@ import { normalize } from "../normalize.js"
 import { inBatch, indexRow } from "./search-index.js"
 import { savedStemmers } from "./stems.js"
 
-const INDEX = "note_index"
-
 export interface NoteIndexState {
-  /** Notes written since they were indexed. */
+  /** Rows written since they were indexed. */
   pending: number
   /** The stemmer choices the stems were built by; `null` until the first drain. */
   built: string | null
   wanted: string | null
-  /** Every live note is in the words, stems and chunks: a notes search sees all of them. */
+  /** Every live row is in the words, stems and chunks: a search sees all of them. */
   ready: boolean
 }
 
-/** What a note is indexed as: its title, then its text. Chunk offsets point into this. */
+/**
+ * A text corpus with its own words and stems index, filled from its queue: documents, notes and memories
+ * share the recipe, each with its own tables.
+ */
+export interface Corpus {
+  /** The singular table name: `indexable_type` in the queue, `chunkable_type` in chunks. */
+  type: "document" | "note" | "memory"
+  /** Its row in `search_index_state`. */
+  index: string
+  table: string
+  /** Title and body as `title`/`body`, whether it is live, and its scope, for one row by `id`. */
+  read: string
+}
+
+export const CORPORA = {
+  document: {
+    type: "document",
+    index: "document_index",
+    table: "documents",
+    read:
+      "SELECT d.title, coalesce(d.body, '') AS body, d.deleted_at IS NULL AS live, a.scope FROM documents d " +
+      "JOIN accounts a ON a.id = d.account_id WHERE d.id = ?",
+  },
+  note: {
+    type: "note",
+    index: "note_index",
+    table: "notes",
+    read: "SELECT title, body, deleted_at IS NULL AS live, 'personal' AS scope FROM notes WHERE id = ?",
+  },
+  memory: {
+    type: "memory",
+    index: "memory_index",
+    table: "memories",
+    read: "SELECT NULL AS title, body, status <> 'superseded' AS live, scope FROM memories WHERE id = ?",
+  },
+} as const satisfies Record<string, Corpus>
+
+/** What a row is indexed as: its title, then its text. Chunk offsets point into this. */
 export const noteIndexText = (title: string | null, text: string): string => (title ? `${title}\n\n${text}` : text)
 
-/** `undefined` on a file before version 26. */
-export const noteIndexState = (database: CacheDatabase): NoteIndexState | undefined => {
-  const row = indexRow(database, INDEX)
-  if (!row) return undefined
-  const pending = Number(database.prepare("SELECT count(*) AS n FROM note_index_pending").get()?.n)
+/**
+ * The initial migration seeds only `note_index`; the document and memory rows are made on first use
+ * (schema request: seed them too).
+ */
+const ensureIndexRow = (database: CacheDatabase, corpus: Corpus) => {
+  if (indexRow(database, corpus.index)) return
+  database
+    .prepare(
+      "INSERT OR IGNORE INTO search_index_state (name, watermark, filled_through, terms_through, normalizer_version) VALUES (?, 0, 0, 0, 1)",
+    )
+    .run(corpus.index)
+}
+
+export const corpusIndexState = (database: CacheDatabase, corpus: Corpus): NoteIndexState => {
+  ensureIndexRow(database, corpus)
+  const row = indexRow(database, corpus.index) as Record<string, unknown>
+  const pending = Number(
+    database.prepare(`SELECT count(*) AS n FROM ${corpus.type}_index_pending WHERE indexable_type = ?`).get(corpus.type)
+      ?.n,
+  )
   const saved = savedStemmers(database)
   const wanted = saved === null ? null : analyzerIdentity(saved ?? DEFAULT_STEMMERS)
   const built = row.analyzer === null ? null : String(row.analyzer)
   return { pending, built, wanted, ready: pending === 0 && wanted !== null && (built === wanted || built === null) }
 }
 
-const writer = (database: CacheDatabase, stemmer: Stemmer) => {
-  const read = database.prepare("SELECT title, text, source, deleted_at FROM notes WHERE pk = ?")
-  const oldHashes = database.prepare("SELECT content_hash AS hash FROM note_chunks WHERE note_pk = ?")
+/** Documents and notes together: what a notes search reads. */
+export const noteIndexState = (database: CacheDatabase): NoteIndexState => {
+  const documents = corpusIndexState(database, CORPORA.document)
+  const notes = corpusIndexState(database, CORPORA.note)
+  return {
+    pending: documents.pending + notes.pending,
+    built: notes.built ?? documents.built,
+    wanted: notes.wanted,
+    ready: documents.ready && notes.ready,
+  }
+}
+
+const writer = (database: CacheDatabase, corpus: Corpus, stemmer: Stemmer) => {
+  const read = database.prepare(corpus.read)
+  const oldHashes = database.prepare(
+    "SELECT content_hash AS hash FROM chunks WHERE chunkable_type = ? AND chunkable_id = ?",
+  )
   const statements = {
-    dropWords: database.prepare("DELETE FROM note_words WHERE rowid = ?"),
-    dropStems: database.prepare("DELETE FROM note_stems WHERE rowid = ?"),
-    dropChunks: database.prepare("DELETE FROM note_chunks WHERE note_pk = ?"),
-    words: database.prepare("INSERT INTO note_words (rowid, normalized_text, scope) VALUES (?, ?, ?)"),
-    stems: database.prepare("INSERT INTO note_stems (rowid, stems, scope) VALUES (?, ?, ?)"),
+    dropWords: database.prepare(`DELETE FROM ${corpus.type}_words WHERE rowid = ?`),
+    dropStems: database.prepare(`DELETE FROM ${corpus.type}_stems WHERE rowid = ?`),
+    dropChunks: database.prepare("DELETE FROM chunks WHERE chunkable_type = ? AND chunkable_id = ?"),
+    words: database.prepare(`INSERT INTO ${corpus.type}_words (rowid, normalized_text, scope) VALUES (?, ?, ?)`),
+    stems: database.prepare(`INSERT INTO ${corpus.type}_stems (rowid, stems, scope) VALUES (?, ?, ?)`),
     chunk: database.prepare(
-      "INSERT INTO note_chunks (note_pk, seq, text_start, text_end, content_hash) VALUES (?, ?, ?, ?, ?)",
+      "INSERT INTO chunks (chunkable_type, chunkable_id, position, start_offset, end_offset, content_hash, scope, created_at, updated_at) " +
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
     ),
     purge: database.prepare(
-      `DELETE FROM chunk_vectors WHERE content_hash = ?
-         AND NOT EXISTS (SELECT 1 FROM note_chunks WHERE content_hash = ?)
+      `DELETE FROM embeddings WHERE content_hash = ?
+         AND NOT EXISTS (SELECT 1 FROM chunks WHERE content_hash = ?)
          AND NOT EXISTS (SELECT 1 FROM conversation_chunks WHERE content_hash = ?)`,
     ),
-    dequeue: database.prepare("DELETE FROM note_index_pending WHERE pk = ?"),
+    dequeue: database.prepare(`DELETE FROM ${corpus.type}_index_pending WHERE indexable_type = ? AND id = ?`),
   }
-  return (pk: number) => {
-    const row = read.get(pk)
-    const before = oldHashes.all(pk).map((hash) => String(hash.hash))
-    statements.dropWords.run(pk)
-    statements.dropStems.run(pk)
-    statements.dropChunks.run(pk)
-    const live = row !== undefined && row.deleted_at === null
-    const text = live ? noteIndexText(row.title === null ? null : String(row.title), String(row.text)) : ""
-    const scope = live ? `s${String(row.source)}` : ""
+  return (id: number) => {
+    const row = read.get(id)
+    const before = oldHashes.all(corpus.type, id).map((hash) => String(hash.hash))
+    statements.dropWords.run(id)
+    statements.dropStems.run(id)
+    statements.dropChunks.run(corpus.type, id)
+    const live = row !== undefined && Number(row.live) === 1
+    const text = live ? noteIndexText(row.title == null ? null : String(row.title), String(row.body)) : ""
+    const scope = live ? String(row.scope ?? "personal") : ""
     const words = normalize(text)
-    if (words !== "") statements.words.run(pk, words, scope)
+    if (words !== "") statements.words.run(id, words, scope)
     const stems = text ? stemmer.indexText(text) : ""
-    if (stems !== "") statements.stems.run(pk, stems, scope)
+    if (stems !== "") statements.stems.run(id, stems, scope)
     const after = new Set<string>()
     if (text.trim()) {
-      splitText(text, CHUNK_CHARS).forEach(({ start, end }, seq) => {
+      const at = Date.now()
+      splitText(text, CHUNK_CHARS).forEach(({ start, end }, position) => {
         const hash = chunkHash(text.slice(start, end))
         after.add(hash)
-        statements.chunk.run(pk, seq, start, end, hash)
+        statements.chunk.run(corpus.type, id, position, start, end, hash, scope, at, at)
       })
     }
     for (const hash of before) if (!after.has(hash)) statements.purge.run(hash, hash, hash)
-    statements.dequeue.run(pk)
+    statements.dequeue.run(corpus.type, id)
   }
 }
 
 /**
- * Indexes the notes written since the last drain, in short write transactions. Notes are few, so a change
- * of stemmer choices simply queues every note again instead of waiting for `store reindex` as messages do.
+ * Indexes one corpus's rows written since the last drain, in short write transactions. These corpora are
+ * small, so a change of stemmer choices simply queues every row again instead of waiting for `store reindex`.
  */
-export const drainNoteIndex = (
+export const drainCorpus = (
   database: CacheDatabase,
+  corpus: Corpus,
   stemmerFor: (stemmers: Stemmers) => Stemmer,
   { batch = 200, until = () => false }: { batch?: number; until?: () => boolean } = {},
 ): number => {
-  const state = noteIndexState(database)
-  if (!state || state.wanted === null) return 0
-  const saved = savedStemmers(database)
-  const stemmer = stemmerFor(saved ?? DEFAULT_STEMMERS)
+  const state = corpusIndexState(database, corpus)
+  if (state.wanted === null) return 0
+  const stemmer = stemmerFor(savedStemmers(database) ?? DEFAULT_STEMMERS)
+  const queue = `${corpus.type}_index_pending`
   if (state.built !== stemmer.identity) {
     inBatch(database, () => {
-      if (state.built !== null) database.exec("INSERT OR IGNORE INTO note_index_pending (pk) SELECT pk FROM notes")
-      database.prepare("UPDATE search_index_state SET analyzer = ? WHERE name = ?").run(stemmer.identity, INDEX)
+      if (state.built !== null)
+        database
+          .prepare(`INSERT OR IGNORE INTO ${queue} (indexable_type, id) SELECT ?, id FROM ${corpus.table}`)
+          .run(corpus.type)
+      database.prepare("UPDATE search_index_state SET analyzer = ? WHERE name = ?").run(stemmer.identity, corpus.index)
     })
   }
   if (state.pending === 0 && state.built === stemmer.identity) return 0
-  const next = database.prepare("SELECT pk FROM note_index_pending ORDER BY pk LIMIT ?")
-  const index = writer(database, stemmer)
+  const next = database.prepare(`SELECT id FROM ${queue} WHERE indexable_type = ? ORDER BY id LIMIT ?`)
+  const index = writer(database, corpus, stemmer)
   let done = 0
   for (;;) {
     if (until()) break
     const count = inBatch(database, () => {
-      const pks = next.all(batch).map((row) => Number(row.pk))
-      for (const pk of pks) index(pk)
-      return pks.length
+      const ids = next.all(corpus.type, batch).map((row) => Number(row.id))
+      for (const id of ids) index(id)
+      return ids.length
     })
     if (count === 0) break
     done += count
@@ -112,9 +182,24 @@ export const drainNoteIndex = (
   return done
 }
 
-/** Queues every note again — for `store reindex`. */
+/** Documents, then notes: what a notes search reads. */
+export const drainNoteIndex = (
+  database: CacheDatabase,
+  stemmerFor: (stemmers: Stemmers) => Stemmer,
+  options: { batch?: number; until?: () => boolean } = {},
+): number =>
+  drainCorpus(database, CORPORA.document, stemmerFor, options) +
+  drainCorpus(database, CORPORA.note, stemmerFor, options)
+
+/** Queues every document, note and memory again — for `store reindex`. */
 export const resetNoteIndex = (database: CacheDatabase): boolean => {
-  if (!indexRow(database, INDEX)) return false
-  inBatch(database, () => database.exec("INSERT OR IGNORE INTO note_index_pending (pk) SELECT pk FROM notes"))
+  inBatch(database, () => {
+    for (const corpus of Object.values(CORPORA))
+      database
+        .prepare(
+          `INSERT OR IGNORE INTO ${corpus.type}_index_pending (indexable_type, id) SELECT ?, id FROM ${corpus.table}`,
+        )
+        .run(corpus.type)
+  })
   return true
 }

@@ -61,7 +61,7 @@ const seeded = async (path = fresh()) => {
 const count = async (path: string) => {
   const database = await openCache(path)
   try {
-    return Number(database.prepare("SELECT count(*) AS n FROM tags").get()?.n)
+    return Number(database.prepare("SELECT count(*) AS n FROM taggings").get()?.n)
   } finally {
     database.close()
   }
@@ -153,5 +153,60 @@ describe("tag: in a strict search", () => {
       code: "validation_error",
       details: { reason: "invalid_tag" },
     })
+  })
+})
+
+describe("topics", () => {
+  const topicStore = async (path = fresh()) => {
+    const store = await openStore({ path })
+    live.push(store)
+    return { store, path }
+  }
+
+  it("are made by the owner only; an agent's topic waits for approval", async () => {
+    const { store } = await topicStore()
+    await expect(store.knowledge.createTag("budget", { kind: "topic", by: "agent" })).rejects.toMatchObject({
+      code: "permission_error",
+      details: { reason: "owner_only_topic" },
+    })
+    expect(await store.knowledge.createTag("Budget", { kind: "topic" })).toMatchObject({
+      name: "budget",
+      kind: "topic",
+    })
+  })
+
+  it("share one name space with tags, and the clash says which holds the name", async () => {
+    const { store } = await topicStore()
+    await store.knowledge.createTag("travel", { kind: "topic" })
+    await store.knowledge.createTag("invoices")
+    await expect(store.knowledge.createTag("travel")).rejects.toMatchObject({
+      code: "validation_error",
+      message: '"travel" is a topic; one name is never both',
+    })
+    await expect(store.knowledge.createTag("invoices", { kind: "topic" })).rejects.toMatchObject({
+      details: { reason: "tag_name_clash" },
+    })
+  })
+
+  it("mark one main topic per thing, and only a topic", async () => {
+    const { store, path } = await topicStore()
+    const project = await store.knowledge.addProject({ name: "Lighthouse" })
+    const target = { type: "project" as const, id: project.id }
+    await store.knowledge.createTag("travel", { kind: "topic" })
+    await store.knowledge.createTag("money", { kind: "topic" })
+    await store.knowledge.addTags(null, target, ["plain"])
+    await store.knowledge.setMainTopic(null, target, "travel")
+    await store.knowledge.setMainTopic(null, target, "money")
+    await expect(store.knowledge.setMainTopic(null, target, "plain")).rejects.toMatchObject({
+      code: "validation_error",
+    })
+    const database = await openCache(path)
+    const main = database
+      .prepare("SELECT t.name FROM taggings g JOIN tags t ON t.id = g.tag_id WHERE g.main = 1")
+      .all()
+      .map((row) => row.name)
+    database.close()
+    expect(main).toEqual(["money"])
+    expect(await store.knowledge.tags(null, target)).toEqual(["money", "plain", "travel"])
   })
 })
