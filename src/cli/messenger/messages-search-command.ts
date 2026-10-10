@@ -31,8 +31,8 @@ export const messagesSearchCommand = (messenger: Messenger, kind: SearchKind = "
       mail
         ? "search the mail imported into the local store — memo mail import brings it in"
         : messenger.serverSearch
-          ? "search messenger messages in the local store and on the messenger's server (--backend); optionally fetches new messages with --sync-first"
-          : "search messenger messages in the local store — what was read, fetched or kept by serve; optionally fetches new messages with --sync-first",
+          ? "search messenger messages in the local store and on the messenger's server (--backend); optionally fetches new messages with --sync-first; --discover searches the archive only"
+          : "search messenger messages in the local store — what was read, fetched or kept by serve; optionally fetches new messages with --sync-first; --discover searches the archive only",
     )
     .argument(
       "[query...]",

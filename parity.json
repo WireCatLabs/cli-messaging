@@ -113,7 +113,7 @@
     },
     "--backend": {
       "value": "<archive|server|both>",
-      "meaning": "where to search: the local archive, the messenger's server, or both (default: both)"
+      "meaning": "where to search: the local archive, the messenger's server, or both (default: both; message discovery uses archive only)"
     },
     "--background": {
       "meaning": "run as a job that outlives this command; `store jobs show` follows it"
