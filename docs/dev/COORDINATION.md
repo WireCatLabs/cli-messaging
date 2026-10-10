@@ -8,6 +8,9 @@ Several sessions work on cli-messaging, tg-cli and max-cli at once. This page is
 merged before the migration: the runner skips every version at or below the file's, so two branches
 holding the same number would leave one migration unapplied on stores that ran the other.
 
+**100 is taken by the store v2 baseline** (branch `store-v2`): numbers of this line stay below it, and
+v2 refuses a file at any of them until `store upgrade-v2` converts it.
+
 ## Releases
 
 - Each session releases its own merged work: `git fetch`, `npm view`, a `chore: release` pull request
