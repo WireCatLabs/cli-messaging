@@ -293,6 +293,9 @@
       "value": "<n>",
       "meaning": "remote: the vector size — needed with --base-url; shortens an OpenAI model's"
     },
+    "--discover": {
+      "meaning": "find partial lexical matches and eligible replies in the local archive; results are evidence, not confirmed answers"
+    },
     "--do": {
       "meaning": "actions: reply, task, or both, comma-separated",
       "value": "<actions>"
@@ -3366,6 +3369,7 @@
         },
         "--chat": "all",
         "--context": "all",
+        "--discover": "all",
         "--exact": "all",
         "--language": "all",
         "--limit": "all",
