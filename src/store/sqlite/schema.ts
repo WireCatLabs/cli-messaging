@@ -242,6 +242,9 @@ export const aliases = sqliteTable(
     updatedAt: integer("updated_at").notNull(),
   },
   (table) => [
+    uniqueIndex("aliases_displayed")
+      .on(table.aliasableType, table.aliasableId, sql`ifnull(${table.accountId}, 0)`)
+      .where(sql`display = 1`),
     index("aliases_by_aliasable_type_aliasable_id").on(table.aliasableType, table.aliasableId),
     index("aliases_by_account_id").on(table.accountId),
   ],
@@ -528,6 +531,47 @@ export const messageTranscripts = sqliteTable(
 export const messageStemsPending = sqliteTable("message_stems_pending", {
   id: integer("id").primaryKey(),
 })
+
+/** One read of a chat's member list. Retention reads presence at a checkpoint from these, not from stays. */
+export const memberObservations = sqliteTable(
+  "member_observations",
+  {
+    id: integer("id").primaryKey(),
+    chatId: integer("chat_id")
+      .notNull()
+      .references(() => chats.id),
+    observedAt: integer("observed_at").notNull(),
+    startedAt: integer("started_at"),
+    complete: integer("complete").notNull(),
+    reportedCount: integer("reported_count"),
+    listedCount: integer("listed_count").notNull(),
+    source: text("source").notNull(),
+    createdAt: integer("created_at").notNull(),
+    updatedAt: integer("updated_at").notNull(),
+  },
+  (table) => [index("member_observations_by_chat_id_observed_at_id").on(table.chatId, table.observedAt, table.id)],
+)
+
+/** Who one member-list read saw. */
+export const memberObservationMembers = sqliteTable(
+  "member_observation_members",
+  {
+    memberObservationId: integer("member_observation_id")
+      .notNull()
+      .references(() => memberObservations.id),
+    identityId: integer("identity_id")
+      .notNull()
+      .references(() => identities.id),
+    memberStayId: integer("member_stay_id")
+      .notNull()
+      .references(() => memberStays.id),
+  },
+  (table) => [
+    primaryKey({ columns: [table.memberObservationId, table.identityId] }),
+    index("member_observation_members_by_member_stay_id").on(table.memberStayId),
+    index("member_observation_members_by_identity_id").on(table.identityId),
+  ],
+)
 
 export const emailThreads = sqliteTable(
   "email_threads",
@@ -1002,6 +1046,9 @@ export const meetingChatMessages = sqliteTable(
     updatedAt: integer("updated_at").notNull(),
   },
   (table) => [
+    uniqueIndex("meeting_chat_messages_by_meeting_id_external_id")
+      .on(table.meetingId, table.externalId)
+      .where(sql`external_id IS NOT NULL`),
     index("meeting_chat_messages_by_meeting_id").on(table.meetingId),
     index("meeting_chat_messages_by_sender_participant_id").on(table.senderParticipantId),
   ],
@@ -1027,7 +1074,7 @@ export const meetingSummaries = sqliteTable(
     createdAt: integer("created_at").notNull(),
     updatedAt: integer("updated_at").notNull(),
   },
-  (table) => [index("meeting_summaries_by_meeting_id").on(table.meetingId)],
+  (table) => [unique().on(table.meetingId, table.source)],
 )
 
 /** Keyed by type and id: transcript rows, chat messages and summaries share the queue, and their ids overlap. */
@@ -1074,6 +1121,7 @@ export const projects = sqliteTable(
     description: text("description"),
     type: text("type").notNull(),
     organizationId: integer("organization_id").references(() => organizations.id),
+    accountId: integer("account_id").references(() => accounts.id),
     scope: text("scope").notNull().default("personal"),
     ownerType: text("owner_type"),
     ownerId: integer("owner_id"),
@@ -1085,6 +1133,7 @@ export const projects = sqliteTable(
   },
   (table) => [
     index("projects_by_organization_id").on(table.organizationId),
+    index("projects_by_account_id").on(table.accountId),
     index("projects_by_owner_type_owner_id").on(table.ownerType, table.ownerId),
   ],
 )
@@ -1113,6 +1162,10 @@ export const tasks = sqliteTable(
     authorType: text("author_type").notNull(),
     authorId: integer("author_id").notNull(),
     source: text("source").notNull(),
+    packageId: text("package_id").unique(),
+    sourceLocator: text("source_locator"),
+    sourceKind: text("source_kind"),
+    sourceGroup: text("source_group"),
     resolution: text("resolution"),
     verdict: text("verdict"),
     metadata: text("metadata"),
@@ -1123,6 +1176,8 @@ export const tasks = sqliteTable(
   (table) => [
     unique().on(table.projectId, table.number),
     index("tasks_by_status").on(table.projectId, table.status, table.dueAt),
+    index("tasks_by_project_id_source_locator").on(table.projectId, table.sourceLocator),
+    index("tasks_by_source_group").on(table.sourceGroup),
     index("tasks_by_parent_id").on(table.parentId),
     index("tasks_by_closed_by_type_closed_by_id").on(table.closedByType, table.closedById),
     index("tasks_by_author_type_author_id").on(table.authorType, table.authorId),

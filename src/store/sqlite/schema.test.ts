@@ -369,3 +369,96 @@ describe("the v2 baseline", () => {
     store.database.close()
   })
 })
+
+describe("what the initial migration seeds and enforces", () => {
+  it("seeds the owner person, the rule and agent bots, and a state row for every search index", async () => {
+    const database = await open()
+    migrate(database)
+
+    expect(database.prepare("SELECT name, owner FROM persons").all()).toEqual([{ name: null, owner: 1 }])
+    expect(database.prepare("SELECT name, kind FROM bots ORDER BY name").all()).toEqual([
+      { name: "agent", kind: "agent" },
+      { name: "rule", kind: "script" },
+    ])
+    expect(
+      database
+        .prepare("SELECT name FROM search_index_state ORDER BY name")
+        .all()
+        .map((row) => row.name),
+    ).toEqual(["document_index", "memory_index", "message_stems", "message_words", "note_index"])
+  })
+
+  it("refuses a second displayed alias, a second summary from one source and a repeated meeting chat line", async () => {
+    const database = await open()
+    migrate(database)
+    const run = (sql: string) => database.exec(sql)
+    const alias = (account: string, display: number) =>
+      `INSERT INTO aliases (aliasable_type, aliasable_id, account_id, name, name_folded, display, source, created_at,
+         updated_at) VALUES ('person', 1, ${account}, 'Ali', 'ali', ${display}, 'owner', 1, 1)`
+    run(
+      `INSERT INTO accounts (provider, external_id, scope, created_at, updated_at) VALUES ('zoom', 'a', 'work', 1, 1)`,
+    )
+    run(alias("NULL", 1))
+    run(alias("NULL", 0))
+    run(alias("1", 1))
+    run(`INSERT INTO meetings (account_id, external_id, created_at, updated_at) VALUES (1, 'm', 1, 1)`)
+    run(`INSERT INTO meeting_summaries (meeting_id, source, created_at, updated_at) VALUES (1, 'zoom-ai', 1, 1)`)
+    const line = (externalId: string) =>
+      `INSERT INTO meeting_chat_messages (meeting_id, external_id, sent_at, text, created_at, updated_at)
+         VALUES (1, ${externalId}, 1, 'hi', 1, 1)`
+    run(line("'c1'"))
+    run(line("NULL"))
+    run(line("NULL"))
+
+    expect(() => run(alias("NULL", 1))).toThrow(/UNIQUE/)
+    expect(() =>
+      run(`INSERT INTO meeting_summaries (meeting_id, source, created_at, updated_at) VALUES (1, 'zoom-ai', 1, 1)`),
+    ).toThrow(/UNIQUE/)
+    expect(() => run(line("'c1'"))).toThrow(/UNIQUE/)
+  })
+
+  it("purges an email with its recipients, mailboxes, chunks and unshared embeddings, and an account's links", async () => {
+    const database = await open()
+    migrate(database)
+    const run = (sql: string) => database.exec(sql)
+    const count = (table: string) => Number(database.prepare(`SELECT count(*) AS n FROM ${table}`).get()?.n)
+    run(
+      `INSERT INTO accounts (provider, external_id, scope, created_at, updated_at) VALUES ('mail', 'a', 'work', 1, 1)`,
+    )
+    run(
+      `INSERT INTO email_threads (account_id, external_id, emails_count, created_at, updated_at) VALUES (1, 't', 2, 1, 1)`,
+    )
+    for (const id of [1, 2])
+      run(`INSERT INTO emails (id, account_id, email_thread_id, external_id, created_at, updated_at)
+             VALUES (${id}, 1, 1, 'e${id}', 1, 1)`)
+    run(`INSERT INTO email_recipients (email_id, address, role, position, created_at, updated_at)
+           VALUES (1, 'bob@example.com', 'to', 0, 1, 1)`)
+    run(
+      `INSERT INTO mailboxes (account_id, external_id, name, created_at, updated_at) VALUES (1, 'INBOX', 'Inbox', 1, 1)`,
+    )
+    run(`INSERT INTO email_mailboxes (email_id, mailbox_id, created_at) VALUES (1, 1, 1)`)
+    for (const [email, hash] of [
+      [1, "only"],
+      [1, "shared"],
+      [2, "shared"],
+    ] as const)
+      run(`INSERT INTO chunks (chunkable_type, chunkable_id, position, start_offset, end_offset, content_hash, created_at,
+             updated_at) VALUES ('email', ${email}, ${hash === "only" ? 0 : email}, 0, 1, '${hash}', 1, 1)`)
+    for (const hash of ["only", "shared"])
+      run(`INSERT INTO embeddings (model, content_hash, dims, vector, created_at, updated_at)
+             VALUES ('m', '${hash}', 1, x'00', 1, 1)`)
+    run(`INSERT INTO tags (name, kind, created_at, updated_at) VALUES ('work', 'tag', 1, 1)`)
+    run(`INSERT INTO links (from_type, from_id, to_type, to_id, kind, anchor, source, created_at, updated_at)
+           VALUES ('account', 1, 'tag', 1, 'labelled', 'Projects', 'owner', 1, 1)`)
+
+    run("DELETE FROM emails WHERE id = 1")
+    expect([count("email_recipients"), count("email_mailboxes"), count("chunks")]).toEqual([0, 0, 1])
+    expect(database.prepare("SELECT content_hash FROM embeddings").all()).toEqual([{ content_hash: "shared" }])
+
+    run("DELETE FROM emails")
+    run("DELETE FROM email_threads")
+    run("DELETE FROM mailboxes")
+    run("DELETE FROM accounts")
+    expect(count("links")).toBe(0)
+  })
+})

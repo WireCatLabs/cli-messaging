@@ -59,7 +59,7 @@ describe("observed retention", () => {
       })
       expect(found?.items[0]).toMatchObject({ cohort: "2026-08-31", stays: 2 })
       expect(found?.items[0]?.checkpoints).toEqual([
-        { ageMilliseconds: DAY, eligible: 2, observable: 0, present: 0, absent: 0, unknown: 2, pending: 0, rate: null },
+        { ageMilliseconds: DAY, eligible: 2, observable: 1, present: 1, absent: 0, unknown: 1, pending: 0, rate: 1 },
         {
           ageMilliseconds: 7 * DAY,
           eligible: 2,
@@ -82,9 +82,8 @@ describe("observed retention", () => {
         },
       ])
       expect(found?.evidence[0]?.checkpoints[0]).toMatchObject({
-        state: "unknown",
-        observedAt: null,
-        lagMilliseconds: null,
+        observedAt: new Date(START + 1.25 * DAY).toISOString(),
+        lagMilliseconds: 0.25 * DAY,
       })
       expect(found?.evidence.find((one) => one.person === "3")?.departure).toMatchObject({
         after: new Date(START).toISOString(),
@@ -117,6 +116,22 @@ describe("observed retention", () => {
         "increasing",
       )
       await expect(store.retention?.(OWNER, "7", { ...options(), limit: 101 })).rejects.toThrow("1–100")
+    } finally {
+      await store.close()
+    }
+  })
+
+  it("purges an account together with every roster read it kept", async () => {
+    const { store, roster, options } = await setup()
+    try {
+      await roster(0, [member("2"), member("3")], true)
+      await roster(1, [member("2")], false)
+      await store.purge(OWNER)
+      await store.saveChats(OWNER, [
+        { id: "7", title: "Synthetic group", kind: "group", unreadCount: 0, lastMessageAt: null, participantsCount: 4 },
+      ])
+
+      expect((await store.retention?.(OWNER, "7", options()))?.eligibleStays).toBe(0)
     } finally {
       await store.close()
     }

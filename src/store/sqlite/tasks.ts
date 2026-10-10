@@ -28,19 +28,8 @@ export interface StoreTaskStore extends TaskStore {
   rowOf(id: string): number | undefined
 }
 
-/**
- * The package's id, the source locator, its kind and its group have no column of their own yet (schema
- * request): they live in `metadata`, and a task carries a locator, never the message text.
- */
-interface Held {
-  id: string
-  locator: string
-  sourceKind: string
-  group: string
-}
-
 const COLUMNS =
-  "t.id AS row_id, t.metadata, t.type, t.status, t.close_reason, t.source, t.created_at, t.due_at, t.closed_at, " +
+  "t.id AS row_id, t.package_id, t.source_locator, t.source_kind, t.source_group, t.type, t.status, t.close_reason, t.source, t.created_at, t.due_at, t.closed_at, " +
   "t.closed_by_type, t.closed_by_id, p.name AS account"
 
 /** One inbox project per task account (`telegram:100`): derived from the account text alone, no `-` in it. */
@@ -60,27 +49,39 @@ export const taskStoreOver = (database: CacheDatabase, now: () => number = Date.
   const inbox = (account: string, create: boolean): number | undefined => {
     const key = inboxKey(account)
     const found = database.prepare("SELECT id FROM projects WHERE key = ?").get(key)
-    if (found || !create) return found ? Number(found.id) : undefined
+    if (!create) return found ? Number(found.id) : undefined
+    const [provider, external] = [account.slice(0, account.indexOf(":")), account.slice(account.indexOf(":") + 1)]
+    const owning = database
+      .prepare("SELECT id FROM accounts WHERE provider = ? AND external_id = ?")
+      .get(provider, external)
+    const accountId = owning ? Number(owning.id) : null
+    // A task can arrive before its messenger saved the account; the project learns it on a later task.
+    if (found) {
+      if (accountId !== null)
+        database
+          .prepare("UPDATE projects SET account_id = ? WHERE id = ? AND account_id IS NULL")
+          .run(accountId, Number(found.id))
+      return Number(found.id)
+    }
     const at = now()
     return Number(
       database
         .prepare(
-          "INSERT INTO projects (key, name, description, type, scope, tasks_count, status, created_at, updated_at) " +
-            "VALUES (?, ?, ?, 'personal', 'personal', 0, 'active', ?, ?) RETURNING id",
+          "INSERT INTO projects (key, name, description, type, account_id, scope, tasks_count, status, created_at, updated_at) " +
+            "VALUES (?, ?, ?, 'personal', ?, 'personal', 0, 'active', ?, ?) RETURNING id",
         )
-        .get(key, account, `What waits on the owner in ${account}`, at, at)?.id,
+        .get(key, account, `What waits on the owner in ${account}`, accountId, at, at)?.id,
     )
   }
   const select = (where: string) =>
     database.prepare(`SELECT ${COLUMNS} FROM tasks t JOIN projects p ON p.id = t.project_id WHERE ${where}`)
   const toTask = (row: Record<string, unknown>): Task => {
-    const held = JSON.parse(String(row.metadata ?? "{}")) as Partial<Held>
     const task: Task = {
-      id: String(held.id),
-      source: String(held.locator),
-      sourceKind: String(held.sourceKind),
+      id: String(row.package_id),
+      source: String(row.source_locator),
+      sourceKind: String(row.source_kind),
       account: String(row.account),
-      group: String(held.group),
+      group: String(row.source_group),
       kind: oneOf(TASK_KINDS, row.type, "kind"),
       state: oneOf(TASK_STATES, row.status, "state"),
       origin: oneOf(TASK_ORIGINS, row.source, "origin"),
@@ -110,7 +111,7 @@ export const taskStoreOver = (database: CacheDatabase, now: () => number = Date.
     findBySource: async (account, source) => {
       const project = inbox(account, false)
       if (project === undefined) return []
-      return select("t.project_id = ? AND json_extract(t.metadata, '$.locator') = ? ORDER BY t.created_at, t.id")
+      return select("t.project_id = ? AND t.source_locator = ? ORDER BY t.created_at, t.id")
         .all(project, source)
         .map(toTask)
     },
@@ -123,14 +124,13 @@ export const taskStoreOver = (database: CacheDatabase, now: () => number = Date.
           )
           .get(now(), project)
         const number = Number(counted?.tasks_count)
-        const author = actorOfOrigin(database, task.origin, now())
-        const closedBy = task.closedBy ? actorOfOrigin(database, task.closedBy, now()) : undefined
-        const held: Held = { id: task.id, locator: task.source, sourceKind: task.sourceKind, group: task.group }
+        const author = actorOfOrigin(database, task.origin)
+        const closedBy = task.closedBy ? actorOfOrigin(database, task.closedBy) : undefined
         database
           .prepare(
             "INSERT INTO tasks (project_id, number, key, title, type, status, due_at, closed_at, closed_by_type, closed_by_id, " +
-              "close_reason, author_type, author_id, source, metadata, created_at, updated_at) " +
-              "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+              "close_reason, author_type, author_id, source, package_id, source_locator, source_kind, source_group, created_at, updated_at) " +
+              "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
           )
           .run(
             project,
@@ -147,7 +147,10 @@ export const taskStoreOver = (database: CacheDatabase, now: () => number = Date.
             author.type,
             author.id,
             task.origin,
-            JSON.stringify(held),
+            task.id,
+            task.source,
+            task.sourceKind,
+            task.group,
             task.createdAt.getTime(),
             now(),
           )
@@ -156,7 +159,7 @@ export const taskStoreOver = (database: CacheDatabase, now: () => number = Date.
     update: async (task) => {
       const row = taskRowOf(database, task.id)
       if (row === undefined) throw new CliError("not_found", `no task ${task.id}`)
-      const closedBy = task.closedBy ? actorOfOrigin(database, task.closedBy, now()) : undefined
+      const closedBy = task.closedBy ? actorOfOrigin(database, task.closedBy) : undefined
       database
         .prepare(
           "UPDATE tasks SET status = ?, close_reason = ?, due_at = ?, closed_at = ?, closed_by_type = ?, closed_by_id = ?, " +
@@ -224,7 +227,7 @@ const listTasks = (
     values.push(filter.kind)
   }
   if (filter.group !== undefined) {
-    where.push("json_extract(t.metadata, '$.group') = ?")
+    where.push("t.source_group = ?")
     values.push(filter.group)
   }
   if (filter.createdBefore) {

@@ -5,7 +5,7 @@ of the store v2 plan's schema page, generated from the same spec; `src/store/sql
 hand-written SQL in `drizzle/` must agree with it, and `src/store/sqlite/schema.test.ts` checks every table
 and column of a new store against this page.
 
-75 tables, 16 full-text indexes; 48 new, 14 of today's dropped or merged.
+77 tables, 16 full-text indexes; 50 new, 14 of today's dropped or merged.
 Status: **new** — added; **changed** — merged, split or reshaped; **renamed** — naming rules and timestamps only; **kept** — as today.
 
 ## Conventions
@@ -233,7 +233,7 @@ Other names for anything: a person's nickname, a contact's name in one messenger
 | `created_at` | integer | not null |  | when this row was saved here |
 | `updated_at` | integer | not null |  | when this row last changed here |
 
-*Keys and indexes:* `INDEX (aliasable_type, aliasable_id)`, `INDEX (account_id)`
+*Keys and indexes:* `UNIQUE (aliasable_type, aliasable_id, ifnull(account_id, 0)) WHERE display = 1`, `INDEX (aliasable_type, aliasable_id)`, `INDEX (account_id)`
 
 ### `identities_fts` — kept
 
@@ -501,6 +501,37 @@ Messages whose stems are stale. Triggers fill it, because SQL cannot stem; JS em
 | Column | Type | Constraints | References | Meaning |
 |---|---|---|---|---|
 | `id` ← `pk` | integer | PK |  |  |
+
+### `member_observations` — new
+
+One read of a chat's member list: when, whether it was the whole list, and how many it reported and returned. Retention reads presence at a checkpoint from these.
+
+| Column | Type | Constraints | References | Meaning |
+|---|---|---|---|---|
+| `id` | integer | PK |  |  |
+| `chat_id` | integer | not null | → `chats.id` | the `chat` it belongs to |
+| `observed_at` | integer | not null |  |  |
+| `started_at` | integer |  |  | when the read began, for a list read in pages |
+| `complete` | integer | not null |  | 1 when the read returned the whole list, so a member missing from it is gone |
+| `reported_count` | integer |  |  | the count the messenger reports |
+| `listed_count` | integer | not null |  | how many members this read returned |
+| `source` | text | not null |  | what read it: a sync, a command, an import |
+| `created_at` | integer | not null |  | when this row was saved here |
+| `updated_at` | integer | not null |  | when this row last changed here |
+
+*Keys and indexes:* `INDEX (chat_id, observed_at, id)`
+
+### `member_observation_members` — new
+
+Who one member-list read saw.
+
+| Column | Type | Constraints | References | Meaning |
+|---|---|---|---|---|
+| `member_observation_id` | integer | not null | → `member_observations.id` | the `member_observation` it belongs to |
+| `identity_id` | integer | not null | → `identities.id` | the `identity` it belongs to |
+| `member_stay_id` | integer | not null | → `member_stays.id` | the stay the member was in when seen |
+
+*Keys and indexes:* `PRIMARY KEY (member_observation_id, identity_id)`, `INDEX (member_stay_id)`, `INDEX (identity_id)`
 
 ## Mail
 
@@ -770,7 +801,7 @@ Short text about something: a person, a chat, an event, a document, a task. Comm
 | Column | Type | Constraints | References | Meaning |
 |---|---|---|---|---|
 | `id` | integer | PK |  |  |
-| `notable_type` | text | not null |  | what the note is about: `person`, `chat`, `event`, `document`, `task`, … |
+| `notable_type` | text | not null |  | what the note is about: `person`, `chat`, `event`, `document`, `task`, …; a note about nothing in particular is about the owner's person |
 | `notable_id` | integer | not null |  | the row in the `notable_type` table |
 | `title` | text |  |  | optional heading |
 | `body` | text | not null |  | the note, in Markdown |
@@ -1049,7 +1080,7 @@ The in-meeting chat.
 | `created_at` | integer | not null |  | when this row was saved here |
 | `updated_at` | integer | not null |  | when this row last changed here |
 
-*Keys and indexes:* `INDEX (meeting_id)`, `INDEX (sender_participant_id)`
+*Keys and indexes:* `UNIQUE (meeting_id, external_id) WHERE external_id IS NOT NULL`, `INDEX (meeting_id)`, `INDEX (sender_participant_id)`
 
 ### `meeting_summaries` — new
 
@@ -1072,7 +1103,7 @@ A summary of a meeting, from the provider's AI, a bot, the owner or an LLM run h
 | `created_at` | integer | not null |  | when this row was saved here |
 | `updated_at` | integer | not null |  | when this row last changed here |
 
-*Keys and indexes:* `INDEX (meeting_id)`
+*Keys and indexes:* `UNIQUE (meeting_id, source)`
 
 ### `meeting_words` — new
 
@@ -1139,6 +1170,7 @@ A place for tasks, with the short key their ids start with (`MEET-12`).
 | `description` | text |  |  | what the project is for |
 | `type` | text | not null |  | work, client, personal, oss, other; tags group projects beyond that |
 | `organization_id` | integer |  | → `organizations.id` | the `organization` it belongs to |
+| `account_id` | integer |  | → `accounts.id` | the account an inbox project collects tasks for; null for a project of the owner's own |
 | `scope` | text | not null |  | `personal` or `work`; what a context query may read for a given purpose, so a work question never pulls private chats (owner) |
 | `owner_type` | text |  |  | `person` or `bot` |
 | `owner_id` | integer |  |  | the row in the `owner_type` table |
@@ -1148,7 +1180,7 @@ A place for tasks, with the short key their ids start with (`MEET-12`).
 | `updated_at` | integer | not null |  | when this row last changed here |
 | `deleted_at` | integer |  |  | gone at the source; sync never hard-deletes |
 
-*Keys and indexes:* `INDEX (organization_id)`, `INDEX (owner_type, owner_id)`
+*Keys and indexes:* `INDEX (organization_id)`, `INDEX (account_id)`, `INDEX (owner_type, owner_id)`
 
 ### `tasks` — new
 
@@ -1175,6 +1207,10 @@ A task or ticket, for people and agents alike. Everything it concerns — people
 | `author_type` | text | not null |  | `person` or `bot` |
 | `author_id` | integer | not null |  | the row in the `author_type` table |
 | `source` | text | not null |  | owner, agent, rule (today's `origin`), or an import |
+| `package_id` | text | unique |  | the task package's own id for the task; null for a task made here |
+| `source_locator` | text |  |  | what the task came from: a message locator, never its text |
+| `source_kind` | text |  |  | the kind of thing `source_locator` names |
+| `source_group` | text |  |  | the group the task package files it under |
 | `resolution` | text |  |  | how it ended, in words; a question's answer. Where the answer came from is a `links` row of kind `answered-by` |
 | `verdict` | text |  |  | useful or not_useful, as the owner judged a task an agent raised; null until judged |
 | `metadata` | text |  |  | JSON: what the source sends that has no column, and is not searched |
@@ -1182,7 +1218,7 @@ A task or ticket, for people and agents alike. Everything it concerns — people
 | `updated_at` | integer | not null |  | when this row last changed here |
 | `deleted_at` | integer |  |  | gone at the source; sync never hard-deletes |
 
-*Keys and indexes:* `UNIQUE (project_id, number)`, `INDEX (project_id, status, due_at)`, `INDEX (parent_id)`, `INDEX (closed_by_type, closed_by_id)`, `INDEX (author_type, author_id)`
+*Keys and indexes:* `UNIQUE (project_id, number)`, `INDEX (project_id, status, due_at)`, `INDEX (project_id, source_locator)`, `INDEX (source_group)`, `INDEX (parent_id)`, `INDEX (closed_by_type, closed_by_id)`, `INDEX (author_type, author_id)`
 
 ### `task_assignments` — new
 
@@ -1325,7 +1361,7 @@ A tag's name, once (owner). Which things carry it is `taggings`.
 
 ### `links` — changed
 
-Every connection between two things that no column holds. Kinds include `answered-by` (a question task → the message that answered it), `duplicate-of` (the same question asked again), `evidence` (a decision or memory → its source), `created-from` (a thing → what it was made from), `member-of`, `related-to`, `assigned-to`.
+Every connection between two things that no column holds. Kinds written today: `links-to` (a document or note links to something, as written in it), `about` (a note or document is about a person, project, …), `member-of` (a chat or person belongs to a project or organization), `labelled` (a folder account → a tag, the subfolder's path in `anchor`, so every document under it carries the tag), `answered-by` (a question task → the message that answered it), `evidence` (a decision or memory → its source), `created-from` (a thing → what it was made from). Reserved, not yet written: `duplicate-of` (the same question asked again), `related-to`, `assigned-to`.
 
 *Change:* String references → polymorphic columns, type as a string (owner).
 
@@ -1336,7 +1372,7 @@ Every connection between two things that no column holds. Kinds include `answere
 | `from_id` | integer | not null |  | the row in the `from_type` table |
 | `to_type` | text |  |  | the kind of thing `to_id` points at: a singular table name |
 | `to_id` | integer |  |  | null while the link names nobody yet |
-| `kind` | text | not null |  | Type of connection: `links-to` (a note links to something), `about`, `member-of`, `related-to` or `assigned-to`. |
+| `kind` | text | not null |  | the connection; the kinds are listed in the table's description |
 | `anchor` | text |  |  | The heading or block fragment the link points at inside its target, like `#Heading` or `#^block`; NULL for the whole target. |
 | `source` ← `origin` | text | not null |  | Where the link came from: `file` (written in a note file), `owner` (added by the owner) or `suggested` (proposed, not yet confirmed). |
 | `target_text` | text |  |  | The target as written (e.g. a name in a note), kept while the link resolves to nobody; up to 500 characters. |
@@ -1519,12 +1555,12 @@ Who took part in what, and when: one row per person or identity per message, ema
 
 ### `chunks` — new
 
-Pieces of a longer text, the unit that gets an embedding: ranges of a document, an email, an attachment's text, a note, a meeting transcript or summary; a short task or event is one chunk. Conversations of messages keep their own `conversation_chunks`.
+Pieces of a longer text, the unit that gets an embedding: ranges of a document, an email, an attachment's text, a note, a meeting transcript or summary; a short task or event is one chunk. A conversation of messages keeps its pieces in `conversation_chunks` and also gets a `conversation` row here per piece, so vector search filters it by scope, account and time like any other text.
 
 | Column | Type | Constraints | References | Meaning |
 |---|---|---|---|---|
 | `id` | integer | PK |  |  |
-| `chunkable_type` | text | not null |  | `document`, `email`, `attachment`, `note`, `meeting_transcript`, `meeting_summary`, `event`, `task` |
+| `chunkable_type` | text | not null |  | `document`, `email`, `attachment`, `note`, `memory`, `conversation`, `meeting_transcript`, `meeting_summary`, `event`, `task` |
 | `chunkable_id` | integer | not null |  | the row in the `chunkable_type` table |
 | `position` | integer | not null |  | order within its parent, from 0 |
 | `start_offset` | integer | not null |  | where the piece starts in the parent's text, in characters |
@@ -1567,8 +1603,8 @@ Settings of the store file itself, shared by every profile, tg and MAX — unlik
 |---|---|
 | `chat_metadata` | merged into `chats` (owner) |
 | `attachment_texts` | merged into `attachments` (one row per attachment today) |
-| `membership_batches` | dropped if retention rebuilds on `member_stays` + `member_counts` with its tests passing (owner, NEED-896 A) |
-| `membership_batch_members` | as `membership_batches` |
+| `membership_batches` | → `member_observations`: stays and counts alone lose a checkpoint a later roster overwrites |
+| `membership_batch_members` | → `member_observation_members` |
 | `owner_targets` | taggings and links point at a person, organization, project, task or folder directly |
 | `entities` | split into `organizations` and `projects` (owner); a family or a group is an organization |
 | `note_folders` | become `accounts` rows of provider `folder` |

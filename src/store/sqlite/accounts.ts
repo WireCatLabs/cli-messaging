@@ -12,6 +12,8 @@ import {
   fetchLeases,
   involvements,
   memberCounts,
+  memberObservationMembers,
+  memberObservations,
   memberStays,
   messageRevisions,
   messages,
@@ -76,6 +78,15 @@ export const purgeAccount = ({ orm }: StoreContext, accountKey: number): void =>
   orm.delete(messageTranscripts).where(inArray(messageTranscripts.chatId, chatsOf)).run()
   orm.delete(fetchLeases).where(inArray(fetchLeases.chatId, chatsOf)).run()
   orm.delete(chatMembers).where(inArray(chatMembers.chatId, chatsOf)).run()
+  const observationsOf = orm
+    .select({ id: memberObservations.id })
+    .from(memberObservations)
+    .where(inArray(memberObservations.chatId, chatsOf))
+  orm
+    .delete(memberObservationMembers)
+    .where(inArray(memberObservationMembers.memberObservationId, observationsOf))
+    .run()
+  orm.delete(memberObservations).where(inArray(memberObservations.chatId, chatsOf)).run()
   orm.delete(memberStays).where(inArray(memberStays.chatId, chatsOf)).run()
   orm.delete(memberCounts).where(inArray(memberCounts.chatId, chatsOf)).run()
   orm.delete(syncRanges).where(inArray(syncRanges.chatId, chatsOf)).run()

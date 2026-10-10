@@ -45,6 +45,15 @@ export const retentionQuery = (
       "SELECT s.id AS pk,i.external_id AS person,s.identity_id,s.joined_at,s.first_seen_at,s.last_seen_at,s.left_at FROM member_stays s JOIN identities i ON i.id=s.identity_id WHERE s.chat_id=? AND s.joined_at BETWEEN ? AND ? ORDER BY s.joined_at,s.id",
     )
     .all(chatPk, options.since, options.until)
+  const observationStatement = database.prepare(
+    `SELECT o.id,o.observed_at,o.complete,EXISTS(SELECT 1 FROM member_observation_members om WHERE om.member_observation_id=o.id AND om.member_stay_id=?) AS present FROM member_observations o WHERE o.chat_id=? AND o.observed_at BETWEEN ? AND ? ORDER BY o.observed_at,o.id LIMIT 1`,
+  )
+  const departureStatement = database.prepare(
+    `SELECT o.observed_at FROM member_observations o WHERE o.chat_id=? AND o.complete=1 AND o.observed_at BETWEEN ? AND ? AND NOT EXISTS(SELECT 1 FROM member_observation_members om WHERE om.member_observation_id=o.id AND om.member_stay_id=?) ORDER BY o.observed_at,o.id LIMIT 1`,
+  )
+  const lastPositiveStatement = database.prepare(
+    `SELECT max(o.observed_at) AS at FROM member_observations o JOIN member_observation_members om ON om.member_observation_id=o.id WHERE om.member_stay_id=? AND o.observed_at < ?`,
+  )
   const activityStatement = database.prepare(
     `SELECT min(sent_at) AS at FROM messages WHERE chat_id=? AND sender_identity_id=? AND deleted_at IS NULL AND sent_at >= ? AND sent_at < ?`,
   )
@@ -54,13 +63,10 @@ export const retentionQuery = (
       end = joinedAt + options.within
     const day = dayOf(joinedAt),
       cohort = options.by === "week" ? week(day) : day
-    const upper = row.left_at == null || Number(row.left_at) > options.cutoff ? null : Number(row.left_at)
-    const lower =
-      Number(row.last_seen_at) <= options.cutoff
-        ? Number(row.last_seen_at)
-        : Number(row.first_seen_at) <= options.cutoff
-          ? Number(row.first_seen_at)
-          : null
+    const absence = departureStatement.get(chatPk, Math.max(joinedAt, Number(row.first_seen_at)), options.cutoff, pk)
+    const upper = absence ? Number(absence.observed_at) : null
+    const positive = lastPositiveStatement.get(pk, upper ?? options.cutoff + 1)
+    const lower = positive?.at === null || positive?.at === undefined ? null : Number(positive.at)
     const activityEnd = Math.min(end, options.cutoff + 1, upper ?? Number.POSITIVE_INFINITY)
     const first = activityStatement.get(chatPk, Number(row.identity_id), joinedAt, activityEnd)?.at
     const covered =
@@ -84,19 +90,25 @@ export const retentionQuery = (
             lagMilliseconds: null,
             complete: null,
           }
-        const end = Math.min(target + RETENTION_TOLERANCE, options.cutoff)
-        const positive = [Number(row.first_seen_at), Number(row.last_seen_at)]
-          .filter((at) => at >= target && at <= end)
-          .sort((a, b) => a - b)[0]
-        const absent = upper !== null && upper >= target && upper <= end ? upper : undefined
-        const at = positive !== undefined && (absent === undefined || positive < absent) ? positive : absent
+        const read = observationStatement.get(
+          pk,
+          chatPk,
+          target,
+          Math.min(target + RETENTION_TOLERANCE, options.cutoff),
+        )
         return {
           checkpoint,
           targetAt: iso(target),
-          state: at === undefined ? "unknown" : at === positive ? "present" : "absent",
-          observedAt: at === undefined ? null : iso(at),
-          lagMilliseconds: at === undefined ? null : at - target,
-          complete: absent !== undefined && at === absent ? true : null,
+          state: !read
+            ? "unknown"
+            : Number(read.present) === 1
+              ? "present"
+              : Number(read.complete) === 1
+                ? "absent"
+                : "unknown",
+          observedAt: read ? iso(Number(read.observed_at)) : null,
+          lagMilliseconds: read ? Number(read.observed_at) - target : null,
+          complete: read ? Number(read.complete) === 1 : null,
         }
       }),
       activity: {

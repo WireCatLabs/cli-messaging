@@ -152,9 +152,12 @@ describe("the message store", () => {
 
     const database = await openCache(path)
     const count = (table: string) => database.prepare(`SELECT count(*) AS n FROM ${table}`).get()?.n
-    expect([count("identities"), count("persons"), count("identity_links"), count("identity_link_events")]).toEqual([
-      2, 2, 2, 2,
-    ])
+    expect([
+      count("identities"),
+      count("persons WHERE owner = 0"),
+      count("identity_links"),
+      count("identity_link_events"),
+    ]).toEqual([2, 2, 2, 2])
     database.close()
   })
 

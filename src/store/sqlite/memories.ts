@@ -80,7 +80,7 @@ const oneOf = <T extends string>(value: unknown, allowed: readonly T[], what: st
 }
 
 export const authorActor = (context: StoreContext, author: Author): { actor: Actor; model: string | null } => {
-  if (author === "owner") return { actor: ownerPerson(context.database, context.now()), model: null }
+  if (author === "owner") return { actor: ownerPerson(context.database), model: null }
   return {
     actor: botNamed(context.database, author.bot, context.now(), "agent"),
     model: author.model === undefined ? null : author.model.trim().slice(0, 200) || null,

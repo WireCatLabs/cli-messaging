@@ -94,6 +94,34 @@ export const saveRoster = (
     throw new CliError("validation_error", "member observation predates the latest saved roster")
   if (new Set(members.map((member) => member.id)).size !== members.length)
     throw new CliError("validation_error", "member roster contains duplicate identities")
+  const observationId = observation
+    ? Number(
+        context.database
+          .prepare(
+            "INSERT INTO member_observations (chat_id, observed_at, started_at, complete, reported_count, listed_count, source, created_at, updated_at) " +
+              "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id",
+          )
+          .get(
+            chatKey,
+            observedAt,
+            startedAt,
+            complete ? 1 : 0,
+            participants,
+            members.length,
+            observation.source,
+            at,
+            at,
+          )?.id,
+      )
+    : undefined
+  const recordMember = (person: number, stay: number) => {
+    if (observationId !== undefined)
+      context.database
+        .prepare(
+          "INSERT INTO member_observation_members (member_observation_id, identity_id, member_stay_id) VALUES (?, ?, ?) ON CONFLICT DO NOTHING",
+        )
+        .run(observationId, person, stay)
+  }
   const change: RosterChange = { joined: [], gone: [], changed: [] }
   const present = new Set<number>()
 
@@ -122,10 +150,11 @@ export const saveRoster = (
         .set({ lastSeenAt: observedAt, role: member.role ?? null, joinedAt: joinedAt ?? open.joinedAt })
         .where(eq(memberStays.id, open.pk))
         .run()
+      recordMember(person, open.pk)
       continue
     }
     const invitedBy = member.invitedBy ? identityPk(context, accountKey, provider, member.invitedBy, null) : null
-    orm
+    const inserted = orm
       .insert(memberStays)
       .values({
         chatId: chatKey,
@@ -140,6 +169,7 @@ export const saveRoster = (
       })
       .returning({ pk: memberStays.id })
       .get()
+    if (inserted) recordMember(person, inserted.pk)
     change.joined.push(member.id)
   }
 

@@ -55,21 +55,7 @@ export const CORPORA = {
 /** What a row is indexed as: its title, then its text. Chunk offsets point into this. */
 export const noteIndexText = (title: string | null, text: string): string => (title ? `${title}\n\n${text}` : text)
 
-/**
- * The initial migration seeds only `note_index`; the document and memory rows are made on first use
- * (schema request: seed them too).
- */
-const ensureIndexRow = (database: CacheDatabase, corpus: Corpus) => {
-  if (indexRow(database, corpus.index)) return
-  database
-    .prepare(
-      "INSERT OR IGNORE INTO search_index_state (name, watermark, filled_through, terms_through, normalizer_version) VALUES (?, 0, 0, 0, 1)",
-    )
-    .run(corpus.index)
-}
-
 export const corpusIndexState = (database: CacheDatabase, corpus: Corpus): NoteIndexState => {
-  ensureIndexRow(database, corpus)
   const row = indexRow(database, corpus.index) as Record<string, unknown>
   const pending = Number(
     database.prepare(`SELECT count(*) AS n FROM ${corpus.type}_index_pending WHERE indexable_type = ?`).get(corpus.type)

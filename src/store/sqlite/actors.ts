@@ -12,14 +12,11 @@ export type Origin = "owner" | "agent" | "rule"
 
 const BOT_KINDS = ["agent", "script", "integration"] as const
 
-/** The owner's person row, made on first need: a fresh store has none until a messenger saves people. */
-export const ownerPerson = (database: CacheDatabase, now: number): Actor => {
+/** The owner's person row, which the initial migration seeds. */
+export const ownerPerson = (database: CacheDatabase): Actor => {
   const found = database.prepare("SELECT id FROM persons WHERE owner = 1 ORDER BY id LIMIT 1").get()
-  if (found) return { type: "person", id: Number(found.id) }
-  const made = database
-    .prepare("INSERT INTO persons (name, owner, created_at, updated_at) VALUES (NULL, 1, ?, ?) RETURNING id")
-    .get(now, now)
-  return { type: "person", id: Number(made?.id) }
+  if (!found) throw new CliError("configuration_error", "the store has no owner person")
+  return { type: "person", id: Number(found.id) }
 }
 
 /** A bot by its unique handle, registered on first use. */
@@ -41,12 +38,14 @@ export const botNamed = (
 
 /**
  * The task package's origins as actors: the owner is the owner's person, a rule and an unnamed agent are
- * the bots `rule` and `agent`.
+ * the seeded bots `rule` and `agent`.
  */
-export const actorOfOrigin = (database: CacheDatabase, origin: Origin, now: number): Actor =>
-  origin === "owner"
-    ? ownerPerson(database, now)
-    : botNamed(database, origin, now, origin === "rule" ? "script" : "agent")
+export const actorOfOrigin = (database: CacheDatabase, origin: Origin): Actor => {
+  if (origin === "owner") return ownerPerson(database)
+  const found = database.prepare("SELECT id FROM bots WHERE name = ?").get(origin)
+  if (!found) throw new CliError("configuration_error", `the store has no bot ${origin}`)
+  return { type: "bot", id: Number(found.id) }
+}
 
 export const originOfActor = (database: CacheDatabase, type: unknown, id: unknown): Origin | undefined => {
   if (type == null || id == null) return undefined

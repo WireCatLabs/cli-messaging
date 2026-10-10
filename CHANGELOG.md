@@ -23,11 +23,13 @@ break callers, and says how under "Changed — may break callers". `pnpm docs:ch
 - **`store.mail`: email threads, emails, recipients and mailboxes**, keyed by account and Message-ID. Save a
   thread, list threads, read one, read an email by Message-ID, mark emails gone, and search subjects and bodies.
 - `saveAccount` answers the store's id for the account, which `store.meetings` and `store.mail` take.
+- A new store holds the owner's person and the bots `rule` and `agent` from the start. Tasks keep the task
+  package's id, source locator, kind and group in columns; an inbox project names its account. The store refuses
+  a second displayed alias for one thing and account, a second meeting summary from one source and a repeated
+  meeting chat line. Purging an email takes its recipients, mailboxes and chunks with it.
 
 ### Changed — may break callers
 
-- Retention uses the first and last positive roster observations and observed departures. An intermediate roster
-  observation that those materialized stays no longer retain is reported as unknown.
 - **A new store schema in a new file, `wirecat.db`, created by one initial migration (store version 1).** Tables
   and columns follow Rails naming (`id`, `<thing>_id`, `external_id`, `created_at`/`updated_at`); mail, documents,
   notes, memories, decisions, events, meetings, organizations, projects, tasks, proposed actions, aliases,
