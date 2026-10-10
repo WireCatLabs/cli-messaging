@@ -67,7 +67,7 @@ const setup = async (history?: boolean) => {
 const rows = async (path: string) => {
   const database = await openCache(path)
   try {
-    return database.prepare("SELECT name, command, params, runs FROM searches ORDER BY pk").all()
+    return database.prepare("SELECT name, command, params, runs FROM searches ORDER BY id").all()
   } finally {
     database.close()
   }

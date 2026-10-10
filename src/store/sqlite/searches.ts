@@ -29,10 +29,11 @@ export interface StoredSearch {
   runs: number
 }
 
-const COLUMNS = "pk, name, command, params, language, version, fields_version, created_at, last_run_at, runs"
+const COLUMNS =
+  "id, name, command, params, language, version, fields_version, created_at, updated_at, last_run_at, runs"
 
 const searchOf = (row: Record<string, unknown>): StoredSearch => ({
-  id: String(row.pk),
+  id: String(row.id),
   name: row.name == null ? null : String(row.name),
   command: String(row.command) as SearchCommand,
   params: JSON.parse(String(row.params)) as Record<string, unknown>,
@@ -48,24 +49,24 @@ export const recordRun = ({ database, now }: StoreContext, run: SearchRecord, sa
   const at = now()
   database
     .prepare(
-      `INSERT INTO searches (command, params, language, version, fields_version, created_at, last_run_at, runs)
-       VALUES (?, ?, ?, ?, ?, ?, ?, 1)
-       ON CONFLICT (command, params) WHERE name IS NULL DO UPDATE SET runs = runs + 1, last_run_at = excluded.last_run_at`,
+      `INSERT INTO searches (command, params, language, version, fields_version, created_at, updated_at, last_run_at, runs)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)
+       ON CONFLICT (command, params) WHERE name IS NULL DO UPDATE SET runs = runs + 1, last_run_at = excluded.last_run_at, updated_at=excluded.updated_at`,
     )
-    .run(run.command, run.params, run.language, run.version, run.fieldsVersion, at, at)
+    .run(run.command, run.params, run.language, run.version, run.fieldsVersion, at, at, at)
   database
     .prepare(
-      `DELETE FROM searches WHERE name IS NULL AND pk NOT IN
-       (SELECT pk FROM searches WHERE name IS NULL ORDER BY last_run_at DESC, pk DESC LIMIT ?)`,
+      `DELETE FROM searches WHERE name IS NULL AND id NOT IN
+       (SELECT id FROM searches WHERE name IS NULL ORDER BY last_run_at DESC, id DESC LIMIT ?)`,
     )
     .run(HISTORY_KEPT)
   if (saved !== undefined)
-    database.prepare("UPDATE searches SET runs = runs + 1, last_run_at = ? WHERE pk = ?").run(at, Number(saved))
+    database.prepare("UPDATE searches SET runs = runs + 1, last_run_at = ? WHERE id = ?").run(at, Number(saved))
 }
 
 export const findSearch = ({ database }: StoreContext, reference: string): StoredSearch | undefined => {
   const row = /^\d+$/.test(reference)
-    ? database.prepare(`SELECT ${COLUMNS} FROM searches WHERE pk = ?`).get(Number(reference))
+    ? database.prepare(`SELECT ${COLUMNS} FROM searches WHERE id = ?`).get(Number(reference))
     : database.prepare(`SELECT ${COLUMNS} FROM searches WHERE name = ?`).get(reference)
   return row && searchOf(row)
 }
@@ -93,16 +94,16 @@ export const saveSearch = (
   if (taken)
     database
       .prepare(
-        `UPDATE searches SET command = ?, params = ?, language = ?, version = ?, fields_version = ?, created_at = ?,
-         last_run_at = NULL, runs = 0 WHERE pk = ?`,
+        `UPDATE searches SET command = ?, params = ?, language = ?, version = ?, fields_version = ?, created_at = ?, updated_at = ?,
+         last_run_at = NULL, runs = 0 WHERE id = ?`,
       )
-      .run(...values, Number(taken.id))
+      .run(...values, now(), Number(taken.id))
   else
     database
       .prepare(
-        "INSERT INTO searches (command, params, language, version, fields_version, created_at, name) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO searches (command, params, language, version, fields_version, created_at, updated_at, name) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
       )
-      .run(...values, name)
+      .run(...values, now(), name)
   return mustFind(context, name)
 }
 
@@ -112,13 +113,13 @@ export const savedSearches = ({ database }: StoreContext): StoredSearch[] =>
 /** Runs, newest first: unnamed ones and saved searches that have run. One more than `limit` says there are more. */
 export const searchHistory = ({ database }: StoreContext, limit: number): StoredSearch[] =>
   database
-    .prepare(`SELECT ${COLUMNS} FROM searches WHERE last_run_at IS NOT NULL ORDER BY last_run_at DESC, pk DESC LIMIT ?`)
+    .prepare(`SELECT ${COLUMNS} FROM searches WHERE last_run_at IS NOT NULL ORDER BY last_run_at DESC, id DESC LIMIT ?`)
     .all(limit + 1)
     .map(searchOf)
 
 export const deleteSearch = (context: StoreContext, reference: string): StoredSearch => {
   const found = mustFind(context, reference)
-  context.database.prepare("DELETE FROM searches WHERE pk = ?").run(Number(found.id))
+  context.database.prepare("DELETE FROM searches WHERE id = ?").run(Number(found.id))
   return found
 }
 

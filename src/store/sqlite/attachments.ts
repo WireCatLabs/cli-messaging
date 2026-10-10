@@ -12,15 +12,15 @@ export const keepDownloads = (
   files: readonly DownloadedFile[],
 ): number => {
   const message = orm
-    .select({ pk: messages.pk })
+    .select({ pk: messages.id })
     .from(messages)
-    .where(and(eq(messages.chatPk, chatKey), eq(messages.nativeId, messageId)))
+    .where(and(eq(messages.chatId, chatKey), eq(messages.externalId, messageId)))
     .get()
   if (!message) return 0
   const stored = orm
     .select({ position: attachments.position, kind: attachments.kind, name: attachments.name })
     .from(attachments)
-    .where(eq(attachments.messagePk, message.pk))
+    .where(and(eq(attachments.attachableType, "message"), eq(attachments.attachableId, message.pk)))
     .orderBy(attachments.position)
     .all()
   let kept = 0
@@ -30,7 +30,12 @@ export const keepDownloads = (
     orm
       .update(attachments)
       .set({ localPath: file.path })
-      .where(and(eq(attachments.messagePk, message.pk), eq(attachments.position, position)))
+      .where(
+        and(
+          and(eq(attachments.attachableType, "message"), eq(attachments.attachableId, message.pk)),
+          eq(attachments.position, position),
+        ),
+      )
       .run()
     kept += 1
   })

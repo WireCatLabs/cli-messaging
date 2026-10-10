@@ -7,7 +7,6 @@ import { CHUNK_CHARS, chunkHash, chunkTextOf } from "../conversations/chunks.js"
 import type { Message } from "../domain/models.js"
 import { conversationsService } from "../services/conversations.js"
 import { storeOnlyDeps } from "../services/deps.js"
-import { MIGRATIONS } from "./migrations.js"
 import { type MessageStore, openStore } from "./store.js"
 
 const app = { command: "memo", appName: "cli-memo", envPrefix: "MEMO", description: "notes", version: "0.0.0" }
@@ -101,22 +100,9 @@ describe("a message longer than a chunk", () => {
     const pieces = toEmbed.filter(({ lines }) => lines[0]?.id === "long.md").map(({ hash }) => hash)
     expect(pieces.length).toBeGreaterThan(1)
     const kept = left
-      .prepare(`SELECT count(*) AS n FROM chunk_vectors WHERE content_hash IN (${pieces.map(() => "?").join(",")})`)
+      .prepare(`SELECT count(*) AS n FROM embeddings WHERE content_hash IN (${pieces.map(() => "?").join(",")})`)
       .get(...pieces) as { n: number }
     left.close()
     expect(kept.n).toBe(0)
-  })
-})
-
-describe("store version 21", () => {
-  it("only adds columns older builds ignore: an older build may still write the file", () => {
-    const version = MIGRATIONS.find(({ version }) => version === 21)
-
-    expect(version?.minCompatible).toBe(6)
-    expect(
-      version?.statements.every((statement) =>
-        /^ALTER TABLE `conversation_chunks` ADD `text_(start|end)` integer;?$/.test(statement.trim()),
-      ),
-    ).toBe(true)
   })
 })

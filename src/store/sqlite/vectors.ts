@@ -8,10 +8,10 @@ export interface ChunkToEmbed {
   lines: { id: string; sender: string | null; text: string }[]
 }
 
-const currentChunks = (chatKey: number) => sql`SELECT k.content_hash, k.conversation_pk, k.first_message_pk,
-    k.last_message_pk, k.text_start, k.text_end FROM conversation_chunks k JOIN conversations c ON c.pk = k.conversation_pk
-  WHERE c.chat_pk = ${chatKey}
-    AND c.build = (SELECT s.current_build FROM conversation_state s WHERE s.chat_pk = ${chatKey})`
+const currentChunks = (chatKey: number) => sql`SELECT k.content_hash, k.conversation_id, k.first_message_id,
+    k.last_message_id, k.text_start, k.text_end FROM conversation_chunks k JOIN conversations c ON c.id = k.conversation_id
+  WHERE c.chat_id = ${chatKey}
+    AND c.build = (SELECT s.current_build FROM conversation_state s WHERE s.chat_id = ${chatKey})`
 
 /**
  * Chunks of the current build with no vector of `model`, ordered by hash from `after`, each with the
@@ -31,11 +31,11 @@ export const chunksToEmbed = (
     start: number | null
     end: number | null
   }>(
-    sql`SELECT k.content_hash AS hash, min(k.conversation_pk) AS conversation, k.first_message_pk AS first,
-        k.last_message_pk AS last, k.text_start AS start, k.text_end AS end
+    sql`SELECT k.content_hash AS hash, min(k.conversation_id) AS conversation, k.first_message_id AS first,
+        k.last_message_id AS last, k.text_start AS start, k.text_end AS end
       FROM (${currentChunks(chatKey)}) k
       WHERE k.content_hash > ${after ?? ""}
-        AND NOT EXISTS (SELECT 1 FROM chunk_vectors v WHERE v.model = ${model} AND v.content_hash = k.content_hash)
+        AND NOT EXISTS (SELECT 1 FROM embeddings v WHERE v.model = ${model} AND v.content_hash = k.content_hash)
       GROUP BY k.content_hash ORDER BY k.content_hash LIMIT ${limit}`,
   )
   return chunks.map(({ hash, conversation, first, last, start, end }) => {
@@ -56,13 +56,13 @@ const rangeOf = (start: number | null, end: number | null): TextRange | undefine
 const chunkLines = (orm: StoreContext["orm"], conversation: number, first: number, last: number) =>
   orm
     .all<{ id: string; sender: string | null; text: string; deleted: number }>(
-      sql`SELECT m.native_id AS id, m.sender_name AS sender, m.text, m.deleted_at IS NOT NULL AS deleted
+      sql`SELECT m.external_id AS id, m.sender_name AS sender, m.text, m.deleted_at IS NOT NULL AS deleted
         FROM conversation_messages cm
-        JOIN messages m ON m.pk = cm.message_pk
-        JOIN messages f ON f.pk = ${first} JOIN messages l ON l.pk = ${last}
-        WHERE cm.conversation_pk = ${conversation}
-          AND (m.sent_at, m.pk) >= (f.sent_at, f.pk) AND (m.sent_at, m.pk) <= (l.sent_at, l.pk)
-        ORDER BY m.sent_at, m.pk`,
+        JOIN messages m ON m.id = cm.message_id
+        JOIN messages f ON f.id = ${first} JOIN messages l ON l.id = ${last}
+        WHERE cm.conversation_id = ${conversation}
+          AND (m.sent_at, m.id) >= (f.sent_at, f.id) AND (m.sent_at, m.id) <= (l.sent_at, l.id)
+        ORDER BY m.sent_at, m.id`,
     )
     .map(({ deleted, ...line }) => ({ ...line, deleted: Boolean(deleted) }))
 
@@ -95,11 +95,11 @@ export const purgeVectorHashes = (context: StoreContext, hashes: readonly string
         last: number
         start: number | null
         end: number | null
-      }>(sql`SELECT k.conversation_pk AS conversation, k.first_message_pk AS first,
-        k.last_message_pk AS last, k.text_start AS start, k.text_end AS end
-        FROM conversation_chunks k JOIN conversations c ON c.pk = k.conversation_pk
-        JOIN conversation_state s ON s.chat_pk = c.chat_pk AND s.current_build = c.build
-        WHERE k.content_hash = ${hash} ORDER BY k.conversation_pk, k.ordinal LIMIT 100 OFFSET ${offset}`)
+      }>(sql`SELECT k.conversation_id AS conversation, k.first_message_id AS first,
+        k.last_message_id AS last, k.text_start AS start, k.text_end AS end
+        FROM conversation_chunks k JOIN conversations c ON c.id = k.conversation_id
+        JOIN conversation_state s ON s.chat_id = c.chat_id AND s.current_build = c.build
+        WHERE k.content_hash = ${hash} ORDER BY k.conversation_id, k.ordinal LIMIT 100 OFFSET ${offset}`)
       valid = candidates.some(({ conversation, first, last, start, end }) => {
         const lines = chunkLines(orm, conversation, first, last)
         return !lines.some(({ deleted }) => deleted) && chunkHash(chunkTextOf(lines, rangeOf(start, end))) === hash
@@ -111,17 +111,17 @@ export const purgeVectorHashes = (context: StoreContext, hashes: readonly string
         break
       }
     }
-    if (!valid) orm.run(sql`DELETE FROM chunk_vectors WHERE content_hash = ${hash}`)
+    if (!valid) orm.run(sql`DELETE FROM embeddings WHERE content_hash = ${hash}`)
   }
 }
 
 export const purgeVectorsOf = (context: StoreContext, messagePk: number): void => {
   const hashes = context.orm.all<{ hash: string }>(sql`SELECT DISTINCT k.content_hash AS hash
-    FROM conversation_messages cm JOIN messages m ON m.pk = cm.message_pk
-    JOIN conversation_chunks k ON k.conversation_pk = cm.conversation_pk
-    JOIN messages f ON f.pk = k.first_message_pk JOIN messages l ON l.pk = k.last_message_pk
-    WHERE cm.message_pk = ${messagePk}
-      AND (m.sent_at, m.pk) >= (f.sent_at, f.pk) AND (m.sent_at, m.pk) <= (l.sent_at, l.pk)`)
+    FROM conversation_messages cm JOIN messages m ON m.id = cm.message_id
+    JOIN conversation_chunks k ON k.conversation_id = cm.conversation_id
+    JOIN messages f ON f.id = k.first_message_id JOIN messages l ON l.id = k.last_message_id
+    WHERE cm.message_id = ${messagePk}
+      AND (m.sent_at, m.id) >= (f.sent_at, f.id) AND (m.sent_at, m.id) <= (l.sent_at, l.id)`)
   purgeVectorHashes(
     context,
     hashes.map(({ hash }) => hash),
@@ -145,13 +145,13 @@ export const conversationVectors = (
     hash: string
     vector: Uint8Array | null
   }>(
-    sql`SELECT k.first_message_pk AS first, k.last_message_pk AS last, k.text_start AS start, k.text_end AS end,
+    sql`SELECT k.first_message_id AS first, k.last_message_id AS last, k.text_start AS start, k.text_end AS end,
         k.content_hash AS hash, v.vector
       FROM conversation_chunks k
-      JOIN conversations c ON c.pk = k.conversation_pk
-      JOIN conversation_state s ON s.chat_pk = c.chat_pk AND s.current_build = c.build
-      LEFT JOIN chunk_vectors v ON v.model = ${model} AND v.content_hash = k.content_hash
-      WHERE k.conversation_pk = ${conversationPk} ORDER BY k.ordinal`,
+      JOIN conversations c ON c.id = k.conversation_id
+      JOIN conversation_state s ON s.chat_id = c.chat_id AND s.current_build = c.build
+      LEFT JOIN embeddings v ON v.model = ${model} AND v.content_hash = k.content_hash
+      WHERE k.conversation_id = ${conversationPk} ORDER BY k.ordinal`,
   )
   const vectors = rows.flatMap(({ first, last, start, end, hash, vector }) =>
     vector &&
@@ -179,8 +179,8 @@ export const saveVectors = (
   const at = now()
   for (const { hash, vector } of vectors) {
     orm.run(
-      sql`INSERT INTO chunk_vectors (model, content_hash, dims, vector, created_at)
-        VALUES (${model}, ${hash}, ${dims}, ${Buffer.from(vector.buffer, vector.byteOffset, vector.byteLength)}, ${at})
+      sql`INSERT INTO embeddings (model, content_hash, dims, vector, created_at, updated_at)
+        VALUES (${model}, ${hash}, ${dims}, ${Buffer.from(vector.buffer, vector.byteOffset, vector.byteLength)}, ${at}, ${at})
         ON CONFLICT DO NOTHING`,
     )
   }
@@ -189,7 +189,7 @@ export const saveVectors = (
 /** The current build's distinct chunk texts, and how many of them have a vector of `model`. */
 export const vectorStatus = ({ orm }: StoreContext, chatKey: number, model: string) => {
   const row = orm.get<{ chunks: number; embedded: number }>(
-    sql`SELECT count(*) AS chunks, sum(EXISTS (SELECT 1 FROM chunk_vectors v
+    sql`SELECT count(*) AS chunks, sum(EXISTS (SELECT 1 FROM embeddings v
         WHERE v.model = ${model} AND v.content_hash = k.content_hash)) AS embedded
       FROM (SELECT DISTINCT content_hash FROM (${currentChunks(chatKey)})) k`,
   )
@@ -202,12 +202,12 @@ export const vectorStatus = ({ orm }: StoreContext, chatKey: number, model: stri
  */
 export const clearVectors = ({ orm }: StoreContext, chatKey: number, model: string | undefined): number =>
   orm.all<{ n: number }>(
-    sql`DELETE FROM chunk_vectors
+    sql`DELETE FROM embeddings
       WHERE ${model === undefined ? sql`1` : sql`model = ${model}`}
         AND content_hash IN (SELECT k.content_hash FROM conversation_chunks k
-          JOIN conversations c ON c.pk = k.conversation_pk WHERE c.chat_pk = ${chatKey})
+          JOIN conversations c ON c.id = k.conversation_id WHERE c.chat_id = ${chatKey})
         AND content_hash NOT IN (SELECT k.content_hash FROM conversation_chunks k
-          JOIN conversations c ON c.pk = k.conversation_pk WHERE c.chat_pk <> ${chatKey})
+          JOIN conversations c ON c.id = k.conversation_id WHERE c.chat_id <> ${chatKey})
       RETURNING 1 AS n`,
   ).length
 
@@ -246,6 +246,10 @@ export const nearestChunks = (
     query,
     exclude,
     conversations,
+    scope,
+    projectId,
+    before,
+    personId,
   }: {
     chatKey?: number
     model: string
@@ -254,6 +258,10 @@ export const nearestChunks = (
     query: Float32Array
     exclude?: number
     conversations?: string[]
+    scope?: "personal" | "work"
+    projectId?: number
+    before?: number
+    personId?: number
   },
 ): NearestChunk[] => {
   const best = new Map<number, NearestChunk>()
@@ -271,19 +279,24 @@ export const nearestChunks = (
     }>(
       // CROSS JOIN keeps the chunks first, so each page walks their key; led by the vectors, SQLite re-read and
       // sorted every one of them per page — 1.3 s against 140 ms at 42k chunks (bench/embeddings/README.md).
-      sql`SELECT k.conversation_pk AS conversation, k.ordinal, k.first_message_pk AS first, k.last_message_pk AS last,
+      sql`SELECT k.conversation_id AS conversation, k.ordinal, k.first_message_id AS first, k.last_message_id AS last,
           k.text_start AS start, k.text_end AS end, k.content_hash AS hash, v.vector FROM conversation_chunks k
-        CROSS JOIN conversations c ON c.pk = k.conversation_pk
-        JOIN conversation_state s ON s.chat_pk = c.chat_pk AND s.current_build = c.build
-        JOIN chats ch ON ch.pk = c.chat_pk
-        JOIN chunk_vectors v ON v.model = ${model} AND v.content_hash = k.content_hash
-        WHERE ch.account_pk = ${accountPk}
-          ${chatKey === undefined ? sql`` : sql`AND c.chat_pk = ${chatKey}`}
-          ${since === undefined ? sql`` : sql`AND c.last_at >= ${since}`}
-          ${exclude === undefined ? sql`` : sql`AND c.pk <> ${exclude}`}
-          ${conversations === undefined ? sql`` : sql`AND c.pk IN (SELECT value FROM json_each(${JSON.stringify(conversations)}))`}
-          AND (k.conversation_pk, k.ordinal) > (${after.conversation}, ${after.ordinal})
-        ORDER BY k.conversation_pk, k.ordinal LIMIT ${SCAN_PAGE}`,
+        CROSS JOIN conversations c ON c.id = k.conversation_id
+        JOIN conversation_state s ON s.chat_id = c.chat_id AND s.current_build = c.build
+        JOIN chats ch ON ch.id = c.chat_id
+        JOIN chunks narrowed ON narrowed.chunkable_type='conversation' AND narrowed.chunkable_id=c.id AND narrowed.position=k.ordinal
+        JOIN embeddings v ON v.model = ${model} AND v.content_hash = k.content_hash
+        WHERE ch.account_id = ${accountPk}
+          ${scope === undefined ? sql`` : sql`AND narrowed.scope=${scope}`}
+          ${projectId === undefined ? sql`` : sql`AND narrowed.project_id=${projectId}`}
+          ${before === undefined ? sql`` : sql`AND narrowed.occurred_at < ${before}`}
+          ${personId === undefined ? sql`` : sql`AND EXISTS (SELECT 1 FROM conversation_messages pcm JOIN messages pm ON pm.id=pcm.message_id JOIN identity_links pil ON pil.identity_id=pm.sender_identity_id WHERE pcm.conversation_id=c.id AND pil.person_id=${personId})`}
+          ${chatKey === undefined ? sql`` : sql`AND c.chat_id = ${chatKey}`}
+          ${since === undefined ? sql`` : sql`AND narrowed.occurred_at >= ${since}`}
+          ${exclude === undefined ? sql`` : sql`AND c.id <> ${exclude}`}
+          ${conversations === undefined ? sql`` : sql`AND c.id IN (SELECT value FROM json_each(${JSON.stringify(conversations)}))`}
+          AND (k.conversation_id, k.ordinal) > (${after.conversation}, ${after.ordinal})
+        ORDER BY k.conversation_id, k.ordinal LIMIT ${SCAN_PAGE}`,
     )
     for (const row of rows) {
       const score = dot(query, row.vector)
@@ -308,10 +321,10 @@ export const nearestChunks = (
 }
 
 const hasVectorOf = (models: ReturnType<typeof sql>) => sql`EXISTS (SELECT 1 FROM conversation_chunks k
-    JOIN conversations c ON c.pk = k.conversation_pk
-    JOIN conversation_state s ON s.chat_pk = c.chat_pk AND s.current_build = c.build
-    JOIN chunk_vectors v ON v.model ${models} AND v.content_hash = k.content_hash
-    WHERE c.chat_pk = ch.pk)`
+    JOIN conversations c ON c.id = k.conversation_id
+    JOIN conversation_state s ON s.chat_id = c.chat_id AND s.current_build = c.build
+    JOIN embeddings v ON v.model ${models} AND v.content_hash = k.content_hash
+    WHERE c.chat_id = ch.id)`
 
 /** Chats in scope whose current build has vectors of another model and none of `model`: a search with it skips them. */
 export const embeddedOnlyElsewhere = (
@@ -320,16 +333,16 @@ export const embeddedOnlyElsewhere = (
   { chatKey, model }: { chatKey?: number; model: string },
 ): string[] => {
   const others = orm
-    .all<{ model: string }>(sql`SELECT DISTINCT model FROM chunk_vectors WHERE model <> ${model}`)
+    .all<{ model: string }>(sql`SELECT DISTINCT model FROM embeddings WHERE model <> ${model}`)
     .map((row) => sql`${row.model}`)
   if (others.length === 0) return []
   return orm
     .all<{ id: string }>(
-      sql`SELECT ch.native_id AS id FROM chats ch
-        WHERE ch.account_pk = ${accountPk} ${chatKey === undefined ? sql`` : sql`AND ch.pk = ${chatKey}`}
+      sql`SELECT ch.external_id AS id FROM chats ch
+        WHERE ch.account_id = ${accountPk} ${chatKey === undefined ? sql`` : sql`AND ch.id = ${chatKey}`}
           AND ${hasVectorOf(sql`IN (${sql.join(others, sql`, `)})`)}
           AND NOT ${hasVectorOf(sql`= ${model}`)}
-        ORDER BY ch.native_id`,
+        ORDER BY ch.external_id`,
     )
     .map(({ id }) => id)
 }
@@ -341,7 +354,7 @@ export const messageIds = ({ orm }: StoreContext, pks: number[]): Map<number, st
       ? []
       : orm
           .all<{ pk: number; id: string }>(
-            sql`SELECT pk, native_id AS id FROM messages WHERE pk IN (${sql.join(
+            sql`SELECT id AS pk, external_id AS id FROM messages WHERE id IN (${sql.join(
               pks.map((pk) => sql`${pk}`),
               sql`, `,
             )})`,
@@ -352,19 +365,19 @@ export const messageIds = ({ orm }: StoreContext, pks: number[]): Map<number, st
 /** Chats of the account whose conversations were ever built, or started to be. */
 export const builtChats = ({ orm }: StoreContext, accountPk: number): { chatKey: number; id: string }[] =>
   orm.all<{ chatKey: number; id: string }>(
-    sql`SELECT ch.pk AS chatKey, ch.native_id AS id FROM conversation_state s JOIN chats ch ON ch.pk = s.chat_pk
-      WHERE ch.account_pk = ${accountPk} ORDER BY ch.native_id`,
+    sql`SELECT ch.id AS chatKey, ch.external_id AS id FROM conversation_state s JOIN chats ch ON ch.id = s.chat_id
+      WHERE ch.account_id = ${accountPk} ORDER BY ch.external_id`,
   )
 
 /** Group chats of the account with stored messages and no build ever started, the newest message first. */
 export const unbuiltGroups = ({ orm }: StoreContext, accountPk: number): string[] =>
   orm
     .all<{ id: string }>(
-      sql`SELECT ch.native_id AS id FROM chats ch
-        WHERE ch.account_pk = ${accountPk} AND ch.kind = 'group'
-          AND NOT EXISTS (SELECT 1 FROM conversation_state s WHERE s.chat_pk = ch.pk)
-          AND EXISTS (SELECT 1 FROM messages m WHERE m.chat_pk = ch.pk AND m.deleted_at IS NULL)
-        ORDER BY (SELECT max(m.sent_at) FROM messages m WHERE m.chat_pk = ch.pk) DESC, ch.native_id`,
+      sql`SELECT ch.external_id AS id FROM chats ch
+        WHERE ch.account_id = ${accountPk} AND ch.kind = 'group'
+          AND NOT EXISTS (SELECT 1 FROM conversation_state s WHERE s.chat_id = ch.id)
+          AND EXISTS (SELECT 1 FROM messages m WHERE m.chat_id = ch.id AND m.deleted_at IS NULL)
+        ORDER BY (SELECT max(m.sent_at) FROM messages m WHERE m.chat_id = ch.id) DESC, ch.external_id`,
     )
     .map(({ id }) => id)
 
@@ -376,32 +389,32 @@ export const unbuiltGroups = ({ orm }: StoreContext, accountPk: number): string[
 export const readiness = ({ orm }: StoreContext, chatKey: number, model: string) => {
   const state = orm.get<{ builtAt: number | null; algorithmVersion: number | null; build: number | null }>(
     sql`SELECT built_at AS builtAt, algorithm_version AS algorithmVersion, current_build AS build
-      FROM conversation_state WHERE chat_pk = ${chatKey}`,
+      FROM conversation_state WHERE chat_id = ${chatKey}`,
   )
   if (!state || state.builtAt === null || state.build === null) return undefined
   const { builtAt, build } = state
   const member = (pk: SQL) => sql`EXISTS (SELECT 1 FROM conversation_messages cm
-    JOIN conversations c ON c.pk = cm.conversation_pk WHERE cm.message_pk = ${pk} AND c.build = ${build})`
+    JOIN conversations c ON c.id = cm.conversation_id WHERE cm.message_id = ${pk} AND c.build = ${build})`
   const editedSince = (pk: SQL) =>
-    sql`EXISTS (SELECT 1 FROM message_revisions r WHERE r.message_pk = ${pk} AND r.captured_at >= ${builtAt})`
+    sql`EXISTS (SELECT 1 FROM message_revisions r WHERE r.message_id = ${pk} AND r.created_at >= ${builtAt})`
   const pending = orm.get<{ new: number; edited: number; deleted: number }>(
     sql`SELECT
-        sum(m.deleted_at IS NULL AND NOT ${member(sql`m.pk`)}) AS new,
-        sum(m.deleted_at IS NULL AND ${editedSince(sql`m.pk`)} AND ${member(sql`m.pk`)}) AS edited,
-        sum(m.deleted_at IS NOT NULL AND ${member(sql`m.pk`)}) AS deleted
-      FROM messages m WHERE m.chat_pk = ${chatKey}`,
+        sum(m.deleted_at IS NULL AND NOT ${member(sql`m.id`)}) AS new,
+        sum(m.deleted_at IS NULL AND ${editedSince(sql`m.id`)} AND ${member(sql`m.id`)}) AS edited,
+        sum(m.deleted_at IS NOT NULL AND ${member(sql`m.id`)}) AS deleted
+      FROM messages m WHERE m.chat_id = ${chatKey}`,
   )
   const vectors = orm.get<{ chunks: number; embedded: number; current: number; stale: number }>(
-    sql`WITH changed AS (SELECT m.pk, m.sent_at, cm.conversation_pk FROM messages m
-          JOIN conversation_messages cm ON cm.message_pk = m.pk
-          JOIN conversations c ON c.pk = cm.conversation_pk AND c.build = ${build}
-          WHERE m.chat_pk = ${chatKey} AND (m.deleted_at IS NOT NULL OR ${editedSince(sql`m.pk`)})),
+    sql`WITH changed AS (SELECT m.id, m.sent_at, cm.conversation_id FROM messages m
+          JOIN conversation_messages cm ON cm.message_id = m.id
+          JOIN conversations c ON c.id = cm.conversation_id AND c.build = ${build}
+          WHERE m.chat_id = ${chatKey} AND (m.deleted_at IS NOT NULL OR ${editedSince(sql`m.id`)})),
         stale AS (SELECT DISTINCT k.content_hash AS hash FROM changed g
-          JOIN conversation_chunks k ON k.conversation_pk = g.conversation_pk
-          JOIN messages f ON f.pk = k.first_message_pk JOIN messages l ON l.pk = k.last_message_pk
-          WHERE (g.sent_at, g.pk) >= (f.sent_at, f.pk) AND (g.sent_at, g.pk) <= (l.sent_at, l.pk)),
+          JOIN conversation_chunks k ON k.conversation_id = g.conversation_id
+          JOIN messages f ON f.id = k.first_message_id JOIN messages l ON l.id = k.last_message_id
+          WHERE (g.sent_at, g.id) >= (f.sent_at, f.id) AND (g.sent_at, g.id) <= (l.sent_at, l.id)),
         hashes AS (SELECT DISTINCT h.content_hash AS hash,
-            EXISTS (SELECT 1 FROM chunk_vectors v WHERE v.model = ${model} AND v.content_hash = h.content_hash) AS vector,
+            EXISTS (SELECT 1 FROM embeddings v WHERE v.model = ${model} AND v.content_hash = h.content_hash) AS vector,
             h.content_hash IN (SELECT hash FROM stale) AS stale
           FROM (${currentChunks(chatKey)}) h)
       SELECT count(*) AS chunks, sum(vector) AS embedded, sum(vector AND NOT stale) AS current, sum(stale) AS stale

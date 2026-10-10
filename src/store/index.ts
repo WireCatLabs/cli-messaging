@@ -5,7 +5,9 @@ export { openCache } from "./open.js"
 export { storePath } from "./path.js"
 export { resetAttachmentWords } from "./sqlite/attachment-texts.js"
 export { backfillNormalized, pendingNormalization } from "./sqlite/backfill.js"
-export type { ChatMetadata } from "./sqlite/chat-metadata.js"
+export type { BotUpdate, BotUpdateStore } from "./sqlite/bot-updates.js"
+export type { ChatMetadata } from "./sqlite/chats.js"
+export type { Involvement, InvolvementStore } from "./sqlite/involvements.js"
 export type {
   Annotation,
   KnowledgeEntity,

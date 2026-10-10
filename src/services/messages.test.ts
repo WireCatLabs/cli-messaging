@@ -155,13 +155,12 @@ describe("the messages service", () => {
   it("**builds a slice of the word index first**, bounded in time", async () => {
     const store = await keptStore()
     const spentAtStart: (boolean | undefined)[] = []
-    const watched: MessageStore = {
-      ...store,
-      fillSearchIndex: async (options) => {
+    const watched: MessageStore = Object.assign(Object.create(store) as MessageStore, {
+      fillSearchIndex: async (options: Parameters<MessageStore["fillSearchIndex"]>[0]) => {
         spentAtStart.push(options?.until?.())
         return store.fillSearchIndex(options)
       },
-    }
+    })
 
     await messagesService(storedDeps(messenger, watched, account, guard)).search({ text: "chapter", limit: 10 })
 

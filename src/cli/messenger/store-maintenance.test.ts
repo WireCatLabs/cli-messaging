@@ -32,14 +32,16 @@ const envFor = () => {
 const seeded = async (env: NodeJS.ProcessEnv, version = latest) => {
   const database = await openCache(String(env.MESSAGING_STORE))
   migrate(database, { migrations: MIGRATIONS.filter((migration) => migration.version <= version) })
-  database.exec(`INSERT INTO accounts (pk, provider, native_id, created_at) VALUES (1, 'chat', '500', 0)`)
   database.exec(
-    `INSERT INTO chats (pk, account_pk, native_id, kind, title, last_message_at, updated_at)
-     VALUES (1, 1, '7', 'group', 'Book club', ${2 * DAY}, ${DAY}), (2, 1, '8', 'private', 'Ana', ${DAY}, ${DAY})`,
+    `INSERT INTO accounts (id, provider, external_id, created_at,updated_at) VALUES (1, 'chat', '500', 0,0)`,
   )
   database.exec(
-    `INSERT INTO messages (chat_pk, account_pk, native_id, sent_at, text, ingested_at, ingested_via)
-     VALUES (1, 1, '1', ${DAY}, 'Hola, ¿qué tal?', 0, 'fetch'), (2, 1, '1', ${DAY}, 'Ёлка', 0, 'fetch')`,
+    `INSERT INTO chats (id, account_id, external_id, kind, title, last_message_at, updated_at,created_at)
+     VALUES (1, 1, '7', 'group', 'Book club', ${2 * DAY}, ${DAY},0), (2, 1, '8', 'private', 'Ana', ${DAY}, ${DAY},0)`,
+  )
+  database.exec(
+    `INSERT INTO messages (chat_id, account_id, external_id, sent_at, text, created_at, source,updated_at)
+     VALUES (1, 1, '1', ${DAY}, 'Hola, ¿qué tal?', 0, 'fetch',0), (2, 1, '1', ${DAY}, 'Ёлка', 0, 'fetch',0)`,
   )
   return database
 }
@@ -67,17 +69,17 @@ describe("store info", () => {
     expect(answer).toEqual({ path: env.MESSAGING_STORE, exists: false })
   })
 
-  it("reads a file behind this build without migrating it", async () => {
+  it("reads a baseline file without changing its normalization state", async () => {
     const env = envFor()
-    ;(await seeded(env, 5)).close()
+    ;(await seeded(env, latest)).close()
 
     const { answer } = await call(["store", "info", "--json"], env)
     expect(answer).toMatchObject({
-      schema: { version: 5, speaks: latest, writable: true },
+      schema: { version: latest, speaks: latest, writable: true },
       rows: { accounts: 1, chats: 2, messages: 2 },
-      pendingNormalization: null,
+      pendingNormalization: 2,
     })
-    expect((await call(["store", "info", "--json"], env)).answer.schema.version).toBe(5)
+    expect((await call(["store", "info", "--json"], env)).answer.schema.version).toBe(latest)
   })
 })
 
@@ -120,12 +122,12 @@ describe("store check", () => {
     const env = envFor()
     const database = await seeded(env)
     database.exec(
-      `INSERT INTO conversation_state (chat_pk, enabled_at, built_at, algorithm_version, current_build)
+      `INSERT INTO conversation_state (chat_id, enabled_at, built_at, algorithm_version, current_build)
        VALUES (1, 0, ${DAY}, 1, 1), (2, 0, ${2 * DAY}, ${RULES_VERSION}, 1)`,
     )
     database.exec(
-      `INSERT INTO message_links (chat_pk, message_pk, parent_pk, source, kind, confidence, method, created_at, stale_at)
-       SELECT chat_pk, pk, NULL, 'agent', 'start', 0.9, 'model', 0, ${DAY} FROM messages WHERE chat_pk = 1`,
+      `INSERT INTO message_links (chat_id, message_id, parent_id, source, kind, confidence, method, created_at, stale_at,updated_at)
+       SELECT chat_id, id, NULL, 'agent', 'start', 0.9, 'model', 0, ${DAY} ,0 FROM messages WHERE chat_id = 1`,
     )
     database.close()
 
@@ -141,7 +143,7 @@ describe("store check", () => {
     const env = envFor()
     const database = await seeded(env)
     database.exec("DROP TRIGGER messages_fts_au")
-    database.exec("UPDATE messages SET text = 'changed behind the index' WHERE pk = 1")
+    database.exec("UPDATE messages SET text = 'changed behind the index' WHERE id = 1")
     database.close()
 
     const first = (await call(["store", "check", "--json"], env)).answer
@@ -177,15 +179,15 @@ describe("a file that is empty or is not a database", () => {
 })
 
 describe("store migrate", () => {
-  it("brings a version 5 file up to this build and normalizes what it held, saying so on stderr", async () => {
+  it("normalizes the baseline file, saying so on stderr", async () => {
     const env = envFor()
-    ;(await seeded(env, 5)).close()
+    ;(await seeded(env, latest)).close()
 
     const { answer, stderr } = await call(["store", "migrate", "--json"], env)
     expect(answer).toEqual({
       path: env.MESSAGING_STORE,
       exists: true,
-      from: 5,
+      from: latest,
       to: latest,
       normalized: 2,
       indexed: 0,
@@ -196,7 +198,7 @@ describe("store migrate", () => {
     expect(stderr.join("\n")).toContain("2 of 2 normalized")
 
     const database = await openCache(String(env.MESSAGING_STORE))
-    expect(database.prepare("SELECT normalized_text FROM messages ORDER BY pk").all()).toEqual([
+    expect(database.prepare("SELECT normalized_text FROM messages ORDER BY id").all()).toEqual([
       { normalized_text: "hola, ¿que tal?" },
       { normalized_text: "елка" },
     ])
@@ -253,13 +255,14 @@ describe("the word index", () => {
     expect(stderr.join("\n")).toContain("the word index reaches message 1 of 10 — `chat store migrate` finishes it")
   })
 
-  it("`store reindex` refuses a file behind this build", async () => {
+  it("`store reindex` refuses a file requiring a newer build", async () => {
     const env = envFor()
-    ;(await seeded(env, 11)).close()
-
-    const { code, stderr } = await call(["store", "reindex", "--json"], env)
-    expect(code).not.toBe(0)
-    expect(stderr.join("\n")).toContain("`chat store migrate` first")
+    const database = await seeded(env)
+    migrate(database, {
+      migrations: [...MIGRATIONS, { version: latest + 1, minCompatible: latest + 1, statements: [] }],
+    })
+    database.close()
+    expect((await call(["store", "reindex", "--json"], env)).code).toBe(1)
   })
 })
 
@@ -301,7 +304,7 @@ describe("store restore", () => {
   it("**puts the backup in place and keeps the store it replaced**", async () => {
     const { env, file } = await backedUp()
     const database = await openCache(String(env.MESSAGING_STORE))
-    database.exec("DELETE FROM messages WHERE pk = 1")
+    database.exec("DELETE FROM messages WHERE id = 1")
     database.close()
 
     const { answer } = await call(["store", "restore", file, "--json"], env)

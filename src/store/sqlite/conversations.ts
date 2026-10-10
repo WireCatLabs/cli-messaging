@@ -6,7 +6,9 @@ import { and, asc, desc, eq, isNull, type SQL, sql } from "./drizzle/core.js"
 import type { StoreContext } from "./open.js"
 import { selectMessages, toMessages } from "./reads.js"
 import {
+  accounts,
   chats,
+  chunks as chunkRows,
   conversationChunks,
   conversationMessages,
   conversationState,
@@ -29,26 +31,26 @@ export const linkInputs = (
   const [sentAt, pk] = (after ?? "").split(":").map(Number)
   const rows = orm
     .select({
-      pk: messages.pk,
-      id: messages.nativeId,
-      senderId: sql<string | null>`coalesce(${messages.senderChatNativeId}, ${identities.nativeId})`,
+      pk: messages.id,
+      id: messages.externalId,
+      senderId: sql<string | null>`coalesce(${messages.senderChatExternalId}, ${identities.externalId})`,
       senderName: messages.senderName,
       text: messages.text,
       sentAt: messages.sentAt,
-      replyToId: messages.replyToNativeId,
-      threadId: messages.threadNativeId,
+      replyToId: messages.replyToExternalId,
+      threadId: messages.threadExternalId,
       mentions: messages.mentions,
     })
     .from(messages)
-    .leftJoin(identities, eq(identities.pk, messages.senderIdentityPk))
+    .leftJoin(identities, eq(identities.id, messages.senderIdentityId))
     .where(
       and(
-        eq(messages.chatPk, chatKey),
+        eq(messages.chatId, chatKey),
         isNull(messages.deletedAt),
-        after === undefined ? undefined : sql`(${messages.sentAt}, ${messages.pk}) > (${sentAt}, ${pk})`,
+        after === undefined ? undefined : sql`(${messages.sentAt}, ${messages.id}) > (${sentAt}, ${pk})`,
       ),
     )
-    .orderBy(asc(messages.sentAt), asc(messages.pk))
+    .orderBy(asc(messages.sentAt), asc(messages.id))
     .limit(limit)
     .all()
   const last = rows.at(-1)
@@ -71,15 +73,15 @@ export const linkInputs = (
 export const senderHandles = ({ orm }: StoreContext, chatKey: number): Map<string, Id> =>
   new Map(
     orm
-      .selectDistinct({ username: identities.username, id: identities.nativeId })
+      .selectDistinct({ username: identities.username, id: identities.externalId })
       .from(messages)
-      .innerJoin(identities, eq(identities.pk, messages.senderIdentityPk))
-      .where(and(eq(messages.chatPk, chatKey), sql`${identities.username} IS NOT NULL`))
+      .innerJoin(identities, eq(identities.id, messages.senderIdentityId))
+      .where(and(eq(messages.chatId, chatKey), sql`${identities.username} IS NOT NULL`))
       .all()
       .map(({ username, id }) => [String(username).toLowerCase(), id]),
   )
 
-const inChat = (chatKey: number) => eq(messageLinks.chatPk, chatKey)
+const inChat = (chatKey: number) => eq(messageLinks.chatId, chatKey)
 
 /**
  * A long write cut into short transactions with a pause between them. Without the pause the next
@@ -115,10 +117,10 @@ const highestBuild = ({ orm }: StoreContext, chatKey: number): number =>
     orm
       .select({
         n: sql<number>`max(
-          coalesce((SELECT max(${conversations.build}) FROM ${conversations} WHERE ${conversations.chatPk} = ${chatKey}), 0),
+          coalesce((SELECT max(${conversations.build}) FROM ${conversations} WHERE ${conversations.chatId} = ${chatKey}), 0),
           coalesce((SELECT max(${messageLinks.build}) FROM ${messageLinks} WHERE ${inChat(chatKey)}), 0),
           coalesce((SELECT ${conversationState.currentBuild} FROM ${conversationState}
-            WHERE ${conversationState.chatPk} = ${chatKey}), 0))`,
+            WHERE ${conversationState.chatId} = ${chatKey}), 0))`,
       })
       .from(sql`(SELECT 1)`)
       .get()?.n,
@@ -140,13 +142,19 @@ export const replaceConversations = async (
   const { orm, now } = context
   check?.()
   const oldHashes = orm.all<{ hash: string }>(
-    sql`SELECT DISTINCT k.content_hash AS hash FROM conversation_chunks k JOIN conversations c ON c.pk = k.conversation_pk WHERE c.chat_pk = ${chatKey}`,
+    sql`SELECT DISTINCT k.content_hash AS hash FROM conversation_chunks k JOIN conversations c ON c.id = k.conversation_id WHERE c.chat_id = ${chatKey}`,
   )
   const held = new Map(
     orm
-      .select({ id: messages.nativeId, pk: messages.pk, sentAt: messages.sentAt })
+      .select({
+        id: messages.externalId,
+        pk: messages.id,
+        sentAt: messages.sentAt,
+        text: messages.text,
+        senderName: messages.senderName,
+      })
       .from(messages)
-      .where(eq(messages.chatPk, chatKey))
+      .where(eq(messages.chatId, chatKey))
       .all()
       .map((row) => [row.id, row]),
   )
@@ -156,37 +164,50 @@ export const replaceConversations = async (
     once(() => {
       // By start time, so a build that started later is the newer one; never one already used.
       build = Math.max(startedAt, highestBuild(context, chatKey) + 1)
-      orm.insert(conversationState).values({ chatPk: chatKey, enabledAt: startedAt }).onConflictDoNothing().run()
+      orm.insert(conversationState).values({ chatId: chatKey, enabledAt: startedAt }).onConflictDoNothing().run()
     }),
   )
+
+  const chunkScope = orm
+    .select({ accountId: chats.accountId, scope: sql<string>`coalesce(${chats.scope}, ${accounts.scope})` })
+    .from(chats)
+    .innerJoin(accounts, eq(accounts.id, chats.accountId))
+    .where(eq(chats.id, chatKey))
+    .get()
+  const project = context.database
+    .prepare(
+      "SELECT to_id FROM links WHERE from_type='chat' AND from_id=? AND to_type='project' AND kind='member-of' AND confirmed=1 ORDER BY id LIMIT 1",
+    )
+    .get(chatKey)
 
   const insertLink = orm
     .insert(messageLinks)
     .values({
-      chatPk: chatKey,
-      messagePk: sql.placeholder("messagePk"),
-      parentPk: sql.placeholder("parentPk"),
+      chatId: chatKey,
+      messageId: sql.placeholder("messageId"),
+      parentId: sql.placeholder("parentId"),
       source: sql.placeholder("source"),
       kind: sql.placeholder("kind"),
       confidence: sql.placeholder("confidence"),
       method: sql.placeholder("method"),
       version: String(algorithmVersion),
       createdAt: startedAt,
+      updatedAt: startedAt,
       build,
     })
     .onConflictDoNothing()
     .prepare()
   const insertMember = orm
     .insert(conversationMessages)
-    .values({ conversationPk: sql.placeholder("conversationPk"), messagePk: sql.placeholder("messagePk") })
+    .values({ conversationId: sql.placeholder("conversationId"), messageId: sql.placeholder("messageId") })
     .prepare()
   const insertChunk = orm
     .insert(conversationChunks)
     .values({
-      conversationPk: sql.placeholder("conversationPk"),
+      conversationId: sql.placeholder("conversationId"),
       ordinal: sql.placeholder("ordinal"),
-      firstMessagePk: sql.placeholder("firstMessagePk"),
-      lastMessagePk: sql.placeholder("lastMessagePk"),
+      firstMessageId: sql.placeholder("firstMessageId"),
+      lastMessageId: sql.placeholder("lastMessagePk"),
       contentHash: sql.placeholder("contentHash"),
       textStart: sql.placeholder("textStart"),
       textEnd: sql.placeholder("textEnd"),
@@ -211,31 +232,64 @@ export const replaceConversations = async (
         const created = orm
           .insert(conversations)
           .values({
-            chatPk: chatKey,
+            chatId: chatKey,
             build,
-            firstMessagePk: first.pk,
+            firstMessageId: first.pk,
             firstAt: first.sentAt,
             lastAt: members.reduce((last, member) => Math.max(last, member.sentAt), first.sentAt),
             messageCount: members.length,
             builtAt: startedAt,
+            createdAt: startedAt,
+            updatedAt: startedAt,
             algorithmVersion,
           })
-          .returning({ pk: conversations.pk })
+          .returning({ pk: conversations.id })
           .get()
         for (const member of members) {
           check?.()
-          insertMember.run({ conversationPk: created.pk, messagePk: member.pk })
+          insertMember.run({ conversationId: created.pk, messageId: member.pk })
           yield
+        }
+        const offsets = new Map<string, { start: number; end: number; prefix: number }>()
+        if ((chunks[index]?.length ?? 0) > 0) {
+          let offset = 0
+          for (const member of members) {
+            const prefix = member.senderName ? member.senderName.length + 2 : 0
+            offsets.set(member.id, { start: offset, end: offset + prefix + member.text.length, prefix })
+            offset += prefix + member.text.length + 1
+          }
         }
         for (const [ordinal, chunk] of (chunks[index] ?? []).entries()) {
           check?.()
           const from = held.get(chunk.firstId)
           const to = held.get(chunk.lastId)
           if (!from || !to) continue
+          if (chunkScope)
+            orm
+              .insert(chunkRows)
+              .values({
+                chunkableType: "conversation",
+                chunkableId: created.pk,
+                position: ordinal,
+                startOffset:
+                  (offsets.get(from.id)?.start ?? 0) +
+                  (chunk.range ? (offsets.get(from.id)?.prefix ?? 0) + chunk.range.start : 0),
+                endOffset: chunk.range
+                  ? (offsets.get(to.id)?.start ?? 0) + (offsets.get(to.id)?.prefix ?? 0) + chunk.range.end
+                  : (offsets.get(to.id)?.end ?? 0),
+                contentHash: chunk.hash,
+                projectId: project ? Number(project.to_id) : null,
+                accountId: chunkScope.accountId,
+                scope: chunkScope.scope,
+                occurredAt: from.sentAt,
+                createdAt: startedAt,
+                updatedAt: startedAt,
+              })
+              .run()
           insertChunk.run({
-            conversationPk: created.pk,
+            conversationId: created.pk,
             ordinal,
-            firstMessagePk: from.pk,
+            firstMessageId: from.pk,
             lastMessagePk: to.pk,
             contentHash: chunk.hash,
             textStart: chunk.range?.start ?? null,
@@ -248,8 +302,8 @@ export const replaceConversations = async (
   )
 
   const changedSince = (end: SQL) => sql`(
-    EXISTS (SELECT 1 FROM message_revisions r WHERE r.message_pk = ${end} AND r.captured_at > ${messageLinks.createdAt})
-    OR EXISTS (SELECT 1 FROM messages d WHERE d.pk = ${end} AND d.deleted_at > ${messageLinks.createdAt}))`
+    EXISTS (SELECT 1 FROM message_revisions r WHERE r.message_id = ${end} AND r.created_at > ${messageLinks.createdAt})
+    OR EXISTS (SELECT 1 FROM messages d WHERE d.id = ${end} AND d.deleted_at > ${messageLinks.createdAt}))`
   await inTurns(
     context,
     once(() => {
@@ -262,7 +316,7 @@ export const replaceConversations = async (
             eq(messageLinks.source, "agent"),
             isNull(messageLinks.staleAt),
             inChat(chatKey),
-            sql`(${changedSince(sql`${messageLinks.messagePk}`)} OR ${changedSince(sql`${messageLinks.parentPk}`)})`,
+            sql`(${changedSince(sql`${messageLinks.messageId}`)} OR ${changedSince(sql`${messageLinks.parentId}`)})`,
           ),
         )
         .run()
@@ -271,14 +325,17 @@ export const replaceConversations = async (
         .update(conversationState)
         .set({ currentBuild: build, builtAt: startedAt, algorithmVersion })
         .where(
-          and(eq(conversationState.chatPk, chatKey), sql`coalesce(${conversationState.currentBuild}, 0) < ${build}`),
+          and(eq(conversationState.chatId, chatKey), sql`coalesce(${conversationState.currentBuild}, 0) < ${build}`),
         )
         .run()
+      orm.run(
+        sql`DELETE FROM chunks WHERE chunkable_type='conversation' AND chunkable_id IN (SELECT id FROM conversations WHERE chat_id=${chatKey} AND build < (SELECT current_build FROM conversation_state WHERE chat_id=${chatKey}))`,
+      )
     }),
   )
 
   const current = sql`(SELECT ${conversationState.currentBuild} FROM ${conversationState}
-    WHERE ${conversationState.chatPk} = ${chatKey})`
+    WHERE ${conversationState.chatId} = ${chatKey})`
   await inTurns(
     context,
     (function* () {
@@ -287,18 +344,18 @@ export const replaceConversations = async (
           orm
             .delete(conversations)
             .where(
-              sql`${conversations.pk} IN (SELECT ${conversations.pk} FROM ${conversations}
-              WHERE ${conversations.chatPk} = ${chatKey} AND ${conversations.build} < ${current} LIMIT ${batch})`,
+              sql`${conversations.id} IN (SELECT ${conversations.id} FROM ${conversations}
+              WHERE ${conversations.chatId} = ${chatKey} AND ${conversations.build} < ${current} LIMIT ${batch})`,
             )
-            .returning({ pk: conversations.pk })
+            .returning({ pk: conversations.id })
             .all().length +
           orm
             .delete(messageLinks)
             .where(
-              sql`rowid IN (SELECT rowid FROM ${messageLinks} WHERE ${messageLinks.chatPk} = ${chatKey}
+              sql`rowid IN (SELECT rowid FROM ${messageLinks} WHERE ${messageLinks.chatId} = ${chatKey}
               AND ${messageLinks.build} < ${current} LIMIT ${batch})`,
             )
-            .returning({ pk: messageLinks.messagePk })
+            .returning({ pk: messageLinks.messageId })
             .all().length
         if (removed === 0) return
         yield
@@ -312,8 +369,8 @@ export const replaceConversations = async (
 }
 
 const row = (link: Link, messagePk: number, parentPk: number) => ({
-  messagePk,
-  parentPk,
+  messageId: messagePk,
+  parentId: parentPk,
   source: link.source,
   kind: link.kind,
   confidence: link.confidence,
@@ -322,27 +379,27 @@ const row = (link: Link, messagePk: number, parentPk: number) => ({
 
 /** Only the build readers see; a newer one may be half written. */
 const isCurrent = sql`${conversations.build} = (SELECT ${conversationState.currentBuild} FROM ${conversationState}
-  WHERE ${conversationState.chatPk} = ${conversations.chatPk})`
+  WHERE ${conversationState.chatId} = ${conversations.chatId})`
 
 const SUMMARY = {
-  pk: conversations.pk,
-  chatId: chats.nativeId,
-  firstMessageId: messages.nativeId,
+  pk: conversations.id,
+  chatId: chats.externalId,
+  firstMessageId: messages.externalId,
   firstAt: conversations.firstAt,
   lastAt: conversations.lastAt,
   messageCount: conversations.messageCount,
   builtAt: conversations.builtAt,
   algorithmVersion: conversations.algorithmVersion,
-  senders: sql<number>`(SELECT count(DISTINCT coalesce(m.sender_chat_native_id, m.sender_identity_pk))
-    FROM conversation_messages cm JOIN messages m ON m.pk = cm.message_pk WHERE cm.conversation_pk = ${conversations.pk})`,
+  senders: sql<number>`(SELECT count(DISTINCT coalesce(m.sender_chat_external_id, m.sender_identity_id))
+    FROM conversation_messages cm JOIN messages m ON m.id = cm.message_id WHERE cm.conversation_id = ${conversations.id})`,
 }
 
 const summaries = ({ orm }: StoreContext) =>
   orm
     .select(SUMMARY)
     .from(conversations)
-    .innerJoin(chats, eq(chats.pk, conversations.chatPk))
-    .innerJoin(messages, eq(messages.pk, conversations.firstMessagePk))
+    .innerJoin(chats, eq(chats.id, conversations.chatId))
+    .innerJoin(messages, eq(messages.id, conversations.firstMessageId))
 
 const toSummary = (row: {
   pk: number
@@ -375,13 +432,13 @@ export const conversationPage = (
   const rows = summaries(context)
     .where(
       and(
-        eq(conversations.chatPk, chatKey),
+        eq(conversations.chatId, chatKey),
         isCurrent,
         after === undefined ? undefined : sql`${conversations.firstAt} >= ${after}`,
         before === undefined ? undefined : sql`${conversations.firstAt} < ${before}`,
       ),
     )
-    .orderBy(desc(conversations.firstAt), desc(conversations.pk))
+    .orderBy(desc(conversations.firstAt), desc(conversations.id))
     .limit(limit + 1)
     .all()
   return { items: rows.slice(0, limit).map(toSummary), hasMore: rows.length > limit }
@@ -399,11 +456,11 @@ export const summariesOf = (
       : summaries(context)
           .where(
             and(
-              sql`${conversations.pk} IN (${sql.join(
+              sql`${conversations.id} IN (${sql.join(
                 pks.map((pk) => sql`${pk}`),
                 sql`, `,
               )})`,
-              eq(chats.accountPk, accountKey),
+              eq(chats.accountId, accountKey),
               isCurrent,
             ),
           )
@@ -418,44 +475,44 @@ export const conversation = (
   id: number,
 ): { summary: ConversationSummary; messages: Message[] } | undefined => {
   const found = summaries(context)
-    .where(and(eq(conversations.pk, id), eq(chats.accountPk, accountKey), isCurrent))
+    .where(and(eq(conversations.id, id), eq(chats.accountId, accountKey), isCurrent))
     .get()
   if (!found) return undefined
   const rows = selectMessages(context)
     .where(
       and(
         isNull(messages.deletedAt),
-        sql`${messages.pk} IN (SELECT ${conversationMessages.messagePk} FROM ${conversationMessages}
-          WHERE ${conversationMessages.conversationPk} = ${id})`,
+        sql`${messages.id} IN (SELECT ${conversationMessages.messageId} FROM ${conversationMessages}
+          WHERE ${conversationMessages.conversationId} = ${id})`,
       ),
     )
-    .orderBy(asc(messages.sentAt), asc(messages.pk))
+    .orderBy(asc(messages.sentAt), asc(messages.id))
     .all()
   return { summary: toSummary(found), messages: toMessages(context, rows) }
 }
 
 export const conversationOf = ({ orm }: StoreContext, chatKey: number, messageId: Id): string | undefined => {
   const found = orm
-    .select({ pk: conversationMessages.conversationPk })
+    .select({ pk: conversationMessages.conversationId })
     .from(conversationMessages)
-    .innerJoin(messages, eq(messages.pk, conversationMessages.messagePk))
-    .innerJoin(conversations, eq(conversations.pk, conversationMessages.conversationPk))
-    .where(and(eq(messages.chatPk, chatKey), eq(messages.nativeId, messageId), isCurrent))
+    .innerJoin(messages, eq(messages.id, conversationMessages.messageId))
+    .innerJoin(conversations, eq(conversations.id, conversationMessages.conversationId))
+    .where(and(eq(messages.chatId, chatKey), eq(messages.externalId, messageId), isCurrent))
     .get()
   return found ? String(found.pk) : undefined
 }
 
 const staleLink = (chatKey: number) => sql<boolean>`(${messageLinks.staleAt} IS NOT NULL
-  OR EXISTS (SELECT 1 FROM message_revisions r WHERE r.message_pk IN (${messageLinks.messagePk}, ${messageLinks.parentPk})
-    AND r.captured_at >= ${messageLinks.createdAt})
-  OR EXISTS (SELECT 1 FROM messages d WHERE d.pk IN (${messageLinks.messagePk}, ${messageLinks.parentPk}) AND (d.deleted_at IS NOT NULL OR d.edited_at > ${messageLinks.createdAt}))
+  OR EXISTS (SELECT 1 FROM message_revisions r WHERE r.message_id IN (${messageLinks.messageId}, ${messageLinks.parentId})
+    AND r.created_at >= ${messageLinks.createdAt})
+  OR EXISTS (SELECT 1 FROM messages d WHERE d.id IN (${messageLinks.messageId}, ${messageLinks.parentId}) AND (d.deleted_at IS NOT NULL OR d.edited_at > ${messageLinks.createdAt}))
   OR (${messageLinks.source} = 'provider' AND ${messageLinks.kind} = 'reply' AND
-    (SELECT m.reply_to_native_id FROM messages m WHERE m.pk = ${messageLinks.messagePk}) IS NOT
-    (SELECT p.native_id FROM messages p WHERE p.pk = ${messageLinks.parentPk}))
-  OR EXISTS (SELECT 1 FROM messages p WHERE p.pk = ${messageLinks.parentPk} AND p.chat_pk <> ${chatKey}))`
+    (SELECT m.reply_to_external_id FROM messages m WHERE m.id = ${messageLinks.messageId}) IS NOT
+    (SELECT p.external_id FROM messages p WHERE p.id = ${messageLinks.parentId}))
+  OR EXISTS (SELECT 1 FROM messages p WHERE p.id = ${messageLinks.parentId} AND p.chat_id <> ${chatKey}))`
 
 const currentLink = (chatKey: number) => sql`(${messageLinks.build} IS NULL OR ${messageLinks.build} =
-  (SELECT ${conversationState.currentBuild} FROM ${conversationState} WHERE ${conversationState.chatPk} = ${chatKey}))`
+  (SELECT ${conversationState.currentBuild} FROM ${conversationState} WHERE ${conversationState.chatId} = ${chatKey}))`
 
 /** Every link a message has, the messenger's first, then the strongest. */
 export const linksOf = ({ orm }: StoreContext, chatKey: number, messageId: Id, limit?: number): StoredLink[] =>
@@ -463,7 +520,7 @@ export const linksOf = ({ orm }: StoreContext, chatKey: number, messageId: Id, l
     .select({
       parentId: sql<
         string | null
-      >`(SELECT p.native_id FROM messages p WHERE p.pk = ${messageLinks.parentPk} AND p.chat_pk = ${chatKey})`,
+      >`(SELECT p.external_id FROM messages p WHERE p.id = ${messageLinks.parentId} AND p.chat_id = ${chatKey})`,
       source: messageLinks.source,
       kind: messageLinks.kind,
       confidence: messageLinks.confidence,
@@ -473,13 +530,13 @@ export const linksOf = ({ orm }: StoreContext, chatKey: number, messageId: Id, l
       stale: staleLink(chatKey),
     })
     .from(messageLinks)
-    .innerJoin(messages, eq(messages.pk, messageLinks.messagePk))
-    .where(and(eq(messages.chatPk, chatKey), eq(messages.nativeId, messageId), currentLink(chatKey)))
+    .innerJoin(messages, eq(messages.id, messageLinks.messageId))
+    .where(and(eq(messages.chatId, chatKey), eq(messages.externalId, messageId), currentLink(chatKey)))
     .orderBy(
       sql`CASE ${messageLinks.source} WHEN 'provider' THEN 0 WHEN 'agent' THEN 1 ELSE 2 END`,
       desc(messageLinks.confidence),
       desc(messageLinks.createdAt),
-      messageLinks.parentPk,
+      messageLinks.parentId,
     )
     .limit(limit ?? -1)
     .all()
@@ -498,14 +555,14 @@ export const repliesTo = (
   limit: number,
 ): Page<{ messageId: Id }> => {
   const rows = orm
-    .select({ messageId: messages.nativeId })
+    .select({ messageId: messages.externalId })
     .from(messageLinks)
-    .innerJoin(messages, eq(messages.pk, messageLinks.messagePk))
+    .innerJoin(messages, eq(messages.id, messageLinks.messageId))
     .where(
       and(
-        eq(messages.chatPk, chatKey),
+        eq(messages.chatId, chatKey),
         currentLink(chatKey),
-        sql`${messageLinks.parentPk} = (SELECT p.pk FROM messages p WHERE p.chat_pk = ${chatKey} AND p.native_id = ${messageId})`,
+        sql`${messageLinks.parentId} = (SELECT p.id FROM messages p WHERE p.chat_id = ${chatKey} AND p.external_id = ${messageId})`,
       ),
     )
     .orderBy(sql`${messageLinks}.rowid`)
@@ -518,7 +575,7 @@ export const repliesTo = (
 }
 
 export const stateOf = ({ orm }: StoreContext, chatKey: number) => {
-  const found = orm.select().from(conversationState).where(eq(conversationState.chatPk, chatKey)).get()
+  const found = orm.select().from(conversationState).where(eq(conversationState.chatId, chatKey)).get()
   return found
     ? {
         enabledAt: toIso(found.enabledAt) as string,
@@ -537,13 +594,13 @@ export const agentAnswers = ({ orm }: StoreContext, chatKey: number): Map<Id, Id
   new Map(
     orm
       .all<{ id: string; parent: string | null }>(
-        sql`SELECT m.native_id AS id, p.native_id AS parent FROM message_links l
-          JOIN messages m ON m.pk = l.message_pk LEFT JOIN messages p ON p.pk = l.parent_pk
-          WHERE l.chat_pk = ${chatKey} AND l.source = 'agent' AND l.stale_at IS NULL
+        sql`SELECT m.external_id AS id, p.external_id AS parent FROM message_links l
+          JOIN messages m ON m.id = l.message_id LEFT JOIN messages p ON p.id = l.parent_id
+          WHERE l.chat_id = ${chatKey} AND l.source = 'agent' AND l.stale_at IS NULL
             AND NOT EXISTS (SELECT 1 FROM message_revisions r
-              WHERE r.message_pk IN (l.message_pk, l.parent_pk) AND r.captured_at > l.created_at)
+              WHERE r.message_id IN (l.message_id, l.parent_id) AND r.created_at > l.created_at)
             AND NOT EXISTS (SELECT 1 FROM messages d
-              WHERE d.pk IN (l.message_pk, l.parent_pk) AND d.deleted_at > l.created_at)`,
+              WHERE d.id IN (l.message_id, l.parent_id) AND d.deleted_at > l.created_at)`,
       )
       .map(({ id, parent }) => [id, parent]),
   )

@@ -335,7 +335,7 @@ describe("graph context around a hit", () => {
 
   it("falls back explicitly for an older store without reply expansion", async () => {
     const one = await setup()
-    const older: MessageStore = { ...one.store, replies: undefined }
+    const older: MessageStore = Object.assign(Object.create(one.store) as MessageStore, { replies: undefined })
     expect(await readThreadContext(older, account, "7", "5")).toMatchObject({
       mode: "time",
       fallback: "unsupported_store",
@@ -344,12 +344,11 @@ describe("graph context around a hit", () => {
 
   it("does not hide errors reading the store", async () => {
     const one = await setup()
-    const broken: MessageStore = {
-      ...one.store,
+    const broken: MessageStore = Object.assign(Object.create(one.store) as MessageStore, {
       around: async () => {
         throw new Error("store unavailable")
       },
-    }
+    })
     await expect(readThreadContext(broken, account, "7", "5")).rejects.toThrow("store unavailable")
   })
 
@@ -357,9 +356,9 @@ describe("graph context around a hit", () => {
     const one = await setup()
     const database = await openCache(one.path)
     database
-      .prepare(`INSERT INTO message_links (chat_pk, message_pk, parent_pk, source, kind, confidence, method, created_at)
-      SELECT m.chat_pk, m.pk, p.pk, 'agent', 'answer', 1, 'synthetic', ? FROM messages m JOIN messages p ON p.native_id = '5'
-      WHERE m.native_id = '1'`)
+      .prepare(`INSERT INTO message_links (chat_id, message_id, parent_id, source, kind, confidence, method, created_at, updated_at)
+      SELECT m.chat_id, m.id, p.id, 'agent', 'answer', 1, 'synthetic', ?, 0 FROM messages m JOIN messages p ON p.external_id = '5'
+      WHERE m.external_id = '1'`)
       .run(Date.now())
     database.close()
     const found = await one.services.messages.thread("7", "5")
