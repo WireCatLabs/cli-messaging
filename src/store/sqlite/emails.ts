@@ -254,6 +254,10 @@ const recount = (database: CacheDatabase, threadId: number, now: number) =>
          emails_count = (SELECT count(*) FROM emails WHERE email_thread_id = ?1 AND deleted_at IS NULL),
          last_email_at = (SELECT max(coalesce(sent_at, received_at)) FROM emails
            WHERE email_thread_id = ?1 AND deleted_at IS NULL),
+         deleted_at = CASE
+           WHEN EXISTS (SELECT 1 FROM emails WHERE email_thread_id = ?1 AND deleted_at IS NULL) THEN NULL
+           WHEN EXISTS (SELECT 1 FROM emails WHERE email_thread_id = ?1) THEN coalesce(deleted_at, ?2)
+           ELSE deleted_at END,
          updated_at = ?2
        WHERE id = ?1`,
     )

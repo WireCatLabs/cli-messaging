@@ -97,6 +97,10 @@ describe("mail store", () => {
 
     await mail.saveThread(thread([email({ bodyText: "The roadmap changed to a timeline." })], 8000))
     expect((await mail.search("timeline")).map(({ externalId }) => externalId)).toEqual(["<first@example.com>"])
+
+    await mail.markDeleted(1, ["<first@example.com>"], 9000)
+    expect(await mail.threads()).toEqual([])
+    expect((await mail.threads({ includeDeleted: true }))[0]?.deletedAt).toBe(9000)
   })
 
   it("refuses an empty key and leaves nothing behind", async () => {
