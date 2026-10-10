@@ -24,6 +24,7 @@ export const TEMPLATE_LIMITS = {
 export interface TemplateBlock {
   instruction: string
   fallback: string | null
+  templateValues?: string[]
 }
 export interface TemplateResult {
   text: string | null
@@ -80,16 +81,13 @@ export const renderReplyTemplate = async (reply: ReplyRule["reply"], input: Temp
     )
     const localTime = `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}:${parts.second}${parts.timeZoneName?.replace("GMT", "") || "+00:00"}`
     let metadata: string[] | undefined
-    const references = new Set<string>()
     const capture = (value: unknown): string => {
       const text = value === null || value === undefined ? "" : String(value)
-      if (!metadata || references.has(text)) return text
+      if (!metadata) return text
       if (text.length + metadata.reduce((total, item) => total + item.length, 0) > limits.memory)
         throw new Error("reply metadata limit")
       const index = metadata.push(text) - 1
-      const reference = `[templateValues[${index}]]`
-      references.add(reference)
-      return reference
+      return `[templateValues[${index}]]`
     }
     const engine = new Liquid({
       ownPropertyOnly: true,
@@ -102,7 +100,7 @@ export const renderReplyTemplate = async (reply: ReplyRule["reply"], input: Temp
       preserveTimezones: true,
       outputEscape: capture,
     })
-    engine.registerFilter("raw", capture)
+    engine.registerFilter("raw", (value: unknown) => value)
     for (const name of ["include", "render", "layout"]) {
       engine.registerTag(
         name,
@@ -144,7 +142,6 @@ export const renderReplyTemplate = async (reply: ReplyRule["reply"], input: Temp
         }
         async render(context: Context, emitter: Emitter) {
           const templateValues: string[] = []
-          references.clear()
           metadata = templateValues
           let instruction: string
           try {
@@ -154,7 +151,7 @@ export const renderReplyTemplate = async (reply: ReplyRule["reply"], input: Temp
           }
           const modelData = templateValues.length ? JSON.stringify({ message: input.data, templateValues }) : input.data
           const fallback = this.fallback === null ? null : String(await engine.render(this.fallback, context))
-          blocks.push({ instruction, fallback })
+          blocks.push({ instruction, fallback, ...(templateValues.length ? { templateValues } : {}) })
           let text: string | undefined
           let reason = input.preview
             ? "AI preview only; add --ai to call the configured model"

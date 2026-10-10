@@ -69,7 +69,8 @@ Thanks, {{ sender.firstName | default: "there" }}.
 
 The block's owner-written body is the instruction. Interpolated names, titles and other values
 go separately as untrusted template data, referenced at their insertion points. Incoming message
-text is separate untrusted data too. Model output replaces only the block and is never parsed again as Liquid. Text outside the
+text is separate untrusted data too. JSON previews show those values in each block’s
+`templateValues` beside the instruction’s insertion references. Model output replaces only the block and is never parsed again as Liquid. Text outside the
 block remains the owner's text with its normal substitutions. When a provider is missing, a call
 fails or consent is absent, the else branch is used. Without one the reply is skipped with a reason.
 Nested AI blocks are refused. Per rendering: at most four model calls, 512 output tokens per call,

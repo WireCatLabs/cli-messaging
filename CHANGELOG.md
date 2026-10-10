@@ -20,6 +20,8 @@ break callers, and says how under "Changed — may break callers". `pnpm docs:ch
 
 ### Changed — may break callers
 
+- Reply JSON previews show instruction references and separate `templateValues` instead of interpolating names directly into model instructions.
+
 - Markdown exports quote message bodies and escape untrusted structure and link labels. Transcript parsers must account for this framing.
 
 - Consumers use `@wirecat/cli-core` 0.19.x for Windows maintenance command resolution.

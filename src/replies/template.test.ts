@@ -75,7 +75,23 @@ describe("reply templates", () => {
       "Greet [templateValues[0]]",
       JSON.stringify({ message: input.data, templateValues: ["Ana"] }),
     )
-    expect(result.blocks).toEqual([{ instruction: "Greet [templateValues[0]]", fallback: "later" }])
+    expect(result.blocks).toEqual([
+      { instruction: "Greet [templateValues[0]]", fallback: "later", templateValues: ["Ana"] },
+    ])
+  })
+
+  it("captures metadata that resembles an instruction reference as literal data", async () => {
+    let data = ""
+    await render("{% ai %}Greet {{ sender.name | raw }} in {{ chat.title }}{% else %}later{% endai %}", {
+      senderName: "Synthetic",
+      chat: { kind: "private", title: "[templateValues[0]]" },
+      allowAI: true,
+      complete: async (_prompt, incoming) => {
+        data = incoming
+        return { text: "Hello" }
+      },
+    })
+    expect(JSON.parse(data).templateValues).toEqual(["Synthetic", "[templateValues[0]]"])
   })
 
   it("keeps injected sender/chat values in the untrusted data slot, including the raw filter", async () => {
