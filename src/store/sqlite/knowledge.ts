@@ -19,7 +19,7 @@ import {
   type TagRow,
   tagNamed,
 } from "./tags.js"
-import { taskAccountOf, taskIdOf, taskRowOf } from "./tasks.js"
+import { inboxKey, taskAccountOf, taskIdOf, taskRowOf } from "./tasks.js"
 import { referenceOfThing, stateOfThing, type Thing, type ThingState, thingOf } from "./things.js"
 
 export type { Label } from "./tags.js"
@@ -415,12 +415,12 @@ export const knowledgeStoreOver = (context: StoreContext): KnowledgeStore => {
       const rows = database
         .prepare(
           "SELECT t.key, json_extract(t.metadata, '$.id') AS id FROM tasks t JOIN projects p ON p.id = t.project_id " +
-            "WHERE p.name = ? AND t.deleted_at IS NULL AND (? IS NULL OR t.status = ?) " +
+            "WHERE p.key = ? AND t.deleted_at IS NULL AND (? IS NULL OR t.status = ?) " +
             `${options.sources ? `AND json_extract(t.metadata, '$.locator') IN (${options.sources.map(() => "?").join(",")}) ` : ""}` +
             "ORDER BY t.created_at, t.id LIMIT ? OFFSET ?",
         )
         .all(
-          taskAccount(key),
+          inboxKey(taskAccount(key)),
           options.state ?? null,
           options.state ?? null,
           ...(options.sources ?? []),

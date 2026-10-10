@@ -50,9 +50,10 @@ export const inboxKey = (account: string): string =>
 /** The task account (`provider:account`) a task row belongs to: its inbox project's name. */
 export const taskAccountOf = (database: CacheDatabase, rowId: number): string | undefined => {
   const row = database
-    .prepare("SELECT p.name FROM tasks t JOIN projects p ON p.id = t.project_id WHERE t.id = ?")
+    .prepare("SELECT p.key, p.name FROM tasks t JOIN projects p ON p.id = t.project_id WHERE t.id = ?")
     .get(rowId)
-  return row ? String(row.name) : undefined
+  // Only an inbox project speaks for an account: a project the owner named `telegram:500` does not.
+  return row && String(row.key) === inboxKey(String(row.name)) ? String(row.name) : undefined
 }
 
 export const taskStoreOver = (database: CacheDatabase, now: () => number = Date.now): StoreTaskStore => {

@@ -2,22 +2,24 @@ import type { CacheDatabase } from "../driver.js"
 
 let depth = 0
 
-/** A savepoint, so a write that is already inside the store's transaction nests instead of failing. */
+/**
+ * One write transaction. The outermost takes the write lock at once (`BEGIN IMMEDIATE`): a deferred one that
+ * reads first fails with SQLITE_BUSY when another process writes in between, and tg, max, memo and zm share
+ * the file. A nested call is a savepoint.
+ */
 export const atomic = <T>(database: CacheDatabase, body: () => T): T => {
-  const name = `k${++depth}`
-  database.exec(`SAVEPOINT ${name}`)
+  const outer = depth === 0
+  const name = `k${depth + 1}`
+  database.exec(outer ? "BEGIN IMMEDIATE" : `SAVEPOINT ${name}`)
+  depth += 1
   try {
     const result = body()
-    database.exec(`RELEASE ${name}`)
+    database.exec(outer ? "COMMIT" : `RELEASE ${name}`)
     return result
   } catch (error) {
-    database.exec(`ROLLBACK TO ${name}`)
-    database.exec(`RELEASE ${name}`)
+    database.exec(outer ? "ROLLBACK" : `ROLLBACK TO ${name}; RELEASE ${name}`)
     throw error
   } finally {
     depth -= 1
   }
 }
-
-/** The id an `INSERT … RETURNING id` gave back. */
-export const insertedId = (row: Record<string, unknown> | undefined): number => Number(row?.id)

@@ -3,9 +3,11 @@ export { PRAGMAS } from "./driver.js"
 export { MIGRATIONS, type Migration, migrate } from "./migrations.js"
 export { openCache } from "./open.js"
 export { storePath } from "./path.js"
+export type { AgentAction, AgentActionInput, AgentActionsStore } from "./sqlite/agent-actions.js"
 export { resetAttachmentWords } from "./sqlite/attachment-texts.js"
 export { backfillNormalized, pendingNormalization } from "./sqlite/backfill.js"
 export type { ChatMetadata } from "./sqlite/chat-metadata.js"
+export type { Decision, DecisionInput, DecisionsStore } from "./sqlite/decisions.js"
 export type {
   Annotation,
   KnowledgeRelation,
@@ -16,6 +18,7 @@ export type {
   Project,
   Reminder,
 } from "./sqlite/knowledge.js"
+export type { Author, MemoriesStore, Memory, MemoryInput } from "./sqlite/memories.js"
 export type { NoteIndexState } from "./sqlite/note-index.js"
 export {
   type NearestNote,
@@ -35,6 +38,7 @@ export type {
   NoteTag,
 } from "./sqlite/notes.js"
 export type { PrivateContact, PrivateContactNote } from "./sqlite/private-people.js"
+export type { ProposalInput, ProposedAction, ProposedActionsStore } from "./sqlite/proposed-actions.js"
 export {
   fillSearchIndex,
   resetSearchIndex,
@@ -42,6 +46,8 @@ export {
   type SearchIndexState,
   searchIndexState,
 } from "./sqlite/search-index.js"
+export type { TagKind, TagRow } from "./sqlite/tags.js"
+export type { StoreTaskStore } from "./sqlite/tasks.js"
 export {
   type AccountKey,
   type AttachmentTextEntry,
