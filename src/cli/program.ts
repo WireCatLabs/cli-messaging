@@ -69,6 +69,7 @@ export const createProgram = (
       0,
     )
     .option("--json", "machine-readable output: one JSON value on stdout, nothing else")
+    .option("--agent-json", "JSON for AI agents: invisible controls are visible; ordinary --json preserves text")
     .option("--jsonl", "machine-readable output: one JSON object per line, for streaming and jq")
     .option("--quiet", "diagnostics off; a failure is still said")
     .option("--trace", "the connection's own log lines on stderr — never message content")
@@ -113,7 +114,7 @@ export const run = async (argv: string[], definition: ProgramDefinition, options
   const delimiter = argv.indexOf("--")
   const machine = argv
     .slice(0, delimiter < 0 ? undefined : delimiter)
-    .some((word) => word === "--json" || word === "--jsonl")
+    .some((word) => word === "--json" || word === "--jsonl" || word === "--agent-json")
   const reporting = machine ? { ...options, tty: false } : options
   const control = execution(streams, { maxOutputBytes: 0 })
   let restoreInput: (() => void) | undefined

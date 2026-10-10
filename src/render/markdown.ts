@@ -15,7 +15,7 @@ export const toMarkdown = (title: string, messages: Message[], timeZone?: string
   const clock = new Intl.DateTimeFormat("en-GB", { ...zone, hour: "2-digit", minute: "2-digit", hourCycle: "h23" })
   const byId = new Map(messages.map((message) => [message.id, message]))
 
-  const lines = [`# ${singleLine(title)}`]
+  const lines = [`# ${literal(singleLine(title))}`]
   let today = ""
   for (const message of messages) {
     const when = new Date(message.timestamp)
@@ -28,32 +28,42 @@ export const toMarkdown = (title: string, messages: Message[], timeZone?: string
     const edited = message.editedAt ? " · edited" : ""
     lines.push("", `**${clock.format(when)} ${nameOf(message)}**${edited}`)
     const answered = message.replyTo ?? (message.replyToId === undefined ? undefined : byId.get(message.replyToId))
-    if (answered) lines.push(...quote(`**${nameOf(answered)}:** ${visibleControls(answered.text)}`))
+    if (answered) lines.push(...quote(`**${nameOf(answered)}:** ${literal(visibleControls(answered.text))}`))
     else if (message.replyToId !== undefined) lines.push(`> in reply to message ${singleLine(message.replyToId)}`)
     if (message.forwardedFrom) lines.push(...forwarded(message.forwardedFrom))
-    if (message.text) lines.push(visibleControls(message.text))
+    if (message.text) lines.push(...quote(literal(visibleControls(message.text))))
     lines.push(...message.attachments.map((attachment) => `- ${attachmentLine(attachment)}`))
   }
   return `${lines.join("\n")}\n`
 }
 
+const literal = (text: string): string => text.replace(/[\\`*_{}[\]()#+.!|<>]/g, "\\$&")
+
 const nameOf = (message: Pick<Message, "senderName" | "senderId" | "outgoing">): string =>
-  singleLine(message.senderName ?? (message.outgoing ? "you" : (message.senderId ?? "unknown")))
+  literal(singleLine(message.senderName ?? (message.outgoing ? "you" : (message.senderId ?? "unknown"))))
 
 const quote = (text: string): string[] => text.split("\n").map((line) => `> ${line}`)
 
 const forwarded = (original: QuotedMessage): string[] => [
   `> forwarded from **${nameOf(original)}**`,
-  ...(original.text ? quote(visibleControls(original.text)) : []),
+  ...(original.text ? quote(literal(visibleControls(original.text))) : []),
   ...original.attachments.map((attachment) => `> - ${attachmentLine(attachment)}`),
 ]
 
 const attachmentLine = (attachment: Attachment): string => {
   if (attachment.buttons) {
-    const buttons = attachment.buttons.flat().map((button, index) => `${index + 1} ${singleLine(button.text)}`)
+    const buttons = attachment.buttons.flat().map((button, index) => `${index + 1} ${literal(singleLine(button.text))}`)
     return `buttons: ${buttons.join(" · ")}`
   }
-  const label = singleLine(attachment.title ?? attachment.name ?? attachment.kind)
-  if (attachment.url && /^https?:\/\//i.test(attachment.url)) return `[${label}](${singleLine(attachment.url)})`
-  return attachment.name ? `${attachment.kind}: ${singleLine(attachment.name)}` : attachment.kind
+  const label = literal(singleLine(attachment.title ?? attachment.name ?? attachment.kind))
+  if (attachment.url) {
+    try {
+      const url = new URL(attachment.url)
+      if (["https:", "http:"].includes(url.protocol))
+        return `[${label}](${url.href.replace(/[()<>\\]/g, (char) => `%${char.charCodeAt(0).toString(16)}`)})`
+    } catch {}
+  }
+  return attachment.name
+    ? `${literal(attachment.kind)}: ${literal(singleLine(attachment.name))}`
+    : literal(attachment.kind)
 }

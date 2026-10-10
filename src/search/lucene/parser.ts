@@ -262,3 +262,18 @@ export const parseLucene = (
   expect("EOF")
   return { version: 1, language: "lucene-v1", root }
 }
+
+/** Bare terms eligible for forgiving retrieval; explicit syntax keeps strict semantics. */
+export const implicitTextTerms = (text: string): Set<number> => {
+  const tokens = tokensOf(text)
+  if (tokens.some(({ kind }) => ["AND", "OR", "NOT", "+", "-", "!", "(", ")"].includes(kind))) return new Set()
+  return new Set(
+    tokens.flatMap((token, index) =>
+      token.kind === "term" &&
+      ![":", "=", "<", ">", "<=", ">="].includes(tokens[index - 1]?.kind ?? "") &&
+      ![":", "=", "<", ">", "<=", ">="].includes(tokens[index + 1]?.kind ?? "")
+        ? [token.span.start]
+        : [],
+    ),
+  )
+}

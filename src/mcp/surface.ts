@@ -168,7 +168,7 @@ export const registerCommands = (server: McpServer, prefix: string, commands: Re
       {
         outputSchema: toStandardJsonSchema(v.looseObject({})),
         title: "Run a writing command",
-        description: `Run one command that changes something — sends, edits, deletes, joins — with the arguments ${prefix}_tools_search showed.`,
+        description: `Run one command that changes something — sends, edits, deletes, joins — with the arguments ${prefix}_tools_search showed. ${UNTRUSTED}`,
         inputSchema: toStandardJsonSchema(call),
         annotations: WRITE,
       },

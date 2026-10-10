@@ -1118,6 +1118,7 @@ CREATE INDEX `message_links_by_parent_id` ON `message_links` (`parent_id`);--> s
 CREATE INDEX `message_revisions_by_message_id` ON `message_revisions` (`message_id`);--> statement-breakpoint
 CREATE INDEX `message_transcripts_by_message_id` ON `message_transcripts` (`message_id`);--> statement-breakpoint
 CREATE INDEX `messages_by_time` ON `messages` (`chat_id`,"sent_at" desc);--> statement-breakpoint
+CREATE INDEX `messages_by_reply` ON `messages` (`chat_id`,`reply_to_external_id`) WHERE reply_to_external_id IS NOT NULL AND deleted_at IS NULL;--> statement-breakpoint
 CREATE INDEX `messages_by_account` ON `messages` (`account_id`,`external_id`);--> statement-breakpoint
 CREATE INDEX `messages_to_normalize` ON `messages` (`id`) WHERE normalized_text IS NULL AND deleted_at IS NULL;--> statement-breakpoint
 CREATE INDEX `messages_by_sender_identity_id` ON `messages` (`sender_identity_id`);--> statement-breakpoint

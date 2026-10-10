@@ -41,7 +41,7 @@ export const searchTools = (messenger: Messenger): Record<string, AnyTool> => ({
       timezone,
       limit,
     }),
-    annotations: { ...READ, openWorldHint: false },
+    annotations: { ...READ, openWorldHint: Boolean(messenger.serverSearch) },
     stored: (store, account, args, defaults, connect) =>
       searchServices(
         messenger,
@@ -64,7 +64,7 @@ export const searchTools = (messenger: Messenger): Record<string, AnyTool> => ({
     title: "Search messenger messages",
     description: MESSAGES_SEARCH_DESCRIPTION,
     input: messagesSearchInput(messenger),
-    annotations: { ...READ, openWorldHint: false },
+    annotations: { ...READ, openWorldHint: Boolean(messenger.serverSearch) },
     stored: (store, account, args, defaults, connect) => {
       const network = args.sync_first || (Boolean(messenger.serverSearch) && args.backend !== "archive")
       const services = searchServices(messenger, store, account, defaults, network ? connect : undefined)

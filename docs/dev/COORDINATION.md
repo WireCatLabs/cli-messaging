@@ -4,9 +4,11 @@ Several sessions work on cli-messaging, tg-cli and max-cli at once. This page is
 
 ## Store migrations
 
-**The next free migration number is 29.** Take it by editing this line in a pull request of its own,
+**The next free migration number is 30.** Take it by editing this line in a pull request of its own,
 merged before the migration: the runner skips every version at or below the file's, so two branches
 holding the same number would leave one migration unapplied on stores that ran the other.
+
+Migration 29 is reserved for the bounded direct-reply search index by `feat/combined-search`.
 
 ## Releases
 

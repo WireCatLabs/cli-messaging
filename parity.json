@@ -24,6 +24,9 @@
       "value": "<agent>",
       "meaning": "install the skill for this agent; asks at a terminal, otherwise none"
     },
+    "--agent-json": {
+      "meaning": "agent-safe JSON output: control and direction characters visible in strings and keys; combine with --jsonl for streams"
+    },
     "--ai": {
       "meaning": "call the configured reply model with stored message data; requires reply consent, otherwise uses fallback"
     },
@@ -113,7 +116,7 @@
     },
     "--backend": {
       "value": "<archive|server|both>",
-      "meaning": "where to search: the local archive, the messenger's server, or both (default: both)"
+      "meaning": "where to search: the local archive, the messenger's server, or both (default: both; message discovery uses archive only)"
     },
     "--background": {
       "meaning": "run as a job that outlives this command; `store jobs show` follows it"
@@ -293,6 +296,9 @@
       "value": "<n>",
       "meaning": "remote: the vector size — needed with --base-url; shortens an OpenAI model's"
     },
+    "--discover": {
+      "meaning": "find partial lexical matches and eligible replies in the local archive; results are evidence, not confirmed answers"
+    },
     "--do": {
       "meaning": "actions: reply, task, or both, comma-separated",
       "value": "<actions>"
@@ -405,8 +411,8 @@
       "meaning": "the text is HTML: <b>, <i>, <a href>, <code>"
     },
     "--http": {
-      "meaning": "serve MCP over HTTP on 127.0.0.1 behind the owner's tunnel, with a one-owner login; every write asks first by default",
-      "note": "MAX wording catches up with Telegram’s explicit “by default” at the next shared SDK adoption; both HTTP servers confirm writes by default"
+      "meaning": "serve MCP over HTTP on 127.0.0.1 behind the owner's tunnel, with a one-owner login",
+      "note": "MAX spells out that profile permissions decide; Telegram wording catches up at its next shared SDK adoption"
     },
     "--http-confirmation": {
       "value": "<mode>",
@@ -1093,6 +1099,13 @@
     }
   },
   "globalOptions": {
+    "--agent-json": {
+      "in": [],
+      "planned": {
+        "max": "each CLI’s next cli-messaging bump",
+        "tg": "each CLI’s next cli-messaging bump"
+      }
+    },
     "--dry-run": "all",
     "--fields": "all",
     "--json": "all",
@@ -3366,6 +3379,7 @@
         },
         "--chat": "all",
         "--context": "all",
+        "--discover": "all",
         "--exact": "all",
         "--language": "all",
         "--limit": "all",

@@ -14,6 +14,7 @@ const REFRESH_SECONDS = 30 * 24 * 60 * 60
 const AUTH_CODE_MS = 60 * 1000
 const LOGIN_CODE_MS = 10 * 60 * 1000
 const WRONG_TRIES = 5
+const WRONG_CODE_WAIT_MS = 30_000
 const MAX_CLIENTS = 10
 const CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 
@@ -49,8 +50,11 @@ interface AuthCode {
 
 const hash = (value: string) => createHash("sha256").update(value).digest("base64url")
 const secret = () => randomBytes(32).toString("base64url")
-const same = (given: string, expected: string) =>
-  given.length === expected.length && timingSafeEqual(Buffer.from(given), Buffer.from(expected))
+const same = (given: string, expected: string) => {
+  const left = Buffer.from(given)
+  const right = Buffer.from(expected)
+  return left.byteLength === right.byteLength && timingSafeEqual(left, right)
+}
 
 /** Only hashes reach the disk: the file is worth nothing to someone who copies it. */
 const tokenFile = (path: string) => ({
@@ -58,8 +62,8 @@ const tokenFile = (path: string) => ({
     existsSync(path) ? (JSON.parse(readFileSync(path, "utf8")) as Stored) : { clients: [], tokens: [] },
   write: (stored: Stored) => {
     mkdirSync(dirname(path), { recursive: true, mode: 0o700 })
-    const temporary = `${path}.${process.pid}.tmp`
-    writeFileSync(temporary, JSON.stringify(stored), { mode: 0o600 })
+    const temporary = `${path}.${randomBytes(16).toString("hex")}.tmp`
+    writeFileSync(temporary, JSON.stringify(stored), { mode: 0o600, flag: "wx" })
     chmodSync(temporary, 0o600)
     renameSync(temporary, path)
   },
@@ -122,6 +126,7 @@ export const ownerLogin = ({
   const codes = new Map<string, AuthCode>()
   let login = { value: "", expires: 0 }
   let wrong = 0
+  let retryAt = 0
 
   const freshCode = () => {
     const part = () => Array.from({ length: 4 }, () => CODE_ALPHABET[randomInt(CODE_ALPHABET.length)]).join("")
@@ -250,9 +255,17 @@ export const ownerLogin = ({
       !params.get("code_challenge")
     )
       return new Response("This server needs response_type=code and PKCE with S256.", { status: 400 })
-    if (wrong >= WRONG_TRIES)
-      return new Response("Too many wrong codes. Restart the server to log in again.", { status: 429 })
     if (request.method !== "POST") return page(params, client)
+    const throttled = () =>
+      new Response("Too many wrong codes. Wait before trying the new terminal code.", {
+        status: 429,
+        headers: { "retry-after": String(Math.ceil((retryAt - now()) / 1000)) },
+      })
+    if (wrong >= WRONG_TRIES) {
+      if (now() < retryAt) return throttled()
+      wrong = 0
+      freshCode()
+    }
 
     const typed = (params.get("login_code") ?? "").trim().toUpperCase()
     if (login.expires < now()) {
@@ -261,10 +274,13 @@ export const ownerLogin = ({
     }
     if (!same(typed, login.value)) {
       wrong += 1
-      return wrong >= WRONG_TRIES
-        ? new Response("Too many wrong codes. Restart the server to log in again.", { status: 429 })
-        : page(params, client, `Wrong code. ${WRONG_TRIES - wrong} tries left.`)
+      if (wrong >= WRONG_TRIES) {
+        retryAt = now() + WRONG_CODE_WAIT_MS
+        return throttled()
+      }
+      return page(params, client, `Wrong code. ${WRONG_TRIES - wrong} tries left.`)
     }
+    wrong = 0
     freshCode()
     const code = secret()
     codes.set(hash(code), {

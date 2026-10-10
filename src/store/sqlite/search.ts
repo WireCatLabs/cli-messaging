@@ -1,7 +1,8 @@
 import { CliError } from "@wirecat/cli-core"
 import { formatLocator } from "../../domain/locator.js"
 import type { Message, Page } from "../../domain/models.js"
-import type { MessageFilter, StoredHit } from "../store.js"
+import { exhausted, QUERY_LIMITS } from "../../search/lucene/types.js"
+import type { AccountKey, MessageFilter, StoredHit } from "../store.js"
 import { alias, and, desc, eq, inArray, isNull, lte, type SQL, sql } from "./drizzle/core.js"
 import type { StoreContext } from "./open.js"
 import { MESSAGE_FIELDS, type MessageRow, newestFirst, toMessages } from "./reads.js"
@@ -168,4 +169,35 @@ const perChatNewest = (context: StoreContext, where: SQL | undefined, wanted: nu
     .where(lte(ranked.chatRank, wanted))
     .orderBy(desc(ranked.sentAt), desc(ranked.pk))
     .all()
+}
+
+export const directReplies = (
+  context: StoreContext,
+  parents: { account: AccountKey; chatId: string; id: string }[],
+  limit: number,
+): Page<StoredHit> => {
+  if (!Number.isInteger(limit) || limit < 1 || limit > 100 || parents.length > 300)
+    throw new CliError("validation_error", "direct reply lookup needs 1–100 results and at most 300 parents")
+  if (!parents.length) return { items: [], hasMore: false }
+  const rows = context.database
+    .prepare(`
+    SELECT DISTINCT m.id, length(cast(m.text AS BLOB)) AS bytes FROM json_each(?) requested
+    JOIN accounts ac ON ac.provider=json_extract(requested.value,'$.account.provider')
+      AND ac.external_id=json_extract(requested.value,'$.account.account')
+    JOIN chats c ON c.account_id=ac.id AND c.external_id=json_extract(requested.value,'$.chatId')
+    JOIN messages parent ON parent.chat_id=c.id AND parent.external_id=json_extract(requested.value,'$.id')
+    JOIN messages m INDEXED BY messages_by_reply ON m.chat_id=c.id AND m.reply_to_external_id=parent.external_id
+    WHERE m.deleted_at IS NULL AND parent.deleted_at IS NULL AND m.reply_to_external_id IS NOT NULL
+    ORDER BY cast(requested.key AS INTEGER), m.id LIMIT ?
+  `)
+    .all(JSON.stringify(parents), limit + 1)
+  if (rows.slice(0, limit).reduce((sum, row) => sum + Number(row.bytes), 0) > QUERY_LIMITS.bodyBytes)
+    exhausted("bodyBytes")
+  return {
+    items: hitsByPk(
+      context,
+      rows.slice(0, limit).map((r) => Number(r.id)),
+    ),
+    hasMore: rows.length > limit,
+  }
 }

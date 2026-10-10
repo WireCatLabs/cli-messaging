@@ -81,7 +81,7 @@ export interface SendGuardOptions {
    * The levels by command path, defaults included. Without it, `readOnly` and `allow` alone decide
    * and nothing asks — the guard a CLI built before levels existed.
    */
-  permissions?: Readonly<Record<PermissionKey, Level>>
+  permissions?: Readonly<Record<PermissionKey, Level>> | (() => Readonly<Record<PermissionKey, Level>>)
   permissionSources?: Readonly<Record<PermissionKey, string>>
   permissionDefaults?: Readonly<Record<PermissionKey, Level>>
   permissionFix?: (request: GuardRequest, key: PermissionKey) => string
@@ -149,12 +149,14 @@ export const sendGuard = ({
   warn,
   now = () => new Date(),
 }: SendGuardOptions): SendGuard => {
+  const currentPermissions = () => (typeof permissions === "function" ? permissions() : permissions)
   let reservation: string | undefined
   const answered = new WeakSet<GuardRequest>()
 
   const permitted = (request: GuardRequest) => {
     const { chatId, kind = "message", action, personIds } = request
-    if (permissions === undefined) {
+    const levels = currentPermissions()
+    if (levels === undefined) {
       if (readOnly) {
         throw new CliError(
           "permission_error",
@@ -177,7 +179,7 @@ export const sendGuard = ({
       }
     } else {
       const key = request.key ?? keyForWrite(kind, action)
-      const { level, key: named } = levelFor(permissions, key, permissionDefaults)
+      const { level, key: named } = levelFor(levels, key, permissionDefaults)
       if (level === "deny" || level === "readonly") {
         const fix = permissionFix?.(request, key) ?? `${command} ${profile} config set permissions.${key} allow`
         throw new CliError(
@@ -276,9 +278,10 @@ export const sendGuard = ({
 
   return {
     ask: async (request) => {
-      if (permissions === undefined) return
+      const levels = currentPermissions()
+      if (levels === undefined) return
       const key = request.key ?? keyForWrite(request.kind ?? "message", request.action)
-      if (levelFor(permissions, key, permissionDefaults).level !== "ask") return
+      if (levelFor(levels, key, permissionDefaults).level !== "ask") return
       await ask(key, request)
       answered.add(request)
     },
@@ -383,7 +386,7 @@ export const guardFor = (
     readOnly: settings.readOnly,
     readOnlyFrom: settings.sources.readOnly ?? "default",
     ...(settings.allow ? { allow: settings.allow, allowFrom: settings.sources.allow ?? "default" } : {}),
-    permissions: settings.permissions,
+    permissions: () => settings.permissions,
     permissionSources: settings.permissionSources,
     ...(ask ? { ask } : {}),
     sendsPerHour: settings.sendsPerHour,

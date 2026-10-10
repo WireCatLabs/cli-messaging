@@ -36,9 +36,13 @@ export const createServer = (
   const { app, provider } = messenger
   const name = messenger.name ?? app.command
   const { settings } = context
+  const refreshPermissions = () => {
+    const current = messenger.resolveSettings(command.optsWithGlobals(), { env: context.env })
+    settings.permissions = current.permissions
+    settings.permissionSources = current.permissionSources
+  }
   const levelOf = (key: string | null | undefined) => (key ? levelFor(settings.permissions, key).level : "allow")
   // A tool the level would refuse is not offered: an agent is not handed a tool that cannot work.
-  const syncAllowed = levelOf("messages.sync-first") === "allow"
   const offered = Object.fromEntries(
     Object.entries(personalMcpTools(messenger)).filter(([key, one]) => {
       const level = levelOf(toolKey(key, one))
@@ -50,7 +54,7 @@ export const createServer = (
       )
     }),
   )
-  const writes = Object.fromEntries(Object.entries(offered).filter(([, one]) => one.permission !== undefined))
+  const writes = Object.fromEntries(Object.entries(offered).filter(([, one]) => one.annotations.readOnlyHint !== true))
   // No one is at a terminal to answer the guard's question: over MCP a write at level `ask` goes ahead.
   const guard = messenger.guard
     ? context.guard
@@ -109,10 +113,21 @@ export const createServer = (
             await store.close()
           }
         },
+        around: (key, definition, work) => {
+          refreshPermissions()
+          const level = levelOf(toolKey(key, definition))
+          if (level === "deny" || (definition.annotations.readOnlyHint !== true && level === "readonly"))
+            throw new CliError("permission_error", "the current profile does not allow this command", {
+              permission: toolKey(key, definition),
+            })
+          return work()
+        },
         defaults: {
           spawnJob: sessionOptions.spawnJob,
           limit: settings.limit,
-          syncAllowed,
+          get syncAllowed() {
+            return levelOf("messages.sync-first") === "allow"
+          },
           guard,
           settings,
           env: context.env,
@@ -132,6 +147,13 @@ export const createServer = (
         withStore: context.withStore,
         messenger,
         guard,
+        assertRead: (key) => {
+          refreshPermissions()
+          if (levelOf(key) === "deny")
+            throw new CliError("permission_error", "the current profile does not allow this resource", {
+              permission: key,
+            })
+        },
       })
     if (skill) {
       const { uri, name: resource, title, description, mimeType, read } = skill

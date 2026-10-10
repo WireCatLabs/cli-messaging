@@ -102,7 +102,10 @@ export const mcpCommand = (messenger: Messenger): Command => {
       `serve this profile to an agent over MCP, on stdin and stdout — \`claude mcp add ${app.command} -- ${app.command} mcp\``,
     ),
   )
-    .option("--http", "serve over HTTP on 127.0.0.1 for ChatGPT and Claude in the browser, behind your tunnel")
+    .option(
+      "--http",
+      "serve over HTTP on 127.0.0.1 for ChatGPT and Claude in the browser, behind your tunnel; the profile's permissions decide",
+    )
     .option("--http-confirmation <mode>", "no longer used — writes show no form; the profile's permissions decide")
     .option("--port <port>", `the local port for --http (default ${DEFAULT_PORT})`)
     .option("--public-url <url>", "the tunnel's https address the browser apps use, e.g. https://<name>.ts.net")

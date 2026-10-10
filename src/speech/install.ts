@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto"
+import { createHash, randomUUID } from "node:crypto"
 import { createWriteStream, mkdirSync, statSync } from "node:fs"
 import { rename, rm } from "node:fs/promises"
 import { dirname, join } from "node:path"
@@ -111,7 +111,7 @@ const fetchInto = async (file: ModelFile, path: string, get: Fetch, stalled: Wat
     throw new CliError("network_error", `${file.name} could not be downloaded: HTTP ${response.status}`)
   }
 
-  const partial = `${path}.${process.pid}.part`
+  const partial = `${path}.${randomUUID()}.part`
   const hash = createHash("sha256")
   let bytes = 0
   const hashing = new Transform({
@@ -133,7 +133,7 @@ const fetchInto = async (file: ModelFile, path: string, get: Fetch, stalled: Wat
     await pipeline(
       Readable.fromWeb(response.body as import("node:stream/web").ReadableStream),
       hashing,
-      createWriteStream(partial, { mode: 0o600 }),
+      createWriteStream(partial, { flags: "wx", mode: 0o600 }),
     )
     const actual = hash.digest("hex")
     if (actual !== file.sha256) {

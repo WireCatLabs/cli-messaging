@@ -31,8 +31,8 @@ export const messagesSearchCommand = (messenger: Messenger, kind: SearchKind = "
       mail
         ? "search the mail imported into the local store — memo mail import brings it in"
         : messenger.serverSearch
-          ? "search messenger messages in the local store and on the messenger's server (--backend); optionally fetches new messages with --sync-first"
-          : "search messenger messages in the local store — what was read, fetched or kept by serve; optionally fetches new messages with --sync-first",
+          ? "search messenger messages in the local store and on the messenger's server (--backend); optionally fetches new messages with --sync-first; --discover searches the archive only"
+          : "search messenger messages in the local store — what was read, fetched or kept by serve; optionally fetches new messages with --sync-first; --discover searches the archive only",
     )
     .argument(
       "[query...]",
@@ -61,8 +61,13 @@ export const messagesSearchCommand = (messenger: Messenger, kind: SearchKind = "
       "bare words and quotes match their exact form only, as exact:word does; text: still matches every form",
     )
     .option("--context <n>", "messages before and after each hit; 2 in the terminal, 0 otherwise", wholeCount)
-  if (!mail)
+  if (!mail) {
+    command.option(
+      "--discover",
+      "find partial lexical matches and eligible replies in the local archive; results are evidence, not confirmed answers",
+    )
     command.option("--language <lucene|legacy>", "the query language: strict Lucene or legacy discovery", languageOf)
+  }
   command.option("--timezone <zone>", "the IANA timezone for calendar date boundaries")
   if (mail) return command.action(searchAction(messenger, kind))
   return command
@@ -90,6 +95,7 @@ const searchAction = (messenger: Messenger, kind: SearchKind) =>
       source,
       regex,
       language,
+      discover,
       timezone,
       newest,
       exact,
@@ -100,6 +106,7 @@ const searchAction = (messenger: Messenger, kind: SearchKind) =>
       chat?: string
       source?: string
       regex?: boolean
+      discover?: boolean
       language?: "lucene" | "legacy"
       timezone?: string
       newest?: boolean
@@ -119,6 +126,7 @@ const searchAction = (messenger: Messenger, kind: SearchKind) =>
     const typed = {
       ...(chat === undefined ? {} : { chat }),
       ...(source === undefined ? {} : { source }),
+      ...(discover === undefined ? {} : { discover }),
       ...(language === undefined ? {} : { language }),
       ...(timezone === undefined ? {} : { timezone }),
       ...(newest ? { newest: true } : {}),
@@ -161,6 +169,7 @@ const searchAction = (messenger: Messenger, kind: SearchKind) =>
           signal,
           language: params.language ?? (pattern ? "legacy" : "lucene"),
           newest: params.newest === true,
+          ...(params.discover === undefined ? {} : { discover: params.discover }),
           ...(params.exact ? { exact: true } : {}),
           context: params.context ?? (context.format === "pretty" ? 2 : 0),
           saved: id,

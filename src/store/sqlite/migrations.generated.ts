@@ -1,7 +1,7 @@
 // Written by scripts/bundle-migrations.ts from drizzle/ — run `pnpm db:bundle`, do not edit.
 export const GENERATED: { name: string; statements: string[] }[] = [
   {
-    "name": "20261010130203_initial",
+    "name": "20261010165959_initial",
     "statements": [
       "CREATE TABLE `account_identities` (\n\t`account_id` integer NOT NULL,\n\t`identity_id` integer NOT NULL,\n\t`created_at` integer NOT NULL,\n\t`last_messaged_at` integer,\n\t`updated_at` integer NOT NULL,\n\tCONSTRAINT `account_identities_pk` PRIMARY KEY(`account_id`, `identity_id`),\n\tCONSTRAINT `fk_account_identities_account_id_accounts_id_fk` FOREIGN KEY (`account_id`) REFERENCES `accounts`(`id`),\n\tCONSTRAINT `fk_account_identities_identity_id_identities_id_fk` FOREIGN KEY (`identity_id`) REFERENCES `identities`(`id`)\n);",
       "CREATE TABLE `accounts` (\n\t`id` integer PRIMARY KEY,\n\t`provider` text NOT NULL,\n\t`external_id` text NOT NULL,\n\t`name` text,\n\t`created_at` integer NOT NULL,\n\t`settings` text,\n\t`status` text,\n\t`updated_at` integer NOT NULL,\n\t`scope` text DEFAULT 'personal' NOT NULL,\n\t`organization_id` integer,\n\tCONSTRAINT `fk_accounts_organization_id_organizations_id_fk` FOREIGN KEY (`organization_id`) REFERENCES `organizations`(`id`),\n\tCONSTRAINT `accounts_provider_external_id_unique` UNIQUE(`provider`,`external_id`)\n);",
@@ -147,6 +147,7 @@ export const GENERATED: { name: string; statements: string[] }[] = [
       "CREATE INDEX `message_revisions_by_message_id` ON `message_revisions` (`message_id`);",
       "CREATE INDEX `message_transcripts_by_message_id` ON `message_transcripts` (`message_id`);",
       "CREATE INDEX `messages_by_time` ON `messages` (`chat_id`,\"sent_at\" desc);",
+      "CREATE INDEX `messages_by_reply` ON `messages` (`chat_id`,`reply_to_external_id`) WHERE reply_to_external_id IS NOT NULL AND deleted_at IS NULL;",
       "CREATE INDEX `messages_by_account` ON `messages` (`account_id`,`external_id`);",
       "CREATE INDEX `messages_to_normalize` ON `messages` (`id`) WHERE normalized_text IS NULL AND deleted_at IS NULL;",
       "CREATE INDEX `messages_by_sender_identity_id` ON `messages` (`sender_identity_id`);",

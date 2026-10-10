@@ -415,6 +415,9 @@ export const messages = sqliteTable(
   (table) => [
     unique().on(table.chatId, table.externalId),
     index("messages_by_time").on(table.chatId, desc(table.sentAt)),
+    index("messages_by_reply")
+      .on(table.chatId, table.replyToExternalId)
+      .where(sql`reply_to_external_id IS NOT NULL AND deleted_at IS NULL`),
     index("messages_by_account").on(table.accountId, table.externalId),
     // Empty once the backfill is done, so every open can ask "anything left?" without reading the table.
     index("messages_to_normalize").on(table.id).where(sql`normalized_text IS NULL AND deleted_at IS NULL`),

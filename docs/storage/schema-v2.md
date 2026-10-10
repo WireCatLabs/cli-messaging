@@ -392,7 +392,7 @@ A group's size once a day: the messenger's own count and how many members one re
 | `updated_at` | integer | not null |  | when this row last changed here |
 | `thread_root_id` | integer |  | → `messages.id` | the message a thread hangs from: a Slack thread, comments under a channel post, replies in a topic; null outside a thread |
 
-*Keys and indexes:* `UNIQUE (chat_id, external_id)`, `INDEX (chat_id, sent_at DESC)`, `INDEX (account_id, external_id)`, `INDEX (id) WHERE normalized_text IS NULL AND deleted_at IS NULL`, `INDEX (sender_identity_id)`, `INDEX (thread_root_id)`
+*Keys and indexes:* `UNIQUE (chat_id, external_id)`, `INDEX (chat_id, sent_at DESC)`, `INDEX (chat_id, reply_to_external_id) WHERE reply_to_external_id IS NOT NULL AND deleted_at IS NULL`, `INDEX (account_id, external_id)`, `INDEX (id) WHERE normalized_text IS NULL AND deleted_at IS NULL`, `INDEX (sender_identity_id)`, `INDEX (thread_root_id)`
 
 ### `message_revisions` — renamed
 

@@ -66,6 +66,16 @@ const installed = (model: SpeechModel) => {
 const serving = (body: string) => async () => new Response(body)
 
 describe("installing a speech model", () => {
+  it("leaves an existing predictable temporary file untouched", async () => {
+    const directory = directoryWithVad()
+    mkdirSync(join(directory, tiny.id))
+    const planted = `${modelPath(directory, tiny)("model.onnx")}.${process.pid}.part`
+    writeFileSync(planted, "synthetic existing file")
+    await install(tiny, directory, { fetch: serving("weights") })
+    expect(readFileSync(planted, "utf8")).toBe("synthetic existing file")
+    expect(readFileSync(modelPath(directory, tiny)("model.onnx"), "utf8")).toBe("weights")
+  })
+
   it("**refuses a file whose sha256 is not the pinned one**, and leaves nothing behind", async () => {
     const directory = directoryWithVad()
 

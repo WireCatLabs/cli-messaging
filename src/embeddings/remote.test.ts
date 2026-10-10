@@ -25,6 +25,15 @@ const standIn = (dims: number, script: ((call: Call) => Response | undefined)[] 
 }
 
 describe("openRemote", () => {
+  it("refuses redirects for requests carrying keys and private text", async () => {
+    const remote = remoteModel({})
+    const fetch = async (_url: string, init: RequestInit) => {
+      expect(init.redirect).toBe("error")
+      return new Response(JSON.stringify({ data: [{ index: 0, embedding: new Array(1536).fill(1) }] }))
+    }
+    expect(await openRemote(remote, "synthetic-key", { fetch }).embed(["synthetic text"], "passage")).toHaveLength(1)
+  })
+
   it("**sends OpenAI's request shape** with the key, and gives the vectors back in order, length one", async () => {
     const remote = remoteModel({})
     const { calls, fetch } = standIn(1536)

@@ -42,6 +42,44 @@ break callers, and says how under "Changed — may break callers". `pnpm docs:ch
   resolve as not found. `store.tasks` keeps the `@wirecat/cli-tasks` `TaskStore` and adds `answer` and
   `judge`.
 
+## 0.217.0 — 10.10.2026
+
+### Fixed
+
+- HTTP login recovers after a bounded throttle; embedding requests refuse redirects carrying credentials or text.
+- MCP tool and chat resource permissions refresh before each invocation; tool descriptions frame returned text as untrusted data for reads and writes.
+- Reply model blocks keep interpolated metadata separate from instructions.
+- Model download temporary files use exclusive random names. Reserved downloaded filenames are normalized only on Windows; POSIX names remain unchanged.
+- Development dependency overrides remove obsolete uuid and sprintf-js versions.
+
+### Added
+
+- `--agent-json` makes JSON strings and keys safe for agent consumption, while `--json` retains its raw data contract. Combine with `--jsonl` for streams.
+
+### Changed — may break callers
+
+- Reply JSON previews show instruction references and separate `templateValues` instead of interpolating names directly into model instructions.
+
+- Markdown exports quote message bodies and escape untrusted structure and link labels. Transcript parsers must account for this framing.
+
+- Consumers use `@wirecat/cli-core` 0.19.x for Windows maintenance command resolution.
+
+- MCP contact searches query third-party registries only with explicit `registries: true`; ordinary CLI defaults remain unchanged.
+
+## 0.216.0 — 10.10.2026
+
+### Added
+
+- `search messages --discover`, MCP `discover=true` and SDK `SearchQuery.discover` find partial
+  lexical evidence and eligible direct replies in the local archive without model downloads.
+  Strict Lucene remains the default; explicit syntax, exact and newest searches stay strict.
+  Result metadata shows matched/missing terms and bounded candidate truncation; scores are not
+  answer confidence. Migration 29 adds a derived reply lookup index; message data is unchanged.
+
+### Changed — may break callers
+
+- **The project is now licensed under Apache License 2.0.** See `LICENSE` for the terms.
+
 ## 0.215.0 — 10.10.2026
 
 ### Changed — may break callers

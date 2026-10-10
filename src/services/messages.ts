@@ -25,6 +25,7 @@ import type {
   WordQuery,
 } from "../store/store.js"
 import { fromStore, nothingStored, PUSHED, type ServiceDeps } from "./deps.js"
+import { searchDiscovery } from "./messages-discovery.js"
 import {
   type MessageStats,
   type QueryMetadata,
@@ -74,6 +75,7 @@ export interface SearchQuery {
   only?: { chatId: Id; id: Id }[]
   /** Strict Lucene by default; legacy discovery is explicit through language or a RegExp pattern. */
   text?: string
+  discover?: boolean
   language?: "lucene" | "legacy"
   timezone?: string
   ast?: unknown
@@ -100,6 +102,7 @@ export interface SearchQuery {
 }
 
 export type FoundMessage = StoredHit & {
+  discovery?: { coverage: number; matchedTerms: string[]; missingTerms: string[]; parent?: string }
   match?: Match
   score?: number | null
   exact?: boolean
@@ -421,11 +424,13 @@ export const messagesService = (deps: ServiceDeps): MessagesService => {
       }),
 
     search: (request) => {
+      if (request.discover && request.backend === "server")
+        throw new CliError("validation_error", "discovery searches the local archive; use backend archive")
       const query: SearchQuery = {
         ...request,
         language: request.language ?? (request.pattern ? "legacy" : "lucene"),
         // Mail is only ever in the local store, and a saved search replays as `search messages`.
-        ...(request.kind === "mail" ? { backend: "archive" as const } : {}),
+        ...(request.kind === "mail" || request.discover ? { backend: "archive" as const } : {}),
       }
       return inStore(async (store, account) => {
         if (query.thread) threadBounds(query.thread)
@@ -720,7 +725,14 @@ export const searchStore = async (
     throw new CliError("validation_error", "search was aborted", { reason: "query_aborted", complete: false })
   validateSearchDialect(request)
   if (request.thread) threadBounds(request.thread)
+  if (request.discover !== undefined && typeof request.discover !== "boolean")
+    throw new CliError("validation_error", "discover takes a boolean")
+  if (request.discover && (pattern || request.language === "legacy"))
+    throw new CliError("validation_error", "discovery requires Lucene text, without legacy or regex")
+  if (request.discover && request.backend === "server")
+    throw new CliError("validation_error", "discovery searches the local archive; use backend archive")
   await topUp(store)
+  if (request.discover) return withThreads(store, await searchDiscovery(store, account, request, messenger), request)
   if (!pattern && (request.language === "lucene" || request.ast !== undefined))
     return withThreads(store, await searchLucene(store, account, request, messenger), request)
   const found = pattern
@@ -1004,6 +1016,7 @@ const paramsOf = (command: SearchCommand, query: SearchQuery & { by?: StatsGroup
       ? {}
       : { text: query.text }),
   ...(query.ast === undefined ? {} : { ast: query.ast }),
+  ...(query.discover === undefined ? {} : { discover: query.discover }),
   ...(query.language === undefined ? {} : { language: query.language }),
   ...(query.chat === undefined ? {} : { chat: query.chat }),
   ...(query.source === undefined ? {} : { source: query.source }),

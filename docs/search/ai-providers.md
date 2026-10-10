@@ -18,8 +18,10 @@ values and the source of each field. Environment overrides use names such as
 `MAX_MODELS_ANALYSIS_PROVIDER`, `MAX_MODELS_REPLIES_MODEL`, and `MAX_MODELS_DEFAULT_BASE_URL`.
 
 The gateway takes `purpose`, optional `system`, `prompt`, optional untrusted `data`, `maxTokens`
-and optional provider-specific `options`. The data is sent separately with instructions never to
-follow or copy it. Options are validated by the selected adapter: unknown keys and wrong types
+and optional provider-specific `options`. The data is sent separately and never followed as
+instructions. Reply blocks may use template metadata at the owner’s insertion points; they must
+not copy the incoming message into the reply. Other non-OCR callers keep the no-copy policy.
+Options are validated by the selected adapter: unknown keys and wrong types
 are refused before any request. OpenAI supports temperature, top_p, presence_penalty,
 frequency_penalty, seed, stop, and response_format (text or json_object); Anthropic supports
 temperature, top_p, top_k and stop_sequences. Callers cannot override the model, messages,
@@ -83,3 +85,6 @@ The runner reads the same shipped `link-conversations` skill as your agent, adds
 `--size` uses the existing batch bounds (10–200, default 50). `--max-tokens` defaults to 100000 and caps **reservations for both input and output across this run**. Before each request, the runner reserves UTF-8 bytes for the skill/batch plus protocol overhead and at most 4096 output tokens. It stops before a batch that cannot fit, returning `stopped: "budget"`, `remaining`, `tokens` (provider-reported usage) and `reservedTokens`. Reservations are conservative and are not recycled; a command may stop below its actual usage cap. This is a token bound, not a dollar-price quote. Truncated output and usage exceeding a reservation fail the batch. Provider errors contain no remote body, key or message text.
 
 Anthropic uses the official TypeScript SDK and [Messages streaming](https://platform.claude.com/docs/en/cli-sdks-libraries/sdks/typescript); the runner reads the final message and checks its stop reason. The OpenAI-compatible adapter checks the first choice's finish reason and reported token usage. Both adapters are tested with local fake servers; there are no real provider calls in the test suite.
+
+Embedding endpoints must accept requests at the configured URL directly. Set `embeddingBaseUrl` to
+the API base serving `/embeddings` directly; credential-bearing embedding requests refuse redirects.

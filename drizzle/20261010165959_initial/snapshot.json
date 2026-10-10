@@ -1,7 +1,7 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "00c1c03e-b3c8-45cf-a627-6ce65186d99e",
+  "id": "adfccf17-60d4-425e-a9bd-d39bc5703411",
   "prevIds": [
     "00000000-0000-0000-0000-000000000000"
   ],
@@ -10483,6 +10483,24 @@
       "where": null,
       "origin": "manual",
       "name": "messages_by_time",
+      "entityType": "indexes",
+      "table": "messages"
+    },
+    {
+      "columns": [
+        {
+          "value": "chat_id",
+          "isExpression": false
+        },
+        {
+          "value": "reply_to_external_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": "reply_to_external_id IS NOT NULL AND deleted_at IS NULL",
+      "origin": "manual",
+      "name": "messages_by_reply",
       "entityType": "indexes",
       "table": "messages"
     },
