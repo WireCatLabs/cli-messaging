@@ -215,7 +215,7 @@ it does. tg-cli and max-cli take new versions through Dependabot pull requests.
 
 ## Licence
 
-MIT.
+[Apache License 2.0](LICENSE).
 
 Forum configuration uses the shared topics service: explicit enable/upgrade and named creation,
 with staged guards, original/result chat ids and unknown-outcome handling. Adapters opt into the
