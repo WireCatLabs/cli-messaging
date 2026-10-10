@@ -1099,7 +1099,13 @@
     }
   },
   "globalOptions": {
-    "--agent-json": "all",
+    "--agent-json": {
+      "in": [],
+      "planned": {
+        "max": "each CLI’s next cli-messaging bump",
+        "tg": "each CLI’s next cli-messaging bump"
+      }
+    },
     "--dry-run": "all",
     "--fields": "all",
     "--json": "all",
