@@ -23,6 +23,15 @@ import type { SearchRefreshed } from "./search-refresh.js"
 
 export interface QueryMetadata {
   language: "lucene-v1"
+  discovery?: {
+    method: "lexical-partial"
+    candidateDepth: number
+    candidates: number
+    repliesAdded: number
+    truncated: boolean
+    terms: string[]
+    queries: string[]
+  }
   version: 1
   fieldsVersion: number
   presetVersion: number

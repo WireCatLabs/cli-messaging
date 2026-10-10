@@ -328,7 +328,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--as-reply` |  | send as a reply to the matched message |  | `replies edit` |
 | `--at-time` | `<time>` | let the messenger send it later, even with this machine off: a local time like 2026-09-25T09:00, or 30m |  | `messages send` |
 | `--attachment` | `<n>` | which file of the message, from 1; needed when it has more than one |  | `attachments show`, `attachments text set` |
-| `--backend` | `<archive\|server\|both>` | where to search: the local archive, the messenger's server, or both (default: both) |  | `search messages` |
+| `--backend` | `<archive\|server\|both>` | where to search: the local archive, the messenger's server, or both (default: both; message discovery uses archive only) |  | `search messages` |
 | `--background` |  | run as a job that outlives this command; `store jobs show` follows it |  | `store fetch`, `store gaps repair` |
 | `--base-url` | `<url>` | a server with OpenAI's /v1/embeddings: Gemini, Jina, or Ollama and LM Studio on this machine |  | `conversations build`, `conversations embed`, `conversations embed clear`, `conversations embed status`, `conversations related`, `conversations status`, `search conversations` |
 | `--batch` | `<id>` | the batch id `conversations batches next` printed |  | `conversations links add` |
@@ -374,6 +374,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--deny-people` | `<ids>` | replace denied sender ids, comma-separated; empty clears; deny wins |  | `replies audience` |
 | `--description` | `<text>` | the new about text — of a chat or of your account |  | `account update`, `chats update` |
 | `--dims` | `<n>` | remote: the vector size — needed with --base-url; shortens an OpenAI model's |  | `conversations embed`, `conversations embed clear`, `conversations embed status`, `conversations related`, `conversations status`, `search conversations` |
+| `--discover` |  | find partial lexical matches and eligible replies in the local archive; results are evidence, not confirmed answers |  | `search messages` (planned) |
 | `--do` | `<actions>` | actions: reply, task, or both, comma-separated |  | `replies edit` |
 | `--download` |  | first save, from the messenger, the files no download saved yet |  | `attachments extract` |
 | `--dry-run` |  | judge and plan; do nothing. **A command-specific dry run keeps its richer plan; otherwise the shared shell previews arguments and permissions without running the action. Targets remain unresolved unless that command provides a preview.** |  | every command, `bot chats moderate`, `chats moderate` (planned), `config migrate`, `stats messages counters refresh`, `store repair`, `tags auto` |

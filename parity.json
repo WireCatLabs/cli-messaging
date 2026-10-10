@@ -113,7 +113,7 @@
     },
     "--backend": {
       "value": "<archive|server|both>",
-      "meaning": "where to search: the local archive, the messenger's server, or both (default: both)"
+      "meaning": "where to search: the local archive, the messenger's server, or both (default: both; message discovery uses archive only)"
     },
     "--background": {
       "meaning": "run as a job that outlives this command; `store jobs show` follows it"
@@ -292,6 +292,9 @@
     "--dims": {
       "value": "<n>",
       "meaning": "remote: the vector size — needed with --base-url; shortens an OpenAI model's"
+    },
+    "--discover": {
+      "meaning": "find partial lexical matches and eligible replies in the local archive; results are evidence, not confirmed answers"
     },
     "--do": {
       "meaning": "actions: reply, task, or both, comma-separated",
@@ -3366,6 +3369,13 @@
         },
         "--chat": "all",
         "--context": "all",
+        "--discover": {
+          "in": [],
+          "planned": {
+            "max": "search discovery adoption after the shared release",
+            "tg": "search discovery adoption after the shared release"
+          }
+        },
         "--exact": "all",
         "--language": "all",
         "--limit": "all",

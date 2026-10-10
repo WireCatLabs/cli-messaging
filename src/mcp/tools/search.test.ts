@@ -97,6 +97,14 @@ describe.each(["max", "tg"])("the shared MCP search bridge for %s", (command) =>
     expect(search).not.toHaveBeenCalled()
   })
 
+  it("forwards explicit discovery and rejects a non-boolean value", async () => {
+    const args = v.parse(messagesSearchInput(messenger), { text: "When is the Helix export?", discover: true })
+    const search = vi.fn(async () => found)
+    await answerMessagesSearch({ search }, args, { limit: 20 })
+    expect(search).toHaveBeenCalledWith(expect.objectContaining({ discover: true }))
+    expect(() => v.parse(messagesSearchInput(messenger), { text: "Helix", discover: "yes" })).toThrow()
+  })
+
   it("rejects a language typo in the common schema", () => {
     expect(() => v.parse(messagesSearchInput(messenger), { text: "x", language: "typo" })).toThrow()
   })
