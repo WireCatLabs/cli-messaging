@@ -485,7 +485,7 @@ export const notesStoreOver = (context: StoreContext): Omit<NotesStore, keyof No
     addNote: async ({ text, title, about = [] }) =>
       inTransaction(() => {
         const at = now()
-        const owner = ownerPerson(database, at)
+        const owner = ownerPerson(database)
         const [subject] = about.map((reference) => requiredThing(database, reference))
         const notable = subject ?? owner
         const row = database

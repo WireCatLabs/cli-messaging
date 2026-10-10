@@ -593,7 +593,8 @@ CREATE TABLE `meeting_summaries` (
 	`metadata` text,
 	`created_at` integer NOT NULL,
 	`updated_at` integer NOT NULL,
-	CONSTRAINT `fk_meeting_summaries_meeting_id_meetings_id_fk` FOREIGN KEY (`meeting_id`) REFERENCES `meetings`(`id`)
+	CONSTRAINT `fk_meeting_summaries_meeting_id_meetings_id_fk` FOREIGN KEY (`meeting_id`) REFERENCES `meetings`(`id`),
+	CONSTRAINT `meeting_summaries_meeting_id_source_unique` UNIQUE(`meeting_id`,`source`)
 );
 --> statement-breakpoint
 CREATE TABLE `meeting_transcript_rows` (
@@ -665,6 +666,30 @@ CREATE TABLE `member_counts` (
 	`created_at` integer NOT NULL,
 	CONSTRAINT `member_counts_pk` PRIMARY KEY(`chat_id`, `date`),
 	CONSTRAINT `fk_member_counts_chat_id_chats_id_fk` FOREIGN KEY (`chat_id`) REFERENCES `chats`(`id`)
+);
+--> statement-breakpoint
+CREATE TABLE `member_observation_members` (
+	`member_observation_id` integer NOT NULL,
+	`identity_id` integer NOT NULL,
+	`member_stay_id` integer NOT NULL,
+	CONSTRAINT `member_observation_members_pk` PRIMARY KEY(`member_observation_id`, `identity_id`),
+	CONSTRAINT `fk_member_observation_members_member_observation_id_member_observations_id_fk` FOREIGN KEY (`member_observation_id`) REFERENCES `member_observations`(`id`),
+	CONSTRAINT `fk_member_observation_members_identity_id_identities_id_fk` FOREIGN KEY (`identity_id`) REFERENCES `identities`(`id`),
+	CONSTRAINT `fk_member_observation_members_member_stay_id_member_stays_id_fk` FOREIGN KEY (`member_stay_id`) REFERENCES `member_stays`(`id`)
+);
+--> statement-breakpoint
+CREATE TABLE `member_observations` (
+	`id` integer PRIMARY KEY,
+	`chat_id` integer NOT NULL,
+	`observed_at` integer NOT NULL,
+	`started_at` integer,
+	`complete` integer NOT NULL,
+	`reported_count` integer,
+	`listed_count` integer NOT NULL,
+	`source` text NOT NULL,
+	`created_at` integer NOT NULL,
+	`updated_at` integer NOT NULL,
+	CONSTRAINT `fk_member_observations_chat_id_chats_id_fk` FOREIGN KEY (`chat_id`) REFERENCES `chats`(`id`)
 );
 --> statement-breakpoint
 CREATE TABLE `member_stays` (
@@ -855,6 +880,7 @@ CREATE TABLE `projects` (
 	`description` text,
 	`type` text NOT NULL,
 	`organization_id` integer,
+	`account_id` integer,
 	`scope` text DEFAULT 'personal' NOT NULL,
 	`owner_type` text,
 	`owner_id` integer,
@@ -863,7 +889,8 @@ CREATE TABLE `projects` (
 	`created_at` integer NOT NULL,
 	`updated_at` integer NOT NULL,
 	`deleted_at` integer,
-	CONSTRAINT `fk_projects_organization_id_organizations_id_fk` FOREIGN KEY (`organization_id`) REFERENCES `organizations`(`id`)
+	CONSTRAINT `fk_projects_organization_id_organizations_id_fk` FOREIGN KEY (`organization_id`) REFERENCES `organizations`(`id`),
+	CONSTRAINT `fk_projects_account_id_accounts_id_fk` FOREIGN KEY (`account_id`) REFERENCES `accounts`(`id`)
 );
 --> statement-breakpoint
 CREATE TABLE `proposed_actions` (
@@ -1035,6 +1062,10 @@ CREATE TABLE `tasks` (
 	`author_type` text NOT NULL,
 	`author_id` integer NOT NULL,
 	`source` text NOT NULL,
+	`package_id` text UNIQUE,
+	`source_locator` text,
+	`source_kind` text,
+	`source_group` text,
 	`resolution` text,
 	`verdict` text,
 	`metadata` text,
@@ -1051,6 +1082,7 @@ CREATE INDEX `accounts_by_organization_id` ON `accounts` (`organization_id`);-->
 CREATE INDEX `agent_actions_by_started_at_desc` ON `agent_actions` ("started_at" desc);--> statement-breakpoint
 CREATE INDEX `agent_actions_by_actor_type_actor_id` ON `agent_actions` (`actor_type`,`actor_id`);--> statement-breakpoint
 CREATE INDEX `agent_actions_by_target_type_target_id` ON `agent_actions` (`target_type`,`target_id`);--> statement-breakpoint
+CREATE UNIQUE INDEX `aliases_displayed` ON `aliases` (`aliasable_type`,`aliasable_id`,ifnull("account_id", 0)) WHERE display = 1;--> statement-breakpoint
 CREATE INDEX `aliases_by_aliasable_type_aliasable_id` ON `aliases` (`aliasable_type`,`aliasable_id`);--> statement-breakpoint
 CREATE INDEX `aliases_by_account_id` ON `aliases` (`account_id`);--> statement-breakpoint
 CREATE INDEX `auto_tag_claims_by_tag_id` ON `auto_tag_claims` (`tag_id`);--> statement-breakpoint
@@ -1094,18 +1126,21 @@ CREATE INDEX `involvements_by_project_id` ON `involvements` (`project_id`);--> s
 CREATE INDEX `links_unresolved` ON `links` (`target_folded`) WHERE to_id IS NULL;--> statement-breakpoint
 CREATE INDEX `links_by_from_type_from_id` ON `links` (`from_type`,`from_id`);--> statement-breakpoint
 CREATE INDEX `links_by_to_type_to_id` ON `links` (`to_type`,`to_id`);--> statement-breakpoint
+CREATE UNIQUE INDEX `meeting_chat_messages_by_meeting_id_external_id` ON `meeting_chat_messages` (`meeting_id`,`external_id`) WHERE external_id IS NOT NULL;--> statement-breakpoint
 CREATE INDEX `meeting_chat_messages_by_meeting_id` ON `meeting_chat_messages` (`meeting_id`);--> statement-breakpoint
 CREATE INDEX `meeting_chat_messages_by_sender_participant_id` ON `meeting_chat_messages` (`sender_participant_id`);--> statement-breakpoint
 CREATE INDEX `meeting_participants_by_identity_id` ON `meeting_participants` (`identity_id`);--> statement-breakpoint
 CREATE INDEX `meeting_series_by_event_series_id` ON `meeting_series` (`event_series_id`);--> statement-breakpoint
 CREATE INDEX `meeting_series_by_host_identity_id` ON `meeting_series` (`host_identity_id`);--> statement-breakpoint
-CREATE INDEX `meeting_summaries_by_meeting_id` ON `meeting_summaries` (`meeting_id`);--> statement-breakpoint
 CREATE INDEX `meeting_transcript_rows_by_speaker_participant_id` ON `meeting_transcript_rows` (`speaker_participant_id`);--> statement-breakpoint
 CREATE INDEX `meeting_transcripts_by_meeting_id` ON `meeting_transcripts` (`meeting_id`);--> statement-breakpoint
 CREATE INDEX `meetings_by_time` ON `meetings` (`account_id`,"started_at" desc);--> statement-breakpoint
 CREATE INDEX `meetings_by_meeting_series_id` ON `meetings` (`meeting_series_id`);--> statement-breakpoint
 CREATE INDEX `meetings_by_event_id` ON `meetings` (`event_id`);--> statement-breakpoint
 CREATE INDEX `meetings_by_host_identity_id` ON `meetings` (`host_identity_id`);--> statement-breakpoint
+CREATE INDEX `member_observation_members_by_member_stay_id` ON `member_observation_members` (`member_stay_id`);--> statement-breakpoint
+CREATE INDEX `member_observation_members_by_identity_id` ON `member_observation_members` (`identity_id`);--> statement-breakpoint
+CREATE INDEX `member_observations_by_chat_id_observed_at_id` ON `member_observations` (`chat_id`,`observed_at`,`id`);--> statement-breakpoint
 CREATE UNIQUE INDEX `member_stays_open` ON `member_stays` (`chat_id`,`identity_id`) WHERE left_at IS NULL;--> statement-breakpoint
 CREATE INDEX `member_stays_by_identity_id` ON `member_stays` (`identity_id`);--> statement-breakpoint
 CREATE INDEX `member_stays_by_invited_by_identity_id` ON `member_stays` (`invited_by_identity_id`);--> statement-breakpoint
@@ -1127,6 +1162,7 @@ CREATE INDEX `note_revisions_by_note_id` ON `note_revisions` (`note_id`);--> sta
 CREATE INDEX `notes_by_notable_type_notable_id` ON `notes` (`notable_type`,`notable_id`);--> statement-breakpoint
 CREATE INDEX `notes_by_author_type_author_id` ON `notes` (`author_type`,`author_id`);--> statement-breakpoint
 CREATE INDEX `projects_by_organization_id` ON `projects` (`organization_id`);--> statement-breakpoint
+CREATE INDEX `projects_by_account_id` ON `projects` (`account_id`);--> statement-breakpoint
 CREATE INDEX `projects_by_owner_type_owner_id` ON `projects` (`owner_type`,`owner_id`);--> statement-breakpoint
 CREATE INDEX `proposed_actions_by_status_created_at` ON `proposed_actions` (`status`,`created_at`);--> statement-breakpoint
 CREATE INDEX `proposed_actions_by_account_id` ON `proposed_actions` (`account_id`);--> statement-breakpoint
@@ -1144,6 +1180,8 @@ CREATE INDEX `task_assignments_by_assignee_type_assignee_id` ON `task_assignment
 CREATE INDEX `task_events_by_task_id` ON `task_events` (`task_id`);--> statement-breakpoint
 CREATE INDEX `task_events_by_actor_type_actor_id` ON `task_events` (`actor_type`,`actor_id`);--> statement-breakpoint
 CREATE INDEX `tasks_by_status` ON `tasks` (`project_id`,`status`,`due_at`);--> statement-breakpoint
+CREATE INDEX `tasks_by_project_id_source_locator` ON `tasks` (`project_id`,`source_locator`);--> statement-breakpoint
+CREATE INDEX `tasks_by_source_group` ON `tasks` (`source_group`);--> statement-breakpoint
 CREATE INDEX `tasks_by_parent_id` ON `tasks` (`parent_id`);--> statement-breakpoint
 CREATE INDEX `tasks_by_closed_by_type_closed_by_id` ON `tasks` (`closed_by_type`,`closed_by_id`);--> statement-breakpoint
 CREATE INDEX `tasks_by_author_type_author_id` ON `tasks` (`author_type`,`author_id`);
@@ -1285,6 +1323,7 @@ CREATE TRIGGER account_bd BEFORE DELETE ON accounts BEGIN
   DELETE FROM aliases WHERE account_id = old.id;
   DELETE FROM reminders WHERE account_id = old.id;
   DELETE FROM bot_updates WHERE account_id = old.id;
+  DELETE FROM links WHERE from_type = 'account' AND from_id = old.id;
 END;--> statement-breakpoint
 CREATE TRIGGER reminders_task_closed AFTER UPDATE OF status ON tasks
   WHEN new.status IN ('done', 'dismissed') AND old.status NOT IN ('done', 'dismissed') BEGIN
@@ -1414,6 +1453,14 @@ CREATE TRIGGER email_index_au AFTER UPDATE OF subject, body_text, deleted_at, em
   INSERT OR IGNORE INTO email_index_pending (indexable_type, id) VALUES ('email', new.id);
 END;--> statement-breakpoint
 CREATE TRIGGER email_bd BEFORE DELETE ON emails BEGIN
+  DELETE FROM embeddings WHERE content_hash IN (
+    SELECT k.content_hash FROM chunks k WHERE k.chunkable_type = 'email' AND k.chunkable_id = old.id
+      AND NOT EXISTS (SELECT 1 FROM chunks o WHERE o.content_hash = k.content_hash
+        AND NOT (o.chunkable_type = 'email' AND o.chunkable_id = old.id))
+      AND NOT EXISTS (SELECT 1 FROM conversation_chunks c WHERE c.content_hash = k.content_hash));
+  DELETE FROM chunks WHERE chunkable_type = 'email' AND chunkable_id = old.id;
+  DELETE FROM email_recipients WHERE email_id = old.id;
+  DELETE FROM email_mailboxes WHERE email_id = old.id;
   DELETE FROM email_words WHERE rowid = old.id;
   DELETE FROM email_stems WHERE rowid = old.id;
   DELETE FROM email_index_pending WHERE indexable_type = 'email' AND id = old.id;
@@ -1478,4 +1525,13 @@ CREATE TABLE search_term_trigrams (
 INSERT INTO search_index_state (name, watermark, filled_through, terms_through, normalizer_version, built_at, analyzer)
   VALUES ('message_words', 0, 0, 0, 1, CAST(unixepoch('subsec') * 1000 AS INTEGER), NULL),
          ('message_stems', 0, 0, 0, 1, NULL, NULL),
-         ('note_index', 0, 0, 0, 1, NULL, NULL);
+         ('note_index', 0, 0, 0, 1, NULL, NULL),
+         ('document_index', 0, 0, 0, 1, NULL, NULL),
+         ('memory_index', 0, 0, 0, 1, NULL, NULL);--> statement-breakpoint
+-- The actors a task names before any messenger has saved anyone: the owner, and the bots a rule and an
+-- unnamed agent act as. A note about nothing in particular is about this owner row.
+INSERT INTO persons (name, owner, created_at, updated_at)
+  VALUES (NULL, 1, CAST(unixepoch('subsec') * 1000 AS INTEGER), CAST(unixepoch('subsec') * 1000 AS INTEGER));--> statement-breakpoint
+INSERT INTO bots (name, kind, created_at, updated_at)
+  VALUES ('rule', 'script', CAST(unixepoch('subsec') * 1000 AS INTEGER), CAST(unixepoch('subsec') * 1000 AS INTEGER)),
+         ('agent', 'agent', CAST(unixepoch('subsec') * 1000 AS INTEGER), CAST(unixepoch('subsec') * 1000 AS INTEGER));

@@ -151,17 +151,17 @@ describe("people named in notes, over rows written directly", () => {
       { kind: "links-to", targetText: "@Bob Sample" },
     ])
     const database = await openCache(path)
-    database.exec(`INSERT INTO persons (id, name, created_at, updated_at) VALUES (1, 'Rin', 0, 0), (2, 'Bob', 0, 0), (3, 'Bob', 0, 0);
+    database.exec(`INSERT INTO persons (id, name, created_at, updated_at) VALUES (11, 'Rin', 0, 0), (12, 'Bob', 0, 0), (13, 'Bob', 0, 0);
       INSERT INTO identities (id, provider, external_id, name, created_at, updated_at) VALUES
         (1, 'telegram', '101', 'Rin Example', 0, 0), (2, 'telegram', '102', 'Bob Sample', 0, 0), (3, 'max', '9', 'Bob Sample', 0, 0);
       INSERT INTO identity_links (identity_id, person_id, method, confidence, created_at, author, updated_at) VALUES
-        (1, 1, 'initial', 1, 0, 'ingest', 0), (2, 2, 'initial', 1, 0, 'ingest', 0), (3, 3, 'initial', 1, 0, 'ingest', 0)`)
+        (1, 11, 'initial', 1, 0, 'ingest', 0), (2, 12, 'initial', 1, 0, 'ingest', 0), (3, 13, 'initial', 1, 0, 'ingest', 0)`)
     database.close()
 
     expect(await store.notes.resolveLinks()).toBe(1)
     expect((await store.notes.links({ from: note.ref })).map((link) => [link.targetText, link.to]).sort()).toEqual([
       ["@Bob Sample", null],
-      ["Rin Example", "person:1"],
+      ["Rin Example", "person:11"],
     ])
   })
 })

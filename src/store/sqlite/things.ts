@@ -148,14 +148,12 @@ export const stateOfThing = (database: CacheDatabase, thing: Thing | undefined):
 
 /** The `tasks.id` behind what callers name a task by: the package's id, or the task's key. */
 export const taskRowOf = (database: CacheDatabase, id: string): number | undefined => {
-  const row = database
-    .prepare("SELECT id FROM tasks WHERE json_extract(metadata, '$.id') = ? OR key = ? ORDER BY id LIMIT 1")
-    .get(id, id)
+  const row = database.prepare("SELECT id FROM tasks WHERE package_id = ? OR key = ? ORDER BY id LIMIT 1").get(id, id)
   return row ? Number(row.id) : undefined
 }
 
 /** The package's id for a task row: the reverse of `taskRowOf`. */
 export const taskIdOf = (database: CacheDatabase, rowId: number): string | undefined => {
-  const row = database.prepare("SELECT key, json_extract(metadata, '$.id') AS id FROM tasks WHERE id = ?").get(rowId)
+  const row = database.prepare("SELECT key, package_id AS id FROM tasks WHERE id = ?").get(rowId)
   return row ? String(row.id ?? row.key) : undefined
 }

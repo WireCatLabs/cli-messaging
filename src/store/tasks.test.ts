@@ -100,7 +100,27 @@ describe("tasks in the store", () => {
       status: "open",
       source: "rule",
       key: expect.stringMatching(/^IN[0-9A-F]{8}-1$/),
+      source_locator: question.source,
+      source_kind: "message",
+      source_group: "-1001",
+      metadata: null,
     })
+  })
+
+  it("ties an inbox project to its account once the messenger has saved it", async () => {
+    const path = fresh()
+    const store = await openStore({ path })
+    const tasks = createTaskService({ store: store.tasks })
+    await tasks.add(question)
+    const accountId = await store.saveAccount({ provider: "telegram", account: "100" }, { name: null })
+    await tasks.add({ ...question, source: "msg:telegram:100:-1001:43" })
+    const database = await openCache(path)
+    expect(database.prepare("SELECT account_id FROM projects").all()).toEqual([{ account_id: accountId }])
+
+    await store.purge({ provider: "telegram", account: "100" })
+    expect(database.prepare("SELECT account_id FROM projects").all()).toEqual([{ account_id: null }])
+    database.close()
+    await store.close()
   })
 
   it("records a question's answer and the owner's verdict", async () => {

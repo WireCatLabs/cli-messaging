@@ -12,10 +12,13 @@ import {
   fetchLeases,
   involvements,
   memberCounts,
+  memberObservationMembers,
+  memberObservations,
   memberStays,
   messageRevisions,
   messages,
   messageTranscripts,
+  projects,
   syncCursors,
   syncRanges,
   syncs,
@@ -76,6 +79,15 @@ export const purgeAccount = ({ orm }: StoreContext, accountKey: number): void =>
   orm.delete(messageTranscripts).where(inArray(messageTranscripts.chatId, chatsOf)).run()
   orm.delete(fetchLeases).where(inArray(fetchLeases.chatId, chatsOf)).run()
   orm.delete(chatMembers).where(inArray(chatMembers.chatId, chatsOf)).run()
+  const observationsOf = orm
+    .select({ id: memberObservations.id })
+    .from(memberObservations)
+    .where(inArray(memberObservations.chatId, chatsOf))
+  orm
+    .delete(memberObservationMembers)
+    .where(inArray(memberObservationMembers.memberObservationId, observationsOf))
+    .run()
+  orm.delete(memberObservations).where(inArray(memberObservations.chatId, chatsOf)).run()
   orm.delete(memberStays).where(inArray(memberStays.chatId, chatsOf)).run()
   orm.delete(memberCounts).where(inArray(memberCounts.chatId, chatsOf)).run()
   orm.delete(syncRanges).where(inArray(syncRanges.chatId, chatsOf)).run()
@@ -84,5 +96,7 @@ export const purgeAccount = ({ orm }: StoreContext, accountKey: number): void =>
   orm.delete(chats).where(eq(chats.accountId, accountKey)).run()
   orm.delete(syncCursors).where(eq(syncCursors.accountId, accountKey)).run()
   orm.delete(accountIdentities).where(eq(accountIdentities.accountId, accountKey)).run()
+  // The inbox project and its tasks are the owner's; only the tie to the account goes.
+  orm.update(projects).set({ accountId: null }).where(eq(projects.accountId, accountKey)).run()
   orm.delete(accounts).where(eq(accounts.id, accountKey)).run()
 }

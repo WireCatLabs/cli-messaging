@@ -289,7 +289,7 @@ export const knowledgeStoreOver = (context: StoreContext): KnowledgeStore => {
         ).path
       : null
 
-  /** A subfolder's labels: links from the folder, anchored at the path, to each tag (schema request). */
+  /** A subfolder's labels: `labelled` links from the folder, anchored at the path, to each tag. */
   const subfolderLabels = (folder: number, path: string) =>
     database
       .prepare(
@@ -414,9 +414,9 @@ export const knowledgeStoreOver = (context: StoreContext): KnowledgeStore => {
       account(key)
       const rows = database
         .prepare(
-          "SELECT t.key, json_extract(t.metadata, '$.id') AS id FROM tasks t JOIN projects p ON p.id = t.project_id " +
+          "SELECT t.key, t.package_id AS id FROM tasks t JOIN projects p ON p.id = t.project_id " +
             "WHERE p.key = ? AND t.deleted_at IS NULL AND (? IS NULL OR t.status = ?) " +
-            `${options.sources ? `AND json_extract(t.metadata, '$.locator') IN (${options.sources.map(() => "?").join(",")}) ` : ""}` +
+            `${options.sources ? `AND t.source_locator IN (${options.sources.map(() => "?").join(",")}) ` : ""}` +
             "ORDER BY t.created_at, t.id LIMIT ? OFFSET ?",
         )
         .all(
@@ -436,7 +436,7 @@ export const knowledgeStoreOver = (context: StoreContext): KnowledgeStore => {
       const thing = available(key, target)
       const at = now()
       const id = atomic(database, () => {
-        const owner = ownerPerson(database, at)
+        const owner = ownerPerson(database)
         return Number(
           database
             .prepare(

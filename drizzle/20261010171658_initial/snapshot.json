@@ -1,7 +1,7 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "adfccf17-60d4-425e-a9bd-d39bc5703411",
+  "id": "c1519e2d-c580-4204-8688-6ef6d8575f0f",
   "prevIds": [
     "00000000-0000-0000-0000-000000000000"
   ],
@@ -180,6 +180,14 @@
     },
     {
       "name": "member_counts",
+      "entityType": "tables"
+    },
+    {
+      "name": "member_observation_members",
+      "entityType": "tables"
+    },
+    {
+      "name": "member_observations",
       "entityType": "tables"
     },
     {
@@ -4776,6 +4784,136 @@
     },
     {
       "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "member_observation_id",
+      "entityType": "columns",
+      "table": "member_observation_members"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "identity_id",
+      "entityType": "columns",
+      "table": "member_observation_members"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "member_stay_id",
+      "entityType": "columns",
+      "table": "member_observation_members"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "member_observations"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "chat_id",
+      "entityType": "columns",
+      "table": "member_observations"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "observed_at",
+      "entityType": "columns",
+      "table": "member_observations"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "started_at",
+      "entityType": "columns",
+      "table": "member_observations"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "complete",
+      "entityType": "columns",
+      "table": "member_observations"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "reported_count",
+      "entityType": "columns",
+      "table": "member_observations"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "listed_count",
+      "entityType": "columns",
+      "table": "member_observations"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "source",
+      "entityType": "columns",
+      "table": "member_observations"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "member_observations"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "updated_at",
+      "entityType": "columns",
+      "table": "member_observations"
+    },
+    {
+      "type": "integer",
       "notNull": false,
       "autoincrement": false,
       "default": null,
@@ -6011,6 +6149,16 @@
       "default": null,
       "generated": null,
       "name": "organization_id",
+      "entityType": "columns",
+      "table": "projects"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "account_id",
       "entityType": "columns",
       "table": "projects"
     },
@@ -7290,6 +7438,46 @@
       "autoincrement": false,
       "default": null,
       "generated": null,
+      "name": "package_id",
+      "entityType": "columns",
+      "table": "tasks"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "source_locator",
+      "entityType": "columns",
+      "table": "tasks"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "source_kind",
+      "entityType": "columns",
+      "table": "tasks"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "source_group",
+      "entityType": "columns",
+      "table": "tasks"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
       "name": "resolution",
       "entityType": "columns",
       "table": "tasks"
@@ -8291,6 +8479,66 @@
     },
     {
       "columns": [
+        "member_observation_id"
+      ],
+      "tableTo": "member_observations",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "nameExplicit": false,
+      "name": "fk_member_observation_members_member_observation_id_member_observations_id_fk",
+      "entityType": "fks",
+      "table": "member_observation_members"
+    },
+    {
+      "columns": [
+        "identity_id"
+      ],
+      "tableTo": "identities",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "nameExplicit": false,
+      "name": "fk_member_observation_members_identity_id_identities_id_fk",
+      "entityType": "fks",
+      "table": "member_observation_members"
+    },
+    {
+      "columns": [
+        "member_stay_id"
+      ],
+      "tableTo": "member_stays",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "nameExplicit": false,
+      "name": "fk_member_observation_members_member_stay_id_member_stays_id_fk",
+      "entityType": "fks",
+      "table": "member_observation_members"
+    },
+    {
+      "columns": [
+        "chat_id"
+      ],
+      "tableTo": "chats",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "nameExplicit": false,
+      "name": "fk_member_observations_chat_id_chats_id_fk",
+      "entityType": "fks",
+      "table": "member_observations"
+    },
+    {
+      "columns": [
         "chat_id"
       ],
       "tableTo": "chats",
@@ -8541,6 +8789,21 @@
       "onDelete": "NO ACTION",
       "nameExplicit": false,
       "name": "fk_projects_organization_id_organizations_id_fk",
+      "entityType": "fks",
+      "table": "projects"
+    },
+    {
+      "columns": [
+        "account_id"
+      ],
+      "tableTo": "accounts",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "nameExplicit": false,
+      "name": "fk_projects_account_id_accounts_id_fk",
       "entityType": "fks",
       "table": "projects"
     },
@@ -8828,6 +9091,16 @@
       "name": "member_counts_pk",
       "entityType": "pks",
       "table": "member_counts"
+    },
+    {
+      "columns": [
+        "member_observation_id",
+        "identity_id"
+      ],
+      "nameExplicit": false,
+      "name": "member_observation_members_pk",
+      "entityType": "pks",
+      "table": "member_observation_members"
     },
     {
       "columns": [
@@ -9172,6 +9445,15 @@
         "id"
       ],
       "nameExplicit": false,
+      "name": "member_observations_pk",
+      "table": "member_observations",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
       "name": "member_stays_pk",
       "table": "member_stays",
       "entityType": "pks"
@@ -9451,6 +9733,28 @@
       "name": "agent_actions_by_target_type_target_id",
       "entityType": "indexes",
       "table": "agent_actions"
+    },
+    {
+      "columns": [
+        {
+          "value": "aliasable_type",
+          "isExpression": false
+        },
+        {
+          "value": "aliasable_id",
+          "isExpression": false
+        },
+        {
+          "value": "ifnull(\"account_id\", 0)",
+          "isExpression": true
+        }
+      ],
+      "isUnique": true,
+      "where": "display = 1",
+      "origin": "manual",
+      "name": "aliases_displayed",
+      "entityType": "indexes",
+      "table": "aliases"
     },
     {
       "columns": [
@@ -10115,6 +10419,24 @@
         {
           "value": "meeting_id",
           "isExpression": false
+        },
+        {
+          "value": "external_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": "external_id IS NOT NULL",
+      "origin": "manual",
+      "name": "meeting_chat_messages_by_meeting_id_external_id",
+      "entityType": "indexes",
+      "table": "meeting_chat_messages"
+    },
+    {
+      "columns": [
+        {
+          "value": "meeting_id",
+          "isExpression": false
         }
       ],
       "isUnique": false,
@@ -10179,20 +10501,6 @@
       "name": "meeting_series_by_host_identity_id",
       "entityType": "indexes",
       "table": "meeting_series"
-    },
-    {
-      "columns": [
-        {
-          "value": "meeting_id",
-          "isExpression": false
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "origin": "manual",
-      "name": "meeting_summaries_by_meeting_id",
-      "entityType": "indexes",
-      "table": "meeting_summaries"
     },
     {
       "columns": [
@@ -10281,6 +10589,56 @@
       "name": "meetings_by_host_identity_id",
       "entityType": "indexes",
       "table": "meetings"
+    },
+    {
+      "columns": [
+        {
+          "value": "member_stay_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "member_observation_members_by_member_stay_id",
+      "entityType": "indexes",
+      "table": "member_observation_members"
+    },
+    {
+      "columns": [
+        {
+          "value": "identity_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "member_observation_members_by_identity_id",
+      "entityType": "indexes",
+      "table": "member_observation_members"
+    },
+    {
+      "columns": [
+        {
+          "value": "chat_id",
+          "isExpression": false
+        },
+        {
+          "value": "observed_at",
+          "isExpression": false
+        },
+        {
+          "value": "id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "member_observations_by_chat_id_observed_at_id",
+      "entityType": "indexes",
+      "table": "member_observations"
     },
     {
       "columns": [
@@ -10631,6 +10989,20 @@
     {
       "columns": [
         {
+          "value": "account_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "projects_by_account_id",
+      "entityType": "indexes",
+      "table": "projects"
+    },
+    {
+      "columns": [
+        {
           "value": "owner_type",
           "isExpression": false
         },
@@ -10925,6 +11297,38 @@
     {
       "columns": [
         {
+          "value": "project_id",
+          "isExpression": false
+        },
+        {
+          "value": "source_locator",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "tasks_by_project_id_source_locator",
+      "entityType": "indexes",
+      "table": "tasks"
+    },
+    {
+      "columns": [
+        {
+          "value": "source_group",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "tasks_by_source_group",
+      "entityType": "indexes",
+      "table": "tasks"
+    },
+    {
+      "columns": [
+        {
           "value": "parent_id",
           "isExpression": false
         }
@@ -11096,6 +11500,16 @@
     },
     {
       "columns": [
+        "meeting_id",
+        "source"
+      ],
+      "nameExplicit": false,
+      "name": "meeting_summaries_meeting_id_source_unique",
+      "entityType": "uniques",
+      "table": "meeting_summaries"
+    },
+    {
+      "columns": [
         "meeting_transcript_id",
         "position"
       ],
@@ -11209,6 +11623,15 @@
       ],
       "nameExplicit": false,
       "name": "tasks_key_unique",
+      "entityType": "uniques",
+      "table": "tasks"
+    },
+    {
+      "columns": [
+        "package_id"
+      ],
+      "nameExplicit": false,
+      "name": "tasks_package_id_unique",
       "entityType": "uniques",
       "table": "tasks"
     }
