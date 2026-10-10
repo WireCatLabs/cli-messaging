@@ -24,6 +24,9 @@
       "value": "<agent>",
       "meaning": "install the skill for this agent; asks at a terminal, otherwise none"
     },
+    "--agent-json": {
+      "meaning": "agent-safe JSON output: control and direction characters visible in strings and keys; combine with --jsonl for streams"
+    },
     "--ai": {
       "meaning": "call the configured reply model with stored message data; requires reply consent, otherwise uses fallback"
     },
@@ -1096,6 +1099,7 @@
     }
   },
   "globalOptions": {
+    "--agent-json": "all",
     "--dry-run": "all",
     "--fields": "all",
     "--json": "all",

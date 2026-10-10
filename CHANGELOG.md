@@ -4,7 +4,7 @@ Notable changes to `@wirecat/cli-messaging` (`@leemour/cli-messaging` up to 0.21
 version, newest first. Versions follow [semver](https://semver.org/); before `1.0.0` a minor version may
 break callers, and says how under "Changed — may break callers". `pnpm docs:check` checks the shape of this file.
 
-## Unreleased
+## 0.217.0 — 10.10.2026
 
 ### Fixed
 
@@ -19,6 +19,8 @@ break callers, and says how under "Changed — may break callers". `pnpm docs:ch
 - `--agent-json` makes JSON strings and keys safe for agent consumption, while `--json` retains its raw data contract. Combine with `--jsonl` for streams.
 
 ### Changed — may break callers
+
+- Consumers use `@wirecat/cli-core` 0.19.x for Windows maintenance command resolution.
 
 - MCP contact searches query third-party registries only with explicit `registries: true`; ordinary CLI defaults remain unchanged.
 
