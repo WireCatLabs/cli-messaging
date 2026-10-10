@@ -38,6 +38,15 @@ break callers, and says how under "Changed — may break callers". `pnpm docs:ch
   proposals that wait for the owner) and `store.agentActions` (one audit row per MCP tool call, never its
   arguments). Topics: `knowledge.createTag(name, { kind: "topic" })` for the owner, `setMainTopic`.
 
+### Added
+
+- **`store.meetings`: the shared store's `MeetingStore`**, the port `@wirecat/cli-meetings` 0.2.0 defines (now a
+  dependency). It keeps meetings, their series, participants, transcripts with their history, chat, summaries,
+  files, calendar events and the pull cursor, and passes the package's `meetingStoreContract`. Search matches
+  every word of the query as a prefix.
+- **`store.mail`: email threads, emails, recipients and mailboxes**, keyed by account and Message-ID. Save a
+  thread, list threads, read one, read an email by Message-ID, mark emails gone, and search subjects and bodies.
+
 ## 0.215.0 — 10.10.2026
 
 ### Changed — may break callers

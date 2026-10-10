@@ -11,6 +11,19 @@ export type { ChatMetadata } from "./sqlite/chats.js"
 export type { Involvement, InvolvementStore } from "./sqlite/involvements.js"
 export type { Decision, DecisionInput, DecisionsStore } from "./sqlite/decisions.js"
 export type {
+  Email,
+  EmailAddress,
+  EmailInput,
+  EmailRecipient,
+  EmailThread,
+  Mailbox,
+  MailboxInput,
+  MailFilter,
+  MailStore,
+  ThreadDetails,
+  ThreadSave,
+} from "./sqlite/emails.js"
+export type {
   Annotation,
   KnowledgeRelation,
   KnowledgeStore,
