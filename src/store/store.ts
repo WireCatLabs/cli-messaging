@@ -29,6 +29,7 @@ import { storeCapable } from "./open.js"
 import { storePath } from "./path.js"
 import * as accounts from "./sqlite/accounts.js"
 import { type AdminStoreRequest, type AdminStoreResult, adminStatisticsQuery } from "./sqlite/admin-statistics.js"
+import { type AgentActionsStore, agentActionsStoreOver } from "./sqlite/agent-actions.js"
 import type { AttachmentTextEntry, AttachmentView, FileAttachment } from "./sqlite/attachment-texts.js"
 import * as attachmentTexts from "./sqlite/attachment-texts.js"
 import * as attachmentRows from "./sqlite/attachments.js"
@@ -42,11 +43,13 @@ import * as completeness from "./sqlite/completeness.js"
 import { type ConversationEligibility, conversationEligibility } from "./sqlite/conversation-eligibility.js"
 import * as conversationQueries from "./sqlite/conversations.js"
 import { applyCounterObservations, type CounterTarget, counterStates, counterTargets } from "./sqlite/counters.js"
+import { type DecisionsStore, decisionsStoreOver } from "./sqlite/decisions.js"
 import * as identities from "./sqlite/identities.js"
 import { type KnowledgeStore, knowledgeStoreOver } from "./sqlite/knowledge.js"
 import { findRegex } from "./sqlite/legacy-regex.js"
 import type { QueryGroup, QueryGrouping } from "./sqlite/lucene.js"
 import * as lucene from "./sqlite/lucene.js"
+import { type MemoriesStore, memoriesStoreOver } from "./sqlite/memories.js"
 import * as messageWrites from "./sqlite/messages.js"
 import { noteSearchOver } from "./sqlite/note-search.js"
 import { type NotesStore, notesStoreOver } from "./sqlite/notes.js"
@@ -54,6 +57,7 @@ import { openSqlite, type StoreContext } from "./sqlite/open.js"
 import * as personLinks from "./sqlite/person-links.js"
 import type { PrivateContact, PrivateContactNote } from "./sqlite/private-people.js"
 import * as privatePeople from "./sqlite/private-people.js"
+import { type ProposedActionsStore, proposedActionsStoreOver } from "./sqlite/proposed-actions.js"
 import * as ranges from "./sqlite/ranges.js"
 import { type RankedEvidence, type RankingEvidenceRequest, rankingEvidence } from "./sqlite/ranking-evidence.js"
 import { type RankedStoreFound, type RankingRequest, rankQuery } from "./sqlite/rankings.js"
@@ -556,6 +560,14 @@ export interface MessageStore {
   readonly knowledge: KnowledgeStore
   /** Notes, the links between anything and anything, and the owner's organisations and projects. */
   readonly notes: NotesStore
+  /** Choices that hold until replaced, each with its evidence. */
+  readonly decisions: DecisionsStore
+  /** What agents concluded: summaries, digests, facts, preferences, each with evidence and a scope. */
+  readonly memories: MemoriesStore
+  /** What an agent wants done outside the store, waiting for the owner's approval. */
+  readonly proposedActions: ProposedActionsStore
+  /** One row per tool an agent called, never its arguments. */
+  readonly agentActions: AgentActionsStore
   close(): Promise<void>
 }
 
@@ -764,6 +776,10 @@ const storeOver = (context: StoreContext): MessageStore => {
   let tasks: MessageStore["tasks"] | undefined
   let knowledge: MessageStore["knowledge"] | undefined
   let notes: MessageStore["notes"] | undefined
+  let decisions: MessageStore["decisions"] | undefined
+  let memories: MessageStore["memories"] | undefined
+  let proposedActions: MessageStore["proposedActions"] | undefined
+  let agentActions: MessageStore["agentActions"] | undefined
 
   return {
     saveAccount: async (key, { name }) => {
@@ -1504,6 +1520,22 @@ const storeOver = (context: StoreContext): MessageStore => {
     get notes() {
       notes ??= { ...notesStoreOver(context), ...noteSearchOver(context) }
       return notes
+    },
+    get decisions() {
+      decisions ??= decisionsStoreOver(context)
+      return decisions
+    },
+    get memories() {
+      memories ??= memoriesStoreOver(context)
+      return memories
+    },
+    get proposedActions() {
+      proposedActions ??= proposedActionsStoreOver(context)
+      return proposedActions
+    },
+    get agentActions() {
+      agentActions ??= agentActionsStoreOver(context)
+      return agentActions
     },
 
     close: async () => database.close(),
