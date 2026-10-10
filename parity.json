@@ -24,6 +24,9 @@
       "value": "<agent>",
       "meaning": "install the skill for this agent; asks at a terminal, otherwise none"
     },
+    "--agent-json": {
+      "meaning": "agent-safe JSON output: control and direction characters visible in strings and keys; combine with --jsonl for streams"
+    },
     "--ai": {
       "meaning": "call the configured reply model with stored message data; requires reply consent, otherwise uses fallback"
     },
@@ -408,8 +411,8 @@
       "meaning": "the text is HTML: <b>, <i>, <a href>, <code>"
     },
     "--http": {
-      "meaning": "serve MCP over HTTP on 127.0.0.1 behind the owner's tunnel, with a one-owner login; every write asks first by default",
-      "note": "MAX wording catches up with Telegram’s explicit “by default” at the next shared SDK adoption; both HTTP servers confirm writes by default"
+      "meaning": "serve MCP over HTTP on 127.0.0.1 behind the owner's tunnel, with a one-owner login",
+      "note": "MAX spells out that profile permissions decide; Telegram wording catches up at its next shared SDK adoption"
     },
     "--http-confirmation": {
       "value": "<mode>",
@@ -1096,6 +1099,13 @@
     }
   },
   "globalOptions": {
+    "--agent-json": {
+      "in": [],
+      "planned": {
+        "max": "each CLI’s next cli-messaging bump",
+        "tg": "each CLI’s next cli-messaging bump"
+      }
+    },
     "--dry-run": "all",
     "--fields": "all",
     "--json": "all",

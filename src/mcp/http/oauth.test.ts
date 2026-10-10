@@ -135,13 +135,30 @@ describe("mcp --http and its owner login", () => {
     if (process.platform !== "win32") expect(statSync(tokenFile).mode & 0o777).toBe(0o600)
   })
 
-  it("locks the consent page after five wrong codes, even for the right one", async () => {
+  it("throttles wrong codes and recovers with a fresh terminal code without a restart", async () => {
+    let now = Date.now()
+    const { register, pkce, consent, codes } = await start({ now: () => now })
+    const { body: client } = await register()
+    const { challenge } = pkce()
+    const previous = codes.at(-1) ?? ""
+    for (let i = 0; i < 5; i++) await consent(client.client_id ?? "", challenge, "WRONG-CODE")
+    const locked = await consent(client.client_id ?? "", challenge, previous)
+    expect(locked.status).toBe(429)
+    expect(locked.headers.get("retry-after")).toBe("30")
+    now += 30_000
+    expect((await consent(client.client_id ?? "", challenge, previous)).status).toBe(400)
+    expect(codes.at(-1)).not.toBe(previous)
+    expect((await consent(client.client_id ?? "", challenge, codes.at(-1) ?? "")).status).toBe(302)
+  })
+
+  it("rejects multibyte codes without throwing and resets the failed-attempt budget after login", async () => {
     const { register, pkce, consent, codes } = await start()
     const { body: client } = await register()
     const { challenge } = pkce()
-    for (let i = 0; i < 5; i++) await consent(client.client_id ?? "", challenge, "WRONG-CODE")
-    const right = await consent(client.client_id ?? "", challenge, codes.at(-1) ?? "")
-    expect(right.status).toBe(429)
+    expect((await consent(client.client_id ?? "", challenge, "éBCD-EFGH")).status).toBe(400)
+    for (let i = 0; i < 3; i++) await consent(client.client_id ?? "", challenge, "WRONG-CODE")
+    expect((await consent(client.client_id ?? "", challenge, codes.at(-1) ?? "")).status).toBe(302)
+    expect((await consent(client.client_id ?? "", challenge, "WRONG-CODE")).status).toBe(400)
   })
 
   it("issues a new terminal code after each login, so a code works once", async () => {

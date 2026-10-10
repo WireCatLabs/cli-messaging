@@ -304,6 +304,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--after-n` | `<n>` | how many messages after it |  | `messages context` |
 | `--after-time` | `<time>` | read what came after this ISO 8601 time, or 2h / 1d ago; not with --after-id or the --before pair |  | `messages list` |
 | `--agent` | `<agent>` | install the skill for this agent; asks at a terminal, otherwise none |  | `setup` (planned) |
+| `--agent-json` |  | agent-safe JSON output: control and direction characters visible in strings and keys; combine with --jsonl for streams |  | every command (planned) |
 | `--ai` |  | call the configured reply model with stored message data; requires reply consent, otherwise uses fallback |  | `replies test` |
 | `--all` |  | every row, no paging. **chats requests accept and decline take every pending request instead — Telegram counts them against its hourly limit first; MAX has no way to answer them all at once and refuses it, naming chats requests list — so it differs on purpose (Help text rule 4)** |  | `attachments list`, `chats list`, `chats members list` (planned), `chats requests accept`, `chats requests decline`, `contacts list`, `inbox` (planned), `messages download`, `review` (planned), `store export`, `store fetch` |
 | `--all-bots` |  | also read every other bot's copy on this machine that readOtherBots allows |  | `bot contacts show`, `bot messages between`, `bot search messages` |
@@ -404,7 +405,7 @@ its meaning, and this table is regenerated from it. **Bold** marks a clash still
 | `--hide-online` | `<on\|off>` | hide online status and last seen |  | `account privacy set` (planned) |
 | `--history` |  | the people added also see the messages from before they came |  | `chats members add` (max-only) |
 | `--html` |  | the text is HTML: <b>, <i>, <a href>, <code> |  | `bot messages edit`, `bot messages send`, `messages edit` (planned), `messages send` (planned) |
-| `--http` |  | serve MCP over HTTP on 127.0.0.1 behind the owner's tunnel, with a one-owner login; every write asks first by default. **MAX wording catches up with Telegram’s explicit “by default” at the next shared SDK adoption; both HTTP servers confirm writes by default** |  | `mcp` |
+| `--http` |  | serve MCP over HTTP on 127.0.0.1 behind the owner's tunnel, with a one-owner login. **MAX spells out that profile permissions decide; Telegram wording catches up at its next shared SDK adoption** |  | `mcp` |
 | `--http-confirmation` | `<mode>` | no longer used: MCP writes show no form; the profile's permissions decide. **retired: accepted with a warning so an old setup still starts** |  | `mcp` |
 | `--idle` | `<duration>` | stop after this long with nobody using it — 15m, 1h |  | `serve` (max-only), `server restart` (max-only), `server start` (max-only) |
 | `--if-sha256` | `<hash>` | require the whole retained file to match this previous SHA256 |  | `attachments show` |

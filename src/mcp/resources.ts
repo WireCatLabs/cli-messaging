@@ -27,6 +27,7 @@ export const registerResources = (
     withStore,
     messenger,
     guard,
+    assertRead,
   }: {
     command: string
     name: string
@@ -40,12 +41,14 @@ export const registerResources = (
     /** Whose history is read from the store (`Messenger.history`), so the resource never connects either. */
     messenger: Messenger
     guard: SendGuard
+    assertRead?: (permission: "chats" | "messages") => void
   },
 ): void => {
   server.registerResource(
     "chat",
     new ResourceTemplate(`${command}://chat/{id}`, {
       list: async () => {
+        assertRead?.("chats")
         const chats = recorded()
           ? await withStore(async (store, account) => (await store.chats(account, { limit: LISTED })).items, {
               name: "mcp resources list",
@@ -66,6 +69,8 @@ export const registerResources = (
       mimeType: "application/json",
     },
     async (uri, { id }) => {
+      assertRead?.("chats")
+      assertRead?.("messages")
       const body =
         messenger.history === "store"
           ? await withStore(
