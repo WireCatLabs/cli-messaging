@@ -23,6 +23,8 @@ break callers, and says how under "Changed — may break callers". `pnpm docs:ch
 - **`store.mail`: email threads, emails, recipients and mailboxes**, keyed by account and Message-ID. Save a
   thread, list threads, read one, read an email by Message-ID, mark emails gone, and search subjects and bodies.
 - `saveAccount` answers the store's id for the account, which `store.meetings` and `store.mail` take.
+- `storedAccounts()` lists every account with the store's id; `storedAccount(key)` finds one by provider and
+  external id without creating it, and fails with `not_found` when the store has none.
 - A new store holds the owner's person and the bots `rule` and `agent` from the start. Tasks keep the task
   package's id, source locator, kind and group in columns; an inbox project names its account. The store refuses
   a second displayed alias for one thing and account, a second meeting summary from one source and a repeated
