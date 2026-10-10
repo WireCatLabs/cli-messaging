@@ -4,6 +4,16 @@ Notable changes to `@wirecat/cli-messaging` (`@leemour/cli-messaging` up to 0.21
 version, newest first. Versions follow [semver](https://semver.org/); before `1.0.0` a minor version may
 break callers, and says how under "Changed — may break callers". `pnpm docs:check` checks the shape of this file.
 
+## Unreleased
+
+### Added
+
+- `search messages --discover`, MCP `discover=true` and SDK `SearchQuery.discover` find partial
+  lexical evidence and eligible direct replies in the local archive without model downloads.
+  Strict Lucene remains the default; explicit syntax, exact and newest searches stay strict.
+  Result metadata shows matched/missing terms and bounded candidate truncation; scores are not
+  answer confidence. Migration 29 adds a derived reply lookup index; message data is unchanged.
+
 ## 0.215.0 — 10.10.2026
 
 ### Changed — may break callers

@@ -412,8 +412,11 @@ const compileQuery = (context: StoreContext, execution: QueryExecution, boundedA
       [
         where,
         {
-          sql: "EXISTS (SELECT 1 FROM json_each(?) j WHERE json_extract(j.value,'$.chatId')=c.native_id AND json_extract(j.value,'$.id')=m.native_id)",
-          params: [JSON.stringify(execution.only)],
+          sql: `m.pk IN (SELECT picked.pk FROM json_each(?) j CROSS JOIN accounts allowed CROSS JOIN chats scoped CROSS JOIN messages picked
+            WHERE (${execution.accounts.map(() => "(allowed.provider=? AND allowed.native_id=?)").join(" OR ") || "0"})
+              AND scoped.account_pk=allowed.pk AND scoped.native_id=json_extract(j.value,'$.chatId')
+              AND picked.chat_pk=scoped.pk AND picked.native_id=json_extract(j.value,'$.id'))`,
+          params: [JSON.stringify(execution.only), ...execution.accounts.flatMap((key) => [key.provider, key.account])],
           exact: true,
         },
       ],

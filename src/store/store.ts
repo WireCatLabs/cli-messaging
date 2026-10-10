@@ -417,6 +417,7 @@ export interface MessageStore {
   ): Promise<RetentionResult>
   adminStatisticsQuery?(execution: QueryExecution, request: AdminStoreRequest): Promise<AdminStoreResult>
   rankQuery?(execution: QueryExecution, request: RankingRequest): Promise<RankedStoreFound>
+  directReplies?(parents: { account: AccountKey; chatId: Id; id: Id }[], limit: number): Promise<Page<StoredHit>>
   matchQuery?(execution: QueryExecution): Promise<Page<ScoredHit>>
   conversationEligibility?(execution: QueryExecution): Promise<ConversationEligibility>
   /** The same matches as `matchQuery`, each counted once, grouped by chat, sender or quarter hour. */
@@ -1286,6 +1287,7 @@ const storeOver = (context: StoreContext): MessageStore => {
     },
     adminStatisticsQuery: async (execution, request) => adminStatisticsQuery(context, execution, request),
     rankQuery: async (execution, request) => rankQuery(context, execution, request),
+    directReplies: async (parents, limit) => search.directReplies(context, parents, limit),
     matchQuery: async (execution) => lucene.matchQuery(context, execution),
     conversationEligibility: async (execution) => conversationEligibility(context, execution),
     countQuery: async (execution, by) => lucene.countQuery(context, execution, by),

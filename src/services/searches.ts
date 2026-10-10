@@ -11,6 +11,7 @@ import type { StatsGrouping } from "./messages-search.js"
 
 /** What a run or a saved search keeps: the query and options as given, never a message or a result. */
 export interface SearchParams extends RankingInput {
+  discover?: boolean
   adminReport?: AdminReport
   selection?: unknown
   target?: RankingTarget
@@ -100,6 +101,8 @@ const patternOf = (source: string): RegExp => {
 
 /** The query checked as a search would check it, without the store: syntax, fields, values. */
 const checked = (params: SearchParams): SearchParams => {
+  if (params.discover && (params.regex || languageOf(params) === "legacy"))
+    throw new CliError("validation_error", "discovery requires Lucene text, without legacy or regex")
   if (params.text !== undefined && params.ast !== undefined)
     throw new CliError("validation_error", "give query text or an AST, not both")
   if (params.regex) {

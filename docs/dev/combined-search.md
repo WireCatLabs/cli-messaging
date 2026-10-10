@@ -1,5 +1,13 @@
 # One message search: measured design
 
+The implemented integration is an additive `--discover` / MCP `discover=true` / SDK
+`SearchQuery.discover` archive option, described in [the handoff](combined-search-handoff.md).
+The single-default replacement proposed below remains unqualified by its approved gates.
+Strict CLI/MCP behavior and no-language SDK compatibility are preserved. The explicit option
+returns partial lexical evidence with visible missing terms and bounded context; it does not
+establish answer confidence or qualify a default switch.
+
+
 Status: the owner approved the lexical and semantic experiments. Lexical reranking and e5 cosine
 ranking fail the dev quality gates; joint query-message ranking improves the measured results.
 CLI/MCP and SDK defaults remain unchanged while latency and the original held-out quality gates
@@ -270,7 +278,7 @@ This proposal includes the separately agreed breaking window required by the
    version, updating generated `docs/commands.md`, skills and breaking changelog entries. Avoid other
    consumer `docs/*.md` prose owned by `docs/reader-standards`. Verify unreleased builds with
    `bin/try-messaging` in consumer worktrees; no committed `file:` dependency. Arrange same-day
-   consumer moves when the breaking shared release lands. No release/publish proceeds while the quality gates are unmet.
+   consumer moves when the breaking shared release lands. The breaking default switch does not proceed while its quality gates are unmet.
 
 No migration number is needed now. If saved conversion or later semantic work requires schema
 changes, reserve a number first through [coordination](COORDINATION.md#store-migrations).

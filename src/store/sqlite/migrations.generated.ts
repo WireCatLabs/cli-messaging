@@ -365,5 +365,11 @@ export const GENERATED: { name: string; statements: string[] }[] = [
       "DROP TABLE `knowledge_relations`;",
       "DROP TABLE `knowledge_targets`;"
     ]
+  },
+  {
+    "name": "20261010132610_version-29-direct-replies",
+    "statements": [
+      "CREATE INDEX `messages_by_reply` ON `messages` (`chat_pk`,`reply_to_native_id`) WHERE reply_to_native_id IS NOT NULL AND deleted_at IS NULL;"
+    ]
   }
 ]

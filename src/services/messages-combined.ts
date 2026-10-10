@@ -1,4 +1,4 @@
-import { CliError } from "@leemour/cli-core"
+import { CliError } from "@wirecat/cli-core"
 import type { Messenger } from "../cli/messenger/context.js"
 import { parseLocator } from "../domain/locator.js"
 import type { Page } from "../domain/models.js"

@@ -12,7 +12,7 @@ import { chatOf, limit } from "../tool.js"
 const EXACT = "bare words and quotes match their exact form only, as exact:word does; not with an AST"
 
 export const MESSAGES_SEARCH_DESCRIPTION =
-  "Search the local store, and the messenger's server where it can search, using the Lucene 9.12.3 profile, default AND, with strict Boolean matching. Legacy discovery is explicit with language=legacy. Text or a versioned AST, account-scoped filters, calendar timezone, term/body regex and candidate presets use one service. Empty hits still report archive coverage. `saved` runs a saved search (searches_list) or an earlier run (searches_history). With sync_first, first fetch new messages within max_chats (5), sync_time (30s), max_messages (500), under messages.sync-first permission. A failed or bounded refresh keeps local results with stale coverage and refreshed details. thread=true attaches each hit's bounded parent/reply graph, with provenance and stale-edge labels; thread_hops, thread_messages, thread_bytes, thread_within set its separate bounds. Guide: https://github.com/WireCatLabs/cli-messaging/blob/main/docs/search/query-language.md. Text words and quoted phrases match every form of their words (Snowball stems, exact forms ranked first, query.stemming says how); exact:word, or exact=true, matches the exact form only. Where the messenger's server can search, it is also asked by default (backend=both; archive for the local store only) within server_time (5s), under messages.server-search: its hits are saved and re-checked by the same strict query, each hit says its source (archive, server, both), and server says what the server step did. coverage says what the archive held: messages and chats searched, chats never fetched or behind, up to ten attention chats, and next — the command that would improve the answer; when next is set and nothing was found, run it (or ask the owner) before concluding the message does not exist. Returns { items, page, limit, hasMore, corrections, completeness, wordsReady, stemsReady, query, coverage, server? }."
+  "Use discover=true for partial lexical evidence and eligible replies to natural questions in the local archive, without model downloads; inspect each hit’s discovery.missingTerms and surrounding messages before answering. Explicit syntax stays strict, and ranking is not answer confidence. Search the local store, and the messenger's server where it can search, using the Lucene 9.12.3 profile, default AND, with strict Boolean matching. Legacy discovery is explicit with language=legacy. Text or a versioned AST, account-scoped filters, calendar timezone, term/body regex and candidate presets use one service. Empty hits still report archive coverage. `saved` runs a saved search (searches_list) or an earlier run (searches_history). With sync_first, first fetch new messages within max_chats (5), sync_time (30s), max_messages (500), under messages.sync-first permission. A failed or bounded refresh keeps local results with stale coverage and refreshed details. thread=true attaches each hit's bounded parent/reply graph, with provenance and stale-edge labels; thread_hops, thread_messages, thread_bytes, thread_within set its separate bounds. Guide: https://github.com/WireCatLabs/cli-messaging/blob/main/docs/search/query-language.md. Text words and quoted phrases match every form of their words (Snowball stems, exact forms ranked first, query.stemming says how); exact:word, or exact=true, matches the exact form only. Where the messenger's server can search, it is also asked by default (backend=both; archive for the local store only) within server_time (5s), under messages.server-search: its hits are saved and re-checked by the same strict query, each hit says its source (archive, server, both), and server says what the server step did. coverage says what the archive held: messages and chats searched, chats never fetched or behind, up to ten attention chats, and next — the command that would improve the answer; when next is set and nothing was found, run it (or ask the owner) before concluding the message does not exist. Returns { items, page, limit, hasMore, corrections, completeness, wordsReady, stemsReady, query, coverage, server? }."
 
 const backendInputs = {
   backend: v.optional(
@@ -41,6 +41,14 @@ export const messagesSearchInput = (messenger: Messenger) =>
     ...syncInputs,
     text: v.optional(v.pipe(v.string(), v.description("the query: Lucene text or explicit legacy syntax"))),
     ast: v.optional(v.unknown()),
+    discover: v.optional(
+      v.pipe(
+        v.boolean(),
+        v.description(
+          "partial lexical discovery with eligible replies in the local archive; use for questions when wording is uncertain; hits are evidence, not confirmed answers",
+        ),
+      ),
+    ),
     language: v.optional(v.picklist(["lucene", "legacy"])),
     timezone: v.optional(v.string()),
     chat: v.optional(chatOf(messenger)),
@@ -109,8 +117,8 @@ export type MessagesSearchArgs = v.InferOutput<ReturnType<typeof messagesSearchI
 
 const typedOf = (args: Record<string, unknown>): SearchParams =>
   Object.fromEntries(
-    ["text", "language", "timezone", "chat", "source", "newest", "exact", "context", "limit", "by"].flatMap((key) =>
-      args[key] === undefined ? [] : [[key, args[key]]],
+    ["text", "discover", "language", "timezone", "chat", "source", "newest", "exact", "context", "limit", "by"].flatMap(
+      (key) => (args[key] === undefined ? [] : [[key, args[key]]]),
     ),
   )
 
@@ -152,6 +160,7 @@ export const answerMessagesSearch = async (
       ...threadArgs(args),
       ...(pattern ? { pattern } : params.text === undefined ? {} : { text: params.text }),
       ...(params.ast === undefined ? {} : { ast: params.ast }),
+      ...(params.discover === undefined ? {} : { discover: params.discover }),
       language: params.language ?? (pattern ? "legacy" : "lucene"),
       signal: defaults.signal,
       ...(params.timezone === undefined ? {} : { timezone: params.timezone }),
@@ -175,6 +184,7 @@ export const answerMessagesSearch = async (
     ...threadArgs(args),
     ...(args.text === undefined ? {} : { text: args.text }),
     ...(args.ast === undefined ? {} : { ast: args.ast }),
+    ...(args.discover === undefined ? {} : { discover: args.discover }),
     language: args.language ?? "lucene",
     signal: defaults.signal,
     ...(args.timezone === undefined ? {} : { timezone: args.timezone }),
