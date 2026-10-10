@@ -209,10 +209,10 @@ export const entryRunner = ({
 }: Registration): RunEntry => {
   const where = { profile: defaults.settings.profile, env: defaults.env }
   return async (key, definition, args, ctx) => {
-    const syncAllowed = syncAllowedFor(key, defaults)
     const run = `mcp ${key.replaceAll("_", " ")}`
     try {
       const execute = async () => {
+        const syncAllowed = syncAllowedFor(key, defaults)
         if (definition.annotations.readOnlyHint !== true) args = agentArguments(args)
         if (Buffer.byteLength(JSON.stringify(args)) > MAX_BUFFERED_INPUT)
           throw new CliError("validation_error", "tool arguments exceed the buffered input limit", {
@@ -292,22 +292,23 @@ export const entryRunner = ({
   }
 }
 
-/** Registers each tool as `<cli>_<name>`; a read tool's description ends with the warning about data. */
+/** Registers each tool as `<cli>_<name>`; every tool's description ends with the warning about data. */
 export const registerTools = (server: McpServer, tools: Record<string, AnyTool>, registration: Registration): void => {
   const run = entryRunner(registration)
   for (const [key, definition] of Object.entries(tools)) {
     const syncAllowed = syncAllowedFor(key, registration.defaults)
-    const reads = definition.annotations.readOnlyHint === true
     server.registerTool(
       `${registration.command}_${key}`,
       {
         outputSchema: toStandardJsonSchema(v.looseObject({})),
         title: definition.title,
-        description: reads ? `${definition.description} ${UNTRUSTED}` : definition.description,
+        description: `${definition.description} ${UNTRUSTED}`,
         inputSchema: toStandardJsonSchema(inputOf(definition, syncAllowed)),
         annotations: {
           ...definition.annotations,
-          ...("sync_first" in definition.input.entries ? { openWorldHint: syncAllowed } : {}),
+          ...("sync_first" in definition.input.entries
+            ? { openWorldHint: definition.annotations.openWorldHint === true || syncAllowed }
+            : {}),
         },
         ...(definition._meta ? { _meta: definition._meta } : {}),
       },
@@ -377,8 +378,17 @@ export const answered = (value: object, maxBytes = DEFAULT_OUTPUT_BYTES): CallTo
 /** The same object the CLI prints on stderr, so an agent reads one error shape from both. */
 export const failed = (error: unknown): CallToolResult => {
   const original = isCliFailure(error)
-    ? { code: error.code, message: error.message, retryable: false, ...error.details }
-    : { code: "generic_failure", message: error instanceof Error ? error.message : String(error), retryable: false }
+    ? {
+        code: error.code,
+        message: error.message,
+        retryable: false,
+        ...error.details,
+      }
+    : {
+        code: "generic_failure",
+        message: error instanceof Error ? error.message : String(error),
+        retryable: false,
+      }
   const body = JSON.parse(agentJson(original)) as Record<string, unknown>
   return {
     content: [{ type: "text", text: JSON.stringify({ error: body }) }],

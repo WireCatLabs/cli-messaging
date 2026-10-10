@@ -7,10 +7,12 @@ import {
   singleLine,
 } from "@wirecat/cli-core"
 import { fieldsOf, projectFields } from "./cli/result-fields.js"
+import { agentJson as serializeAgentJson } from "./mcp/text.js"
 
 export interface OutputOptions {
   json?: boolean
   jsonl?: boolean
+  agentJson?: boolean
   quiet?: boolean
   streams?: Streams
   /** Whether a person is looking. Defaults to whether stdout is a terminal. */
@@ -31,6 +33,7 @@ export interface OutputOptions {
 export const resolveOutput = ({
   json,
   jsonl,
+  agentJson,
   quiet,
   streams = processStreams,
   tty,
@@ -39,9 +42,17 @@ export const resolveOutput = ({
   env = process.env,
 }: OutputOptions = {}) => {
   const interactive = tty ?? process.stdout.isTTY === true
-  const format: RenderFormat = jsonl ? "jsonl" : json || !interactive ? "json" : "pretty"
+  const format: RenderFormat = jsonl ? "jsonl" : agentJson || json || !interactive ? "json" : "pretty"
   const painted = format === "pretty" && (color ?? (env.NO_COLOR === undefined && env.TERM !== "dumb" && !env.CI))
-  const created = createRenderer({ format, color: painted, streams })
+  const standard = createRenderer({ format, color: painted, streams })
+  const safe = (value: unknown) => JSON.parse(serializeAgentJson(value)) as unknown
+  const created = agentJson
+    ? {
+        ...standard,
+        result: (value: unknown) => standard.result(safe(value)),
+        stream: (items: Iterable<unknown>) => standard.stream([...items].map(safe)),
+      }
+    : standard
   const paths = fields === undefined ? undefined : fieldsOf(fields)
   const renderer =
     format === "pretty"

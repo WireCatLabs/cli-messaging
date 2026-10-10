@@ -4,6 +4,24 @@ Notable changes to `@wirecat/cli-messaging` (`@leemour/cli-messaging` up to 0.21
 version, newest first. Versions follow [semver](https://semver.org/); before `1.0.0` a minor version may
 break callers, and says how under "Changed — may break callers". `pnpm docs:check` checks the shape of this file.
 
+## Unreleased
+
+### Fixed
+
+- HTTP login recovers after a bounded throttle; embedding requests refuse redirects carrying credentials or text.
+- MCP permissions refresh before each call; tool descriptions frame returned text as untrusted data for reads and writes.
+- Reply model blocks keep interpolated metadata separate from instructions. Markdown export escapes untrusted message structure and link labels.
+- Model download temporary files use exclusive random names. Reserved downloaded filenames are normalized only on Windows; POSIX names remain unchanged.
+- Development dependency overrides remove obsolete uuid and sprintf-js versions.
+
+### Added
+
+- `--agent-json` makes JSON strings and keys safe for agent consumption, while `--json` retains its raw data contract. Combine with `--jsonl` for streams.
+
+### Changed — may break callers
+
+- MCP contact searches query third-party registries only with explicit `registries: true`; ordinary CLI defaults remain unchanged.
+
 ## 0.216.0 — 10.10.2026
 
 ### Added

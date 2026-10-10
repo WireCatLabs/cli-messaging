@@ -1836,12 +1836,27 @@ describe("the MCP server", () => {
   it("checks one person without the ban lists when asked, and says a non-Telegram account is not in them", async () => {
     const { call } = await connect(scripted())
     const quiet = await call("chat_contacts_check", { person: "Olga", registries: false })
-    const asked = await call("chat_contacts_check", { person: "Olga" })
+    const implicit = await call("chat_contacts_check", { person: "Olga" })
+    const asked = await call("chat_contacts_check", { person: "Olga", registries: true })
 
     expect(quiet.isError).toBe(false)
     expect(quiet.body.registries).toEqual([])
+    expect(implicit.body.registries).toEqual([])
     expect(quiet.body.notes).toContain("the ban lists were not asked")
     expect(asked.body.registries.map((one: { answer: string }) => one.answer)).toEqual(["unknown", "unknown"])
+  })
+
+  it("honours permission tightening on an already-open MCP session, including local writes", async () => {
+    const root = mkdtempSync(join(tmpdir(), "mcp-permissions-current-"))
+    const backend = scripted()
+    const { call, env } = await connect(backend, { root })
+    expect((await call("chat_messages_list", { chat: "7" })).isError).toBe(false)
+    writeFileSync(
+      join(env.CHAT_CONFIG_DIR, "config.json"),
+      JSON.stringify(levels({ messages: "deny", tags: "readonly" })),
+    )
+    expect((await call("chat_messages_list", { chat: "7" })).body.error.code).toBe("permission_error")
+    expect((await call("chat_tags_add", { tags: ["synthetic"], chat: "7" })).body.error.code).toBe("permission_error")
   })
 
   it("hides contact context when message reading is denied", async () => {
