@@ -262,7 +262,9 @@ describe("the word index", () => {
       migrations: [...MIGRATIONS, { version: latest + 1, minCompatible: latest + 1, statements: [] }],
     })
     database.close()
-    expect((await call(["store", "reindex", "--json"], env)).code).toBe(1)
+    const { code, stderr } = await call(["store", "reindex", "--json"], env)
+    expect(code).not.toBe(0)
+    expect(stderr.join("\n")).toContain("upgrade this tool")
   })
 })
 

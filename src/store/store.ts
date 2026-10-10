@@ -53,8 +53,8 @@ import { type KnowledgeStore, knowledgeStoreOver } from "./sqlite/knowledge.js"
 import { findRegex } from "./sqlite/legacy-regex.js"
 import type { QueryGroup, QueryGrouping } from "./sqlite/lucene.js"
 import * as lucene from "./sqlite/lucene.js"
-import { type MemoriesStore, memoriesStoreOver } from "./sqlite/memories.js"
 import { meetingStoreOver } from "./sqlite/meetings.js"
+import { type MemoriesStore, memoriesStoreOver } from "./sqlite/memories.js"
 import * as messageWrites from "./sqlite/messages.js"
 import { noteSearchOver } from "./sqlite/note-search.js"
 import { type NotesStore, notesStoreOver } from "./sqlite/notes.js"
@@ -1577,6 +1577,7 @@ const storeOver = (context: StoreContext): MessageStore => {
     get agentActions() {
       agentActions ??= agentActionsStoreOver(context)
       return agentActions
+    },
     get meetings() {
       meetings ??= meetingStoreOver(context)
       return meetings

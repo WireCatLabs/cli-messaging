@@ -1,6 +1,7 @@
 import { CliError } from "@wirecat/cli-core"
 import type { Contact, Id, Page, PersonAlias, Provider } from "../../domain/models.js"
 import type { PeopleLookup } from "../../resolve.js"
+import { fold } from "../normalize.js"
 import type { AccountKey, PersonFacts } from "../store.js"
 import { and, asc, desc, eq, inArray, isNotNull, isNull, ne, sql } from "./drizzle/core.js"
 import type { Orm, StoreContext } from "./open.js"
@@ -284,7 +285,7 @@ const contactsWhere = (accountKey: number, key: AccountKey, query: string | unde
                   AND ${chats.kind} = 'dialog')`,
     query === undefined
       ? undefined
-      : sql`(${identities.id} IN (SELECT rowid FROM identities_fts WHERE identities_fts MATCH ${`"${query.trim().replaceAll('"', '""')}"`}) OR EXISTS (SELECT 1 FROM aliases ca WHERE ca.aliasable_type='identity' AND ca.display=1 AND ca.account_id=${accountKey} AND ca.aliasable_id=${identities.id} AND instr(ca.name_folded, ${query.trim().toLowerCase()}) > 0))`,
+      : sql`(${identities.id} IN (SELECT rowid FROM identities_fts WHERE identities_fts MATCH ${`"${query.trim().replaceAll('"', '""')}"`}) OR EXISTS (SELECT 1 FROM aliases ca WHERE ca.aliasable_type='identity' AND ca.display=1 AND ca.account_id=${accountKey} AND ca.aliasable_id=${identities.id} AND instr(ca.name_folded, ${fold(query.trim())}) > 0))`,
   )
 }
 

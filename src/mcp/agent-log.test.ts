@@ -7,7 +7,7 @@ import * as v from "valibot"
 import { afterEach, describe, expect, it } from "vitest"
 import { openCache } from "../store/open.js"
 import { type MessageStore, openStore } from "../store/store.js"
-import { type AnyTool, entryRunner, READ, type Registration, tierOf, tool, WRITE } from "./tool.js"
+import { type AnyTool, entryRunner, READ, type Registration, type ToolCall, tierOf, tool, WRITE } from "./tool.js"
 
 const live: MessageStore[] = []
 afterEach(async () => {
@@ -33,7 +33,7 @@ const refusing = tool({
 
 const runner = (store: MessageStore) =>
   entryRunner({
-    log: async (call) => {
+    log: async (call: ToolCall) => {
       await store.agentActions.record({ actor: { bot: "test-mcp" }, ...call })
     },
     defaults: { settings: {}, env: {} },

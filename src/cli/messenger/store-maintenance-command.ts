@@ -277,7 +277,7 @@ const inspect = (path: string) =>
       ...(schema.version > 0 ? SEARCH_INDEXES.map((index) => [index, indexIntegrity(database, index)]) : []),
       ...(wordIndex ? [[WORD_INDEX, indexIntegrity(database, WORD_INDEX, 0)]] : []),
       ...(stems ? [["message_stems", indexIntegrity(database, "message_stems", 0)]] : []),
-      ...(schema.version >= 19 ? [["attachment_words", indexIntegrity(database, "attachment_words", 0)]] : []),
+      ...(schema.version > 0 ? [["attachment_words", indexIntegrity(database, "attachment_words", 0)]] : []),
     ])
     const size = bytesOf(path) + bytesOf(`${path}-wal`)
     const { bavail, bsize } = statfsSync(dirname(path))
@@ -477,7 +477,15 @@ const reindexCommand = (messenger: Messenger): Command =>
         return
       }
       const answer = await reading(path, (database) => {
-        if (schemaOf(database).version < SPEAKS) {
+        const schema = schemaOf(database)
+        if (!schema.writable) {
+          throw new CliError(
+            "configuration_error",
+            `the message store was written by a newer version (schema ${schema.version}, needs at least ` +
+              `${schema.minCompatible}; this one speaks ${SPEAKS}) — upgrade this tool`,
+          )
+        }
+        if (schema.version < SPEAKS) {
           throw new CliError(
             "validation_error",
             `the store is behind this build — \`${messenger.app.command} store migrate\` first`,
