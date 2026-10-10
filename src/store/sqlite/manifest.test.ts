@@ -35,13 +35,12 @@ describe("the generated migrations", () => {
     expect(GENERATED).toEqual(onDisk)
   })
 
-  it("each have one manifest row, in order, numbered on from version 5 without a gap", () => {
+  it("each have one manifest row, in order, numbered from 1 without a gap", () => {
     expect(MANIFEST.map(({ name }) => name)).toEqual(GENERATED.map(({ name }) => name))
-    const numbered = MANIFEST.flatMap((entry) => ("version" in entry ? [entry] : []))
-    const versions = [...new Set(numbered.map(({ version }) => version))]
-    expect(versions).toEqual(versions.map((_, index) => 6 + index))
-    for (const entry of numbered) expect(entry.minCompatible).toBeLessThanOrEqual(entry.version)
-    expect(MIGRATIONS.map(({ version }) => version)).toEqual(MIGRATIONS.map((_, index) => index + 1))
+    const versions = [...new Set(MANIFEST.map(({ version }) => version))]
+    expect(versions).toEqual(versions.map((_, index) => 1 + index))
+    for (const entry of MANIFEST) expect(entry.minCompatible).toBeLessThanOrEqual(entry.version)
+    expect(MIGRATIONS.map(({ version }) => version)).toEqual(MIGRATIONS.map((_, index) => 1 + index))
   })
 
   it("**never rebuild a base table** or add a column an older build cannot fill", () => {
@@ -130,7 +129,7 @@ describe("two processes opening one file", () => {
     migrate(database)
     database.close()
     const next = {
-      version: MIGRATIONS.length + 1,
+      version: (MIGRATIONS.at(-1)?.version ?? 0) + 1,
       minCompatible: 1,
       statements: [
         "CREATE TABLE applied (n INTEGER)",

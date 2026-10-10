@@ -762,6 +762,9 @@ const storeOver = (context: StoreContext): MessageStore => {
 
   const writeState = (accountKey: number, name: string, value: string) =>
     sync.writeState(context, accountKey, name, value)
+  let tasks: MessageStore["tasks"] | undefined
+  let knowledge: MessageStore["knowledge"] | undefined
+  let notes: MessageStore["notes"] | undefined
 
   return {
     saveAccount: async (key, { name }) => {
@@ -1490,9 +1493,19 @@ const storeOver = (context: StoreContext): MessageStore => {
       return cleared
     },
 
-    tasks: taskStoreOver(database),
-    knowledge: knowledgeStoreOver(context),
-    notes: { ...notesStoreOver(context), ...noteSearchOver(context) },
+    // Built on first use: an area that prepares its statements must not stop the store opening for the rest.
+    get tasks() {
+      tasks ??= taskStoreOver(database)
+      return tasks
+    },
+    get knowledge() {
+      knowledge ??= knowledgeStoreOver(context)
+      return knowledge
+    },
+    get notes() {
+      notes ??= { ...notesStoreOver(context), ...noteSearchOver(context) }
+      return notes
+    },
 
     close: async () => database.close(),
   }

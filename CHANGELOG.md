@@ -4,6 +4,17 @@ Notable changes to `@wirecat/cli-messaging` (`@leemour/cli-messaging` up to 0.21
 version, newest first. Versions follow [semver](https://semver.org/); before `1.0.0` a minor version may
 break callers, and says how under "Changed — may break callers". `pnpm docs:check` checks the shape of this file.
 
+## Unreleased
+
+### Changed — may break callers
+
+- **A new store schema in a new file, `wirecat.db`, created by one initial migration (store version 1).** Tables
+  and columns follow Rails naming (`id`, `<thing>_id`, `external_id`, `created_at`/`updated_at`); mail, documents,
+  notes, memories, decisions, events, meetings, organizations, projects, tasks, proposed actions, aliases,
+  taggings and topics, chunks and embeddings have tables of their own. Every table and column is in
+  [`docs/storage/schema-v2.md`](docs/storage/schema-v2.md). The old `messages.db` is left as it is and not
+  converted: messages come back with a fresh sync.
+
 ## 0.215.0 — 10.10.2026
 
 ### Changed — may break callers
